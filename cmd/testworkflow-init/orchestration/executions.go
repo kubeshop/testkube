@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"sync"
 	"sync/atomic"
@@ -94,8 +93,10 @@ func (e *executionGroup) Pause() (err error) {
 	e.executionsMu.Lock()
 	defer e.executionsMu.Unlock()
 
-	// Retrieve all started processes
-	ps, totalFailure, err := processes()
+	ps, totalFailure, err := e.trackedProcesses()
+	if ps == nil && err == nil {
+		return nil
+	}
 	if totalFailure {
 		return errors.Wrap(err, "failed to pause: failed to list processes")
 	}
@@ -103,8 +104,6 @@ func (e *executionGroup) Pause() (err error) {
 		output.Std.Direct().Warnf("warn: failed to pause: failed to list some processes: %v\n", err)
 	}
 
-	// Ignore the init process, to not suspend it accidentally
-	ps.VirtualizePath(int32(os.Getpid()))
 	err = ps.Suspend()
 	return errors.Wrap(err, "failed to pause")
 }
@@ -121,8 +120,10 @@ func (e *executionGroup) Resume() (err error) {
 	e.executionsMu.Lock()
 	defer e.executionsMu.Unlock()
 
-	// Retrieve all started processes
-	ps, totalFailure, err := processes()
+	ps, totalFailure, err := e.trackedProcesses()
+	if ps == nil && err == nil {
+		return nil
+	}
 	if totalFailure {
 		return errors.Wrap(err, "failed to resume: failed to list processes")
 	}
@@ -130,8 +131,6 @@ func (e *executionGroup) Resume() (err error) {
 		output.Std.Direct().Warnf("warn: failed to resume: failed to list some processes: %v\n", err)
 	}
 
-	// Ignore the init process, to not suspend it accidentally
-	ps.VirtualizePath(int32(os.Getpid()))
 	err = ps.Resume()
 	return errors.Wrap(err, "failed to resume")
 }
@@ -146,8 +145,10 @@ func (e *executionGroup) Kill() (err error) {
 		return nil
 	}
 
-	// Retrieve all started processes
-	ps, totalFailure, err := processes()
+	ps, totalFailure, err := e.trackedProcesses()
+	if ps == nil && err == nil {
+		return nil
+	}
 	if totalFailure {
 		return errors.Wrap(err, "failed to kill: failed to list processes")
 	}
@@ -155,10 +156,31 @@ func (e *executionGroup) Kill() (err error) {
 		output.Std.Direct().Warnf("warn: failed to kill: failed to list some processes: %v\n", err.Error())
 	}
 
-	// Ignore the init process, to not suspend it accidentally
-	ps.VirtualizePath(int32(os.Getpid()))
 	err = ps.Kill()
 	return errors.Wrap(err, "failed to kill")
+}
+
+func (e *executionGroup) trackedProcesses() (*processNode, bool, error) {
+	pids := make([]int32, 0, len(e.executions))
+	for _, ex := range e.executions {
+		ex.cmdMu.Lock()
+		cmd := ex.cmd
+		ex.cmdMu.Unlock()
+		if cmd != nil && cmd.Process != nil {
+			pids = append(pids, int32(cmd.Process.Pid))
+		}
+	}
+
+	if len(pids) == 0 {
+		return nil, false, nil
+	}
+
+	ps, totalFailure, err := processes()
+	if ps == nil {
+		return nil, totalFailure, err
+	}
+
+	return ps.SelectRoots(pids), totalFailure, err
 }
 
 // WaitAll waits for all tracked executions to finish.
