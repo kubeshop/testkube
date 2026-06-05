@@ -205,6 +205,9 @@ spec:
           {{- if .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Key }}
           key: {{ .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Key }}
           {{- end }}
+          {{- if .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Optional }}
+          optional: {{ .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Optional }}
+          {{- end }}
         {{- end }}
       {{- end }}
       {{- if .ContentSelector.Git.Token }}
