@@ -47,6 +47,54 @@ func (p *processNode) VirtualizePath(pid int32) {
 	}
 }
 
+func (p *processNode) SelectRoots(pids []int32) *processNode {
+	root := &processNode{pid: -1, nodes: map[*processNode]struct{}{}}
+	selected := map[int32]*processNode{}
+
+	for _, pid := range pids {
+		if pid <= 0 {
+			continue
+		}
+
+		path := p.Find(pid)
+		if len(path) == 0 {
+			continue
+		}
+
+		skip := false
+		for _, node := range path[1 : len(path)-1] {
+			if _, ok := selected[node.pid]; ok {
+				skip = true
+				break
+			}
+		}
+		if skip {
+			continue
+		}
+
+		node := path[len(path)-1]
+		if _, ok := selected[node.pid]; ok {
+			continue
+		}
+
+		for selectedPid, selectedNode := range selected {
+			if node.Find(selectedPid) != nil {
+				delete(selected, selectedPid)
+				delete(root.nodes, selectedNode)
+			}
+		}
+
+		selected[node.pid] = node
+		root.nodes[node] = struct{}{}
+	}
+
+	if len(root.nodes) == 0 {
+		return nil
+	}
+
+	return root
+}
+
 // Suspend all the processes in group, starting from top
 func (p *processNode) Suspend() error {
 	errs := make([]error, 0)
