@@ -147,7 +147,7 @@ spec:
       {{- if ne (len .ContentSelector.Git.Branches) 0 }}
       branches:
         {{- range .ContentSelector.Git.Branches }}
-        - {{.}}
+        - {{ printf "%q" . }}
         {{- end }}
       {{- end }}
       {{- if ne (len .ContentSelector.Git.BranchesIgnore) 0 }}
