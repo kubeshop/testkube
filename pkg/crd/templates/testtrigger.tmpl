@@ -228,9 +228,12 @@ spec:
       sshKeyFrom:
         {{- if .ContentSelector.Git.SshKeyFrom.SecretKeyRef }}
         secretKeyRef:
+          {{- if .ContentSelector.Git.SshKeyFrom.SecretKeyRef.Name }}
           name: {{ .ContentSelector.Git.SshKeyFrom.SecretKeyRef.Name }}
+          {{- end }}
+          {{- if .ContentSelector.Git.SshKeyFrom.SecretKeyRef.Key }}
           key: {{ .ContentSelector.Git.SshKeyFrom.SecretKeyRef.Key }}
-        {{- end }}
+          {{- end }}
         {{- if .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef }}
         configMapKeyRef:
           {{- if .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Name }}
