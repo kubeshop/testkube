@@ -143,7 +143,7 @@ spec:
   {{- if and .ContentSelector .ContentSelector.Git }}
   contentSelector:
     git:
-      uri: {{ .ContentSelector.Git.Uri }}
+      uri: {{ printf "%q" .ContentSelector.Git.Uri }}
       {{- if ne (len .ContentSelector.Git.Branches) 0 }}
       branches:
         {{- range .ContentSelector.Git.Branches }}
