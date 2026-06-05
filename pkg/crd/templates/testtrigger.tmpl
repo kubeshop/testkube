@@ -159,7 +159,7 @@ spec:
       {{- if ne (len .ContentSelector.Git.Paths) 0 }}
       paths:
         {{- range .ContentSelector.Git.Paths }}
-        - {{.}}
+        - {{ printf "%q" . }}
         {{- end }}
       {{- end }}
       {{- if ne (len .ContentSelector.Git.PathsIgnore) 0 }}
