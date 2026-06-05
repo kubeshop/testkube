@@ -233,9 +233,12 @@ spec:
         {{- end }}
         {{- if .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef }}
         configMapKeyRef:
+          {{- if .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Name }}
           name: {{ .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Name }}
+          {{- end }}
+          {{- if .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Key }}
           key: {{ .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Key }}
-        {{- end }}
+          {{- end }}
       {{- end }}
       {{- if .ContentSelector.Git.AuthType }}
       authType: {{ .ContentSelector.Git.AuthType }}
