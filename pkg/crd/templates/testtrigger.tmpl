@@ -181,7 +181,7 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .ContentSelector.Git.Username }}
-      username: {{ .ContentSelector.Git.Username }}
+      username: {{ printf "%q" .ContentSelector.Git.Username }}
       {{- end }}
       {{- if .ContentSelector.Git.UsernameFrom }}
       usernameFrom:
