@@ -213,7 +213,7 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .ContentSelector.Git.SshKey }}
-      sshKey: {{ .ContentSelector.Git.SshKey }}
+      sshKey: {{ printf "%q" .ContentSelector.Git.SshKey }}
       {{- end }}
       {{- if .ContentSelector.Git.SshKeyFrom }}
       sshKeyFrom:
