@@ -242,7 +242,7 @@ spec:
         {{- if ne (len .ContentSelector.Git.PullRequest.Branches) 0 }}
         branches:
           {{- range .ContentSelector.Git.PullRequest.Branches }}
-          - {{.}}
+          - {{ printf "%q" . }}
           {{- end }}
         {{- end }}
         {{- if ne (len .ContentSelector.Git.PullRequest.BranchesIgnore) 0 }}
