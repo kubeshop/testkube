@@ -171,7 +171,7 @@ spec:
       {{- if ne (len .ContentSelector.Git.Tags) 0 }}
       tags:
         {{- range .ContentSelector.Git.Tags }}
-        - {{.}}
+        - {{ printf "%q" . }}
         {{- end }}
       {{- end }}
       {{- if ne (len .ContentSelector.Git.TagsIgnore) 0 }}
