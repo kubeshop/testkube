@@ -33,9 +33,15 @@ func RunInit(groupIndex int) (int, error) {
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
+	sigDone := make(chan struct{})
+	defer close(sigDone)
 	go func() {
-		<-sigCh
-		cancel()
+		select {
+		case <-sigCh:
+			cancel()
+		case <-sigDone:
+		}
 	}()
 
 	return RunInitWithContext(ctx, groupIndex)
@@ -62,7 +68,8 @@ func RunInitWithContext(ctx context.Context, groupIndex int) (int, error) {
 
 	currentContainer := lite.LiteActionContainer{}
 
-	setupAbortHandler(ctx)
+	stopAbortHandler := setupAbortHandler(ctx)
+	defer stopAbortHandler()
 
 	state := data.GetState()
 
@@ -130,11 +137,23 @@ func RunInitWithContext(ctx context.Context, groupIndex int) (int, error) {
 }
 
 // setupAbortHandler sets up context-based abort handling
-func setupAbortHandler(ctx context.Context) {
+func setupAbortHandler(ctx context.Context) func() {
+	done := make(chan struct{})
 	go func() {
-		<-ctx.Done()
-		orchestration.Executions.Abort()
+		select {
+		case <-ctx.Done():
+			select {
+			case <-done:
+				return
+			default:
+				orchestration.Executions.Abort()
+			}
+		case <-done:
+		}
 	}()
+	return func() {
+		close(done)
+	}
 }
 
 // setupControlServer sets up the control server for pause/resume functionality
