@@ -46,7 +46,7 @@ spec:
     name: {{ .ResourceSelector.Name }}
     {{- end }}
     {{- if .ResourceSelector.NameRegex }}
-    nameRegex: {{ .ResourceSelector.NameRegex }}
+    nameRegex: {{ printf "%q" .ResourceSelector.NameRegex }}
     {{- end }}
     {{- if .ResourceSelector.Namespace }}
     namespace: {{ .ResourceSelector.Namespace }}
@@ -193,6 +193,7 @@ spec:
           {{- if .ContentSelector.Git.UsernameFrom.SecretKeyRef.Key }}
           key: {{ .ContentSelector.Git.UsernameFrom.SecretKeyRef.Key }}
           {{- end }}
+        {{- end }}
         {{- if .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef }}
         configMapKeyRef:
           {{- if .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Name }}
@@ -201,6 +202,7 @@ spec:
           {{- if .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Key }}
           key: {{ .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Key }}
           {{- end }}
+        {{- end }}
       {{- end }}
       {{- if .ContentSelector.Git.Token }}
       token: {{ printf "%q" .ContentSelector.Git.Token }}
@@ -215,6 +217,7 @@ spec:
           {{- if .ContentSelector.Git.TokenFrom.SecretKeyRef.Key }}
           key: {{ .ContentSelector.Git.TokenFrom.SecretKeyRef.Key }}
           {{- end }}
+        {{- end }}
         {{- if .ContentSelector.Git.TokenFrom.ConfigMapKeyRef }}
         configMapKeyRef:
           {{- if .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Name }}
@@ -223,6 +226,7 @@ spec:
           {{- if .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Key }}
           key: {{ .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Key }}
           {{- end }}
+        {{- end }}
       {{- end }}
       {{- if .ContentSelector.Git.SshKey }}
       sshKey: {{ printf "%q" .ContentSelector.Git.SshKey }}
@@ -237,6 +241,7 @@ spec:
           {{- if .ContentSelector.Git.SshKeyFrom.SecretKeyRef.Key }}
           key: {{ .ContentSelector.Git.SshKeyFrom.SecretKeyRef.Key }}
           {{- end }}
+        {{- end }}
         {{- if .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef }}
         configMapKeyRef:
           {{- if .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Name }}
@@ -245,6 +250,7 @@ spec:
           {{- if .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Key }}
           key: {{ .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Key }}
           {{- end }}
+        {{- end }}
       {{- end }}
       {{- if .ContentSelector.Git.AuthType }}
       authType: {{ .ContentSelector.Git.AuthType }}
@@ -328,7 +334,7 @@ spec:
     name: {{ .TestSelector.Name }}
     {{- end }}
     {{- if .TestSelector.NameRegex }}
-    nameRegex: {{ .TestSelector.NameRegex }}
+    nameRegex: {{ printf "%q" .TestSelector.NameRegex }}
     {{- end }}
     {{- if .TestSelector.Namespace }}
     namespace: {{ .TestSelector.Namespace }}

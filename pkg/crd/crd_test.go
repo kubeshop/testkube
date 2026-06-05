@@ -24,10 +24,12 @@ func TestExecuteTemplateQuotesNamespaceRegex(t *testing.T) {
 		Action:    &action,
 		Execution: &execution,
 		ResourceSelector: &testkube.TestTriggerSelector{
+			NameRegex:      "*resource",
 			NamespaceRegex: "*prod",
 		},
 		TestSelector: &testkube.TestTriggerSelector{
 			Name:           "sample-test",
+			NameRegex:      "*name",
 			NamespaceRegex: "*tests",
 		},
 	}
@@ -45,12 +47,22 @@ func TestExecuteTemplateQuotesNamespaceRegex(t *testing.T) {
 		t.Fatalf("expected rendered YAML to contain %q, got:\n%s", want, output)
 	}
 
+	if want := "nameRegex: \"*resource\""; !strings.Contains(output, want) {
+		t.Fatalf("expected rendered YAML to contain %q, got:\n%s", want, output)
+	}
+
+	if want := "nameRegex: \"*name\""; !strings.Contains(output, want) {
+		t.Fatalf("expected rendered YAML to contain %q, got:\n%s", want, output)
+	}
+
 	var parsed struct {
 		Spec struct {
 			ResourceSelector struct {
+				NameRegex      string `yaml:"nameRegex"`
 				NamespaceRegex string `yaml:"namespaceRegex"`
 			} `yaml:"resourceSelector"`
 			TestSelector struct {
+				NameRegex      string `yaml:"nameRegex"`
 				NamespaceRegex string `yaml:"namespaceRegex"`
 			} `yaml:"testSelector"`
 		} `yaml:"spec"`
@@ -64,7 +76,15 @@ func TestExecuteTemplateQuotesNamespaceRegex(t *testing.T) {
 		t.Fatalf("expected resourceSelector namespaceRegex to round-trip, got %q", parsed.Spec.ResourceSelector.NamespaceRegex)
 	}
 
+	if parsed.Spec.ResourceSelector.NameRegex != "*resource" {
+		t.Fatalf("expected resourceSelector nameRegex to round-trip, got %q", parsed.Spec.ResourceSelector.NameRegex)
+	}
+
 	if parsed.Spec.TestSelector.NamespaceRegex != "*tests" {
 		t.Fatalf("expected testSelector namespaceRegex to round-trip, got %q", parsed.Spec.TestSelector.NamespaceRegex)
+	}
+
+	if parsed.Spec.TestSelector.NameRegex != "*name" {
+		t.Fatalf("expected testSelector nameRegex to round-trip, got %q", parsed.Spec.TestSelector.NameRegex)
 	}
 }
