@@ -9,7 +9,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func TestExecuteTemplateQuotesNamespaceRegex(t *testing.T) {
+func TestExecuteTemplateQuotesSelectorRegexFields(t *testing.T) {
 	t.Parallel()
 
 	resource := testkube.CONTENT_TestTriggerResources
