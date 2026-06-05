@@ -183,7 +183,7 @@ spec:
       {{- if .ContentSelector.Git.Username }}
       username: {{ printf "%q" .ContentSelector.Git.Username }}
       {{- end }}
-      {{- if .ContentSelector.Git.UsernameFrom }}
+      {{- if and .ContentSelector.Git.UsernameFrom (or .ContentSelector.Git.UsernameFrom.SecretKeyRef .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef .ContentSelector.Git.UsernameFrom.FieldRef .ContentSelector.Git.UsernameFrom.ResourceFieldRef) }}
       usernameFrom:
         {{- if .ContentSelector.Git.UsernameFrom.SecretKeyRef }}
         secretKeyRef:
