@@ -329,13 +329,6 @@ func normalizeEventToJSONMap(e *watcherEvent) (map[string]interface{}, error) {
 	if e.EventLabels != nil {
 		result["eventLabels"] = e.EventLabels
 	}
-	if e.GitMetadata != nil {
-		if normalizedGit, err := normalizeToJSONMap(e.GitMetadata); err == nil {
-			result["gitMetadata"] = normalizedGit
-		} else {
-			result["gitMetadata"] = e.GitMetadata
-		}
-	}
 	return result, nil
 }
 
