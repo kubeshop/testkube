@@ -165,7 +165,7 @@ spec:
       {{- if ne (len .ContentSelector.Git.PathsIgnore) 0 }}
       pathsIgnore:
         {{- range .ContentSelector.Git.PathsIgnore }}
-        - {{.}}
+        - {{ printf "%q" . }}
         {{- end }}
       {{- end }}
       {{- if ne (len .ContentSelector.Git.Tags) 0 }}
