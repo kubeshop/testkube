@@ -217,9 +217,12 @@ spec:
           {{- end }}
         {{- if .ContentSelector.Git.TokenFrom.ConfigMapKeyRef }}
         configMapKeyRef:
+          {{- if .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Name }}
           name: {{ .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Name }}
+          {{- end }}
+          {{- if .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Key }}
           key: {{ .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Key }}
-        {{- end }}
+          {{- end }}
       {{- end }}
       {{- if .ContentSelector.Git.SshKey }}
       sshKey: {{ printf "%q" .ContentSelector.Git.SshKey }}
