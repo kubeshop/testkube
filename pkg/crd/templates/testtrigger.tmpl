@@ -248,7 +248,7 @@ spec:
         {{- if ne (len .ContentSelector.Git.PullRequest.BranchesIgnore) 0 }}
         branchesIgnore:
           {{- range .ContentSelector.Git.PullRequest.BranchesIgnore }}
-          - {{.}}
+          - {{ printf "%q" . }}
           {{- end }}
         {{- end }}
       {{- end }}
