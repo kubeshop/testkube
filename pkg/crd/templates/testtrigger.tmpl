@@ -209,9 +209,12 @@ spec:
       tokenFrom:
         {{- if .ContentSelector.Git.TokenFrom.SecretKeyRef }}
         secretKeyRef:
+          {{- if .ContentSelector.Git.TokenFrom.SecretKeyRef.Name }}
           name: {{ .ContentSelector.Git.TokenFrom.SecretKeyRef.Name }}
+          {{- end }}
+          {{- if .ContentSelector.Git.TokenFrom.SecretKeyRef.Key }}
           key: {{ .ContentSelector.Git.TokenFrom.SecretKeyRef.Key }}
-        {{- end }}
+          {{- end }}
         {{- if .ContentSelector.Git.TokenFrom.ConfigMapKeyRef }}
         configMapKeyRef:
           name: {{ .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Name }}
