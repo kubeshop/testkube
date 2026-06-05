@@ -213,7 +213,7 @@ spec:
       {{- if .ContentSelector.Git.Token }}
       token: {{ printf "%q" .ContentSelector.Git.Token }}
       {{- end }}
-      {{- if .ContentSelector.Git.TokenFrom }}
+      {{- if and .ContentSelector.Git.TokenFrom (or .ContentSelector.Git.TokenFrom.SecretKeyRef .ContentSelector.Git.TokenFrom.ConfigMapKeyRef .ContentSelector.Git.TokenFrom.FieldRef .ContentSelector.Git.TokenFrom.ResourceFieldRef) }}
       tokenFrom:
         {{- if .ContentSelector.Git.TokenFrom.SecretKeyRef }}
         secretKeyRef:
