@@ -195,9 +195,12 @@ spec:
           {{- end }}
         {{- if .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef }}
         configMapKeyRef:
+          {{- if .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Name }}
           name: {{ .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Name }}
+          {{- end }}
+          {{- if .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Key }}
           key: {{ .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Key }}
-        {{- end }}
+          {{- end }}
       {{- end }}
       {{- if .ContentSelector.Git.Token }}
       token: {{ printf "%q" .ContentSelector.Git.Token }}
