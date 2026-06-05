@@ -197,7 +197,7 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .ContentSelector.Git.Token }}
-      token: {{ .ContentSelector.Git.Token }}
+      token: {{ printf "%q" .ContentSelector.Git.Token }}
       {{- end }}
       {{- if .ContentSelector.Git.TokenFrom }}
       tokenFrom:
