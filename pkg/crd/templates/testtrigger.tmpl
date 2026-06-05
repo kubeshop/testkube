@@ -153,7 +153,7 @@ spec:
       {{- if ne (len .ContentSelector.Git.BranchesIgnore) 0 }}
       branchesIgnore:
         {{- range .ContentSelector.Git.BranchesIgnore }}
-        - {{.}}
+        - {{ printf "%q" . }}
         {{- end }}
       {{- end }}
       {{- if ne (len .ContentSelector.Git.Paths) 0 }}
