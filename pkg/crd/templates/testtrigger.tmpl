@@ -187,9 +187,12 @@ spec:
       usernameFrom:
         {{- if .ContentSelector.Git.UsernameFrom.SecretKeyRef }}
         secretKeyRef:
+          {{- if .ContentSelector.Git.UsernameFrom.SecretKeyRef.Name }}
           name: {{ .ContentSelector.Git.UsernameFrom.SecretKeyRef.Name }}
+          {{- end }}
+          {{- if .ContentSelector.Git.UsernameFrom.SecretKeyRef.Key }}
           key: {{ .ContentSelector.Git.UsernameFrom.SecretKeyRef.Key }}
-        {{- end }}
+          {{- end }}
         {{- if .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef }}
         configMapKeyRef:
           name: {{ .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Name }}
