@@ -265,6 +265,9 @@ spec:
           {{- if .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Key }}
           key: {{ .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Key }}
           {{- end }}
+          {{- if .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Optional }}
+          optional: {{ .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Optional }}
+          {{- end }}
         {{- end }}
       {{- end }}
       {{- if .ContentSelector.Git.AuthType }}
