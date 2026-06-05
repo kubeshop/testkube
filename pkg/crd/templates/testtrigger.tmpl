@@ -253,6 +253,9 @@ spec:
           {{- if .ContentSelector.Git.SshKeyFrom.SecretKeyRef.Key }}
           key: {{ .ContentSelector.Git.SshKeyFrom.SecretKeyRef.Key }}
           {{- end }}
+          {{- if .ContentSelector.Git.SshKeyFrom.SecretKeyRef.Optional }}
+          optional: {{ .ContentSelector.Git.SshKeyFrom.SecretKeyRef.Optional }}
+          {{- end }}
         {{- end }}
         {{- if .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef }}
         configMapKeyRef:
