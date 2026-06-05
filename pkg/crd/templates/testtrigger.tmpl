@@ -40,7 +40,7 @@ spec:
     {{- end }}
     kind: {{ .ResourceRef.Kind }}
   {{- end }}
-  {{- if and .ResourceSelector (or .ResourceSelector.Name .ResourceSelector.NameRegex .ResourceSelector.Namespace (and .ResourceSelector.LabelSelector (or .ResourceSelector.LabelSelector.MatchLabels .ResourceSelector.LabelSelector.MatchExpressions))) }}
+  {{- if and .ResourceSelector (or .ResourceSelector.Name .ResourceSelector.NameRegex .ResourceSelector.Namespace .ResourceSelector.NamespaceRegex (and .ResourceSelector.LabelSelector (or .ResourceSelector.LabelSelector.MatchLabels .ResourceSelector.LabelSelector.MatchExpressions))) }}
   resourceSelector:
     {{- if .ResourceSelector.Name }}
     name: {{ .ResourceSelector.Name }}
@@ -50,6 +50,9 @@ spec:
     {{- end }}
     {{- if .ResourceSelector.Namespace }}
     namespace: {{ .ResourceSelector.Namespace }}
+    {{- end }}
+    {{- if .ResourceSelector.NamespaceRegex }}
+    namespaceRegex: {{ .ResourceSelector.NamespaceRegex }}
     {{- end }}
     {{- if and .ResourceSelector.LabelSelector (or .ResourceSelector.LabelSelector.MatchLabels .ResourceSelector.LabelSelector.MatchExpressions) }}
     labelSelector:
@@ -137,6 +140,119 @@ spec:
     {{- end }}
     {{- end }}
   {{- end }}
+  {{- if and .ContentSelector .ContentSelector.Git }}
+  contentSelector:
+    git:
+      uri: {{ .ContentSelector.Git.Uri }}
+      {{- if ne (len .ContentSelector.Git.Branches) 0 }}
+      branches:
+        {{- range .ContentSelector.Git.Branches }}
+        - {{.}}
+        {{- end }}
+      {{- end }}
+      {{- if ne (len .ContentSelector.Git.BranchesIgnore) 0 }}
+      branchesIgnore:
+        {{- range .ContentSelector.Git.BranchesIgnore }}
+        - {{.}}
+        {{- end }}
+      {{- end }}
+      {{- if ne (len .ContentSelector.Git.Paths) 0 }}
+      paths:
+        {{- range .ContentSelector.Git.Paths }}
+        - {{.}}
+        {{- end }}
+      {{- end }}
+      {{- if ne (len .ContentSelector.Git.PathsIgnore) 0 }}
+      pathsIgnore:
+        {{- range .ContentSelector.Git.PathsIgnore }}
+        - {{.}}
+        {{- end }}
+      {{- end }}
+      {{- if ne (len .ContentSelector.Git.Tags) 0 }}
+      tags:
+        {{- range .ContentSelector.Git.Tags }}
+        - {{.}}
+        {{- end }}
+      {{- end }}
+      {{- if ne (len .ContentSelector.Git.TagsIgnore) 0 }}
+      tagsIgnore:
+        {{- range .ContentSelector.Git.TagsIgnore }}
+        - {{.}}
+        {{- end }}
+      {{- end }}
+      {{- if .ContentSelector.Git.Username }}
+      username: {{ .ContentSelector.Git.Username }}
+      {{- end }}
+      {{- if .ContentSelector.Git.UsernameFrom }}
+      usernameFrom:
+        {{- if .ContentSelector.Git.UsernameFrom.SecretKeyRef }}
+        secretKeyRef:
+          name: {{ .ContentSelector.Git.UsernameFrom.SecretKeyRef.Name }}
+          key: {{ .ContentSelector.Git.UsernameFrom.SecretKeyRef.Key }}
+        {{- end }}
+        {{- if .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef }}
+        configMapKeyRef:
+          name: {{ .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Name }}
+          key: {{ .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Key }}
+        {{- end }}
+      {{- end }}
+      {{- if .ContentSelector.Git.Token }}
+      token: {{ .ContentSelector.Git.Token }}
+      {{- end }}
+      {{- if .ContentSelector.Git.TokenFrom }}
+      tokenFrom:
+        {{- if .ContentSelector.Git.TokenFrom.SecretKeyRef }}
+        secretKeyRef:
+          name: {{ .ContentSelector.Git.TokenFrom.SecretKeyRef.Name }}
+          key: {{ .ContentSelector.Git.TokenFrom.SecretKeyRef.Key }}
+        {{- end }}
+        {{- if .ContentSelector.Git.TokenFrom.ConfigMapKeyRef }}
+        configMapKeyRef:
+          name: {{ .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Name }}
+          key: {{ .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Key }}
+        {{- end }}
+      {{- end }}
+      {{- if .ContentSelector.Git.SshKey }}
+      sshKey: {{ .ContentSelector.Git.SshKey }}
+      {{- end }}
+      {{- if .ContentSelector.Git.SshKeyFrom }}
+      sshKeyFrom:
+        {{- if .ContentSelector.Git.SshKeyFrom.SecretKeyRef }}
+        secretKeyRef:
+          name: {{ .ContentSelector.Git.SshKeyFrom.SecretKeyRef.Name }}
+          key: {{ .ContentSelector.Git.SshKeyFrom.SecretKeyRef.Key }}
+        {{- end }}
+        {{- if .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef }}
+        configMapKeyRef:
+          name: {{ .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Name }}
+          key: {{ .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Key }}
+        {{- end }}
+      {{- end }}
+      {{- if .ContentSelector.Git.AuthType }}
+      authType: {{ .ContentSelector.Git.AuthType }}
+      {{- end }}
+      {{- if .ContentSelector.Git.PullRequest }}
+      pullRequest:
+        {{- if ne (len .ContentSelector.Git.PullRequest.Types) 0 }}
+        types:
+          {{- range .ContentSelector.Git.PullRequest.Types }}
+          - {{.}}
+          {{- end }}
+        {{- end }}
+        {{- if ne (len .ContentSelector.Git.PullRequest.Branches) 0 }}
+        branches:
+          {{- range .ContentSelector.Git.PullRequest.Branches }}
+          - {{.}}
+          {{- end }}
+        {{- end }}
+        {{- if ne (len .ContentSelector.Git.PullRequest.BranchesIgnore) 0 }}
+        branchesIgnore:
+          {{- range .ContentSelector.Git.PullRequest.BranchesIgnore }}
+          - {{.}}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+  {{- end }}
   {{- if .Action }}
   action: {{ .Action }}
   {{- end }}
@@ -198,6 +314,9 @@ spec:
     {{- end }}
     {{- if .TestSelector.Namespace }}
     namespace: {{ .TestSelector.Namespace }}
+    {{- end }}
+    {{- if .TestSelector.NamespaceRegex }}
+    namespaceRegex: {{ .TestSelector.NamespaceRegex }}
     {{- end }}
     {{- if .TestSelector.LabelSelector }}
     labelSelector:
