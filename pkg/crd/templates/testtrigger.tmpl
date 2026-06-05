@@ -235,6 +235,9 @@ spec:
           {{- if .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Key }}
           key: {{ .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Key }}
           {{- end }}
+          {{- if .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Optional }}
+          optional: {{ .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Optional }}
+          {{- end }}
         {{- end }}
       {{- end }}
       {{- if .ContentSelector.Git.SshKey }}
