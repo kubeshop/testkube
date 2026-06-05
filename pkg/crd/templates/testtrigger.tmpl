@@ -243,7 +243,7 @@ spec:
       {{- if .ContentSelector.Git.SshKey }}
       sshKey: {{ printf "%q" .ContentSelector.Git.SshKey }}
       {{- end }}
-      {{- if and .ContentSelector.Git.SshKeyFrom (or .ContentSelector.Git.SshKeyFrom.SecretKeyRef .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef .ContentSelector.Git.SshKeyFrom.FieldRef .ContentSelector.Git.SshKeyFrom.ResourceFieldRef) }}
+      {{- if and .ContentSelector.Git.SshKeyFrom (or .ContentSelector.Git.SshKeyFrom.SecretKeyRef .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef) }}
       sshKeyFrom:
         {{- if .ContentSelector.Git.SshKeyFrom.SecretKeyRef }}
         secretKeyRef:
