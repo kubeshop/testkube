@@ -20,8 +20,34 @@ func NewDisableTelemetryCmd() *cobra.Command {
 
 			cfg, err := config.Load()
 			// Remember whether telemetry was actually on, so we only record a
-			// genuine on->off transition once we know the opt-out persisted.
+			// genuine on->off transition - and only while it is still enabled.
 			wasEnabled := err == nil && cfg.TelemetryEnabled
+
+			client, _, clientErr := common.GetClient(cmd)
+			ui.WarnOnError("getting client", clientErr)
+
+			apiDisabled := false
+			if clientErr == nil {
+				if _, apiErr := client.UpdateConfig(testkube.Config{EnableTelemetry: false}); apiErr != nil {
+					ui.PrintDisabled("Telemetry on API", "failed")
+					ui.PrintConfigError(apiErr)
+				} else {
+					ui.PrintDisabled("Telemetry on API", "disabled")
+					apiDisabled = true
+				}
+			}
+
+			// Emit the final opt-out event while telemetry is still enabled
+			// locally, but only once the API opt-out has persisted. If the API
+			// update failed, the root post-run sync would re-enable the CLI
+			// config, so sending here would record a false opt-out.
+			if wasEnabled && apiDisabled {
+				if _, sendErr := telemetry.SendTelemetryOptOutEvent(cmd, common.Version); sendErr != nil {
+					ui.Debug("sending telemetry opt-out event failed", sendErr.Error())
+				}
+			}
+
+			// Persist the local opt-out last, after the final event has been sent.
 			if err == nil {
 				cfg.DisableAnalytics()
 				err = config.Save(cfg)
@@ -31,29 +57,6 @@ func NewDisableTelemetryCmd() *cobra.Command {
 				ui.PrintConfigError(err)
 			} else {
 				ui.PrintDisabled("Telemetry on CLI", "disabled")
-			}
-
-			client, _, err := common.GetClient(cmd)
-			ui.WarnOnError("getting client", err)
-			if err != nil {
-				return
-			}
-
-			_, err = client.UpdateConfig(testkube.Config{EnableTelemetry: false})
-			if err != nil {
-				ui.PrintDisabled("Telemetry on API", "failed")
-				ui.PrintConfigError(err)
-			} else {
-				ui.PrintDisabled("Telemetry on API", "disabled")
-				// Only record the opt-out now that it has persisted on both the
-				// CLI and the API. If the API update had failed, the root
-				// post-run sync would re-enable the CLI config, leaving the user
-				// opted in - so sending earlier would produce a false opt-out.
-				if wasEnabled {
-					if _, sendErr := telemetry.SendTelemetryOptOutEvent(cmd, common.Version); sendErr != nil {
-						ui.Debug("sending telemetry opt-out event failed", sendErr.Error())
-					}
-				}
 			}
 
 			ui.NL()
