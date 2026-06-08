@@ -6,6 +6,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -19,6 +20,13 @@ func NewDisableTelemetryCmd() *cobra.Command {
 
 			cfg, err := config.Load()
 			if err == nil {
+				// Send a final opt-out event while telemetry is still enabled.
+				// Once the opt-out is persisted, no further events may be sent.
+				if cfg.TelemetryEnabled {
+					if _, sendErr := telemetry.SendTelemetryOptOutEvent(cmd, common.Version); sendErr != nil {
+						ui.Debug("sending telemetry opt-out event failed", sendErr.Error())
+					}
+				}
 				cfg.DisableAnalytics()
 				err = config.Save(cfg)
 			}
