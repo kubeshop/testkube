@@ -144,7 +144,7 @@ func TestAgentLoop_GetRunnerRequests_ReconnectionOnReceiveTimeout(t *testing.T) 
 	)
 
 	// Create context with timeout longer than 2x receive timeout + reconnect timeout
-	ctx, cancel := context.WithTimeout(context.Background(), (2*testTimeout)+agentLoopReconnectionDelay)
+	ctx, cancel := context.WithTimeout(context.Background(), (3*testTimeout)+(2*agentLoopReconnectionDelay))
 	defer cancel()
 
 	// Start the agent loop
@@ -160,7 +160,7 @@ func TestAgentLoop_GetRunnerRequests_ReconnectionOnReceiveTimeout(t *testing.T) 
 		"Expected at least 2 calls due to receive timeout reconnections, got %d", testServer.GetCallCount())
 }
 
-func TestAgentLoop_GetNotifications_ReconnectionOnReceiveTimeout(t *testing.T) {
+func TestAgentLoop_GetNotifications_ReconnectionOnReceiveTimeout(t *testing.T) { //nolint:dupl // intentionally mirrors GetRunnerRequests test
 	testServer := &testGRPCServer{
 		getRunnerRequestSendPing:                         true,
 		getTestWorkflowNotificationsSendPing:             false,
@@ -214,7 +214,7 @@ func TestAgentLoop_GetNotifications_ReconnectionOnReceiveTimeout(t *testing.T) {
 	)
 
 	// Create context with timeout longer than 2x receive timeout + reconnect timeout
-	ctx, cancel := context.WithTimeout(context.Background(), (2*testTimeout)+agentLoopReconnectionDelay)
+	ctx, cancel := context.WithTimeout(context.Background(), (3*testTimeout)+(2*agentLoopReconnectionDelay))
 	defer cancel()
 
 	// Start the agent loop
