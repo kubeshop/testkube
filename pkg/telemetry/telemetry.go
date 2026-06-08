@@ -121,6 +121,14 @@ func SendCmdInitEvent(cmd *cobra.Command, version string) (string, error) {
 	return sendData(senders, payload)
 }
 
+// SendTelemetryOptOutEvent records that the user disabled telemetry. It must be
+// called while telemetry is still enabled (before the opt-out is persisted), as
+// no further events may be sent once the user has opted out.
+func SendTelemetryOptOutEvent(cmd *cobra.Command, version string) (string, error) {
+	payload := NewCLIPayload(getCurrentContext(), getUserID(cmd), "telemetry_opt_out", version, "cli_command_execution", GetClusterType())
+	return sendData(senders, payload)
+}
+
 // SendPreviewEvent sends a preview-specific telemetry event with execution context
 func SendPreviewEvent(cmd *cobra.Command, version, executionID string, artifactCount int32, skipArtifacts bool, previewErr string) (string, error) {
 	machineID := GetMachineID()
