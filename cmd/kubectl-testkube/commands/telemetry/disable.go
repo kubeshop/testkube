@@ -19,14 +19,10 @@ func NewDisableTelemetryCmd() *cobra.Command {
 			ui.Print(ui.IconRocket + "  Disabling telemetry on the testkube CLI")
 
 			cfg, err := config.Load()
+			// Remember whether telemetry was actually on, so we only record a
+			// genuine on->off transition once we know the opt-out persisted.
+			wasEnabled := err == nil && cfg.TelemetryEnabled
 			if err == nil {
-				// Send a final opt-out event while telemetry is still enabled.
-				// Once the opt-out is persisted, no further events may be sent.
-				if cfg.TelemetryEnabled {
-					if _, sendErr := telemetry.SendTelemetryOptOutEvent(cmd, common.Version); sendErr != nil {
-						ui.Debug("sending telemetry opt-out event failed", sendErr.Error())
-					}
-				}
 				cfg.DisableAnalytics()
 				err = config.Save(cfg)
 			}
@@ -49,6 +45,15 @@ func NewDisableTelemetryCmd() *cobra.Command {
 				ui.PrintConfigError(err)
 			} else {
 				ui.PrintDisabled("Telemetry on API", "disabled")
+				// Only record the opt-out now that it has persisted on both the
+				// CLI and the API. If the API update had failed, the root
+				// post-run sync would re-enable the CLI config, leaving the user
+				// opted in - so sending earlier would produce a false opt-out.
+				if wasEnabled {
+					if _, sendErr := telemetry.SendTelemetryOptOutEvent(cmd, common.Version); sendErr != nil {
+						ui.Debug("sending telemetry opt-out event failed", sendErr.Error())
+					}
+				}
 			}
 
 			ui.NL()
