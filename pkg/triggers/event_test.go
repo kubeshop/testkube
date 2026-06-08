@@ -8,6 +8,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -104,4 +105,53 @@ func TestNewWatcherEventSanitizesEventLabels(t *testing.T) {
 	assert.Equal(t, longLabel[:validation.LabelValueMaxLength], customLabel)
 	assert.Empty(t, validation.IsValidLabelValue(customLabel))
 	assert.LessOrEqual(t, len(customLabel), validation.LabelValueMaxLength)
+}
+
+func TestNewWatcherEventUnstructuredCRD(t *testing.T) {
+	s := runtime.NewScheme()
+	metav1.AddToGroupVersion(s, schema.GroupVersion{Version: "v1"})
+	k8sscheme.AddToScheme(s)
+
+	service := &Service{
+		agentName:         "testkube-agent",
+		testkubeNamespace: "testkube-ns",
+		informers:         &k8sInformers{scheme: s},
+		logger:            log.DefaultLogger,
+	}
+
+	rollout := &unstructured.Unstructured{}
+	rollout.SetName("my-rollout")
+	rollout.SetNamespace("my-ns")
+	rollout.SetLabels(map[string]string{"app": "my-rollout"})
+	rollout.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "argoproj.io",
+		Version: "v1alpha1",
+		Kind:    "Rollout",
+	})
+
+	// Simulate exactly what dynamic_informer.go does:
+	//   objectMeta = rollout (*unstructured.Unstructured)
+	//   object     = rollout.Object (map[string]interface{}, not a runtime.Object)
+	event := service.newWatcherEvent("modified", rollout, rollout.Object, "rollout")
+
+	assert.Equal(t, "Rollout", event.EventLabels[eventLabelKeyResourceKind],
+		"resource-kind label must be set for CRD objects via the unstructured fallback")
+	assert.Equal(t, "argoproj.io", event.EventLabels[eventLabelKeyResourceGroup])
+	assert.Equal(t, "v1alpha1", event.EventLabels[eventLabelKeyResourceVersion])
+	assert.Equal(t, "my-rollout", event.EventLabels[eventLabelKeyResourceName])
+	assert.Equal(t, "my-ns", event.EventLabels[eventLabelKeyResourceNamespace])
+
+	// A global eventLabel configured by the operator must not shadow the real CRD kind.
+	// maps.Copy(w.EventLabels, s.eventLabels) runs before the fallback, so a stale
+	// global testkube.io/resource-kind must be unconditionally overwritten.
+	serviceWithStaleGlobal := &Service{
+		agentName:         "testkube-agent",
+		testkubeNamespace: "testkube-ns",
+		informers:         &k8sInformers{scheme: s},
+		logger:            log.DefaultLogger,
+		eventLabels:       map[string]string{eventLabelKeyResourceKind: "StalePod"},
+	}
+	event2 := serviceWithStaleGlobal.newWatcherEvent("modified", rollout, rollout.Object, "rollout")
+	assert.Equal(t, "Rollout", event2.EventLabels[eventLabelKeyResourceKind],
+		"stale global resource-kind label must be overwritten by the unstructured fallback")
 }
