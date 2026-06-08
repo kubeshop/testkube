@@ -71,6 +71,24 @@ tests:
             name: TESTKUBE_TW_INIT_IMAGE
           any: true
 
+  - it: sets TESTKUBE_REGISTRY from global.imageRegistry when provided
+    set:
+      global.imageRegistry: 123.dkr.ecr.eu-west-1.amazonaws.com
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TESTKUBE_REGISTRY
+            value: 123.dkr.ecr.eu-west-1.amazonaws.com
+
+  - it: renders TESTKUBE_REGISTRY with an empty value by default
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TESTKUBE_REGISTRY
+            value: ""
+
   - it: passes runner credentials as direct env vars when set inline
     set:
       runner.id: agent-123
