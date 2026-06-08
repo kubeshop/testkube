@@ -174,18 +174,16 @@ func (s *Service) newWatcherEvent(
 		}
 	}
 
-	// Fallback for CRD objects from the dynamic informer: dynamic_informer.go passes
+	// For CRD objects from the dynamic informer: dynamic_informer.go passes
 	// newU.Object (map[string]interface{}) as `object`, which doesn't implement runtime.Object,
-	// so scheme.ObjectKinds() is never called and the resource-kind label stays empty.
-	// Use objectMeta (*unstructured.Unstructured) as the fallback GVK source so that
-	// selector.matchLabels works for CRDs the same as for builtin types.
-	if w.EventLabels[eventLabelKeyResourceKind] == "" {
-		if u, ok := objectMeta.(*unstructured.Unstructured); ok && u.GetKind() != "" {
-			w.EventLabels[eventLabelKeyResourceKind] = u.GetKind()
-			gv, _ := schema.ParseGroupVersion(u.GetAPIVersion())
-			w.EventLabels[eventLabelKeyResourceGroup] = gv.Group
-			w.EventLabels[eventLabelKeyResourceVersion] = gv.Version
-		}
+	// so scheme.ObjectKinds() is never called. Use objectMeta (*unstructured.Unstructured) as
+	// the authoritative GVK source — unconditionally, to match scheme.ObjectKinds() behaviour
+	// and avoid a stale global eventLabel overriding the real kind.
+	if u, ok := objectMeta.(*unstructured.Unstructured); ok && u.GetKind() != "" {
+		w.EventLabels[eventLabelKeyResourceKind] = u.GetKind()
+		gv, _ := schema.ParseGroupVersion(u.GetAPIVersion())
+		w.EventLabels[eventLabelKeyResourceGroup] = gv.Group
+		w.EventLabels[eventLabelKeyResourceVersion] = gv.Version
 	}
 
 	for _, opt := range opts {

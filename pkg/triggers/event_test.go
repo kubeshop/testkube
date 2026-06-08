@@ -140,4 +140,18 @@ func TestNewWatcherEventUnstructuredCRD(t *testing.T) {
 	assert.Equal(t, "v1alpha1", event.EventLabels[eventLabelKeyResourceVersion])
 	assert.Equal(t, "my-rollout", event.EventLabels[eventLabelKeyResourceName])
 	assert.Equal(t, "my-ns", event.EventLabels[eventLabelKeyResourceNamespace])
+
+	// A global eventLabel configured by the operator must not shadow the real CRD kind.
+	// maps.Copy(w.EventLabels, s.eventLabels) runs before the fallback, so a stale
+	// global testkube.io/resource-kind must be unconditionally overwritten.
+	serviceWithStaleGlobal := &Service{
+		agentName:         "testkube-agent",
+		testkubeNamespace: "testkube-ns",
+		informers:         &k8sInformers{scheme: s},
+		logger:            log.DefaultLogger,
+		eventLabels:       map[string]string{eventLabelKeyResourceKind: "StalePod"},
+	}
+	event2 := serviceWithStaleGlobal.newWatcherEvent("modified", rollout, rollout.Object, "rollout")
+	assert.Equal(t, "Rollout", event2.EventLabels[eventLabelKeyResourceKind],
+		"stale global resource-kind label must be overwritten by the unstructured fallback")
 }
