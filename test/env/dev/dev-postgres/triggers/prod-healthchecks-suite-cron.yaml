@@ -1,0 +1,21 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: prod-healthchecks-workflow-suite-cron-trigger
+  labels:
+    core-tests: workflows-suite-trigger
+    type: suite-trigger
+    tool: healthcheck
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+  - execute:
+      workflows:
+      - name: prod-healthchecks-workflow-suite
+  events:
+  - cronjob:
+      cron: "*/15 * * * *" # every 15 minutes
