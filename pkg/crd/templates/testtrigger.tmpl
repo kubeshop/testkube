@@ -40,16 +40,19 @@ spec:
     {{- end }}
     kind: {{ .ResourceRef.Kind }}
   {{- end }}
-  {{- if and .ResourceSelector (or .ResourceSelector.Name .ResourceSelector.NameRegex .ResourceSelector.Namespace (and .ResourceSelector.LabelSelector (or .ResourceSelector.LabelSelector.MatchLabels .ResourceSelector.LabelSelector.MatchExpressions))) }}
+  {{- if and .ResourceSelector (or .ResourceSelector.Name .ResourceSelector.NameRegex .ResourceSelector.Namespace .ResourceSelector.NamespaceRegex (and .ResourceSelector.LabelSelector (or .ResourceSelector.LabelSelector.MatchLabels .ResourceSelector.LabelSelector.MatchExpressions))) }}
   resourceSelector:
     {{- if .ResourceSelector.Name }}
     name: {{ .ResourceSelector.Name }}
     {{- end }}
     {{- if .ResourceSelector.NameRegex }}
-    nameRegex: {{ .ResourceSelector.NameRegex }}
+    nameRegex: {{ printf "%q" .ResourceSelector.NameRegex }}
     {{- end }}
     {{- if .ResourceSelector.Namespace }}
     namespace: {{ .ResourceSelector.Namespace }}
+    {{- end }}
+    {{- if .ResourceSelector.NamespaceRegex }}
+    namespaceRegex: {{ printf "%q" .ResourceSelector.NamespaceRegex }}
     {{- end }}
     {{- if and .ResourceSelector.LabelSelector (or .ResourceSelector.LabelSelector.MatchLabels .ResourceSelector.LabelSelector.MatchExpressions) }}
     labelSelector:
@@ -137,6 +140,161 @@ spec:
     {{- end }}
     {{- end }}
   {{- end }}
+  {{- if and .ContentSelector .ContentSelector.Git }}
+  contentSelector:
+    git:
+      uri: {{ printf "%q" .ContentSelector.Git.Uri }}
+      {{- if ne (len .ContentSelector.Git.Branches) 0 }}
+      branches:
+        {{- range .ContentSelector.Git.Branches }}
+        - {{ printf "%q" . }}
+        {{- end }}
+      {{- end }}
+      {{- if ne (len .ContentSelector.Git.BranchesIgnore) 0 }}
+      branchesIgnore:
+        {{- range .ContentSelector.Git.BranchesIgnore }}
+        - {{ printf "%q" . }}
+        {{- end }}
+      {{- end }}
+      {{- if ne (len .ContentSelector.Git.Paths) 0 }}
+      paths:
+        {{- range .ContentSelector.Git.Paths }}
+        - {{ printf "%q" . }}
+        {{- end }}
+      {{- end }}
+      {{- if ne (len .ContentSelector.Git.PathsIgnore) 0 }}
+      pathsIgnore:
+        {{- range .ContentSelector.Git.PathsIgnore }}
+        - {{ printf "%q" . }}
+        {{- end }}
+      {{- end }}
+      {{- if ne (len .ContentSelector.Git.Tags) 0 }}
+      tags:
+        {{- range .ContentSelector.Git.Tags }}
+        - {{ printf "%q" . }}
+        {{- end }}
+      {{- end }}
+      {{- if ne (len .ContentSelector.Git.TagsIgnore) 0 }}
+      tagsIgnore:
+        {{- range .ContentSelector.Git.TagsIgnore }}
+        - {{ printf "%q" . }}
+        {{- end }}
+      {{- end }}
+      {{- if .ContentSelector.Git.Username }}
+      username: {{ printf "%q" .ContentSelector.Git.Username }}
+      {{- end }}
+      {{- if and .ContentSelector.Git.UsernameFrom (or .ContentSelector.Git.UsernameFrom.SecretKeyRef .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef) }}
+      usernameFrom:
+        {{- if .ContentSelector.Git.UsernameFrom.SecretKeyRef }}
+        secretKeyRef:
+          {{- if .ContentSelector.Git.UsernameFrom.SecretKeyRef.Name }}
+          name: {{ .ContentSelector.Git.UsernameFrom.SecretKeyRef.Name }}
+          {{- end }}
+          {{- if .ContentSelector.Git.UsernameFrom.SecretKeyRef.Key }}
+          key: {{ .ContentSelector.Git.UsernameFrom.SecretKeyRef.Key }}
+          {{- end }}
+          {{- if .ContentSelector.Git.UsernameFrom.SecretKeyRef.Optional }}
+          optional: {{ .ContentSelector.Git.UsernameFrom.SecretKeyRef.Optional }}
+          {{- end }}
+        {{- end }}
+        {{- if .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef }}
+        configMapKeyRef:
+          {{- if .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Name }}
+          name: {{ .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Name }}
+          {{- end }}
+          {{- if .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Key }}
+          key: {{ .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Key }}
+          {{- end }}
+          {{- if .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Optional }}
+          optional: {{ .ContentSelector.Git.UsernameFrom.ConfigMapKeyRef.Optional }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+      {{- if .ContentSelector.Git.Token }}
+      token: {{ printf "%q" .ContentSelector.Git.Token }}
+      {{- end }}
+      {{- if and .ContentSelector.Git.TokenFrom (or .ContentSelector.Git.TokenFrom.SecretKeyRef .ContentSelector.Git.TokenFrom.ConfigMapKeyRef) }}
+      tokenFrom:
+        {{- if .ContentSelector.Git.TokenFrom.SecretKeyRef }}
+        secretKeyRef:
+          {{- if .ContentSelector.Git.TokenFrom.SecretKeyRef.Name }}
+          name: {{ .ContentSelector.Git.TokenFrom.SecretKeyRef.Name }}
+          {{- end }}
+          {{- if .ContentSelector.Git.TokenFrom.SecretKeyRef.Key }}
+          key: {{ .ContentSelector.Git.TokenFrom.SecretKeyRef.Key }}
+          {{- end }}
+          {{- if .ContentSelector.Git.TokenFrom.SecretKeyRef.Optional }}
+          optional: {{ .ContentSelector.Git.TokenFrom.SecretKeyRef.Optional }}
+          {{- end }}
+        {{- end }}
+        {{- if .ContentSelector.Git.TokenFrom.ConfigMapKeyRef }}
+        configMapKeyRef:
+          {{- if .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Name }}
+          name: {{ .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Name }}
+          {{- end }}
+          {{- if .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Key }}
+          key: {{ .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Key }}
+          {{- end }}
+          {{- if .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Optional }}
+          optional: {{ .ContentSelector.Git.TokenFrom.ConfigMapKeyRef.Optional }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+      {{- if .ContentSelector.Git.SshKey }}
+      sshKey: {{ printf "%q" .ContentSelector.Git.SshKey }}
+      {{- end }}
+      {{- if and .ContentSelector.Git.SshKeyFrom (or .ContentSelector.Git.SshKeyFrom.SecretKeyRef .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef) }}
+      sshKeyFrom:
+        {{- if .ContentSelector.Git.SshKeyFrom.SecretKeyRef }}
+        secretKeyRef:
+          {{- if .ContentSelector.Git.SshKeyFrom.SecretKeyRef.Name }}
+          name: {{ .ContentSelector.Git.SshKeyFrom.SecretKeyRef.Name }}
+          {{- end }}
+          {{- if .ContentSelector.Git.SshKeyFrom.SecretKeyRef.Key }}
+          key: {{ .ContentSelector.Git.SshKeyFrom.SecretKeyRef.Key }}
+          {{- end }}
+          {{- if .ContentSelector.Git.SshKeyFrom.SecretKeyRef.Optional }}
+          optional: {{ .ContentSelector.Git.SshKeyFrom.SecretKeyRef.Optional }}
+          {{- end }}
+        {{- end }}
+        {{- if .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef }}
+        configMapKeyRef:
+          {{- if .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Name }}
+          name: {{ .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Name }}
+          {{- end }}
+          {{- if .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Key }}
+          key: {{ .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Key }}
+          {{- end }}
+          {{- if .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Optional }}
+          optional: {{ .ContentSelector.Git.SshKeyFrom.ConfigMapKeyRef.Optional }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+      {{- if .ContentSelector.Git.AuthType }}
+      authType: {{ .ContentSelector.Git.AuthType }}
+      {{- end }}
+      {{- if .ContentSelector.Git.PullRequest }}
+      pullRequest:
+        {{- if ne (len .ContentSelector.Git.PullRequest.Types) 0 }}
+        types:
+          {{- range .ContentSelector.Git.PullRequest.Types }}
+          - {{ printf "%q" . }}
+          {{- end }}
+        {{- end }}
+        {{- if ne (len .ContentSelector.Git.PullRequest.Branches) 0 }}
+        branches:
+          {{- range .ContentSelector.Git.PullRequest.Branches }}
+          - {{ printf "%q" . }}
+          {{- end }}
+        {{- end }}
+        {{- if ne (len .ContentSelector.Git.PullRequest.BranchesIgnore) 0 }}
+        branchesIgnore:
+          {{- range .ContentSelector.Git.PullRequest.BranchesIgnore }}
+          - {{ printf "%q" . }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+  {{- end }}
   {{- if .Action }}
   action: {{ .Action }}
   {{- end }}
@@ -194,10 +352,13 @@ spec:
     name: {{ .TestSelector.Name }}
     {{- end }}
     {{- if .TestSelector.NameRegex }}
-    nameRegex: {{ .TestSelector.NameRegex }}
+    nameRegex: {{ printf "%q" .TestSelector.NameRegex }}
     {{- end }}
     {{- if .TestSelector.Namespace }}
     namespace: {{ .TestSelector.Namespace }}
+    {{- end }}
+    {{- if .TestSelector.NamespaceRegex }}
+    namespaceRegex: {{ printf "%q" .TestSelector.NamespaceRegex }}
     {{- end }}
     {{- if .TestSelector.LabelSelector }}
     labelSelector:
