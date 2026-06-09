@@ -10,7 +10,9 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes"
 
@@ -170,6 +172,18 @@ func (s *Service) newWatcherEvent(
 			w.EventLabels[eventLabelKeyResourceGroup] = gvk.Group
 			w.EventLabels[eventLabelKeyResourceVersion] = gvk.Version
 		}
+	}
+
+	// For CRD objects from the dynamic informer: dynamic_informer.go passes
+	// newU.Object (map[string]interface{}) as `object`, which doesn't implement runtime.Object,
+	// so scheme.ObjectKinds() is never called. Use objectMeta (*unstructured.Unstructured) as
+	// the authoritative GVK source unconditionally, to match scheme.ObjectKinds() behaviour
+	// and avoid a stale global eventLabel overriding the real kind.
+	if u, ok := objectMeta.(*unstructured.Unstructured); ok && u.GetKind() != "" {
+		w.EventLabels[eventLabelKeyResourceKind] = u.GetKind()
+		gv, _ := schema.ParseGroupVersion(u.GetAPIVersion())
+		w.EventLabels[eventLabelKeyResourceGroup] = gv.Group
+		w.EventLabels[eventLabelKeyResourceVersion] = gv.Version
 	}
 
 	for _, opt := range opts {
