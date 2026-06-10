@@ -672,6 +672,49 @@ func TestRestoreCommitBaseline(t *testing.T) {
 	assert.False(t, exists)
 }
 
+// initLocalRemoteWithCommit creates a bare repository with a single commit
+// pushed to main, so informer tests can list and fetch refs without touching
+// the network.
+func initLocalRemoteWithCommit(t *testing.T) string {
+	t.Helper()
+	tmpDir := t.TempDir()
+	remoteDir := filepath.Join(tmpDir, "remote.git")
+	_, err := git.PlainInit(remoteDir, true)
+	require.NoError(t, err)
+
+	workDir := filepath.Join(tmpDir, "work")
+	workRepo, err := git.PlainInit(workDir, false)
+	require.NoError(t, err)
+	_, err = workRepo.CreateRemote(&config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{remoteDir},
+	})
+	require.NoError(t, err)
+	require.NoError(t, workRepo.Storer.SetReference(
+		plumbing.NewSymbolicReference(plumbing.HEAD, plumbing.NewBranchReferenceName("main")),
+	))
+	worktree, err := workRepo.Worktree()
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "README.md"), []byte("initial\n"), 0o644))
+	_, err = worktree.Add("README.md")
+	require.NoError(t, err)
+	_, err = worktree.Commit("initial", &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "test",
+			Email: "test@example.com",
+			When:  time.Now(),
+		},
+	})
+	require.NoError(t, err)
+	require.NoError(t, workRepo.Push(&git.PushOptions{
+		RemoteName: "origin",
+		RefSpecs: []config.RefSpec{
+			config.RefSpec("refs/heads/main:refs/heads/main"),
+		},
+	}))
+	return remoteDir
+}
+
 func TestUpdateRepositories_RestoresBaselineWhenMatchFails(t *testing.T) {
 	resource := testkube.CONTENT_TestTriggerResources
 	trigger := testkube.TestTrigger{
@@ -681,7 +724,7 @@ func TestUpdateRepositories_RestoresBaselineWhenMatchFails(t *testing.T) {
 		Resource:  &resource,
 		ContentSelector: &testkube.TestTriggerContentSelector{
 			Git: &testkube.TestTriggerContentGit{
-				Uri:      "https://github.com/kubeshop/testkube.git",
+				Uri:      initLocalRemoteWithCommit(t),
 				Branches: []string{"main"},
 			},
 		},
@@ -705,8 +748,8 @@ func TestUpdateRepositories_RestoresBaselineWhenMatchFails(t *testing.T) {
 	)
 	informer.commits[key] = "old-head"
 
-	// updateRepositories will try to contact remote, fail, and not call matcher.
-	// Baseline should remain unchanged since the remote call fails before matching.
+	// The remote lists a new HEAD, the matcher fails, and the baseline must be
+	// restored so the commit is retried on the next reconcile.
 	informer.updateRepositories(context.Background())
 
 	assert.Equal(t, "old-head", informer.commits[key])
@@ -761,7 +804,7 @@ func TestUpdateRepositories_ContinuesWhenNamespaceListFails(t *testing.T) {
 		Resource:  &resource,
 		ContentSelector: &testkube.TestTriggerContentSelector{
 			Git: &testkube.TestTriggerContentGit{
-				Uri:      "https://github.com/kubeshop/testkube.git",
+				Uri:      initLocalRemoteWithCommit(t),
 				Branches: []string{"main"},
 			},
 		},
@@ -868,25 +911,16 @@ func TestUpdateRepositories_MatchesTestTriggerWithGitPaths(t *testing.T) {
 	pushMain()
 
 	key := triggerKey(testTriggerSource, "testkube", "trigger-a")
-	repoDir := triggerRepositoryPathFromKey(key)
+	// The informer opens per-ref clones at the ref-suffixed path, so the
+	// pre-seeded clone must live there for the pull path to be exercised.
+	repoDir := triggerRepositoryPathFromKey(key) + refDelimiter + refDirectorySuffix("refs/heads/main")
 	t.Cleanup(func() { _ = os.RemoveAll(repoDir) })
 	_ = os.RemoveAll(repoDir)
 
-	localRepo, err := git.PlainClone(repoDir, &git.CloneOptions{
+	_, err = git.PlainClone(repoDir, &git.CloneOptions{
 		URL:           remoteDir,
 		ReferenceName: plumbing.NewBranchReferenceName("main"),
 		SingleBranch:  true,
-	})
-	require.NoError(t, err)
-	require.NoError(t, localRepo.DeleteRemote("origin"))
-	// Keep the real test remote first (used for fetch/pull) and include the
-	// GitHub URL to satisfy repositoryOriginMatches for kubeshop/testkube.
-	_, err = localRepo.CreateRemote(&config.RemoteConfig{
-		Name: "origin",
-		URLs: []string{
-			remoteDir,
-			"https://github.com/kubeshop/testkube.git",
-		},
 	})
 	require.NoError(t, err)
 
@@ -901,7 +935,7 @@ func TestUpdateRepositories_MatchesTestTriggerWithGitPaths(t *testing.T) {
 		Resource:  &resource,
 		ContentSelector: &testkube.TestTriggerContentSelector{
 			Git: &testkube.TestTriggerContentGit{
-				Uri:      "https://github.com/kubeshop/testkube.git",
+				Uri:      remoteDir,
 				Branches: []string{"main"},
 				Paths:    []string{"/test", "/pkg"},
 			},
