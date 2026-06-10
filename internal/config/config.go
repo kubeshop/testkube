@@ -49,8 +49,9 @@ type OSSControlPlaneConfig struct {
 	StorageCAFile                string `envconfig:"STORAGE_CA_FILE" default:""`
 	StorageUseVirtualHostedStyle bool   `envconfig:"STORAGE_USE_VIRTUAL_HOSTED_STYLE" default:"false"`
 
-	LogsBucket  string `envconfig:"LOGS_BUCKET" default:""`
-	LogsStorage string `envconfig:"LOGS_STORAGE" default:""`
+	LogsBucket       string `envconfig:"LOGS_BUCKET" default:""`
+	LogsStorage      string `envconfig:"LOGS_STORAGE" default:""`
+	ArtifactsStorage string `envconfig:"ARTIFACTS_STORAGE" default:""`
 }
 
 type LegacyExecutorConfig struct {
