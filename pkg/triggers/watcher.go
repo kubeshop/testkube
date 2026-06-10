@@ -397,6 +397,7 @@ func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan st
 			TestSelector:      t.TestSelector,
 			ConcurrencyPolicy: t.ConcurrencyPolicy,
 			Disabled:          t.Disabled,
+			ListenerAgentIds:  t.ListenerAgentIds,
 		})
 	}
 

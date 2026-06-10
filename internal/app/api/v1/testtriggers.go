@@ -150,6 +150,7 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 				ConcurrencyPolicy: request.ConcurrencyPolicy,
 				Disabled:          request.Disabled,
 				Sync:              request.Sync,
+				ListenerAgentIds:  request.ListenerAgentIds,
 			}
 		} else {
 			// JSON merge: only update fields that are present in the request
@@ -207,6 +208,9 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 			if request.Sync != nil {
 				apiTrigger.Sync = request.Sync
 			}
+			if request.ListenerAgentIds != nil {
+				apiTrigger.ListenerAgentIds = request.ListenerAgentIds
+			}
 			apiTrigger.Disabled = request.Disabled
 		}
 
@@ -250,17 +254,10 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 			namespaces[namespace] = struct{}{}
 		}
 
-		for namespace := range namespaces {
-			_, err = s.TestTriggersClient.DeleteAll(c.Context(), s.getEnvironmentId(), namespace)
-			if err != nil {
-				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: error cleaning triggers before reapply", errPrefix))
-			}
-		}
-
-		s.Metrics.IncBulkDeleteTestTrigger(nil)
-
+		// Map and validate the full payload before any deletion: bulk update is
+		// delete-then-recreate, so a validation failure discovered mid-reapply
+		// would leave the namespaces emptied with nothing recreated.
 		testTriggers := make([]testkube.TestTrigger, 0, len(request))
-
 		for _, upsertRequest := range request {
 			crdTestTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(upsertRequest)
 			// default trigger name if not defined in upsert request
@@ -273,8 +270,19 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 			}
 
 			// Convert CRD to API object for the new interface
-			apiTrigger := testtriggersmapper.MapCRDToAPI(&crdTestTrigger)
+			testTriggers = append(testTriggers, testtriggersmapper.MapCRDToAPI(&crdTestTrigger))
+		}
 
+		for namespace := range namespaces {
+			_, err = s.TestTriggersClient.DeleteAll(c.Context(), s.getEnvironmentId(), namespace)
+			if err != nil {
+				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: error cleaning triggers before reapply", errPrefix))
+			}
+		}
+
+		s.Metrics.IncBulkDeleteTestTrigger(nil)
+
+		for _, apiTrigger := range testTriggers {
 			err = s.TestTriggersClient.Create(c.Context(), s.getEnvironmentId(), apiTrigger)
 
 			s.Metrics.IncCreateTestTrigger(err)
@@ -282,8 +290,6 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 			if err != nil {
 				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: error reapplying triggers after clean", errPrefix))
 			}
-
-			testTriggers = append(testTriggers, apiTrigger)
 		}
 
 		s.Metrics.IncBulkUpdateTestTrigger(nil)
@@ -421,6 +427,7 @@ func mapAPITestTriggerToUpsertRequest(trigger *testkube.TestTrigger) testkube.Te
 		ConcurrencyPolicy: trigger.ConcurrencyPolicy,
 		Disabled:          trigger.Disabled,
 		Sync:              trigger.Sync,
+		ListenerAgentIds:  trigger.ListenerAgentIds,
 	}
 }
 

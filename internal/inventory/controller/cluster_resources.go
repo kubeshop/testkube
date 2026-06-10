@@ -104,12 +104,7 @@ func (c *ClusterResourcesController) pushOnce(ctx context.Context) {
 		c.Log.Warnw("inventory: cluster discovery failed; skipping push", "error", err)
 		return
 	}
-	watchable := resources[:0]
-	for _, r := range resources {
-		if r.CanWatch {
-			watchable = append(watchable, r)
-		}
-	}
+	watchable := clusterdiscovery.Watchable(resources)
 	if err := c.Pusher.PutClusterResources(ctx, watchable); err != nil {
 		c.Log.Warnw("inventory: push cluster resources to CP failed", "error", err, "count", len(watchable))
 		return

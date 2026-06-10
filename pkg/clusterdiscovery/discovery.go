@@ -115,6 +115,19 @@ func (d *Discoverer) List(ctx context.Context) ([]testkube.ClusterResource, erro
 	return out, nil
 }
 
+// Watchable returns the subset of resources the agent can watch (CanWatch).
+// It filters in place, reusing the input slice's backing array, so callers
+// must not keep using the slice they passed in afterwards.
+func Watchable(resources []testkube.ClusterResource) []testkube.ClusterResource {
+	watchable := resources[:0]
+	for _, r := range resources {
+		if r.CanWatch {
+			watchable = append(watchable, r)
+		}
+	}
+	return watchable
+}
+
 // effectiveWatchRules returns the agent's SelfSubjectRulesReview rules and a
 // flag indicating whether the authorizer enumerated all of them (when false,
 // canWatch will have false negatives - see List for the degradation policy).

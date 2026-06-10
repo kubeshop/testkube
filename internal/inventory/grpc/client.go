@@ -7,12 +7,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"time"
 
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/oauth"
+	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -47,6 +49,10 @@ func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, apiToke
 		callOpts: []grpc.CallOption{
 			perRPCCreds,
 			grpc.WaitForReady(true),
+			// CRD-heavy clusters produce multi-MB schema snapshots; compress and
+			// lift the 4MB default send cap so the push doesn't ResourceExhausted.
+			grpc.UseCompressor(gzip.Name),
+			grpc.MaxCallSendMsgSize(math.MaxInt32),
 		},
 		callTimeout: defaultCallTimeout,
 	}
