@@ -136,7 +136,9 @@ func TestBucketListConstruction_LogsStorageEmpty(t *testing.T) {
 
 	assert.Len(t, buckets, 2)
 	assert.Equal(t, "testkube-artifacts", buckets[0].name)
+	assert.Equal(t, "storage", buckets[0].label)
 	assert.Equal(t, "testkube-logs", buckets[1].name)
+	assert.Equal(t, "logs", buckets[1].label)
 }
 
 func TestEnsureBucket_BucketExists(t *testing.T) {
