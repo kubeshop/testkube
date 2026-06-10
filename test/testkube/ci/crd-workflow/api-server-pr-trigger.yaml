@@ -2,7 +2,6 @@ apiVersion: tests.testkube.io/v1
 kind: TestTrigger
 metadata:
   name: api-server-ci-pr-content-trigger
-  namespace: testkube
 spec:
   resource: content
   event: git-pull-request
