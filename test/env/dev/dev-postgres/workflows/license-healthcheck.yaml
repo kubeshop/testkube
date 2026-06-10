@@ -16,9 +16,6 @@ spec:
       requests:
         cpu: 32m
         memory: 32Mi
-  events:
-  - cronjob:
-      cron: "*/15 * * * *" # every 15 minutes
   steps:
   - name: Install dependencies
     shell: |

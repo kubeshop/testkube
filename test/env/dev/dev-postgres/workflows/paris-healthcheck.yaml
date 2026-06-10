@@ -1,7 +1,7 @@
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: prod-healthcheck
+  name: paris-healthcheck
   labels:
     core-tests: healthcheck
     environment: prod
@@ -21,20 +21,17 @@ spec:
         valueFrom:
           secretKeyRef:
             name: testkube-agent-secrets
-            key: TESTKUBE-CLOUD-TEST-BASIC-RUN-TOKEN-FOR-DEV
+            key: TESTKUBE-CLOUD-INTERNAL-DEMO-PARIS-RUN-TOKEN-FOR-DEV
       - name: organizationId
         valueFrom:
           secretKeyRef:
             name: testkube-agent-secrets
-            key: TESTKUBE-CLOUD-TEST-BASIC-ORG-ID
+            key: TESTKUBE-CLOUD-INTERNAL-DEMO-PARIS-ORG-ID
       - name: environmentId
         valueFrom:
           secretKeyRef:
             name: testkube-agent-secrets
-            key: TESTKUBE-CLOUD-TEST-BASIC-ENV-ID
-  events:
-  - cronjob:
-      cron: "*/15 * * * *" # every 15 minutes
+            key: TESTKUBE-CLOUD-INTERNAL-DEMO-PARIS-ENV-ID
   steps:
   - name: Disable telemetry (optional)
     optional: true
