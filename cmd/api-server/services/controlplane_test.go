@@ -88,11 +88,7 @@ func TestBucketListConstruction_LogsStorageNone(t *testing.T) {
 		},
 	}
 
-	// Simulate the bucket list construction logic from CreateControlPlane
-	buckets := []bucketSpec{{name: cfg.StorageBucket, label: "storage"}}
-	if cfg.LogsStorage != "none" {
-		buckets = append(buckets, bucketSpec{name: cfg.LogsBucket, label: "logs"})
-	}
+	buckets := buildBucketSpecs(cfg)
 
 	assert.Len(t, buckets, 1)
 	assert.Equal(t, "testkube-artifacts", buckets[0].name)
@@ -108,11 +104,7 @@ func TestBucketListConstruction_LogsStorageMinio(t *testing.T) {
 		},
 	}
 
-	// Simulate the bucket list construction logic from CreateControlPlane
-	buckets := []bucketSpec{{name: cfg.StorageBucket, label: "storage"}}
-	if cfg.LogsStorage != "none" {
-		buckets = append(buckets, bucketSpec{name: cfg.LogsBucket, label: "logs"})
-	}
+	buckets := buildBucketSpecs(cfg)
 
 	assert.Len(t, buckets, 2)
 	assert.Equal(t, "testkube-artifacts", buckets[0].name)
@@ -131,10 +123,7 @@ func TestBucketListConstruction_LogsStorageEmpty(t *testing.T) {
 	}
 
 	// When LogsStorage is empty (default), logs bucket should still be ensured
-	buckets := []bucketSpec{{name: cfg.StorageBucket, label: "storage"}}
-	if cfg.LogsStorage != "none" {
-		buckets = append(buckets, bucketSpec{name: cfg.LogsBucket, label: "logs"})
-	}
+	buckets := buildBucketSpecs(cfg)
 
 	assert.Len(t, buckets, 2)
 	assert.Equal(t, "testkube-artifacts", buckets[0].name)
