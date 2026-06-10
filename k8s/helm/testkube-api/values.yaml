@@ -492,7 +492,7 @@ storage:
   scrapperEnabled: true
   ## Toggle whether to compress artifacts into tarballs
   compressArtifacts: true
-  ## where the artifacts should be stored; use "none" to disable artifact bucket creation entirely
+  ## Controls artifact bucket ensure/creation on API startup; set to "none" to skip bucket creation entirely
   storage: ""
 
 ## Logs storage for Testkube API.
