@@ -69,6 +69,7 @@ func (c *k8sTestTriggerClient) Update(ctx context.Context, environmentId string,
 		TestSelector:      trigger.TestSelector,
 		ConcurrencyPolicy: trigger.ConcurrencyPolicy,
 		Disabled:          trigger.Disabled,
+		ListenerAgentIds:  trigger.ListenerAgentIds,
 	}
 
 	// Use the new mapper function that preserves existing metadata
@@ -99,6 +100,7 @@ func (c *k8sTestTriggerClient) Create(ctx context.Context, environmentId string,
 		TestSelector:      trigger.TestSelector,
 		ConcurrencyPolicy: trigger.ConcurrencyPolicy,
 		Disabled:          trigger.Disabled,
+		ListenerAgentIds:  trigger.ListenerAgentIds,
 	}
 
 	crd := testtriggers.MapTestTriggerUpsertRequestToTestTriggerCRD(upsertRequest)

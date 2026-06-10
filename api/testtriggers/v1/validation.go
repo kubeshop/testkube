@@ -24,11 +24,12 @@ var MatchPathBracketPattern = regexp.MustCompile(`\[\*\]|\[\d+\]`)
 // create, update, and bulk-update handlers all round-trip the request through
 // the CRD mapper and call this, as does the admission webhook (when wired).
 //
-// Schema-aware match[] triggers require runner binding via
-// ActionParameters.Target.Match.id. Validation against the runner's CRD
-// schema is only sound when the runner that fires the trigger is known at
-// save time; broadcast dispatch would let the trigger land on a runner
-// whose schema or RBAC differs from the one validation ran against.
+// Schema-aware match[] triggers require listener binding via
+// listenerAgentIds. The listener is the agent that watches the cluster and
+// evaluates match[] at fire time, so validation against a CRD schema is only
+// sound when that listener is known at save time; broadcast dispatch would
+// let the trigger land on a listener whose schema or RBAC differs from the
+// one validation ran against.
 func (s *TestTriggerSpec) Validate() []error {
 	var errs []error
 
@@ -49,8 +50,8 @@ func (s *TestTriggerSpec) Validate() []error {
 	if isContentResource && len(s.Match) > 0 {
 		errs = append(errs, fmt.Errorf("resource %q does not support match", TestTriggerResourceContent))
 	} else if len(s.Match) > 0 {
-		if s.ActionParameters == nil || s.ActionParameters.Target == nil || len(s.ActionParameters.Target.Match["id"]) == 0 {
-			errs = append(errs, fmt.Errorf("match conditions require actionParameters.target.match.id to pin the trigger to one or more runners"))
+		if len(s.ListenerAgentIds) == 0 {
+			errs = append(errs, fmt.Errorf("match conditions require listenerAgentIds to pin the trigger to one or more listener agents"))
 		}
 	}
 
@@ -87,7 +88,7 @@ func (s *TestTriggerSpec) Validate() []error {
 		case workflowtriggersv1.FieldOperatorChanged,
 			workflowtriggersv1.FieldOperatorChangedTo,
 			workflowtriggersv1.FieldOperatorChangedFrom:
-			if s.Event != "" && s.Event != TestTriggerEventModified {
+			if s.Event != TestTriggerEventModified {
 				errs = append(errs, fmt.Errorf("match[%d]: operator %q requires event to be %q", i, cond.Operator, TestTriggerEventModified))
 			}
 		}

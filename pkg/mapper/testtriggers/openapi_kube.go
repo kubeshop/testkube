@@ -55,6 +55,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			TestSelector:      mapSelectorToCRD(request.TestSelector),
 			ConcurrencyPolicy: concurrencyPolicy,
 			Disabled:          request.Disabled,
+			ListenerAgentIds:  request.ListenerAgentIds,
 		},
 	}
 }
@@ -120,6 +121,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta(request testkub
 			TestSelector:      mapSelectorToCRD(request.TestSelector),
 			ConcurrencyPolicy: concurrencyPolicy,
 			Disabled:          request.Disabled,
+			ListenerAgentIds:  request.ListenerAgentIds,
 		},
 	}
 }

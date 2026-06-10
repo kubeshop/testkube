@@ -316,7 +316,12 @@ func (s *Service) updateTrigger(ctx context.Context, target *testtriggersv1.Test
 	targetsUs := s.triggerTargetsThisAgent(target.Spec.ListenerAgentIds)
 	if !targetsUs {
 		if registered {
-			s.releaseDynamicInformerForTrigger(target, key)
+			// Release the informer registered for the OLD GVK: the same update
+			// may also change resourceRef, in which case the incoming trigger
+			// no longer describes the informer we actually hold.
+			if old := s.triggerStatus[key].trigger; old != nil && old.ResourceKind != "" {
+				s.releaseDynamicInformerByGVK(old.ResourceGroup, old.ResourceVersion, old.ResourceKind, key)
+			}
 			delete(s.triggerStatus, key)
 			s.logger.Debugf(
 				"trigger service: dropping testtrigger %s/%s — listenerAgentIds no longer includes this agent",
@@ -340,11 +345,7 @@ func (s *Service) updateTrigger(ctx context.Context, target *testtriggersv1.Test
 		old.ResourceKind != newInternal.ResourceKind)
 
 	if gvrChanged && old.ResourceKind != "" {
-		s.releaseDynamicInformerForTrigger(&testtriggersv1.TestTrigger{
-			Spec: testtriggersv1.TestTriggerSpec{ResourceRef: &testtriggersv1.TestTriggerResourceRef{
-				Group: old.ResourceGroup, Version: old.ResourceVersion, Kind: old.ResourceKind,
-			}},
-		}, key)
+		s.releaseDynamicInformerByGVK(old.ResourceGroup, old.ResourceVersion, old.ResourceKind, key)
 	}
 
 	s.triggerStatus[key].trigger = newInternal

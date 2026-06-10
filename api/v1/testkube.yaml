@@ -8185,6 +8185,17 @@ components:
           description: Match filters which object changes fire the trigger (ANDed).
           items:
             $ref: "#/components/schemas/TestTriggerFieldCondition"
+        listenerAgentIds:
+          type: array
+          description: |
+            Agent IDs of the listeners that watch the cluster and fire this
+            trigger. Empty means broadcast (every listener fires). Required
+            when match is set: schema-aware validation runs against a specific
+            listener's cluster-resources snapshot.
+          items:
+            type: string
+          example:
+            - tkcagnt_2b8c83advsf
         conditionSpec:
           $ref: "#/components/schemas/TestTriggerConditionSpec"
         probeSpec:

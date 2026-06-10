@@ -85,6 +85,12 @@ spec:
       {{- end }}
     {{- end }}
   {{- end }}
+  {{- if ne (len .ListenerAgentIds) 0 }}
+  listenerAgentIds:
+    {{- range $id := .ListenerAgentIds }}
+    - {{ $id }}
+    {{- end }}
+  {{- end }}
   {{- if .ConditionSpec }}
   conditionSpec:
     {{- if .ConditionSpec.Timeout }}
