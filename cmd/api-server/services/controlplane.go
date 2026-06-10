@@ -85,7 +85,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 	if cfg.ArtifactsStorage != "none" {
 		buckets = append(buckets, bucketSpec{name: cfg.StorageBucket, label: "storage"})
 	} else {
-		log.DefaultLogger.Infow("Artifact storage is disabled", "artifacts.storage", cfg.ArtifactsStorage)
+		log.DefaultLogger.Infow("Skipping artifact bucket ensure (ARTIFACTS_STORAGE=none)", "artifacts.storage", cfg.ArtifactsStorage, "bucket", cfg.StorageBucket)
 	}
 	if cfg.LogsStorage != "none" {
 		buckets = append(buckets, bucketSpec{name: cfg.LogsBucket, label: "logs"})
