@@ -81,7 +81,11 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 	executionQuerier := factory.NewExecutionQuerier()
 
 	// Ensure the buckets exist (retry in background until they do).
-	go ensureBucketsWithRetry(ctx, storageClient, buildBucketSpecs(cfg))
+	buckets := []bucketSpec{{name: cfg.StorageBucket, label: "storage"}}
+	if cfg.LogsStorage != "none" {
+		buckets = append(buckets, bucketSpec{name: cfg.LogsBucket, label: "logs"})
+	}
+	go ensureBucketsWithRetry(ctx, storageClient, buckets)
 
 	return controlplane.New(controlplane.Config{
 		Port:                             cfg.GRPCServerPort,
@@ -96,16 +100,6 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 type bucketSpec struct {
 	name  string
 	label string
-}
-
-// buildBucketSpecs returns the list of buckets that should be ensured on startup.
-// The logs bucket is excluded when LogsStorage is "none" (log persistence disabled).
-func buildBucketSpecs(cfg *config.Config) []bucketSpec {
-	buckets := []bucketSpec{{name: cfg.StorageBucket, label: "storage"}}
-	if cfg.LogsStorage != "none" {
-		buckets = append(buckets, bucketSpec{name: cfg.LogsBucket, label: "logs"})
-	}
-	return buckets
 }
 
 func ensureBucketsWithRetry(ctx context.Context, storageClient domainstorage.Client, buckets []bucketSpec) {
