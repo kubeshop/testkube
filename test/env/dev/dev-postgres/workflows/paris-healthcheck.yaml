@@ -43,4 +43,4 @@ spec:
         --org-id {{ shellquote(env.organizationId) }} \
         --env-id {{ shellquote(env.environmentId) }}
   - name: Run remote workflow
-    shell: testkube run tw postman-workflow-smoke -f
+    shell: testkube run tw postman-junit-report -f
