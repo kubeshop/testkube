@@ -66,6 +66,8 @@ func NewIntermediate(defaultEmptyDirSizeLimit string) Intermediate {
 	ref := NewRefCounter()
 	var defaultLimit *resource.Quantity
 	if defaultEmptyDirSizeLimit != "" {
+		// Bundle validates worker config up front; this extra parse keeps direct
+		// NewIntermediate callers tolerant of invalid input instead of panicking.
 		if parsedLimit, err := resource.ParseQuantity(defaultEmptyDirSizeLimit); err == nil {
 			defaultLimit = &parsedLimit
 		}
