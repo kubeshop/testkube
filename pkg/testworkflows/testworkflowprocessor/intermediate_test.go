@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 )
 
 func TestAddEmptyDirVolume_NoSizeLimit(t *testing.T) {
@@ -78,4 +80,29 @@ func TestAddEmptyDirVolume_InvalidDefaultSizeLimit_DoesNotPanic(t *testing.T) {
 	assert.Len(t, volumes, 1)
 	require.NotNil(t, volumes[0].EmptyDir)
 	assert.Nil(t, volumes[0].EmptyDir.SizeLimit)
+}
+
+func TestVolumes_AppliesDefaultSizeLimitToExistingPodEmptyDirs(t *testing.T) {
+	explicitQty := resource.MustParse("512Mi")
+	layer := NewIntermediate("256Mi").AppendPodConfig(&testworkflowsv1.PodConfig{
+		Volumes: []corev1.Volume{
+			{
+				Name:         "defaulted",
+				VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
+			},
+			{
+				Name:         "explicit",
+				VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{SizeLimit: &explicitQty}},
+			},
+		},
+	})
+
+	volumes := layer.Volumes()
+	require.Len(t, volumes, 2)
+	require.NotNil(t, volumes[0].EmptyDir)
+	require.NotNil(t, volumes[0].EmptyDir.SizeLimit)
+	assert.True(t, volumes[0].EmptyDir.SizeLimit.Equal(resource.MustParse("256Mi")))
+	require.NotNil(t, volumes[1].EmptyDir)
+	require.NotNil(t, volumes[1].EmptyDir.SizeLimit)
+	assert.True(t, volumes[1].EmptyDir.SizeLimit.Equal(explicitQty))
 }

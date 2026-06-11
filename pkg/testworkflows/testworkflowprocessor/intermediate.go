@@ -103,7 +103,15 @@ func (s *intermediate) Secrets() []corev1.Secret {
 }
 
 func (s *intermediate) Volumes() []corev1.Volume {
-	return append(s.Pod.Volumes, s.Files.Volumes()...)
+	volumes := make([]corev1.Volume, 0, len(s.Pod.Volumes)+len(s.Files.Volumes()))
+	for i := range s.Pod.Volumes {
+		volume := *s.Pod.Volumes[i].DeepCopy()
+		if volume.EmptyDir != nil {
+			s.applyDefaultEmptyDirSizeLimit(volume.EmptyDir)
+		}
+		volumes = append(volumes, volume)
+	}
+	return append(volumes, s.Files.Volumes()...)
 }
 
 func (s *intermediate) Pvcs() map[string]corev1.PersistentVolumeClaim {
@@ -147,14 +155,19 @@ func (s *intermediate) AddSecret(secret corev1.Secret) Intermediate {
 	return s
 }
 
+func (s *intermediate) applyDefaultEmptyDirSizeLimit(source *corev1.EmptyDirVolumeSource) {
+	if source == nil || source.SizeLimit != nil || s.DefaultEmptyDirSizeLimit == nil {
+		return
+	}
+	qty := *s.DefaultEmptyDirSizeLimit
+	source.SizeLimit = &qty
+}
+
 func (s *intermediate) AddEmptyDirVolume(source *corev1.EmptyDirVolumeSource, mountPath string) corev1.VolumeMount {
 	if source == nil {
 		source = &corev1.EmptyDirVolumeSource{}
 	}
-	if source.SizeLimit == nil && s.DefaultEmptyDirSizeLimit != nil {
-		qty := *s.DefaultEmptyDirSizeLimit
-		source.SizeLimit = &qty
-	}
+	s.applyDefaultEmptyDirSizeLimit(source)
 	ref := s.NextRef()
 	s.AddVolume(corev1.Volume{Name: ref, VolumeSource: corev1.VolumeSource{EmptyDir: source}})
 	return corev1.VolumeMount{Name: ref, MountPath: mountPath}
