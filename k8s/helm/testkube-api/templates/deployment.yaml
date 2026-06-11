@@ -341,13 +341,23 @@ spec:
       securityContext: {{ include "testkube-api.podSecurityContext" . | nindent 8 }}
       volumes:
         - name: testkube-tmp
+          {{- if .Values.emptyDirSizeLimit }}
+          emptyDir:
+            sizeLimit: {{ .Values.emptyDirSizeLimit | quote }}
+          {{- else }}
           emptyDir: {}
+          {{- end }}
         - name: testkube-config
           configMap:
             name: {{ include "testkube-api.fullname" . }}
         {{- if .Values.nats.embedded }}
         - name: testkube-nats
+          {{- if .Values.emptyDirSizeLimit }}
+          emptyDir:
+            sizeLimit: {{ .Values.emptyDirSizeLimit | quote }}
+          {{- else }}
           emptyDir: {}
+          {{- end }}
         {{- end }}
         {{- if .Values.storage.certSecret.enabled }}
         - name: {{ .Values.storage.certSecret.name }}

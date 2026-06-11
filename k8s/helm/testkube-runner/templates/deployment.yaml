@@ -88,9 +88,19 @@ spec:
       securityContext: {{ include "testkube-runner.podSecurityContext" . | nindent 8 }}
       volumes:
         - name: tmp
+          {{- if .Values.emptyDirSizeLimit }}
+          emptyDir:
+            sizeLimit: {{ .Values.emptyDirSizeLimit | quote }}
+          {{- else }}
           emptyDir: {}
+          {{- end }}
         - name: nats
+          {{- if .Values.emptyDirSizeLimit }}
+          emptyDir:
+            sizeLimit: {{ .Values.emptyDirSizeLimit | quote }}
+          {{- else }}
           emptyDir: {}
+          {{- end }}
         {{- if .Values.cloud.tls.customCa.secretRef.name }}
         - name: custom-ca
           secret:

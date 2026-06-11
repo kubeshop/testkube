@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
@@ -116,6 +117,13 @@ func (p *processor) Process(layer Intermediate, container stage.Container, step 
 
 func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, options BundleOptions,
 	machines ...expressions.Machine) (bundle *Bundle, err error) {
+	if options.Config.Worker.EmptyDirSizeLimit != "" {
+		_, err = resource.ParseQuantity(options.Config.Worker.EmptyDirSizeLimit)
+		if err != nil {
+			return nil, errors.Wrapf(err, "invalid worker emptyDir sizeLimit %q", options.Config.Worker.EmptyDirSizeLimit)
+		}
+	}
+
 	// Initialize intermediate layer
 	layer := NewIntermediate(options.Config.Worker.EmptyDirSizeLimit).
 		AppendPodConfig(workflow.Spec.Pod).

@@ -59,18 +59,24 @@ type intermediate struct {
 	Files ConfigMapFiles `expr:"include"`
 
 	// Default sizeLimit for emptyDir volumes
-	DefaultEmptyDirSizeLimit string
+	DefaultEmptyDirSizeLimit *resource.Quantity
 }
 
 func NewIntermediate(defaultEmptyDirSizeLimit string) Intermediate {
 	ref := NewRefCounter()
+	var defaultLimit *resource.Quantity
+	if defaultEmptyDirSizeLimit != "" {
+		if parsedLimit, err := resource.ParseQuantity(defaultEmptyDirSizeLimit); err == nil {
+			defaultLimit = &parsedLimit
+		}
+	}
 	return &intermediate{
 		RefCounter:               ref,
 		Root:                     stage.NewGroupStage("", true),
 		Container:                stage.NewContainer(),
 		Files:                    NewConfigMapFiles(fmt.Sprintf("{{resource.id}}-%s", ref.NextRef()), nil),
 		Ps:                       make(map[string]corev1.PersistentVolumeClaim),
-		DefaultEmptyDirSizeLimit: defaultEmptyDirSizeLimit,
+		DefaultEmptyDirSizeLimit: defaultLimit,
 	}
 }
 
