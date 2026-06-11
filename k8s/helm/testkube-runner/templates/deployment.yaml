@@ -309,6 +309,10 @@ spec:
               value: "{{ include "testkube-runner.toolkit.image" . }}"
             - name: "TESTKUBE_TW_INIT_IMAGE"
               value: "{{ include "testkube-runner.init.image" . }}"
+            {{- if .Values.global }}
+            - name: TESTKUBE_REGISTRY
+              value: "{{ .Values.global.imageRegistry }}"
+            {{- end }}
             {{- if .Values.imageInspectionCache.enabled }}
             - name: "TESTKUBE_ENABLE_IMAGE_DATA_PERSISTENT_CACHE"
               value:  "true"
