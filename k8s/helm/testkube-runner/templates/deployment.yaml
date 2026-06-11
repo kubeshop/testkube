@@ -230,6 +230,10 @@ spec:
             # Security
             - name: "ALLOW_LOW_SECURITY_FIELDS"
               value: "{{ .Values.allowLowSecurityFields }}"
+            {{- if .Values.emptyDirSizeLimit }}
+            - name: "TESTKUBE_EMPTYDIR_SIZE_LIMIT"
+              value: "{{ .Values.emptyDirSizeLimit }}"
+            {{- end }}
             - name: "TESTKUBE_NAMESPACE"
               value: "{{ .Release.Namespace }}"
             {{- if .Values.execution.default.namespace }}

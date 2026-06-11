@@ -353,6 +353,10 @@ dockerImageVersion: ""
 ## allow to use low securiy fields for test workflow pod and container configurations
 allowLowSecurityFields: false
 
+## default sizeLimit for internally generated emptyDir volumes (e.g. "256Mi", "1Gi")
+## set this if your cluster enforces sizeLimit on emptyDir volumes via admission policies
+emptyDirSizeLimit: ""
+
 # Testkube log server parameters
 testkubeLogs:
   # -- GRPC address
