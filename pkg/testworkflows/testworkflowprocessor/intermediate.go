@@ -143,10 +143,9 @@ func (s *intermediate) AddEmptyDirVolume(source *corev1.EmptyDirVolumeSource, mo
 	if source == nil {
 		source = &corev1.EmptyDirVolumeSource{}
 	}
-	if source.SizeLimit == nil && s.DefaultEmptyDirSizeLimit != "" {
-		if qty, err := resource.ParseQuantity(s.DefaultEmptyDirSizeLimit); err == nil {
-			source.SizeLimit = &qty
-		}
+	if source.SizeLimit == nil && s.DefaultEmptyDirSizeLimit != nil {
+		qty := *s.DefaultEmptyDirSizeLimit
+		source.SizeLimit = &qty
 	}
 	ref := s.NextRef()
 	s.AddVolume(corev1.Volume{Name: ref, VolumeSource: corev1.VolumeSource{EmptyDir: source}})
