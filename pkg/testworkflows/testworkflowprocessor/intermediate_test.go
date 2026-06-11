@@ -63,3 +63,16 @@ func TestAddEmptyDirVolume_WithExplicitNilSizeLimit(t *testing.T) {
 	expectedQty := resource.MustParse("1Gi")
 	assert.True(t, volumes[0].VolumeSource.EmptyDir.SizeLimit.Equal(expectedQty))
 }
+
+func TestAddEmptyDirVolume_InvalidDefaultSizeLimit_DoesNotPanic(t *testing.T) {
+	layer := NewIntermediate("not-a-quantity")
+
+	assert.NotPanics(t, func() {
+		layer.AddEmptyDirVolume(nil, "/data")
+	})
+
+	volumes := layer.Volumes()
+	assert.Len(t, volumes, 1)
+	assert.NotNil(t, volumes[0].VolumeSource.EmptyDir)
+	assert.Nil(t, volumes[0].VolumeSource.EmptyDir.SizeLimit)
+}
