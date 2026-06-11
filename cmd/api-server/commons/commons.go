@@ -214,6 +214,20 @@ func MustGetPostgresDatabase(ctx context.Context, cfg *config.Config, migrate bo
 	pool, err := pgxpool.New(ctx, cfg.APIPostgresDSN)
 	ExitOnError("Getting Postgres database", err)
 
+	// Validate connectivity immediately so we fail fast with a clear error
+	// instead of hanging later when the pool is first used.
+	pingCtx, pingCancel := context.WithTimeout(ctx, 30*time.Second)
+	defer pingCancel()
+	if err := pool.Ping(pingCtx); err != nil {
+		pool.Close()
+		if migrate {
+			ExitOnError("Connecting to Postgres database (check that the database exists and the user has CONNECT privilege)", err)
+		} else {
+			ExitOnError("Connecting to Postgres database (migrations are disabled via DISABLE_POSTGRES_MIGRATIONS=true; ensure the database exists, the user has CONNECT privilege, and migrations have been applied by an administrator)", err)
+		}
+	}
+	log.DefaultLogger.Info("Postgres connection validated successfully")
+
 	if migrate {
 		db := stdlib.OpenDBFromPool(pool)
 		if err := runPostgresMigrations(ctx, db); err != nil {
