@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
@@ -56,16 +57,20 @@ type intermediate struct {
 
 	// Storing files
 	Files ConfigMapFiles `expr:"include"`
+
+	// Default sizeLimit for emptyDir volumes
+	DefaultEmptyDirSizeLimit string
 }
 
-func NewIntermediate() Intermediate {
+func NewIntermediate(defaultEmptyDirSizeLimit string) Intermediate {
 	ref := NewRefCounter()
 	return &intermediate{
-		RefCounter: ref,
-		Root:       stage.NewGroupStage("", true),
-		Container:  stage.NewContainer(),
-		Files:      NewConfigMapFiles(fmt.Sprintf("{{resource.id}}-%s", ref.NextRef()), nil),
-		Ps:         make(map[string]corev1.PersistentVolumeClaim),
+		RefCounter:               ref,
+		Root:                     stage.NewGroupStage("", true),
+		Container:                stage.NewContainer(),
+		Files:                    NewConfigMapFiles(fmt.Sprintf("{{resource.id}}-%s", ref.NextRef()), nil),
+		Ps:                       make(map[string]corev1.PersistentVolumeClaim),
+		DefaultEmptyDirSizeLimit: defaultEmptyDirSizeLimit,
 	}
 }
 
@@ -137,6 +142,10 @@ func (s *intermediate) AddSecret(secret corev1.Secret) Intermediate {
 func (s *intermediate) AddEmptyDirVolume(source *corev1.EmptyDirVolumeSource, mountPath string) corev1.VolumeMount {
 	if source == nil {
 		source = &corev1.EmptyDirVolumeSource{}
+	}
+	if source.SizeLimit == nil && s.DefaultEmptyDirSizeLimit != "" {
+		qty := resource.MustParse(s.DefaultEmptyDirSizeLimit)
+		source.SizeLimit = &qty
 	}
 	ref := s.NextRef()
 	s.AddVolume(corev1.Volume{Name: ref, VolumeSource: corev1.VolumeSource{EmptyDir: source}})

@@ -117,7 +117,7 @@ func (p *processor) Process(layer Intermediate, container stage.Container, step 
 func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, options BundleOptions,
 	machines ...expressions.Machine) (bundle *Bundle, err error) {
 	// Initialize intermediate layer
-	layer := NewIntermediate().
+	layer := NewIntermediate(options.Config.Worker.EmptyDirSizeLimit).
 		AppendPodConfig(workflow.Spec.Pod).
 		AppendJobConfig(workflow.Spec.Job).
 		AppendPvcs(workflow.Spec.Pvcs)
