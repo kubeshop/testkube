@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -12,11 +11,6 @@ import (
 	sqlc "github.com/kubeshop/testkube/pkg/controlplane/scheduling/sqlc"
 	"github.com/kubeshop/testkube/pkg/log"
 )
-
-// defaultConnectTimeout is the maximum time allowed for individual connection
-// attempts during database creation checks. This prevents the server from
-// hanging indefinitely when the database host is unreachable.
-const defaultConnectTimeout = 30 * time.Second
 
 type DB struct {
 	Pool *pgxpool.Pool
@@ -44,14 +38,9 @@ func CreateDatabaseIfNotExists(ctx context.Context, connectionString string) err
 	dbName := connConfig.Database
 	log.DefaultLogger.Infof("Checking if database %q exists on host %s", dbName, connConfig.Host)
 
-	// Apply a timeout to prevent indefinite hangs when the database host is
-	// unreachable or drops packets silently.
-	connectCtx, connectCancel := context.WithTimeout(ctx, defaultConnectTimeout)
-	defer connectCancel()
-
 	// Fast path: try to connect directly to the target database.
 	// If successful the database already exists — nothing to do.
-	directConn, err := pgx.ConnectConfig(connectCtx, connConfig)
+	directConn, err := pgx.ConnectConfig(ctx, connConfig)
 	if err == nil {
 		directConn.Close(ctx)
 		log.DefaultLogger.Infof("Database %s already exists", dbName)
@@ -63,7 +52,7 @@ func CreateDatabaseIfNotExists(ctx context.Context, connectionString string) err
 	log.DefaultLogger.Infof("Cannot connect to database %s directly (%v), attempting to create it", dbName, err)
 
 	connConfig.Database = "postgres"
-	conn, err := pgx.ConnectConfig(connectCtx, connConfig)
+	conn, err := pgx.ConnectConfig(ctx, connConfig)
 	if err != nil {
 		// Cannot reach the system database either. The target database may
 		// actually exist but we simply cannot verify it from here. Return nil
