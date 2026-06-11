@@ -221,9 +221,9 @@ func MustGetPostgresDatabase(ctx context.Context, cfg *config.Config, migrate bo
 	if err := pool.Ping(pingCtx); err != nil {
 		pool.Close()
 		if migrate {
-			ExitOnError("Connecting to Postgres database (check that the database exists and the user has CONNECT privilege)", err)
+			ExitOnError("Failed to connect to Postgres database (verify the database exists and the user has CONNECT privilege)", err)
 		} else {
-			ExitOnError("Connecting to Postgres database (migrations are disabled via DISABLE_POSTGRES_MIGRATIONS=true; ensure the database exists, the user has CONNECT privilege, and migrations have been applied by an administrator)", err)
+			ExitOnError("Failed to connect to Postgres database with migrations disabled (DISABLE_POSTGRES_MIGRATIONS=true); ensure the database exists, the user has CONNECT privilege, and schema migrations have been applied by an administrator", err)
 		}
 	}
 	log.DefaultLogger.Info("Postgres connection validated successfully")
