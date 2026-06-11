@@ -322,6 +322,9 @@ disableMongoMigrations: false
 ## disable running PostgreSQL migrations on API start
 disablePostgresMigrations: false
 
+## skip database creation attempt (useful when using external PostgreSQL without CREATEDB privileges)
+skipDBCreation: false
+
 ## disable secret creation for tests and test sources
 disableSecretCreation: false
 

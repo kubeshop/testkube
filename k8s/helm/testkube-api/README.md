@@ -62,6 +62,7 @@ A Helm chart for Testkube api
 | defaultStorageClassName | string | `""` | Whether to generate RBAC for test job or use manually provided    generateTestJobRBAC: true # default storage class name for PVC volumes |
 | disableMongoMigrations | bool | `false` |  |
 | disablePostgresMigrations | bool | `false` |  |
+| skipDBCreation | bool | `false` | Skip database creation attempt (useful when using external PostgreSQL without CREATEDB privileges) |
 | disableSecretCreation | bool | `false` |  |
 | dnsPolicy | string | `""` |  |
 | dockerImageVersion | string | `""` |  |
