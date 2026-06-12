@@ -33,7 +33,7 @@
     "@esbuild/linux-x64": "0.28.1",
     "@rollup/rollup-linux-x64-gnu": "4.61.1"
   },
-  "packageManager": "npm@11.16.0",
+  "packageManager": "npm@11.17.0",
   "engines": {
     "node": "^20.0.0 || ^22.0.0 || ^24.0.0",
     "npm": ">=10.0.0"
