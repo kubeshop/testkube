@@ -238,6 +238,10 @@ spec:
             {{- end }}
             - name: ALLOW_LOW_SECURITY_FIELDS
               value: "{{ .Values.allowLowSecurityFields }}"
+            {{- if .Values.emptyDirSizeLimit }}
+            - name: TESTKUBE_EMPTYDIR_SIZE_LIMIT
+              value: "{{ .Values.emptyDirSizeLimit }}"
+            {{- end }}
             - name: ENABLE_K8S_CONTROLLERS
               value: "{{ .Values.next.controllers.enabled }}"
             - name: EXPORT_ARCHIVE_MAX_SIZE
@@ -339,13 +343,23 @@ spec:
       securityContext: {{ include "testkube-api.podSecurityContext" . | nindent 8 }}
       volumes:
         - name: testkube-tmp
+          {{- if .Values.emptyDirSizeLimit }}
+          emptyDir:
+            sizeLimit: {{ .Values.emptyDirSizeLimit | quote }}
+          {{- else }}
           emptyDir: {}
+          {{- end }}
         - name: testkube-config
           configMap:
             name: {{ include "testkube-api.fullname" . }}
         {{- if .Values.nats.embedded }}
         - name: testkube-nats
+          {{- if .Values.emptyDirSizeLimit }}
+          emptyDir:
+            sizeLimit: {{ .Values.emptyDirSizeLimit | quote }}
+          {{- else }}
           emptyDir: {}
+          {{- end }}
         {{- end }}
         {{- if .Values.storage.certSecret.enabled }}
         - name: {{ .Values.storage.certSecret.name }}

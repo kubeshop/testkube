@@ -39,4 +39,5 @@ type Config struct {
 	WorkflowLogsInsecureSkipTLSVerifyBackend bool
 	TLSRetry                                 controller.TLSRetryConfig
 	DisableResourceMetrics                   bool
+	EmptyDirSizeLimit                        string
 }

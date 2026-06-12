@@ -77,6 +77,7 @@ func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.P
 			CommonEnvVariables:                config.CommonEnvVariables,
 			AllowLowSecurityFields:            config.AllowLowSecurityFields,
 			DisableResourceMetrics:            config.DisableResourceMetrics,
+			EmptyDirSizeLimit:                 config.EmptyDirSizeLimit,
 		},
 	}
 }
