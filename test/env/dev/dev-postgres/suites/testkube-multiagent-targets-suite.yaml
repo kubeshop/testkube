@@ -13,6 +13,8 @@ spec:
       requests:
         cpu: 32m
         memory: 32Mi
+  job:
+    activeDeadlineSeconds: 300 # This suite requires timeout as it schedules using specific agents
   steps:
   - execute:
       parallelism: 2
