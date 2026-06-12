@@ -198,6 +198,12 @@ Define API environment in agent mode
   value:  "{{ .Values.storage.scrapperEnabled }}"
 - name: "COMPRESSARTIFACTS"
   value:  "{{ .Values.storage.compressArtifacts }}"
+- name: "ARTIFACTS_STORAGE"
+  {{- if .Values.storage.storage }}
+  value:  "{{ .Values.storage.storage }}"
+  {{- else }}
+  value:  ""
+  {{- end }}
 {{- end }}
 
 {{/*
@@ -363,6 +369,12 @@ Define API environment in standalone mode
   value:  "{{ .Values.storage.scrapperEnabled }}"
 - name: "COMPRESSARTIFACTS"
   value:  "{{ .Values.storage.compressArtifacts }}"
+- name: "ARTIFACTS_STORAGE"
+  {{- if .Values.storage.storage }}
+  value:  "{{ .Values.storage.storage }}"
+  {{- else }}
+  value:  ""
+  {{- end }}
 - name: "LOGS_BUCKET"
   value:  "{{ .Values.logs.bucket }}"
 - name: "LOGS_STORAGE"
