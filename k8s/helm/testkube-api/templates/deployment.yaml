@@ -152,6 +152,8 @@ spec:
               value: "{{ .Values.disableMongoMigrations }}"
             - name: DISABLE_POSTGRES_MIGRATIONS
               value: "{{ .Values.disablePostgresMigrations }}"
+            - name: SKIP_DB_CREATION
+              value: "{{ .Values.skipDBCreation }}"
             - name: DISABLE_SECRET_CREATION
               value: "{{ .Values.disableSecretCreation }}"
             {{- if .Values.executionNamespaces }}
