@@ -1,0 +1,23 @@
+edition = "2023";
+
+package testkube.inventory.v1;
+
+import "testkube/inventory/v1/put_cluster_resources_request.proto";
+import "testkube/inventory/v1/put_cluster_resources_response.proto";
+
+// AgentInventoryService holds RPCs for the Agent to publish snapshots of the
+// agent-observable state of its connected Kubernetes cluster to the Control
+// Plane. Snapshot semantics: each Put* call replaces any previously stored
+// value for the same (environment, agent) tuple.
+//
+// This is distinct from testkube.sync.v1.SyncService, which handles per-object
+// CRUD for Testkube-owned CRDs. AgentInventoryService is for cluster-environment
+// metadata the agent observes — not Testkube objects. As more inventory types
+// are added (nodes, operators, storage classes, k8s version), they become
+// additional Put* RPCs on this service.
+service AgentInventoryService {
+  // PutClusterResources replaces the Control Plane's view of the watchable
+  // GVKs in the agent's cluster. The agent must only include resources it
+  // has verified it can watch.
+  rpc PutClusterResources(PutClusterResourcesRequest) returns (PutClusterResourcesResponse);
+}

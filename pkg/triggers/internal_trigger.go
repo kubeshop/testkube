@@ -44,6 +44,11 @@ type internalTrigger struct {
 	// Match
 	FieldConditions []workflowtriggersv1.WorkflowTriggerFieldCondition
 
+	// ListenerAgentIds pins the trigger to specific listener agents. Empty
+	// means broadcast (every listener-capable agent in the env fires). Set on
+	// v1 only — v2 has no analog yet.
+	ListenerAgentIds []string
+
 	// Wait
 	Conditions *internalWaitConditions
 	Probes     *internalWaitProbes
@@ -113,6 +118,7 @@ func convertV1ToInternal(t *testtriggersv1.TestTrigger) *internalTrigger {
 		Event:              string(t.Spec.Event),
 		EventLabelSelector: t.Spec.Selector,
 		FieldConditions:    t.Spec.Match,
+		ListenerAgentIds:   t.Spec.ListenerAgentIds,
 		Execution:          string(t.Spec.Execution),
 		Disabled:           t.Spec.Disabled,
 	}
