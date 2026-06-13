@@ -127,8 +127,8 @@ func TestExecuteTemplateRendersContentSelectorGit(t *testing.T) {
 		Spec struct {
 			ContentSelector struct {
 				Git struct {
-					Uri      string   `yaml:"uri"`
-					Branches []string `yaml:"branches"`
+					Uri          string   `yaml:"uri"`
+					Branches     []string `yaml:"branches"`
 					UsernameFrom struct {
 						SecretKeyRef struct {
 							Name string `yaml:"name"`

@@ -12,15 +12,15 @@ import (
 
 func TestCreateExecutionStart_PropagatesTags(t *testing.T) {
 	exe := testkube.TestWorkflowExecution{
-		Id:               "exec-1",
-		GroupId:          "group-1",
-		Name:             "workflow-1-1",
-		Number:           1,
-		ScheduledAt:      time.Unix(1735689600, 0),
-		DisableWebhooks:  true,
-		Tags:             map[string]string{"env": "prod", "suite": "smoke"},
-		RunningContext:   &testkube.TestWorkflowRunningContext{Actor: &testkube.TestWorkflowRunningContextActor{ExecutionPath: "p1/p2"}},
-		Workflow:         &testkube.TestWorkflow{Name: "wf-a"},
+		Id:              "exec-1",
+		GroupId:         "group-1",
+		Name:            "workflow-1-1",
+		Number:          1,
+		ScheduledAt:     time.Unix(1735689600, 0),
+		DisableWebhooks: true,
+		Tags:            map[string]string{"env": "prod", "suite": "smoke"},
+		RunningContext:  &testkube.TestWorkflowRunningContext{Actor: &testkube.TestWorkflowRunningContextActor{ExecutionPath: "p1/p2"}},
+		Workflow:        &testkube.TestWorkflow{Name: "wf-a"},
 	}
 	info := scheduling.RunnerInfo{EnvironmentId: "env-1"}
 

@@ -249,7 +249,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 				Runtime: &executionworkertypes.Runtime{
 					Variables: start.GetVariableOverrides(),
 				},
-				Execution: executionConfigFromStart(start, c.OrganizationId),
+				Execution:    executionConfigFromStart(start, c.OrganizationId),
 				Workflow:     workflow,
 				ControlPlane: c.ControlPlaneConfig,
 			})
