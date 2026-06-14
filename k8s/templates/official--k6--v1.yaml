@@ -23,7 +23,7 @@ spec:
     version:
       description: k6 version to use
       type: string
-      default: 0.49.0
+      default: 1.1.0
     run:
       description: Run command
       type: string
