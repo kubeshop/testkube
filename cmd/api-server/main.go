@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
+	apiextclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
@@ -42,6 +43,8 @@ import (
 	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/internal/cronjob/robfig"
 	cronjobtestworkflow "github.com/kubeshop/testkube/internal/cronjob/testworkflow"
+	inventorycontroller "github.com/kubeshop/testkube/internal/inventory/controller"
+	inventorygrpc "github.com/kubeshop/testkube/internal/inventory/grpc"
 	synccontroller "github.com/kubeshop/testkube/internal/sync/controller"
 	syncgrpc "github.com/kubeshop/testkube/internal/sync/grpc"
 	"github.com/kubeshop/testkube/pkg/agent"
@@ -51,6 +54,7 @@ import (
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
+	"github.com/kubeshop/testkube/pkg/clusterdiscovery"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/controller"
 	"github.com/kubeshop/testkube/pkg/controlplane"
@@ -155,6 +159,8 @@ func main() {
 	commons.ExitOnError("creating k8s clientset", err)
 	dynamicClient, err := dynamic.NewForConfig(kubeConfig)
 	commons.ExitOnError("creating k8s dynamic client", err)
+	apiextClient, err := apiextclient.NewForConfig(kubeConfig)
+	commons.ExitOnError("creating k8s apiextensions client", err)
 
 	log.DefaultLogger.Infow("connected to Kubernetes cluster successfully", "namespace", cfg.TestkubeNamespace)
 
@@ -331,6 +337,7 @@ func main() {
 	// This setup can be moved back down to just before the controller initialisation
 	// when the SuperAgent migration has been removed.
 	syncStore := syncgrpc.NewClient(grpcConn, log.DefaultLogger, proContext.APIKey, proContext.OrgID, grpcTLSEnabled)
+	inventoryClient := inventorygrpc.NewClient(grpcConn, log.DefaultLogger, proContext.APIKey, proContext.OrgID, grpcTLSEnabled)
 	// SUPER AGENT DEPRECATION MIGRATION
 	// Run the migration function blocking further processing. We want the migration to run and succeed or to fail and
 	// kill the program before any additional processing occurs to avoid any conflicts with the migration process and
@@ -765,7 +772,22 @@ func main() {
 		testWorkflowExecutor,
 		cfg.ExportArchiveMaxSize,
 	)
+	api.ClusterDiscoverer = clusterdiscovery.New(clientset, cfg.TestkubeNamespace).WithSchemas(apiextClient)
 	api.Init(httpServer)
+
+	// Push watchable cluster-resources snapshot to CP on startup, on CRD
+	// informer events, and as an hourly safety net. CP caches the result to
+	// render the TestTrigger resourceRef picker (see AgentInventoryService).
+	if proContext.APIKey != "" {
+		crdNotifier := inventorycontroller.StartCRDChangeNotifier(ctx, apiextClient, log.DefaultLogger)
+		clusterResourcesController := &inventorycontroller.ClusterResourcesController{
+			Discoverer: api.ClusterDiscoverer,
+			Pusher:     inventoryClient,
+			Notifier:   crdNotifier,
+			Log:        log.DefaultLogger,
+		}
+		g.Go(func() error { return clusterResourcesController.Run(ctx) })
+	}
 
 	log.DefaultLogger.Info("starting agent service")
 

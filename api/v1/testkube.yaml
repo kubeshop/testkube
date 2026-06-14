@@ -41,6 +41,37 @@ tags:
     description: "Keymap for fields in a form"
 
 paths:
+  /cluster-resources:
+    get:
+      tags:
+        - cluster-resources
+        - api
+      summary: List cluster resources
+      description: |
+        Returns every Group/Version/Kind the cluster exposes, tagged with whether
+        the agent ServiceAccount has list+watch permission. Backs the UI dropdown
+        for picking what resource a TestTrigger or WorkflowTrigger should watch.
+      operationId: listClusterResources
+      parameters:
+        - in: query
+          name: watchable
+          schema:
+            type: boolean
+          description: When true, drop resources the agent cannot list+watch.
+      responses:
+        200:
+          description: successful list operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClusterResource"
+        501:
+          description: cluster discovery not configured on this instance
+        502:
+          description: cluster discovery failed
+
   /keymap/triggers:
     get:
       tags:
@@ -8154,6 +8185,17 @@ components:
           description: Match filters which object changes fire the trigger (ANDed).
           items:
             $ref: "#/components/schemas/TestTriggerFieldCondition"
+        listenerAgentIds:
+          type: array
+          description: |
+            Agent IDs of the listeners that watch the cluster and fire this
+            trigger. Empty means broadcast (every listener fires). Required
+            when match is set: schema-aware validation runs against a specific
+            listener's cluster-resources snapshot.
+          items:
+            type: string
+          example:
+            - tkcagnt_2b8c83advsf
         conditionSpec:
           $ref: "#/components/schemas/TestTriggerConditionSpec"
         probeSpec:
@@ -12052,6 +12094,37 @@ components:
       type: string
       enum:
         - kubernetes
+
+    ClusterResource:
+      description: One GVK the cluster exposes, with the agent's watch permission.
+      type: object
+      required:
+        - version
+        - kind
+        - resource
+        - namespaced
+        - canWatch
+      properties:
+        group:
+          type: string
+          description: API group (empty for core resources like Pod, Service).
+          example: "argoproj.io"
+        version:
+          type: string
+          example: "v1alpha1"
+        kind:
+          type: string
+          example: "Rollout"
+        resource:
+          type: string
+          description: Plural resource name as used in RBAC rules.
+          example: "rollouts"
+        namespaced:
+          type: boolean
+          description: Cluster-scoped resources (Node, ClusterRole, ...) have this false.
+        canWatch:
+          type: boolean
+          description: True when the agent ServiceAccount holds list+watch on this resource.
 
     Syncable:
       description: |

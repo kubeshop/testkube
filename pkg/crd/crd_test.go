@@ -127,8 +127,8 @@ func TestExecuteTemplateRendersContentSelectorGit(t *testing.T) {
 		Spec struct {
 			ContentSelector struct {
 				Git struct {
-					Uri      string   `yaml:"uri"`
-					Branches []string `yaml:"branches"`
+					Uri          string   `yaml:"uri"`
+					Branches     []string `yaml:"branches"`
 					UsernameFrom struct {
 						SecretKeyRef struct {
 							Name string `yaml:"name"`
@@ -161,5 +161,63 @@ func TestExecuteTemplateRendersContentSelectorGit(t *testing.T) {
 
 	if len(parsed.Spec.ContentSelector.Git.PullRequest.Types) != 1 || parsed.Spec.ContentSelector.Git.PullRequest.Types[0] != "opened" {
 		t.Fatalf("expected contentSelector.git.pullRequest.types to round-trip, got %v", parsed.Spec.ContentSelector.Git.PullRequest.Types)
+	}
+}
+
+func TestExecuteTemplateRendersMatchAndListenerAgentIds(t *testing.T) {
+	action := testkube.RUN_TestTriggerActions
+	execution := testkube.TESTWORKFLOW_TestTriggerExecutions
+
+	trigger := testkube.TestTrigger{
+		Name:      "match-trigger",
+		Namespace: "testkube",
+		ResourceRef: &testkube.TestTriggerResourceRef{
+			Group:   "argoproj.io",
+			Version: "v1alpha1",
+			Kind:    "Rollout",
+		},
+		Event:     "modified",
+		Action:    &action,
+		Execution: &execution,
+		TestSelector: &testkube.TestTriggerSelector{
+			Name: "sample-workflow",
+		},
+		Match: []testkube.TestTriggerFieldCondition{
+			{Path: ".status.phase", Operator: "changed_to", Value: "Healthy"},
+			{Path: ".spec.paused", Operator: "exists"},
+		},
+		ListenerAgentIds: []string{"tkcagnt_a", "tkcagnt_b"},
+	}
+
+	output, err := ExecuteTemplate(TemplateTestTrigger, trigger)
+	if err != nil {
+		t.Fatalf("execute template: %v", err)
+	}
+
+	var parsed struct {
+		Spec struct {
+			Match []struct {
+				Path     string `yaml:"path"`
+				Operator string `yaml:"operator"`
+				Value    string `yaml:"value"`
+			} `yaml:"match"`
+			ListenerAgentIds []string `yaml:"listenerAgentIds"`
+		} `yaml:"spec"`
+	}
+	if err := yaml.Unmarshal([]byte(output), &parsed); err != nil {
+		t.Fatalf("generated YAML does not parse: %v\n%s", err, output)
+	}
+
+	if len(parsed.Spec.Match) != 2 {
+		t.Fatalf("expected 2 match conditions, got %d\n%s", len(parsed.Spec.Match), output)
+	}
+	if parsed.Spec.Match[0].Path != ".status.phase" || parsed.Spec.Match[0].Operator != "changed_to" || parsed.Spec.Match[0].Value != "Healthy" {
+		t.Errorf("match[0] mismatch: %+v", parsed.Spec.Match[0])
+	}
+	if parsed.Spec.Match[1].Value != "" {
+		t.Errorf("valueless operator should not render a value: %+v", parsed.Spec.Match[1])
+	}
+	if len(parsed.Spec.ListenerAgentIds) != 2 || parsed.Spec.ListenerAgentIds[0] != "tkcagnt_a" || parsed.Spec.ListenerAgentIds[1] != "tkcagnt_b" {
+		t.Errorf("listenerAgentIds mismatch: %v", parsed.Spec.ListenerAgentIds)
 	}
 }
