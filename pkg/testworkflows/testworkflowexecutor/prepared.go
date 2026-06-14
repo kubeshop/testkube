@@ -316,6 +316,14 @@ func (e *IntermediateExecution) Resolve(organizationId, organizationSlug, enviro
 		e.dirty = true
 	}
 
+	// Compute the merged execution tags (spec defaults + per-execution overrides) so that
+	// expressions like {{ execution.tags.env }} are resolved correctly.
+	executionTags := make(map[string]string)
+	if e.cr.Spec.Execution != nil {
+		maps.Copy(executionTags, e.cr.Spec.Execution.Tags)
+	}
+	maps.Copy(executionTags, e.tags)
+
 	executionMachine := testworkflowconfig.CreateExecutionMachine(&testworkflowconfig.ExecutionConfig{
 		Id:               e.execution.Id,
 		GroupId:          e.execution.GroupId,
@@ -323,6 +331,7 @@ func (e *IntermediateExecution) Resolve(organizationId, organizationSlug, enviro
 		Number:           e.execution.Number,
 		ScheduledAt:      e.execution.ScheduledAt,
 		DisableWebhooks:  e.execution.DisableWebhooks,
+		Tags:             executionTags,
 		Debug:            debug,
 		OrganizationId:   organizationId,
 		OrganizationSlug: organizationSlug,
