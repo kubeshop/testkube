@@ -28,7 +28,7 @@ spec:
     version:
       description: Artillery version to use
       type: string
-      default: 2.0.9
+      default: 2.0.23
     artillery_binary:
       description: Artillery binary path
       type: string
