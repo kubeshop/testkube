@@ -153,5 +153,8 @@ func influxLineProtocolHasValidLine(reader io.Reader) bool {
 			return true
 		}
 	}
+	if err := scanner.Err(); err != nil {
+		fmt.Printf("warn: influx line protocol scanning: %s\n", err)
+	}
 	return false
 }
