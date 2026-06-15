@@ -68,11 +68,8 @@ func (b *PostgresLeaseBackend) TryAcquire(ctx context.Context, id, clusterID str
 		return false, err
 	}
 
-	acquired, renewable := leaseStatus(currentLease, id, clusterID)
-	switch {
-	case acquired:
-		return true, nil
-	case !renewable:
+	_, renewable := leaseStatus(currentLease, id, clusterID)
+	if !renewable {
 		return false, nil
 	}
 
@@ -86,7 +83,7 @@ func (b *PostgresLeaseBackend) TryAcquire(ctx context.Context, id, clusterID str
 		return false, err
 	}
 
-	acquired, _ = leaseStatus(newLease, id, clusterID)
+	acquired, _ := leaseStatus(newLease, id, clusterID)
 	return acquired, nil
 }
 
@@ -167,12 +164,12 @@ func leaseStatus(lease *sqlc.Lease, id, clusterID string) (acquired bool, renewa
 	isMyLease := lease.Identifier == id && lease.ClusterID == clusterID
 
 	switch {
+	case isMyLease:
+		acquired = true
+		renewable = true
 	case isLeaseExpired:
 		acquired = false
 		renewable = true
-	case isMyLease:
-		acquired = true
-		renewable = false
 	default:
 		acquired = false
 		renewable = false

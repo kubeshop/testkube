@@ -62,6 +62,7 @@ func TestPostgresLeaseBackend_TryAcquire(t *testing.T) {
 			RenewedAt:  toPgTimestamp(time.Now()),
 		}
 		mockQueries.On("InsertLease", ctx, mock.AnythingOfType("sqlc.InsertLeaseParams")).Return(expectedLease, nil)
+		mockQueries.On("UpdateLease", ctx, mock.AnythingOfType("sqlc.UpdateLeaseParams")).Return(expectedLease, nil)
 
 		// Act
 		acquired, err := backend.TryAcquire(ctx, id, clusterID)
@@ -91,6 +92,9 @@ func TestPostgresLeaseBackend_TryAcquire(t *testing.T) {
 			RenewedAt:  toPgTimestamp(time.Now()), // Recent renewal
 		}
 		mockQueries.On("FindLeaseById", ctx, leaseID).Return(existingLease, nil)
+		renewedLease := existingLease
+		renewedLease.RenewedAt = toPgTimestamp(time.Now())
+		mockQueries.On("UpdateLease", ctx, mock.AnythingOfType("sqlc.UpdateLeaseParams")).Return(renewedLease, nil)
 
 		// Act
 		acquired, err := backend.TryAcquire(ctx, id, clusterID)
@@ -170,6 +174,32 @@ func TestPostgresLeaseBackend_TryAcquire(t *testing.T) {
 	})
 }
 
+func TestPostgresLeaseBackend_HolderRenewsOwnLease(t *testing.T) {
+	mockQueries := &MockQueriesInterface{}
+	backend := createPostgresLeaseBackend(mockQueries, nil)
+
+	ctx := context.Background()
+	id := "leader-1"
+	clusterID := "cluster"
+	leaseID := "lease-cluster"
+
+	ownLease := sqlc.Lease{
+		ID:         leaseID,
+		Identifier: id,
+		ClusterID:  clusterID,
+		AcquiredAt: toPgTimestamp(time.Now().Add(-5 * time.Minute)),
+		RenewedAt:  toPgTimestamp(time.Now().Add(-30 * time.Second)),
+	}
+	mockQueries.On("FindLeaseById", ctx, leaseID).Return(ownLease, nil)
+	mockQueries.On("UpdateLease", ctx, mock.AnythingOfType("sqlc.UpdateLeaseParams")).Return(ownLease, nil)
+
+	acquired, err := backend.TryAcquire(ctx, id, clusterID)
+
+	assert.NoError(t, err)
+	assert.True(t, acquired, "holder must keep leadership")
+	mockQueries.AssertCalled(t, "UpdateLease", ctx, mock.AnythingOfType("sqlc.UpdateLeaseParams"))
+}
+
 func TestLeaseStatus(t *testing.T) {
 	tests := []struct {
 		name              string
@@ -209,7 +239,7 @@ func TestLeaseStatus(t *testing.T) {
 			id:                "test",
 			clusterID:         "cluster",
 			expectedAcquired:  true,
-			expectedRenewable: false,
+			expectedRenewable: true,
 		},
 		{
 			name: "Other's active lease",
