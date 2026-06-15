@@ -53,6 +53,9 @@ func (b *MongoLeaseBackend) TryAcquire(ctx context.Context, id, clusterID string
 		acquiredAt = time.Now()
 	}
 	newLease, err := b.tryUpdateLease(ctx, leaseMongoID, id, clusterID, acquiredAt)
+	if err == mongo.ErrNoDocuments {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
@@ -98,12 +101,24 @@ func (b *MongoLeaseBackend) tryUpdateLease(ctx context.Context, leaseMongoID, id
 		RenewedAt:  time.Now(),
 	}
 
+	staleThreshold := time.Now().Add(-leasebackend.DefaultMaxLeaseDuration)
+	filter := bson.M{
+		"_id": leaseMongoID,
+		"$or": bson.A{
+			bson.M{"identifier": id},
+			bson.M{"renewed_at": bson.M{"$lt": staleThreshold}},
+		},
+	}
+
 	res := b.coll.FindOneAndUpdate(
 		ctx,
-		bson.M{"_id": leaseMongoID},
+		filter,
 		bson.M{"$set": newLease},
 		options.FindOneAndUpdate().SetReturnDocument(options.After),
 	)
+	if res.Err() == mongo.ErrNoDocuments {
+		return nil, mongo.ErrNoDocuments
+	}
 	if res.Err() != nil {
 		return nil, errors.Wrap(res.Err(), "error finding and updating mongo db document")
 	}

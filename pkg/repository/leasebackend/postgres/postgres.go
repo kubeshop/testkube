@@ -79,6 +79,9 @@ func (b *PostgresLeaseBackend) TryAcquire(ctx context.Context, id, clusterID str
 	}
 
 	newLease, err := b.tryUpdateLease(ctx, leaseID, id, clusterID, acquiredAt.Time)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
@@ -135,11 +138,12 @@ func (b *PostgresLeaseBackend) tryUpdateLease(ctx context.Context, leaseID, id, 
 	renewedAt := time.Now()
 
 	result, err := b.queries.UpdateLease(ctx, sqlc.UpdateLeaseParams{
-		ID:         leaseID,
-		Identifier: id,
-		ClusterID:  clusterID,
-		AcquiredAt: toPgTimestamp(acquiredAt),
-		RenewedAt:  toPgTimestamp(renewedAt),
+		ID:             leaseID,
+		Identifier:     id,
+		ClusterID:      clusterID,
+		AcquiredAt:     toPgTimestamp(acquiredAt),
+		RenewedAt:      toPgTimestamp(renewedAt),
+		StaleThreshold: toPgTimestamp(renewedAt.Add(-leasebackend.DefaultMaxLeaseDuration)),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error updating lease: %w", err)
