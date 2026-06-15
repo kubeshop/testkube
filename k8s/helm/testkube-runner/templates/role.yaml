@@ -25,6 +25,14 @@ rules:
     - patch
     - update
     - delete
+# Read access to the agent's own Deployment so it can collect
+# runner.testkube.io/* registration labels at startup.
+- apiGroups:
+    - apps
+  resources:
+    - deployments
+  verbs:
+    - get
 {{- end }}
 
 ---
