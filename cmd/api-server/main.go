@@ -1007,11 +1007,9 @@ func main() {
 		leaderClusterID = leasebackend.SanitizeForK8sName(leaderClusterID)
 
 		coordinatorLogger := log.DefaultLogger.With("component", "leader-coordinator")
-		leaderOpts := []leader.Option{leader.WithCheckInterval(leaseCheckInterval)}
-		if cfg.LeaderElectionDisabled {
-			leaderOpts = append(leaderOpts, leader.WithLeaderElectionDisabled())
-		}
-		leaderCoordinator := leader.New(leaderLeaseBackend, leaderIdentifier, leaderClusterID, coordinatorLogger, leaderOpts...)
+		leaderCoordinator := leader.New(leaderLeaseBackend, leaderIdentifier, leaderClusterID, coordinatorLogger,
+			leader.WithCheckInterval(leaseCheckInterval),
+			leader.WithLeaderElectionDisabled(cfg.LeaderElectionDisabled))
 		for _, task := range leaderTasks {
 			leaderCoordinator.Register(task)
 		}

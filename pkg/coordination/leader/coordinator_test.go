@@ -210,7 +210,7 @@ func TestCoordinatorDisabledRunsTasksWithoutLease(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	coord := New(backend, "id-1", "cluster-1", nil, WithLeaderElectionDisabled())
+	coord := New(backend, "id-1", "cluster-1", nil, WithLeaderElectionDisabled(true))
 	coord.Register(task)
 
 	done := make(chan struct{})

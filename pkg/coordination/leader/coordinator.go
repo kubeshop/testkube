@@ -84,16 +84,16 @@ func WithCheckInterval(interval time.Duration) Option {
 	}
 }
 
-// WithLeaderElectionDisabled turns leader election off entirely: Run starts the
-// registered tasks directly and never contacts the lease backend (no lease object,
-// no periodic API calls). It is intended for explicitly single-replica deployments
-// where election is unnecessary overhead.
+// WithLeaderElectionDisabled controls whether leader election runs. When disabled,
+// Run starts the registered tasks directly and never contacts the lease backend (no
+// lease object, no periodic API calls). It is intended for explicitly single-replica
+// deployments where election is unnecessary overhead.
 //
-// WARNING: do not enable this with more than one replica — every replica would run
+// WARNING: do not disable this with more than one replica — every replica would run
 // the leader-only tasks simultaneously.
-func WithLeaderElectionDisabled() Option {
+func WithLeaderElectionDisabled(disabled bool) Option {
 	return func(c *Coordinator) {
-		c.disabled = true
+		c.disabled = disabled
 	}
 }
 

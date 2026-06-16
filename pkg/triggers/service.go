@@ -158,11 +158,9 @@ func NewService(
 	}
 
 	coordinatorLogger := logger.With("component", "trigger-service", "identifier", s.identifier)
-	leaderOpts := []leader.Option{leader.WithCheckInterval(s.leaseCheckInterval)}
-	if s.leaderElectionDisabled {
-		leaderOpts = append(leaderOpts, leader.WithLeaderElectionDisabled())
-	}
-	s.coordinator = leader.New(leaseBackend, s.identifier, s.clusterID, coordinatorLogger, leaderOpts...)
+	s.coordinator = leader.New(leaseBackend, s.identifier, s.clusterID, coordinatorLogger,
+		leader.WithCheckInterval(s.leaseCheckInterval),
+		leader.WithLeaderElectionDisabled(s.leaderElectionDisabled))
 
 	s.coordinator.Register(leader.Task{
 		Name: "trigger-watcher",
