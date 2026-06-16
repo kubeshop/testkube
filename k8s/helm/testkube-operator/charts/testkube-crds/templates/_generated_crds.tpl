@@ -7130,19 +7130,34 @@ spec:
                 - testsuite
                 - testworkflow
                 type: string
-              listenerAgentIds:
+              listener:
                 description: |-
-                  ListenerAgentIds pins this trigger to specific listener agent(s) — the
-                  agents that watch the cluster for matching events and fire the trigger.
-                  When empty, every listener-capable agent in the environment that picks
-                  up the CRD will fire it (broadcast). Required when match[] is set,
-                  because schema-aware match validation is only sound when the firing
-                  listener is known at create time. The picker and validator ran against
-                  that listener's cluster-resources snapshot, and a different listener
-                  may have a different CRD inventory or RBAC.
-                items:
-                  type: string
-                type: array
+                  Listener selects which listener agent(s) watch the cluster for matching
+                  events and fire the trigger, using the same match selector as the action
+                  target (e.g. match.id). When empty, every listener-capable agent in the
+                  environment that picks up the CRD will fire it (broadcast). Required when
+                  match[] is set, because schema-aware match validation is only sound when
+                  the firing listener is known at create time: the picker and validator ran
+                  against that listener's cluster-resources snapshot, and a different
+                  listener may have a different CRD inventory or RBAC.
+                properties:
+                  match:
+                    additionalProperties:
+                      items:
+                        type: string
+                      type: array
+                    type: object
+                  not:
+                    additionalProperties:
+                      items:
+                        type: string
+                      type: array
+                    type: object
+                  replicate:
+                    items:
+                      type: string
+                    type: array
+                type: object
               match:
                 description: |-
                   Match filters which object changes fire the trigger.

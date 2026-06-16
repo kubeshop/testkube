@@ -117,8 +117,8 @@ func TestTestTriggerSpecValidate(t *testing.T) {
 	}{
 		"valid scalar equals": {
 			spec: testtriggersv1.TestTriggerSpec{
-				Event:            testtriggersv1.TestTriggerEventModified,
-				ListenerAgentIds: []string{"tkcagnt_test"},
+				Event:    testtriggersv1.TestTriggerEventModified,
+				Listener: &commonv1.Target{Match: map[string][]string{"id": {"tkcagnt_test"}}},
 				Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
 					{Path: ".status.phase", Operator: workflowtriggersv1.FieldOperatorEquals, Value: "Healthy"},
 				},
@@ -127,7 +127,7 @@ func TestTestTriggerSpecValidate(t *testing.T) {
 		},
 		"valid exists with no value": {
 			spec: testtriggersv1.TestTriggerSpec{
-				ListenerAgentIds: []string{"tkcagnt_test"},
+				Listener: &commonv1.Target{Match: map[string][]string{"id": {"tkcagnt_test"}}},
 				Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
 					{Path: ".status.phase", Operator: workflowtriggersv1.FieldOperatorExists},
 				},
@@ -138,22 +138,22 @@ func TestTestTriggerSpecValidate(t *testing.T) {
 			spec:       testtriggersv1.TestTriggerSpec{Event: testtriggersv1.TestTriggerEventCreated},
 			wantErrMsg: "",
 		},
-		"match[] without listenerAgentIds is rejected": {
+		"match[] without a listener is rejected": {
 			spec: testtriggersv1.TestTriggerSpec{
 				Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
 					{Path: ".status.phase", Operator: workflowtriggersv1.FieldOperatorExists},
 				},
 			},
-			wantErrMsg: "listenerAgentIds",
+			wantErrMsg: "listener",
 		},
-		"match[] with empty listenerAgentIds list is rejected": {
+		"match[] with empty listener match.id is rejected": {
 			spec: testtriggersv1.TestTriggerSpec{
-				ListenerAgentIds: []string{},
+				Listener: &commonv1.Target{Match: map[string][]string{"id": {}}},
 				Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
 					{Path: ".status.phase", Operator: workflowtriggersv1.FieldOperatorExists},
 				},
 			},
-			wantErrMsg: "listenerAgentIds",
+			wantErrMsg: "listener",
 		},
 		"match[] with only a runner binding is rejected": {
 			spec: testtriggersv1.TestTriggerSpec{
@@ -162,11 +162,11 @@ func TestTestTriggerSpecValidate(t *testing.T) {
 					{Path: ".status.phase", Operator: workflowtriggersv1.FieldOperatorExists},
 				},
 			},
-			wantErrMsg: "listenerAgentIds",
+			wantErrMsg: "listener",
 		},
 		"missing path": {
 			spec: testtriggersv1.TestTriggerSpec{
-				ListenerAgentIds: []string{"tkcagnt_test"},
+				Listener: &commonv1.Target{Match: map[string][]string{"id": {"tkcagnt_test"}}},
 				Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
 					{Path: "", Operator: workflowtriggersv1.FieldOperatorEquals, Value: "x"},
 				},
@@ -175,7 +175,7 @@ func TestTestTriggerSpecValidate(t *testing.T) {
 		},
 		"invalid path syntax": {
 			spec: testtriggersv1.TestTriggerSpec{
-				ListenerAgentIds: []string{"tkcagnt_test"},
+				Listener: &commonv1.Target{Match: map[string][]string{"id": {"tkcagnt_test"}}},
 				Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
 					{Path: "spec.replicas", Operator: workflowtriggersv1.FieldOperatorExists},
 				},
@@ -184,7 +184,7 @@ func TestTestTriggerSpecValidate(t *testing.T) {
 		},
 		"bracket wildcard path is rejected": {
 			spec: testtriggersv1.TestTriggerSpec{
-				ListenerAgentIds: []string{"tkcagnt_test"},
+				Listener: &commonv1.Target{Match: map[string][]string{"id": {"tkcagnt_test"}}},
 				Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
 					{Path: ".spec.containers[*].image", Operator: workflowtriggersv1.FieldOperatorExists},
 				},
@@ -193,7 +193,7 @@ func TestTestTriggerSpecValidate(t *testing.T) {
 		},
 		"bracket index path is rejected": {
 			spec: testtriggersv1.TestTriggerSpec{
-				ListenerAgentIds: []string{"tkcagnt_test"},
+				Listener: &commonv1.Target{Match: map[string][]string{"id": {"tkcagnt_test"}}},
 				Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
 					{Path: ".spec.containers[0].image", Operator: workflowtriggersv1.FieldOperatorExists},
 				},
@@ -202,8 +202,8 @@ func TestTestTriggerSpecValidate(t *testing.T) {
 		},
 		"equals without value": {
 			spec: testtriggersv1.TestTriggerSpec{
-				Event:            testtriggersv1.TestTriggerEventModified,
-				ListenerAgentIds: []string{"tkcagnt_test"},
+				Event:    testtriggersv1.TestTriggerEventModified,
+				Listener: &commonv1.Target{Match: map[string][]string{"id": {"tkcagnt_test"}}},
 				Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
 					{Path: ".status.phase", Operator: workflowtriggersv1.FieldOperatorEquals, Value: ""},
 				},
@@ -212,7 +212,7 @@ func TestTestTriggerSpecValidate(t *testing.T) {
 		},
 		"unknown operator": {
 			spec: testtriggersv1.TestTriggerSpec{
-				ListenerAgentIds: []string{"tkcagnt_test"},
+				Listener: &commonv1.Target{Match: map[string][]string{"id": {"tkcagnt_test"}}},
 				Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
 					{Path: ".status.phase", Operator: "matches"},
 				},
@@ -221,8 +221,8 @@ func TestTestTriggerSpecValidate(t *testing.T) {
 		},
 		"changed_to with non-modified event": {
 			spec: testtriggersv1.TestTriggerSpec{
-				Event:            "created",
-				ListenerAgentIds: []string{"tkcagnt_test"},
+				Event:    "created",
+				Listener: &commonv1.Target{Match: map[string][]string{"id": {"tkcagnt_test"}}},
 				Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
 					{Path: ".status.phase", Operator: workflowtriggersv1.FieldOperatorChangedTo, Value: "Healthy"},
 				},

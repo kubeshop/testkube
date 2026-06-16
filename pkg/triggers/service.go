@@ -304,9 +304,9 @@ func (s *Service) triggerTargetsThisAgent(listenerAgentIds []string) bool {
 }
 
 func (s *Service) addTrigger(ctx context.Context, t *testtriggersv1.TestTrigger) {
-	if !s.triggerTargetsThisAgent(t.Spec.ListenerAgentIds) {
+	if !s.triggerTargetsThisAgent(listenerAgentIDs(t.Spec.Listener)) {
 		s.logger.Debugf(
-			"trigger service: skipping testtrigger %s/%s — listenerAgentIds pins it to other agent(s)",
+			"trigger service: skipping testtrigger %s/%s — listener pins it to other agent(s)",
 			t.Namespace, t.Name,
 		)
 		return
@@ -333,7 +333,7 @@ func (s *Service) updateTrigger(ctx context.Context, target *testtriggersv1.Test
 	// only when we previously held one). If it newly targets us, register
 	// fresh. Otherwise fall through to the normal in-place update path.
 	registered := s.triggerStatus[key] != nil
-	targetsUs := s.triggerTargetsThisAgent(target.Spec.ListenerAgentIds)
+	targetsUs := s.triggerTargetsThisAgent(listenerAgentIDs(target.Spec.Listener))
 	if !targetsUs {
 		if registered {
 			// Release the informer registered for the OLD GVK: the same update

@@ -7,10 +7,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/log"
 )
+
+// listenerTarget builds a listener Target pinned to the given agent IDs, or nil
+// (broadcast) when none are given — mirroring how empty listenerAgentIds used
+// to mean "every listener fires".
+func listenerTarget(ids []string) *commonv1.Target {
+	if len(ids) == 0 {
+		return nil
+	}
+	return &commonv1.Target{Match: map[string][]string{"id": ids}}
+}
 
 func TestService_addTrigger(t *testing.T) {
 
@@ -181,7 +192,7 @@ func TestService_addTrigger_listenerPinning(t *testing.T) {
 			}
 			trig := &testtriggersv1.TestTrigger{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "tk-dev", Name: "t1"},
-				Spec:       testtriggersv1.TestTriggerSpec{ListenerAgentIds: tc.listenerIDs},
+				Spec:       testtriggersv1.TestTriggerSpec{Listener: listenerTarget(tc.listenerIDs)},
 			}
 			s.addTrigger(context.Background(), trig)
 			key := newStatusKey(triggerSourceV1, "tk-dev", "t1")
@@ -215,8 +226,8 @@ func TestService_updateTrigger_listenerPinning(t *testing.T) {
 		return &testtriggersv1.TestTrigger{
 			ObjectMeta: metav1.ObjectMeta{Namespace: "tk-dev", Name: "t1"},
 			Spec: testtriggersv1.TestTriggerSpec{
-				ListenerAgentIds: listenerIDs,
-				Event:            testtriggersv1.TestTriggerEvent(event),
+				Listener: listenerTarget(listenerIDs),
+				Event:    testtriggersv1.TestTriggerEvent(event),
 			},
 		}
 	}

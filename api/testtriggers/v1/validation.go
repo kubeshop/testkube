@@ -50,8 +50,8 @@ func (s *TestTriggerSpec) Validate() []error {
 	if isContentResource && len(s.Match) > 0 {
 		errs = append(errs, fmt.Errorf("resource %q does not support match", TestTriggerResourceContent))
 	} else if len(s.Match) > 0 {
-		if len(s.ListenerAgentIds) == 0 {
-			errs = append(errs, fmt.Errorf("match conditions require listenerAgentIds to pin the trigger to one or more listener agents"))
+		if s.Listener == nil || len(s.Listener.Match["id"]) == 0 {
+			errs = append(errs, fmt.Errorf("match conditions require listener.match.id to pin the trigger to one or more listener agents"))
 		}
 	}
 

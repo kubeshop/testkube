@@ -25,12 +25,8 @@ type TestTrigger struct {
 	// listen for event for selected resource
 	Event string `json:"event"`
 	// Match filters which object changes fire the trigger (ANDed).
-	Match []TestTriggerFieldCondition `json:"match,omitempty"`
-	// ListenerAgentIds pins this trigger to specific listener agent(s). Empty
-	// means broadcast (every listener-capable agent in the env fires). Required
-	// by cp-api when match[] is set so schema-aware validation has a concrete
-	// listener to anchor against.
-	ListenerAgentIds  []string                        `json:"listenerAgentIds,omitempty"`
+	Match             []TestTriggerFieldCondition     `json:"match,omitempty"`
+	Listener          *ExecutionTarget                `json:"listener,omitempty"`
 	ConditionSpec     *TestTriggerConditionSpec       `json:"conditionSpec,omitempty"`
 	ProbeSpec         *TestTriggerProbeSpec           `json:"probeSpec,omitempty"`
 	ContentSelector   *TestTriggerContentSelector     `json:"contentSelector,omitempty"`

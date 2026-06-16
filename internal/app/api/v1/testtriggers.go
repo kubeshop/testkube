@@ -150,7 +150,7 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 				ConcurrencyPolicy: request.ConcurrencyPolicy,
 				Disabled:          request.Disabled,
 				Sync:              request.Sync,
-				ListenerAgentIds:  request.ListenerAgentIds,
+				Listener:          request.Listener,
 			}
 		} else {
 			// JSON merge: only update fields that are present in the request
@@ -208,8 +208,8 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 			if request.Sync != nil {
 				apiTrigger.Sync = request.Sync
 			}
-			if request.ListenerAgentIds != nil {
-				apiTrigger.ListenerAgentIds = request.ListenerAgentIds
+			if request.Listener != nil {
+				apiTrigger.Listener = request.Listener
 			}
 			apiTrigger.Disabled = request.Disabled
 		}
@@ -427,7 +427,7 @@ func mapAPITestTriggerToUpsertRequest(trigger *testkube.TestTrigger) testkube.Te
 		ConcurrencyPolicy: trigger.ConcurrencyPolicy,
 		Disabled:          trigger.Disabled,
 		Sync:              trigger.Sync,
-		ListenerAgentIds:  trigger.ListenerAgentIds,
+		Listener:          trigger.Listener,
 	}
 }
 

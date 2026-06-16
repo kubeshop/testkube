@@ -108,6 +108,15 @@ type internalProbe struct {
 	Headers map[string]string
 }
 
+// listenerAgentIDs returns the agent IDs the listener target pins to (its
+// match.id selector), or nil for broadcast (no listener / no id match).
+func listenerAgentIDs(listener *commonv1.Target) []string {
+	if listener == nil {
+		return nil
+	}
+	return listener.Match["id"]
+}
+
 // convertV1ToInternal converts a v1 TestTrigger CRD to the internal representation.
 func convertV1ToInternal(t *testtriggersv1.TestTrigger) *internalTrigger {
 	it := &internalTrigger{
@@ -118,7 +127,7 @@ func convertV1ToInternal(t *testtriggersv1.TestTrigger) *internalTrigger {
 		Event:              string(t.Spec.Event),
 		EventLabelSelector: t.Spec.Selector,
 		FieldConditions:    t.Spec.Match,
-		ListenerAgentIds:   t.Spec.ListenerAgentIds,
+		ListenerAgentIds:   listenerAgentIDs(t.Spec.Listener),
 		Execution:          string(t.Spec.Execution),
 		Disabled:           t.Spec.Disabled,
 	}

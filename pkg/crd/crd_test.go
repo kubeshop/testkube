@@ -164,7 +164,7 @@ func TestExecuteTemplateRendersContentSelectorGit(t *testing.T) {
 	}
 }
 
-func TestExecuteTemplateRendersMatchAndListenerAgentIds(t *testing.T) {
+func TestExecuteTemplateRendersMatchAndListener(t *testing.T) {
 	action := testkube.RUN_TestTriggerActions
 	execution := testkube.TESTWORKFLOW_TestTriggerExecutions
 
@@ -186,7 +186,7 @@ func TestExecuteTemplateRendersMatchAndListenerAgentIds(t *testing.T) {
 			{Path: ".status.phase", Operator: "changed_to", Value: "Healthy"},
 			{Path: ".spec.paused", Operator: "exists"},
 		},
-		ListenerAgentIds: []string{"tkcagnt_a", "tkcagnt_b"},
+		Listener: &testkube.ExecutionTarget{Match: map[string][]string{"id": {"tkcagnt_a", "tkcagnt_b"}}},
 	}
 
 	output, err := ExecuteTemplate(TemplateTestTrigger, trigger)
@@ -201,7 +201,9 @@ func TestExecuteTemplateRendersMatchAndListenerAgentIds(t *testing.T) {
 				Operator string `yaml:"operator"`
 				Value    string `yaml:"value"`
 			} `yaml:"match"`
-			ListenerAgentIds []string `yaml:"listenerAgentIds"`
+			Listener struct {
+				Match map[string][]string `yaml:"match"`
+			} `yaml:"listener"`
 		} `yaml:"spec"`
 	}
 	if err := yaml.Unmarshal([]byte(output), &parsed); err != nil {
@@ -217,7 +219,8 @@ func TestExecuteTemplateRendersMatchAndListenerAgentIds(t *testing.T) {
 	if parsed.Spec.Match[1].Value != "" {
 		t.Errorf("valueless operator should not render a value: %+v", parsed.Spec.Match[1])
 	}
-	if len(parsed.Spec.ListenerAgentIds) != 2 || parsed.Spec.ListenerAgentIds[0] != "tkcagnt_a" || parsed.Spec.ListenerAgentIds[1] != "tkcagnt_b" {
-		t.Errorf("listenerAgentIds mismatch: %v", parsed.Spec.ListenerAgentIds)
+	ids := parsed.Spec.Listener.Match["id"]
+	if len(ids) != 2 || ids[0] != "tkcagnt_a" || ids[1] != "tkcagnt_b" {
+		t.Errorf("listener match.id mismatch: %v", ids)
 	}
 }
