@@ -16,6 +16,24 @@ spec:
   - execute:
       parallelism: 2
       workflows:
-        - selector:
-            matchLabels:
-              core-tests: wizard-examples
+        # Do not use selector.matchLabels here! It would also match user-created workflows cloned from these examples
+        - name: example-artillery
+        - name: example-curl
+        - name: example-cypress
+        - name: example-sharded-cypress
+        - name: example-distributed-jmeter
+        - name: example-distributed-k6
+        - name: example-sharded-playwright-with-merged-report
+        - name: example-gradle
+        - name: example-jmeter
+        - name: example-k6-string
+        - name: example-k6
+        - name: example-matrix-services
+        - name: example-maven
+        - name: example-playwright
+        - name: example-postman
+        - name: example-pytest
+        - name: example-soapui
+        - name: example-test-suite-with-file-input
+        - name: example-test-suite
+        - name: example-sequential-test-suite
