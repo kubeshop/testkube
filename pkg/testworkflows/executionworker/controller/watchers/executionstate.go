@@ -417,13 +417,24 @@ func (e *executionState) PodExecutionError() string {
 		errorStr = e.pod.ExecutionError()
 	}
 
-	if (errorStr == "" || errorStr == "Error") && e.podEvents.Error() {
+	buildPodEventError := func() string {
 		reason := e.podEvents.ErrorReason()
 		message := e.podEvents.ErrorMessage()
 		if message == "" {
 			return reason
 		}
 		return fmt.Sprintf("%s: %s", reason, message)
+	}
+
+	if (errorStr == "" || errorStr == "Error") && e.podEvents.Error() {
+		return buildPodEventError()
+	}
+
+	if strings.HasPrefix(errorStr, "EvictionByEvictionAPI:") && e.podEvents.Error() {
+		podEventErr := buildPodEventError()
+		if podEventErr != "" && !strings.Contains(errorStr, podEventErr) {
+			return fmt.Sprintf("%s (pod event: %s)", errorStr, podEventErr)
+		}
 	}
 
 	if errorStr == "Error" {

@@ -6,6 +6,7 @@ import (
 	"slices"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
@@ -24,6 +25,17 @@ type WatchInstrumentedPodOptions struct {
 	DisableFollow       bool
 	LogAbortedDetails   bool
 	ContainerLogOptions ContainerLogOptions
+}
+
+func mapPodEventRef(container, stepRef string, ev *corev1.Event) (string, bool) {
+	name := GetEventContainerName(ev)
+	if name == "" {
+		return "", true
+	}
+	if name == container && ev.Reason != "Created" && ev.Reason != "Started" {
+		return stepRef, true
+	}
+	return "", false
 }
 
 func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []stage.Signature, scheduledAt time.Time, watcher watchers2.ExecutionWatcher, opts WatchInstrumentedPodOptions) (<-chan ChannelMessage[Notification], error) {
@@ -84,10 +96,9 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			for _, ev := range watcher.State().PodEvents().Original()[currentPodEventsIndex:] {
 				currentPodEventsIndex++
 
-				// Display only events that are unrelated to further containers
-				name := GetEventContainerName(ev)
-				if name == "" {
-					notifier.Event("", watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message, executionId)
+				ref, emit := mapPodEventRef("", "", ev)
+				if emit {
+					notifier.Event(ref, watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message, executionId)
 				}
 			}
 
@@ -161,10 +172,9 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				for _, ev := range watcher.State().PodEvents().Original()[currentPodEventsIndex:] {
 					currentPodEventsIndex++
 
-					// Display only events that are unrelated to further containers
-					name := GetEventContainerName(ev)
-					if name == container && ev.Reason != "Created" && ev.Reason != "Started" {
-						notifier.Event(initialRefs[containerIndex], watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message, executionId)
+					ref, emit := mapPodEventRef(container, initialRefs[containerIndex], ev)
+					if emit {
+						notifier.Event(ref, watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message, executionId)
 					}
 				}
 
@@ -195,6 +205,15 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			for {
 				select {
 				case <-updatesCh:
+					for _, ev := range watcher.State().PodEvents().Original()[currentPodEventsIndex:] {
+						currentPodEventsIndex++
+
+						ref, emit := mapPodEventRef(container, lastStarted, ev)
+						if emit {
+							notifier.Event(ref, watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message, executionId)
+						}
+					}
+
 					// Force empty notification on container ready (for services)
 					nextContainersReady := watcher.State().ContainersReady()
 					if containersReady != nextContainersReady {
@@ -238,6 +257,15 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 			// Wait until the Container is terminated
 			for ok := true; ok; _, ok = <-updatesCh {
+				for _, ev := range watcher.State().PodEvents().Original()[currentPodEventsIndex:] {
+					currentPodEventsIndex++
+
+					ref, emit := mapPodEventRef(container, lastStarted, ev)
+					if emit {
+						notifier.Event(ref, watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message, executionId)
+					}
+				}
+
 				// Determine if the container should be already stopped
 				if watcher.State().ContainerFinished(container) || watcher.State().Completed() || opts.DisableFollow {
 					break
