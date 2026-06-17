@@ -375,6 +375,7 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 			Number:           execution.Number,
 			ScheduledAt:      execution.ScheduledAt,
 			DisableWebhooks:  execution.DisableWebhooks,
+			Tags:             execution.Tags,
 			Debug:            false,
 			OrganizationId:   a.organizationId,
 			OrganizationSlug: a.proContext.OrgSlug,

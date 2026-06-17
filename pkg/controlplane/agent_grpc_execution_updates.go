@@ -116,5 +116,6 @@ func createExecutionStart(exe testkube.TestWorkflowExecution, info scheduling.Ru
 		AncestorExecutionIds: ancestorIds,
 		WorkflowName:         common.Ptr(workflowName),
 		VariableOverrides:    variableOverrides,
+		Tags:                 exe.Tags,
 	}
 }

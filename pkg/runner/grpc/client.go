@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"maps"
 	"strings"
 	"sync"
 	"time"
@@ -54,6 +55,22 @@ type Client struct {
 	callTimeout   time.Duration
 	runner        runner
 	pollInterval  time.Duration
+}
+
+func executionConfigFromStart(start *executionv1.ExecutionStart, organizationId string) testworkflowconfig.ExecutionConfig {
+	return testworkflowconfig.ExecutionConfig{
+		Id:              start.GetExecutionId(),
+		GroupId:         start.GetGroupId(),
+		Name:            start.GetName(),
+		Number:          start.GetNumber(),
+		ScheduledAt:     start.GetQueuedAt().AsTime(),
+		DisableWebhooks: start.GetDisableWebhooks(),
+		Tags:            maps.Clone(start.GetTags()),
+		Debug:           false,
+		OrganizationId:  organizationId,
+		EnvironmentId:   start.GetEnvironmentId(),
+		ParentIds:       strings.Join(start.AncestorExecutionIds, "/"),
+	}
 }
 
 // NewClient creates a client for retrieving updates about executions.
@@ -232,18 +249,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 				Runtime: &executionworkertypes.Runtime{
 					Variables: start.GetVariableOverrides(),
 				},
-				Execution: testworkflowconfig.ExecutionConfig{
-					Id:              start.GetExecutionId(),
-					GroupId:         start.GetGroupId(),
-					Name:            start.GetName(),
-					Number:          start.GetNumber(),
-					ScheduledAt:     start.GetQueuedAt().AsTime(),
-					DisableWebhooks: start.GetDisableWebhooks(),
-					Debug:           false,
-					OrganizationId:  c.OrganizationId,
-					EnvironmentId:   start.GetEnvironmentId(),
-					ParentIds:       strings.Join(start.AncestorExecutionIds, "/"),
-				},
+				Execution:    executionConfigFromStart(start, c.OrganizationId),
 				Workflow:     workflow,
 				ControlPlane: c.ControlPlaneConfig,
 			})
