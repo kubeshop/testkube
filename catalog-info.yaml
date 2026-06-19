@@ -37,10 +37,10 @@ spec:
   system: testkube-oss-runner
   lifecycle: production
   dependsOn:
-    - component:testkube-oss-runner/testkube-testworkflow-init
-    - component:testkube-oss-runner/testkube-testworkflow-toolkit
+    - component:testkube-testworkflow-init
+    - component:testkube-testworkflow-toolkit
   providesApis:
-    - api:testkube-oss-runner/testkube-api-server
+    - api:testkube-api-server
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API
@@ -57,7 +57,7 @@ spec:
   system: testkube-oss-runner
   lifecycle: production
   definition:
-    $ref: https://docs.testkube.io/assets/files/testkube-agent-openapi-9a33d3ecc97e3d36a05d07477de762d2.yaml
+    $text: ./api/v1/testkube.yaml
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
