@@ -1,9 +1,25 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: testkube-oss-runner
+  title: Testkube OSS/Runner
+  description: Testkube OSS/Runner is a cloud native test orchestration and execution platform
+    for Kubernetes.
+  annotations:
+    github.com/project-slug: kubeshop/testkube
+  tags:
+  - go
+  - kubernetes
+  - testing
+  - ci-cd
+---
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: testkube
-  title: Testkube
-  description: Cloud native test orchestration and execution platform for Kubernetes.
+  name: testkube-api-server
+  title: Testkube Agent
+  description: Testkube Agent is a component of Testkube that runs as a Kubernetes controller and is responsible for orchestrating test execution and managing test resources in the cluster.
   annotations:
     github.com/project-slug: kubeshop/testkube
   tags:
@@ -14,4 +30,64 @@ metadata:
 spec:
   type: service
   owner: group:guests
+  system: testkube-oss-runner
+  lifecycle: production
+  dependsOn:
+    - testkube-testworkflow-init
+    - testkube-testworkflow-toolkit
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: testkube-kubectl
+  title: Testkube CLI
+  description: Testkube CLI is a command-line interface for Testkube that allows users to interact with the Testkube platform, manage test resources, and execute tests from their local development environment.
+  annotations:
+    github.com/project-slug: kubeshop/testkube
+  tags:
+  - go
+  - kubernetes
+  - cli
+spec:
+  type: library
+  owner: group:guests
+  system: testkube-oss-runner
+  lifecycle: production
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: testkube-testworkflow-init
+  title: Testkube TestWorkflow Init Container
+  description: Testkube TestWorkflow Init Container is a component of Testkube that runs as an init container in test execution pods and is responsible for preparing the test environment, such as setting up necessary files, configurations, and dependencies before the main test execution container starts.
+  annotations:
+    github.com/project-slug: kubeshop/testkube
+  tags:
+  - go
+  - kubernetes
+  - testing
+  - ci-cd
+spec:
+  type: service
+  owner: group:guests
+  system: testkube-oss-runner
+  lifecycle: production
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: testkube-testworkflow-toolkit
+  title: Testkube TestWorkflow Toolkit
+  description: Testkube TestWorkflow Toolkit is a component of Testkube that provides reusable tools and utilities for test workflows, such as setting up necessary files, configurations, and dependencies before the main test execution container starts.
+  annotations:
+    github.com/project-slug: kubeshop/testkube
+  tags:
+  - go
+  - kubernetes
+  - testing
+  - ci-cd
+spec:
+  type: service
+  owner: group:guests
+  system: testkube-oss-runner
   lifecycle: production
