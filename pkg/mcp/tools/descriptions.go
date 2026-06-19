@@ -4,24 +4,26 @@ const (
 	WorkflowNameDescription = `The name of the workflow. Workflow names are lowercase alphanumeric with dashes 
 (e.g., 'my-workflow', 'api-tests'). This uniquely identifies a TestWorkflow within the organization.`
 
-	ExecutionIdDescription = `The unique execution ID in MongoDB format (e.g., '67d2cdbc351aecb2720afdf2'). 
-This is the internal identifier used by most tools that operate on specific executions. 
-If you only have an execution name, use the lookup_execution_id tool first to get the ID.`
+	ExecutionIdDescription = `The unique execution ID in MongoDB ObjectID format (24 hex chars, e.g., '67d2cdbc351aecb2720afdf2').
+Use lookup_execution_id if you only have an execution name.`
 
-	ExecutionNameDescription = `The name of the execution (e.g., 'my-workflow-123'). Execution names follow 
-the pattern of workflow name plus a numeric suffix. Use this when you have an execution name 
-but need the execution ID for other operations.`
+	ExecutionNameDescription = `The name of the execution (e.g., 'my-workflow-123'). Execution names follow
+the pattern of workflow name plus a numeric suffix. Use lookup_execution_id to get the ID from a name.`
 
 	PageDescription = "Page number for pagination (default: 0)"
 
 	PageSizeDescription = "Number of items to return per page (default: 10, max: 100)"
 
-	TextSearchDescription = `Text search filter for names or descriptions. Can use space-separated words 
+	TextSearchDescription = `Text search filter for names or descriptions. Can use space-separated words
 to find items containing all terms`
 
-	SelectorDescription = `Filter by workflow labels using key=value format. For single label use 'key=value', for multiple labels use comma-separated format 'key1=value1,key2=value2'. For example: 'tool=cypress' or 'tool=cypress,env=prod'. Note: this filters on workflow-level labels, not execution-level tags — use tagSelector for execution tags.`
+	SelectorDescription = `Filter workflows by label using key=value format. For single label use 'key=value',
+for multiple labels use comma-separated format 'key1=value1,key2=value2' (e.g., 'tool=cypress,env=prod').
+Note: filters workflow-level labels, not execution tags — use tagSelector for execution tags.`
 
-	TagSelectorDescription = `Filter by execution tags using key=value format. For single tag use 'key=value', for multiple tags use comma-separated format 'key1=value1,key2=value2'. For example: 'type=suite' or 'env=prod,type=smoke'. Note: this filters on execution-level tags (set via update_execution_tags), not workflow-level labels — use selector for workflow labels.`
+	TagSelectorDescription = `Filter executions by tag using key=value format. For single tag use 'key=value',
+for multiple tags use comma-separated format 'key1=value1,key2=value2' (e.g., 'type=suite,env=prod').
+Note: filters execution-level tags (set via update_execution_tags), not workflow labels — use selector for workflow labels.`
 
 	StatusDescription = `Filter by execution status. Available statuses: 'queued', 'running', 'passed', 
 'failed', 'skipped', 'aborted', 'timeout', 'paused'`
@@ -30,102 +32,68 @@ to find items containing all terms`
 
 	SinceDescription = "Filter executions created after this time (ISO 8601 format)"
 
-	StartDateDescription = "Filter executions scheduled on or after this date/time. Accepts a date (YYYY-MM-DD, e.g., '2024-01-15') or an RFC 3339 timestamp including optional fractional seconds (e.g., '2024-01-15T13:00:00Z' or '2024-01-15T13:00:00.000Z'). Use the timestamp form to narrow results to a specific hour range within a day."
+	StartDateDescription = `Filter items on or after this time. Accepts a date (YYYY-MM-DD, e.g., '2024-01-15')
+or an RFC 3339 timestamp (e.g., '2024-01-15T13:00:00Z').`
 
-	EndDateDescription = "Filter executions scheduled on or before this date/time. Accepts a date (YYYY-MM-DD, e.g., '2024-01-31') which includes the entire day, or an RFC 3339 timestamp including optional fractional seconds (e.g., '2024-01-31T16:00:00Z') for an exact upper bound. Combine with startDate to express ranges like 'yesterday 1–4 PM'."
+	EndDateDescription = `Filter items on or before this time. Accepts a date (YYYY-MM-DD, e.g., '2024-01-31')
+or an RFC 3339 timestamp (e.g., '2024-01-31T16:00:00Z'). Combine with startDate for date ranges.`
 
 	FilenameDescription = "The name of the artifact file to retrieve"
 
 	// Workflow tool descriptions
-	ListWorkflowsDescription               = "List Testkube workflows with optional filtering by resource group, selector, status, and other criteria. Returns workflow names (which are also the workflow IDs), descriptions, and execution status."
-	CreateWorkflowDescription              = "Create a new TestWorkflow directly in Testkube from a YAML definition. Use this tool to deploy workflows to the Testkube platform. The workflow will be immediately available for execution after creation."
-	GetWorkflowDefinitionDescription       = "Get the YAML definition of a specific Testkube workflow. Returns the complete workflow specification including all steps, configuration schema, and metadata."
-	GetWorkflowDescription                 = "Retrieve detailed workflow information including execution history, health metrics, and current status. Returns JSON format with comprehensive workflow metadata."
-	GetWorkflowMetricsDescription          = "Get metrics of test workflow executions including execution statistics, health scores, pass rates, and performance data. Returns comprehensive metrics data for analyzing workflow performance and reliability."
-	GetWorkflowExecutionMetricsDescription = "Get detailed resource consumption metrics for a SINGLE workflow execution. Returns raw time-series data (CPU, memory, disk, network samples over time) for deep analysis of one specific run. Use this when you need granular metrics or charts for debugging a particular execution. Requires both workflowName and executionId."
-	GetWorkflowResourceHistoryDescription  = "Analyze resource consumption PATTERNS across multiple executions of a workflow. Fetches the last N executions (default 50) and computes cross-execution statistics: mean/min/max/stdDev, trend detection (increasing/decreasing/stable), and outlier identification (z-score > 2). Use this to answer questions like 'is memory usage growing over time?' or 'which runs had abnormal CPU usage?'. Only requires workflowName."
-	RunWorkflowDescription                 = "Run a TestWorkflow with optional configuration parameters and target specification. If the workflow requires config parameters, use the get_workflow_definition tool first to examine the spec.config section to see what parameters are available. The target parameter supports multiple formats: 1) {\"name\": \"agent-name\"} to target a specific runner by name, 2) {\"labels\": {\"env\": \"prod\", \"type\": \"runner\"}} to target runners by labels, 3) Standard ExecutionTarget format with match/not/replicate fields."
-	UpdateWorkflowDescription              = `Update an existing TestWorkflow in Testkube with a new YAML definition. This tool allows you to modify workflow steps, configuration, and metadata. The workflow will be updated immediately and available for execution with the new configuration.`
+	ListWorkflowsDescription               = "List Testkube workflows with optional filtering by resource group, selector, status, and text search. Returns workflow names, descriptions, and execution status."
+	CreateWorkflowDescription              = "Create a new TestWorkflow from a YAML definition. The workflow is immediately available for execution after creation."
+	GetWorkflowDefinitionDescription       = "Get the YAML definition of a specific Testkube workflow. Returns the complete specification including steps, configuration schema, and metadata."
+	GetWorkflowDescription                 = "Get detailed workflow information including execution history, health metrics, and current status."
+	GetWorkflowMetricsDescription          = "Get execution metrics for a workflow: execution statistics, health scores, pass rates, and performance data. Use to analyze workflow reliability over time."
+	GetWorkflowExecutionMetricsDescription = "Get raw resource metrics (CPU, memory, disk, network) for a single workflow execution as time-series data. Use for deep-dive debugging of a specific run. Requires workflowName and executionId."
+	GetWorkflowResourceHistoryDescription  = "Analyze resource consumption patterns (CPU, memory, disk, network) across recent executions of a workflow. Computes cross-execution statistics (mean, min, max, stdDev), detects trends, and identifies outliers. Use to investigate growing resource usage or find abnormal runs. Requires workflowName."
+	RunWorkflowDescription                 = "Run a TestWorkflow with optional configuration parameters and agent targeting. Use get_workflow_definition first to discover available config parameters. Use list_agents to discover available target agents."
+	UpdateWorkflowDescription              = "Update an existing TestWorkflow with a new YAML definition. The workflow is updated immediately and available for execution with the new configuration."
 
 	// Execution tool descriptions
-	FetchExecutionLogsDescription           = "Retrieves logs from a test workflow execution. Default (no params, step-only, or workerRef-only with empty grep): returns the last 100 lines. When using grep, searches the full log (server caps at 100 matching lines). Always work in chunks of 100 lines when paging — never request unbounded ranges. Parameters: tail (last N lines, e.g. tail=100), startLine/endLine (1-based range, e.g. startLine=1 endLine=100), grep (substring filter), step (filter to a specific step reference). Parameters can be combined. For parallel workflows with workers: ALWAYS call get_execution_info first to get the 'workers' array, then use a 'ref' value from that array as workerRef plus the matching workerIndex (0-based, default 0). Do NOT use step refs from the main log metadata as workerRef — worker refs are distinct from step refs and only available via get_execution_info."
-	ListExecutionsDescription               = "List executions with filtering and pagination. Parameters: workflowName (filter to a specific workflow), status (passed/failed/running/etc.), since (ISO 8601 timestamp, e.g. '2024-01-15T13:00:00Z'), startDate/endDate (date or RFC 3339 range), selector (workflow labels, e.g. 'tool=cypress'), tagSelector (execution tags, e.g. 'type=suite'), textSearch (name/description substring), page/pageSize (pagination, default 10). Returns execution summaries including id, name, status, duration, scheduledAt, workflowName, tags, and actor info. Duration is returned as a human-readable string (e.g. '2m30s', '45s')."
-	GetExecutionInfoDescription             = "Get detailed information about a specific test workflow execution, including status, timing, results, and configuration. Requires executionId. workflowName is optional and only needed when looking up by execution name (not id) and you want to disambiguate within a specific workflow; safe to omit when you already have an execution id."
-	GetExecutionInfoWorkflowNameDescription = "Optional workflow name. Only needed when looking up an execution by name and you want to scope the lookup to a specific workflow; safe to omit when you have an execution id."
-	LookupExecutionIdDescription            = "Resolves an execution name to its corresponding execution ID. Use this tool when you have an execution name (e.g., 'my-workflow-123', 'my-test-987-1') but need the execution ID. Many other tools require execution IDs (MongoDB format) rather than names."
-	WaitForExecutionsDescription            = "Wait for a list of workflow executions to complete (pass, fail, or timeout). Returns the final status of all executions. Useful for synchronizing multiple test runs or waiting for dependent workflows to finish."
-	AbortWorkflowExecutionDescription       = "Abort a running test workflow execution. This will stop the execution and mark it as aborted. Use this tool to cancel long-running or stuck workflow executions."
-	UpdateExecutionTagsDescription          = "Update the tags on a test workflow execution. Uses replace semantics: the provided tags completely replace any existing tags. Send an empty map ({}) to clear all tags. Tags are key-value string pairs used for categorization and filtering (e.g., {\"env\":\"prod\",\"bug\":\"found\"})."
+	FetchExecutionLogsDescription           = "Retrieve logs from a test workflow execution. Default returns last 100 lines. Use grep to search the full log (capped at 100 matches). Always paginate in 100-line chunks. For parallel workflows with workers, call get_execution_info first to get worker refs."
+	ListExecutionsDescription               = "List test workflow executions with filtering by workflow, status, date range, labels, tags, or text search. Returns execution summaries including status, duration, and metadata. Use to discover recent runs or find specific executions."
+	GetExecutionInfoDescription             = "Get detailed information about a specific workflow execution: status, timing, results, configuration, and worker instances. Requires executionId. workflowName is optional for disambiguation."
+	GetExecutionInfoWorkflowNameDescription = "Optional workflow name for scoping an execution name lookup. Safe to omit when you have an execution ID."
+	LookupExecutionIdDescription            = "Resolve an execution name (e.g., 'my-workflow-123') to its execution ID. Use when you have an execution name but need the ID for other tools."
+	WaitForExecutionsDescription            = "Wait for a list of workflow executions to complete. Returns the final status of all executions. Use for synchronizing dependent workflows."
+	AbortWorkflowExecutionDescription       = "Abort a running workflow execution. Stops the execution and marks it as aborted. Use for cancelling long-running or stuck executions."
+	UpdateExecutionTagsDescription          = "Update tags on a workflow execution. Uses replace semantics: provided tags completely replace existing tags. Send empty map {} to clear all tags. Tags are key-value pairs for categorization and filtering."
 
 	// Additional parameter descriptions
 	ExecutionIdsDescription   = "Comma-separated list of execution IDs to wait for (e.g., 'exec1,exec2,exec3')."
 	TimeoutMinutesDescription = "Maximum time to wait in minutes before timing out (default: 30). Set to 0 for no timeout."
 
 	// Artifact tool descriptions
-	ListArtifactsDescription = "Retrieves all artifacts generated during a workflow execution. Use this tool to discover available outputs, reports, logs, or other files produced by test runs. These artifacts provide valuable context for understanding test results, accessing detailed reports, or examining generated data. The response includes artifact names, sizes, and their current status."
-	ReadArtifactDescription  = "Retrieves the content of a specific artifact from a workflow execution. Default (no params): returns the first 100 lines. Maximum: 200 lines per request. Parameters: startLine/endLine (1-based range, e.g. startLine=101 endLine=200 for the second page), grep (case-insensitive substring filter, returns matches with 3 lines of context). Note: grep and startLine/endLine are mutually exclusive -- when grep is specified, startLine/endLine are ignored. For binary artifacts (images, etc.), returns a summary message instead of content. Always work in chunks of 100-200 lines when paging -- never request unbounded ranges."
+	ListArtifactsDescription = "List all artifacts (files, reports, logs) generated by a workflow execution. Returns artifact names, sizes, and status. Use to discover available outputs before reading specific artifacts."
+	ReadArtifactDescription  = "Read content from an artifact file produced by a workflow execution. Default returns first 100 lines (max 200 per request). Always paginate in 100-200 line chunks. For binary artifacts, returns a summary instead of content."
 
 	// Other tool descriptions
-	BuildDashboardUrlDescription  = "Build dashboard URLs for Testkube workflows and executions. Supports deep linking to a specific step within an execution's log view using stepRef (obtained from execution info signatures) and executionTab (defaults to 'log-output' when stepRef is provided)."
-	ListLabelsDescription         = "Retrieve all available labels and their values from workflows in the current Testkube environment. Returns a map where each key is a label name and the value is an array of all possible values for that label. This is useful for discovering what labels exist and what values you can filter by when using selectors in other tools."
-	ListResourceGroupsDescription = "Retrieve all available resource groups from the current Testkube environment. Returns a list of resource groups with their IDs, slugs, names, descriptions, and metadata. This is useful for discovering what resource groups exist and what slugs you can use when filtering by resource groups in other tools."
-	ListAgentsDescription         = "Retrieve all available agents from the current Testkube organization that can be used when specifying target agent(s) in run_workflow. Returns a list of agents with their IDs, names, types, capabilities, labels, and environment information. This is useful for discovering what agents are available for workflow execution targeting."
+	BuildDashboardUrlDescription  = "Build dashboard URLs for Testkube workflows and executions. Supports deep linking to a specific step in the execution log view via stepRef."
+	ListLabelsDescription         = "List all workflow labels and their values in the environment. Use to discover available filters for selector parameters in other tools."
+	ListResourceGroupsDescription = "List available resource groups in the organization. Use to discover group slugs for filtering workflows and executions."
+	ListAgentsDescription         = "List available agents in the organization for workflow execution targeting. Returns agent names, types, capabilities, labels, and status. Use before run_workflow to discover target agents."
 
 	// Query tool descriptions
-	QueryWorkflowsDescription = `Query multiple workflow definitions using JSONPath expressions.
-Fetches workflow YAML definitions and extracts data matching the path.
+	QueryWorkflowsDescription = `Query workflow definitions in bulk using JSONPath.
+Fetches workflow YAML and extracts fields matching the expression.
+Use to find workflows by configuration patterns, image references, or step structure across all workflows.`
 
-Supported JSONPath syntax:
-  $                   - Root element (the workflow)
-  $.spec.steps        - Direct path to steps array
-  $.spec.steps[0]     - First step
-  $.spec.steps[*]     - All steps
-  $..image            - All 'image' fields anywhere (recursive)
-  $[?(@.name=='x')]   - Filter by field value
-
-Parameters:
-- expression: The JSONPath expression to apply (required)
-- selector: Filter workflows by labels (e.g., 'tool=cypress,env=prod')
-- resourceGroup: Filter by resource group slug
-- limit: Page size for fetching workflows (default 50). All matching workflows are fetched across multiple pages
-- aggregate: If true, combines all workflows into an array and applies expression once; if false (default), applies expression to each workflow separately. Automatically enabled for root-level filter expressions like $[?(@.field==value)].
-
-Returns: Map of workflow name → extracted values (per-item mode) or a single array of matches (aggregate mode). Missing paths return empty arrays, not errors.`
-
-	QueryExecutionsDescription = `Query multiple execution records using JSONPath expressions.
-Fetches execution JSON data and extracts data matching the path.
-
-Supported JSONPath syntax:
-  $                   - Root element (the execution)
-  $.result.status     - Direct path to status
-  $.result.steps.*    - All step results (steps is a map, not array)
-  $..duration         - All duration fields (recursive)
-  $[?(@.status=='failed')] - Filter by status
-
-Parameters:
-- expression: The JSONPath expression to apply (required)
-- workflowName: Filter executions by workflow name
-- status: Filter by status (passed/failed/running/aborted)
-- selector: Filter by workflow labels (e.g., 'tool=cypress')
-- tagSelector: Filter by execution tags (e.g., 'type=suite')
-- since: Filter executions after this time (ISO 8601)
-- startDate: Filter executions on or after this date/time (YYYY-MM-DD or RFC 3339)
-- endDate: Filter executions on or before this date/time (YYYY-MM-DD or RFC 3339)
-- limit: Page size for fetching executions (default 50). All matching executions are fetched across multiple pages
-- aggregate: If true, combines all executions into an array and applies expression once; if false (default), applies expression to each execution separately. Automatically enabled for root-level filter expressions like $[?(@.field==value)].
-
-Returns: Map of execution ID → extracted values (per-item mode) or a single array of matches (aggregate mode). Missing paths return empty arrays, not errors.`
+	QueryExecutionsDescription = `Query execution records across multiple workflows using JSONPath.
+Fetches execution data and extracts fields matching the expression.
+Use for cross-workflow analysis: find all failed executions, compare durations, or extract specific fields in bulk.`
 
 	// WorkflowTemplate tool descriptions
 	TemplateNameDescription = `The name of the workflow template. Template names are lowercase alphanumeric with dashes 
 (e.g., 'my-template', 'official--k6--v1'). This uniquely identifies a TestWorkflowTemplate within the environment.`
 
-	ListWorkflowTemplatesDescription         = "List all TestWorkflowTemplates in the current Testkube environment with optional label filtering. Returns template names, descriptions, and labels."
-	GetWorkflowTemplateDefinitionDescription = "Get the YAML definition of a specific TestWorkflowTemplate. Returns the complete template specification including all steps, configuration schema, and metadata."
-	CreateWorkflowTemplateDescription        = "Create a new TestWorkflowTemplate in Testkube from a YAML definition. The template will be immediately available for use by workflows after creation."
-	UpdateWorkflowTemplateDescription        = "Update an existing TestWorkflowTemplate in Testkube with a new YAML definition. The template will be updated immediately and workflows using it will pick up the changes."
+	ListWorkflowTemplatesDescription         = "List all TestWorkflowTemplates with optional label filtering. Returns template names, descriptions, and labels."
+	GetWorkflowTemplateDefinitionDescription = "Get the YAML definition of a specific TestWorkflowTemplate. Returns the complete template specification including steps, config schema, and metadata."
+	CreateWorkflowTemplateDescription        = "Create a new TestWorkflowTemplate from a YAML definition. The template is immediately available for use by workflows."
+	UpdateWorkflowTemplateDescription        = "Update an existing TestWorkflowTemplate with a new YAML definition. Workflows using the template pick up the changes."
 
 	// Schema tool descriptions
-	GetWorkflowSchemaDescription  = "Get the YAML schema for TestWorkflow definitions. Returns all available fields, their types, and descriptions. Use this to understand workflow structure when creating, updating, or querying workflows."
-	GetExecutionSchemaDescription = "Get the YAML schema for TestWorkflowExecution data. Returns all available fields, their types, and descriptions. Use this to understand execution data structure when analyzing results or querying executions."
+	GetWorkflowSchemaDescription  = "Get the YAML schema for TestWorkflow definitions. Returns all available fields, their types, and descriptions. Use to understand workflow structure when creating or querying workflows."
+	GetExecutionSchemaDescription = "Get the YAML schema for TestWorkflowExecution data. Returns all available fields, their types, and descriptions. Use to understand execution data structure when analyzing results."
 )
