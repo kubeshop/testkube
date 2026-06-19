@@ -8,6 +8,7 @@ metadata:
     for Kubernetes.
   annotations:
     github.com/project-slug: kubeshop/testkube
+    backstage.io/techdocs-ref: url:https://docs.testkube.io/articles/install/standalone-agent
   tags:
   - go
   - kubernetes
@@ -24,6 +25,7 @@ metadata:
   description: Testkube Agent is a component of Testkube that runs as a Kubernetes controller and is responsible for orchestrating test execution and managing test resources in the cluster.
   annotations:
     github.com/project-slug: kubeshop/testkube
+    backstage.io/techdocs-ref: url:https://docs.testkube.io/articles/install/standalone-agent
   tags:
   - go
   - kubernetes
@@ -35,8 +37,27 @@ spec:
   system: testkube-oss-runner
   lifecycle: production
   dependsOn:
-    - testkube-testworkflow-init
-    - testkube-testworkflow-toolkit
+    - component:testkube-oss-runner/testkube-testworkflow-init
+    - component:testkube-oss-runner/testkube-testworkflow-toolkit
+  providesApis:
+    - api:testkube-oss-runner/testkube-api-server
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: testkube-api-server
+  title: Testkube Agent API
+  description: The API provided by the Testkube Agent, which allows users to interact with the Testkube platform, manage test resources, and execute tests programmatically.
+  annotations:
+    github.com/project-slug: kubeshop/testkube
+    backstage.io/techdocs-ref: url:https://docs.testkube.io/openapi/overview#agent-api
+spec:
+  type: openapi
+  owner: group:guests
+  system: testkube-oss-runner
+  lifecycle: production
+  definition:
+    $ref: https://docs.testkube.io/assets/files/testkube-agent-openapi-9a33d3ecc97e3d36a05d07477de762d2.yaml
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -46,6 +67,7 @@ metadata:
   description: Testkube CLI is a command-line interface for Testkube that allows users to interact with the Testkube platform, manage test resources, and execute tests from their local development environment.
   annotations:
     github.com/project-slug: kubeshop/testkube
+    backstage.io/techdocs-ref: url:https://docs.testkube.io/articles/cli-config-reference
   tags:
   - go
   - kubernetes
@@ -64,6 +86,7 @@ metadata:
   description: Testkube TestWorkflow Init Container is a component of Testkube that runs as an init container in test execution pods and is responsible for preparing the test environment, such as setting up necessary files, configurations, and dependencies before the main test execution container starts.
   annotations:
     github.com/project-slug: kubeshop/testkube
+    backstage.io/techdocs-ref: url:https://docs.testkube.io/articles/install/standalone-agent
   tags:
   - go
   - kubernetes
@@ -83,6 +106,7 @@ metadata:
   description: Testkube TestWorkflow Toolkit is a component of Testkube that provides reusable tools and utilities for test workflows, such as setting up necessary files, configurations, and dependencies before the main test execution container starts.
   annotations:
     github.com/project-slug: kubeshop/testkube
+    backstage.io/techdocs-ref: url:https://docs.testkube.io/articles/install/standalone-agent
   tags:
   - go
   - kubernetes
