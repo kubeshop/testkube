@@ -1,0 +1,17 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: testkube
+  title: Testkube
+  description: Cloud native test orchestration and execution platform for Kubernetes.
+  annotations:
+    github.com/project-slug: kubeshop/testkube
+  tags:
+  - go
+  - kubernetes
+  - testing
+  - ci-cd
+spec:
+  type: service
+  owner: group:guests
+  lifecycle: production
