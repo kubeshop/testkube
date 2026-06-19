@@ -4,8 +4,7 @@ kind: System
 metadata:
   name: testkube-oss-runner
   title: Testkube OSS/Runner
-  description: Testkube OSS/Runner is a cloud native test orchestration and execution platform
-    for Kubernetes.
+  description: Testkube OSS/Runner is a cloud native test orchestration and execution platform for Kubernetes.
   annotations:
     github.com/project-slug: kubeshop/testkube
     backstage.io/techdocs-ref: url:https://docs.testkube.io/articles/install/standalone-agent
@@ -37,17 +36,17 @@ spec:
   system: testkube-oss-runner
   lifecycle: production
   dependsOn:
-    - component:testkube-testworkflow-init
-    - component:testkube-testworkflow-toolkit
+  - component:testkube-testworkflow-init
+  - component:testkube-testworkflow-toolkit
   providesApis:
-    - api:testkube-api-server
+  - api:testkube-api-server
   links:
-    - url: https://github.com/kubeshop/testkube/blob/backstage/.github/workflows/new-build.yaml
-      title: New Build CI/CD Workflow
-      icon: github
-    - url: https://github.com/kubeshop/testkube/actions?query=workflow:new-build
-      title: Build Actions
-      icon: dashboard
+  - url: https://github.com/kubeshop/testkube/blob/backstage/.github/workflows/new-build.yaml
+    title: New Build CI/CD Workflow
+    icon: github
+  - url: https://github.com/kubeshop/testkube/actions?query=workflow:new-build
+    title: Build Actions
+    icon: dashboard
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API
@@ -85,12 +84,12 @@ spec:
   system: testkube-oss-runner
   lifecycle: production
   links:
-    - url: https://github.com/kubeshop/testkube/blob/backstage/.github/workflows/new-build.yaml
-      title: New Build CI/CD Workflow
-      icon: github
-    - url: https://github.com/kubeshop/testkube/actions?query=workflow:new-build
-      title: Build Actions
-      icon: dashboard
+  - url: https://github.com/kubeshop/testkube/blob/backstage/.github/workflows/new-build.yaml
+    title: New Build CI/CD Workflow
+    icon: github
+  - url: https://github.com/kubeshop/testkube/actions?query=workflow:new-build
+    title: Build Actions
+    icon: dashboard
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -112,12 +111,12 @@ spec:
   system: testkube-oss-runner
   lifecycle: production
   links:
-    - url: https://github.com/kubeshop/testkube/blob/backstage/.github/workflows/new-build.yaml
-      title: New Build CI/CD Workflow
-      icon: github
-    - url: https://github.com/kubeshop/testkube/actions?query=workflow:new-build
-      title: Build Actions
-      icon: dashboard
+  - url: https://github.com/kubeshop/testkube/blob/backstage/.github/workflows/new-build.yaml
+    title: New Build CI/CD Workflow
+    icon: github
+  - url: https://github.com/kubeshop/testkube/actions?query=workflow:new-build
+    title: Build Actions
+    icon: dashboard
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -139,9 +138,9 @@ spec:
   system: testkube-oss-runner
   lifecycle: production
   links:
-    - url: https://github.com/kubeshop/testkube/blob/backstage/.github/workflows/new-build.yaml
-      title: New Build CI/CD Workflow
-      icon: github
-    - url: https://github.com/kubeshop/testkube/actions?query=workflow:new-build
-      title: Build Actions
-      icon: dashboard
+  - url: https://github.com/kubeshop/testkube/blob/backstage/.github/workflows/new-build.yaml
+    title: New Build CI/CD Workflow
+    icon: github
+  - url: https://github.com/kubeshop/testkube/actions?query=workflow:new-build
+    title: Build Actions
+    icon: dashboard
