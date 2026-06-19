@@ -13,6 +13,8 @@ metadata:
   - kubernetes
   - testing
   - ci-cd
+spec:
+  owner: guests
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
