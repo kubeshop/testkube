@@ -41,6 +41,13 @@ spec:
     - component:testkube-testworkflow-toolkit
   providesApis:
     - api:testkube-api-server
+  links:
+    - url: https://github.com/kubeshop/testkube/blob/backstage/.github/workflows/new-build.yaml
+      title: New Build CI/CD Workflow
+      icon: github
+    - url: https://github.com/kubeshop/testkube/actions?query=workflow:new-build
+      title: Build Actions
+      icon: dashboard
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API
@@ -77,6 +84,13 @@ spec:
   owner: group:guests
   system: testkube-oss-runner
   lifecycle: production
+  links:
+    - url: https://github.com/kubeshop/testkube/blob/backstage/.github/workflows/new-build.yaml
+      title: New Build CI/CD Workflow
+      icon: github
+    - url: https://github.com/kubeshop/testkube/actions?query=workflow:new-build
+      title: Build Actions
+      icon: dashboard
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -97,6 +111,13 @@ spec:
   owner: group:guests
   system: testkube-oss-runner
   lifecycle: production
+  links:
+    - url: https://github.com/kubeshop/testkube/blob/backstage/.github/workflows/new-build.yaml
+      title: New Build CI/CD Workflow
+      icon: github
+    - url: https://github.com/kubeshop/testkube/actions?query=workflow:new-build
+      title: Build Actions
+      icon: dashboard
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -117,3 +138,10 @@ spec:
   owner: group:guests
   system: testkube-oss-runner
   lifecycle: production
+  links:
+    - url: https://github.com/kubeshop/testkube/blob/backstage/.github/workflows/new-build.yaml
+      title: New Build CI/CD Workflow
+      icon: github
+    - url: https://github.com/kubeshop/testkube/actions?query=workflow:new-build
+      title: Build Actions
+      icon: dashboard
