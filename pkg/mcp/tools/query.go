@@ -31,7 +31,17 @@ type ExecutionBulkGetter interface {
 func QueryWorkflows(client WorkflowDefinitionBulkGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("query_workflows",
 		mcp.WithDescription(QueryWorkflowsDescription),
-		mcp.WithString("expression", mcp.Required(), mcp.Description("The JSONPath expression to apply to workflow definitions. Examples: '$..image', '$.spec.steps[*].name', '$.metadata.labels'.")),
+		mcp.WithString("expression", mcp.Required(), mcp.Description(`JSONPath expression to apply to workflow definitions.
+
+Supported syntax:
+  $                   - Root element (the workflow)
+  $.spec.steps        - Direct path to steps array
+  $.spec.steps[0]     - First step
+  $.spec.steps[*]     - All steps
+  $..image            - All 'image' fields anywhere (recursive)
+  $[?(@.name=='x')]   - Filter by field value
+
+Examples: '$..image', '$.spec.steps[*].name', '$.metadata.labels'.`)),
 		mcp.WithString("selector", mcp.Description(SelectorDescription)),
 		mcp.WithString("resourceGroup", mcp.Description(ResourceGroupDescription)),
 		mcp.WithNumber("limit", mcp.Description("Page size for fetching workflows (default: 50). All matching workflows are fetched across multiple pages.")),
@@ -132,7 +142,16 @@ func QueryWorkflows(client WorkflowDefinitionBulkGetter) (tool mcp.Tool, handler
 func QueryExecutions(client ExecutionBulkGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("query_executions",
 		mcp.WithDescription(QueryExecutionsDescription),
-		mcp.WithString("expression", mcp.Required(), mcp.Description("The JSONPath expression to apply to execution data. Examples: '$.result.status', '$.result.duration', '$..errorMessage'.")),
+		mcp.WithString("expression", mcp.Required(), mcp.Description(`JSONPath expression to apply to execution data.
+
+Supported syntax:
+  $                   - Root element (the execution)
+  $.result.status     - Direct path to status
+  $.result.steps.*    - All step results (steps is a map, not array)
+  $..duration         - All duration fields (recursive)
+  $[?(@.status=='failed')] - Filter by status
+
+Examples: '$.result.status', '$.result.duration', '$..errorMessage'.`)),
 		mcp.WithString("workflowName", mcp.Description(WorkflowNameDescription)),
 		mcp.WithString("status", mcp.Description(StatusDescription)),
 		mcp.WithString("selector", mcp.Description(SelectorDescription)),
