@@ -15,7 +15,7 @@
     "inquirer": "14.0.2",
     "log-symbols": "7.0.1",
     "ora": "9.4.0",
-    "semver": "7.8.4",
+    "semver": "7.8.5",
     "shelljs": "0.10.0",
     "strands": "1.0.1",
     "untildify": "6.0.0",
