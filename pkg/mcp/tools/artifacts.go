@@ -52,7 +52,7 @@ func ReadArtifact(client ArtifactReader) (tool mcp.Tool, handler server.ToolHand
 			mcp.Description("1-based line number to stop reading at (inclusive). Use with startLine for a range."),
 		),
 		mcp.WithString("grep",
-			mcp.Description("Case-insensitive substring filter. Returns matching lines with 3 lines of context."),
+			mcp.Description("Case-insensitive substring filter. Returns matching lines with 3 lines of context. When set, startLine and endLine are ignored — use grep OR line range, not both."),
 		),
 	)
 
