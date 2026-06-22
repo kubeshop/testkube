@@ -103,16 +103,16 @@ SET
     acquired_at = \$3,
     renewed_at = \$4,
     updated_at = NOW\(\)
-WHERE id = \$5
-RETURNING id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at`
+WHERE id = \$5[\s\S]*AND \(identifier = \$1 OR renewed_at < \$6\)[\s\S]*RETURNING id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at`
 
 	testTime := time.Now()
 	params := UpdateLeaseParams{
-		Identifier: "updated-identifier",
-		ClusterID:  "updated-cluster",
-		AcquiredAt: pgtype.Timestamptz{Time: testTime, Valid: true},
-		RenewedAt:  pgtype.Timestamptz{Time: testTime, Valid: true},
-		ID:         "lease-test-cluster",
+		Identifier:     "updated-identifier",
+		ClusterID:      "updated-cluster",
+		AcquiredAt:     pgtype.Timestamptz{Time: testTime, Valid: true},
+		RenewedAt:      pgtype.Timestamptz{Time: testTime, Valid: true},
+		ID:             "lease-test-cluster",
+		StaleThreshold: pgtype.Timestamptz{Time: testTime, Valid: true},
 	}
 
 	rows := mock.NewRows([]string{
@@ -122,7 +122,7 @@ RETURNING id, identifier, cluster_id, acquired_at, renewed_at, created_at, updat
 	)
 
 	mock.ExpectQuery(expectedQuery).WithArgs(
-		params.Identifier, params.ClusterID, params.AcquiredAt, params.RenewedAt, params.ID,
+		params.Identifier, params.ClusterID, params.AcquiredAt, params.RenewedAt, params.ID, params.StaleThreshold,
 	).WillReturnRows(rows)
 
 	result, err := queries.UpdateLease(ctx, params)
@@ -240,18 +240,19 @@ func TestSQLCLeaseQueries_ParameterValidation(t *testing.T) {
 					"id", "identifier", "cluster_id", "acquired_at", "renewed_at", "created_at", "updated_at",
 				}).AddRow("lease-id", longString, longString, testTime, testTime, testTime, testTime)
 
-				mock.ExpectQuery(`UPDATE leases SET`).
-					WithArgs(longString, longString, pgtype.Timestamptz{Time: testTime, Valid: true}, pgtype.Timestamptz{Time: testTime, Valid: true}, "lease-id").
+				mock.ExpectQuery(`UPDATE leases`).
+					WithArgs(longString, longString, pgtype.Timestamptz{Time: testTime, Valid: true}, pgtype.Timestamptz{Time: testTime, Valid: true}, "lease-id", pgtype.Timestamptz{Time: testTime, Valid: true}).
 					WillReturnRows(rows)
 			},
 			executeQuery: func(q *Queries, ctx context.Context) error {
 				longString := string(make([]byte, 1000))
 				_, err := q.UpdateLease(ctx, UpdateLeaseParams{
-					Identifier: longString,
-					ClusterID:  longString,
-					AcquiredAt: pgtype.Timestamptz{Time: testTime, Valid: true},
-					RenewedAt:  pgtype.Timestamptz{Time: testTime, Valid: true},
-					ID:         "lease-id",
+					Identifier:     longString,
+					ClusterID:      longString,
+					AcquiredAt:     pgtype.Timestamptz{Time: testTime, Valid: true},
+					RenewedAt:      pgtype.Timestamptz{Time: testTime, Valid: true},
+					ID:             "lease-id",
+					StaleThreshold: pgtype.Timestamptz{Time: testTime, Valid: true},
 				})
 				return err
 			},
