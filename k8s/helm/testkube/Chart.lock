@@ -7,7 +7,7 @@ dependencies:
   version: 8.3.4-0
 - name: postgresql
   repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
-  version: 18.3-0
+  version: 18.4-0
 - name: cloudnative-pg
   repository: https://cloudnative-pg.github.io/charts
   version: 0.28.3
@@ -23,5 +23,5 @@ dependencies:
 - name: global
   repository: file://../global
   version: 0.1.3
-digest: sha256:0fd13bd9f13b9cd03301dd7a16faffa8a20fc81f2295b14c0799c0186fd81e19
-generated: "2026-06-22T16:06:02.044656217Z"
+digest: sha256:f6d71f85b624aa3cd2d68059f06a9326b0e9db4ea971120dec4dfecac0e7f8d6
+generated: "2026-06-22T21:59:10.963276241Z"
