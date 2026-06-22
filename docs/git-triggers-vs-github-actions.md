@@ -560,8 +560,9 @@ spec:
   contentSelector:
     git:
       uri: https://github.com/your-org/your-repo.git
-      branches:
-        - main              # Only PRs targeting main
+      pullRequest:
+        branches:
+          - main            # Only PRs targeting main
       paths:
         - "src/**"
         - "tests/**"
@@ -809,7 +810,7 @@ Fine-tune the Git Informer for your environment:
 | `TEST_TRIGGER_GIT_INFORMER_RECONCILE_INTERVAL`        | `1m`     | How often to check for new commits       |
 | `TEST_TRIGGER_GIT_INFORMER_REPO_DEPTH`                | `500`    | Clone depth for repositories             |
 | `TEST_TRIGGER_GIT_INFORMER_MAX_COMMITS_SCAN`          | `500`    | Max commits to scan per reconciliation   |
-| `TEST_TRIGGER_GIT_INFORMER_LIST_TIMEOUT`              | `15s`    | Timeout for git ls-remote operations     |
+| `TEST_TRIGGER_GIT_INFORMER_LIST_TIMEOUT`              | `15`     | Timeout in seconds for git ls-remote operations |
 | `TEST_TRIGGER_GIT_INFORMER_PULL_RETRIES`              | `2`      | Number of retries on git pull failures   |
 | `TEST_TRIGGER_GIT_INFORMER_PULL_RETRY_DELAY`          | `2s`     | Delay between pull retries               |
 
