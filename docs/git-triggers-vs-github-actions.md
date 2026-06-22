@@ -6,7 +6,7 @@ Modern software teams rely on CI/CD pipelines to run tests automatically when co
 
 **Testkube Git Triggers** offer a fundamentally different approach. By polling Git repositories directly from inside your Kubernetes cluster, Testkube enables the same event-driven test automation — **without webhooks, without vendor lock-in, and without internet access**.
 
-This document compares Testkube Git Triggers with GitHub Actions across key scenarios, demonstrates how `git-push` and `git-tag-push` events work with any Git provider, and shows why Testkube is the superior choice for teams running in air-gapped, multi-cloud, or hybrid environments.
+This document compares Testkube Git Triggers with GitHub Actions across key scenarios, demonstrates how `git-push`, `git-tag-push`, and `git-pull-request` events work with any Git provider, and shows why Testkube is the superior choice for teams running in air-gapped, multi-cloud, or hybrid environments.
 
 ---
 
@@ -506,6 +506,209 @@ When a tag like `v2.5.0` is pushed to **any** Git server, Testkube:
 
 ---
 
+## Scenario 6: Pull Request Validation — Keep GitHub, Run Tests in Your Own Environment
+
+Many teams are deeply integrated with GitHub — their workflows, code reviews, branch protection rules, and developer tooling all revolve around GitHub Pull Requests. Moving away from GitHub entirely is impractical or undesirable. However, running test workloads on GitHub-hosted runners means tests execute **outside your real infrastructure**, without access to internal services, databases, or production-like environments.
+
+**Testkube's `git-pull-request` event** bridges this gap: you keep GitHub as your source-of-truth for code and collaboration, while Testkube runs your PR validation tests **inside your own Kubernetes cluster** — against real services, with real data, in a real network topology.
+
+### The Problem: GitHub Actions PR Tests Run in Isolation
+
+```yaml
+# .github/workflows/pr-tests.yml
+name: PR Validation
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start dependencies
+        run: docker-compose up -d  # Simulated services, not real ones
+      - name: Run integration tests
+        run: |
+          npm install
+          npm run test:integration
+      - name: Run E2E tests
+        run: npm run test:e2e  # Against mocked APIs, not real cluster
+```
+
+**Limitations of this approach:**
+- Tests run against **mocked or containerized services**, not your real infrastructure
+- No access to internal APIs, databases, or message queues behind your firewall
+- Docker-compose "mini environments" **diverge from production** — passing tests don't guarantee production readiness
+- Self-hosted runners require exposing your infrastructure to GitHub's webhook delivery network
+- GitHub-hosted runners add latency (provisioning, dependency installation) on every PR update
+- Cannot test Kubernetes-specific behaviors (network policies, service mesh, RBAC, resource limits)
+
+### Testkube `git-pull-request` Event: GitHub for Code, Your Cluster for Tests
+
+```yaml
+# TestTrigger CRD — reacts to GitHub Pull Requests
+apiVersion: tests.testkube.io/v1
+kind: TestTrigger
+metadata:
+  name: pr-validation
+  namespace: testkube
+spec:
+  resource: content
+  event: git-pull-request
+  contentSelector:
+    git:
+      uri: https://github.com/your-org/your-repo.git
+      branches:
+        - main              # Only PRs targeting main
+      paths:
+        - "src/**"
+        - "tests/**"
+        - "api/**"
+      pathsIgnore:
+        - "**/*.md"
+        - "docs/**"
+      tokenFrom:
+        secretKeyRef:
+          name: github-token
+          key: token
+  action: run
+  execution: testworkflow
+  testSelector:
+    name: pr-integration-tests
+    namespace: testkube
+  concurrencyPolicy: replace   # Only test the latest PR commit
+```
+
+```yaml
+# TestWorkflow — runs PR validation inside your cluster
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: pr-integration-tests
+  namespace: testkube
+spec:
+  content:
+    git:
+      uri: https://github.com/your-org/your-repo.git
+      revision: "{{ config.TESTKUBE_GIT_PR_HEAD_SHA }}"
+      tokenFrom:
+        secretKeyRef:
+          name: github-token
+          key: token
+  steps:
+    - name: Integration Tests Against Real Services
+      run:
+        image: node:20
+        env:
+          - name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: test-db-credentials
+                key: url
+          - name: API_GATEWAY_URL
+            value: "http://api-gateway.staging.svc.cluster.local:8080"
+        shell: |
+          echo "Testing PR #{{ config.TESTKUBE_GIT_PR_NUMBER }}: {{ config.TESTKUBE_GIT_PR_TITLE }}"
+          echo "Branch: {{ config.TESTKUBE_GIT_PR_HEAD_REF }} → {{ config.TESTKUBE_GIT_PR_BASE_REF }}"
+          cd /data/repo
+          npm install
+          npm run test:integration   # Tests against REAL database
+          npm run test:e2e           # Tests against REAL API gateway
+
+    - name: Kubernetes-Specific Validation
+      run:
+        image: bitnami/kubectl:latest
+        shell: |
+          # Deploy the PR branch to a preview namespace
+          kubectl create namespace preview-pr-{{ config.TESTKUBE_GIT_PR_NUMBER }} --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f k8s/manifests/ -n preview-pr-{{ config.TESTKUBE_GIT_PR_NUMBER }}
+          kubectl rollout status deployment/app -n preview-pr-{{ config.TESTKUBE_GIT_PR_NUMBER }} --timeout=120s
+
+    - name: Performance Baseline Check
+      run:
+        image: grafana/k6:latest
+        shell: |
+          # Run performance tests against the preview deployment
+          k6 run --out json=/data/artifacts/perf-results.json \
+            /data/repo/tests/performance/baseline.js
+```
+
+### How It Works
+
+1. **Developer opens or updates a PR on GitHub** — normal GitHub workflow, no changes needed
+2. **Testkube's Git Informer detects the PR event** via polling (no webhook configuration required)
+3. **Trigger matches** — the PR targets `main` and changes files in `src/**`, `tests/**`, or `api/**`
+4. **TestWorkflow executes inside your cluster** — with full access to internal services, databases, and APIs
+5. **Rich PR metadata is injected** — PR number, title, author, head/base refs, head SHA, and PR URL are all available as `config.*` variables
+6. **Results appear in the Testkube Dashboard** — with full test logs, artifacts, and traceability back to the PR
+
+### Why This Matters for GitHub-Linked Teams
+
+| Aspect | GitHub Actions Runners | Testkube `git-pull-request` |
+|--------|------------------------|------------------------------|
+| **Code & Collaboration** | GitHub ✅ | GitHub ✅ (unchanged) |
+| **Test Execution** | GitHub cloud / self-hosted runners | Your Kubernetes cluster |
+| **Access to Internal Services** | ❌ Requires tunnels/proxies | ✅ Native cluster networking |
+| **Access to Real Databases** | ❌ Needs container stubs | ✅ Connect to staging/test DBs directly |
+| **Kubernetes-native Testing** | ❌ Limited | ✅ Full kubectl, helm, service mesh access |
+| **Network Policy Testing** | ❌ Impossible | ✅ Tests run under real network policies |
+| **Performance Test Accuracy** | ❌ Shared runner variability | ✅ Consistent, dedicated infrastructure |
+| **Data Compliance** | ⚠️ Data leaves your network | ✅ All data stays within your infrastructure |
+| **Webhook Configuration** | Required (repo admin access) | Not required (polling-based) |
+| **Branch Protection Integration** | Native check runs | Dashboard results + optional status API |
+
+### The Hybrid Model: Best of Both Worlds
+
+With `git-pull-request`, teams get the **best of both ecosystems**:
+
+- **Keep GitHub for what it does best** — code hosting, pull request reviews, issue tracking, branch protection, team collaboration
+- **Use Testkube for what it does best** — running tests inside your actual infrastructure with access to real services, real data, and real network conditions
+
+This means:
+- ✅ Developers continue using their familiar GitHub PR workflow — no behavior change
+- ✅ Tests validate against **production-like environments**, not mocked services
+- ✅ Sensitive test data (credentials, customer data, internal APIs) **never leaves your network**
+- ✅ No webhook endpoints to configure or secure — Testkube polls GitHub via standard Git protocols
+- ✅ Works even if your cluster has **no inbound internet access** — only outbound HTTPS to github.com is needed
+- ✅ PR metadata (number, title, author, branch names) flows into tests automatically for reporting and traceability
+
+### Example: Complete PR Workflow with Status Reporting
+
+For teams that want PR check status reported back to GitHub, Testkube can be paired with a simple status update step:
+
+```yaml
+steps:
+  - name: Run Tests
+    run:
+      image: node:20
+      shell: |
+        cd /data/repo && npm test
+
+  - name: Report Status to GitHub
+    condition: always
+    run:
+      image: curlimages/curl:latest
+      env:
+        - name: GITHUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github-token
+              key: token
+      shell: |
+        STATUS=$([ "{{ status }}" = "passed" ] && echo "success" || echo "failure")
+        curl -X POST \
+          -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/repos/your-org/your-repo/statuses/{{ config.TESTKUBE_GIT_PR_HEAD_SHA }}" \
+          -d "{\"state\":\"$STATUS\",\"target_url\":\"https://app.testkube.io/executions/{{ execution.id }}\",\"description\":\"Testkube PR Validation\",\"context\":\"testkube/pr-tests\"}"
+```
+
+This posts a commit status back to GitHub, so the PR shows a green/red check — maintaining full visibility in the GitHub UI while tests execute in your environment.
+
+---
+
 ## Git Metadata: Context Available in Your Tests
 
 Every triggered TestWorkflow receives rich Git context as environment variables, enabling dynamic test behavior:
@@ -689,6 +892,8 @@ kubectl apply -f triggers/ -n testkube
 ## Summary
 
 Testkube Git Triggers provide a **vendor-agnostic, air-gap-compatible, Kubernetes-native** alternative to GitHub Actions for test automation. By using a polling-based architecture instead of webhooks, Testkube eliminates the dependency on any single Git vendor and enables test automation in environments where GitHub Actions simply cannot operate.
+
+For teams deeply invested in GitHub, the `git-pull-request` event offers the best of both worlds: continue using GitHub for code hosting, pull requests, and collaboration while running your test workloads inside your own Kubernetes cluster — with access to real services, real databases, and production-like network conditions.
 
 Whether you're running on GitHub, GitLab, Bitbucket, Azure DevOps, or a self-hosted Gitea instance behind a firewall — Testkube Git Triggers give you the same powerful, event-driven test automation with the added benefits of running tests inside your actual infrastructure.
 
