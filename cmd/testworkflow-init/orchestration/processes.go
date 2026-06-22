@@ -12,39 +12,33 @@ type processNode struct {
 	nodes map[*processNode]struct{}
 }
 
-func (p *processNode) Find(pid int32) []*processNode {
+func (p *processNode) find(pid int32) *processNode {
 	if p.pid == pid {
-		return []*processNode{p}
+		return p
 	}
-	// Try to find directly
 	for n := range p.nodes {
-		if n.pid == pid {
-			return append([]*processNode{p}, n)
+		if found := n.find(pid); found != nil {
+			return found
 		}
 	}
-
-	// Try to find in the children
-	for n := range p.nodes {
-		found := n.Find(pid)
-		if found != nil {
-			return append([]*processNode{p}, found...)
-		}
-	}
-
 	return nil
 }
 
-func (p *processNode) VirtualizePath(pid int32) {
-	for ps := range p.nodes {
-		if ps.pid == pid {
-			for sub := range ps.nodes {
-				p.nodes[sub] = struct{}{}
-			}
-			delete(p.nodes, ps)
-		} else {
-			ps.VirtualizePath(pid)
+// childrenOf returns a virtual root (pid -1) holding the descendant subtree of
+// the process with the given pid, or an empty root when it isn't found. Killing,
+// suspending or resuming it affects only that process's own children, never the
+// process itself or anything outside its subtree. When the init runs as PID 1 in
+// a pod this is the full step process tree (matching the previous whole-tree
+// behavior); on a shared host such as CI it stays scoped, so concurrent test
+// binaries can't reach into each other's trees.
+func (p *processNode) childrenOf(pid int32) *processNode {
+	virtual := &processNode{pid: -1, nodes: map[*processNode]struct{}{}}
+	if target := p.find(pid); target != nil {
+		for child := range target.nodes {
+			virtual.nodes[child] = struct{}{}
 		}
 	}
+	return virtual
 }
 
 // Suspend all the processes in group, starting from top
