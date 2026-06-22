@@ -204,15 +204,21 @@ type Config struct {
 	CronJobConfig
 	WebhookConfig
 	// Tracing
-	TracingEnabled                  bool     `envconfig:"TRACING_ENABLED" default:"false"`
-	OTLPEndpoint                    string   `envconfig:"OTLP_ENDPOINT" default:"http://localhost:4317"`
-	OTLPServiceName                 string   `envconfig:"OTLP_SERVICE_NAME" default:"testkube"`
-	TracingSampleRate               float64  `envconfig:"TRACING_SAMPLE_RATE" default:"1.0"`
-	DisableDefaultAgent             bool     `envconfig:"DISABLE_DEFAULT_AGENT" default:"false"`
-	TestkubeConfigDir               string   `envconfig:"TESTKUBE_CONFIG_DIR" default:"config"`
-	TestkubeAnalyticsEnabled        bool     `envconfig:"TESTKUBE_ANALYTICS_ENABLED" default:"false"`
-	TestkubeNamespace               string   `envconfig:"TESTKUBE_NAMESPACE" default:"testkube"`
-	TestkubeLeaseName               string   `envconfig:"TESTKUBE_LEASE_NAME" default:""`
+	TracingEnabled           bool    `envconfig:"TRACING_ENABLED" default:"false"`
+	OTLPEndpoint             string  `envconfig:"OTLP_ENDPOINT" default:"http://localhost:4317"`
+	OTLPServiceName          string  `envconfig:"OTLP_SERVICE_NAME" default:"testkube"`
+	TracingSampleRate        float64 `envconfig:"TRACING_SAMPLE_RATE" default:"1.0"`
+	DisableDefaultAgent      bool    `envconfig:"DISABLE_DEFAULT_AGENT" default:"false"`
+	TestkubeConfigDir        string  `envconfig:"TESTKUBE_CONFIG_DIR" default:"config"`
+	TestkubeAnalyticsEnabled bool    `envconfig:"TESTKUBE_ANALYTICS_ENABLED" default:"false"`
+	TestkubeNamespace        string  `envconfig:"TESTKUBE_NAMESPACE" default:"testkube"`
+	TestkubeLeaseName        string  `envconfig:"TESTKUBE_LEASE_NAME" default:""`
+
+	// Leader election / lease coordination (runner). Disable election for explicitly
+	// single-replica deployments; tune how often the lease is checked/renewed.
+	LeaderElectionDisabled bool          `envconfig:"LEADER_ELECTION_DISABLED" default:"false"`
+	LeaseCheckInterval     time.Duration `envconfig:"LEASE_CHECK_INTERVAL" default:"5s"`
+
 	TestkubeProWorkerCount          int      `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
 	TestkubeProLogStreamWorkerCount int      `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
 	TestkubeProMigrate              string   `envconfig:"TESTKUBE_PRO_MIGRATE" default:"false"`

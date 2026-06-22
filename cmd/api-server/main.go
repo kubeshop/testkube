@@ -180,9 +180,15 @@ func main() {
 	if cfg.Trace {
 		eventBus.TraceEvents()
 	}
+	// Resolve the lease check interval once and reuse it across all lease consumers
+	// (events emitter, triggers, leader coordinator). Clamps unsafe values.
+	leaseCheckInterval := resolveLeaseCheckInterval(cfg.LeaseCheckInterval)
+
 	// TODO(emil): do we need a mongo/postgres backend for leases like for test triggers?
 	eventsEmitterLeaseBackend := leasebackendk8s.NewK8sLeaseBackend(clientset, "testkube-agent-"+cfg.APIServerFullname, cfg.TestkubeNamespace)
-	eventsEmitter := event.NewEmitter(eventBus, eventsEmitterLeaseBackend, "agentevents", cfg.TestkubeClusterName, event.DefaultEventTTL, event.DefaultEventCacheCapacity)
+	eventsEmitter := event.NewEmitter(eventBus, eventsEmitterLeaseBackend, "agentevents", cfg.TestkubeClusterName, event.DefaultEventTTL, event.DefaultEventCacheCapacity,
+		event.WithLeaseCheckInterval(leaseCheckInterval),
+		event.WithLeaderElectionDisabled(cfg.LeaderElectionDisabled))
 
 	// Connect to the Control Plane
 	var grpcConn *grpc.ClientConn
@@ -862,6 +868,8 @@ func main() {
 			triggers.WithWorkflowTriggersClient(workflowTriggersClient),
 			triggers.WithEventLabels(cfg.EventLabels),
 			triggers.WithDynamicClient(dynamicClient),
+			triggers.WithLeaseCheckInterval(leaseCheckInterval),
+			triggers.WithLeaderElectionDisabled(cfg.LeaderElectionDisabled),
 		)
 
 		// Start git content informer when enabled for trigger source-of-truth (cloud or OSS).
@@ -999,7 +1007,9 @@ func main() {
 		leaderClusterID = leasebackend.SanitizeForK8sName(leaderClusterID)
 
 		coordinatorLogger := log.DefaultLogger.With("component", "leader-coordinator")
-		leaderCoordinator := leader.New(leaderLeaseBackend, leaderIdentifier, leaderClusterID, coordinatorLogger)
+		leaderCoordinator := leader.New(leaderLeaseBackend, leaderIdentifier, leaderClusterID, coordinatorLogger,
+			leader.WithCheckInterval(leaseCheckInterval),
+			leader.WithLeaderElectionDisabled(cfg.LeaderElectionDisabled))
 		for _, task := range leaderTasks {
 			leaderCoordinator.Register(task)
 		}
@@ -1012,6 +1022,26 @@ func main() {
 	if err := g.Wait(); err != nil {
 		log.DefaultLogger.Fatalf("Testkube is shutting down: %v", err)
 	}
+}
+
+const defaultLeaseCheckInterval = 5 * time.Second
+
+// resolveLeaseCheckInterval validates the configured lease check interval. The lease
+// expires after leasebackend.DefaultMaxLeaseDuration, so checking/renewing less often
+// than that would let the lease lapse between checks and cause leadership churn. We
+// keep a safety margin (half the lease duration) and clamp anything larger.
+func resolveLeaseCheckInterval(interval time.Duration) time.Duration {
+	if interval <= 0 {
+		return defaultLeaseCheckInterval
+	}
+	if maxSafe := leasebackend.DefaultMaxLeaseDuration / 2; interval > maxSafe {
+		log.DefaultLogger.Warnw("configured lease check interval is too high relative to the lease duration; clamping to avoid leadership churn",
+			"configured", interval.String(),
+			"clamped", maxSafe.String(),
+			"leaseDuration", leasebackend.DefaultMaxLeaseDuration.String())
+		return maxSafe
+	}
+	return interval
 }
 
 func resolveLeaderIdentifier() string {

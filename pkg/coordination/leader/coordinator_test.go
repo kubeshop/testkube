@@ -192,6 +192,50 @@ func TestCoordinatorTreatsErrorsAsLeaseLoss(t *testing.T) {
 	waitFor(func() bool { return isClosed(stopped) }, 500*time.Millisecond, t)
 }
 
+func TestCoordinatorDisabledRunsTasksWithoutLease(t *testing.T) {
+	// No responses are pushed: if the coordinator touched the backend it would block,
+	// and we also assert calls == 0 below.
+	backend := newStubLeaseBackend(1)
+
+	var started atomic.Int32
+	task := Task{
+		Name: "direct",
+		Start: func(ctx context.Context) error {
+			started.Add(1)
+			<-ctx.Done()
+			return nil
+		},
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	coord := New(backend, "id-1", "cluster-1", nil, WithLeaderElectionDisabled(true))
+	coord.Register(task)
+
+	done := make(chan struct{})
+	go func() {
+		if err := coord.Run(ctx); err != context.Canceled {
+			t.Errorf("expected context.Canceled, got %v", err)
+		}
+		close(done)
+	}()
+
+	// The task runs immediately, without any lease coordination.
+	waitFor(func() bool { return started.Load() == 1 }, 200*time.Millisecond, t)
+
+	if got := backend.calls.Load(); got != 0 {
+		t.Fatalf("expected lease backend to never be called when election is disabled, got %d calls", got)
+	}
+
+	cancel()
+	waitFor(func() bool { return isClosed(done) }, 200*time.Millisecond, t)
+
+	if got := started.Load(); got != 1 {
+		t.Fatalf("expected task to start exactly once, got %d", got)
+	}
+}
+
 func waitFor(cond func() bool, timeout time.Duration, t *testing.T) {
 	t.Helper()
 

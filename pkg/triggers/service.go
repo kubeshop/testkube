@@ -63,6 +63,8 @@ type Service struct {
 	agentName                     string
 	triggerExecutor               ExecutorF
 	scraperInterval               time.Duration
+	leaseCheckInterval            time.Duration
+	leaderElectionDisabled        bool
 	defaultConditionsCheckTimeout time.Duration
 	defaultConditionsCheckBackoff time.Duration
 	defaultProbesCheckTimeout     time.Duration
@@ -156,7 +158,9 @@ func NewService(
 	}
 
 	coordinatorLogger := logger.With("component", "trigger-service", "identifier", s.identifier)
-	s.coordinator = leader.New(leaseBackend, s.identifier, s.clusterID, coordinatorLogger)
+	s.coordinator = leader.New(leaseBackend, s.identifier, s.clusterID, coordinatorLogger,
+		leader.WithCheckInterval(s.leaseCheckInterval),
+		leader.WithLeaderElectionDisabled(s.leaderElectionDisabled))
 
 	s.coordinator.Register(leader.Task{
 		Name: "trigger-watcher",
@@ -175,6 +179,22 @@ func NewService(
 	})
 
 	return s
+}
+
+// WithLeaseCheckInterval overrides how often the trigger service's leader coordinator
+// checks/renews its lease. Non-positive values keep the coordinator default.
+func WithLeaseCheckInterval(interval time.Duration) Option {
+	return func(s *Service) {
+		s.leaseCheckInterval = interval
+	}
+}
+
+// WithLeaderElectionDisabled disables leader election for the trigger service: its
+// leader-only tasks run directly without lease coordination. Single-replica only.
+func WithLeaderElectionDisabled(disabled bool) Option {
+	return func(s *Service) {
+		s.leaderElectionDisabled = disabled
+	}
 }
 
 func WithHostnameIdentifier() Option {
