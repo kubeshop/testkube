@@ -1,0 +1,20 @@
+edition = "2023";
+
+package testkube.inventory.v1;
+
+// PutClusterResourcesRequest is the message sent by an Agent to replace the
+// Control Plane's stored snapshot of watchable cluster resources for the
+// calling agent's environment.
+//
+// The payload encodes []testkube.ClusterResource as JSON, following the lazy
+// payload convention used by testkube.sync.v1 — protobuf-izing CRD-adjacent
+// schemas is left out by design (see sync_service.proto for the rationale).
+//
+// The agent is authoritative over its own access: only GVKs the agent has
+// verified it can watch (SelfSubjectAccessReview passed at watchable=true)
+// must be included.
+message PutClusterResourcesRequest {
+  // payload is JSON-encoded []testkube.ClusterResource (one entry per watchable
+  // GVK the agent observes in its cluster).
+  bytes payload = 1;
+}

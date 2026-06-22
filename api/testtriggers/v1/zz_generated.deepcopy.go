@@ -360,6 +360,11 @@ func (in *TestTriggerSpec) DeepCopyInto(out *TestTriggerSpec) {
 		*out = make([]workflowtriggersv1.WorkflowTriggerFieldCondition, len(*in))
 		copy(*out, *in)
 	}
+	if in.Listener != nil {
+		in, out := &in.Listener, &out.Listener
+		*out = new(commonv1.Target)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.ConditionSpec != nil {
 		in, out := &in.ConditionSpec, &out.ConditionSpec
 		*out = new(TestTriggerConditionSpec)

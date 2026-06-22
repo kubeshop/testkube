@@ -44,6 +44,11 @@ type internalTrigger struct {
 	// Match
 	FieldConditions []workflowtriggersv1.WorkflowTriggerFieldCondition
 
+	// ListenerAgentIds pins the trigger to specific listener agents. Empty
+	// means broadcast (every listener-capable agent in the env fires). Set on
+	// v1 only — v2 has no analog yet.
+	ListenerAgentIds []string
+
 	// Wait
 	Conditions *internalWaitConditions
 	Probes     *internalWaitProbes
@@ -103,6 +108,15 @@ type internalProbe struct {
 	Headers map[string]string
 }
 
+// listenerAgentIDs returns the agent IDs the listener target pins to (its
+// match.id selector), or nil for broadcast (no listener / no id match).
+func listenerAgentIDs(listener *commonv1.Target) []string {
+	if listener == nil {
+		return nil
+	}
+	return listener.Match["id"]
+}
+
 // convertV1ToInternal converts a v1 TestTrigger CRD to the internal representation.
 func convertV1ToInternal(t *testtriggersv1.TestTrigger) *internalTrigger {
 	it := &internalTrigger{
@@ -113,6 +127,7 @@ func convertV1ToInternal(t *testtriggersv1.TestTrigger) *internalTrigger {
 		Event:              string(t.Spec.Event),
 		EventLabelSelector: t.Spec.Selector,
 		FieldConditions:    t.Spec.Match,
+		ListenerAgentIds:   listenerAgentIDs(t.Spec.Listener),
 		Execution:          string(t.Spec.Execution),
 		Disabled:           t.Spec.Disabled,
 	}

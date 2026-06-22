@@ -118,10 +118,6 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 		}
 		errPrefix = errPrefix + " " + request.Name
 
-		if errs := validateUpsertMatchConditions(request.Match, request.Event); len(errs) > 0 {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: %w", errPrefix, errors.Join(errs...)))
-		}
-
 		// we need to get resource first to validate it exists
 		existingTrigger, err := s.TestTriggersClient.Get(c.Context(), s.getEnvironmentId(), request.Name, namespace)
 		if err != nil {
@@ -154,6 +150,7 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 				ConcurrencyPolicy: request.ConcurrencyPolicy,
 				Disabled:          request.Disabled,
 				Sync:              request.Sync,
+				Listener:          request.Listener,
 			}
 		} else {
 			// JSON merge: only update fields that are present in the request
@@ -211,9 +208,16 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 			if request.Sync != nil {
 				apiTrigger.Sync = request.Sync
 			}
+			if request.Listener != nil {
+				apiTrigger.Listener = request.Listener
+			}
 			apiTrigger.Disabled = request.Disabled
 		}
 
+		// Validate the effective merged state, not the request fields: a JSON
+		// merge that changes Event without sending Match would otherwise slip
+		// past an empty-request check and persist an incompatible combination
+		// (e.g. event=created with a preserved changed_to match).
 		validatedCRDTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(mapAPITestTriggerToUpsertRequest(apiTrigger))
 		if errs := validatedCRDTrigger.Spec.Validate(); len(errs) > 0 {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: %w", errPrefix, errors.Join(errs...)))
@@ -250,17 +254,10 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 			namespaces[namespace] = struct{}{}
 		}
 
-		for namespace := range namespaces {
-			_, err = s.TestTriggersClient.DeleteAll(c.Context(), s.getEnvironmentId(), namespace)
-			if err != nil {
-				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: error cleaning triggers before reapply", errPrefix))
-			}
-		}
-
-		s.Metrics.IncBulkDeleteTestTrigger(nil)
-
+		// Map and validate the full payload before any deletion: bulk update is
+		// delete-then-recreate, so a validation failure discovered mid-reapply
+		// would leave the namespaces emptied with nothing recreated.
 		testTriggers := make([]testkube.TestTrigger, 0, len(request))
-
 		for _, upsertRequest := range request {
 			crdTestTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(upsertRequest)
 			// default trigger name if not defined in upsert request
@@ -273,8 +270,19 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 			}
 
 			// Convert CRD to API object for the new interface
-			apiTrigger := testtriggersmapper.MapCRDToAPI(&crdTestTrigger)
+			testTriggers = append(testTriggers, testtriggersmapper.MapCRDToAPI(&crdTestTrigger))
+		}
 
+		for namespace := range namespaces {
+			_, err = s.TestTriggersClient.DeleteAll(c.Context(), s.getEnvironmentId(), namespace)
+			if err != nil {
+				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: error cleaning triggers before reapply", errPrefix))
+			}
+		}
+
+		s.Metrics.IncBulkDeleteTestTrigger(nil)
+
+		for _, apiTrigger := range testTriggers {
 			err = s.TestTriggersClient.Create(c.Context(), s.getEnvironmentId(), apiTrigger)
 
 			s.Metrics.IncCreateTestTrigger(err)
@@ -282,8 +290,6 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 			if err != nil {
 				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: error reapplying triggers after clean", errPrefix))
 			}
-
-			testTriggers = append(testTriggers, apiTrigger)
 		}
 
 		s.Metrics.IncBulkUpdateTestTrigger(nil)
@@ -421,46 +427,8 @@ func mapAPITestTriggerToUpsertRequest(trigger *testkube.TestTrigger) testkube.Te
 		ConcurrencyPolicy: trigger.ConcurrencyPolicy,
 		Disabled:          trigger.Disabled,
 		Sync:              trigger.Sync,
+		Listener:          trigger.Listener,
 	}
-}
-
-// validateUpsertMatchConditions mirrors TestTriggerSpec.Validate for the REST upsert path,
-// where we only have the OpenAPI type (not the CRD) and building the CRD via the mapper
-// would require non-nil selectors we don't have.
-func validateUpsertMatchConditions(match []testkube.TestTriggerFieldCondition, event string) []error {
-	var errs []error
-	for i, cond := range match {
-		if cond.Path == "" {
-			errs = append(errs, fmt.Errorf("match[%d].path is required", i))
-			continue
-		}
-
-		op := testkube.TestTriggerFieldOperator(cond.Operator)
-		switch op {
-		case testkube.TestTriggerFieldOperatorEquals,
-			testkube.TestTriggerFieldOperatorNotEquals,
-			testkube.TestTriggerFieldOperatorChangedTo,
-			testkube.TestTriggerFieldOperatorChangedFrom:
-			if cond.Value == "" {
-				errs = append(errs, fmt.Errorf("match[%d]: operator %q requires a value", i, op))
-			}
-		case testkube.TestTriggerFieldOperatorExists,
-			testkube.TestTriggerFieldOperatorNotExists,
-			testkube.TestTriggerFieldOperatorChanged:
-		default:
-			errs = append(errs, fmt.Errorf("match[%d]: unknown operator %q", i, cond.Operator))
-		}
-
-		switch op {
-		case testkube.TestTriggerFieldOperatorChanged,
-			testkube.TestTriggerFieldOperatorChangedTo,
-			testkube.TestTriggerFieldOperatorChangedFrom:
-			if event != "" && event != string(testtriggersv1.TestTriggerEventModified) {
-				errs = append(errs, fmt.Errorf("match[%d]: operator %q requires event to be %q", i, op, testtriggersv1.TestTriggerEventModified))
-			}
-		}
-	}
-	return errs
 }
 
 // generateTestTriggerName function generates a trigger name from the TestTrigger spec

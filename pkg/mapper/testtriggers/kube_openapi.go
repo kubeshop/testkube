@@ -70,6 +70,7 @@ func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
 		TestSelector:      mapSelectorFromCRD(crd.Spec.TestSelector),
 		ConcurrencyPolicy: concurrencyPolicy,
 		Disabled:          crd.Spec.Disabled,
+		Listener:          common.MapPtr(crd.Spec.Listener, commonmapper.MapTargetKubeToAPI),
 	}
 }
 
@@ -202,6 +203,7 @@ func MapTestTriggerCRDToTestTriggerUpsertRequest(request testsv1.TestTrigger) te
 		TestSelector:      mapSelectorFromCRD(request.Spec.TestSelector),
 		ConcurrencyPolicy: concurrencyPolicy,
 		Disabled:          request.Spec.Disabled,
+		Listener:          common.MapPtr(request.Spec.Listener, commonmapper.MapTargetKubeToAPI),
 	}
 }
 
