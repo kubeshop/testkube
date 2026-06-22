@@ -27,6 +27,7 @@ type TestTriggerUpsertRequest struct {
 	Event string `json:"event"`
 	// Match filters which object changes fire the trigger (ANDed).
 	Match             []TestTriggerFieldCondition     `json:"match,omitempty"`
+	Listener          *ExecutionTarget                `json:"listener,omitempty"`
 	ConditionSpec     *TestTriggerConditionSpec       `json:"conditionSpec,omitempty"`
 	ProbeSpec         *TestTriggerProbeSpec           `json:"probeSpec,omitempty"`
 	ContentSelector   *TestTriggerContentSelector     `json:"contentSelector,omitempty"`

@@ -85,6 +85,33 @@ spec:
       {{- end }}
     {{- end }}
   {{- end }}
+  {{- if .Listener }}
+  listener:
+    {{- if .Listener.Match }}
+    match:
+      {{- range $key, $value := .Listener.Match }}
+      {{ $key }}:
+        {{- range $value }}
+        - {{.}}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- if .Listener.Not }}
+    not:
+      {{- range $key, $value := .Listener.Not }}
+      {{ $key }}:
+        {{- range $value }}
+        - {{.}}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- if .Listener.Replicate }}
+    replicate:
+      {{- range .Listener.Replicate }}
+      - {{.}}
+      {{- end }}
+    {{- end }}
+  {{- end }}
   {{- if .ConditionSpec }}
   conditionSpec:
     {{- if .ConditionSpec.Timeout }}
