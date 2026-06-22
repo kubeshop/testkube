@@ -409,7 +409,6 @@ spec:
       branches:
         - main
         - "release/*"
-      authType: ssh
       sshKeyFrom:
         secretKeyRef:
           name: internal-git-ssh
