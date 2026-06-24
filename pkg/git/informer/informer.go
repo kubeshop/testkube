@@ -810,7 +810,7 @@ func (i *Informer) githubAuthClientOptions(ctx context.Context, gitConfig *testk
 	}
 	token, err := i.githubTokenProvider.GetGitHubToken(ctx, gitConfig.Uri)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get GitHub token for %s: %w", gitConfig.Uri, err)
+		return nil, fmt.Errorf("failed to get GitHub token: %w", err)
 	}
 	opts := []client.Option{
 		client.WithHTTPAuth(&http.BasicAuth{
