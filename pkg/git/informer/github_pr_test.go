@@ -243,7 +243,7 @@ func TestCheckPullRequests_E2E(t *testing.T) {
 		trigger := buildPRTrigger(uri, nil)
 		key := "v1:default/test-trigger"
 
-		result, err := inf.checkPullRequests(context.Background(), key, trigger)
+		result, err := inf.checkPullRequests(context.Background(), key, trigger, newReconcileCache())
 		require.NoError(t, err)
 		assert.False(t, result.changed, "first reconcile must not fire")
 
@@ -269,7 +269,7 @@ func TestCheckPullRequests_E2E(t *testing.T) {
 		}
 		trigger := buildPRTrigger(uri, nil)
 
-		result, err := inf.checkPullRequests(context.Background(), key, trigger)
+		result, err := inf.checkPullRequests(context.Background(), key, trigger, newReconcileCache())
 		require.NoError(t, err)
 		assert.True(t, result.changed, "new PR after initialization must fire")
 		assert.Equal(t, "opened", result.metadata[GitMetaKeyPRAction])
@@ -313,7 +313,7 @@ func TestCheckPullRequests_E2E(t *testing.T) {
 		// returns 500 for the files endpoint which is treated as a transient error.
 		trigger := buildPRTrigger(uri, nil, "src/**")
 
-		result, err := inf.checkPullRequests(context.Background(), key, trigger)
+		result, err := inf.checkPullRequests(context.Background(), key, trigger, newReconcileCache())
 		require.NoError(t, err)
 		assert.False(t, result.changed, "event must not fire on file-fetch error")
 		// Baseline must NOT advance so the event is retried next poll.
@@ -341,7 +341,7 @@ func TestCheckPullRequests_E2E(t *testing.T) {
 			Types: []string{"opened"},
 		})
 
-		result, err := inf.checkPullRequests(context.Background(), key, trigger)
+		result, err := inf.checkPullRequests(context.Background(), key, trigger, newReconcileCache())
 		require.NoError(t, err)
 		assert.False(t, result.changed)
 		// Baseline must advance to avoid re-evaluating the same state.

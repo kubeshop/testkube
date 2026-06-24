@@ -160,7 +160,7 @@ func isPullRequestTrigger(trigger testkube.TestTrigger) bool {
 }
 
 // checkPullRequests polls GitHub for PRs matching the trigger configuration and fires events.
-func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger testkube.TestTrigger) (matchResult, error) {
+func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger testkube.TestTrigger, cache *reconcileCache) (matchResult, error) {
 	gitConfig := trigger.ContentSelector.Git
 	if gitConfig == nil {
 		return matchResult{}, nil
@@ -172,7 +172,7 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 	}
 
 	// Resolve token for API authentication.
-	token := i.resolvePRToken(ctx, trigger.Namespace, gitConfig)
+	token := i.resolvePRToken(ctx, trigger.Namespace, gitConfig, cache)
 	apiBase := githubAPIBaseFromURI(gitConfig.Uri)
 	if i.githubAPIBaseFunc != nil {
 		apiBase = i.githubAPIBaseFunc(gitConfig.Uri)
@@ -276,11 +276,22 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 	return matchResult{}, nil
 }
 
-func (i *Informer) resolvePRToken(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit) string {
+func (i *Informer) resolvePRToken(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit, cache *reconcileCache) string {
 	// If authType is "github", fetch token from control plane.
 	authType := strings.ToLower(gitConfig.AuthType)
 	if authType == string(testkube.GITHUB_ContentGitAuthType) && i.githubTokenProvider != nil {
-		log.DefaultLogger.Warnw("failed to get GitHub App token for PR polling, falling back to configured credentials", "error", err)
+		// Use the per-reconcile cache to avoid repeated gRPC calls for the same URI.
+		if token, ok := cache.githubToken(gitConfig.Uri); ok {
+			return token
+		}
+		token, err := i.githubTokenProvider.GetGitHubToken(ctx, gitConfig.Uri)
+		if err != nil {
+			log.DefaultLogger.Warnw("failed to get GitHub App token for PR polling, falling back to configured credentials", "error", err)
+		} else {
+			cache.setGithubToken(gitConfig.Uri, token)
+			return token
+		}
+	}
 	if i.kubeClient != nil {
 		return i.resolveCredentialValue(ctx, gitConfig.Token, namespace, gitConfig.TokenFrom)
 	}
