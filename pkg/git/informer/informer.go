@@ -1083,6 +1083,9 @@ func (c *reconcileCache) setGithubToken(uri, token string) {
 	if c == nil {
 		return
 	}
+	if c.githubTokens == nil {
+		c.githubTokens = make(map[string]string)
+	}
 	c.githubTokens[uri] = token
 }
 
