@@ -913,7 +913,7 @@ func main() {
 						PullRetryDelay:     cfg.TestTriggerGitInformerPullRetryDelay,
 						WatcherNamespaces:  informerWatcherNamespaces,
 						KubeClient:         clientset,
-					}).Reconcile(taskCtx)
+					}, client).Reconcile(taskCtx)
 					return nil
 				},
 			})

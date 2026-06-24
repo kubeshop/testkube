@@ -98,6 +98,12 @@ type Matcher interface {
 	MatchGitTrigger(ctx context.Context, triggerName, namespace string, gitMeta map[string]string) error
 }
 
+// GitHubTokenProvider fetches a GitHub App installation token for a given
+// repository URL. This is used when authType is "github".
+type GitHubTokenProvider interface {
+	GetGitHubToken(ctx context.Context, url string) (string, error)
+}
+
 // Informer polls git repositories referenced by content triggers and fires
 // events when matching commits are detected.
 type Informer struct {
@@ -110,6 +116,11 @@ type Informer struct {
 	environmentID     string
 	options           Options
 	kubeClient        kubernetes.Interface
+
+	// githubTokenProvider fetches GitHub App installation tokens for repos.
+	// When nil, the "github" auth type is not supported and falls back to
+	// unauthenticated access.
+	githubTokenProvider GitHubTokenProvider
 
 	// githubAPIBaseFunc resolves the GitHub REST API base URL from a repo URI.
 	// When nil, the production githubAPIBaseFromURI function is used.
@@ -148,17 +159,23 @@ func NewInformer(
 	namespace string,
 	environmentID string,
 	options Options,
+	githubTokenProvider ...GitHubTokenProvider,
 ) *Informer {
 	options = normalizeOptions(options)
+	var gtp GitHubTokenProvider
+	if len(githubTokenProvider) > 0 {
+		gtp = githubTokenProvider[0]
+	}
 	return &Informer{
-		testTriggerClient: testTriggerClient,
-		matcher:           matcher,
-		commits:           make(map[string]string),
-		revisions:         make(map[string]string),
-		namespaces:        resolveNamespaces(options.WatcherNamespaces, namespace),
-		environmentID:     environmentID,
-		options:           options,
-		kubeClient:        options.KubeClient,
+		testTriggerClient:   testTriggerClient,
+		matcher:             matcher,
+		commits:             make(map[string]string),
+		revisions:           make(map[string]string),
+		namespaces:          resolveNamespaces(options.WatcherNamespaces, namespace),
+		environmentID:       environmentID,
+		options:             options,
+		kubeClient:          options.KubeClient,
+		githubTokenProvider: gtp,
 	}
 }
 
@@ -780,9 +797,32 @@ func authClientOptions(gitConfig *testkube.TestTriggerContentGit) ([]client.Opti
 }
 
 func (i *Informer) authClientOptions(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit) ([]client.Option, error) {
+	authType := strings.ToLower(gitConfig.AuthType)
+	if authType == string(testkube.GITHUB_ContentGitAuthType) {
+		return i.githubAuthClientOptions(ctx, gitConfig)
+	}
 	return authClientOptionsWithResolver(gitConfig, func(value string, source *testkube.EnvVarSource) string {
 		return i.resolveCredentialValue(ctx, value, namespace, source)
 	})
+}
+
+// githubAuthClientOptions resolves a GitHub App installation token via the
+// control plane and returns HTTP basic auth options using x-access-token.
+func (i *Informer) githubAuthClientOptions(ctx context.Context, gitConfig *testkube.TestTriggerContentGit) ([]client.Option, error) {
+	if i.githubTokenProvider == nil {
+		return nil, fmt.Errorf("github authType requires a connected control plane with GitHub App integration")
+	}
+	token, err := i.githubTokenProvider.GetGitHubToken(ctx, gitConfig.Uri)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get GitHub token for %s: %w", gitConfig.Uri, err)
+	}
+	opts := []client.Option{
+		client.WithHTTPAuth(&http.BasicAuth{
+			Username: "x-access-token",
+			Password: token,
+		}),
+	}
+	return opts, nil
 }
 
 func authClientOptionsWithResolver(
