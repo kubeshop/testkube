@@ -59,6 +59,15 @@ func parseGitHubRepo(uri string) (owner, repo string, ok bool) {
 	return matches[1], matches[2], true
 }
 
+func sanitizeGitHubTokenURI(uri string) string {
+	u, err := url.Parse(uri)
+	if err != nil || u.User == nil {
+		return uri
+	}
+	u.User = nil
+	return u.String()
+}
+
 // githubAPIBaseFromURI returns the GitHub API base URL for the given repo URI.
 // For github.com it returns "https://api.github.com", for GHES it derives from the host.
 func githubAPIBaseFromURI(uri string) string {
@@ -286,11 +295,7 @@ func (i *Informer) resolvePRToken(ctx context.Context, namespace string, gitConf
 			log.DefaultLogger.Warnw(githubPRNoTokenProviderWarning)
 		} else {
 			// Use the per-reconcile cache to avoid repeated gRPC calls for the same URI.
-			uri := gitConfig.Uri
-			if u, err := url.Parse(uri); err == nil && u.User != nil {
-				u.User = nil
-				uri = u.String()
-			}
+			uri := sanitizeGitHubTokenURI(gitConfig.Uri)
 
 			if token, ok := cache.githubToken(uri); ok {
 				return token

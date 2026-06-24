@@ -811,17 +811,18 @@ func (i *Informer) githubAuthClientOptions(ctx context.Context, gitConfig *testk
 		return nil, fmt.Errorf("github authType requires a connected control plane with GitHub App integration")
 	}
 	// Use the per-reconcile cache to avoid repeated gRPC calls for the same URI.
-	token, ok := cache.githubToken(gitConfig.Uri)
+	uri := sanitizeGitHubTokenURI(gitConfig.Uri)
+	token, ok := cache.githubToken(uri)
 	if !ok {
 		var err error
-		token, err = i.githubTokenProvider.GetGitHubToken(ctx, gitConfig.Uri)
+		token, err = i.githubTokenProvider.GetGitHubToken(ctx, uri)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get GitHub token: %w", err)
 		}
 		if strings.TrimSpace(token) == "" {
 			return nil, fmt.Errorf("failed to get GitHub token: empty token returned")
 		}
-		cache.setGithubToken(gitConfig.Uri, token)
+		cache.setGithubToken(uri, token)
 	}
 	opts := []client.Option{
 		client.WithHTTPAuth(&http.BasicAuth{

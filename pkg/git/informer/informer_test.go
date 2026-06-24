@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -277,13 +278,15 @@ func TestAuthClientOptions(t *testing.T) {
 
 // stubGitHubTokenProvider is a minimal GitHubTokenProvider for unit tests.
 type stubGitHubTokenProvider struct {
-	token string
-	err   error
-	calls int
+	token   string
+	err     error
+	calls   int
+	lastURI string
 }
 
-func (s *stubGitHubTokenProvider) GetGitHubToken(_ context.Context, _ string) (string, error) {
+func (s *stubGitHubTokenProvider) GetGitHubToken(_ context.Context, uri string) (string, error) {
 	s.calls++
+	s.lastURI = uri
 	return s.token, s.err
 }
 
@@ -304,6 +307,7 @@ func TestInformerAuthClientOptions_GitHub(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, opts, 1)
 		assert.Equal(t, 1, provider.calls)
+		assert.Equal(t, gitConfig.Uri, provider.lastURI)
 	})
 
 	t.Run("github authType returns error when provider is nil", func(t *testing.T) {
@@ -332,6 +336,31 @@ func TestInformerAuthClientOptions_GitHub(t *testing.T) {
 		assert.Len(t, opts2, 1)
 
 		// Provider should only have been called once despite two authClientOptions calls.
+		assert.Equal(t, 1, provider.calls)
+	})
+
+	t.Run("github authType strips URI userinfo before provider lookup and cache keying", func(t *testing.T) {
+		provider := &stubGitHubTokenProvider{token: "ghp_sanitized"}
+		informer := &Informer{githubTokenProvider: provider}
+		cache := newReconcileCache()
+		sanitizedURI := "https://github.com/kubeshop/testkube.git"
+		credentialedURI := (&url.URL{
+			Scheme: "https",
+			Host:   "github.com",
+			Path:   "/kubeshop/testkube.git",
+			User:   url.UserPassword("git", "test"),
+		}).String()
+		credentialedConfig := &testkube.TestTriggerContentGit{
+			Uri:      credentialedURI,
+			AuthType: string(testkube.GITHUB_ContentGitAuthType),
+		}
+
+		_, err := informer.authClientOptions(ctx, "default", credentialedConfig, cache)
+		require.NoError(t, err)
+		assert.Equal(t, sanitizedURI, provider.lastURI)
+
+		_, err = informer.authClientOptions(ctx, "default", gitConfig, cache)
+		require.NoError(t, err)
 		assert.Equal(t, 1, provider.calls)
 	})
 
