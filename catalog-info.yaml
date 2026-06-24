@@ -10,13 +10,10 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: System
 metadata:
-  name: testkube-oss-runners
+  name: testkube-oss-runner
   title: Testkube OSS/Runner
   description: Testkube OSS/Runner is a cloud native test orchestration and execution platform for Kubernetes.
   annotations:
-    testkube.io/organization: testkube
-    testkube.io/environments: testkube-cloud-test-dev
-    testkube.io/labels: tool=testkube-oss
     github.com/project-slug: kubeshop/testkube
     backstage.io/techdocs-ref: url:https://docs.testkube.io/articles/install/standalone-agent
   tags:
@@ -34,6 +31,9 @@ metadata:
   title: Testkube Agent
   description: Testkube Agent is a component of Testkube that runs as a Kubernetes controller and is responsible for orchestrating test execution and managing test resources in the cluster.
   annotations:
+    testkube.io/organization: testkube
+    testkube.io/environments: testkube-cloud-test-dev
+    testkube.io/labels: tool=testkube-oss
     github.com/project-slug: kubeshop/testkube
     backstage.io/techdocs-ref: url:https://docs.testkube.io/articles/install/standalone-agent
   tags:
