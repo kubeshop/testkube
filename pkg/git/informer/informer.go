@@ -119,8 +119,7 @@ type Informer struct {
 	kubeClient        kubernetes.Interface
 
 	// githubTokenProvider fetches GitHub App installation tokens for repos.
-	// When nil, the "github" auth type is not supported and falls back to
-	// unauthenticated access.
+	// When nil, the "github" auth type is not supported and will return an error.
 	githubTokenProvider GitHubTokenProvider
 
 	// githubAPIBaseFunc resolves the GitHub REST API base URL from a repo URI.
