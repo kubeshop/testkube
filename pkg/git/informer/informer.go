@@ -819,7 +819,7 @@ func (i *Informer) githubAuthClientOptions(ctx context.Context, gitConfig *testk
 			return nil, fmt.Errorf("failed to get GitHub token: %w", err)
 		}
 		if strings.TrimSpace(token) == "" {
-			return nil, fmt.Errorf("failed to get GitHub token: empty token returned for %s", gitConfig.Uri)
+			return nil, fmt.Errorf("failed to get GitHub token: empty token returned")
 		}
 		cache.setGithubToken(gitConfig.Uri, token)
 	}
