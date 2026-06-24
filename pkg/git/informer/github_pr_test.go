@@ -370,7 +370,7 @@ func TestResolvePRToken_GitHubNilProviderWarnsAndFallsBack(t *testing.T) {
 	token := inf.resolvePRToken(context.Background(), "default", gitConfig, newReconcileCache())
 
 	assert.Equal(t, "fallback-token", token)
-	require.Len(t, recordedLogs.FilterMessage("github authType configured for PR polling but no GitHub token provider is available, falling back to configured credentials").All(), 1)
+	require.Len(t, recordedLogs.FilterMessage(githubPRNoTokenProviderWarning).All(), 1)
 }
 
 func TestFetchGitHubPRs_MockServer(t *testing.T) {

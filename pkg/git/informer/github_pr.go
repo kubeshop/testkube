@@ -48,6 +48,8 @@ var githubRepoPattern = regexp.MustCompile(`(?:github\.com|github\.[^/:]+)[/:]([
 // githubHTTPClient is used for GitHub API requests with an appropriate timeout.
 var githubHTTPClient = &http.Client{Timeout: 30 * time.Second}
 
+const githubPRNoTokenProviderWarning = "github authType configured for PR polling but no GitHub token provider is available, falling back to configured credentials"
+
 // parseGitHubRepo extracts owner/repo from a GitHub URL (HTTPS or SSH).
 func parseGitHubRepo(uri string) (owner, repo string, ok bool) {
 	matches := githubRepoPattern.FindStringSubmatch(uri)
@@ -281,7 +283,7 @@ func (i *Informer) resolvePRToken(ctx context.Context, namespace string, gitConf
 	authType := strings.ToLower(gitConfig.AuthType)
 	if authType == string(testkube.GITHUB_ContentGitAuthType) {
 		if i.githubTokenProvider == nil {
-			log.DefaultLogger.Warnw("github authType configured for PR polling but no GitHub token provider is available, falling back to configured credentials")
+			log.DefaultLogger.Warnw(githubPRNoTokenProviderWarning)
 		} else {
 			// Use the per-reconcile cache to avoid repeated gRPC calls for the same URI.
 			if token, ok := cache.githubToken(gitConfig.Uri); ok {
