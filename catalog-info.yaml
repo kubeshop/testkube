@@ -14,11 +14,11 @@ metadata:
   title: Testkube OSS/Runner
   description: Testkube OSS/Runner is a cloud native test orchestration and execution platform for Kubernetes.
   annotations:
-    github.com/project-slug: kubeshop/testkube
-    backstage.io/techdocs-ref: url:https://docs.testkube.io/articles/install/standalone-agent
     testkube.io/organization: testkube
     testkube.io/environments: testkube-cloud-test-dev
     testkube.io/labels: tool=testkube-oss
+    github.com/project-slug: kubeshop/testkube
+    backstage.io/techdocs-ref: url:https://docs.testkube.io/articles/install/standalone-agent
   tags:
   - go
   - kubernetes
