@@ -1,5 +1,13 @@
 ---
 apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: testkube
+spec:
+  type: team
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
 kind: System
 metadata:
   name: testkube-oss-runner
@@ -8,13 +16,16 @@ metadata:
   annotations:
     github.com/project-slug: kubeshop/testkube
     backstage.io/techdocs-ref: url:https://docs.testkube.io/articles/install/standalone-agent
+    testkube.io/organization: testkube
+    testkube.io/environments: testkube-cloud-test-dev
+    testkube.io/labels: tool=testkube-oss
   tags:
   - go
   - kubernetes
   - testing
   - ci-cd
 spec:
-  owner: guests
+  owner: group:testkube
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -32,7 +43,7 @@ metadata:
   - ci-cd
 spec:
   type: service
-  owner: group:guests
+  owner: group:testkube
   system: testkube-oss-runner
   lifecycle: production
   dependsOn:
@@ -59,7 +70,7 @@ metadata:
     backstage.io/techdocs-ref: url:https://docs.testkube.io/openapi/overview#agent-api
 spec:
   type: openapi
-  owner: group:guests
+  owner: group:testkube
   system: testkube-oss-runner
   lifecycle: production
   definition:
@@ -80,7 +91,7 @@ metadata:
   - cli
 spec:
   type: library
-  owner: group:guests
+  owner: group:testkube
   system: testkube-oss-runner
   lifecycle: production
   links:
@@ -107,7 +118,7 @@ metadata:
   - ci-cd
 spec:
   type: service
-  owner: group:guests
+  owner: group:testkube
   system: testkube-oss-runner
   lifecycle: production
   links:
@@ -134,7 +145,7 @@ metadata:
   - ci-cd
 spec:
   type: service
-  owner: group:guests
+  owner: group:testkube
   system: testkube-oss-runner
   lifecycle: production
   links:
