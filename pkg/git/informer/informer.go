@@ -822,7 +822,7 @@ func (i *Informer) githubAuthClientOptions(ctx context.Context, gitConfig *testk
 		if strings.TrimSpace(token) == "" {
 			return nil, fmt.Errorf("failed to get GitHub token: empty token returned")
 		}
-		cache.setGithubToken(uri, token)
+		cache.setGitHubToken(uri, token)
 	}
 	opts := []client.Option{
 		client.WithHTTPAuth(&http.BasicAuth{
@@ -1079,8 +1079,8 @@ func (c *reconcileCache) githubToken(uri string) (string, bool) {
 	return tok, ok
 }
 
-// setGithubToken stores a GitHub App token for the given repo URI in the cache.
-func (c *reconcileCache) setGithubToken(uri, token string) {
+// setGitHubToken stores a GitHub App token for the given repo URI in the cache.
+func (c *reconcileCache) setGitHubToken(uri, token string) {
 	if c == nil {
 		return
 	}

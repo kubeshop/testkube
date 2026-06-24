@@ -309,7 +309,7 @@ func (i *Informer) resolvePRToken(ctx context.Context, namespace string, gitConf
 			} else if strings.TrimSpace(token) == "" {
 				log.DefaultLogger.Warnw("received empty GitHub App token for PR polling, falling back to configured credentials")
 			} else {
-				cache.setGithubToken(uri, token)
+				cache.setGitHubToken(uri, token)
 				return token
 			}
 		}
