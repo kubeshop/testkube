@@ -286,16 +286,22 @@ func (i *Informer) resolvePRToken(ctx context.Context, namespace string, gitConf
 			log.DefaultLogger.Warnw(githubPRNoTokenProviderWarning)
 		} else {
 			// Use the per-reconcile cache to avoid repeated gRPC calls for the same URI.
-			if token, ok := cache.githubToken(gitConfig.Uri); ok {
+			uri := gitConfig.Uri
+			if u, err := url.Parse(uri); err == nil && u.User != nil {
+				u.User = nil
+				uri = u.String()
+			}
+
+			if token, ok := cache.githubToken(uri); ok {
 				return token
 			}
-			token, err := i.githubTokenProvider.GetGitHubToken(ctx, gitConfig.Uri)
+			token, err := i.githubTokenProvider.GetGitHubToken(ctx, uri)
 			if err != nil {
 				log.DefaultLogger.Warnw("failed to get GitHub App token for PR polling, falling back to configured credentials", "error", err)
 			} else if strings.TrimSpace(token) == "" {
 				log.DefaultLogger.Warnw("received empty GitHub App token for PR polling, falling back to configured credentials")
 			} else {
-				cache.setGithubToken(gitConfig.Uri, token)
+				cache.setGithubToken(uri, token)
 				return token
 			}
 		}
