@@ -59,6 +59,9 @@ func parseGitHubRepo(uri string) (owner, repo string, ok bool) {
 	return matches[1], matches[2], true
 }
 
+// sanitizeGitHubTokenURI strips userinfo from GitHub URIs before they are sent
+// to the token provider or used as cache keys. If parsing fails or no userinfo
+// is present, the original URI is returned unchanged.
 func sanitizeGitHubTokenURI(uri string) string {
 	u, err := url.Parse(uri)
 	if err != nil || u.User == nil {

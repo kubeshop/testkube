@@ -362,6 +362,7 @@ func TestInformerAuthClientOptions_GitHub(t *testing.T) {
 		_, err = informer.authClientOptions(ctx, "default", gitConfig, cache)
 		require.NoError(t, err)
 		assert.Equal(t, 1, provider.calls)
+		assert.Equal(t, sanitizedURI, provider.lastURI)
 	})
 
 	t.Run("github authType forwards provider error", func(t *testing.T) {
