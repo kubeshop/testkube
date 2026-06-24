@@ -12,8 +12,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 func TestParseGitHubRepo(t *testing.T) {
@@ -347,6 +350,27 @@ func TestCheckPullRequests_E2E(t *testing.T) {
 		// Baseline must advance to avoid re-evaluating the same state.
 		assert.Equal(t, "sha-initial:closed", inf.commits[prKey])
 	})
+}
+
+func TestResolvePRToken_GitHubNilProviderWarnsAndFallsBack(t *testing.T) {
+	core, recordedLogs := observer.New(zap.WarnLevel)
+	originalLogger := log.DefaultLogger
+	log.DefaultLogger = zap.New(core).Sugar()
+	t.Cleanup(func() {
+		log.DefaultLogger = originalLogger
+	})
+
+	inf := &Informer{}
+	gitConfig := &testkube.TestTriggerContentGit{
+		Uri:      "https://github.com/owner/repo.git",
+		AuthType: string(testkube.GITHUB_ContentGitAuthType),
+		Token:    "fallback-token",
+	}
+
+	token := inf.resolvePRToken(context.Background(), "default", gitConfig, newReconcileCache())
+
+	assert.Equal(t, "fallback-token", token)
+	require.Len(t, recordedLogs.FilterMessage("github authType configured for PR polling but no GitHub token provider is available, falling back to configured credentials").All(), 1)
 }
 
 func TestFetchGitHubPRs_MockServer(t *testing.T) {
