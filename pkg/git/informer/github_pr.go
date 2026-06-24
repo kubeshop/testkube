@@ -280,12 +280,7 @@ func (i *Informer) resolvePRToken(ctx context.Context, namespace string, gitConf
 	// If authType is "github", fetch token from control plane.
 	authType := strings.ToLower(gitConfig.AuthType)
 	if authType == string(testkube.GITHUB_ContentGitAuthType) && i.githubTokenProvider != nil {
-		token, err := i.githubTokenProvider.GetGitHubToken(ctx, gitConfig.Uri)
-		if err == nil {
-			return token
-		}
-		log.DefaultLogger.Warnw("failed to get GitHub App token for PR polling, falling back to configured credentials", "uri", gitConfig.Uri, "error", err)
-	}
+		log.DefaultLogger.Warnw("failed to get GitHub App token for PR polling, falling back to configured credentials", "error", err)
 	if i.kubeClient != nil {
 		return i.resolveCredentialValue(ctx, gitConfig.Token, namespace, gitConfig.TokenFrom)
 	}
