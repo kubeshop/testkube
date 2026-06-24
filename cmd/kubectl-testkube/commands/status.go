@@ -65,30 +65,29 @@ func printContextStatus(cmd *cobra.Command, cfg config.Data) {
 			envName = cfg.CloudContext.EnvironmentId
 		}
 
-		contextData := map[string]string{
-			"Organization": orgName,
-			"Environment ": envName,
-			"API URI     ": cfg.CloudContext.ApiUri,
-			"Namespace   ": cfg.Namespace,
-		}
-		ui.InfoGrid(contextData)
+		// Use Properties (ordered slice) instead of InfoGrid (map) so the
+		// padded fields render in a stable order on every run.
+		ui.Properties([][]string{
+			{"Organization", orgName},
+			{"Environment ", envName},
+			{"API URI     ", cfg.CloudContext.ApiUri},
+			{"Namespace   ", cfg.Namespace},
+		})
 	} else {
 		ui.PrintEnabled("Context", "connected to a local standalone agent")
 
 		namespace := cfg.Namespace
-		if flag := cmd.Flag("namespace"); flag != nil && flag.Value.String() != "" {
+		if flag := cmd.Flag("namespace"); flag != nil && flag.Changed {
 			namespace = flag.Value.String()
 		}
 		apiURI := cfg.APIURI
-		if flag := cmd.Flag("api-uri"); flag != nil && flag.Value.String() != "" {
+		if flag := cmd.Flag("api-uri"); flag != nil && flag.Changed {
 			apiURI = flag.Value.String()
 		}
 
-		ui.InfoGrid(map[string]string{
-			"Namespace": namespace,
-			"API URI  ": apiURI,
+		ui.Properties([][]string{
+			{"Namespace", namespace},
+			{"API URI  ", apiURI},
 		})
 	}
-
-	ui.NL()
 }
