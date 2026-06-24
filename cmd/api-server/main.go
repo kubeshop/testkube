@@ -905,15 +905,16 @@ func main() {
 				Name: "git-informer",
 				Start: func(taskCtx context.Context) error {
 					gitinformer.NewInformer(testTriggersClient, triggerService, cfg.TestkubeNamespace, proContext.EnvID, gitinformer.Options{
-						ReconcileInterval:  cfg.TestTriggerGitInformerReconcileInterval,
-						RepoDepth:          cfg.TestTriggerGitInformerRepoDepth,
-						ListTimeoutSeconds: cfg.TestTriggerGitInformerListTimeout,
-						MaxCommitsScan:     cfg.TestTriggerGitInformerMaxCommitsScan,
-						PullRetries:        cfg.TestTriggerGitInformerPullRetries,
-						PullRetryDelay:     cfg.TestTriggerGitInformerPullRetryDelay,
-						WatcherNamespaces:  informerWatcherNamespaces,
-						KubeClient:         clientset,
-					}, client).Reconcile(taskCtx)
+						ReconcileInterval:   cfg.TestTriggerGitInformerReconcileInterval,
+						RepoDepth:           cfg.TestTriggerGitInformerRepoDepth,
+						ListTimeoutSeconds:  cfg.TestTriggerGitInformerListTimeout,
+						MaxCommitsScan:      cfg.TestTriggerGitInformerMaxCommitsScan,
+						PullRetries:         cfg.TestTriggerGitInformerPullRetries,
+						PullRetryDelay:      cfg.TestTriggerGitInformerPullRetryDelay,
+						WatcherNamespaces:   informerWatcherNamespaces,
+						KubeClient:          clientset,
+						GitHubTokenProvider: client,
+					}).Reconcile(taskCtx)
 					return nil
 				},
 			})

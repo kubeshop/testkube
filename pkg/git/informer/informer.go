@@ -61,14 +61,15 @@ var envVarNameSanitizer = regexp.MustCompile(`[^A-Za-z0-9_]`)
 var gitCommitSHAPattern = regexp.MustCompile(`^[a-fA-F0-9]{40}$`)
 
 type Options struct {
-	ReconcileInterval  time.Duration
-	RepoDepth          int
-	ListTimeoutSeconds int
-	MaxCommitsScan     int
-	PullRetries        int
-	PullRetryDelay     time.Duration
-	WatcherNamespaces  string
-	KubeClient         kubernetes.Interface
+	ReconcileInterval   time.Duration
+	RepoDepth           int
+	ListTimeoutSeconds  int
+	MaxCommitsScan      int
+	PullRetries         int
+	PullRetryDelay      time.Duration
+	WatcherNamespaces   string
+	KubeClient          kubernetes.Interface
+	GitHubTokenProvider GitHubTokenProvider
 }
 
 func normalizeOptions(opts Options) Options {
@@ -159,13 +160,8 @@ func NewInformer(
 	namespace string,
 	environmentID string,
 	options Options,
-	githubTokenProvider ...GitHubTokenProvider,
 ) *Informer {
 	options = normalizeOptions(options)
-	var gtp GitHubTokenProvider
-	if len(githubTokenProvider) > 0 {
-		gtp = githubTokenProvider[0]
-	}
 	return &Informer{
 		testTriggerClient:   testTriggerClient,
 		matcher:             matcher,
@@ -175,7 +171,7 @@ func NewInformer(
 		environmentID:       environmentID,
 		options:             options,
 		kubeClient:          options.KubeClient,
-		githubTokenProvider: gtp,
+		githubTokenProvider: options.GitHubTokenProvider,
 	}
 }
 
