@@ -287,6 +287,8 @@ func (i *Informer) resolvePRToken(ctx context.Context, namespace string, gitConf
 		token, err := i.githubTokenProvider.GetGitHubToken(ctx, gitConfig.Uri)
 		if err != nil {
 			log.DefaultLogger.Warnw("failed to get GitHub App token for PR polling, falling back to configured credentials", "error", err)
+		} else if strings.TrimSpace(token) == "" {
+			log.DefaultLogger.Warnw("received empty GitHub App token for PR polling, falling back to configured credentials")
 		} else {
 			cache.setGithubToken(gitConfig.Uri, token)
 			return token
