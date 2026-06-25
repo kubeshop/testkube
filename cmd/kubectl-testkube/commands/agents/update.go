@@ -1,6 +1,7 @@
 package agents
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -30,7 +31,7 @@ func NewUpdateAgentCommand() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&setLabels, "label", "l", nil, "labels to set")
 	cmd.Flags().StringSliceVarP(&deleteLabels, "delete-label", "L", nil, "labels to delete")
 	cmd.Flags().StringVarP(&runnerMode, "runner-mode", "m", "", "runner mode, allowed values: independent, group, global")
-	cmd.Flags().StringVarP(&runnerMode, "group-name", "g", "", "group name used to target executions")
+	cmd.Flags().StringVarP(&groupName, "group-name", "g", "", "group name used to target executions")
 
 	return cmd
 }
@@ -39,32 +40,41 @@ func UiUpdateAgent(cmd *cobra.Command, name string, setLabels, deleteLabels []st
 	agent, err := GetControlPlaneAgent(cmd, name)
 	ui.ExitOnError("getting agent", err)
 
+	input, err := buildUpdateAgentInput(agent, setLabels, deleteLabels, runnerMode, groupName)
+	ui.ExitOnError("preparing agent update", err)
+
+	agent, err = UpdateAgent(cmd, agent.ID, input)
+	ui.ExitOnError("updating agent", err)
+
+	PrintControlPlaneAgent(*agent)
+}
+
+func buildUpdateAgentInput(agent *client.Agent, setLabels, deleteLabels []string, runnerMode string, groupName string) (client.AgentInput, error) {
 	if agent.Labels == nil {
 		agent.Labels = make(map[string]string)
 	}
 
-	if runnerMode == "group" && groupName != "" && agent.Labels["group"] == "" {
-		ui.ExitOnError("group name is mandatory to set runner mode as group, use param --group-name")
-	}
-
 	if runnerMode != "" {
-		if runnerMode == "group" || runnerMode == "global" || runnerMode == "independent" {
-			if runnerMode == "independent" {
-				runnerMode = "name"
+		switch runnerMode {
+		case "independent":
+			agent.RunnerPolicy = &client.RunnerPolicy{RequiredMatch: []string{"name"}}
+		case "group":
+			agent.RunnerPolicy = &client.RunnerPolicy{RequiredMatch: []string{"group"}}
+			if groupName != "" {
+				agent.Labels["group"] = groupName
 			}
-			agent.RunnerPolicy = &client.RunnerPolicy{
-				RequiredMatch: []string{runnerMode},
-			}
-		} else {
-			ui.ExitOnError("runner mode not valid, allowed values:  independent, group, global")
+		case "global":
+			agent.RunnerPolicy = &client.RunnerPolicy{RequiredMatch: []string{"global"}}
+		default:
+			return client.AgentInput{}, errors.New("runner mode not valid, allowed values: independent, group, global")
 		}
 	}
 
 	for _, labelPair := range setLabels {
 		k, v, _ := strings.Cut(labelPair, "=")
 		if v == "" {
-			if agent.RunnerPolicy.RequiredMatch[0] == "group" && k == "group" {
-				ui.ExitOnError("cannot delete group label when runner mode is group")
+			if isAgentGroupRunner(agent) && k == "group" {
+				return client.AgentInput{}, errors.New("cannot delete group label when runner mode is group")
 			}
 			delete(agent.Labels, k)
 		} else {
@@ -73,17 +83,29 @@ func UiUpdateAgent(cmd *cobra.Command, name string, setLabels, deleteLabels []st
 	}
 
 	for _, labelName := range deleteLabels {
-		if agent.RunnerPolicy.RequiredMatch[0] == "group" && labelName == "group" {
-			ui.ExitOnError("cannot delete group label when runner mode is group")
+		if isAgentGroupRunner(agent) && labelName == "group" {
+			return client.AgentInput{}, errors.New("cannot delete group label when runner mode is group")
 		}
 		delete(agent.Labels, labelName)
 	}
 
-	agent, err = UpdateAgent(cmd, agent.ID, client.AgentInput{
-		RunnerPolicy: common.Ptr(*agent.RunnerPolicy),
-		Labels:       common.Ptr(agent.Labels),
-	})
-	ui.ExitOnError("updating agent", err)
+	if isAgentGroupRunner(agent) && agent.Labels["group"] == "" {
+		return client.AgentInput{}, errors.New("group name is mandatory to set runner mode as group, use param --group-name")
+	}
 
-	PrintControlPlaneAgent(*agent)
+	input := client.AgentInput{
+		Labels: common.Ptr(agent.Labels),
+	}
+	if agent.RunnerPolicy != nil {
+		input.RunnerPolicy = common.Ptr(*agent.RunnerPolicy)
+	}
+
+	return input, nil
+}
+
+func isAgentGroupRunner(agent *client.Agent) bool {
+	return agent != nil &&
+		agent.RunnerPolicy != nil &&
+		len(agent.RunnerPolicy.RequiredMatch) > 0 &&
+		agent.RunnerPolicy.RequiredMatch[0] == "group"
 }
