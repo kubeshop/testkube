@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -12,8 +13,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 func TestParseGitHubRepo(t *testing.T) {
@@ -243,7 +247,7 @@ func TestCheckPullRequests_E2E(t *testing.T) {
 		trigger := buildPRTrigger(uri, nil)
 		key := "v1:default/test-trigger"
 
-		result, err := inf.checkPullRequests(context.Background(), key, trigger)
+		result, err := inf.checkPullRequests(context.Background(), key, trigger, newReconcileCache())
 		require.NoError(t, err)
 		assert.False(t, result.changed, "first reconcile must not fire")
 
@@ -269,7 +273,7 @@ func TestCheckPullRequests_E2E(t *testing.T) {
 		}
 		trigger := buildPRTrigger(uri, nil)
 
-		result, err := inf.checkPullRequests(context.Background(), key, trigger)
+		result, err := inf.checkPullRequests(context.Background(), key, trigger, newReconcileCache())
 		require.NoError(t, err)
 		assert.True(t, result.changed, "new PR after initialization must fire")
 		assert.Equal(t, "opened", result.metadata[GitMetaKeyPRAction])
@@ -313,7 +317,7 @@ func TestCheckPullRequests_E2E(t *testing.T) {
 		// returns 500 for the files endpoint which is treated as a transient error.
 		trigger := buildPRTrigger(uri, nil, "src/**")
 
-		result, err := inf.checkPullRequests(context.Background(), key, trigger)
+		result, err := inf.checkPullRequests(context.Background(), key, trigger, newReconcileCache())
 		require.NoError(t, err)
 		assert.False(t, result.changed, "event must not fire on file-fetch error")
 		// Baseline must NOT advance so the event is retried next poll.
@@ -341,11 +345,93 @@ func TestCheckPullRequests_E2E(t *testing.T) {
 			Types: []string{"opened"},
 		})
 
-		result, err := inf.checkPullRequests(context.Background(), key, trigger)
+		result, err := inf.checkPullRequests(context.Background(), key, trigger, newReconcileCache())
 		require.NoError(t, err)
 		assert.False(t, result.changed)
 		// Baseline must advance to avoid re-evaluating the same state.
 		assert.Equal(t, "sha-initial:closed", inf.commits[prKey])
+	})
+}
+
+func TestResolvePRToken_GitHubNilProviderWarnsAndFallsBack(t *testing.T) {
+	core, recordedLogs := observer.New(zap.WarnLevel)
+	originalLogger := log.DefaultLogger
+	log.DefaultLogger = zap.New(core).Sugar()
+	t.Cleanup(func() {
+		log.DefaultLogger = originalLogger
+	})
+
+	inf := &Informer{}
+	gitConfig := &testkube.TestTriggerContentGit{
+		Uri:      "https://github.com/owner/repo.git",
+		AuthType: string(testkube.GITHUB_ContentGitAuthType),
+		Token:    "fallback-token",
+	}
+
+	token := inf.resolvePRToken(context.Background(), "default", gitConfig, newReconcileCache())
+
+	assert.Equal(t, "fallback-token", token)
+	require.Len(t, recordedLogs.FilterMessage(githubPRNoTokenProviderWarning).All(), 1)
+}
+
+func TestResolvePRToken_GitHubUsesProviderTokenAndCachesSanitizedURI(t *testing.T) {
+	provider := &stubGitHubTokenProvider{token: "ghp_prtoken"}
+	inf := &Informer{githubTokenProvider: provider}
+	cache := newReconcileCache()
+	credentialedConfig := &testkube.TestTriggerContentGit{
+		Uri: (&url.URL{
+			Scheme: "https",
+			Host:   "github.com",
+			Path:   "/owner/repo.git",
+			User:   url.UserPassword("git", "test"),
+		}).String(),
+		AuthType: string(testkube.GITHUB_ContentGitAuthType),
+		Token:    "fallback-token",
+	}
+	sanitizedConfig := &testkube.TestTriggerContentGit{
+		Uri:      "https://github.com/owner/repo.git",
+		AuthType: string(testkube.GITHUB_ContentGitAuthType),
+		Token:    "other-fallback-token",
+	}
+
+	token1 := inf.resolvePRToken(context.Background(), "default", credentialedConfig, cache)
+	token2 := inf.resolvePRToken(context.Background(), "default", sanitizedConfig, cache)
+
+	assert.Equal(t, "ghp_prtoken", token1)
+	assert.Equal(t, "ghp_prtoken", token2)
+	assert.Equal(t, 1, provider.calls)
+	assert.Equal(t, sanitizedConfig.Uri, provider.lastURI)
+}
+
+func TestResolvePRToken_GitHubProviderFailuresFallBack(t *testing.T) {
+	t.Run("provider error falls back to configured credentials", func(t *testing.T) {
+		provider := &stubGitHubTokenProvider{err: assert.AnError}
+		inf := &Informer{githubTokenProvider: provider}
+		gitConfig := &testkube.TestTriggerContentGit{
+			Uri:      "https://github.com/owner/repo.git",
+			AuthType: string(testkube.GITHUB_ContentGitAuthType),
+			Token:    "fallback-token",
+		}
+
+		token := inf.resolvePRToken(context.Background(), "default", gitConfig, newReconcileCache())
+
+		assert.Equal(t, "fallback-token", token)
+		assert.Equal(t, 1, provider.calls)
+	})
+
+	t.Run("empty provider token falls back to configured credentials", func(t *testing.T) {
+		provider := &stubGitHubTokenProvider{}
+		inf := &Informer{githubTokenProvider: provider}
+		gitConfig := &testkube.TestTriggerContentGit{
+			Uri:      "https://github.com/owner/repo.git",
+			AuthType: string(testkube.GITHUB_ContentGitAuthType),
+			Token:    "fallback-token",
+		}
+
+		token := inf.resolvePRToken(context.Background(), "default", gitConfig, newReconcileCache())
+
+		assert.Equal(t, "fallback-token", token)
+		assert.Equal(t, 1, provider.calls)
 	})
 }
 
