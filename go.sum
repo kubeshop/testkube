@@ -129,6 +129,8 @@ github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 h1:DDGfHa7BWjL4Yn
 github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869/go.mod h1:Ekp36dRnpXw/yCqJaO+ZrUyxD+3VXMFFr56k5XYrpB4=
 github.com/cdevents/sdk-go v0.5.0 h1:DLEadQBBxSHAhdbSJL4LdM/ES4tAt8lmlGY1Rxqtt+Y=
 github.com/cdevents/sdk-go v0.5.0/go.mod h1:kXb/bQX7SfJrAVr62GTuQnITWLHeEg+sRB3zlhQK5Lw=
+github.com/cdevents/sdk-go v0.5.1 h1:BpUKf1nUs703mwJPgzF0WOh2fEJ9v7I0RmvbLzccIHg=
+github.com/cdevents/sdk-go v0.5.1/go.mod h1:/4gu96R76jCptOR/qG+nX1pYQI8fRusPnIgUXxhPbbk=
 github.com/cenkalti/backoff/v5 v5.0.3 h1:ZN+IMa753KfX5hd8vVaMixjnqRZ3y8CuJKRKj1xcsSM=
 github.com/cenkalti/backoff/v5 v5.0.3/go.mod h1:rkhZdG3JZukswDf7f0cwqPNk4K0sa+F97BxZthm/crw=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
