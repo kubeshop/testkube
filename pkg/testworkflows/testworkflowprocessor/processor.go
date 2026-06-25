@@ -462,9 +462,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		for i := range containers {
 			if containers[i].Resources.Requests == nil && containers[i].Resources.Limits == nil {
 				if defaultRes.Requests.CPU != "" || defaultRes.Requests.Memory != "" {
-					if containers[i].Resources.Requests == nil {
-						containers[i].Resources.Requests = corev1.ResourceList{}
-					}
+					containers[i].Resources.Requests = corev1.ResourceList{}
 					if defaultRes.Requests.CPU != "" {
 						containers[i].Resources.Requests[corev1.ResourceCPU] = resource.MustParse(defaultRes.Requests.CPU)
 					}
@@ -473,9 +471,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 					}
 				}
 				if defaultRes.Limits.CPU != "" || defaultRes.Limits.Memory != "" {
-					if containers[i].Resources.Limits == nil {
-						containers[i].Resources.Limits = corev1.ResourceList{}
-					}
+					containers[i].Resources.Limits = corev1.ResourceList{}
 					if defaultRes.Limits.CPU != "" {
 						containers[i].Resources.Limits[corev1.ResourceCPU] = resource.MustParse(defaultRes.Limits.CPU)
 					}
