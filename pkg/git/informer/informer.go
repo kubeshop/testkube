@@ -61,14 +61,15 @@ var envVarNameSanitizer = regexp.MustCompile(`[^A-Za-z0-9_]`)
 var gitCommitSHAPattern = regexp.MustCompile(`^[a-fA-F0-9]{40}$`)
 
 type Options struct {
-	ReconcileInterval  time.Duration
-	RepoDepth          int
-	ListTimeoutSeconds int
-	MaxCommitsScan     int
-	PullRetries        int
-	PullRetryDelay     time.Duration
-	WatcherNamespaces  string
-	KubeClient         kubernetes.Interface
+	ReconcileInterval   time.Duration
+	RepoDepth           int
+	ListTimeoutSeconds  int
+	MaxCommitsScan      int
+	PullRetries         int
+	PullRetryDelay      time.Duration
+	WatcherNamespaces   string
+	KubeClient          kubernetes.Interface
+	GitHubTokenProvider GitHubTokenProvider
 }
 
 func normalizeOptions(opts Options) Options {
@@ -98,6 +99,12 @@ type Matcher interface {
 	MatchGitTrigger(ctx context.Context, triggerName, namespace string, gitMeta map[string]string) error
 }
 
+// GitHubTokenProvider fetches a GitHub App installation token for a given
+// repository URL. This is used when authType is "github".
+type GitHubTokenProvider interface {
+	GetGitHubToken(ctx context.Context, url string) (string, error)
+}
+
 // Informer polls git repositories referenced by content triggers and fires
 // events when matching commits are detected.
 type Informer struct {
@@ -111,6 +118,10 @@ type Informer struct {
 	options           Options
 	kubeClient        kubernetes.Interface
 
+	// githubTokenProvider fetches GitHub App installation tokens for repos.
+	// When nil, the "github" auth type is not supported and will return an error.
+	githubTokenProvider GitHubTokenProvider
+
 	// githubAPIBaseFunc resolves the GitHub REST API base URL from a repo URI.
 	// When nil, the production githubAPIBaseFromURI function is used.
 	// Tests can override this to point at a mock HTTP server.
@@ -118,7 +129,8 @@ type Informer struct {
 }
 
 type reconcileCache struct {
-	states map[string]*reconcileState
+	states       map[string]*reconcileState
+	githubTokens map[string]string // keyed by repo URI; cached for the duration of a reconcile pass
 }
 
 type reconcileState struct {
@@ -151,14 +163,15 @@ func NewInformer(
 ) *Informer {
 	options = normalizeOptions(options)
 	return &Informer{
-		testTriggerClient: testTriggerClient,
-		matcher:           matcher,
-		commits:           make(map[string]string),
-		revisions:         make(map[string]string),
-		namespaces:        resolveNamespaces(options.WatcherNamespaces, namespace),
-		environmentID:     environmentID,
-		options:           options,
-		kubeClient:        options.KubeClient,
+		testTriggerClient:   testTriggerClient,
+		matcher:             matcher,
+		commits:             make(map[string]string),
+		revisions:           make(map[string]string),
+		namespaces:          resolveNamespaces(options.WatcherNamespaces, namespace),
+		environmentID:       environmentID,
+		options:             options,
+		kubeClient:          options.KubeClient,
+		githubTokenProvider: options.GitHubTokenProvider,
 	}
 }
 
@@ -244,7 +257,7 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 		var match matchResult
 		var err error
 		if isPullRequestTrigger(trigger) {
-			match, err = i.checkPullRequests(ctx, key, trigger)
+			match, err = i.checkPullRequests(ctx, key, trigger, cache)
 		} else {
 			match, err = i.hasNewMatchingCommitWithCache(ctx, key, trigger, cache)
 		}
@@ -424,7 +437,7 @@ func (i *Informer) hasNewMatchingCommitWithCache(ctx context.Context, key string
 		}
 
 		// Ref changed – clone/open the repo for this ref and check path diffs.
-		repo, repoErr := i.openOrUpdateRepositoryForRef(ctx, key, trigger, pair.Ref)
+		repo, repoErr := i.openOrUpdateRepositoryForRef(ctx, key, trigger, pair.Ref, cache)
 		if repoErr != nil {
 			return matchResult{}, repoErr
 		}
@@ -525,7 +538,7 @@ func refSubKey(triggerKey, ref string) string {
 
 func (i *Informer) remoteAllMatchingRefsWithCache(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit, cache *reconcileCache) ([]refHashPair, error) {
 	if cache == nil {
-		return i.remoteAllMatchingRefs(ctx, namespace, gitConfig)
+		return i.remoteAllMatchingRefs(ctx, namespace, gitConfig, nil)
 	}
 
 	state := cache.stateFor(namespace, gitConfig)
@@ -533,13 +546,13 @@ func (i *Informer) remoteAllMatchingRefsWithCache(ctx context.Context, namespace
 		return state.allRefs, state.allRefsErr
 	}
 
-	state.allRefs, state.allRefsErr = i.remoteAllMatchingRefs(ctx, namespace, gitConfig)
+	state.allRefs, state.allRefsErr = i.remoteAllMatchingRefs(ctx, namespace, gitConfig, cache)
 	state.allRefsLoaded = true
 	return state.allRefs, state.allRefsErr
 }
 
-func (i *Informer) remoteAllMatchingRefs(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit) ([]refHashPair, error) {
-	clientOptions, err := i.authClientOptions(ctx, namespace, gitConfig)
+func (i *Informer) remoteAllMatchingRefs(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit, cache *reconcileCache) ([]refHashPair, error) {
+	clientOptions, err := i.authClientOptions(ctx, namespace, gitConfig, cache)
 	if err != nil {
 		return nil, err
 	}
@@ -552,7 +565,7 @@ func normalizeRevision(revision string) string {
 
 // openOrUpdateRepositoryForRef clones or pulls the repository for a specific ref.
 // It uses a per-ref subdirectory to avoid conflicts when multiple refs are tracked.
-func (i *Informer) openOrUpdateRepositoryForRef(ctx context.Context, key string, trigger testkube.TestTrigger, ref string) (*git.Repository, error) {
+func (i *Informer) openOrUpdateRepositoryForRef(ctx context.Context, key string, trigger testkube.TestTrigger, ref string, cache *reconcileCache) (*git.Repository, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -561,7 +574,7 @@ func (i *Informer) openOrUpdateRepositoryForRef(ctx context.Context, key string,
 	refSuffix := refDirectorySuffix(ref)
 	repoDir := triggerRepositoryPathFromKey(key) + refDelimiter + refSuffix
 	gitConfig := trigger.ContentSelector.Git
-	clientOptions, err := i.authClientOptions(ctx, trigger.Namespace, gitConfig)
+	clientOptions, err := i.authClientOptions(ctx, trigger.Namespace, gitConfig, cache)
 	if err != nil {
 		return nil, err
 	}
@@ -779,10 +792,45 @@ func authClientOptions(gitConfig *testkube.TestTriggerContentGit) ([]client.Opti
 	return authClientOptionsWithResolver(gitConfig, resolveCredentialValue)
 }
 
-func (i *Informer) authClientOptions(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit) ([]client.Option, error) {
+func (i *Informer) authClientOptions(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit, cache *reconcileCache) ([]client.Option, error) {
+	authType := strings.ToLower(gitConfig.AuthType)
+	if authType == string(testkube.GITHUB_ContentGitAuthType) {
+		return i.githubAuthClientOptions(ctx, gitConfig, cache)
+	}
 	return authClientOptionsWithResolver(gitConfig, func(value string, source *testkube.EnvVarSource) string {
 		return i.resolveCredentialValue(ctx, value, namespace, source)
 	})
+}
+
+// githubAuthClientOptions resolves a GitHub App installation token via the
+// control plane and returns HTTP basic auth options using x-access-token.
+// The token is cached in cache for the duration of the reconcile pass to
+// avoid issuing multiple gRPC calls for the same repository URL.
+func (i *Informer) githubAuthClientOptions(ctx context.Context, gitConfig *testkube.TestTriggerContentGit, cache *reconcileCache) ([]client.Option, error) {
+	if i.githubTokenProvider == nil {
+		return nil, fmt.Errorf("github authType requires a connected control plane with GitHub App integration")
+	}
+	// Use the per-reconcile cache to avoid repeated gRPC calls for the same URI.
+	uri := sanitizeGitHubTokenURI(gitConfig.Uri)
+	token, ok := cache.githubToken(uri)
+	if !ok {
+		var err error
+		token, err = i.githubTokenProvider.GetGitHubToken(ctx, uri)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get GitHub token: %w", err)
+		}
+		if strings.TrimSpace(token) == "" {
+			return nil, fmt.Errorf("failed to get GitHub token: empty token returned")
+		}
+		cache.setGitHubToken(uri, token)
+	}
+	opts := []client.Option{
+		client.WithHTTPAuth(&http.BasicAuth{
+			Username: "x-access-token",
+			Password: token,
+		}),
+	}
+	return opts, nil
 }
 
 func authClientOptionsWithResolver(
@@ -1006,7 +1054,10 @@ func collectChangedPathsSince(repo *git.Repository, headHash, prevHash string, m
 }
 
 func newReconcileCache() *reconcileCache {
-	return &reconcileCache{states: make(map[string]*reconcileState)}
+	return &reconcileCache{
+		states:       make(map[string]*reconcileState),
+		githubTokens: make(map[string]string),
+	}
 }
 
 func (c *reconcileCache) stateFor(namespace string, gitConfig *testkube.TestTriggerContentGit) *reconcileState {
@@ -1017,6 +1068,26 @@ func (c *reconcileCache) stateFor(namespace string, gitConfig *testkube.TestTrig
 	state := &reconcileState{deltas: make(map[string]commitDelta)}
 	c.states[key] = state
 	return state
+}
+
+// githubToken returns a cached GitHub App token for the given repo URI, if present.
+func (c *reconcileCache) githubToken(uri string) (string, bool) {
+	if c == nil {
+		return "", false
+	}
+	tok, ok := c.githubTokens[uri]
+	return tok, ok
+}
+
+// setGitHubToken stores a GitHub App token for the given repo URI in the cache.
+func (c *reconcileCache) setGitHubToken(uri, token string) {
+	if c == nil {
+		return
+	}
+	if c.githubTokens == nil {
+		c.githubTokens = make(map[string]string)
+	}
+	c.githubTokens[uri] = token
 }
 
 func gitConfigCacheKey(namespace string, gitConfig *testkube.TestTriggerContentGit) string {

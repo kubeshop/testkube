@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -273,6 +274,107 @@ func TestAuthClientOptions(t *testing.T) {
 		assert.Contains(t, err.Error(), "resourceFieldRef")
 	})
 
+}
+
+// stubGitHubTokenProvider is a minimal GitHubTokenProvider for unit tests.
+type stubGitHubTokenProvider struct {
+	token   string
+	err     error
+	calls   int
+	lastURI string
+}
+
+func (s *stubGitHubTokenProvider) GetGitHubToken(_ context.Context, uri string) (string, error) {
+	s.calls++
+	s.lastURI = uri
+	return s.token, s.err
+}
+
+func TestInformerAuthClientOptions_GitHub(t *testing.T) {
+	ctx := context.Background()
+	gitConfig := &testkube.TestTriggerContentGit{
+		Uri:      "https://github.com/kubeshop/testkube.git",
+		AuthType: string(testkube.GITHUB_ContentGitAuthType),
+	}
+
+	t.Run("github authType returns x-access-token basic auth when provider succeeds", func(t *testing.T) {
+		provider := &stubGitHubTokenProvider{token: "ghp_testtoken"}
+		informer := &Informer{githubTokenProvider: provider}
+		cache := newReconcileCache()
+
+		opts, err := informer.authClientOptions(ctx, "default", gitConfig, cache)
+
+		require.NoError(t, err)
+		assert.Len(t, opts, 1)
+		assert.Equal(t, 1, provider.calls)
+		assert.Equal(t, gitConfig.Uri, provider.lastURI)
+	})
+
+	t.Run("github authType returns error when provider is nil", func(t *testing.T) {
+		informer := &Informer{githubTokenProvider: nil}
+		cache := newReconcileCache()
+
+		_, err := informer.authClientOptions(ctx, "default", gitConfig, cache)
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "github authType requires a connected control plane")
+	})
+
+	t.Run("github authType caches token within reconcile pass", func(t *testing.T) {
+		provider := &stubGitHubTokenProvider{token: "ghp_cachedtoken"}
+		informer := &Informer{githubTokenProvider: provider}
+		cache := newReconcileCache()
+
+		// First call should fetch the token.
+		opts1, err := informer.authClientOptions(ctx, "default", gitConfig, cache)
+		require.NoError(t, err)
+		assert.Len(t, opts1, 1)
+
+		// Second call with the same cache should reuse the cached token.
+		opts2, err := informer.authClientOptions(ctx, "default", gitConfig, cache)
+		require.NoError(t, err)
+		assert.Len(t, opts2, 1)
+
+		// Provider should only have been called once despite two authClientOptions calls.
+		assert.Equal(t, 1, provider.calls)
+	})
+
+	t.Run("github authType strips URI userinfo before provider lookup and cache keying", func(t *testing.T) {
+		provider := &stubGitHubTokenProvider{token: "ghp_sanitized"}
+		informer := &Informer{githubTokenProvider: provider}
+		cache := newReconcileCache()
+		sanitizedURI := "https://github.com/kubeshop/testkube.git"
+		credentialedURI := (&url.URL{
+			Scheme: "https",
+			Host:   "github.com",
+			Path:   "/kubeshop/testkube.git",
+			User:   url.UserPassword("git", "test"),
+		}).String()
+		credentialedConfig := &testkube.TestTriggerContentGit{
+			Uri:      credentialedURI,
+			AuthType: string(testkube.GITHUB_ContentGitAuthType),
+		}
+
+		_, err := informer.authClientOptions(ctx, "default", credentialedConfig, cache)
+		require.NoError(t, err)
+		assert.Equal(t, sanitizedURI, provider.lastURI)
+
+		_, err = informer.authClientOptions(ctx, "default", gitConfig, cache)
+		require.NoError(t, err)
+		assert.Equal(t, 1, provider.calls)
+		assert.Equal(t, sanitizedURI, provider.lastURI)
+	})
+
+	t.Run("github authType forwards provider error", func(t *testing.T) {
+		provider := &stubGitHubTokenProvider{err: errors.New("control plane unavailable")}
+		informer := &Informer{githubTokenProvider: provider}
+		cache := newReconcileCache()
+
+		_, err := informer.authClientOptions(ctx, "default", gitConfig, cache)
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to get GitHub token")
+	})
 }
 
 func TestCloneAndPullOptions_BranchRef(t *testing.T) {

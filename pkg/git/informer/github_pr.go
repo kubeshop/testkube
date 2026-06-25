@@ -48,6 +48,8 @@ var githubRepoPattern = regexp.MustCompile(`(?:github\.com|github\.[^/:]+)[/:]([
 // githubHTTPClient is used for GitHub API requests with an appropriate timeout.
 var githubHTTPClient = &http.Client{Timeout: 30 * time.Second}
 
+const githubPRNoTokenProviderWarning = "github authType configured for PR polling but no GitHub token provider is available, falling back to configured credentials"
+
 // parseGitHubRepo extracts owner/repo from a GitHub URL (HTTPS or SSH).
 func parseGitHubRepo(uri string) (owner, repo string, ok bool) {
 	matches := githubRepoPattern.FindStringSubmatch(uri)
@@ -55,6 +57,18 @@ func parseGitHubRepo(uri string) (owner, repo string, ok bool) {
 		return "", "", false
 	}
 	return matches[1], matches[2], true
+}
+
+// sanitizeGitHubTokenURI strips userinfo from GitHub URIs before they are sent
+// to the token provider or used as cache keys. If parsing fails or no userinfo
+// is present, the original URI is returned unchanged.
+func sanitizeGitHubTokenURI(uri string) string {
+	u, err := url.Parse(uri)
+	if err != nil || u.User == nil {
+		return uri
+	}
+	u.User = nil
+	return u.String()
 }
 
 // githubAPIBaseFromURI returns the GitHub API base URL for the given repo URI.
@@ -160,7 +174,7 @@ func isPullRequestTrigger(trigger testkube.TestTrigger) bool {
 }
 
 // checkPullRequests polls GitHub for PRs matching the trigger configuration and fires events.
-func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger testkube.TestTrigger) (matchResult, error) {
+func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger testkube.TestTrigger, cache *reconcileCache) (matchResult, error) {
 	gitConfig := trigger.ContentSelector.Git
 	if gitConfig == nil {
 		return matchResult{}, nil
@@ -172,7 +186,7 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 	}
 
 	// Resolve token for API authentication.
-	token := i.resolvePRToken(ctx, trigger.Namespace, gitConfig)
+	token := i.resolvePRToken(ctx, trigger.Namespace, gitConfig, cache)
 	apiBase := githubAPIBaseFromURI(gitConfig.Uri)
 	if i.githubAPIBaseFunc != nil {
 		apiBase = i.githubAPIBaseFunc(gitConfig.Uri)
@@ -276,7 +290,30 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 	return matchResult{}, nil
 }
 
-func (i *Informer) resolvePRToken(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit) string {
+func (i *Informer) resolvePRToken(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit, cache *reconcileCache) string {
+	// If authType is "github", fetch token from control plane.
+	authType := strings.ToLower(gitConfig.AuthType)
+	if authType == string(testkube.GITHUB_ContentGitAuthType) {
+		if i.githubTokenProvider == nil {
+			log.DefaultLogger.Warnw(githubPRNoTokenProviderWarning)
+		} else {
+			// Use the per-reconcile cache to avoid repeated gRPC calls for the same URI.
+			uri := sanitizeGitHubTokenURI(gitConfig.Uri)
+
+			if token, ok := cache.githubToken(uri); ok {
+				return token
+			}
+			token, err := i.githubTokenProvider.GetGitHubToken(ctx, uri)
+			if err != nil {
+				log.DefaultLogger.Warnw("failed to get GitHub App token for PR polling, falling back to configured credentials", "error", err)
+			} else if strings.TrimSpace(token) == "" {
+				log.DefaultLogger.Warnw("received empty GitHub App token for PR polling, falling back to configured credentials")
+			} else {
+				cache.setGitHubToken(uri, token)
+				return token
+			}
+		}
+	}
 	if i.kubeClient != nil {
 		return i.resolveCredentialValue(ctx, gitConfig.Token, namespace, gitConfig.TokenFrom)
 	}

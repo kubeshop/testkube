@@ -10802,6 +10802,7 @@ components:
       enum:
         - basic
         - header
+        - github
 
     BoxedStringList:
       type: object
