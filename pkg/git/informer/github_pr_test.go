@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -371,6 +372,67 @@ func TestResolvePRToken_GitHubNilProviderWarnsAndFallsBack(t *testing.T) {
 
 	assert.Equal(t, "fallback-token", token)
 	require.Len(t, recordedLogs.FilterMessage(githubPRNoTokenProviderWarning).All(), 1)
+}
+
+func TestResolvePRToken_GitHubUsesProviderTokenAndCachesSanitizedURI(t *testing.T) {
+	provider := &stubGitHubTokenProvider{token: "ghp_prtoken"}
+	inf := &Informer{githubTokenProvider: provider}
+	cache := newReconcileCache()
+	credentialedConfig := &testkube.TestTriggerContentGit{
+		Uri: (&url.URL{
+			Scheme: "https",
+			Host:   "github.com",
+			Path:   "/owner/repo.git",
+			User:   url.UserPassword("git", "test"),
+		}).String(),
+		AuthType: string(testkube.GITHUB_ContentGitAuthType),
+		Token:    "fallback-token",
+	}
+	sanitizedConfig := &testkube.TestTriggerContentGit{
+		Uri:      "https://github.com/owner/repo.git",
+		AuthType: string(testkube.GITHUB_ContentGitAuthType),
+		Token:    "other-fallback-token",
+	}
+
+	token1 := inf.resolvePRToken(context.Background(), "default", credentialedConfig, cache)
+	token2 := inf.resolvePRToken(context.Background(), "default", sanitizedConfig, cache)
+
+	assert.Equal(t, "ghp_prtoken", token1)
+	assert.Equal(t, "ghp_prtoken", token2)
+	assert.Equal(t, 1, provider.calls)
+	assert.Equal(t, sanitizedConfig.Uri, provider.lastURI)
+}
+
+func TestResolvePRToken_GitHubProviderFailuresFallBack(t *testing.T) {
+	t.Run("provider error falls back to configured credentials", func(t *testing.T) {
+		provider := &stubGitHubTokenProvider{err: assert.AnError}
+		inf := &Informer{githubTokenProvider: provider}
+		gitConfig := &testkube.TestTriggerContentGit{
+			Uri:      "https://github.com/owner/repo.git",
+			AuthType: string(testkube.GITHUB_ContentGitAuthType),
+			Token:    "fallback-token",
+		}
+
+		token := inf.resolvePRToken(context.Background(), "default", gitConfig, newReconcileCache())
+
+		assert.Equal(t, "fallback-token", token)
+		assert.Equal(t, 1, provider.calls)
+	})
+
+	t.Run("empty provider token falls back to configured credentials", func(t *testing.T) {
+		provider := &stubGitHubTokenProvider{}
+		inf := &Informer{githubTokenProvider: provider}
+		gitConfig := &testkube.TestTriggerContentGit{
+			Uri:      "https://github.com/owner/repo.git",
+			AuthType: string(testkube.GITHUB_ContentGitAuthType),
+			Token:    "fallback-token",
+		}
+
+		token := inf.resolvePRToken(context.Background(), "default", gitConfig, newReconcileCache())
+
+		assert.Equal(t, "fallback-token", token)
+		assert.Equal(t, 1, provider.calls)
+	})
 }
 
 func TestFetchGitHubPRs_MockServer(t *testing.T) {
