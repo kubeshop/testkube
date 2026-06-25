@@ -40,4 +40,6 @@ type Config struct {
 	TLSRetry                                 controller.TLSRetryConfig
 	DisableResourceMetrics                   bool
 	EmptyDirSizeLimit                        string
+	DefaultImagePullPolicy                   string
+	DefaultRunnerResources                   testworkflowconfig.ContainerResourceConfig
 }

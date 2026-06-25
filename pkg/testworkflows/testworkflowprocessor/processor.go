@@ -124,6 +124,32 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		}
 	}
 
+	// Validate default image pull policy
+	if p := options.Config.Worker.DefaultImagePullPolicy; p != "" {
+		switch corev1.PullPolicy(p) {
+		case corev1.PullAlways, corev1.PullIfNotPresent, corev1.PullNever:
+		default:
+			return nil, fmt.Errorf("invalid worker default image pull policy %q", p)
+		}
+	}
+
+	// Validate default runner resources
+	defaultRes := options.Config.Worker.DefaultRunnerResources
+	for _, v := range []struct {
+		name, val string
+	}{
+		{"CPU request", defaultRes.Requests.CPU},
+		{"memory request", defaultRes.Requests.Memory},
+		{"CPU limit", defaultRes.Limits.CPU},
+		{"memory limit", defaultRes.Limits.Memory},
+	} {
+		if v.val != "" {
+			if _, err := resource.ParseQuantity(v.val); err != nil {
+				return nil, fmt.Errorf("invalid worker default runner %s %q: %w", v.name, v.val, err)
+			}
+		}
+	}
+
 	// Initialize intermediate layer
 	layer := NewIntermediate(options.Config.Worker.EmptyDirSizeLimit).
 		AppendPodConfig(workflow.Spec.Pod).
@@ -420,6 +446,47 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 
 	options.Config.Execution.SecretMountPaths = secretMountPaths
+
+	// Apply default image pull policy for runner containers
+	if options.Config.Worker.DefaultImagePullPolicy != "" {
+		defaultPolicy := corev1.PullPolicy(options.Config.Worker.DefaultImagePullPolicy)
+		for i := range containers {
+			if containers[i].ImagePullPolicy == corev1.PullIfNotPresent {
+				containers[i].ImagePullPolicy = defaultPolicy
+			}
+		}
+	}
+
+	// Apply default resource requests/limits for runner containers that have no resources set
+	if defaultRes.Requests.CPU != "" || defaultRes.Requests.Memory != "" || defaultRes.Limits.CPU != "" || defaultRes.Limits.Memory != "" {
+		for i := range containers {
+			if containers[i].Resources.Requests == nil && containers[i].Resources.Limits == nil {
+				if defaultRes.Requests.CPU != "" || defaultRes.Requests.Memory != "" {
+					if containers[i].Resources.Requests == nil {
+						containers[i].Resources.Requests = corev1.ResourceList{}
+					}
+					if defaultRes.Requests.CPU != "" {
+						containers[i].Resources.Requests[corev1.ResourceCPU] = resource.MustParse(defaultRes.Requests.CPU)
+					}
+					if defaultRes.Requests.Memory != "" {
+						containers[i].Resources.Requests[corev1.ResourceMemory] = resource.MustParse(defaultRes.Requests.Memory)
+					}
+				}
+				if defaultRes.Limits.CPU != "" || defaultRes.Limits.Memory != "" {
+					if containers[i].Resources.Limits == nil {
+						containers[i].Resources.Limits = corev1.ResourceList{}
+					}
+					if defaultRes.Limits.CPU != "" {
+						containers[i].Resources.Limits[corev1.ResourceCPU] = resource.MustParse(defaultRes.Limits.CPU)
+					}
+					if defaultRes.Limits.Memory != "" {
+						containers[i].Resources.Limits[corev1.ResourceMemory] = resource.MustParse(defaultRes.Limits.Memory)
+					}
+				}
+			}
+		}
+	}
+
 	// Append common environment variables
 	if len(options.CommonEnvVariables) > 0 {
 		for i := range containers {
