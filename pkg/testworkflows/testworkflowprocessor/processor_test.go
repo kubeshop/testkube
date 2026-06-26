@@ -121,7 +121,7 @@ func TestBundle_DefaultImagePullPolicy_Applied(t *testing.T) {
 	require.NoError(t, err)
 	allContainers := append(bundle.Job.Spec.Template.Spec.InitContainers, bundle.Job.Spec.Template.Spec.Containers...)
 	for _, c := range allContainers {
-		assert.Equal(t, corev1.PullAlways, c.ImagePullPolicy, "container %s should have PullAlways", c.Name)
+		assert.Equalf(t, corev1.PullAlways, c.ImagePullPolicy, "container %s should have PullAlways", c.Name)
 	}
 }
 
