@@ -322,7 +322,8 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	for _, c := range root.ContainerStages() {
 		image := c.Container().Image()
 		policy := c.Container().ImagePullPolicy()
-		if defaultImagePullPolicy != "" && (policy == "" || policy == corev1.PullIfNotPresent) {
+		isRunnerImage := image == constants.DefaultInitImage || image == constants.DefaultToolkitImage
+		if isRunnerImage && defaultImagePullPolicy != "" && (policy == "" || policy == corev1.PullIfNotPresent) {
 			policy = defaultImagePullPolicy
 		}
 		if policy == corev1.PullAlways {
