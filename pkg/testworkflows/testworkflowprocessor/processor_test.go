@@ -206,12 +206,15 @@ func TestBundle_DefaultImagePullPolicy_DoesNotOverrideExplicitPolicy(t *testing.
 
 	require.NoError(t, err)
 	allContainers := append(bundle.Job.Spec.Template.Spec.InitContainers, bundle.Job.Spec.Template.Spec.Containers...)
-	// Find the container using the custom image; its explicit PullNever must not be overridden.
 	found := false
 	for _, c := range allContainers {
 		if c.Image == "custom-image:latest" {
+			// The container with an explicit PullNever must not be overridden.
 			found = true
 			assert.Equalf(t, corev1.PullNever, c.ImagePullPolicy, "container %s should keep explicit PullNever policy", c.Name)
+		} else {
+			// All other (runner) containers without an explicit policy should receive the default.
+			assert.Equalf(t, corev1.PullAlways, c.ImagePullPolicy, "container %s should have default PullAlways policy", c.Name)
 		}
 	}
 	require.True(t, found, "expected to find container with custom-image:latest")
@@ -263,13 +266,17 @@ func TestBundle_DefaultRunnerResources_DoesNotOverrideExplicitResources(t *testi
 
 	require.NoError(t, err)
 	allContainers := append(bundle.Job.Spec.Template.Spec.InitContainers, bundle.Job.Spec.Template.Spec.Containers...)
-	// Find the container using the custom image; its explicitly set resources must not be replaced by defaults.
 	found := false
 	for _, c := range allContainers {
 		if c.Image == "custom-image:latest" {
+			// The container with explicit resources must not have its values replaced by defaults.
 			found = true
 			assert.Equalf(t, resource.MustParse("200m"), c.Resources.Requests[corev1.ResourceCPU], "container %s should keep explicit CPU request", c.Name)
 			assert.Equalf(t, resource.MustParse("256Mi"), c.Resources.Requests[corev1.ResourceMemory], "container %s should keep explicit memory request", c.Name)
+		} else {
+			// All other (runner) containers without explicit resources should receive the defaults.
+			assert.Equalf(t, resource.MustParse("100m"), c.Resources.Requests[corev1.ResourceCPU], "container %s should have default CPU request", c.Name)
+			assert.Equalf(t, resource.MustParse("128Mi"), c.Resources.Requests[corev1.ResourceMemory], "container %s should have default memory request", c.Name)
 		}
 	}
 	require.True(t, found, "expected to find container with custom-image:latest")
