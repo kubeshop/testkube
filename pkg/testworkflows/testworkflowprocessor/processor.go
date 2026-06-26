@@ -502,11 +502,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			cpuLim = q
 		}
 		if defaultRes.Limits.Memory != "" {
-			q, parseErr := resource.ParseQuantity(defaultRes.Limits.Memory)
-			if parseErr != nil {
-				return nil, fmt.Errorf("invalid worker default runner memory limit %q: %w", defaultRes.Limits.Memory, parseErr)
-			}
-			memLim = q
+			memLim = resource.MustParse(defaultRes.Limits.Memory)
 		}
 
 		for i := range containers {
