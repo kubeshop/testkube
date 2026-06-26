@@ -162,9 +162,9 @@ func TestBundle_DefaultRunnerResources_Applied(t *testing.T) {
 	require.NoError(t, err)
 	allContainers := append(bundle.Job.Spec.Template.Spec.InitContainers, bundle.Job.Spec.Template.Spec.Containers...)
 	for _, c := range allContainers {
-		assert.Equal(t, resource.MustParse("100m"), c.Resources.Requests[corev1.ResourceCPU], "container %s CPU request", c.Name)
-		assert.Equal(t, resource.MustParse("128Mi"), c.Resources.Requests[corev1.ResourceMemory], "container %s memory request", c.Name)
-		assert.Equal(t, resource.MustParse("500m"), c.Resources.Limits[corev1.ResourceCPU], "container %s CPU limit", c.Name)
-		assert.Equal(t, resource.MustParse("512Mi"), c.Resources.Limits[corev1.ResourceMemory], "container %s memory limit", c.Name)
+		assert.Equalf(t, resource.MustParse("100m"), c.Resources.Requests[corev1.ResourceCPU], "container %s CPU request", c.Name)
+		assert.Equalf(t, resource.MustParse("128Mi"), c.Resources.Requests[corev1.ResourceMemory], "container %s memory request", c.Name)
+		assert.Equalf(t, resource.MustParse("500m"), c.Resources.Limits[corev1.ResourceCPU], "container %s CPU limit", c.Name)
+		assert.Equalf(t, resource.MustParse("512Mi"), c.Resources.Limits[corev1.ResourceMemory], "container %s memory limit", c.Name)
 	}
 }
