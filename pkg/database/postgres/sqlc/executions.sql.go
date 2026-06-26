@@ -790,6 +790,236 @@ func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg Get
 	return items, nil
 }
 
+const getFinishedTestWorkflowExecutionsByWorkflow = `-- name: GetFinishedTestWorkflowExecutionsByWorkflow :many
+SELECT
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
+    r.pauses, r.initialization, r.steps,
+    w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
+    w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
+    w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
+    w.status as workflow_status,
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
+    rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
+    rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
+    rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', s.id,
+                'ref', s.ref,
+                'name', s.name,
+                'category', s.category,
+                'optional', s.optional,
+                'negative', s.negative,
+                'parent_id', s.parent_id
+            ) ORDER BY s.sig_order
+        ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
+        '[]'::json
+    )::json as signatures_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', o.id,
+                'ref', o.ref,
+                'name', o.name,
+                'value', o.value
+            ) ORDER BY o.out_order
+        ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
+        '[]'::json
+    )::json as outputs_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', rep.id,
+                'ref', rep.ref,
+                'kind', rep.kind,
+                'file', rep.file,
+                'summary', rep.summary
+            ) ORDER BY rep.rep_order
+        ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
+        '[]'::json
+    )::json as reports_json,
+    ra.global as resource_aggregations_global,
+    ra.step as resource_aggregations_step
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
+LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
+WHERE e.organization_id = $1
+  AND e.environment_id = $2
+  AND e.workflow_name = $3
+  AND e.status IN ('passed', 'failed', 'aborted')
+  AND (e.silent_mode IS NULL OR (e.silent_mode->>'health')::boolean IS NOT TRUE)
+  AND ($4::timestamptz IS NULL OR e.scheduled_at <= $4::timestamptz)
+ORDER BY e.scheduled_at DESC
+LIMIT NULLIF($6, 0) OFFSET $5
+`
+
+type GetFinishedTestWorkflowExecutionsByWorkflowParams struct {
+	OrganizationID string             `db:"organization_id" json:"organization_id"`
+	EnvironmentID  string             `db:"environment_id" json:"environment_id"`
+	WorkflowName   pgtype.Text        `db:"workflow_name" json:"workflow_name"`
+	EndDate        pgtype.Timestamptz `db:"end_date" json:"end_date"`
+	Fst            int32              `db:"fst" json:"fst"`
+	Lmt            interface{}        `db:"lmt" json:"lmt"`
+}
+
+type GetFinishedTestWorkflowExecutionsByWorkflowRow struct {
+	ID                          string             `db:"id" json:"id"`
+	GroupID                     pgtype.Text        `db:"group_id" json:"group_id"`
+	RunnerID                    pgtype.Text        `db:"runner_id" json:"runner_id"`
+	RunnerTarget                []byte             `db:"runner_target" json:"runner_target"`
+	RunnerOriginalTarget        []byte             `db:"runner_original_target" json:"runner_original_target"`
+	Name                        string             `db:"name" json:"name"`
+	Namespace                   pgtype.Text        `db:"namespace" json:"namespace"`
+	Number                      pgtype.Int4        `db:"number" json:"number"`
+	ScheduledAt                 pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
+	AssignedAt                  pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
+	StatusAt                    pgtype.Timestamptz `db:"status_at" json:"status_at"`
+	TestWorkflowExecutionName   pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
+	DisableWebhooks             pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
+	Tags                        []byte             `db:"tags" json:"tags"`
+	RunningContext              []byte             `db:"running_context" json:"running_context"`
+	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	Runtime                     []byte             `db:"runtime" json:"runtime"`
+	SilentMode                  []byte             `db:"silent_mode" json:"silent_mode"`
+	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	Status                      pgtype.Text        `db:"status" json:"status"`
+	PredictedStatus             pgtype.Text        `db:"predicted_status" json:"predicted_status"`
+	QueuedAt                    pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
+	StartedAt                   pgtype.Timestamptz `db:"started_at" json:"started_at"`
+	FinishedAt                  pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
+	Duration                    pgtype.Text        `db:"duration" json:"duration"`
+	TotalDuration               pgtype.Text        `db:"total_duration" json:"total_duration"`
+	DurationMs                  pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
+	PausedMs                    pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
+	TotalDurationMs             pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
+	Pauses                      []byte             `db:"pauses" json:"pauses"`
+	Initialization              []byte             `db:"initialization" json:"initialization"`
+	Steps                       []byte             `db:"steps" json:"steps"`
+	WorkflowName                pgtype.Text        `db:"workflow_name" json:"workflow_name"`
+	WorkflowNamespace           pgtype.Text        `db:"workflow_namespace" json:"workflow_namespace"`
+	WorkflowDescription         pgtype.Text        `db:"workflow_description" json:"workflow_description"`
+	WorkflowLabels              []byte             `db:"workflow_labels" json:"workflow_labels"`
+	WorkflowAnnotations         []byte             `db:"workflow_annotations" json:"workflow_annotations"`
+	WorkflowCreated             pgtype.Timestamptz `db:"workflow_created" json:"workflow_created"`
+	WorkflowUpdated             pgtype.Timestamptz `db:"workflow_updated" json:"workflow_updated"`
+	WorkflowSpec                []byte             `db:"workflow_spec" json:"workflow_spec"`
+	WorkflowReadOnly            pgtype.Bool        `db:"workflow_read_only" json:"workflow_read_only"`
+	WorkflowStatus              []byte             `db:"workflow_status" json:"workflow_status"`
+	ResolvedWorkflowName        pgtype.Text        `db:"resolved_workflow_name" json:"resolved_workflow_name"`
+	ResolvedWorkflowNamespace   pgtype.Text        `db:"resolved_workflow_namespace" json:"resolved_workflow_namespace"`
+	ResolvedWorkflowDescription pgtype.Text        `db:"resolved_workflow_description" json:"resolved_workflow_description"`
+	ResolvedWorkflowLabels      []byte             `db:"resolved_workflow_labels" json:"resolved_workflow_labels"`
+	ResolvedWorkflowAnnotations []byte             `db:"resolved_workflow_annotations" json:"resolved_workflow_annotations"`
+	ResolvedWorkflowCreated     pgtype.Timestamptz `db:"resolved_workflow_created" json:"resolved_workflow_created"`
+	ResolvedWorkflowUpdated     pgtype.Timestamptz `db:"resolved_workflow_updated" json:"resolved_workflow_updated"`
+	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
+	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
+	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status" json:"resolved_workflow_status"`
+	SignaturesJson              []byte             `db:"signatures_json" json:"signatures_json"`
+	OutputsJson                 []byte             `db:"outputs_json" json:"outputs_json"`
+	ReportsJson                 []byte             `db:"reports_json" json:"reports_json"`
+	ResourceAggregationsGlobal  []byte             `db:"resource_aggregations_global" json:"resource_aggregations_global"`
+	ResourceAggregationsStep    []byte             `db:"resource_aggregations_step" json:"resource_aggregations_step"`
+}
+
+// Fast-path finished query when filtering by a single denormalized workflow_name
+// (optionally with end_date and paging). Avoids the COALESCE($n,”)=” OR col=$n
+// branches in GetFinishedTestWorkflowExecutions, which under pgx's prepared-statement
+// generic plan cause a pathological seq-scan.
+// Backed by idx_twe_org_env_wfname_sched (organization_id, environment_id, workflow_name, scheduled_at DESC).
+func (q *Queries) GetFinishedTestWorkflowExecutionsByWorkflow(ctx context.Context, arg GetFinishedTestWorkflowExecutionsByWorkflowParams) ([]GetFinishedTestWorkflowExecutionsByWorkflowRow, error) {
+	rows, err := q.db.Query(ctx, getFinishedTestWorkflowExecutionsByWorkflow,
+		arg.OrganizationID,
+		arg.EnvironmentID,
+		arg.WorkflowName,
+		arg.EndDate,
+		arg.Fst,
+		arg.Lmt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFinishedTestWorkflowExecutionsByWorkflowRow
+	for rows.Next() {
+		var i GetFinishedTestWorkflowExecutionsByWorkflowRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.GroupID,
+			&i.RunnerID,
+			&i.RunnerTarget,
+			&i.RunnerOriginalTarget,
+			&i.Name,
+			&i.Namespace,
+			&i.Number,
+			&i.ScheduledAt,
+			&i.AssignedAt,
+			&i.StatusAt,
+			&i.TestWorkflowExecutionName,
+			&i.DisableWebhooks,
+			&i.Tags,
+			&i.RunningContext,
+			&i.ConfigParams,
+			&i.Runtime,
+			&i.SilentMode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Status,
+			&i.PredictedStatus,
+			&i.QueuedAt,
+			&i.StartedAt,
+			&i.FinishedAt,
+			&i.Duration,
+			&i.TotalDuration,
+			&i.DurationMs,
+			&i.PausedMs,
+			&i.TotalDurationMs,
+			&i.Pauses,
+			&i.Initialization,
+			&i.Steps,
+			&i.WorkflowName,
+			&i.WorkflowNamespace,
+			&i.WorkflowDescription,
+			&i.WorkflowLabels,
+			&i.WorkflowAnnotations,
+			&i.WorkflowCreated,
+			&i.WorkflowUpdated,
+			&i.WorkflowSpec,
+			&i.WorkflowReadOnly,
+			&i.WorkflowStatus,
+			&i.ResolvedWorkflowName,
+			&i.ResolvedWorkflowNamespace,
+			&i.ResolvedWorkflowDescription,
+			&i.ResolvedWorkflowLabels,
+			&i.ResolvedWorkflowAnnotations,
+			&i.ResolvedWorkflowCreated,
+			&i.ResolvedWorkflowUpdated,
+			&i.ResolvedWorkflowSpec,
+			&i.ResolvedWorkflowReadOnly,
+			&i.ResolvedWorkflowStatus,
+			&i.SignaturesJson,
+			&i.OutputsJson,
+			&i.ReportsJson,
+			&i.ResourceAggregationsGlobal,
+			&i.ResourceAggregationsStep,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getLatestTestWorkflowExecutionByTestWorkflow = `-- name: GetLatestTestWorkflowExecutionByTestWorkflow :one
 WITH latest AS (
     (SELECT e.id
