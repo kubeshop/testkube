@@ -463,16 +463,32 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			cpuLim, memLim resource.Quantity
 		)
 		if defaultRes.Requests.CPU != "" {
-			cpuReq = resource.MustParse(defaultRes.Requests.CPU)
+			q, parseErr := resource.ParseQuantity(defaultRes.Requests.CPU)
+			if parseErr != nil {
+				return nil, fmt.Errorf("invalid worker default runner CPU request %q: %w", defaultRes.Requests.CPU, parseErr)
+			}
+			cpuReq = q
 		}
 		if defaultRes.Requests.Memory != "" {
-			memReq = resource.MustParse(defaultRes.Requests.Memory)
+			q, parseErr := resource.ParseQuantity(defaultRes.Requests.Memory)
+			if parseErr != nil {
+				return nil, fmt.Errorf("invalid worker default runner memory request %q: %w", defaultRes.Requests.Memory, parseErr)
+			}
+			memReq = q
 		}
 		if defaultRes.Limits.CPU != "" {
-			cpuLim = resource.MustParse(defaultRes.Limits.CPU)
+			q, parseErr := resource.ParseQuantity(defaultRes.Limits.CPU)
+			if parseErr != nil {
+				return nil, fmt.Errorf("invalid worker default runner CPU limit %q: %w", defaultRes.Limits.CPU, parseErr)
+			}
+			cpuLim = q
 		}
 		if defaultRes.Limits.Memory != "" {
-			memLim = resource.MustParse(defaultRes.Limits.Memory)
+			q, parseErr := resource.ParseQuantity(defaultRes.Limits.Memory)
+			if parseErr != nil {
+				return nil, fmt.Errorf("invalid worker default runner memory limit %q: %w", defaultRes.Limits.Memory, parseErr)
+			}
+			memLim = q
 		}
 
 		for i := range containers {
