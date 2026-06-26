@@ -488,11 +488,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			cpuReq = resource.MustParse(defaultRes.Requests.CPU)
 		}
 		if defaultRes.Requests.Memory != "" {
-			q, parseErr := resource.ParseQuantity(defaultRes.Requests.Memory)
-			if parseErr != nil {
-				return nil, fmt.Errorf("invalid worker default runner memory request %q: %w", defaultRes.Requests.Memory, parseErr)
-			}
-			memReq = q
+			memReq = resource.MustParse(defaultRes.Requests.Memory)
 		}
 		if defaultRes.Limits.CPU != "" {
 			cpuLim = resource.MustParse(defaultRes.Limits.CPU)
