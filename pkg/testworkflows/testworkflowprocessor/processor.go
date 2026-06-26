@@ -453,7 +453,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	options.Config.Execution.SecretMountPaths = secretMountPaths
 
-	// Apply default image pull policy for runner containers
+	// Apply default image pull policy for all generated workflow containers
 	if options.Config.Worker.DefaultImagePullPolicy != "" {
 		defaultPolicy := corev1.PullPolicy(options.Config.Worker.DefaultImagePullPolicy)
 		for i := range containers {
