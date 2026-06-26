@@ -130,8 +130,8 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		case corev1.PullAlways, corev1.PullIfNotPresent, corev1.PullNever:
 		default:
 			return nil, fmt.Errorf("invalid worker default image pull policy %q (allowed: Always, IfNotPresent, Never)", policy)
+		}
 	}
-
 	// Validate default runner resources
 	defaultRes := options.Config.Worker.DefaultRunnerResources
 	for _, v := range []struct {
