@@ -451,7 +451,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	if options.Config.Worker.DefaultImagePullPolicy != "" {
 		defaultPolicy := corev1.PullPolicy(options.Config.Worker.DefaultImagePullPolicy)
 		for i := range containers {
-			if containers[i].ImagePullPolicy == corev1.PullIfNotPresent {
+			if containers[i].ImagePullPolicy == "" || containers[i].ImagePullPolicy == corev1.PullIfNotPresent {
 				containers[i].ImagePullPolicy = defaultPolicy
 			}
 		}
@@ -460,7 +460,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Apply default resource requests/limits for runner containers that have no resources set
 	if defaultRes.Requests.CPU != "" || defaultRes.Requests.Memory != "" || defaultRes.Limits.CPU != "" || defaultRes.Limits.Memory != "" {
 		for i := range containers {
-			if containers[i].Resources.Requests == nil && containers[i].Resources.Limits == nil {
+			if len(containers[i].Resources.Requests) == 0 && len(containers[i].Resources.Limits) == 0 {
 				if defaultRes.Requests.CPU != "" || defaultRes.Requests.Memory != "" {
 					containers[i].Resources.Requests = corev1.ResourceList{}
 					if defaultRes.Requests.CPU != "" {
