@@ -125,11 +125,11 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 
 	// Validate default image pull policy
-	if p := options.Config.Worker.DefaultImagePullPolicy; p != "" {
-		switch corev1.PullPolicy(p) {
+	if policy := options.Config.Worker.DefaultImagePullPolicy; policy != "" {
+		switch corev1.PullPolicy(policy) {
 		case corev1.PullAlways, corev1.PullIfNotPresent, corev1.PullNever:
 		default:
-			return nil, fmt.Errorf("invalid worker default image pull policy %q", p)
+			return nil, fmt.Errorf("invalid worker default image pull policy %q", policy)
 		}
 	}
 
