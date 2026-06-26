@@ -501,6 +501,9 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		}
 
 		for i := range containers {
+			if containers[i].Image != constants.DefaultInitImage && containers[i].Image != constants.DefaultToolkitImage {
+				continue
+			}
 			if len(containers[i].Resources.Requests) == 0 && len(containers[i].Resources.Limits) == 0 {
 				if defaultRes.Requests.CPU != "" || defaultRes.Requests.Memory != "" {
 					containers[i].Resources.Requests = corev1.ResourceList{}
