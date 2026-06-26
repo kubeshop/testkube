@@ -99,8 +99,8 @@ type WorkerConfig struct {
 	DisableResourceMetrics bool                   `json:"m,omitempty"`
 	EmptyDirSizeLimit      string                 `json:"z,omitempty"`
 
-	DefaultImagePullPolicy  string                  `json:"I,omitempty"`
-	DefaultRunnerResources  ContainerResourceConfig `json:"D,omitempty"`
+	DefaultImagePullPolicy string                  `json:"Y,omitempty"`
+	DefaultRunnerResources ContainerResourceConfig `json:"D,omitempty"`
 }
 
 type WorkerConnectionConfig struct {
