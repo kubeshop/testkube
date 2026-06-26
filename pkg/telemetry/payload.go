@@ -53,6 +53,7 @@ type Params struct {
 	RcActorType                string     `json:"rc_actor_type,omitempty"`
 	RcInterfaceType            string     `json:"rc_interface_type,omitempty"`
 	TriggeredBy                string     `json:"triggered_by,omitempty"`
+	IsSilent                   bool       `json:"is_silent,omitempty"`
 	License                    string     `json:"license,omitempty"`
 	Step                       string     `json:"step,omitempty"`
 	Email                      string     `json:"email,omitempty"`
@@ -130,6 +131,7 @@ type CreateWorkflowParams struct {
 type RunWorkflowParams struct {
 	RunParams
 	WorkflowParams
+	IsSilent bool
 }
 
 func NewCLIPayload(context RunContext, id, name, version, category, clusterType string) Payload {
@@ -337,6 +339,7 @@ func NewRunWorkflowPayload(name, clusterType string, params RunWorkflowParams) P
 					RcActorType:                params.RcActorType,
 					RcInterfaceType:            params.RcInterfaceType,
 					TriggeredBy:                params.TriggeredBy,
+					IsSilent:                   params.IsSilent,
 				},
 			}},
 	}
