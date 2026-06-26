@@ -30,6 +30,19 @@ func (*dummyInspector) ResolveName(_, image string) string {
 	return image
 }
 
+type recordingInspector struct {
+	dummyInspector
+	calls map[string][]corev1.PullPolicy
+}
+
+func (r *recordingInspector) Inspect(ctx context.Context, registry, image string, pullPolicy corev1.PullPolicy, pullSecretNames []string) (*imageinspector.Info, error) {
+	if r.calls == nil {
+		r.calls = map[string][]corev1.PullPolicy{}
+	}
+	r.calls[image] = append(r.calls[image], pullPolicy)
+	return r.dummyInspector.Inspect(ctx, registry, image, pullPolicy, pullSecretNames)
+}
+
 func TestBundle_InvalidEmptyDirSizeLimit_ReturnsError(t *testing.T) {
 	proc := New(&dummyInspector{})
 	workflow := &testworkflowsv1.TestWorkflow{}
@@ -218,6 +231,47 @@ func TestBundle_DefaultImagePullPolicy_DoesNotOverrideExplicitPolicy(t *testing.
 		}
 	}
 	require.True(t, found, "expected to find container with custom-image:latest")
+}
+
+func TestBundle_InspectorPullPolicy_UsesEffectivePolicyPerImage(t *testing.T) {
+	inspector := &recordingInspector{}
+	proc := New(inspector).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+	workflow := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{
+					StepOperations: testworkflowsv1.StepOperations{
+						Run: &testworkflowsv1.StepRun{
+							ContainerConfig: testworkflowsv1.ContainerConfig{
+								Image:           "custom-image:latest",
+								ImagePullPolicy: corev1.PullNever,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	_, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+		Config: testworkflowconfig.InternalConfig{
+			Resource: testworkflowconfig.ResourceConfig{
+				Id:     "resource-id",
+				RootId: "resource-root-id",
+			},
+			Worker: testworkflowconfig.WorkerConfig{
+				DefaultImagePullPolicy: "Always",
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	require.NotEmpty(t, inspector.calls["custom-image:latest"], "expected custom image to be inspected")
+	assert.Contains(t, inspector.calls["custom-image:latest"], corev1.PullIfNotPresent, "custom image with explicit PullNever should be inspected with cache enabled")
+	assert.NotContains(t, inspector.calls["custom-image:latest"], corev1.PullAlways, "custom image with explicit PullNever should not be inspected with PullAlways")
 }
 
 func TestBundle_DefaultRunnerResources_DoesNotOverrideExplicitResources(t *testing.T) {

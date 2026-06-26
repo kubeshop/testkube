@@ -310,22 +310,37 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		pullSecretNames[i] = v.Name
 	}
 
-	// Load the image details when necessary
+	// Load the image details when necessary.
+	// Determine inspector pull policy per image so cache bypass follows the effective
+	// runtime pull policy (Always bypasses cache, IfNotPresent/Never uses cache).
 	hasPodSecurityContextGroup := podConfig.SecurityContext != nil && podConfig.SecurityContext.RunAsGroup != nil
 	imageNames := root.GetImages(!hasPodSecurityContextGroup)
 	images := make(map[string]*imageinspector.Info)
 	imageNameResolutions := map[string]string{}
-	// Use the configured default pull policy for inspection so the inspector's cache
-	// behaviour (bypass on Always, use cache on IfNotPresent/Never) matches the pull
-	// policy that will be applied to the containers at runtime.
-	inspectorPullPolicy := corev1.PullIfNotPresent
-	if options.Config.Worker.DefaultImagePullPolicy != "" {
-		inspectorPullPolicy = corev1.PullPolicy(options.Config.Worker.DefaultImagePullPolicy)
+	imagePullPolicies := map[string]corev1.PullPolicy{}
+	defaultImagePullPolicy := corev1.PullPolicy(options.Config.Worker.DefaultImagePullPolicy)
+	for _, c := range root.ContainerStages() {
+		image := c.Container().Image()
+		policy := c.Container().ImagePullPolicy()
+		if defaultImagePullPolicy != "" && (policy == "" || policy == corev1.PullIfNotPresent) {
+			policy = defaultImagePullPolicy
+		}
+		if policy == corev1.PullAlways {
+			imagePullPolicies[image] = corev1.PullAlways
+			continue
+		}
+		if _, ok := imagePullPolicies[image]; !ok {
+			imagePullPolicies[image] = corev1.PullIfNotPresent
+		}
 	}
 	for image, needsMetadata := range imageNames {
 		var info *imageinspector.Info
+		pullPolicy := imagePullPolicies[image]
+		if pullPolicy == "" {
+			pullPolicy = corev1.PullIfNotPresent
+		}
 		if needsMetadata {
-			info, err = p.inspector.Inspect(ctx, "", image, inspectorPullPolicy, pullSecretNames)
+			info, err = p.inspector.Inspect(ctx, "", image, pullPolicy, pullSecretNames)
 			images[image] = info
 		}
 		imageNameResolutions[image] = p.inspector.ResolveName("", image)
