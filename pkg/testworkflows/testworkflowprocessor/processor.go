@@ -315,10 +315,17 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	imageNames := root.GetImages(!hasPodSecurityContextGroup)
 	images := make(map[string]*imageinspector.Info)
 	imageNameResolutions := map[string]string{}
+	// Use the configured default pull policy for inspection so the inspector's cache
+	// behaviour (bypass on Always, use cache on IfNotPresent/Never) matches the pull
+	// policy that will be applied to the containers at runtime.
+	inspectorPullPolicy := corev1.PullIfNotPresent
+	if options.Config.Worker.DefaultImagePullPolicy != "" {
+		inspectorPullPolicy = corev1.PullPolicy(options.Config.Worker.DefaultImagePullPolicy)
+	}
 	for image, needsMetadata := range imageNames {
 		var info *imageinspector.Info
 		if needsMetadata {
-			info, err = p.inspector.Inspect(ctx, "", image, corev1.PullIfNotPresent, pullSecretNames)
+			info, err = p.inspector.Inspect(ctx, "", image, inspectorPullPolicy, pullSecretNames)
 			images[image] = info
 		}
 		imageNameResolutions[image] = p.inspector.ResolveName("", image)
