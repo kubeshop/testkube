@@ -290,3 +290,15 @@ allowLowSecurityFields: false
 ## default sizeLimit for internally generated emptyDir volumes (e.g. "256Mi", "1Gi")
 ## set this if your cluster enforces sizeLimit on emptyDir volumes via admission policies
 emptyDirSizeLimit: ""
+
+## default image pull policy for test workflow containers (e.g. "Always", "IfNotPresent", "Never")
+defaultImagePullPolicy: ""
+
+## default resource requests and limits for test workflow runner containers
+defaultRunnerResources:
+  requests:
+    cpu: ""
+    memory: ""
+  limits:
+    cpu: ""
+    memory: ""

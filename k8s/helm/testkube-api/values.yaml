@@ -344,6 +344,18 @@ executionNamespaces:
 ## default storage class name for PVC volumes
 defaultStorageClassName: ""
 
+## default image pull policy for test workflow containers (e.g. "Always", "IfNotPresent", "Never")
+defaultImagePullPolicy: ""
+
+## default resource requests and limits for test workflow runner containers
+defaultRunnerResources:
+  requests:
+    cpu: ""
+    memory: ""
+  limits:
+    cpu: ""
+    memory: ""
+
 # storageRequest is the requested storage for PVC utilized for artifact requests.
 storageRequest: "1Gi"
 
