@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -23,9 +24,9 @@ func (m *mockExecutionLogger) GetExecutionLogs(_ context.Context, id string, par
 	return m.returnLogs, m.returnErr
 }
 
-func callFetchExecutionLogs(t *testing.T, mock *mockExecutionLogger, args map[string]any) (*mcp.CallToolResult, error) {
+func callFetchExecutionLogs(t *testing.T, logger ExecutionLogger, args map[string]any) (*mcp.CallToolResult, error) {
 	t.Helper()
-	_, handler := FetchExecutionLogs(mock)
+	_, handler := FetchExecutionLogs(logger)
 	req := mcp.CallToolRequest{}
 	req.Params.Arguments = args
 	return handler(context.Background(), req)
@@ -45,6 +46,88 @@ func TestFetchExecutionLogs_NoParams_DefaultsTail100(t *testing.T) {
 	textContent, ok := result.Content[0].(mcp.TextContent)
 	require.True(t, ok)
 	assert.Equal(t, "log output", textContent.Text)
+}
+
+// funcExecutionLogger allows per-call behavior so we can simulate a first call
+// failing and a retry succeeding.
+type funcExecutionLogger struct {
+	calls   []ExecutionLogParams
+	handler func(call int, params ExecutionLogParams) (string, error)
+}
+
+func (m *funcExecutionLogger) GetExecutionLogs(_ context.Context, _ string, params ExecutionLogParams) (string, error) {
+	n := len(m.calls)
+	m.calls = append(m.calls, params)
+	return m.handler(n, params)
+}
+
+func TestFetchExecutionLogs_InvalidStep_RetriesWithoutStep(t *testing.T) {
+	invalidStepErr := fmt.Errorf(`API returned status 400: invalid filter: step "rtff5nk" not found; available steps: init, rwj87r6, rhhrw5b`)
+	m := &funcExecutionLogger{handler: func(call int, params ExecutionLogParams) (string, error) {
+		if call == 0 {
+			// First call still carries the invalid step filter.
+			assert.Equal(t, "rtff5nk", params.Step)
+			return "", invalidStepErr
+		}
+		// Retry must drop the step filter but keep the rest (e.g. workerRef).
+		assert.Equal(t, "", params.Step)
+		assert.Equal(t, "rtff5nk", params.WorkerRef)
+		return "worker log line 1\nworker log line 2", nil
+	}}
+
+	result, err := callFetchExecutionLogs(t, m, map[string]any{
+		"executionId": "abc123",
+		"step":        "rtff5nk",
+		"workerRef":   "rtff5nk",
+		"workerIndex": "1",
+	})
+	require.NoError(t, err)
+	require.Len(t, m.calls, 2, "expected one failed call and one retry")
+	require.NotNil(t, result)
+	require.False(t, result.IsError)
+	textContent, ok := result.Content[0].(mcp.TextContent)
+	require.True(t, ok)
+	// The recovered result must include the worker logs and a note explaining the
+	// dropped filter, including the available-steps detail from the server.
+	assert.Contains(t, textContent.Text, "worker log line 1")
+	assert.Contains(t, textContent.Text, "step filter \"rtff5nk\" was invalid")
+	assert.Contains(t, textContent.Text, "available steps: init, rwj87r6, rhhrw5b")
+}
+
+func TestFetchExecutionLogs_InvalidStep_RetryAlsoFails_SurfacesDetail(t *testing.T) {
+	invalidStepErr := fmt.Errorf(`API returned status 400: invalid filter: step "x" not found; available steps: init, a, b`)
+	m := &funcExecutionLogger{handler: func(_ int, _ ExecutionLogParams) (string, error) {
+		return "", invalidStepErr
+	}}
+
+	result, err := callFetchExecutionLogs(t, m, map[string]any{
+		"executionId": "abc123",
+		"step":        "x",
+	})
+	require.NoError(t, err)
+	require.Len(t, m.calls, 2, "expected original call plus one retry attempt")
+	require.NotNil(t, result)
+	require.True(t, result.IsError)
+	textContent, ok := result.Content[0].(mcp.TextContent)
+	require.True(t, ok)
+	// When the retry also fails the detailed error (with available steps) must be surfaced.
+	assert.Contains(t, textContent.Text, "available steps: init, a, b")
+}
+
+func TestFetchExecutionLogs_NonStepError_NoRetry(t *testing.T) {
+	m := &funcExecutionLogger{handler: func(_ int, _ ExecutionLogParams) (string, error) {
+		return "", fmt.Errorf("API returned status 500: internal error")
+	}}
+
+	result, err := callFetchExecutionLogs(t, m, map[string]any{
+		"executionId": "abc123",
+		"step":        "run-tests",
+	})
+	require.NoError(t, err)
+	// A non-step error must not trigger a retry.
+	require.Len(t, m.calls, 1)
+	require.NotNil(t, result)
+	require.True(t, result.IsError)
 }
 
 func TestFetchExecutionLogs_AllParams_ParsedCorrectly(t *testing.T) {

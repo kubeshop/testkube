@@ -104,6 +104,23 @@ func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.T
 
 		logs, err := client.GetExecutionLogs(ctx, executionID, params)
 		if err != nil {
+			// The model commonly supplies a step ref that does not exist in the
+			// targeted log — for example confusing a parallel/worker ref with an
+			// inner step name — which the control plane rejects with a 400. Rather
+			// than dead-ending on a generic error, retry once without the step
+			// filter so the caller still gets logs, and annotate the result so the
+			// model knows the filter was dropped (and which steps were available).
+			if params.Step != "" && isInvalidStepError(err) {
+				retryParams := params
+				retryParams.Step = ""
+				if retryLogs, retryErr := client.GetExecutionLogs(ctx, executionID, retryParams); retryErr == nil {
+					note := fmt.Sprintf(
+						"Note: step filter %q was invalid for this log and was ignored (%v). Showing unfiltered logs below.\n\n",
+						params.Step, err,
+					)
+					return mcp.NewToolResultText(note + retryLogs), nil
+				}
+			}
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to fetch logs: %v", err)), nil
 		}
 
@@ -111,6 +128,23 @@ func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.T
 	}
 
 	return tool, handler
+}
+
+// isInvalidStepError reports whether err indicates the control plane rejected the
+// request because of an invalid `step` filter. It matches the invalid-filter
+// messages surfaced by the logs endpoint ("step %q not found; available steps: …"
+// and "step %q not found; this log has no step boundaries").
+func isInvalidStepError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	if !strings.Contains(msg, "step") {
+		return false
+	}
+	return strings.Contains(msg, "not found") ||
+		strings.Contains(msg, "available steps") ||
+		strings.Contains(msg, "no step boundaries")
 }
 
 type ListExecutionsParams struct {

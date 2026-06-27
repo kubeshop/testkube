@@ -92,9 +92,6 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 
 	// Build the URL
 	fullURL := c.buildApiUrl(apiReq.Path, apiReq.PathParams, apiReq.Scope)
-	if debugInfo != nil {
-		debugInfo.Data["url"] = fullURL
-	}
 
 	// Add query parameters if present
 	if len(apiReq.QueryParams) > 0 {
@@ -111,6 +108,13 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 		}
 		u.RawQuery = q.Encode()
 		fullURL = u.String()
+	}
+
+	// Record the final URL (including query params) for debugging. This must run
+	// after query params are appended so debug output reflects the request that
+	// was actually sent.
+	if debugInfo != nil {
+		debugInfo.Data["url"] = fullURL
 	}
 
 	// Prepare request body
@@ -166,10 +170,20 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 
 	// Check status code
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		// Read the error body so the caller (and the model) gets an actionable
+		// message instead of a bare status code. The control plane returns
+		// RFC-7807 application/problem+json bodies for 4xx errors.
+		errBody, _ := io.ReadAll(resp.Body)
 		if debugInfo != nil {
 			debugInfo.Data["status"] = resp.StatusCode
 			debugInfo.Data["requestHeaders"] = redactSensitiveHeaders(req.Header)
 			debugInfo.Data["responseHeaders"] = redactSensitiveHeaders(resp.Header)
+			if len(errBody) > 0 {
+				debugInfo.Data["responseBody"] = string(errBody)
+			}
+		}
+		if detail := extractErrorDetail(errBody); detail != "" {
+			return "", fmt.Errorf("API returned status %d: %s", resp.StatusCode, detail)
 		}
 		return "", fmt.Errorf("API returned status %d", resp.StatusCode)
 	}
@@ -188,6 +202,39 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 	}
 
 	return string(bodyBytes), nil
+}
+
+// maxErrorDetailLen bounds how much of an error response body is surfaced to the
+// caller, so a large/unexpected body can't blow up the tool result.
+const maxErrorDetailLen = 2048
+
+// extractErrorDetail pulls a human-readable message out of an error response
+// body. It prefers the RFC-7807 problem+json "detail" (falling back to "title")
+// and otherwise returns the raw body. The result is trimmed and length-capped.
+func extractErrorDetail(body []byte) string {
+	if len(body) == 0 {
+		return ""
+	}
+	var problem struct {
+		Detail string `json:"detail"`
+		Title  string `json:"title"`
+	}
+	if err := json.Unmarshal(body, &problem); err == nil {
+		if problem.Detail != "" {
+			return truncate(strings.TrimSpace(problem.Detail), maxErrorDetailLen)
+		}
+		if problem.Title != "" {
+			return truncate(strings.TrimSpace(problem.Title), maxErrorDetailLen)
+		}
+	}
+	return truncate(strings.TrimSpace(string(body)), maxErrorDetailLen)
+}
+
+func truncate(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "…"
 }
 
 var sensitiveHeaders = []string{
