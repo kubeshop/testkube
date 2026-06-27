@@ -96,8 +96,12 @@ func TestFetchExecutionLogs_InvalidStep_RetriesWithoutStep(t *testing.T) {
 
 func TestFetchExecutionLogs_InvalidStep_RetryAlsoFails_SurfacesDetail(t *testing.T) {
 	invalidStepErr := fmt.Errorf(`API returned status 400: invalid filter: step "x" not found; available steps: init, a, b`)
-	m := &funcExecutionLogger{handler: func(_ int, _ ExecutionLogParams) (string, error) {
-		return "", invalidStepErr
+	retryErr := fmt.Errorf("API returned status 500: backend unavailable")
+	m := &funcExecutionLogger{handler: func(call int, _ ExecutionLogParams) (string, error) {
+		if call == 0 {
+			return "", invalidStepErr
+		}
+		return "", retryErr
 	}}
 
 	result, err := callFetchExecutionLogs(t, m, map[string]any{
@@ -110,8 +114,11 @@ func TestFetchExecutionLogs_InvalidStep_RetryAlsoFails_SurfacesDetail(t *testing
 	require.True(t, result.IsError)
 	textContent, ok := result.Content[0].(mcp.TextContent)
 	require.True(t, ok)
-	// When the retry also fails the detailed error (with available steps) must be surfaced.
+	// When the retry also fails, both the original detail (available steps) and the
+	// distinct retry failure must be surfaced so neither is lost.
 	assert.Contains(t, textContent.Text, "available steps: init, a, b")
+	assert.Contains(t, textContent.Text, "retry without step filter also failed")
+	assert.Contains(t, textContent.Text, "backend unavailable")
 }
 
 func TestFetchExecutionLogs_NonStepError_NoRetry(t *testing.T) {

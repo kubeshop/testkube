@@ -113,13 +113,18 @@ func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.T
 			if params.Step != "" && isInvalidStepError(err) {
 				retryParams := params
 				retryParams.Step = ""
-				if retryLogs, retryErr := client.GetExecutionLogs(ctx, executionID, retryParams); retryErr == nil {
+				retryLogs, retryErr := client.GetExecutionLogs(ctx, executionID, retryParams)
+				if retryErr == nil {
 					note := fmt.Sprintf(
 						"Note: step filter %q was invalid for this log and was ignored (%v). Showing unfiltered logs below.\n\n",
 						params.Step, err,
 					)
 					return mcp.NewToolResultText(note + retryLogs), nil
 				}
+				// The unfiltered retry also failed; surface both errors so neither the
+				// original available-steps detail nor the new failure reason is lost.
+				return mcp.NewToolResultError(fmt.Sprintf(
+					"Failed to fetch logs: %v (retry without step filter also failed: %v)", err, retryErr)), nil
 			}
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to fetch logs: %v", err)), nil
 		}
