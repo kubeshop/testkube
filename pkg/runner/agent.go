@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	retrygo "github.com/avast/retry-go/v5"
 	errors2 "github.com/pkg/errors"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
@@ -22,6 +23,7 @@ import (
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/repository/channels"
 	testworkflowutils "github.com/kubeshop/testkube/pkg/testworkflows"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
@@ -43,6 +45,8 @@ type agentLoop struct {
 	organizationId      string
 	legacyEnvironmentId string
 	sf                  singleflight.Group
+	// summaryRetryDelay overrides the wait between Summary retries; zero falls back to GetNotificationsRetryDelay.
+	summaryRetryDelay time.Duration
 }
 
 type AgentLoop interface {
@@ -169,10 +173,45 @@ func (a *agentLoop) init(ctx context.Context, environmentId string, execution *t
 	return err
 }
 
+// summaryWithJobRetry fetches the live-notifications summary, waiting out the
+// window where the Job is not yet List-visible (controller.ErrJobTimeout). It
+// reuses the archival path's budget (GetNotificationsRetryCount /
+// GetNotificationsRetryDelay) at a fixed delay. Other errors, successes, and
+// context cancellation return at once.
+func (a *agentLoop) summaryWithJobRetry(ctx context.Context, executionId string, opts executionworkertypes.GetOptions) (*executionworkertypes.SummaryResult, error) {
+	delay := a.summaryRetryDelay
+	if delay <= 0 {
+		delay = GetNotificationsRetryDelay
+	}
+
+	jobNotVisible := func(err error) bool { return errors.Is(err, controller.ErrJobTimeout) }
+
+	status, err := retrygo.NewWithData[*executionworkertypes.SummaryResult](
+		retrygo.Context(ctx),
+		retrygo.RetryIf(jobNotVisible),
+		retrygo.Attempts(GetNotificationsRetryCount),
+		retrygo.Delay(delay),
+		retrygo.DelayType(retrygo.FixedDelay),
+		retrygo.LastErrorOnly(true),
+		retrygo.OnRetry(func(attempt uint, _ error) {
+			a.logger.Infow("job not visible yet, retrying summary for live notifications",
+				"executionId", executionId, "attempt", attempt+1)
+		}),
+	).Do(func() (*executionworkertypes.SummaryResult, error) {
+		return a.worker.Summary(ctx, executionId, opts)
+	})
+
+	if jobNotVisible(err) {
+		a.logger.Warnw("giving up waiting for job to become visible for live notifications",
+			"executionId", executionId, "attempts", GetNotificationsRetryCount)
+	}
+	return status, err
+}
+
 func (a *agentLoop) loopNotifications(ctx context.Context) error {
 	return a.client.ProcessExecutionNotificationRequests(ctx, func(ctx context.Context, req *cloud.TestWorkflowNotificationsRequest) controlplaneclient.NotificationWatcher {
 		// Read the initial status TODO: consider getting from the database
-		status, err := a.worker.Summary(ctx, req.ExecutionId, executionworkertypes.GetOptions{})
+		status, err := a.summaryWithJobRetry(ctx, req.ExecutionId, executionworkertypes.GetOptions{})
 		if err != nil {
 			return channels.NewError[*testkube.TestWorkflowExecutionNotification](err)
 		}
