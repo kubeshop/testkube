@@ -103,9 +103,8 @@ func (e *executionGroup) Pause() (err error) {
 		output.Std.Direct().Warnf("warn: failed to pause: failed to list some processes: %v\n", err)
 	}
 
-	// Ignore the init process, to not suspend it accidentally
-	ps.VirtualizePath(int32(os.Getpid()))
-	err = ps.Suspend()
+	// Scope to our own descendants, never the init process or unrelated ones.
+	err = ps.childrenOf(int32(os.Getpid())).Suspend()
 	return errors.Wrap(err, "failed to pause")
 }
 
@@ -130,9 +129,8 @@ func (e *executionGroup) Resume() (err error) {
 		output.Std.Direct().Warnf("warn: failed to resume: failed to list some processes: %v\n", err)
 	}
 
-	// Ignore the init process, to not suspend it accidentally
-	ps.VirtualizePath(int32(os.Getpid()))
-	err = ps.Resume()
+	// Scope to our own descendants, never the init process or unrelated ones.
+	err = ps.childrenOf(int32(os.Getpid())).Resume()
 	return errors.Wrap(err, "failed to resume")
 }
 
@@ -155,9 +153,8 @@ func (e *executionGroup) Kill() (err error) {
 		output.Std.Direct().Warnf("warn: failed to kill: failed to list some processes: %v\n", err.Error())
 	}
 
-	// Ignore the init process, to not suspend it accidentally
-	ps.VirtualizePath(int32(os.Getpid()))
-	err = ps.Kill()
+	// Scope to our own descendants, never the init process or unrelated ones.
+	err = ps.childrenOf(int32(os.Getpid())).Kill()
 	return errors.Wrap(err, "failed to kill")
 }
 

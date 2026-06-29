@@ -205,7 +205,7 @@ func getMongoSSLConfig(cfg *config.Config, secretClient secret.Interface) *stora
 }
 
 func MustGetPostgresDatabase(ctx context.Context, cfg *config.Config, migrate bool) *pgxpool.Pool {
-	if migrate {
+	if migrate && !cfg.SkipDBCreation {
 		err := postgresdb.CreateDatabaseIfNotExists(ctx, cfg.APIPostgresDSN)
 		ExitOnError("Creating Postgres database if needed", err)
 	}

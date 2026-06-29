@@ -41,6 +41,37 @@ tags:
     description: "Keymap for fields in a form"
 
 paths:
+  /cluster-resources:
+    get:
+      tags:
+        - cluster-resources
+        - api
+      summary: List cluster resources
+      description: |
+        Returns every Group/Version/Kind the cluster exposes, tagged with whether
+        the agent ServiceAccount has list+watch permission. Backs the UI dropdown
+        for picking what resource a TestTrigger or WorkflowTrigger should watch.
+      operationId: listClusterResources
+      parameters:
+        - in: query
+          name: watchable
+          schema:
+            type: boolean
+          description: When true, drop resources the agent cannot list+watch.
+      responses:
+        200:
+          description: successful list operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClusterResource"
+        501:
+          description: cluster discovery not configured on this instance
+        502:
+          description: cluster discovery failed
+
   /keymap/triggers:
     get:
       tags:
@@ -8141,16 +8172,33 @@ components:
           description: label selector for events
         resource:
           $ref: "#/components/schemas/TestTriggerResources"
+        resourceRef:
+          $ref: "#/components/schemas/TestTriggerResourceRef"
         resourceSelector:
           $ref: "#/components/schemas/TestTriggerSelector"
         event:
           type: string
           description: listen for event for selected resource
           example: modified
+        match:
+          type: array
+          description: Match filters which object changes fire the trigger (ANDed).
+          items:
+            $ref: "#/components/schemas/TestTriggerFieldCondition"
+        listener:
+          description: |
+            Selects which listener agent(s) watch the cluster and fire this
+            trigger, using the same match selector as the action target (e.g.
+            match.id). Empty means broadcast (every listener fires). Required
+            when match is set: schema-aware validation runs against a specific
+            listener's cluster-resources snapshot.
+          $ref: "#/components/schemas/ExecutionTarget"
         conditionSpec:
           $ref: "#/components/schemas/TestTriggerConditionSpec"
         probeSpec:
           $ref: "#/components/schemas/TestTriggerProbeSpec"
+        contentSelector:
+          $ref: "#/components/schemas/TestTriggerContentSelector"
         action:
           $ref: "#/components/schemas/TestTriggerActions"
         actionParameters:
@@ -8221,6 +8269,138 @@ components:
           $ref: "https://raw.githubusercontent.com/garethr/kubernetes-json-schema/master/v1.7.8/_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector"
           description: label selector for Kubernetes resources
 
+    TestTriggerResourceRef:
+      type: object
+      required:
+        - kind
+      properties:
+        group:
+          type: string
+          description: Group is the API group (empty for core resources like Pod, Service).
+          example: apps
+        version:
+          type: string
+          description: Version is the API version.
+          example: v1
+        kind:
+          type: string
+          description: Kind is the resource kind.
+          example: Deployment
+
+    TestTriggerFieldCondition:
+      type: object
+      required:
+        - path
+        - operator
+      properties:
+        path:
+          type: string
+          description: Dot-path to the field in the watched resource, e.g. ".spec.replicas".
+        operator:
+          $ref: "#/components/schemas/TestTriggerFieldOperator"
+        value:
+          type: string
+          description: Value to compare against for value-based operators.
+
+    TestTriggerFieldOperator:
+      type: string
+      description: supported comparison operators for TestTrigger match conditions
+      enum:
+        - equals
+        - not_equals
+        - exists
+        - not_exists
+        - changed
+        - changed_to
+        - changed_from
+
+    TestTriggerContentSelector:
+      type: object
+      properties:
+        git:
+          $ref: "#/components/schemas/TestTriggerContentGit"
+
+    TestTriggerContentGit:
+      type: object
+      required:
+        - uri
+      properties:
+        uri:
+          type: string
+          description: URI of the git repository to watch.
+        branches:
+          type: array
+          description: "Branch name patterns to watch (glob supported, e.g. \"main\", \"release/*\"). If empty, all branches are watched."
+          items:
+            type: string
+        branchesIgnore:
+          type: array
+          description: "Branch name patterns to exclude (glob supported). Takes precedence over branches."
+          items:
+            type: string
+        paths:
+          type: array
+          description: paths to watch for changes (glob supported)
+          items:
+            type: string
+        pathsIgnore:
+          type: array
+          description: "Path patterns to exclude (glob supported). Takes precedence over paths."
+          items:
+            type: string
+        tags:
+          type: array
+          description: "Tag name patterns to watch (glob supported, e.g. \"v*\", \"v1.*\")."
+          items:
+            type: string
+        tagsIgnore:
+          type: array
+          description: "Tag name patterns to exclude (glob supported). Takes precedence over tags."
+          items:
+            type: string
+        username:
+          type: string
+          description: plain text username to fetch with
+        usernameFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        token:
+          type: string
+          description: "plain text token to fetch with. Warning: this credential is stored in plain text in the trigger spec; prefer tokenFrom instead."
+        tokenFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        sshKey:
+          type: string
+          description: "plain text SSH private key to fetch with. Warning: this credential is stored in plain text in the trigger spec; prefer sshKeyFrom instead."
+        sshKeyFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        authType:
+          type: string
+          enum:
+            - basic
+            - header
+        pullRequest:
+          $ref: "#/components/schemas/TestTriggerContentGitPullRequest"
+
+    TestTriggerContentGitPullRequest:
+      type: object
+      description: Pull request trigger configuration for GitHub API polling.
+      properties:
+        types:
+          type: array
+          description: "PR activity types to watch (e.g. \"opened\", \"synchronize\", \"reopened\", \"closed\"). If empty, all types are watched."
+          items:
+            type: string
+        branches:
+          type: array
+          description: "Base branch name patterns to watch (glob supported). If empty, PRs targeting any base branch are watched."
+          items:
+            type: string
+        branchesIgnore:
+          type: array
+          description: "Base branch name patterns to exclude (glob supported). Takes precedence over branches."
+          items:
+            type: string
+
     TestTriggerResources:
       description: supported kubernetes resources for test triggers
       type: string
@@ -8233,6 +8413,7 @@ components:
         - ingress
         - event
         - configmap
+        - content
 
     TestTriggerExecutions:
       description: supported test resources for test triggers
@@ -10621,6 +10802,7 @@ components:
       enum:
         - basic
         - header
+        - github
 
     BoxedStringList:
       type: object
@@ -11910,6 +12092,37 @@ components:
       type: string
       enum:
         - kubernetes
+
+    ClusterResource:
+      description: One GVK the cluster exposes, with the agent's watch permission.
+      type: object
+      required:
+        - version
+        - kind
+        - resource
+        - namespaced
+        - canWatch
+      properties:
+        group:
+          type: string
+          description: API group (empty for core resources like Pod, Service).
+          example: "argoproj.io"
+        version:
+          type: string
+          example: "v1alpha1"
+        kind:
+          type: string
+          example: "Rollout"
+        resource:
+          type: string
+          description: Plural resource name as used in RBAC rules.
+          example: "rollouts"
+        namespaced:
+          type: boolean
+          description: Cluster-scoped resources (Node, ClusterRole, ...) have this false.
+        canWatch:
+          type: boolean
+          description: True when the agent ServiceAccount holds list+watch on this resource.
 
     Syncable:
       description: |

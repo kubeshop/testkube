@@ -3,11 +3,13 @@ package workflowtriggers
 import (
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 )
 
 // MapCRDToAPI converts the Kubernetes CRD shape (spec-wrapped) into the flat
@@ -23,10 +25,12 @@ func MapCRDToAPI(crd *workflowtriggersv1.WorkflowTrigger) testkube.WorkflowTrigg
 		Annotations: crd.Annotations,
 		Disabled:    crd.Spec.Disabled,
 		Watch:       mapWatchCRDToAPI(crd.Spec.Watch),
-		When:        testkube.WorkflowTriggerWhen{Event: crd.Spec.When.Event},
-		Match:       mapMatchCRDToAPI(crd.Spec.Match),
-		Wait:        mapWaitCRDToAPI(crd.Spec.Wait),
-		Run:         mapRunCRDToAPI(crd.Spec.Run),
+		When: testkube.WorkflowTriggerWhen{
+			Event: crd.Spec.When.Event,
+		},
+		Match: mapMatchCRDToAPI(crd.Spec.Match),
+		Wait:  mapWaitCRDToAPI(crd.Spec.Wait),
+		Run:   mapRunCRDToAPI(crd.Spec.Run),
 	}
 }
 
@@ -46,12 +50,18 @@ func MapAPIToCRD(api testkube.WorkflowTrigger) workflowtriggersv1.WorkflowTrigge
 		Spec: workflowtriggersv1.WorkflowTriggerSpec{
 			Disabled: api.Disabled,
 			Watch:    mapWatchAPIToCRD(api.Watch),
-			When:     workflowtriggersv1.WorkflowTriggerWhen{Event: api.When.Event},
-			Match:    mapMatchAPIToCRD(api.Match),
-			Wait:     mapWaitAPIToCRD(api.Wait),
-			Run:      mapRunAPIToCRD(api.Run),
+			When: workflowtriggersv1.WorkflowTriggerWhen{
+				Event: api.When.Event,
+			},
+			Match: mapMatchAPIToCRD(api.Match),
+			Wait:  mapWaitAPIToCRD(api.Wait),
+			Run:   mapRunAPIToCRD(api.Run),
 		},
 	}
+}
+
+func mapEnvVarSourceAPIToKube(v *testkube.EnvVarSource) *corev1.EnvVarSource {
+	return commonmapper.MapEnvVarSourceAPIToKube(v)
 }
 
 // MapListCRDToAPI maps a CRD list into a flat API slice.

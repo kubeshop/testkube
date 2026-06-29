@@ -23,6 +23,9 @@ func (c *cloudTestTriggerClient) Get(ctx context.Context, environmentId string, 
 }
 
 func (c *cloudTestTriggerClient) List(ctx context.Context, environmentId string, options ListOptions, namespace string) ([]testkube.TestTrigger, error) {
+	if namespace == "*" {
+		namespace = ""
+	}
 	list, err := c.client.ListTestTriggers(ctx, environmentId, controlplaneclient.ListTestTriggerOptions{
 		Labels:     options.Labels,
 		TextSearch: options.TextSearch,

@@ -3,6 +3,7 @@ package workflowtriggerclient
 import (
 	"context"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,6 +28,9 @@ func NewKubernetesWorkflowTriggerClient(c crclient.Client, namespace string) Wor
 }
 
 func (c *k8sWorkflowTriggerClient) resolveNamespace(ns string) string {
+	if ns == "*" {
+		return metav1.NamespaceAll
+	}
 	if ns != "" {
 		return ns
 	}

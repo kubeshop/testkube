@@ -129,7 +129,7 @@ func (s *Service) dynamicEventHandler(ctx context.Context, gvr schema.GroupVersi
 			}
 			resourceType := testtrigger.ResourceType(strings.ToLower(u.GetKind()))
 			s.logger.Debugf("trigger service: dynamic informer: %s %s/%s created", resourceType, u.GetNamespace(), u.GetName())
-			event := s.newWatcherEvent(testtrigger.EventCreated, u, u.Object, resourceType)
+			event := s.newWatcherEvent(testtrigger.EventCreated, u, newUnstructuredTemplateObject(u), resourceType)
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("trigger service: dynamic informer: error matching create event: %v", err)
 			}
@@ -145,7 +145,7 @@ func (s *Service) dynamicEventHandler(ctx context.Context, gvr schema.GroupVersi
 			}
 			resourceType := testtrigger.ResourceType(strings.ToLower(newU.GetKind()))
 			s.logger.Debugf("trigger service: dynamic informer: %s %s/%s updated", resourceType, newU.GetNamespace(), newU.GetName())
-			event := s.newWatcherEvent(testtrigger.EventModified, newU, newU.Object, resourceType, withOldObject(oldU.Object))
+			event := s.newWatcherEvent(testtrigger.EventModified, newU, newUnstructuredTemplateObject(newU), resourceType, withOldObject(newUnstructuredTemplateObject(oldU)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("trigger service: dynamic informer: error matching update event: %v", err)
 			}
@@ -167,7 +167,7 @@ func (s *Service) dynamicEventHandler(ctx context.Context, gvr schema.GroupVersi
 			}
 			resourceType := testtrigger.ResourceType(strings.ToLower(u.GetKind()))
 			s.logger.Debugf("trigger service: dynamic informer: %s %s/%s deleted", resourceType, u.GetNamespace(), u.GetName())
-			event := s.newWatcherEvent(testtrigger.EventDeleted, u, u.Object, resourceType)
+			event := s.newWatcherEvent(testtrigger.EventDeleted, u, newUnstructuredTemplateObject(u), resourceType)
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("trigger service: dynamic informer: error matching delete event: %v", err)
 			}

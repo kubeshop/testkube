@@ -23,13 +23,16 @@ spec:
     version:
       description: k6 version to use
       type: string
-      default: 0.49.0
+      default: 1.1.0
     run:
       description: Run command
       type: string
-      default: "k6 run k6.js"
+      default: "mkdir -p /data/artifacts && k6 run k6.js --summary-export /data/artifacts/summary.json"
   steps:
   - name: Run k6 tests
     run:
       image: "grafana/k6:{{ config.version }}"
       shell: "{{ config.run }}"
+    artifacts:
+      paths:
+      - /data/artifacts/*

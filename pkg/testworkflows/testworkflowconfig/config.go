@@ -97,6 +97,7 @@ type WorkerConfig struct {
 	CommonEnvVariables     []corev1.EnvVar        `json:"e,omitempty"`
 	AllowLowSecurityFields bool                   `json:"a,omitempty"`
 	DisableResourceMetrics bool                   `json:"m,omitempty"`
+	EmptyDirSizeLimit      string                 `json:"z,omitempty"`
 }
 
 type WorkerConnectionConfig struct {

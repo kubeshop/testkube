@@ -26,6 +26,9 @@ func (c *cloudWorkflowTriggerClient) Get(ctx context.Context, environmentId, nam
 }
 
 func (c *cloudWorkflowTriggerClient) List(ctx context.Context, environmentId string, options ListOptions, namespace string) ([]testkube.WorkflowTrigger, error) {
+	if namespace == "*" {
+		namespace = ""
+	}
 	list, err := c.client.ListWorkflowTriggers(ctx, environmentId, controlplaneclient.ListWorkflowTriggerOptions{
 		Labels:     options.Labels,
 		TextSearch: options.TextSearch,

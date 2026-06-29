@@ -37,6 +37,23 @@ func WithLeaseClusterID(id string) EmitterOption {
 	}
 }
 
+// WithLeaseCheckInterval overrides how often the emitter checks/renews its lease.
+// Non-positive values are ignored (the default is kept).
+func WithLeaseCheckInterval(interval time.Duration) EmitterOption {
+	return func(e *Emitter) {
+		if interval > 0 {
+			e.leaseCheckInterval = interval
+		}
+	}
+}
+
+// WARNING: must not be enabled with more than one replica.
+func WithLeaderElectionDisabled(disabled bool) EmitterOption {
+	return func(e *Emitter) {
+		e.leaderElectionDisabled = disabled
+	}
+}
+
 // SetLeaseClusterID overrides the lease cluster ID used by the emitter's
 // leader-election loop. When empty, the current value is not changed.
 func (e *Emitter) SetLeaseClusterID(id string) {
@@ -64,6 +81,7 @@ func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectR
 		clusterName:         clusterName,
 		eventCache:          cache,
 		leaseClusterID:      DefaultLeaseClusterID,
+		leaseCheckInterval:  defaultLeaseCheckInterval,
 	}
 	for _, opt := range opts {
 		opt(e)
@@ -79,17 +97,19 @@ type Interface interface {
 type Emitter struct {
 	*loader
 
-	log                 *zap.SugaredLogger
-	registeredListeners common.Listeners
-	listeners           common.Listeners
-	mutex               sync.RWMutex
-	bus                 bus.Bus
-	instanceId          string
-	leaseBackend        leasebackend.Repository
-	subjectRoot         string
-	clusterName         string
-	leaseClusterID      string
-	eventCache          *ttlcache.Cache[string, bool]
+	log                    *zap.SugaredLogger
+	registeredListeners    common.Listeners
+	listeners              common.Listeners
+	mutex                  sync.RWMutex
+	bus                    bus.Bus
+	instanceId             string
+	leaseBackend           leasebackend.Repository
+	subjectRoot            string
+	clusterName            string
+	leaseClusterID         string
+	leaseCheckInterval     time.Duration
+	leaderElectionDisabled bool
+	eventCache             *ttlcache.Cache[string, bool]
 }
 
 // uniqueListeners keeps a unique set of listeners by kind, group and name.
@@ -176,15 +196,27 @@ func (e *Emitter) eventTopic(event testkube.Event) string {
 }
 
 const (
-	leaseCheckInterval           = 5 * time.Second
-	DefaultLeaseClusterID string = "event-emitters"
+	defaultLeaseCheckInterval        = 5 * time.Second
+	DefaultLeaseClusterID     string = "event-emitters"
 )
 
 // TODO(emil): convert to using new common coordinator package for lease acquisition
 func (e *Emitter) leaseCheckLoop(ctx context.Context, leaseChan chan<- bool) {
+	if e.leaderElectionDisabled {
+		e.log.Info("event emitter: leader election disabled, running without lease coordination")
+		select {
+		case leaseChan <- true:
+		case <-ctx.Done():
+			return
+		}
+		<-ctx.Done()
+		e.log.Info("event emitter stopped lease checks")
+		return
+	}
+
 	e.log.Info("event emitter waiting for lease")
 	e.leaseCheck(ctx, leaseChan)
-	ticker := time.NewTicker(leaseCheckInterval)
+	ticker := time.NewTicker(e.leaseCheckInterval)
 	for {
 		select {
 		case <-ctx.Done():

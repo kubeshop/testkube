@@ -1,4 +1,4 @@
-ARG BUSYBOX_IMAGE="busybox:1.37.0-musl"
+ARG BUSYBOX_IMAGE="busybox:1.38.0-musl"
 
 ###################################
 ## Build testworkflow init
@@ -23,7 +23,7 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 ###################################
 ## Debug
 ###################################
-FROM golang:1.26.3-alpine AS debug
+FROM golang:1.26.4-alpine AS debug
 
 ENV GOTRACEBACK=all
 RUN go install github.com/go-delve/delve/cmd/dlv@v1.26.0

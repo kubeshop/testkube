@@ -15,7 +15,33 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
+
+func TestBuildKubernetesWorkerConfig(t *testing.T) {
+	cfg := &testworkflowconfig.InternalConfig{
+		Worker: testworkflowconfig.WorkerConfig{
+			Namespace:              "namespace",
+			DefaultRegistry:        "registry",
+			DefaultServiceAccount:  "service-account",
+			ClusterID:              "cluster-id",
+			RunnerID:               "runner-id",
+			DisableResourceMetrics: true,
+			EmptyDirSizeLimit:      "256Mi",
+		},
+	}
+
+	workerCfg := buildKubernetesWorkerConfig(cfg, true)
+
+	assert.Equal(t, "cluster-id", workerCfg.Cluster.Id)
+	assert.Equal(t, "namespace", workerCfg.Cluster.DefaultNamespace)
+	assert.Equal(t, "service-account", workerCfg.Cluster.Namespaces["namespace"].DefaultServiceAccountName)
+	assert.Equal(t, "runner-id", workerCfg.RunnerId)
+	assert.True(t, workerCfg.LogAbortedDetails)
+	assert.True(t, workerCfg.DisableResourceMetrics)
+	assert.Equal(t, "256Mi", workerCfg.EmptyDirSizeLimit)
+}
 
 func TestExecuteParallel(t *testing.T) {
 	t.Run("all items run when context is not cancelled", func(t *testing.T) {

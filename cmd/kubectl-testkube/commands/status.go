@@ -21,6 +21,8 @@ func NewStatusCmd() *cobra.Command {
 			cfg, err := config.Load()
 			ui.ExitOnError("   Loading config file failed", err)
 
+			printContextStatus(cmd, cfg)
+
 			if cfg.TelemetryEnabled {
 				ui.PrintEnabled("Telemetry on CLI", "enabled")
 			} else {
@@ -45,4 +47,47 @@ func NewStatusCmd() *cobra.Command {
 	cmd.AddCommand(telemetry.NewStatusTelemetryCmd())
 
 	return cmd
+}
+
+// printContextStatus reports whether the CLI is talking to the Testkube
+// Control Plane (cloud context) or a local/standalone agent (kubeconfig
+// context), along with the connection details relevant to that context.
+func printContextStatus(cmd *cobra.Command, cfg config.Data) {
+	if cfg.ContextType == config.ContextTypeCloud {
+		ui.PrintEnabled("Context", "connected to Testkube Control Plane")
+
+		orgName := cfg.CloudContext.OrganizationName
+		if orgName == "" {
+			orgName = cfg.CloudContext.OrganizationId
+		}
+		envName := cfg.CloudContext.EnvironmentName
+		if envName == "" {
+			envName = cfg.CloudContext.EnvironmentId
+		}
+
+		// Use Properties (ordered slice) instead of InfoGrid (map) so the
+		// padded fields render in a stable order on every run.
+		ui.Properties([][]string{
+			{"Organization", orgName},
+			{"Environment ", envName},
+			{"API URI     ", cfg.CloudContext.ApiUri},
+			{"Namespace   ", cfg.Namespace},
+		})
+	} else {
+		ui.PrintEnabled("Context", "connected to a local standalone agent")
+
+		namespace := cfg.Namespace
+		if flag := cmd.Flag("namespace"); flag != nil && flag.Changed {
+			namespace = flag.Value.String()
+		}
+		apiURI := cfg.APIURI
+		if flag := cmd.Flag("api-uri"); flag != nil && flag.Changed {
+			apiURI = flag.Value.String()
+		}
+
+		ui.Properties([][]string{
+			{"Namespace", namespace},
+			{"API URI  ", apiURI},
+		})
+	}
 }

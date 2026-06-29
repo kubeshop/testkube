@@ -258,6 +258,88 @@ func TestFetchExecutionLogs_InvalidWorkerIndex_FallsBackToZero(t *testing.T) {
 	assert.Equal(t, 0, m.capturedParams.WorkerIndex)
 }
 
+// mockExecutionInfoGetter records the args passed to GetExecutionInfo so tests
+// can assert how the tool routes between the workflow-scoped and
+// id-only API paths.
+type mockExecutionInfoGetter struct {
+	capturedWorkflowName string
+	capturedExecutionID  string
+	returnInfo           string
+	returnErr            error
+}
+
+func (m *mockExecutionInfoGetter) GetExecutionInfo(_ context.Context, workflowName, executionID string) (string, error) {
+	m.capturedWorkflowName = workflowName
+	m.capturedExecutionID = executionID
+	return m.returnInfo, m.returnErr
+}
+
+func callGetExecutionInfo(t *testing.T, mock *mockExecutionInfoGetter, args map[string]any) (*mcp.CallToolResult, error) {
+	t.Helper()
+	_, handler := GetExecutionInfo(mock)
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = args
+	return handler(context.Background(), req)
+}
+
+func TestGetExecutionInfo_ExecutionIdOnly_PassesEmptyWorkflowName(t *testing.T) {
+	m := &mockExecutionInfoGetter{returnInfo: `{"id":"abc123","name":"test-1"}`}
+	result, err := callGetExecutionInfo(t, m, map[string]any{
+		"executionId": "abc123",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.False(t, result.IsError, "id-only call must not produce a tool error")
+	assert.Equal(t, "abc123", m.capturedExecutionID)
+	// Empty workflowName is the signal APIClient.GetExecutionInfo uses to take the
+	// /test-workflow-executions/{executionId} branch instead of the workflow-scoped path.
+	assert.Equal(t, "", m.capturedWorkflowName)
+}
+
+func TestGetExecutionInfo_BothParams_PassesWorkflowName(t *testing.T) {
+	m := &mockExecutionInfoGetter{returnInfo: `{"id":"abc123","name":"test-1"}`}
+	result, err := callGetExecutionInfo(t, m, map[string]any{
+		"executionId":  "abc123",
+		"workflowName": "my-workflow",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.False(t, result.IsError, "workflow-scoped call must not produce a tool error")
+	assert.Equal(t, "abc123", m.capturedExecutionID)
+	// Non-empty workflowName keeps the legacy workflow-scoped path live so name-based,
+	// workflow-disambiguated lookups still work.
+	assert.Equal(t, "my-workflow", m.capturedWorkflowName)
+}
+
+func TestGetExecutionInfo_MissingExecutionId_ReturnsError(t *testing.T) {
+	m := &mockExecutionInfoGetter{}
+	result, err := callGetExecutionInfo(t, m, map[string]any{
+		"workflowName": "my-workflow",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.IsError, "missing executionId must surface as a tool error")
+	// Client must not have been called.
+	assert.Equal(t, "", m.capturedExecutionID)
+	assert.Equal(t, "", m.capturedWorkflowName)
+}
+
+func TestGetExecutionInfo_ToolSchema_WorkflowNameNotRequired(t *testing.T) {
+	m := &mockExecutionInfoGetter{}
+	tool, _ := GetExecutionInfo(m)
+	assert.Equal(t, "get_execution_info", tool.Name)
+
+	paramNames := make([]string, 0)
+	for name := range tool.InputSchema.Properties {
+		paramNames = append(paramNames, name)
+	}
+	assert.Contains(t, paramNames, "executionId")
+	assert.Contains(t, paramNames, "workflowName")
+
+	assert.Contains(t, tool.InputSchema.Required, "executionId", "executionId must be required")
+	assert.NotContains(t, tool.InputSchema.Required, "workflowName", "workflowName must be optional so id-only lookups are allowed")
+}
+
 // mockExecutionLister records the params passed to ListExecutions.
 type mockExecutionLister struct {
 	capturedParams ListExecutionsParams

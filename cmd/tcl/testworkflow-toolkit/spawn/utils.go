@@ -54,6 +54,33 @@ var (
 	executionWorkerMu sync.Mutex
 )
 
+func buildKubernetesWorkerConfig(cfg *testworkflowconfig.InternalConfig, debug bool) kubernetesworker.Config {
+	return kubernetesworker.Config{
+		Cluster: kubernetesworker.ClusterConfig{
+			Id:               cfg.Worker.ClusterID,
+			DefaultNamespace: cfg.Worker.Namespace, // TODO: Use current execution namespace?
+			DefaultRegistry:  cfg.Worker.DefaultRegistry,
+			// TODO: Fetch all the namespaces with service accounts?
+			Namespaces: map[string]kubernetesworker.NamespaceConfig{
+				cfg.Worker.Namespace: {DefaultServiceAccountName: cfg.Worker.DefaultServiceAccount},
+			},
+		},
+		ImageInspector: kubernetesworker.ImageInspectorConfig{
+			CacheEnabled: cfg.Worker.ImageInspectorPersistenceEnabled,
+			CacheKey:     cfg.Worker.ImageInspectorPersistenceCacheKey,
+			CacheTTL:     cfg.Worker.ImageInspectorPersistenceCacheTTL,
+		},
+		Connection:             cfg.Worker.Connection,
+		FeatureFlags:           cfg.Worker.FeatureFlags,
+		RunnerId:               cfg.Worker.RunnerID,
+		CommonEnvVariables:     cfg.Worker.CommonEnvVariables,
+		LogAbortedDetails:      debug,
+		AllowLowSecurityFields: cfg.Worker.AllowLowSecurityFields,
+		DisableResourceMetrics: cfg.Worker.DisableResourceMetrics,
+		EmptyDirSizeLimit:      cfg.Worker.EmptyDirSizeLimit,
+	}
+}
+
 // ExecutionWorker returns an execution worker using the global configuration.
 func ExecutionWorker() executionworkertypes.Worker {
 	executionWorkerMu.Lock()
@@ -61,29 +88,7 @@ func ExecutionWorker() executionworkertypes.Worker {
 
 	if executionWorker == nil {
 		cfg := config.Config()
-		executionWorker = executionworker.NewKubernetes(env.Kubernetes(), presets.NewPro(env.ImageInspector()), kubernetesworker.Config{
-			Cluster: kubernetesworker.ClusterConfig{
-				Id:               cfg.Worker.ClusterID,
-				DefaultNamespace: cfg.Worker.Namespace, // TODO: Use current execution namespace?
-				DefaultRegistry:  cfg.Worker.DefaultRegistry,
-				// TODO: Fetch all the namespaces with service accounts?
-				Namespaces: map[string]kubernetesworker.NamespaceConfig{
-					cfg.Worker.Namespace: {DefaultServiceAccountName: cfg.Worker.DefaultServiceAccount},
-				},
-			},
-			ImageInspector: kubernetesworker.ImageInspectorConfig{
-				CacheEnabled: cfg.Worker.ImageInspectorPersistenceEnabled,
-				CacheKey:     cfg.Worker.ImageInspectorPersistenceCacheKey,
-				CacheTTL:     cfg.Worker.ImageInspectorPersistenceCacheTTL,
-			},
-			Connection:             cfg.Worker.Connection,
-			FeatureFlags:           cfg.Worker.FeatureFlags,
-			RunnerId:               cfg.Worker.RunnerID,
-			CommonEnvVariables:     cfg.Worker.CommonEnvVariables,
-			LogAbortedDetails:      config.Debug(),
-			AllowLowSecurityFields: cfg.Worker.AllowLowSecurityFields,
-			DisableResourceMetrics: cfg.Worker.DisableResourceMetrics,
-		})
+		executionWorker = executionworker.NewKubernetes(env.Kubernetes(), presets.NewPro(env.ImageInspector()), buildKubernetesWorkerConfig(cfg, config.Debug()))
 	}
 	return executionWorker
 }
@@ -411,28 +416,7 @@ func ParallelExecutionWorker(cfg *config.ConfigV2) executionworkertypes.Worker {
 
 	// Create new worker
 	internalCfg := cfg.Internal()
-	worker := executionworker.NewKubernetes(env.Kubernetes(), presets.NewPro(env.ImageInspector()), kubernetesworker.Config{
-		Cluster: kubernetesworker.ClusterConfig{
-			Id:               internalCfg.Worker.ClusterID,
-			DefaultNamespace: internalCfg.Worker.Namespace,
-			DefaultRegistry:  internalCfg.Worker.DefaultRegistry,
-			Namespaces: map[string]kubernetesworker.NamespaceConfig{
-				internalCfg.Worker.Namespace: {DefaultServiceAccountName: internalCfg.Worker.DefaultServiceAccount},
-			},
-		},
-		ImageInspector: kubernetesworker.ImageInspectorConfig{
-			CacheEnabled: internalCfg.Worker.ImageInspectorPersistenceEnabled,
-			CacheKey:     internalCfg.Worker.ImageInspectorPersistenceCacheKey,
-			CacheTTL:     internalCfg.Worker.ImageInspectorPersistenceCacheTTL,
-		},
-		Connection:             internalCfg.Worker.Connection,
-		FeatureFlags:           internalCfg.Worker.FeatureFlags,
-		RunnerId:               internalCfg.Worker.RunnerID,
-		CommonEnvVariables:     internalCfg.Worker.CommonEnvVariables,
-		LogAbortedDetails:      cfg.Debug(),
-		AllowLowSecurityFields: internalCfg.Worker.AllowLowSecurityFields,
-		DisableResourceMetrics: internalCfg.Worker.DisableResourceMetrics,
-	})
+	worker := executionworker.NewKubernetes(env.Kubernetes(), presets.NewPro(env.ImageInspector()), buildKubernetesWorkerConfig(internalCfg, cfg.Debug()))
 
 	// Cache the worker
 	parallelExecutionWorkerMap[cfg] = worker

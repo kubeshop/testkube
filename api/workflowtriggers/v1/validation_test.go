@@ -36,7 +36,7 @@ func TestValidate(t *testing.T) {
 				s.Watch = nil
 			},
 			wantErrs:   1,
-			wantSubstr: "watch is required",
+			wantSubstr: "watch is required when when.event is set",
 		},
 		"watch without kind": {
 			modify: func(s *WorkflowTriggerSpec) {
@@ -54,7 +54,6 @@ func TestValidate(t *testing.T) {
 			wantErrs:   1,
 			wantSubstr: "when.event is required",
 		},
-
 		// run validation
 		"workflow without selector": {
 			modify: func(s *WorkflowTriggerSpec) {

@@ -1,10 +1,10 @@
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: prod-healthcheck
+  name: prod-eu-healthcheck
   labels:
     core-tests: healthcheck
-    environment: prod
+    environment: prod # triggers prod-specific webhooks
 spec:
   system:
     pureByDefault: true
@@ -21,20 +21,17 @@ spec:
         valueFrom:
           secretKeyRef:
             name: testkube-agent-secrets
-            key: TESTKUBE-CLOUD-TEST-BASIC-RUN-TOKEN-FOR-DEV
+            key: TESTKUBE-CLOUD-EU-TESTKUBE-RUN-TOKEN-FOR-DEV
       - name: organizationId
         valueFrom:
           secretKeyRef:
             name: testkube-agent-secrets
-            key: TESTKUBE-CLOUD-TEST-BASIC-ORG-ID
+            key: TESTKUBE-CLOUD-EU-TESTKUBE-ORG-ID
       - name: environmentId
         valueFrom:
           secretKeyRef:
             name: testkube-agent-secrets
-            key: TESTKUBE-CLOUD-TEST-BASIC-ENV-ID
-  events:
-  - cronjob:
-      cron: "*/15 * * * *" # every 15 minutes
+            key: TESTKUBE-CLOUD-EU-TESTKUBE-ENV-ID
   steps:
   - name: Disable telemetry (optional)
     optional: true
@@ -44,6 +41,7 @@ spec:
       testkube set context \
         --api-key {{ shellquote(env.apiToken) }} \
         --org-id {{ shellquote(env.organizationId) }} \
-        --env-id {{ shellquote(env.environmentId) }}
+        --env-id {{ shellquote(env.environmentId) }} \
+        --root-domain eu.testkube.io
   - name: Run remote workflow
     shell: testkube run tw postman-workflow-smoke -f

@@ -179,14 +179,16 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 
 	// WorkflowTrigger v2: when on control plane, poll via the cloud client.
 	// Otherwise watch the CRD directly via a dynamic informer scoped to the
-	// Testkube namespace (no generated clientset yet for this CRD).
+	// configured watcher namespaces (no generated clientset yet for this CRD).
 	if s.testTriggerControlPlane && s.workflowTriggersClient != nil {
 		s.startCloudWorkflowTriggerWatch(ctx, stop)
 	} else if s.dynamicClient != nil {
-		wtFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(s.dynamicClient, 0, s.testkubeNamespace, nil)
-		wtInformer := wtFactory.ForResource(workflowtriggersv1.GroupVersionResource).Informer()
-		wtInformer.AddEventHandler(s.workflowTriggerEventHandler(ctx))
-		go wtInformer.Run(stop)
+		for _, namespace := range s.getWorkflowTriggerWatchNamespaces() {
+			wtFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(s.dynamicClient, 0, namespace, nil)
+			wtInformer := wtFactory.ForResource(workflowtriggersv1.GroupVersionResource).Informer()
+			wtInformer.AddEventHandler(s.workflowTriggerEventHandler(ctx))
+			go wtInformer.Run(stop)
+		}
 	}
 	if watchWebhookResources {
 		s.informers.webhookInformer.Informer().AddEventHandler(s.webhookEventHandler())
@@ -301,26 +303,45 @@ func (s *Service) startCloudWorkflowTriggerWatch(ctx context.Context, stop <-cha
 	ticker := time.NewTicker(s.scraperInterval)
 
 	prev := map[string]testkube.WorkflowTrigger{}
+	namespaces := s.getCloudWatchNamespaces()
 
 	syncOnce := func() {
-		list, err := s.workflowTriggersClient.List(ctx, s.getEnvironmentId(), workflowtriggerclient.ListOptions{}, s.testkubeNamespace)
-		if err != nil {
-			s.logger.Errorf("trigger service: error listing cloud workflow triggers: %v", err)
-			return
-		}
-
 		curr := map[string]testkube.WorkflowTrigger{}
-		for _, t := range list {
-			key := fmt.Sprintf("%s/%s", t.Namespace, t.Name)
-			curr[key] = t
+		failedNamespaces := map[string]struct{}{}
+		for _, namespace := range namespaces {
+			list, err := s.workflowTriggersClient.List(ctx, s.getEnvironmentId(), workflowtriggerclient.ListOptions{}, namespace)
+			if err != nil {
+				s.logger.Errorf("trigger service: error listing cloud workflow triggers in namespace %q: %v", namespace, err)
+				failedNamespaces[namespace] = struct{}{}
+				continue
+			}
+			for _, t := range list {
+				key := fmt.Sprintf("%s/%s", t.Namespace, t.Name)
+				curr[key] = t
 
-			crd := workflowtriggersmapper.MapAPIToCRD(t)
-			if old, ok := prev[key]; !ok {
-				s.addWorkflowTrigger(ctx, &crd)
-				s.eventsBus.Publish(testkube.NewEvent(testkube.EventCreated, testkube.EventResourceWorkflowTrigger, t.Name))
-			} else if !cmp.Equal(old, t) {
-				s.updateWorkflowTrigger(ctx, &crd)
-				s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceWorkflowTrigger, t.Name))
+				crd := workflowtriggersmapper.MapAPIToCRD(t)
+				if old, ok := prev[key]; !ok {
+					s.addWorkflowTrigger(ctx, &crd)
+					s.eventsBus.Publish(testkube.NewEvent(testkube.EventCreated, testkube.EventResourceWorkflowTrigger, t.Name))
+				} else if !cmp.Equal(old, t) {
+					s.updateWorkflowTrigger(ctx, &crd)
+					s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceWorkflowTrigger, t.Name))
+				}
+			}
+		}
+		if len(failedNamespaces) > 0 {
+			_, failedAll := failedNamespaces["*"]
+			for key, t := range prev {
+				if _, exists := curr[key]; exists {
+					continue
+				}
+				if failedAll {
+					curr[key] = t
+					continue
+				}
+				if _, failed := failedNamespaces[t.Namespace]; failed {
+					curr[key] = t
+				}
 			}
 		}
 
@@ -354,6 +375,7 @@ func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan st
 	ticker := time.NewTicker(s.scraperInterval)
 
 	prev := map[string]testkube.TestTrigger{}
+	namespaces := s.getCloudWatchNamespaces()
 
 	toCRD := func(t testkube.TestTrigger) testtriggersv1.TestTrigger {
 		return testtriggers.MapTestTriggerUpsertRequestToTestTriggerCRD(testkube.TestTriggerUpsertRequest{
@@ -368,33 +390,54 @@ func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan st
 			Match:             t.Match,
 			ConditionSpec:     t.ConditionSpec,
 			ProbeSpec:         t.ProbeSpec,
+			ContentSelector:   t.ContentSelector,
 			Action:            t.Action,
 			ActionParameters:  t.ActionParameters,
 			Execution:         t.Execution,
 			TestSelector:      t.TestSelector,
 			ConcurrencyPolicy: t.ConcurrencyPolicy,
 			Disabled:          t.Disabled,
+			Listener:          t.Listener,
 		})
 	}
 
 	syncOnce := func() {
-		list, err := s.testTriggersClient.List(ctx, s.getEnvironmentId(), testtriggerclient.ListOptions{}, s.testkubeNamespace)
-		if err != nil {
-			s.logger.Errorf("trigger service: error listing cloud test triggers: %v", err)
-			return
-		}
-
 		curr := map[string]testkube.TestTrigger{}
-		for _, t := range list {
-			key := fmt.Sprintf("%s/%s", t.Namespace, t.Name)
-			curr[key] = t
+		failedNamespaces := map[string]struct{}{}
+		for _, namespace := range namespaces {
+			list, err := s.testTriggersClient.List(ctx, s.getEnvironmentId(), testtriggerclient.ListOptions{}, namespace)
+			if err != nil {
+				s.logger.Errorf("trigger service: error listing cloud test triggers in namespace %q: %v", namespace, err)
+				failedNamespaces[namespace] = struct{}{}
+				continue
+			}
 
-			if old, ok := prev[key]; !ok {
-				crd := toCRD(t)
-				s.testTriggerEventHandler(ctx).AddFunc(&crd)
-			} else if !cmp.Equal(old, t) {
-				crd := toCRD(t)
-				s.testTriggerEventHandler(ctx).UpdateFunc(nil, &crd)
+			for _, t := range list {
+				key := fmt.Sprintf("%s/%s", t.Namespace, t.Name)
+				curr[key] = t
+
+				if old, ok := prev[key]; !ok {
+					crd := toCRD(t)
+					s.testTriggerEventHandler(ctx).AddFunc(&crd)
+				} else if !cmp.Equal(old, t) {
+					crd := toCRD(t)
+					s.testTriggerEventHandler(ctx).UpdateFunc(nil, &crd)
+				}
+			}
+		}
+		if len(failedNamespaces) > 0 {
+			_, failedAll := failedNamespaces["*"]
+			for key, t := range prev {
+				if _, exists := curr[key]; exists {
+					continue
+				}
+				if failedAll {
+					curr[key] = t
+					continue
+				}
+				if _, failed := failedNamespaces[t.Namespace]; failed {
+					curr[key] = t
+				}
 			}
 		}
 
@@ -420,6 +463,39 @@ func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan st
 			}
 		}
 	}()
+}
+
+func (s *Service) getCloudWatchNamespaces() []string {
+	return s.normalizeWatchNamespaces("*")
+}
+
+func (s *Service) getWorkflowTriggerWatchNamespaces() []string {
+	if len(s.watcherNamespaces) == 0 {
+		return []string{s.testkubeNamespace}
+	}
+	return s.normalizeWatchNamespaces(metav1.NamespaceAll)
+}
+
+func (s *Service) normalizeWatchNamespaces(allValue string) []string {
+	if len(s.watcherNamespaces) == 0 {
+		return []string{allValue}
+	}
+
+	namespaces := make([]string, 0, len(s.watcherNamespaces))
+	seen := make(map[string]struct{}, len(s.watcherNamespaces))
+	for _, namespace := range s.watcherNamespaces {
+		if namespace == "*" || namespace == metav1.NamespaceAll {
+			return []string{allValue}
+		}
+		value := namespace
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		namespaces = append(namespaces, value)
+	}
+
+	return namespaces
 }
 
 func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {

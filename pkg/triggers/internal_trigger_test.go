@@ -192,6 +192,7 @@ func TestConvertV2ToInternal(t *testing.T) {
 
 	// When
 	assert.Equal(t, "created", it.Event)
+	assert.Nil(t, it.ContentSelector)
 
 	// Match
 	require.Len(t, it.FieldConditions, 1)

@@ -19,7 +19,7 @@ spec:
     version:
       description: Cypress version to use
       type: string
-      default: 13.6.4
+      default: 14.5.1
     run:
       description: Run command
       type: string

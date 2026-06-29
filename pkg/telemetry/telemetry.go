@@ -2,7 +2,6 @@ package telemetry
 
 import (
 	"net/http"
-	"os"
 	"runtime"
 	"strings"
 	"sync"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	"github.com/kubeshop/testkube/pkg/cliruntime"
 	httpclient "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/utils/text"
@@ -118,6 +118,14 @@ func SendCmdWithLicenseEvent(cmd *cobra.Command, version, license, step string) 
 // SendCmdInitEvent will send CLI event to GA
 func SendCmdInitEvent(cmd *cobra.Command, version string) (string, error) {
 	payload := NewCLIPayload(getCurrentContext(), getUserID(cmd), "init", version, "cli_command_execution", GetClusterType())
+	return sendData(senders, payload)
+}
+
+// SendTelemetryOptOutEvent records that the user disabled telemetry. It must be
+// called while telemetry is still enabled (before the opt-out is persisted), as
+// no further events may be sent once the user has opted out.
+func SendTelemetryOptOutEvent(cmd *cobra.Command, version string) (string, error) {
+	payload := NewCLIPayload(getCurrentContext(), getUserID(cmd), "telemetry_opt_out", version, "cli_command_execution", GetClusterType())
 	return sendData(senders, payload)
 }
 
@@ -255,192 +263,22 @@ func getUserID(cmd *cobra.Command) string {
 	return data.CloudContext.EnvironmentId
 }
 
-// IsRunningInDocker detects if the CLI is running inside a Docker container
+// IsRunningInDocker detects if the CLI is running inside a Docker container.
+//
+// Kept as a thin wrapper around cliruntime.IsRunningInDocker so external
+// callers (this package's tests, existing telemetry consumers) keep working.
 func IsRunningInDocker() bool {
-	// Method 1: Check for .dockerenv file
-	if _, err := os.Stat("/.dockerenv"); err == nil {
-		return true
-	}
-
-	// Method 2: Check Docker-specific environment variables
-	dockerEnvVars := []string{
-		"DOCKER_CONTAINER",
-		"DOCKER_BUILDKIT",
-		"DOCKER_HOST",
-		"DOCKER_TLS_VERIFY",
-		"DOCKER_CERT_PATH",
-		"DOCKER_MACHINE_NAME",
-	}
-
-	for _, envVar := range dockerEnvVars {
-		if _, exists := os.LookupEnv(envVar); exists {
-			return true
-		}
-	}
-
-	// Method 3: Check cgroup for Docker/containerd (Linux only)
-	if runtime.GOOS == "linux" {
-		if cgroupData, err := os.ReadFile("/proc/1/cgroup"); err == nil {
-			cgroupContent := string(cgroupData)
-			if strings.Contains(cgroupContent, "docker") ||
-				strings.Contains(cgroupContent, "containerd") {
-				return true
-			}
-		}
-	}
-
-	return false
+	return cliruntime.IsRunningInDocker()
 }
 
-// GetDockerContext detects how the Docker container is being run
+// GetDockerContext returns a descriptor of the container environment when
+// running inside Docker/Kubernetes, or "" otherwise.
 func GetDockerContext() string {
-	if !IsRunningInDocker() {
-		return ""
-	}
-
-	// Check for Docker Compose
-	if _, ok := os.LookupEnv("COMPOSE_PROJECT_NAME"); ok {
-		projectName := os.Getenv("COMPOSE_PROJECT_NAME")
-		if projectName != "" {
-			return "docker-compose:" + projectName
-		}
-		return "docker-compose"
-	}
-
-	// Check for Docker Swarm
-	if _, ok := os.LookupEnv("DOCKER_SWARM"); ok {
-		return "docker-swarm"
-	}
-
-	// Check for Kubernetes (running in a pod)
-	if _, ok := os.LookupEnv("KUBERNETES_SERVICE_HOST"); ok {
-		namespace := os.Getenv("POD_NAMESPACE")
-		if namespace != "" {
-			return "kubernetes:" + namespace
-		}
-		return "kubernetes"
-	}
-
-	// Check for Docker BuildKit (during build)
-	if _, ok := os.LookupEnv("DOCKER_BUILDKIT"); ok {
-		return "docker-buildkit"
-	}
-
-	// Check for Docker Desktop
-	if _, ok := os.LookupEnv("DOCKER_DESKTOP"); ok {
-		return "docker-desktop"
-	}
-
-	// Check for specific container runtime
-	if runtime.GOOS == "linux" {
-		if cgroupData, err := os.ReadFile("/proc/1/cgroup"); err == nil {
-			cgroupContent := string(cgroupData)
-			if strings.Contains(cgroupContent, "containerd") {
-				return "containerd"
-			}
-			if strings.Contains(cgroupContent, "crio") {
-				return "cri-o"
-			}
-		}
-	}
-
-	// Check for custom Testkube Docker image version
-	if version, ok := os.LookupEnv("TESTKUBE_DOCKER_IMAGE_VERSION"); ok {
-		return "docker:testkube:" + version
-	}
-
-	// Check for CI/CD environments that might be using Docker
-	if _, ok := os.LookupEnv("GITHUB_ACTIONS"); ok {
-		return "docker:github-actions"
-	}
-	if _, ok := os.LookupEnv("CIRCLECI"); ok {
-		return "docker:circleci"
-	}
-	if _, ok := os.LookupEnv("GITLAB_CI"); ok {
-		return "docker:gitlab-ci"
-	}
-	if _, ok := os.LookupEnv("BUILDKITE"); ok {
-		return "docker:buildkite"
-	}
-
-	// Check for container orchestration platforms
-	if _, ok := os.LookupEnv("AWS_EXECUTION_ENV"); ok {
-		return "docker:aws"
-	}
-	if _, ok := os.LookupEnv("GOOGLE_CLOUD_PROJECT"); ok {
-		return "docker:gcp"
-	}
-	if _, ok := os.LookupEnv("AZURE_CONTAINER_REGISTRY"); ok {
-		return "docker:azure"
-	}
-
-	// Default Docker context
-	return "docker"
+	return cliruntime.DockerContext()
 }
 
+// GetCliRunContext returns the CLI runtime context identifier (CI system,
+// container runtime, or the local sentinel).
 func GetCliRunContext() string {
-	// Check for Docker first with detailed context
-	if dockerContext := GetDockerContext(); dockerContext != "" {
-		return dockerContext
-	}
-
-	if value, ok := os.LookupEnv("GITHUB_ACTIONS"); ok {
-		if value == "true" {
-			return "github-actions"
-		}
-	}
-
-	if _, ok := os.LookupEnv("TF_BUILD"); ok {
-		return "azure-pipelines"
-	}
-
-	if _, ok := os.LookupEnv("JENKINS_URL"); ok {
-		return "jenkins"
-	}
-
-	if _, ok := os.LookupEnv("JENKINS_HOME"); ok {
-		return "jenkins"
-	}
-
-	if _, ok := os.LookupEnv("CIRCLECI"); ok {
-		return "circleci"
-	}
-
-	if _, ok := os.LookupEnv("GITLAB_CI"); ok {
-		return "gitlab-ci"
-	}
-
-	if _, ok := os.LookupEnv("BUILDKITE"); ok {
-		return "buildkite"
-	}
-
-	if _, ok := os.LookupEnv("TRAVIS"); ok {
-		return "travis-ci"
-	}
-
-	if _, ok := os.LookupEnv("AIRFLOW_HOME"); ok {
-		return "airflow"
-	}
-
-	if _, ok := os.LookupEnv("TEAMCITY_VERSION"); ok {
-		return "teamcity"
-	}
-
-	if _, ok := os.LookupEnv("GO_PIPELINE_NAME"); ok {
-		return "gocd"
-	}
-
-	if _, ok := os.LookupEnv("SEMAPHORE"); ok {
-		return "semaphore-ci"
-	}
-
-	if _, ok := os.LookupEnv("BITBUCKET_BUILD_NUMBER"); ok {
-		return "bitbucket-pipelines"
-	}
-
-	if _, ok := os.LookupEnv("DRONE"); ok {
-		return "drone"
-	}
-
-	return "others|local"
+	return cliruntime.CliRunContext()
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
@@ -56,16 +57,28 @@ type intermediate struct {
 
 	// Storing files
 	Files ConfigMapFiles `expr:"include"`
+
+	// Default sizeLimit for emptyDir volumes
+	DefaultEmptyDirSizeLimit *resource.Quantity
 }
 
-func NewIntermediate() Intermediate {
+func NewIntermediate(defaultEmptyDirSizeLimit string) Intermediate {
 	ref := NewRefCounter()
+	var defaultLimit *resource.Quantity
+	if defaultEmptyDirSizeLimit != "" {
+		// Bundle validates worker config up front; this extra parse keeps direct
+		// NewIntermediate callers tolerant of invalid input (invalid values are ignored).
+		if parsedLimit, err := resource.ParseQuantity(defaultEmptyDirSizeLimit); err == nil {
+			defaultLimit = &parsedLimit
+		}
+	}
 	return &intermediate{
-		RefCounter: ref,
-		Root:       stage.NewGroupStage("", true),
-		Container:  stage.NewContainer(),
-		Files:      NewConfigMapFiles(fmt.Sprintf("{{resource.id}}-%s", ref.NextRef()), nil),
-		Ps:         make(map[string]corev1.PersistentVolumeClaim),
+		RefCounter:               ref,
+		Root:                     stage.NewGroupStage("", true),
+		Container:                stage.NewContainer(),
+		Files:                    NewConfigMapFiles(fmt.Sprintf("{{resource.id}}-%s", ref.NextRef()), nil),
+		Ps:                       make(map[string]corev1.PersistentVolumeClaim),
+		DefaultEmptyDirSizeLimit: defaultLimit,
 	}
 }
 
@@ -90,7 +103,15 @@ func (s *intermediate) Secrets() []corev1.Secret {
 }
 
 func (s *intermediate) Volumes() []corev1.Volume {
-	return append(s.Pod.Volumes, s.Files.Volumes()...)
+	volumes := make([]corev1.Volume, 0, len(s.Pod.Volumes)+len(s.Files.Volumes()))
+	for i := range s.Pod.Volumes {
+		volume := *s.Pod.Volumes[i].DeepCopy()
+		if volume.EmptyDir != nil {
+			s.applyDefaultEmptyDirSizeLimit(volume.EmptyDir)
+		}
+		volumes = append(volumes, volume)
+	}
+	return append(volumes, s.Files.Volumes()...)
 }
 
 func (s *intermediate) Pvcs() map[string]corev1.PersistentVolumeClaim {
@@ -134,10 +155,19 @@ func (s *intermediate) AddSecret(secret corev1.Secret) Intermediate {
 	return s
 }
 
+func (s *intermediate) applyDefaultEmptyDirSizeLimit(source *corev1.EmptyDirVolumeSource) {
+	if source == nil || source.SizeLimit != nil || s.DefaultEmptyDirSizeLimit == nil {
+		return
+	}
+	qty := *s.DefaultEmptyDirSizeLimit
+	source.SizeLimit = &qty
+}
+
 func (s *intermediate) AddEmptyDirVolume(source *corev1.EmptyDirVolumeSource, mountPath string) corev1.VolumeMount {
 	if source == nil {
 		source = &corev1.EmptyDirVolumeSource{}
 	}
+	s.applyDefaultEmptyDirSizeLimit(source)
 	ref := s.NextRef()
 	s.AddVolume(corev1.Volume{Name: ref, VolumeSource: corev1.VolumeSource{EmptyDir: source}})
 	return corev1.VolumeMount{Name: ref, MountPath: mountPath}

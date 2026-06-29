@@ -103,6 +103,30 @@ func TestMapAPIToCRD_invalidDelay_dropsField(t *testing.T) {
 	assert.Nil(t, crd.Spec.Run.Delay, "invalid delay should be dropped rather than panic")
 }
 
+func TestMapEnvVarSourceAPIToKube_preservesOptional(t *testing.T) {
+	env := &testkube.EnvVarSource{
+		ConfigMapKeyRef: &testkube.EnvVarSourceConfigMapKeyRef{
+			Name:     "cfg",
+			Key:      "token",
+			Optional: ptr(true),
+		},
+		SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{
+			Name:     "sec",
+			Key:      "password",
+			Optional: ptr(false),
+		},
+	}
+
+	mapped := mapEnvVarSourceAPIToKube(env)
+	require.NotNil(t, mapped)
+	require.NotNil(t, mapped.ConfigMapKeyRef)
+	require.NotNil(t, mapped.ConfigMapKeyRef.Optional)
+	assert.True(t, *mapped.ConfigMapKeyRef.Optional)
+	require.NotNil(t, mapped.SecretKeyRef)
+	require.NotNil(t, mapped.SecretKeyRef.Optional)
+	assert.False(t, *mapped.SecretKeyRef.Optional)
+}
+
 func TestMapListCRDToAPI_handlesEmptyAndMulti(t *testing.T) {
 	assert.Nil(t, MapListCRDToAPI(nil))
 
@@ -114,4 +138,8 @@ func TestMapListCRDToAPI_handlesEmptyAndMulti(t *testing.T) {
 	require.Len(t, out, 2)
 	assert.Equal(t, "a", out[0].Name)
 	assert.Equal(t, "b", out[1].Name)
+}
+
+func ptr[T any](v T) *T {
+	return &v
 }

@@ -68,11 +68,8 @@ func (b *PostgresLeaseBackend) TryAcquire(ctx context.Context, id, clusterID str
 		return false, err
 	}
 
-	acquired, renewable := leaseStatus(currentLease, id, clusterID)
-	switch {
-	case acquired:
-		return true, nil
-	case !renewable:
+	_, renewable := leaseStatus(currentLease, id, clusterID)
+	if !renewable {
 		return false, nil
 	}
 
@@ -82,11 +79,14 @@ func (b *PostgresLeaseBackend) TryAcquire(ctx context.Context, id, clusterID str
 	}
 
 	newLease, err := b.tryUpdateLease(ctx, leaseID, id, clusterID, acquiredAt.Time)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
 
-	acquired, _ = leaseStatus(newLease, id, clusterID)
+	acquired, _ := leaseStatus(newLease, id, clusterID)
 	return acquired, nil
 }
 
@@ -138,11 +138,12 @@ func (b *PostgresLeaseBackend) tryUpdateLease(ctx context.Context, leaseID, id, 
 	renewedAt := time.Now()
 
 	result, err := b.queries.UpdateLease(ctx, sqlc.UpdateLeaseParams{
-		ID:         leaseID,
-		Identifier: id,
-		ClusterID:  clusterID,
-		AcquiredAt: toPgTimestamp(acquiredAt),
-		RenewedAt:  toPgTimestamp(renewedAt),
+		ID:             leaseID,
+		Identifier:     id,
+		ClusterID:      clusterID,
+		AcquiredAt:     toPgTimestamp(acquiredAt),
+		RenewedAt:      toPgTimestamp(renewedAt),
+		StaleThreshold: toPgTimestamp(renewedAt.Add(-leasebackend.DefaultMaxLeaseDuration)),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error updating lease: %w", err)
@@ -167,12 +168,12 @@ func leaseStatus(lease *sqlc.Lease, id, clusterID string) (acquired bool, renewa
 	isMyLease := lease.Identifier == id && lease.ClusterID == clusterID
 
 	switch {
+	case isMyLease:
+		acquired = true
+		renewable = true
 	case isLeaseExpired:
 		acquired = false
 		renewable = true
-	case isMyLease:
-		acquired = true
-		renewable = false
 	default:
 		acquired = false
 		renewable = false

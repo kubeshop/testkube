@@ -43,11 +43,8 @@ func (b *MongoLeaseBackend) TryAcquire(ctx context.Context, id, clusterID string
 		return false, err
 	}
 
-	acquired, renewable := leaseStatus(currentLease, id, clusterID)
-	switch {
-	case acquired:
-		return true, nil
-	case !renewable:
+	_, renewable := leaseStatus(currentLease, id, clusterID)
+	if !renewable {
 		return false, nil
 	}
 
@@ -56,10 +53,13 @@ func (b *MongoLeaseBackend) TryAcquire(ctx context.Context, id, clusterID string
 		acquiredAt = time.Now()
 	}
 	newLease, err := b.tryUpdateLease(ctx, leaseMongoID, id, clusterID, acquiredAt)
+	if err == mongo.ErrNoDocuments {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
-	acquired, _ = leaseStatus(newLease, id, clusterID)
+	acquired, _ := leaseStatus(newLease, id, clusterID)
 
 	return acquired, nil
 }
@@ -101,12 +101,24 @@ func (b *MongoLeaseBackend) tryUpdateLease(ctx context.Context, leaseMongoID, id
 		RenewedAt:  time.Now(),
 	}
 
+	staleThreshold := time.Now().Add(-leasebackend.DefaultMaxLeaseDuration)
+	filter := bson.M{
+		"_id": leaseMongoID,
+		"$or": bson.A{
+			bson.M{"identifier": id},
+			bson.M{"renewed_at": bson.M{"$lt": staleThreshold}},
+		},
+	}
+
 	res := b.coll.FindOneAndUpdate(
 		ctx,
-		bson.M{"_id": leaseMongoID},
+		filter,
 		bson.M{"$set": newLease},
 		options.FindOneAndUpdate().SetReturnDocument(options.After),
 	)
+	if res.Err() == mongo.ErrNoDocuments {
+		return nil, mongo.ErrNoDocuments
+	}
 	if res.Err() != nil {
 		return nil, errors.Wrap(res.Err(), "error finding and updating mongo db document")
 	}
@@ -126,12 +138,12 @@ func leaseStatus(lease *Lease, id, clusterID string) (acquired bool, renewable b
 	isLeaseExpired := lease.RenewedAt.Before(maxLeaseDurationStaleness)
 	isMyLease := lease.Identifier == id && lease.ClusterID == clusterID
 	switch {
+	case isMyLease:
+		acquired = true
+		renewable = true
 	case isLeaseExpired:
 		acquired = false
 		renewable = true
-	case isMyLease:
-		acquired = true
-		renewable = false
 	default:
 		acquired = false
 		renewable = false

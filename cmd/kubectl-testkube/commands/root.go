@@ -118,6 +118,7 @@ var RootCmd = &cobra.Command{
 
 		// We ignore this check for cloud, since agent can be offline, and config API won't work
 		// but other commands should work.
+		cfgDirty := false
 		if clientCfg.ContextType != config.ContextTypeCloud {
 			serverCfg, err := client.GetConfig()
 			if ui.Verbose && err != nil {
@@ -132,14 +133,24 @@ var RootCmd = &cobra.Command{
 					clientCfg.DisableAnalytics()
 					ui.Debug("Sync telemetry on CLI with API", "disabled")
 				}
-
-				err = config.Save(clientCfg)
-				ui.WarnOnError("syncing config", err)
+				cfgDirty = true
 			}
 		}
 
 		if !isPreRunTelemetry(cmd) {
 			handleTelemetry(cmd, &clientCfg, false)
+		}
+
+		// Update-check hint - silent in CI/Docker/Kubernetes, skipped for the
+		// version command (which renders its own richer status block).
+		if common.MaybeNotifyNewerRelease(cmd, &clientCfg) {
+			cfgDirty = true
+		}
+
+		if cfgDirty {
+			if err := config.Save(clientCfg); err != nil {
+				ui.WarnOnError("syncing config", err)
+			}
 		}
 	},
 

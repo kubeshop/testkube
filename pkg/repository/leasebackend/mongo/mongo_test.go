@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
+	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
@@ -123,4 +124,68 @@ func TestMongoLeaseBackend_TryAcquire_Integration(t *testing.T) {
 		assert.True(t, leased, "should acquire lease")
 		assert.NoError(t, err)
 	})
+}
+
+func TestLeaseStatus(t *testing.T) {
+	tests := []struct {
+		name              string
+		lease             *Lease
+		id                string
+		clusterID         string
+		expectedAcquired  bool
+		expectedRenewable bool
+	}{
+		{
+			name:              "Nil lease",
+			lease:             nil,
+			id:                "test",
+			clusterID:         "cluster",
+			expectedAcquired:  false,
+			expectedRenewable: false,
+		},
+		{
+			name: "Expired lease held by other",
+			lease: &Lease{
+				Identifier: "other",
+				ClusterID:  "cluster",
+				RenewedAt:  time.Now().Add(-leasebackend.DefaultMaxLeaseDuration).Add(-time.Minute),
+			},
+			id:                "test",
+			clusterID:         "cluster",
+			expectedAcquired:  false,
+			expectedRenewable: true,
+		},
+		{
+			name: "My active lease",
+			lease: &Lease{
+				Identifier: "test",
+				ClusterID:  "cluster",
+				RenewedAt:  time.Now(),
+			},
+			id:                "test",
+			clusterID:         "cluster",
+			expectedAcquired:  true,
+			expectedRenewable: true,
+		},
+		{
+			name: "Other's active lease",
+			lease: &Lease{
+				Identifier: "other",
+				ClusterID:  "cluster",
+				RenewedAt:  time.Now(),
+			},
+			id:                "test",
+			clusterID:         "cluster",
+			expectedAcquired:  false,
+			expectedRenewable: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			acquired, renewable := leaseStatus(tt.lease, tt.id, tt.clusterID)
+			assert.Equal(t, tt.expectedAcquired, acquired)
+			assert.Equal(t, tt.expectedRenewable, renewable)
+		})
+	}
 }

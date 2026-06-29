@@ -36,7 +36,7 @@ jobs:
             path: .builds-darwin.goreleaser.yml
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.ref }}
           fetch-depth: 0
@@ -45,7 +45,7 @@ jobs:
         with:
           go-version: stable
       - name: Go Cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/go/pkg/mod
@@ -110,7 +110,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.ref }}
           fetch-depth: 0
@@ -145,7 +145,7 @@ jobs:
         with:
           go-version: stable
       - name: Go Cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/go/pkg/mod

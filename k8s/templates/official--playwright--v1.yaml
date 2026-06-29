@@ -19,7 +19,7 @@ spec:
     version:
       description: Playwright version to use
       type: string
-      default: v1.43.0
+      default: v1.56.1
     run:
       description: Run command
       type: string

@@ -1,0 +1,46 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: public-demo-healthcheck
+  labels:
+    core-tests: healthcheck
+    environment: prod
+spec:
+  system:
+    pureByDefault: true
+  job:
+    activeDeadlineSeconds: 180
+  container:
+    image: kubeshop/testkube-cli:latest
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+    env:
+      - name: apiToken
+        valueFrom:
+          secretKeyRef:
+            name: testkube-agent-secrets
+            key: TESTKUBE-CLOUD-PUBLIC-SANDBOX-RUN-TOKEN-FOR-DEV
+      - name: organizationId
+        valueFrom:
+          secretKeyRef:
+            name: testkube-agent-secrets
+            key: TESTKUBE-CLOUD-PUBLIC-SANDBOX-ORG-ID
+      - name: environmentId
+        valueFrom:
+          secretKeyRef:
+            name: testkube-agent-secrets
+            key: TESTKUBE-CLOUD-PUBLIC-SANDBOX-ENV-ID
+  steps:
+  - name: Disable telemetry (optional)
+    optional: true
+    shell: testkube disable telemetry
+  - name: Set context
+    shell: |
+      testkube set context \
+        --api-key {{ shellquote(env.apiToken) }} \
+        --org-id {{ shellquote(env.organizationId) }} \
+        --env-id {{ shellquote(env.environmentId) }}
+  - name: Run remote workflow
+    shell: testkube run tw postman-workflow-smoke -f

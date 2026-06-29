@@ -8,6 +8,8 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	mcpcontext "github.com/kubeshop/testkube/pkg/mcp/context"
 )
 
 func TestBuildDashboardUrl(t *testing.T) {
@@ -202,5 +204,63 @@ func TestBuildDashboardUrl(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, result)
 		assert.True(t, result.IsError)
+	})
+
+	t.Run("context fallback when closure org/env are empty", func(t *testing.T) {
+		_, handler := BuildDashboardUrl(dashboardUrl, "", "")
+		ctx := mcpcontext.WithOrgEnv(context.Background(), "ctx-org", "ctx-env")
+		request := mcp.CallToolRequest{}
+		request.Params.Arguments = map[string]any{
+			"resourceType": "workflow",
+			"workflowName": "my-wf",
+		}
+		result, err := handler(ctx, request)
+		require.NoError(t, err)
+		url := parseURL(t, result)
+		assert.Equal(t, dashboardUrl+"/organization/ctx-org/environment/ctx-env/dashboard/test-workflows/my-wf", url)
+	})
+
+	t.Run("closure values take precedence over context", func(t *testing.T) {
+		_, handler := BuildDashboardUrl(dashboardUrl, orgId, envId)
+		ctx := mcpcontext.WithOrgEnv(context.Background(), "ctx-org", "ctx-env")
+		request := mcp.CallToolRequest{}
+		request.Params.Arguments = map[string]any{
+			"resourceType": "workflow",
+			"workflowName": "my-wf",
+		}
+		result, err := handler(ctx, request)
+		require.NoError(t, err)
+		url := parseURL(t, result)
+		// Closure values (orgId, envId) should win over context values
+		assert.Equal(t, dashboardUrl+basePath+"/test-workflows/my-wf", url)
+	})
+
+	t.Run("error when both closure and context org/env are empty", func(t *testing.T) {
+		_, handler := BuildDashboardUrl(dashboardUrl, "", "")
+		request := mcp.CallToolRequest{}
+		request.Params.Arguments = map[string]any{
+			"resourceType": "workflow",
+			"workflowName": "my-wf",
+		}
+		result, err := handler(context.Background(), request)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.True(t, result.IsError)
+	})
+
+	t.Run("context fallback with execution URL and stepRef", func(t *testing.T) {
+		_, handler := BuildDashboardUrl(dashboardUrl, "", "")
+		ctx := mcpcontext.WithOrgEnv(context.Background(), "ctx-org", "ctx-env")
+		request := mcp.CallToolRequest{}
+		request.Params.Arguments = map[string]any{
+			"resourceType": "execution",
+			"workflowName": "my-wf",
+			"executionId":  "exec-1",
+			"stepRef":      "rwhc2zn",
+		}
+		result, err := handler(ctx, request)
+		require.NoError(t, err)
+		url := parseURL(t, result)
+		assert.Equal(t, dashboardUrl+"/organization/ctx-org/environment/ctx-env/dashboard/test-workflows/my-wf/execution/exec-1/log-output?ref=rwhc2zn", url)
 	})
 }

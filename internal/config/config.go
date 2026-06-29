@@ -30,6 +30,7 @@ type OSSControlPlaneConfig struct {
 	APIMongoDBType            string `envconfig:"API_MONGO_DB_TYPE" default:"mongo"`
 	DisableMongoMigrations    bool   `envconfig:"DISABLE_MONGO_MIGRATIONS" default:"false"`
 	DisablePostgresMigrations bool   `envconfig:"DISABLE_POSTGRES_MIGRATIONS" default:"false"`
+	SkipDBCreation            bool   `envconfig:"SKIP_DB_CREATION" default:"false"`
 
 	// Postgres
 	APIPostgresDSN string `envconfig:"API_POSTGRES_DSN" default:""`
@@ -49,8 +50,9 @@ type OSSControlPlaneConfig struct {
 	StorageCAFile                string `envconfig:"STORAGE_CA_FILE" default:""`
 	StorageUseVirtualHostedStyle bool   `envconfig:"STORAGE_USE_VIRTUAL_HOSTED_STYLE" default:"false"`
 
-	LogsBucket  string `envconfig:"LOGS_BUCKET" default:""`
-	LogsStorage string `envconfig:"LOGS_STORAGE" default:""`
+	LogsBucket       string `envconfig:"LOGS_BUCKET" default:""`
+	LogsStorage      string `envconfig:"LOGS_STORAGE" default:""`
+	ArtifactsStorage string `envconfig:"ARTIFACTS_STORAGE" default:""`
 }
 
 type LegacyExecutorConfig struct {
@@ -202,15 +204,21 @@ type Config struct {
 	CronJobConfig
 	WebhookConfig
 	// Tracing
-	TracingEnabled                  bool     `envconfig:"TRACING_ENABLED" default:"false"`
-	OTLPEndpoint                    string   `envconfig:"OTLP_ENDPOINT" default:"http://localhost:4317"`
-	OTLPServiceName                 string   `envconfig:"OTLP_SERVICE_NAME" default:"testkube"`
-	TracingSampleRate               float64  `envconfig:"TRACING_SAMPLE_RATE" default:"1.0"`
-	DisableDefaultAgent             bool     `envconfig:"DISABLE_DEFAULT_AGENT" default:"false"`
-	TestkubeConfigDir               string   `envconfig:"TESTKUBE_CONFIG_DIR" default:"config"`
-	TestkubeAnalyticsEnabled        bool     `envconfig:"TESTKUBE_ANALYTICS_ENABLED" default:"false"`
-	TestkubeNamespace               string   `envconfig:"TESTKUBE_NAMESPACE" default:"testkube"`
-	TestkubeLeaseName               string   `envconfig:"TESTKUBE_LEASE_NAME" default:""`
+	TracingEnabled           bool    `envconfig:"TRACING_ENABLED" default:"false"`
+	OTLPEndpoint             string  `envconfig:"OTLP_ENDPOINT" default:"http://localhost:4317"`
+	OTLPServiceName          string  `envconfig:"OTLP_SERVICE_NAME" default:"testkube"`
+	TracingSampleRate        float64 `envconfig:"TRACING_SAMPLE_RATE" default:"1.0"`
+	DisableDefaultAgent      bool    `envconfig:"DISABLE_DEFAULT_AGENT" default:"false"`
+	TestkubeConfigDir        string  `envconfig:"TESTKUBE_CONFIG_DIR" default:"config"`
+	TestkubeAnalyticsEnabled bool    `envconfig:"TESTKUBE_ANALYTICS_ENABLED" default:"false"`
+	TestkubeNamespace        string  `envconfig:"TESTKUBE_NAMESPACE" default:"testkube"`
+	TestkubeLeaseName        string  `envconfig:"TESTKUBE_LEASE_NAME" default:""`
+
+	// Leader election / lease coordination (runner). Disable election for explicitly
+	// single-replica deployments; tune how often the lease is checked/renewed.
+	LeaderElectionDisabled bool          `envconfig:"LEADER_ELECTION_DISABLED" default:"false"`
+	LeaseCheckInterval     time.Duration `envconfig:"LEASE_CHECK_INTERVAL" default:"5s"`
+
 	TestkubeProWorkerCount          int      `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
 	TestkubeProLogStreamWorkerCount int      `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
 	TestkubeProMigrate              string   `envconfig:"TESTKUBE_PRO_MIGRATE" default:"false"`
@@ -235,13 +243,23 @@ type Config struct {
 	EnableK8sControllers            bool     `envconfig:"ENABLE_K8S_CONTROLLERS" default:"false"`
 	DisableOfficialTemplates        bool     `envconfig:"DISABLE_OFFICIAL_TEMPLATES" default:"false"`
 	TerminationLogPath              string   `envconfig:"TERMINATION_LOG_PATH" default:"/dev/termination-log"`
+	TestkubeEmptyDirSizeLimit       string   `envconfig:"TESTKUBE_EMPTYDIR_SIZE_LIMIT" default:""`
 
-	ExportArchiveMaxSize                     int  `envconfig:"EXPORT_ARCHIVE_MAX_SIZE" default:"104857600"`
-	FeatureCloudStorage                      bool `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
-	TestWorkflowLogArchiveRequired           bool `envconfig:"TESTWORKFLOW_LOG_ARCHIVE_REQUIRED" default:"true"`
-	WorkflowLogsInsecureSkipTLSVerifyBackend bool `envconfig:"TESTKUBE_WORKFLOW_LOGS_INSECURE_SKIP_TLS_VERIFY_BACKEND" default:"false"`
-	TestTriggerControlPlane                  bool `envconfig:"TEST_TRIGGER_CONTROL_PLANE" default:"false"`
-	ForceSuperAgentMode                      bool `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"false"`
+	ExportArchiveMaxSize                     int           `envconfig:"EXPORT_ARCHIVE_MAX_SIZE" default:"104857600"`
+	FeatureCloudStorage                      bool          `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
+	TestWorkflowLogArchiveRequired           bool          `envconfig:"TESTWORKFLOW_LOG_ARCHIVE_REQUIRED" default:"true"`
+	WorkflowLogsInsecureSkipTLSVerifyBackend bool          `envconfig:"TESTKUBE_WORKFLOW_LOGS_INSECURE_SKIP_TLS_VERIFY_BACKEND" default:"false"`
+	WorkflowLogsTLSRetryMaxAttempts          int           `envconfig:"TESTKUBE_WORKFLOW_LOGS_TLS_RETRY_MAX_ATTEMPTS" default:"7"`
+	WorkflowLogsTLSRetryInitialDelay         time.Duration `envconfig:"TESTKUBE_WORKFLOW_LOGS_TLS_RETRY_INITIAL_DELAY" default:"500ms"`
+	WorkflowLogsTLSRetryMaxDelay             time.Duration `envconfig:"TESTKUBE_WORKFLOW_LOGS_TLS_RETRY_MAX_DELAY" default:"30s"`
+	TestTriggerControlPlane                  bool          `envconfig:"TEST_TRIGGER_CONTROL_PLANE" default:"false"`
+	TestTriggerGitInformerRepoDepth          int           `envconfig:"TEST_TRIGGER_GIT_INFORMER_REPO_DEPTH" default:"500"`
+	TestTriggerGitInformerListTimeout        int           `envconfig:"TEST_TRIGGER_GIT_INFORMER_LIST_TIMEOUT" default:"15"`
+	TestTriggerGitInformerMaxCommitsScan     int           `envconfig:"TEST_TRIGGER_GIT_INFORMER_MAX_COMMITS_SCAN" default:"500"`
+	TestTriggerGitInformerReconcileInterval  time.Duration `envconfig:"TEST_TRIGGER_GIT_INFORMER_RECONCILE_INTERVAL" default:"1m"`
+	TestTriggerGitInformerPullRetries        int           `envconfig:"TEST_TRIGGER_GIT_INFORMER_PULL_RETRIES" default:"2"`
+	TestTriggerGitInformerPullRetryDelay     time.Duration `envconfig:"TEST_TRIGGER_GIT_INFORMER_PULL_RETRY_DELAY" default:"2s"`
+	ForceSuperAgentMode                      bool          `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"false"`
 }
 
 type DeprecatedConfig struct {

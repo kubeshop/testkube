@@ -44,6 +44,13 @@ func TestMatchFieldSelector(t *testing.T) {
 			obj:        newDeploy,
 			expected:   true,
 		},
+		"nil object does not panic and does not match existing field": {
+			conditions: []v1.WorkflowTriggerFieldCondition{
+				{Path: ".spec.replicas", Operator: v1.FieldOperatorExists},
+			},
+			obj:      nil,
+			expected: false,
+		},
 
 		// equals
 		"equals matches when value is equal": {

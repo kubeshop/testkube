@@ -5,6 +5,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: artillery
+    artifacts: "true"
     category: performance-testing
   annotations:
     testkube.io/icon: artillery
@@ -26,7 +27,13 @@ spec:
     activeDeadlineSeconds: 300
   steps:
   - name: Run test
-    shell: /home/node/artillery/bin/run run artillery-smoke-test.yaml
+    shell: |
+      mkdir -p /data/artifacts
+      /home/node/artillery/bin/run run artillery-smoke-test.yaml -o /data/artifacts/artillery-report.json
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '*'
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -90,7 +97,7 @@ spec:
       name: official/artillery/v1
       config:
         version: 2.0.23
-        run: "artillery run artillery-smoke-test.yaml"
+        run: "mkdir -p /data/artifacts && artillery run artillery-smoke-test.yaml -o /data/artifacts/artillery-report.json"
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1

@@ -592,7 +592,6 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: create-get-list-secrets-role-{{ $rangeItem.namespace  }}
-  namespace: {{ .Release.Namespace }}
 subjects:
   - kind: ServiceAccount
     name: {{ include "testkube-api.serviceAccountName" . }}
@@ -616,7 +615,6 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: get-configmaps-role-{{ $rangeItem.namespace  }}
-  namespace: {{ .Release.Namespace }}
 subjects:
   - kind: ServiceAccount
     name: {{ include "testkube-api.serviceAccountName" . }}
