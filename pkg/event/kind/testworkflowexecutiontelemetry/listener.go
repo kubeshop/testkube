@@ -163,6 +163,8 @@ func (l *testWorkflowExecutionTelemetryListener) sendRunWorkflowTelemetry(ctx co
 		}
 	}
 
+	isSilent := isSilentExecution(execution.SilentMode)
+
 	out, err := telemetry.SendRunWorkflowEvent("testkube_api_run_test_workflow", telemetry.RunWorkflowParams{
 		RunParams: telemetry.RunParams{
 			AppVersion: version.Version,
@@ -190,6 +192,7 @@ func (l *testWorkflowExecutionTelemetryListener) sendRunWorkflowTelemetry(ctx co
 			RcInterfaceType: interfaceType,
 			TriggeredBy:     triggeredByBucket(actorType, interfaceType),
 		},
+		IsSilent: isSilent,
 	})
 
 	if err != nil {
@@ -197,4 +200,15 @@ func (l *testWorkflowExecutionTelemetryListener) sendRunWorkflowTelemetry(ctx co
 	} else {
 		log.DefaultLogger.Debugw("sending run test workflow telemetry event", "output", out)
 	}
+}
+
+// isSilentExecution reports whether the execution was triggered as fully silent
+// (the --silent CLI flag, the dashboard silent toggle, or a workflow-level silent
+// execution — all of which silence every aspect). Partial silencing of individual
+// aspects (e.g. the deprecated --disable-webhooks) does not count.
+func isSilentExecution(silentMode *testkube.SilentMode) bool {
+	if silentMode == nil {
+		return false
+	}
+	return silentMode.Webhooks && silentMode.Insights && silentMode.Health && silentMode.Metrics && silentMode.Cdevents
 }

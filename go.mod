@@ -45,7 +45,7 @@ require (
 	github.com/keygen-sh/keygen-go/v3 v3.3.0
 	github.com/mark3labs/mcp-go v0.55.1
 	github.com/mattn/go-isatty v0.0.22
-	github.com/minio/minio-go/v7 v7.2.0
+	github.com/minio/minio-go/v7 v7.2.1
 	github.com/montanaflynn/stats v0.9.0
 	github.com/moogar0880/problems v1.0.1
 	github.com/nats-io/nats-server/v2 v2.14.2
@@ -92,7 +92,7 @@ require (
 	k8s.io/apimachinery v0.36.2
 	k8s.io/client-go v0.36.2
 	k8s.io/kube-openapi v0.0.0-20260624041617-8f3fa4921821
-	k8s.io/utils v0.0.0-20260617174310-a95e086a2553
+	k8s.io/utils v0.0.0-20260626114624-be93311217bd
 	sigs.k8s.io/controller-runtime v0.24.1
 	sigs.k8s.io/yaml v1.6.0
 )
