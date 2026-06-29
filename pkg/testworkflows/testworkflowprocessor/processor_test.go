@@ -274,6 +274,53 @@ func TestBundle_InspectorPullPolicy_UsesEffectivePolicyPerImage(t *testing.T) {
 	assert.NotContains(t, inspector.calls["custom-image:latest"], corev1.PullAlways, "custom image with explicit PullNever should not be inspected with PullAlways")
 }
 
+// TestBundle_InspectorPullPolicy_UserAlwaysImageUsesCache locks in the fix for the
+// cache-bypass regression: a user container with an explicit imagePullPolicy: Always
+// must still be inspected with PullIfNotPresent (from cache), so a registry hiccup at
+// Bundle time cannot fail an otherwise-working workflow. Only the internally injected
+// runner images may bypass the cache. See finding #1.
+func TestBundle_InspectorPullPolicy_UserAlwaysImageUsesCache(t *testing.T) {
+	inspector := &recordingInspector{}
+	proc := New(inspector).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+	workflow := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{
+					StepOperations: testworkflowsv1.StepOperations{
+						Run: &testworkflowsv1.StepRun{
+							ContainerConfig: testworkflowsv1.ContainerConfig{
+								Image:           "custom-image:latest",
+								ImagePullPolicy: corev1.PullAlways,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	_, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+		Config: testworkflowconfig.InternalConfig{
+			Resource: testworkflowconfig.ResourceConfig{
+				Id:     "resource-id",
+				RootId: "resource-root-id",
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	require.NotEmpty(t, inspector.calls["custom-image:latest"], "expected custom image to be inspected")
+	assert.NotContains(t, inspector.calls["custom-image:latest"], corev1.PullAlways,
+		"user container with explicit PullAlways must not bypass the inspector cache")
+	for _, p := range inspector.calls["custom-image:latest"] {
+		assert.Equal(t, corev1.PullIfNotPresent, p,
+			"user container with explicit PullAlways must be inspected from cache (PullIfNotPresent)")
+	}
+}
+
 func TestBundle_DefaultRunnerResources_DoesNotOverrideExplicitResources(t *testing.T) {
 	proc := New(&dummyInspector{}).
 		Register(ProcessRunCommand).
