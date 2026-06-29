@@ -482,7 +482,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		}
 	}
 
-	// Apply default resource requests/limits for all generated workflow containers that have no resources set
+	// Apply default resource requests/limits for internally injected runner containers that have no resources set
 	if defaultRes.Requests.CPU != "" || defaultRes.Requests.Memory != "" || defaultRes.Limits.CPU != "" || defaultRes.Limits.Memory != "" {
 		var (
 			cpuReq, memReq resource.Quantity
