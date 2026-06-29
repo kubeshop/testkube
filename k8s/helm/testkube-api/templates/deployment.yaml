@@ -188,21 +188,27 @@ spec:
             - name: TESTKUBE_DEFAULT_IMAGE_PULL_POLICY
               value: "{{ .Values.defaultImagePullPolicy }}"
             {{- end }}
-            {{- if .Values.defaultRunnerResources.requests.cpu }}
+            {{- with .Values.defaultRunnerResources }}
+            {{- with .requests }}
+            {{- if .cpu }}
             - name: TESTKUBE_DEFAULT_RUNNER_CPU_REQUEST
-              value: "{{ .Values.defaultRunnerResources.requests.cpu }}"
+              value: "{{ .cpu }}"
             {{- end }}
-            {{- if .Values.defaultRunnerResources.requests.memory }}
+            {{- if .memory }}
             - name: TESTKUBE_DEFAULT_RUNNER_MEMORY_REQUEST
-              value: "{{ .Values.defaultRunnerResources.requests.memory }}"
+              value: "{{ .memory }}"
             {{- end }}
-            {{- if .Values.defaultRunnerResources.limits.cpu }}
+            {{- end }}
+            {{- with .limits }}
+            {{- if .cpu }}
             - name: TESTKUBE_DEFAULT_RUNNER_CPU_LIMIT
-              value: "{{ .Values.defaultRunnerResources.limits.cpu }}"
+              value: "{{ .cpu }}"
             {{- end }}
-            {{- if .Values.defaultRunnerResources.limits.memory }}
+            {{- if .memory }}
             - name: TESTKUBE_DEFAULT_RUNNER_MEMORY_LIMIT
-              value: "{{ .Values.defaultRunnerResources.limits.memory }}"
+              value: "{{ .memory }}"
+            {{- end }}
+            {{- end }}
             {{- end }}
             - name: TESTKUBE_TW_TOOLKIT_IMAGE
               value: "{{ include "testkube-tw-toolkit.image" . }}"
