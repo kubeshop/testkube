@@ -501,6 +501,7 @@ SELECT
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
     rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status,
+    -- Build json object for related joins (signatures, output,s reports).
     COALESCE(
         (SELECT json_agg(
             json_build_object(
