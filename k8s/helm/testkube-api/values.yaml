@@ -344,7 +344,11 @@ executionNamespaces:
 ## default storage class name for PVC volumes
 defaultStorageClassName: ""
 
-## default image pull policy for test workflow containers (e.g. "Always", "IfNotPresent", "Never")
+## Default image pull policy for the internally injected test workflow runner images
+## (init/toolkit), e.g. "Always", "IfNotPresent" or "Never". Leave empty to use the
+## Kubernetes default.
+## NOTE: "Never" requires these runner images to be pre-pulled on every node that runs
+## workflows; otherwise pods fail with ErrImageNeverPull.
 defaultImagePullPolicy: ""
 
 ## default resource requests and limits for test workflow runner containers
