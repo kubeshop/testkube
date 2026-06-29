@@ -8,6 +8,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	v1 "github.com/kubeshop/testkube/api/testtriggers/v1"
+	gitinformer "github.com/kubeshop/testkube/pkg/git/informer"
 	"github.com/kubeshop/testkube/pkg/operator/validation/tests/v1/testtrigger"
 )
 
@@ -18,17 +20,47 @@ var errGitTriggerProbesUnavailable = errors.New("git trigger probes unavailable 
 // MatchGitTrigger creates a synthetic watcherEvent for a git content trigger
 // and runs it through the matcher. Called by the git informer when new commits
 // are detected that match the trigger's content selector paths.
-func (s *Service) MatchGitTrigger(ctx context.Context, triggerName, namespace string) error {
-	return s.matchGitTriggerBySource(ctx, triggerName, namespace, triggerSourceV1)
+// It fires git-push, git-tag-push, or git-pull-request events so that both TestTrigger and
+// WorkflowTrigger resources can match.
+func (s *Service) MatchGitTrigger(ctx context.Context, triggerName, namespace string, gitMeta map[string]string) error {
+	eventType := gitEventTypeFromMeta(gitMeta)
+	return s.matchGitTriggerBySource(ctx, triggerName, namespace, triggerSourceV1, testtrigger.EventType(eventType), gitMeta)
 }
 
-func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, namespace, source string) error {
+// gitEventTypeFromMeta determines the git event type from the metadata.
+func gitEventTypeFromMeta(gitMeta map[string]string) string {
+	if gitMeta[gitinformer.GitMetaKeyPRNumber] != "" {
+		return string(v1.TestTriggerEventGitPullRequest)
+	}
+	if gitMeta[gitinformer.GitMetaKeyTag] != "" {
+		return string(v1.TestTriggerEventGitTagPush)
+	}
+	return string(v1.TestTriggerEventGitPush)
+}
+
+func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, namespace, source string, eventType testtrigger.EventType, gitMeta map[string]string) error {
 	event := s.newWatcherEvent(
-		testtrigger.EventModified,
+		eventType,
 		&metav1.ObjectMeta{Name: triggerName, Namespace: namespace},
 		nil,
 		testtrigger.ResourceType(testtrigger.ResourceContent),
 	)
+
+	// Attach git metadata to the event for downstream use by the executor.
+	event.GitMetadata = &GitMetadata{
+		Commit:    gitMeta[gitinformer.GitMetaKeyCommit],
+		Ref:       gitMeta[gitinformer.GitMetaKeyRef],
+		Branch:    gitMeta[gitinformer.GitMetaKeyBranch],
+		Tag:       gitMeta[gitinformer.GitMetaKeyTag],
+		PRNumber:  gitMeta[gitinformer.GitMetaKeyPRNumber],
+		PRAction:  gitMeta[gitinformer.GitMetaKeyPRAction],
+		PRBaseRef: gitMeta[gitinformer.GitMetaKeyPRBaseRef],
+		PRHeadRef: gitMeta[gitinformer.GitMetaKeyPRHeadRef],
+		PRHeadSHA: gitMeta[gitinformer.GitMetaKeyPRHeadSHA],
+		PRURL:     gitMeta[gitinformer.GitMetaKeyPRURL],
+		PRTitle:   gitMeta[gitinformer.GitMetaKeyPRTitle],
+		PRAuthor:  gitMeta[gitinformer.GitMetaKeyPRAuthor],
+	}
 
 	key := newStatusKey(source, namespace, triggerName)
 	s.triggerStatusMu.RLock()
@@ -100,7 +132,12 @@ func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, name
 }
 
 func isGitSyntheticTargetReady(trigger *internalTrigger) bool {
-	return strings.EqualFold(trigger.ResourceKind, string(testtrigger.ResourceContent)) &&
-		!trigger.Disabled &&
-		strings.EqualFold(trigger.Event, string(testtrigger.EventModified))
+	if trigger.Disabled {
+		return false
+	}
+	if !strings.EqualFold(trigger.ResourceKind, string(testtrigger.ResourceContent)) {
+		return false
+	}
+	e := strings.ToLower(trigger.Event)
+	return e == string(v1.TestTriggerEventGitPush) || e == string(v1.TestTriggerEventGitTagPush) || e == string(v1.TestTriggerEventGitPullRequest)
 }

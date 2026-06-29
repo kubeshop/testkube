@@ -23,7 +23,7 @@ jobs:
     runs-on: depot-ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Depot CLI
         uses: depot/setup-action@v1
@@ -135,7 +135,7 @@ jobs:
       GAR_LOCATION: ${{ secrets.GAR_LOCATION }}
       CHARTS_REPOSITORY: testkube
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - id: helm-version
         name: Extract Helm Chart version
         uses: mikefarah/yq@master
@@ -209,7 +209,7 @@ jobs:
       DOCKER_IMAGE: kubeshop/mcp-server
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Get version tag
         id: tag

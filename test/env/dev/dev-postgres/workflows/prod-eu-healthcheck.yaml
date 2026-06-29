@@ -32,9 +32,6 @@ spec:
           secretKeyRef:
             name: testkube-agent-secrets
             key: TESTKUBE-CLOUD-EU-TESTKUBE-ENV-ID
-  events:
-  - cronjob:
-      cron: "*/15 * * * *" # every 15 minutes
   steps:
   - name: Disable telemetry (optional)
     optional: true

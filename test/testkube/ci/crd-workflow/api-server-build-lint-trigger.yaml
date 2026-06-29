@@ -2,14 +2,14 @@ apiVersion: tests.testkube.io/v1
 kind: TestTrigger
 metadata:
   name: api-server-ci-main-content-trigger
-  namespace: testkube
 spec:
   resource: content
-  event: modified
+  event: git-push
   contentSelector:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: main
+      branches:
+        - main
   action: run
   execution: testworkflow
   testSelector:

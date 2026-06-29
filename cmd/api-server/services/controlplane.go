@@ -81,7 +81,12 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 	executionQuerier := factory.NewExecutionQuerier()
 
 	// Ensure the buckets exist (retry in background until they do).
-	buckets := []bucketSpec{{name: cfg.StorageBucket, label: "storage"}}
+	var buckets []bucketSpec
+	if cfg.ArtifactsStorage != "none" {
+		buckets = append(buckets, bucketSpec{name: cfg.StorageBucket, label: "storage"})
+	} else {
+		log.DefaultLogger.Infow("Skipping artifact bucket ensure (ARTIFACTS_STORAGE=none)", "artifacts.storage", cfg.ArtifactsStorage, "bucket", cfg.StorageBucket)
+	}
 	if cfg.LogsStorage != "none" {
 		buckets = append(buckets, bucketSpec{name: cfg.LogsBucket, label: "logs"})
 	}

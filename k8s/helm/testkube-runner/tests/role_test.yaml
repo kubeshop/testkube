@@ -41,6 +41,21 @@ tests:
               - update
               - delete
 
+  - it: agent-role can read its own Deployment for registration label collection
+    documentSelector:
+      path: metadata.name
+      value: agent-role-tk
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - apps
+            resources:
+              - deployments
+            verbs:
+              - get
+
   - it: agent-lease-access targets coordination.k8s.io/leases
     documentSelector:
       path: metadata.name

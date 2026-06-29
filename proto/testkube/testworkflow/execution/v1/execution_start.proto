@@ -37,4 +37,7 @@ message ExecutionStart {
   // this instance of the workflow execution. Keys may refer to known variables, and the values to the
   // override values. Unknown keys may be ignored.
   map<string, string> variable_overrides = 11;
+  // tags contains execution-level metadata tags forwarded to the runner so
+  // expressions like execution.tags.<key> can be resolved in all start paths.
+  map<string, string> tags = 12;
 }

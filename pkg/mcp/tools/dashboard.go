@@ -8,6 +8,8 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+
+	mcpcontext "github.com/kubeshop/testkube/pkg/mcp/context"
 )
 
 func BuildDashboardUrl(dashboardUrl string, orgId string, envId string) (tool mcp.Tool, handler server.ToolHandlerFunc) {
@@ -56,7 +58,22 @@ func BuildDashboardUrl(dashboardUrl string, orgId string, envId string) (tool mc
 			executionTab = "log-output"
 		}
 
-		baseDashboardPath := fmt.Sprintf("/organization/%s/environment/%s/dashboard", orgId, envId)
+		// Resolve org/env IDs: prefer closure values (CLI mode), fall back to
+		// per-request context values (cloud mode where the closure is empty).
+		effectiveOrgID := orgId
+		if effectiveOrgID == "" {
+			effectiveOrgID = mcpcontext.GetOrgID(ctx)
+		}
+		effectiveEnvID := envId
+		if effectiveEnvID == "" {
+			effectiveEnvID = mcpcontext.GetEnvID(ctx)
+		}
+
+		if effectiveOrgID == "" || effectiveEnvID == "" {
+			return mcp.NewToolResultError("organization and environment IDs are required but not available"), nil
+		}
+
+		baseDashboardPath := fmt.Sprintf("/organization/%s/environment/%s/dashboard", effectiveOrgID, effectiveEnvID)
 
 		// Build URL based on resource type
 		var resultURL string

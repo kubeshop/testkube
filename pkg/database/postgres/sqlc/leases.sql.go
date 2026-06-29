@@ -76,15 +76,20 @@ SET
     renewed_at = $4,
     updated_at = NOW()
 WHERE id = $5
+  -- Only renew/take over if, at write time, the lease is still ours or has expired.
+  -- This makes the update atomic with the ownership/expiry decision and prevents a
+  -- stalled holder from overwriting a newer leader after failover.
+  AND (identifier = $1 OR renewed_at < $6)
 RETURNING id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at
 `
 
 type UpdateLeaseParams struct {
-	Identifier string             `db:"identifier" json:"identifier"`
-	ClusterID  string             `db:"cluster_id" json:"cluster_id"`
-	AcquiredAt pgtype.Timestamptz `db:"acquired_at" json:"acquired_at"`
-	RenewedAt  pgtype.Timestamptz `db:"renewed_at" json:"renewed_at"`
-	ID         string             `db:"id" json:"id"`
+	Identifier     string             `db:"identifier" json:"identifier"`
+	ClusterID      string             `db:"cluster_id" json:"cluster_id"`
+	AcquiredAt     pgtype.Timestamptz `db:"acquired_at" json:"acquired_at"`
+	RenewedAt      pgtype.Timestamptz `db:"renewed_at" json:"renewed_at"`
+	ID             string             `db:"id" json:"id"`
+	StaleThreshold pgtype.Timestamptz `db:"stale_threshold" json:"stale_threshold"`
 }
 
 func (q *Queries) UpdateLease(ctx context.Context, arg UpdateLeaseParams) (Lease, error) {
@@ -94,6 +99,7 @@ func (q *Queries) UpdateLease(ctx context.Context, arg UpdateLeaseParams) (Lease
 		arg.AcquiredAt,
 		arg.RenewedAt,
 		arg.ID,
+		arg.StaleThreshold,
 	)
 	var i Lease
 	err := row.Scan(

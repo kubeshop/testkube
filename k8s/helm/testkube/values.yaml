@@ -112,7 +112,7 @@ mongodb:
     # -- MongoDB image repository
     repository: kubeshop/bitnami-mongodb
     # -- MongoDB image tag
-    tag: 8.3.1
+    tag: 8.3.4
     # -- MongoDB image pull Secret
     pullSecrets: []
   # -- Target MongoDB Feature Compatibility Version used by the FCV hook jobs.
@@ -317,7 +317,7 @@ postgresql:
     # -- PostgreSQL image repository
     repository: kubeshop/testkube-postgres
     # -- PostgreSQL image tag
-    tag: 18.3
+    tag: 18.4
     # -- PostgreSQL image pull Secret
     pullSecrets: []
 
@@ -1433,7 +1433,7 @@ testkube-operator:
         # -- Migrate container job image name
         repository: rancher/kubectl
         # -- Migrate container job image tag
-        version: v1.36.0
+        version: v1.36.2
         # -- Migrate container job image pull policy
         pullPolicy: IfNotPresent
         # -- Migrate container job k8s secret for private registries

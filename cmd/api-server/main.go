@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
+	apiextclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
@@ -42,6 +43,8 @@ import (
 	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/internal/cronjob/robfig"
 	cronjobtestworkflow "github.com/kubeshop/testkube/internal/cronjob/testworkflow"
+	inventorycontroller "github.com/kubeshop/testkube/internal/inventory/controller"
+	inventorygrpc "github.com/kubeshop/testkube/internal/inventory/grpc"
 	synccontroller "github.com/kubeshop/testkube/internal/sync/controller"
 	syncgrpc "github.com/kubeshop/testkube/internal/sync/grpc"
 	"github.com/kubeshop/testkube/pkg/agent"
@@ -51,6 +54,7 @@ import (
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
+	"github.com/kubeshop/testkube/pkg/clusterdiscovery"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/controller"
 	"github.com/kubeshop/testkube/pkg/controlplane"
@@ -155,6 +159,8 @@ func main() {
 	commons.ExitOnError("creating k8s clientset", err)
 	dynamicClient, err := dynamic.NewForConfig(kubeConfig)
 	commons.ExitOnError("creating k8s dynamic client", err)
+	apiextClient, err := apiextclient.NewForConfig(kubeConfig)
+	commons.ExitOnError("creating k8s apiextensions client", err)
 
 	log.DefaultLogger.Infow("connected to Kubernetes cluster successfully", "namespace", cfg.TestkubeNamespace)
 
@@ -180,9 +186,15 @@ func main() {
 	if cfg.Trace {
 		eventBus.TraceEvents()
 	}
+	// Resolve the lease check interval once and reuse it across all lease consumers
+	// (events emitter, triggers, leader coordinator). Clamps unsafe values.
+	leaseCheckInterval := resolveLeaseCheckInterval(cfg.LeaseCheckInterval)
+
 	// TODO(emil): do we need a mongo/postgres backend for leases like for test triggers?
 	eventsEmitterLeaseBackend := leasebackendk8s.NewK8sLeaseBackend(clientset, "testkube-agent-"+cfg.APIServerFullname, cfg.TestkubeNamespace)
-	eventsEmitter := event.NewEmitter(eventBus, eventsEmitterLeaseBackend, "agentevents", cfg.TestkubeClusterName, event.DefaultEventTTL, event.DefaultEventCacheCapacity)
+	eventsEmitter := event.NewEmitter(eventBus, eventsEmitterLeaseBackend, "agentevents", cfg.TestkubeClusterName, event.DefaultEventTTL, event.DefaultEventCacheCapacity,
+		event.WithLeaseCheckInterval(leaseCheckInterval),
+		event.WithLeaderElectionDisabled(cfg.LeaderElectionDisabled))
 
 	// Connect to the Control Plane
 	var grpcConn *grpc.ClientConn
@@ -257,9 +269,12 @@ func main() {
 		capabilities := buildStartupCapabilities(cfg)
 		log.DefaultLogger.Infow("runner capabilities", "capabilities", stringifyCapabilities(capabilities))
 
-		// Get all labels that matches with prefix
-		runnerLabels := getDeploymentLabels(ctx, clientset, cfg.TestkubeNamespace, cfg.APIServerFullname, cfg.RunnerLabelsPrefix)
-		runnerLabels["registration"] = "self"
+		// Get all labels that matches with prefix. On a failed Deployment lookup we proceed with
+		// just the self-registration marker; first-time Register has no prior label set to clobber.
+		runnerLabels, _, err := collectRunnerRegistrationLabels(ctx, clientset, cfg)
+		if err != nil {
+			runnerLabels = map[string]string{"registration": "self"}
+		}
 
 		// Debug labels found
 		log.DefaultLogger.Debugw("labels to be configured", "labels", runnerLabels)
@@ -328,6 +343,7 @@ func main() {
 	// This setup can be moved back down to just before the controller initialisation
 	// when the SuperAgent migration has been removed.
 	syncStore := syncgrpc.NewClient(grpcConn, log.DefaultLogger, proContext.APIKey, proContext.OrgID, grpcTLSEnabled)
+	inventoryClient := inventorygrpc.NewClient(grpcConn, log.DefaultLogger, proContext.APIKey, proContext.OrgID, grpcTLSEnabled)
 	// SUPER AGENT DEPRECATION MIGRATION
 	// Run the migration function blocking further processing. We want the migration to run and succeed or to fail and
 	// kill the program before any additional processing occurs to avoid any conflicts with the migration process and
@@ -358,8 +374,50 @@ func main() {
 			controlplaneclient.AgentIdMetadataName:        proContext.Agent.ID,
 			controlplaneclient.EnvironmentIdMetadataName:  proContext.EnvID,
 		}))
+		// Read labels under the same 5s budget as the RPC so a stalled K8s lookup cannot
+		// block startup. Label collection failure only suppresses the label refresh; the
+		// runner-policy fields (runner_group, is_global) come from cfg and propagate
+		// regardless so cluster-scope/routing changes still reach the control plane.
+		//
+		// We also suppress the label refresh when the Deployment exposes no user-configured
+		// labels (only the synthetic "registration" marker would survive). Without this guard,
+		// upgrading a runner whose labels were managed via `testkube update agent -l ...` and
+		// never copied into Helm would silently overwrite those labels with an empty set on
+		// the first reconnect. To opt back in, set runner.register.labels in the Helm values
+		// (or annotate the Deployment with cfg.RunnerLabelsPrefix-prefixed keys).
+		//
+		// Likewise, we only refresh runner policy (runner_group / is_global) when the runner
+		// has an explicit policy configured. An all-zero policy snapshot is indistinguishable
+		// from "Independent" mode and from "unset", so without this guard we would silently
+		// downgrade a Global or Grouped agent whose policy was set via the CLI but not in
+		// Helm. Mode changes through Helm therefore require setting at least one of
+		// runner.register.global / runner.register.groupName; demoting to Independent must be
+		// done explicitly via `testkube update agent`.
+		runnerLabels, hasUserLabels, labelsErr := collectRunnerRegistrationLabels(updateCtx, clientset, cfg)
+		updateLabels := labelsErr == nil && hasUserLabels
+		if labelsErr != nil {
+			log.DefaultLogger.Warnw("skipping label refresh; cannot read deployment labels",
+				"error", labelsErr.Error(),
+			)
+		} else if !hasUserLabels {
+			log.DefaultLogger.Infow("skipping label refresh; runner deployment has no user-configured labels under prefix",
+				"labelPrefix", cfg.RunnerLabelsPrefix,
+			)
+		}
+		updateRunnerPolicy := cfg.RunnerGroup != "" || cfg.IsGlobal
+		if !updateRunnerPolicy {
+			log.DefaultLogger.Infow("skipping runner policy refresh; runner has no explicit policy configured",
+				"runnerGroup", cfg.RunnerGroup,
+				"isGlobal", cfg.IsGlobal,
+			)
+		}
 		resp, err := grpcClient.UpdateAgentCapabilitiesOnStartup(updateCtx, &cloud.UpdateAgentCapabilitiesOnStartupRequest{
-			Capabilities: startupCapabilities,
+			Capabilities:       startupCapabilities,
+			Labels:             runnerLabels,
+			RunnerGroup:        cfg.RunnerGroup,
+			IsGlobal:           cfg.IsGlobal,
+			UpdateLabels:       updateLabels,
+			UpdateRunnerPolicy: updateRunnerPolicy,
 		})
 		cancel()
 		if err != nil {
@@ -720,7 +778,22 @@ func main() {
 		testWorkflowExecutor,
 		cfg.ExportArchiveMaxSize,
 	)
+	api.ClusterDiscoverer = clusterdiscovery.New(clientset, cfg.TestkubeNamespace).WithSchemas(apiextClient)
 	api.Init(httpServer)
+
+	// Push watchable cluster-resources snapshot to CP on startup, on CRD
+	// informer events, and as an hourly safety net. CP caches the result to
+	// render the TestTrigger resourceRef picker (see AgentInventoryService).
+	if proContext.APIKey != "" {
+		crdNotifier := inventorycontroller.StartCRDChangeNotifier(ctx, apiextClient, log.DefaultLogger)
+		clusterResourcesController := &inventorycontroller.ClusterResourcesController{
+			Discoverer: api.ClusterDiscoverer,
+			Pusher:     inventoryClient,
+			Notifier:   crdNotifier,
+			Log:        log.DefaultLogger,
+		}
+		g.Go(func() error { return clusterResourcesController.Run(ctx) })
+	}
 
 	log.DefaultLogger.Info("starting agent service")
 
@@ -817,6 +890,8 @@ func main() {
 			triggers.WithWorkflowTriggersClient(workflowTriggersClient),
 			triggers.WithEventLabels(cfg.EventLabels),
 			triggers.WithDynamicClient(dynamicClient),
+			triggers.WithLeaseCheckInterval(leaseCheckInterval),
+			triggers.WithLeaderElectionDisabled(cfg.LeaderElectionDisabled),
 		)
 
 		// Start git content informer when enabled for trigger source-of-truth (cloud or OSS).
@@ -830,14 +905,15 @@ func main() {
 				Name: "git-informer",
 				Start: func(taskCtx context.Context) error {
 					gitinformer.NewInformer(testTriggersClient, triggerService, cfg.TestkubeNamespace, proContext.EnvID, gitinformer.Options{
-						ReconcileInterval:  cfg.TestTriggerGitInformerReconcileInterval,
-						RepoDepth:          cfg.TestTriggerGitInformerRepoDepth,
-						ListTimeoutSeconds: cfg.TestTriggerGitInformerListTimeout,
-						MaxCommitsScan:     cfg.TestTriggerGitInformerMaxCommitsScan,
-						PullRetries:        cfg.TestTriggerGitInformerPullRetries,
-						PullRetryDelay:     cfg.TestTriggerGitInformerPullRetryDelay,
-						WatcherNamespaces:  informerWatcherNamespaces,
-						KubeClient:         clientset,
+						ReconcileInterval:   cfg.TestTriggerGitInformerReconcileInterval,
+						RepoDepth:           cfg.TestTriggerGitInformerRepoDepth,
+						ListTimeoutSeconds:  cfg.TestTriggerGitInformerListTimeout,
+						MaxCommitsScan:      cfg.TestTriggerGitInformerMaxCommitsScan,
+						PullRetries:         cfg.TestTriggerGitInformerPullRetries,
+						PullRetryDelay:      cfg.TestTriggerGitInformerPullRetryDelay,
+						WatcherNamespaces:   informerWatcherNamespaces,
+						KubeClient:          clientset,
+						GitHubTokenProvider: client,
 					}).Reconcile(taskCtx)
 					return nil
 				},
@@ -954,7 +1030,9 @@ func main() {
 		leaderClusterID = leasebackend.SanitizeForK8sName(leaderClusterID)
 
 		coordinatorLogger := log.DefaultLogger.With("component", "leader-coordinator")
-		leaderCoordinator := leader.New(leaderLeaseBackend, leaderIdentifier, leaderClusterID, coordinatorLogger)
+		leaderCoordinator := leader.New(leaderLeaseBackend, leaderIdentifier, leaderClusterID, coordinatorLogger,
+			leader.WithCheckInterval(leaseCheckInterval),
+			leader.WithLeaderElectionDisabled(cfg.LeaderElectionDisabled))
 		for _, task := range leaderTasks {
 			leaderCoordinator.Register(task)
 		}
@@ -967,6 +1045,26 @@ func main() {
 	if err := g.Wait(); err != nil {
 		log.DefaultLogger.Fatalf("Testkube is shutting down: %v", err)
 	}
+}
+
+const defaultLeaseCheckInterval = 5 * time.Second
+
+// resolveLeaseCheckInterval validates the configured lease check interval. The lease
+// expires after leasebackend.DefaultMaxLeaseDuration, so checking/renewing less often
+// than that would let the lease lapse between checks and cause leadership churn. We
+// keep a safety margin (half the lease duration) and clamp anything larger.
+func resolveLeaseCheckInterval(interval time.Duration) time.Duration {
+	if interval <= 0 {
+		return defaultLeaseCheckInterval
+	}
+	if maxSafe := leasebackend.DefaultMaxLeaseDuration / 2; interval > maxSafe {
+		log.DefaultLogger.Warnw("configured lease check interval is too high relative to the lease duration; clamping to avoid leadership churn",
+			"configured", interval.String(),
+			"clamped", maxSafe.String(),
+			"leaseDuration", leasebackend.DefaultMaxLeaseDuration.String())
+		return maxSafe
+	}
+	return interval
 }
 
 func resolveLeaderIdentifier() string {
@@ -1014,16 +1112,16 @@ func stringifyCapabilities(capabilities []cloud.AgentCapability) []string {
 	return names
 }
 
-func getDeploymentLabels(ctx context.Context, clientset kubernetes.Interface, namespace, deploymentName string, labelPrefix string) map[string]string {
+func getDeploymentLabels(ctx context.Context, clientset kubernetes.Interface, namespace, deploymentName string, labelPrefix string) (map[string]string, error) {
 	labels := map[string]string{}
 	if deploymentName == "" {
-		return labels
+		return labels, nil
 	}
 
 	deploy, err := clientset.AppsV1().Deployments(namespace).Get(ctx, deploymentName, metav1.GetOptions{})
 	if err != nil {
 		log.DefaultLogger.Warnw("cannot read deployment labels", "deployment", deploymentName, "error", err.Error())
-		return labels
+		return nil, err
 	}
 	log.DefaultLogger.Debugw("deployment found", "deployment_name", deploymentName, "deployment_labels", deploy.Labels)
 	for k, v := range deploy.Labels {
@@ -1034,7 +1132,33 @@ func getDeploymentLabels(ctx context.Context, clientset kubernetes.Interface, na
 			}
 		}
 	}
-	return labels
+	return labels, nil
+}
+
+// collectRunnerRegistrationLabels returns the runner-supplied label set used both at
+// initial Register and on every reconnect via UpdateAgentCapabilitiesOnStartup. Keeping a
+// single source of truth avoids drift between the two paths.
+//
+// The error return distinguishes a Kubernetes Deployment lookup failure (which would
+// otherwise produce a near-empty label set) from a Deployment with no matching labels.
+// Callers that send these labels as authoritative MUST skip the update on error.
+//
+// The hasUserLabels return is true only when the Deployment exposed at least one
+// user-configured label matching cfg.RunnerLabelsPrefix (the synthetic "registration"
+// marker does not count). Reconnect-time refresh callers MUST gate UpdateLabels on this
+// so that a runner with no Helm-managed labels does not clobber labels previously set via
+// `testkube update agent -l ...` against the Control Plane.
+func collectRunnerRegistrationLabels(ctx context.Context, clientset kubernetes.Interface, cfg *intconfig.Config) (map[string]string, bool, error) {
+	labels, err := getDeploymentLabels(ctx, clientset, cfg.TestkubeNamespace, cfg.APIServerFullname, cfg.RunnerLabelsPrefix)
+	if err != nil {
+		return nil, false, err
+	}
+	hasUserLabels := len(labels) > 0
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	labels["registration"] = "self"
+	return labels, hasUserLabels, nil
 }
 
 // shouldUseCloudTestTriggers returns true when the agent has migrated off super-agent mode,

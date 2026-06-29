@@ -55,6 +55,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			TestSelector:      mapSelectorToCRD(request.TestSelector),
 			ConcurrencyPolicy: concurrencyPolicy,
 			Disabled:          request.Disabled,
+			Listener:          common.MapPtr(request.Listener, commonmapper.MapTargetApiToKube),
 		},
 	}
 }
@@ -120,6 +121,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta(request testkub
 			TestSelector:      mapSelectorToCRD(request.TestSelector),
 			ConcurrencyPolicy: concurrencyPolicy,
 			Disabled:          request.Disabled,
+			Listener:          common.MapPtr(request.Listener, commonmapper.MapTargetApiToKube),
 		},
 	}
 }
@@ -252,26 +254,35 @@ func mapContentGitToCRD(git *testkube.TestTriggerContentGit) *testsv1.TestTrigge
 		return nil
 	}
 	return &testsv1.TestTriggerContentGitSpec{
-		Uri:          git.Uri,
-		Revision:     git.Revision,
-		Username:     git.Username,
-		UsernameFrom: mapEnvVarSourceAPIToKube(git.UsernameFrom),
-		Token:        git.Token,
-		TokenFrom:    mapEnvVarSourceAPIToKube(git.TokenFrom),
-		SshKey:       git.SshKey,
-		SshKeyFrom:   mapEnvVarSourceAPIToKube(git.SshKeyFrom),
-		AuthType:     mapGitAuthTypeAPIToKube(git.AuthType),
-		Paths:        git.Paths,
+		Uri:            git.Uri,
+		Branches:       git.Branches,
+		BranchesIgnore: git.BranchesIgnore,
+		Paths:          git.Paths,
+		PathsIgnore:    git.PathsIgnore,
+		Tags:           git.Tags,
+		TagsIgnore:     git.TagsIgnore,
+		Username:       git.Username,
+		UsernameFrom:   mapEnvVarSourceAPIToKube(git.UsernameFrom),
+		Token:          git.Token,
+		TokenFrom:      mapEnvVarSourceAPIToKube(git.TokenFrom),
+		SshKey:         git.SshKey,
+		SshKeyFrom:     mapEnvVarSourceAPIToKube(git.SshKeyFrom),
+		AuthType:       testsv3.GitAuthType(git.AuthType),
+		PullRequest:    mapContentGitPullRequestToCRD(git.PullRequest),
+	}
+}
+
+func mapContentGitPullRequestToCRD(pr *testkube.TestTriggerContentGitPullRequest) *testsv1.TestTriggerContentGitPullRequest {
+	if pr == nil {
+		return nil
+	}
+	return &testsv1.TestTriggerContentGitPullRequest{
+		Types:          pr.Types,
+		Branches:       pr.Branches,
+		BranchesIgnore: pr.BranchesIgnore,
 	}
 }
 
 func mapEnvVarSourceAPIToKube(v *testkube.EnvVarSource) *corev1.EnvVarSource {
 	return commonmapper.MapEnvVarSourceAPIToKube(v)
-}
-
-func mapGitAuthTypeAPIToKube(v *testkube.ContentGitAuthType) testsv3.GitAuthType {
-	if v == nil {
-		return ""
-	}
-	return testsv3.GitAuthType(*v)
 }

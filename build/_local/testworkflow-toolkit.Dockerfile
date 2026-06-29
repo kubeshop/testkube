@@ -1,5 +1,5 @@
 ARG BUSYBOX_IMAGE="busybox:1.38.0-musl"
-ARG ALPINE_IMAGE="alpine:3.23.4"
+ARG ALPINE_IMAGE="alpine:3.24.1"
 FROM ${BUSYBOX_IMAGE} AS busybox
 
 ###################################
@@ -25,7 +25,7 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 ###################################
 ## Build testworkflow-toolkit
 ###################################
-FROM --platform=$BUILDPLATFORM golang:1.26.3-alpine AS builder-toolkit
+FROM --platform=$BUILDPLATFORM golang:1.26.4-alpine AS builder-toolkit
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -45,7 +45,7 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 ###################################
 ## Debug builder (Delve)
 ###################################
-FROM golang:1.26.3-alpine AS debug-builder
+FROM golang:1.26.4-alpine AS debug-builder
 RUN go install github.com/go-delve/delve/cmd/dlv@v1.26.0
 
 ###################################

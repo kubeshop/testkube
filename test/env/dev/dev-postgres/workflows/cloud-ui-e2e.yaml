@@ -17,14 +17,7 @@ spec:
       revision: '{{ config.GIT_REVISION }}'
       paths:
       - js/packages/e2e-tests
-      usernameFrom:
-        secretKeyRef:
-          name: 'testkube-agent-secrets'
-          key: 'CLOUD_UI_E2E_GITHUB_USERNAME'
-      tokenFrom:
-        secretKeyRef:
-          name: 'testkube-agent-secrets'
-          key: 'CLOUD_UI_E2E_GITHUB_TOKEN'
+      authType: github
   job:
     activeDeadlineSeconds: 1200
   config:

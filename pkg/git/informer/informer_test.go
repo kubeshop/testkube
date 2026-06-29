@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
+	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 )
@@ -67,7 +69,7 @@ func (s stubTestTriggerClient) DeleteByLabels(context.Context, string, string, s
 	return 0, nil
 }
 
-func (s stubMatcher) MatchGitTrigger(ctx context.Context, triggerName, namespace string) error {
+func (s stubMatcher) MatchGitTrigger(ctx context.Context, triggerName, namespace string, gitMeta map[string]string) error {
 	if s.matchTestTriggerFn != nil {
 		return s.matchTestTriggerFn(ctx, triggerName, namespace)
 	}
@@ -210,10 +212,9 @@ func TestAuthClientOptions(t *testing.T) {
 	})
 
 	t.Run("header auth", func(t *testing.T) {
-		authType := testkube.HEADER_ContentGitAuthType
 		opts, err := authClientOptions(&testkube.TestTriggerContentGit{
 			Token:    "token",
-			AuthType: &authType,
+			AuthType: string(testkube.HEADER_ContentGitAuthType),
 		})
 		require.NoError(t, err)
 		assert.Len(t, opts, 1)
@@ -275,54 +276,191 @@ func TestAuthClientOptions(t *testing.T) {
 
 }
 
-func TestCloneAndPullOptions_CommitSHARevision(t *testing.T) {
-	sha := "0123456789abcdef0123456789abcdef01234567"
+// stubGitHubTokenProvider is a minimal GitHubTokenProvider for unit tests.
+type stubGitHubTokenProvider struct {
+	token   string
+	err     error
+	calls   int
+	lastURI string
+}
+
+func (s *stubGitHubTokenProvider) GetGitHubToken(_ context.Context, uri string) (string, error) {
+	s.calls++
+	s.lastURI = uri
+	return s.token, s.err
+}
+
+func TestInformerAuthClientOptions_GitHub(t *testing.T) {
+	ctx := context.Background()
+	gitConfig := &testkube.TestTriggerContentGit{
+		Uri:      "https://github.com/kubeshop/testkube.git",
+		AuthType: string(testkube.GITHUB_ContentGitAuthType),
+	}
+
+	t.Run("github authType returns x-access-token basic auth when provider succeeds", func(t *testing.T) {
+		provider := &stubGitHubTokenProvider{token: "ghp_testtoken"}
+		informer := &Informer{githubTokenProvider: provider}
+		cache := newReconcileCache()
+
+		opts, err := informer.authClientOptions(ctx, "default", gitConfig, cache)
+
+		require.NoError(t, err)
+		assert.Len(t, opts, 1)
+		assert.Equal(t, 1, provider.calls)
+		assert.Equal(t, gitConfig.Uri, provider.lastURI)
+	})
+
+	t.Run("github authType returns error when provider is nil", func(t *testing.T) {
+		informer := &Informer{githubTokenProvider: nil}
+		cache := newReconcileCache()
+
+		_, err := informer.authClientOptions(ctx, "default", gitConfig, cache)
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "github authType requires a connected control plane")
+	})
+
+	t.Run("github authType caches token within reconcile pass", func(t *testing.T) {
+		provider := &stubGitHubTokenProvider{token: "ghp_cachedtoken"}
+		informer := &Informer{githubTokenProvider: provider}
+		cache := newReconcileCache()
+
+		// First call should fetch the token.
+		opts1, err := informer.authClientOptions(ctx, "default", gitConfig, cache)
+		require.NoError(t, err)
+		assert.Len(t, opts1, 1)
+
+		// Second call with the same cache should reuse the cached token.
+		opts2, err := informer.authClientOptions(ctx, "default", gitConfig, cache)
+		require.NoError(t, err)
+		assert.Len(t, opts2, 1)
+
+		// Provider should only have been called once despite two authClientOptions calls.
+		assert.Equal(t, 1, provider.calls)
+	})
+
+	t.Run("github authType strips URI userinfo before provider lookup and cache keying", func(t *testing.T) {
+		provider := &stubGitHubTokenProvider{token: "ghp_sanitized"}
+		informer := &Informer{githubTokenProvider: provider}
+		cache := newReconcileCache()
+		sanitizedURI := "https://github.com/kubeshop/testkube.git"
+		credentialedURI := (&url.URL{
+			Scheme: "https",
+			Host:   "github.com",
+			Path:   "/kubeshop/testkube.git",
+			User:   url.UserPassword("git", "test"),
+		}).String()
+		credentialedConfig := &testkube.TestTriggerContentGit{
+			Uri:      credentialedURI,
+			AuthType: string(testkube.GITHUB_ContentGitAuthType),
+		}
+
+		_, err := informer.authClientOptions(ctx, "default", credentialedConfig, cache)
+		require.NoError(t, err)
+		assert.Equal(t, sanitizedURI, provider.lastURI)
+
+		_, err = informer.authClientOptions(ctx, "default", gitConfig, cache)
+		require.NoError(t, err)
+		assert.Equal(t, 1, provider.calls)
+		assert.Equal(t, sanitizedURI, provider.lastURI)
+	})
+
+	t.Run("github authType forwards provider error", func(t *testing.T) {
+		provider := &stubGitHubTokenProvider{err: errors.New("control plane unavailable")}
+		informer := &Informer{githubTokenProvider: provider}
+		cache := newReconcileCache()
+
+		_, err := informer.authClientOptions(ctx, "default", gitConfig, cache)
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to get GitHub token")
+	})
+}
+
+func TestCloneAndPullOptions_BranchRef(t *testing.T) {
 	opts := Options{RepoDepth: 1}
 
 	cloneOpts, err := cloneOptions(&testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
-		Revision: sha,
+		Branches: []string{"main"},
 	}, opts)
 	require.NoError(t, err)
-	assert.Empty(t, cloneOpts.ReferenceName)
+	assert.Equal(t, plumbing.ReferenceName("refs/heads/main"), cloneOpts.ReferenceName)
 
 	pullOpts, err := pullOptions(&testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
-		Revision: sha,
+		Branches: []string{"main"},
 	}, opts)
 	require.NoError(t, err)
-	assert.Empty(t, pullOpts.ReferenceName)
+	assert.Equal(t, plumbing.ReferenceName("refs/heads/main"), pullOpts.ReferenceName)
 }
 
-func TestCommitSHARevisionWithPathsIsNotWatchable(t *testing.T) {
-	sha := "0123456789abcdef0123456789abcdef01234567"
+func TestEmptyBranchesProduceNoStaticEffectiveRefs(t *testing.T) {
 	trigger := testkube.TestTrigger{
-		Name:      "trigger-a",
-		Namespace: "default",
 		ContentSelector: &testkube.TestTriggerContentSelector{
 			Git: &testkube.TestTriggerContentGit{
-				Uri:      "https://github.com/kubeshop/testkube.git",
-				Revision: sha,
-				Paths:    []string{"pkg/git"},
+				Uri:   "https://github.com/kubeshop/testkube.git",
+				Paths: []string{"pkg/git"},
 			},
 		},
 	}
 
-	informer := NewInformer(stubTestTriggerClient{}, nil, "testkube", "", Options{})
+	// With no branches specified, effectiveRefs returns nil and remote refs are resolved dynamically.
+	refs := effectiveRefs(trigger.ContentSelector.Git)
+	assert.Empty(t, refs)
+}
 
-	key := triggerKey(testTriggerSource, trigger.Namespace, trigger.Name)
-	changed, err := informer.hasNewMatchingCommit(context.Background(), key, trigger)
+func TestRemoteAllMatchingRefsWithClientOptions_EmptyFiltersWatchAllBranches(t *testing.T) {
+	tmpDir := t.TempDir()
+	remoteDir := filepath.Join(tmpDir, "remote.git")
+	_, err := git.PlainInit(remoteDir, true)
 	require.NoError(t, err)
-	assert.False(t, changed)
 
-	assert.Equal(t, sha, informer.commits[key])
-
-	// Even when local baseline drifts, SHA-pinned triggers stay non-watchable.
-	informer.commits[key] = "drifted"
-	changed, err = informer.hasNewMatchingCommit(context.Background(), key, trigger)
+	workDir := filepath.Join(tmpDir, "work")
+	workRepo, err := git.PlainInit(workDir, false)
 	require.NoError(t, err)
-	assert.False(t, changed)
-	assert.Equal(t, sha, informer.commits[key])
+	_, err = workRepo.CreateRemote(&config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{remoteDir},
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, workRepo.Storer.SetReference(
+		plumbing.NewSymbolicReference(plumbing.HEAD, plumbing.NewBranchReferenceName("main")),
+	))
+
+	worktree, err := workRepo.Worktree()
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "README.md"), []byte("hello"), 0o644))
+	_, err = worktree.Add("README.md")
+	require.NoError(t, err)
+	hash, err := worktree.Commit("initial", &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "test",
+			Email: "test@example.com",
+			When:  time.Now(),
+		},
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, workRepo.Storer.SetReference(plumbing.NewHashReference(plumbing.NewBranchReferenceName("develop"), hash)))
+	require.NoError(t, workRepo.Push(&git.PushOptions{
+		RemoteName: "origin",
+		RefSpecs: []config.RefSpec{
+			config.RefSpec("refs/heads/main:refs/heads/main"),
+			config.RefSpec("refs/heads/develop:refs/heads/develop"),
+		},
+	}))
+
+	refs, err := remoteAllMatchingRefsWithClientOptions(&testkube.TestTriggerContentGit{Uri: remoteDir}, Options{ListTimeoutSeconds: 15}, nil)
+	require.NoError(t, err)
+
+	got := map[string]struct{}{}
+	for _, ref := range refs {
+		got[ref.Ref] = struct{}{}
+	}
+	assert.Contains(t, got, "refs/heads/main")
+	assert.Contains(t, got, "refs/heads/develop")
 }
 
 func TestShouldAdvanceBaselineOnScanError(t *testing.T) {
@@ -435,7 +573,7 @@ func initTestRepoWithOrigin(t *testing.T, originURL string) *git.Repository {
 func TestCloneAndPullOptions_UseRepoDepth(t *testing.T) {
 	gitConfig := &testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/example/repo.git",
-		Revision: "main",
+		Branches: []string{"main"},
 	}
 	opts := Options{RepoDepth: 77}
 
@@ -451,7 +589,7 @@ func TestCloneAndPullOptions_UseRepoDepth(t *testing.T) {
 func TestCloneAndPullOptions_TestkubeRepository(t *testing.T) {
 	gitConfig := &testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
-		Revision: "main",
+		Branches: []string{"main"},
 	}
 	opts := Options{
 		RepoDepth:          50,
@@ -473,11 +611,11 @@ func TestCloneAndPullOptions_TestkubeRepository(t *testing.T) {
 func TestGitInformerConfig_MultiplePathFilters(t *testing.T) {
 	gitConfig := &testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
-		Revision: "main",
+		Branches: []string{"main"},
 		Paths:    []string{"/test", "/pkg"},
 	}
 
-	refs := normalizeRefs(gitConfig.Revision)
+	refs := effectiveRefs(gitConfig)
 	assert.Contains(t, refs, "refs/heads/main")
 	assert.Equal(t, "https://github.com/kubeshop/testkube.git", gitConfig.Uri)
 
@@ -499,7 +637,7 @@ func TestIsGitContentTrigger(t *testing.T) {
 		{
 			name: "valid git content trigger",
 			trigger: testkube.TestTrigger{
-				Event:    "modified",
+				Event:    string(testtriggersv1.TestTriggerEventGitPush),
 				Resource: &resource,
 				ContentSelector: &testkube.TestTriggerContentSelector{
 					Git: &testkube.TestTriggerContentGit{
@@ -513,7 +651,7 @@ func TestIsGitContentTrigger(t *testing.T) {
 			name: "disabled trigger",
 			trigger: testkube.TestTrigger{
 				Disabled: true,
-				Event:    "modified",
+				Event:    string(testtriggersv1.TestTriggerEventGitPush),
 				Resource: &resource,
 				ContentSelector: &testkube.TestTriggerContentSelector{
 					Git: &testkube.TestTriggerContentGit{
@@ -526,7 +664,7 @@ func TestIsGitContentTrigger(t *testing.T) {
 		{
 			name: "valid git content trigger via resourceRef",
 			trigger: testkube.TestTrigger{
-				Event: "modified",
+				Event: string(testtriggersv1.TestTriggerEventGitPush),
 				ResourceRef: &testkube.TestTriggerResourceRef{
 					Kind: "Content",
 				},
@@ -541,7 +679,7 @@ func TestIsGitContentTrigger(t *testing.T) {
 		{
 			name: "resourceRef non-content",
 			trigger: testkube.TestTrigger{
-				Event: "modified",
+				Event: string(testtriggersv1.TestTriggerEventGitPush),
 				ResourceRef: &testkube.TestTriggerResourceRef{
 					Kind: "Deployment",
 				},
@@ -561,7 +699,7 @@ func TestIsGitContentTrigger(t *testing.T) {
 		{
 			name: "no content selector",
 			trigger: testkube.TestTrigger{
-				Event:    "modified",
+				Event:    string(testtriggersv1.TestTriggerEventGitPush),
 				Resource: &resource,
 			},
 			expected: false,
@@ -636,18 +774,60 @@ func TestRestoreCommitBaseline(t *testing.T) {
 	assert.False(t, exists)
 }
 
+// initLocalRemoteWithCommit creates a bare repository with a single commit
+// pushed to main, so informer tests can list and fetch refs without touching
+// the network.
+func initLocalRemoteWithCommit(t *testing.T) string {
+	t.Helper()
+	tmpDir := t.TempDir()
+	remoteDir := filepath.Join(tmpDir, "remote.git")
+	_, err := git.PlainInit(remoteDir, true)
+	require.NoError(t, err)
+
+	workDir := filepath.Join(tmpDir, "work")
+	workRepo, err := git.PlainInit(workDir, false)
+	require.NoError(t, err)
+	_, err = workRepo.CreateRemote(&config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{remoteDir},
+	})
+	require.NoError(t, err)
+	require.NoError(t, workRepo.Storer.SetReference(
+		plumbing.NewSymbolicReference(plumbing.HEAD, plumbing.NewBranchReferenceName("main")),
+	))
+	worktree, err := workRepo.Worktree()
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "README.md"), []byte("initial\n"), 0o644))
+	_, err = worktree.Add("README.md")
+	require.NoError(t, err)
+	_, err = worktree.Commit("initial", &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "test",
+			Email: "test@example.com",
+			When:  time.Now(),
+		},
+	})
+	require.NoError(t, err)
+	require.NoError(t, workRepo.Push(&git.PushOptions{
+		RemoteName: "origin",
+		RefSpecs: []config.RefSpec{
+			config.RefSpec("refs/heads/main:refs/heads/main"),
+		},
+	}))
+	return remoteDir
+}
+
 func TestUpdateRepositories_RestoresBaselineWhenMatchFails(t *testing.T) {
-	const revision = "0123456789abcdef0123456789abcdef01234567"
 	resource := testkube.CONTENT_TestTriggerResources
 	trigger := testkube.TestTrigger{
 		Name:      "trigger-a",
 		Namespace: "testkube",
-		Event:     "modified",
+		Event:     string(testtriggersv1.TestTriggerEventGitPush),
 		Resource:  &resource,
 		ContentSelector: &testkube.TestTriggerContentSelector{
 			Git: &testkube.TestTriggerContentGit{
-				Uri:      "https://github.com/kubeshop/testkube.git",
-				Revision: revision,
+				Uri:      initLocalRemoteWithCommit(t),
+				Branches: []string{"main"},
 			},
 		},
 	}
@@ -670,6 +850,8 @@ func TestUpdateRepositories_RestoresBaselineWhenMatchFails(t *testing.T) {
 	)
 	informer.commits[key] = "old-head"
 
+	// The remote lists a new HEAD, the matcher fails, and the baseline must be
+	// restored so the commit is retried on the next reconcile.
 	informer.updateRepositories(context.Background())
 
 	assert.Equal(t, "old-head", informer.commits[key])
@@ -720,12 +902,12 @@ func TestUpdateRepositories_ContinuesWhenNamespaceListFails(t *testing.T) {
 	trigger := testkube.TestTrigger{
 		Name:      "trigger-a",
 		Namespace: "team-b",
-		Event:     "modified",
+		Event:     string(testtriggersv1.TestTriggerEventGitPush),
 		Resource:  &resource,
 		ContentSelector: &testkube.TestTriggerContentSelector{
 			Git: &testkube.TestTriggerContentGit{
-				Uri:      "https://github.com/kubeshop/testkube.git",
-				Revision: "main",
+				Uri:      initLocalRemoteWithCommit(t),
+				Branches: []string{"main"},
 			},
 		},
 	}
@@ -758,8 +940,12 @@ func TestUpdateRepositories_ContinuesWhenNamespaceListFails(t *testing.T) {
 
 	keepPath := triggerRepositoryPathFromKey(keepKey)
 	removePath := triggerRepositoryPathFromKey(removeKey)
+	keepRefPath := keepPath + refDelimiter + "ref_main"
+	removeRefPath := removePath + refDelimiter + "ref_main"
 	require.NoError(t, os.MkdirAll(keepPath, 0o755))
 	require.NoError(t, os.MkdirAll(removePath, 0o755))
+	require.NoError(t, os.MkdirAll(keepRefPath, 0o755))
+	require.NoError(t, os.MkdirAll(removeRefPath, 0o755))
 
 	informer.updateRepositories(context.Background())
 
@@ -771,6 +957,10 @@ func TestUpdateRepositories_ContinuesWhenNamespaceListFails(t *testing.T) {
 	assert.False(t, removeExists)
 	_, removeErr := os.Stat(removePath)
 	assert.True(t, os.IsNotExist(removeErr))
+	_, keepRefErr := os.Stat(keepRefPath)
+	assert.NoError(t, keepRefErr)
+	_, removeRefErr := os.Stat(removeRefPath)
+	assert.True(t, os.IsNotExist(removeRefErr))
 }
 
 func TestUpdateRepositories_MatchesTestTriggerWithGitPaths(t *testing.T) {
@@ -823,25 +1013,16 @@ func TestUpdateRepositories_MatchesTestTriggerWithGitPaths(t *testing.T) {
 	pushMain()
 
 	key := triggerKey(testTriggerSource, "testkube", "trigger-a")
-	repoDir := triggerRepositoryPathFromKey(key)
+	// The informer opens per-ref clones at the ref-suffixed path, so the
+	// pre-seeded clone must live there for the pull path to be exercised.
+	repoDir := triggerRepositoryPathFromKey(key) + refDelimiter + refDirectorySuffix("refs/heads/main")
 	t.Cleanup(func() { _ = os.RemoveAll(repoDir) })
 	_ = os.RemoveAll(repoDir)
 
-	localRepo, err := git.PlainClone(repoDir, &git.CloneOptions{
+	_, err = git.PlainClone(repoDir, &git.CloneOptions{
 		URL:           remoteDir,
 		ReferenceName: plumbing.NewBranchReferenceName("main"),
 		SingleBranch:  true,
-	})
-	require.NoError(t, err)
-	require.NoError(t, localRepo.DeleteRemote("origin"))
-	// Keep the real test remote first (used for fetch/pull) and include the
-	// GitHub URL to satisfy repositoryOriginMatches for kubeshop/testkube.
-	_, err = localRepo.CreateRemote(&config.RemoteConfig{
-		Name: "origin",
-		URLs: []string{
-			remoteDir,
-			"https://github.com/kubeshop/testkube.git",
-		},
 	})
 	require.NoError(t, err)
 
@@ -852,12 +1033,12 @@ func TestUpdateRepositories_MatchesTestTriggerWithGitPaths(t *testing.T) {
 	trigger := testkube.TestTrigger{
 		Name:      "trigger-a",
 		Namespace: "testkube",
-		Event:     "modified",
+		Event:     string(testtriggersv1.TestTriggerEventGitPush),
 		Resource:  &resource,
 		ContentSelector: &testkube.TestTriggerContentSelector{
 			Git: &testkube.TestTriggerContentGit{
-				Uri:      "https://github.com/kubeshop/testkube.git",
-				Revision: "main",
+				Uri:      remoteDir,
+				Branches: []string{"main"},
 				Paths:    []string{"/test", "/pkg"},
 			},
 		},
@@ -888,26 +1069,616 @@ func TestUpdateRepositories_MatchesTestTriggerWithGitPaths(t *testing.T) {
 	assert.NotEqual(t, firstHash, informer.commits[key])
 }
 
+func TestUpdateRepositories_TracksMovedTagAcrossMultipleUpdates(t *testing.T) {
+	tmpDir := t.TempDir()
+	remoteDir := filepath.Join(tmpDir, "remote.git")
+	_, err := git.PlainInit(remoteDir, true)
+	require.NoError(t, err)
+
+	workDir := filepath.Join(tmpDir, "work")
+	workRepo, err := git.PlainInit(workDir, false)
+	require.NoError(t, err)
+	_, err = workRepo.CreateRemote(&config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{remoteDir},
+	})
+	require.NoError(t, err)
+	require.NoError(t, workRepo.Storer.SetReference(
+		plumbing.NewSymbolicReference(plumbing.HEAD, plumbing.NewBranchReferenceName("main")),
+	))
+	worktree, err := workRepo.Worktree()
+	require.NoError(t, err)
+
+	commitFile := func(path, content, message string) plumbing.Hash {
+		fullPath := filepath.Join(workDir, path)
+		require.NoError(t, os.MkdirAll(filepath.Dir(fullPath), 0o755))
+		require.NoError(t, os.WriteFile(fullPath, []byte(content), 0o644))
+		_, err = worktree.Add(path)
+		require.NoError(t, err)
+		hash, err := worktree.Commit(message, &git.CommitOptions{
+			Author: &object.Signature{
+				Name:  "test",
+				Email: "test@example.com",
+				When:  time.Now(),
+			},
+		})
+		require.NoError(t, err)
+		return hash
+	}
+
+	pushMainAndTag := func(tag string) {
+		err = workRepo.Push(&git.PushOptions{
+			RemoteName: "origin",
+			RefSpecs: []config.RefSpec{
+				config.RefSpec("refs/heads/main:refs/heads/main"),
+				config.RefSpec("+refs/tags/" + tag + ":refs/tags/" + tag),
+			},
+		})
+		require.NoError(t, err)
+	}
+
+	moveTag := func(tag string, hash plumbing.Hash) {
+		require.NoError(t, workRepo.Storer.SetReference(plumbing.NewHashReference(plumbing.NewTagReferenceName(tag), hash)))
+	}
+
+	hash1 := commitFile("app.txt", "v1\n", "commit 1")
+	moveTag("v1.0.0", hash1)
+	pushMainAndTag("v1.0.0")
+
+	resource := testkube.CONTENT_TestTriggerResources
+	trigger := testkube.TestTrigger{
+		Name:      "trigger-tag",
+		Namespace: "testkube",
+		Event:     string(testtriggersv1.TestTriggerEventGitTagPush),
+		Resource:  &resource,
+		ContentSelector: &testkube.TestTriggerContentSelector{
+			Git: &testkube.TestTriggerContentGit{
+				Uri:  remoteDir,
+				Tags: []string{"v1.0.0"},
+			},
+		},
+	}
+
+	var matched []string
+	informer := NewInformer(
+		stubTestTriggerClient{
+			listFn: func(_ context.Context, _ string, _ testtriggerclient.ListOptions, _ string) ([]testkube.TestTrigger, error) {
+				return []testkube.TestTrigger{trigger}, nil
+			},
+		},
+		stubMatcher{
+			matchTestTriggerFn: func(_ context.Context, triggerName, namespace string) error {
+				matched = append(matched, namespace+"/"+triggerName)
+				return nil
+			},
+		},
+		"testkube",
+		"",
+		Options{},
+	)
+
+	// First reconcile initializes baseline.
+	informer.updateRepositories(context.Background())
+	assert.Empty(t, matched)
+
+	hash2 := commitFile("app.txt", "v2\n", "commit 2")
+	moveTag("v1.0.0", hash2)
+	pushMainAndTag("v1.0.0")
+
+	informer.updateRepositories(context.Background())
+	assert.Equal(t, []string{"testkube/trigger-tag"}, matched)
+
+	hash3 := commitFile("app.txt", "v3\n", "commit 3")
+	moveTag("v1.0.0", hash3)
+	pushMainAndTag("v1.0.0")
+
+	informer.updateRepositories(context.Background())
+	assert.Equal(t, []string{"testkube/trigger-tag", "testkube/trigger-tag"}, matched)
+}
+
+func TestUpdateRepositories_TracksMovedTagWithPathsAcrossMultipleUpdates(t *testing.T) {
+	tmpDir := t.TempDir()
+	remoteDir := filepath.Join(tmpDir, "remote.git")
+	_, err := git.PlainInit(remoteDir, true)
+	require.NoError(t, err)
+
+	workDir := filepath.Join(tmpDir, "work")
+	workRepo, err := git.PlainInit(workDir, false)
+	require.NoError(t, err)
+	_, err = workRepo.CreateRemote(&config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{remoteDir},
+	})
+	require.NoError(t, err)
+	require.NoError(t, workRepo.Storer.SetReference(
+		plumbing.NewSymbolicReference(plumbing.HEAD, plumbing.NewBranchReferenceName("main")),
+	))
+	worktree, err := workRepo.Worktree()
+	require.NoError(t, err)
+
+	commitFile := func(path, content, message string) plumbing.Hash {
+		fullPath := filepath.Join(workDir, path)
+		require.NoError(t, os.MkdirAll(filepath.Dir(fullPath), 0o755))
+		require.NoError(t, os.WriteFile(fullPath, []byte(content), 0o644))
+		_, err = worktree.Add(path)
+		require.NoError(t, err)
+		hash, err := worktree.Commit(message, &git.CommitOptions{
+			Author: &object.Signature{
+				Name:  "test",
+				Email: "test@example.com",
+				When:  time.Now(),
+			},
+		})
+		require.NoError(t, err)
+		return hash
+	}
+
+	pushMainAndTag := func(tag string) {
+		err = workRepo.Push(&git.PushOptions{
+			RemoteName: "origin",
+			RefSpecs: []config.RefSpec{
+				config.RefSpec("refs/heads/main:refs/heads/main"),
+				config.RefSpec("+refs/tags/" + tag + ":refs/tags/" + tag),
+			},
+		})
+		require.NoError(t, err)
+	}
+
+	moveTag := func(tag string, hash plumbing.Hash) {
+		require.NoError(t, workRepo.Storer.SetReference(plumbing.NewHashReference(plumbing.NewTagReferenceName(tag), hash)))
+	}
+
+	hash1 := commitFile("src/app.txt", "v1\n", "commit 1")
+	moveTag("v1.0.0", hash1)
+	pushMainAndTag("v1.0.0")
+
+	resource := testkube.CONTENT_TestTriggerResources
+	trigger := testkube.TestTrigger{
+		Name:      "trigger-tag-path",
+		Namespace: "testkube",
+		Event:     string(testtriggersv1.TestTriggerEventGitTagPush),
+		Resource:  &resource,
+		ContentSelector: &testkube.TestTriggerContentSelector{
+			Git: &testkube.TestTriggerContentGit{
+				Uri:   remoteDir,
+				Tags:  []string{"v1.0.0"},
+				Paths: []string{"src/**"},
+			},
+		},
+	}
+
+	var matched []string
+	informer := NewInformer(
+		stubTestTriggerClient{
+			listFn: func(_ context.Context, _ string, _ testtriggerclient.ListOptions, _ string) ([]testkube.TestTrigger, error) {
+				return []testkube.TestTrigger{trigger}, nil
+			},
+		},
+		stubMatcher{
+			matchTestTriggerFn: func(_ context.Context, triggerName, namespace string) error {
+				matched = append(matched, namespace+"/"+triggerName)
+				return nil
+			},
+		},
+		"testkube",
+		"",
+		Options{},
+	)
+
+	informer.updateRepositories(context.Background())
+	assert.Empty(t, matched)
+
+	hash2 := commitFile("src/app.txt", "v2\n", "commit 2")
+	moveTag("v1.0.0", hash2)
+	pushMainAndTag("v1.0.0")
+
+	informer.updateRepositories(context.Background())
+	assert.Equal(t, []string{"testkube/trigger-tag-path"}, matched)
+
+	hash3 := commitFile("src/app.txt", "v3\n", "commit 3")
+	moveTag("v1.0.0", hash3)
+	pushMainAndTag("v1.0.0")
+
+	informer.updateRepositories(context.Background())
+	assert.Equal(t, []string{"testkube/trigger-tag-path", "testkube/trigger-tag-path"}, matched)
+}
+
 func TestGitConfigCacheKey_GroupsByNormalizedGitConfigAndNamespace(t *testing.T) {
-	authType := testkube.BASIC_ContentGitAuthType
 	keyA := gitConfigCacheKey("testkube", &testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
-		Revision: "main",
-		AuthType: &authType,
+		Branches: []string{"main"},
+		AuthType: string(testkube.BASIC_ContentGitAuthType),
 		Paths:    []string{"pkg"},
 	})
 	keyB := gitConfigCacheKey("testkube", &testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
-		Revision: "main",
-		AuthType: &authType,
+		Branches: []string{"main"},
+		AuthType: string(testkube.BASIC_ContentGitAuthType),
 		Paths:    []string{"test"},
+	})
+	keyWithIgnore := gitConfigCacheKey("testkube", &testkube.TestTriggerContentGit{
+		Uri:            "https://github.com/kubeshop/testkube.git",
+		Branches:       []string{"main"},
+		BranchesIgnore: []string{"main"},
+		AuthType:       string(testkube.BASIC_ContentGitAuthType),
+	})
+	keyWithTagIgnore := gitConfigCacheKey("testkube", &testkube.TestTriggerContentGit{
+		Uri:        "https://github.com/kubeshop/testkube.git",
+		Tags:       []string{"v*"},
+		TagsIgnore: []string{"v1.*"},
+		AuthType:   string(testkube.BASIC_ContentGitAuthType),
 	})
 	keyOtherNamespace := gitConfigCacheKey("team-a", &testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
-		Revision: "main",
-		AuthType: &authType,
+		Branches: []string{"main"},
+		AuthType: string(testkube.BASIC_ContentGitAuthType),
 	})
 
 	assert.Equal(t, keyA, keyB)
+	assert.NotEqual(t, keyA, keyWithIgnore)
+	assert.NotEqual(t, gitConfigCacheKey("testkube", &testkube.TestTriggerContentGit{
+		Uri:      "https://github.com/kubeshop/testkube.git",
+		Tags:     []string{"v*"},
+		AuthType: string(testkube.BASIC_ContentGitAuthType),
+	}), keyWithTagIgnore)
 	assert.NotEqual(t, keyA, keyOtherNamespace)
+}
+
+func TestMatchGlob(t *testing.T) {
+	tests := []struct {
+		name     string
+		pattern  string
+		input    string
+		expected bool
+	}{
+		{"exact match", "main.go", "main.go", true},
+		{"no match", "main.go", "other.go", false},
+		{"star matches extension", "*.go", "main.go", true},
+		{"doublestar matches nested", "src/**/*.go", "src/pkg/main.go", true},
+		{"doublestar matches multiple dirs", "src/**/*.go", "src/a/b/c.go", true},
+		{"doublestar no match outside prefix", "src/**/*.go", "pkg/main.go", false},
+		{"prefix directory match", "src", "src/main.go", true},
+		{"prefix directory exact", "src", "src", true},
+		{"prefix directory trailing slash", "src/", "src/main.go", true},
+		{"question mark single char", "?.go", "a.go", true},
+		{"question mark no match multi char", "?.go", "ab.go", false},
+		{"doublestar prefix only", "src/**", "src/a/b.go", true},
+		{"doublestar suffix only", "**/test.go", "a/b/test.go", true},
+		{"malformed pattern returns false", "[invalid", "anything", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, matchGlob(tt.pattern, tt.input))
+		})
+	}
+}
+
+func TestNameMatchesPatterns(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		patterns []string
+		expected bool
+	}{
+		{"empty patterns matches all", "main", nil, true},
+		{"exact match", "main", []string{"main"}, true},
+		{"no match", "develop", []string{"main"}, false},
+		{"glob star", "feature/foo", []string{"feature/*"}, true},
+		{"glob star no match", "bugfix/foo", []string{"feature/*"}, false},
+		{"multiple patterns first matches", "main", []string{"main", "develop"}, true},
+		{"multiple patterns second matches", "develop", []string{"main", "develop"}, true},
+		{"whitespace trimmed", "main", []string{"  main  "}, true},
+		{"empty pattern skipped", "main", []string{""}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, nameMatchesPatterns(tt.input, tt.patterns))
+		})
+	}
+}
+
+func TestNameMatchesAny(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		patterns []string
+		expected bool
+	}{
+		{"empty patterns returns false", "main", nil, false},
+		{"exact match", "main", []string{"main"}, true},
+		{"glob match", "v1.0.0", []string{"v*"}, true},
+		{"no match", "develop", []string{"main", "release/*"}, false},
+		{"glob question mark", "v1", []string{"v?"}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, nameMatchesAny(tt.input, tt.patterns))
+		})
+	}
+}
+
+func TestPathIsIgnored(t *testing.T) {
+	tests := []struct {
+		name     string
+		patterns []string
+		file     string
+		expected bool
+	}{
+		{"empty patterns", nil, "any/file.go", false},
+		{"matches glob", []string{"*.md"}, "README.md", true},
+		{"does not match", []string{"*.md"}, "main.go", false},
+		{"directory pattern", []string{"docs"}, "docs/guide.md", true},
+		{"multiple patterns second matches", []string{"*.txt", "*.md"}, "notes.md", true},
+		{"doublestar ignore", []string{"**/*.test.js"}, "src/deep/file.test.js", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, pathIsIgnored(tt.patterns, tt.file))
+		})
+	}
+}
+
+func TestBranchFromRef(t *testing.T) {
+	tests := []struct {
+		ref      string
+		expected string
+	}{
+		{"refs/heads/main", "main"},
+		{"refs/heads/feature/foo", "feature/foo"},
+		{"refs/tags/v1.0", ""},
+		{"HEAD", ""},
+		{"", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.ref, func(t *testing.T) {
+			assert.Equal(t, tt.expected, branchFromRef(tt.ref))
+		})
+	}
+}
+
+func TestTagFromRef(t *testing.T) {
+	tests := []struct {
+		ref      string
+		expected string
+	}{
+		{"refs/tags/v1.0", "v1.0"},
+		{"refs/tags/release/2.0", "release/2.0"},
+		{"refs/heads/main", ""},
+		{"HEAD", ""},
+		{"", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.ref, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tagFromRef(tt.ref))
+		})
+	}
+}
+
+func TestEffectiveRefsKey(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   *testkube.TestTriggerContentGit
+		expected string
+	}{
+		{
+			"branches only",
+			&testkube.TestTriggerContentGit{Branches: []string{"main", "develop"}},
+			"b:main,b:develop",
+		},
+		{
+			"tags only",
+			&testkube.TestTriggerContentGit{Tags: []string{"v1.0", "v2.0"}},
+			"t:v1.0,t:v2.0",
+		},
+		{
+			"branches and tags",
+			&testkube.TestTriggerContentGit{Branches: []string{"main"}, Tags: []string{"v1.0"}},
+			"b:main,t:v1.0",
+		},
+		{
+			"empty",
+			&testkube.TestTriggerContentGit{},
+			"",
+		},
+		{
+			"whitespace trimmed",
+			&testkube.TestTriggerContentGit{Branches: []string{" main "}},
+			"b:main",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, effectiveRefsKey(tt.config))
+		})
+	}
+}
+
+func TestRefSubKey(t *testing.T) {
+	tests := []struct {
+		name       string
+		triggerKey string
+		ref        string
+		expected   string
+	}{
+		{"with ref", "v1:ns/trigger", "refs/heads/main", "v1:ns/trigger|ref|refs/heads/main"},
+		{"empty ref returns trigger key", "v1:ns/trigger", "", "v1:ns/trigger"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, refSubKey(tt.triggerKey, tt.ref))
+		})
+	}
+}
+
+func TestRefDirectorySuffix_AvoidsSanitizerCollisions(t *testing.T) {
+	refA := "refs/heads/a-b"
+	refB := "refs/heads/a/b"
+
+	assert.Equal(t, envVarNameSanitizer.ReplaceAllString(refA, "_"), envVarNameSanitizer.ReplaceAllString(refB, "_"),
+		"sanitizer output should collide for this regression test setup")
+	assert.NotEqual(t, refDirectorySuffix(refA), refDirectorySuffix(refB))
+
+	key := triggerKey(testTriggerSource, "ns", "trigger")
+	repoA := triggerRepositoryPathFromKey(key) + refDelimiter + refDirectorySuffix(refA)
+	repoB := triggerRepositoryPathFromKey(key) + refDelimiter + refDirectorySuffix(refB)
+	assert.NotEqual(t, repoA, repoB)
+}
+
+func TestEffectiveRefs(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   *testkube.TestTriggerContentGit
+		expected []string
+	}{
+		{
+			"exact branches",
+			&testkube.TestTriggerContentGit{Branches: []string{"main", "develop"}},
+			[]string{"refs/heads/main", "refs/heads/develop"},
+		},
+		{
+			"exact tags",
+			&testkube.TestTriggerContentGit{Tags: []string{"v1.0", "v2.0"}},
+			[]string{"refs/tags/v1.0", "refs/tags/v2.0"},
+		},
+		{
+			"glob branches skipped",
+			&testkube.TestTriggerContentGit{Branches: []string{"feature/*"}},
+			nil,
+		},
+		{
+			"glob tags skipped",
+			&testkube.TestTriggerContentGit{Tags: []string{"v*"}},
+			nil,
+		},
+		{
+			"mixed exact and glob",
+			&testkube.TestTriggerContentGit{Branches: []string{"main", "release/*"}},
+			[]string{"refs/heads/main"},
+		},
+		{
+			"empty input",
+			&testkube.TestTriggerContentGit{},
+			nil,
+		},
+		{
+			"whitespace only entries skipped",
+			&testkube.TestTriggerContentGit{Branches: []string{"  ", "main"}},
+			[]string{"refs/heads/main"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := effectiveRefs(tt.config)
+			if tt.expected == nil {
+				assert.Nil(t, result)
+			} else {
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestPathMatchesNormalized_GlobPatterns(t *testing.T) {
+	tests := []struct {
+		name     string
+		paths    []string
+		file     string
+		expected bool
+	}{
+		{"glob star extension", []string{"*.md"}, "README.md", true},
+		{"glob star no match different ext", []string{"*.md"}, "main.go", false},
+		{"doublestar recursive", []string{"src/**/*.go"}, "src/pkg/file.go", true},
+		{"directory prefix", []string{"pkg"}, "pkg/util.go", true},
+		{"exact file", []string{"Makefile"}, "Makefile", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			normalized := normalizePaths(tt.paths)
+			assert.Equal(t, tt.expected, pathMatchesNormalized(normalized, tt.file))
+		})
+	}
+}
+
+func TestTriggerKeyFromRefSubKey(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"with ref separator", "v1:ns/trigger|ref|refs/heads/main", "v1:ns/trigger"},
+		{"without ref separator", "v1:ns/trigger", "v1:ns/trigger"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, triggerKeyFromRefSubKey(tt.input))
+		})
+	}
+}
+
+func TestCollectHeadMetadata_UsesPreferredRefForGlobBranches(t *testing.T) {
+	informer := &Informer{}
+	gitConfig := &testkube.TestTriggerContentGit{
+		Branches: []string{"release/*"},
+	}
+
+	meta := informer.collectHeadMetadata(nil, "abc123", gitConfig, "refs/heads/release/v1")
+
+	assert.Equal(t, "abc123", meta[GitMetaKeyCommit])
+	assert.Equal(t, "refs/heads/release/v1", meta[GitMetaKeyRef])
+	assert.Equal(t, "release/v1", meta[GitMetaKeyBranch])
+	assert.Empty(t, meta[GitMetaKeyTag])
+}
+
+func TestCollectHeadMetadata_BranchesOnlyDoesNotSetTag(t *testing.T) {
+	tmpDir := t.TempDir()
+	repo, err := git.PlainInit(tmpDir, false)
+	require.NoError(t, err)
+
+	require.NoError(t, repo.Storer.SetReference(
+		plumbing.NewSymbolicReference(plumbing.HEAD, plumbing.NewBranchReferenceName("main")),
+	))
+
+	filePath := filepath.Join(tmpDir, "README.md")
+	require.NoError(t, os.WriteFile(filePath, []byte("test\n"), 0o644))
+
+	worktree, err := repo.Worktree()
+	require.NoError(t, err)
+	_, err = worktree.Add("README.md")
+	require.NoError(t, err)
+
+	hash, err := worktree.Commit("initial", &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "test",
+			Email: "test@example.com",
+			When:  time.Now(),
+		},
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, repo.Storer.SetReference(
+		plumbing.NewHashReference(plumbing.NewTagReferenceName("v1.0.0"), hash),
+	))
+
+	informer := &Informer{}
+	gitConfig := &testkube.TestTriggerContentGit{
+		Branches: []string{"main"},
+	}
+
+	meta := informer.collectHeadMetadata(repo, hash.String(), gitConfig, "")
+
+	assert.Equal(t, hash.String(), meta[GitMetaKeyCommit])
+	assert.Equal(t, "refs/heads/main", meta[GitMetaKeyRef])
+	assert.Equal(t, "main", meta[GitMetaKeyBranch])
+	assert.Empty(t, meta[GitMetaKeyTag])
 }

@@ -36,10 +36,11 @@ type Coordinator struct {
 
 	checkInterval time.Duration
 
-	mu     sync.Mutex
-	tasks  []Task
-	active *taskGroup
-	leader bool
+	mu       sync.Mutex
+	tasks    []Task
+	active   *taskGroup
+	leader   bool
+	disabled bool
 }
 
 const (
@@ -83,6 +84,19 @@ func WithCheckInterval(interval time.Duration) Option {
 	}
 }
 
+// WithLeaderElectionDisabled controls whether leader election runs. When disabled,
+// Run starts the registered tasks directly and never contacts the lease backend (no
+// lease object, no periodic API calls). It is intended for explicitly single-replica
+// deployments where election is unnecessary overhead.
+//
+// WARNING: do not disable this with more than one replica — every replica would run
+// the leader-only tasks simultaneously.
+func WithLeaderElectionDisabled(disabled bool) Option {
+	return func(c *Coordinator) {
+		c.disabled = disabled
+	}
+}
+
 // Register adds a task that must only run while this instance holds the leader lease. Register must be
 // called before Run.
 func (c *Coordinator) Register(task Task) {
@@ -95,6 +109,17 @@ func (c *Coordinator) Register(task Task) {
 // Run participates in leader election until the provided context is cancelled. It returns ctx.Err() when
 // shutting down gracefully.
 func (c *Coordinator) Run(ctx context.Context) error {
+	// Leader election disabled: run the registered tasks directly as the sole owner,
+	// without ever contacting the lease backend. acquire()/release() handle task
+	// lifecycle and never touch the backend, so this adds zero lease/API load.
+	if c.disabled {
+		c.logger.Infow("leader coordinator: leader election disabled, running tasks directly without lease coordination")
+		c.acquire(ctx)
+		<-ctx.Done()
+		c.release()
+		return ctx.Err()
+	}
+
 	ticker := time.NewTicker(c.checkInterval)
 	defer ticker.Stop()
 
