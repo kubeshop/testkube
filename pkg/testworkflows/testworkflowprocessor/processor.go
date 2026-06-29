@@ -312,7 +312,9 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	// Load the image details when necessary.
 	// Determine inspector pull policy per image so cache bypass follows the effective
-	// runtime pull policy (Always bypasses cache, IfNotPresent/Never uses cache).
+	// runtime pull policy. Only the internally injected runner images may bypass the
+	// cache (Always -> live fetch); user containers are always inspected from cache
+	// (IfNotPresent) so their runtime pull policy never forces a registry call here.
 	hasPodSecurityContextGroup := podConfig.SecurityContext != nil && podConfig.SecurityContext.RunAsGroup != nil
 	imageNames := root.GetImages(!hasPodSecurityContextGroup)
 	images := make(map[string]*imageinspector.Info)
@@ -326,7 +328,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		if isRunnerImage && defaultImagePullPolicy != "" && (policy == "" || policy == corev1.PullIfNotPresent) {
 			policy = defaultImagePullPolicy
 		}
-		if policy == corev1.PullAlways {
+		if isRunnerImage && policy == corev1.PullAlways {
 			imagePullPolicies[image] = corev1.PullAlways
 			continue
 		}
