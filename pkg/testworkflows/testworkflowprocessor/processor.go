@@ -471,7 +471,11 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	options.Config.Execution.SecretMountPaths = secretMountPaths
 
-	// Apply default image pull policy for internally injected runner containers
+	// Apply default image pull policy for internally injected runner containers.
+	// NOTE: a default of "Never" is honored as-is (e.g. for air-gapped clusters); it
+	// requires the runner init/toolkit images to be pre-pulled on every node that runs
+	// workflows, otherwise the pod fails with ErrImageNeverPull. See the
+	// defaultImagePullPolicy documentation in the Helm values.
 	if options.Config.Worker.DefaultImagePullPolicy != "" {
 		defaultPolicy := corev1.PullPolicy(options.Config.Worker.DefaultImagePullPolicy)
 		for i := range containers {
