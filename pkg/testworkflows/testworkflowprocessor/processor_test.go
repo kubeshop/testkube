@@ -382,3 +382,61 @@ func TestBundle_DefaultRunnerResources_DoesNotOverrideExplicitResources(t *testi
 	}
 	require.True(t, found, "expected to find container with custom-image:latest")
 }
+
+// TestBundle_DefaultRunnerResources_AppliesLimitsWhenOnlyRequestsSet locks in the fix
+// for finding #4: defaults for requests and limits must be applied independently. A
+// runner container that already has only requests set (here inherited from the
+// workflow-level container config) must still receive the configured default limits,
+// instead of being skipped because it has some resources set.
+func TestBundle_DefaultRunnerResources_AppliesLimitsWhenOnlyRequestsSet(t *testing.T) {
+	proc := New(&dummyInspector{}).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+	workflow := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			// Container-level config propagates to the injected runner containers,
+			// giving them a request but no limit.
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Container: &testworkflowsv1.ContainerConfig{
+					Resources: &testworkflowsv1.Resources{
+						Requests: map[corev1.ResourceName]intstr.IntOrString{
+							corev1.ResourceCPU: intstr.FromString("50m"),
+						},
+					},
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "echo hello"}},
+			},
+		},
+	}
+
+	bundle, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+		Config: testworkflowconfig.InternalConfig{
+			Resource: testworkflowconfig.ResourceConfig{
+				Id:     "resource-id",
+				RootId: "resource-root-id",
+			},
+			Worker: testworkflowconfig.WorkerConfig{
+				DefaultRunnerResources: testworkflowconfig.ContainerResourceConfig{
+					Limits: testworkflowconfig.ContainerResources{
+						CPU:    "500m",
+						Memory: "512Mi",
+					},
+				},
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	allContainers := append(bundle.Job.Spec.Template.Spec.InitContainers, bundle.Job.Spec.Template.Spec.Containers...)
+	require.NotEmpty(t, allContainers)
+	for _, c := range allContainers {
+		// The pre-existing request must be preserved.
+		assert.Equalf(t, resource.MustParse("50m"), c.Resources.Requests[corev1.ResourceCPU], "container %s should keep its inherited CPU request", c.Name)
+		// The default limits must still be applied even though requests were already set.
+		assert.Equalf(t, resource.MustParse("500m"), c.Resources.Limits[corev1.ResourceCPU], "container %s should receive default CPU limit", c.Name)
+		assert.Equalf(t, resource.MustParse("512Mi"), c.Resources.Limits[corev1.ResourceMemory], "container %s should receive default memory limit", c.Name)
+	}
+}

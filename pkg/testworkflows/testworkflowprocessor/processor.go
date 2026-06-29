@@ -507,24 +507,25 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			if containers[i].Image != constants.DefaultInitImage && containers[i].Image != constants.DefaultToolkitImage {
 				continue
 			}
-			if len(containers[i].Resources.Requests) == 0 && len(containers[i].Resources.Limits) == 0 {
-				if defaultRes.Requests.CPU != "" || defaultRes.Requests.Memory != "" {
-					containers[i].Resources.Requests = corev1.ResourceList{}
-					if defaultRes.Requests.CPU != "" {
-						containers[i].Resources.Requests[corev1.ResourceCPU] = cpuReq
-					}
-					if defaultRes.Requests.Memory != "" {
-						containers[i].Resources.Requests[corev1.ResourceMemory] = memReq
-					}
+			// Apply request and limit defaults independently so a container that already
+			// has only one of them set (e.g. only requests via a template) still receives
+			// the configured defaults for the other.
+			if len(containers[i].Resources.Requests) == 0 && (defaultRes.Requests.CPU != "" || defaultRes.Requests.Memory != "") {
+				containers[i].Resources.Requests = corev1.ResourceList{}
+				if defaultRes.Requests.CPU != "" {
+					containers[i].Resources.Requests[corev1.ResourceCPU] = cpuReq
 				}
-				if defaultRes.Limits.CPU != "" || defaultRes.Limits.Memory != "" {
-					containers[i].Resources.Limits = corev1.ResourceList{}
-					if defaultRes.Limits.CPU != "" {
-						containers[i].Resources.Limits[corev1.ResourceCPU] = cpuLim
-					}
-					if defaultRes.Limits.Memory != "" {
-						containers[i].Resources.Limits[corev1.ResourceMemory] = memLim
-					}
+				if defaultRes.Requests.Memory != "" {
+					containers[i].Resources.Requests[corev1.ResourceMemory] = memReq
+				}
+			}
+			if len(containers[i].Resources.Limits) == 0 && (defaultRes.Limits.CPU != "" || defaultRes.Limits.Memory != "") {
+				containers[i].Resources.Limits = corev1.ResourceList{}
+				if defaultRes.Limits.CPU != "" {
+					containers[i].Resources.Limits[corev1.ResourceCPU] = cpuLim
+				}
+				if defaultRes.Limits.Memory != "" {
+					containers[i].Resources.Limits[corev1.ResourceMemory] = memLim
 				}
 			}
 		}
