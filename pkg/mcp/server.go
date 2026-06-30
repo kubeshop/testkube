@@ -83,8 +83,11 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	// Agent tools
 	mcpServer.AddTool(tools.ListAgents(client))
 
-	// Credential tools
-	mcpServer.AddTool(tools.ListCredentials(client))
+	// Credential tools — exposed only on hosted MCP surfaces (bridge / control-plane
+	// endpoint), not the local CLI, so credential references aren't surfaced locally.
+	if cfg.IncludeCredentialTools {
+		mcpServer.AddTool(tools.ListCredentials(client))
+	}
 
 	// Execution tools
 	mcpServer.AddTool(tools.FetchExecutionLogs(client))
