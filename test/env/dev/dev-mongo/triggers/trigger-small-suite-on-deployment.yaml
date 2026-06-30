@@ -8,7 +8,7 @@ spec:
       testkube.io/resource-kind: Deployment
       testkube.io/resource-name: tk-api-testkube-cloud-api
       testkube.io/resource-namespace: app-mongo
-  event: eployment-image-update
+  event: deployment-image-update
   action: run
   execution: testworkflow
   testSelector:
