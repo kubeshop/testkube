@@ -27,7 +27,6 @@ RUN cd cmd/api-server; \
     -o /app -mod mod -a .
 
 FROM ${ALPINE_IMAGE}
-# Apply available Alpine security patches (openssl, ...) then install runtime deps.
 RUN apk --no-cache upgrade && apk --no-cache add ca-certificates libssl3 git
 WORKDIR /root/
 COPY --from=build /app /bin/app
