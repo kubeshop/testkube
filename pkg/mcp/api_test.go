@@ -130,6 +130,38 @@ func TestAPIClient_DebugInfo_URLIncludesQueryParams(t *testing.T) {
 	assert.Contains(t, gotURL, "tail=50")
 }
 
+func TestAPIClient_ListCredentials_HitsEnvScopedFilterAll(t *testing.T) {
+	const (
+		orgID = "org-1"
+		envID = "env-1"
+		token = "tok"
+		body  = `{"elements":[{"name":"github-access-token","type":"secret","reference":"github-access-token"}]}`
+	)
+
+	var gotPath, gotQuery, gotAuth string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotQuery = r.URL.Query().Get("filter")
+		gotAuth = r.Header.Get("Authorization")
+		_, _ = io.WriteString(w, body)
+	}))
+	defer server.Close()
+
+	client := NewAPIClient(&MCPServerConfig{
+		ControlPlaneUrl: server.URL,
+		AccessToken:     token,
+		OrgId:           orgID,
+		EnvId:           envID,
+	}, server.Client())
+
+	result, err := client.ListCredentials(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, body, result)
+	assert.Equal(t, "/organizations/"+orgID+"/environments/"+envID+"/credentials", gotPath)
+	assert.Equal(t, "all", gotQuery)
+	assert.Equal(t, "Bearer "+token, gotAuth)
+}
+
 func TestExtractErrorDetail(t *testing.T) {
 	t.Run("problem json detail", func(t *testing.T) {
 		got := extractErrorDetail([]byte(`{"title":"Bad Request","detail":"boom"}`))
