@@ -22,7 +22,8 @@ RUN cd cmd/testworkflow-init; \
 
 FROM ${BUSYBOX_IMAGE} AS busybox
 FROM ${ALPINE_IMAGE}
-RUN apk --no-cache add ca-certificates libssl3 git openssh-client
+# Apply available Alpine security patches (openssl, ...) then install runtime deps.
+RUN apk --no-cache upgrade && apk --no-cache add ca-certificates libssl3 git openssh-client
 COPY --from=busybox /bin /.tktw-bin
 COPY --from=build /app/testworkflow-toolkit /toolkit
 COPY --from=build /app/testworkflow-init /init
