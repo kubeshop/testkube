@@ -27,7 +27,7 @@ RUN cd cmd/api-server; \
     -o /app -mod mod -a .
 
 FROM ${ALPINE_IMAGE}
-RUN apk --no-cache add ca-certificates libssl3 git
+RUN apk --no-cache upgrade && apk --no-cache add ca-certificates libssl3 git
 WORKDIR /root/
 COPY --from=build /app /bin/app
 USER 1001
