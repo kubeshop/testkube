@@ -78,6 +78,8 @@ func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.P
 			AllowLowSecurityFields:            config.AllowLowSecurityFields,
 			DisableResourceMetrics:            config.DisableResourceMetrics,
 			EmptyDirSizeLimit:                 config.EmptyDirSizeLimit,
+			DefaultImagePullPolicy:            config.DefaultImagePullPolicy,
+			DefaultRunnerResources:            config.DefaultRunnerResources,
 		},
 	}
 }

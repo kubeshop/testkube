@@ -184,6 +184,32 @@ spec:
             {{- end }}
             - name: TESTKUBE_DEFAULT_STORAGE_CLASS_NAME
               value: "{{ .Values.defaultStorageClassName }}"
+            {{- if .Values.defaultImagePullPolicy }}
+            - name: TESTKUBE_DEFAULT_IMAGE_PULL_POLICY
+              value: "{{ .Values.defaultImagePullPolicy }}"
+            {{- end }}
+            {{- with .Values.defaultRunnerResources }}
+            {{- with .requests }}
+            {{- if .cpu }}
+            - name: TESTKUBE_DEFAULT_RUNNER_CPU_REQUEST
+              value: "{{ .cpu }}"
+            {{- end }}
+            {{- if .memory }}
+            - name: TESTKUBE_DEFAULT_RUNNER_MEMORY_REQUEST
+              value: "{{ .memory }}"
+            {{- end }}
+            {{- end }}
+            {{- with .limits }}
+            {{- if .cpu }}
+            - name: TESTKUBE_DEFAULT_RUNNER_CPU_LIMIT
+              value: "{{ .cpu }}"
+            {{- end }}
+            {{- if .memory }}
+            - name: TESTKUBE_DEFAULT_RUNNER_MEMORY_LIMIT
+              value: "{{ .memory }}"
+            {{- end }}
+            {{- end }}
+            {{- end }}
             - name: TESTKUBE_TW_TOOLKIT_IMAGE
               value: "{{ include "testkube-tw-toolkit.image" . }}"
             - name: TESTKUBE_TW_INIT_IMAGE
