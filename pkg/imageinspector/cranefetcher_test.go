@@ -223,10 +223,10 @@ func TestParseSecretData(t *testing.T) {
 
 		out, err := ParseSecretData([]corev1.Secret{secret}, "index.docker.io", "index.docker.io/library/nginx:latest")
 
-		assert.NoError(t, err)
-		assert.Equal(t, 1, len(out))
-		assert.Equal(t, "dockeruser", out[0].Username)
-		assert.Equal(t, "dockerpass", out[0].Password)
+		if assert.NoError(t, err) && assert.Len(t, out, 1) {
+			assert.Equal(t, "dockeruser", out[0].Username)
+			assert.Equal(t, "dockerpass", out[0].Password)
+		}
 	})
 
 	t.Run("parse docker config missed data", func(t *testing.T) {
