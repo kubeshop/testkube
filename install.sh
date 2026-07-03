@@ -59,7 +59,7 @@ _resolve_tag() {
 
   if [ "$1" = "beta" ]; then
     TAG="$(
-      curl -sSf "${GITHUB_API}/releases" 2>/dev/null |
+      curl -sSLf "${GITHUB_API}/releases" 2>/dev/null |
         jq -r '[.[] | select(.prerelease)][0].tag_name // empty'
     )"
     if [ -n "${TAG}" ]; then
@@ -69,7 +69,7 @@ _resolve_tag() {
     echo "No pre-releases found. Installing latest release" >&2
   fi
 
-  curl -sSf "${GITHUB_API}/releases/latest" 2>/dev/null | jq -r '.tag_name // empty'
+  curl -sSLf "${GITHUB_API}/releases/latest" 2>/dev/null | jq -r '.tag_name // empty'
 }
 
 # Normalize the tag format based on the version number when a version is
@@ -121,7 +121,9 @@ _verify_checksum() {
     return 0
   fi
 
-  EXPECTED="$(grep " ${TARBALL_NAME}\$" "${WORKDIR}/checksums.txt" | cut -d' ' -f1)"
+  # Exact field match — the tarball name contains dots that grep would treat
+  # as regex wildcards.
+  EXPECTED="$(awk -v name="${TARBALL_NAME}" '$2 == name {print $1}' "${WORKDIR}/checksums.txt")"
   if [ -z "${EXPECTED}" ]; then
     echo "Warning: no checksum entry found for ${TARBALL_NAME}, skipping checksum verification" >&2
     return 0
