@@ -240,17 +240,22 @@ func ParseSecretData(imageSecrets []corev1.Secret, registry, image string) ([]au
 		var pathFound, hostFound bool
 		for _, key := range keys {
 			normalized := stripURLScheme(key)
-			// Path-scoped (mirror) credential: the key prefixes the image path.
-			if strings.Contains(normalized, "/") && strings.HasPrefix(image, normalized) {
+
+			host, isRegistry := registryHost(normalized)
+			if isRegistry {
+				// Registry-level credential: the key's host equals the registry.
+				if host == registry && !hostFound {
+					hostCreds, hostFound = auths.Auths[key], true
+				}
+				continue
+			}
+
+			// Path-scoped (mirror) credential: non-registry keys that prefix the image path.
+			if strings.HasPrefix(image, normalized) {
 				if len(normalized) > bestPathLen {
 					bestPathLen = len(normalized)
 					pathCreds, pathFound = auths.Auths[key], true
 				}
-				continue
-			}
-			// Registry-level credential: the key's host equals the registry.
-			if host, isRegistry := registryHost(normalized); isRegistry && host == registry && !hostFound {
-				hostCreds, hostFound = auths.Auths[key], true
 			}
 		}
 		switch {
