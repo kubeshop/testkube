@@ -165,6 +165,22 @@ func stripURLScheme(s string) string {
 	return s
 }
 
+// registryHost splits a scheme-stripped auth key into its host and reports
+// whether the key refers to a registry as a whole rather than a path-scoped
+// mirror entry. Keys with no path, or with only the legacy Docker
+// credential-store API suffix (e.g. "index.docker.io/v1/"), are registry keys.
+func registryHost(normalizedKey string) (host string, isRegistry bool) {
+	host, rest, hasPath := strings.Cut(normalizedKey, "/")
+	if !hasPath {
+		return host, true
+	}
+	switch strings.Trim(rest, "/") {
+	case "", "v1", "v2":
+		return host, true
+	}
+	return host, false
+}
+
 func determineUserGroupPair(userGroupStr string) (int64, int64) {
 	if userGroupStr == "" {
 		userGroupStr = "0"
@@ -200,19 +216,45 @@ func ParseSecretData(imageSecrets []corev1.Secret, registry, image string) ([]au
 			return nil, fmt.Errorf("imagePullSecret %s contains neither .dockercfg nor .dockerconfigjson", imageSecret.Name)
 		}
 
-		// Determine if there is a secret for the specified registry.
-		// Some dockerconfigjson secrets (e.g. the traditional Docker credential-store
-		// format, like "https://index.docker.io/v1/") key their auths map with a
-		// scheme-prefixed URL rather than a bare hostname, so fall back to a
-		// scheme-insensitive lookup when the exact key isn't found.
+		// Determine which credentials to use for the specified registry, in
+		// order of decreasing specificity:
+		//   1. an exact match on the registry key,
+		//   2. the longest path-scoped key that prefixes the image (mirror auth),
+		//   3. a scheme-insensitive match on the registry host, which also covers
+		//      the traditional Docker credential-store format (e.g. the key
+		//      "https://index.docker.io/v1/" for the "index.docker.io" registry).
+		// Keys are visited in sorted order so selection is deterministic when
+		// several keys would otherwise match equally.
 		creds, ok := auths.Auths[registry]
 		if !ok {
-			normalizedRegistry := stripURLScheme(registry)
-			for key, value := range auths.Auths {
-				if stripURLScheme(key) == normalizedRegistry {
-					creds, ok = value, true
-					break
+			keys := make([]string, 0, len(auths.Auths))
+			for key := range auths.Auths {
+				keys = append(keys, key)
+			}
+			sort.Strings(keys)
+
+			bestPathLen := -1
+			var hostCreds authn.AuthConfig
+			var hostFound bool
+			for _, key := range keys {
+				normalized := stripURLScheme(key)
+				// Path-scoped (mirror) credential: the key prefixes the image path.
+				if strings.Contains(normalized, "/") && strings.HasPrefix(image, normalized) {
+					if len(normalized) > bestPathLen {
+						bestPathLen = len(normalized)
+						creds, ok = auths.Auths[key], true
+					}
+					continue
 				}
+				// Registry-level credential: the key's host equals the registry.
+				if host, isRegistry := registryHost(normalized); isRegistry && host == registry && !hostFound {
+					hostCreds, hostFound = auths.Auths[key], true
+				}
+			}
+			// A path-scoped match is more specific, so only fall back to the
+			// registry-level credential when no path-scoped key matched.
+			if bestPathLen < 0 && hostFound {
+				creds, ok = hostCreds, true
 			}
 		}
 		if ok {
@@ -222,37 +264,6 @@ func ParseSecretData(imageSecrets []corev1.Secret, registry, image string) ([]au
 			}
 
 			results = append(results, authn.AuthConfig{Username: username, Password: password})
-		} else {
-			var slice []struct {
-				Path  string
-				Creds authn.AuthConfig
-			}
-
-			for path, creds := range auths.Auths {
-				slice = append(slice, struct {
-					Path  string
-					Creds authn.AuthConfig
-				}{
-					Path:  path,
-					Creds: creds,
-				})
-			}
-
-			sort.Slice(slice, func(i, j int) bool {
-				return slice[i].Path > slice[j].Path
-			})
-
-			for _, item := range slice {
-				if strings.HasPrefix(image, item.Path) {
-					username, password, err := extractRegistryCredentials(item.Creds)
-					if err != nil {
-						return nil, err
-					}
-
-					results = append(results, authn.AuthConfig{Username: username, Password: password})
-					break
-				}
-			}
 		}
 	}
 

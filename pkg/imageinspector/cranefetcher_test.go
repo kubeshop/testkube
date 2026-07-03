@@ -122,6 +122,52 @@ func TestParseSecretData(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("path-scoped credential wins over scheme-prefixed registry credential", func(t *testing.T) {
+
+		secret := corev1.Secret{
+			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"https://registry.gitlab.com\": {\"username\": \"registryuser\", \"password\": \"registrypass\"}, \"registry.gitlab.com/company/path\": {\"username\": \"pathuser\", \"password\": \"pathpass\"}}}")},
+		}
+
+		out, err := ParseSecretData([]corev1.Secret{secret}, "registry.gitlab.com", "registry.gitlab.com/company/path/image")
+
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(out))
+		assert.Equal(t, "pathuser", out[0].Username)
+		assert.Equal(t, "pathpass", out[0].Password)
+	})
+
+	t.Run("scheme-insensitive registry match is deterministic across duplicate hosts", func(t *testing.T) {
+
+		secret := corev1.Secret{
+			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"https://reg.example.com\": {\"username\": \"httpsuser\", \"password\": \"httpspass\"}, \"http://reg.example.com\": {\"username\": \"httpuser\", \"password\": \"httppass\"}}}")},
+		}
+
+		// Keys are visited in sorted order, so "http://..." (which sorts before
+		// "https://...") is selected deterministically on every run.
+		for range 20 {
+			out, err := ParseSecretData([]corev1.Secret{secret}, "reg.example.com", "reg.example.com/image")
+
+			assert.NoError(t, err)
+			assert.Equal(t, 1, len(out))
+			assert.Equal(t, "httpuser", out[0].Username)
+			assert.Equal(t, "httppass", out[0].Password)
+		}
+	})
+
+	t.Run("legacy docker credential-store key matches bare registry host", func(t *testing.T) {
+
+		secret := corev1.Secret{
+			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"https://index.docker.io/v1/\": {\"username\": \"dockeruser\", \"password\": \"dockerpass\"}}}")},
+		}
+
+		out, err := ParseSecretData([]corev1.Secret{secret}, "index.docker.io", "index.docker.io/library/nginx:latest")
+
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(out))
+		assert.Equal(t, "dockeruser", out[0].Username)
+		assert.Equal(t, "dockerpass", out[0].Password)
+	})
+
 	t.Run("parse docker config missed data", func(t *testing.T) {
 
 		secret := corev1.Secret{
