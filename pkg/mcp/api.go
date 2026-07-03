@@ -878,7 +878,7 @@ func (c *APIClient) ListWorkflowTemplates(ctx context.Context, selector string) 
 
 	return c.makeRequest(ctx, APIRequest{
 		Method:      "GET",
-		Path:        "/test-workflow-templates",
+		Path:        "/agent/test-workflow-templates",
 		Scope:       ApiScopeOrgEnv,
 		QueryParams: queryParams,
 	})
@@ -887,7 +887,7 @@ func (c *APIClient) ListWorkflowTemplates(ctx context.Context, selector string) 
 func (c *APIClient) GetWorkflowTemplateDefinition(ctx context.Context, templateName string) (string, error) {
 	return c.makeRequest(ctx, APIRequest{
 		Method: "GET",
-		Path:   "/test-workflow-templates/{templateName}",
+		Path:   "/agent/test-workflow-templates/{templateName}",
 		Scope:  ApiScopeOrgEnv,
 		PathParams: map[string]string{
 			"templateName": templateName,
@@ -901,7 +901,7 @@ func (c *APIClient) GetWorkflowTemplateDefinition(ctx context.Context, templateN
 func (c *APIClient) CreateWorkflowTemplate(ctx context.Context, templateDefinition string) (string, error) {
 	return c.makeRequest(ctx, APIRequest{
 		Method: "POST",
-		Path:   "/test-workflow-templates",
+		Path:   "/agent/test-workflow-templates",
 		Scope:  ApiScopeOrgEnv,
 		Body:   templateDefinition,
 		Headers: map[string]string{
@@ -913,7 +913,7 @@ func (c *APIClient) CreateWorkflowTemplate(ctx context.Context, templateDefiniti
 func (c *APIClient) UpdateWorkflowTemplate(ctx context.Context, templateName, templateDefinition string) (string, error) {
 	return c.makeRequest(ctx, APIRequest{
 		Method: "PUT",
-		Path:   "/test-workflow-templates/{templateName}",
+		Path:   "/agent/test-workflow-templates/{templateName}",
 		Scope:  ApiScopeOrgEnv,
 		PathParams: map[string]string{
 			"templateName": templateName,
