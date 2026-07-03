@@ -126,7 +126,7 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
          ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          ($11::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE($12::text, '') = '' OR e.running_context->'actor'->>'name' = $12::text)
-    AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type_' = $13::text)
+    AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type' = $13::text)
     AND (COALESCE($14::text, '') = '' OR e.id = $14::text OR e.group_id = $14::text)
     AND (COALESCE($15, NULL) IS NULL OR
          ($15::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
@@ -524,7 +524,7 @@ WHERE e.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = $1 AN
          ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          ($11::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE($12::text, '') = '' OR e.running_context->'actor'->>'name' = $12::text)
-    AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type_' = $13::text)
+    AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type' = $13::text)
     AND (COALESCE($14::text, '') = '' OR e.id = $14::text OR e.group_id = $14::text)
     AND (COALESCE($15, NULL) IS NULL OR
          ($15::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
@@ -805,6 +805,7 @@ SELECT
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
     rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status,
+    -- Build json object for related joins (signatures, output,s reports).
     COALESCE(
         (SELECT json_agg(
             json_build_object(
@@ -2433,7 +2434,7 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
          ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          ($11::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE($12::text, '') = '' OR e.running_context->'actor'->>'name' = $12::text)
-    AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type_' = $13::text)
+    AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type' = $13::text)
     AND (COALESCE($14::text, '') = '' OR e.id = $14::text OR e.group_id = $14::text)
     AND (COALESCE($15, NULL) IS NULL OR
          ($15::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
@@ -2771,7 +2772,7 @@ FROM (
              ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
              ($11::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
         AND (COALESCE($12::text, '') = '' OR e.running_context->'actor'->>'name' = $12::text)
-        AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type_' = $13::text)
+        AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type' = $13::text)
         AND (COALESCE($14::text, '') = '' OR e.id = $14::text OR e.group_id = $14::text)
         AND (COALESCE($15, NULL) IS NULL OR
              ($15::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
@@ -3288,7 +3289,7 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
          ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          ($11::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE($12::text, '') = '' OR e.running_context->'actor'->>'name' = $12::text)
-    AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type_' = $13::text)
+    AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type' = $13::text)
     AND (COALESCE($14::text, '') = '' OR e.id = $14::text OR e.group_id = $14::text)
     AND (COALESCE($15, NULL) IS NULL OR
          ($15::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
