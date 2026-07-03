@@ -150,6 +150,23 @@ func TestParseSecretData(t *testing.T) {
 		assert.Equal(t, "registrypass", out[0].Password)
 	})
 
+	t.Run("exact registry key wins over trailing-slash registry key", func(t *testing.T) {
+
+		secret := corev1.Secret{
+			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"registry.gitlab.com\": {\"username\": \"exactuser\", \"password\": \"exactpass\"}, \"registry.gitlab.com/\": {\"username\": \"slashuser\", \"password\": \"slashpass\"}}}")},
+		}
+
+		// "registry.gitlab.com/" is the registry root, not a repo path, so it must
+		// not be treated as a more-specific path match that beats the exact key.
+		out, err := ParseSecretData([]corev1.Secret{secret}, "registry.gitlab.com", "registry.gitlab.com/company/image")
+
+		assert.NoError(t, err)
+		if assert.Len(t, out, 1) {
+			assert.Equal(t, "exactuser", out[0].Username)
+			assert.Equal(t, "exactpass", out[0].Password)
+		}
+	})
+
 	t.Run("path-scoped credential wins over scheme-prefixed registry credential", func(t *testing.T) {
 
 		secret := corev1.Secret{
@@ -164,21 +181,22 @@ func TestParseSecretData(t *testing.T) {
 		assert.Equal(t, "pathpass", out[0].Password)
 	})
 
-	t.Run("scheme-insensitive registry match is deterministic across duplicate hosts", func(t *testing.T) {
+	t.Run("scheme-insensitive registry match prefers the secure https key", func(t *testing.T) {
 
 		secret := corev1.Secret{
 			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"https://reg.example.com\": {\"username\": \"httpsuser\", \"password\": \"httpspass\"}, \"http://reg.example.com\": {\"username\": \"httpuser\", \"password\": \"httppass\"}}}")},
 		}
 
-		// Keys are visited in sorted order, so "http://..." (which sorts before
-		// "https://...") is selected deterministically on every run.
+		// When both an insecure "http://" and a secure "https://" key match the
+		// same host, the https credential is chosen deterministically so we never
+		// send credentials intended for the secure endpoint to an insecure one.
 		for range 20 {
 			out, err := ParseSecretData([]corev1.Secret{secret}, "reg.example.com", "reg.example.com/image")
 
 			assert.NoError(t, err)
 			if assert.Len(t, out, 1) {
-				assert.Equal(t, "httpuser", out[0].Username)
-				assert.Equal(t, "httppass", out[0].Password)
+				assert.Equal(t, "httpsuser", out[0].Username)
+				assert.Equal(t, "httpspass", out[0].Password)
 			}
 		}
 	})

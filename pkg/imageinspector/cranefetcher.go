@@ -237,6 +237,7 @@ func ParseSecretData(imageSecrets []corev1.Secret, registry, image string) ([]au
 
 		bestPathLen := -1
 		var pathCreds, hostCreds authn.AuthConfig
+		var hostKey string
 		var pathFound, hostFound bool
 		for _, key := range keys {
 			normalized := stripURLScheme(key)
@@ -244,8 +245,10 @@ func ParseSecretData(imageSecrets []corev1.Secret, registry, image string) ([]au
 			host, isRegistry := registryHost(normalized)
 			if isRegistry {
 				// Registry-level credential: the key's host equals the registry.
-				if host == registry && !hostFound {
-					hostCreds, hostFound = auths.Auths[key], true
+				// Prefer a secure key over an insecure "http://" one so credentials
+				// meant for an https endpoint are not sent to an insecure one.
+				if host == registry && (!hostFound || (strings.HasPrefix(hostKey, "http://") && !strings.HasPrefix(key, "http://"))) {
+					hostCreds, hostKey, hostFound = auths.Auths[key], key, true
 				}
 				continue
 			}
