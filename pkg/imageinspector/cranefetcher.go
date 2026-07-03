@@ -251,7 +251,10 @@ func ParseSecretData(imageSecrets []corev1.Secret, registry, image string) ([]au
 			}
 
 			// Path-scoped (mirror) credential: non-registry keys that prefix the image path.
-			if strings.HasPrefix(image, normalized) {
+			if normalized != "" && (image == normalized ||
+				strings.HasPrefix(image, normalized+"/") ||
+				strings.HasPrefix(image, normalized+":") ||
+				strings.HasPrefix(image, normalized+"@")) {
 				if len(normalized) > bestPathLen {
 					bestPathLen = len(normalized)
 					pathCreds, pathFound = auths.Auths[key], true
