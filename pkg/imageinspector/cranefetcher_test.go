@@ -108,6 +108,20 @@ func TestParseSecretData(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("parse docker config scheme-prefixed auth key against bare registry", func(t *testing.T) {
+
+		secret := corev1.Secret{
+			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"https://artifactory.example.com\": {\"username\": \"plainuser\", \"password\": \"plainpass\"}}}")},
+		}
+
+		out, err := ParseSecretData([]corev1.Secret{secret}, "artifactory.example.com", "artifactory.example.com/docker/library/node:latest")
+
+		assert.Equal(t, 1, len(out))
+		assert.Equal(t, "plainuser", out[0].Username)
+		assert.Equal(t, "plainpass", out[0].Password)
+		assert.NoError(t, err)
+	})
+
 	t.Run("parse docker config missed data", func(t *testing.T) {
 
 		secret := corev1.Secret{

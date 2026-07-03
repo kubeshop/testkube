@@ -151,6 +151,20 @@ func ExtractRegistry(image string) string {
 	return ""
 }
 
+// stripURLScheme removes a leading "http://" or "https://" from a registry
+// host or dockerconfigjson auth key, so entries using the traditional
+// scheme-prefixed Docker credential-store format can still be matched
+// against a bare registry hostname.
+func stripURLScheme(s string) string {
+	if rest, ok := strings.CutPrefix(s, "https://"); ok {
+		return rest
+	}
+	if rest, ok := strings.CutPrefix(s, "http://"); ok {
+		return rest
+	}
+	return s
+}
+
 func determineUserGroupPair(userGroupStr string) (int64, int64) {
 	if userGroupStr == "" {
 		userGroupStr = "0"
@@ -186,8 +200,22 @@ func ParseSecretData(imageSecrets []corev1.Secret, registry, image string) ([]au
 			return nil, fmt.Errorf("imagePullSecret %s contains neither .dockercfg nor .dockerconfigjson", imageSecret.Name)
 		}
 
-		// Determine if there is a secret for the specified registry
-		if creds, ok := auths.Auths[registry]; ok {
+		// Determine if there is a secret for the specified registry.
+		// Some dockerconfigjson secrets (e.g. the traditional Docker credential-store
+		// format, like "https://index.docker.io/v1/") key their auths map with a
+		// scheme-prefixed URL rather than a bare hostname, so fall back to a
+		// scheme-insensitive lookup when the exact key isn't found.
+		creds, ok := auths.Auths[registry]
+		if !ok {
+			normalizedRegistry := stripURLScheme(registry)
+			for key, value := range auths.Auths {
+				if stripURLScheme(key) == normalizedRegistry {
+					creds, ok = value, true
+					break
+				}
+			}
+		}
+		if ok {
 			username, password, err := extractRegistryCredentials(creds)
 			if err != nil {
 				return nil, err
