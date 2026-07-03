@@ -201,6 +201,20 @@ func TestParseSecretData(t *testing.T) {
 		}
 	})
 
+	t.Run("repository namespace named v2 is treated as path-scoped, not registry-wide", func(t *testing.T) {
+
+		secret := corev1.Secret{
+			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"myreg.io/v2\": {\"username\": \"v2user\", \"password\": \"v2pass\"}}}")},
+		}
+
+		// "myreg.io/v2" is a repo namespace, not the legacy "/v1/"-style registry
+		// suffix, so its credentials must not be applied to an unrelated repo.
+		out, err := ParseSecretData([]corev1.Secret{secret}, "myreg.io", "myreg.io/other/app")
+
+		assert.NoError(t, err)
+		assert.Empty(t, out)
+	})
+
 	t.Run("legacy docker credential-store key matches bare registry host", func(t *testing.T) {
 
 		secret := corev1.Secret{

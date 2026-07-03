@@ -174,8 +174,12 @@ func registryHost(normalizedKey string) (host string, isRegistry bool) {
 	if !hasPath {
 		return host, true
 	}
-	switch strings.Trim(rest, "/") {
-	case "", "v1", "v2":
+	// The legacy credential-store suffix always carries a trailing slash
+	// ("index.docker.io/v1/"), so require it here; otherwise a repository
+	// namespace literally named "v1" or "v2" (e.g. "myreg.io/v2") would be
+	// misclassified as a whole-registry key and applied registry-wide.
+	switch rest {
+	case "", "v1/", "v2/":
 		return host, true
 	}
 	return host, false
