@@ -175,10 +175,10 @@ func TestParseSecretData(t *testing.T) {
 
 		out, err := ParseSecretData([]corev1.Secret{secret}, "registry.gitlab.com", "registry.gitlab.com/company/path/image")
 
-		assert.NoError(t, err)
-		assert.Equal(t, 1, len(out))
-		assert.Equal(t, "pathuser", out[0].Username)
-		assert.Equal(t, "pathpass", out[0].Password)
+		if assert.NoError(t, err) && assert.Len(t, out, 1) {
+			assert.Equal(t, "pathuser", out[0].Username)
+			assert.Equal(t, "pathpass", out[0].Password)
+		}
 	})
 
 	t.Run("scheme-insensitive registry match prefers the secure https key", func(t *testing.T) {
