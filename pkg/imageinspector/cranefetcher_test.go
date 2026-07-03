@@ -176,9 +176,10 @@ func TestParseSecretData(t *testing.T) {
 			out, err := ParseSecretData([]corev1.Secret{secret}, "reg.example.com", "reg.example.com/image")
 
 			assert.NoError(t, err)
-			assert.Equal(t, 1, len(out))
-			assert.Equal(t, "httpuser", out[0].Username)
-			assert.Equal(t, "httppass", out[0].Password)
+			if assert.Len(t, out, 1) {
+				assert.Equal(t, "httpuser", out[0].Username)
+				assert.Equal(t, "httppass", out[0].Password)
+			}
 		}
 	})
 
