@@ -122,6 +122,34 @@ func TestParseSecretData(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("path-scoped credential wins over exact registry credential", func(t *testing.T) {
+
+		secret := corev1.Secret{
+			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"registry.gitlab.com\": {\"username\": \"registryuser\", \"password\": \"registrypass\"}, \"registry.gitlab.com/company/path\": {\"username\": \"pathuser\", \"password\": \"pathpass\"}}}")},
+		}
+
+		out, err := ParseSecretData([]corev1.Secret{secret}, "registry.gitlab.com", "registry.gitlab.com/company/path/image")
+
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(out))
+		assert.Equal(t, "pathuser", out[0].Username)
+		assert.Equal(t, "pathpass", out[0].Password)
+	})
+
+	t.Run("exact registry credential used when no path-scoped key matches the image", func(t *testing.T) {
+
+		secret := corev1.Secret{
+			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"registry.gitlab.com\": {\"username\": \"registryuser\", \"password\": \"registrypass\"}, \"registry.gitlab.com/company/path\": {\"username\": \"pathuser\", \"password\": \"pathpass\"}}}")},
+		}
+
+		out, err := ParseSecretData([]corev1.Secret{secret}, "registry.gitlab.com", "registry.gitlab.com/other/image")
+
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(out))
+		assert.Equal(t, "registryuser", out[0].Username)
+		assert.Equal(t, "registrypass", out[0].Password)
+	})
+
 	t.Run("path-scoped credential wins over scheme-prefixed registry credential", func(t *testing.T) {
 
 		secret := corev1.Secret{

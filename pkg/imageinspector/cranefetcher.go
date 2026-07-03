@@ -218,44 +218,49 @@ func ParseSecretData(imageSecrets []corev1.Secret, registry, image string) ([]au
 
 		// Determine which credentials to use for the specified registry, in
 		// order of decreasing specificity:
-		//   1. an exact match on the registry key,
-		//   2. the longest path-scoped key that prefixes the image (mirror auth),
+		//   1. the longest path-scoped key that prefixes the image (mirror auth),
+		//   2. an exact match on the registry key,
 		//   3. a scheme-insensitive match on the registry host, which also covers
 		//      the traditional Docker credential-store format (e.g. the key
 		//      "https://index.docker.io/v1/" for the "index.docker.io" registry).
-		// Keys are visited in sorted order so selection is deterministic when
-		// several keys would otherwise match equally.
+		// A path-scoped credential is more specific than a registry-level one, so
+		// it takes precedence even when an exact registry key also exists. Keys are
+		// visited in sorted order so selection is deterministic when several keys
+		// would otherwise match equally.
 		creds, ok := auths.Auths[registry]
-		if !ok {
-			keys := make([]string, 0, len(auths.Auths))
-			for key := range auths.Auths {
-				keys = append(keys, key)
-			}
-			sort.Strings(keys)
 
-			bestPathLen := -1
-			var hostCreds authn.AuthConfig
-			var hostFound bool
-			for _, key := range keys {
-				normalized := stripURLScheme(key)
-				// Path-scoped (mirror) credential: the key prefixes the image path.
-				if strings.Contains(normalized, "/") && strings.HasPrefix(image, normalized) {
-					if len(normalized) > bestPathLen {
-						bestPathLen = len(normalized)
-						creds, ok = auths.Auths[key], true
-					}
-					continue
+		keys := make([]string, 0, len(auths.Auths))
+		for key := range auths.Auths {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		bestPathLen := -1
+		var pathCreds, hostCreds authn.AuthConfig
+		var pathFound, hostFound bool
+		for _, key := range keys {
+			normalized := stripURLScheme(key)
+			// Path-scoped (mirror) credential: the key prefixes the image path.
+			if strings.Contains(normalized, "/") && strings.HasPrefix(image, normalized) {
+				if len(normalized) > bestPathLen {
+					bestPathLen = len(normalized)
+					pathCreds, pathFound = auths.Auths[key], true
 				}
-				// Registry-level credential: the key's host equals the registry.
-				if host, isRegistry := registryHost(normalized); isRegistry && host == registry && !hostFound {
-					hostCreds, hostFound = auths.Auths[key], true
-				}
+				continue
 			}
-			// A path-scoped match is more specific, so only fall back to the
-			// registry-level credential when no path-scoped key matched.
-			if bestPathLen < 0 && hostFound {
-				creds, ok = hostCreds, true
+			// Registry-level credential: the key's host equals the registry.
+			if host, isRegistry := registryHost(normalized); isRegistry && host == registry && !hostFound {
+				hostCreds, hostFound = auths.Auths[key], true
 			}
+		}
+		switch {
+		case pathFound:
+			// A path-scoped match overrides a registry-level credential.
+			creds, ok = pathCreds, true
+		case !ok && hostFound:
+			// Fall back to a scheme-insensitive registry match only when no exact
+			// registry key was present.
+			creds, ok = hostCreds, true
 		}
 		if ok {
 			username, password, err := extractRegistryCredentials(creds)
