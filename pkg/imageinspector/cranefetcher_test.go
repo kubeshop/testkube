@@ -144,10 +144,10 @@ func TestParseSecretData(t *testing.T) {
 
 		out, err := ParseSecretData([]corev1.Secret{secret}, "registry.gitlab.com", "registry.gitlab.com/other/image")
 
-		assert.NoError(t, err)
-		assert.Equal(t, 1, len(out))
-		assert.Equal(t, "registryuser", out[0].Username)
-		assert.Equal(t, "registrypass", out[0].Password)
+		if assert.NoError(t, err) && assert.Len(t, out, 1) {
+			assert.Equal(t, "registryuser", out[0].Username)
+			assert.Equal(t, "registrypass", out[0].Password)
+		}
 	})
 
 	t.Run("exact registry key wins over trailing-slash registry key", func(t *testing.T) {
