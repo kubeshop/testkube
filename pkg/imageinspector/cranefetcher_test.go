@@ -116,10 +116,10 @@ func TestParseSecretData(t *testing.T) {
 
 		out, err := ParseSecretData([]corev1.Secret{secret}, "artifactory.example.com", "artifactory.example.com/docker/library/node:latest")
 
-		assert.Equal(t, 1, len(out))
-		assert.Equal(t, "plainuser", out[0].Username)
-		assert.Equal(t, "plainpass", out[0].Password)
-		assert.NoError(t, err)
+		if assert.NoError(t, err) && assert.Len(t, out, 1) {
+			assert.Equal(t, "plainuser", out[0].Username)
+			assert.Equal(t, "plainpass", out[0].Password)
+		}
 	})
 
 	t.Run("path-scoped credential wins over exact registry credential", func(t *testing.T) {
