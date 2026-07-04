@@ -4,14 +4,47 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
 
+type dummyInspector struct{}
+
+func (*dummyInspector) Inspect(_ context.Context, _, _ string, _ corev1.PullPolicy, _ []string) (*imageinspector.Info, error) {
+	return &imageinspector.Info{
+		Entrypoint: []string{"/bin/sh"},
+		Cmd:        []string{"-c"},
+		User:       0,
+		Group:      1001,
+	}, nil
+}
+
+func (*dummyInspector) ResolveName(_, image string) string {
+	return image
+}
+
+type recordingInspector struct {
+	dummyInspector
+	calls map[string][]corev1.PullPolicy
+}
+
+func (r *recordingInspector) Inspect(ctx context.Context, registry, image string, pullPolicy corev1.PullPolicy, pullSecretNames []string) (*imageinspector.Info, error) {
+	if r.calls == nil {
+		r.calls = map[string][]corev1.PullPolicy{}
+	}
+	r.calls[image] = append(r.calls[image], pullPolicy)
+	return r.dummyInspector.Inspect(ctx, registry, image, pullPolicy, pullSecretNames)
+}
+
 func TestBundle_InvalidEmptyDirSizeLimit_ReturnsError(t *testing.T) {
-	proc := New(nil)
+	proc := New(&dummyInspector{})
 	workflow := &testworkflowsv1.TestWorkflow{}
 
 	_, err := proc.Bundle(context.Background(), workflow, BundleOptions{
@@ -28,4 +61,382 @@ func TestBundle_InvalidEmptyDirSizeLimit_ReturnsError(t *testing.T) {
 
 	require.Error(t, err)
 	require.ErrorContains(t, err, `invalid worker emptyDir sizeLimit "not-a-quantity"`)
+}
+
+func TestBundle_InvalidDefaultImagePullPolicy_ReturnsError(t *testing.T) {
+	proc := New(&dummyInspector{})
+	workflow := &testworkflowsv1.TestWorkflow{}
+
+	_, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+		Config: testworkflowconfig.InternalConfig{
+			Resource: testworkflowconfig.ResourceConfig{
+				Id:     "resource-id",
+				RootId: "resource-root-id",
+			},
+			Worker: testworkflowconfig.WorkerConfig{
+				DefaultImagePullPolicy: "InvalidPolicy",
+			},
+		},
+	})
+
+	require.Error(t, err)
+	require.ErrorContains(t, err, `invalid worker default image pull policy "InvalidPolicy"`)
+}
+
+func TestBundle_InvalidDefaultRunnerResources_ReturnsError(t *testing.T) {
+	proc := New(&dummyInspector{})
+	workflow := &testworkflowsv1.TestWorkflow{}
+
+	_, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+		Config: testworkflowconfig.InternalConfig{
+			Resource: testworkflowconfig.ResourceConfig{
+				Id:     "resource-id",
+				RootId: "resource-root-id",
+			},
+			Worker: testworkflowconfig.WorkerConfig{
+				DefaultRunnerResources: testworkflowconfig.ContainerResourceConfig{
+					Requests: testworkflowconfig.ContainerResources{
+						CPU: "not-valid",
+					},
+				},
+			},
+		},
+	})
+
+	require.Error(t, err)
+	require.ErrorContains(t, err, `invalid worker default runner CPU request "not-valid"`)
+}
+
+func TestBundle_DefaultImagePullPolicy_Applied(t *testing.T) {
+	proc := New(&dummyInspector{}).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+	workflow := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "echo hello"}},
+			},
+		},
+	}
+
+	bundle, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+		Config: testworkflowconfig.InternalConfig{
+			Resource: testworkflowconfig.ResourceConfig{
+				Id:     "resource-id",
+				RootId: "resource-root-id",
+			},
+			Worker: testworkflowconfig.WorkerConfig{
+				DefaultImagePullPolicy: "Always",
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	allContainers := append(bundle.Job.Spec.Template.Spec.InitContainers, bundle.Job.Spec.Template.Spec.Containers...)
+	for _, c := range allContainers {
+		assert.Equalf(t, corev1.PullAlways, c.ImagePullPolicy, "container %s should have PullAlways", c.Name)
+	}
+}
+
+func TestBundle_DefaultRunnerResources_Applied(t *testing.T) {
+	proc := New(&dummyInspector{}).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+	workflow := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "echo hello"}},
+			},
+		},
+	}
+
+	bundle, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+		Config: testworkflowconfig.InternalConfig{
+			Resource: testworkflowconfig.ResourceConfig{
+				Id:     "resource-id",
+				RootId: "resource-root-id",
+			},
+			Worker: testworkflowconfig.WorkerConfig{
+				DefaultRunnerResources: testworkflowconfig.ContainerResourceConfig{
+					Requests: testworkflowconfig.ContainerResources{
+						CPU:    "100m",
+						Memory: "128Mi",
+					},
+					Limits: testworkflowconfig.ContainerResources{
+						CPU:    "500m",
+						Memory: "512Mi",
+					},
+				},
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	allContainers := append(bundle.Job.Spec.Template.Spec.InitContainers, bundle.Job.Spec.Template.Spec.Containers...)
+	for _, c := range allContainers {
+		assert.Equalf(t, resource.MustParse("100m"), c.Resources.Requests[corev1.ResourceCPU], "container %s CPU request", c.Name)
+		assert.Equalf(t, resource.MustParse("128Mi"), c.Resources.Requests[corev1.ResourceMemory], "container %s memory request", c.Name)
+		assert.Equalf(t, resource.MustParse("500m"), c.Resources.Limits[corev1.ResourceCPU], "container %s CPU limit", c.Name)
+		assert.Equalf(t, resource.MustParse("512Mi"), c.Resources.Limits[corev1.ResourceMemory], "container %s memory limit", c.Name)
+	}
+}
+
+func TestBundle_DefaultImagePullPolicy_DoesNotOverrideExplicitPolicy(t *testing.T) {
+	proc := New(&dummyInspector{}).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+	workflow := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{
+					StepOperations: testworkflowsv1.StepOperations{
+						Run: &testworkflowsv1.StepRun{
+							ContainerConfig: testworkflowsv1.ContainerConfig{
+								Image:           "custom-image:latest",
+								ImagePullPolicy: corev1.PullNever,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	bundle, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+		Config: testworkflowconfig.InternalConfig{
+			Resource: testworkflowconfig.ResourceConfig{
+				Id:     "resource-id",
+				RootId: "resource-root-id",
+			},
+			Worker: testworkflowconfig.WorkerConfig{
+				DefaultImagePullPolicy: "Always",
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	allContainers := append(bundle.Job.Spec.Template.Spec.InitContainers, bundle.Job.Spec.Template.Spec.Containers...)
+	found := false
+	for _, c := range allContainers {
+		if c.Image == "custom-image:latest" {
+			// The container with an explicit PullNever must not be overridden.
+			found = true
+			assert.Equalf(t, corev1.PullNever, c.ImagePullPolicy, "container %s should keep explicit PullNever policy", c.Name)
+		} else {
+			// All other (runner) containers without an explicit policy should receive the default.
+			assert.Equalf(t, corev1.PullAlways, c.ImagePullPolicy, "container %s should have default PullAlways policy", c.Name)
+		}
+	}
+	require.True(t, found, "expected to find container with custom-image:latest")
+}
+
+func TestBundle_InspectorPullPolicy_UsesEffectivePolicyPerImage(t *testing.T) {
+	inspector := &recordingInspector{}
+	proc := New(inspector).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+	workflow := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{
+					StepOperations: testworkflowsv1.StepOperations{
+						Run: &testworkflowsv1.StepRun{
+							ContainerConfig: testworkflowsv1.ContainerConfig{
+								Image:           "custom-image:latest",
+								ImagePullPolicy: corev1.PullNever,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	_, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+		Config: testworkflowconfig.InternalConfig{
+			Resource: testworkflowconfig.ResourceConfig{
+				Id:     "resource-id",
+				RootId: "resource-root-id",
+			},
+			Worker: testworkflowconfig.WorkerConfig{
+				DefaultImagePullPolicy: "Always",
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	require.NotEmpty(t, inspector.calls["custom-image:latest"], "expected custom image to be inspected")
+	assert.Contains(t, inspector.calls["custom-image:latest"], corev1.PullIfNotPresent, "custom image with explicit PullNever should be inspected with cache enabled")
+	assert.NotContains(t, inspector.calls["custom-image:latest"], corev1.PullAlways, "custom image with explicit PullNever should not be inspected with PullAlways")
+}
+
+// TestBundle_InspectorPullPolicy_UserAlwaysImageUsesCache locks in the fix for the
+// cache-bypass regression: a user container with an explicit imagePullPolicy: Always
+// must still be inspected with PullIfNotPresent (from cache), so a registry hiccup at
+// Bundle time cannot fail an otherwise-working workflow. Only the internally injected
+// runner images may bypass the cache. See finding #1.
+func TestBundle_InspectorPullPolicy_UserAlwaysImageUsesCache(t *testing.T) {
+	inspector := &recordingInspector{}
+	proc := New(inspector).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+	workflow := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{
+					StepOperations: testworkflowsv1.StepOperations{
+						Run: &testworkflowsv1.StepRun{
+							ContainerConfig: testworkflowsv1.ContainerConfig{
+								Image:           "custom-image:latest",
+								ImagePullPolicy: corev1.PullAlways,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	_, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+		Config: testworkflowconfig.InternalConfig{
+			Resource: testworkflowconfig.ResourceConfig{
+				Id:     "resource-id",
+				RootId: "resource-root-id",
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	require.NotEmpty(t, inspector.calls["custom-image:latest"], "expected custom image to be inspected")
+	assert.NotContains(t, inspector.calls["custom-image:latest"], corev1.PullAlways,
+		"user container with explicit PullAlways must not bypass the inspector cache")
+	for _, p := range inspector.calls["custom-image:latest"] {
+		assert.Equal(t, corev1.PullIfNotPresent, p,
+			"user container with explicit PullAlways must be inspected from cache (PullIfNotPresent)")
+	}
+}
+
+func TestBundle_DefaultRunnerResources_DoesNotOverrideExplicitResources(t *testing.T) {
+	proc := New(&dummyInspector{}).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+	workflow := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{
+					StepOperations: testworkflowsv1.StepOperations{
+						Run: &testworkflowsv1.StepRun{
+							ContainerConfig: testworkflowsv1.ContainerConfig{
+								Image: "custom-image:latest",
+								Resources: &testworkflowsv1.Resources{
+									Requests: map[corev1.ResourceName]intstr.IntOrString{
+										corev1.ResourceCPU:    intstr.FromString("200m"),
+										corev1.ResourceMemory: intstr.FromString("256Mi"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	bundle, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+		Config: testworkflowconfig.InternalConfig{
+			Resource: testworkflowconfig.ResourceConfig{
+				Id:     "resource-id",
+				RootId: "resource-root-id",
+			},
+			Worker: testworkflowconfig.WorkerConfig{
+				DefaultRunnerResources: testworkflowconfig.ContainerResourceConfig{
+					Requests: testworkflowconfig.ContainerResources{
+						CPU:    "100m",
+						Memory: "128Mi",
+					},
+				},
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	allContainers := append(bundle.Job.Spec.Template.Spec.InitContainers, bundle.Job.Spec.Template.Spec.Containers...)
+	found := false
+	for _, c := range allContainers {
+		if c.Image == "custom-image:latest" {
+			// The container with explicit resources must not have its values replaced by defaults.
+			found = true
+			assert.Equalf(t, resource.MustParse("200m"), c.Resources.Requests[corev1.ResourceCPU], "container %s should keep explicit CPU request", c.Name)
+			assert.Equalf(t, resource.MustParse("256Mi"), c.Resources.Requests[corev1.ResourceMemory], "container %s should keep explicit memory request", c.Name)
+		} else {
+			// All other (runner) containers without explicit resources should receive the defaults.
+			assert.Equalf(t, resource.MustParse("100m"), c.Resources.Requests[corev1.ResourceCPU], "container %s should have default CPU request", c.Name)
+			assert.Equalf(t, resource.MustParse("128Mi"), c.Resources.Requests[corev1.ResourceMemory], "container %s should have default memory request", c.Name)
+		}
+	}
+	require.True(t, found, "expected to find container with custom-image:latest")
+}
+
+// TestBundle_DefaultRunnerResources_AppliesLimitsWhenOnlyRequestsSet locks in the fix
+// for finding #4: defaults for requests and limits must be applied independently. A
+// runner container that already has only requests set (here inherited from the
+// workflow-level container config) must still receive the configured default limits,
+// instead of being skipped because it has some resources set.
+func TestBundle_DefaultRunnerResources_AppliesLimitsWhenOnlyRequestsSet(t *testing.T) {
+	proc := New(&dummyInspector{}).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+	workflow := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			// Container-level config propagates to the injected runner containers,
+			// giving them a request but no limit.
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Container: &testworkflowsv1.ContainerConfig{
+					Resources: &testworkflowsv1.Resources{
+						Requests: map[corev1.ResourceName]intstr.IntOrString{
+							corev1.ResourceCPU: intstr.FromString("50m"),
+						},
+					},
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "echo hello"}},
+			},
+		},
+	}
+
+	bundle, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+		Config: testworkflowconfig.InternalConfig{
+			Resource: testworkflowconfig.ResourceConfig{
+				Id:     "resource-id",
+				RootId: "resource-root-id",
+			},
+			Worker: testworkflowconfig.WorkerConfig{
+				DefaultRunnerResources: testworkflowconfig.ContainerResourceConfig{
+					Limits: testworkflowconfig.ContainerResources{
+						CPU:    "500m",
+						Memory: "512Mi",
+					},
+				},
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	allContainers := append(bundle.Job.Spec.Template.Spec.InitContainers, bundle.Job.Spec.Template.Spec.Containers...)
+	require.NotEmpty(t, allContainers)
+	for _, c := range allContainers {
+		// The pre-existing request must be preserved.
+		assert.Equalf(t, resource.MustParse("50m"), c.Resources.Requests[corev1.ResourceCPU], "container %s should keep its inherited CPU request", c.Name)
+		// The default limits must still be applied even though requests were already set.
+		assert.Equalf(t, resource.MustParse("500m"), c.Resources.Limits[corev1.ResourceCPU], "container %s should receive default CPU limit", c.Name)
+		assert.Equalf(t, resource.MustParse("512Mi"), c.Resources.Limits[corev1.ResourceMemory], "container %s should receive default memory limit", c.Name)
+	}
 }

@@ -78,6 +78,8 @@ func buildKubernetesWorkerConfig(cfg *testworkflowconfig.InternalConfig, debug b
 		AllowLowSecurityFields: cfg.Worker.AllowLowSecurityFields,
 		DisableResourceMetrics: cfg.Worker.DisableResourceMetrics,
 		EmptyDirSizeLimit:      cfg.Worker.EmptyDirSizeLimit,
+		DefaultImagePullPolicy: cfg.Worker.DefaultImagePullPolicy,
+		DefaultRunnerResources: cfg.Worker.DefaultRunnerResources,
 	}
 }
 
