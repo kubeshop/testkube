@@ -124,6 +124,31 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		}
 	}
 
+	// Validate default image pull policy
+	if policy := options.Config.Worker.DefaultImagePullPolicy; policy != "" {
+		switch corev1.PullPolicy(policy) {
+		case corev1.PullAlways, corev1.PullIfNotPresent, corev1.PullNever:
+		default:
+			return nil, fmt.Errorf("invalid worker default image pull policy %q (allowed: Always, IfNotPresent, Never)", policy)
+		}
+	}
+	// Validate default runner resources
+	defaultRes := options.Config.Worker.DefaultRunnerResources
+	for _, v := range []struct {
+		name, val string
+	}{
+		{"CPU request", defaultRes.Requests.CPU},
+		{"memory request", defaultRes.Requests.Memory},
+		{"CPU limit", defaultRes.Limits.CPU},
+		{"memory limit", defaultRes.Limits.Memory},
+	} {
+		if v.val != "" {
+			if _, err := resource.ParseQuantity(v.val); err != nil {
+				return nil, fmt.Errorf("invalid worker default runner %s %q: %w", v.name, v.val, err)
+			}
+		}
+	}
+
 	// Initialize intermediate layer
 	layer := NewIntermediate(options.Config.Worker.EmptyDirSizeLimit).
 		AppendPodConfig(workflow.Spec.Pod).
@@ -285,15 +310,40 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		pullSecretNames[i] = v.Name
 	}
 
-	// Load the image details when necessary
+	// Load the image details when necessary.
+	// Determine inspector pull policy per image so cache bypass follows the effective
+	// runtime pull policy. Only the internally injected runner images may bypass the
+	// cache (Always -> live fetch); user containers are always inspected from cache
+	// (IfNotPresent) so their runtime pull policy never forces a registry call here.
 	hasPodSecurityContextGroup := podConfig.SecurityContext != nil && podConfig.SecurityContext.RunAsGroup != nil
 	imageNames := root.GetImages(!hasPodSecurityContextGroup)
 	images := make(map[string]*imageinspector.Info)
 	imageNameResolutions := map[string]string{}
+	imagePullPolicies := map[string]corev1.PullPolicy{}
+	defaultImagePullPolicy := corev1.PullPolicy(options.Config.Worker.DefaultImagePullPolicy)
+	for _, c := range root.ContainerStages() {
+		image := c.Container().Image()
+		policy := c.Container().ImagePullPolicy()
+		isRunnerImage := image == constants.DefaultInitImage || image == constants.DefaultToolkitImage
+		if isRunnerImage && defaultImagePullPolicy != "" && (policy == "" || policy == corev1.PullIfNotPresent) {
+			policy = defaultImagePullPolicy
+		}
+		if isRunnerImage && policy == corev1.PullAlways {
+			imagePullPolicies[image] = corev1.PullAlways
+			continue
+		}
+		if _, ok := imagePullPolicies[image]; !ok {
+			imagePullPolicies[image] = corev1.PullIfNotPresent
+		}
+	}
 	for image, needsMetadata := range imageNames {
 		var info *imageinspector.Info
+		pullPolicy := imagePullPolicies[image]
+		if pullPolicy == "" {
+			pullPolicy = corev1.PullIfNotPresent
+		}
 		if needsMetadata {
-			info, err = p.inspector.Inspect(ctx, "", image, corev1.PullIfNotPresent, pullSecretNames)
+			info, err = p.inspector.Inspect(ctx, "", image, pullPolicy, pullSecretNames)
 			images[image] = info
 		}
 		imageNameResolutions[image] = p.inspector.ResolveName("", image)
@@ -420,6 +470,71 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 
 	options.Config.Execution.SecretMountPaths = secretMountPaths
+
+	// Apply default image pull policy for internally injected runner containers.
+	// NOTE: a default of "Never" is honored as-is (e.g. for air-gapped clusters); it
+	// requires the runner init/toolkit images to be pre-pulled on every node that runs
+	// workflows, otherwise the pod fails with ErrImageNeverPull. See the
+	// defaultImagePullPolicy documentation in the Helm values.
+	if options.Config.Worker.DefaultImagePullPolicy != "" {
+		defaultPolicy := corev1.PullPolicy(options.Config.Worker.DefaultImagePullPolicy)
+		for i := range containers {
+			if containers[i].Image != constants.DefaultInitImage && containers[i].Image != constants.DefaultToolkitImage {
+				continue
+			}
+			if containers[i].ImagePullPolicy == "" || containers[i].ImagePullPolicy == corev1.PullIfNotPresent {
+				containers[i].ImagePullPolicy = defaultPolicy
+			}
+		}
+	}
+
+	// Apply default resource requests/limits for internally injected runner containers that have no resources set
+	if defaultRes.Requests.CPU != "" || defaultRes.Requests.Memory != "" || defaultRes.Limits.CPU != "" || defaultRes.Limits.Memory != "" {
+		var (
+			cpuReq, memReq resource.Quantity
+			cpuLim, memLim resource.Quantity
+		)
+		if defaultRes.Requests.CPU != "" {
+			cpuReq = resource.MustParse(defaultRes.Requests.CPU)
+		}
+		if defaultRes.Requests.Memory != "" {
+			memReq = resource.MustParse(defaultRes.Requests.Memory)
+		}
+		if defaultRes.Limits.CPU != "" {
+			cpuLim = resource.MustParse(defaultRes.Limits.CPU)
+		}
+		if defaultRes.Limits.Memory != "" {
+			memLim = resource.MustParse(defaultRes.Limits.Memory)
+		}
+
+		for i := range containers {
+			if containers[i].Image != constants.DefaultInitImage && containers[i].Image != constants.DefaultToolkitImage {
+				continue
+			}
+			// Apply request and limit defaults independently so a container that already
+			// has only one of them set (e.g. only requests via a template) still receives
+			// the configured defaults for the other.
+			if len(containers[i].Resources.Requests) == 0 && (defaultRes.Requests.CPU != "" || defaultRes.Requests.Memory != "") {
+				containers[i].Resources.Requests = corev1.ResourceList{}
+				if defaultRes.Requests.CPU != "" {
+					containers[i].Resources.Requests[corev1.ResourceCPU] = cpuReq
+				}
+				if defaultRes.Requests.Memory != "" {
+					containers[i].Resources.Requests[corev1.ResourceMemory] = memReq
+				}
+			}
+			if len(containers[i].Resources.Limits) == 0 && (defaultRes.Limits.CPU != "" || defaultRes.Limits.Memory != "") {
+				containers[i].Resources.Limits = corev1.ResourceList{}
+				if defaultRes.Limits.CPU != "" {
+					containers[i].Resources.Limits[corev1.ResourceCPU] = cpuLim
+				}
+				if defaultRes.Limits.Memory != "" {
+					containers[i].Resources.Limits[corev1.ResourceMemory] = memLim
+				}
+			}
+		}
+	}
+
 	// Append common environment variables
 	if len(options.CommonEnvVariables) > 0 {
 		for i := range containers {

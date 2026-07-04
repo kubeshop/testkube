@@ -344,6 +344,22 @@ executionNamespaces:
 ## default storage class name for PVC volumes
 defaultStorageClassName: ""
 
+## Default image pull policy for the internally injected test workflow runner images
+## (init/toolkit), e.g. "Always", "IfNotPresent" or "Never". Leave empty to use the
+## Kubernetes default.
+## NOTE: "Never" requires these runner images to be pre-pulled on every node that runs
+## workflows; otherwise pods fail with ErrImageNeverPull.
+defaultImagePullPolicy: ""
+
+## default resource requests and limits for test workflow runner containers
+defaultRunnerResources:
+  requests:
+    cpu: ""
+    memory: ""
+  limits:
+    cpu: ""
+    memory: ""
+
 # storageRequest is the requested storage for PVC utilized for artifact requests.
 storageRequest: "1Gi"
 
