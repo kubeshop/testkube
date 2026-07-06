@@ -217,7 +217,7 @@ func HelmUninstall(namespace string, releaseName string) *CLIError {
 func HelmUpgradeOrInstallTestkube(options HelmOptions) *CLIError {
 	// Exactly one bundled database backend may be selected. With PostgreSQL as the
 	// default, enabling MongoDB via --no-mongo=false without also passing
-	// --no-postgres would leave both enabled and the API pointed at PostgreSQL.
+	// --no-postgres would leave both backends enabled and inject both DSNs into the API.
 	if !options.NoMongo && !options.NoPostgres {
 		return NewCLIError(
 			TKErrInvalidInstallConfig,
