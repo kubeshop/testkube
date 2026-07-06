@@ -587,7 +587,7 @@ service:
 ##MongoDB parameters
 mongodb:
   ## Deploy MongoDB server to the cluster
-  enabled: true
+  enabled: false
   dsn: "mongodb://testkube-mongodb:27017"
   ## or use dsn in secrets
   # secretName: testkube-secrets
@@ -626,7 +626,7 @@ mongodb:
 ##PostgreSQL parameters
 postgresql:
   ## Deploy PostgreSQL server to the cluster
-  enabled: false
+  enabled: true
   ## Define PostgreSQL DSN connection string
   dsn: "postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"
   ## Name of the Kubernetes secret containing the PostgreSQL DSN

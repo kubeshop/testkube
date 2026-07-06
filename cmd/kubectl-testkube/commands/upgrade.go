@@ -91,6 +91,33 @@ func NewUpgradeCmd() *cobra.Command {
 			} else {
 				ui.Info("Updating Testkube")
 
+				// Fresh installs default to PostgreSQL, but an upgrade must never silently
+				// switch the database of an existing installation: doing so would disable the
+				// running MongoDB sub-chart and point the API at an empty PostgreSQL, orphaning
+				// the user's data. Preserve whichever database is currently deployed unless the
+				// user explicitly overrode the flags.
+				if !cmd.Flags().Changed("no-mongo") && !cmd.Flags().Changed("no-postgres") {
+					dbType, cliErr := common.DetectDatabaseType(options.Namespace)
+					if cliErr != nil {
+						common.HandleCLIError(cliErr)
+					}
+
+					// Only set the flags; prepareCommonHelmArgs derives both the
+					// sub-chart toggles and the API backend selection from them.
+					switch dbType {
+					case config.DatabaseTypeMongoDB:
+						ui.Info("Detected existing MongoDB installation - preserving MongoDB as the database backend")
+						options.NoMongo = false
+						options.NoPostgres = true
+					case config.DatabaseTypePostgreSQL:
+						options.NoMongo = true
+						options.NoPostgres = false
+					default:
+						ui.Errf("Could not detect the existing database type (no in-cluster MongoDB/PostgreSQL found). Re-run with explicit --no-mongo/--no-postgres to avoid switching databases during upgrade (especially if you use an external database or customized resource names).")
+						os.Exit(1)
+					}
+				}
+
 				if cliErr := common.HelmUpgradeOrInstallTestkube(options); cliErr != nil {
 					cliErr.Print()
 					os.Exit(1)

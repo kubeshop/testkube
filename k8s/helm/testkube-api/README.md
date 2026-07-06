@@ -156,7 +156,7 @@ A Helm chart for Testkube api
 | minio.tolerations | list | `[]` |  |
 | mongodb.allowDiskUse | bool | `true` |  |
 | mongodb.dsn | string | `"mongodb://testkube-mongodb:27017"` |  |
-| mongodb.enabled | bool | `true` |  |
+| mongodb.enabled | bool | `false` |  |
 | multinamespace.enabled | bool | `false` |  |
 | nameOverride | string | `""` |  |
 | nats.embedded | bool | `false` |  |
@@ -176,7 +176,7 @@ A Helm chart for Testkube api
 | podSecurityContext | object | `{}` |  |
 | podStartTimeout | string | `"30m"` | Testkube timeout for pod start |
 | postgresql.dsn | string | `"postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"` |  |
-| postgresql.enabled | bool | `false` |  |
+| postgresql.enabled | bool | `true` |  |
 | postgresql.secretKey | string | `""` |  |
 | postgresql.secretName | string | `""` |  |
 | priorityClassName | string | `""` |  |
