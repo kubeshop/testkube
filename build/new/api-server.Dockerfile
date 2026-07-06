@@ -4,6 +4,8 @@ ARG ALPINE_IMAGE
 FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS build
 ARG TARGETOS
 ARG TARGETARCH
+ARG GOCACHE="/root/.cache/go-build"
+ARG GOMODCACHE="/go/pkg/mod"
 
 ARG VERSION
 ARG GIT_SHA
@@ -15,7 +17,9 @@ ARG CLOUD_SEGMENTIO_KEY
 
 WORKDIR /build
 COPY . .
-RUN cd cmd/api-server; \
+RUN --mount=type=cache,target="$GOMODCACHE" \
+    --mount=type=cache,target="$GOCACHE" \
+    cd cmd/api-server; \
     GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 go build -ldflags \
      "-X github.com/kubeshop/testkube/pkg/version.Version=${VERSION} \
       -X github.com/kubeshop/testkube/pkg/version.Commit=${GIT_SHA} \
@@ -24,7 +28,7 @@ RUN cd cmd/api-server; \
       -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=${ANALYTICS_API_KEY} \
       -X github.com/kubeshop/testkube/pkg/telemetry.SegmentioKey=${SEGMENTIO_KEY} \
       -X github.com/kubeshop/testkube/pkg/telemetry.CloudSegmentioKey=${CLOUD_SEGMENTIO_KEY}" \
-    -o /app -mod mod -a .
+    -o /app -mod mod .
 
 FROM ${ALPINE_IMAGE}
 RUN apk --no-cache upgrade && apk --no-cache add ca-certificates libssl3 git
