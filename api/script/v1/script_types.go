@@ -68,6 +68,7 @@ type ScriptStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:unservedversion
 
 // Script is the Schema for the scripts API
 type Script struct {

@@ -690,7 +690,7 @@ spec:
                 type: string
             type: object
         type: object
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}
@@ -2005,7 +2005,7 @@ spec:
             description: TestStatus defines the observed state of Test
             type: object
         type: object
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}
@@ -2250,7 +2250,7 @@ spec:
                 type: string
             type: object
         type: object
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}
@@ -4974,7 +4974,7 @@ spec:
             description: TestSuiteStatus defines the observed state of TestSuite
             type: object
         type: object
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}
@@ -5327,7 +5327,7 @@ spec:
                 type: object
             type: object
         type: object
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}
