@@ -95,7 +95,7 @@ func (a *agentLoop) Start(ctx context.Context, withRunnerRequests bool) error {
 					// After context cancellation exit the loop.
 					return
 				case err != nil:
-					a.logger.Errorw("error running agent connection",
+					a.logger.Warnw("error running agent connection",
 						"name", name,
 						"error", err)
 				}

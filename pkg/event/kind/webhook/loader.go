@@ -176,7 +176,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 			}
 
 			if webhookTemplate.Spec.Disabled {
-				r.log.Errorw("error webhook template is disabled", "name", webhook.Name, "template", webhook.Spec.WebhookTemplateRef.Name)
+				r.log.Debugw("webhook template is disabled", "name", webhook.Name, "template", webhook.Spec.WebhookTemplateRef.Name)
 				continue
 			}
 
