@@ -218,6 +218,8 @@ type Config struct {
 	// single-replica deployments; tune how often the lease is checked/renewed.
 	LeaderElectionDisabled bool          `envconfig:"LEADER_ELECTION_DISABLED" default:"false"`
 	LeaseCheckInterval     time.Duration `envconfig:"LEASE_CHECK_INTERVAL" default:"5s"`
+	// How often the event emitter leader reloads webhook/listener configuration.
+	EventEmitterReconcileInterval time.Duration `envconfig:"EVENT_EMITTER_RECONCILE_INTERVAL" default:"5s"`
 
 	TestkubeProWorkerCount          int      `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
 	TestkubeProLogStreamWorkerCount int      `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`

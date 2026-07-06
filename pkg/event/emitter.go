@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	reconcileInterval                = time.Second
+	DefaultReconcileInterval           = 5 * time.Second
 	eventEmitterQueueName     string = "emitter"
 	DefaultEventTTL                  = 1 * time.Hour
 	DefaultEventCacheCapacity        = 100000
@@ -43,6 +43,16 @@ func WithLeaseCheckInterval(interval time.Duration) EmitterOption {
 	return func(e *Emitter) {
 		if interval > 0 {
 			e.leaseCheckInterval = interval
+		}
+	}
+}
+
+// WithReconcileInterval overrides how often the leader reloads listeners from
+// registered loaders. Non-positive values are ignored (the default is kept).
+func WithReconcileInterval(interval time.Duration) EmitterOption {
+	return func(e *Emitter) {
+		if interval > 0 {
+			e.reconcileInterval = interval
 		}
 	}
 }
@@ -82,6 +92,7 @@ func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectR
 		eventCache:          cache,
 		leaseClusterID:      DefaultLeaseClusterID,
 		leaseCheckInterval:  defaultLeaseCheckInterval,
+		reconcileInterval:   DefaultReconcileInterval,
 	}
 	for _, opt := range opts {
 		opt(e)
@@ -108,6 +119,7 @@ type Emitter struct {
 	clusterName            string
 	leaseClusterID         string
 	leaseCheckInterval     time.Duration
+	reconcileInterval      time.Duration
 	leaderElectionDisabled bool
 	eventCache             *ttlcache.Cache[string, bool]
 }
@@ -322,7 +334,7 @@ func (e *Emitter) leaderLoop(ctx context.Context) {
 		"subject", subscribeSubject)
 	// Reconcilation loop
 	e.log.Info("event emitter leader started reconciler")
-	ticker := time.NewTicker(reconcileInterval)
+	ticker := time.NewTicker(e.reconcileInterval)
 	for {
 		select {
 		case <-ctx.Done():

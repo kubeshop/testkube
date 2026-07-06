@@ -189,11 +189,13 @@ func main() {
 	// Resolve the lease check interval once and reuse it across all lease consumers
 	// (events emitter, triggers, leader coordinator). Clamps unsafe values.
 	leaseCheckInterval := resolveLeaseCheckInterval(cfg.LeaseCheckInterval)
+	eventEmitterReconcileInterval := resolveEventEmitterReconcileInterval(cfg.EventEmitterReconcileInterval)
 
 	// TODO(emil): do we need a mongo/postgres backend for leases like for test triggers?
 	eventsEmitterLeaseBackend := leasebackendk8s.NewK8sLeaseBackend(clientset, "testkube-agent-"+cfg.APIServerFullname, cfg.TestkubeNamespace)
 	eventsEmitter := event.NewEmitter(eventBus, eventsEmitterLeaseBackend, "agentevents", cfg.TestkubeClusterName, event.DefaultEventTTL, event.DefaultEventCacheCapacity,
 		event.WithLeaseCheckInterval(leaseCheckInterval),
+		event.WithReconcileInterval(eventEmitterReconcileInterval),
 		event.WithLeaderElectionDisabled(cfg.LeaderElectionDisabled))
 
 	// Connect to the Control Plane
@@ -1063,6 +1065,13 @@ func resolveLeaseCheckInterval(interval time.Duration) time.Duration {
 			"clamped", maxSafe.String(),
 			"leaseDuration", leasebackend.DefaultMaxLeaseDuration.String())
 		return maxSafe
+	}
+	return interval
+}
+
+func resolveEventEmitterReconcileInterval(interval time.Duration) time.Duration {
+	if interval <= 0 {
+		return event.DefaultReconcileInterval
 	}
 	return interval
 }

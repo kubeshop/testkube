@@ -887,3 +887,35 @@ func TestEmitterLeaseClusterID(t *testing.T) {
 		assert.True(t, <-leaseChan)
 	})
 }
+
+func TestEmitterReconcileInterval(t *testing.T) {
+	t.Run("default reconcile interval", func(t *testing.T) {
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepo := leasebackend.NewMockRepository(mockCtrl)
+		emitter := NewEmitter(eventBus, mockLeaseRepo, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		defer emitter.eventCache.Stop()
+		assert.Equal(t, DefaultReconcileInterval, emitter.reconcileInterval)
+	})
+
+	t.Run("WithReconcileInterval overrides default", func(t *testing.T) {
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepo := leasebackend.NewMockRepository(mockCtrl)
+		emitter := NewEmitter(eventBus, mockLeaseRepo, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity, WithReconcileInterval(12*time.Second))
+		defer emitter.eventCache.Stop()
+		assert.Equal(t, 12*time.Second, emitter.reconcileInterval)
+	})
+
+	t.Run("WithReconcileInterval non-positive does not override", func(t *testing.T) {
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepo := leasebackend.NewMockRepository(mockCtrl)
+		emitter := NewEmitter(eventBus, mockLeaseRepo, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity, WithReconcileInterval(0))
+		defer emitter.eventCache.Stop()
+		assert.Equal(t, DefaultReconcileInterval, emitter.reconcileInterval)
+	})
+}
