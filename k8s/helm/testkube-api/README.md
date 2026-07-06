@@ -156,7 +156,7 @@ A Helm chart for Testkube api
 | minio.tolerations | list | `[]` |  |
 | mongodb.allowDiskUse | bool | `true` |  |
 | mongodb.dsn | string | `"mongodb://testkube-mongodb:27017"` |  |
-| mongodb.enabled | bool | `true` |  |
+| mongodb.enabled | bool | `false` |  |
 | multinamespace.enabled | bool | `false` |  |
 | nameOverride | string | `""` |  |
 | nats.embedded | bool | `false` |  |
@@ -180,7 +180,7 @@ A Helm chart for Testkube api
 | postgresql.secretKey | string | `""` |  |
 | postgresql.secretName | string | `""` |  |
 | priorityClassName | string | `""` |  |
-| prometheus.enabled | bool | `false` |  |
+| prometheus.enabled | bool | `true` |  |
 | prometheus.interval | string | `"15s"` |  |
 | prometheus.monitoringLabels | object | `{}` |  |
 | rbac.create | bool | `true` |  |
