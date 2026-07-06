@@ -451,7 +451,7 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 	cmd.Flags().StringVar(&options.Values, "values", "", "path to Helm values file")
 
 	cmd.Flags().BoolVar(&options.NoMinio, "no-minio", false, "don't install MinIO")
-	cmd.Flags().BoolVar(&options.NoMongo, "no-mongo", true, "don't install MongoDB (default). To use MongoDB, also set Helm values to point the API at MongoDB (testkube-api.mongodb.enabled=true and testkube-api.postgresql.enabled=false)")
+	cmd.Flags().BoolVar(&options.NoMongo, "no-mongo", true, "don't install MongoDB (default). To use MongoDB instead of PostgreSQL, pass --no-mongo=false --no-postgres")
 	cmd.Flags().BoolVar(&options.NoPostgres, "no-postgres", false, "don't install PostgreSQL (default database)")
 	cmd.Flags().BoolVar(&options.NoConfirm, "no-confirm", false, "don't ask for confirmation - unattended installation mode")
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
