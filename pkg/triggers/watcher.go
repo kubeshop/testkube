@@ -311,7 +311,7 @@ func (s *Service) startCloudWorkflowTriggerWatch(ctx context.Context, stop <-cha
 		for _, namespace := range namespaces {
 			list, err := s.workflowTriggersClient.List(ctx, s.getEnvironmentId(), workflowtriggerclient.ListOptions{}, namespace)
 			if err != nil {
-				s.logger.Errorf("trigger service: error listing cloud workflow triggers in namespace %q: %v", namespace, err)
+				s.logger.Warnf("trigger service: error listing cloud workflow triggers in namespace %q: %v", namespace, err)
 				failedNamespaces[namespace] = struct{}{}
 				continue
 			}
@@ -407,7 +407,7 @@ func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan st
 		for _, namespace := range namespaces {
 			list, err := s.testTriggersClient.List(ctx, s.getEnvironmentId(), testtriggerclient.ListOptions{}, namespace)
 			if err != nil {
-				s.logger.Errorf("trigger service: error listing cloud test triggers in namespace %q: %v", namespace, err)
+				s.logger.Warnf("trigger service: error listing cloud test triggers in namespace %q: %v", namespace, err)
 				failedNamespaces[namespace] = struct{}{}
 				continue
 			}
