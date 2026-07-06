@@ -222,7 +222,7 @@ func HelmUpgradeOrInstallTestkube(options HelmOptions) *CLIError {
 	mongoEnabled := !options.NoMongo
 	postgresEnabled := !options.NoPostgres
 
-	if !mongoEnabled && !postgresEnabled && options.SetOptions["testkube-api.mongodb.enabled"] != "true" && options.SetOptions["testkube-api.postgresql.enabled"] != "true" {
+	if !mongoEnabled && !postgresEnabled {
 		return NewCLIError(
 			TKErrInvalidInstallConfig,
 			"Invalid database configuration",
