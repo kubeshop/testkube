@@ -143,8 +143,8 @@ func TestAgentLoop_GetRunnerRequests_ReconnectionOnReceiveTimeout(t *testing.T) 
 		"test-env",
 	)
 
-	// Create context with timeout longer than 2x receive timeout + reconnect timeout
-	ctx, cancel := context.WithTimeout(context.Background(), (2*testTimeout)+agentLoopReconnectionDelay)
+	// Create context with timeout long enough for two receive timeouts and reconnect delays.
+	ctx, cancel := context.WithTimeout(context.Background(), 2*(testTimeout+agentLoopReconnectionDelay)+500*time.Millisecond)
 	defer cancel()
 
 	// Start the agent loop
@@ -213,8 +213,8 @@ func TestAgentLoop_GetNotifications_ReconnectionOnReceiveTimeout(t *testing.T) {
 		"test-env",
 	)
 
-	// Create context with timeout longer than 2x receive timeout + reconnect timeout
-	ctx, cancel := context.WithTimeout(context.Background(), (2*testTimeout)+agentLoopReconnectionDelay)
+	// Create context with timeout long enough for two receive timeouts and reconnect delays.
+	ctx, cancel := context.WithTimeout(context.Background(), 2*(testTimeout+agentLoopReconnectionDelay)+500*time.Millisecond)
 	defer cancel()
 
 	// Start the agent loop
@@ -225,8 +225,7 @@ func TestAgentLoop_GetNotifications_ReconnectionOnReceiveTimeout(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "context deadline exceeded")
 
-	// Should have made multiple calls due to receive timeout reconnections
-	// Each call should timeout after 2 seconds, so we expect at least 2 calls in 7 seconds
-	assert.GreaterOrEqual(t, testServer.GetCallCount(), 2,
-		"Expected at least 2 calls due to receive timeout reconnections, got %d", testServer.GetCallCount())
+	// Should have made multiple notification stream connections due to receive timeout reconnections
+	assert.GreaterOrEqual(t, testServer.GetNotificationStreamCallCount(), 2,
+		"Expected at least 2 notification stream calls due to receive timeout reconnections, got %d", testServer.GetNotificationStreamCallCount())
 }
