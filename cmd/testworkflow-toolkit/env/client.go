@@ -158,6 +158,11 @@ func CloudInternal() (cloud.TestKubeCloudAPIClient, error) {
 	var err error
 	if cloudClient == nil {
 		cfg := config2.Config().Worker.Connection
+		if cfg.Url == "" {
+			// Dialing an empty address blocks for the full connection deadline
+			// before failing; report the missing configuration right away.
+			return nil, fmt.Errorf("failed to connect with Cloud: control plane URL is not configured")
+		}
 		logger := log.NewSilent()
 		// TODO(dejan): now metrics are scrapped on each workflow execution and we get an error when connecting to Control Plane even with publicly trusted certificates.
 		// Until a better solution is implemented, TLS verification will be skipped.
