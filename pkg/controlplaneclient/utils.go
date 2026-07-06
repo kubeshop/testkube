@@ -474,7 +474,6 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 
 			// Handle the error
 			if err != nil {
-				logger.Errorw("process notifications error", "error", err)
 				return err
 			}
 
@@ -497,14 +496,12 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 				req = result.req
 				err = result.err
 				if err != nil {
-					logger.Errorw("process notifications error", "error", err)
 					return err
 				}
 			case <-ctx.Done():
 				return ctx.Err()
 			case <-time.After(recvTimeout):
 				err = errors.New("receive request too slow")
-				logger.Errorw("process notifications error", "error", err)
 				return err
 			}
 
