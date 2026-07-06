@@ -113,7 +113,7 @@ func NewUpgradeCmd() *cobra.Command {
 						options.NoMongo = true
 						options.NoPostgres = false
 					default:
-					ui.Errf("Could not detect the existing database type (no in-cluster MongoDB/PostgreSQL found). Re-run with explicit --no-mongo/--no-postgres to avoid switching databases during upgrade (especially if you use an external database or customized resource names).")
+						ui.Errf("Could not detect the existing database type (no in-cluster MongoDB/PostgreSQL found). Re-run with explicit --no-mongo/--no-postgres to avoid switching databases during upgrade (especially if you use an external database or customized resource names).")
 						os.Exit(1)
 					}
 				}
