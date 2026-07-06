@@ -215,6 +215,18 @@ func HelmUninstall(namespace string, releaseName string) *CLIError {
 }
 
 func HelmUpgradeOrInstallTestkube(options HelmOptions) *CLIError {
+	// Exactly one bundled database backend may be selected. With PostgreSQL as the
+	// default, enabling MongoDB via --no-mongo=false without also passing
+	// --no-postgres would leave both enabled and the API pointed at PostgreSQL.
+	if !options.NoMongo && !options.NoPostgres {
+		return NewCLIError(
+			TKErrInvalidInstallConfig,
+			"Invalid database configuration",
+			"Select exactly one database backend: pass --no-postgres to use MongoDB, or --no-mongo (the default) to use PostgreSQL.",
+			errors.New("both MongoDB and PostgreSQL are enabled; exactly one database backend must be selected"),
+		)
+	}
+
 	helmPath, err := lookupHelmPath()
 	if err != nil {
 		return err
@@ -396,8 +408,14 @@ func prepareCommonHelmArgs(options HelmOptions) ([]string, map[string]string) {
 		"testkube-api.multinamespace.enabled": fmt.Sprintf("%t", options.MultiNamespace),
 		"testkube-api.minio.enabled":          fmt.Sprintf("%t", !options.NoMinio),
 		"testkube-operator.installCRD":        fmt.Sprintf("%t", !options.NoCRDs),
-		"mongodb.enabled":                     fmt.Sprintf("%t", !options.NoMongo),
-		"postgresql.enabled":                  fmt.Sprintf("%t", !options.NoPostgres),
+		// Toggle both the dependency sub-chart (deploys the database) and the API
+		// backend selection (which DSN the API uses) from the same flags, so the DB
+		// choice works via CLI flags alone. Power users can still override any of
+		// these via --helm-set (SetOptions take precedence in appendHelmArgs).
+		"mongodb.enabled":                 fmt.Sprintf("%t", !options.NoMongo),
+		"postgresql.enabled":              fmt.Sprintf("%t", !options.NoPostgres),
+		"testkube-api.mongodb.enabled":    fmt.Sprintf("%t", !options.NoMongo),
+		"testkube-api.postgresql.enabled": fmt.Sprintf("%t", !options.NoPostgres),
 	}
 
 	if options.MinioReplicas > 0 {
