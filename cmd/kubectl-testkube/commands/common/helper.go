@@ -215,6 +215,31 @@ func HelmUninstall(namespace string, releaseName string) *CLIError {
 }
 
 func HelmUpgradeOrInstallTestkube(options HelmOptions) *CLIError {
+	// Exactly one database backend should be active for a standard standalone install.
+	// Prevent the two invalid states:
+	//  - both enabled (would inject both DSNs)
+	//  - both disabled (would inject no DSN, leaving the API without a backend)
+	mongoEnabled := !options.NoMongo
+	postgresEnabled := !options.NoPostgres
+
+	if !mongoEnabled && !postgresEnabled {
+		return NewCLIError(
+			TKErrInvalidInstallConfig,
+			"Invalid database configuration",
+			"No database backend selected. Use PostgreSQL (default), or pass --no-mongo=false --no-postgres to use MongoDB.",
+			errors.New("both MongoDB and PostgreSQL are disabled; no database backend is selected"),
+		)
+	}
+
+	if mongoEnabled && postgresEnabled {
+		return NewCLIError(
+			TKErrInvalidInstallConfig,
+			"Invalid database configuration",
+			"MongoDB and PostgreSQL cannot both be enabled: pass --no-postgres to use MongoDB, or --no-mongo (the default) to use PostgreSQL.",
+			errors.New("both MongoDB and PostgreSQL are enabled; only one database backend may be selected"),
+		)
+	}
+
 	helmPath, err := lookupHelmPath()
 	if err != nil {
 		return err
@@ -396,8 +421,14 @@ func prepareCommonHelmArgs(options HelmOptions) ([]string, map[string]string) {
 		"testkube-api.multinamespace.enabled": fmt.Sprintf("%t", options.MultiNamespace),
 		"testkube-api.minio.enabled":          fmt.Sprintf("%t", !options.NoMinio),
 		"testkube-operator.installCRD":        fmt.Sprintf("%t", !options.NoCRDs),
-		"mongodb.enabled":                     fmt.Sprintf("%t", !options.NoMongo),
-		"postgresql.enabled":                  fmt.Sprintf("%t", !options.NoPostgres),
+		// Toggle both the dependency sub-chart (deploys the database) and the API
+		// backend selection (which DSN the API uses) from the same flags, so the DB
+		// choice works via CLI flags alone. Power users can still override any of
+		// these via --helm-set (SetOptions take precedence in appendHelmArgs).
+		"mongodb.enabled":                 fmt.Sprintf("%t", !options.NoMongo),
+		"postgresql.enabled":              fmt.Sprintf("%t", !options.NoPostgres),
+		"testkube-api.mongodb.enabled":    fmt.Sprintf("%t", !options.NoMongo),
+		"testkube-api.postgresql.enabled": fmt.Sprintf("%t", !options.NoPostgres),
 	}
 
 	if options.MinioReplicas > 0 {
@@ -433,9 +464,9 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 	cmd.Flags().StringVar(&options.Values, "values", "", "path to Helm values file")
 
 	cmd.Flags().BoolVar(&options.NoMinio, "no-minio", false, "don't install MinIO")
-	cmd.Flags().BoolVar(&options.NoMongo, "no-mongo", false, "don't install MongoDB")
-	cmd.Flags().BoolVar(&options.NoPostgres, "no-postgres", true, "don't install PostgreSQL")
-	cmd.Flags().BoolVar(&options.NoConfirm, "no-confirm", false, "don't ask for confirmation - unatended installation mode")
+	cmd.Flags().BoolVar(&options.NoMongo, "no-mongo", true, "don't install MongoDB (default). To use MongoDB instead of PostgreSQL, pass --no-mongo=false --no-postgres")
+	cmd.Flags().BoolVar(&options.NoPostgres, "no-postgres", false, "don't install PostgreSQL (default database)")
+	cmd.Flags().BoolVar(&options.NoConfirm, "no-confirm", false, "don't ask for confirmation - unattended installation mode")
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
 	cmd.Flags().BoolVar(&options.EmbeddedNATS, "embedded-nats", false, "embedded NATS server in agent")
 }
