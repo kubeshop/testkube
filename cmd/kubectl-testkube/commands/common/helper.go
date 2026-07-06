@@ -215,15 +215,28 @@ func HelmUninstall(namespace string, releaseName string) *CLIError {
 }
 
 func HelmUpgradeOrInstallTestkube(options HelmOptions) *CLIError {
-	// Exactly one bundled database backend may be selected. With PostgreSQL as the
-	// default, enabling MongoDB via --no-mongo=false without also passing
-	// --no-postgres would leave both backends enabled and inject both DSNs into the API.
-	if !options.NoMongo && !options.NoPostgres {
+	// Exactly one database backend should be active for a standard standalone install.
+	// Prevent the two invalid states:
+	//  - both enabled (would inject both DSNs)
+	//  - both disabled (would inject no DSN, leaving the API without a backend)
+	mongoEnabled := !options.NoMongo
+	postgresEnabled := !options.NoPostgres
+
+	if !mongoEnabled && !postgresEnabled && options.Values == "" && options.SetOptions["testkube-api.mongodb.enabled"] != "true" && options.SetOptions["testkube-api.postgresql.enabled"] != "true" {
 		return NewCLIError(
 			TKErrInvalidInstallConfig,
 			"Invalid database configuration",
-			"Select exactly one database backend: pass --no-postgres to use MongoDB, or --no-mongo (the default) to use PostgreSQL.",
-			errors.New("both MongoDB and PostgreSQL are enabled; exactly one database backend must be selected"),
+			"No database backend selected. Use PostgreSQL (default), or pass --no-postgres to use MongoDB. If you are using an external DB, enable exactly one backend via --values/--helm-set so the API receives the correct DSN.",
+			errors.New("both MongoDB and PostgreSQL are disabled; no database backend is selected"),
+		)
+	}
+
+	if mongoEnabled && postgresEnabled {
+		return NewCLIError(
+			TKErrInvalidInstallConfig,
+			"Invalid database configuration",
+			"MongoDB and PostgreSQL cannot both be enabled: pass --no-postgres to use MongoDB, or --no-mongo (the default) to use PostgreSQL.",
+			errors.New("both MongoDB and PostgreSQL are enabled; only one database backend may be selected"),
 		)
 	}
 
