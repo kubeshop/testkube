@@ -226,7 +226,7 @@ func HelmUpgradeOrInstallTestkube(options HelmOptions) *CLIError {
 		return NewCLIError(
 			TKErrInvalidInstallConfig,
 			"Invalid database configuration",
-			"No database backend selected. Use PostgreSQL (default), or pass --no-postgres to use MongoDB. If you are using an external DB, enable exactly one backend via --values/--helm-set so the API receives the correct DSN.",
+			"No database backend selected. Use PostgreSQL (default), or pass --no-mongo=false --no-postgres to use MongoDB. If you are using an external DB, enable exactly one backend via --helm-set so the API receives the correct DSN.",
 			errors.New("both MongoDB and PostgreSQL are disabled; no database backend is selected"),
 		)
 	}
