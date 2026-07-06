@@ -159,7 +159,6 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 	// load all webhooks from kubernetes CRDs
 	webhookList, err := r.webhookClient.List("")
 	if err != nil {
-		r.log.Errorw("failed to list webhooks", "error", err)
 		return listeners, err
 	}
 
