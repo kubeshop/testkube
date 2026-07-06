@@ -101,14 +101,26 @@ func NewUpgradeCmd() *cobra.Command {
 					if cliErr != nil {
 						common.HandleCLIError(cliErr)
 					}
+
+					if options.SetOptions == nil {
+						options.SetOptions = make(map[string]string)
+					}
+
 					switch dbType {
 					case config.DatabaseTypeMongoDB:
 						ui.Info("Detected existing MongoDB installation - preserving MongoDB as the database backend")
 						options.NoMongo = false
 						options.NoPostgres = true
+						options.SetOptions["testkube-api.mongodb.enabled"] = "true"
+						options.SetOptions["testkube-api.postgresql.enabled"] = "false"
 					case config.DatabaseTypePostgreSQL:
 						options.NoMongo = true
 						options.NoPostgres = false
+						options.SetOptions["testkube-api.mongodb.enabled"] = "false"
+						options.SetOptions["testkube-api.postgresql.enabled"] = "true"
+					default:
+						ui.Errf("Could not detect the existing database type. Re-run with explicit --no-mongo/--no-postgres to avoid switching databases during upgrade.")
+						os.Exit(1)
 					}
 				}
 
