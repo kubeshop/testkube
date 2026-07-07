@@ -3,7 +3,6 @@ package runner
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -28,15 +27,8 @@ const (
 // Group 0 runs setup actions, groups 1+ run test steps.
 // Returns 0 on success, 137 on abort, or other exit codes on failure.
 func RunInit(groupIndex int) (int, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sigCh
-		cancel()
-	}()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
 	return RunInitWithContext(ctx, groupIndex)
 }
@@ -62,7 +54,8 @@ func RunInitWithContext(ctx context.Context, groupIndex int) (int, error) {
 
 	currentContainer := lite.LiteActionContainer{}
 
-	setupAbortHandler(ctx)
+	stopAbortHandler := setupAbortHandler(ctx)
+	defer stopAbortHandler()
 
 	state := data.GetState()
 
@@ -129,12 +122,13 @@ func RunInitWithContext(ctx context.Context, groupIndex int) (int, error) {
 	}
 }
 
-// setupAbortHandler sets up context-based abort handling
-func setupAbortHandler(ctx context.Context) {
-	go func() {
-		<-ctx.Done()
-		orchestration.Executions.Abort()
-	}()
+// setupAbortHandler aborts the executions when the context ends while the run
+// is still in progress. The returned stop function detaches the handler:
+// without it, the deferred context cancellation of a finished run would later
+// call Abort() on the process-global execution group and poison the next run
+// sharing the process.
+func setupAbortHandler(ctx context.Context) (stop func() bool) {
+	return context.AfterFunc(ctx, orchestration.Executions.Abort)
 }
 
 // setupControlServer sets up the control server for pause/resume functionality
