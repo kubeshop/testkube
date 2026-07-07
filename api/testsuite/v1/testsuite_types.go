@@ -85,7 +85,8 @@ type TestSuiteStatus struct {
 }
 
 //+kubebuilder:object:root=true
-//+kubebuilder:skipversion
+//+kubebuilder:subresource:status
+//+kubebuilder:unservedversion
 
 // TestSuite is the Schema for the testsuites API
 type TestSuite struct {
