@@ -104,7 +104,8 @@ spec:
     storage: false
     subresources:
       status: {}
-  - name: v2
+  - deprecated: true
+    name: v2
     schema:
       openAPIV3Schema:
         description: Script is the Schema for the scripts API

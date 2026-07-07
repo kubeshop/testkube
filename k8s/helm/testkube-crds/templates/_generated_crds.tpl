@@ -694,7 +694,8 @@ spec:
     storage: false
     subresources:
       status: {}
-  - name: v2
+  - deprecated: true
+    name: v2
     schema:
       openAPIV3Schema:
         description: Script is the Schema for the scripts API
@@ -2261,6 +2262,7 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
+    deprecated: true
     name: v3
     schema:
       openAPIV3Schema:
@@ -5331,7 +5333,8 @@ spec:
     storage: false
     subresources:
       status: {}
-  - name: v3
+  - deprecated: true
+    name: v3
     schema:
       openAPIV3Schema:
         description: TestSuite is the Schema for the testsuites API

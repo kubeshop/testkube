@@ -70,6 +70,7 @@ type ScriptStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:storageversion
+//+kubebuilder:deprecatedversion
 
 // Script is the Schema for the scripts API
 type Script struct {

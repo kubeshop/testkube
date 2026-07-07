@@ -305,6 +305,7 @@ type TestStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:storageversion
+//+kubebuilder:deprecatedversion
 
 // Test is the Schema for the tests API
 // +kubebuilder:printcolumn:name="Type",type=string,JSONPath=`.spec.type`
