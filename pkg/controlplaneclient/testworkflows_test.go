@@ -78,6 +78,7 @@ func TestNotificationStreamSessionManagerReplaysAfterCursor(t *testing.T) {
 	t.Cleanup(cancel)
 
 	manager := newNotificationStreamSessionManager(
+		ctx,
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -93,7 +94,7 @@ func TestNotificationStreamSessionManagerReplaysAfterCursor(t *testing.T) {
 		},
 	)
 
-	session, sub, replay, available, _, done := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
+	session, sub, replay, available, _, done := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
 	require.True(t, available)
 	require.False(t, done)
 	require.Empty(t, replay)
@@ -103,13 +104,65 @@ func TestNotificationStreamSessionManagerReplaysAfterCursor(t *testing.T) {
 
 	assert.Equal(t, []uint32{1, 2, 3}, firstPass)
 
-	session, sub, replay, available, lastSeqNo, done := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1", ResumeAfterSeqNo: 1})
+	session, sub, replay, available, lastSeqNo, done := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1", ResumeAfterSeqNo: 1})
 	require.True(t, available)
 	require.True(t, done)
 	require.Equal(t, uint32(3), lastSeqNo)
 	require.Len(t, replay, 2)
 	assert.Equal(t, []uint32{2, 3}, []uint32{replay[0].seqNo, replay[1].seqNo})
 	session.unsubscribe(sub)
+}
+
+// TestNotificationStreamSessionSurvivesReaderDropAndResumesLive locks in the resume fix:
+// the source runs under the manager's long-lived context, so it keeps filling the buffer
+// after a reader disconnects (e.g. a gRPC reconnect). A later attach with the same streamId
+// then resumes from the cursor instead of returning resume_unavailable and re-streaming.
+func TestNotificationStreamSessionSurvivesReaderDropAndResumesLive(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	emit := make(chan string)
+	manager := newNotificationStreamSessionManager(
+		ctx,
+		func(req *cloud.TestWorkflowNotificationsRequest) string {
+			return req.ExecutionId
+		},
+		func(context.Context, *cloud.TestWorkflowNotificationsRequest) NotificationWatcher {
+			watcher := channels.NewWatcher[*testkube.TestWorkflowExecutionNotification]()
+			go func() {
+				for log := range emit {
+					watcher.Send(&testkube.TestWorkflowExecutionNotification{Log: log})
+				}
+				watcher.Close(nil)
+			}()
+			return watcher
+		},
+	)
+
+	// First reader attaches; the source starts producing.
+	session, sub, _, available, _, done := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
+	require.True(t, available)
+	require.False(t, done)
+	emit <- "a"
+	emit <- "b"
+	require.Eventually(t, func() bool { return session.currentSeqNo() == 2 }, time.Second, 5*time.Millisecond)
+
+	// The reader disconnects, but the source keeps running under the manager context.
+	session.unsubscribe(sub)
+	emit <- "c"
+	emit <- "d"
+	require.Eventually(t, func() bool { return session.currentSeqNo() == 4 }, time.Second, 5*time.Millisecond)
+
+	// A reconnect with the same streamId resumes from the cursor, not resume_unavailable.
+	session2, sub2, replay, available2, lastSeqNo, done2 := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1", ResumeAfterSeqNo: 2})
+	require.True(t, available2, "resume must be available: the source survived the reader disconnect")
+	require.False(t, done2)
+	require.Equal(t, uint32(4), lastSeqNo)
+	require.Len(t, replay, 2)
+	assert.Equal(t, []uint32{3, 4}, []uint32{replay[0].seqNo, replay[1].seqNo})
+
+	session2.unsubscribe(sub2)
+	close(emit)
 }
 
 func TestSendNotificationResponseReturnsContextErrorWhenCanceled(t *testing.T) {
@@ -196,6 +249,7 @@ func TestNotificationStreamSessionManagerStartsFreshAfterDoneSessionWithoutResum
 
 	var processCalls atomic.Int32
 	manager := newNotificationStreamSessionManager(
+		ctx,
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -210,11 +264,11 @@ func TestNotificationStreamSessionManagerStartsFreshAfterDoneSessionWithoutResum
 		},
 	)
 
-	session1, sub1, _, _, _, _ := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
+	session1, sub1, _, _, _, _ := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
 	waitForNotificationSubscriptionDone(t, sub1)
 	session1.unsubscribe(sub1)
 
-	session2, sub2, replay, available, _, _ := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
+	session2, sub2, replay, available, _, _ := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
 	waitForNotificationSubscriptionDone(t, sub2)
 	session2.unsubscribe(sub2)
 
@@ -231,6 +285,7 @@ func TestNotificationStreamSessionManagerStartsFreshAfterErroredDoneSessionWithR
 	releaseSecond := make(chan struct{})
 	var processCalls atomic.Int32
 	manager := newNotificationStreamSessionManager(
+		ctx,
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -252,12 +307,12 @@ func TestNotificationStreamSessionManagerStartsFreshAfterErroredDoneSessionWithR
 		},
 	)
 
-	session1, sub1, _, _, _, _ := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
+	session1, sub1, _, _, _, _ := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
 	firstPass := collectNotificationSubscriptionSeqNos(t, sub1)
 	session1.unsubscribe(sub1)
 	require.NotEmpty(t, firstPass)
 
-	session2, sub2, replay, available, lastSeqNo, done := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1", ResumeAfterSeqNo: firstPass[len(firstPass)-1]})
+	session2, sub2, replay, available, lastSeqNo, done := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1", ResumeAfterSeqNo: firstPass[len(firstPass)-1]})
 	defer session2.unsubscribe(sub2)
 
 	require.NotSame(t, session1, session2)
@@ -288,6 +343,7 @@ func TestNotificationStreamSessionManagerFreshResumeStartsFromLiveTail(t *testin
 
 	release := make(chan struct{})
 	manager := newNotificationStreamSessionManager(
+		ctx,
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -304,7 +360,7 @@ func TestNotificationStreamSessionManagerFreshResumeStartsFromLiveTail(t *testin
 		},
 	)
 
-	session, sub, replay, available, lastSeqNo, done := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{
+	session, sub, replay, available, lastSeqNo, done := manager.attach(&cloud.TestWorkflowNotificationsRequest{
 		ExecutionId:      "exec-1",
 		StreamId:         "stream-1",
 		ResumeAfterSeqNo: 7,
@@ -332,6 +388,7 @@ func TestNotificationStreamSessionManagerMarksResumeUnavailableForFreshSessionWi
 
 	release := make(chan struct{})
 	manager := newNotificationStreamSessionManager(
+		ctx,
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -345,7 +402,7 @@ func TestNotificationStreamSessionManagerMarksResumeUnavailableForFreshSessionWi
 		},
 	)
 
-	session, sub, replay, available, lastSeqNo, done := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1", ResumeAfterSeqNo: 7})
+	session, sub, replay, available, lastSeqNo, done := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1", ResumeAfterSeqNo: 7})
 	defer session.unsubscribe(sub)
 	defer close(release)
 
@@ -363,6 +420,7 @@ func TestNotificationStreamSessionManagerStartsFreshForConcurrentViewersWithoutR
 	releaseSecond := make(chan struct{})
 	var processCalls atomic.Int32
 	manager := newNotificationStreamSessionManager(
+		ctx,
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -382,9 +440,9 @@ func TestNotificationStreamSessionManagerStartsFreshForConcurrentViewersWithoutR
 		},
 	)
 
-	session1, sub1, _, available1, _, done1 := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
+	session1, sub1, _, available1, _, done1 := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
 	defer session1.unsubscribe(sub1)
-	session2, sub2, replay2, available2, _, done2 := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-2"})
+	session2, sub2, replay2, available2, _, done2 := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-2"})
 	defer session2.unsubscribe(sub2)
 	defer close(releaseFirst)
 	defer close(releaseSecond)
@@ -413,6 +471,7 @@ func TestNotificationStreamSessionManagerExpiresDoneSessionsWithoutAttach(t *tes
 
 	release := make(chan struct{})
 	manager := newNotificationStreamSessionManager(
+		ctx,
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -428,7 +487,7 @@ func TestNotificationStreamSessionManagerExpiresDoneSessionsWithoutAttach(t *tes
 	)
 	manager.sessionIdleTTL = 10 * time.Millisecond
 
-	session, sub, _, _, _, _ := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
+	session, sub, _, _, _, _ := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
 	close(release)
 	waitForNotificationSubscriptionDone(t, sub)
 	session.unsubscribe(sub)

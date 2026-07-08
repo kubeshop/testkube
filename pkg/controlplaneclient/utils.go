@@ -280,6 +280,11 @@ func sendNotificationResponse[Response any](ctx context.Context, responses chan<
 }
 
 type notificationStreamSessionManager[Request notificationRequest] struct {
+	// ctx is the long-lived agent context, NOT the per-connection gRPC stream context.
+	// runSource runs under it so a session's pod-log source and replay buffer survive a
+	// gRPC reconnect: the next attach with the same streamId finds the live session and
+	// replays from the cursor instead of falling back to resume_unavailable.
+	ctx            context.Context
 	mu             sync.Mutex
 	nextID         atomic.Uint64
 	sessions       map[string]*notificationStreamSession
@@ -289,10 +294,12 @@ type notificationStreamSessionManager[Request notificationRequest] struct {
 }
 
 func newNotificationStreamSessionManager[Request notificationRequest](
+	ctx context.Context,
 	key func(Request) string,
 	process func(ctx context.Context, req Request) NotificationWatcher,
 ) *notificationStreamSessionManager[Request] {
 	return &notificationStreamSessionManager[Request]{
+		ctx:            ctx,
 		sessions:       make(map[string]*notificationStreamSession),
 		sessionIdleTTL: workflowNotificationSessionIdleTTL,
 		key:            key,
@@ -308,7 +315,7 @@ func (m *notificationStreamSessionManager[Request]) sessionKey(req Request) stri
 	return fmt.Sprintf("%s:%s", key, req.GetStreamId())
 }
 
-func (m *notificationStreamSessionManager[Request]) attach(ctx context.Context, req Request) (*notificationStreamSession, *notificationStreamSubscription, []notificationStreamEvent, bool, uint32, bool) {
+func (m *notificationStreamSessionManager[Request]) attach(req Request) (*notificationStreamSession, *notificationStreamSubscription, []notificationStreamEvent, bool, uint32, bool) {
 	key := m.sessionKey(req)
 	now := time.Now()
 
@@ -348,7 +355,7 @@ func (m *notificationStreamSessionManager[Request]) attach(ctx context.Context, 
 		if req.GetResumeAfterSeqNo() > 0 {
 			liveOnlyAfter = time.Now()
 		}
-		go m.runSource(ctx, key, session, req, liveOnlyAfter)
+		go m.runSource(m.ctx, key, session, req, liveOnlyAfter)
 		if req.GetResumeAfterSeqNo() > 0 {
 			available = false
 		}
@@ -412,8 +419,7 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 	buildNotification func(streamId string, seqNo uint32, notification *testkube.TestWorkflowExecutionNotification) Response,
 	buildError func(streamId string, message string) Response,
 	buildProtocol func(streamId string, seqNo uint32, notificationType cloud.TestWorkflowNotificationType, message string) Response,
-	sessionKey func(req Request) string,
-	process func(ctx context.Context, req Request) NotificationWatcher,
+	sessionManager *notificationStreamSessionManager[Request],
 	sendTimeout time.Duration,
 	recvTimeout time.Duration,
 	logger *zap.SugaredLogger,
@@ -428,7 +434,6 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 	sendResponse := func(response Response) error {
 		return sendNotificationResponse(ctx, responses, response)
 	}
-	sessionManager := newNotificationStreamSessionManager(sessionKey, process)
 
 	// Send responses in sequence
 	// GRPC stream have special requirements for concurrency on SendMsg, and RecvMsg calls.
@@ -519,7 +524,7 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 				return func() error {
 					defer wg.Done()
 
-					session, sub, replay, resumeAvailable, lastSeqNo, done := sessionManager.attach(ctx, req)
+					session, sub, replay, resumeAvailable, lastSeqNo, done := sessionManager.attach(req)
 					defer session.unsubscribe(sub)
 
 					// READY means the agent accepted this request and attached it to a logical stream session.
