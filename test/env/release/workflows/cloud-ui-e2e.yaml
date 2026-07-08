@@ -1,0 +1,68 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: cloud-ui-e2e
+  labels:
+    core-tests: cloud-ui-e2e
+    tool: playwright
+    artifacts: "true"
+    junit: "true"
+    playwright-traces: "on"
+    category: e2e-ui-testing
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube-cloud-api.git
+      revision: '{{ config.GIT_REVISION }}'
+      paths:
+      - js/packages/e2e-tests
+      usernameFrom:
+        secretKeyRef:
+          name: 'testkube-agent-mongo-secrets' # TODO
+          key: 'CLOUD_UI_E2E_GITHUB_USERNAME'
+      tokenFrom:
+        secretKeyRef:
+          name: 'testkube-agent-mongo-secrets' # TODO
+          key: 'CLOUD_UI_E2E_GITHUB_TOKEN'
+  job:
+    activeDeadlineSeconds: 1200
+  config:
+    CLOUD_BASE_URL: {type: string, default: 'https://app-2-11.testkube.xyz'}
+    GIT_REVISION: {type: string, default: 'main'}
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/js/packages/e2e-tests
+    image: mcr.microsoft.com/playwright:v1.59.1-noble
+    env:
+    - name: CLOUD_BASE_URL
+      value: '{{ config.CLOUD_BASE_URL }}'
+    - name: CLOUD_API_URL
+      value: 'https://api-2-11.testkube.xyz'
+    - name: TEST_ORG_ID
+      value: 'tkcorg_6273a008ca1866b6'
+    - name: TEST_ORG_SLUG
+      value: 'demo'
+    - name: TEST_ENV_ID # Env with connected agent (Testkube-cloud-test-dev-E2E) - used for running some of the tests
+      value: 'tkcenv_d30fe05a2edfaf90'
+    - name: TEST_ENV_SLUG
+      value: 'enterprise-tests'
+    - name: TEST_FIXTURE_USER # Test user having access to connected environment
+      value: 'test-user-10'
+    - name: TESTKUBE_NAMESPACE # namespace where agent is installed
+      value: 'testkube-agent'
+  steps:
+  - name: Install dependencies
+    shell: npm install
+  - name: Run tests
+    timeout: 15m
+    shell: npx playwright test --retries=1 --grep-invert @dev-only
+    artifacts:
+      paths:
+      - playwright-report/**
+      - test-results/**
+  - name: E2E Test Coverage report
+    optional: true
+    shell: npm run scenario-coverage
