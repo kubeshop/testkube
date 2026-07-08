@@ -346,6 +346,16 @@ func (r *blockingReader) Read(p []byte) (int, error) {
 	return 0, r.ctx.Err()
 }
 
+// errReader fails every read with a non-EOF error, standing in for a connection
+// reset, an idle-timed-out socket, or a load balancer cutting a long-lived stream.
+type errReader struct {
+	err error
+}
+
+func (r *errReader) Read(p []byte) (int, error) {
+	return 0, r.err
+}
+
 func TestWatchContainerLogsIdleTimeoutCancelsWhenDoneWithoutError(t *testing.T) {
 	t.Parallel()
 
@@ -542,8 +552,100 @@ func TestWatchContainerLogsReopensOnEOF(t *testing.T) {
 	ch := watchContainerLogsWithStream(
 		ctx,
 		func(_ context.Context, _ kubernetes.Interface, _, _, _ string, _ func() bool, _ *time.Time) (io.Reader, error) {
-			call := atomic.AddInt32(&calls, 1)
-			if call == 1 {
+			if atomic.AddInt32(&calls, 1) == 1 {
+				return bytes.NewBufferString(line), nil
+			}
+			// Every reopen after the first returns a contentless EOF.
+			return bytes.NewBuffer(nil), nil
+		},
+		nil,
+		"default",
+		"pod",
+		"container",
+		testBufferSizeLarge,
+		func() bool { return false }, // container still running
+		func(*instructions.Instruction) bool { return false },
+		testIdleTimeoutDefault,
+	)
+
+	// A contentless EOF while the container is still running is an idle timeout, not
+	// end of logs, so the source must re-follow instead of closing. Consume frames
+	// for a window: the channel must not close, and the opener must be called
+	// repeatedly (each re-follow reopens the stream).
+	deadline := time.After(testDeadlineMedium)
+	for {
+		select {
+		case msg, ok := <-ch:
+			if !ok {
+				t.Fatal("source ended on a contentless EOF while the container was still running")
+			}
+			if msg.Error != nil {
+				t.Fatalf("unexpected error from logs channel: %v", msg.Error)
+			}
+		case <-deadline:
+			assert.GreaterOrEqual(t, atomic.LoadInt32(&calls), int32(3),
+				"expected repeated re-follows on a contentless EOF while running")
+			return
+		}
+	}
+}
+
+func TestWatchContainerLogsReopensOnNonEOFError(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	var calls int32
+	ch := watchContainerLogsWithStream(
+		ctx,
+		func(_ context.Context, _ kubernetes.Interface, _, _, _ string, _ func() bool, _ *time.Time) (io.Reader, error) {
+			atomic.AddInt32(&calls, 1)
+			// A broken read that is neither EOF nor GOAWAY, e.g. a connection reset.
+			return &errReader{err: fmt.Errorf("read tcp 10.0.0.1:443: connection reset by peer")}, nil
+		},
+		nil,
+		"default",
+		"pod",
+		"container",
+		testBufferSizeLarge,
+		func() bool { return false }, // container still running
+		func(*instructions.Instruction) bool { return false },
+		testIdleTimeoutDefault,
+	)
+
+	// A broken read while the container is still running must reopen and keep tailing
+	// regardless of the error cause, not surface the error or close the source.
+	deadline := time.After(testDeadlineMedium)
+	for {
+		select {
+		case msg, ok := <-ch:
+			if !ok {
+				t.Fatal("source ended on a non-EOF read error while the container was still running")
+			}
+			if msg.Error != nil {
+				t.Fatalf("unexpected error surfaced instead of reconnecting: %v", msg.Error)
+			}
+		case <-deadline:
+			assert.GreaterOrEqual(t, atomic.LoadInt32(&calls), int32(3),
+				"expected repeated reopens on a non-EOF read error while running")
+			return
+		}
+	}
+}
+
+func TestWatchContainerLogsEndsOnContentlessEOFWhenDone(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	var calls int32
+	line := "2024-06-07T12:41:49.037275300Z hello\n"
+	ch := watchContainerLogsWithStream(
+		ctx,
+		func(_ context.Context, _ kubernetes.Interface, _, _, _ string, _ func() bool, _ *time.Time) (io.Reader, error) {
+			if atomic.AddInt32(&calls, 1) == 1 {
 				return bytes.NewBufferString(line), nil
 			}
 			return bytes.NewBuffer(nil), nil
@@ -553,31 +655,23 @@ func TestWatchContainerLogsReopensOnEOF(t *testing.T) {
 		"pod",
 		"container",
 		testBufferSizeLarge,
-		func() bool { return false },
+		func() bool { return true }, // container already done
 		func(*instructions.Instruction) bool { return false },
 		testIdleTimeoutDefault,
 	)
 
+	// With the container done, a contentless EOF after the drained content is a real
+	// end of logs and must close the source.
 	deadline := time.NewTimer(testDeadlineMedium)
 	defer deadline.Stop()
-
-	var gotLog bool
 	for {
 		select {
-		case msg, ok := <-ch:
+		case _, ok := <-ch:
 			if !ok {
-				assert.True(t, gotLog, "expected at least one log message before channel close")
-				assert.GreaterOrEqual(t, atomic.LoadInt32(&calls), int32(2))
 				return
 			}
-			if msg.Error != nil {
-				t.Fatalf("unexpected error from logs channel: %v", msg.Error)
-			}
-			if bytes.Contains(msg.Value.Log, []byte("hello")) {
-				gotLog = true
-			}
 		case <-deadline.C:
-			t.Fatal("timed out waiting for log stream to close")
+			t.Fatal("source did not end on a contentless EOF while the container was done")
 		}
 	}
 }
