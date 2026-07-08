@@ -184,7 +184,7 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | global.volumes.additionalVolumes | list | `[]` | Additional volumes to be added to the Testkube API container and Test Jobs containers |
 | mongodb.auth.enabled | bool | `false` | Toggle whether to enable MongoDB authentication |
 | mongodb.containerSecurityContext | object | `{}` | Security Context for MongoDB container |
-| mongodb.enabled | bool | `false` | Toggle whether to install MongoDB |
+| mongodb.enabled | bool | `true` | Toggle whether to install MongoDB |
 | mongodb.fullnameOverride | string | `"testkube-mongodb"` | MongoDB fullname override |
 | mongodb.image.pullSecrets | list | `[]` | MongoDB image pull Secret |
 | mongodb.image.registry | string | `"docker.io"` | MongoDB image registry |
@@ -210,7 +210,7 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | postgresql.auth.password | string | `postgres5432` | Password for the custom user to create in PostgreSQL |
 | postgresql.auth.postgresPassword | string | `postgres1234` | Password for the "postgres" admin user in PostgreSQL |
 | postgresql.fullnameOverride | string | `"testkube-postgresql"` | PostgreSQL fullname override |
-| postgresql.enabled | bool | `true` | Toggle whether to install PostgreSQL |
+| postgresql.enabled | bool | `false` | Toggle whether to install PostgreSQL |
 | postgresql.global.security.allowInsecureImages | bool | `true` | Allows skipping image verification for PostgreSQL |
 | postgresql.image.pullSecrets | list | `[]` | PostgreSQL image pull Secret |
 | postgresql.image.registry | string | `"docker.io"` | PostgreSQL image registry |
@@ -346,7 +346,7 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | testkube-api.minio.tolerations | list | `[]` | Tolerations to schedule a workload to nodes with any architecture type. Required for deployment to GKE cluster. |
 | testkube-api.mongodb.allowDiskUse | bool | `true` | Allow or prohibit writing temporary files on disk when a pipeline stage exceeds the 100 megabyte limit. |
 | testkube-api.mongodb.dsn | string | `"mongodb://testkube-mongodb:27017"` | MongoDB DSN |
-| testkube-api.mongodb.enabled | bool | `false` | use MongoDB |
+| testkube-api.mongodb.enabled | bool | `true` | use MongoDB |
 | testkube-api.multinamespace.enabled | bool | `false` |  |
 | testkube-api.nameOverride | string | `"api-server"` | Testkube API name override |
 | testkube-api.nats.embedded | bool | `false` | Start NATS embedded server in api binary instead of separate deployment |
@@ -487,7 +487,7 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | testkube-operator.podLabels | object | `{}` |  |
 | testkube-operator.podSecurityContext | object | `{}` | Testkube Operator Pod Security Context |
 | testkube-api.postgresql.dsn | string | `"postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"` | PostgreSQL DSN |
-| testkube-api.postgresql.enabled | bool | `true` | use PostgreSQL |
+| testkube-api.postgresql.enabled | bool | `false` | use PostgreSQL |
 | testkube-api.postgresql.secretKey | string | `""` | Secret key for PostgreSQL DSN |
 | testkube-api.postgresql.secretName | string | `""` | Secret name with PostgreSQL DSN |
 | testkube-operator.preUpgrade.annotations | object | `{}` |  |
