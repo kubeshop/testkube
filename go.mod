@@ -81,7 +81,7 @@ require (
 	golang.org/x/crypto v0.53.0
 	golang.org/x/exp v0.0.0-20260611194520-c48552f49976
 	golang.org/x/oauth2 v0.36.0
-	golang.org/x/sync v0.21.0
+	golang.org/x/sync v0.22.0
 	golang.org/x/text v0.39.0
 	google.golang.org/appengine/v2 v2.0.6
 	google.golang.org/grpc v1.82.0
