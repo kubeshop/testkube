@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	DefaultReconcileInterval         = 5 * time.Second
+	DefaultReconcileInterval           = 5 * time.Second
 	eventEmitterQueueName     string = "emitter"
 	DefaultEventTTL                  = 1 * time.Hour
 	DefaultEventCacheCapacity        = 100000
