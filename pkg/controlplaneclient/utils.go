@@ -467,6 +467,12 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 	// Process the requests
 	g.Go(func() error {
 		var wg sync.WaitGroup
+		// activeStreams dedups subscriptions by session key. The control plane re-asserts
+		// the same stream request periodically so a dropped connection self-heals; while a
+		// subscription is already live it already covers that stream, so a duplicate
+		// request is ignored to avoid double-delivering notifications.
+		activeStreams := make(map[string]struct{})
+		var activeStreamsMu sync.Mutex
 		defer func() {
 			wg.Wait()
 			close(responses)
@@ -518,11 +524,27 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 				continue
 			}
 
-			// Start reading the notifications
+			// Start reading the notifications. Ignore a request whose session is already
+			// being streamed on this connection (the control plane re-asserts requests to
+			// self-heal, so duplicates are expected while a subscription is live).
+			streamKey := sessionManager.sessionKey(req)
+			activeStreamsMu.Lock()
+			if _, streaming := activeStreams[streamKey]; streaming {
+				activeStreamsMu.Unlock()
+				continue
+			}
+			activeStreams[streamKey] = struct{}{}
+			activeStreamsMu.Unlock()
+
 			wg.Add(1)
 			g.Go(func(req Request) func() error {
 				return func() error {
 					defer wg.Done()
+					defer func() {
+						activeStreamsMu.Lock()
+						delete(activeStreams, streamKey)
+						activeStreamsMu.Unlock()
+					}()
 
 					session, sub, replay, resumeAvailable, lastSeqNo, done := sessionManager.attach(req)
 					defer session.unsubscribe(sub)
