@@ -1,6 +1,7 @@
 package controlplaneclient
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -132,6 +133,66 @@ func TestBudgetAccountingReturnsToZero(t *testing.T) {
 
 	assert.Equal(t, int64(0), budgetUsed(budget), "used must return to zero after all sessions drop")
 	assert.Len(t, m.sessions, 0)
+}
+
+// sumReplayBytes returns the actual bytes currently held across the given
+// sessions, read under each session lock.
+func sumReplayBytes(sessions ...*notificationStreamSession) int64 {
+	var total int64
+	for _, s := range sessions {
+		s.mu.Lock()
+		total += int64(s.replayBytes)
+		s.mu.Unlock()
+	}
+	return total
+}
+
+// TestBudgetNoPhantomOvercountUnderConcurrency stresses the budget with many
+// publishers over sessions that share an over-tight budget, forcing continuous
+// eviction. It asserts used never drifts above the actual bytes held: with the
+// reservation happening under the session lock, a concurrent evictor can only
+// release bytes already reserved, so used stays consistent. Against the old
+// reserve-after-unlock ordering, an evictor could release a not-yet-reserved
+// growth, leaving a phantom overcount that this test detects.
+func TestBudgetNoPhantomOvercountUnderConcurrency(t *testing.T) {
+	payload := makePayload(2 * 1024)
+	// Tight enough that every publisher forces eviction across the shared budget.
+	budget := newLiveLogReplayBudget(24 * 1024)
+
+	m := newNotificationStreamSessionManager[*fakeNotificationRequest](
+		budget,
+		func(r *fakeNotificationRequest) string { return r.key },
+		nil,
+	)
+
+	const sessionCount = 4
+	sessions := make([]*notificationStreamSession, sessionCount)
+	for i := 0; i < sessionCount; i++ {
+		s := newNotificationStreamSession(budget)
+		sessions[i] = s
+		m.mu.Lock()
+		m.sessions[string(rune('a'+i))] = s
+		m.mu.Unlock()
+	}
+
+	const publishers = 8
+	const perPublisher = 400
+	var wg sync.WaitGroup
+	for p := 0; p < publishers; p++ {
+		wg.Add(1)
+		go func(p int) {
+			defer wg.Done()
+			for i := 0; i < perPublisher; i++ {
+				sessions[(p+i)%sessionCount].publish(logNotification(payload))
+			}
+		}(p)
+	}
+	wg.Wait()
+
+	used := budgetUsed(budget)
+	actual := sumReplayBytes(sessions...)
+	assert.Equal(t, actual, used, "used must equal the actual bytes held across live sessions (no phantom overcount)")
+	assert.LessOrEqual(t, used, budget.max, "used must not exceed max after eviction settles")
 }
 
 func makePayload(n int) string {

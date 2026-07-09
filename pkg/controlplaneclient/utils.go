@@ -78,12 +78,16 @@ const (
 
 // liveLogReplayBudget bounds the total bytes held across every replay buffer of
 // every notification stream session, on top of the per-session inner caps. When
-// a growth would exceed max, registered evictors reclaim bytes: first by dropping
+// used would exceed max, registered evictors reclaim bytes: first by dropping
 // done sessions, then by trimming the oldest replay events of running sessions.
 //
-// Lock ordering: manager.mu -> session.mu. budget.mu is a leaf and is never held
-// while calling an evictor or acquiring manager/session locks; evictors acquire
-// manager.mu then session.mu. This keeps publish non-blocking and deadlock-free.
+// Lock ordering: manager.mu -> session.mu -> budget.mu. budget.mu is a leaf:
+// reserve/release take only budget.mu and return immediately, never invoking an
+// evictor or acquiring manager/session locks. A session reserves its bytes while
+// still holding session.mu, so a growth is counted atomically with the buffer
+// mutation and can never be released before it is reserved. The eviction trigger
+// runs only after session.mu is dropped; evictors acquire manager.mu then
+// session.mu. This keeps publish non-blocking and deadlock-free.
 type liveLogReplayBudget struct {
 	mu       sync.Mutex
 	used     int64
@@ -109,16 +113,33 @@ func (b *liveLogReplayBudget) register(evict func(need int64, exclude *notificat
 	b.mu.Unlock()
 }
 
-// grow accounts delta bytes just added to caller's replay buffer. If the total
-// would exceed max, it reclaims bytes from other sessions and, as a last resort,
-// from the caller (exclude is passed so an evictor trims the caller via the
-// caller's own lock, which is already released by now). grow never blocks.
-func (b *liveLogReplayBudget) grow(delta int64, caller *notificationStreamSession) {
-	if b == nil || delta <= 0 {
+// reserve accounts a net change to the caller's replay buffer against used. It is
+// a pure leaf: it takes only budget.mu and returns immediately, never invoking an
+// evictor or acquiring manager/session locks. Callers reserve while still holding
+// their session.mu, so the reservation is atomic with the buffer mutation and a
+// growth can never be released before it is reserved. delta may be negative when a
+// mutation nets to a shrink (e.g. inner-cap eviction outweighs the append).
+func (b *liveLogReplayBudget) reserve(delta int64) {
+	if b == nil || delta == 0 {
 		return
 	}
 	b.mu.Lock()
 	b.used += delta
+	if b.used < 0 {
+		b.used = 0
+	}
+	b.mu.Unlock()
+}
+
+// evictIfOver reclaims bytes when used exceeds max. It must be called only after
+// the caller has released its session.mu, since evictors acquire manager.mu then
+// session.mu. caller is passed as exclude so an evictor trims the caller last, via
+// the caller's own (now-released) lock. evictIfOver never blocks on a held lock.
+func (b *liveLogReplayBudget) evictIfOver(caller *notificationStreamSession) {
+	if b == nil {
+		return
+	}
+	b.mu.Lock()
 	over := b.used - b.max
 	if over <= 0 {
 		b.mu.Unlock()
@@ -283,6 +304,10 @@ func (s *notificationStreamSession) publish(notification *testkube.TestWorkflowE
 			s.replay[0].notification = nil
 			s.replay = s.replay[1:]
 		}
+		// Reserve the net change while still holding s.mu, so the reservation is
+		// atomic with the buffer mutation. A concurrent evictor can then only
+		// release bytes it has already seen reserved, never a phantom growth.
+		s.budget.reserve(int64(grownBytes - freedBytes))
 	}
 
 	for _, sub := range s.subscribers {
@@ -290,10 +315,8 @@ func (s *notificationStreamSession) publish(notification *testkube.TestWorkflowE
 	}
 	s.mu.Unlock()
 
-	// Reconcile the global budget outside session.mu so eviction never re-enters
-	// this session's lock. Release inner-cap evictions first, then account net growth.
-	s.budget.release(int64(freedBytes))
-	s.budget.grow(int64(grownBytes), s)
+	// Trigger eviction outside s.mu so evictors never re-enter this session's lock.
+	s.budget.evictIfOver(s)
 
 	for _, sub := range subscribers {
 		sub.send(event)
