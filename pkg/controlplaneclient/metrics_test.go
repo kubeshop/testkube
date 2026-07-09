@@ -64,3 +64,49 @@ func TestLiveLogMetricsMoveOnAttachAndPublish(t *testing.T) {
 	manager.detach(session, sub2)
 	require.Equal(t, float64(0), testutil.ToFloat64(liveLogSubscribers.WithLabelValues(kind)))
 }
+
+// Two managers of the same kind can overlap: on gRPC reconnect a fresh manager
+// is built while the previous one's sessions keep draining bytes via stale TTL
+// timers. The replay_bytes gauge must reflect the current live total across
+// both, not be clobbered to a single manager's draining value.
+func TestLiveLogReplayBytesAdditiveAcrossManagers(t *testing.T) {
+	const kind = "metrics-overlap-test"
+
+	newManager := func() *notificationStreamSessionManager[*cloud.TestWorkflowNotificationsRequest] {
+		return newNotificationStreamSessionManager(
+			kind,
+			func(req *cloud.TestWorkflowNotificationsRequest) string { return req.ExecutionId },
+			func(context.Context, *cloud.TestWorkflowNotificationsRequest) NotificationWatcher {
+				return channels.NewWatcher[*testkube.TestWorkflowExecutionNotification]()
+			},
+		)
+	}
+
+	require.Equal(t, float64(0), testutil.ToFloat64(liveLogReplayBytes.WithLabelValues(kind)))
+
+	// Old manager buffers some bytes.
+	oldManager := newManager()
+	oldSession := newNotificationStreamSession(oldManager.addReplayBytes)
+	oldSession.publish(&testkube.TestWorkflowExecutionNotification{Log: "old-manager-payload"})
+	oldBytes := testutil.ToFloat64(liveLogReplayBytes.WithLabelValues(kind))
+	require.Greater(t, oldBytes, float64(0))
+
+	// A reconnect builds a fresh manager whose session buffers more bytes.
+	newMgr := newManager()
+	newSession := newNotificationStreamSession(newMgr.addReplayBytes)
+	newSession.publish(&testkube.TestWorkflowExecutionNotification{Log: "new-manager-payload"})
+	combined := testutil.ToFloat64(liveLogReplayBytes.WithLabelValues(kind))
+	require.Greater(t, combined, oldBytes)
+
+	newBytes := combined - oldBytes
+
+	// The old manager's stale timer releases its session's bytes. The gauge must
+	// drop by exactly the old contribution and still hold the new manager's live
+	// total, not be reset to the old manager's (now zero) draining value.
+	oldSession.releaseReplayBytes()
+	require.Equal(t, newBytes, testutil.ToFloat64(liveLogReplayBytes.WithLabelValues(kind)))
+
+	// Once the new manager's session drops too, the gauge nets back to zero.
+	newSession.releaseReplayBytes()
+	require.Equal(t, float64(0), testutil.ToFloat64(liveLogReplayBytes.WithLabelValues(kind)))
+}

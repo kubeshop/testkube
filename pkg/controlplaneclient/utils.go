@@ -311,7 +311,6 @@ type notificationStreamSessionManager[Request notificationRequest] struct {
 	sessions       map[string]*notificationStreamSession
 	sessionIdleTTL time.Duration
 	kind           string
-	replayBytes    int64
 	key            func(Request) string
 	process        func(ctx context.Context, req Request) NotificationWatcher
 }
@@ -330,15 +329,15 @@ func newNotificationStreamSessionManager[Request notificationRequest](
 	}
 }
 
-// addReplayBytes adjusts the manager-level replay byte total and the gauge.
-// The session mutex serializes the deltas from a single session; the atomic
-// keeps the manager total consistent across sessions.
+// addReplayBytes applies a signed byte delta to the gauge. Adds are matched by
+// their own release deltas, so overlapping managers of the same kind (e.g. a
+// new manager built on gRPC reconnect while an old one's sessions still drain)
+// sum correctly and the gauge nets back to zero once every session drops.
 func (m *notificationStreamSessionManager[Request]) addReplayBytes(delta int) {
 	if delta == 0 {
 		return
 	}
-	total := atomic.AddInt64(&m.replayBytes, int64(delta))
-	liveLogReplayBytes.WithLabelValues(m.kind).Set(float64(total))
+	liveLogReplayBytes.WithLabelValues(m.kind).Add(float64(delta))
 }
 
 func (m *notificationStreamSessionManager[Request]) sessionKey(req Request) string {
