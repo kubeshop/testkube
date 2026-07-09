@@ -89,28 +89,41 @@ const (
 // runs only after session.mu is dropped; evictors acquire manager.mu then
 // session.mu. This keeps publish non-blocking and deadlock-free.
 type liveLogReplayBudget struct {
-	mu       sync.Mutex
-	used     int64
-	max      int64
-	evictors []func(need int64, exclude *notificationStreamSession) int64
+	mu            sync.Mutex
+	used          int64
+	max           int64
+	nextEvictorID uint64
+	evictors      map[uint64]func(need int64, exclude *notificationStreamSession) int64
 }
 
 func newLiveLogReplayBudget(max int64) *liveLogReplayBudget {
 	if max <= 0 {
 		max = defaultLiveLogReplayMaxBytes
 	}
-	return &liveLogReplayBudget{max: max}
+	return &liveLogReplayBudget{
+		max:      max,
+		evictors: make(map[uint64]func(need int64, exclude *notificationStreamSession) int64),
+	}
 }
 
-// register adds a manager's evictor. Called once per manager at construction,
-// before any publish, so no lock coordination with reclaim is needed here.
-func (b *liveLogReplayBudget) register(evict func(need int64, exclude *notificationStreamSession) int64) {
+// register adds a manager's evictor and returns a deregister func that removes it.
+// The budget is shared and long-lived while managers come and go with each gRPC
+// connection, so the caller must call deregister when its manager tears down or
+// the evictor set grows without bound. deregister takes only budget.mu (leaf).
+func (b *liveLogReplayBudget) register(evict func(need int64, exclude *notificationStreamSession) int64) func() {
 	if b == nil {
-		return
+		return func() {}
 	}
 	b.mu.Lock()
-	b.evictors = append(b.evictors, evict)
+	id := b.nextEvictorID
+	b.nextEvictorID++
+	b.evictors[id] = evict
 	b.mu.Unlock()
+	return func() {
+		b.mu.Lock()
+		delete(b.evictors, id)
+		b.mu.Unlock()
+	}
 }
 
 // reserve accounts a net change to the caller's replay buffer against used. It is
@@ -145,8 +158,10 @@ func (b *liveLogReplayBudget) evictIfOver(caller *notificationStreamSession) {
 		b.mu.Unlock()
 		return
 	}
-	evictors := make([]func(int64, *notificationStreamSession) int64, len(b.evictors))
-	copy(evictors, b.evictors)
+	evictors := make([]func(int64, *notificationStreamSession) int64, 0, len(b.evictors))
+	for _, evict := range b.evictors {
+		evictors = append(evictors, evict)
+	}
 	b.mu.Unlock()
 
 	for _, evict := range evictors {
@@ -440,6 +455,7 @@ type notificationStreamSessionManager[Request notificationRequest] struct {
 	sessions       map[string]*notificationStreamSession
 	sessionIdleTTL time.Duration
 	budget         *liveLogReplayBudget
+	deregister     func()
 	key            func(Request) string
 	process        func(ctx context.Context, req Request) NotificationWatcher
 }
@@ -456,8 +472,17 @@ func newNotificationStreamSessionManager[Request notificationRequest](
 		key:            key,
 		process:        process,
 	}
-	budget.register(m.evict)
+	m.deregister = budget.register(m.evict)
 	return m
+}
+
+// stop removes this manager's evictor from the shared budget. It must be called
+// when the manager's connection ends so evictors do not accumulate across
+// reconnects. Orphaned sessions still release their own bytes via idle-TTL expiry.
+func (m *notificationStreamSessionManager[Request]) stop() {
+	if m.deregister != nil {
+		m.deregister()
+	}
 }
 
 // evict reclaims up to need bytes for the budget: first by dropping done sessions
@@ -652,6 +677,9 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 		return sendNotificationResponse(ctx, responses, response)
 	}
 	sessionManager := newNotificationStreamSessionManager(budget, sessionKey, process)
+	// Remove this connection's evictor from the shared budget when the stream ends,
+	// so evictor registrations do not accumulate across reconnects.
+	defer sessionManager.stop()
 
 	// Send responses in sequence
 	// GRPC stream have special requirements for concurrency on SendMsg, and RecvMsg calls.

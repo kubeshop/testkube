@@ -195,6 +195,38 @@ func TestBudgetNoPhantomOvercountUnderConcurrency(t *testing.T) {
 	assert.LessOrEqual(t, used, budget.max, "used must not exceed max after eviction settles")
 }
 
+func budgetEvictorCount(b *liveLogReplayBudget) int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return len(b.evictors)
+}
+
+// TestBudgetEvictorsDeregisterOnManagerStop verifies that managers registering
+// against a shared, long-lived budget do not leak evictors: after each manager
+// stops, the budget's evictor set returns to its baseline instead of growing with
+// every reconnect.
+func TestBudgetEvictorsDeregisterOnManagerStop(t *testing.T) {
+	budget := newLiveLogReplayBudget(1 * 1024 * 1024)
+	require.Equal(t, 0, budgetEvictorCount(budget), "fresh budget has no evictors")
+
+	const managers = 50
+	stops := make([]func(), 0, managers)
+	for i := 0; i < managers; i++ {
+		m := newNotificationStreamSessionManager[*fakeNotificationRequest](
+			budget,
+			func(r *fakeNotificationRequest) string { return r.key },
+			nil,
+		)
+		stops = append(stops, m.stop)
+	}
+	require.Equal(t, managers, budgetEvictorCount(budget), "each manager registers one evictor")
+
+	for _, stop := range stops {
+		stop()
+	}
+	assert.Equal(t, 0, budgetEvictorCount(budget), "stopping every manager returns the evictor set to baseline")
+}
+
 func makePayload(n int) string {
 	buf := make([]byte, n)
 	for i := range buf {
