@@ -18,11 +18,11 @@ spec:
       - js/packages/e2e-tests
       usernameFrom:
         secretKeyRef:
-          name: 'testkube-agent-mongo-secrets' # TODO
+          name: 'testkube-agent-secrets'
           key: 'CLOUD_UI_E2E_GITHUB_USERNAME'
       tokenFrom:
         secretKeyRef:
-          name: 'testkube-agent-mongo-secrets' # TODO
+          name: 'testkube-agent-secrets'
           key: 'CLOUD_UI_E2E_GITHUB_TOKEN'
   job:
     activeDeadlineSeconds: 1200
