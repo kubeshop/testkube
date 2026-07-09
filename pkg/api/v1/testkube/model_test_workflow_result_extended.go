@@ -361,7 +361,7 @@ func (r *TestWorkflowResult) HealDuration(scheduledAt time.Time) {
 			queuedAt = scheduledAt
 		}
 		totalDuration := r.FinishedAt.Sub(scheduledAt)
-		duration := totalDuration - time.Duration(1e3*r.PausedMs)
+		duration := totalDuration - time.Duration(r.PausedMs)*time.Millisecond
 		if totalDuration < 0 {
 			totalDuration = time.Duration(0)
 		}
