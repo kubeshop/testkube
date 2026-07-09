@@ -71,6 +71,7 @@ const (
 	workflowNotificationReplayMaxEvents   = 10_000
 	workflowNotificationReplayMaxBytes    = 10 * 1024 * 1024
 	workflowNotificationSessionIdleTTL    = 15 * time.Minute
+	workflowNotificationSweepInterval     = 60 * time.Second
 )
 
 type notificationStreamEvent struct {
@@ -298,12 +299,31 @@ func newNotificationStreamSessionManager[Request notificationRequest](
 	key func(Request) string,
 	process func(ctx context.Context, req Request) NotificationWatcher,
 ) *notificationStreamSessionManager[Request] {
-	return &notificationStreamSessionManager[Request]{
+	m := &notificationStreamSessionManager[Request]{
 		ctx:            ctx,
 		sessions:       make(map[string]*notificationStreamSession),
 		sessionIdleTTL: workflowNotificationSessionIdleTTL,
 		key:            key,
 		process:        process,
+	}
+	go m.runSweeper(workflowNotificationSweepInterval)
+	return m
+}
+
+// runSweeper reclaims expired sessions on a fixed interval regardless of attach
+// traffic. This covers a manager that goes idle (attach never runs to sweep) and a
+// done session re-attached near its TTL boundary that escapes scheduleExpiration's
+// single AfterFunc. It stops when the manager's context is done.
+func (m *notificationStreamSessionManager[Request]) runSweeper(interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-m.ctx.Done():
+			return
+		case <-ticker.C:
+			m.sweepExpired(time.Now())
+		}
 	}
 }
 
@@ -315,17 +335,24 @@ func (m *notificationStreamSessionManager[Request]) sessionKey(req Request) stri
 	return fmt.Sprintf("%s:%s", key, req.GetStreamId())
 }
 
-func (m *notificationStreamSessionManager[Request]) attach(req Request) (*notificationStreamSession, *notificationStreamSubscription, []notificationStreamEvent, bool, uint32, bool) {
-	key := m.sessionKey(req)
-	now := time.Now()
-
+// sweepExpired removes every session that is done and past the idle TTL as of now.
+func (m *notificationStreamSessionManager[Request]) sweepExpired(now time.Time) {
 	m.mu.Lock()
+	defer m.mu.Unlock()
 	for sessionKey, session := range m.sessions {
 		if session.expired(now, m.sessionIdleTTL) {
 			delete(m.sessions, sessionKey)
 		}
 	}
+}
 
+func (m *notificationStreamSessionManager[Request]) attach(req Request) (*notificationStreamSession, *notificationStreamSubscription, []notificationStreamEvent, bool, uint32, bool) {
+	key := m.sessionKey(req)
+	now := time.Now()
+
+	m.sweepExpired(now)
+
+	m.mu.Lock()
 	session := m.sessions[key]
 	if req.GetResumeAfterSeqNo() == 0 {
 		session = nil

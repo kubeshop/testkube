@@ -113,10 +113,6 @@ func TestNotificationStreamSessionManagerReplaysAfterCursor(t *testing.T) {
 	session.unsubscribe(sub)
 }
 
-// TestNotificationStreamSessionSurvivesReaderDropAndResumesLive locks in the resume fix:
-// the source runs under the manager's long-lived context, so it keeps filling the buffer
-// after a reader disconnects (e.g. a gRPC reconnect). A later attach with the same streamId
-// then resumes from the cursor instead of returning resume_unavailable and re-streaming.
 func TestNotificationStreamSessionSurvivesReaderDropAndResumesLive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
@@ -497,6 +493,55 @@ func TestNotificationStreamSessionManagerExpiresDoneSessionsWithoutAttach(t *tes
 		defer manager.mu.Unlock()
 		return len(manager.sessions) == 0
 	}, time.Second, time.Millisecond)
+}
+
+func TestNotificationStreamSessionManagerSweepExpiredRemovesDonePastTTLSession(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	release := make(chan struct{})
+	manager := newNotificationStreamSessionManager(
+		ctx,
+		func(req *cloud.TestWorkflowNotificationsRequest) string {
+			return req.ExecutionId
+		},
+		func(context.Context, *cloud.TestWorkflowNotificationsRequest) NotificationWatcher {
+			watcher := channels.NewWatcher[*testkube.TestWorkflowExecutionNotification]()
+			go func() {
+				watcher.Send(&testkube.TestWorkflowExecutionNotification{Log: "done"})
+				<-release
+				watcher.Close(nil)
+			}()
+			return watcher
+		},
+	)
+	manager.sessionIdleTTL = time.Minute
+
+	session, sub, _, _, _, _ := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
+	close(release)
+	waitForNotificationSubscriptionDone(t, sub)
+	session.unsubscribe(sub)
+
+	require.Eventually(t, func() bool {
+		done, _ := session.status()
+		return done
+	}, time.Second, time.Millisecond)
+
+	manager.mu.Lock()
+	require.Len(t, manager.sessions, 1)
+	manager.mu.Unlock()
+
+	// A sweep at now-before-TTL leaves the session in place.
+	manager.sweepExpired(time.Now())
+	manager.mu.Lock()
+	require.Len(t, manager.sessions, 1)
+	manager.mu.Unlock()
+
+	// A sweep at a time past the TTL reclaims it with no further attach traffic.
+	manager.sweepExpired(time.Now().Add(2 * manager.sessionIdleTTL))
+	manager.mu.Lock()
+	require.Len(t, manager.sessions, 0)
+	manager.mu.Unlock()
 }
 
 func collectNotificationSubscriptionSeqNos(t *testing.T, sub *notificationStreamSubscription) []uint32 {
