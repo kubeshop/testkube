@@ -175,12 +175,25 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 	return watcher
 }
 
+// The session key identifies a notification stream session, so a reconnect with the
+// same key reattaches to the live session and its replay buffer instead of starting a
+// fresh one. It encodes the execution plus the per-stream discriminators.
+func workflowNotificationSessionKey(req *cloud.TestWorkflowNotificationsRequest) string {
+	return fmt.Sprintf("workflow:%s:%s", req.GetEnvironmentId(), req.GetExecutionId())
+}
+
+func parallelWorkerNotificationSessionKey(req *cloud.TestWorkflowParallelStepNotificationsRequest) string {
+	return fmt.Sprintf("parallel:%s:%s:%s:%d", req.GetEnvironmentId(), req.GetExecutionId(), req.GetRef(), req.GetWorkerIndex())
+}
+
+func serviceNotificationSessionKey(req *cloud.TestWorkflowServiceNotificationsRequest) string {
+	return fmt.Sprintf("service:%s:%s:%s:%d", req.GetEnvironmentId(), req.GetExecutionId(), req.GetServiceName(), req.GetServiceIndex())
+}
+
 func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowNotificationsRequest) NotificationWatcher) error {
 	c.notifMu.Lock()
 	if c.workflowNotifManager == nil {
-		c.workflowNotifManager = newNotificationStreamSessionManager(ctx, func(req *cloud.TestWorkflowNotificationsRequest) string {
-			return fmt.Sprintf("workflow:%s:%s", req.GetEnvironmentId(), req.GetExecutionId())
-		}, process)
+		c.workflowNotifManager = newNotificationStreamSessionManager(ctx, workflowNotificationSessionKey, process)
 	}
 	manager := c.workflowNotifManager
 	c.notifMu.Unlock()
@@ -202,9 +215,7 @@ func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, proce
 func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowParallelStepNotificationsRequest) NotificationWatcher) error {
 	c.notifMu.Lock()
 	if c.parallelNotifManager == nil {
-		c.parallelNotifManager = newNotificationStreamSessionManager(ctx, func(req *cloud.TestWorkflowParallelStepNotificationsRequest) string {
-			return fmt.Sprintf("parallel:%s:%s:%s:%d", req.GetEnvironmentId(), req.GetExecutionId(), req.GetRef(), req.GetWorkerIndex())
-		}, process)
+		c.parallelNotifManager = newNotificationStreamSessionManager(ctx, parallelWorkerNotificationSessionKey, process)
 	}
 	manager := c.parallelNotifManager
 	c.notifMu.Unlock()
@@ -226,9 +237,7 @@ func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.
 func (c *client) ProcessExecutionServiceNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) NotificationWatcher) error {
 	c.notifMu.Lock()
 	if c.serviceNotifManager == nil {
-		c.serviceNotifManager = newNotificationStreamSessionManager(ctx, func(req *cloud.TestWorkflowServiceNotificationsRequest) string {
-			return fmt.Sprintf("service:%s:%s:%s:%d", req.GetEnvironmentId(), req.GetExecutionId(), req.GetServiceName(), req.GetServiceIndex())
-		}, process)
+		c.serviceNotifManager = newNotificationStreamSessionManager(ctx, serviceNotificationSessionKey, process)
 	}
 	manager := c.serviceNotifManager
 	c.notifMu.Unlock()
