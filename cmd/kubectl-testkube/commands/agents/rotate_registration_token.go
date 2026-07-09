@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -19,7 +18,7 @@ func NewRotateRegistrationTokenCommand() *cobra.Command {
 	var yes bool
 
 	cmd := &cobra.Command{
-		Use:   "rotate-registration-token [environment-id-or-name]",
+		Use:   "rotate-registration-token [environment-id]",
 		Short: "Rotate the registration token for an environment",
 		Args:  cobra.MaximumNArgs(1),
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
@@ -33,23 +32,11 @@ func NewRotateRegistrationTokenCommand() *cobra.Command {
 			ui.ExitOnError("loading config", err)
 
 			envID := cfg.CloudContext.EnvironmentId
-			envName := envID
 			if len(args) == 1 {
-				envs, err := common.GetEnvironments(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, cfg.SkipTLS || cfg.CloudContext.SkipTLS)
-				ui.ExitOnError("getting environments", err)
-				envID = ""
-				for _, env := range envs {
-					if env.Id == args[0] || env.Name == args[0] {
-						envID, envName = env.Id, env.Name
-						break
-					}
-				}
-				if envID == "" {
-					ui.ExitOnError("finding environment", errors.Errorf("environment %q not found", args[0]))
-				}
+				envID = args[0]
 			}
 
-			if !yes && !ui.Confirm(fmt.Sprintf("Rotate registration token for environment '%s'?", envName)) {
+			if !yes && !ui.Confirm(fmt.Sprintf("Rotate registration token for environment ID '%s'?", envID)) {
 				return
 			}
 
