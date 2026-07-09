@@ -58,7 +58,7 @@ spec:
     shell: npm install
   - name: Run tests
     timeout: 15m
-    shell: npx playwright test --retries=1 --grep-invert @dev-only
+    shell: npx playwright test --retries=1 --grep-invert "@dev-only|@exclude-sandbox"
     artifacts:
       paths:
       - playwright-report/**
