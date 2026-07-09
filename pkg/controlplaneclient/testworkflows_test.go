@@ -78,6 +78,7 @@ func TestNotificationStreamSessionManagerReplaysAfterCursor(t *testing.T) {
 	t.Cleanup(cancel)
 
 	manager := newNotificationStreamSessionManager(
+		newLiveLogReplayBudget(0),
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -123,7 +124,7 @@ func TestSendNotificationResponseReturnsContextErrorWhenCanceled(t *testing.T) {
 }
 
 func TestNotificationStreamSessionPublishDoesNotHoldLockForSlowSubscriber(t *testing.T) {
-	session := newNotificationStreamSession()
+	session := newNotificationStreamSession(newLiveLogReplayBudget(0))
 	sub, _, _, _, _ := session.subscribe(0, 1)
 	for i := 0; i < cap(sub.ch); i++ {
 		sub.ch <- notificationStreamEvent{}
@@ -159,7 +160,7 @@ func TestNotificationStreamSessionPublishDoesNotHoldLockForSlowSubscriber(t *tes
 }
 
 func TestWorkflowProtocolEventsDoNotAdvanceApplicationSeqNo(t *testing.T) {
-	session := newNotificationStreamSession()
+	session := newNotificationStreamSession(newLiveLogReplayBudget(0))
 
 	ready := buildCloudProtocol("stream-1", session.currentSeqNo(), cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_READY, "")
 	require.Equal(t, uint32(0), ready.SeqNo)
@@ -174,7 +175,7 @@ func TestWorkflowProtocolEventsDoNotAdvanceApplicationSeqNo(t *testing.T) {
 }
 
 func TestNotificationStreamSessionReplayUnavailableForTrimmedCursor(t *testing.T) {
-	session := newNotificationStreamSession()
+	session := newNotificationStreamSession(newLiveLogReplayBudget(0))
 	for i := 0; i < workflowNotificationReplayMaxEvents+2; i++ {
 		session.publish(&testkube.TestWorkflowExecutionNotification{Log: "log"})
 	}
@@ -196,6 +197,7 @@ func TestNotificationStreamSessionManagerStartsFreshAfterDoneSessionWithoutResum
 
 	var processCalls atomic.Int32
 	manager := newNotificationStreamSessionManager(
+		newLiveLogReplayBudget(0),
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -231,6 +233,7 @@ func TestNotificationStreamSessionManagerStartsFreshAfterErroredDoneSessionWithR
 	releaseSecond := make(chan struct{})
 	var processCalls atomic.Int32
 	manager := newNotificationStreamSessionManager(
+		newLiveLogReplayBudget(0),
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -288,6 +291,7 @@ func TestNotificationStreamSessionManagerFreshResumeStartsFromLiveTail(t *testin
 
 	release := make(chan struct{})
 	manager := newNotificationStreamSessionManager(
+		newLiveLogReplayBudget(0),
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -332,6 +336,7 @@ func TestNotificationStreamSessionManagerMarksResumeUnavailableForFreshSessionWi
 
 	release := make(chan struct{})
 	manager := newNotificationStreamSessionManager(
+		newLiveLogReplayBudget(0),
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -363,6 +368,7 @@ func TestNotificationStreamSessionManagerStartsFreshForConcurrentViewersWithoutR
 	releaseSecond := make(chan struct{})
 	var processCalls atomic.Int32
 	manager := newNotificationStreamSessionManager(
+		newLiveLogReplayBudget(0),
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -413,6 +419,7 @@ func TestNotificationStreamSessionManagerExpiresDoneSessionsWithoutAttach(t *tes
 
 	release := make(chan struct{})
 	manager := newNotificationStreamSessionManager(
+		newLiveLogReplayBudget(0),
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},

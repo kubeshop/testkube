@@ -71,7 +71,91 @@ const (
 	workflowNotificationReplayMaxEvents   = 10_000
 	workflowNotificationReplayMaxBytes    = 10 * 1024 * 1024
 	workflowNotificationSessionIdleTTL    = 15 * time.Minute
+	// defaultLiveLogReplayMaxBytes is the aggregate replay budget shared by the
+	// workflow, parallel and service managers when the operator does not set one.
+	defaultLiveLogReplayMaxBytes = 256 * 1024 * 1024
 )
+
+// liveLogReplayBudget bounds the total bytes held across every replay buffer of
+// every notification stream session, on top of the per-session inner caps. When
+// a growth would exceed max, registered evictors reclaim bytes: first by dropping
+// done sessions, then by trimming the oldest replay events of running sessions.
+//
+// Lock ordering: manager.mu -> session.mu. budget.mu is a leaf and is never held
+// while calling an evictor or acquiring manager/session locks; evictors acquire
+// manager.mu then session.mu. This keeps publish non-blocking and deadlock-free.
+type liveLogReplayBudget struct {
+	mu       sync.Mutex
+	used     int64
+	max      int64
+	evictors []func(need int64, exclude *notificationStreamSession) int64
+}
+
+func newLiveLogReplayBudget(max int64) *liveLogReplayBudget {
+	if max <= 0 {
+		max = defaultLiveLogReplayMaxBytes
+	}
+	return &liveLogReplayBudget{max: max}
+}
+
+// register adds a manager's evictor. Called once per manager at construction,
+// before any publish, so no lock coordination with reclaim is needed here.
+func (b *liveLogReplayBudget) register(evict func(need int64, exclude *notificationStreamSession) int64) {
+	if b == nil {
+		return
+	}
+	b.mu.Lock()
+	b.evictors = append(b.evictors, evict)
+	b.mu.Unlock()
+}
+
+// grow accounts delta bytes just added to caller's replay buffer. If the total
+// would exceed max, it reclaims bytes from other sessions and, as a last resort,
+// from the caller (exclude is passed so an evictor trims the caller via the
+// caller's own lock, which is already released by now). grow never blocks.
+func (b *liveLogReplayBudget) grow(delta int64, caller *notificationStreamSession) {
+	if b == nil || delta <= 0 {
+		return
+	}
+	b.mu.Lock()
+	b.used += delta
+	over := b.used - b.max
+	if over <= 0 {
+		b.mu.Unlock()
+		return
+	}
+	evictors := make([]func(int64, *notificationStreamSession) int64, len(b.evictors))
+	copy(evictors, b.evictors)
+	b.mu.Unlock()
+
+	for _, evict := range evictors {
+		if over <= 0 {
+			break
+		}
+		freed := evict(over, caller)
+		// Freed bytes are released against the budget by the eviction path
+		// itself (via release), so recompute remaining overage from the budget.
+		if freed > 0 {
+			b.mu.Lock()
+			over = b.used - b.max
+			b.mu.Unlock()
+		}
+	}
+}
+
+// release returns bytes to the budget when a replay buffer shrinks (inner-cap
+// eviction, trim, or session drop). Releases must exactly match prior grows.
+func (b *liveLogReplayBudget) release(delta int64) {
+	if b == nil || delta <= 0 {
+		return
+	}
+	b.mu.Lock()
+	b.used -= delta
+	if b.used < 0 {
+		b.used = 0
+	}
+	b.mu.Unlock()
+}
 
 type notificationStreamEvent struct {
 	seqNo        uint32
@@ -120,6 +204,7 @@ func (s *notificationStreamSubscription) close() {
 
 type notificationStreamSession struct {
 	mu          sync.Mutex
+	budget      *liveLogReplayBudget
 	nextSeqNo   uint32
 	replay      []notificationStreamEvent
 	replayBytes int
@@ -130,8 +215,9 @@ type notificationStreamSession struct {
 	lastActive  time.Time
 }
 
-func newNotificationStreamSession() *notificationStreamSession {
+func newNotificationStreamSession(budget *liveLogReplayBudget) *notificationStreamSession {
 	return &notificationStreamSession{
+		budget:      budget,
 		nextSeqNo:   1,
 		subscribers: make(map[uint64]*notificationStreamSubscription),
 		lastActive:  time.Now(),
@@ -170,6 +256,8 @@ func (s *notificationStreamSession) publish(notification *testkube.TestWorkflowE
 	}
 
 	var subscribers []*notificationStreamSubscription
+	var grownBytes int
+	var freedBytes int
 	s.mu.Lock()
 	s.lastActive = time.Now()
 	seqNo := uint32(0)
@@ -184,10 +272,14 @@ func (s *notificationStreamSession) publish(notification *testkube.TestWorkflowE
 		notification: notification,
 	}
 	if seqNo > 0 {
+		added := approximateNotificationBytes(notification)
 		s.replay = append(s.replay, event)
-		s.replayBytes += approximateNotificationBytes(notification)
+		s.replayBytes += added
+		grownBytes = added
 		for len(s.replay) > workflowNotificationReplayMaxEvents || s.replayBytes > workflowNotificationReplayMaxBytes {
-			s.replayBytes -= approximateNotificationBytes(s.replay[0].notification)
+			evicted := approximateNotificationBytes(s.replay[0].notification)
+			s.replayBytes -= evicted
+			freedBytes += evicted
 			s.replay[0].notification = nil
 			s.replay = s.replay[1:]
 		}
@@ -197,6 +289,11 @@ func (s *notificationStreamSession) publish(notification *testkube.TestWorkflowE
 		subscribers = append(subscribers, sub)
 	}
 	s.mu.Unlock()
+
+	// Reconcile the global budget outside session.mu so eviction never re-enters
+	// this session's lock. Release inner-cap evictions first, then account net growth.
+	s.budget.release(int64(freedBytes))
+	s.budget.grow(int64(grownBytes), s)
 
 	for _, sub := range subscribers {
 		sub.send(event)
@@ -217,6 +314,41 @@ func (s *notificationStreamSession) close(errored bool) {
 		sub.close()
 		delete(s.subscribers, id)
 	}
+}
+
+// dropReplay discards the whole replay buffer and returns the bytes it held, so
+// the caller can release them against the budget. Used when evicting a done session.
+func (s *notificationStreamSession) dropReplay() int64 {
+	s.mu.Lock()
+	freed := s.replayBytes
+	for i := range s.replay {
+		s.replay[i].notification = nil
+	}
+	s.replay = nil
+	s.replayBytes = 0
+	s.mu.Unlock()
+	return int64(freed)
+}
+
+// trimReplay drops oldest replay events until at least need bytes are freed or
+// the buffer is empty, returning the bytes freed. Lowers resume depth for running
+// sessions under budget pressure; a later resume past the trimmed point returns
+// resume_unavailable downstream.
+func (s *notificationStreamSession) trimReplay(need int64) int64 {
+	if need <= 0 {
+		return 0
+	}
+	s.mu.Lock()
+	var freed int64
+	for freed < need && len(s.replay) > 0 {
+		evicted := approximateNotificationBytes(s.replay[0].notification)
+		s.replayBytes -= evicted
+		freed += int64(evicted)
+		s.replay[0].notification = nil
+		s.replay = s.replay[1:]
+	}
+	s.mu.Unlock()
+	return freed
 }
 
 func (s *notificationStreamSession) currentSeqNo() uint32 {
@@ -284,20 +416,80 @@ type notificationStreamSessionManager[Request notificationRequest] struct {
 	nextID         atomic.Uint64
 	sessions       map[string]*notificationStreamSession
 	sessionIdleTTL time.Duration
+	budget         *liveLogReplayBudget
 	key            func(Request) string
 	process        func(ctx context.Context, req Request) NotificationWatcher
 }
 
 func newNotificationStreamSessionManager[Request notificationRequest](
+	budget *liveLogReplayBudget,
 	key func(Request) string,
 	process func(ctx context.Context, req Request) NotificationWatcher,
 ) *notificationStreamSessionManager[Request] {
-	return &notificationStreamSessionManager[Request]{
+	m := &notificationStreamSessionManager[Request]{
 		sessions:       make(map[string]*notificationStreamSession),
 		sessionIdleTTL: workflowNotificationSessionIdleTTL,
+		budget:         budget,
 		key:            key,
 		process:        process,
 	}
+	budget.register(m.evict)
+	return m
+}
+
+// evict reclaims up to need bytes for the budget: first by dropping done sessions
+// from the map, then by trimming the oldest replay events of running sessions.
+// It releases every freed byte against the budget itself. Acquires manager.mu then
+// each session's lock (via the session helpers); budget.mu is not held on entry.
+func (m *notificationStreamSessionManager[Request]) evict(need int64, exclude *notificationStreamSession) int64 {
+	var freed int64
+
+	// Pass 1: drop done sessions entirely.
+	m.mu.Lock()
+	for key, session := range m.sessions {
+		if freed >= need {
+			break
+		}
+		if done, _ := session.status(); !done {
+			continue
+		}
+		delete(m.sessions, key)
+		freed += session.dropReplay()
+	}
+	// Collect remaining running sessions for pass 2 before releasing the lock.
+	var running []*notificationStreamSession
+	if freed < need {
+		running = make([]*notificationStreamSession, 0, len(m.sessions))
+		for _, session := range m.sessions {
+			running = append(running, session)
+		}
+	}
+	m.mu.Unlock()
+
+	// Release dropped-session bytes; they are gone from the map now.
+	m.budget.release(freed)
+
+	// Pass 2: trim oldest events of running sessions until enough is reclaimed.
+	for _, session := range running {
+		if freed >= need {
+			break
+		}
+		if session == exclude {
+			// The caller's own growth is accounted separately; trimming it here
+			// too is safe (its lock is released) but redundant, so skip it first
+			// and only fall back to it below if others cannot cover the need.
+			continue
+		}
+		t := session.trimReplay(need - freed)
+		freed += t
+		m.budget.release(t)
+	}
+	if freed < need && exclude != nil {
+		t := exclude.trimReplay(need - freed)
+		freed += t
+		m.budget.release(t)
+	}
+	return freed
 }
 
 func (m *notificationStreamSessionManager[Request]) sessionKey(req Request) string {
@@ -308,6 +500,13 @@ func (m *notificationStreamSessionManager[Request]) sessionKey(req Request) stri
 	return fmt.Sprintf("%s:%s", key, req.GetStreamId())
 }
 
+// dropSessionLocked removes a session from the map and releases its replay bytes
+// against the budget. Caller must hold m.mu.
+func (m *notificationStreamSessionManager[Request]) dropSessionLocked(key string, session *notificationStreamSession) {
+	delete(m.sessions, key)
+	m.budget.release(session.dropReplay())
+}
+
 func (m *notificationStreamSessionManager[Request]) attach(ctx context.Context, req Request) (*notificationStreamSession, *notificationStreamSubscription, []notificationStreamEvent, bool, uint32, bool) {
 	key := m.sessionKey(req)
 	now := time.Now()
@@ -315,7 +514,7 @@ func (m *notificationStreamSessionManager[Request]) attach(ctx context.Context, 
 	m.mu.Lock()
 	for sessionKey, session := range m.sessions {
 		if session.expired(now, m.sessionIdleTTL) {
-			delete(m.sessions, sessionKey)
+			m.dropSessionLocked(sessionKey, session)
 		}
 	}
 
@@ -325,13 +524,13 @@ func (m *notificationStreamSessionManager[Request]) attach(ctx context.Context, 
 	} else if session != nil {
 		done, errored := session.status()
 		if done && errored {
-			delete(m.sessions, key)
+			m.dropSessionLocked(key, session)
 			session = nil
 		}
 	}
 	freshSession := false
 	if session == nil {
-		session = newNotificationStreamSession()
+		session = newNotificationStreamSession(m.budget)
 		m.sessions[key] = session
 		freshSession = true
 	}
@@ -365,7 +564,7 @@ func (m *notificationStreamSessionManager[Request]) scheduleExpiration(key strin
 			return
 		}
 		if session.expired(time.Now(), m.sessionIdleTTL) {
-			delete(m.sessions, key)
+			m.dropSessionLocked(key, session)
 		}
 	})
 }
@@ -414,6 +613,7 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 	buildProtocol func(streamId string, seqNo uint32, notificationType cloud.TestWorkflowNotificationType, message string) Response,
 	sessionKey func(req Request) string,
 	process func(ctx context.Context, req Request) NotificationWatcher,
+	budget *liveLogReplayBudget,
 	sendTimeout time.Duration,
 	recvTimeout time.Duration,
 	logger *zap.SugaredLogger,
@@ -428,7 +628,7 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 	sendResponse := func(response Response) error {
 		return sendNotificationResponse(ctx, responses, response)
 	}
-	sessionManager := newNotificationStreamSessionManager(sessionKey, process)
+	sessionManager := newNotificationStreamSessionManager(budget, sessionKey, process)
 
 	// Send responses in sequence
 	// GRPC stream have special requirements for concurrency on SendMsg, and RecvMsg calls.

@@ -188,6 +188,7 @@ func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, proce
 			return fmt.Sprintf("workflow:%s:%s", req.GetEnvironmentId(), req.GetExecutionId())
 		},
 		process,
+		c.liveLogReplayBudg,
 		c.opts.SendTimeout,
 		c.opts.RecvTimeout,
 		c.logger,
@@ -207,6 +208,7 @@ func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.
 			return fmt.Sprintf("parallel:%s:%s:%s:%d", req.GetEnvironmentId(), req.GetExecutionId(), req.GetRef(), req.GetWorkerIndex())
 		},
 		process,
+		c.liveLogReplayBudg,
 		c.opts.SendTimeout,
 		c.opts.RecvTimeout,
 		c.logger,
@@ -226,6 +228,7 @@ func (c *client) ProcessExecutionServiceNotificationRequests(ctx context.Context
 			return fmt.Sprintf("service:%s:%s:%s:%d", req.GetEnvironmentId(), req.GetExecutionId(), req.GetServiceName(), req.GetServiceIndex())
 		},
 		process,
+		c.liveLogReplayBudg,
 		c.opts.SendTimeout,
 		c.opts.RecvTimeout,
 		c.logger,

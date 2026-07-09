@@ -451,8 +451,9 @@ func main() {
 		Runtime: controlplaneclient.RuntimeConfig{
 			Namespace: cfg.TestkubeNamespace,
 		},
-		SendTimeout: cfg.TestkubeProSendTimeout,
-		RecvTimeout: cfg.TestkubeProRecvTimeout,
+		SendTimeout:           cfg.TestkubeProSendTimeout,
+		RecvTimeout:           cfg.TestkubeProRecvTimeout,
+		LiveLogReplayMaxBytes: cfg.TestkubeProLiveLogReplayMaxBytes,
 	}, log.DefaultLogger)
 
 	cloudTestTriggersClient := testtriggerclient.NewCloudTestTriggerClient(client)

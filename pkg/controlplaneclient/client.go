@@ -18,10 +18,11 @@ const (
 var _ Client = &client{}
 
 type client struct {
-	client     cloud.TestKubeCloudAPIClient
-	proContext config.ProContext
-	opts       ClientOptions
-	logger     *zap.SugaredLogger
+	client            cloud.TestKubeCloudAPIClient
+	proContext        config.ProContext
+	opts              ClientOptions
+	liveLogReplayBudg *liveLogReplayBudget
+	logger            *zap.SugaredLogger
 }
 
 type ClientOptions struct {
@@ -33,6 +34,11 @@ type ClientOptions struct {
 	Runtime     RuntimeConfig
 	SendTimeout time.Duration
 	RecvTimeout time.Duration
+
+	// LiveLogReplayMaxBytes is the aggregate memory budget shared by all live-log
+	// replay buffers on this client. Operator-tunable; when zero, New defaults it
+	// to defaultLiveLogReplayMaxBytes.
+	LiveLogReplayMaxBytes int64
 }
 
 type RuntimeConfig struct {
@@ -56,10 +62,11 @@ type Client interface {
 
 func New(grpcClient cloud.TestKubeCloudAPIClient, proContext config.ProContext, opts ClientOptions, logger *zap.SugaredLogger) Client {
 	return &client{
-		client:     grpcClient,
-		proContext: proContext,
-		opts:       opts,
-		logger:     logger,
+		client:            grpcClient,
+		proContext:        proContext,
+		opts:              opts,
+		liveLogReplayBudg: newLiveLogReplayBudget(opts.LiveLogReplayMaxBytes),
+		logger:            logger,
 	}
 }
 

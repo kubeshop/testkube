@@ -103,20 +103,21 @@ type LogServerConfig struct {
 }
 
 type ControlPlaneConfig struct {
-	TestkubeProEnvID             string        `envconfig:"TESTKUBE_PRO_ENV_ID" default:""`
-	TestkubeProOrgID             string        `envconfig:"TESTKUBE_PRO_ORG_ID" default:""`
-	TestkubeProAgentID           string        `envconfig:"TESTKUBE_PRO_AGENT_ID" default:""`
-	TestkubeProAPIKey            string        `envconfig:"TESTKUBE_PRO_API_KEY" default:""`
-	TestkubeProURL               string        `envconfig:"TESTKUBE_PRO_URL" default:""`
-	TestkubeProAgentRegToken     string        `envconfig:"TESTKUBE_PRO_AGENT_REGISTRATION_TOKEN" default:""`
-	TestkubeProTLSInsecure       bool          `envconfig:"TESTKUBE_PRO_TLS_INSECURE" default:"false"`
-	TestkubeProSkipVerify        bool          `envconfig:"TESTKUBE_PRO_SKIP_VERIFY" default:"false"`
-	TestkubeProConnectionTimeout int           `envconfig:"TESTKUBE_PRO_CONNECTION_TIMEOUT" default:"10"`
-	TestkubeProCertFile          string        `envconfig:"TESTKUBE_PRO_CERT_FILE" default:""`
-	TestkubeProKeyFile           string        `envconfig:"TESTKUBE_PRO_KEY_FILE" default:""`
-	TestkubeProTLSSecret         string        `envconfig:"TESTKUBE_PRO_TLS_SECRET" default:""`
-	TestkubeProSendTimeout       time.Duration `envconfig:"TESTKUBE_PRO_SEND_TIMEOUT" default:"30s"`
-	TestkubeProRecvTimeout       time.Duration `envconfig:"TESTKUBE_PRO_RECV_TIMEOUT" default:"5m"`
+	TestkubeProEnvID                 string        `envconfig:"TESTKUBE_PRO_ENV_ID" default:""`
+	TestkubeProOrgID                 string        `envconfig:"TESTKUBE_PRO_ORG_ID" default:""`
+	TestkubeProAgentID               string        `envconfig:"TESTKUBE_PRO_AGENT_ID" default:""`
+	TestkubeProAPIKey                string        `envconfig:"TESTKUBE_PRO_API_KEY" default:""`
+	TestkubeProURL                   string        `envconfig:"TESTKUBE_PRO_URL" default:""`
+	TestkubeProAgentRegToken         string        `envconfig:"TESTKUBE_PRO_AGENT_REGISTRATION_TOKEN" default:""`
+	TestkubeProTLSInsecure           bool          `envconfig:"TESTKUBE_PRO_TLS_INSECURE" default:"false"`
+	TestkubeProSkipVerify            bool          `envconfig:"TESTKUBE_PRO_SKIP_VERIFY" default:"false"`
+	TestkubeProConnectionTimeout     int           `envconfig:"TESTKUBE_PRO_CONNECTION_TIMEOUT" default:"10"`
+	TestkubeProCertFile              string        `envconfig:"TESTKUBE_PRO_CERT_FILE" default:""`
+	TestkubeProKeyFile               string        `envconfig:"TESTKUBE_PRO_KEY_FILE" default:""`
+	TestkubeProTLSSecret             string        `envconfig:"TESTKUBE_PRO_TLS_SECRET" default:""`
+	TestkubeProSendTimeout           time.Duration `envconfig:"TESTKUBE_PRO_SEND_TIMEOUT" default:"30s"`
+	TestkubeProRecvTimeout           time.Duration `envconfig:"TESTKUBE_PRO_RECV_TIMEOUT" default:"5m"`
+	TestkubeProLiveLogReplayMaxBytes int64         `envconfig:"TESTKUBE_PRO_LIVE_LOG_REPLAY_MAX_BYTES" default:"268435456"`
 
 	// TestkubeProCAFile is meant to provide a custom CA when making a TLS connection to
 	// the agent API.
