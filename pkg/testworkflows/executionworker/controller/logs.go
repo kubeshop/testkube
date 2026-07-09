@@ -405,7 +405,9 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 					return
 				}
 
+				logBufferMu.Lock()
 				logLen := logBufferLog.Len()
+				logBufferMu.Unlock()
 				if logLen == 0 {
 					select {
 					case <-bufferCtx.Done():
@@ -491,19 +493,30 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 				lastTs = tsReader.ts
 			}
 
-			// If the stream is finished,
-			// either the logfile has been rotated, or the container actually finished.
-			// Consider the container is done only when either:
-			// - there was EOF without any logs since, or
-			// - the last expected instruction was already delivered
-			if err == io.EOF && (!readerAnyContent || completed) {
+			// The logs are finished only when the container is: the last expected
+			// instruction was delivered, or there is no more content and the container
+			// reports finished. Any other EOF is a broken connection to reconnect,
+			// never the end of logs.
+			logsFinished := completed || (!readerAnyContent && isDone())
+			if errors.Is(err, io.EOF) && logsFinished {
 				return
 			}
 
-			// If there was EOF, and we are not sure if container is done,
-			// reinitialize the stream from the time we have finished.
-			// Similarly for GOAWAY, that may be caused by too long connection.
-			if err == io.EOF || (err != nil && strings.Contains(err.Error(), "GOAWAY")) {
+			// Any other read error means the stream broke, and we do not care why (a
+			// connection reset, a GOAWAY, a load balancer cutting a long-lived socket).
+			// While the container is still running we reopen from just after the last
+			// line we saw and keep tailing; a contentless reopen backs off first so a
+			// stream that fails immediately cannot busy-loop. ErrInvalidTimestamp is a
+			// content-parse issue, not a broken stream, so it falls through to the
+			// handler below.
+			if err != nil && !errors.Is(err, ErrInvalidTimestamp) {
+				if !readerAnyContent {
+					select {
+					case <-ctx.Done():
+						return
+					case <-time.After(LogRetryOnConnectionLostDelay):
+					}
+				}
 				since = common.Ptr(lastTs.Add(1))
 				stream, err = openStream(since)
 				if err != nil {
