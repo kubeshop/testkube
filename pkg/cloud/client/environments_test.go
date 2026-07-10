@@ -49,8 +49,8 @@ func TestEnvironmentsClient_RotateRegistrationToken(t *testing.T) {
 	client.Client = ClientMock{
 		body: []byte(`{"registrationToken":"new-token","gracePeriod":"24h0m0s","oldTokenExpiresAt":"2026-07-07T12:00:00Z"}`),
 		validateRequestFunc: func(req *http.Request) error {
-			assert.Equal(t, http.MethodDelete, req.Method)
-			assert.Equal(t, "/organizations/tkcorg_1/environments/tkcenv_1/registration-token", req.URL.Path)
+			assert.Equal(t, http.MethodPost, req.Method)
+			assert.Equal(t, "/organizations/tkcorg_1/environments/tkcenv_1/registration-token/rotate", req.URL.Path)
 			assert.Equal(t, "24h", req.URL.Query().Get("gracePeriod"))
 			assert.Equal(t, "Bearer token", req.Header.Get("Authorization"))
 			return nil
