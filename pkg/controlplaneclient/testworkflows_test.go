@@ -586,3 +586,56 @@ func waitForNotificationSubscriptionDone(t *testing.T, sub *notificationStreamSu
 		t.Fatal("timed out waiting for notification subscription to finish")
 	}
 }
+
+func TestNotificationStreamSessionReplacementCancelsOrphanedSource(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	sourceCtxs := make(chan context.Context, 4)
+	release := make(chan struct{})
+	t.Cleanup(func() { close(release) })
+
+	manager := newNotificationStreamSessionManager(
+		ctx,
+		func(req *cloud.TestWorkflowNotificationsRequest) string { return req.ExecutionId },
+		func(sourceCtx context.Context, _ *cloud.TestWorkflowNotificationsRequest) NotificationWatcher {
+			sourceCtxs <- sourceCtx
+			watcher := channels.NewWatcher[*testkube.TestWorkflowExecutionNotification]()
+			go func() {
+				select {
+				case <-sourceCtx.Done():
+				case <-release:
+				}
+				watcher.Close(nil)
+			}()
+			return watcher
+		},
+	)
+
+	req := &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"}
+	session1, sub1, _, _, _, _ := manager.attach(req)
+	t.Cleanup(func() { session1.unsubscribe(sub1) })
+
+	var firstSource context.Context
+	select {
+	case firstSource = <-sourceCtxs:
+	case <-time.After(2 * time.Second):
+		t.Fatal("first source was not started")
+	}
+
+	// A resume-from-zero attach with the same key replaces the session; the old
+	// source must be cancelled instead of running orphaned until execution end.
+	session2, sub2, _, _, _, _ := manager.attach(&cloud.TestWorkflowNotificationsRequest{
+		ExecutionId:      "exec-1",
+		StreamId:         "stream-1",
+		ResumeAfterSeqNo: 0,
+	})
+	t.Cleanup(func() { session2.unsubscribe(sub2) })
+	require.NotSame(t, session1, session2, "resume-from-zero must create a new session")
+
+	select {
+	case <-firstSource.Done():
+	case <-time.After(2 * time.Second):
+		t.Fatal("replaced session source context was not cancelled")
+	}
+}

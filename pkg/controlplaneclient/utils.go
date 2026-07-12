@@ -121,6 +121,7 @@ func (s *notificationStreamSubscription) close() {
 
 type notificationStreamSession struct {
 	mu          sync.Mutex
+	cancel      context.CancelFunc
 	nextSeqNo   uint32
 	replay      []notificationStreamEvent
 	replayBytes int
@@ -217,6 +218,19 @@ func (s *notificationStreamSession) close(errored bool) {
 	for id, sub := range s.subscribers {
 		sub.close()
 		delete(s.subscribers, id)
+	}
+}
+
+// stopSource cancels the session's pod-log source. It runs when the session is
+// removed from the manager (replaced on a resume-from-zero, or evicted) so an
+// orphaned source does not keep running until the execution ends, and in
+// runSource's defer to release the derived context. Safe to call more than once.
+func (s *notificationStreamSession) stopSource() {
+	s.mu.Lock()
+	cancel := s.cancel
+	s.mu.Unlock()
+	if cancel != nil {
+		cancel()
 	}
 }
 
@@ -353,8 +367,14 @@ func (m *notificationStreamSessionManager[Request]) attach(req Request) (*notifi
 	m.sweepExpired(now)
 
 	m.mu.Lock()
+	// A resume-from-zero request abandons any existing session under this key (the
+	// client reset after resume_unavailable). Capture it so its source can be
+	// stopped: once replaced in the map it is unreachable and would otherwise run
+	// orphaned until the execution ends.
+	var replaced *notificationStreamSession
 	session := m.sessions[key]
 	if req.GetResumeAfterSeqNo() == 0 {
+		replaced = session
 		session = nil
 	} else if session != nil {
 		done, errored := session.status()
@@ -364,13 +384,19 @@ func (m *notificationStreamSessionManager[Request]) attach(req Request) (*notifi
 		}
 	}
 	freshSession := false
+	var sourceCtx context.Context
 	if session == nil {
 		session = newNotificationStreamSession()
+		sourceCtx, session.cancel = context.WithCancel(m.ctx)
 		m.sessions[key] = session
 		freshSession = true
 	}
 	subscriptionID := m.nextID.Add(1)
 	m.mu.Unlock()
+
+	if replaced != nil {
+		replaced.stopSource()
+	}
 
 	subscribeAfterSeqNo := req.GetResumeAfterSeqNo()
 	if freshSession && req.GetResumeAfterSeqNo() > 0 {
@@ -382,7 +408,7 @@ func (m *notificationStreamSessionManager[Request]) attach(req Request) (*notifi
 		if req.GetResumeAfterSeqNo() > 0 {
 			liveOnlyAfter = time.Now()
 		}
-		go m.runSource(m.ctx, key, session, req, liveOnlyAfter)
+		go m.runSource(sourceCtx, key, session, req, liveOnlyAfter)
 		if req.GetResumeAfterSeqNo() > 0 {
 			available = false
 		}
@@ -418,6 +444,7 @@ func (m *notificationStreamSessionManager[Request]) runSource(ctx context.Contex
 	var sourceErr error
 	defer func() {
 		session.close(sourceErr != nil)
+		session.stopSource()
 		m.scheduleExpiration(key, session)
 	}()
 

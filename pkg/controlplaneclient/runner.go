@@ -192,7 +192,11 @@ func serviceNotificationSessionKey(req *cloud.TestWorkflowServiceNotificationsRe
 
 func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowNotificationsRequest) NotificationWatcher) error {
 	c.notifMu.Lock()
-	if c.workflowNotifManager == nil {
+	// Recreate the manager if its context has been cancelled. The manager binds to
+	// the context of the first call and is reused across reconnects; that context is
+	// the agent lifetime today, but rebuilding it on a dead context avoids silently
+	// running with sources and a sweeper that can never start.
+	if c.workflowNotifManager == nil || c.workflowNotifManager.ctx.Err() != nil {
 		c.workflowNotifManager = newNotificationStreamSessionManager(ctx, workflowNotificationSessionKey, process)
 	}
 	manager := c.workflowNotifManager
@@ -214,7 +218,7 @@ func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, proce
 
 func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowParallelStepNotificationsRequest) NotificationWatcher) error {
 	c.notifMu.Lock()
-	if c.parallelNotifManager == nil {
+	if c.parallelNotifManager == nil || c.parallelNotifManager.ctx.Err() != nil {
 		c.parallelNotifManager = newNotificationStreamSessionManager(ctx, parallelWorkerNotificationSessionKey, process)
 	}
 	manager := c.parallelNotifManager
@@ -236,7 +240,7 @@ func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.
 
 func (c *client) ProcessExecutionServiceNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) NotificationWatcher) error {
 	c.notifMu.Lock()
-	if c.serviceNotifManager == nil {
+	if c.serviceNotifManager == nil || c.serviceNotifManager.ctx.Err() != nil {
 		c.serviceNotifManager = newNotificationStreamSessionManager(ctx, serviceNotificationSessionKey, process)
 	}
 	manager := c.serviceNotifManager
