@@ -27,7 +27,6 @@ spec:
   job:
     activeDeadlineSeconds: 1200
   config:
-    CLOUD_BASE_URL: {type: string, default: 'https://app-2-11.testkube.xyz'}
     GIT_REVISION: {type: string, default: 'main'}
   container:
     resources:
@@ -38,9 +37,9 @@ spec:
     image: mcr.microsoft.com/playwright:v1.59.1-noble
     env:
     - name: CLOUD_BASE_URL
-      value: '{{ config.CLOUD_BASE_URL }}'
+      value: '{{ dashboard.url }}'
     - name: CLOUD_API_URL
-      value: 'https://api-2-11.testkube.xyz'
+      value: '{{ join(list(at(split(dashboard.url, "app-"), 0), at(split(dashboard.url, "app-"), 1)), "api-") }}'
     - name: TEST_ORG_ID
       value: 'tkcorg_6273a008ca1866b6'
     - name: TEST_ORG_SLUG
