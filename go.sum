@@ -486,6 +486,8 @@ github.com/montanaflynn/stats v0.9.0 h1:tsBJ0RXwph9BmAuFoCmqGv6e8xa0MENQ8m0ptKq2
 github.com/montanaflynn/stats v0.9.0/go.mod h1:etXPPgVO6n31NxCd9KQUMvCM+ve0ruNzt6R8Bnaayow=
 github.com/montanaflynn/stats v0.10.0 h1:8GQhct8Qup299/6gFmW3K3xRvPrdpmdjVCWRsZ5bnes=
 github.com/montanaflynn/stats v0.10.0/go.mod h1:etXPPgVO6n31NxCd9KQUMvCM+ve0ruNzt6R8Bnaayow=
+github.com/montanaflynn/stats v0.11.0 h1:zDghK0ZIhSGNLdZaZYob15c5fjgVnuTzv/MRZ9UJifY=
+github.com/montanaflynn/stats v0.11.0/go.mod h1:etXPPgVO6n31NxCd9KQUMvCM+ve0ruNzt6R8Bnaayow=
 github.com/moogar0880/problems v1.0.1 h1:jKrdXJmXVBM3J8M8iNcy0BByffJ6nf1Rkxwj84Aj3MQ=
 github.com/moogar0880/problems v1.0.1/go.mod h1:vrTUjd+81cQ9SwKUApMYrEDjDOBSjON3mSAy8GSn/b8=
 github.com/morikuni/aec v1.1.0 h1:vBBl0pUnvi/Je71dsRrhMBtreIqNMYErSAbEeb8jrXQ=
