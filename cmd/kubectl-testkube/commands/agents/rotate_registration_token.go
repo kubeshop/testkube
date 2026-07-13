@@ -41,8 +41,16 @@ func NewRotateRegistrationTokenCommand() *cobra.Command {
 			}
 
 			client := cloudclient.NewEnvironmentsClient(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, cfg.SkipTLS || cfg.CloudContext.SkipTLS)
-			result, err := client.RotateRegistrationToken(envID, gracePeriod)
-			ui.ExitOnError("rotating environment registration token", err)
+			result, err := client.RotateRegistrationToken(cmd.Context(), envID, gracePeriod)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrAgentRotateRegistrationTokenFailed,
+					"Failed to rotate environment registration token",
+					"Verify the environment ID is correct, your credentials are valid, and your user is an organization admin or owner.",
+					err,
+				))
+				return
+			}
 
 			ui.Success("Registration token rotated successfully")
 			fmt.Println()

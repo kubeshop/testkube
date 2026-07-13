@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"testing"
@@ -57,7 +58,7 @@ func TestEnvironmentsClient_RotateRegistrationToken(t *testing.T) {
 		},
 	}
 
-	result, err := client.RotateRegistrationToken("tkcenv_1", "24h")
+	result, err := client.RotateRegistrationToken(context.Background(), "tkcenv_1", "24h")
 	assert.NoError(t, err)
 	assert.Equal(t, "new-token", result.RegistrationToken)
 	assert.Equal(t, "24h0m0s", result.GracePeriod)

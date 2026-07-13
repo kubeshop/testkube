@@ -72,12 +72,12 @@ func (c EnvironmentsClient) rotateRegistrationTokenURL(envID, gracePeriod string
 	return u.String(), nil
 }
 
-func (c EnvironmentsClient) RotateRegistrationToken(envID, gracePeriod string) (RotateRegistrationTokenResponse, error) {
+func (c EnvironmentsClient) RotateRegistrationToken(ctx context.Context, envID, gracePeriod string) (RotateRegistrationTokenResponse, error) {
 	path, err := c.rotateRegistrationTokenURL(envID, gracePeriod)
 	if err != nil {
 		return RotateRegistrationTokenResponse{}, err
 	}
-	req, err := nethttp.NewRequestWithContext(context.Background(), nethttp.MethodPost, path, nil)
+	req, err := nethttp.NewRequestWithContext(ctx, nethttp.MethodPost, path, nil)
 	if err != nil {
 		return RotateRegistrationTokenResponse{}, err
 	}
