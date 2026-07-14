@@ -134,9 +134,9 @@ func SanitizeName(path string) string {
 }
 
 // SanitizeLabelValue sanitizes a string so it conforms to Kubernetes label value rules
-// (max 63 characters, alphanumeric plus '-', '_' and '.', beginning and ending with an
-// alphanumeric character). Invalid characters are replaced with '-'. It returns an empty
-// string if the value cannot be made into a valid label value.
+// (max 63 characters; alphanumeric plus '-', '_' and '.', optionally empty).
+// Invalid characters are replaced with '-'. It returns "" if the input is empty or if the
+// value cannot be sanitized into a valid label value.
 func SanitizeLabelValue(value string) string {
 	if value == "" {
 		return value
