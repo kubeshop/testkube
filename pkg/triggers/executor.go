@@ -188,8 +188,8 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *internalTrigg
 	}
 
 	// Record the TestTrigger as the running context so downstream logs and APIs carry the
-	// human-readable trigger name and source. Built without the TCL helper so it applies to
-	// the OSS/standalone agent as well as Pro editions.
+	// human-readable trigger name. Built without the TCL helper so it applies to the
+	// OSS/standalone agent as well as Pro editions.
 	request.RunningContext, _ = testworkflowexecutor.GetNewRunningContext(newTriggerRunningContext(t.Name), nil)
 
 	if t.Delay != nil {
