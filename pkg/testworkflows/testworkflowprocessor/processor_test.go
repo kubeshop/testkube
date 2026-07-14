@@ -164,6 +164,7 @@ func TestBundle_WorkflowNameLabel_Sanitized(t *testing.T) {
 	})
 
 	require.NoError(t, err)
+	assert.Equal(t, "My-Workflow-Name", bundle.Job.Labels[constants.WorkflowNameLabelName])
 	assert.Equal(t, "My-Workflow-Name", bundle.Job.Spec.Template.Labels[constants.WorkflowNameLabelName])
 }
 
