@@ -385,8 +385,7 @@ func (e *Enqueuer) persistExecution(ctx context.Context, executions []*testworkf
 			},
 		)
 		if err != nil {
-			logger.Errorw("failed to update the TestWorkflow exec in database", append(exec.Execution().LogFields(), "recoverable", false, "error", err)...)
-		}
+			logger.Errorw("failed to insert the TestWorkflow exec in database", append(exec.Execution().LogFields(), "recoverable", false, "error", err)...)
 
 		result = append(result, *exec.Execution())
 	}
