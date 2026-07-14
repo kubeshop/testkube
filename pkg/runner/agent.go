@@ -364,7 +364,7 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, ex
 
 func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId string, executionToken string, runtime *cloud.TestWorkflowRuntime) error {
 	ctx := context.Background()
-	logger := a.logger.With("environmentId", environmentId, "executionId", executionId)
+	logger := a.logger.With("environmentId", environmentId)
 
 	// Get the execution details
 	execution, err := a.client.GetExecution(ctx, environmentId, executionId)
@@ -372,9 +372,8 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 		return errors2.Wrapf(err, "failed to get execution details '%s/%s' from Control Plane", environmentId, executionId)
 	}
 
-	// Enrich the scoped logger with human-readable context (workflow name, trigger/source)
-	// so every downstream log line for this execution is easy to identify.
-	logger = a.logger.With("environmentId", environmentId)
+	// Enrich the scoped logger with human-readable context (execution ID, workflow name,
+	// trigger/source) so every downstream log line for this execution is easy to identify.
 	logger = logger.With(execution.LogFields()...)
 	if execution.RunnerId != a.proContext.Agent.ID && execution.RunnerId != "" {
 		return errors.New("execution is assigned to a different runner")
