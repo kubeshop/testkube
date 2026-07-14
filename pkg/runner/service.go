@@ -95,9 +95,12 @@ func (s *service) reattach(ctx context.Context) (err error) {
 				return
 			}
 
+			// Enrich logs with human-readable context now that the execution is loaded.
+			logger := s.logger.With(execution.LogFields()...)
+
 			// Ignore if it's still queued - orchestrator will reattach to it later
 			if execution.Result.IsQueued() {
-				s.logger.Warnw("execution to monitor is still queued: leaving it for orchestrator", "id", executionId)
+				logger.Warnw("execution to monitor is still queued: leaving it for orchestrator")
 				return
 			}
 
@@ -120,9 +123,9 @@ func (s *service) reattach(ctx context.Context) (err error) {
 			execution.Result.HealMissingPauseStatuses()
 			execution.Result.HealStatus(sigSequence)
 			if err = s.client.FinishExecutionResult(ctx, environmentId, executionId, execution.Result); err != nil {
-				s.logger.Errorw("failed to recover execution: saving execution", "id", executionId, "error", err)
+				logger.Errorw("failed to recover execution: saving execution", "error", err)
 			} else {
-				s.logger.Infow("recovered execution", "id", executionId, "error", err)
+				logger.Infow("recovered execution")
 			}
 		}(exec.EnvironmentId, exec.Id)
 	}

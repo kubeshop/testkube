@@ -13,6 +13,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
 type dummyInspector struct{}
@@ -105,6 +106,65 @@ func TestBundle_InvalidDefaultRunnerResources_ReturnsError(t *testing.T) {
 
 	require.Error(t, err)
 	require.ErrorContains(t, err, `invalid worker default runner CPU request "not-valid"`)
+}
+
+func TestBundle_WorkflowNameLabel_Applied(t *testing.T) {
+	proc := New(&dummyInspector{}).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+	workflow := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "echo hello"}},
+			},
+		},
+	}
+
+	bundle, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+		Config: testworkflowconfig.InternalConfig{
+			Resource: testworkflowconfig.ResourceConfig{
+				Id:     "resource-id",
+				RootId: "resource-root-id",
+			},
+			Workflow: testworkflowconfig.WorkflowConfig{
+				Name: "my-workflow",
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "my-workflow", bundle.Job.Labels[constants.WorkflowNameLabelName])
+	assert.Equal(t, "my-workflow", bundle.Job.Spec.Template.Labels[constants.WorkflowNameLabelName])
+}
+
+func TestBundle_WorkflowNameLabel_Sanitized(t *testing.T) {
+	proc := New(&dummyInspector{}).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+	workflow := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "echo hello"}},
+			},
+		},
+	}
+
+	bundle, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+		Config: testworkflowconfig.InternalConfig{
+			Resource: testworkflowconfig.ResourceConfig{
+				Id:     "resource-id",
+				RootId: "resource-root-id",
+			},
+			Workflow: testworkflowconfig.WorkflowConfig{
+				Name: "My Workflow/Name",
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "My-Workflow-Name", bundle.Job.Spec.Template.Labels[constants.WorkflowNameLabelName])
 }
 
 func TestBundle_DefaultImagePullPolicy_Applied(t *testing.T) {

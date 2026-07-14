@@ -25,6 +25,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 //go:generate go tool mockgen -destination=./mock_processor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" Processor
@@ -621,6 +622,12 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		return nil, errors.Wrap(err, "finalizing job spec")
 	}
 	jobSpec.Spec.Template = podSpec
+
+	// Stamp the human-readable workflow name as a label on the job and its pod template so
+	// runner pods can be selected by workflow in observability tooling (Prometheus/Grafana).
+	if workflowNameLabel := utils.SanitizeLabelValue(options.Config.Workflow.Name); workflowNameLabel != "" {
+		AnnotateWorkflowName(&jobSpec, workflowNameLabel)
+	}
 
 	// TODO(TKC-2585): Avoid adding the secrets to all the groups without isolation
 	addEnvVarToContainerSpec(mapEnv, jobSpec.Spec.Template.Spec.InitContainers)

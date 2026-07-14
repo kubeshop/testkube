@@ -22,6 +22,23 @@ func AnnotateControlledBy(obj metav1.Object, rootId, id string) {
 	}
 }
 
+// AnnotateWorkflowName stamps the human-readable TestWorkflow name as a label so runner
+// pods/jobs can be selected by workflow in observability tooling (Prometheus/Grafana).
+// The name must already be sanitized to a valid Kubernetes label value.
+func AnnotateWorkflowName(obj metav1.Object, name string) {
+	labels := obj.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	labels[constants.WorkflowNameLabelName] = name
+	obj.SetLabels(labels)
+
+	// Annotate Pod template in the Job
+	if v, ok := obj.(*batchv1.Job); ok {
+		AnnotateWorkflowName(&v.Spec.Template, name)
+	}
+}
+
 func AnnotateGroupId(obj metav1.Object, id string) {
 	labels := obj.GetLabels()
 	if labels == nil {

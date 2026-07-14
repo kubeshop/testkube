@@ -371,6 +371,11 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 	if err != nil {
 		return errors2.Wrapf(err, "failed to get execution details '%s/%s' from Control Plane", environmentId, executionId)
 	}
+
+	// Enrich the scoped logger with human-readable context (workflow name, trigger/source)
+	// so every downstream log line for this execution is easy to identify.
+	logger = a.logger.With("environmentId", environmentId)
+	logger = logger.With(execution.LogFields()...)
 	if execution.RunnerId != a.proContext.Agent.ID && execution.RunnerId != "" {
 		return errors.New("execution is assigned to a different runner")
 	}
@@ -392,7 +397,6 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 			Variables: runtime.EnvVars,
 		}
 		logger.Debugw("Received runtime configuration from control plane",
-			"executionId", executionId,
 			"variableCount", len(runtime.EnvVars))
 	}
 
@@ -400,8 +404,7 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 	if testworkflowutils.IsWorkflowSilent(execution.ResolvedWorkflow) {
 		// This overrides any SilentMode settings from the request (CLI flags)
 		execution.SilentMode = testworkflowutils.NewSilenceAllSilentMode()
-		logger.Debugw("Workflow is silent, activated SilentMode for execution",
-			"executionId", executionId)
+		logger.Debugw("Workflow is silent, activated SilentMode for execution")
 	}
 
 	result, err := a.runner.Execute(executionworkertypes.ExecuteRequest{

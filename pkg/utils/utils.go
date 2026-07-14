@@ -16,6 +16,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"github.com/jackc/pgx/v5"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 func IsNotFound(err error) bool {
@@ -130,6 +131,50 @@ func SanitizeName(path string) string {
 	}
 
 	return path
+}
+
+// SanitizeLabelValue sanitizes a string so it conforms to Kubernetes label value rules
+// (max 63 characters, alphanumeric plus '-', '_' and '.', beginning and ending with an
+// alphanumeric character). Invalid characters are replaced with '-'. It returns an empty
+// string if the value cannot be made into a valid label value.
+func SanitizeLabelValue(value string) string {
+	if value == "" {
+		return value
+	}
+
+	// Replace invalid characters with hyphens
+	sanitized := strings.Map(func(r rune) rune {
+		if isAllowedLabelRune(r) {
+			return r
+		}
+		return '-'
+	}, value)
+
+	// Truncate if too long
+	if len(sanitized) > validation.LabelValueMaxLength {
+		sanitized = sanitized[:validation.LabelValueMaxLength]
+	}
+
+	// Trim non-alphanumeric characters from start and end
+	sanitized = strings.TrimLeftFunc(sanitized, func(r rune) bool { return !isAlphaNumeric(r) })
+	sanitized = strings.TrimRightFunc(sanitized, func(r rune) bool { return !isAlphaNumeric(r) })
+
+	// Final validation
+	if errs := validation.IsValidLabelValue(sanitized); len(errs) > 0 {
+		return ""
+	}
+
+	return sanitized
+}
+
+// isAllowedLabelRune returns true if the rune is allowed in a Kubernetes label value.
+func isAllowedLabelRune(r rune) bool {
+	return isAlphaNumeric(r) || r == '-' || r == '_' || r == '.'
+}
+
+// isAlphaNumeric returns true if the rune is an ASCII alphanumeric character.
+func isAlphaNumeric(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')
 }
 
 // EscapeDots escapes dots for MongoDB fields
