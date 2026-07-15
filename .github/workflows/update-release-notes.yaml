@@ -28,13 +28,15 @@ jobs:
 
       - name: Read release notes
         id: read_notes
+        env:
+          NOTES_FILE: ${{ inputs.release_notes_file }}
         run: |
-          if [ -f "${{ inputs.release_notes_file }}" ]; then
-            echo "Reading release notes from ${{ inputs.release_notes_file }}"
+          if [ -f "$NOTES_FILE" ]; then
+            echo "Reading release notes from $NOTES_FILE"
             # Read the file and escape for GitHub Actions
             {
               echo 'RELEASE_NOTES<<EOF'
-              cat "${{ inputs.release_notes_file }}"
+              cat "$NOTES_FILE"
               echo EOF
             } >> "$GITHUB_ENV"
           else
@@ -45,12 +47,17 @@ jobs:
       - name: Update GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+          REPO: ${{ github.repository }}
         run: |
-          gh release edit "${{ inputs.tag }}" \
-            --notes "${{ env.RELEASE_NOTES }}" \
-            --repo ${{ github.repository }}
+          gh release edit "$TAG" \
+            --notes "$RELEASE_NOTES" \
+            --repo "$REPO"
 
       - name: Success message
+        env:
+          TAG: ${{ inputs.tag }}
+          REPO: ${{ github.repository }}
         run: |
-          echo "✅ Release notes updated successfully for tag ${{ inputs.tag }}"
-          echo "View at: https://github.com/${{ github.repository }}/releases/tag/${{ inputs.tag }}"
+          echo "✅ Release notes updated successfully for tag $TAG"
+          echo "View at: https://github.com/$REPO/releases/tag/$TAG"

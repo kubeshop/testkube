@@ -154,7 +154,7 @@ jobs:
 
       - name: Configure Docker for GAR
         if: ${{ github.ref_type == 'tag' }}
-        run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev -q
+        run: gcloud auth configure-docker "${GAR_LOCATION}-docker.pkg.dev" -q
 
       - name: Login to DockerHub
         uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
@@ -164,24 +164,28 @@ jobs:
 
       - id: helm-publish
         name: Publish Helm Chart
+        env:
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          HELM_VERSION: ${{ steps.helm-version.outputs.result }}
         run: |
           REGISTRY=registry-1.docker.io
-          REGISTRY_GAR=${{ env.GAR_LOCATION }}-docker.pkg.dev
+          REGISTRY_GAR="${GAR_LOCATION}-docker.pkg.dev"
 
-          echo ${{ secrets.DOCKERHUB_TOKEN }} | helm registry login ${REGISTRY} --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+          printf '%s' "$DOCKERHUB_TOKEN" | helm registry login "$REGISTRY" --username "$DOCKERHUB_USERNAME" --password-stdin
           helm repo add cloudnative-pg https://cloudnative-pg.github.io/charts --force-update
 
           # testkube chart
           helm dependency build k8s/helm/testkube
           helm package k8s/helm/testkube
-          helm push testkube-${{ steps.helm-version.outputs.result }}.tgz oci://${REGISTRY}/kubeshop
-          helm push testkube-${{ steps.helm-version.outputs.result }}.tgz oci://${REGISTRY_GAR}/${{ env.GAR_PROJECT_ID }}/${{ env.CHARTS_REPOSITORY }}
+          helm push "testkube-${HELM_VERSION}.tgz" "oci://${REGISTRY}/kubeshop"
+          helm push "testkube-${HELM_VERSION}.tgz" "oci://${REGISTRY_GAR}/${GAR_PROJECT_ID}/${CHARTS_REPOSITORY}"
 
           # testkube runner chart
           helm dependency build k8s/helm/testkube-runner
           helm package k8s/helm/testkube-runner
-          helm push testkube-runner-${{ steps.helm-version.outputs.result }}.tgz oci://${REGISTRY}/kubeshop
-          helm push testkube-runner-${{ steps.helm-version.outputs.result }}.tgz oci://${REGISTRY_GAR}/${{ env.GAR_PROJECT_ID }}/${{ env.CHARTS_REPOSITORY }}
+          helm push "testkube-runner-${HELM_VERSION}.tgz" "oci://${REGISTRY}/kubeshop"
+          helm push "testkube-runner-${HELM_VERSION}.tgz" "oci://${REGISTRY_GAR}/${GAR_PROJECT_ID}/${CHARTS_REPOSITORY}"
 
       - id: helm-index-update
         name: Dispatch update for legacy Helm index
@@ -222,9 +226,11 @@ jobs:
           echo "Using version from tag: $TAG"
 
       - name: Update server.json with version
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
           cd build/mcp-server
-          jq --arg version "${{ steps.tag.outputs.tag }}" \
+          jq --arg version "$TAG" \
             '.version = $version | .packages[0].identifier = "docker.io/kubeshop/mcp-server:" + $version' \
             server.json > server.json.tmp
           mv server.json.tmp server.json
@@ -258,6 +264,8 @@ jobs:
             echo "Warning: Could not verify publication immediately. It may take a few minutes to appear."
 
       - name: Summary
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
-          echo "MCP Server v${{ steps.tag.outputs.tag }} published to MCP Registry"
+          echo "MCP Server v${TAG} published to MCP Registry"
           echo "Registry URL: https://registry.modelcontextprotocol.io/v0/servers/io.github.kubeshop/testkube-mcp"
