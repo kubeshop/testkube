@@ -1,0 +1,52 @@
+{{/*
+Validation template for MongoDB configuration changes that are unsafe on existing
+persistent volumes. Detects boolean toggles that cause duplicate-key injection in
+mongod.conf or storage lock conflicts during rolling upgrades.
+
+The validation fires only during upgrades (Release.IsUpgrade) and only when MongoDB
+is enabled, since fresh installs do not have an existing mongod.conf or data directory.
+*/}}
+{{- if and .Values.mongodb.enabled .Release.IsUpgrade }}
+{{- $errors := list }}
+{{- /*
+  Bug 1 – Duplicate Key Injection:
+  The Bitnami MongoDB container entrypoint appends configuration parameters to
+  mongod.conf using raw string injection. Toggling boolean switches such as
+  disableJavascript or disableSystemLog across upgrades generates duplicate YAML
+  keys (e.g. security.javascriptEnabled appears twice), causing MongoDB to fail
+  with a fatal parse error.
+
+  Block the upgrade when these flags are explicitly set to a non-default value,
+  since the entrypoint cannot safely update an existing mongod.conf on a
+  pre-populated persistent volume.
+*/ -}}
+{{- if hasKey .Values.mongodb "disableJavascript" }}
+{{- if .Values.mongodb.disableJavascript }}
+{{- $errors = append $errors "mongodb.disableJavascript=true: Toggling this value on an existing MongoDB persistent volume causes duplicate 'security.javascriptEnabled' keys in mongod.conf, leading to a fatal YAML parse error. To apply this change, delete the MongoDB PVC first or manually edit the mongod.conf on the volume." }}
+{{- end }}
+{{- end }}
+{{- if hasKey .Values.mongodb "disableSystemLog" }}
+{{- if .Values.mongodb.disableSystemLog }}
+{{- $errors = append $errors "mongodb.disableSystemLog=true: Toggling this value on an existing MongoDB persistent volume causes duplicate 'systemLog' keys in mongod.conf, leading to a fatal YAML parse error. To apply this change, delete the MongoDB PVC first or manually edit the mongod.conf on the volume." }}
+{{- end }}
+{{- end }}
+{{- /*
+  Bug 2 – Uncoordinated Storage Locking:
+  Simultaneously disabling auth and enabling disableSystemLog triggers
+  initialization scripts that conflict with an active data directory lock.
+  The Recreate strategy mitigates this for most cases, but the combination
+  of auth.enabled=false (when previously true) with disableSystemLog=true
+  still causes init script conflicts on existing data directories.
+*/ -}}
+{{- if and (hasKey .Values.mongodb "disableSystemLog") (not .Values.mongodb.auth.enabled) }}
+{{- if .Values.mongodb.disableSystemLog }}
+{{- $errors = append $errors "mongodb.auth.enabled=false with mongodb.disableSystemLog=true: Applying both changes simultaneously on an existing MongoDB data directory causes initialization script conflicts. Apply these changes separately, or delete the MongoDB PVC before upgrading." }}
+{{- end }}
+{{- end }}
+{{- if $errors }}
+{{- $msg := printf "\n\nMongoDB Configuration Validation Failed:\n\n%s\n\nSet mongodb.forceConfigUpdate=true to bypass this validation (at your own risk)." (join "\n\n" $errors) }}
+{{- if not .Values.mongodb.forceConfigUpdate }}
+{{- fail $msg }}
+{{- end }}
+{{- end }}
+{{- end }}

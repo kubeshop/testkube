@@ -81,6 +81,10 @@ mongodb:
   enabled: true
   # -- MongoDB fullname override
   fullnameOverride: "testkube-mongodb"
+  # -- Bypass MongoDB configuration change validation during upgrades.
+  # -- Setting this to true skips safety checks for config toggles (disableJavascript, disableSystemLog)
+  # -- that can cause duplicate keys in mongod.conf on existing persistent volumes. Use at your own risk.
+  forceConfigUpdate: false
   # MongoDB Auth settings
   auth:
     # -- Toggle whether to enable MongoDB authentication
@@ -192,11 +196,11 @@ mongodb:
     failureThreshold: 6
     successThreshold: 1
   # MongoDB uses ReadWriteOnce access mode for PV. It means that the volume can be accessed by pods that reside on the same node.
-  # Keep the default RollingUpdate behavior unless the underlying MongoDB chart/template is updated to support Recreate without rendering a `rollingUpdate` block.
-  # Setting `type: Recreate` against the current chart rendering produces an invalid Deployment because Kubernetes forbids `rollingUpdate` when strategy type is `Recreate`.
+  # Using Recreate strategy ensures the old pod is fully terminated before the new one starts,
+  # preventing storage lock conflicts (mongod.lock) on the shared persistent volume during upgrades.
   updateStrategy:
-    # -- Update Strategy type. Keep `RollingUpdate` with the current chart rendering.
-    type: RollingUpdate
+    # -- Update Strategy type. Must be `Recreate` to avoid mongod.lock conflicts on ReadWriteOnce volumes.
+    type: Recreate
   # -- MongoDB metrics sidecar image configuration.
   # Overrides the subchart default to prevent the tag from being embedded in the repository field,
   # which would cause an invalid duplicated-tag image reference (e.g. registry/repo:tag:tag).
