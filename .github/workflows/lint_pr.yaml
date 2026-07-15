@@ -8,6 +8,10 @@ on:
       - synchronize
       - ready_for_review
 
+# pull_request_target lets the semantic title check run on fork PRs; the job never checks out PR code.
+permissions:
+  pull-requests: read
+
 jobs:
   prlint:
     name: Lint PR

@@ -6,8 +6,7 @@ on:
       - "[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
-  id-token: write # needed for keyless signing
-  contents: write
+  contents: read
 
 env:
   TESTKUBE_CHOCO_REPO: https://chocolatey.kubeshop.io/
@@ -88,6 +87,10 @@ jobs:
           app-id: 253113
           private-key: ${{ secrets.TESTKUBE_GH_APP_GITOPS_KEY }}
           owner: kubeshop
+          repositories: |
+            testkube
+            homebrew-testkube
+          permission-contents: write
       - name: Get GitHub App User ID
         id: get-user-id
         run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
