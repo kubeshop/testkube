@@ -1,6 +1,7 @@
 package testworkflows
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	common2 "github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -61,6 +63,7 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 
 			name := args[0]
 			workflow, err := client.GetTestWorkflowWithExecution(name)
+			common.HandleCLIError(testWorkflowNotFoundError(name, namespace, err))
 			ui.ExitOnError("getting test workflow"+namespaceSuffix, err)
 
 			if crdOnly {
@@ -82,4 +85,24 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "render the fetched test workflows as crd yaml; does not read crds from the cluster")
 
 	return cmd
+}
+
+// testWorkflowNotFoundError returns a CLIError with a CRD-sync hint when a test
+// workflow lookup returns a 404, or nil for a nil or non-404 error.
+func testWorkflowNotFoundError(name, namespace string, err error) *common.CLIError {
+	if !client.IsNotFound(err) {
+		return nil
+	}
+
+	moreInfo := fmt.Sprintf("The workflow may exist only as a Kubernetes CRD in your cluster. "+
+		"When CRD-to-Control Plane synchronization is disabled, workflows created from CRDs are not visible to the API. "+
+		"Check with: kubectl get testworkflows.testworkflows.testkube.io -n %s. "+
+		"Verify you are targeting the right environment with: testkube get context.", namespace)
+
+	return common.NewCLIError(
+		common.TKErrResourceNotFound,
+		fmt.Sprintf("test workflow '%s' not found", name),
+		moreInfo,
+		err,
+	)
 }

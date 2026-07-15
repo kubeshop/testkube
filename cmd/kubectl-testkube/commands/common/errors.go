@@ -71,6 +71,11 @@ const (
 	// is malformed or references an unknown key, or the parameter values
 	// could not be re-applied to the workflow YAML.
 	TKErrMarketplaceInvalidParameter ErrorCode = "TKERR-1603"
+
+	// TKERR-17xx errors are related to resource lookup operations.
+
+	// TKErrResourceNotFound is returned when a requested resource does not exist on the API server.
+	TKErrResourceNotFound ErrorCode = "TKERR-1701"
 )
 
 const helpUrl = "https://testkubeworkspace.slack.com"
