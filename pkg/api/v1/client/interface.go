@@ -111,7 +111,7 @@ type TestWorkflowAPI interface {
 	GetTestWorkflow(id string) (testkube.TestWorkflow, error)
 	GetTestWorkflowWithExecution(id string) (testkube.TestWorkflowWithExecution, error)
 	ListTestWorkflows(selector string) (testkube.TestWorkflows, error)
-	ListTestWorkflowWithExecutions(selector string) (testkube.TestWorkflowWithExecutions, error)
+	ListTestWorkflowWithExecutions(selector string, limit int) (testkube.TestWorkflowWithExecutions, error)
 	DeleteTestWorkflows(selector string) error
 	CreateTestWorkflow(workflow testkube.TestWorkflow) (testkube.TestWorkflow, error)
 	UpdateTestWorkflow(workflow testkube.TestWorkflow) (testkube.TestWorkflow, error)
