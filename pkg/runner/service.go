@@ -82,16 +82,16 @@ func (s *service) reattach(ctx context.Context) (err error) {
 				return
 			}
 			if !errors.Is(err, registry.ErrResourceNotFound) && !errors.Is(err, controller.ErrJobAborted) {
-				s.logger.Errorw("failed to monitor execution", "id", executionId, "error", err)
+				s.logger.Errorw("failed to monitor execution", "executionId", executionId, "error", err)
 				return
 			}
 
-			s.logger.Warnw("execution to monitor not found. reattaching again.", "id", executionId, "error", err)
+			s.logger.Warnw("execution to monitor not found. reattaching again.", "executionId", executionId, "error", err)
 
 			// Get the existing execution
 			execution, err := s.client.GetExecution(ctx, environmentId, executionId)
 			if err != nil {
-				s.logger.Errorw("failed to reattach to execution: getting execution", "id", executionId, "error", err)
+				s.logger.Errorw("failed to reattach to execution: getting execution", "executionId", executionId, "error", err)
 				return
 			}
 

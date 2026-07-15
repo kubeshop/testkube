@@ -441,13 +441,13 @@ func (r *runner) Monitor(ctx context.Context, organizationId string, environment
 	err := retry(GetExecutionRetryCount, GetExecutionRetryDelay, func(_ int) (err error) {
 		execution, err = r.client.GetExecution(ctx, environmentId, id)
 		if err != nil {
-			log.DefaultLogger.Warnw("failed to get execution for monitoring, retrying...", "id", id, "error", err)
+			log.DefaultLogger.Warnw("failed to get execution for monitoring, retrying...", "executionId", id, "error", err)
 		}
 		return err
 	})
 	if err != nil {
 		r.watching.Delete(id)
-		log.DefaultLogger.Errorw("failed to get execution for monitoring", "id", id, "error", err)
+		log.DefaultLogger.Errorw("failed to get execution for monitoring", "executionId", id, "error", err)
 		return err
 	}
 	return r.monitor(ctx, organizationId, environmentId, *execution)
@@ -498,22 +498,22 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 			err := retry(MonitorRetryCount, MonitorRetryDelay, func(_ int) error {
 				err := r.Monitor(context.Background(), request.Execution.OrganizationId, request.Execution.EnvironmentId, request.Execution.Id)
 				if err != nil {
-					log.DefaultLogger.Warnw("failed to monitor execution, retrying...", "id", request.Execution.Id, "error", err)
+					log.DefaultLogger.Warnw("failed to monitor execution, retrying...", "executionId", request.Execution.Id, "error", err)
 				}
 				return err
 			})
 			if err != nil {
 				log.DefaultLogger.Errorw(
 					"failed to monitor execution and retry limit is reached, assuming execution is stuck and running cleanup...",
-					"id", request.Execution.Id,
+					"executionId", request.Execution.Id,
 					"error", err,
 				)
 				// At this point, all retries have failed and nothing is monitoring the execution anymore.
 				// We can assume that the execution is stuck in running state and we need to abort it.
 				if err := r.abortExecution(context.Background(), request.Execution.EnvironmentId, request.Execution.Id); err != nil {
-					log.DefaultLogger.Errorw("failed to abort stuck execution", "id", request.Execution.Id, "error", err)
+					log.DefaultLogger.Errorw("failed to abort stuck execution", "executionId", request.Execution.Id, "error", err)
 				}
-				log.DefaultLogger.Warnw("aborted execution stuck in running state", "id", request.Execution.Id)
+				log.DefaultLogger.Warnw("aborted execution stuck in running state", "executionId", request.Execution.Id)
 			}
 		}()
 	}
