@@ -495,25 +495,27 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 	res, err := r.worker.Execute(context.Background(), request)
 	if err == nil {
 		go func() {
+			// The full execution object isn't available here (only the ExecuteRequest), so we
+			// scope with the fields we do have: the execution ID and the workflow name.
+			logger := log.DefaultLogger.With("executionId", request.Execution.Id, "workflowName", request.Workflow.Name)
 			err := retry(MonitorRetryCount, MonitorRetryDelay, func(_ int) error {
 				err := r.Monitor(context.Background(), request.Execution.OrganizationId, request.Execution.EnvironmentId, request.Execution.Id)
 				if err != nil {
-					log.DefaultLogger.Warnw("failed to monitor execution, retrying...", "executionId", request.Execution.Id, "error", err)
+					logger.Warnw("failed to monitor execution, retrying...", "error", err)
 				}
 				return err
 			})
 			if err != nil {
-				log.DefaultLogger.Errorw(
+				logger.Errorw(
 					"failed to monitor execution and retry limit is reached, assuming execution is stuck and running cleanup...",
-					"executionId", request.Execution.Id,
 					"error", err,
 				)
 				// At this point, all retries have failed and nothing is monitoring the execution anymore.
 				// We can assume that the execution is stuck in running state and we need to abort it.
 				if err := r.abortExecution(context.Background(), request.Execution.EnvironmentId, request.Execution.Id); err != nil {
-					log.DefaultLogger.Errorw("failed to abort stuck execution", "executionId", request.Execution.Id, "error", err)
+					logger.Errorw("failed to abort stuck execution", "error", err)
 				}
-				log.DefaultLogger.Warnw("aborted execution stuck in running state", "executionId", request.Execution.Id)
+				logger.Warnw("aborted execution stuck in running state")
 			}
 		}()
 	}
