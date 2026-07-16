@@ -74,6 +74,7 @@ or an RFC 3339 timestamp (e.g., '2024-01-31T16:00:00Z'). Combine with startDate 
 	ListLabelsDescription         = "List all workflow labels and their values in the environment. Use to discover available filters for selector parameters in other tools."
 	ListResourceGroupsDescription = "List available resource groups in the organization. Use to discover group slugs for filtering workflows and executions."
 	ListAgentsDescription         = "List available agents in the organization for workflow execution targeting. Returns agent names, types, capabilities, labels, and status. Use before run_workflow to discover target agents."
+	ListCredentialsDescription    = "List the credential and secret references available in the current environment (organization and environment scope) for use in workflow credential(\"...\") expressions. Returns each credential's name, type, scope, reference, and ready-to-use expression — it NEVER returns secret values. Use this to discover which secrets/credentials already exist before authoring a workflow that needs one (e.g. a git token or registry auth); if the credential you need is not listed, use request_credential to collect it from the user instead of duplicating an existing one."
 
 	// Query tool descriptions
 	QueryWorkflowsDescription = `Query workflow definitions in bulk using JSONPath.

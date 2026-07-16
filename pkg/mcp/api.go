@@ -654,6 +654,15 @@ func (c *APIClient) ListLabels(ctx context.Context) (string, error) {
 	})
 }
 
+func (c *APIClient) ListCredentials(ctx context.Context) (string, error) {
+	return c.makeRequest(ctx, APIRequest{
+		Method:      "GET",
+		Path:        "/credentials",
+		Scope:       ApiScopeOrgEnv,
+		QueryParams: map[string]string{"filter": "all"},
+	})
+}
+
 func (c *APIClient) ListResourceGroups(ctx context.Context) (string, error) {
 	return c.makeRequest(ctx, APIRequest{
 		Method: "GET",

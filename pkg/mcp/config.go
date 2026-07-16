@@ -51,6 +51,12 @@ type MCPServerConfig struct {
 	// Used by the MCP bridge when spawned for metadata-only listing with dummy credentials.
 	SkipEndpointChecks bool
 
+	// IncludeCredentialTools exposes the list_credentials tool. It is enabled only on the
+	// hosted/cloud MCP surfaces (the mcp-bridge that backs the AI chat, and the control
+	// plane's in-process MCP endpoint), and left disabled on the local testkube CLI so
+	// credential references are not surfaced through a user's local MCP server.
+	IncludeCredentialTools bool
+
 	// SkipTLS disables TLS certificate verification for the control-plane HTTP client.
 	SkipTLS bool
 
