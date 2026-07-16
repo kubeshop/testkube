@@ -533,8 +533,17 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 		DeleteFunc: func(obj interface{}) {
 			pod, ok := obj.(*corev1.Pod)
 			if !ok {
-				s.logger.Errorf("failed to process delete pod event due to it being an unexpected type, received type %+v", obj)
-				return
+				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+				if !ok {
+					s.logger.Errorf("failed to process delete pod event due to it being an unexpected type, received type %+v", obj)
+					return
+				}
+
+				pod, ok = tombstone.Obj.(*corev1.Pod)
+				if !ok {
+					s.logger.Errorf("failed to process delete pod event due to tombstone containing an unexpected type, received type %+v", tombstone.Obj)
+					return
+				}
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: pod %s/%s deleted", pod.Namespace, pod.Name)
 			event := s.newWatcherEvent(testtrigger.EventDeleted, &pod.ObjectMeta, pod, testtrigger.ResourcePod,
