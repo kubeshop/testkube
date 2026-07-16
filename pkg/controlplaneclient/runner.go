@@ -175,7 +175,32 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 	return watcher
 }
 
+// The session key identifies a notification stream session, so a reconnect with the
+// same key reattaches to the live session and its replay buffer instead of starting a
+// fresh one. It encodes the execution plus the per-stream discriminators.
+func workflowNotificationSessionKey(req *cloud.TestWorkflowNotificationsRequest) string {
+	return fmt.Sprintf("workflow:%s:%s", req.GetEnvironmentId(), req.GetExecutionId())
+}
+
+func parallelWorkerNotificationSessionKey(req *cloud.TestWorkflowParallelStepNotificationsRequest) string {
+	return fmt.Sprintf("parallel:%s:%s:%s:%d", req.GetEnvironmentId(), req.GetExecutionId(), req.GetRef(), req.GetWorkerIndex())
+}
+
+func serviceNotificationSessionKey(req *cloud.TestWorkflowServiceNotificationsRequest) string {
+	return fmt.Sprintf("service:%s:%s:%s:%d", req.GetEnvironmentId(), req.GetExecutionId(), req.GetServiceName(), req.GetServiceIndex())
+}
+
 func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowNotificationsRequest) NotificationWatcher) error {
+	c.notifMu.Lock()
+	// Recreate the manager if its context has been cancelled. The manager binds to
+	// the context of the first call and is reused across reconnects; that context is
+	// the agent lifetime today, but rebuilding it on a dead context avoids silently
+	// running with sources and a sweeper that can never start.
+	if c.workflowNotifManager == nil || c.workflowNotifManager.ctx.Err() != nil {
+		c.workflowNotifManager = newNotificationStreamSessionManager(ctx, workflowNotificationSessionKey, process)
+	}
+	manager := c.workflowNotifManager
+	c.notifMu.Unlock()
 	return processNotifications(
 		ctx,
 		c.metadata().GRPC(),
@@ -184,10 +209,7 @@ func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, proce
 		buildCloudNotification,
 		buildCloudError,
 		buildCloudProtocol,
-		func(req *cloud.TestWorkflowNotificationsRequest) string {
-			return fmt.Sprintf("workflow:%s:%s", req.GetEnvironmentId(), req.GetExecutionId())
-		},
-		process,
+		manager,
 		c.opts.SendTimeout,
 		c.opts.RecvTimeout,
 		c.logger,
@@ -195,6 +217,12 @@ func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, proce
 }
 
 func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowParallelStepNotificationsRequest) NotificationWatcher) error {
+	c.notifMu.Lock()
+	if c.parallelNotifManager == nil || c.parallelNotifManager.ctx.Err() != nil {
+		c.parallelNotifManager = newNotificationStreamSessionManager(ctx, parallelWorkerNotificationSessionKey, process)
+	}
+	manager := c.parallelNotifManager
+	c.notifMu.Unlock()
 	return processNotifications(
 		ctx,
 		c.metadata().GRPC(),
@@ -203,10 +231,7 @@ func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.
 		buildParallelStepCloudNotification,
 		buildParallelStepCloudError,
 		buildParallelStepCloudProtocol,
-		func(req *cloud.TestWorkflowParallelStepNotificationsRequest) string {
-			return fmt.Sprintf("parallel:%s:%s:%s:%d", req.GetEnvironmentId(), req.GetExecutionId(), req.GetRef(), req.GetWorkerIndex())
-		},
-		process,
+		manager,
 		c.opts.SendTimeout,
 		c.opts.RecvTimeout,
 		c.logger,
@@ -214,6 +239,12 @@ func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.
 }
 
 func (c *client) ProcessExecutionServiceNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) NotificationWatcher) error {
+	c.notifMu.Lock()
+	if c.serviceNotifManager == nil || c.serviceNotifManager.ctx.Err() != nil {
+		c.serviceNotifManager = newNotificationStreamSessionManager(ctx, serviceNotificationSessionKey, process)
+	}
+	manager := c.serviceNotifManager
+	c.notifMu.Unlock()
 	return processNotifications(
 		ctx,
 		c.metadata().GRPC(),
@@ -222,10 +253,7 @@ func (c *client) ProcessExecutionServiceNotificationRequests(ctx context.Context
 		buildServiceCloudNotification,
 		buildServiceCloudError,
 		buildServiceCloudProtocol,
-		func(req *cloud.TestWorkflowServiceNotificationsRequest) string {
-			return fmt.Sprintf("service:%s:%s:%s:%d", req.GetEnvironmentId(), req.GetExecutionId(), req.GetServiceName(), req.GetServiceIndex())
-		},
-		process,
+		manager,
 		c.opts.SendTimeout,
 		c.opts.RecvTimeout,
 		c.logger,

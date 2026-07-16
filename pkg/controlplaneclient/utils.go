@@ -71,6 +71,7 @@ const (
 	workflowNotificationReplayMaxEvents   = 10_000
 	workflowNotificationReplayMaxBytes    = 10 * 1024 * 1024
 	workflowNotificationSessionIdleTTL    = 15 * time.Minute
+	workflowNotificationSweepInterval     = 60 * time.Second
 )
 
 type notificationStreamEvent struct {
@@ -120,6 +121,7 @@ func (s *notificationStreamSubscription) close() {
 
 type notificationStreamSession struct {
 	mu          sync.Mutex
+	cancel      context.CancelFunc
 	nextSeqNo   uint32
 	replay      []notificationStreamEvent
 	replayBytes int
@@ -219,6 +221,19 @@ func (s *notificationStreamSession) close(errored bool) {
 	}
 }
 
+// stopSource cancels the session's pod-log source. It runs when the session is
+// removed from the manager (replaced on a resume-from-zero, or evicted) so an
+// orphaned source does not keep running until the execution ends, and in
+// runSource's defer to release the derived context. Safe to call more than once.
+func (s *notificationStreamSession) stopSource() {
+	s.mu.Lock()
+	cancel := s.cancel
+	s.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+}
+
 func (s *notificationStreamSession) currentSeqNo() uint32 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -280,6 +295,11 @@ func sendNotificationResponse[Response any](ctx context.Context, responses chan<
 }
 
 type notificationStreamSessionManager[Request notificationRequest] struct {
+	// ctx is the long-lived agent context, NOT the per-connection gRPC stream context.
+	// runSource runs under it so a session's pod-log source and replay buffer survive a
+	// gRPC reconnect: the next attach with the same streamId finds the live session and
+	// replays from the cursor instead of falling back to resume_unavailable.
+	ctx            context.Context
 	mu             sync.Mutex
 	nextID         atomic.Uint64
 	sessions       map[string]*notificationStreamSession
@@ -289,14 +309,35 @@ type notificationStreamSessionManager[Request notificationRequest] struct {
 }
 
 func newNotificationStreamSessionManager[Request notificationRequest](
+	ctx context.Context,
 	key func(Request) string,
 	process func(ctx context.Context, req Request) NotificationWatcher,
 ) *notificationStreamSessionManager[Request] {
-	return &notificationStreamSessionManager[Request]{
+	m := &notificationStreamSessionManager[Request]{
+		ctx:            ctx,
 		sessions:       make(map[string]*notificationStreamSession),
 		sessionIdleTTL: workflowNotificationSessionIdleTTL,
 		key:            key,
 		process:        process,
+	}
+	go m.runSweeper(workflowNotificationSweepInterval)
+	return m
+}
+
+// runSweeper reclaims expired sessions on a fixed interval regardless of attach
+// traffic. This covers a manager that goes idle (attach never runs to sweep) and a
+// done session re-attached near its TTL boundary that escapes scheduleExpiration's
+// single AfterFunc. It stops when the manager's context is done.
+func (m *notificationStreamSessionManager[Request]) runSweeper(interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-m.ctx.Done():
+			return
+		case <-ticker.C:
+			m.sweepExpired(time.Now())
+		}
 	}
 }
 
@@ -308,19 +349,32 @@ func (m *notificationStreamSessionManager[Request]) sessionKey(req Request) stri
 	return fmt.Sprintf("%s:%s", key, req.GetStreamId())
 }
 
-func (m *notificationStreamSessionManager[Request]) attach(ctx context.Context, req Request) (*notificationStreamSession, *notificationStreamSubscription, []notificationStreamEvent, bool, uint32, bool) {
-	key := m.sessionKey(req)
-	now := time.Now()
-
+// sweepExpired removes every session that is done and past the idle TTL as of now.
+func (m *notificationStreamSessionManager[Request]) sweepExpired(now time.Time) {
 	m.mu.Lock()
+	defer m.mu.Unlock()
 	for sessionKey, session := range m.sessions {
 		if session.expired(now, m.sessionIdleTTL) {
 			delete(m.sessions, sessionKey)
 		}
 	}
+}
 
+func (m *notificationStreamSessionManager[Request]) attach(req Request) (*notificationStreamSession, *notificationStreamSubscription, []notificationStreamEvent, bool, uint32, bool) {
+	key := m.sessionKey(req)
+	now := time.Now()
+
+	m.sweepExpired(now)
+
+	m.mu.Lock()
+	// A resume-from-zero request abandons any existing session under this key (the
+	// client reset after resume_unavailable). Capture it so its source can be
+	// stopped: once replaced in the map it is unreachable and would otherwise run
+	// orphaned until the execution ends.
+	var replaced *notificationStreamSession
 	session := m.sessions[key]
 	if req.GetResumeAfterSeqNo() == 0 {
+		replaced = session
 		session = nil
 	} else if session != nil {
 		done, errored := session.status()
@@ -330,13 +384,19 @@ func (m *notificationStreamSessionManager[Request]) attach(ctx context.Context, 
 		}
 	}
 	freshSession := false
+	var sourceCtx context.Context
 	if session == nil {
 		session = newNotificationStreamSession()
+		sourceCtx, session.cancel = context.WithCancel(m.ctx)
 		m.sessions[key] = session
 		freshSession = true
 	}
 	subscriptionID := m.nextID.Add(1)
 	m.mu.Unlock()
+
+	if replaced != nil {
+		replaced.stopSource()
+	}
 
 	subscribeAfterSeqNo := req.GetResumeAfterSeqNo()
 	if freshSession && req.GetResumeAfterSeqNo() > 0 {
@@ -348,7 +408,7 @@ func (m *notificationStreamSessionManager[Request]) attach(ctx context.Context, 
 		if req.GetResumeAfterSeqNo() > 0 {
 			liveOnlyAfter = time.Now()
 		}
-		go m.runSource(ctx, key, session, req, liveOnlyAfter)
+		go m.runSource(sourceCtx, key, session, req, liveOnlyAfter)
 		if req.GetResumeAfterSeqNo() > 0 {
 			available = false
 		}
@@ -384,6 +444,7 @@ func (m *notificationStreamSessionManager[Request]) runSource(ctx context.Contex
 	var sourceErr error
 	defer func() {
 		session.close(sourceErr != nil)
+		session.stopSource()
 		m.scheduleExpiration(key, session)
 	}()
 
@@ -412,8 +473,7 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 	buildNotification func(streamId string, seqNo uint32, notification *testkube.TestWorkflowExecutionNotification) Response,
 	buildError func(streamId string, message string) Response,
 	buildProtocol func(streamId string, seqNo uint32, notificationType cloud.TestWorkflowNotificationType, message string) Response,
-	sessionKey func(req Request) string,
-	process func(ctx context.Context, req Request) NotificationWatcher,
+	sessionManager *notificationStreamSessionManager[Request],
 	sendTimeout time.Duration,
 	recvTimeout time.Duration,
 	logger *zap.SugaredLogger,
@@ -428,7 +488,6 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 	sendResponse := func(response Response) error {
 		return sendNotificationResponse(ctx, responses, response)
 	}
-	sessionManager := newNotificationStreamSessionManager(sessionKey, process)
 
 	// Send responses in sequence
 	// GRPC stream have special requirements for concurrency on SendMsg, and RecvMsg calls.
@@ -462,6 +521,12 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 	// Process the requests
 	g.Go(func() error {
 		var wg sync.WaitGroup
+		// activeStreams dedups subscriptions by session key. The control plane re-asserts
+		// the same stream request periodically so a dropped connection self-heals; while a
+		// subscription is already live it already covers that stream, so a duplicate
+		// request is ignored to avoid double-delivering notifications.
+		activeStreams := make(map[string]struct{})
+		var activeStreamsMu sync.Mutex
 		defer func() {
 			wg.Wait()
 			close(responses)
@@ -513,13 +578,29 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 				continue
 			}
 
-			// Start reading the notifications
+			// Start reading the notifications. Ignore a request whose session is already
+			// being streamed on this connection (the control plane re-asserts requests to
+			// self-heal, so duplicates are expected while a subscription is live).
+			streamKey := sessionManager.sessionKey(req)
+			activeStreamsMu.Lock()
+			if _, streaming := activeStreams[streamKey]; streaming {
+				activeStreamsMu.Unlock()
+				continue
+			}
+			activeStreams[streamKey] = struct{}{}
+			activeStreamsMu.Unlock()
+
 			wg.Add(1)
 			g.Go(func(req Request) func() error {
 				return func() error {
 					defer wg.Done()
+					defer func() {
+						activeStreamsMu.Lock()
+						delete(activeStreams, streamKey)
+						activeStreamsMu.Unlock()
+					}()
 
-					session, sub, replay, resumeAvailable, lastSeqNo, done := sessionManager.attach(ctx, req)
+					session, sub, replay, resumeAvailable, lastSeqNo, done := sessionManager.attach(req)
 					defer session.unsubscribe(sub)
 
 					// READY means the agent accepted this request and attached it to a logical stream session.
