@@ -128,14 +128,34 @@ type notificationStreamSession struct {
 	errored     bool
 	lastSeqNo   uint32
 	lastActive  time.Time
+	// onReplayBytes reports the signed change in this session's buffered bytes.
+	// Called under mu so a session's deltas are serialized.
+	onReplayBytes func(delta int)
 }
 
-func newNotificationStreamSession() *notificationStreamSession {
+func newNotificationStreamSession(onReplayBytes func(delta int)) *notificationStreamSession {
 	return &notificationStreamSession{
-		nextSeqNo:   1,
-		subscribers: make(map[uint64]*notificationStreamSubscription),
-		lastActive:  time.Now(),
+		nextSeqNo:     1,
+		subscribers:   make(map[uint64]*notificationStreamSubscription),
+		lastActive:    time.Now(),
+		onReplayBytes: onReplayBytes,
 	}
+}
+
+func (s *notificationStreamSession) reportReplayBytes(delta int) {
+	if delta != 0 && s.onReplayBytes != nil {
+		s.onReplayBytes(delta)
+	}
+}
+
+// releaseReplayBytes drops the session's remaining buffered bytes from the
+// accounting, once, when the session is removed from its manager.
+func (s *notificationStreamSession) releaseReplayBytes() {
+	s.mu.Lock()
+	remaining := s.replayBytes
+	s.replayBytes = 0
+	s.reportReplayBytes(-remaining)
+	s.mu.Unlock()
 }
 
 func (s *notificationStreamSession) subscribe(resumeAfterSeqNo uint32, subscriptionID uint64) (*notificationStreamSubscription, []notificationStreamEvent, bool, uint32, bool) {
@@ -183,11 +203,16 @@ func (s *notificationStreamSession) publish(notification *testkube.TestWorkflowE
 		seqNo:        seqNo,
 		notification: notification,
 	}
+	bytesDelta := 0
 	if seqNo > 0 {
+		added := approximateNotificationBytes(notification)
 		s.replay = append(s.replay, event)
-		s.replayBytes += approximateNotificationBytes(notification)
+		s.replayBytes += added
+		bytesDelta += added
 		for len(s.replay) > workflowNotificationReplayMaxEvents || s.replayBytes > workflowNotificationReplayMaxBytes {
-			s.replayBytes -= approximateNotificationBytes(s.replay[0].notification)
+			evicted := approximateNotificationBytes(s.replay[0].notification)
+			s.replayBytes -= evicted
+			bytesDelta -= evicted
 			s.replay[0].notification = nil
 			s.replay = s.replay[1:]
 		}
@@ -196,6 +221,7 @@ func (s *notificationStreamSession) publish(notification *testkube.TestWorkflowE
 	for _, sub := range s.subscribers {
 		subscribers = append(subscribers, sub)
 	}
+	s.reportReplayBytes(bytesDelta)
 	s.mu.Unlock()
 
 	for _, sub := range subscribers {
@@ -284,20 +310,34 @@ type notificationStreamSessionManager[Request notificationRequest] struct {
 	nextID         atomic.Uint64
 	sessions       map[string]*notificationStreamSession
 	sessionIdleTTL time.Duration
+	kind           string
 	key            func(Request) string
 	process        func(ctx context.Context, req Request) NotificationWatcher
 }
 
 func newNotificationStreamSessionManager[Request notificationRequest](
+	kind string,
 	key func(Request) string,
 	process func(ctx context.Context, req Request) NotificationWatcher,
 ) *notificationStreamSessionManager[Request] {
 	return &notificationStreamSessionManager[Request]{
 		sessions:       make(map[string]*notificationStreamSession),
 		sessionIdleTTL: workflowNotificationSessionIdleTTL,
+		kind:           kind,
 		key:            key,
 		process:        process,
 	}
+}
+
+// addReplayBytes applies a signed byte delta to the gauge. Adds are matched by
+// their own release deltas, so overlapping managers of the same kind (e.g. a
+// new manager built on gRPC reconnect while an old one's sessions still drain)
+// sum correctly and the gauge nets back to zero once every session drops.
+func (m *notificationStreamSessionManager[Request]) addReplayBytes(delta int) {
+	if delta == 0 {
+		return
+	}
+	liveLogReplayBytes.WithLabelValues(m.kind).Add(float64(delta))
 }
 
 func (m *notificationStreamSessionManager[Request]) sessionKey(req Request) string {
@@ -312,10 +352,14 @@ func (m *notificationStreamSessionManager[Request]) attach(ctx context.Context, 
 	key := m.sessionKey(req)
 	now := time.Now()
 
+	var releaseSessions []*notificationStreamSession
 	m.mu.Lock()
 	for sessionKey, session := range m.sessions {
 		if session.expired(now, m.sessionIdleTTL) {
 			delete(m.sessions, sessionKey)
+			releaseSessions = append(releaseSessions, session)
+			liveLogSessionsEvictedTotal.WithLabelValues(m.kind, "ttl").Inc()
+			liveLogSessions.WithLabelValues(m.kind, "done").Dec()
 		}
 	}
 
@@ -326,17 +370,25 @@ func (m *notificationStreamSessionManager[Request]) attach(ctx context.Context, 
 		done, errored := session.status()
 		if done && errored {
 			delete(m.sessions, key)
+			releaseSessions = append(releaseSessions, session)
+			liveLogSessions.WithLabelValues(m.kind, "done").Dec()
 			session = nil
 		}
 	}
 	freshSession := false
 	if session == nil {
-		session = newNotificationStreamSession()
+		session = newNotificationStreamSession(m.addReplayBytes)
 		m.sessions[key] = session
 		freshSession = true
+		liveLogSessionsCreatedTotal.WithLabelValues(m.kind).Inc()
+		liveLogSessions.WithLabelValues(m.kind, "active").Inc()
 	}
 	subscriptionID := m.nextID.Add(1)
 	m.mu.Unlock()
+
+	for _, s := range releaseSessions {
+		s.releaseReplayBytes()
+	}
 
 	subscribeAfterSeqNo := req.GetResumeAfterSeqNo()
 	if freshSession && req.GetResumeAfterSeqNo() > 0 {
@@ -353,20 +405,38 @@ func (m *notificationStreamSessionManager[Request]) attach(ctx context.Context, 
 			available = false
 		}
 	}
+	if req.GetResumeAfterSeqNo() > 0 {
+		result := "unavailable"
+		if available {
+			result = "available"
+		}
+		liveLogResumeTotal.WithLabelValues(m.kind, result).Inc()
+	}
+	liveLogSubscribers.WithLabelValues(m.kind).Inc()
 	return session, sub, replay, available, lastSeqNo, done
+}
+
+func (m *notificationStreamSessionManager[Request]) detach(session *notificationStreamSession, sub *notificationStreamSubscription) {
+	session.unsubscribe(sub)
+	liveLogSubscribers.WithLabelValues(m.kind).Dec()
 }
 
 func (m *notificationStreamSessionManager[Request]) scheduleExpiration(key string, session *notificationStreamSession) {
 	time.AfterFunc(m.sessionIdleTTL, func() {
 		m.mu.Lock()
-		defer m.mu.Unlock()
-
 		if m.sessions[key] != session {
+			m.mu.Unlock()
 			return
 		}
-		if session.expired(time.Now(), m.sessionIdleTTL) {
-			delete(m.sessions, key)
+		if !session.expired(time.Now(), m.sessionIdleTTL) {
+			m.mu.Unlock()
+			return
 		}
+		delete(m.sessions, key)
+		liveLogSessionsEvictedTotal.WithLabelValues(m.kind, "ttl").Inc()
+		liveLogSessions.WithLabelValues(m.kind, "done").Dec()
+		m.mu.Unlock()
+		session.releaseReplayBytes()
 	})
 }
 
@@ -381,9 +451,16 @@ func shouldPublishLiveResumeNotification(notification *testkube.TestWorkflowExec
 }
 
 func (m *notificationStreamSessionManager[Request]) runSource(ctx context.Context, key string, session *notificationStreamSession, req Request, liveOnlyAfter time.Time) {
+	started := time.Now()
 	var sourceErr error
 	defer func() {
 		session.close(sourceErr != nil)
+		liveLogSessions.WithLabelValues(m.kind, "active").Dec()
+		liveLogSessions.WithLabelValues(m.kind, "done").Inc()
+		liveLogSourceDurationSeconds.WithLabelValues(m.kind).Observe(time.Since(started).Seconds())
+		if sourceErr != nil {
+			liveLogSessionsEvictedTotal.WithLabelValues(m.kind, "error").Inc()
+		}
 		m.scheduleExpiration(key, session)
 	}()
 
@@ -412,6 +489,7 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 	buildNotification func(streamId string, seqNo uint32, notification *testkube.TestWorkflowExecutionNotification) Response,
 	buildError func(streamId string, message string) Response,
 	buildProtocol func(streamId string, seqNo uint32, notificationType cloud.TestWorkflowNotificationType, message string) Response,
+	kind string,
 	sessionKey func(req Request) string,
 	process func(ctx context.Context, req Request) NotificationWatcher,
 	sendTimeout time.Duration,
@@ -428,7 +506,7 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 	sendResponse := func(response Response) error {
 		return sendNotificationResponse(ctx, responses, response)
 	}
-	sessionManager := newNotificationStreamSessionManager(sessionKey, process)
+	sessionManager := newNotificationStreamSessionManager(kind, sessionKey, process)
 
 	// Send responses in sequence
 	// GRPC stream have special requirements for concurrency on SendMsg, and RecvMsg calls.
@@ -520,7 +598,7 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 					defer wg.Done()
 
 					session, sub, replay, resumeAvailable, lastSeqNo, done := sessionManager.attach(ctx, req)
-					defer session.unsubscribe(sub)
+					defer sessionManager.detach(session, sub)
 
 					// READY means the agent accepted this request and attached it to a logical stream session.
 					// It does not imply the Kubernetes log source has already produced data.

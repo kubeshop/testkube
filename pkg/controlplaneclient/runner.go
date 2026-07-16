@@ -184,6 +184,7 @@ func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, proce
 		buildCloudNotification,
 		buildCloudError,
 		buildCloudProtocol,
+		"workflow",
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return fmt.Sprintf("workflow:%s:%s", req.GetEnvironmentId(), req.GetExecutionId())
 		},
@@ -203,6 +204,7 @@ func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.
 		buildParallelStepCloudNotification,
 		buildParallelStepCloudError,
 		buildParallelStepCloudProtocol,
+		"parallel",
 		func(req *cloud.TestWorkflowParallelStepNotificationsRequest) string {
 			return fmt.Sprintf("parallel:%s:%s:%s:%d", req.GetEnvironmentId(), req.GetExecutionId(), req.GetRef(), req.GetWorkerIndex())
 		},
@@ -222,6 +224,7 @@ func (c *client) ProcessExecutionServiceNotificationRequests(ctx context.Context
 		buildServiceCloudNotification,
 		buildServiceCloudError,
 		buildServiceCloudProtocol,
+		"service",
 		func(req *cloud.TestWorkflowServiceNotificationsRequest) string {
 			return fmt.Sprintf("service:%s:%s:%s:%d", req.GetEnvironmentId(), req.GetExecutionId(), req.GetServiceName(), req.GetServiceIndex())
 		},
