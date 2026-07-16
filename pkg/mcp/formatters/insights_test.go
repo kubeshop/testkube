@@ -83,6 +83,37 @@ func TestFormatInsightMetricSeries(t *testing.T) {
 		assert.Contains(t, out, `"segment":"failed"`)
 	})
 
+	t.Run("drops empty generate_series buckets when segmented", func(t *testing.T) {
+		// The server pads the time range with empty (value 0, no segment)
+		// buckets around the real data buckets. These must not become an "all"
+		// series of zeros that distorts min/avg.
+		raw := `[
+			{"ts":1,"value":0,"segments":[]},
+			{"ts":2,"value":180,"segments":[{"label":"http_req_duration_p95_ms","value":180}]},
+			{"ts":3,"value":0,"segments":[]},
+			{"ts":4,"value":240,"segments":[{"label":"http_req_duration_p95_ms","value":240}]}
+		]`
+		out, err := FormatInsightMetricSeries(raw, 0)
+		require.NoError(t, err)
+		assert.NotContains(t, out, `"segment":"all"`)
+
+		var parsed struct {
+			PointCount int `json:"pointCount"`
+			Series     []struct {
+				Segment string  `json:"segment"`
+				Points  int     `json:"points"`
+				Min     float64 `json:"min"`
+				Max     float64 `json:"max"`
+			} `json:"series"`
+		}
+		require.NoError(t, json.Unmarshal([]byte(out), &parsed))
+		require.Len(t, parsed.Series, 1)
+		assert.Equal(t, 2, parsed.PointCount)
+		assert.Equal(t, "http_req_duration_p95_ms", parsed.Series[0].Segment)
+		assert.Equal(t, float64(180), parsed.Series[0].Min)
+		assert.Equal(t, float64(240), parsed.Series[0].Max)
+	})
+
 	t.Run("downsamples to maxSamples keeping ends", func(t *testing.T) {
 		var sb strings.Builder
 		sb.WriteString("[")

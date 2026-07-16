@@ -124,6 +124,19 @@ func FormatInsightMetricSeries(raw string, maxSamples int) (string, error) {
 		maxSamples = defaultInsightSeriesSamples
 	}
 
+	// When any bucket carries segments, the response is segmented: the values
+	// live in the segments and the server fills the rest of the time range with
+	// empty (value 0, no segment) buckets. Drop those empty buckets so they
+	// don't distort the summary. Only when no bucket has segments do we use the
+	// top-level value as a single "all" series.
+	segmented := false
+	for _, d := range data {
+		if len(d.Segments) > 0 {
+			segmented = true
+			break
+		}
+	}
+
 	// Preserve first-seen segment order for stable output.
 	order := make([]string, 0)
 	points := make(map[string][]insightSeriesPoint)
@@ -136,7 +149,7 @@ func FormatInsightMetricSeries(raw string, maxSamples int) (string, error) {
 
 	total := 0
 	for _, d := range data {
-		if len(d.Segments) == 0 {
+		if !segmented {
 			add("all", d.Ts, d.Value)
 			total++
 			continue
