@@ -138,7 +138,7 @@ func (a *agentLoop) saveEmptyLogs(ctx context.Context, environmentId string, exe
 		return a._saveEmptyLogs(ctx, environmentId, execution)
 	})
 	if err != nil {
-		a.logger.Errorw("failed to save empty log", "executionId", execution.Id, "error", err)
+		a.logger.Errorw("failed to save empty log", append(execution.LogFields(), "error", err)...)
 	}
 	return err
 }
@@ -147,28 +147,28 @@ func (a *agentLoop) finishExecution(ctx context.Context, environmentId string, e
 	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func(_ int) error {
 		err := a.client.FinishExecutionResult(ctx, environmentId, execution.Id, execution.Result)
 		if err != nil {
-			a.logger.Warnw("failed to finish the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
+			a.logger.Warnw("failed to finish the TestWorkflow execution in database", append(execution.LogFields(), "recoverable", true, "error", err)...)
 			return err
 		}
 		return nil
 	})
 	if err != nil {
-		a.logger.Errorw("failed to finish the TestWorkflow execution in database", "recoverable", false, "executionId", execution.Id, "error", err)
+		a.logger.Errorw("failed to finish the TestWorkflow execution in database", append(execution.LogFields(), "recoverable", false, "error", err)...)
 	}
 	return err
 }
 
 func (a *agentLoop) init(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
 	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func(retryCount int) (err error) {
-		a.logger.Infow("Initializing execution", "executionId", execution.Id, "attempt", retryCount)
+		a.logger.Infow("Initializing execution", append(execution.LogFields(), "attempt", retryCount)...)
 		err = a.client.InitExecution(ctx, environmentId, execution.Id, execution.Signature, execution.Namespace)
 		if err != nil {
-			a.logger.Warnw("failed to initialize the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
+			a.logger.Warnw("failed to initialize the TestWorkflow execution in database", append(execution.LogFields(), "recoverable", true, "error", err)...)
 		}
 		return err
 	})
 	if err != nil {
-		a.logger.Errorw("failed to initialize the TestWorkflow execution in database", "recoverable", false, "executionId", execution.Id, "error", err)
+		a.logger.Errorw("failed to initialize the TestWorkflow execution in database", append(execution.LogFields(), "recoverable", false, "error", err)...)
 	}
 	return err
 }

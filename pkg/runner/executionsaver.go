@@ -153,7 +153,7 @@ func (s *executionSaver) End(ctx context.Context, result testkube.TestWorkflowRe
 				return err
 			}
 		} else {
-			log.DefaultLogger.Infow("TestWorkflow log archive is not required; skipping log archive upload", "id", s.id)
+			log.DefaultLogger.Infow("TestWorkflow log archive is not required; skipping log archive upload", "executionId", s.id)
 		}
 	}
 
