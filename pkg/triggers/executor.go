@@ -19,10 +19,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/expressions"
-	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
-	triggerstcl "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/triggers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
@@ -35,6 +33,20 @@ const (
 )
 
 type ExecutorF func(context.Context, *watcherEvent, *internalTrigger) error
+
+// newTriggerRunningContext builds the running context recorded on executions started by a
+// TestTrigger, identifying the trigger by name. It applies in OSS as well as Pro editions.
+func newTriggerRunningContext(triggerName string) *testkube.TestWorkflowRunningContext {
+	return &testkube.TestWorkflowRunningContext{
+		Interface_: &testkube.TestWorkflowRunningContextInterface{
+			Type_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterfaceType),
+		},
+		Actor: &testkube.TestWorkflowRunningContextActor{
+			Name:  triggerName,
+			Type_: common.Ptr(testkube.TESTTRIGGER_TestWorkflowRunningContextActorType),
+		},
+	}
+}
 
 func (s *Service) execute(ctx context.Context, e *watcherEvent, t *internalTrigger) error {
 	// If the trigger was removed between match() and execute() (concurrent
@@ -175,34 +187,39 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *internalTrigg
 		}),
 	}
 
-	// Pro edition only (tcl protected code)
-	if s.proContext != nil && s.proContext.APIKey != "" {
-		request.RunningContext, _ = testworkflowexecutor.GetNewRunningContext(triggerstcl.GetRunningContext(t.Name), nil)
-	}
+	// Record the TestTrigger as the running context so downstream logs and APIs carry the
+	// human-readable trigger name. Built without the TCL helper so it applies to the
+	// OSS/standalone agent as well as Pro editions.
+	request.RunningContext, _ = testworkflowexecutor.GetNewRunningContext(newTriggerRunningContext(t.Name), nil)
 
 	if t.Delay != nil {
 		s.logger.Infof(
-			"trigger service: executor component: trigger %s/%s has delayed testworkflow execution configured for %f seconds",
-			t.Namespace, t.Name, t.Delay.Seconds(),
+			"trigger service: executor component: trigger %s/%s (source %s) has delayed testworkflow execution configured for %f seconds",
+			t.Namespace, t.Name, t.Source, t.Delay.Seconds(),
 		)
 		time.Sleep(*t.Delay)
 	}
 	s.logger.Infof(
-		"trigger service: executor component: scheduling testworkflow executions for trigger %s/%s",
-		t.Namespace, t.Name,
+		"trigger service: executor component: scheduling testworkflow executions for trigger %s/%s (source %s)",
+		t.Namespace, t.Name, t.Source,
 	)
 
 	executions, err := s.testWorkflowExecutor.Execute(ctx, request)
 	if err != nil {
-		log.DefaultLogger.Errorw(fmt.Sprintf("trigger service: error executing testworkflow for trigger %s/%s", t.Namespace, t.Name), "error", err)
+		s.logger.Errorw(fmt.Sprintf("trigger service: error executing testworkflow for trigger %s/%s (source %s)", t.Namespace, t.Name, t.Source), "error", err)
 		return nil
 	}
+	executionIDs := make([]string, 0, len(executions))
 	for _, exec := range executions {
 		status.addTestWorkflowExecutionID(exec.Id)
+		executionIDs = append(executionIDs, exec.Id)
 	}
 
 	status.start()
-	s.logger.Debugf("trigger service: executor component: started test execution for trigger %s/%s", t.Namespace, t.Name)
+	s.logger.Infof(
+		"trigger service: executor component: started testworkflow executions %v for trigger %s/%s (source %s)",
+		executionIDs, t.Namespace, t.Name, t.Source,
+	)
 
 	return nil
 }

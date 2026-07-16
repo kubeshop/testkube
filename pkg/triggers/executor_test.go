@@ -6,7 +6,29 @@ import (
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
+
+// TestNewTriggerRunningContext verifies that executions started by a TestTrigger record the
+// trigger name as their running context, and that it maps to the TESTTRIGGER cloud context.
+// This applies regardless of edition (previously the running context was only set in Pro).
+func TestNewTriggerRunningContext(t *testing.T) {
+	legacy := newTriggerRunningContext("my-trigger")
+
+	assert.NotNil(t, legacy.Actor)
+	assert.Equal(t, "my-trigger", legacy.Actor.Name)
+	assert.NotNil(t, legacy.Actor.Type_)
+	assert.Equal(t, testkube.TESTTRIGGER_TestWorkflowRunningContextActorType, *legacy.Actor.Type_)
+
+	runningContext, untrustedUser := testworkflowexecutor.GetNewRunningContext(legacy, nil)
+	assert.Nil(t, untrustedUser)
+	assert.NotNil(t, runningContext)
+	assert.Equal(t, cloud.RunningContextType_TESTTRIGGER, runningContext.Type)
+	assert.Equal(t, "my-trigger", runningContext.Name)
+}
 
 // TestGetTemplateData_MetadataLabels verifies that Go templates in v1
 // TestTrigger actionParameters work with BOTH JSON-style field names

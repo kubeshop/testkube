@@ -108,6 +108,10 @@ func New(
 func (r *runner) monitor(ctx context.Context, organizationId string, environmentId string, execution testkube.TestWorkflowExecution) error {
 	defer r.watching.Delete(execution.Id)
 
+	// Scoped logger carrying human-readable context (workflow name, trigger/source) so every
+	// log line emitted while monitoring this execution is easy to identify.
+	logger := log.DefaultLogger.With(execution.LogFields()...)
+
 	var notifications executionworkertypes.NotificationsWatcher
 	for i := 0; i < GetNotificationsRetryCount; i++ {
 		notifications = r.worker.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{})
@@ -187,13 +191,13 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 				currentRef = n.Ref
 				err = logs.WriteStart(n.Ref)
 				if err != nil {
-					log.DefaultLogger.Errorw("failed to write start logs", "id", execution.Id, "ref", n.Ref)
+					logger.Errorw("failed to write start logs", "ref", n.Ref)
 					continue
 				}
 			}
 			_, err = logs.Write([]byte(n.Log))
 			if err != nil {
-				log.DefaultLogger.Errorw("failed to write logs", "id", execution.Id, "ref", n.Ref)
+				logger.Errorw("failed to write logs", "ref", n.Ref)
 				continue
 			}
 		}
@@ -205,11 +209,11 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	}
 
 	if notifications.Err() != nil {
-		log.DefaultLogger.Errorw("error from TestWorkflow watcher", "id", execution.Id, "error", notifications.Err())
+		logger.Errorw("error from TestWorkflow watcher", "error", notifications.Err())
 	}
 
 	if lastResult == nil || !lastResult.IsFinished() {
-		log.DefaultLogger.Errorw("not finished TestWorkflow result received, trying to recover...", "id", execution.Id)
+		logger.Errorw("not finished TestWorkflow result received, trying to recover...")
 		watcher := r.worker.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
 			NoFollow: true,
 		})
@@ -225,7 +229,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 			lastResult = execution.Result
 		}
 		if !lastResult.IsFinished() {
-			log.DefaultLogger.Errorw("failed to recover TestWorkflow result, marking as fatal error...", "id", execution.Id)
+			logger.Errorw("failed to recover TestWorkflow result, marking as fatal error...")
 			lastResult.Fatal(err, true, time.Now())
 		}
 	}
@@ -234,7 +238,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	if lastResult.IsAborted() || lastResult.IsCanceled() {
 		// Service logs
 		if len(services) > 0 {
-			log.DefaultLogger.Warnw("TestWorkflow execution has been aborted or canceled, while some services are still running. Recovering their logs.", "executionId", execution.Id, "count", len(services))
+			logger.Warnw("TestWorkflow execution has been aborted or canceled, while some services are still running. Recovering their logs.", "count", len(services))
 			for svc := range services {
 				err := r.recoverServiceData(ctx, saver, environmentId, &execution, commands.ServiceInfo{
 					Group: svc.GroupId,
@@ -242,37 +246,36 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 					Name:  svc.Name,
 				})
 				if err == nil {
-					log.DefaultLogger.Infow("recovered TestWorkflow execution service logs", "executionId", execution.Id, "serviceName", svc.Name, "serviceIndex", svc.Index)
+					logger.Infow("recovered TestWorkflow execution service logs", "serviceName", svc.Name, "serviceIndex", svc.Index)
 				} else {
-					log.DefaultLogger.Errorw("failed to recover TestWorkflow execution service logs", "executionId", execution.Id, "serviceName", svc.Name, "serviceIndex", svc.Index, "error", err)
+					logger.Errorw("failed to recover TestWorkflow execution service logs", "serviceName", svc.Name, "serviceIndex", svc.Index, "error", err)
 				}
 			}
 		}
 
 		// Parallel steps logs
 		if len(parallel) > 0 {
-			log.DefaultLogger.Warnw("TestWorkflow execution has been aborted or canceled, while some parallel steps are still running. Recovering their logs.", "executionId", execution.Id, "count", len(parallel))
+			logger.Warnw("TestWorkflow execution has been aborted or canceled, while some parallel steps are still running. Recovering their logs.", "count", len(parallel))
 			for step := range parallel {
 				err := r.recoverParallelStepData(ctx, saver, environmentId, &execution, step.GroupId, int(step.Index))
 				if err == nil {
-					log.DefaultLogger.Infow("recovered TestWorkflow execution parallel step logs", "executionId", execution.Id, "stepRef", step.GroupId, "stepIndex", step.Index)
+					logger.Infow("recovered TestWorkflow execution parallel step logs", "stepRef", step.GroupId, "stepIndex", step.Index)
 				} else {
-					log.DefaultLogger.Errorw("failed to recover TestWorkflow execution parallel step logs", "executionId", execution.Id, "stepRef", step.GroupId, "stepIndex", step.Index, "error", err)
+					logger.Errorw("failed to recover TestWorkflow execution parallel step logs", "stepRef", step.GroupId, "stepIndex", step.Index, "error", err)
 				}
 			}
 		}
 	}
 
-	log.DefaultLogger.Infow("Saving execution", "id", execution.Id)
+	logger.Infow("Saving execution")
 	for i := 0; i < SaveEndResultRetryCount; i++ {
 		err = saver.End(ctx, *lastResult)
 		if err == nil {
 			break
 		}
 		sleepDuration := time.Duration(i/10) * SaveEndResultRetryBaseDelay
-		log.DefaultLogger.Warnw(
+		logger.Warnw(
 			"failed to end execution and save execution data, retrying...",
-			"id", execution.Id,
 			"retryCount", i,
 			"retryDelay", sleepDuration,
 			"error", err,
@@ -282,14 +285,14 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 
 	// Handle fatal error
 	if err != nil {
-		log.DefaultLogger.Errorw("failed to save execution data", "id", execution.Id, "error", err)
+		logger.Errorw("failed to save execution data", "error", err)
 		return errors.Wrapf(err, "failed to save execution '%s' data", execution.Id)
 	}
 
 	err = r.worker.Destroy(context.Background(), execution.Id, executionworkertypes.DestroyOptions{})
 	if err != nil {
 		// TODO: what to do on error?
-		log.DefaultLogger.Errorw("failed to cleanup TestWorkflow resources", "id", execution.Id, "error", err)
+		logger.Errorw("failed to cleanup TestWorkflow resources", "error", err)
 	}
 
 	return nil
@@ -438,13 +441,13 @@ func (r *runner) Monitor(ctx context.Context, organizationId string, environment
 	err := retry(GetExecutionRetryCount, GetExecutionRetryDelay, func(_ int) (err error) {
 		execution, err = r.client.GetExecution(ctx, environmentId, id)
 		if err != nil {
-			log.DefaultLogger.Warnw("failed to get execution for monitoring, retrying...", "id", id, "error", err)
+			log.DefaultLogger.Warnw("failed to get execution for monitoring, retrying...", "executionId", id, "error", err)
 		}
 		return err
 	})
 	if err != nil {
 		r.watching.Delete(id)
-		log.DefaultLogger.Errorw("failed to get execution for monitoring", "id", id, "error", err)
+		log.DefaultLogger.Errorw("failed to get execution for monitoring", "executionId", id, "error", err)
 		return err
 	}
 	return r.monitor(ctx, organizationId, environmentId, *execution)
@@ -492,25 +495,27 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 	res, err := r.worker.Execute(context.Background(), request)
 	if err == nil {
 		go func() {
+			// The full execution object isn't available here (only the ExecuteRequest), so we
+			// scope with the fields we do have: the execution ID and the workflow name.
+			logger := log.DefaultLogger.With("executionId", request.Execution.Id, "workflowName", request.Workflow.Name)
 			err := retry(MonitorRetryCount, MonitorRetryDelay, func(_ int) error {
 				err := r.Monitor(context.Background(), request.Execution.OrganizationId, request.Execution.EnvironmentId, request.Execution.Id)
 				if err != nil {
-					log.DefaultLogger.Warnw("failed to monitor execution, retrying...", "id", request.Execution.Id, "error", err)
+					logger.Warnw("failed to monitor execution, retrying...", "error", err)
 				}
 				return err
 			})
 			if err != nil {
-				log.DefaultLogger.Errorw(
+				logger.Errorw(
 					"failed to monitor execution and retry limit is reached, assuming execution is stuck and running cleanup...",
-					"id", request.Execution.Id,
 					"error", err,
 				)
 				// At this point, all retries have failed and nothing is monitoring the execution anymore.
 				// We can assume that the execution is stuck in running state and we need to abort it.
 				if err := r.abortExecution(context.Background(), request.Execution.EnvironmentId, request.Execution.Id); err != nil {
-					log.DefaultLogger.Errorw("failed to abort stuck execution", "id", request.Execution.Id, "error", err)
+					logger.Errorw("failed to abort stuck execution", "error", err)
 				}
-				log.DefaultLogger.Warnw("aborted execution stuck in running state", "id", request.Execution.Id)
+				logger.Warnw("aborted execution stuck in running state")
 			}
 		}()
 	}

@@ -100,7 +100,7 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 			}
 		}
 
-		s.logger.Infof("trigger service: matcher component: event %s matches trigger %s/%s for resource %s", e.eventType, t.Namespace, t.Name, e.resource)
+		s.logger.Infof("trigger service: matcher component: event %s matches trigger %s/%s (source %s) for resource %s", e.eventType, t.Namespace, t.Name, t.Source, e.resource)
 
 		var causes []string
 		for _, cause := range e.causes {

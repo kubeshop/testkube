@@ -138,7 +138,7 @@ func (a *agentLoop) saveEmptyLogs(ctx context.Context, environmentId string, exe
 		return a._saveEmptyLogs(ctx, environmentId, execution)
 	})
 	if err != nil {
-		a.logger.Errorw("failed to save empty log", "executionId", execution.Id, "error", err)
+		a.logger.Errorw("failed to save empty log", append(execution.LogFields(), "error", err)...)
 	}
 	return err
 }
@@ -147,28 +147,28 @@ func (a *agentLoop) finishExecution(ctx context.Context, environmentId string, e
 	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func(_ int) error {
 		err := a.client.FinishExecutionResult(ctx, environmentId, execution.Id, execution.Result)
 		if err != nil {
-			a.logger.Warnw("failed to finish the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
+			a.logger.Warnw("failed to finish the TestWorkflow execution in database", append(execution.LogFields(), "recoverable", true, "error", err)...)
 			return err
 		}
 		return nil
 	})
 	if err != nil {
-		a.logger.Errorw("failed to finish the TestWorkflow execution in database", "recoverable", false, "executionId", execution.Id, "error", err)
+		a.logger.Errorw("failed to finish the TestWorkflow execution in database", append(execution.LogFields(), "recoverable", false, "error", err)...)
 	}
 	return err
 }
 
 func (a *agentLoop) init(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
 	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func(retryCount int) (err error) {
-		a.logger.Infow("Initializing execution", "executionId", execution.Id, "attempt", retryCount)
+		a.logger.Infow("Initializing execution", append(execution.LogFields(), "attempt", retryCount)...)
 		err = a.client.InitExecution(ctx, environmentId, execution.Id, execution.Signature, execution.Namespace)
 		if err != nil {
-			a.logger.Warnw("failed to initialize the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
+			a.logger.Warnw("failed to initialize the TestWorkflow execution in database", append(execution.LogFields(), "recoverable", true, "error", err)...)
 		}
 		return err
 	})
 	if err != nil {
-		a.logger.Errorw("failed to initialize the TestWorkflow execution in database", "recoverable", false, "executionId", execution.Id, "error", err)
+		a.logger.Errorw("failed to initialize the TestWorkflow execution in database", append(execution.LogFields(), "recoverable", false, "error", err)...)
 	}
 	return err
 }
@@ -364,13 +364,17 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, ex
 
 func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId string, executionToken string, runtime *cloud.TestWorkflowRuntime) error {
 	ctx := context.Background()
-	logger := a.logger.With("environmentId", environmentId, "executionId", executionId)
+	logger := a.logger.With("environmentId", environmentId)
 
 	// Get the execution details
 	execution, err := a.client.GetExecution(ctx, environmentId, executionId)
 	if err != nil {
 		return errors2.Wrapf(err, "failed to get execution details '%s/%s' from Control Plane", environmentId, executionId)
 	}
+
+	// Enrich the scoped logger with human-readable context (execution ID, workflow name,
+	// trigger/source) so every downstream log line for this execution is easy to identify.
+	logger = logger.With(execution.LogFields()...)
 	if execution.RunnerId != a.proContext.Agent.ID && execution.RunnerId != "" {
 		return errors.New("execution is assigned to a different runner")
 	}
@@ -392,7 +396,6 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 			Variables: runtime.EnvVars,
 		}
 		logger.Debugw("Received runtime configuration from control plane",
-			"executionId", executionId,
 			"variableCount", len(runtime.EnvVars))
 	}
 
@@ -400,8 +403,7 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 	if testworkflowutils.IsWorkflowSilent(execution.ResolvedWorkflow) {
 		// This overrides any SilentMode settings from the request (CLI flags)
 		execution.SilentMode = testworkflowutils.NewSilenceAllSilentMode()
-		logger.Debugw("Workflow is silent, activated SilentMode for execution",
-			"executionId", executionId)
+		logger.Debugw("Workflow is silent, activated SilentMode for execution")
 	}
 
 	result, err := a.runner.Execute(executionworkertypes.ExecuteRequest{
