@@ -116,8 +116,10 @@ func ListInsightSeries(client InsightSeriesLister) (tool mcp.Tool, handler serve
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
-		if pageSize < 0 {
-			pageSize = 0
+		if pageSize <= 0 {
+			pageSize = 10
+		} else if pageSize > 100 {
+			pageSize = 100
 		}
 		result, err := client.ListInsightSeries(ctx, InsightSeriesCatalogParams{
 			Workflow:        workflow,
