@@ -112,6 +112,9 @@ func (r *runner) observeExecutionMetrics(execution testkube.TestWorkflowExecutio
 	if !r.reportMetricsLocal || execution.Result == nil || !execution.Result.IsFinished() {
 		return
 	}
+	if execution.SilentMode != nil && execution.SilentMode.Metrics {
+		return
+	}
 
 	r.metrics.IncAndObserveExecuteTestWorkflow(execution, r.proContext.DashboardURI)
 }
