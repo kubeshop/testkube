@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kubeshop/testkube/pkg/mcp/formatters"
 	"github.com/kubeshop/testkube/pkg/mcp/tools"
 )
 
@@ -128,6 +129,49 @@ func TestAPIClient_DebugInfo_URLIncludesQueryParams(t *testing.T) {
 	// The recorded URL must include the query params actually sent, not just the base path.
 	assert.Contains(t, gotURL, "step=run-tests")
 	assert.Contains(t, gotURL, "tail=50")
+}
+
+// TestAPIClient_ListInsightExecutions_ArrayBodyFeedsFormatter guards the CLI path
+// end to end: the control-plane endpoint returns a bare JSON array (pagination in
+// the Link header, not the body), the APIClient returns that body verbatim, and
+// FormatInsightExecutions must parse the array shape without error.
+func TestAPIClient_ListInsightExecutions_ArrayBodyFeedsFormatter(t *testing.T) {
+	const (
+		orgID = "org-3"
+		envID = "env-3"
+		token = "tok"
+	)
+
+	// Real wire shape: ArrStart … ArrEnd plus a Link header for pagination.
+	const arrayBody = `[{"id":"e1","name":"n1","parent":"wf","environment":"env-3","status":"passed","duration":1200,"runAt":"2026-07-01T00:00:00Z"}]`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/organizations/"+orgID+"/insights/series/executions", r.URL.Path)
+		assert.Equal(t, envID, r.URL.Query().Get("env"))
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Link", `</next>; rel="next"`)
+		_, _ = io.WriteString(w, arrayBody)
+	}))
+	defer server.Close()
+
+	client := NewAPIClient(&MCPServerConfig{
+		ControlPlaneUrl: server.URL,
+		AccessToken:     token,
+		OrgId:           orgID,
+		EnvId:           envID,
+	}, server.Client())
+
+	raw, err := client.ListInsightExecutions(context.Background(), tools.InsightExecutionsParams{Measure: "http_req_duration_p95_ms"})
+	require.NoError(t, err)
+	assert.JSONEq(t, arrayBody, raw)
+
+	// The formatter must accept this array body — this is the call that previously
+	// failed with "cannot unmarshal array into Go value of type ...".
+	formatted, err := formatters.FormatInsightExecutions(raw)
+	require.NoError(t, err)
+	assert.Contains(t, formatted, `"id":"e1"`)
+	assert.Contains(t, formatted, `"workflow":"wf"`)
+	assert.Contains(t, formatted, `"durationMs":1200`)
 }
 
 func TestExtractErrorDetail(t *testing.T) {

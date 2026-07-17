@@ -218,17 +218,17 @@ func downsampleInsightPoints(values []insightSeriesPoint, maxPoints int) []insig
 
 // --- list_insight_executions -------------------------------------------------
 
-type insightExecutionsInput struct {
-	Executions []struct {
-		ID          string `json:"id"`
-		Name        string `json:"name"`
-		Parent      string `json:"parent"`
-		Environment string `json:"environment"`
-		Status      string `json:"status"`
-		Duration    int    `json:"duration"`
-		RunAt       string `json:"runAt"`
-	} `json:"executions"`
-	HasMore bool `json:"hasMore"`
+// insightExecutionRef is one element of the insight-executions response. The
+// control-plane endpoint encodes the response as a bare JSON array of these refs
+// (see FormatInsightExecutions), not an object.
+type insightExecutionRef struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Parent      string `json:"parent"`
+	Environment string `json:"environment"`
+	Status      string `json:"status"`
+	Duration    int    `json:"duration"`
+	RunAt       string `json:"runAt"`
 }
 
 type formattedInsightExecution struct {
@@ -242,17 +242,22 @@ type formattedInsightExecution struct {
 
 // FormatInsightExecutions projects execution references down to the fields
 // useful for pivoting to other execution tools, dropping heavy report/health data.
+//
+// The control-plane endpoint GET /organizations/{id}/insights/series/executions
+// encodes its response as a bare JSON array of execution refs. Pagination is
+// carried in the Link HTTP response header, not the body, so this formatter has
+// no hasMore flag to surface; callers paginate via the page/pageSize parameters.
 func FormatInsightExecutions(raw string) (string, error) {
-	input, isEmpty, err := ParseJSON[insightExecutionsInput](raw)
+	input, isEmpty, err := ParseJSON[[]insightExecutionRef](raw)
 	if err != nil {
 		return "", err
 	}
-	if isEmpty || len(input.Executions) == 0 {
+	if isEmpty || len(input) == 0 {
 		return "No executions found for the given query.", nil
 	}
 
-	executions := make([]formattedInsightExecution, 0, len(input.Executions))
-	for _, e := range input.Executions {
+	executions := make([]formattedInsightExecution, 0, len(input))
+	for _, e := range input {
 		executions = append(executions, formattedInsightExecution{
 			ID:         e.ID,
 			Name:       e.Name,
@@ -265,6 +270,5 @@ func FormatInsightExecutions(raw string) (string, error) {
 
 	return FormatJSON(struct {
 		Executions []formattedInsightExecution `json:"executions"`
-		HasMore    bool                        `json:"hasMore"`
-	}{Executions: executions, HasMore: input.HasMore})
+	}{Executions: executions})
 }

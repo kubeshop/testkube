@@ -149,23 +149,38 @@ func TestFormatInsightMetricSeries(t *testing.T) {
 }
 
 func TestFormatInsightExecutions(t *testing.T) {
+	// The control-plane endpoint encodes its response as a bare JSON array of
+	// execution refs (pagination lives in the Link header, not the body), so the
+	// formatter's inputs mirror that shape.
 	t.Run("empty", func(t *testing.T) {
-		out, err := FormatInsightExecutions(`{"executions":[],"hasMore":false}`)
+		out, err := FormatInsightExecutions(`[]`)
+		require.NoError(t, err)
+		assert.Contains(t, out, "No executions found")
+	})
+
+	t.Run("null", func(t *testing.T) {
+		out, err := FormatInsightExecutions(`null`)
 		require.NoError(t, err)
 		assert.Contains(t, out, "No executions found")
 	})
 
 	t.Run("projects fields and drops heavy data", func(t *testing.T) {
-		raw := `{"executions":[{"id":"e1","name":"n1","parent":"wf","environment":"env","status":"passed","duration":1200,"runAt":"2026-07-01T00:00:00Z","reports":[{"ref":"big"}],"health":{"x":1}}],"hasMore":true}`
+		raw := `[{"id":"e1","name":"n1","parent":"wf","environment":"env","status":"passed","duration":1200,"runAt":"2026-07-01T00:00:00Z","reports":[{"ref":"big"}],"health":{"x":1}}]`
 		out, err := FormatInsightExecutions(raw)
 		require.NoError(t, err)
 		assert.Contains(t, out, `"id":"e1"`)
 		assert.Contains(t, out, `"workflow":"wf"`)
 		assert.Contains(t, out, `"durationMs":1200`)
-		assert.Contains(t, out, `"hasMore":true`)
 		assert.NotContains(t, out, "reports")
 		assert.NotContains(t, out, "health")
 		assert.NotContains(t, out, "environment")
+	})
+
+	t.Run("rejects the legacy object shape", func(t *testing.T) {
+		// Guards against regressing to the object shape: the real endpoint never
+		// returns this, and accepting it silently would re-hide the array mismatch.
+		_, err := FormatInsightExecutions(`{"executions":[],"hasMore":false}`)
+		require.Error(t, err)
 	})
 }
 

@@ -142,7 +142,9 @@ func TestGetInsightMetricSeries(t *testing.T) {
 }
 
 func TestListInsightExecutions(t *testing.T) {
-	mock := &mockInsightExecutionsLister{result: `{"executions":[{"id":"e1","name":"n1","parent":"wf","status":"passed","duration":1200}],"hasMore":false}`}
+	// The control-plane endpoint returns a bare JSON array of execution refs
+	// (pagination is carried in the Link header, not the body).
+	mock := &mockInsightExecutionsLister{result: `[{"id":"e1","name":"n1","parent":"wf","status":"passed","duration":1200}]`}
 	tool, handler := ListInsightExecutions(mock)
 	assert.Equal(t, "list_insight_executions", tool.Name)
 
