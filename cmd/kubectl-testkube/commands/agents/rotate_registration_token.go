@@ -56,7 +56,11 @@ func NewRotateRegistrationTokenCommand() *cobra.Command {
 			fmt.Println()
 			ui.Warn("New Registration Token:", result.RegistrationToken)
 			ui.Warn("Grace Period:          ", result.GracePeriod)
-			ui.Warn("Old Token Expires:      ", result.OldTokenExpiresAt.In(time.Local).Format(time.RFC822Z))
+			if result.OldTokenExpiresAt == nil {
+				ui.Warn("Old Token Expires:      ", "immediately")
+			} else {
+				ui.Warn("Old Token Expires:      ", result.OldTokenExpiresAt.In(time.Local).Format(time.RFC822Z))
+			}
 			fmt.Println()
 			ui.Info("Update runner.register.token or the Secret referenced by runner.register.tokenSecret before the old token expires.")
 		},

@@ -44,9 +44,9 @@ type EnvironmentsClient struct {
 }
 
 type RotateRegistrationTokenResponse struct {
-	RegistrationToken string    `json:"registrationToken"`
-	GracePeriod       string    `json:"gracePeriod"`
-	OldTokenExpiresAt time.Time `json:"oldTokenExpiresAt"`
+	RegistrationToken string     `json:"registrationToken"`
+	GracePeriod       string     `json:"gracePeriod"`
+	OldTokenExpiresAt *time.Time `json:"oldTokenExpiresAt"`
 }
 
 func (c EnvironmentsClient) Create(env Environment) (Environment, error) {
