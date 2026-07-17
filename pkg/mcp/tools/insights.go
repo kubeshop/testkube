@@ -243,6 +243,11 @@ func GetInsightMetricSeries(client InsightMetricSeriesGetter) (tool mcp.Tool, ha
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
+		if maxSamples < 0 {
+			maxSamples = 0
+		} else if maxSamples > 500 {
+			maxSamples = 500
+		}
 		result, err := client.GetInsightMetricSeries(ctx, InsightMetricSeriesParams{
 			Measure:         measure,
 			SeriesID:        seriesID,
