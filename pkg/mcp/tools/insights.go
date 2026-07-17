@@ -273,9 +273,20 @@ func ListInsightExecutions(client InsightExecutionsLister) (tool mcp.Tool, handl
 		tagFilter, _ := OptionalParam[string](request, "tagFilter")
 		startDate, _ := OptionalParam[string](request, "startDate")
 		endDate, _ := OptionalParam[string](request, "endDate")
-		page, _ := OptionalIntParam(request, "page")
-		pageSize, _ := OptionalIntParam(request, "pageSize")
-
+		page, err := OptionalIntParam(request, "page")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		if page < 0 {
+			page = 0
+		}
+		pageSize, err := OptionalIntParam(request, "pageSize")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		if pageSize < 0 {
+			pageSize = 0
+		}
 		result, err := client.ListInsightExecutions(ctx, InsightExecutionsParams{
 			Measure:         measure,
 			IdentityFilters: identityFilters,
