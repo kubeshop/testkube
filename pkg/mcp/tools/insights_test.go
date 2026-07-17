@@ -62,7 +62,7 @@ func TestListInsightSeries(t *testing.T) {
 		request.Params.Arguments = map[string]any{
 			"workflow": "wf",
 			"source":   "k6",
-			"page":     float64(2),
+			"page":     "2",
 		}
 		result, err := handler(context.Background(), request)
 		require.NoError(t, err)

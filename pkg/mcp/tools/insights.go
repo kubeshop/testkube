@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -95,8 +96,8 @@ func ListInsightSeries(client InsightSeriesLister) (tool mcp.Tool, handler serve
 		mcp.WithString("metricKey", mcp.Description(InsightMetricKeyDescription)),
 		mcp.WithString("identityFilters", mcp.Description(InsightIdentityFiltersDescription)),
 		mcp.WithString("q", mcp.Description(InsightQueryDescription)),
-		mcp.WithNumber("page", mcp.Description(PageDescription)),
-		mcp.WithNumber("pageSize", mcp.Description(PageSizeDescription)),
+		mcp.WithString("page", mcp.Description(PageDescription)),
+		mcp.WithString("pageSize", mcp.Description(PageSizeDescription)),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -120,21 +121,17 @@ func ListInsightSeries(client InsightSeriesLister) (tool mcp.Tool, handler serve
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
-		page, err := OptionalIntParam(request, "page")
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
+		page := 0
+		if pageStr := request.GetString("page", "0"); pageStr != "" {
+			if p, err := strconv.Atoi(pageStr); err == nil && p >= 0 {
+				page = p
+			}
 		}
-		if page < 0 {
-			page = 0
-		}
-		pageSize, err := OptionalIntParam(request, "pageSize")
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-		if pageSize <= 0 {
-			pageSize = 10
-		} else if pageSize > 100 {
-			pageSize = 100
+		pageSize := 10
+		if pageSizeStr := request.GetString("pageSize", "10"); pageSizeStr != "" {
+			if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 {
+				pageSize = ps
+			}
 		}
 		result, err := client.ListInsightSeries(ctx, InsightSeriesCatalogParams{
 			Workflow:        workflow,
@@ -168,8 +165,8 @@ func ListInsightMetricKeys(client InsightMetricKeysLister) (tool mcp.Tool, handl
 		mcp.WithString("source", mcp.Description(InsightSourceDescription)),
 		mcp.WithString("identityFilters", mcp.Description(InsightIdentityFiltersDescription)),
 		mcp.WithString("q", mcp.Description(InsightQueryDescription)),
-		mcp.WithNumber("page", mcp.Description(PageDescription)),
-		mcp.WithNumber("pageSize", mcp.Description(PageSizeDescription)),
+		mcp.WithString("page", mcp.Description(PageDescription)),
+		mcp.WithString("pageSize", mcp.Description(PageSizeDescription)),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -189,21 +186,17 @@ func ListInsightMetricKeys(client InsightMetricKeysLister) (tool mcp.Tool, handl
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
-		page, err := OptionalIntParam(request, "page")
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
+		page := 0
+		if pageStr := request.GetString("page", "0"); pageStr != "" {
+			if p, err := strconv.Atoi(pageStr); err == nil && p >= 0 {
+				page = p
+			}
 		}
-		if page < 0 {
-			page = 0
-		}
-		pageSize, err := OptionalIntParam(request, "pageSize")
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-		if pageSize <= 0 {
-			pageSize = 10
-		} else if pageSize > 100 {
-			pageSize = 100
+		pageSize := 10
+		if pageSizeStr := request.GetString("pageSize", "10"); pageSizeStr != "" {
+			if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 {
+				pageSize = ps
+			}
 		}
 		result, err := client.ListInsightMetricKeys(ctx, InsightMetricKeysParams{
 			Workflow:        workflow,
@@ -343,8 +336,8 @@ func ListInsightExecutions(client InsightExecutionsLister) (tool mcp.Tool, handl
 		mcp.WithString("tagFilter", mcp.Description(InsightTagFilterDescription)),
 		mcp.WithString("startDate", mcp.Description(StartDateDescription)),
 		mcp.WithString("endDate", mcp.Description(EndDateDescription)),
-		mcp.WithNumber("page", mcp.Description(PageDescription)),
-		mcp.WithNumber("pageSize", mcp.Description(PageSizeDescription)),
+		mcp.WithString("page", mcp.Description(PageDescription)),
+		mcp.WithString("pageSize", mcp.Description(PageSizeDescription)),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -376,21 +369,17 @@ func ListInsightExecutions(client InsightExecutionsLister) (tool mcp.Tool, handl
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
-		page, err := OptionalIntParam(request, "page")
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
+		page := 0
+		if pageStr := request.GetString("page", "0"); pageStr != "" {
+			if p, err := strconv.Atoi(pageStr); err == nil && p >= 0 {
+				page = p
+			}
 		}
-		if page < 0 {
-			page = 0
-		}
-		pageSize, err := OptionalIntParam(request, "pageSize")
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-		if pageSize <= 0 {
-			pageSize = 10
-		} else if pageSize > 100 {
-			pageSize = 100
+		pageSize := 10
+		if pageSizeStr := request.GetString("pageSize", "10"); pageSizeStr != "" {
+			if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 {
+				pageSize = ps
+			}
 		}
 		result, err := client.ListInsightExecutions(ctx, InsightExecutionsParams{
 			Measure:         measure,
