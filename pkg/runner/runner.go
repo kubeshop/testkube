@@ -73,6 +73,7 @@ type runner struct {
 	emitter            event.Interface
 	metrics            metrics.Metrics
 	proContext         config.ProContext // TODO: Include Agent ID in pro context
+	reportMetricsLocal bool
 	storageSkipVerify  bool
 	logArchiveRequired bool
 	getGlobalTemplate  GlobalTemplateFactory
@@ -88,6 +89,7 @@ func New(
 	emitter event.Interface,
 	metrics metrics.Metrics,
 	proContext config.ProContext,
+	reportMetricsLocal bool,
 	storageSkipVerify bool,
 	logArchiveRequired bool,
 	getGlobalTemplate GlobalTemplateFactory,
@@ -99,10 +101,19 @@ func New(
 		emitter:            emitter,
 		metrics:            metrics,
 		proContext:         proContext,
+		reportMetricsLocal: reportMetricsLocal,
 		storageSkipVerify:  storageSkipVerify,
 		logArchiveRequired: logArchiveRequired,
 		getGlobalTemplate:  getGlobalTemplate,
 	}
+}
+
+func (r *runner) observeExecutionMetrics(execution testkube.TestWorkflowExecution) {
+	if !r.reportMetricsLocal || execution.Result == nil || !execution.Result.IsFinished() {
+		return
+	}
+
+	r.metrics.IncAndObserveExecuteTestWorkflow(execution, r.proContext.DashboardURI)
 }
 
 func (r *runner) monitor(ctx context.Context, organizationId string, environmentId string, execution testkube.TestWorkflowExecution) error {
@@ -288,6 +299,9 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		logger.Errorw("failed to save execution data", "error", err)
 		return errors.Wrapf(err, "failed to save execution '%s' data", execution.Id)
 	}
+
+	execution.Result = lastResult
+	r.observeExecutionMetrics(execution)
 
 	err = r.worker.Destroy(context.Background(), execution.Id, executionworkertypes.DestroyOptions{})
 	if err != nil {
