@@ -554,6 +554,7 @@ func main() {
 		eventsEmitter,
 		metrics,
 		proContext,
+		cfg.DisableDefaultAgent,
 		runnerOpts.StorageSkipVerify,
 		cfg.TestWorkflowLogArchiveRequired,
 		runnerOpts.GlobalTemplate,
