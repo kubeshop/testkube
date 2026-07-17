@@ -217,6 +217,9 @@ func GetInsightMetricSeries(client InsightMetricSeriesGetter) (tool mcp.Tool, ha
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		measure, _ := OptionalParam[string](request, "measure")
 		seriesID, _ := OptionalParam[string](request, "seriesId")
+		if seriesID != "" {
+			measure = ""
+		}
 		if measure == "" && seriesID == "" {
 			return mcp.NewToolResultError("either measure or seriesId is required"), nil
 		}
