@@ -171,8 +171,10 @@ func ListInsightMetricKeys(client InsightMetricKeysLister) (tool mcp.Tool, handl
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
-		if pageSize < 0 {
-			pageSize = 0
+		if pageSize <= 0 {
+			pageSize = 10
+		} else if pageSize > 100 {
+			pageSize = 100
 		}
 		result, err := client.ListInsightMetricKeys(ctx, InsightMetricKeysParams{
 			Workflow:        workflow,
