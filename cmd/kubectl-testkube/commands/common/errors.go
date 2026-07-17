@@ -59,6 +59,8 @@ const (
 	TKErrAgentGetFailed ErrorCode = "TKERR-1501"
 	// TKErrAgentRotateKeyFailed is returned when rotating an agent's secret key fails.
 	TKErrAgentRotateKeyFailed ErrorCode = "TKERR-1502"
+	// TKErrAgentRotateRegistrationTokenFailed is returned when rotating an environment registration token fails.
+	TKErrAgentRotateRegistrationTokenFailed ErrorCode = "TKERR-1503"
 
 	// TKERR-16xx errors are related to marketplace operations.
 
