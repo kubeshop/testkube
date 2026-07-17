@@ -231,8 +231,14 @@ func GetInsightMetricSeries(client InsightMetricSeriesGetter) (tool mcp.Tool, ha
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		measure, _ := OptionalParam[string](request, "measure")
-		seriesID, _ := OptionalParam[string](request, "seriesId")
+		measure, err := OptionalParam[string](request, "measure")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		seriesID, err := OptionalParam[string](request, "seriesId")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
 		if seriesID != "" {
 			measure = ""
 		}
@@ -240,17 +246,41 @@ func GetInsightMetricSeries(client InsightMetricSeriesGetter) (tool mcp.Tool, ha
 			return mcp.NewToolResultError("either measure or seriesId is required"), nil
 		}
 
-		aggregate, _ := OptionalParam[string](request, "aggregate")
+		aggregate, err := OptionalParam[string](request, "aggregate")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
 		if aggregate == "" {
 			aggregate = "avg"
 		}
-		segment, _ := OptionalParam[string](request, "segment")
-		workflow, _ := OptionalParam[string](request, "workflow")
-		identityFilters, _ := OptionalParam[string](request, "identityFilters")
-		status, _ := OptionalParam[string](request, "status")
-		tagFilter, _ := OptionalParam[string](request, "tagFilter")
-		startDate, _ := OptionalParam[string](request, "startDate")
-		endDate, _ := OptionalParam[string](request, "endDate")
+		segment, err := OptionalParam[string](request, "segment")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		workflow, err := OptionalParam[string](request, "workflow")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		identityFilters, err := OptionalParam[string](request, "identityFilters")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		status, err := OptionalParam[string](request, "status")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		tagFilter, err := OptionalParam[string](request, "tagFilter")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		startDate, err := OptionalParam[string](request, "startDate")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		endDate, err := OptionalParam[string](request, "endDate")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
 		maxSamples, err := OptionalIntParam(request, "maxSamples")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
