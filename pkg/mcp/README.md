@@ -47,10 +47,13 @@ This flexibility allows the same MCP tools to work in different deployment scena
 
 ### Available Tools
 
-The MCP server exposes up to 30 tools organized into the categories below. The two
+The MCP server exposes up to 34 tools organized into the categories below. The two
 Query tools register conditionally: with the default `APIClient`, they are added only
 when the control plane advertises the required endpoints (unless `SkipEndpointChecks`
-is set); other client implementations register them unconditionally.
+is set); other client implementations register them unconditionally. The Insight
+tools register unconditionally and require a control plane that serves the
+`/insights/*` endpoints; against an older control plane they appear in the tool list
+but return an error when called.
 
 #### Dashboard Tools (1 tool)
 
@@ -105,6 +108,15 @@ is set); other client implementations register them unconditionally.
 - `list_labels` - List all labels in the environment
 - `list_resource_groups` - List resource groups in the organization
 - `list_agents` - List agents with filtering (type, capability, pagination)
+
+#### Insight Tools (4 tools)
+
+Expose the ingested granular insight series (performance/test metrics parsed from k6, JMeter, Artillery, JUnit, and Influx reports, plus cross-tool canonical metrics). All insight tools are scoped to the current environment automatically.
+
+- `list_insight_series` - Discover the granular insight metric series ingested from test/performance reports
+- `list_insight_metric_keys` - List the distinct insight metric keys available (lightweight vocabulary for discovery)
+- `get_insight_metric_series` - Query a granular insight metric as a time series (values and trends over time)
+- `list_insight_executions` - List the workflow executions that produced a given insight metric
 
 **Note for maintainers:** When adding new tools to `pkg/mcp/tools/`, ensure that:
 
