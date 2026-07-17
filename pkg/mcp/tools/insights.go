@@ -149,9 +149,20 @@ func ListInsightMetricKeys(client InsightMetricKeysLister) (tool mcp.Tool, handl
 		source, _ := OptionalParam[string](request, "source")
 		identityFilters, _ := OptionalParam[string](request, "identityFilters")
 		query, _ := OptionalParam[string](request, "q")
-		page, _ := OptionalIntParam(request, "page")
-		pageSize, _ := OptionalIntParam(request, "pageSize")
-
+		page, err := OptionalIntParam(request, "page")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		if page < 0 {
+			page = 0
+		}
+		pageSize, err := OptionalIntParam(request, "pageSize")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		if pageSize < 0 {
+			pageSize = 0
+		}
 		result, err := client.ListInsightMetricKeys(ctx, InsightMetricKeysParams{
 			Workflow:        workflow,
 			Source:          source,
