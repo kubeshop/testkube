@@ -109,7 +109,7 @@ A lightweight vocabulary for discovery; use list_insight_series when you also ne
 	GetInsightMetricSeriesDescription = `Query a granular insight metric as a time series (values and trends over time) for the current environment.
 Provide either a metricKey via 'measure' (values are aggregated across all matching series) or one or more 'seriesId' values (comma-separated). If both are set, seriesId wins.
 Discover metric keys with list_insight_metric_keys and series/seriesIds with list_insight_series.
-Besides granular metric keys, 'measure' also accepts the canonical cross-tool measures 'latency_p95_ms', 'throughput_rps' and 'errors_rate' (these do NOT appear in the series catalog).
+Besides granular metric keys, 'measure' also accepts the canonical cross-tool measures 'latency_p95_ms', 'throughput_rps' and 'errors_rate' (these may not appear in the series catalog).
 Use 'segment' to break the series down by workflow, status, or an identity field key. Data defaults to the last 7 days unless startDate/endDate are given.`
 
 	ListInsightExecutionsDescription = `List the workflow executions that produced a given insight metric, most recent first.
