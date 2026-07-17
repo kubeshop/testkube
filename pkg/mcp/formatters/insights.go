@@ -195,8 +195,8 @@ func FormatInsightMetricSeries(raw string, maxSamples int) (string, error) {
 	}{PointCount: total, Series: segments})
 }
 
-// downsampleInsightPoints evenly reduces a series to at most maxPoints,
-// always keeping the first and last point.
+// downsampleInsightPoints evenly reduces a series to at most maxPoints.
+// For maxPoints >= 2 it always keeps the first and last point.
 func downsampleInsightPoints(values []insightSeriesPoint, maxPoints int) []insightSeriesPoint {
 	if maxPoints <= 0 || len(values) <= maxPoints {
 		return values
