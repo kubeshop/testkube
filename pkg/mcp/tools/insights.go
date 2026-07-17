@@ -333,13 +333,34 @@ func ListInsightExecutions(client InsightExecutionsLister) (tool mcp.Tool, handl
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		measure, _ := OptionalParam[string](request, "measure")
-		identityFilters, _ := OptionalParam[string](request, "identityFilters")
-		workflow, _ := OptionalParam[string](request, "workflow")
-		status, _ := OptionalParam[string](request, "status")
-		tagFilter, _ := OptionalParam[string](request, "tagFilter")
-		startDate, _ := OptionalParam[string](request, "startDate")
-		endDate, _ := OptionalParam[string](request, "endDate")
+		measure, err := OptionalParam[string](request, "measure")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		identityFilters, err := OptionalParam[string](request, "identityFilters")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		workflow, err := OptionalParam[string](request, "workflow")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		status, err := OptionalParam[string](request, "status")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		tagFilter, err := OptionalParam[string](request, "tagFilter")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		startDate, err := OptionalParam[string](request, "startDate")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		endDate, err := OptionalParam[string](request, "endDate")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
 		page, err := OptionalIntParam(request, "page")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
