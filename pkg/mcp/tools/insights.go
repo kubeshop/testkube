@@ -221,8 +221,10 @@ func GetInsightMetricSeries(client InsightMetricSeriesGetter) (tool mcp.Tool, ha
 		tagFilter, _ := OptionalParam[string](request, "tagFilter")
 		startDate, _ := OptionalParam[string](request, "startDate")
 		endDate, _ := OptionalParam[string](request, "endDate")
-		maxSamples, _ := OptionalIntParam(request, "maxSamples")
-
+		maxSamples, err := OptionalIntParam(request, "maxSamples")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
 		result, err := client.GetInsightMetricSeries(ctx, InsightMetricSeriesParams{
 			Measure:         measure,
 			SeriesID:        seriesID,
