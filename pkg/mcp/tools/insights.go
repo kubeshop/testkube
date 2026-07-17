@@ -302,8 +302,10 @@ func ListInsightExecutions(client InsightExecutionsLister) (tool mcp.Tool, handl
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
-		if pageSize < 0 {
-			pageSize = 0
+		if pageSize <= 0 {
+			pageSize = 10
+		} else if pageSize > 100 {
+			pageSize = 100
 		}
 		result, err := client.ListInsightExecutions(ctx, InsightExecutionsParams{
 			Measure:         measure,
