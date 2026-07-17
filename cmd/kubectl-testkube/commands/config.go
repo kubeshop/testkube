@@ -25,14 +25,14 @@ func NewConfigCmd() *cobra.Command {
 				ui.ExitOnError("loading config file", err)
 
 				ui.NL()
-				ui.InfoGrid(map[string]string{
-					"Context type     ": string(cfg.ContextType),
-					"Namespace        ": cfg.Namespace,
-					"API URI          ": cfg.APIURI,
-					"API Server Name  ": cfg.APIServerName,
-					"API Server Port  ": fmt.Sprintf("%d", cfg.APIServerPort),
-					"Headers          ": testkube.MapToString(cfg.Headers),
-					"Telemetry Enabled": fmt.Sprintf("%t", cfg.TelemetryEnabled),
+				ui.Properties([][]string{
+					{"Context type     ", string(cfg.ContextType)},
+					{"Namespace        ", cfg.Namespace},
+					{"API URI          ", cfg.APIURI},
+					{"API Server Name  ", cfg.APIServerName},
+					{"API Server Port  ", fmt.Sprintf("%d", cfg.APIServerPort)},
+					{"Headers          ", testkube.MapToString(cfg.Headers)},
+					{"Telemetry Enabled", fmt.Sprintf("%t", cfg.TelemetryEnabled)},
 				})
 				return
 			}
