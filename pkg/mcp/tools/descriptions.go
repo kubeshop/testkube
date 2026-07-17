@@ -124,7 +124,7 @@ Filter with the same 'measure'/identity/workflow/status/tag/date filters as get_
 	InsightSeriesIdDescription   = "Comma-separated granular insight series IDs to include (from list_insight_series). When set, takes precedence over 'measure'."
 	InsightAggregateDescription  = "How to aggregate values within each time bucket: 'avg' (default), 'sum', 'min', 'max', or 'count'."
 	InsightSegmentDescription    = "Break the series down by a property: 'workflow', 'status', or any stable identity field key (e.g. 'testcase', 'scenario', 'route')."
-	InsightMaxSamplesDescription = "Maximum number of time-series points to return per segment (default: 50). Increase for finer detail, decrease for a more compact response."
+	InsightMaxSamplesDescription = "Maximum number of time-series points to return per segment (default: 50, max: 500). Increase for finer detail, decrease for a more compact response."
 	InsightWorkflowDescription   = "Filter to a single workflow by name."
 
 	InsightIdentityFiltersDescription = `JSON object of granular insight series identity filters. Keys are identity field names and values are arrays of strings. ` +
