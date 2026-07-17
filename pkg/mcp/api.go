@@ -1018,3 +1018,106 @@ func (c *APIClient) GetExecutions(ctx context.Context, params tools.ListExecutio
 
 	return executions, nil
 }
+
+// Insight (ingested metrics) methods
+//
+// These hit the org-scoped insight endpoints under /organizations/{id}/insights.
+// Unlike most workflow/execution endpoints they are not environment-scoped in the
+// path; the environment is passed as the "env" query parameter (empty values are
+// dropped by makeRequest).
+
+func (c *APIClient) ListInsightSeries(ctx context.Context, params tools.InsightSeriesCatalogParams) (string, error) {
+	queryParams := map[string]string{
+		"env":             c.config.EnvId,
+		"workflow":        params.Workflow,
+		"source":          params.Source,
+		"metricKey":       params.MetricKey,
+		"identityFilters": params.IdentityFilters,
+		"q":               params.Query,
+	}
+	if params.Page > 0 {
+		queryParams["page"] = strconv.Itoa(params.Page)
+	}
+	if params.PageSize > 0 {
+		queryParams["pageSize"] = strconv.Itoa(params.PageSize)
+	}
+
+	return c.makeRequest(ctx, APIRequest{
+		Method:      http.MethodGet,
+		Path:        "/insights/series/catalog",
+		Scope:       ApiScopeOrg,
+		QueryParams: queryParams,
+	})
+}
+
+func (c *APIClient) ListInsightMetricKeys(ctx context.Context, params tools.InsightMetricKeysParams) (string, error) {
+	queryParams := map[string]string{
+		"env":             c.config.EnvId,
+		"workflow":        params.Workflow,
+		"source":          params.Source,
+		"identityFilters": params.IdentityFilters,
+		"q":               params.Query,
+	}
+	if params.Page > 0 {
+		queryParams["page"] = strconv.Itoa(params.Page)
+	}
+	if params.PageSize > 0 {
+		queryParams["pageSize"] = strconv.Itoa(params.PageSize)
+	}
+
+	return c.makeRequest(ctx, APIRequest{
+		Method:      http.MethodGet,
+		Path:        "/insights/series/catalog/metric-keys",
+		Scope:       ApiScopeOrg,
+		QueryParams: queryParams,
+	})
+}
+
+func (c *APIClient) GetInsightMetricSeries(ctx context.Context, params tools.InsightMetricSeriesParams) (string, error) {
+	queryParams := map[string]string{
+		"env":             c.config.EnvId,
+		"measure":         params.Measure,
+		"seriesId":        params.SeriesID,
+		"aggregate":       params.Aggregate,
+		"segment":         params.Segment,
+		"workflow":        params.Workflow,
+		"identityFilters": params.IdentityFilters,
+		"status":          params.Status,
+		"tagFilter":       params.TagFilter,
+		"startDate":       params.StartDate,
+		"endDate":         params.EndDate,
+	}
+
+	return c.makeRequest(ctx, APIRequest{
+		Method:      http.MethodGet,
+		Path:        "/insights/series",
+		Scope:       ApiScopeOrg,
+		QueryParams: queryParams,
+	})
+}
+
+func (c *APIClient) ListInsightExecutions(ctx context.Context, params tools.InsightExecutionsParams) (string, error) {
+	queryParams := map[string]string{
+		"env":             c.config.EnvId,
+		"measure":         params.Measure,
+		"identityFilters": params.IdentityFilters,
+		"workflow":        params.Workflow,
+		"status":          params.Status,
+		"tagFilter":       params.TagFilter,
+		"startDate":       params.StartDate,
+		"endDate":         params.EndDate,
+	}
+	if params.Page > 0 {
+		queryParams["page"] = strconv.Itoa(params.Page)
+	}
+	if params.PageSize > 0 {
+		queryParams["pageSize"] = strconv.Itoa(params.PageSize)
+	}
+
+	return c.makeRequest(ctx, APIRequest{
+		Method:      http.MethodGet,
+		Path:        "/insights/series/executions",
+		Scope:       ApiScopeOrg,
+		QueryParams: queryParams,
+	})
+}

@@ -37,4 +37,10 @@ type Client interface {
 	// Bulk getters for yq query tools
 	tools.WorkflowDefinitionBulkGetter
 	tools.ExecutionBulkGetter
+
+	// Insight (ingested metrics) interfaces
+	tools.InsightSeriesLister
+	tools.InsightMetricKeysLister
+	tools.InsightMetricSeriesGetter
+	tools.InsightExecutionsLister
 }
