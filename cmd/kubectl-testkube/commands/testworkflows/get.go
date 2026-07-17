@@ -63,7 +63,7 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 
 				if limit > 0 && len(workflows) == limit+1 {
 					workflows = workflows[:limit]
-					ui.NewStderrUI(false).Warn(fmt.Sprintf("Showing %d test workflows, more are available on the server. Use --limit 0 to fetch all.", limit))
+					ui.NewStderrUI(false).Warn(fmt.Sprintf("Showing %d test workflows, more are available on the server. Drop --limit (or use --limit 0) to fetch all.", limit))
 				}
 
 				if crdOnly {
