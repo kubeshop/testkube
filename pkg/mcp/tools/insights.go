@@ -100,11 +100,26 @@ func ListInsightSeries(client InsightSeriesLister) (tool mcp.Tool, handler serve
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		workflow, _ := OptionalParam[string](request, "workflow")
-		source, _ := OptionalParam[string](request, "source")
-		metricKey, _ := OptionalParam[string](request, "metricKey")
-		identityFilters, _ := OptionalParam[string](request, "identityFilters")
-		query, _ := OptionalParam[string](request, "q")
+		workflow, err := OptionalParam[string](request, "workflow")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		source, err := OptionalParam[string](request, "source")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		metricKey, err := OptionalParam[string](request, "metricKey")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		identityFilters, err := OptionalParam[string](request, "identityFilters")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		query, err := OptionalParam[string](request, "q")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
 		page, err := OptionalIntParam(request, "page")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
