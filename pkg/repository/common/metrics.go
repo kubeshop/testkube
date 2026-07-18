@@ -1,12 +1,11 @@
 package common
 
 import (
+	"math"
+	"slices"
 	"time"
 
-	"github.com/montanaflynn/stats"
-
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
@@ -53,14 +52,18 @@ func CalculateMetrics(executionsMetrics []testkube.ExecutionsMetricsExecutions) 
 	return
 }
 
+// calculate returns the given percentile of the durations using the
+// nearest-rank method: the smallest value below which the requested
+// percentage of observations falls. The input slice is not modified.
 func calculate(durations []float64, quantile float64) float64 {
 	if len(durations) == 0 {
 		return 0
 	}
-	percentile, err := stats.PercentileNearestRank(durations, quantile)
-	if err != nil {
-		log.DefaultLogger.Errorw("Unable to calculate percentile", "error", err)
-		return 0
+	sorted := slices.Clone(durations)
+	slices.Sort(sorted)
+	rank := int(math.Ceil(float64(len(sorted)) * quantile / 100))
+	if rank == 0 {
+		return sorted[0]
 	}
-	return percentile
+	return sorted[rank-1]
 }
