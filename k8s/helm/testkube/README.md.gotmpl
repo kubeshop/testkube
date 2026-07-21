@@ -106,6 +106,18 @@ This installation requires having cluster administrative rights.
 helm install testkube kubeshop/testkube --create-namespace --namespace testkube
 ```
 
+If your cluster cannot pull `docker.io/rancher/kubectl:v1.23.7` for the built-in TestWorkflowTemplate installer hook, override it from the parent chart values:
+
+```yaml
+global:
+  testWorkflows:
+    builtinTemplatesInstaller:
+      image:
+        registry: my-registry.local
+        repository: rancher/kubectl
+        tag: v1.23.7
+```
+
 ## Uninstall
 
 NOTE: Uninstalling Testkube will also delete all CRDs and all resources created by Testkube.
