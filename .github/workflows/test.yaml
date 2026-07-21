@@ -12,14 +12,16 @@ on:
 
 permissions:
   contents: read
-  checks: write  # For test annotations
-  pull-requests: write  # For PR comments
 
 jobs:
   unit-tests:
     name: Unit Tests
     if: (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'
     runs-on: depot-ubuntu-24.04
+    permissions:
+      contents: read
+      checks: write  # For test annotations
+      pull-requests: write  # For PR comments
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -77,6 +79,10 @@ jobs:
     name: Integration Tests
     if: (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'
     runs-on: depot-ubuntu-24.04
+    permissions:
+      contents: read
+      checks: write  # For test annotations
+      pull-requests: write  # For PR comments
 
     services:
       mongo:
@@ -172,6 +178,8 @@ jobs:
     name: Verify generated protobuf
     if: (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'
     runs-on: depot-ubuntu-24.04
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -198,6 +206,8 @@ jobs:
     name: Verify generated CRDs
     if: (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'
     runs-on: depot-ubuntu-24.04
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
