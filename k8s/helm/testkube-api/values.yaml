@@ -584,6 +584,16 @@ service:
   ## Service labels
   labels: {}
 
+## Database engine selection
+## The API's database is resolved by the shared "testkube.effectiveDatabase" helper:
+##   1. global.database.type ("mongodb" | "postgresql") when set explicitly
+##   2. a persisted marker ConfigMap from a previous release
+##   3. live detection of the running installation
+##   4. the mongodb.enabled / postgresql.enabled flags below (postgres wins if both)
+## This preserves the database an existing installation already uses when the chart
+## default changes. Set global.database.type to force a specific engine (required
+## under `helm template` / Argo CD, where cluster detection is unavailable).
+
 ##MongoDB parameters
 mongodb:
   ## Deploy MongoDB server to the cluster

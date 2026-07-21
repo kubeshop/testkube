@@ -1,4 +1,9 @@
 {{- if index .Values "testkube-api" "cloud" "key" }}
 Testkube agent installed successfully. We're initialising your connection to Testkube Cloud. This can take up to 5 minutes.
 {{- end }}
+{{- if .Values.databasePreserve.enabled }}
+
+Database in use: {{ include "testkube.effectiveDatabase" . | trim }}
+(recorded in ConfigMap "{{ include "testkube.databaseMarkerName" . }}"; override with global.database.type)
+{{- end }}
 Enjoy testing with Testkube!

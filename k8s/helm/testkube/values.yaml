@@ -74,6 +74,19 @@ global:
       #     imagePullSecrets:
       #     - name: regcred
 
+# Database preservation across upgrades / default changes.
+# Prevents an existing installation from silently switching database engines when
+# the chart default changes. See global.database.type to force a specific engine.
+databasePreserve:
+  # -- Enable the detection helper, the persisted marker ConfigMap and the preflight guard.
+  enabled: true
+  # -- Fail the upgrade instead of silently switching a detected MongoDB install to PostgreSQL.
+  failOnMismatch: true
+  # -- Use Argo CD hook annotations on the marker ConfigMap instead of Helm hook annotations.
+  useArgoHooks: false
+  # -- Extra annotations added to the marker ConfigMap.
+  annotations: {}
+
 # MongoDB parameters
 # For more configuration parameters of MongoDB chart please look here: https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters
 mongodb:
@@ -1308,6 +1321,15 @@ testkube-operator:
 
   # -- Testkube API full name
   apiFullname: "testkube-api-server"
+  # Database selection shared across the umbrella and the testkube-api subchart.
+  database:
+    # -- Explicit database selector: "" (auto-detect & preserve the current DB),
+    # -- "mongodb", or "postgresql". Set this to intentionally choose/migrate.
+    # -- Required under helm template / Argo CD, where cluster lookup is unavailable.
+    type: ""
+    # -- Optional override for the database marker ConfigMap name.
+    # -- Defaults to "<release>-db-marker" when empty.
+    markerName: ""
   # -- Testkube API port
   apiPort: 8088
   # -- Testkube Operator webhook server port

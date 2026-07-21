@@ -1,0 +1,19 @@
+{{- if and .Values.databasePreserve.enabled .Values.databasePreserve.failOnMismatch }}
+{{/*
+Fail-fast guard against a silent database switch.
+
+Fires only when an existing MongoDB installation is detected but the merged values
+would install/point at PostgreSQL (mongodb.enabled=false) WITHOUT the operator
+explicitly opting in via global.database.type=postgresql. This converts a silent
+switch + bundled-MongoDB removal into a loud, actionable stop.
+
+Dormant while MongoDB remains the chart default (mongodb.enabled=true); it activates
+automatically once a future release flips the default. `lookup` is empty under
+helm template / Argo CD, so those paths are guarded by the sentinel instead.
+*/}}
+{{- $db := include "testkube.effectiveDatabase" . | trim -}}
+{{- $optIn := (($.Values.global | default dict).database | default dict).type | default "" -}}
+{{- if and (eq $db "mongodb") (not .Values.mongodb.enabled) (ne $optIn "postgresql") -}}
+{{- fail (printf "\n\nTestkube database preservation guard:\n\nAn EXISTING MongoDB-backed installation was detected, but mongodb.enabled=false in the\nmerged values. Upgrading now would uninstall the bundled MongoDB and switch the API to\nPostgreSQL — risking data loss and a silent database change.\n\n  * To keep MongoDB: set mongodb.enabled=true (and testkube-api.mongodb.enabled=true),\n    with postgresql.enabled=false.\n  * To intentionally migrate to PostgreSQL: set global.database.type=postgresql and\n    follow the migration guide.\n  * To bypass this guard (NOT recommended): set databasePreserve.failOnMismatch=false.\n") -}}
+{{- end -}}
+{{- end -}}

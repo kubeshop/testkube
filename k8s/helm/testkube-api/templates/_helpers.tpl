@@ -210,7 +210,8 @@ Define API environment in agent mode
 Define API environment in standalone mode
 */}}
 {{- define "testkube-api.env-standalone-mode" -}}
-{{- if .Values.mongodb.enabled }}
+{{- $db := include "testkube.effectiveDatabase" . | trim -}}
+{{- if eq $db "mongodb" }}
 - name: API_MONGO_DSN
   {{- if .Values.mongodb.secretName }}
   valueFrom:
@@ -279,7 +280,7 @@ Define API environment in standalone mode
 - name: API_MONGO_ALLOW_DISK_USE
   value: "{{ .Values.mongodb.allowDiskUse }}"
 {{- end }}
-{{- if .Values.postgresql.enabled }}
+{{- if eq $db "postgresql" }}
 - name: API_POSTGRES_DSN
   {{- if .Values.postgresql.secretName }}
   valueFrom:
