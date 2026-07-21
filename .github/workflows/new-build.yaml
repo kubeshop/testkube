@@ -23,7 +23,7 @@ jobs:
     runs-on: depot-ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Depot CLI
         uses: depot/setup-action@15c09a5f77a0840ad4bce955686522a257853461 # v1.7.1
@@ -135,7 +135,7 @@ jobs:
       GAR_LOCATION: ${{ secrets.GAR_LOCATION }}
       CHARTS_REPOSITORY: testkube
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: helm-version
         name: Extract Helm Chart version
         uses: mikefarah/yq@e2f1d5ccf73239195bf92280cd47596751492449 # master as of 2026-07-15
@@ -209,7 +209,7 @@ jobs:
       DOCKER_IMAGE: kubeshop/mcp-server
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Get version tag
         id: tag
