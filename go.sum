@@ -931,6 +931,8 @@ k8s.io/kube-openapi v0.0.0-20260706235625-cdb1db5517a0 h1:CVjOUCTXINUThEmDs25FNS
 k8s.io/kube-openapi v0.0.0-20260706235625-cdb1db5517a0/go.mod h1:rcZ+P5cEvHQB+m154WBOatIGBgOEPjzmLkXjkHfg3ms=
 k8s.io/kube-openapi v0.0.0-20260718133925-74c0ba7c0470 h1:BVDpOsFos+7pz64ZQ3g3mhfqFNKmBXW2a/BVXwbB7FI=
 k8s.io/kube-openapi v0.0.0-20260718133925-74c0ba7c0470/go.mod h1:rcZ+P5cEvHQB+m154WBOatIGBgOEPjzmLkXjkHfg3ms=
+k8s.io/kube-openapi v0.0.0-20260721042612-c26577a1ec9a h1:QkCyIr4f6yciQ8A+ymvRkmr8DMtkqfVlBorj2LlPK7M=
+k8s.io/kube-openapi v0.0.0-20260721042612-c26577a1ec9a/go.mod h1:rcZ+P5cEvHQB+m154WBOatIGBgOEPjzmLkXjkHfg3ms=
 k8s.io/streaming v0.36.2 h1:NSKthPPg9UFSKsRauVJUVGH2Dvn8fhKmY4qrMkw/p98=
 k8s.io/streaming v0.36.2/go.mod h1:z6fV3D+NVkoeqRMtWwlUZK6U17SY/LqNzOxWL6GyR/s=
 k8s.io/utils v0.0.0-20260617174310-a95e086a2553 h1:hmGqDecjc8d7HVzWzRFl0QD9bYuYKbBEG7t8xwnVxfI=
