@@ -1,12 +1,12 @@
 package testworkflowexecutor
 
 import (
+	stderrors "errors"
 	"fmt"
 	"maps"
 	"strings"
 	"time"
 
-	errors2 "github.com/go-errors/errors"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	corev1 "k8s.io/api/core/v1"
@@ -233,7 +233,7 @@ func (e *IntermediateExecution) simplifyCr() error {
 	crMachine := testworkflowconfig.CreateWorkflowMachine(&testworkflowconfig.WorkflowConfig{Name: e.cr.Name, Labels: e.cr.Labels})
 	err1 := expressions.Simplify(e.cr, crMachine)
 	err2 := expressions.SimplifyForce(&e.sensitiveData.Data, crMachine)
-	err := errors2.Join(err1, err2)
+	err := stderrors.Join(err1, err2)
 	e.dirty = true
 	if err != nil {
 		return err
@@ -350,7 +350,7 @@ func (e *IntermediateExecution) Resolve(organizationId, organizationSlug, enviro
 	})
 	err1 := expressions.Simplify(e.cr, crMachine, resourceMachine, executionMachine)
 	err2 := expressions.SimplifyForce(&e.sensitiveData.Data, crMachine, resourceMachine, executionMachine)
-	err := errors2.Join(err1, err2)
+	err := stderrors.Join(err1, err2)
 	e.dirty = true
 	if err != nil {
 		return err
