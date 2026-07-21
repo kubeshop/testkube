@@ -47,7 +47,13 @@ This flexibility allows the same MCP tools to work in different deployment scena
 
 ### Available Tools
 
-The MCP server exposes 20 tools organized into five categories:
+The MCP server exposes up to 34 tools organized into the categories below. The two
+Query tools register conditionally: with the default `APIClient`, they are added only
+when the control plane advertises the required endpoints (unless `SkipEndpointChecks`
+is set); other client implementations register them unconditionally. The Insight
+tools register unconditionally and require a control plane that serves the
+`/insights/*` endpoints; against an older control plane they appear in the tool list
+but return an error when called.
 
 #### Dashboard Tools (1 tool)
 
@@ -63,15 +69,34 @@ The MCP server exposes 20 tools organized into five categories:
 - `update_workflow` - Update existing workflow
 - `run_workflow` - Execute workflow with config and target parameters
 
-#### Execution Tools (7 tools)
+#### Workflow Template Tools (4 tools)
+
+- `list_workflowtemplates` - List workflow templates with optional label filtering
+- `get_workflowtemplate_definition` - Get the YAML definition of a specific template
+- `create_workflowtemplate` - Create a new template from a YAML definition
+- `update_workflowtemplate` - Update an existing template with a new YAML definition
+
+#### Query Tools (2 tools, registered conditionally)
+
+- `query_workflows` - Bulk-query workflow definitions using JSONPath
+- `query_executions` - Bulk-query execution records across workflows using JSONPath
+
+#### Schema Tools (2 tools)
+
+- `get_workflow_schema` - Get the YAML schema for TestWorkflow definitions
+- `get_execution_schema` - Get the YAML schema for TestWorkflowExecution data
+
+#### Execution Tools (9 tools)
 
 - `fetch_execution_logs` - Fetch logs for specific execution
 - `list_executions` - List executions with optional workflow name and filtering
 - `lookup_execution_id` - Look up execution ID by execution name
 - `get_execution_info` - Get detailed execution information
 - `get_workflow_execution_metrics` - Fetch metrics for specific execution
+- `get_workflow_resource_history` - Analyze resource consumption (CPU, memory, disk, network) across recent executions of a workflow
 - `wait_for_executions` - Poll multiple executions until completion (5s interval)
 - `abort_workflow_execution` - Abort running workflow execution
+- `update_execution_tags` - Update tags on an execution (replace semantics)
 
 #### Artifact Tools (2 tools)
 
@@ -83,6 +108,15 @@ The MCP server exposes 20 tools organized into five categories:
 - `list_labels` - List all labels in the environment
 - `list_resource_groups` - List resource groups in the organization
 - `list_agents` - List agents with filtering (type, capability, pagination)
+
+#### Insight Tools (4 tools)
+
+Expose the ingested granular insight series (performance/test metrics parsed from k6, JMeter, Artillery, JUnit, and Influx reports, plus cross-tool canonical metrics). All insight tools are scoped to the current environment automatically.
+
+- `list_insight_series` - Discover the granular insight metric series ingested from test/performance reports
+- `list_insight_metric_keys` - List the distinct insight metric keys available (lightweight vocabulary for discovery)
+- `get_insight_metric_series` - Query a granular insight metric as a time series (values and trends over time)
+- `list_insight_executions` - List the workflow executions that produced a given insight metric
 
 **Note for maintainers:** When adding new tools to `pkg/mcp/tools/`, ensure that:
 

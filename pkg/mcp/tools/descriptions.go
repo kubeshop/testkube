@@ -96,4 +96,41 @@ Use for cross-workflow analysis: find all failed executions, compare durations, 
 	// Schema tool descriptions
 	GetWorkflowSchemaDescription  = "Get the YAML schema for TestWorkflow definitions. Returns all available fields, their types, and descriptions. Use to understand workflow structure when creating or querying workflows."
 	GetExecutionSchemaDescription = "Get the YAML schema for TestWorkflowExecution data. Returns all available fields, their types, and descriptions. Use to understand execution data structure when analyzing results."
+
+	// Insight (ingested metrics) tool descriptions
+	ListInsightSeriesDescription = `Discover the granular insight metric series ingested from test/performance reports.
+Each series is one metric for one workflow (and optional identity, e.g. a specific k6 request name or JUnit test case), identified by a seriesId.
+Series are parsed from k6, jmeter, artillery, junit and influx reports. Use this to find which metrics exist and to get the seriesId and metricKey to feed into get_insight_metric_series.
+Scoped to the current environment.`
+
+	ListInsightMetricKeysDescription = `List the distinct granular insight metric keys available (e.g. 'http_req_duration_p95_ms', 'response_time_percentile_2_ms', 'test_duration_ms').
+A lightweight vocabulary for discovery; use list_insight_series when you also need seriesId, source, workflow or identity. Scoped to the current environment.`
+
+	GetInsightMetricSeriesDescription = `Query a granular insight metric as a time series (values and trends over time) for the current environment.
+Provide either a metricKey via 'measure' (values are aggregated across all matching series) or one or more 'seriesId' values (comma-separated). If both are set, seriesId wins.
+Discover metric keys with list_insight_metric_keys and series/seriesIds with list_insight_series.
+Besides granular metric keys, 'measure' also accepts the canonical cross-tool measures 'latency_p95_ms', 'throughput_rps' and 'errors_rate' (these may not appear in the series catalog).
+Use 'segment' to break the series down by workflow, status, or an identity field key. Data defaults to the last 7 days unless startDate/endDate are given.`
+
+	ListInsightExecutionsDescription = `List the workflow executions that produced a given insight metric, most recent first.
+Use after get_insight_metric_series to drill from a metric value/trend down to the concrete executions behind it, then pivot to get_execution_info or fetch_execution_logs.
+Filter with the same 'measure'/identity/workflow/status/tag/date filters as get_insight_metric_series. Scoped to the current environment.`
+
+	// Insight tool parameter descriptions
+	InsightSourceDescription     = "Filter by the report source that produced the series: 'k6', 'jmeter', 'artillery', 'junit', 'influx', or 'canonical'."
+	InsightMetricKeyDescription  = "Filter by an exact metric key (e.g. 'http_req_duration_p95_ms', 'test_duration_ms'). Discover valid keys with list_insight_metric_keys."
+	InsightQueryDescription      = "Free-text search across series metadata (metric key, workflow, identity)."
+	InsightMeasureDescription    = `The metric to query. A granular metric key (e.g. 'http_req_duration_p95_ms') or a canonical cross-tool measure ('latency_p95_ms', 'throughput_rps', 'errors_rate'). Discover granular keys with list_insight_metric_keys.`
+	InsightSeriesIdDescription   = "Comma-separated granular insight series IDs to include (from list_insight_series). When set, takes precedence over 'measure'."
+	InsightAggregateDescription  = "How to aggregate values within each time bucket: 'avg' (default), 'sum', 'min', 'max', or 'count'."
+	InsightSegmentDescription    = "Break the series down by a property: 'workflow', 'status', or any stable identity field key (e.g. 'testcase', 'scenario', 'route')."
+	InsightMaxSamplesDescription = "Maximum number of time-series points to return per segment (default: 50, max: 500). Increase for finer detail, decrease for a more compact response."
+	InsightWorkflowDescription   = "Filter to a single workflow by name."
+
+	InsightIdentityFiltersDescription = `JSON object of granular insight series identity filters. Keys are identity field names and values are arrays of strings. ` +
+		`Plain strings match exactly (case-insensitive); strings prefixed with "~" match partially via regex. ` +
+		`Multiple identity keys are combined with AND; multiple values for the same key are combined with OR. ` +
+		`Example: {"testcase":["login"],"route":["~^/api/"]}.`
+	InsightTagFilterDescription = `Filter executions by tag. Tag values may contain commas, so multiple predicates must be passed as a JSON array, e.g. ["release=2026.07,hotfix","bug"]. ` +
+		`A plain (non-JSON) string is treated as a single predicate verbatim. Each predicate supports key=value (exact), key=~pattern (regex), or a bare key (existence).`
 )
