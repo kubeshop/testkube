@@ -472,6 +472,7 @@ func (r *PostgresRepository) executionToSummary(row testkube.TestWorkflowExecuti
 		Runtime:              row.Runtime,
 		Reports:              row.Reports,
 		ResourceAggregations: row.ResourceAggregations,
+		SilentMode:           row.SilentMode,
 	}
 }
 
