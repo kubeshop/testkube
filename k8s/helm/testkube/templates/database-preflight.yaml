@@ -1,19 +1,40 @@
 {{- if and .Values.databasePreserve.enabled .Values.databasePreserve.failOnMismatch }}
 {{/*
-Fail-fast guard against a silent database switch.
+Fail-fast guards against database subchart / sentinel mismatches.
 
-Fires only when an existing MongoDB installation is detected but the merged values
-would install/point at PostgreSQL (mongodb.enabled=false) WITHOUT the operator
-explicitly opting in via global.database.type=postgresql. This converts a silent
-switch + bundled-MongoDB removal into a loud, actionable stop.
+Guard 1 — silent MongoDB removal:
+  Fires when an existing MongoDB installation is detected but the merged values
+  would install/point at PostgreSQL (mongodb.enabled=false) WITHOUT the operator
+  explicitly opting in via global.database.type=postgresql. This converts a silent
+  switch + bundled-MongoDB removal into a loud, actionable stop.
 
-Dormant while MongoDB remains the chart default (mongodb.enabled=true); it activates
-automatically once a future release flips the default. `lookup` is empty under
-helm template / Argo CD, so those paths are guarded by the sentinel instead.
+  Dormant while MongoDB remains the chart default (mongodb.enabled=true); it activates
+  automatically once a future release flips the default. `lookup` is empty under
+  helm template / Argo CD, so those paths are guarded by the sentinel instead.
+
+Guard 2 — PostgreSQL sentinel with no PostgreSQL subchart enabled:
+  Fires when global.database.type=postgresql is explicitly set but neither the
+  bundled PostgreSQL subchart (postgresql.enabled) nor the CloudNativePG cluster
+  subchart (postgresqlOperatorCluster.enabled) is enabled. Without a bundled or
+  in-cluster PostgreSQL the API server cannot connect and the release would be broken.
+
+  If you are using an EXTERNAL PostgreSQL instance (i.e. you supply your own DSN
+  via testkube-api.postgresql.dsn / testkube-api.postgresql.secretName), this guard
+  is a false positive — suppress it with databasePreserve.failOnMismatch=false.
+
+NOTE: Helm subchart conditions (Chart.yaml `condition:` fields) are evaluated from
+static values before template rendering, so the enabled flags cannot be derived
+automatically from global.database.type via template helpers. Set the flags that
+match your chosen engine together with global.database.type.
 */}}
 {{- $db := include "testkube.effectiveDatabase" . | trim -}}
 {{- $optIn := (($.Values.global | default dict).database | default dict).type | default "" -}}
 {{- if and (eq $db "mongodb") (not .Values.mongodb.enabled) (ne $optIn "postgresql") -}}
 {{- fail (printf "\n\nTestkube database preservation guard:\n\nAn EXISTING MongoDB-backed installation was detected, but mongodb.enabled=false in the\nmerged values. Upgrading now would uninstall the bundled MongoDB and switch the API to\nPostgreSQL — risking data loss and a silent database change.\n\n  * To keep MongoDB: set mongodb.enabled=true (and testkube-api.mongodb.enabled=true),\n    with postgresql.enabled=false.\n  * To intentionally migrate to PostgreSQL: set global.database.type=postgresql and\n    follow the migration guide.\n  * To bypass this guard (NOT recommended): set databasePreserve.failOnMismatch=false.\n") -}}
+{{- end -}}
+{{- $pg := .Values.postgresql | default dict -}}
+{{- $pgOp := index .Values "postgresqlOperatorCluster" | default dict -}}
+{{- if and (eq $optIn "postgresql") (not $pg.enabled) (not $pgOp.enabled) -}}
+{{- fail (printf "\n\nTestkube database configuration mismatch:\n\nglobal.database.type=postgresql is set but no PostgreSQL subchart is enabled\n(postgresql.enabled=false and postgresqlOperatorCluster.enabled=false).\nWithout a bundled or in-cluster PostgreSQL the API server will not be able to connect.\n\n  * To use the bundled PostgreSQL (Bitnami): set postgresql.enabled=true.\n  * To use CloudNativePG: set postgresqlOperatorCluster.enabled=true (and\n    cloudnative-pg.enabled=true if no shared operator exists in the cluster).\n  * If using an EXTERNAL PostgreSQL: configure the DSN via\n    testkube-api.postgresql.dsn or testkube-api.postgresql.secretName, and\n    suppress this guard with databasePreserve.failOnMismatch=false.\n") -}}
 {{- end -}}
 {{- end -}}

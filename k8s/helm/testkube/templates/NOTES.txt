@@ -2,8 +2,25 @@
 Testkube agent installed successfully. We're initialising your connection to Testkube Cloud. This can take up to 5 minutes.
 {{- end }}
 {{- if .Values.databasePreserve.enabled }}
+{{- $db := include "testkube.effectiveDatabase" . | trim }}
+{{- $mongo := .Values.mongodb | default dict }}
+{{- $pg := .Values.postgresql | default dict }}
+{{- $pgOp := index .Values "postgresqlOperatorCluster" | default dict }}
 
-Database in use: {{ include "testkube.effectiveDatabase" . | trim }}
+Database in use: {{ $db }}
 (recorded in ConfigMap "{{ include "testkube.databaseMarkerName" . }}"; override with global.database.type)
+{{- if and (eq $db "mongodb") (not $mongo.enabled) }}
+
+WARNING: Effective database is "mongodb" but mongodb.enabled=false.
+Verify you have an external MongoDB configured (testkube-api.mongodb.dsn)
+or set mongodb.enabled=true to deploy the bundled instance.
+{{- end }}
+{{- if and (eq $db "postgresql") (not $pg.enabled) (not $pgOp.enabled) }}
+
+WARNING: Effective database is "postgresql" but no PostgreSQL subchart is enabled
+(postgresql.enabled=false, postgresqlOperatorCluster.enabled=false).
+Verify you have an external PostgreSQL configured (testkube-api.postgresql.dsn)
+or enable a PostgreSQL subchart.
+{{- end }}
 {{- end }}
 Enjoy testing with Testkube!
