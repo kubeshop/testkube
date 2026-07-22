@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -56,10 +57,53 @@ func (c TestWorkflowClient) ListTestWorkflows(selector string) (testkube.TestWor
 }
 
 // ListTestWorkflowWithExecutions list all test workflows with their latest executions
-func (c TestWorkflowClient) ListTestWorkflowWithExecutions(selector string) (testkube.TestWorkflowWithExecutions, error) {
+func (c TestWorkflowClient) ListTestWorkflowWithExecutions(selector string, limit int) (testkube.TestWorkflowWithExecutions, error) {
 	uri := c.testWorkflowWithExecutionTransport.GetURI("/test-workflow-with-executions")
-	params := map[string]string{"selector": selector}
-	return c.testWorkflowWithExecutionTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
+
+	if limit > 0 {
+		params := map[string]string{"selector": selector, "pageSize": strconv.Itoa(limit)}
+		return c.testWorkflowWithExecutionTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
+	}
+
+	const pageSize = 100
+	var result testkube.TestWorkflowWithExecutions
+	// The server sorts by latest execution activity, so a workflow can shift
+	// between pages while paging; dedupe by name to keep it listed only once.
+	// Unnamed items collapse under the empty key on purpose, so a full-set
+	// echo past the last page adds no new names and stops the loop below.
+	seen := make(map[string]bool)
+	for page := 0; ; page++ {
+		params := map[string]string{
+			"selector": selector,
+			"pageSize": strconv.Itoa(pageSize),
+			"page":     strconv.Itoa(page),
+		}
+		items, err := c.testWorkflowWithExecutionTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
+		if err != nil {
+			return nil, err
+		}
+
+		added := 0
+		for _, item := range items {
+			var name string
+			if item.Workflow != nil {
+				name = item.Workflow.Name
+			}
+			if seen[name] {
+				continue
+			}
+			seen[name] = true
+			result = append(result, item)
+			added++
+		}
+
+		// Stop on a short page (the last one) or a page that added nothing new.
+		if len(items) < pageSize || added == 0 {
+			break
+		}
+	}
+
+	return result, nil
 }
 
 // DeleteTestWorkflows deletes multiple test workflows by labels

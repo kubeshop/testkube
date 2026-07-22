@@ -24,6 +24,7 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 	var (
 		selectors []string
 		crdOnly   bool
+		limit     int
 	)
 
 	cmd := &cobra.Command{
@@ -32,6 +33,13 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Get all available test workflows",
 		Long:    `Get all available test workflows. In cloud context (API key) the CLI fetches them from the connected Control Plane environment and ignores the namespace flag. In kubeconfig context it fetches them from the agent in the given namespace (default "testkube").`,
+
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if limit < 0 {
+				return fmt.Errorf("--limit must not be negative")
+			}
+			return nil
+		},
 
 		Run: func(cmd *cobra.Command, args []string) {
 			namespace := cmd.Flag("namespace").Value.String()
@@ -47,8 +55,17 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 			}
 
 			if len(args) == 0 {
-				workflows, err := client.ListTestWorkflowWithExecutions(strings.Join(selectors, ","))
+				fetchLimit := limit
+				if limit > 0 {
+					fetchLimit = limit + 1
+				}
+				workflows, err := client.ListTestWorkflowWithExecutions(strings.Join(selectors, ","), fetchLimit)
 				ui.ExitOnError("getting all test workflows"+namespaceSuffix, err)
+
+				if limit > 0 && len(workflows) == limit+1 {
+					workflows = workflows[:limit]
+					ui.NewStderrUI(false).Warn(fmt.Sprintf("Showing %d test workflows, more are available on the server. Drop --limit (or use --limit 0) to fetch all.", limit))
+				}
 
 				if crdOnly {
 					uicrd.PrintCRDs(common2.MapSlice(workflows, func(t testkube.TestWorkflowWithExecution) testworkflowsv1.TestWorkflow {
@@ -83,6 +100,7 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 	}
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "render the fetched test workflows as crd yaml; does not read crds from the cluster")
+	cmd.Flags().IntVar(&limit, "limit", 0, "maximum number of workflows to return, 0 to fetch all")
 
 	return cmd
 }
