@@ -1777,6 +1777,13 @@ func (r *PostgresRepository) GetTestWorkflowMetrics(ctx context.Context, name st
 			StartTime:   fromPgTimestamp(row.StartTime),
 			RunnerId:    fromPgText(row.RunnerID),
 		}
+		if len(row.SilentMode) > 0 {
+			silentMode, err := fromJSONB[testkube.SilentMode](row.SilentMode)
+			if err != nil {
+				return metrics, err
+			}
+			executions[i].SilentMode = silentMode
+		}
 	}
 
 	metrics = common.CalculateMetrics(executions)

@@ -958,7 +958,8 @@ SELECT
     r.status,
     e.name,
     e.scheduled_at as start_time,
-    e.runner_id
+    e.runner_id,
+    e.silent_mode
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 WHERE e.workflow_name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
