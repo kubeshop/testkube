@@ -106,7 +106,7 @@ This installation requires having cluster administrative rights.
 helm install testkube kubeshop/testkube --create-namespace --namespace testkube
 ```
 
-If your cluster cannot pull `docker.io/rancher/kubectl:v1.23.7` for the built-in TestWorkflowTemplate installer hook, override it from the parent chart values:
+If your cluster cannot pull `docker.io/kubeshop/testkube-kubectl:1.36.2` for the built-in TestWorkflowTemplate installer hook, override it from the parent chart values:
 
 ```yaml
 global:
