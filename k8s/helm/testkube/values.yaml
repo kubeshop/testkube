@@ -61,8 +61,8 @@ global:
     builtinTemplatesInstaller:
       image:
         registry: docker.io
-        repository: rancher/kubectl
-        tag: v1.23.7
+        repository: kubeshop/testkube-kubectl
+        tag: 1.36.2
         digest: ""
         pullPolicy: IfNotPresent
         pullSecrets: []
