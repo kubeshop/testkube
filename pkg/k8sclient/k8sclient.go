@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -438,4 +439,82 @@ func IsContainerTerminated(clientset kubernetes.Interface, podName, containerNam
 
 		return false, nil
 	}
+}
+
+func CheckDeploymentReady(ctx context.Context, clientset *kubernetes.Clientset, namespace, labelSelector string) (bool, error) {
+	pods, err := clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	if err != nil {
+		return false, err
+	}
+	if len(pods.Items) == 0 {
+		return false, fmt.Errorf("No Pods found for selector %s in %s namespace", labelSelector, namespace)
+	}
+	for _, pod := range pods.Items {
+		if len(pod.Status.ContainerStatuses) == 0 {
+			return false, fmt.Errorf("Pod %s has no container statuses", pod.Name)
+		}
+
+		for _, c := range pod.Status.ContainerStatuses {
+			if !c.Ready {
+				return false, fmt.Errorf("Pod %s is not ready", pod.Name)
+			}
+		}
+	}
+	return true, nil
+}
+
+func IsRunningMinKubeVersion(version string) error {
+	minVersion := "1.20.0"
+	isCompatible, err := IsVersionGreaterOrEqual(version[1:], minVersion)
+	if err != nil {
+		return err
+	}
+	if !isCompatible {
+		return fmt.Errorf("Kubernetes version %s is not compatible, must be at least %s", version, minVersion)
+	}
+	return nil
+}
+
+func IsVersionGreaterOrEqual(version, minVersion string) (bool, error) {
+	vParts := strings.Split(version, ".")
+	mparts := strings.Split(minVersion, ".")
+	for i, s := range vParts {
+		if i >= len(mparts) {
+			break
+		}
+		var vNum, mNum int
+		fmt.Sscanf(s, "%d", &vNum)
+		fmt.Sscanf(mparts[i], "%d", &mNum)
+		if vNum < mNum {
+			return false, fmt.Errorf("Current Kubernetes version %s is less than minimum required version %s", version, minVersion)
+		}
+	}
+	return true, nil
+}
+
+func CheckClusterRoleBindingExists(ctx context.Context, clientset *kubernetes.Clientset, expectedBindings []string) (bool, error) {
+	for _, bindingName := range expectedBindings {
+		_, err := clientset.RbacV1().ClusterRoleBindings().Get(ctx, bindingName, metav1.GetOptions{})
+		if err != nil {
+			return false, fmt.Errorf("ClusterRoleBinding %s not found", bindingName)
+		}
+	}
+	return true, nil
+}
+
+func CheckOperatorRunning(ctx context.Context, clientset *kubernetes.Clientset, namespace string) (bool, error) {
+	pods, err := clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: operatorDeploymentSelector,
+	})
+	if err != nil {
+		return false, err
+	}
+	for _, pod := range pods.Items {
+		if pod.Status.Phase == corev1.PodRunning {
+			return true, nil
+		}
+	}
+	return false, nil
 }
