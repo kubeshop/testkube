@@ -175,7 +175,6 @@ require (
 	github.com/go-openapi/swag/cmdutils v0.27.1 // indirect
 	github.com/go-openapi/swag/conv v0.27.1 // indirect
 	github.com/go-openapi/swag/fileutils v0.27.1 // indirect
-	github.com/go-openapi/swag/jsonname v0.26.0 // indirect
 	github.com/go-openapi/swag/jsonutils v0.27.1 // indirect
 	github.com/go-openapi/swag/loading v0.27.1 // indirect
 	github.com/go-openapi/swag/mangling v0.27.1 // indirect
@@ -299,7 +298,6 @@ require (
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.4 // indirect
-	golang.org/x/exp v0.0.0-20260718201538-764159d718ef // indirect
 	golang.org/x/mod v0.38.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
