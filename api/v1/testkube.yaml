@@ -5469,6 +5469,8 @@ components:
           format: date-time
         runnerId:
           type: string
+        silentMode:
+          $ref: '#/components/schemas/SilentMode'
 
     Variables:
       type: object
