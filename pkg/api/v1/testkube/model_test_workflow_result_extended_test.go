@@ -61,3 +61,62 @@ func TestHealDuration(t *testing.T) {
 		})
 	}
 }
+
+func TestTestWorkflowResult_Fatal(t *testing.T) {
+	ts := time.Date(2026, 7, 22, 15, 20, 0, 0, time.UTC)
+
+	tests := []struct {
+		name             string
+		result           *TestWorkflowResult
+		err              error
+		aborted          bool
+		wantStatus       TestWorkflowStatus
+		wantInitStatus   TestWorkflowStepStatus
+		wantErrorMessage string
+	}{
+		{
+			name:             "handles nil error and nil initialization without panicking",
+			result:           &TestWorkflowResult{},
+			err:              nil,
+			aborted:          true,
+			wantStatus:       ABORTED_TestWorkflowStatus,
+			wantInitStatus:   ABORTED_TestWorkflowStepStatus,
+			wantErrorMessage: "fatal error without details",
+		},
+		{
+			name: "keeps existing initialization error message when error is nil",
+			result: &TestWorkflowResult{
+				Initialization: &TestWorkflowStepResult{ErrorMessage: "original failure"},
+			},
+			err:              nil,
+			aborted:          false,
+			wantStatus:       FAILED_TestWorkflowStatus,
+			wantInitStatus:   FAILED_TestWorkflowStepStatus,
+			wantErrorMessage: "original failure",
+		},
+		{
+			name: "stores error message and marks result failed",
+			result: &TestWorkflowResult{
+				Initialization: &TestWorkflowStepResult{},
+			},
+			err:              assert.AnError,
+			aborted:          false,
+			wantStatus:       FAILED_TestWorkflowStatus,
+			wantInitStatus:   FAILED_TestWorkflowStepStatus,
+			wantErrorMessage: assert.AnError.Error(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.result.Fatal(tt.err, tt.aborted, ts)
+
+			assert.Equal(t, tt.wantStatus, *tt.result.Status)
+			assert.Equal(t, tt.wantInitStatus, *tt.result.Initialization.Status)
+			assert.Equal(t, tt.wantErrorMessage, tt.result.Initialization.ErrorMessage)
+			assert.Equal(t, ts, tt.result.QueuedAt)
+			assert.Equal(t, ts, tt.result.StartedAt)
+			assert.Equal(t, ts, tt.result.FinishedAt)
+		})
+	}
+}
