@@ -176,7 +176,8 @@ func handleTelemetry(cmd *cobra.Command, cfg *config.Data, isPreRun bool) {
 	// Send telemetry early to ensure it's captured even if command fails
 	if cfg.TelemetryEnabled {
 		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `testkube disable telemetry`")
-		out, err := telemetry.SendCmdEvent(cmd, common.Version)
+		userID := common.TelemetryUserID(cmd, cfg)
+		out, err := telemetry.SendCmdEvent(cmd, common.Version, userID)
 		if ui.Verbose && err != nil {
 			ui.Err(err)
 		}
@@ -190,13 +191,28 @@ func handleTelemetry(cmd *cobra.Command, cfg *config.Data, isPreRun bool) {
 
 			ui.Debug("sending 'init' event")
 
-			out, err := telemetry.SendCmdInitEvent(cmd, common.Version)
+			out, err := telemetry.SendCmdInitEvent(cmd, common.Version, userID)
 			if ui.Verbose && err != nil {
 				ui.Err(err)
 			}
 			ui.Debug("telemetry init event response", out)
 		}
 	}
+}
+
+func handleCLIErrorTelemetry(version string, err *common.CLIError) (string, error) {
+	if err.Telemetry == nil {
+		return "", nil
+	}
+	return telemetry.SendCmdErrorEventWithLicense(
+		err.Telemetry.Command,
+		version,
+		err.Telemetry.Type,
+		err.StackTrace,
+		err.Telemetry.License,
+		err.Telemetry.Step,
+		string(err.Code),
+	)
 }
 
 func Execute() {
