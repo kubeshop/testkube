@@ -242,9 +242,12 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		if lastResult == nil {
 			lastResult = execution.Result
 		}
+		if lastResult == nil {
+			lastResult = &testkube.TestWorkflowResult{}
+		}
 		if !lastResult.IsFinished() {
 			logger.Errorw("failed to recover TestWorkflow result, marking as fatal error...")
-			lastResult.Fatal(err, true, time.Now())
+			lastResult.Fatal(errors.New("failed to recover TestWorkflow result"), true, time.Now())
 		}
 	}
 
