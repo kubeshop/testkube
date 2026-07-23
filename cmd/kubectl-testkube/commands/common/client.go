@@ -112,6 +112,20 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	return c, namespace, nil
 }
 
+func TelemetryUserID(cmd *cobra.Command, cfg *config.Data) string {
+	if cfg.CloudContext.EnvironmentId != "" {
+		return cfg.CloudContext.EnvironmentId
+	}
+	id := "command-cli-user"
+	client, _, err := GetClient(cmd)
+	if err == nil && client != nil {
+		if info, err := client.GetServerInfo(); err == nil && info.ClusterId != "" {
+			id = info.ClusterId
+		}
+	}
+	return id
+}
+
 func userAgent() string {
 	return fmt.Sprintf("%s/%s (%s; %s) Go/%s", UserAgentCLI, Version, runtime.GOOS, runtime.GOARCH, runtime.Version())
 }

@@ -8,7 +8,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/cliruntime"
 	httpclient "github.com/kubeshop/testkube/pkg/http"
@@ -33,34 +32,19 @@ func SendServerStartEvent(clusterId, version string, capabilities []string) (str
 }
 
 // SendCmdEvent will send CLI event to GA
-func SendCmdEvent(cmd *cobra.Command, version string) (string, error) {
+func SendCmdEvent(cmd *cobra.Command, version, userID string) (string, error) {
 	// get all sub-commands passed to cli
 	command := strings.TrimPrefix(cmd.CommandPath(), "kubectl-testkube ")
 	if command == "" {
 		command = "root"
 	}
 
-	payload := NewCLIPayload(getCurrentContext(), getUserID(cmd), command, version, "cli_command_execution", GetClusterType())
+	payload := NewCLIPayload(getCurrentContext(), userID, command, version, "cli_command_execution", GetClusterType())
 	return sendData(senders, payload)
 }
 
 func SendCmdErrorEvent(cmd *cobra.Command, version, errType string, errorStackTrace string) (string, error) {
 	return SendCmdErrorEventWithLicense(cmd, version, errType, errorStackTrace, "", "", "")
-}
-
-func HandleCLIErrorTelemetry(version string, err *common.CLIError) (string, error) {
-	if err.Telemetry != nil {
-		return SendCmdErrorEventWithLicense(
-			err.Telemetry.Command,
-			version,
-			err.Telemetry.Type,
-			err.StackTrace,
-			err.Telemetry.License,
-			err.Telemetry.Step,
-			string(err.Code),
-		)
-	}
-	return "", nil
 }
 
 // SendCmdErrorEventWithLicense will send CLI error event with license
@@ -103,29 +87,29 @@ func SendCmdErrorEventWithLicense(cmd *cobra.Command, version, errType, errorSta
 	return sendData(senders, payload)
 }
 
-func SendCmdAttemptEvent(cmd *cobra.Command, version string) (string, error) {
+func SendCmdAttemptEvent(cmd *cobra.Command, version, userID string) (string, error) {
 	// TODO pass error
-	payload := NewCLIPayload(getCurrentContext(), getUserID(cmd), getCommand(cmd), version, "cli_command_execution", GetClusterType())
+	payload := NewCLIPayload(getCurrentContext(), userID, getCommand(cmd), version, "cli_command_execution", GetClusterType())
 	return sendData(senders, payload)
 }
 
 // SendCmdWithLicenseEvent will send CLI command attempt event with license
-func SendCmdWithLicenseEvent(cmd *cobra.Command, version, license, step string) (string, error) {
-	payload := NewCLIWithLicensePayload(getCurrentContext(), getUserID(cmd), getCommandWithoutAttempt(cmd), version, "cli_command_execution", GetClusterType(), license, step)
+func SendCmdWithLicenseEvent(cmd *cobra.Command, version, userID, license, step string) (string, error) {
+	payload := NewCLIWithLicensePayload(getCurrentContext(), userID, getCommandWithoutAttempt(cmd), version, "cli_command_execution", GetClusterType(), license, step)
 	return sendData(senders, payload)
 }
 
 // SendCmdInitEvent will send CLI event to GA
-func SendCmdInitEvent(cmd *cobra.Command, version string) (string, error) {
-	payload := NewCLIPayload(getCurrentContext(), getUserID(cmd), "init", version, "cli_command_execution", GetClusterType())
+func SendCmdInitEvent(cmd *cobra.Command, version, userID string) (string, error) {
+	payload := NewCLIPayload(getCurrentContext(), userID, "init", version, "cli_command_execution", GetClusterType())
 	return sendData(senders, payload)
 }
 
 // SendTelemetryOptOutEvent records that the user disabled telemetry. It must be
 // called while telemetry is still enabled (before the opt-out is persisted), as
 // no further events may be sent once the user has opted out.
-func SendTelemetryOptOutEvent(cmd *cobra.Command, version string) (string, error) {
-	payload := NewCLIPayload(getCurrentContext(), getUserID(cmd), "telemetry_opt_out", version, "cli_command_execution", GetClusterType())
+func SendTelemetryOptOutEvent(cmd *cobra.Command, version, userID string) (string, error) {
+	payload := NewCLIPayload(getCurrentContext(), userID, "telemetry_opt_out", version, "cli_command_execution", GetClusterType())
 	return sendData(senders, payload)
 }
 
@@ -245,22 +229,6 @@ func getCurrentContext() RunContext {
 // GetCurrentContext returns the current run context, making it accessible from other packages
 func GetCurrentContext() RunContext {
 	return getCurrentContext()
-}
-
-func getUserID(cmd *cobra.Command) string {
-	id := "command-cli-user"
-	client, _, err := common.GetClient(cmd)
-	if err == nil && client != nil {
-		info, err := client.GetServerInfo()
-		if err == nil && info.ClusterId != "" {
-			id = info.ClusterId
-		}
-	}
-	data, err := config.Load()
-	if err != nil || data.CloudContext.EnvironmentId == "" {
-		return id
-	}
-	return data.CloudContext.EnvironmentId
 }
 
 // IsRunningInDocker detects if the CLI is running inside a Docker container.
