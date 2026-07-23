@@ -42,7 +42,7 @@ func NewDisableTelemetryCmd() *cobra.Command {
 			// update failed, the root post-run sync would re-enable the CLI
 			// config, so sending here would record a false opt-out.
 			if wasEnabled && apiDisabled {
-				if _, sendErr := telemetry.SendTelemetryOptOutEvent(cmd, common.Version); sendErr != nil {
+				if _, sendErr := telemetry.SendTelemetryOptOutEvent(cmd, common.Version, common.TelemetryUserID(cmd, &cfg)); sendErr != nil {
 					ui.Debug("sending telemetry opt-out event failed", sendErr.Error())
 				}
 			}
