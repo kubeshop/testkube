@@ -1383,6 +1383,7 @@ func StreamDockerLogs(dockerContainerName string) *CLIError {
 		_ = cmd.Wait()
 	}()
 
+	var installationSucceeded bool
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -1392,6 +1393,7 @@ func StreamDockerLogs(dockerContainerName string) *CLIError {
 		}
 
 		if strings.Contains(line, "Testkube installation succeed") {
+			installationSucceeded = true
 			break
 		}
 
@@ -1412,7 +1414,28 @@ func StreamDockerLogs(dockerContainerName string) *CLIError {
 			err)
 	}
 
-	return nil
+	// If we saw the success marker, stop following logs and report success.
+	if installationSucceeded {
+		return nil
+	}
+
+	// The log stream ended (EOF) before either marker was observed. This means
+	// `docker logs -f` exited on its own (e.g. the container was removed, the
+	// daemon disconnected, or access was denied). Treat that as a failure
+	// instead of silently reporting installation success.
+	if err := cmd.Wait(); err != nil {
+		return NewCLIError(
+			TKErrDockerLogStreamingFailed,
+			"Docker log streaming stopped before installation completed",
+			"Check that your Testkube Docker Agent container is up and running",
+			err)
+	}
+
+	return NewCLIError(
+		TKErrDockerLogStreamingFailed,
+		"Docker log stream ended before installation completed",
+		"Check logs of your Testkube Docker Agent container",
+		errors.New("docker logs stream closed without an installation status message"))
 }
 
 func DockerUpgradeTestkubeAgent(options HelmOptions, latestVersion string, cfg config.Data) *CLIError {
