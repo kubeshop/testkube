@@ -1,0 +1,131 @@
+{{- $createGlobalTemplate := and .Values.global.testWorkflows.globalTemplate.enabled (not (or .Values.global.testWorkflows.globalTemplate.external .Values.global.testWorkflows.globalTemplate.inline)) -}}
+{{- if or .Values.global.testWorkflows.createServiceAccountTemplates $createGlobalTemplate }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "testkube-api.fullname" . }}-builtin-templates
+  labels:
+    {{- include "testkube-api.labels" . | nindent 4 }}
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" (dict "value" .Values.global.labels "context" $) | nindent 4 }}
+    {{- end }}
+    {{- with .Values.global.testWorkflows.builtinTemplatesInstaller.labels }}
+    {{- include "global.tplvalues.render" (dict "value" . "context" $) | nindent 4 }}
+    {{- end }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "18"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    {{- if .Values.global.annotations }}
+    {{- include "global.tplvalues.render" (dict "value" .Values.global.annotations "context" $) | nindent 4 }}
+    {{- end }}
+    {{- with .Values.global.testWorkflows.builtinTemplatesInstaller.annotations }}
+    {{- include "global.tplvalues.render" (dict "value" . "context" $) | nindent 4 }}
+    {{- end }}
+data:
+  templates.yaml: |
+    {{- if .Values.global.testWorkflows.createServiceAccountTemplates }}
+    apiVersion: testworkflows.testkube.io/v1
+    kind: TestWorkflowTemplate
+    metadata:
+      name: serviceaccount--fullaccess
+    spec:
+      pod:
+        serviceAccountName: {{ include "testkube-api.serviceAccountName" . }}
+    {{- end }}
+    {{- if and .Values.global.testWorkflows.createServiceAccountTemplates $createGlobalTemplate }}
+    ---
+    {{- end }}
+    {{- if $createGlobalTemplate }}
+    apiVersion: testworkflows.testkube.io/v1
+    kind: TestWorkflowTemplate
+    metadata:
+      name: {{ .Values.global.testWorkflows.globalTemplate.name | quote }}
+    spec:
+    {{- toYaml .Values.global.testWorkflows.globalTemplate.spec | nindent 6 }}
+    {{- end }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "testkube-api.fullname" . }}-builtin-templates
+  labels:
+    {{- include "testkube-api.labels" . | nindent 4 }}
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" (dict "value" .Values.global.labels "context" $) | nindent 4 }}
+    {{- end }}
+    {{- with .Values.global.testWorkflows.builtinTemplatesInstaller.labels }}
+    {{- include "global.tplvalues.render" (dict "value" . "context" $) | nindent 4 }}
+    {{- end }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "19"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    {{- if .Values.global.annotations }}
+    {{- include "global.tplvalues.render" (dict "value" .Values.global.annotations "context" $) | nindent 4 }}
+    {{- end }}
+    {{- with .Values.global.testWorkflows.builtinTemplatesInstaller.annotations }}
+    {{- include "global.tplvalues.render" (dict "value" . "context" $) | nindent 4 }}
+    {{- end }}
+spec:
+  backoffLimit: {{ .Values.global.testWorkflows.builtinTemplatesInstaller.backoffLimit }}
+  {{- if .Values.global.testWorkflows.builtinTemplatesInstaller.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ .Values.global.testWorkflows.builtinTemplatesInstaller.ttlSecondsAfterFinished }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "testkube-api.labels" . | nindent 8 }}
+        {{- if .Values.global.labels }}
+        {{- include "global.tplvalues.render" (dict "value" .Values.global.labels "context" $) | nindent 8 }}
+        {{- end }}
+        {{- with .Values.global.testWorkflows.builtinTemplatesInstaller.labels }}
+        {{- include "global.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+        {{- end }}
+      {{- with .Values.global.testWorkflows.builtinTemplatesInstaller.podAnnotations }}
+      annotations:
+        {{- include "global.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "testkube-api.serviceAccountName" . }}
+      {{- include "global.images.renderPullSecrets" (dict "global" .Values.global "secretPath" .Values.global.testWorkflows.builtinTemplatesInstaller.image.pullSecrets) | nindent 6 }}
+      {{- with .Values.global.testWorkflows.builtinTemplatesInstaller.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.testWorkflows.builtinTemplatesInstaller.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.testWorkflows.builtinTemplatesInstaller.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.testWorkflows.builtinTemplatesInstaller.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: builtin-templates-installer
+          image: {{ include "global.images.image" (dict "imageRoot" .Values.global.testWorkflows.builtinTemplatesInstaller.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.global.testWorkflows.builtinTemplatesInstaller.image.pullPolicy }}
+          {{- with .Values.global.testWorkflows.builtinTemplatesInstaller.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          command:
+            - kubectl
+          args:
+            - apply
+            - -f
+            - /etc/testkube-builtins/templates.yaml
+          volumeMounts:
+            - name: builtin-templates
+              mountPath: /etc/testkube-builtins
+              readOnly: true
+      volumes:
+        - name: builtin-templates
+          configMap:
+            name: {{ include "testkube-api.fullname" . }}-builtin-templates
+{{- end }}

@@ -43,6 +43,24 @@ global:
       inline: false
       name: global-template
       spec: null
+    builtinTemplatesInstaller:
+      image:
+        registry: docker.io
+        repository: kubeshop/testkube-kubectl
+        tag:  1.36.2
+        digest: ""
+        pullPolicy: IfNotPresent
+        pullSecrets: []
+      ttlSecondsAfterFinished: 300
+      backoffLimit: 10
+      annotations: {}
+      labels: {}
+      podAnnotations: {}
+      podSecurityContext: {}
+      securityContext: {}
+      nodeSelector: {}
+      affinity: {}
+      tolerations: []
 
 ### @section Common parameters
 ## Kubernetes version (using Helm capabilities if not set)
