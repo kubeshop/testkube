@@ -57,6 +57,15 @@ global:
     createServiceAccountTemplates: true
     # -- Create TestWorkflowTemplates with automatically configured execution
     createOfficialTemplates: true
+    # -- Image used by the built-in TestWorkflowTemplate installer hook Job
+    builtinTemplatesInstaller:
+      image:
+        registry: docker.io
+        repository: kubeshop/testkube-kubectl
+        tag: 1.36.2
+        digest: ""
+        pullPolicy: IfNotPresent
+        pullSecrets: []
     # -- Global TestWorkflowTemplate that will be automatically included for all executions
     globalTemplate:
       # -- Is global template enabled
