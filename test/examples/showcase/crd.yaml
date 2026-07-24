@@ -522,7 +522,7 @@ spec:
       type: string
   steps:
   - run:
-      image: kubeshop/testkube-cli:latest
+      image: kubeshop/testkube-cli@sha256:d6963cbb3604fe0a0c25be9fbb3da623ea5bbac7d2585a4a74b6159b3b196a42
       shell: |
         testkube set context \
           --api-key {{ config.apiToken }} \
