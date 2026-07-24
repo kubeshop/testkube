@@ -109,12 +109,18 @@ func Lt(version1, version2 string) (bool, error) {
 
 // Lte checks if version1 is less-than or equal version2, returns error in case of invalid version string
 func Lte(version1, version2 string) (bool, error) {
-	ok, err := Lt(version1, version2)
+	v1, err := semver.NewVersion(version1)
+	if err != nil {
+		return false, err
+	}
+	v2, err := semver.NewVersion(version2)
 	if err != nil {
 		return false, err
 	}
 
-	return ok || version1 == version2, nil
+	// Compare semantically, so equal versions with different string forms
+	// (e.g. "1.0" and "1.0.0", or "v1.2.3" and "1.2.3") are treated as equal.
+	return v1.Compare(v2) <= 0, nil
 }
 
 func validateVersionPostion(kind string) error {
@@ -125,7 +131,8 @@ func validateVersionPostion(kind string) error {
 	return fmt.Errorf("invalid version kind: %s: use one of major|minor|patch", kind)
 }
 
-// GetNewest returns greatest version from passed versions list
+// GetNewest returns greatest version from passed versions list,
+// or an empty string if the list contains no valid versions.
 func GetNewest(versions []string) string {
 	semversions := []*semver.Version{}
 	for _, ver := range versions {
@@ -134,6 +141,10 @@ func GetNewest(versions []string) string {
 		if err == nil {
 			semversions = append(semversions, v)
 		}
+	}
+
+	if len(semversions) == 0 {
+		return ""
 	}
 
 	sort.Slice(semversions, func(i, j int) bool {
