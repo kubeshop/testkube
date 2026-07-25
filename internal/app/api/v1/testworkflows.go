@@ -117,6 +117,14 @@ func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 				}
 				workflows = append(workflows, *workflow)
 			}
+
+			for _, workflow := range workflows {
+				err = s.TestWorkflowsClient.Delete(ctx, environmentId, workflow.Name)
+				s.Metrics.IncDeleteTestWorkflow(err)
+				if err != nil {
+					return s.ClientError(c, errPrefix, err)
+				}
+			}
 		} else {
 			workflows, err = s.TestWorkflowsClient.List(ctx, environmentId, testworkflowclient.ListOptions{
 				Labels: labelSelector.MatchLabels,
@@ -124,17 +132,15 @@ func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 			if err != nil {
 				return s.BadGateway(c, errPrefix, "client problem", err)
 			}
-		}
 
-		// Delete
-		_, err = s.TestWorkflowsClient.DeleteByLabels(ctx, environmentId, labelSelector.MatchLabels)
-		if err != nil {
-			return s.ClientError(c, errPrefix, err)
-		}
+			_, err = s.TestWorkflowsClient.DeleteByLabels(ctx, environmentId, labelSelector.MatchLabels)
+			if err != nil {
+				return s.ClientError(c, errPrefix, err)
+			}
 
-		// Mark as deleted
-		for range workflows {
-			s.Metrics.IncDeleteTestWorkflow(err)
+			for range workflows {
+				s.Metrics.IncDeleteTestWorkflow(err)
+			}
 		}
 
 		// Delete the executions
