@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -67,6 +68,57 @@ func TestDeleteTestWorkflowsHandlerDeletesExplicitNamesOnly(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+}
+
+func TestDeleteTestWorkflowsHandlerCleansUpAfterPartialDeletion(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	client := testworkflowclient.NewMockTestWorkflowClient(ctrl)
+	outputRepository := testworkflowrepository.NewMockOutputRepository(ctrl)
+	resultsRepository := testworkflowrepository.NewMockRepository(ctrl)
+
+	gomock.InOrder(
+		client.EXPECT().
+			Get(gomock.Any(), "test-env", "workflow-a").
+			Return(&testkube.TestWorkflow{Name: "workflow-a"}, nil),
+		client.EXPECT().
+			Get(gomock.Any(), "test-env", "workflow-b").
+			Return(&testkube.TestWorkflow{Name: "workflow-b"}, nil),
+		client.EXPECT().
+			Delete(gomock.Any(), "test-env", "workflow-a").
+			Return(nil),
+		client.EXPECT().
+			Delete(gomock.Any(), "test-env", "workflow-b").
+			Return(errors.New("client problem")),
+	)
+	// only the workflow that was actually deleted gets its executions removed
+	outputRepository.EXPECT().
+		DeleteOutputForTestWorkflows(gomock.Any(), []string{"workflow-a"}).
+		Return(nil)
+	resultsRepository.EXPECT().
+		DeleteByTestWorkflows(gomock.Any(), []string{"workflow-a"}).
+		Return(nil)
+
+	testAPI := &TestkubeAPI{
+		TestWorkflowsClient: client,
+		TestWorkflowOutput:  outputRepository,
+		TestWorkflowResults: resultsRepository,
+		Metrics:             metrics.NewMetrics(),
+		Log:                 log.DefaultLogger,
+		proContext:          &config.ProContext{EnvID: "test-env"},
+	}
+	app := fiber.New()
+	app.Delete("/test-workflows", testAPI.DeleteTestWorkflowsHandler())
+
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodDelete,
+		"/test-workflows?testWorkflowNames=workflow-a,workflow-b",
+		nil,
+	)
+	resp, err := app.Test(req)
+
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
 }
 
 func TestDeleteTestWorkflowsHandlerDeletesBySelector(t *testing.T) {
