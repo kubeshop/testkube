@@ -26,22 +26,12 @@ var tf embed.FS
 type Template string
 
 const (
-	// TemplateExecutor is executor crd template
-	TemplateExecutor Template = "executor"
 	// TemplateWebhook is webhook crd template
 	TemplateWebhook Template = "webhook"
 	// TemplateWebhookTemplate is webhook template crd template
 	TemplateWebhookTemplate Template = "webhooktemplate"
-	// TemplateTest is test crd template
-	TemplateTest Template = "test"
-	// TemplateTestSuite is test suite crd template
-	TemplateTestSuite Template = "testsuite"
 	// TemplateTestTrigger is test trigger crd template
 	TemplateTestTrigger Template = "testtrigger"
-	// TemplateTestSource is test source crd template
-	TemplateTestSource Template = "testsource"
-	// TemplateTemplate is template crd template
-	TemplateTemplate Template = "template"
 )
 
 // Gettable is an interface of gettable objects

@@ -25,12 +25,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
-	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
-	testsourcev1 "github.com/kubeshop/testkube/api/testsource/v1"
 	"github.com/kubeshop/testkube/pkg/mapper/testtriggers"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 
-	testsuitev3 "github.com/kubeshop/testkube/api/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	workflowtriggersmapper "github.com/kubeshop/testkube/pkg/mapper/workflowtriggers"
@@ -71,9 +68,6 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 	k8sscheme.AddToScheme(scheme)
 	inf := &k8sInformers{scheme: scheme}
 	executorv1.AddToScheme(inf.scheme)
-	testsuitev3.AddToScheme(inf.scheme)
-	testsv3.AddToScheme(inf.scheme)
-	testsourcev1.AddToScheme(inf.scheme)
 	testtriggersv1.AddToScheme(inf.scheme)
 
 	if len(watcherNamespaces) == 0 {
