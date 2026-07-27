@@ -421,7 +421,7 @@ func applyAutoConfig(opts *Options, autoConfig, noAutoConfig bool) *common.CLIEr
 	ui.Info("Auto-configured usage export from", discovered.SourceDetail)
 	if ui.IsVerbose() {
 		for k, v := range discovered.HelmSet {
-			ui.Debug(fmt.Sprintf("  %s=%s", k, v))
+			ui.Debug(fmt.Sprintf("  %s=%s", k, redactHelmSetValueForLog(k, v)))
 		}
 	}
 	return nil

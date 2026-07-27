@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -66,7 +67,7 @@ func Install(opts Options) (string, *common.CLIError) {
 		args = append(args, "-f", valuesFile)
 	}
 	for key, value := range opts.HelmSet {
-		args = append(args, "--set", fmt.Sprintf("%s=%s", key, value))
+		args = append(args, "--set", formatHelmSetArg(key, value))
 	}
 	for key, value := range opts.HelmArg {
 		args = append(args, fmt.Sprintf("--%s", key))
@@ -75,12 +76,33 @@ func Install(opts Options) (string, *common.CLIError) {
 		}
 	}
 
-	output, cliErr := common.RunHelmCommand(helmPath, args, opts.DryRun)
+	output, cliErr := runHelmCommand(helmPath, args, opts.DryRun)
 	if cliErr != nil {
 		return "", cliErr
 	}
 	ui.Debug("Helm install usage-export output", output)
 	return resolveJobName(opts)
+}
+
+func runHelmCommand(helmPath string, args []string, dryRun bool) (string, *common.CLIError) {
+	logArgs := redactHelmArgsForLog(append([]string{helmPath}, args...))
+	ui.DebugNL()
+	ui.Debug("Helm command:")
+	ui.Debug(strings.Join(logArgs, " "))
+
+	output, err := process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: dryRun})
+	ui.DebugNL()
+	ui.Debug("Helm output:")
+	ui.Debug(string(output))
+	if err != nil {
+		return "", common.NewCLIError(
+			common.TKErrHelmCommandFailed,
+			"Helm command failed",
+			"Retry the command with a bigger timeout by setting --helm-arg timeout=30m, if the error still persists, reach out to Testkube support",
+			err,
+		).WithExecutedCommand(strings.Join(logArgs, " "))
+	}
+	return string(output), nil
 }
 
 func resolveJobName(opts Options) (string, *common.CLIError) {
@@ -114,11 +136,11 @@ func resolveJobName(opts Options) (string, *common.CLIError) {
 }
 
 func updateChartRepo(helmPath string, dryRun bool) *common.CLIError {
-	_, err := common.RunHelmCommand(helmPath, []string{"repo", "add", chartRepoName, chartRepoURL}, dryRun)
+	_, err := runHelmCommand(helmPath, []string{"repo", "add", chartRepoName, chartRepoURL}, dryRun)
 	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		return err
 	}
-	_, err = common.RunHelmCommand(helmPath, []string{"repo", "update"}, dryRun)
+	_, err = runHelmCommand(helmPath, []string{"repo", "update"}, dryRun)
 	return err
 }
 
