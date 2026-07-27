@@ -9,13 +9,12 @@ import (
 func PrintInstructions(opts Options, localPath string) {
 	ui.NL()
 	ui.H2("Usage export complete")
-	ui.Info("Saved export to:", localPath)
 	ui.NL()
 	ui.H2("Next steps")
-	ui.Info("1. Upload the zip via the Testkube backoffice license usage import.")
-	ui.Info("2. Review the import preview and confirm manifest checks pass.")
-	if !opts.KeepRelease {
-		ui.Info("3. Clean up the export Job release when finished:")
+	ui.Info(fmt.Sprintf("1. Your usage export is saved at: %s", localPath))
+	ui.Info("2. Send this file to Testkube staff for processing.")
+	if opts.KeepRelease {
+		ui.Info("3. When you are finished, uninstall the export release:")
 		uninstall := fmt.Sprintf("   helm uninstall %s", opts.Release)
 		if opts.Namespace != "" {
 			uninstall += fmt.Sprintf(" -n %s", opts.Namespace)
@@ -25,10 +24,7 @@ func PrintInstructions(opts Options, localPath string) {
 		}
 		ui.Info(uninstall)
 	} else {
-		ui.Info("3. Release kept (--keep-release). Uninstall manually when finished.")
+		ui.Info(fmt.Sprintf("3. Helm release %q was removed from the cluster.", opts.Release))
 	}
-	ui.NL()
-	ui.Info("Chart values reference:")
-	ui.Info("  https://github.com/kubeshop/testkube-cloud-api/tree/main/helm/testkube-usage-export")
 	ui.NL()
 }

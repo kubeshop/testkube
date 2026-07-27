@@ -57,3 +57,30 @@ func TestDefaultLocalOutput(t *testing.T) {
 		t.Fatalf("defaultLocalOutput() = %q", got)
 	}
 }
+
+func TestParsePodNamePhase(t *testing.T) {
+	t.Parallel()
+
+	pod, phase, ok := parsePodNamePhase("export-pod-1\tRunning")
+	if !ok || pod != "export-pod-1" || phase != "Running" {
+		t.Fatalf("parsePodNamePhase() = (%q, %q, %v)", pod, phase, ok)
+	}
+
+	_, _, ok = parsePodNamePhase("")
+	if ok {
+		t.Fatal("expected empty input to be invalid")
+	}
+}
+
+func TestPodIsReadyForExport(t *testing.T) {
+	t.Parallel()
+
+	for _, phase := range []string{"Running", "Succeeded", "Failed"} {
+		if !podIsReadyForExport(phase) {
+			t.Fatalf("phase %q should be ready", phase)
+		}
+	}
+	if podIsReadyForExport("Pending") {
+		t.Fatal("Pending should not be ready")
+	}
+}

@@ -15,6 +15,8 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 )
 
+const usageExportContainer = "usage-export"
+
 var (
 	outputPathJSONPattern = regexp.MustCompile(`"outputPath"\s*:\s*"([^"]+)"`)
 	outputPathLogPattern  = regexp.MustCompile(`outputPath[=:\s]+(/[^\s",]+)`)
@@ -59,7 +61,7 @@ func WaitAndDownload(ctx context.Context, opts Options, jobName string) (string,
 
 	podName, remotePath, cliErr := waitForExportComplete(waitCtx, kubectlPath, opts, jobName)
 	if cliErr != nil {
-		return "", "", cliErr
+		return "", podName, cliErr
 	}
 
 	localPath := opts.Output
@@ -75,7 +77,7 @@ func WaitAndDownload(ctx context.Context, opts Options, jobName string) (string,
 		)
 	}
 
-	cpArgs := kubectlBaseArgs(opts, "cp", fmt.Sprintf("%s:%s", podName, remotePath), localPath)
+	cpArgs := kubectlBaseArgs(opts, "cp", "-c", usageExportContainer, fmt.Sprintf("%s:%s", podName, remotePath), localPath)
 	if _, cliErr := common.RunKubectlCommand(kubectlPath, cpArgs); cliErr != nil {
 		return "", "", cliErr
 	}
@@ -89,7 +91,7 @@ func waitForExportComplete(ctx context.Context, kubectlPath string, opts Options
 		return "", "", cliErr
 	}
 
-	logArgs := kubectlBaseArgs(opts, "logs", "-f", podName)
+	logArgs := kubectlBaseArgs(opts, "logs", "-f", podName, "-c", usageExportContainer)
 	cmd := exec.CommandContext(ctx, kubectlPath, logArgs...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -125,7 +127,7 @@ func waitForExportComplete(ctx context.Context, kubectlPath string, opts Options
 	select {
 	case <-ctx.Done():
 		_ = cmd.Process.Kill()
-		return "", "", common.NewCLIError(
+		return podName, "", common.NewCLIError(
 			common.TKErrKubectlCommandFailed,
 			"Timed out waiting for usage export",
 			fmt.Sprintf("Increase --timeout (current %s) or inspect logs: kubectl logs %s", opts.Timeout, podName),
@@ -137,7 +139,7 @@ func waitForExportComplete(ctx context.Context, kubectlPath string, opts Options
 		if exportPath == "" {
 			exportPath, cliErr = discoverOutputPath(kubectlPath, opts, podName)
 			if cliErr != nil {
-				return "", "", cliErr
+				return podName, "", exportFailureCLIError(opts, podName, cliErr)
 			}
 			return podName, exportPath, nil
 		}
@@ -152,11 +154,14 @@ func waitForJobPod(ctx context.Context, kubectlPath string, opts Options, jobNam
 	for {
 		args := kubectlBaseArgs(opts, "get", "pods",
 			"-l", fmt.Sprintf("job-name=%s", jobName),
-			"-o", "jsonpath={.items[0].metadata.name}",
+			"-o", "jsonpath={.items[0].metadata.name}{\"\\t\"}{.items[0].status.phase}",
 		)
-		podName, cliErr := common.RunKubectlCommand(kubectlPath, args)
-		if cliErr == nil && strings.TrimSpace(podName) != "" {
-			return strings.TrimSpace(podName), nil
+		raw, cliErr := common.RunKubectlCommand(kubectlPath, args)
+		if cliErr == nil {
+			podName, phase, ok := parsePodNamePhase(raw)
+			if ok && podIsReadyForExport(phase) {
+				return podName, nil
+			}
 		}
 
 		select {
@@ -172,8 +177,25 @@ func waitForJobPod(ctx context.Context, kubectlPath string, opts Options, jobNam
 	}
 }
 
+func parsePodNamePhase(raw string) (podName, phase string, ok bool) {
+	parts := strings.Split(strings.TrimSpace(raw), "\t")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", "", false
+	}
+	return parts[0], parts[1], true
+}
+
+func podIsReadyForExport(phase string) bool {
+	switch phase {
+	case "Running", "Succeeded", "Failed":
+		return true
+	default:
+		return false
+	}
+}
+
 func discoverOutputPath(kubectlPath string, opts Options, podName string) (string, *common.CLIError) {
-	args := kubectlBaseArgs(opts, "exec", podName, "--", "sh", "-c", "ls -1 /output/*.zip 2>/dev/null | head -1")
+	args := kubectlBaseArgs(opts, "exec", podName, "-c", usageExportContainer, "--", "sh", "-c", "ls -1 /output/*.zip 2>/dev/null | head -1")
 	output, cliErr := common.RunKubectlCommand(kubectlPath, args)
 	if cliErr != nil {
 		return "", cliErr
@@ -188,6 +210,21 @@ func discoverOutputPath(kubectlPath string, opts Options, podName string) (strin
 		)
 	}
 	return path, nil
+}
+
+func exportFailureCLIError(opts Options, podName string, cause *common.CLIError) *common.CLIError {
+	hint := fmt.Sprintf("Inspect pod logs: kubectl -n %s logs %s -c %s", opts.Namespace, podName, usageExportContainer)
+	return common.NewCLIError(
+		common.TKErrKubectlCommandFailed,
+		"Usage export did not produce a downloadable zip",
+		hint,
+		cause,
+	)
+}
+
+func podLogs(kubectlPath string, opts Options, podName string) (string, *common.CLIError) {
+	args := kubectlBaseArgs(opts, "logs", podName, "-c", usageExportContainer)
+	return common.RunKubectlCommand(kubectlPath, args)
 }
 
 func defaultLocalOutput(remotePath string) string {

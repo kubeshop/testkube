@@ -46,7 +46,7 @@ func NewUsageCmd() *cobra.Command {
 		Use:   "usage",
 		Short: "Install the usage-export chart, download the zip, and print follow-up steps",
 		Long: `Installs the standalone testkube-usage-export Helm chart, waits for the export Job,
-copies the resulting zip locally, and prints instructions for uploading it to Testkube.
+copies the resulting zip locally, removes the release, and prints follow-up steps.
 
 When no -f values file is provided, configuration is auto-detected from the Testkube Enterprise
 cloud-api deployment in the target namespace (database, credentials, license).`,
@@ -83,13 +83,13 @@ cloud-api deployment in the target namespace (database, credentials, license).`,
 			}
 
 			if cliErr := applyAutoConfig(&opts, autoConfig, noAutoConfig); cliErr != nil {
-				common.HandleCLIError(cliErr)
+				finishUsageExport(opts, "", "", cliErr)
 			}
 
 			if !dryRun {
 				currentContext, cliErr := common.GetCurrentKubernetesContext()
 				if cliErr != nil {
-					common.HandleCLIError(cliErr)
+					finishUsageExport(opts, "", "", cliErr)
 				}
 				ui.Info("Kubernetes context:", currentContext)
 				if kubeContext != "" {
@@ -103,24 +103,35 @@ cloud-api deployment in the target namespace (database, credentials, license).`,
 			jobName, cliErr := Install(opts)
 			if cliErr != nil {
 				spinner.Fail()
-				common.HandleCLIError(cliErr)
+				finishUsageExport(opts, jobName, "", cliErr)
 			}
 			spinner.Success("Chart installed, Job:", jobName)
 
 			spinner = ui.NewSpinner("Waiting for usage export and downloading zip...")
-			localPath, _, cliErr := WaitAndDownload(context.Background(), opts, jobName)
+			localPath, podName, cliErr := WaitAndDownload(context.Background(), opts, jobName)
 			if cliErr != nil {
 				spinner.Fail()
-				common.HandleCLIError(cliErr)
+				finishUsageExport(opts, jobName, podName, cliErr)
 			}
 			spinner.Success("Downloaded:", localPath)
 
+			if !keepRelease {
+				spinner = ui.NewSpinner("Cleaning up usage export release...")
+				if cliErr := Uninstall(opts); cliErr != nil {
+					spinner.Fail()
+					finishUsageExport(opts, jobName, podName, cliErr)
+				}
+				spinner.Success("Removed Helm release:", opts.Release)
+			}
+
 			if dryRun {
+				printRunVersions(opts)
 				ui.Info("Dry run complete — no resources were created.")
 				os.Exit(0)
 			}
 
 			PrintInstructions(opts, localPath)
+			printRunVersions(opts)
 		},
 	}
 
@@ -134,7 +145,7 @@ cloud-api deployment in the target namespace (database, credentials, license).`,
 	cmd.Flags().StringVar(&output, "output", "", "Local path for the downloaded zip")
 	cmd.Flags().StringVar(&timeout, "timeout", "15m", "Maximum time to wait for export completion")
 	cmd.Flags().BoolVar(&createNamespace, "create-namespace", true, "Create namespace if it does not exist")
-	cmd.Flags().BoolVar(&keepRelease, "keep-release", false, "Skip cleanup instructions for the Helm release")
+	cmd.Flags().BoolVar(&keepRelease, "keep-release", false, "Keep the Helm release after download (default: uninstall when finished)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Print helm/kubectl commands only")
 	cmd.Flags().BoolVar(&autoConfig, "auto-config", false, "Discover DB/license config from the enterprise cloud-api deployment (default when no -f is passed)")
 	cmd.Flags().BoolVar(&noAutoConfig, "no-auto-config", false, "Disable auto-config; requires -f values.yaml")

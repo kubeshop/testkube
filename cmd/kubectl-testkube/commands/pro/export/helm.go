@@ -84,6 +84,24 @@ func Install(opts Options) (string, *common.CLIError) {
 	return resolveJobName(opts)
 }
 
+func Uninstall(opts Options) *common.CLIError {
+	helmPath, cliErr := common.LookupHelmPath()
+	if cliErr != nil {
+		return cliErr
+	}
+
+	args := []string{"uninstall", opts.Release}
+	if opts.Namespace != "" {
+		args = append(args, "--namespace", opts.Namespace)
+	}
+	if opts.KubeContext != "" {
+		args = append(args, "--kube-context", opts.KubeContext)
+	}
+
+	_, cliErr = runHelmCommand(helmPath, args, opts.DryRun)
+	return cliErr
+}
+
 func runHelmCommand(helmPath string, args []string, dryRun bool) (string, *common.CLIError) {
 	logArgs := redactHelmArgsForLog(append([]string{helmPath}, args...))
 	ui.DebugNL()
