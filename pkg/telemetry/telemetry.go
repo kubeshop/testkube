@@ -74,6 +74,7 @@ func SendCmdErrorEventWithLicense(cmd *cobra.Command, version, errType, errorSta
 					Architecture:    runtime.GOARCH,
 					Context:         getCurrentContext(),
 					ClusterType:     GetClusterType(),
+					CliContext:      GetCliRunContext(),
 					AITool:          GetAITool(),
 					ErrorCode:       errCode,
 					ErrorType:       errType,
