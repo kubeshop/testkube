@@ -74,6 +74,7 @@ func SendCmdErrorEventWithLicense(cmd *cobra.Command, version, errType, errorSta
 					Architecture:    runtime.GOARCH,
 					Context:         getCurrentContext(),
 					ClusterType:     GetClusterType(),
+					AITool:          GetAITool(),
 					ErrorCode:       errCode,
 					ErrorType:       errType,
 					ErrorStackTrace: errorStackTrace,
@@ -138,6 +139,7 @@ func SendPreviewEvent(cmd *cobra.Command, version, executionID string, artifactC
 					Context:              getCurrentContext(),
 					ClusterType:          GetClusterType(),
 					CliContext:           GetCliRunContext(),
+					AITool:               GetAITool(),
 					PreviewExecutionID:   executionID,
 					PreviewArtifacts:     artifactCount,
 					PreviewSkipArtifacts: skipArtifacts,
@@ -249,4 +251,9 @@ func GetDockerContext() string {
 // container runtime, or the local sentinel).
 func GetCliRunContext() string {
 	return cliruntime.CliRunContext()
+}
+
+// GetAITool returns the AI coding tool that invoked the CLI, or "" if none.
+func GetAITool() string {
+	return cliruntime.DetectAITool()
 }

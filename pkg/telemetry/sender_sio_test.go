@@ -31,7 +31,8 @@ func TestMapParams(t *testing.T) {
 					Status:          "failed",
 					TestSource:      "main",
 					TestSuiteSteps:  5,
-					ClusterType:     "local", Source: "cli-direct"},
+					ClusterType:     "local", Source: "cli-direct",
+					CliContext: "others|local", AITool: "claude-code"},
 			},
 		},
 	}
@@ -41,6 +42,8 @@ func TestMapParams(t *testing.T) {
 
 	// then
 	assert.Equal(t, "testkube-api", track.Properties["name"])
+	assert.Equal(t, "others|local", track.Properties["cliContext"])
+	assert.Equal(t, "claude-code", track.Properties["aiTool"])
 	assert.Equal(t, "v1.0.0", track.Properties["version"])
 	assert.Equal(t, "amd64", track.Properties["arch"])
 	assert.Equal(t, "linux", track.Properties["os"])
