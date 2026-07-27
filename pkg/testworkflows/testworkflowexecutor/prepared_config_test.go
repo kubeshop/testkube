@@ -126,5 +126,3 @@ func TestApplyConfig_SimpleValuesUnchanged(t *testing.T) {
 		})
 	}
 }
-
-
