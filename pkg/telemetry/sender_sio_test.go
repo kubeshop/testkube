@@ -31,8 +31,11 @@ func TestMapParams(t *testing.T) {
 					Status:          "failed",
 					TestSource:      "main",
 					TestSuiteSteps:  5,
-					ClusterType:     "local", Source: "cli-direct",
-					CliContext: "others|local", AITool: "claude-code"},
+					ClusterType: "local",
+					Source:      "cli-direct",
+					CliContext:  "others|local",
+					AITool:      "claude-code",
+				},
 			},
 		},
 	}
