@@ -1,5 +1,7 @@
 package config
 
+import "slices"
+
 type ProContextMode string
 
 const (
@@ -66,6 +68,19 @@ type ProContextAgentEnvironment struct {
 	Name string
 }
 
+// AgentCapability names a capability the Control Plane assigns to an agent. The
+// values are the Control Plane's own, carried verbatim over the wire, so they
+// must not be renamed independently of it.
+type AgentCapability string
+
+const (
+	AgentCapabilityRunner        AgentCapability = "runner"
+	AgentCapabilityListener      AgentCapability = "listener"
+	AgentCapabilityGitOps        AgentCapability = "gitops"
+	AgentCapabilityWebhooks      AgentCapability = "webhooks"
+	AgentCapabilityCloudWebhooks AgentCapability = "cloud-webhooks"
+)
+
 type ProContextAgent struct {
 	ID           string
 	Name         string
@@ -73,4 +88,28 @@ type ProContextAgent struct {
 	Labels       map[string]string
 	IsSuperAgent bool
 	Environments []ProContextAgentEnvironment
+	// Capabilities is empty when the Control Plane predates capability
+	// reporting, which is indistinguishable from an agent with none.
+	Capabilities []string
+}
+
+func (a *ProContextAgent) HasCapability(capability AgentCapability) bool {
+	return slices.Contains(a.Capabilities, string(capability))
+}
+
+// ShouldPushClusterInventory reports whether this agent should run the CRD
+// watcher and push the cluster-resources inventory. Only listener-capable
+// agents should: the Control Plane rejects everyone else's push, and a
+// runner-only deployment has no CRD RBAC to watch with. Standalone serves
+// discovery from its own API, so it never pushes. Against a Control Plane too
+// old to report capabilities, the listener-oriented deployment flags are the
+// closest local approximation.
+func ShouldPushClusterInventory(cfg *Config, proContext ProContext) bool {
+	if proContext.APIKey == "" {
+		return false
+	}
+	if len(proContext.Agent.Capabilities) > 0 {
+		return proContext.Agent.HasCapability(AgentCapabilityListener)
+	}
+	return cfg.EnableK8sControllers || cfg.GitOpsSyncKubernetesToCloudEnabled
 }

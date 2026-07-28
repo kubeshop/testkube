@@ -225,6 +225,7 @@ message ProContextAgent {
   map<string, string> labels = 5;
   repeated ProContextEnvironment environments = 6;
   bool is_super_agent = 7;
+  repeated string capabilities = 8;
 }
 
 message ProContextResponse {
