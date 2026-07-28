@@ -1583,3 +1583,23 @@ func CheckLegacyName(commandName string) {
 		ui.Alert("! -------------------------------------------------------------------------------------------------------------- !")
 	}
 }
+
+// LookupHelmPath returns the path to the helm binary or a structured CLI error.
+func LookupHelmPath() (string, *CLIError) {
+	return lookupHelmPath()
+}
+
+// RunHelmCommand executes helm with the given args.
+func RunHelmCommand(helmPath string, args []string, dryRun bool) (string, *CLIError) {
+	return runHelmCommand(helmPath, args, dryRun)
+}
+
+// LookupKubectlPath returns the path to the kubectl binary or a structured CLI error.
+func LookupKubectlPath() (string, *CLIError) {
+	return lookupKubectlPath()
+}
+
+// RunKubectlCommand executes kubectl with the given args.
+func RunKubectlCommand(kubectlPath string, args []string) (string, *CLIError) {
+	return runKubectlCommand(kubectlPath, args)
+}
