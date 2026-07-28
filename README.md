@@ -1,3 +1,5 @@
+[![MCP Toplist](https://mcptoplist.com/badge/io.github.kubeshop%2Ftestkube-mcp.svg)](https://mcptoplist.com/server/io.github.kubeshop%2Ftestkube-mcp)
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./assets/testkube_logo-light.png">
   <source media="(prefers-color-scheme: light)" srcset="./assets/testkube_logo-dark.png">
