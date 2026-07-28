@@ -34,6 +34,7 @@ type Params struct {
 	Context                    RunContext `json:"context,omitempty"`
 	ClusterType                string     `json:"cluster_type,omitempty"`
 	CliContext                 string     `json:"cli_context,omitempty"`
+	AITool                     string     `json:"ai_tool,omitempty"`
 	Error                      string     `json:"error,omitempty"`
 	ErrorType                  string     `json:"error_type,omitempty"`
 	ErrorStackTrace            string     `json:"error_stacktrace,omitempty"`
@@ -152,6 +153,7 @@ func NewCLIPayload(context RunContext, id, name, version, category, clusterType 
 					Context:         context,
 					ClusterType:     clusterType,
 					CliContext:      GetCliRunContext(),
+					AITool:          GetAITool(),
 				},
 			}},
 	}
@@ -175,6 +177,7 @@ func NewCLIWithLicensePayload(context RunContext, id, name, version, category, c
 					Context:         context,
 					ClusterType:     clusterType,
 					CliContext:      GetCliRunContext(),
+					AITool:          GetAITool(),
 					License:         license,
 					Email:           GetEmail(license),
 					Step:            step,

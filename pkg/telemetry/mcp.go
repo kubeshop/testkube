@@ -41,6 +41,7 @@ func NewMCPToolPayloadWithContext(toolName, eventName string, duration time.Dura
 				ToolName:   toolName,
 				DurationMs: int32(duration.Milliseconds()),
 				CliContext: GetCliRunContext(),
+				AITool:     GetAITool(),
 				Source:     source,
 			},
 		}},
