@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/pro"
+	exportcmd "github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/pro/export"
 )
 
 func NewProCmd() *cobra.Command {
@@ -19,6 +20,7 @@ func NewProCmd() *cobra.Command {
 	cmd.AddCommand(pro.NewDisconnectCmd())
 	cmd.AddCommand(pro.NewInitCmd())
 	cmd.AddCommand(pro.NewLoginCmd())
+	cmd.AddCommand(exportcmd.NewExportCmd())
 
 	return cmd
 }
