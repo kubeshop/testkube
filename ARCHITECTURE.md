@@ -314,5 +314,6 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 
 - [`README.md`](README.md) - project overview and contributor entry points
 - [`DEVELOPMENT.md`](DEVELOPMENT.md) - local setup, Tilt workflow, and debugging
+- [`docs/shared-execution-watchers.md`](docs/shared-execution-watchers.md) - design for sharing execution monitoring watches per namespace instead of per execution
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) - Contribution guidelines
 - [TestWorkflow Execution Architecture](https://docs.testkube.io/articles/test-workflows-high-level-architecture) - How TestWorkflows are executed.
