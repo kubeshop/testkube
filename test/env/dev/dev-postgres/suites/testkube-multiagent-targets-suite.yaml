@@ -6,6 +6,7 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: testkube-multi-agent
+    dev-quality-gate: "true"
 description: Run only at .dev where these runners are created!
 spec:
   container:
