@@ -58,6 +58,11 @@ func UiContextHeader(cmd *cobra.Command, cfg config.Data) {
 		return
 	}
 
+	// --crd-only output is meant to be piped into kubectl or a file, so keep stdout pure YAML
+	if flag := cmd.Flags().Lookup("crd-only"); flag != nil && flag.Value.String() == "true" {
+		return
+	}
+
 	// Check for legacy resource type and show deprecation warning
 	CheckLegacyName(cmd.Name())
 

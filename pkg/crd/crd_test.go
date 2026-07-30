@@ -164,6 +164,84 @@ func TestExecuteTemplateRendersContentSelectorGit(t *testing.T) {
 	}
 }
 
+func TestExecuteTemplateQuotesWebhookConfigAndParameters(t *testing.T) {
+	t.Parallel()
+
+	webhook := testkube.Webhook{
+		Name:            "sample-webhook",
+		Namespace:       "testkube",
+		Uri:             "http://localhost:8080/events",
+		PayloadTemplate: "{\"text\": \"event id {{ .Id }}\"}\n",
+		Config: map[string]testkube.WebhookConfigValue{
+			// "yes" parses as a boolean in YAML 1.1 unless it is quoted
+			"flag": {Value: &testkube.BoxedString{Value: "yes"}},
+		},
+		Parameters: []testkube.WebhookParameterSchema{
+			{
+				Name:        "var",
+				Description: "some: description",
+				Example:     "12345",
+				// "0" is a string in the API model, but renders as a YAML integer unless it is quoted
+				Default_: &testkube.BoxedString{Value: "0"},
+				Pattern:     "[0-9]*",
+			},
+		},
+	}
+
+	webhook.QuoteTextFields()
+
+	output, err := ExecuteTemplate(TemplateWebhook, webhook)
+	if err != nil {
+		t.Fatalf("execute template: %v", err)
+	}
+
+	var parsed struct {
+		Spec struct {
+			Config map[string]struct {
+				Value string `yaml:"value"`
+			} `yaml:"config"`
+			Parameters []struct {
+				Description string `yaml:"description"`
+				Example     string `yaml:"example"`
+				// decoded as any so that an unquoted scalar shows up as a non-string type
+				Default any    `yaml:"default"`
+				Pattern string `yaml:"pattern"`
+			} `yaml:"parameters"`
+			PayloadTemplate string `yaml:"payloadTemplate"`
+		} `yaml:"spec"`
+	}
+
+	if err := yaml.Unmarshal([]byte(output), &parsed); err != nil {
+		t.Fatalf("generated YAML does not parse: %v\n%s", err, output)
+	}
+
+	if got := parsed.Spec.Config["flag"].Value; got != "yes" {
+		t.Errorf("config flag value should round-trip as a string, got %q\n%s", got, output)
+	}
+
+	if got := parsed.Spec.PayloadTemplate; got != "{\"text\": \"event id {{ .Id }}\"}\n" {
+		t.Errorf("payload template should round-trip verbatim, got %q\n%s", got, output)
+	}
+
+	if len(parsed.Spec.Parameters) != 1 {
+		t.Fatalf("expected 1 parameter, got %d\n%s", len(parsed.Spec.Parameters), output)
+	}
+
+	parameter := parsed.Spec.Parameters[0]
+	if parameter.Description != "some: description" {
+		t.Errorf("parameter description should round-trip, got %q\n%s", parameter.Description, output)
+	}
+	if parameter.Example != "12345" {
+		t.Errorf("parameter example should round-trip, got %q\n%s", parameter.Example, output)
+	}
+	if parameter.Default != any("0") {
+		t.Errorf("parameter default should round-trip as the string \"0\", got %#v\n%s", parameter.Default, output)
+	}
+	if parameter.Pattern != "[0-9]*" {
+		t.Errorf("parameter pattern should round-trip without extra quoting, got %q\n%s", parameter.Pattern, output)
+	}
+}
+
 func TestExecuteTemplateRendersMatchAndListener(t *testing.T) {
 	action := testkube.RUN_TestTriggerActions
 	execution := testkube.TESTWORKFLOW_TestTriggerExecutions
