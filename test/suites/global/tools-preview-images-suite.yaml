@@ -5,7 +5,7 @@ metadata:
   labels:
     core-tests: tools-preview-images-suite
     type: suite
-    dev-quality-gate: true
+    dev-quality-gate: "true"
 spec:
   container:
     resources:
