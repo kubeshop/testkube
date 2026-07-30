@@ -256,14 +256,7 @@ func (e *IntermediateExecution) ApplyDynamicConfig(config map[string]string) err
 func (e *IntermediateExecution) ApplyConfig(config map[string]string) error {
 	dynamicConfig := make(map[string]string)
 	for k, v := range config {
-		// Detect JSON values (start with { or [ but NOT {{) and wrap in tojson(json()) to prevent colon tokenization
-		isJSON := len(v) > 0 && ((v[0] == '{' && (len(v) < 2 || v[1] != '{')) || v[0] == '[')
-
-		if isJSON {
-			dynamicConfig[k] = "tojson(json(" + expressions.NewStringValue(v).String() + "))"
-		} else {
-			dynamicConfig[k] = expressions.NewStringValue(v).Template()
-		}
+		dynamicConfig[k] = expressions.NewStringValue(v).Template()
 	}
 	return e.ApplyDynamicConfig(dynamicConfig)
 }
