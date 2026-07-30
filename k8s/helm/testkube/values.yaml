@@ -121,7 +121,7 @@ mongodb:
     # -- MongoDB image repository
     repository: kubeshop/bitnami-mongodb
     # -- MongoDB image tag
-    tag: 8.3.4
+    tag: 8.3.7
     # -- MongoDB image pull Secret
     pullSecrets: []
   # -- Target MongoDB Feature Compatibility Version used by the FCV hook jobs.
