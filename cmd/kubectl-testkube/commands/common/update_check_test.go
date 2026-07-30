@@ -121,6 +121,29 @@ func TestMaybeNotifyNewerRelease_SkipsNonPrettyOutput(t *testing.T) {
 	}
 }
 
+func TestMaybeNotifyNewerRelease_SkipsCrdOnly(t *testing.T) {
+	withLocalRunContext(t)
+	stub := &fetcherStub{value: "2.1.140"}
+	withFetcher(t, stub)
+	withVersion(t, "2.1.130")
+
+	// create/get keep --crd-only alongside a pretty --output, so the hint has to be
+	// suppressed by the crd-only flag rather than by the output format
+	cmd := newCmdWithOutputFlag("create", "pretty")
+	cmd.Flags().Bool("crd-only", false, "")
+	if err := cmd.Flags().Set("crd-only", "true"); err != nil {
+		t.Fatalf("setting crd-only: %v", err)
+	}
+	cfg := &config.Data{}
+
+	if dirty := MaybeNotifyNewerRelease(cmd, cfg); dirty {
+		t.Fatal("expected dirty=false for --crd-only")
+	}
+	if stub.called != 0 {
+		t.Fatalf("fetcher should not be called for --crd-only, got %d calls", stub.called)
+	}
+}
+
 func TestMaybeNotifyNewerRelease_SkipsCIContext(t *testing.T) {
 	withRunContext(t, "github-actions")
 	stub := &fetcherStub{value: "2.1.140"}

@@ -53,13 +53,8 @@ func UiCloudContextValidationError(err error) {
 }
 
 func UiContextHeader(cmd *cobra.Command, cfg config.Data) {
-	// only show header when output is pretty
-	if cmd.Flag("output") != nil && cmd.Flag("output").Value.String() != "pretty" {
-		return
-	}
-
-	// --crd-only output is meant to be piped into kubectl or a file, so keep stdout pure YAML
-	if flag := cmd.Flags().Lookup("crd-only"); flag != nil && flag.Value.String() == "true" {
+	// only show header when stdout is not carrying machine-readable output
+	if !outputIsPretty(cmd) {
 		return
 	}
 
