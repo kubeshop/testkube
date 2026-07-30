@@ -435,6 +435,13 @@ func main() {
 				)
 			}
 		} else {
+			// GetProContext ran before this call, so its capability list predates
+			// the update. Adopting the post-update set lets a capability change
+			// reach the gates below without a second restart. Empty means the
+			// Control Plane reported nothing, which is not the same as none.
+			if names := commons.AgentCapabilityNames(resp.Capabilities); len(names) > 0 {
+				proContext.Agent.Capabilities = names
+			}
 			log.DefaultLogger.Infow("updated startup capabilities in control plane",
 				"capabilities", stringifyCapabilities(resp.Capabilities),
 			)
@@ -784,10 +791,10 @@ func main() {
 	api.ClusterDiscoverer = clusterdiscovery.New(clientset, cfg.TestkubeNamespace).WithSchemas(apiextClient)
 	api.Init(httpServer)
 
-	// Push watchable cluster-resources snapshot to CP on startup, on CRD
-	// informer events, and as an hourly safety net. CP caches the result to
-	// render the TestTrigger resourceRef picker (see AgentInventoryService).
-	if proContext.APIKey != "" {
+	// Push a cluster-resources snapshot to the CP on startup, on CRD informer
+	// events, and as an hourly safety net. The CP caches it to render the
+	// TestTrigger resourceRef picker (see AgentInventoryService).
+	if intconfig.ShouldPushClusterInventory(cfg, proContext) {
 		crdNotifier := inventorycontroller.StartCRDChangeNotifier(ctx, apiextClient, log.DefaultLogger)
 		clusterResourcesController := &inventorycontroller.ClusterResourcesController{
 			Discoverer: api.ClusterDiscoverer,
