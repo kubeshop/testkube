@@ -35,22 +35,14 @@ const (
 )
 
 // Gettable is an interface of gettable objects
+// It is limited to the models which still have a CRD template available.
 type Gettable interface {
-	testkube.Test |
-		testkube.TestSuite |
-		testkube.Webhook |
-		testkube.WebhookTemplate |
-		testkube.TestUpsertRequest |
-		testkube.TestSuiteUpsertRequest |
-		testkube.ExecutorUpsertRequest |
+	testkube.Webhook |
 		testkube.WebhookCreateRequest |
+		testkube.WebhookTemplate |
 		testkube.WebhookTemplateCreateRequest |
 		testkube.TestTrigger |
-		testkube.TestTriggerUpsertRequest |
-		testkube.TestSource |
-		testkube.TestSourceUpsertRequest |
-		testkube.Template |
-		testkube.TemplateCreateRequest
+		testkube.TestTriggerUpsertRequest
 }
 
 // ExecuteTemplate executes crd template
