@@ -5,6 +5,7 @@ metadata:
   labels:
     core-tests: workflows-suite
     type: suite
+    dev-quality-gate: true
 spec:
   container:
     resources:
