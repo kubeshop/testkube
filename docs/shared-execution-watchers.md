@@ -249,8 +249,17 @@ state right now", but stop being lists:
 - Critical gap: the paths in `executionwatcher.go` that set `hasMissingCriticalPod` or
   `hasMissingCriticalJob`, meaning the event stream reported an error or the job reported success
   while the pod is not finished. Here the subscription issues a targeted single-object GET, a job by
-  name or a pod by name once the pod name is known, and feeds the result through the same listener.
-  This is the escape hatch that keeps result correctness independent of cache freshness.
+  name or a pod by name, and feeds the result through the same listener. This is the escape hatch
+  that keeps result correctness independent of cache freshness.
+- Critical gap with no pod name yet: `hasMissingCriticalPod` can hold while the subscription has
+  never observed a pod, so there is no name to GET. A pod name is not a precondition the design may
+  assume. The authoritative lookup in that case is a label-selected list of pods for the resource id,
+  the same request the current pod watcher issues, scoped to the one execution and reached only on
+  this path. If it returns nothing the execution is genuinely gone and the state machine sees the
+  same empty result it sees today; if it returns more than one pod, that stays the error it is now
+  rather than becoming a silent pick. Without this fallback a terminal state that arrives before the
+  pod is known has no authoritative source, which is exactly how an execution gets stranded or
+  misreported.
 
 ### Failure propagation
 
