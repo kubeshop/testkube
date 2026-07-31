@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/git/matchers"
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
@@ -50,94 +51,6 @@ func TestGitHubAPIBaseFromURI(t *testing.T) {
 	assert.Equal(t, "https://api.github.com", githubAPIBaseFromURI("https://github.com/foo/bar"))
 	assert.Equal(t, "https://github.example.com/api/v3", githubAPIBaseFromURI("https://github.example.com/foo/bar"))
 }
-
-func TestPRMatchesBaseBranch(t *testing.T) {
-	tests := []struct {
-		name     string
-		base     string
-		config   *testkube.TestTriggerContentGitPullRequest
-		expected bool
-	}{
-		{"nil config matches all", "main", nil, true},
-		{"empty branches matches all", "main", &testkube.TestTriggerContentGitPullRequest{}, true},
-		{"branch matches", "main", &testkube.TestTriggerContentGitPullRequest{Branches: []string{"main", "develop"}}, true},
-		{"branch does not match", "feature/x", &testkube.TestTriggerContentGitPullRequest{Branches: []string{"main"}}, false},
-		{"glob match", "release/1.0", &testkube.TestTriggerContentGitPullRequest{Branches: []string{"release/*"}}, true},
-		{"ignore takes precedence", "main", &testkube.TestTriggerContentGitPullRequest{Branches: []string{"main"}, BranchesIgnore: []string{"main"}}, false},
-		{"ignore only", "main", &testkube.TestTriggerContentGitPullRequest{BranchesIgnore: []string{"main"}}, false},
-		{"ignore does not match", "develop", &testkube.TestTriggerContentGitPullRequest{BranchesIgnore: []string{"main"}}, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, prMatchesBaseBranch(tt.base, tt.config))
-		})
-	}
-}
-
-func TestPRMatchesTypes(t *testing.T) {
-	tests := []struct {
-		name     string
-		action   string
-		config   *testkube.TestTriggerContentGitPullRequest
-		expected bool
-	}{
-		{"nil config matches all", "opened", nil, true},
-		{"empty types matches all", "synchronize", &testkube.TestTriggerContentGitPullRequest{}, true},
-		{"type matches", "opened", &testkube.TestTriggerContentGitPullRequest{Types: []string{"opened", "synchronize"}}, true},
-		{"type does not match", "closed", &testkube.TestTriggerContentGitPullRequest{Types: []string{"opened"}}, false},
-		{"case insensitive", "Opened", &testkube.TestTriggerContentGitPullRequest{Types: []string{"opened"}}, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, prMatchesTypes(tt.action, tt.config))
-		})
-	}
-}
-
-func TestDeterminePRAction(t *testing.T) {
-	pr := githubPR{}
-	pr.Head.SHA = "new-sha"
-	pr.State = "open"
-
-	tests := []struct {
-		name     string
-		prev     string
-		current  string
-		expected string
-	}{
-		{"sha change is synchronize", "old-sha:open", "new-sha:open", "synchronize"},
-		{"state to closed", "old-sha:open", "new-sha:closed", "closed"},
-		{"state to open from closed", "old-sha:closed", "new-sha:open", "reopened"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := determinePRAction(tt.prev, tt.current, pr)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestPRPathsMatch(t *testing.T) {
-	tests := []struct {
-		name     string
-		files    []string
-		paths    []string
-		ignore   []string
-		expected bool
-	}{
-		{"no filters matches all", []string{"src/main.go"}, nil, nil, true},
-		{"path matches", []string{"src/main.go", "docs/readme.md"}, []string{"src/**"}, nil, true},
-		{"path does not match", []string{"docs/readme.md"}, []string{"src/**"}, nil, false},
-		{"ignore takes precedence", []string{"src/vendor/lib.go"}, []string{"src/**"}, []string{"src/vendor/**"}, false},
-		{"mixed match after ignore", []string{"src/vendor/lib.go", "src/main.go"}, []string{"src/**"}, []string{"src/vendor/**"}, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, prPathsMatch(tt.files, tt.paths, tt.ignore))
-		})
-	}
-}
-
 func TestCheckPullRequests_Integration(t *testing.T) {
 	t.Run("first_run_initializes_baseline", func(t *testing.T) {
 		inf := &Informer{
@@ -177,7 +90,7 @@ func TestCheckPullRequests_Integration(t *testing.T) {
 		pr := githubPR{}
 		pr.Head.SHA = "new-sha"
 		pr.State = "open"
-		action := determinePRAction(prev, newState, pr)
+		action := matchers.DeterminePRAction(prev, newState, pr.Head.SHA)
 		assert.Equal(t, "synchronize", action)
 	})
 }
@@ -536,15 +449,16 @@ func TestCheckPullRequests_EndToEnd(t *testing.T) {
 	assert.NotEqual(t, prev, currentState)
 
 	pr := prs[0]
-	action := determinePRAction(prev, currentState, pr)
+	action := matchers.DeterminePRAction(prev, currentState, pr.Head.SHA)
 	assert.Equal(t, "synchronize", action)
 
 	// Check branch filter
-	matched := prMatchesBaseBranch(pr.Base.Ref, trigger.ContentSelector.Git.PullRequest)
+	prConfig := trigger.ContentSelector.Git.PullRequest
+	matched := prConfig == nil || matchers.PRMatchesBaseBranch(pr.Base.Ref, prConfig.Branches, prConfig.BranchesIgnore)
 	assert.True(t, matched)
 
 	// Check type filter (no filter = match all)
-	typeMatched := prMatchesTypes(action, trigger.ContentSelector.Git.PullRequest)
+	typeMatched := prConfig == nil || matchers.PRMatchesTypes(action, prConfig.Types)
 	assert.True(t, typeMatched)
 
 	// Build expected metadata

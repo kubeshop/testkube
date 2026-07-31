@@ -27,6 +27,7 @@ import (
 
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/git/matchers"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 )
@@ -393,8 +394,8 @@ func (i *Informer) hasNewMatchingCommitWithCache(ctx context.Context, key string
 	}
 
 	gitConfig := trigger.ContentSelector.Git
-	paths := normalizePaths(gitConfig.Paths)
-	pathsIgnore := normalizePaths(gitConfig.PathsIgnore)
+	paths := matchers.NormalizePaths(gitConfig.Paths)
+	pathsIgnore := matchers.NormalizePaths(gitConfig.PathsIgnore)
 
 	if len(paths) == 0 && len(pathsIgnore) == 0 {
 		return i.hasNewHeadCommitWithCache(ctx, key, trigger, cache)
@@ -451,10 +452,10 @@ func (i *Informer) hasNewMatchingCommitWithCache(ctx context.Context, key string
 
 		matched := false
 		for _, changedPath := range delta.paths {
-			if pathIsIgnored(pathsIgnore, changedPath) {
+			if matchers.PathIsIgnored(pathsIgnore, changedPath) {
 				continue
 			}
-			if len(paths) == 0 || pathMatchesNormalized(paths, changedPath) {
+			if len(paths) == 0 || matchers.PathMatchesNormalized(paths, changedPath) {
 				matched = true
 				break
 			}
@@ -515,10 +516,10 @@ func (i *Informer) hasNewHeadCommitWithCache(ctx context.Context, key string, tr
 		meta[GitMetaKeyCommit] = pair.Hash
 		if pair.Ref != "" {
 			meta[GitMetaKeyRef] = pair.Ref
-			if branch := branchFromRef(pair.Ref); branch != "" {
+			if branch := matchers.BranchFromRef(pair.Ref); branch != "" {
 				meta[GitMetaKeyBranch] = branch
 			}
-			if tag := tagFromRef(pair.Ref); tag != "" {
+			if tag := matchers.TagFromRef(pair.Ref); tag != "" {
 				meta[GitMetaKeyTag] = tag
 			}
 		}
@@ -684,18 +685,18 @@ func remoteAllMatchingRefsWithClientOptions(gitConfig *testkube.TestTriggerConte
 		var results []refHashPair
 		for _, r := range refs {
 			refName := string(r.Name())
-			if branch := branchFromRef(refName); branch != "" {
+			if branch := matchers.BranchFromRef(refName); branch != "" {
 				// When branches is empty but branchesIgnore is set, match all branches minus ignored.
-				matchesBranch := hasBranchFilters && nameMatchesPatterns(branch, gitConfig.Branches)
+				matchesBranch := hasBranchFilters && matchers.NameMatchesPatterns(branch, gitConfig.Branches)
 				matchesAllBranches := !hasBranchFilters && !hasTagFilters && hasBranchIgnore
-				if (matchesBranch || matchesAllBranches) && !nameMatchesAny(branch, gitConfig.BranchesIgnore) {
+				if (matchesBranch || matchesAllBranches) && !matchers.NameMatchesAny(branch, gitConfig.BranchesIgnore) {
 					results = append(results, refHashPair{Hash: r.Hash().String(), Ref: refName})
 				}
 			}
-			if tag := tagFromRef(refName); tag != "" {
-				matchesTag := hasTagFilters && nameMatchesPatterns(tag, gitConfig.Tags)
+			if tag := matchers.TagFromRef(refName); tag != "" {
+				matchesTag := hasTagFilters && matchers.NameMatchesPatterns(tag, gitConfig.Tags)
 				matchesAllTags := !hasBranchFilters && !hasTagFilters && hasTagIgnore
-				if (matchesTag || matchesAllTags) && !nameMatchesAny(tag, gitConfig.TagsIgnore) {
+				if (matchesTag || matchesAllTags) && !matchers.NameMatchesAny(tag, gitConfig.TagsIgnore) {
 					results = append(results, refHashPair{Hash: r.Hash().String(), Ref: refName})
 				}
 			}
@@ -1214,34 +1215,6 @@ func sleepWithContext(ctx context.Context, delay time.Duration) error {
 		return nil
 	}
 }
-
-func normalizePaths(paths []string) []string {
-	if len(paths) == 0 {
-		return nil
-	}
-	out := make([]string, 0, len(paths))
-	for _, p := range paths {
-		p = strings.Trim(strings.TrimSpace(p), "/")
-		if p != "" {
-			out = append(out, p)
-		}
-	}
-	return out
-}
-
-func pathMatches(paths []string, file string) bool {
-	return pathMatchesNormalized(normalizePaths(paths), file)
-}
-
-func pathMatchesNormalized(paths []string, file string) bool {
-	for _, p := range paths {
-		if matchGlob(p, file) {
-			return true
-		}
-	}
-	return false
-}
-
 func triggerKey(source, namespace, name string) string {
 	return source + ":" + namespace + "/" + name
 }
@@ -1313,124 +1286,6 @@ func effectiveIgnoreRefsKey(gitConfig *testkube.TestTriggerContentGit) string {
 	}
 	return strings.Join(parts, ",")
 }
-
-// pathIsIgnored returns true if the file matches any of the ignore patterns.
-func pathIsIgnored(ignorePatterns []string, file string) bool {
-	if len(ignorePatterns) == 0 {
-		return false
-	}
-	for _, p := range ignorePatterns {
-		if matchGlob(p, file) {
-			return true
-		}
-	}
-	return false
-}
-
-// branchFromRef extracts the branch name from a full ref like "refs/heads/main".
-func branchFromRef(ref string) string {
-	const prefix = "refs/heads/"
-	if strings.HasPrefix(ref, prefix) {
-		return ref[len(prefix):]
-	}
-	return ""
-}
-
-// tagFromRef extracts the tag name from a full ref like "refs/tags/v1.0.0".
-func tagFromRef(ref string) string {
-	const prefix = "refs/tags/"
-	if strings.HasPrefix(ref, prefix) {
-		return ref[len(prefix):]
-	}
-	return ""
-}
-
-// matchGlob performs glob-style matching supporting * and ** patterns.
-// It matches file paths against patterns like "src/**", "*.md", "docs/*".
-// Malformed patterns are treated as non-matching (filepath.Match returns ErrBadPattern).
-func matchGlob(pattern, name string) bool {
-	matched, err := filepath.Match(pattern, name)
-	if err != nil {
-		log.DefaultLogger.Debugf("git informer: malformed glob pattern %q: %v", pattern, err)
-		return false
-	}
-	if matched {
-		return true
-	}
-	// Support ** for recursive directory matching
-	if strings.Contains(pattern, "**") {
-		// Globstar (**) matching across path segments: ** matches zero or more directories.
-		pattern = filepath.ToSlash(strings.TrimSuffix(pattern, "/"))
-		name = filepath.ToSlash(strings.TrimSuffix(name, "/"))
-
-		pSegs := strings.Split(pattern, "/")
-		nSegs := strings.Split(name, "/")
-
-		type state struct{ i, j int }
-		memo := map[state]bool{}
-		var match func(i, j int) bool
-		match = func(i, j int) bool {
-			s := state{i, j}
-			if v, ok := memo[s]; ok {
-				return v
-			}
-
-			var res bool
-			switch {
-			case i == len(pSegs):
-				res = j == len(nSegs)
-			case pSegs[i] == "**":
-				res = match(i+1, j) || (j < len(nSegs) && match(i, j+1))
-			case j < len(nSegs):
-				ok, err := filepath.Match(pSegs[i], nSegs[j])
-				res = err == nil && ok && match(i+1, j+1)
-			default:
-				res = false
-			}
-
-			memo[s] = res
-			return res
-		}
-		return match(0, 0)
-	}
-
-	// Also try prefix match for directory patterns
-	normalizedPattern := strings.TrimSuffix(pattern, "/")
-	if name == normalizedPattern || strings.HasPrefix(name, normalizedPattern+"/") {
-		return true
-	}
-	return false
-}
-
-// nameMatchesPatterns checks if a name (branch or tag) matches any of the given glob patterns.
-// Returns true if patterns is empty (matches all).
-func nameMatchesPatterns(name string, patterns []string) bool {
-	if len(patterns) == 0 {
-		return true
-	}
-	return nameMatchesAny(name, patterns)
-}
-
-// nameMatchesAny checks if a name matches any of the given glob patterns.
-// Returns false if patterns is empty.
-func nameMatchesAny(name string, patterns []string) bool {
-	for _, p := range patterns {
-		p = strings.TrimSpace(p)
-		if p == "" {
-			continue
-		}
-		matched, err := filepath.Match(p, name)
-		if err != nil {
-			log.DefaultLogger.Debugf("git informer: malformed glob pattern %q: %v", p, err)
-			continue
-		}
-		if matched {
-			return true
-		}
-	}
-	return false
-}
-
 // collectHeadMetadata extracts metadata from the HEAD commit of a repository.
 func (i *Informer) collectHeadMetadata(repo *git.Repository, headHash string, gitConfig *testkube.TestTriggerContentGit, preferredRef string) map[string]string {
 	meta := make(map[string]string)
@@ -1446,12 +1301,12 @@ func (i *Informer) collectHeadMetadata(repo *git.Repository, headHash string, gi
 
 	if preferredRef != "" {
 		meta[GitMetaKeyRef] = preferredRef
-		if branch := branchFromRef(preferredRef); branch != "" {
+		if branch := matchers.BranchFromRef(preferredRef); branch != "" {
 			meta[GitMetaKeyBranch] = branch
 			delete(meta, GitMetaKeyTag)
 		}
 		if watchTags {
-			if tag := tagFromRef(preferredRef); tag != "" {
+			if tag := matchers.TagFromRef(preferredRef); tag != "" {
 				meta[GitMetaKeyTag] = tag
 				delete(meta, GitMetaKeyBranch)
 			}
@@ -1466,15 +1321,15 @@ func (i *Informer) collectHeadMetadata(repo *git.Repository, headHash string, gi
 					return nil
 				}
 				refName := string(ref.Name())
-				if branch := branchFromRef(refName); branch != "" {
-					if nameMatchesPatterns(branch, gitConfig.Branches) && !nameMatchesAny(branch, gitConfig.BranchesIgnore) {
+				if branch := matchers.BranchFromRef(refName); branch != "" {
+					if matchers.NameMatchesPatterns(branch, gitConfig.Branches) && !matchers.NameMatchesAny(branch, gitConfig.BranchesIgnore) {
 						meta[GitMetaKeyRef] = refName
 						meta[GitMetaKeyBranch] = branch
 					}
 				}
 				if watchTags {
-					if tag := tagFromRef(refName); tag != "" {
-						if nameMatchesPatterns(tag, gitConfig.Tags) && !nameMatchesAny(tag, gitConfig.TagsIgnore) {
+					if tag := matchers.TagFromRef(refName); tag != "" {
+						if matchers.NameMatchesPatterns(tag, gitConfig.Tags) && !matchers.NameMatchesAny(tag, gitConfig.TagsIgnore) {
 							meta[GitMetaKeyRef] = refName
 							meta[GitMetaKeyTag] = tag
 							delete(meta, GitMetaKeyBranch)
@@ -1491,10 +1346,10 @@ func (i *Informer) collectHeadMetadata(repo *git.Repository, headHash string, gi
 		refs := effectiveRefs(gitConfig)
 		if len(refs) > 0 {
 			meta[GitMetaKeyRef] = refs[0]
-			if branch := branchFromRef(refs[0]); branch != "" {
+			if branch := matchers.BranchFromRef(refs[0]); branch != "" {
 				meta[GitMetaKeyBranch] = branch
 			}
-			if tag := tagFromRef(refs[0]); tag != "" {
+			if tag := matchers.TagFromRef(refs[0]); tag != "" {
 				meta[GitMetaKeyTag] = tag
 			}
 		}
