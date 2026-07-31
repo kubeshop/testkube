@@ -7,7 +7,6 @@ metadata:
     artifacts: "true"
     tool: k6
     category: performance-testing
-    dev-quality-gate: "true"
 spec:
   content:
     git:

@@ -53,8 +53,8 @@ func UiCloudContextValidationError(err error) {
 }
 
 func UiContextHeader(cmd *cobra.Command, cfg config.Data) {
-	// only show header when stdout is not carrying machine-readable output
-	if !OutputIsPretty(cmd) {
+	// only show header when output is pretty
+	if cmd.Flag("output") != nil && cmd.Flag("output").Value.String() != "pretty" {
 		return
 	}
 

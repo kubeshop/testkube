@@ -28,6 +28,8 @@ type taskGroup struct {
 // Coordinator coordinates leadership among multiple replicas using a lease backend. When a lease is
 // acquired the coordinator starts all registered tasks with a derived context. If the lease is lost it
 // cancels those contexts and waits for the tasks to exit before attempting to re-acquire leadership.
+// Lease checks that fail against an unreachable backend are tolerated for one lease duration, so a
+// transient outage does not restart every task.
 type Coordinator struct {
 	backend    leasebackend.Repository
 	identifier string
@@ -35,12 +37,16 @@ type Coordinator struct {
 	logger     *zap.SugaredLogger
 
 	checkInterval time.Duration
+	leaseDuration time.Duration
+	now           func() time.Time
 
-	mu       sync.Mutex
-	tasks    []Task
-	active   *taskGroup
-	leader   bool
-	disabled bool
+	mu                  sync.Mutex
+	tasks               []Task
+	active              *taskGroup
+	leader              bool
+	disabled            bool
+	lastRenewal         time.Time
+	consecutiveFailures int
 }
 
 const (
@@ -62,6 +68,8 @@ func New(
 		clusterID:     clusterID,
 		logger:        logger,
 		checkInterval: defaultCheckInterval,
+		leaseDuration: leasebackend.DefaultMaxLeaseDuration,
+		now:           time.Now,
 	}
 
 	for _, opt := range options {
@@ -80,6 +88,27 @@ func WithCheckInterval(interval time.Duration) Option {
 	return func(c *Coordinator) {
 		if interval > 0 {
 			c.checkInterval = interval
+		}
+	}
+}
+
+// WithLeaseDuration overrides how long a successfully renewed lease stays valid. It must match the
+// duration the lease backend writes, since it is also the window during which the coordinator keeps
+// leadership while lease checks fail. Defaults to leasebackend.DefaultMaxLeaseDuration.
+func WithLeaseDuration(duration time.Duration) Option {
+	return func(c *Coordinator) {
+		if duration > 0 {
+			c.leaseDuration = duration
+		}
+	}
+}
+
+// withClock overrides the time source, so that tests can exercise the lease duration window
+// without waiting for it.
+func withClock(now func() time.Time) Option {
+	return func(c *Coordinator) {
+		if now != nil {
+			c.now = now
 		}
 	}
 }
@@ -137,18 +166,66 @@ func (c *Coordinator) Run(ctx context.Context) error {
 }
 
 func (c *Coordinator) evaluate(ctx context.Context) {
+	// Timestamp the attempt before making it: backends stamp the renewal when the call starts, and a
+	// throttled backend can take seconds to answer. Measuring the tolerance window from the response
+	// would keep leadership past the point where other instances already treat the lease as expired.
+	startedAt := c.now()
+
 	leased, err := c.backend.TryAcquire(ctx, c.identifier, c.clusterID)
 	if err != nil {
-		c.logger.Errorw("leader coordinator: failed to check lease", "error", err)
-		// Treat errors as a lost lease to avoid duplicate work until we can revalidate.
-		leased = false
+		c.handleCheckFailure(err)
+		return
 	}
 
+	c.mu.Lock()
+	c.consecutiveFailures = 0
 	if leased {
-		c.acquire(ctx)
-	} else {
-		c.release()
+		c.lastRenewal = startedAt
 	}
+	c.mu.Unlock()
+
+	if !leased {
+		c.release()
+		return
+	}
+
+	c.acquire(ctx)
+}
+
+// handleCheckFailure decides whether a lease backend error costs us leadership. An unreachable
+// backend does not mean the lease expired: it stays ours until the last successful renewal plus
+// the lease duration, and only past that is leadership released.
+func (c *Coordinator) handleCheckFailure(err error) {
+	c.mu.Lock()
+	c.consecutiveFailures++
+	failures := c.consecutiveFailures
+	isLeader := c.leader
+	sinceRenewal := c.now().Sub(c.lastRenewal)
+	c.mu.Unlock()
+
+	if !isLeader {
+		c.logger.Errorw("leader coordinator: failed to check lease",
+			"error", err,
+			"consecutiveFailures", failures)
+		return
+	}
+
+	if sinceRenewal < c.leaseDuration {
+		c.logger.Warnw("leader coordinator: failed to check lease, keeping leadership until the lease duration elapses",
+			"error", err,
+			"consecutiveFailures", failures,
+			"sinceLastRenewal", sinceRenewal.String(),
+			"leaseDuration", c.leaseDuration.String())
+		return
+	}
+
+	c.logger.Errorw("leader coordinator: lease not renewed within the lease duration, releasing leadership",
+		"error", err,
+		"consecutiveFailures", failures,
+		"sinceLastRenewal", sinceRenewal.String(),
+		"leaseDuration", c.leaseDuration.String())
+
+	c.release()
 }
 
 func (c *Coordinator) acquire(ctx context.Context) {

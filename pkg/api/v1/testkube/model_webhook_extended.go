@@ -58,24 +58,14 @@ func (w *Webhook) QuoteTextFields() {
 		w.PayloadTemplate, _ = printPayloadTemplate(w.PayloadTemplate)
 	}
 
-	quoteWebhookConfig(w.Config)
-	quoteWebhookParameters(w.Parameters)
-}
-
-// quoteWebhookConfig quotes config values in place so that the rendered CRD keeps them as strings.
-func quoteWebhookConfig(config map[string]WebhookConfigValue) {
-	for key, val := range config {
+	for key, val := range w.Config {
 		if val.Value != nil && val.Value.Value != "" {
-			val.Value = &BoxedString{Value: fmt.Sprintf("%q", val.Value.Value)}
+			val.Value.Value = fmt.Sprintf("%q", val.Value.Value)
 		}
-		config[key] = val
+		w.Config[key] = val
 	}
-}
 
-// quoteWebhookParameters quotes the free-form parameter fields in place. Without quoting, values
-// such as "yes", "1:2" or "*" are rendered as bare YAML scalars and no longer round-trip as strings.
-func quoteWebhookParameters(parameters []WebhookParameterSchema) {
-	for i, value := range parameters {
+	for key, value := range w.Parameters {
 		if value.Description != "" {
 			value.Description = fmt.Sprintf("%q", value.Description)
 		}
@@ -85,14 +75,14 @@ func quoteWebhookParameters(parameters []WebhookParameterSchema) {
 		}
 
 		if value.Default_ != nil && value.Default_.Value != "" {
-			value.Default_ = &BoxedString{Value: fmt.Sprintf("%q", value.Default_.Value)}
+			value.Pattern = fmt.Sprintf("%q", value.Pattern)
 		}
 
 		if value.Pattern != "" {
 			value.Pattern = fmt.Sprintf("%q", value.Pattern)
 		}
 
-		parameters[i] = value
+		w.Parameters[key] = value
 	}
 }
 
