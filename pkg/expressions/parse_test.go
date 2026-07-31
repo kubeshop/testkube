@@ -361,7 +361,11 @@ a:
 	assert.Equal(t, `"a"`, MustCompile(`at("abc", 0)`).String())
 	assert.Equal(t, `"c"`, MustCompile(`at("abc", 2)`).String())
 	assert.Equal(t, `true`, MustCompile(`at("abc", 1) == "b"`).String())
-	assert.Equal(t, `"c"`, MustCompile(`at("abc", len("abc") - 1)`).String())
+	// Multibyte characters are returned whole, not split into invalid UTF-8.
+	assert.Equal(t, `"é"`, MustCompile(`at("héllo", 1)`).String())
+	assert.Equal(t, `"日"`, MustCompile(`at("日本語", 0)`).String())
+	assert.Equal(t, `"語"`, MustCompile(`at("日本語", 2)`).String())
+	assert.Equal(t, `true`, MustCompile(`at("日本語", 1) == "本"`).String())
 	assert.Equal(t, `"abc"`, MustCompile(`eval("\"abc\"")`).String())
 	assert.Equal(t, `50`, MustCompile(`eval("5 * 10")`).String())
 	assert.Equal(t, `50*something`, MustCompile(`eval("5 * 10 * something")`).String())

@@ -431,12 +431,14 @@ var stdFunctions = map[string]StdFunction{
 				if err != nil {
 					return nil, fmt.Errorf(`"at" function expects 2nd argument to be number for string, %s provided`, value[1])
 				}
-				if k >= 0 && k < int64(len(v)) {
-					// Slice instead of index, so the result is a one character string and not a byte.
-					// Byte based indexing keeps "at" consistent with "len", which is byte based too.
-					return NewValue(v[int(k) : int(k)+1]), nil
+				// Index by rune, so multibyte characters come back whole. Indexing the
+				// string directly would yield a byte, which serializes as a number, and
+				// slicing a single byte would split multibyte characters into invalid UTF-8.
+				runes := []rune(v)
+				if k >= 0 && k < int64(len(runes)) {
+					return NewValue(string(runes[int(k)])), nil
 				}
-				return nil, fmt.Errorf(`"at" function: error: out of bounds (length=%d, index=%d)`, len(v), k)
+				return nil, fmt.Errorf(`"at" function: error: out of bounds (length=%d, index=%d)`, len(runes), k)
 			}
 			return nil, fmt.Errorf(`"at" function can be performed only on lists, maps and strings: %s provided`, value[0])
 		}),
