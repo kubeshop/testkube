@@ -432,7 +432,9 @@ var stdFunctions = map[string]StdFunction{
 					return nil, fmt.Errorf(`"at" function expects 2nd argument to be number for string, %s provided`, value[1])
 				}
 				if k >= 0 && k < int64(len(v)) {
-					return NewValue(v[int(k)]), nil
+					// Slice instead of index, so the result is a one character string and not a byte.
+					// Byte based indexing keeps "at" consistent with "len", which is byte based too.
+					return NewValue(v[int(k) : int(k)+1]), nil
 				}
 				return nil, fmt.Errorf(`"at" function: error: out of bounds (length=%d, index=%d)`, len(v), k)
 			}
