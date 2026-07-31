@@ -202,12 +202,13 @@ func updateCheckEnabled(cmd *cobra.Command) bool {
 	if v, _ := os.LookupEnv(updateCheckEnvDisable); v != "" {
 		return false
 	}
-	return outputIsPretty(cmd)
+	return OutputIsPretty(cmd)
 }
 
-// outputIsPretty reports whether the command renders human-readable output, and so
-// whether decoration may be written to stdout alongside it.
-func outputIsPretty(cmd *cobra.Command) bool {
+// OutputIsPretty reports whether the command renders human-readable output, and so
+// whether decoration (context header, version warnings, update hints) may be written
+// to stdout alongside it.
+func OutputIsPretty(cmd *cobra.Command) bool {
 	if cmd == nil {
 		return true
 	}

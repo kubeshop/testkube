@@ -183,7 +183,7 @@ func TestExecuteTemplateQuotesWebhookConfigAndParameters(t *testing.T) {
 				Example:     "12345",
 				// "0" is a string in the API model, but renders as a YAML integer unless it is quoted
 				Default_: &testkube.BoxedString{Value: "0"},
-				Pattern:     "[0-9]*",
+				Pattern:  "[0-9]*",
 			},
 		},
 	}
