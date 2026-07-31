@@ -148,6 +148,8 @@ The API server exposes Prometheus metrics at `/metrics` for monitoring and obser
 
 **Metrics Implementation**: [`internal/app/api/metrics/metrics.go`](internal/app/api/metrics/metrics.go)
 
+**Kubernetes Client Metrics**: [`pkg/k8sclient/metrics.go`](pkg/k8sclient/metrics.go) instruments the transport of every client config it builds, exposing `testkube_k8s_client_requests_total` and `testkube_k8s_client_request_duration_seconds` on the default Prometheus registerer. Response codes make server-side throttling (429 and 503) visible per client. The trigger service adds `testkube_triggers_watcher_starts_total` and `testkube_triggers_leader` in [`pkg/triggers/metrics.go`](pkg/triggers/metrics.go).
+
 **Server Setup**: The metrics endpoint is registered in [`pkg/server/httpserver.go`](pkg/server/httpserver.go) using Prometheus's standard HTTP handler (`promhttp.Handler()`).
 
 **Access**: Metrics are accessible at `http://localhost:8088/metrics` (or the configured API server port).

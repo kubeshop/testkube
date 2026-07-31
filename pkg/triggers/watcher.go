@@ -102,6 +102,9 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 }
 
 func (s *Service) runWatcher(ctx context.Context) {
+	watcherStartsCount.Inc()
+	leaderGauge.Set(1)
+
 	s.logger.Infof("trigger service: instance %s in cluster %s acquired lease", s.identifier, s.clusterID)
 	informers := newK8sInformers(s.clientset, s.testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
 	s.informersMu.Lock()
@@ -115,6 +118,7 @@ func (s *Service) runWatcher(ctx context.Context) {
 
 	stopChan := make(chan struct{})
 	defer func() {
+		leaderGauge.Set(0)
 		close(stopChan)
 		if s.dynamicManager != nil {
 			s.dynamicManager.stopAll()

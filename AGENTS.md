@@ -38,6 +38,13 @@
 - Regenerate SQL code when query files change via `make generate-sqlc`.
 - Refresh mocks for new or updated interfaces using `make generate-mocks`.
 
+## Prometheus metrics
+
+- Agent metrics are served on `/metrics` by `pkg/server/httpserver.go` using the default Prometheus registry, so any collector registered through `promauto` is exposed without extra wiring.
+- `internal/app/api/metrics/metrics.go` holds the execution and CRD event metrics.
+- `pkg/k8sclient/metrics.go` wraps the transport of every config returned by `GetK8sClientConfig`, and reports `testkube_k8s_client_requests_total` and `testkube_k8s_client_request_duration_seconds`. Call `InstrumentConfig` on any other `*rest.Config` you build (some call sites construct one directly instead of going through `GetK8sClientConfig`) so its traffic is counted too. Keep label values bounded there: response code and HTTP method only, no namespace, object name, path or host. Do not switch this to `k8s.io/client-go/tools/metrics.Register`: that hook takes one set of adapters per process and controller-runtime claims it from a package init, so a second registration is silently dropped.
+- `pkg/triggers/metrics.go` tracks informer fleet lifecycle with `testkube_triggers_watcher_starts_total` and `testkube_triggers_leader`.
+
 ## Telemetry and cluster detection
 
 - `pkg/telemetry/` contains all telemetry event construction, sending, and cluster identification logic.
