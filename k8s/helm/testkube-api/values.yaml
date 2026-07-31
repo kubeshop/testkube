@@ -47,7 +47,7 @@ global:
       image:
         registry: docker.io
         repository: kubeshop/testkube-kubectl
-        tag:  1.36.3
+        tag:  1.36.2
         digest: ""
         pullPolicy: IfNotPresent
         pullSecrets: []

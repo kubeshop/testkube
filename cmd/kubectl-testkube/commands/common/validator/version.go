@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -15,9 +16,13 @@ var ErrOldClientVersion = fmt.Errorf("client version is older than api version, 
 
 // PersistentPreRunVersionCheck will check versions based on commands client
 func PersistentPreRunVersionCheck(cmd *cobra.Command, clientVersion string) {
-	// skip when stdout is carrying machine-readable output (-o json/yaml, --crd-only),
-	// so the warning never lands in the middle of a manifest
-	if !common.OutputIsPretty(cmd) {
+	outputFlag := cmd.Flag("output")
+	outputType := render.OutputPretty
+	if outputFlag != nil {
+		outputType = render.OutputType(outputFlag.Value.String())
+	}
+
+	if outputType != render.OutputPretty {
 		return
 	}
 

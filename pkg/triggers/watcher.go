@@ -110,7 +110,7 @@ func (s *Service) runWatcher(ctx context.Context) {
 
 	if s.dynamicClient != nil {
 		mapper := newCachedRESTMapper(s.clientset.Discovery())
-		s.dynamicManager = newDynamicInformerManager(s.dynamicClient, mapper, s.watcherNamespaces, s.logger)
+		s.dynamicManager = newDynamicInformerManager(s.dynamicClient, mapper, s.watcherNamespaces, s.logger, s.keepManagedFields)
 	}
 
 	stopChan := make(chan struct{})
@@ -140,41 +140,41 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 	watchWebhookResources := s.canWatchWebhookResources()
 
 	for i := range s.informers.podInformers {
-		s.informers.podInformers[i].Informer().AddEventHandler(s.podEventHandler(ctx))
+		watchInformer(s.logger, "pod", s.keepManagedFields, s.informers.podInformers[i].Informer(), s.podEventHandler(ctx))
 	}
 
 	for i := range s.informers.deploymentInformers {
-		s.informers.deploymentInformers[i].Informer().AddEventHandler(s.deploymentEventHandler(ctx))
+		watchInformer(s.logger, "deployment", s.keepManagedFields, s.informers.deploymentInformers[i].Informer(), s.deploymentEventHandler(ctx))
 	}
 
 	for i := range s.informers.daemonsetInformers {
-		s.informers.daemonsetInformers[i].Informer().AddEventHandler(s.daemonSetEventHandler(ctx))
+		watchInformer(s.logger, "daemonset", s.keepManagedFields, s.informers.daemonsetInformers[i].Informer(), s.daemonSetEventHandler(ctx))
 	}
 
 	for i := range s.informers.statefulsetInformers {
-		s.informers.statefulsetInformers[i].Informer().AddEventHandler(s.statefulSetEventHandler(ctx))
+		watchInformer(s.logger, "statefulset", s.keepManagedFields, s.informers.statefulsetInformers[i].Informer(), s.statefulSetEventHandler(ctx))
 	}
 
 	for i := range s.informers.serviceInformers {
-		s.informers.serviceInformers[i].Informer().AddEventHandler(s.serviceEventHandler(ctx))
+		watchInformer(s.logger, "service", s.keepManagedFields, s.informers.serviceInformers[i].Informer(), s.serviceEventHandler(ctx))
 	}
 
 	for i := range s.informers.ingressInformers {
-		s.informers.ingressInformers[i].Informer().AddEventHandler(s.ingressEventHandler(ctx))
+		watchInformer(s.logger, "ingress", s.keepManagedFields, s.informers.ingressInformers[i].Informer(), s.ingressEventHandler(ctx))
 	}
 
 	for i := range s.informers.clusterEventInformers {
-		s.informers.clusterEventInformers[i].Informer().AddEventHandler(s.clusterEventEventHandler(ctx))
+		watchInformer(s.logger, "cluster event", s.keepManagedFields, s.informers.clusterEventInformers[i].Informer(), s.clusterEventEventHandler(ctx))
 	}
 
 	for i := range s.informers.configMapInformers {
-		s.informers.configMapInformers[i].Informer().AddEventHandler(s.configMapEventHandler(ctx))
+		watchInformer(s.logger, "config map", s.keepManagedFields, s.informers.configMapInformers[i].Informer(), s.configMapEventHandler(ctx))
 	}
 
 	if s.testTriggerControlPlane {
 		s.startCloudTestTriggerWatch(ctx, stop)
 	} else {
-		s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler(ctx))
+		watchInformer(s.logger, "test trigger", s.keepManagedFields, s.informers.testTriggerInformer.Informer(), s.testTriggerEventHandler(ctx))
 	}
 
 	// WorkflowTrigger v2: when on control plane, poll via the cloud client.
@@ -186,13 +186,13 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		for _, namespace := range s.getWorkflowTriggerWatchNamespaces() {
 			wtFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(s.dynamicClient, 0, namespace, nil)
 			wtInformer := wtFactory.ForResource(workflowtriggersv1.GroupVersionResource).Informer()
-			wtInformer.AddEventHandler(s.workflowTriggerEventHandler(ctx))
+			watchInformer(s.logger, "workflow trigger", s.keepManagedFields, wtInformer, s.workflowTriggerEventHandler(ctx))
 			go wtInformer.Run(stop)
 		}
 	}
 	if watchWebhookResources {
-		s.informers.webhookInformer.Informer().AddEventHandler(s.webhookEventHandler())
-		s.informers.webhookTemplateInformer.Informer().AddEventHandler(s.webhookTemplateEventHandler())
+		watchInformer(s.logger, "webhook", s.keepManagedFields, s.informers.webhookInformer.Informer(), s.webhookEventHandler())
+		watchInformer(s.logger, "webhook template", s.keepManagedFields, s.informers.webhookTemplateInformer.Informer(), s.webhookTemplateEventHandler())
 	}
 
 	s.logger.Debugf("trigger service: starting pod informers")
