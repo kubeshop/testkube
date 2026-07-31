@@ -26,7 +26,7 @@ func newTestDynamicInformerManager(t *testing.T, extraGVRs ...schema.GroupVersio
 	}
 	scheme := runtime.NewScheme()
 	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrToListKind)
-	return newDynamicInformerManager(client, nil, []string{"default"}, log.DefaultLogger)
+	return newDynamicInformerManager(client, nil, []string{"default"}, log.DefaultLogger, false)
 }
 
 func TestDynamicInformerManager_ensureInformer_startsOnce(t *testing.T) {

@@ -62,7 +62,7 @@ global:
       image:
         registry: docker.io
         repository: kubeshop/testkube-kubectl
-        tag: 1.36.3
+        tag: 1.36.2
         digest: ""
         pullPolicy: IfNotPresent
         pullSecrets: []
@@ -121,7 +121,7 @@ mongodb:
     # -- MongoDB image repository
     repository: kubeshop/bitnami-mongodb
     # -- MongoDB image tag
-    tag: 8.3.7
+    tag: 8.3.4
     # -- MongoDB image pull Secret
     pullSecrets: []
   # -- Target MongoDB Feature Compatibility Version used by the FCV hook jobs.

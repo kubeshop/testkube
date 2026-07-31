@@ -5,7 +5,6 @@ metadata:
   labels:
     core-tests: special-cases-suite
     type: suite
-    dev-quality-gate: "true"
 spec:
   container:
     resources:

@@ -96,6 +96,7 @@ type Service struct {
 	eventLabels                   map[string]string
 	dynamicClient                 dynamic.Interface
 	dynamicManager                *dynamicInformerManager
+	keepManagedFields             bool
 	Agent                         watcherAgent
 	coordinator                   *leader.Coordinator
 }
@@ -260,6 +261,15 @@ func WithEventLabels(eventLabels map[string]string) Option {
 func WithDynamicClient(client dynamic.Interface) Option {
 	return func(s *Service) {
 		s.dynamicClient = client
+	}
+}
+
+// WithManagedFieldsKept stops the informer caches from dropping metadata.managedFields. The
+// caches are what v2 trigger expressions resolve `resource` against, so this is the escape
+// hatch for expressions that read managed fields, at the cost of the memory they occupy.
+func WithManagedFieldsKept(keep bool) Option {
+	return func(s *Service) {
+		s.keepManagedFields = keep
 	}
 }
 

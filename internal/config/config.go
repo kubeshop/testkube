@@ -73,6 +73,9 @@ type LegacyExecutorConfig struct {
 	CompressArtifacts                bool          `envconfig:"COMPRESSARTIFACTS" default:"false"`
 	TestkubeDefaultStorageClassName  string        `envconfig:"TESTKUBE_DEFAULT_STORAGE_CLASS_NAME" default:""`
 	TestkubePodStartTimeout          time.Duration `envconfig:"TESTKUBE_POD_START_TIMEOUT" default:"30m"`
+	// TestTriggerKeepManagedFields keeps metadata.managedFields in the trigger informer caches.
+	// They cost memory and only matter to trigger expressions that read them.
+	TestTriggerKeepManagedFields bool `envconfig:"TEST_TRIGGER_KEEP_MANAGED_FIELDS" default:"false"`
 
 	DisableReconciler bool `envconfig:"DISABLE_RECONCILER" default:"false"`
 }

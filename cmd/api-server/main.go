@@ -895,6 +895,7 @@ func main() {
 			triggers.WithDynamicClient(dynamicClient),
 			triggers.WithLeaseCheckInterval(leaseCheckInterval),
 			triggers.WithLeaderElectionDisabled(cfg.LeaderElectionDisabled),
+			triggers.WithManagedFieldsKept(cfg.TestTriggerKeepManagedFields),
 		)
 
 		// Start git content informer when enabled for trigger source-of-truth (cloud or OSS).

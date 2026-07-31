@@ -34,15 +34,19 @@ type dynamicInformerManager struct {
 	namespaces []string
 	logger     *zap.SugaredLogger
 	mu         sync.Mutex
+
+	keepManagedFields bool
 }
 
-func newDynamicInformerManager(client dynamic.Interface, mapper meta.RESTMapper, namespaces []string, logger *zap.SugaredLogger) *dynamicInformerManager {
+func newDynamicInformerManager(client dynamic.Interface, mapper meta.RESTMapper, namespaces []string, logger *zap.SugaredLogger, keepManagedFields bool) *dynamicInformerManager {
 	return &dynamicInformerManager{
 		client:     client,
 		mapper:     mapper,
 		informers:  make(map[string]*dynamicInformerEntry),
 		namespaces: namespaces,
 		logger:     logger,
+
+		keepManagedFields: keepManagedFields,
 	}
 }
 
@@ -76,7 +80,7 @@ func (m *dynamicInformerManager) ensureInformer(ctx context.Context, gvr schema.
 	for _, ns := range namespaces {
 		factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(m.client, 0, ns, nil)
 		informer := factory.ForResource(gvr).Informer()
-		informer.AddEventHandler(handler)
+		watchInformer(m.logger, key, m.keepManagedFields, informer, handler)
 		go informer.Run(stopCh)
 	}
 

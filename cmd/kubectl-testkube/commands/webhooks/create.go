@@ -87,7 +87,7 @@ func NewCreateWebhookCmd() *cobra.Command {
 				data, err := crd.ExecuteTemplate(crd.TemplateWebhook, options)
 				ui.ExitOnError("executing crd template", err)
 
-				fmt.Print(data)
+				ui.Info(data)
 			}
 		},
 	}

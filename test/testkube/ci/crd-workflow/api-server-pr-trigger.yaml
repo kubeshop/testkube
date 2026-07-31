@@ -1,0 +1,25 @@
+apiVersion: tests.testkube.io/v1
+kind: TestTrigger
+metadata:
+  name: api-server-ci-pr-content-trigger
+spec:
+  resource: content
+  event: git-pull-request
+  contentSelector:
+    git:
+      uri: https://github.com/kubeshop/testkube.git
+      tokenFrom:
+        secretKeyRef:
+          name: gh-token
+          key: token
+      paths:
+        - "src/**"
+      pullRequest:
+        types: ["opened", "synchronize", "reopened"]
+        branches: ["main"]
+        branchesIgnore: ["release/*"]
+  action: run
+  execution: testworkflow
+  testSelector:
+    name: api-server-ci-build-lint
+    namespace: testkube
