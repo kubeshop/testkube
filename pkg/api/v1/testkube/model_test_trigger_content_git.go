@@ -34,7 +34,9 @@ type TestTriggerContentGit struct {
 	SshKey     string        `json:"sshKey,omitempty"`
 	SshKeyFrom *EnvVarSource `json:"sshKeyFrom,omitempty"`
 	AuthType   string        `json:"authType,omitempty"`
-	// PullRequest specifies pull request trigger configuration using the GitHub API.
+	// PullRequest specifies pull request trigger configuration. The informer polls the
+	// provider REST API for GitHub pull requests or GitLab merge requests; the provider
+	// is detected from Uri.
 	PullRequest *TestTriggerContentGitPullRequest `json:"pullRequest,omitempty"`
 }
 
@@ -42,9 +44,12 @@ type TestTriggerContentGit struct {
 type TestTriggerContentGitPullRequest struct {
 	// Types is a list of PR activity types to watch (e.g. "opened", "synchronize", "reopened", "closed").
 	// If empty, all types are watched.
+	// The same activity names apply to GitLab merge requests: a merged or closed merge
+	// request reports "closed", and new commits report "synchronize".
 	Types []string `json:"types,omitempty"`
 	// Branches is a list of base branch patterns to watch (glob supported).
 	// If empty, PRs targeting any base branch are watched.
+	// For GitLab this matches the merge request target branch.
 	Branches []string `json:"branches,omitempty"`
 	// BranchesIgnore is a list of base branch patterns to exclude (glob supported).
 	// Takes precedence over Branches when both match.

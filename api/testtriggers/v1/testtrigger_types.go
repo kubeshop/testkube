@@ -326,7 +326,10 @@ type TestTriggerContentGitSpec struct {
 	// Authorization type for the credentials
 	AuthType testsv3.GitAuthType `json:"authType,omitempty"`
 	// PullRequest specifies pull request trigger configuration.
-	// When set, the informer uses the GitHub API to poll for PR events.
+	// When set, the informer polls the provider REST API for pull request events:
+	// GitHub pull requests or GitLab merge requests. The provider is detected from
+	// Uri, so no extra configuration is needed for github.com, gitlab.com, or a
+	// self-managed host whose name carries the provider.
 	PullRequest *TestTriggerContentGitPullRequest `json:"pullRequest,omitempty"`
 }
 
@@ -334,9 +337,12 @@ type TestTriggerContentGitSpec struct {
 type TestTriggerContentGitPullRequest struct {
 	// Types is a list of PR activity types to watch (e.g. "opened", "synchronize", "reopened", "closed").
 	// If empty, all types are watched.
+	// The same GitHub activity names apply to GitLab merge requests: a merged or
+	// closed merge request reports "closed", and new commits report "synchronize".
 	Types []string `json:"types,omitempty"`
 	// Branches is a list of base branch name patterns to watch (glob supported).
 	// If empty, PRs targeting any base branch are watched.
+	// For GitLab this matches the merge request target branch.
 	Branches []string `json:"branches,omitempty"`
 	// BranchesIgnore is a list of base branch name patterns to exclude (glob supported).
 	// Takes precedence over Branches when both match.

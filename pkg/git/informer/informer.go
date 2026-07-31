@@ -122,10 +122,16 @@ type Informer struct {
 	// When nil, the "github" auth type is not supported and will return an error.
 	githubTokenProvider GitHubTokenProvider
 
-	// githubAPIBaseFunc resolves the GitHub REST API base URL from a repo URI.
-	// When nil, the production githubAPIBaseFromURI function is used.
-	// Tests can override this to point at a mock HTTP server.
-	githubAPIBaseFunc func(uri string) string
+	// prAPIBaseFunc resolves the pull request REST API base URL from a repo URI.
+	// When nil, the production githubAPIBaseFromURI / gitlabAPIBaseFromURI
+	// functions are used. Tests can override this to point at a mock HTTP server.
+	prAPIBaseFunc func(uri string) string
+
+	// prProviders caches the detected git provider per repository host for the
+	// process lifetime, so the detection probe for self-managed hosts runs once
+	// rather than on every reconcile pass. Guarded by mu like commits/revisions:
+	// it is only reachable from updateRepositories, which holds the lock.
+	prProviders map[string]providerKind
 }
 
 type reconcileCache struct {
@@ -167,6 +173,7 @@ func NewInformer(
 		matcher:             matcher,
 		commits:             make(map[string]string),
 		revisions:           make(map[string]string),
+		prProviders:         make(map[string]providerKind),
 		namespaces:          resolveNamespaces(options.WatcherNamespaces, namespace),
 		environmentID:       environmentID,
 		options:             options,
@@ -811,7 +818,7 @@ func (i *Informer) githubAuthClientOptions(ctx context.Context, gitConfig *testk
 		return nil, fmt.Errorf("github authType requires a connected control plane with GitHub App integration")
 	}
 	// Use the per-reconcile cache to avoid repeated gRPC calls for the same URI.
-	uri := sanitizeGitHubTokenURI(gitConfig.Uri)
+	uri := sanitizeTokenURI(gitConfig.Uri)
 	token, ok := cache.githubToken(uri)
 	if !ok {
 		var err error
