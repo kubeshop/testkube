@@ -79,6 +79,17 @@ func normalizeRepoPath(rawPath string) string {
 // SSH port must never be reused for HTTPS.
 func gitAPIHostPort(uri string) (host, authority string) {
 	trimmed := strings.TrimSpace(uri)
+
+	// Treat Windows drive-letter paths (e.g. "C:\\repo") as local filesystem paths.
+	// Without this, they match the scp-like "[user@]host:path" shape and get gated
+	// as if "c" were a network host.
+	if len(trimmed) >= 3 &&
+		((trimmed[0] >= 'A' && trimmed[0] <= 'Z') || (trimmed[0] >= 'a' && trimmed[0] <= 'z')) &&
+		trimmed[1] == ':' &&
+		(trimmed[2] == '\\' || trimmed[2] == '/') {
+		return "", ""
+	}
+
 	if strings.Contains(trimmed, "://") {
 		if u, err := url.Parse(trimmed); err == nil && u.Hostname() != "" {
 			host = strings.ToLower(u.Hostname())
