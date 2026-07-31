@@ -60,14 +60,84 @@ type pullRequest struct {
 type prProvider interface {
 	// kind reports which provider this is; used for logging and cache scoping.
 	kind() providerKind
-	// list returns the most recently updated pull requests, newest first.
-	list(ctx context.Context) ([]pullRequest, error)
+	// list returns the most recently updated pull requests, newest first. cutoff
+	// bounds how far back pagination walks; see paginatePRList.
+	list(ctx context.Context, cutoff time.Time) ([]pullRequest, error)
+	// fetchPRPage returns a single page of pull requests, newest first.
+	fetchPRPage(ctx context.Context, page int) ([]pullRequest, error)
+	// listPageSize is the page size fetchPRPage requests, used to recognise a
+	// short (final) page.
+	listPageSize() int
 	// changedFiles returns the paths touched by the given pull request. truncated
 	// reports that the provider capped the file list, so the absence of a path
 	// proves nothing.
 	changedFiles(ctx context.Context, number int) (paths []string, truncated bool, err error)
 	// headRef returns the canonical remote ref for the pull request head.
 	headRef(number int) string
+}
+
+const (
+	// prListMaxPages bounds how many pages of pull requests a single reconcile pass
+	// will walk, so one trigger cannot monopolise the informer.
+	prListMaxPages = 10
+
+	// prListMinLookback is the minimum age of activity that pagination reaches back
+	// to. Both providers list every historical pull request when asked for all
+	// states, and neither bounds that result set, so pagination has to stop
+	// somewhere; the cutoff is what makes the walk finite.
+	prListMinLookback = 24 * time.Hour
+
+	// prListLookbackIntervals keeps the lookback comfortably wider than the poll
+	// interval, so an unusually long interval cannot outrun the window.
+	prListLookbackIntervals = 20
+)
+
+// prListCutoff returns the oldest update time pagination should reach back to.
+func (i *Informer) prListCutoff(now time.Time) time.Time {
+	lookback := time.Duration(prListMinLookback)
+	if scaled := i.options.ReconcileInterval * prListLookbackIntervals; scaled > lookback {
+		lookback = scaled
+	}
+	return now.Add(-lookback)
+}
+
+// paginatePRList walks pages of pull requests until the provider runs out, until
+// the results fall outside the lookback window, or until the page cap.
+//
+// The first page is ALWAYS fetched in full regardless of cutoff. That matters:
+// GitLab could filter server-side with updated_after, and GitHub cannot filter at
+// all, but applying a time filter to the first page would shrink coverage below the
+// single page this used to fetch, and a quiet project whose merge requests were all
+// last touched months ago would lose its baselines entirely. Keeping page one
+// unconditional makes coverage a superset of the previous behaviour in every case.
+func paginatePRList(ctx context.Context, p prProvider, cutoff time.Time) ([]pullRequest, error) {
+	pageSize := p.listPageSize()
+	all := make([]pullRequest, 0, pageSize)
+
+	for page := 1; page <= prListMaxPages; page++ {
+		batch, err := p.fetchPRPage(ctx, page)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, batch...)
+
+		// A short page is the last page.
+		if len(batch) < pageSize {
+			return all, nil
+		}
+		// Results are ordered by update time descending, so once a full page ends
+		// outside the window every later page is older still. A zero timestamp
+		// counts as outside, which stops after page one rather than walking the
+		// project's whole history.
+		if oldest := batch[len(batch)-1].UpdatedAt; oldest.Before(cutoff) {
+			return all, nil
+		}
+	}
+
+	log.DefaultLogger.Warnf(
+		"git informer: %s pull request list hit the %d page cap (%d entries); pull requests updated before that point were not examined this pass",
+		p.kind(), prListMaxPages, len(all))
+	return all, nil
 }
 
 // isPullRequestTrigger returns true if the trigger is configured for git-pull-request events.
@@ -131,7 +201,7 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 	}
 	kind := provider.kind()
 
-	prs, err := provider.list(ctx)
+	prs, err := provider.list(ctx, i.prListCutoff(time.Now()))
 	if err != nil {
 		return matchResult{}, fmt.Errorf("failed to fetch %s pull requests: %w", kind, err)
 	}

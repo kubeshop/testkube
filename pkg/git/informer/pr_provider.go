@@ -144,8 +144,11 @@ func (i *Informer) prProviderFor(
 	}
 
 	if !i.prHostAllowed(host) {
-		return nil, fmt.Errorf("git-pull-request trigger host %q is not in the configured pull request host allowlist (%s)",
-			host, strings.Join(i.options.AllowedPRHosts, ", "))
+		return nil, fmt.Errorf(
+			"git-pull-request trigger host %q is not allowed to receive credentials; "+
+				"add it to TEST_TRIGGER_GIT_INFORMER_ALLOWED_PR_HOSTS (currently: %s), "+
+				"or set that variable to %q to allow any host",
+			host, describeAllowedPRHosts(i.options.AllowedPRHosts), allowAnyPRHostWildcard)
 	}
 
 	kind, err := i.resolveProviderKind(ctx, namespace, host, gitConfig)
@@ -289,35 +292,65 @@ func (i *Informer) storePRProviderKind(host string, kind providerKind) {
 	i.prProviders[host] = kind
 }
 
+// defaultAllowedPRHosts is the allowlist applied when an operator has not
+// configured one: the canonical SaaS hosts only.
+//
+// This default is deliberately closed. A trigger author chooses both the uri and the
+// tokenFrom Secret reference, and tokenFrom may name any Secret in the trigger's
+// namespace, so an open default lets an author send a Secret they cannot otherwise
+// read to a host they control. Host naming cannot substitute for an allowlist:
+// "gitlab.attacker.com" satisfies every name-based test, being indistinguishable
+// from the legitimate "gitlab.mycompany.com" convention.
+//
+// Self-managed GitHub Enterprise Server and GitLab installations are therefore NOT
+// covered by the default and must be named in AllowedPRHosts.
+var defaultAllowedPRHosts = []string{"github.com", ".github.com", "gitlab.com", ".gitlab.com"}
+
+// allowAnyPRHostWildcard opts out of host restriction entirely. It exists so an
+// operator who cannot enumerate their hosts yet has a deliberate, greppable escape
+// hatch rather than being pushed toward disabling the feature.
+const allowAnyPRHostWildcard = "*"
+
 // prHostAllowed reports whether a repository host may be contacted with a trigger
-// credential.
-//
-// This is the only real control over where credentials go. A trigger author chooses
-// both the uri and the tokenFrom Secret reference, and tokenFrom may name any Secret
-// in the trigger's namespace, so without an allowlist an author can have the
-// informer send a Secret they cannot otherwise read to a host of their choosing.
-// Host naming cannot substitute for this: "gitlab.attacker.com" satisfies every
-// name-based test.
-//
-// The allowlist is opt-in. When empty every host is permitted, which preserves the
-// behaviour of existing installations; operators who care set AllowedPRHosts.
-// Entries match a host exactly or, when written as ".example.com", any subdomain.
+// credential. Entries match a host exactly or, when written as ".example.com", that
+// domain and any subdomain of it.
 func (i *Informer) prHostAllowed(host string) bool {
-	if len(i.options.AllowedPRHosts) == 0 {
-		return true
+	allowlist := i.options.AllowedPRHosts
+	if !hasUsableAllowlistEntry(allowlist) {
+		// Unconfigured (or unusable) means the closed default, never "allow all".
+		allowlist = defaultAllowedPRHosts
 	}
-	for _, allowed := range i.options.AllowedPRHosts {
+
+	for _, allowed := range allowlist {
 		allowed = strings.ToLower(strings.TrimSpace(allowed))
-		if allowed == "" {
+		switch {
+		case allowed == "":
 			continue
-		}
-		if strings.HasPrefix(allowed, ".") {
+		case allowed == allowAnyPRHostWildcard:
+			return true
+		case strings.HasPrefix(allowed, "."):
 			if host == strings.TrimPrefix(allowed, ".") || strings.HasSuffix(host, allowed) {
 				return true
 			}
-			continue
+		case host == allowed:
+			return true
 		}
-		if host == allowed {
+	}
+	return false
+}
+
+// describeAllowedPRHosts renders the effective allowlist for an error message, so an
+// operator hitting the closed default can see what is permitted.
+func describeAllowedPRHosts(allowlist []string) string {
+	if !hasUsableAllowlistEntry(allowlist) {
+		return strings.Join(defaultAllowedPRHosts, ", ") + " (default)"
+	}
+	return strings.Join(allowlist, ", ")
+}
+
+func hasUsableAllowlistEntry(allowlist []string) bool {
+	for _, entry := range allowlist {
+		if strings.TrimSpace(entry) != "" {
 			return true
 		}
 	}

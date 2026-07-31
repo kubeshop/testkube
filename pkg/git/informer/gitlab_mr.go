@@ -88,10 +88,18 @@ func (p *gitlabProvider) headRef(iid int) string {
 	return "refs/merge-requests/" + strconv.Itoa(iid) + "/head"
 }
 
-// list fetches the most recently updated merge requests, newest first.
-func (p *gitlabProvider) list(ctx context.Context) ([]pullRequest, error) {
-	endpoint := fmt.Sprintf("%s/projects/%s/merge_requests?state=all&order_by=updated_at&sort=desc&scope=all&per_page=%d",
-		p.apiBase, gitlabEscapeProjectPath(p.projectPath), gitlabMRListPageSize)
+func (p *gitlabProvider) listPageSize() int { return gitlabMRListPageSize }
+
+// list fetches the most recently updated merge requests, newest first, paginating
+// within the lookback window.
+func (p *gitlabProvider) list(ctx context.Context, cutoff time.Time) ([]pullRequest, error) {
+	return paginatePRList(ctx, p, cutoff)
+}
+
+// fetchPRPage fetches one page of merge requests ordered by update time descending.
+func (p *gitlabProvider) fetchPRPage(ctx context.Context, page int) ([]pullRequest, error) {
+	endpoint := fmt.Sprintf("%s/projects/%s/merge_requests?state=all&order_by=updated_at&sort=desc&scope=all&page=%d&per_page=%d",
+		p.apiBase, gitlabEscapeProjectPath(p.projectPath), page, gitlabMRListPageSize)
 
 	var mrs []gitlabMR
 	if err := prAPIGet(ctx, "GitLab", endpoint, p.token, gitlabAcceptJSON, &mrs); err != nil {

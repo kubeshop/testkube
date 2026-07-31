@@ -72,13 +72,15 @@ type Options struct {
 	GitHubTokenProvider GitHubTokenProvider
 
 	// AllowedPRHosts restricts which repository hosts a pull request trigger may
-	// contact with a credential. Entries match a host exactly, or any subdomain when
-	// written with a leading dot (".example.com"). When empty every host is allowed.
+	// contact with a credential. Entries match a host exactly, or that domain and any
+	// subdomain when written with a leading dot (".example.com"). A single "*" entry
+	// allows any host.
 	//
-	// Setting this is the only way to stop a trigger author from directing a Secret
-	// from their namespace at a host they control, because tokenFrom may reference
-	// any Secret in that namespace and no hostname test can distinguish
-	// "gitlab.attacker.com" from a legitimate self-managed instance.
+	// When empty, defaultAllowedPRHosts applies: the canonical SaaS hosts only. This
+	// is the only control over where credentials go, because tokenFrom may reference
+	// any Secret in the trigger's namespace and no hostname test can distinguish
+	// "gitlab.attacker.com" from a legitimate self-managed instance. Self-managed
+	// hosts must therefore be listed explicitly.
 	AllowedPRHosts []string
 }
 

@@ -12,10 +12,9 @@ const (
 	// githubAcceptJSON is the recommended Accept header for the GitHub REST API.
 	githubAcceptJSON = "application/vnd.github+json"
 
-	// githubPRListPageSize is GitHub's default page size. Pull requests updated
-	// beyond this window may be missed if the reconciliation interval is too long.
-	// TODO: paginate, or raise to GitHub's maximum of 100.
-	githubPRListPageSize = 30
+	// githubPRListPageSize is GitHub's documented maximum page size. Pages are
+	// walked by paginatePRList within the lookback window.
+	githubPRListPageSize = 100
 
 	// githubPRFilesPageSize is GitHub's maximum page size. Pull requests with more
 	// changed files than this will have incomplete path matching.
@@ -80,10 +79,21 @@ func (p *githubProvider) headRef(number int) string {
 	return "refs/pull/" + strconv.Itoa(number) + "/head"
 }
 
-// list fetches the most recently updated pull requests, newest first.
-func (p *githubProvider) list(ctx context.Context) ([]pullRequest, error) {
-	endpoint := fmt.Sprintf("%s/repos/%s/%s/pulls?state=all&sort=updated&direction=desc&per_page=%d",
-		p.apiBase, p.owner, p.repo, githubPRListPageSize)
+func (p *githubProvider) listPageSize() int { return githubPRListPageSize }
+
+// list fetches the most recently updated pull requests, newest first, paginating
+// within the lookback window.
+//
+// GitHub's pulls endpoint has no update-time filter, so sort=updated&direction=desc
+// plus a client-side cutoff is the only way to bound the walk.
+func (p *githubProvider) list(ctx context.Context, cutoff time.Time) ([]pullRequest, error) {
+	return paginatePRList(ctx, p, cutoff)
+}
+
+// fetchPRPage fetches one page of pull requests ordered by update time descending.
+func (p *githubProvider) fetchPRPage(ctx context.Context, page int) ([]pullRequest, error) {
+	endpoint := fmt.Sprintf("%s/repos/%s/%s/pulls?state=all&sort=updated&direction=desc&page=%d&per_page=%d",
+		p.apiBase, p.owner, p.repo, page, githubPRListPageSize)
 
 	var githubPRs []githubPR
 	if err := prAPIGet(ctx, "GitHub", endpoint, p.token, githubAcceptJSON, &githubPRs); err != nil {
@@ -102,7 +112,10 @@ func (p *githubProvider) list(ctx context.Context) ([]pullRequest, error) {
 			BaseRef: pr.Base.Ref,
 			Author:  pr.User.Login,
 			URL:     pr.HTMLURL,
-			Draft:   pr.Draft,
+			// Required: paginatePRList stops on this, so leaving it zero would
+			// silently cap the walk at one page.
+			UpdatedAt: pr.UpdatedAt,
+			Draft:     pr.Draft,
 		})
 	}
 	return prs, nil

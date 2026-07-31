@@ -63,7 +63,11 @@ func TestPRProviderFor_RejectsGitHubRepoFromInjectedPath(t *testing.T) {
 	}))
 	defer server.Close()
 
-	inf := &Informer{prAPIBaseFunc: func(_ string) string { return server.URL }}
+	// Allow any host, so that only the repository-path check can reject this.
+	inf := &Informer{
+		prAPIBaseFunc: func(_ string) string { return server.URL },
+		options:       Options{AllowedPRHosts: []string{allowAnyPRHostWildcard}},
+	}
 	gitConfig := &testkube.TestTriggerContentGit{
 		Uri:   "https://evil.example.com/github.com/owner/repo",
 		Token: "secret-token",
@@ -479,7 +483,7 @@ func TestGitHubProviderList_MockServer(t *testing.T) {
 	}))
 	defer server.Close()
 
-	result, err := newGitHubProvider(server.URL, "owner", "repo", "test-token").list(context.Background())
+	result, err := newGitHubProvider(server.URL, "owner", "repo", "test-token").list(context.Background(), testPRCutoff())
 	require.NoError(t, err)
 	assert.Len(t, result, 2)
 	assert.Equal(t, 1, result[0].Number)

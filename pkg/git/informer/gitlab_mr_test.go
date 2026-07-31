@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -133,7 +134,7 @@ func TestGitLabProviderList_MockServer(t *testing.T) {
 	defer server.Close()
 
 	provider := newGitLabProvider(server.URL, "group/sub/project", "glpat-token")
-	result, err := provider.list(context.Background())
+	result, err := provider.list(context.Background(), testPRCutoff())
 	require.NoError(t, err)
 	require.Len(t, result, 2)
 
@@ -165,7 +166,7 @@ func TestGitLabProviderList_NullAuthorAndNullSHA(t *testing.T) {
 	}))
 	defer server.Close()
 
-	result, err := newGitLabProvider(server.URL, "group/project", "").list(context.Background())
+	result, err := newGitLabProvider(server.URL, "group/project", "").list(context.Background(), testPRCutoff())
 	require.NoError(t, err)
 	require.Len(t, result, 1)
 	assert.Empty(t, result[0].HeadSHA)
@@ -181,7 +182,7 @@ func TestGitLabProviderList_404MentionsProjectAndScope(t *testing.T) {
 	}))
 	defer server.Close()
 
-	_, err := newGitLabProvider(server.URL, "group/sub/project", "glpat-token").list(context.Background())
+	_, err := newGitLabProvider(server.URL, "group/sub/project", "glpat-token").list(context.Background(), testPRCutoff())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "group/sub/project")
 	assert.Contains(t, err.Error(), "read_api")
@@ -543,10 +544,13 @@ func TestResolvePRToken_GitLabIgnoresGitHubAuthType(t *testing.T) {
 	assert.Equal(t, prGitHubAuthTypeWrongProviderWarning, recordedLogs.All()[0].Message)
 }
 
-// TestCheckMergeRequests_ListWindowEvictionIsRecoverable documents the bound on the
-// single-page merge request list: an MR pushed out of the "most recently updated"
-// window by newer activity is DEFERRED, not lost. Matching is state-based, so the
-// unchanged baseline still differs once the MR reappears and the event fires then.
+// TestCheckMergeRequests_ListWindowEvictionIsRecoverable covers the case where an
+// unobserved merge request has ONE pending change: its baseline is untouched, so the
+// change is still detected when the merge request is next seen.
+//
+// This recovery is limited to that case. It does NOT hold when the state returns to
+// the recorded value in the meantime — see
+// TestCheckMergeRequests_RoundTripWhileUnobservedIsLost.
 func TestCheckMergeRequests_ListWindowEvictionIsRecoverable(t *testing.T) {
 	var currentMRs string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -584,4 +588,136 @@ func TestCheckMergeRequests_ListWindowEvictionIsRecoverable(t *testing.T) {
 	assert.Equal(t, "1", result.metadata[GitMetaKeyPRNumber])
 	assert.Equal(t, "synchronize", result.metadata[GitMetaKeyPRAction])
 	assert.Equal(t, "sha-v2", result.metadata[GitMetaKeyCommit])
+}
+
+// gitlabMRPage renders a full page of merge requests with the given update time, so
+// pagination behaviour can be driven independently of content.
+func gitlabMRPage(startIID, count int, updatedAt time.Time) string {
+	entries := make([]string, 0, count)
+	for i := 0; i < count; i++ {
+		iid := startIID + i
+		entries = append(entries, fmt.Sprintf(
+			`{"iid": %d, "state": "opened", "title": "MR %d", "sha": "sha-%d",
+			  "source_branch": "f%d", "target_branch": "main", "updated_at": %q,
+			  "web_url": "https://gitlab.com/g/p/-/merge_requests/%d", "author": {"username": "dev"}}`,
+			iid, iid, iid, iid, updatedAt.Format(time.RFC3339), iid))
+	}
+	return "[" + strings.Join(entries, ",") + "]"
+}
+
+// TestGitLabProviderList_PaginatesBeyondFirstPage is the regression guard for merge
+// requests being invisible past the first page. Before pagination, only the first 100
+// were ever examined, so a state transition on the 101st could never be seen.
+func TestGitLabProviderList_PaginatesBeyondFirstPage(t *testing.T) {
+	recent := time.Now().Add(-time.Hour)
+	var pages []string
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		page := r.URL.Query().Get("page")
+		pages = append(pages, page)
+		require.Equal(t, fmt.Sprint(gitlabMRListPageSize), r.URL.Query().Get("per_page"))
+		w.Header().Set("Content-Type", "application/json")
+		switch page {
+		case "1":
+			_, _ = w.Write([]byte(gitlabMRPage(1, gitlabMRListPageSize, recent)))
+		case "2":
+			// A short page ends pagination.
+			_, _ = w.Write([]byte(gitlabMRPage(1000, 3, recent)))
+		default:
+			t.Errorf("unexpected page %s", page)
+			_, _ = w.Write([]byte(`[]`))
+		}
+	}))
+	defer server.Close()
+
+	result, err := newGitLabProvider(server.URL, "g/p", "").list(context.Background(), testPRCutoff())
+	require.NoError(t, err)
+	assert.Equal(t, []string{"1", "2"}, pages)
+	assert.Len(t, result, gitlabMRListPageSize+3)
+	// The merge request that used to be unreachable is now examined.
+	assert.Equal(t, 1002, result[len(result)-1].Number)
+}
+
+// TestGitLabProviderList_StopsOutsideLookback bounds the walk. Asking for all states
+// returns every historical merge request, so without a cutoff an old project would be
+// paged through in full on every reconcile.
+func TestGitLabProviderList_StopsOutsideLookback(t *testing.T) {
+	var requests int32
+	stale := time.Now().Add(-90 * 24 * time.Hour)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt32(&requests, 1)
+		w.Header().Set("Content-Type", "application/json")
+		// Always a full page of long-untouched merge requests.
+		_, _ = w.Write([]byte(gitlabMRPage(1, gitlabMRListPageSize, stale)))
+	}))
+	defer server.Close()
+
+	result, err := newGitLabProvider(server.URL, "g/p", "").list(context.Background(), testPRCutoff())
+	require.NoError(t, err)
+	// Page one is always fetched in full, so coverage never drops below the single
+	// page this used to fetch; the stale timestamps stop it there.
+	assert.Equal(t, int32(1), atomic.LoadInt32(&requests))
+	assert.Len(t, result, gitlabMRListPageSize)
+}
+
+// TestGitLabProviderList_PageCapWarns keeps the bound visible rather than silently
+// truncating.
+func TestGitLabProviderList_PageCapWarns(t *testing.T) {
+	core, recordedLogs := observer.New(zap.WarnLevel)
+	originalLogger := log.DefaultLogger
+	log.DefaultLogger = zap.New(core).Sugar()
+	t.Cleanup(func() { log.DefaultLogger = originalLogger })
+
+	var requests int32
+	recent := time.Now().Add(-time.Minute)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt32(&requests, 1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(gitlabMRPage(1, gitlabMRListPageSize, recent)))
+	}))
+	defer server.Close()
+
+	result, err := newGitLabProvider(server.URL, "g/p", "").list(context.Background(), testPRCutoff())
+	require.NoError(t, err)
+	assert.Equal(t, int32(prListMaxPages), atomic.LoadInt32(&requests), "the walk must be bounded")
+	assert.Len(t, result, prListMaxPages*gitlabMRListPageSize)
+	require.NotEmpty(t, recordedLogs.All())
+	assert.Contains(t, recordedLogs.All()[0].Message, "page cap")
+}
+
+// TestCheckMergeRequests_RoundTripWhileUnobservedIsLost documents a real limit of
+// state-based polling that pagination does NOT fix, correcting an earlier claim that
+// unobserved changes are merely deferred.
+//
+// Comparison is against a stored state, not an event log. A merge request that closes
+// and reopens between two observations returns to the same head SHA and state, so the
+// baseline matches and nothing fires: both transitions are lost permanently. This is
+// inherent to polling at any interval, not specific to the list window.
+func TestCheckMergeRequests_RoundTripWhileUnobservedIsLost(t *testing.T) {
+	var currentMRs string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(currentMRs))
+	}))
+	defer server.Close()
+
+	const key = "v1:default/test-trigger"
+	inf := &Informer{
+		commits: map[string]string{
+			prInitKey(key, providerGitLab):     "1",
+			prCacheKey(key, providerGitLab, 1): "sha-initial:open",
+		},
+		prAPIBaseFunc: func(_ string) string { return server.URL },
+	}
+	trigger := buildPRTrigger(gitlabTestURI, nil)
+
+	// The merge request was closed and reopened since the last pass, so it is back
+	// to exactly the state that was recorded.
+	currentMRs = "[" + gitlabMRJSON(1, gitlabStateOpened, "sha-initial", "feature/x", "main") + "]"
+
+	result, err := inf.checkPullRequests(context.Background(), key, trigger, newReconcileCache())
+	require.NoError(t, err)
+	assert.False(t, result.changed,
+		"a close/reopen round trip is invisible to state comparison; both transitions are lost")
 }

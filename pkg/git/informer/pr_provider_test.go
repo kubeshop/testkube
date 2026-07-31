@@ -6,12 +6,19 @@ import (
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
+
+// testPRCutoff is a lookback cutoff for provider-level tests. Mock servers return
+// short pages, which ends pagination regardless of timestamps.
+func testPRCutoff() time.Time {
+	return time.Now().Add(-prListMinLookback)
+}
 
 func TestSplitGitURI(t *testing.T) {
 	tests := []struct {
@@ -164,7 +171,10 @@ func TestPRProviderFor_Detection(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			atomic.StoreInt32(&requests, 0)
-			inf := &Informer{prAPIBaseFunc: func(_ string) string { return server.URL }}
+			inf := &Informer{
+				prAPIBaseFunc: func(_ string) string { return server.URL },
+				options:       Options{AllowedPRHosts: []string{allowAnyPRHostWildcard}},
+			}
 
 			gitConfig := &testkube.TestTriggerContentGit{Uri: tt.uri, AuthType: tt.authType}
 			provider, err := inf.prProviderFor(context.Background(), "default", gitConfig, newReconcileCache())
@@ -175,7 +185,10 @@ func TestPRProviderFor_Detection(t *testing.T) {
 	}
 
 	t.Run("gitlab requires a namespaced project path", func(t *testing.T) {
-		inf := &Informer{prAPIBaseFunc: func(_ string) string { return server.URL }}
+		inf := &Informer{
+			prAPIBaseFunc: func(_ string) string { return server.URL },
+			options:       Options{AllowedPRHosts: []string{allowAnyPRHostWildcard}},
+		}
 		gitConfig := &testkube.TestTriggerContentGit{Uri: "https://gitlab.com/project.git"}
 		_, err := inf.prProviderFor(context.Background(), "default", gitConfig, newReconcileCache())
 		require.Error(t, err)
@@ -221,7 +234,10 @@ func TestPRProviderFor_ProbesUnknownHost(t *testing.T) {
 			server := newProbeServer(tt.status, &requests)
 			defer server.Close()
 
-			inf := &Informer{prAPIBaseFunc: func(_ string) string { return server.URL }}
+			inf := &Informer{
+				prAPIBaseFunc: func(_ string) string { return server.URL },
+				options:       Options{AllowedPRHosts: []string{allowAnyPRHostWildcard}},
+			}
 			// A neutral host carrying neither provider name, so only the probe can
 			// decide. Two path segments so either provider can accept it.
 			gitConfig := &testkube.TestTriggerContentGit{Uri: "https://git.example.com/group/project.git"}
@@ -244,7 +260,10 @@ func TestPRProviderFor_ProbesUnknownHost(t *testing.T) {
 		server := newProbeServer(http.StatusBadGateway, &requests)
 		defer server.Close()
 
-		inf := &Informer{prAPIBaseFunc: func(_ string) string { return server.URL }}
+		inf := &Informer{
+			prAPIBaseFunc: func(_ string) string { return server.URL },
+			options:       Options{AllowedPRHosts: []string{allowAnyPRHostWildcard}},
+		}
 		gitConfig := &testkube.TestTriggerContentGit{Uri: "https://git.example.com/group/project.git"}
 
 		_, err := inf.prProviderFor(context.Background(), "default", gitConfig, newReconcileCache())
@@ -280,7 +299,10 @@ func TestPRProviderFor_ProbesUnknownHost(t *testing.T) {
 		}))
 		defer server.Close()
 
-		inf := &Informer{prAPIBaseFunc: func(_ string) string { return server.URL }}
+		inf := &Informer{
+			prAPIBaseFunc: func(_ string) string { return server.URL },
+			options:       Options{AllowedPRHosts: []string{allowAnyPRHostWildcard}},
+		}
 		gitConfig := &testkube.TestTriggerContentGit{
 			Uri:   "https://attacker.example.com/group/project.git",
 			Token: "super-secret-token",
@@ -298,7 +320,10 @@ func TestPRProviderFor_ProbesUnknownHost(t *testing.T) {
 		unreachable := server.URL
 		server.Close()
 
-		inf := &Informer{prAPIBaseFunc: func(_ string) string { return unreachable }}
+		inf := &Informer{
+			prAPIBaseFunc: func(_ string) string { return unreachable },
+			options:       Options{AllowedPRHosts: []string{allowAnyPRHostWildcard}},
+		}
 		gitConfig := &testkube.TestTriggerContentGit{Uri: "https://git.example.com/group/project.git"}
 
 		_, err := inf.prProviderFor(context.Background(), "default", gitConfig, newReconcileCache())
@@ -319,24 +344,35 @@ func TestPRHostAllowlist(t *testing.T) {
 		host    string
 		want    bool
 	}{
-		// Unset preserves the behaviour of existing installations.
-		{"empty allows anything", nil, "gitlab.attacker.com", true},
-		{"exact match", []string{"gitlab.com"}, "gitlab.com", true},
-		{"exact mismatch", []string{"gitlab.com"}, "gitlab.attacker.com", false},
-		{"one of several", []string{"github.com", "gitlab.corp.internal"}, "gitlab.corp.internal", true},
+		// Unconfigured means the closed default: canonical SaaS hosts only.
+		{"default allows github.com", nil, "github.com", true},
+		{"default allows gitlab.com", nil, "gitlab.com", true},
+		{"default allows a gitlab.com subdomain", nil, "www.gitlab.com", true},
+		// The host an attacker would choose passes every name-based test, so only
+		// the allowlist can reject it. This is the reported vulnerability.
+		{"default rejects gitlab.attacker.com", nil, "gitlab.attacker.com", false},
+		{"default rejects github.attacker.com", nil, "github.attacker.com", false},
+		// Self-managed hosts are deliberately NOT covered by the default.
+		{"default rejects self managed", nil, "gitlab.corp.internal", false},
+
+		{"explicit exact match", []string{"gitlab.corp.internal"}, "gitlab.corp.internal", true},
+		{"explicit list replaces the default", []string{"gitlab.corp.internal"}, "github.com", false},
 		{"subdomain wildcard", []string{".corp.internal"}, "gitlab.corp.internal", true},
 		{"wildcard also matches the apex", []string{".corp.internal"}, "corp.internal", true},
 		{"wildcard does not match a sibling", []string{".corp.internal"}, "gitlab.corp.evil.com", false},
 		// A suffix must not match a longer label: ".example.com" is not "evilexample.com".
 		{"wildcard is label anchored", []string{".example.com"}, "evilexample.com", false},
-		{"whitespace and case are normalized", []string{" GitLab.com "}, "gitlab.com", true},
-		{"blank entries are ignored", []string{"", "gitlab.com"}, "gitlab.com", true},
-		// A configured-but-unusable allowlist fails CLOSED. This is deliberate: a
-		// malformed value in a security control should stop triggers loudly (the
-		// error names the configured list) rather than silently permit every host.
-		// The unset case is a nil/empty slice, which envconfig produces for both an
-		// absent and an explicitly empty env var, so this cannot fire by accident.
-		{"malformed allowlist fails closed", []string{"", "  "}, "gitlab.com", false},
+		{"whitespace and case are normalized", []string{" GitLab.CORP.internal "}, "gitlab.corp.internal", true},
+		{"blank entries are ignored", []string{"", "gitlab.corp.internal"}, "gitlab.corp.internal", true},
+
+		// The explicit escape hatch for operators who cannot enumerate their hosts.
+		{"star allows anything", []string{"*"}, "gitlab.attacker.com", true},
+		{"star among others", []string{"gitlab.com", "*"}, "anything.example", true},
+
+		// An unusable value falls back to the closed default rather than allowing
+		// everything, so a config typo cannot silently disable the control.
+		{"unusable value falls back to the default", []string{"", "  "}, "github.com", true},
+		{"unusable value still rejects other hosts", []string{"", "  "}, "gitlab.attacker.com", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -371,7 +407,7 @@ func TestPRProviderFor_AllowlistBlocksCredentialRelease(t *testing.T) {
 	}
 	_, err := newInf().prProviderFor(context.Background(), "default", gitConfig, newReconcileCache())
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "allowlist")
+	assert.Contains(t, err.Error(), "TEST_TRIGGER_GIT_INFORMER_ALLOWED_PR_HOSTS")
 	assert.NotContains(t, err.Error(), "super-secret-token")
 	assert.Zero(t, atomic.LoadInt32(&requests), "no request may be made to a host that is not allowlisted")
 
