@@ -1286,6 +1286,7 @@ func effectiveIgnoreRefsKey(gitConfig *testkube.TestTriggerContentGit) string {
 	}
 	return strings.Join(parts, ",")
 }
+
 // collectHeadMetadata extracts metadata from the HEAD commit of a repository.
 func (i *Informer) collectHeadMetadata(repo *git.Repository, headHash string, gitConfig *testkube.TestTriggerContentGit, preferredRef string) map[string]string {
 	meta := make(map[string]string)
