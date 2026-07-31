@@ -21,6 +21,7 @@ import (
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
+	"github.com/kubeshop/testkube/pkg/k8sclient"
 )
 
 // GetClient returns kubernetes CRD client with registered schemes
@@ -46,6 +47,7 @@ func GetClient() (client.Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	k8sclient.InstrumentConfig(kubeconfig)
 
 	return client.New(kubeconfig, client.Options{Scheme: scheme})
 }

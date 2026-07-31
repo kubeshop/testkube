@@ -91,6 +91,8 @@ func GetK8sClientConfig() (*rest.Config, error) {
 		return nil, err
 	}
 
+	InstrumentConfig(config)
+
 	return config, nil
 }
 

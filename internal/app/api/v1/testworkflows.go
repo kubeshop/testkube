@@ -106,7 +106,6 @@ func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 			return s.ClientError(c, errPrefix, errors.New("matchExpressions are not supported"))
 		}
 
-		var deleteErr error
 		workflows := make([]testkube.TestWorkflow, 0)
 		testWorkflowNames := c.Query("testWorkflowNames")
 		if testWorkflowNames != "" {
@@ -118,18 +117,6 @@ func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 				}
 				workflows = append(workflows, *workflow)
 			}
-
-			deleted := make([]testkube.TestWorkflow, 0, len(workflows))
-			for _, workflow := range workflows {
-				err = s.TestWorkflowsClient.Delete(ctx, environmentId, workflow.Name)
-				s.Metrics.IncDeleteTestWorkflow(err)
-				if err != nil {
-					// stop deleting, but still clean up executions for what is already gone
-					deleteErr, workflows = err, deleted
-					break
-				}
-				deleted = append(deleted, workflow)
-			}
 		} else {
 			workflows, err = s.TestWorkflowsClient.List(ctx, environmentId, testworkflowclient.ListOptions{
 				Labels: labelSelector.MatchLabels,
@@ -137,15 +124,17 @@ func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 			if err != nil {
 				return s.BadGateway(c, errPrefix, "client problem", err)
 			}
+		}
 
-			_, err = s.TestWorkflowsClient.DeleteByLabels(ctx, environmentId, labelSelector.MatchLabels)
-			if err != nil {
-				return s.ClientError(c, errPrefix, err)
-			}
+		// Delete
+		_, err = s.TestWorkflowsClient.DeleteByLabels(ctx, environmentId, labelSelector.MatchLabels)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
 
-			for range workflows {
-				s.Metrics.IncDeleteTestWorkflow(err)
-			}
+		// Mark as deleted
+		for range workflows {
+			s.Metrics.IncDeleteTestWorkflow(err)
 		}
 
 		// Delete the executions
@@ -163,10 +152,6 @@ func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 			if err != nil {
 				return s.ClientError(c, "deleting executions", err)
 			}
-		}
-
-		if deleteErr != nil {
-			return s.ClientError(c, errPrefix, deleteErr)
 		}
 
 		return c.SendStatus(http.StatusNoContent)
