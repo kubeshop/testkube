@@ -98,17 +98,33 @@ func gitAPIHostPort(uri string) (host, authority string) {
 
 // providerKindFromHost resolves a provider from the host alone, without network
 // access. ok is false when the host is an unrecognized self-managed instance.
+//
+// Matching is on whole DNS labels, never on substrings: a substring test also
+// accepts "notgithub.com" and "evil-gitlab.attacker.com", which have no legitimate
+// use and only widen the set of hosts that can be handed a credential.
+//
+// No name test can make this a trust decision, though. An author who controls the
+// trigger's uri can always name their host "gitlab.attacker.com", which is
+// indistinguishable from the legitimate "gitlab.mycompany.com" convention. Gating
+// credential release is the job of Options.AllowedPRHosts, not of this function.
 func providerKindFromHost(host string) (providerKind, bool) {
 	if host == "" {
 		return providerUnknown, false
 	}
+	labels := strings.Split(host, ".")
 	// GitLab is checked first so a host such as "gitlab.github-mirror.example.com"
 	// is not misread as GitHub.
-	if strings.Contains(host, "gitlab") {
-		return providerGitLab, true
-	}
-	if strings.Contains(host, "github") {
-		return providerGitHub, true
+	for _, kind := range []providerKind{providerGitLab, providerGitHub} {
+		name := string(kind)
+		// The canonical host or a subdomain of it, e.g. gitlab.com, www.gitlab.com.
+		if host == name+".com" || strings.HasSuffix(host, "."+name+".com") {
+			return kind, true
+		}
+		// Self-managed convention: the leading label names the provider, e.g.
+		// gitlab.example.com or github.corp.internal.
+		if labels[0] == name {
+			return kind, true
+		}
 	}
 	return providerUnknown, false
 }
@@ -130,6 +146,11 @@ func (i *Informer) prProviderFor(
 	kind, err := i.resolveProviderKind(ctx, namespace, host, gitConfig)
 	if err != nil {
 		return nil, err
+	}
+
+	if !i.prHostAllowed(host) {
+		return nil, fmt.Errorf("git-pull-request trigger host %q is not in the configured pull request host allowlist (%s)",
+			host, strings.Join(i.options.AllowedPRHosts, ", "))
 	}
 
 	token := i.resolvePRToken(ctx, namespace, gitConfig, kind, cache)
@@ -266,6 +287,41 @@ func (i *Informer) storePRProviderKind(host string, kind providerKind) {
 		i.prProviders = make(map[string]providerKind)
 	}
 	i.prProviders[host] = kind
+}
+
+// prHostAllowed reports whether a repository host may be contacted with a trigger
+// credential.
+//
+// This is the only real control over where credentials go. A trigger author chooses
+// both the uri and the tokenFrom Secret reference, and tokenFrom may name any Secret
+// in the trigger's namespace, so without an allowlist an author can have the
+// informer send a Secret they cannot otherwise read to a host of their choosing.
+// Host naming cannot substitute for this: "gitlab.attacker.com" satisfies every
+// name-based test.
+//
+// The allowlist is opt-in. When empty every host is permitted, which preserves the
+// behaviour of existing installations; operators who care set AllowedPRHosts.
+// Entries match a host exactly or, when written as ".example.com", any subdomain.
+func (i *Informer) prHostAllowed(host string) bool {
+	if len(i.options.AllowedPRHosts) == 0 {
+		return true
+	}
+	for _, allowed := range i.options.AllowedPRHosts {
+		allowed = strings.ToLower(strings.TrimSpace(allowed))
+		if allowed == "" {
+			continue
+		}
+		if strings.HasPrefix(allowed, ".") {
+			if host == strings.TrimPrefix(allowed, ".") || strings.HasSuffix(host, allowed) {
+				return true
+			}
+			continue
+		}
+		if host == allowed {
+			return true
+		}
+	}
+	return false
 }
 
 // resolvePlainToken resolves the token configured directly on the trigger, without

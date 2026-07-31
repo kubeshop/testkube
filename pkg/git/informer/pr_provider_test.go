@@ -79,13 +79,21 @@ func TestProviderKindFromHost(t *testing.T) {
 		ok       bool
 	}{
 		{"github.com", providerGitHub, true},
+		{"www.github.com", providerGitHub, true},
 		{"github.example.com", providerGitHub, true},
+		{"github.corp.internal", providerGitHub, true},
 		{"gitlab.com", providerGitLab, true},
 		{"gitlab.example.com", providerGitLab, true},
 		// GitLab wins so a host carrying both names is not misread as GitHub.
 		{"gitlab.github-mirror.example.com", providerGitLab, true},
 		{"git.example.com", providerUnknown, false},
 		{"", providerUnknown, false},
+		// Matching is on whole labels. A substring test would accept all of these,
+		// widening the set of hosts that can be handed a credential for no benefit.
+		{"notgithub.com", providerUnknown, false},
+		{"evil-gitlab.attacker.com", providerUnknown, false},
+		{"gitlab-mirror.evil.io", providerUnknown, false},
+		{"mygithub.example.com", providerUnknown, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.host, func(t *testing.T) {
@@ -298,4 +306,83 @@ func TestPRProviderFor_ProbesUnknownHost(t *testing.T) {
 		assert.Contains(t, err.Error(), "failed to detect git provider")
 		assert.Empty(t, inf.prProviders)
 	})
+}
+
+// TestPRHostAllowlist covers the only real control over where pull request
+// credentials are sent. A trigger author picks both the uri and the tokenFrom Secret
+// reference, and tokenFrom may name any Secret in the namespace, so without this an
+// author can direct a Secret they cannot otherwise read at a host they control.
+func TestPRHostAllowlist(t *testing.T) {
+	tests := []struct {
+		name    string
+		allowed []string
+		host    string
+		want    bool
+	}{
+		// Unset preserves the behaviour of existing installations.
+		{"empty allows anything", nil, "gitlab.attacker.com", true},
+		{"exact match", []string{"gitlab.com"}, "gitlab.com", true},
+		{"exact mismatch", []string{"gitlab.com"}, "gitlab.attacker.com", false},
+		{"one of several", []string{"github.com", "gitlab.corp.internal"}, "gitlab.corp.internal", true},
+		{"subdomain wildcard", []string{".corp.internal"}, "gitlab.corp.internal", true},
+		{"wildcard also matches the apex", []string{".corp.internal"}, "corp.internal", true},
+		{"wildcard does not match a sibling", []string{".corp.internal"}, "gitlab.corp.evil.com", false},
+		// A suffix must not match a longer label: ".example.com" is not "evilexample.com".
+		{"wildcard is label anchored", []string{".example.com"}, "evilexample.com", false},
+		{"whitespace and case are normalized", []string{" GitLab.com "}, "gitlab.com", true},
+		{"blank entries are ignored", []string{"", "gitlab.com"}, "gitlab.com", true},
+		// A configured-but-unusable allowlist fails CLOSED. This is deliberate: a
+		// malformed value in a security control should stop triggers loudly (the
+		// error names the configured list) rather than silently permit every host.
+		// The unset case is a nil/empty slice, which envconfig produces for both an
+		// absent and an explicitly empty env var, so this cannot fire by accident.
+		{"malformed allowlist fails closed", []string{"", "  "}, "gitlab.com", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			inf := &Informer{options: Options{AllowedPRHosts: tt.allowed}}
+			assert.Equal(t, tt.want, inf.prHostAllowed(tt.host))
+		})
+	}
+}
+
+// TestPRProviderFor_AllowlistBlocksCredentialRelease asserts the allowlist is
+// enforced before any credential is resolved or sent.
+func TestPRProviderFor_AllowlistBlocksCredentialRelease(t *testing.T) {
+	var requests int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt32(&requests, 1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer server.Close()
+
+	newInf := func() *Informer {
+		return &Informer{
+			prAPIBaseFunc: func(_ string) string { return server.URL },
+			options:       Options{AllowedPRHosts: []string{"gitlab.com", ".corp.internal"}},
+		}
+	}
+
+	// A host that passes every name-based test but is not allowlisted.
+	gitConfig := &testkube.TestTriggerContentGit{
+		Uri:   "https://gitlab.attacker.com/group/project.git",
+		Token: "super-secret-token",
+	}
+	_, err := newInf().prProviderFor(context.Background(), "default", gitConfig, newReconcileCache())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "allowlist")
+	assert.NotContains(t, err.Error(), "super-secret-token")
+	assert.Zero(t, atomic.LoadInt32(&requests), "no request may be made to a host that is not allowlisted")
+
+	// Allowlisted hosts still work, both exactly and by subdomain.
+	for _, uri := range []string{
+		"https://gitlab.com/group/project.git",
+		"https://gitlab.corp.internal/group/project.git",
+	} {
+		provider, err := newInf().prProviderFor(context.Background(), "default",
+			&testkube.TestTriggerContentGit{Uri: uri, Token: "tok"}, newReconcileCache())
+		require.NoError(t, err, uri)
+		assert.Equal(t, providerGitLab, provider.kind())
+	}
 }

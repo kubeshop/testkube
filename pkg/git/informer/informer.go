@@ -70,6 +70,16 @@ type Options struct {
 	WatcherNamespaces   string
 	KubeClient          kubernetes.Interface
 	GitHubTokenProvider GitHubTokenProvider
+
+	// AllowedPRHosts restricts which repository hosts a pull request trigger may
+	// contact with a credential. Entries match a host exactly, or any subdomain when
+	// written with a leading dot (".example.com"). When empty every host is allowed.
+	//
+	// Setting this is the only way to stop a trigger author from directing a Secret
+	// from their namespace at a host they control, because tokenFrom may reference
+	// any Secret in that namespace and no hostname test can distinguish
+	// "gitlab.attacker.com" from a legitimate self-managed instance.
+	AllowedPRHosts []string
 }
 
 func normalizeOptions(opts Options) Options {
