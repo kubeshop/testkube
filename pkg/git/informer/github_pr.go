@@ -3,7 +3,6 @@ package informer
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -50,17 +49,6 @@ type githubPRFile struct {
 	Filename         string `json:"filename"`
 	PreviousFilename string `json:"previous_filename"`
 	Status           string `json:"status"`
-}
-
-var githubRepoPattern = regexp.MustCompile(`(?:github\.com|github\.[^/:]+)[/:]([^/]+)/([^/]+?)(?:\.git)?/?$`)
-
-// parseGitHubRepo extracts owner/repo from a GitHub URL (HTTPS or SSH).
-func parseGitHubRepo(uri string) (owner, repo string, ok bool) {
-	matches := githubRepoPattern.FindStringSubmatch(uri)
-	if len(matches) < 3 {
-		return "", "", false
-	}
-	return matches[1], matches[2], true
 }
 
 // githubAPIBaseFromURI returns the GitHub API base URL for the given repo URI.
@@ -120,15 +108,20 @@ func (p *githubProvider) list(ctx context.Context) ([]pullRequest, error) {
 	return prs, nil
 }
 
-// changedFiles returns the paths touched by a pull request.
-func (p *githubProvider) changedFiles(ctx context.Context, number int) ([]string, error) {
+// changedFiles returns the paths touched by a pull request. truncated reports that
+// the pull request has at least a full page of changed files, in which case the
+// list may be incomplete.
+func (p *githubProvider) changedFiles(ctx context.Context, number int) ([]string, bool, error) {
 	endpoint := fmt.Sprintf("%s/repos/%s/%s/pulls/%d/files?per_page=%d",
 		p.apiBase, p.owner, p.repo, number, githubPRFilesPageSize)
 
 	var files []githubPRFile
 	if err := prAPIGet(ctx, "GitHub", endpoint, p.token, githubAcceptJSON, &files); err != nil {
-		return nil, err
+		return nil, false, err
 	}
+
+	// A full page means there may be more; GitHub does not say either way.
+	truncated := len(files) >= githubPRFilesPageSize
 
 	paths := make([]string, 0, len(files))
 	for _, f := range files {
@@ -141,5 +134,5 @@ func (p *githubProvider) changedFiles(ctx context.Context, number int) ([]string
 			paths = append(paths, f.PreviousFilename)
 		}
 	}
-	return paths, nil
+	return paths, truncated, nil
 }

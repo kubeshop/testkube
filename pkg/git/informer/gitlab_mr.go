@@ -117,8 +117,10 @@ func (p *gitlabProvider) list(ctx context.Context) ([]pullRequest, error) {
 }
 
 // changedFiles returns the paths touched by a merge request. GitLab caps the diffs
-// endpoint at a small page size, so results are paginated.
-func (p *gitlabProvider) changedFiles(ctx context.Context, iid int) ([]string, error) {
+// endpoint at a small page size, so results are paginated. truncated reports that
+// the page cap was reached before the diff was exhausted, in which case the list is
+// incomplete.
+func (p *gitlabProvider) changedFiles(ctx context.Context, iid int) ([]string, bool, error) {
 	paths := make([]string, 0, gitlabMRDiffPageSize)
 	seen := make(map[string]struct{}, gitlabMRDiffPageSize)
 
@@ -139,7 +141,7 @@ func (p *gitlabProvider) changedFiles(ctx context.Context, iid int) ([]string, e
 
 		var diffs []gitlabMRDiff
 		if err := prAPIGet(ctx, "GitLab", endpoint, p.token, gitlabAcceptJSON, &diffs); err != nil {
-			return nil, p.describeError(err)
+			return nil, false, p.describeError(err)
 		}
 
 		for _, diff := range diffs {
@@ -152,13 +154,13 @@ func (p *gitlabProvider) changedFiles(ctx context.Context, iid int) ([]string, e
 		}
 
 		if len(diffs) < gitlabMRDiffPageSize {
-			return paths, nil
+			return paths, false, nil
 		}
 	}
 
 	log.DefaultLogger.Warnf("git informer: merge request !%d in %s has more changed files than the %d fetched; path filtering may be incomplete",
 		iid, p.projectPath, gitlabMRDiffMaxPages*gitlabMRDiffPageSize)
-	return paths, nil
+	return paths, true, nil
 }
 
 // describeError adds actionable context to GitLab's deliberately vague 404, which

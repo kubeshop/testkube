@@ -222,9 +222,10 @@ func TestGitLabProviderChangedFiles_Paginates(t *testing.T) {
 	}))
 	defer server.Close()
 
-	result, err := newGitLabProvider(server.URL, "group/sub/project", "").changedFiles(context.Background(), 12)
+	result, truncated, err := newGitLabProvider(server.URL, "group/sub/project", "").changedFiles(context.Background(), 12)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"1", "2"}, requestedPages, "a short page must end pagination")
+	assert.False(t, truncated, "a short final page means the list is complete")
 	assert.Len(t, result, gitlabMRDiffPageSize+5)
 	assert.Equal(t, "a/f0.go", result[0])
 	assert.Equal(t, "b/f4.go", result[len(result)-1])
@@ -245,10 +246,11 @@ func TestGitLabProviderChangedFiles_TruncationWarns(t *testing.T) {
 	}))
 	defer server.Close()
 
-	result, err := newGitLabProvider(server.URL, "group/project", "").changedFiles(context.Background(), 12)
+	result, truncated, err := newGitLabProvider(server.URL, "group/project", "").changedFiles(context.Background(), 12)
 	require.NoError(t, err)
 	assert.Equal(t, int32(gitlabMRDiffMaxPages), atomic.LoadInt32(&requests))
 	assert.Len(t, result, gitlabMRDiffMaxPages*gitlabMRDiffPageSize)
+	assert.True(t, truncated, "hitting the page cap must be reported to the caller")
 
 	// Silent truncation would read as "no matching paths"; it must be logged.
 	require.NotEmpty(t, recordedLogs.All())
@@ -269,8 +271,9 @@ func TestGitLabProviderChangedFiles_RenamesAndDeletions(t *testing.T) {
 	}))
 	defer server.Close()
 
-	result, err := newGitLabProvider(server.URL, "group/project", "").changedFiles(context.Background(), 12)
+	result, truncated, err := newGitLabProvider(server.URL, "group/project", "").changedFiles(context.Background(), 12)
 	require.NoError(t, err)
+	assert.False(t, truncated)
 	// A rename contributes both paths; a deletion repeats one path and must not
 	// be duplicated.
 	assert.Equal(t, []string{"src/a.go", "src/b.go", "old/b.go", "src/c.go", "src/d.go"}, result)
@@ -476,6 +479,27 @@ func TestCheckMergeRequests_E2E(t *testing.T) {
 		assert.Equal(t, "sha-v4:open", inf.commits[prCacheKey(key, providerGitLab, 1)])
 	})
 
+	// A truncated changed-file list cannot prove the absence of a match, so
+	// advancing the baseline would drop the event permanently. Fire instead.
+	t.Run("truncated_diffs_with_no_match_fires_instead_of_skipping", func(t *testing.T) {
+		currentMRs = "[" + gitlabMRJSON(1, gitlabStateOpened, "sha-v6", "feature/x", "main") + "]"
+		// Every page full, so pagination stops at the cap with no matching path in
+		// the part that was fetched.
+		currentDiffs = gitlabDiffPage(t, "docs", gitlabMRDiffPageSize)
+		t.Cleanup(func() { currentDiffs = "" })
+
+		inf := newInformer(map[string]string{
+			prInitKey(key, providerGitLab):     "1",
+			prCacheKey(key, providerGitLab, 1): "sha-initial:open",
+		})
+		trigger := buildPRTrigger(gitlabTestURI, nil, "src/**")
+		result, err := inf.checkPullRequests(context.Background(), key, trigger, newReconcileCache())
+		require.NoError(t, err)
+		require.True(t, result.changed,
+			"a match may sit in the diff pages that were never fetched, so the event must not be dropped")
+		assert.Equal(t, "synchronize", result.metadata[GitMetaKeyPRAction])
+	})
+
 	t.Run("transient_diffs_error_does_not_advance_baseline", func(t *testing.T) {
 		currentMRs = "[" + gitlabMRJSON(1, gitlabStateOpened, "sha-v5", "feature/x", "main") + "]"
 		// currentDiffs stays empty, so the mock answers 500.
@@ -517,4 +541,47 @@ func TestResolvePRToken_GitLabIgnoresGitHubAuthType(t *testing.T) {
 	assert.Zero(t, provider.calls, "GitHub token provider must not be consulted for GitLab")
 	require.NotEmpty(t, recordedLogs.All())
 	assert.Equal(t, prGitHubAuthTypeWrongProviderWarning, recordedLogs.All()[0].Message)
+}
+
+// TestCheckMergeRequests_ListWindowEvictionIsRecoverable documents the bound on the
+// single-page merge request list: an MR pushed out of the "most recently updated"
+// window by newer activity is DEFERRED, not lost. Matching is state-based, so the
+// unchanged baseline still differs once the MR reappears and the event fires then.
+func TestCheckMergeRequests_ListWindowEvictionIsRecoverable(t *testing.T) {
+	var currentMRs string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(currentMRs))
+	}))
+	defer server.Close()
+
+	const key = "v1:default/test-trigger"
+	inf := &Informer{
+		commits: map[string]string{
+			prInitKey(key, providerGitLab):     "1",
+			prCacheKey(key, providerGitLab, 1): "sha-initial:open",
+		},
+		prAPIBaseFunc: func(_ string) string { return server.URL },
+	}
+	trigger := buildPRTrigger(gitlabTestURI, nil)
+
+	// Pass 1: MR 1 got a new commit but is absent from the page, crowded out by
+	// other recently updated merge requests.
+	currentMRs = "[" + gitlabMRJSON(99, gitlabStateOpened, "sha-other", "noise", "main") + "]"
+	result, err := inf.checkPullRequests(context.Background(), key, trigger, newReconcileCache())
+	require.NoError(t, err)
+	require.True(t, result.changed, "the crowding MR itself fires")
+	assert.Equal(t, "99", result.metadata[GitMetaKeyPRNumber])
+
+	// MR 1's baseline is untouched, so nothing about it has been consumed.
+	assert.Equal(t, "sha-initial:open", inf.commits[prCacheKey(key, providerGitLab, 1)])
+
+	// Pass 2: MR 1 is visible again. Its new commit is still detected.
+	currentMRs = "[" + gitlabMRJSON(1, gitlabStateOpened, "sha-v2", "feature/x", "main") + "]"
+	result, err = inf.checkPullRequests(context.Background(), key, trigger, newReconcileCache())
+	require.NoError(t, err)
+	require.True(t, result.changed, "a deferred merge request must still fire once visible")
+	assert.Equal(t, "1", result.metadata[GitMetaKeyPRNumber])
+	assert.Equal(t, "synchronize", result.metadata[GitMetaKeyPRAction])
+	assert.Equal(t, "sha-v2", result.metadata[GitMetaKeyCommit])
 }

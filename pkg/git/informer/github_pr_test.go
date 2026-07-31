@@ -3,6 +3,7 @@ package informer
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -19,30 +20,59 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
-func TestParseGitHubRepo(t *testing.T) {
+func TestSplitGitHubRepoPath(t *testing.T) {
 	tests := []struct {
-		name  string
-		uri   string
-		owner string
-		repo  string
-		ok    bool
+		name     string
+		repoPath string
+		owner    string
+		repo     string
+		ok       bool
 	}{
-		{"https", "https://github.com/kubeshop/testkube.git", "kubeshop", "testkube", true},
-		{"https no .git", "https://github.com/kubeshop/testkube", "kubeshop", "testkube", true},
-		{"ssh", "git@github.com:kubeshop/testkube.git", "kubeshop", "testkube", true},
-		{"not github", "https://gitlab.com/foo/bar.git", "", "", false},
+		{"owner and repo", "kubeshop/testkube", "kubeshop", "testkube", true},
+		// GitHub has no nested namespaces, so a longer path is not a repository.
+		// This is also what stops https://evil.example.com/github.com/owner/repo
+		// from being accepted as a GitHub repository on evil.example.com.
+		{"path injection is rejected", "github.com/owner/repo", "", "", false},
+		{"too few segments", "testkube", "", "", false},
+		{"trailing subpath", "owner/repo/tree/main", "", "", false},
+		{"empty segment", "owner/", "", "", false},
 		{"empty", "", "", "", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			owner, repo, ok := parseGitHubRepo(tt.uri)
+			owner, repo, ok := splitGitHubRepoPath(tt.repoPath)
 			assert.Equal(t, tt.ok, ok)
-			if ok {
+			if tt.ok {
 				assert.Equal(t, tt.owner, owner)
 				assert.Equal(t, tt.repo, repo)
 			}
 		})
 	}
+}
+
+// TestPRProviderFor_RejectsGitHubRepoFromInjectedPath locks in that a URI whose
+// PATH merely mentions github.com is never treated as a GitHub repository hosted on
+// the URI's own host. Accepting it would send the trigger's token to that host,
+// because the API base is derived from the host while the repository would have
+// been derived from the path.
+func TestPRProviderFor_RejectsGitHubRepoFromInjectedPath(t *testing.T) {
+	// 404 on /version means "not GitLab", so resolution lands on the GitHub branch
+	// and only the repository-path check can reject this.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	inf := &Informer{prAPIBaseFunc: func(_ string) string { return server.URL }}
+	gitConfig := &testkube.TestTriggerContentGit{
+		Uri:   "https://evil.example.com/github.com/owner/repo",
+		Token: "secret-token",
+	}
+
+	_, err := inf.prProviderFor(context.Background(), "default", gitConfig, newReconcileCache())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "host/owner/repo")
+	assert.NotContains(t, err.Error(), "secret-token")
 }
 
 func TestGitHubAPIBaseFromURI(t *testing.T) {
@@ -478,9 +508,30 @@ func TestGitHubProviderChangedFiles_MockServer(t *testing.T) {
 	}))
 	defer server.Close()
 
-	result, err := newGitHubProvider(server.URL, "owner", "repo", "").changedFiles(context.Background(), 42)
+	result, truncated, err := newGitHubProvider(server.URL, "owner", "repo", "").changedFiles(context.Background(), 42)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"src/main.go", "README.md", "src/new.go", "old/new.go"}, result)
+	assert.False(t, truncated, "a short page means the list is complete")
+}
+
+func TestGitHubProviderChangedFiles_FullPageReportsTruncated(t *testing.T) {
+	// GitHub does not say whether more files exist, so a full page must be treated
+	// as possibly incomplete.
+	files := make([]githubPRFile, 0, githubPRFilesPageSize)
+	for i := range githubPRFilesPageSize {
+		files = append(files, githubPRFile{Filename: fmt.Sprintf("docs/f%d.md", i)})
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(files)
+	}))
+	defer server.Close()
+
+	result, truncated, err := newGitHubProvider(server.URL, "owner", "repo", "").changedFiles(context.Background(), 42)
+	require.NoError(t, err)
+	assert.Len(t, result, githubPRFilesPageSize)
+	assert.True(t, truncated)
 }
 
 func TestGitHubProviderHeadRef(t *testing.T) {

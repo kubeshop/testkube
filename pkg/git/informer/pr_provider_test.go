@@ -249,6 +249,42 @@ func TestPRProviderFor_ProbesUnknownHost(t *testing.T) {
 		assert.Equal(t, int32(2), atomic.LoadInt32(&requests))
 	})
 
+	// TestPRProviderFor_ProbeSendsNoCredential is a security regression guard. The
+	// probe host comes straight from the trigger's uri and has not yet been shown
+	// to be a supported provider, so it must never receive the trigger's token: an
+	// attacker who can create a TestTrigger could otherwise name their own host and
+	// have the informer hand over any Secret in the namespace.
+	t.Run("probe sends no credential", func(t *testing.T) {
+		var probes int32
+		var sawAuthHeader bool
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/version" {
+				atomic.AddInt32(&probes, 1)
+				if r.Header.Get("Authorization") != "" || r.Header.Get("Private-Token") != "" {
+					sawAuthHeader = true
+				}
+				// 401 is enough to prove the /api/v4 route exists.
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`[]`))
+		}))
+		defer server.Close()
+
+		inf := &Informer{prAPIBaseFunc: func(_ string) string { return server.URL }}
+		gitConfig := &testkube.TestTriggerContentGit{
+			Uri:   "https://attacker.example.com/group/project.git",
+			Token: "super-secret-token",
+		}
+
+		provider, err := inf.prProviderFor(context.Background(), "default", gitConfig, newReconcileCache())
+		require.NoError(t, err)
+		require.Equal(t, providerGitLab, provider.kind())
+		assert.Equal(t, int32(1), atomic.LoadInt32(&probes))
+		assert.False(t, sawAuthHeader, "the detection probe must not carry the trigger credential")
+	})
+
 	t.Run("unreachable host is not cached", func(t *testing.T) {
 		server := newProbeServer(http.StatusOK, new(int32))
 		unreachable := server.URL

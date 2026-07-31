@@ -62,8 +62,10 @@ type prProvider interface {
 	kind() providerKind
 	// list returns the most recently updated pull requests, newest first.
 	list(ctx context.Context) ([]pullRequest, error)
-	// changedFiles returns the paths touched by the given pull request.
-	changedFiles(ctx context.Context, number int) ([]string, error)
+	// changedFiles returns the paths touched by the given pull request. truncated
+	// reports that the provider capped the file list, so the absence of a path
+	// proves nothing.
+	changedFiles(ctx context.Context, number int) (paths []string, truncated bool, err error)
 	// headRef returns the canonical remote ref for the pull request head.
 	headRef(number int) string
 }
@@ -195,7 +197,7 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 
 		// Apply path filters if configured.
 		if len(paths) > 0 || len(pathsIgnore) > 0 {
-			changedFiles, fileErr := provider.changedFiles(ctx, pr.Number)
+			changedFiles, truncated, fileErr := provider.changedFiles(ctx, pr.Number)
 			if fileErr != nil {
 				// Transient error: do NOT advance the baseline so the event can be
 				// retried on the next reconcile.
@@ -203,9 +205,18 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 				continue
 			}
 			if !prPathsMatch(changedFiles, paths, pathsIgnore) {
-				// Paths do not match; advance baseline to skip this state on the next pass.
-				i.commits[prKey] = currentState
-				continue
+				if !truncated {
+					// Paths do not match; advance baseline to skip this state on the next pass.
+					i.commits[prKey] = currentState
+					continue
+				}
+				// The provider capped the file list, so a matching path may sit in
+				// the part that was never fetched. Advancing the baseline here would
+				// drop this event permanently, so fire instead: a superfluous run is
+				// recoverable, a silently skipped trigger is not.
+				log.DefaultLogger.Warnf(
+					"git informer: PR #%d for trigger %s/%s has a truncated changed-file list and no match among the files fetched; firing anyway because a match cannot be ruled out",
+					pr.Number, trigger.Namespace, trigger.Name)
 			}
 		}
 

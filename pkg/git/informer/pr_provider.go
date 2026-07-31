@@ -141,13 +141,7 @@ func (i *Informer) prProviderFor(
 		}
 		return newGitLabProvider(i.prAPIBase(gitConfig.Uri, providerGitLab), repoPath, token), nil
 	default:
-		owner, repo, parsed := parseGitHubRepo(gitConfig.Uri)
-		if !parsed {
-			// A GitHub Enterprise Server host need not carry "github" in its name,
-			// in which case the pattern above does not match. Fall back to the
-			// normalized path, which GitHub always shapes as owner/repo.
-			owner, repo, parsed = splitGitHubRepoPath(repoPath)
-		}
+		owner, repo, parsed := splitGitHubRepoPath(repoPath)
 		if !parsed {
 			return nil, fmt.Errorf("git-pull-request trigger requires a GitHub repository URL of the form host/owner/repo, got: %s",
 				sanitizeTokenURI(gitConfig.Uri))
@@ -159,6 +153,13 @@ func (i *Informer) prProviderFor(
 // splitGitHubRepoPath splits a normalized repository path into owner and repo.
 // GitHub has no nested namespaces, so anything other than two segments is not a
 // repository path.
+//
+// This is anchored on the path that splitGitURI derived from the URI, which is why
+// it must not be replaced by a substring match on the whole URI: a pattern looking
+// for "github.com" anywhere would accept
+// https://evil.example.com/github.com/owner/repo and then send the trigger's token
+// to evil.example.com, because the API base is derived from the host while the
+// repository would have been derived from the path.
 func splitGitHubRepoPath(repoPath string) (owner, repo string, ok bool) {
 	segments := strings.Split(repoPath, "/")
 	if len(segments) != 2 || segments[0] == "" || segments[1] == "" {
@@ -191,7 +192,7 @@ func (i *Informer) resolveProviderKind(
 		return providerGitHub, nil
 	}
 
-	kind, err := i.probeProviderKind(ctx, namespace, gitConfig)
+	kind, err := i.probeProviderKind(ctx, gitConfig)
 	if err != nil {
 		// Leave the host uncached so a transient failure does not pin it to the
 		// wrong provider for the process lifetime.
@@ -202,11 +203,14 @@ func (i *Informer) resolveProviderKind(
 }
 
 // probeProviderKind detects an unrecognized self-managed host by asking it for the
-// GitLab API version. A 401/403 answer still proves the /api/v4 route exists, so
-// the probe works with or without a valid token.
+// GitLab API version.
+//
+// The probe is deliberately UNAUTHENTICATED. The host here comes straight from the
+// trigger's uri and has not yet been established as a supported provider, so it
+// must never receive the trigger's credential: a 401 answer already proves the
+// /api/v4 route exists, which is all the probe needs to decide.
 func (i *Informer) probeProviderKind(
 	ctx context.Context,
-	namespace string,
 	gitConfig *testkube.TestTriggerContentGit,
 ) (providerKind, error) {
 	uri := sanitizeTokenURI(gitConfig.Uri)
@@ -215,9 +219,6 @@ func (i *Informer) probeProviderKind(
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return providerUnknown, err
-	}
-	if token := i.resolvePlainToken(ctx, namespace, gitConfig); token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
 	resp, err := prHTTPClient.Do(req)
