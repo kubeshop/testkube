@@ -150,115 +150,58 @@ func TestInMemoryCache_Set(t *testing.T) {
 	}
 }
 
-func TestInMemoryCache(t *testing.T) {
+func TestInMemoryCache_SetAndGet(t *testing.T) {
 	ctx := context.Background()
+	start := time.Now()
 
 	tests := []struct {
-		name              string
-		key               string
-		value             string
-		ttl               time.Duration
-		waitForExpiration bool
-		want              any
+		name    string
+		ttl     time.Duration
+		advance time.Duration
+		want    string
+		wantErr error
 	}{
 		{
-			name:  "Set and Get existing item without TTL",
-			key:   "existing",
-			value: "value",
-			ttl:   0,
+			name:    "an item without a ttl is not cached at all",
+			ttl:     0,
+			wantErr: ErrNotFound,
 		},
 		{
-			name:  "Set and Get existing item with TTL",
-			key:   "existingWithTTL",
-			value: "value",
-			ttl:   1 * time.Hour,
-			want:  "value",
-		},
-		{
-			name:              "Set and Get item which expired",
-			key:               "existingWithTTL",
-			value:             "value",
-			ttl:               100 * time.Millisecond,
-			waitForExpiration: true,
-			want:              "value",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cache := NewInMemoryCache[string]()
-
-			err := cache.Set(ctx, tt.key, tt.value, tt.ttl)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if tt.ttl == 0 {
-				// Set should not have cached the item if TTL is 0
-				_, err := cache.Get(ctx, tt.key)
-				assert.ErrorIs(t, err, ErrNotFound)
-				return
-			}
-			if tt.waitForExpiration {
-				// Assert that a not found error eventually gets returned
-				assert.Eventually(t, func() bool {
-					_, err := cache.Get(ctx, tt.key)
-					return errors.Is(err, ErrNotFound)
-				}, 300*time.Millisecond, 30*time.Millisecond)
-				// Assert that any subsequent Get calls return a not found error
-				_, err := cache.Get(ctx, tt.key)
-				assert.Equal(t, ErrNotFound, err)
-
-				return
-			}
-			got, err := cache.Get(ctx, tt.key)
-			assert.NoError(t, err)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-// TestInMemoryCache_InjectedClock covers expiry being decided by the cache's own time source
-// rather than by the wall clock, so that callers can exercise TTL behavior deterministically.
-func TestInMemoryCache_InjectedClock(t *testing.T) {
-	ctx := context.Background()
-	// An anchor far from the wall clock, so a stored item is live by the injected clock while
-	// already being long expired by the real one.
-	anchor := time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
-
-	tests := []struct {
-		name      string
-		advance   time.Duration
-		want      string
-		wantError error
-	}{
-		{
-			name:    "item is live while the injected clock is within its ttl",
+			name:    "an item is served while the clock is within its ttl",
+			ttl:     time.Hour,
 			advance: time.Minute,
 			want:    "value",
 		},
 		{
-			name:      "item expires once the injected clock passes its ttl",
-			advance:   2 * time.Hour,
-			wantError: ErrNotFound,
+			name:    "an item is gone once the clock passes its ttl",
+			ttl:     time.Hour,
+			advance: 2 * time.Hour,
+			wantErr: ErrNotFound,
+		},
+		{
+			name:    "an item with an infinite ttl outlives any advance",
+			ttl:     InfiniteTTL(),
+			advance: 100 * 365 * 24 * time.Hour,
+			want:    "value",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			now := anchor
+			now := start
 			cache := NewInMemoryCache[string]()
 			cache.timeGetter = func() time.Time { return now }
 
-			require.NoError(t, cache.Set(ctx, "key", "value", time.Hour))
-			now = anchor.Add(tt.advance)
+			require.NoError(t, cache.Set(ctx, "key", "value", tt.ttl))
+			now = start.Add(tt.advance)
 
 			got, err := cache.Get(ctx, "key")
-			if tt.wantError != nil {
-				assert.ErrorIs(t, err, tt.wantError)
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
 				return
 			}
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
 	}
