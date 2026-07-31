@@ -275,7 +275,7 @@ type Config struct {
 	// subdomains) are allowed. Self-managed GitHub Enterprise Server and GitLab hosts
 	// must be listed explicitly, because tokenFrom may reference any Secret in the
 	// trigger's namespace and a hostname alone cannot establish trust.
-	TestTriggerGitInformerAllowedGitHosts []string `envconfig:"TEST_TRIGGER_GIT_INFORMER_ALLOWED_HOSTS" default:""`
+	TestTriggerGitInformerAllowedGitHosts []string `envconfig:"TEST_TRIGGER_GIT_INFORMER_ALLOWED_HOSTS" default:"*"`
 	ForceSuperAgentMode                   bool     `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"false"`
 }
 
