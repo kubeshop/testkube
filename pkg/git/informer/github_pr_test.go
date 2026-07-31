@@ -66,7 +66,7 @@ func TestPRProviderFor_RejectsGitHubRepoFromInjectedPath(t *testing.T) {
 	// Allow any host, so that only the repository-path check can reject this.
 	inf := &Informer{
 		prAPIBaseFunc: func(_ string) string { return server.URL },
-		options:       Options{AllowedPRHosts: []string{allowAnyPRHostWildcard}},
+		options:       Options{AllowedGitHosts: []string{allowAnyGitHostWildcard}},
 	}
 	gitConfig := &testkube.TestTriggerContentGit{
 		Uri:   "https://evil.example.com/github.com/owner/repo",

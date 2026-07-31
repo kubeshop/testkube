@@ -173,7 +173,7 @@ func TestPRProviderFor_Detection(t *testing.T) {
 			atomic.StoreInt32(&requests, 0)
 			inf := &Informer{
 				prAPIBaseFunc: func(_ string) string { return server.URL },
-				options:       Options{AllowedPRHosts: []string{allowAnyPRHostWildcard}},
+				options:       Options{AllowedGitHosts: []string{allowAnyGitHostWildcard}},
 			}
 
 			gitConfig := &testkube.TestTriggerContentGit{Uri: tt.uri, AuthType: tt.authType}
@@ -187,7 +187,7 @@ func TestPRProviderFor_Detection(t *testing.T) {
 	t.Run("gitlab requires a namespaced project path", func(t *testing.T) {
 		inf := &Informer{
 			prAPIBaseFunc: func(_ string) string { return server.URL },
-			options:       Options{AllowedPRHosts: []string{allowAnyPRHostWildcard}},
+			options:       Options{AllowedGitHosts: []string{allowAnyGitHostWildcard}},
 		}
 		gitConfig := &testkube.TestTriggerContentGit{Uri: "https://gitlab.com/project.git"}
 		_, err := inf.prProviderFor(context.Background(), "default", gitConfig, newReconcileCache())
@@ -236,7 +236,7 @@ func TestPRProviderFor_ProbesUnknownHost(t *testing.T) {
 
 			inf := &Informer{
 				prAPIBaseFunc: func(_ string) string { return server.URL },
-				options:       Options{AllowedPRHosts: []string{allowAnyPRHostWildcard}},
+				options:       Options{AllowedGitHosts: []string{allowAnyGitHostWildcard}},
 			}
 			// A neutral host carrying neither provider name, so only the probe can
 			// decide. Two path segments so either provider can accept it.
@@ -262,7 +262,7 @@ func TestPRProviderFor_ProbesUnknownHost(t *testing.T) {
 
 		inf := &Informer{
 			prAPIBaseFunc: func(_ string) string { return server.URL },
-			options:       Options{AllowedPRHosts: []string{allowAnyPRHostWildcard}},
+			options:       Options{AllowedGitHosts: []string{allowAnyGitHostWildcard}},
 		}
 		gitConfig := &testkube.TestTriggerContentGit{Uri: "https://git.example.com/group/project.git"}
 
@@ -301,7 +301,7 @@ func TestPRProviderFor_ProbesUnknownHost(t *testing.T) {
 
 		inf := &Informer{
 			prAPIBaseFunc: func(_ string) string { return server.URL },
-			options:       Options{AllowedPRHosts: []string{allowAnyPRHostWildcard}},
+			options:       Options{AllowedGitHosts: []string{allowAnyGitHostWildcard}},
 		}
 		gitConfig := &testkube.TestTriggerContentGit{
 			Uri:   "https://attacker.example.com/group/project.git",
@@ -322,7 +322,7 @@ func TestPRProviderFor_ProbesUnknownHost(t *testing.T) {
 
 		inf := &Informer{
 			prAPIBaseFunc: func(_ string) string { return unreachable },
-			options:       Options{AllowedPRHosts: []string{allowAnyPRHostWildcard}},
+			options:       Options{AllowedGitHosts: []string{allowAnyGitHostWildcard}},
 		}
 		gitConfig := &testkube.TestTriggerContentGit{Uri: "https://git.example.com/group/project.git"}
 
@@ -376,8 +376,8 @@ func TestPRHostAllowlist(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			inf := &Informer{options: Options{AllowedPRHosts: tt.allowed}}
-			assert.Equal(t, tt.want, inf.prHostAllowed(tt.host))
+			inf := &Informer{options: Options{AllowedGitHosts: tt.allowed}}
+			assert.Equal(t, tt.want, inf.gitHostAllowed(tt.host))
 		})
 	}
 }
@@ -396,7 +396,7 @@ func TestPRProviderFor_AllowlistBlocksCredentialRelease(t *testing.T) {
 	newInf := func() *Informer {
 		return &Informer{
 			prAPIBaseFunc: func(_ string) string { return server.URL },
-			options:       Options{AllowedPRHosts: []string{"gitlab.com", ".corp.internal"}},
+			options:       Options{AllowedGitHosts: []string{"gitlab.com", ".corp.internal"}},
 		}
 	}
 
@@ -407,7 +407,7 @@ func TestPRProviderFor_AllowlistBlocksCredentialRelease(t *testing.T) {
 	}
 	_, err := newInf().prProviderFor(context.Background(), "default", gitConfig, newReconcileCache())
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "TEST_TRIGGER_GIT_INFORMER_ALLOWED_PR_HOSTS")
+	assert.Contains(t, err.Error(), "TEST_TRIGGER_GIT_INFORMER_ALLOWED_HOSTS")
 	assert.NotContains(t, err.Error(), "super-secret-token")
 	assert.Zero(t, atomic.LoadInt32(&requests), "no request may be made to a host that is not allowlisted")
 
@@ -421,4 +421,54 @@ func TestPRProviderFor_AllowlistBlocksCredentialRelease(t *testing.T) {
 		require.NoError(t, err, uri)
 		assert.Equal(t, providerGitLab, provider.kind())
 	}
+}
+
+// TestCloneCredentialPathIsGated covers the OTHER credential egress path. Pull
+// request polling is not the only place the informer resolves a Secret: git-push and
+// git-tag-push triggers hand one to go-git via authClientOptions. Both paths must
+// enforce the same host allowlist, or the restriction is only half applied.
+func TestCloneCredentialPathIsGated(t *testing.T) {
+	inf := NewInformer(nil, nil, "testkube", "", Options{})
+
+	t.Run("hostile host is rejected before credentials are resolved", func(t *testing.T) {
+		gitConfig := &testkube.TestTriggerContentGit{
+			Uri:   "https://gitlab.attacker.com/group/project.git",
+			Token: "exfiltrated-namespace-secret",
+		}
+		opts, err := inf.authClientOptions(context.Background(), "testkube", gitConfig, newReconcileCache())
+		require.Error(t, err)
+		assert.Nil(t, opts)
+		assert.NotContains(t, err.Error(), "exfiltrated-namespace-secret")
+	})
+
+	t.Run("canonical host is allowed", func(t *testing.T) {
+		gitConfig := &testkube.TestTriggerContentGit{
+			Uri:   "https://github.com/kubeshop/testkube.git",
+			Token: "tok",
+		}
+		opts, err := inf.authClientOptions(context.Background(), "testkube", gitConfig, newReconcileCache())
+		require.NoError(t, err)
+		assert.NotEmpty(t, opts)
+	})
+
+	t.Run("hostless local path is not gated", func(t *testing.T) {
+		// A filesystem path has no network host, so no credential can leave the
+		// process; blocking it would break local clones for nothing.
+		gitConfig := &testkube.TestTriggerContentGit{Uri: t.TempDir()}
+		_, err := inf.authClientOptions(context.Background(), "testkube", gitConfig, newReconcileCache())
+		require.NoError(t, err)
+	})
+
+	t.Run("explicit allowlist covers self managed hosts", func(t *testing.T) {
+		allowed := NewInformer(nil, nil, "testkube", "", Options{
+			AllowedGitHosts: []string{"gitlab.corp.internal"},
+		})
+		gitConfig := &testkube.TestTriggerContentGit{
+			Uri:   "https://gitlab.corp.internal/group/project.git",
+			Token: "tok",
+		}
+		opts, err := allowed.authClientOptions(context.Background(), "testkube", gitConfig, newReconcileCache())
+		require.NoError(t, err)
+		assert.NotEmpty(t, opts)
+	})
 }

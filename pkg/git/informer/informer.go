@@ -71,17 +71,17 @@ type Options struct {
 	KubeClient          kubernetes.Interface
 	GitHubTokenProvider GitHubTokenProvider
 
-	// AllowedPRHosts restricts which repository hosts a pull request trigger may
+	// AllowedGitHosts restricts which repository hosts a pull request trigger may
 	// contact with a credential. Entries match a host exactly, or that domain and any
 	// subdomain when written with a leading dot (".example.com"). A single "*" entry
 	// allows any host.
 	//
-	// When empty, defaultAllowedPRHosts applies: the canonical SaaS hosts only. This
+	// When empty, defaultAllowedGitHosts applies: the canonical SaaS hosts only. This
 	// is the only control over where credentials go, because tokenFrom may reference
 	// any Secret in the trigger's namespace and no hostname test can distinguish
 	// "gitlab.attacker.com" from a legitimate self-managed instance. Self-managed
 	// hosts must therefore be listed explicitly.
-	AllowedPRHosts []string
+	AllowedGitHosts []string
 }
 
 func normalizeOptions(opts Options) Options {
@@ -811,7 +811,17 @@ func authClientOptions(gitConfig *testkube.TestTriggerContentGit) ([]client.Opti
 	return authClientOptionsWithResolver(gitConfig, resolveCredentialValue)
 }
 
+// authClientOptions resolves clone credentials for a git-push / git-tag-push
+// trigger. This is the single chokepoint through which the informer hands a
+// credential to go-git, so the host allowlist is enforced here as well as on the
+// pull request polling path: the uri is author-controlled and tokenFrom can name any
+// Secret in the trigger's namespace, so an unrestricted host means an author can
+// direct a Secret they cannot otherwise read at a host they control.
 func (i *Informer) authClientOptions(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit, cache *reconcileCache) ([]client.Option, error) {
+	if err := i.checkGitHostAllowed(gitConfig.Uri); err != nil {
+		return nil, err
+	}
+
 	authType := strings.ToLower(gitConfig.AuthType)
 	if authType == string(testkube.GITHUB_ContentGitAuthType) {
 		return i.githubAuthClientOptions(ctx, gitConfig, cache)

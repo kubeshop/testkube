@@ -106,7 +106,7 @@ func gitAPIHostPort(uri string) (host, authority string) {
 // No name test can make this a trust decision, though. An author who controls the
 // trigger's uri can always name their host "gitlab.attacker.com", which is
 // indistinguishable from the legitimate "gitlab.mycompany.com" convention. Gating
-// credential release is the job of Options.AllowedPRHosts, not of this function.
+// credential release is the job of Options.AllowedGitHosts, not of this function.
 func providerKindFromHost(host string) (providerKind, bool) {
 	if host == "" {
 		return providerUnknown, false
@@ -143,12 +143,8 @@ func (i *Informer) prProviderFor(
 			sanitizeTokenURI(gitConfig.Uri))
 	}
 
-	if !i.prHostAllowed(host) {
-		return nil, fmt.Errorf(
-			"git-pull-request trigger host %q is not allowed to receive credentials; "+
-				"add it to TEST_TRIGGER_GIT_INFORMER_ALLOWED_PR_HOSTS (currently: %s), "+
-				"or set that variable to %q to allow any host",
-			host, describeAllowedPRHosts(i.options.AllowedPRHosts), allowAnyPRHostWildcard)
+	if err := i.checkGitHostAllowed(gitConfig.Uri); err != nil {
+		return nil, err
 	}
 
 	kind, err := i.resolveProviderKind(ctx, namespace, host, gitConfig)
@@ -292,7 +288,7 @@ func (i *Informer) storePRProviderKind(host string, kind providerKind) {
 	i.prProviders[host] = kind
 }
 
-// defaultAllowedPRHosts is the allowlist applied when an operator has not
+// defaultAllowedGitHosts is the allowlist applied when an operator has not
 // configured one: the canonical SaaS hosts only.
 //
 // This default is deliberately closed. A trigger author chooses both the uri and the
@@ -303,22 +299,42 @@ func (i *Informer) storePRProviderKind(host string, kind providerKind) {
 // from the legitimate "gitlab.mycompany.com" convention.
 //
 // Self-managed GitHub Enterprise Server and GitLab installations are therefore NOT
-// covered by the default and must be named in AllowedPRHosts.
-var defaultAllowedPRHosts = []string{"github.com", ".github.com", "gitlab.com", ".gitlab.com"}
+// covered by the default and must be named in AllowedGitHosts.
+var defaultAllowedGitHosts = []string{"github.com", ".github.com", "gitlab.com", ".gitlab.com"}
 
-// allowAnyPRHostWildcard opts out of host restriction entirely. It exists so an
+// allowAnyGitHostWildcard opts out of host restriction entirely. It exists so an
 // operator who cannot enumerate their hosts yet has a deliberate, greppable escape
 // hatch rather than being pushed toward disabling the feature.
-const allowAnyPRHostWildcard = "*"
+const allowAnyGitHostWildcard = "*"
 
-// prHostAllowed reports whether a repository host may be contacted with a trigger
+// checkGitHostAllowed rejects a repository URI whose host may not be handed a
+// trigger credential. It is enforced on every path that resolves one: pull request
+// polling and go-git clone alike.
+func (i *Informer) checkGitHostAllowed(uri string) error {
+	host, _ := gitAPIHostPort(uri)
+	if host == "" {
+		// No network host, e.g. a local filesystem path. go-git reads it from disk,
+		// so no credential can leave the process and there is nothing to gate.
+		return nil
+	}
+	if !i.gitHostAllowed(host) {
+		return fmt.Errorf(
+			"git trigger host %q is not allowed to receive credentials; "+
+				"add it to TEST_TRIGGER_GIT_INFORMER_ALLOWED_HOSTS (currently: %s), "+
+				"or set that variable to %q to allow any host",
+			host, describeAllowedGitHosts(i.options.AllowedGitHosts), allowAnyGitHostWildcard)
+	}
+	return nil
+}
+
+// gitHostAllowed reports whether a repository host may be contacted with a trigger
 // credential. Entries match a host exactly or, when written as ".example.com", that
 // domain and any subdomain of it.
-func (i *Informer) prHostAllowed(host string) bool {
-	allowlist := i.options.AllowedPRHosts
+func (i *Informer) gitHostAllowed(host string) bool {
+	allowlist := i.options.AllowedGitHosts
 	if !hasUsableAllowlistEntry(allowlist) {
 		// Unconfigured (or unusable) means the closed default, never "allow all".
-		allowlist = defaultAllowedPRHosts
+		allowlist = defaultAllowedGitHosts
 	}
 
 	for _, allowed := range allowlist {
@@ -326,7 +342,7 @@ func (i *Informer) prHostAllowed(host string) bool {
 		switch {
 		case allowed == "":
 			continue
-		case allowed == allowAnyPRHostWildcard:
+		case allowed == allowAnyGitHostWildcard:
 			return true
 		case strings.HasPrefix(allowed, "."):
 			if host == strings.TrimPrefix(allowed, ".") || strings.HasSuffix(host, allowed) {
@@ -339,11 +355,11 @@ func (i *Informer) prHostAllowed(host string) bool {
 	return false
 }
 
-// describeAllowedPRHosts renders the effective allowlist for an error message, so an
+// describeAllowedGitHosts renders the effective allowlist for an error message, so an
 // operator hitting the closed default can see what is permitted.
-func describeAllowedPRHosts(allowlist []string) string {
+func describeAllowedGitHosts(allowlist []string) string {
 	if !hasUsableAllowlistEntry(allowlist) {
-		return strings.Join(defaultAllowedPRHosts, ", ") + " (default)"
+		return strings.Join(defaultAllowedGitHosts, ", ") + " (default)"
 	}
 	return strings.Join(allowlist, ", ")
 }

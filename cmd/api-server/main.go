@@ -917,7 +917,7 @@ func main() {
 						WatcherNamespaces:   informerWatcherNamespaces,
 						KubeClient:          clientset,
 						GitHubTokenProvider: client,
-						AllowedPRHosts:      cfg.TestTriggerGitInformerAllowedPRHosts,
+						AllowedGitHosts:     cfg.TestTriggerGitInformerAllowedGitHosts,
 					}).Reconcile(taskCtx)
 					return nil
 				},
