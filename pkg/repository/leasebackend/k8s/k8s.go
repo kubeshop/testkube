@@ -95,15 +95,28 @@ func (b *K8sLeaseBackend) TryAcquire(ctx context.Context, id, clusterID string) 
 
 	// Renew if we already hold it
 	if l.Spec.HolderIdentity != nil && *l.Spec.HolderIdentity == id {
-		l.Spec.RenewTime = &now
-		if l.Spec.LeaseDurationSeconds == nil {
-			l.Spec.LeaseDurationSeconds = &leaseDurationSeconds
-		}
-		if _, err := leases.Update(ctx, l, metav1.UpdateOptions{}); err != nil {
-			if apierrors.IsConflict(err) {
-				// Someone updated concurrently; try again on next tick.
+		err := b.renewHeldLease(ctx, l, now, leaseDurationSeconds)
+		if apierrors.IsConflict(err) {
+			// The lease changed between our Get and Update. We are the recorded holder, so this
+			// is a stale read rather than a demotion: re-read it and retry once before reporting
+			// a lost lease, which would otherwise stop all leader tasks.
+			l, err = leases.Get(ctx, leaseName, metav1.GetOptions{})
+			switch {
+			case apierrors.IsNotFound(err):
+				// The lease is gone; the next tick recreates it.
+				return false, nil
+			case err != nil:
+				return false, err
+			case l.Spec.HolderIdentity == nil || *l.Spec.HolderIdentity != id:
 				return false, nil
 			}
+			err = b.renewHeldLease(ctx, l, now, leaseDurationSeconds)
+		}
+		switch {
+		case apierrors.IsConflict(err):
+			// Still conflicting; try again on next tick.
+			return false, nil
+		case err != nil:
 			return false, err
 		}
 		return true, nil
@@ -133,6 +146,16 @@ func (b *K8sLeaseBackend) TryAcquire(ctx context.Context, id, clusterID string) 
 		return false, err
 	}
 	return true, nil
+}
+
+func (b *K8sLeaseBackend) renewHeldLease(ctx context.Context, l *coordv1.Lease, now metav1.MicroTime, leaseDurationSeconds int32) error {
+	l.Spec.RenewTime = &now
+	if l.Spec.LeaseDurationSeconds == nil {
+		l.Spec.LeaseDurationSeconds = &leaseDurationSeconds
+	}
+
+	_, err := b.client.CoordinationV1().Leases(b.namespace).Update(ctx, l, metav1.UpdateOptions{})
+	return err
 }
 
 // leaseName returns the Kubernetes Lease object name for the given clusterID.
