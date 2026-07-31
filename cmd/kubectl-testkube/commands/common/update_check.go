@@ -202,12 +202,20 @@ func updateCheckEnabled(cmd *cobra.Command) bool {
 	if v, _ := os.LookupEnv(updateCheckEnvDisable); v != "" {
 		return false
 	}
-	return outputIsPretty(cmd)
+	return OutputIsPretty(cmd)
 }
 
-func outputIsPretty(cmd *cobra.Command) bool {
+// OutputIsPretty reports whether the command renders human-readable output, and so
+// whether decoration (context header, version warnings, update hints) may be written
+// to stdout alongside it.
+func OutputIsPretty(cmd *cobra.Command) bool {
 	if cmd == nil {
 		return true
+	}
+	// --crd-only writes a manifest to stdout that is meant to be piped into kubectl
+	// or redirected to a file, so anything else printed there corrupts it
+	if crdOnlyFlag := cmd.Flags().Lookup("crd-only"); crdOnlyFlag != nil && crdOnlyFlag.Value.String() == "true" {
+		return false
 	}
 	outputFlag := cmd.Flag("output")
 	if outputFlag == nil {
