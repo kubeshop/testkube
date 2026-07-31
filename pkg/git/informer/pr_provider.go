@@ -143,14 +143,14 @@ func (i *Informer) prProviderFor(
 			sanitizeTokenURI(gitConfig.Uri))
 	}
 
-	kind, err := i.resolveProviderKind(ctx, namespace, host, gitConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	if !i.prHostAllowed(host) {
 		return nil, fmt.Errorf("git-pull-request trigger host %q is not in the configured pull request host allowlist (%s)",
 			host, strings.Join(i.options.AllowedPRHosts, ", "))
+	}
+
+	kind, err := i.resolveProviderKind(ctx, namespace, host, gitConfig)
+	if err != nil {
+		return nil, err
 	}
 
 	token := i.resolvePRToken(ctx, namespace, gitConfig, kind, cache)
