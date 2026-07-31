@@ -6,6 +6,7 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: testkube-oss
+    dev-quality-gate: "true"
 spec:
   container:
     resources:
