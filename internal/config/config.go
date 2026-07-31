@@ -271,7 +271,7 @@ type Config struct {
 	// entry with a leading dot matches subdomains (".example.com"). Empty allows any
 	// host, which preserves existing behaviour.
 	TestTriggerGitInformerAllowedPRHosts []string `envconfig:"TEST_TRIGGER_GIT_INFORMER_ALLOWED_PR_HOSTS" default:""`
-	ForceSuperAgentMode                      bool          `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"false"`
+	ForceSuperAgentMode                  bool     `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"false"`
 }
 
 type DeprecatedConfig struct {
