@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestInMemoryCache_Get(t *testing.T) {
@@ -210,6 +211,53 @@ func TestInMemoryCache(t *testing.T) {
 				return
 			}
 			got, err := cache.Get(ctx, tt.key)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// TestInMemoryCache_InjectedClock covers expiry being decided by the cache's own time source
+// rather than by the wall clock, so that callers can exercise TTL behavior deterministically.
+func TestInMemoryCache_InjectedClock(t *testing.T) {
+	ctx := context.Background()
+	// An anchor far from the wall clock, so a stored item is live by the injected clock while
+	// already being long expired by the real one.
+	anchor := time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name      string
+		advance   time.Duration
+		want      string
+		wantError error
+	}{
+		{
+			name:    "item is live while the injected clock is within its ttl",
+			advance: time.Minute,
+			want:    "value",
+		},
+		{
+			name:      "item expires once the injected clock passes its ttl",
+			advance:   2 * time.Hour,
+			wantError: ErrNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			now := anchor
+			cache := NewInMemoryCache[string]()
+			cache.timeGetter = func() time.Time { return now }
+
+			require.NoError(t, cache.Set(ctx, "key", "value", time.Hour))
+			now = anchor.Add(tt.advance)
+
+			got, err := cache.Get(ctx, "key")
+			if tt.wantError != nil {
+				assert.ErrorIs(t, err, tt.wantError)
+				return
+			}
+
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})

@@ -40,7 +40,7 @@ func (c *InMemoryCache[T]) Get(ctx context.Context, key string) (T, error) {
 		return defaultVal, errors.New("unexpected item type found in cache")
 	}
 
-	if i.expiresAt != nil && i.expiresAt.Before(time.Now()) {
+	if i.expiresAt != nil && i.expiresAt.Before(c.timeGetter()) {
 		c.cache.Delete(key)
 		return defaultVal, ErrNotFound
 	}
