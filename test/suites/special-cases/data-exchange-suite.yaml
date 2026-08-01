@@ -38,6 +38,9 @@ spec:
     token:
       type: string
       default: ""
+    producerId:
+      type: string
+      default: ""
   container:
     resources:
       requests:
@@ -63,6 +66,18 @@ spec:
       # suite that scheduled this one, addressed by the reserved "parent" reference.
       echo "parent fixture: {{ read_artifact("parent", "fixtures/data.json") }}"
       [ '{{ read_artifact("parent", "fixtures/data.json") }}' = '{"cases":3}' ] || { echo "unexpected fixture"; exit 1; }
+
+  - name: Read a sibling's values and files
+    shell: |
+      set -e
+      # A workflow only knows the test workflows it ran itself, and this one ran none.
+      # A sibling of the same suite is addressed by execution id, which the parent
+      # passed down; the control plane allows it because both share a parent.
+      echo "sibling token: {{ execution(config.producerId).outputs.token }}"
+      [ "{{ execution(config.producerId).outputs.token }}" = "token-from-producer" ] || { echo "unexpected sibling token"; exit 1; }
+
+      echo "sibling summary: {{ read_artifact(config.producerId, "results/summary.json") }}"
+      [ '{{ read_artifact(config.producerId, "results/summary.json") }}' = '{"passed":true}' ] || { echo "unexpected sibling summary"; exit 1; }
 
 ---
 kind: TestWorkflow
@@ -119,9 +134,12 @@ spec:
       [ -f /data/from-producer/results/summary.json ] || { echo "summary.json was not fetched"; exit 1; }
       [ -f /data/from-producer/results/payload.txt ] || { echo "payload.txt was not fetched"; exit 1; }
 
-  - name: Run the consumer with the producer's output
+  - name: Run the consumer with the producer's output and identity
     execute:
       workflows:
       - name: tw-data-exchange-consumer
         config:
           token: '{{ execution("p").outputs.token }}'
+          # Handing the id down is what lets the consumer reach its sibling itself,
+          # for anything the parent did not know to forward.
+          producerId: '{{ execution("p").id }}'

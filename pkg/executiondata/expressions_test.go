@@ -2,6 +2,8 @@ package executiondata
 
 import (
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -153,6 +155,9 @@ func TestExecutionFunctionUnregistered(t *testing.T) {
 	assert.Contains(t, compiled.String(), `execution("p")`)
 }
 
+// A workflow only registers the test workflows it ran itself. Everything else -
+// notably a sibling of the same suite, whose id the parent passed down - is
+// addressed by execution id and resolved through the control plane.
 func TestExecutionRepositoryFallback(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	repository := NewMockExecutionRepository(ctrl)
@@ -163,6 +168,51 @@ func TestExecutionRepositoryFallback(t *testing.T) {
 	value, err := resolve(t, `execution("other-execution").outputs.key`, machine)
 	require.NoError(t, err)
 	assert.Equal(t, "value", value)
+}
+
+// The same reference works for artifacts, so a sibling reads both the values and
+// the files of another test workflow of its suite.
+func TestSiblingByExecutionId(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("produced by the sibling"))
+	}))
+	defer server.Close()
+
+	ctrl := gomock.NewController(t)
+	repository := NewMockExecutionRepository(ctrl)
+	repository.EXPECT().Get(gomock.Any(), "exec-producer").
+		Return(Execution{Id: "exec-producer", Outputs: map[string]string{"token": "abc"}}, nil).Times(2)
+	repository.EXPECT().ListArtifacts(gomock.Any(), "exec-producer", []string{"results/summary.json"}).
+		Return([]Artifact{{Path: "results/summary.json", Url: server.URL, Size: 23}}, nil)
+
+	// The registry is empty: a child never scheduled anything itself.
+	machine := NewMachine(MachineOptions{Registry: NewRegistry(), Repository: repository})
+
+	value, err := resolve(t, `execution("exec-producer").outputs.token`, machine)
+	require.NoError(t, err)
+	assert.Equal(t, "abc", value)
+
+	value, err = resolve(t, `read_artifact("exec-producer", "results/summary.json")`, machine)
+	require.NoError(t, err)
+	assert.Equal(t, "produced by the sibling", value)
+}
+
+// The id arrives as a config value rather than a literal, so the reference has to
+// survive being an accessor.
+func TestSiblingReferenceFromConfig(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	repository := NewMockExecutionRepository(ctrl)
+	repository.EXPECT().Get(gomock.Any(), "exec-producer").
+		Return(Execution{Id: "exec-producer", Outputs: map[string]string{"token": "abc"}}, nil)
+
+	machine := expressions.CombinedMachines(
+		expressions.NewMachine().RegisterStringMap("config", map[string]string{"producerId": "exec-producer"}),
+		NewMachine(MachineOptions{Registry: NewRegistry(), Repository: repository}),
+	)
+
+	value, err := resolve(t, `execution(config.producerId).outputs.token`, machine)
+	require.NoError(t, err)
+	assert.Equal(t, "abc", value)
 }
 
 func TestExecutionRepositoryNotConfigured(t *testing.T) {

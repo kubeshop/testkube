@@ -125,8 +125,11 @@ func UnknownRefError(ref string, index int64, known []string) error {
 	if index != 0 {
 		position = fmt.Sprintf(" at index %d", index)
 	}
+	// A workflow only knows the test workflows it ran itself. Anything else - a
+	// sibling of the same suite, for instance - has to be addressed by execution id,
+	// which the parent can pass down as configuration.
 	if len(known) == 0 {
-		return fmt.Errorf("unknown execution %q%s: this workflow has not executed any test workflow yet - run it in an earlier step", ref, position)
+		return fmt.Errorf("unknown execution %q%s: this workflow has not executed any test workflow yet - run it in an earlier step, or pass an execution id", ref, position)
 	}
-	return fmt.Errorf("unknown execution %q%s: available executions are %s", ref, position, strings.Join(known, ", "))
+	return fmt.Errorf("unknown execution %q%s: available executions are %s (anything else must be addressed by execution id)", ref, position, strings.Join(known, ", "))
 }
