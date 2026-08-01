@@ -60,7 +60,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/savioxavier/termlink v1.4.3
 	github.com/segmentio/analytics-go/v3 v3.3.0
-	github.com/shirou/gopsutil/v4 v4.26.6
+	github.com/shirou/gopsutil/v4 v4.26.7
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/afero v1.15.0
 	github.com/spf13/cobra v1.10.2
@@ -154,7 +154,7 @@ require (
 	github.com/docker/docker-credential-helpers v0.9.5 // indirect
 	github.com/docker/go-connections v0.7.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/ebitengine/purego v0.10.0 // indirect
+	github.com/ebitengine/purego v0.10.2 // indirect
 	github.com/elliotchance/orderedmap v1.8.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
