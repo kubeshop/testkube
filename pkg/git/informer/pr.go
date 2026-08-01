@@ -13,6 +13,7 @@ import (
 
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/git/matchers"
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
@@ -20,8 +21,8 @@ import (
 var prHTTPClient = &http.Client{Timeout: 30 * time.Second}
 
 // Normalized pull request states. Provider-specific states are mapped onto these
-// before they reach the shared matching logic, which keeps determinePRAction and
-// the baseline encoding provider-agnostic.
+// before they reach the shared matching logic, which keeps matchers.DeterminePRAction
+// and the baseline encoding provider-agnostic.
 const (
 	prStateOpen   = "open"
 	prStateClosed = "closed"
@@ -208,8 +209,8 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 
 	prConfig := gitConfig.PullRequest
 
-	paths := normalizePaths(gitConfig.Paths)
-	pathsIgnore := normalizePaths(gitConfig.PathsIgnore)
+	paths := matchers.NormalizePaths(gitConfig.Paths)
+	pathsIgnore := matchers.NormalizePaths(gitConfig.PathsIgnore)
 
 	// On the first reconcile pass for a trigger all currently-visible PRs are
 	// recorded as baselines without firing.  Once the sentinel is set, a PR
@@ -255,7 +256,7 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 		if !hasPrev {
 			action = prActionOpened
 		} else {
-			action = determinePRAction(prev, currentState)
+			action = matchers.DeterminePRAction(prev, currentState, pr.HeadSHA)
 		}
 
 		// Apply type filter. Advance baseline so the same state is not re-evaluated
@@ -274,7 +275,7 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 				log.DefaultLogger.Warnf("git informer: failed to fetch PR #%d files: %v", pr.Number, fileErr)
 				continue
 			}
-			if !prPathsMatch(changedFiles, paths, pathsIgnore) {
+			if !matchers.PRPathsMatch(changedFiles, paths, pathsIgnore) {
 				if !truncated {
 					// Paths do not match; advance baseline to skip this state on the next pass.
 					i.commits[prKey] = currentState
@@ -381,76 +382,20 @@ func prInitKey(triggerKey string, kind providerKind) string {
 	return triggerKey + refSeparator + prKeyPrefix(kind) + "__init__"
 }
 
-// prMatchesBaseBranch checks if a PR's base branch matches the trigger's branch filters.
+// prMatchesBaseBranch adapts the trigger's pull request config to the shared
+// matcher. A nil config means no filters are set, which matches every base branch.
 func prMatchesBaseBranch(baseBranch string, prConfig *testkube.TestTriggerContentGitPullRequest) bool {
 	if prConfig == nil {
 		return true
 	}
-	// Check ignore first (takes precedence)
-	if nameMatchesAny(baseBranch, prConfig.BranchesIgnore) {
-		return false
-	}
-	// If branches list is empty, match all
-	if len(prConfig.Branches) == 0 {
-		return true
-	}
-	return nameMatchesAny(baseBranch, prConfig.Branches)
+	return matchers.PRMatchesBaseBranch(baseBranch, prConfig.Branches, prConfig.BranchesIgnore)
 }
 
-// prMatchesTypes checks if a PR action matches the configured types filter.
+// prMatchesTypes adapts the trigger's pull request config to the shared matcher.
+// A nil config means no filter is set, which matches every action.
 func prMatchesTypes(action string, prConfig *testkube.TestTriggerContentGitPullRequest) bool {
-	if prConfig == nil || len(prConfig.Types) == 0 {
+	if prConfig == nil {
 		return true
 	}
-	for _, t := range prConfig.Types {
-		if strings.EqualFold(strings.TrimSpace(t), action) {
-			return true
-		}
-	}
-	return false
-}
-
-// determinePRAction determines the PR action based on state transitions. Both
-// baselines are encoded as "<headSHA>:<normalizedState>".
-func determinePRAction(prevEncoded, currentEncoded string) string {
-	prevSHA, prevState := splitPRBaseline(prevEncoded)
-	currSHA, currState := splitPRBaseline(currentEncoded)
-
-	// State changed to closed
-	if currState == prStateClosed && prevState != prStateClosed {
-		return prActionClosed
-	}
-	// State changed from closed to open (reopened)
-	if currState == prStateOpen && prevState == prStateClosed {
-		return prActionReopened
-	}
-	// SHA changed (new commits pushed)
-	if prevSHA != currSHA {
-		return prActionSynchronize
-	}
-	// Catch-all
-	return prActionSynchronize
-}
-
-// splitPRBaseline splits an encoded "<headSHA>:<normalizedState>" baseline. Both
-// components are empty when the encoding is not recognised.
-func splitPRBaseline(encoded string) (sha, state string) {
-	parts := strings.SplitN(encoded, ":", 2)
-	if len(parts) != 2 {
-		return "", ""
-	}
-	return parts[0], parts[1]
-}
-
-// prPathsMatch checks if any changed file in a PR matches the path filters.
-func prPathsMatch(changedFiles, paths, pathsIgnore []string) bool {
-	for _, file := range changedFiles {
-		if pathIsIgnored(pathsIgnore, file) {
-			continue
-		}
-		if len(paths) == 0 || pathMatchesNormalized(paths, file) {
-			return true
-		}
-	}
-	return false
+	return matchers.PRMatchesTypes(action, prConfig.Types)
 }

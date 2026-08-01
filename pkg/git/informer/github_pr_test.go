@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/git/matchers"
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
@@ -127,46 +128,6 @@ func TestPRMatchesTypes(t *testing.T) {
 	}
 }
 
-func TestDeterminePRAction(t *testing.T) {
-	tests := []struct {
-		name     string
-		prev     string
-		current  string
-		expected string
-	}{
-		{"sha change is synchronize", "old-sha:open", "new-sha:open", "synchronize"},
-		{"state to closed", "old-sha:open", "new-sha:closed", "closed"},
-		{"state to open from closed", "old-sha:closed", "new-sha:open", "reopened"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := determinePRAction(tt.prev, tt.current)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestPRPathsMatch(t *testing.T) {
-	tests := []struct {
-		name     string
-		files    []string
-		paths    []string
-		ignore   []string
-		expected bool
-	}{
-		{"no filters matches all", []string{"src/main.go"}, nil, nil, true},
-		{"path matches", []string{"src/main.go", "docs/readme.md"}, []string{"src/**"}, nil, true},
-		{"path does not match", []string{"docs/readme.md"}, []string{"src/**"}, nil, false},
-		{"ignore takes precedence", []string{"src/vendor/lib.go"}, []string{"src/**"}, []string{"src/vendor/**"}, false},
-		{"mixed match after ignore", []string{"src/vendor/lib.go", "src/main.go"}, []string{"src/**"}, []string{"src/vendor/**"}, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, prPathsMatch(tt.files, tt.paths, tt.ignore))
-		})
-	}
-}
-
 func TestCheckPullRequests_Integration(t *testing.T) {
 	t.Run("first_run_initializes_baseline", func(t *testing.T) {
 		inf := &Informer{
@@ -203,7 +164,7 @@ func TestCheckPullRequests_Integration(t *testing.T) {
 
 		assert.NotEqual(t, prev, newState)
 
-		action := determinePRAction(prev, newState)
+		action := matchers.DeterminePRAction(prev, newState, "new-sha")
 		assert.Equal(t, "synchronize", action)
 	})
 }

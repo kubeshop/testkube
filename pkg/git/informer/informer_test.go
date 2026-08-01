@@ -27,6 +27,7 @@ import (
 
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/git/matchers"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 )
 
@@ -94,16 +95,16 @@ func TestPathMatches(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.file, func(t *testing.T) {
-			assert.Equal(t, tt.expected, pathMatches(tt.paths, tt.file))
+			assert.Equal(t, tt.expected, matchers.PathMatches(tt.paths, tt.file))
 		})
 	}
 }
 
 func TestPathMatchesNormalized(t *testing.T) {
-	paths := normalizePaths([]string{"src/", " pkg "})
-	assert.True(t, pathMatchesNormalized(paths, "src/main.go"))
-	assert.True(t, pathMatchesNormalized(paths, "pkg/util.go"))
-	assert.False(t, pathMatchesNormalized(paths, "internal/main.go"))
+	paths := matchers.NormalizePaths([]string{"src/", " pkg "})
+	assert.True(t, matchers.PathMatchesNormalized(paths, "src/main.go"))
+	assert.True(t, matchers.PathMatchesNormalized(paths, "pkg/util.go"))
+	assert.False(t, matchers.PathMatchesNormalized(paths, "internal/main.go"))
 }
 
 func TestNormalizeRefs(t *testing.T) {
@@ -134,7 +135,7 @@ func TestNormalizeRevision(t *testing.T) {
 
 func TestNormalizePaths(t *testing.T) {
 	paths := []string{" /a ", "/b/c", "", "///", "d/"}
-	assert.Equal(t, []string{"a", "b/c", "d"}, normalizePaths(paths))
+	assert.Equal(t, []string{"a", "b/c", "d"}, matchers.NormalizePaths(paths))
 }
 
 func TestResolveCredentialValue(t *testing.T) {
@@ -619,11 +620,11 @@ func TestGitInformerConfig_MultiplePathFilters(t *testing.T) {
 	assert.Contains(t, refs, "refs/heads/main")
 	assert.Equal(t, "https://github.com/kubeshop/testkube.git", gitConfig.Uri)
 
-	normalizedPaths := normalizePaths(gitConfig.Paths)
+	normalizedPaths := matchers.NormalizePaths(gitConfig.Paths)
 	assert.Equal(t, []string{"test", "pkg"}, normalizedPaths)
-	assert.True(t, pathMatchesNormalized(normalizedPaths, "test/testkube/ci/crd-workflow/api-server-build-lint.yaml"))
-	assert.True(t, pathMatchesNormalized(normalizedPaths, "pkg/triggers/git_trigger.go"))
-	assert.False(t, pathMatchesNormalized(normalizedPaths, "cmd/api-server/main.go"))
+	assert.True(t, matchers.PathMatchesNormalized(normalizedPaths, "test/testkube/ci/crd-workflow/api-server-build-lint.yaml"))
+	assert.True(t, matchers.PathMatchesNormalized(normalizedPaths, "pkg/triggers/git_trigger.go"))
+	assert.False(t, matchers.PathMatchesNormalized(normalizedPaths, "cmd/api-server/main.go"))
 }
 
 func TestIsGitContentTrigger(t *testing.T) {
@@ -1349,7 +1350,7 @@ func TestMatchGlob(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, matchGlob(tt.pattern, tt.input))
+			assert.Equal(t, tt.expected, matchers.MatchGlob(tt.pattern, tt.input))
 		})
 	}
 }
@@ -1374,7 +1375,7 @@ func TestNameMatchesPatterns(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, nameMatchesPatterns(tt.input, tt.patterns))
+			assert.Equal(t, tt.expected, matchers.NameMatchesPatterns(tt.input, tt.patterns))
 		})
 	}
 }
@@ -1395,7 +1396,7 @@ func TestNameMatchesAny(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, nameMatchesAny(tt.input, tt.patterns))
+			assert.Equal(t, tt.expected, matchers.NameMatchesAny(tt.input, tt.patterns))
 		})
 	}
 }
@@ -1417,7 +1418,7 @@ func TestPathIsIgnored(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, pathIsIgnored(tt.patterns, tt.file))
+			assert.Equal(t, tt.expected, matchers.PathIsIgnored(tt.patterns, tt.file))
 		})
 	}
 }
@@ -1436,7 +1437,7 @@ func TestBranchFromRef(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.ref, func(t *testing.T) {
-			assert.Equal(t, tt.expected, branchFromRef(tt.ref))
+			assert.Equal(t, tt.expected, matchers.BranchFromRef(tt.ref))
 		})
 	}
 }
@@ -1455,7 +1456,7 @@ func TestTagFromRef(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.ref, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tagFromRef(tt.ref))
+			assert.Equal(t, tt.expected, matchers.TagFromRef(tt.ref))
 		})
 	}
 }
@@ -1603,8 +1604,8 @@ func TestPathMatchesNormalized_GlobPatterns(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			normalized := normalizePaths(tt.paths)
-			assert.Equal(t, tt.expected, pathMatchesNormalized(normalized, tt.file))
+			normalized := matchers.NormalizePaths(tt.paths)
+			assert.Equal(t, tt.expected, matchers.PathMatchesNormalized(normalized, tt.file))
 		})
 	}
 }
