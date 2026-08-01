@@ -54,27 +54,41 @@ func TestDeferredSpecFinalization(t *testing.T) {
 	})
 }
 
-func TestClaimExecutionRef(t *testing.T) {
+func TestClaimExecutionRefs(t *testing.T) {
 	t.Run("an entry is addressed by its workflow name", func(t *testing.T) {
 		claimed := map[string]string{}
-		require.NoError(t, claimExecutionRef(claimed, "", "producer"))
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}))
 		assert.Equal(t, map[string]string{"producer": "producer"}, claimed)
 	})
 
 	t.Run("an alias takes precedence over the workflow name", func(t *testing.T) {
 		claimed := map[string]string{}
-		require.NoError(t, claimExecutionRef(claimed, "p", "producer"))
+		require.NoError(t, claimExecutionRefs(claimed, "p", []string{"producer"}))
 		assert.Equal(t, map[string]string{"p": "producer"}, claimed)
 
-		require.NoError(t, claimExecutionRef(claimed, "", "producer"),
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}),
 			"the unaliased entry still claims the workflow name, so both stay addressable")
+	})
+
+	t.Run("a selector claims every workflow it matched", func(t *testing.T) {
+		claimed := map[string]string{}
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"a", "b", "c"}))
+		assert.Equal(t, map[string]string{"a": "a", "b": "a", "c": "a"}, claimed)
+	})
+
+	t.Run("an aliased selector claims one reference for the whole group", func(t *testing.T) {
+		// The matched workflows form a single group addressed by execution("all", i),
+		// so the alias must not be claimed once per match.
+		claimed := map[string]string{}
+		require.NoError(t, claimExecutionRefs(claimed, "all", []string{"a", "b", "c"}))
+		assert.Equal(t, map[string]string{"all": "a"}, claimed)
 	})
 
 	t.Run("rejects the same workflow listed twice without an alias", func(t *testing.T) {
 		claimed := map[string]string{}
-		require.NoError(t, claimExecutionRef(claimed, "", "producer"))
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}))
 
-		err := claimExecutionRef(claimed, "", "producer")
+		err := claimExecutionRefs(claimed, "", []string{"producer"})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), `duplicated execution reference "producer"`)
 		assert.Contains(t, err.Error(), "set a unique 'as'")
@@ -82,10 +96,19 @@ func TestClaimExecutionRef(t *testing.T) {
 
 	t.Run("rejects two entries sharing an alias", func(t *testing.T) {
 		claimed := map[string]string{}
-		require.NoError(t, claimExecutionRef(claimed, "shared", "producer"))
+		require.NoError(t, claimExecutionRefs(claimed, "shared", []string{"producer"}))
 
-		err := claimExecutionRef(claimed, "shared", "consumer")
+		err := claimExecutionRefs(claimed, "shared", []string{"consumer"})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), `already used by "producer"`)
+	})
+
+	t.Run("rejects two selectors overlapping on a workflow", func(t *testing.T) {
+		claimed := map[string]string{}
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"a", "b"}))
+
+		err := claimExecutionRefs(claimed, "", []string{"b", "c"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `duplicated execution reference "b"`)
 	})
 }

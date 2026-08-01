@@ -205,6 +205,44 @@ func TestScanStepOutputs(t *testing.T) {
 	})
 }
 
+func TestPartitionSensitiveOutputs(t *testing.T) {
+	t.Run("withholds values holding a sensitive word", func(t *testing.T) {
+		values := map[string]string{
+			"token":    "Bearer s3cr3t-value",
+			"count":    "42",
+			"endpoint": "https://api.example.com",
+		}
+
+		publishable, withheld := PartitionSensitiveOutputs(values, []string{"s3cr3t-value"})
+		assert.Equal(t, map[string]string{"count": "42", "endpoint": "https://api.example.com"}, publishable)
+		assert.Equal(t, []string{"token"}, withheld,
+			"the whole value is withheld, because publishing it obfuscated would corrupt it")
+	})
+
+	t.Run("publishes everything when nothing is sensitive", func(t *testing.T) {
+		values := map[string]string{"count": "42"}
+
+		publishable, withheld := PartitionSensitiveOutputs(values, []string{"unrelated"})
+		assert.Equal(t, values, publishable)
+		assert.Empty(t, withheld)
+	})
+
+	t.Run("ignores empty sensitive words", func(t *testing.T) {
+		// An empty word matches every string, which would withhold everything.
+		publishable, withheld := PartitionSensitiveOutputs(map[string]string{"count": "42"}, []string{""})
+		assert.Equal(t, map[string]string{"count": "42"}, publishable)
+		assert.Empty(t, withheld)
+	})
+
+	t.Run("reports withheld names in a stable order", func(t *testing.T) {
+		values := map[string]string{"b": "secret", "a": "secret", "c": "fine"}
+
+		publishable, withheld := PartitionSensitiveOutputs(values, []string{"secret"})
+		assert.Equal(t, map[string]string{"c": "fine"}, publishable)
+		assert.Equal(t, []string{"a", "b"}, withheld)
+	})
+}
+
 func TestStepResultsDir(t *testing.T) {
 	assert.Equal(t, "/data/.steps/build", StepResultsDir("build"))
 	assert.Equal(t, "/data/.steps/run_tests", StepResultsDir("run_tests"))

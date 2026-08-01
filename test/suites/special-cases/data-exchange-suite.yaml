@@ -15,7 +15,8 @@ spec:
   - name: Publish an output and an artifact
     shell: |
       # /testkube/outputs is the same channel used between steps of a single
-      # workflow - here it also crosses the workflow boundary.
+      # workflow - here it also crosses the workflow boundary. Values holding a
+      # credential stay workflow-local; pass those with credential() instead.
       echo -n "token-from-producer" > /testkube/outputs/token
 
       mkdir -p /data/results

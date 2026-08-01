@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -73,6 +74,36 @@ func scanStepOutputsFrom(dir, stepId string) (map[string]string, error) {
 		values[name] = value
 	}
 	return values, nil
+}
+
+// PartitionSensitiveOutputs splits the scanned outputs into the ones that may leave
+// the pod and the names of the ones that may not.
+//
+// Values are published by printing an instruction to the log stream, which is
+// obfuscated on its way out - a sensitive value would reach the execution record
+// partially masked, so the consumer would silently read a corrupted value. Dropping
+// it keeps the workflow-local output intact while refusing to publish something the
+// reader could not trust.
+func PartitionSensitiveOutputs(values map[string]string, sensitiveWords []string) (publishable map[string]string, withheld []string) {
+	publishable = make(map[string]string, len(values))
+	for name, value := range values {
+		if containsAny(value, sensitiveWords) {
+			withheld = append(withheld, name)
+			continue
+		}
+		publishable[name] = value
+	}
+	sort.Strings(withheld)
+	return publishable, withheld
+}
+
+func containsAny(value string, words []string) bool {
+	for _, word := range words {
+		if word != "" && strings.Contains(value, word) {
+			return true
+		}
+	}
+	return false
 }
 
 func PrepareOutputsDir() error {

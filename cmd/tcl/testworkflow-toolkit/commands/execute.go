@@ -305,18 +305,24 @@ func buildWorkflowExecution(req workflowExecutionRequest) func() error {
 	}
 }
 
-// claimExecutionRef reserves the reference an entry will be addressed by. Two entries
-// answering to the same reference would make execution() ambiguous, so ask for an
-// explicit alias instead of silently picking a winner.
-func claimExecutionRef(claimed map[string]string, alias, workflowName string) error {
-	ref := alias
-	if ref == "" {
-		ref = workflowName
+// claimExecutionRefs reserves the references an entry will be addressed by. Two
+// entries answering to the same reference would make execution() ambiguous, so ask
+// for an explicit alias instead of silently picking a winner.
+//
+// An aliased entry claims one reference no matter how many workflows its selector
+// matched - they form a single group, told apart by execution("<alias>", index).
+// An entry without an alias claims each matched workflow by name.
+func claimExecutionRefs(claimed map[string]string, alias string, workflowNames []string) error {
+	refs := workflowNames
+	if alias != "" {
+		refs = []string{alias}
 	}
-	if previous, ok := claimed[ref]; ok {
-		return fmt.Errorf("duplicated execution reference %q, already used by %q: set a unique 'as' on one of them", ref, previous)
+	for _, ref := range refs {
+		if previous, ok := claimed[ref]; ok {
+			return fmt.Errorf("duplicated execution reference %q, already used by %q: set a unique 'as' on one of them", ref, previous)
+		}
+		claimed[ref] = workflowNames[0]
 	}
-	claimed[ref] = workflowName
 	return nil
 }
 
@@ -510,12 +516,12 @@ func NewExecuteCmd() *cobra.Command {
 					ui.Fail(errors.Wrapf(err, "'%s' workflow: computing the 'as' reference", w.Name))
 				}
 
+				if err := claimExecutionRefs(aliases, alias, testWorkflowNames); err != nil {
+					ui.Fail(err)
+				}
+
 				for _, testWorkflowName := range testWorkflowNames {
 					fmt.Printf("%s: %s\n", commontcl.ServiceLabel(testWorkflowName), params.Humanize())
-
-					if err := claimExecutionRef(aliases, alias, testWorkflowName); err != nil {
-						ui.Fail(err)
-					}
 
 					// Create operations for each expected execution
 					for i := int64(0); i < params.Count; i++ {
