@@ -25,23 +25,26 @@ func SetOutputsDir(dir string) {
 
 // ScanStepOutputs reads files from OutputsDir and stores their contents
 // as per-step outputs. Files exceeding MaxOutputSize are skipped.
-func ScanStepOutputs(stepId string) error {
+// It returns the scanned values, so the caller may publish them further
+// (e.g. as workflow-level outputs readable by a parent workflow).
+func ScanStepOutputs(stepId string) (map[string]string, error) {
 	return scanStepOutputsFrom(outputsDir, stepId)
 }
 
-func scanStepOutputsFrom(dir, stepId string) error {
+func scanStepOutputsFrom(dir, stepId string) (map[string]string, error) {
 	if stepId == "" {
-		return nil
+		return nil, nil
 	}
 
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return nil, nil
 		}
-		return fmt.Errorf("failed to read outputs directory: %w", err)
+		return nil, fmt.Errorf("failed to read outputs directory: %w", err)
 	}
 
+	values := make(map[string]string)
 	state := GetState()
 	for _, entry := range entries {
 		if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") || !entry.Type().IsRegular() {
@@ -65,9 +68,11 @@ func scanStepOutputsFrom(dir, stepId string) error {
 			continue
 		}
 
-		state.SetStepOutput(stepId, name, strings.TrimSpace(string(content)))
+		value := strings.TrimSpace(string(content))
+		state.SetStepOutput(stepId, name, value)
+		values[name] = value
 	}
-	return nil
+	return values, nil
 }
 
 func PrepareOutputsDir() error {

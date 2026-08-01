@@ -14,9 +14,11 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/commands"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/runtime"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
+	"github.com/kubeshop/testkube/pkg/executiondata"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
@@ -246,8 +248,15 @@ func handleExecuteAction(action *lite.ActionExecute, ctx *ExecutionContext) Acti
 
 	// Scan per-step outputs directory after execution
 	if step.Id != "" {
-		if err := data.ScanStepOutputs(step.Id); err != nil {
+		values, err := data.ScanStepOutputs(step.Id)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "warn: failed to scan step outputs: %s\n", err.Error())
+		}
+		// Publish them as workflow-level outputs too, so that a parent workflow
+		// running this one via `execute` can read them back from the execution record.
+		// Printf goes through the obfuscated stream, so sensitive words stay masked.
+		if len(values) > 0 {
+			ctx.Stdout.Printf("%s", instructions.SprintOutput(step.Ref, executiondata.OutputsInstructionName, values))
 		}
 	}
 

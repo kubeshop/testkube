@@ -242,7 +242,7 @@ func parseAndValidateSpec(specContent string, cfg *config.ConfigV2, base64Encode
 	parser.NormalizeParallelSpec(parallel)
 
 	// Preserve env.* expressions for parallel workers
-	baseMachine := spawn.ParallelCreateBaseMachineWithoutEnv(cfg, stateMachine, credentialMachine)
+	baseMachine := spawn.ParallelCreateBaseMachineWithoutEnv(cfg, stateMachine, data.ExecutionDataMachine(), credentialMachine)
 
 	params, err := commontcl.GetParamsSpec(parallel.Matrix, parallel.Shards, parallel.Count, parallel.MaxCount, baseMachine)
 	if err != nil {
@@ -260,7 +260,7 @@ func prepareWorkers(parallel *testworkflowsv1.StepParallel, params *commontcl.Pa
 	transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, cfg.IP(), constants.DefaultTransferPort)
 
 	// Preserve env.* expressions for parallel workers
-	baseMachine := spawn.ParallelCreateBaseMachineWithoutEnv(cfg, stateMachine, credentialMachine)
+	baseMachine := spawn.ParallelCreateBaseMachineWithoutEnv(cfg, stateMachine, data.ExecutionDataMachine(), credentialMachine)
 
 	builder := NewParallelWorkersBuilder(transferSrv, baseMachine, params, cfg)
 	workers, err := builder.BuildWorkerSpecs(parallel)
@@ -842,7 +842,7 @@ func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params
 	resumeOrchestrator := NewResumeOrchestrator(registry, updates, namespaces, descriptions, cfg)
 	go resumeOrchestrator.Start(execCtx)
 
-	fullBaseMachine := spawn.ParallelCreateBaseMachine(cfg, stateMachine, credentialMachine)
+	fullBaseMachine := spawn.ParallelCreateBaseMachine(cfg, stateMachine, data.ExecutionDataMachine(), credentialMachine)
 	executor := NewWorkerExecutor(storage, registry, updates, fullBaseMachine, cfg)
 
 	// ExecuteParallel callback - matches worker by index and namespace

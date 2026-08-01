@@ -1,0 +1,110 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-data-exchange-producer
+  labels:
+    core-tests: data-exchange
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+    workingDir: /data
+  steps:
+  - name: Publish an output and an artifact
+    shell: |
+      # /testkube/outputs is the same channel used between steps of a single
+      # workflow - here it also crosses the workflow boundary.
+      echo -n "token-from-producer" > /testkube/outputs/token
+
+      mkdir -p /data/results
+      echo -n '{"passed":true}' > /data/results/summary.json
+      echo -n 'a large payload' > /data/results/payload.txt
+    artifacts:
+      workingDir: /data
+      paths:
+      - 'results/**'
+
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-data-exchange-consumer
+  labels:
+    core-tests: data-exchange
+spec:
+  config:
+    token:
+      type: string
+      default: ""
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+  - name: Read what the parent passed down
+    shell: |
+      set -e
+      echo "received token: {{ config.token }}"
+      [ "{{ config.token }}" = "token-from-producer" ] || { echo "unexpected token"; exit 1; }
+
+  - name: Read the parent's own data
+    shell: |
+      set -e
+      echo "parent seed: {{ execution("parent").outputs.seed }}"
+      [ "{{ execution("parent").outputs.seed }}" = "seed-from-parent" ] || { echo "unexpected seed"; exit 1; }
+
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-data-exchange-suite
+  labels:
+    core-tests: data-exchange
+    type: suite
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+  - name: Publish something for the children to read
+    shell: |
+      echo -n "seed-from-parent" > /testkube/outputs/seed
+
+  - name: Run the producer, pulling its artifacts down
+    id: produce
+    execute:
+      workflows:
+      - name: tw-data-exchange-producer
+        as: p
+        fetch:
+        - paths:
+          - 'results/**'
+          to: /data/from-producer
+
+  - name: Read the producer's values and artifacts
+    shell: |
+      set -e
+      echo "token: {{ execution("p").outputs.token }}"
+      [ "{{ execution("p").outputs.token }}" = "token-from-producer" ] || { echo "unexpected token"; exit 1; }
+
+      echo "summary: {{ read_artifact("p", "results/summary.json") }}"
+      [ '{{ read_artifact("p", "results/summary.json") }}' = '{"passed":true}' ] || { echo "unexpected summary"; exit 1; }
+
+  - name: Check the fetched artifacts landed on disk
+    shell: |
+      set -e
+      ls -la /data/from-producer/results
+      [ -f /data/from-producer/results/summary.json ] || { echo "summary.json was not fetched"; exit 1; }
+      [ -f /data/from-producer/results/payload.txt ] || { echo "payload.txt was not fetched"; exit 1; }
+
+  - name: Run the consumer with the producer's output
+    execute:
+      workflows:
+      - name: tw-data-exchange-consumer
+        config:
+          token: '{{ execution("p").outputs.token }}'

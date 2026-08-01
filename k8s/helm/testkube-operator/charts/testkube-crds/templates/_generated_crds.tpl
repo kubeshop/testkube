@@ -9042,6 +9042,9 @@ spec:
                             description: workflows to run
                             items:
                               properties:
+                                as:
+                                  description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -9062,6 +9065,28 @@ spec:
                                 executionName:
                                   description: unique execution name to use
                                   type: string
+                                fetch:
+                                  description: instructions for downloading artifacts produced by executed test workflows
+                                  items:
+                                    description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                    properties:
+                                      from:
+                                        description: execution to download the artifacts from, defaults to the one being executed
+                                        type: string
+                                      paths:
+                                        description: artifact paths to download, relative to the artifact root of the execution
+                                        items:
+                                          type: string
+                                        type: array
+                                      to:
+                                        description: |-
+                                          directory to download the artifacts to; when the entry fans out over a matrix or
+                                          shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                        type: string
+                                    required:
+                                      - to
+                                    type: object
+                                  type: array
                                 matrix:
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
@@ -9537,6 +9562,9 @@ spec:
                                 description: workflows to run
                                 items:
                                   properties:
+                                    as:
+                                      description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -9557,6 +9585,28 @@ spec:
                                     executionName:
                                       description: unique execution name to use
                                       type: string
+                                    fetch:
+                                      description: instructions for downloading artifacts produced by executed test workflows
+                                      items:
+                                        description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                        properties:
+                                          from:
+                                            description: execution to download the artifacts from, defaults to the one being executed
+                                            type: string
+                                          paths:
+                                            description: artifact paths to download, relative to the artifact root of the execution
+                                            items:
+                                              type: string
+                                            type: array
+                                          to:
+                                            description: |-
+                                              directory to download the artifacts to; when the entry fans out over a matrix or
+                                              shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                            type: string
+                                        required:
+                                          - to
+                                        type: object
+                                      type: array
                                     matrix:
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
@@ -14634,6 +14684,9 @@ spec:
                             description: workflows to run
                             items:
                               properties:
+                                as:
+                                  description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -14654,6 +14707,28 @@ spec:
                                 executionName:
                                   description: unique execution name to use
                                   type: string
+                                fetch:
+                                  description: instructions for downloading artifacts produced by executed test workflows
+                                  items:
+                                    description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                    properties:
+                                      from:
+                                        description: execution to download the artifacts from, defaults to the one being executed
+                                        type: string
+                                      paths:
+                                        description: artifact paths to download, relative to the artifact root of the execution
+                                        items:
+                                          type: string
+                                        type: array
+                                      to:
+                                        description: |-
+                                          directory to download the artifacts to; when the entry fans out over a matrix or
+                                          shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                        type: string
+                                    required:
+                                      - to
+                                    type: object
+                                  type: array
                                 matrix:
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
@@ -15129,6 +15204,9 @@ spec:
                                 description: workflows to run
                                 items:
                                   properties:
+                                    as:
+                                      description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -15149,6 +15227,28 @@ spec:
                                     executionName:
                                       description: unique execution name to use
                                       type: string
+                                    fetch:
+                                      description: instructions for downloading artifacts produced by executed test workflows
+                                      items:
+                                        description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                        properties:
+                                          from:
+                                            description: execution to download the artifacts from, defaults to the one being executed
+                                            type: string
+                                          paths:
+                                            description: artifact paths to download, relative to the artifact root of the execution
+                                            items:
+                                              type: string
+                                            type: array
+                                          to:
+                                            description: |-
+                                              directory to download the artifacts to; when the entry fans out over a matrix or
+                                              shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                            type: string
+                                        required:
+                                          - to
+                                        type: object
+                                      type: array
                                     matrix:
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
@@ -17998,6 +18098,9 @@ spec:
                             description: workflows to run
                             items:
                               properties:
+                                as:
+                                  description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -18018,6 +18121,28 @@ spec:
                                 executionName:
                                   description: unique execution name to use
                                   type: string
+                                fetch:
+                                  description: instructions for downloading artifacts produced by executed test workflows
+                                  items:
+                                    description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                    properties:
+                                      from:
+                                        description: execution to download the artifacts from, defaults to the one being executed
+                                        type: string
+                                      paths:
+                                        description: artifact paths to download, relative to the artifact root of the execution
+                                        items:
+                                          type: string
+                                        type: array
+                                      to:
+                                        description: |-
+                                          directory to download the artifacts to; when the entry fans out over a matrix or
+                                          shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                        type: string
+                                    required:
+                                      - to
+                                    type: object
+                                  type: array
                                 matrix:
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
@@ -18493,6 +18618,9 @@ spec:
                                 description: workflows to run
                                 items:
                                   properties:
+                                    as:
+                                      description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -18513,6 +18641,28 @@ spec:
                                     executionName:
                                       description: unique execution name to use
                                       type: string
+                                    fetch:
+                                      description: instructions for downloading artifacts produced by executed test workflows
+                                      items:
+                                        description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                        properties:
+                                          from:
+                                            description: execution to download the artifacts from, defaults to the one being executed
+                                            type: string
+                                          paths:
+                                            description: artifact paths to download, relative to the artifact root of the execution
+                                            items:
+                                              type: string
+                                            type: array
+                                          to:
+                                            description: |-
+                                              directory to download the artifacts to; when the entry fans out over a matrix or
+                                              shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                            type: string
+                                        required:
+                                          - to
+                                        type: object
+                                      type: array
                                     matrix:
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
@@ -21643,6 +21793,9 @@ spec:
                             description: workflows to run
                             items:
                               properties:
+                                as:
+                                  description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -21663,6 +21816,28 @@ spec:
                                 executionName:
                                   description: unique execution name to use
                                   type: string
+                                fetch:
+                                  description: instructions for downloading artifacts produced by executed test workflows
+                                  items:
+                                    description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                    properties:
+                                      from:
+                                        description: execution to download the artifacts from, defaults to the one being executed
+                                        type: string
+                                      paths:
+                                        description: artifact paths to download, relative to the artifact root of the execution
+                                        items:
+                                          type: string
+                                        type: array
+                                      to:
+                                        description: |-
+                                          directory to download the artifacts to; when the entry fans out over a matrix or
+                                          shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                        type: string
+                                    required:
+                                      - to
+                                    type: object
+                                  type: array
                                 matrix:
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
@@ -22123,6 +22298,9 @@ spec:
                                 description: workflows to run
                                 items:
                                   properties:
+                                    as:
+                                      description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -22143,6 +22321,28 @@ spec:
                                     executionName:
                                       description: unique execution name to use
                                       type: string
+                                    fetch:
+                                      description: instructions for downloading artifacts produced by executed test workflows
+                                      items:
+                                        description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                        properties:
+                                          from:
+                                            description: execution to download the artifacts from, defaults to the one being executed
+                                            type: string
+                                          paths:
+                                            description: artifact paths to download, relative to the artifact root of the execution
+                                            items:
+                                              type: string
+                                            type: array
+                                          to:
+                                            description: |-
+                                              directory to download the artifacts to; when the entry fans out over a matrix or
+                                              shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                            type: string
+                                        required:
+                                          - to
+                                        type: object
+                                      type: array
                                     matrix:
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
@@ -27093,6 +27293,9 @@ spec:
                             description: workflows to run
                             items:
                               properties:
+                                as:
+                                  description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -27113,6 +27316,28 @@ spec:
                                 executionName:
                                   description: unique execution name to use
                                   type: string
+                                fetch:
+                                  description: instructions for downloading artifacts produced by executed test workflows
+                                  items:
+                                    description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                    properties:
+                                      from:
+                                        description: execution to download the artifacts from, defaults to the one being executed
+                                        type: string
+                                      paths:
+                                        description: artifact paths to download, relative to the artifact root of the execution
+                                        items:
+                                          type: string
+                                        type: array
+                                      to:
+                                        description: |-
+                                          directory to download the artifacts to; when the entry fans out over a matrix or
+                                          shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                        type: string
+                                    required:
+                                      - to
+                                    type: object
+                                  type: array
                                 matrix:
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
@@ -27573,6 +27798,9 @@ spec:
                                 description: workflows to run
                                 items:
                                   properties:
+                                    as:
+                                      description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -27593,6 +27821,28 @@ spec:
                                     executionName:
                                       description: unique execution name to use
                                       type: string
+                                    fetch:
+                                      description: instructions for downloading artifacts produced by executed test workflows
+                                      items:
+                                        description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                        properties:
+                                          from:
+                                            description: execution to download the artifacts from, defaults to the one being executed
+                                            type: string
+                                          paths:
+                                            description: artifact paths to download, relative to the artifact root of the execution
+                                            items:
+                                              type: string
+                                            type: array
+                                          to:
+                                            description: |-
+                                              directory to download the artifacts to; when the entry fans out over a matrix or
+                                              shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                            type: string
+                                        required:
+                                          - to
+                                        type: object
+                                      type: array
                                     matrix:
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
@@ -30335,6 +30585,9 @@ spec:
                             description: workflows to run
                             items:
                               properties:
+                                as:
+                                  description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -30355,6 +30608,28 @@ spec:
                                 executionName:
                                   description: unique execution name to use
                                   type: string
+                                fetch:
+                                  description: instructions for downloading artifacts produced by executed test workflows
+                                  items:
+                                    description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                    properties:
+                                      from:
+                                        description: execution to download the artifacts from, defaults to the one being executed
+                                        type: string
+                                      paths:
+                                        description: artifact paths to download, relative to the artifact root of the execution
+                                        items:
+                                          type: string
+                                        type: array
+                                      to:
+                                        description: |-
+                                          directory to download the artifacts to; when the entry fans out over a matrix or
+                                          shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                        type: string
+                                    required:
+                                      - to
+                                    type: object
+                                  type: array
                                 matrix:
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
@@ -30815,6 +31090,9 @@ spec:
                                 description: workflows to run
                                 items:
                                   properties:
+                                    as:
+                                      description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -30835,6 +31113,28 @@ spec:
                                     executionName:
                                       description: unique execution name to use
                                       type: string
+                                    fetch:
+                                      description: instructions for downloading artifacts produced by executed test workflows
+                                      items:
+                                        description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                        properties:
+                                          from:
+                                            description: execution to download the artifacts from, defaults to the one being executed
+                                            type: string
+                                          paths:
+                                            description: artifact paths to download, relative to the artifact root of the execution
+                                            items:
+                                              type: string
+                                            type: array
+                                          to:
+                                            description: |-
+                                              directory to download the artifacts to; when the entry fans out over a matrix or
+                                              shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                            type: string
+                                        required:
+                                          - to
+                                        type: object
+                                      type: array
                                     matrix:
                                       description: matrix of parameters to spawn instances (static)
                                       type: object

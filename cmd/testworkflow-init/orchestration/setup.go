@@ -257,6 +257,7 @@ func (c *setup) UseEnv(group string) error {
 
 	// Compute dynamic environment variables
 	addonMachine := expressions.CombinedMachines(data.RefSuccessMachine, data.AliasMachine, data.StateMachine, libs.NewFsMachine(os.DirFS("/"), cwd),
+		data.ExecutionDataMachine(),
 		credentials.NewCredentialMachine(data.Credentials(), func(_ string, value string) {
 			c.AddSensitiveWords(value)
 			output.Std.SetSensitiveWords(c.GetSensitiveWords())
