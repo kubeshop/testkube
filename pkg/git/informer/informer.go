@@ -82,6 +82,11 @@ type Options struct {
 	// any Secret in the trigger's namespace and no hostname test can distinguish
 	// "gitlab.attacker.com" from a legitimate self-managed instance. Self-managed
 	// hosts must therefore be listed explicitly.
+	//
+	// Note that the API server does not leave this empty: it defaults
+	// TEST_TRIGGER_GIT_INFORMER_ALLOWED_HOSTS to "*" for backward compatibility, so
+	// the closed default above only applies to callers that pass nothing. A wildcard
+	// allowlist is warned about once at construction.
 	AllowedGitHosts []string
 }
 
@@ -103,6 +108,15 @@ func normalizeOptions(opts Options) Options {
 	}
 	if opts.PullRetryDelay < 0 {
 		opts.PullRetryDelay = 0
+	}
+	if allowlistIsUnrestricted(opts.AllowedGitHosts) {
+		// Operators do not read the source, and the ungated mode is the one that can
+		// leak a Secret to an author-chosen host. Say so where they will see it.
+		log.DefaultLogger.Warnw("git informer: repository host allowlist is unrestricted",
+			"allowedGitHosts", allowAnyGitHostWildcard,
+			"risk", "any trigger author can send a tokenFrom Secret to a host they control",
+			"remediation", "set TEST_TRIGGER_GIT_INFORMER_ALLOWED_HOSTS to your own git hosts",
+		)
 	}
 	return opts
 }

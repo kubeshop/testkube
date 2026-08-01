@@ -271,10 +271,19 @@ type Config struct {
 	// entry with a leading dot matches that domain and its subdomains
 	// (".example.com"), and a single "*" allows any host.
 	//
-	// When unset only the canonical SaaS hosts (github.com, gitlab.com and their
-	// subdomains) are allowed. Self-managed GitHub Enterprise Server and GitLab hosts
-	// must be listed explicitly, because tokenFrom may reference any Secret in the
-	// trigger's namespace and a hostname alone cannot establish trust.
+	// WARNING: the default is "*", which allows any host. It ships open so that
+	// upgrading does not break operators already polling self-managed GitHub
+	// Enterprise Server or GitLab instances, but it leaves credential release
+	// ungated: a trigger author picks both the uri and the tokenFrom Secret
+	// reference, tokenFrom may name any Secret in the trigger's namespace, and a
+	// hostname alone cannot establish trust ("gitlab.attacker.com" is
+	// indistinguishable from "gitlab.mycompany.com"). An author who can create a
+	// trigger can therefore exfiltrate a Secret they cannot otherwise read.
+	// Restrict this to your own hosts in production. The git informer logs a warning
+	// when it starts while this is "*".
+	//
+	// Setting it to the empty string selects the closed built-in default: the
+	// canonical SaaS hosts (github.com, gitlab.com and their subdomains) only.
 	TestTriggerGitInformerAllowedGitHosts []string `envconfig:"TEST_TRIGGER_GIT_INFORMER_ALLOWED_HOSTS" default:"*"`
 	ForceSuperAgentMode                   bool     `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"false"`
 }

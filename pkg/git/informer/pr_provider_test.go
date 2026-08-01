@@ -382,6 +382,29 @@ func TestPRHostAllowlist(t *testing.T) {
 	}
 }
 
+// TestAllowlistIsUnrestricted covers the predicate behind the startup warning: an
+// operator must be told when the allowlist gates nothing, and must NOT be warned
+// when an empty value has selected the closed default.
+func TestAllowlistIsUnrestricted(t *testing.T) {
+	tests := []struct {
+		name    string
+		allowed []string
+		want    bool
+	}{
+		{"nil selects the closed default", nil, false},
+		{"blank entries select the closed default", []string{"", "  "}, false},
+		{"explicit hosts are restricted", []string{"gitlab.corp.internal", ".github.com"}, false},
+		{"star is unrestricted", []string{"*"}, true},
+		{"star among others is still unrestricted", []string{"gitlab.com", "*"}, true},
+		{"star is matched after trimming", []string{" * "}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, allowlistIsUnrestricted(tt.allowed))
+		})
+	}
+}
+
 // TestPRProviderFor_AllowlistBlocksCredentialRelease asserts the allowlist is
 // enforced before any credential is resolved or sent.
 func TestPRProviderFor_AllowlistBlocksCredentialRelease(t *testing.T) {

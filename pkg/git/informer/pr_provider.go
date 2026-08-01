@@ -384,6 +384,18 @@ func hasUsableAllowlistEntry(allowlist []string) bool {
 	return false
 }
 
+// allowlistIsUnrestricted reports whether the configured allowlist gates nothing,
+// i.e. it contains the "*" wildcard. An empty allowlist is not unrestricted: that
+// selects the closed defaultAllowedGitHosts.
+func allowlistIsUnrestricted(allowlist []string) bool {
+	for _, entry := range allowlist {
+		if strings.TrimSpace(entry) == allowAnyGitHostWildcard {
+			return true
+		}
+	}
+	return false
+}
+
 // resolvePlainToken resolves the token configured directly on the trigger, without
 // consulting the control plane's GitHub App integration.
 func (i *Informer) resolvePlainToken(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit) string {
