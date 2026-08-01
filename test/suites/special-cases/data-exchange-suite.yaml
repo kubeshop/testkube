@@ -50,11 +50,19 @@ spec:
       echo "received token: {{ config.token }}"
       [ "{{ config.token }}" = "token-from-producer" ] || { echo "unexpected token"; exit 1; }
 
-  - name: Read the parent's own data
+  - name: Read a value the parent published
     shell: |
       set -e
       echo "parent seed: {{ execution("parent").outputs.seed }}"
       [ "{{ execution("parent").outputs.seed }}" = "seed-from-parent" ] || { echo "unexpected seed"; exit 1; }
+
+  - name: Read a file the parent produced
+    shell: |
+      set -e
+      # read_artifact reaches into the artifacts of another execution - here the
+      # suite that scheduled this one, addressed by the reserved "parent" reference.
+      echo "parent fixture: {{ read_artifact("parent", "fixtures/data.json") }}"
+      [ '{{ read_artifact("parent", "fixtures/data.json") }}' = '{"cases":3}' ] || { echo "unexpected fixture"; exit 1; }
 
 ---
 kind: TestWorkflow
@@ -74,6 +82,15 @@ spec:
   - name: Publish something for the children to read
     shell: |
       echo -n "seed-from-parent" > /testkube/outputs/seed
+
+      # Artifacts are uploaded when this step ends, so they are already readable
+      # by the time the executions below start.
+      mkdir -p /data/fixtures
+      echo -n '{"cases":3}' > /data/fixtures/data.json
+    artifacts:
+      workingDir: /data
+      paths:
+      - 'fixtures/**'
 
   - name: Run the producer, pulling its artifacts down
     id: produce
