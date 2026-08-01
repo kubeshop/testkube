@@ -46,7 +46,7 @@ require (
 	github.com/minio/minio-go/v7 v7.2.1
 	github.com/nats-io/nats-server/v2 v2.14.4
 	github.com/nats-io/nats.go v1.52.0
-	github.com/ohler55/ojg v1.28.2
+	github.com/ohler55/ojg v1.28.3
 	github.com/olekukonko/tablewriter v1.1.4
 	github.com/onsi/ginkgo/v2 v2.32.0
 	github.com/onsi/gomega v1.42.1
