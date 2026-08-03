@@ -24,9 +24,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
-	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	testsourcev1 "github.com/kubeshop/testkube/api/testsource/v1"
-	testsuitev3 "github.com/kubeshop/testkube/api/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 )
 
@@ -35,8 +33,6 @@ var codecs = serializer.NewCodecFactory(scheme)
 
 var localSchemeBuilder = runtime.SchemeBuilder{
 	testtriggersv1.AddToScheme,
-	testsuitev3.AddToScheme,
-	testsv3.AddToScheme,
 	executorv1.AddToScheme,
 	testsourcev1.AddToScheme,
 }

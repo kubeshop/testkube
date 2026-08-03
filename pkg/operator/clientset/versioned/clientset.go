@@ -22,8 +22,6 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube/pkg/operator/clientset/versioned/typed/executor/v1"
 	v1 "github.com/kubeshop/testkube/pkg/operator/clientset/versioned/typed/tests/v1"
-	v2 "github.com/kubeshop/testkube/pkg/operator/clientset/versioned/typed/tests/v2"
-	v3 "github.com/kubeshop/testkube/pkg/operator/clientset/versioned/typed/tests/v3"
 
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
@@ -33,8 +31,6 @@ import (
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	TestsV1() v1.TestsV1Interface
-	TestsV2() v2.TestsV2Interface
-	TestsV3() v3.TestsV3Interface
 	ExecutorV1() executorv1.ExecutorV1Interface
 }
 
@@ -42,24 +38,12 @@ type Interface interface {
 type Clientset struct {
 	*discovery.DiscoveryClient
 	testsV1    *v1.TestsV1Client
-	testsV2    *v2.TestsV2Client
-	testsV3    *v3.TestsV3Client
 	executorV1 *executorv1.ExecutorV1Client
 }
 
 // TestsV1 retrieves the TestsV1Client
 func (c *Clientset) TestsV1() v1.TestsV1Interface {
 	return c.testsV1
-}
-
-// TestsV2 retrieves the TestsV2Client
-func (c *Clientset) TestsV2() v2.TestsV2Interface {
-	return c.testsV2
-}
-
-// TestsV3 retrieves the TestsV3Client
-func (c *Clientset) TestsV3() v3.TestsV3Interface {
-	return c.testsV3
 }
 
 // ExecutorV1 retrieves the ExecutorV1Client
@@ -116,16 +100,6 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 		return nil, err
 	}
 
-	cs.testsV2, err = v2.NewForConfigAndClient(&configShallowCopy, httpClient)
-	if err != nil {
-		return nil, err
-	}
-
-	cs.testsV3, err = v3.NewForConfigAndClient(&configShallowCopy, httpClient)
-	if err != nil {
-		return nil, err
-	}
-
 	cs.executorV1, err = executorv1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
@@ -152,8 +126,6 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.testsV1 = v1.New(c)
-	cs.testsV2 = v2.New(c)
-	cs.testsV3 = v3.New(c)
 	cs.executorV1 = executorv1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
