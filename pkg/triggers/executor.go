@@ -561,10 +561,10 @@ func (s *Service) getTestWorkflowsFromInternal(t *internalTrigger) ([]testworkfl
 			return nil, err
 		}
 		testWorkflowsList, err := s.testWorkflowsClient.List(context.Background(), s.getEnvironmentId(), testworkflowclient.ListOptions{})
-			if err != nil {
-				s.logger.Errorf("failed to list test workflows for trigger labelSelector filtering: %v", err)
-				return nil, err
-			}
+		if err != nil {
+			s.logger.Errorf("failed to list test workflows for trigger labelSelector filtering: %v", err)
+			return nil, err
+		}
 		for i := range testWorkflowsList {
 			workflowLabelSet := labels.Set(testWorkflowsList[i].Labels)
 			if !k8sSelector.Matches(workflowLabelSet) {
