@@ -2,9 +2,26 @@ package executiondata
 
 import (
 	"context"
+	"fmt"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 )
+
+// translateUnsupported turns the bare Unimplemented a control plane returns for an
+// unknown method into something that names the missing feature. Checking the
+// capability up-front would not be enough on its own: a control plane that forgets
+// to advertise it still has to fail comprehensibly.
+func translateUnsupported(err error) error {
+	if status.Code(err) != codes.Unimplemented {
+		return err
+	}
+	return fmt.Errorf("this control plane cannot grant access to another execution's artifacts (missing the %q capability): upgrade it, or exchange the data as outputs instead: %w",
+		capabilities.CapabilityArtifactRead, err)
+}
 
 //go:generate go tool mockgen -destination=./mock_repository.go -package=executiondata "github.com/kubeshop/testkube/pkg/executiondata" ExecutionRepository
 
@@ -35,7 +52,7 @@ func NewExecutionRepository(getClient func() controlplaneclient.Client, environm
 func (r *executionRepository) ListArtifacts(ctx context.Context, id string, patterns []string) ([]Artifact, error) {
 	found, err := r.getClient().ListExecutionArtifactsGetPresignedURLs(ctx, r.environmentId, id, patterns)
 	if err != nil {
-		return nil, err
+		return nil, translateUnsupported(err)
 	}
 	artifacts := make([]Artifact, 0, len(found))
 	for _, artifact := range found {
