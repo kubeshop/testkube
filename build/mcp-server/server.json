@@ -33,6 +33,22 @@
       "url": "https://testkube.io"
     }
   ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://api.testkube.io/organizations/{organization_id}/environments/{environment_id}/mcp",
+      "variables": {
+        "organization_id": {
+          "description": "Testkube organization ID (e.g., tkcorg_xxxxxxx)",
+          "isRequired": true
+        },
+        "environment_id": {
+          "description": "Testkube environment ID (e.g., tkcenv_xxxxxxx)",
+          "isRequired": true
+        }
+      }
+    }
+  ],
   "packages": [
     {
       "registryType": "oci",
