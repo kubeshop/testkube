@@ -28,7 +28,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.14
 	github.com/gofiber/websocket/v2 v2.2.1
 	github.com/google/go-cmp v0.7.0
-	github.com/google/go-containerregistry v0.21.7
+	github.com/google/go-containerregistry v0.21.8
 	github.com/google/uuid v1.6.0
 	github.com/gookit/color v1.6.1
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3
@@ -46,7 +46,7 @@ require (
 	github.com/minio/minio-go/v7 v7.2.1
 	github.com/nats-io/nats-server/v2 v2.14.4
 	github.com/nats-io/nats.go v1.52.0
-	github.com/ohler55/ojg v1.28.2
+	github.com/ohler55/ojg v1.28.3
 	github.com/olekukonko/tablewriter v1.1.4
 	github.com/onsi/ginkgo/v2 v2.32.0
 	github.com/onsi/gomega v1.42.1
@@ -60,7 +60,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/savioxavier/termlink v1.4.3
 	github.com/segmentio/analytics-go/v3 v3.3.0
-	github.com/shirou/gopsutil/v4 v4.26.6
+	github.com/shirou/gopsutil/v4 v4.26.7
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/afero v1.15.0
 	github.com/spf13/cobra v1.10.2
@@ -150,11 +150,11 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/cli v29.5.3+incompatible // indirect
+	github.com/docker/cli v29.6.2+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.5 // indirect
 	github.com/docker/go-connections v0.7.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/ebitengine/purego v0.10.0 // indirect
+	github.com/ebitengine/purego v0.10.2 // indirect
 	github.com/elliotchance/orderedmap v1.8.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
