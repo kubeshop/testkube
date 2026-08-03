@@ -562,6 +562,7 @@ func (s *Service) getTestWorkflowsFromInternal(t *internalTrigger) ([]testworkfl
 		}
 		testWorkflowsList, err := s.testWorkflowsClient.List(context.Background(), s.getEnvironmentId(), testworkflowclient.ListOptions{})
 		if err != nil {
+		    s.Logger.Errorf("failed to list test workflows for trigger labelSelector filtering: %v", err)
 			return nil, err
 		}
 		for i := range testWorkflowsList {
