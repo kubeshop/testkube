@@ -2,6 +2,7 @@ package runner
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -305,9 +306,65 @@ func appendSuffixIfNeeded(s, suffix string) string {
 	return s + suffix
 }
 
+type metricsFile struct {
+	path string
+	info os.FileInfo
+}
+
+// collectMetricsFiles lists the files the metrics recorder produced in dir.
+// A missing directory means the recorder had nothing to record.
+func collectMetricsFiles(dir string) ([]metricsFile, error) {
+	var files []metricsFile
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		files = append(files, metricsFile{path: path, info: info})
+		return nil
+	})
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to list metrics files in %q: %v", dir, err)
+	}
+	return files, nil
+}
+
+// uploadMetricsFiles saves every collected file, best effort per file: one
+// unreadable or failed file should not prevent scraping the remaining metrics.
+func uploadMetricsFiles(storage artifacts.InternalArtifactStorage, files []metricsFile) error {
+	var errs []error
+	for _, file := range files {
+		f, err := os.Open(file.path)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed to open metrics file %q: %v", file.path, err))
+			continue
+		}
+		target := filepath.Join("metrics", filepath.Base(file.path))
+		saveErr := storage.SaveFile(target, f, file.info)
+		f.Close()
+		if saveErr != nil {
+			errs = append(errs, fmt.Errorf("failed to save stream to %q: %v", target, saveErr))
+		}
+	}
+	return errors.Join(errs...)
+}
+
 func scrapeMetricsPostProcessor(path, step string, config testworkflowconfig.InternalConfig) func() error {
 	return func() error {
-		err := orchestration.Setup.UseCurrentEnv()
+		// When the recorder produced nothing, there is nothing to upload and
+		// connecting to the storage would only stall the step for the
+		// connection deadline.
+		files, err := collectMetricsFiles(path)
+		if err != nil || len(files) == 0 {
+			return err
+		}
+
+		err = orchestration.Setup.UseCurrentEnv()
 		if err != nil {
 			return fmt.Errorf("failed to configure environment for scraping metrics: %v", err)
 		}
@@ -323,25 +380,7 @@ func scrapeMetricsPostProcessor(path, step string, config testworkflowconfig.Int
 		if err != nil {
 			return fmt.Errorf("failed to create internal storage for metrics: %v", err)
 		}
-		err = filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
-			if info.IsDir() {
-				return nil
-			}
-			if err != nil {
-				return err
-			}
-			f, err := os.Open(path)
-			if err != nil {
-				return fmt.Errorf("failed to open metrics file %q: %v", path, err)
-			}
-			defer f.Close()
-			path = filepath.Join("metrics", filepath.Base(path))
-			if err := storage.SaveFile(path, f, info); err != nil {
-				return fmt.Errorf("failed to save stream to %q: %v", path, err)
-			}
-			return nil
-		})
-		return err
+		return uploadMetricsFiles(storage, files)
 	}
 }
 

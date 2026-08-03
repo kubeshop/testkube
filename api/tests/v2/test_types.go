@@ -89,6 +89,7 @@ type TestStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:unservedversion
 
 // Test is the Schema for the tests API
 type Test struct {

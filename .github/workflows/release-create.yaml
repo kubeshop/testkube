@@ -19,6 +19,9 @@ on:
           - 'no'
           - 'yes'
 
+permissions:
+  contents: read
+
 jobs:
   release:
     name: Release
@@ -28,32 +31,39 @@ jobs:
     if: ${{ inputs.confirm == 'yes' }}
     steps:
       # Configure git to push: We use a GitHub App so that we have an entity that can be configured to bypass merge to main.
-      - uses: actions/create-github-app-token@v3
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
         with:
           app-id: 253113
           private-key: ${{ secrets.TESTKUBE_GH_APP_GITOPS_KEY }}
+          owner: kubeshop
+          repositories: testkube
+          permission-contents: write
       - name: Get GitHub App User ID
         id: get-user-id
-        run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+        run: echo "user-id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           token: ${{ steps.app-token.outputs.token }}
           ref: ${{ github.head_ref }}
 
       - name: Use Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: js/.nvmrc
       - name: Install dependencies packages
         run: npm install --prefix=js --workspace=tk-release
 
-      - run: |
-          git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
-          git config --global user.email '${{ steps.get-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
+      - env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          USER_ID: ${{ steps.get-user-id.outputs.user-id }}
+        run: |
+          git config --global user.name "${APP_SLUG}[bot]"
+          git config --global user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
 
       - id: release-create
         name: Run release script

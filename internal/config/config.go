@@ -218,6 +218,8 @@ type Config struct {
 	// single-replica deployments; tune how often the lease is checked/renewed.
 	LeaderElectionDisabled bool          `envconfig:"LEADER_ELECTION_DISABLED" default:"false"`
 	LeaseCheckInterval     time.Duration `envconfig:"LEASE_CHECK_INTERVAL" default:"5s"`
+	// How often the event emitter leader reloads webhook/listener configuration.
+	EventEmitterReconcileInterval time.Duration `envconfig:"EVENT_EMITTER_RECONCILE_INTERVAL" default:"5s"`
 
 	TestkubeProWorkerCount          int      `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
 	TestkubeProLogStreamWorkerCount int      `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
@@ -244,6 +246,11 @@ type Config struct {
 	DisableOfficialTemplates        bool     `envconfig:"DISABLE_OFFICIAL_TEMPLATES" default:"false"`
 	TerminationLogPath              string   `envconfig:"TERMINATION_LOG_PATH" default:"/dev/termination-log"`
 	TestkubeEmptyDirSizeLimit       string   `envconfig:"TESTKUBE_EMPTYDIR_SIZE_LIMIT" default:""`
+	TestkubeDefaultImagePullPolicy  string   `envconfig:"TESTKUBE_DEFAULT_IMAGE_PULL_POLICY" default:""`
+	TestkubeDefaultRunnerCPURequest string   `envconfig:"TESTKUBE_DEFAULT_RUNNER_CPU_REQUEST" default:""`
+	TestkubeDefaultRunnerMemRequest string   `envconfig:"TESTKUBE_DEFAULT_RUNNER_MEMORY_REQUEST" default:""`
+	TestkubeDefaultRunnerCPULimit   string   `envconfig:"TESTKUBE_DEFAULT_RUNNER_CPU_LIMIT" default:""`
+	TestkubeDefaultRunnerMemLimit   string   `envconfig:"TESTKUBE_DEFAULT_RUNNER_MEMORY_LIMIT" default:""`
 
 	ExportArchiveMaxSize                     int           `envconfig:"EXPORT_ARCHIVE_MAX_SIZE" default:"104857600"`
 	FeatureCloudStorage                      bool          `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`

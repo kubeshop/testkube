@@ -1,9 +1,11 @@
 package client
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -41,5 +43,41 @@ func TestEnvironmentsClient_Create(t *testing.T) {
 		assert.Equal(t, "env-name", env.Name)
 		assert.Equal(t, "tkcorg_2bb1486705fb6997", env.OrganizationId)
 		assert.Equal(t, "887179cf83a16", env.AgentToken)
+	})
+}
+
+func TestEnvironmentsClient_RotateRegistrationToken(t *testing.T) {
+	t.Run("decodes expiry", func(t *testing.T) {
+		client := NewEnvironmentsClient("https://testkube.dev", "token", "tkcorg_1")
+		client.Client = ClientMock{
+			body: []byte(`{"registrationToken":"new-token","gracePeriod":"24h0m0s","oldTokenExpiresAt":"2026-07-07T12:00:00Z"}`),
+			validateRequestFunc: func(req *http.Request) error {
+				assert.Equal(t, http.MethodPost, req.Method)
+				assert.Equal(t, "/organizations/tkcorg_1/environments/tkcenv_1/registration-token/rotate", req.URL.Path)
+				assert.Equal(t, "24h", req.URL.Query().Get("gracePeriod"))
+				assert.Equal(t, "Bearer token", req.Header.Get("Authorization"))
+				return nil
+			},
+		}
+
+		result, err := client.RotateRegistrationToken(context.Background(), "tkcenv_1", "24h")
+		assert.NoError(t, err)
+		assert.Equal(t, "new-token", result.RegistrationToken)
+		assert.Equal(t, "24h0m0s", result.GracePeriod)
+		if assert.NotNil(t, result.OldTokenExpiresAt) {
+			assert.Equal(t, time.Date(2026, 7, 7, 12, 0, 0, 0, time.UTC), *result.OldTokenExpiresAt)
+		}
+	})
+
+	t.Run("decodes null expiry", func(t *testing.T) {
+		client := NewEnvironmentsClient("https://testkube.dev", "token", "tkcorg_1")
+		client.Client = ClientMock{
+			body:                []byte(`{"registrationToken":"new-token","gracePeriod":"0s","oldTokenExpiresAt":null}`),
+			validateRequestFunc: func(req *http.Request) error { return nil },
+		}
+
+		result, err := client.RotateRegistrationToken(context.Background(), "tkcenv_1", "0s")
+		assert.NoError(t, err)
+		assert.Nil(t, result.OldTokenExpiresAt)
 	})
 }

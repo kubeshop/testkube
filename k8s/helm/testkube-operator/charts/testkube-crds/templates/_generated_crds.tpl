@@ -690,11 +690,12 @@ spec:
                 type: string
             type: object
         type: object
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}
-  - name: v2
+  - deprecated: true
+    name: v2
     schema:
       openAPIV3Schema:
         description: Script is the Schema for the scripts API
@@ -2005,7 +2006,7 @@ spec:
             description: TestStatus defines the observed state of Test
             type: object
         type: object
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}
@@ -2250,7 +2251,7 @@ spec:
                 type: string
             type: object
         type: object
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}
@@ -2261,6 +2262,7 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
+    deprecated: true
     name: v3
     schema:
       openAPIV3Schema:
@@ -4974,7 +4976,7 @@ spec:
             description: TestSuiteStatus defines the observed state of TestSuite
             type: object
         type: object
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}
@@ -5327,11 +5329,12 @@ spec:
                 type: object
             type: object
         type: object
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}
-  - name: v3
+  - deprecated: true
+    name: v3
     schema:
       openAPIV3Schema:
         description: TestSuite is the Schema for the testsuites API

@@ -75,14 +75,19 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 			}
 
 			if outputPretty {
-				ui.Info("Getting logs for test workflow execution", execution.Id)
+				if execution.Result != nil && execution.Result.IsFinished() {
+					ui.Info("Getting logs for test workflow execution", execution.Id)
 
-				logs, err := client.GetTestWorkflowExecutionLogs(execution.Id)
-				ui.ExitOnError("getting logs from test workflow", err)
+					logs, err := client.GetTestWorkflowExecutionLogs(execution.Id)
+					ui.ExitOnError("getting logs from test workflow", err)
 
-				sigs := testworkflows.FlattenSignatures(execution.Signature)
+					sigs := testworkflows.FlattenSignatures(execution.Signature)
 
-				printRawLogLines(logs, sigs, execution)
+					printRawLogLines(logs, sigs, execution)
+				} else {
+					ui.Info("Logs are not available yet, the test workflow execution is still in progress", execution.Id)
+				}
+
 				if !logsOnly {
 					render.PrintTestWorkflowExecutionURIs(&execution)
 					common.UIShellViewExecution(execution.Id)

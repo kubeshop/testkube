@@ -184,52 +184,6 @@ func TestSanitizeLabelKey(t *testing.T) {
 	}
 }
 
-func TestSanitizeLabelValue(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "empty value",
-			input:    "",
-			expected: "",
-		},
-		{
-			name:     "valid value",
-			input:    "my-app-123",
-			expected: "my-app-123",
-		},
-		{
-			name:     "value with invalid characters",
-			input:    "test@app#name",
-			expected: "test-app-name",
-		},
-		{
-			name:     "value with leading and trailing hyphens",
-			input:    "-test-",
-			expected: "test",
-		},
-		{
-			name:     "value with only invalid characters",
-			input:    "@@@",
-			expected: "",
-		},
-		{
-			name:     "value with underscores and dots",
-			input:    "test_app.name",
-			expected: "test_app.name",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := sanitizeLabelValue(tt.input)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 func TestSanitizeDNSSubdomain(t *testing.T) {
 	tests := []struct {
 		name     string

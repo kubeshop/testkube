@@ -379,13 +379,13 @@ func (e *Enqueuer) persistExecution(ctx context.Context, executions []*testworkf
 			func() error {
 				err := e.executionRepository.Insert(ctx, *exec.Execution())
 				if err != nil {
-					logger.Warnw("failed to update the TestWorkflow exec in database", "recoverable", true, "executionId", exec.Execution().Id, "error", err)
+					logger.Warnw("failed to insert the TestWorkflow exec in database", append(exec.Execution().LogFields(), "recoverable", true, "error", err)...)
 				}
 				return err
 			},
 		)
 		if err != nil {
-			logger.Errorw("failed to update the TestWorkflow exec in database", "recoverable", false, "executionId", exec.Execution().Id, "error", err)
+			logger.Errorw("failed to insert the TestWorkflow exec in database", append(exec.Execution().LogFields(), "recoverable", false, "error", err)...)
 		}
 
 		result = append(result, *exec.Execution())

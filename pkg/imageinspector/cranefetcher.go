@@ -151,6 +151,40 @@ func ExtractRegistry(image string) string {
 	return ""
 }
 
+// stripURLScheme removes a leading "http://" or "https://" from a registry
+// host or dockerconfigjson auth key, so entries using the traditional
+// scheme-prefixed Docker credential-store format can still be matched
+// against a bare registry hostname.
+func stripURLScheme(s string) string {
+	if rest, ok := strings.CutPrefix(s, "https://"); ok {
+		return rest
+	}
+	if rest, ok := strings.CutPrefix(s, "http://"); ok {
+		return rest
+	}
+	return s
+}
+
+// registryHost splits a scheme-stripped auth key into its host and reports
+// whether the key refers to a registry as a whole rather than a path-scoped
+// mirror entry. Keys with no path, or with only the legacy Docker
+// credential-store API suffix (e.g. "index.docker.io/v1/"), are registry keys.
+func registryHost(normalizedKey string) (host string, isRegistry bool) {
+	host, rest, hasPath := strings.Cut(normalizedKey, "/")
+	if !hasPath {
+		return host, true
+	}
+	// The legacy credential-store suffix always carries a trailing slash
+	// ("index.docker.io/v1/"), so require it here; otherwise a repository
+	// namespace literally named "v1" or "v2" (e.g. "myreg.io/v2") would be
+	// misclassified as a whole-registry key and applied registry-wide.
+	switch rest {
+	case "", "v1/", "v2/":
+		return host, true
+	}
+	return host, false
+}
+
 func determineUserGroupPair(userGroupStr string) (int64, int64) {
 	if userGroupStr == "" {
 		userGroupStr = "0"
@@ -186,45 +220,70 @@ func ParseSecretData(imageSecrets []corev1.Secret, registry, image string) ([]au
 			return nil, fmt.Errorf("imagePullSecret %s contains neither .dockercfg nor .dockerconfigjson", imageSecret.Name)
 		}
 
-		// Determine if there is a secret for the specified registry
-		if creds, ok := auths.Auths[registry]; ok {
+		// Determine which credentials to use for the specified registry, in
+		// order of decreasing specificity:
+		//   1. the longest path-scoped key that prefixes the image (mirror auth),
+		//   2. an exact match on the registry key,
+		//   3. a scheme-insensitive match on the registry host, which also covers
+		//      the traditional Docker credential-store format (e.g. the key
+		//      "https://index.docker.io/v1/" for the "index.docker.io" registry).
+		// A path-scoped credential is more specific than a registry-level one, so
+		// it takes precedence even when an exact registry key also exists. Keys are
+		// visited in sorted order so selection is deterministic when several keys
+		// would otherwise match equally.
+		creds, ok := auths.Auths[registry]
+
+		keys := make([]string, 0, len(auths.Auths))
+		for key := range auths.Auths {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		bestPathLen := -1
+		var pathCreds, hostCreds authn.AuthConfig
+		var hostKey string
+		var pathFound, hostFound bool
+		for _, key := range keys {
+			normalized := stripURLScheme(key)
+
+			host, isRegistry := registryHost(normalized)
+			if isRegistry {
+				// Registry-level credential: the key's host equals the registry.
+				// Prefer a secure key over an insecure "http://" one so credentials
+				// meant for an https endpoint are not sent to an insecure one.
+				if host == registry && (!hostFound || (strings.HasPrefix(hostKey, "http://") && !strings.HasPrefix(key, "http://"))) {
+					hostCreds, hostKey, hostFound = auths.Auths[key], key, true
+				}
+				continue
+			}
+
+			// Path-scoped (mirror) credential: non-registry keys that prefix the image path.
+			if normalized != "" && (image == normalized ||
+				strings.HasPrefix(image, normalized+"/") ||
+				strings.HasPrefix(image, normalized+":") ||
+				strings.HasPrefix(image, normalized+"@")) {
+				if len(normalized) > bestPathLen {
+					bestPathLen = len(normalized)
+					pathCreds, pathFound = auths.Auths[key], true
+				}
+			}
+		}
+		switch {
+		case pathFound:
+			// A path-scoped match overrides a registry-level credential.
+			creds, ok = pathCreds, true
+		case !ok && hostFound:
+			// Fall back to a scheme-insensitive registry match only when no exact
+			// registry key was present.
+			creds, ok = hostCreds, true
+		}
+		if ok {
 			username, password, err := extractRegistryCredentials(creds)
 			if err != nil {
 				return nil, err
 			}
 
 			results = append(results, authn.AuthConfig{Username: username, Password: password})
-		} else {
-			var slice []struct {
-				Path  string
-				Creds authn.AuthConfig
-			}
-
-			for path, creds := range auths.Auths {
-				slice = append(slice, struct {
-					Path  string
-					Creds authn.AuthConfig
-				}{
-					Path:  path,
-					Creds: creds,
-				})
-			}
-
-			sort.Slice(slice, func(i, j int) bool {
-				return slice[i].Path > slice[j].Path
-			})
-
-			for _, item := range slice {
-				if strings.HasPrefix(image, item.Path) {
-					username, password, err := extractRegistryCredentials(item.Creds)
-					if err != nil {
-						return nil, err
-					}
-
-					results = append(results, authn.AuthConfig{Username: username, Password: password})
-					break
-				}
-			}
 		}
 	}
 

@@ -7,6 +7,9 @@ on:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
 
+permissions:
+  contents: read
+
 jobs:
   trigger-fips-build:
     name: Trigger FIPS OSS build
@@ -52,7 +55,7 @@ jobs:
 
       - name: Trigger FIPS OSS build in testkube-fips-enable-images
         continue-on-error: true
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           VERSION: ${{ steps.version.outputs.version }}
           OSS_REF: ${{ steps.version.outputs.oss_ref }}

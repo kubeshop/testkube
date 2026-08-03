@@ -24,6 +24,7 @@ const (
 	RootResourceIdLabelName         = "testkube.io/root"
 	RunnerIdLabelName               = "testkube.io/runner"
 	GroupIdLabelName                = "testkube.io/contextGroup"
+	WorkflowNameLabelName           = "testkube.io/workflow-name"
 	SignatureAnnotationName         = "testkube.io/signature"
 	SignatureAnnotationFieldPath    = "metadata.annotations['" + SignatureAnnotationName + "']"
 	ScheduledAtAnnotationName       = "testkube.io/at"

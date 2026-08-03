@@ -11,10 +11,11 @@ package common
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"math"
+	"slices"
 	"strings"
 
-	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
@@ -32,7 +33,7 @@ func CountCombinations(matrix map[string][]interface{}) int64 {
 
 func GetMatrixValues(matrix map[string][]interface{}, index int64) map[string]interface{} {
 	// Compute modulo for each matrix parameter
-	keys := maps.Keys(matrix)
+	keys := slices.Collect(maps.Keys(matrix))
 	modulo := map[string]int64{}
 	floor := map[string]int64{}
 	for i, k := range keys {

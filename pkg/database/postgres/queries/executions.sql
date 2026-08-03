@@ -408,7 +408,7 @@ WHERE e.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
          (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
-    AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
+    AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type' = @actor_type::text)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
     AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
@@ -481,6 +481,80 @@ WHERE e.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
 ORDER BY e.scheduled_at DESC
 LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 
+-- name: GetFinishedTestWorkflowExecutionsByWorkflow :many
+-- Fast-path finished query when filtering by a single denormalized workflow_name
+-- (optionally with end_date and paging). Avoids the COALESCE($n,'')='' OR col=$n
+-- branches in GetFinishedTestWorkflowExecutions, which under pgx's prepared-statement
+-- generic plan cause a pathological seq-scan.
+-- Backed by idx_twe_org_env_wfname_sched (organization_id, environment_id, workflow_name, scheduled_at DESC).
+SELECT
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
+    r.pauses, r.initialization, r.steps,
+    w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
+    w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
+    w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
+    w.status as workflow_status,
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
+    rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
+    rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
+    rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status,
+    -- Build json object for related joins (signatures, output,s reports).
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', s.id,
+                'ref', s.ref,
+                'name', s.name,
+                'category', s.category,
+                'optional', s.optional,
+                'negative', s.negative,
+                'parent_id', s.parent_id
+            ) ORDER BY s.sig_order
+        ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
+        '[]'::json
+    )::json as signatures_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', o.id,
+                'ref', o.ref,
+                'name', o.name,
+                'value', o.value
+            ) ORDER BY o.out_order
+        ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
+        '[]'::json
+    )::json as outputs_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', rep.id,
+                'ref', rep.ref,
+                'kind', rep.kind,
+                'file', rep.file,
+                'summary', rep.summary
+            ) ORDER BY rep.rep_order
+        ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
+        '[]'::json
+    )::json as reports_json,
+    ra.global as resource_aggregations_global,
+    ra.step as resource_aggregations_step
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
+LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
+WHERE e.organization_id = @organization_id
+  AND e.environment_id = @environment_id
+  AND e.workflow_name = @workflow_name
+  AND e.status IN ('passed', 'failed', 'aborted')
+  AND (e.silent_mode IS NULL OR (e.silent_mode->>'health')::boolean IS NOT TRUE)
+  AND (sqlc.narg('end_date')::timestamptz IS NULL OR e.scheduled_at <= sqlc.narg('end_date')::timestamptz)
+ORDER BY e.scheduled_at DESC
+LIMIT NULLIF(@lmt, 0) OFFSET @fst;
+
 -- name: GetTestWorkflowExecutionsTotals :many
 SELECT
     e.status,
@@ -501,7 +575,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
          (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
-    AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
+    AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type' = @actor_type::text)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
     AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
@@ -655,7 +729,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
          (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
-    AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
+    AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type' = @actor_type::text)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
     AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
@@ -884,7 +958,8 @@ SELECT
     r.status,
     e.name,
     e.scheduled_at as start_time,
-    e.runner_id
+    e.runner_id,
+    e.silent_mode
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 WHERE e.workflow_name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
@@ -1128,7 +1203,7 @@ FROM (
              (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
              (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
         AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
-        AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
+        AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type' = @actor_type::text)
         AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
         AND (COALESCE(@initialized, NULL) IS NULL OR
              (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
@@ -1297,7 +1372,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
          (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
-    AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
+    AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type' = @actor_type::text)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
     AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR

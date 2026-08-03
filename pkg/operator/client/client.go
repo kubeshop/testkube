@@ -9,9 +9,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
-	scriptv1 "github.com/kubeshop/testkube/api/script/v1"
-	scriptv2 "github.com/kubeshop/testkube/api/script/v2"
-	templatev1 "github.com/kubeshop/testkube/api/template/v1"
 	testexecutionv1 "github.com/kubeshop/testkube/api/testexecution/v1"
 	testsv1 "github.com/kubeshop/testkube/api/tests/v1"
 	testsv2 "github.com/kubeshop/testkube/api/tests/v2"
@@ -30,8 +27,6 @@ import (
 func GetClient() (client.Client, error) {
 	scheme := runtime.NewScheme()
 
-	utilruntime.Must(scriptv1.AddToScheme(scheme))
-	utilruntime.Must(scriptv2.AddToScheme(scheme))
 	utilruntime.Must(executorv1.AddToScheme(scheme))
 	utilruntime.Must(testsv1.AddToScheme(scheme))
 	utilruntime.Must(testsv2.AddToScheme(scheme))
@@ -44,7 +39,6 @@ func GetClient() (client.Client, error) {
 	utilruntime.Must(testsourcev1.AddToScheme(scheme))
 	utilruntime.Must(testexecutionv1.AddToScheme(scheme))
 	utilruntime.Must(testsuiteexecutionv1.AddToScheme(scheme))
-	utilruntime.Must(templatev1.AddToScheme(scheme))
 	utilruntime.Must(testworkflowsv1.AddToScheme(scheme))
 	utilruntime.Must(workflowtriggersv1.AddToScheme(scheme))
 

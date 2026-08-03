@@ -41,6 +41,7 @@ func NewAgentCmd() *cobra.Command {
 
 	cmd.AddCommand(agent.NewDebugAgentCmd())
 	cmd.AddCommand(agents.NewRotateKeyCommand())
+	cmd.AddCommand(agents.NewRotateRegistrationTokenCommand())
 
 	return cmd
 }

@@ -12,3 +12,10 @@ test
 skaffold.yaml
 bin
 js/
+dist
+tmp
+.tmp
+*.log
+.DS_Store
+coverage.out
+.coverage

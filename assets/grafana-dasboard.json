@@ -133,7 +133,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "testkube_test_executions_count{result=\"passed\"}",
+          "expr": "testkube_testworkflow_executions_count{result=\"passed\"}",
           "hide": false,
           "instant": false,
           "interval": "1",
@@ -222,7 +222,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "testkube_test_executions_count{result=\"failed\"}",
+          "expr": "testkube_testworkflow_executions_count{result=\"failed\"}",
           "hide": false,
           "instant": false,
           "interval": "1",
@@ -276,9 +276,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -289,7 +287,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "testkube_test_creations_count{}",
+          "expr": "testkube_testworkflow_creations_count{}",
           "format": "table",
           "hide": false,
           "instant": false,

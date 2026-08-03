@@ -236,6 +236,8 @@ func TestEmitter_GroupedListenersReceiveQueuedAndStartedWorkflowEvents(t *testin
 }
 
 func TestEmitter_Listen_reconciliation(t *testing.T) {
+	const reconcileInterval = 100 * time.Millisecond
+
 	t.Run("emitter refresh listeners in reconcile loop", func(t *testing.T) {
 		eventBus := bus.NewEventBusMock()
 		mockCtrl := gomock.NewController(t)
@@ -244,7 +246,7 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 		mockLeaseRepository.EXPECT().
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity, WithReconcileInterval(reconcileInterval))
 		defer emitter.eventCache.Stop()
 		emitter.RegisterLoader(&dummy.DummyLoader{IdPrefix: "dummy1"})
 		emitter.RegisterLoader(&dummy.DummyLoader{IdPrefix: "dummy2"})
@@ -262,7 +264,7 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 		emitter.RegisterLoader(&dummy.DummyLoader{IdPrefix: "dummy3"})
 
 		// then each reconciler (3 reconcilers) should load 2 listeners
-		time.Sleep(1100 * time.Millisecond)
+		time.Sleep(2 * reconcileInterval)
 		assert.Len(t, emitter.getListeners(), 6)
 	})
 
@@ -274,7 +276,7 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 		mockLeaseRepository.EXPECT().
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity, WithReconcileInterval(reconcileInterval))
 		defer emitter.eventCache.Stop()
 		registeredListener := &dummy.DummyListener{Id: "registered", Types: []testkube.EventType{
 			testkube.BECOME_TESTWORKFLOW_UP_EventType,
@@ -295,7 +297,7 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 		// on next reconiliation loop
 		emitter.RegisterLoader(&dummy.DummyLoader{IdPrefix: "dummy1", SelectorString: "v2"})
 
-		time.Sleep(1100 * time.Millisecond)
+		time.Sleep(2 * reconcileInterval)
 		assert.Len(t, emitter.getListeners(), 3)
 		assert.Equal(t, "v2", emitter.getListeners()[1].Selector())
 	})
@@ -308,7 +310,7 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 		mockLeaseRepository.EXPECT().
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity, WithReconcileInterval(reconcileInterval))
 		defer emitter.eventCache.Stop()
 		loader := &dummy.DummyLoader{IdPrefix: "dummy1", SelectorString: "v1"}
 		registeredListener := &dummy.DummyListener{Id: "registered", Types: []testkube.EventType{
@@ -331,7 +333,7 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 		loader.ListenersOverride = []common.Listener{}
 
 		// Wait to next reconcillation loop
-		time.Sleep(1100 * time.Millisecond)
+		time.Sleep(2 * reconcileInterval)
 		// Only the registered listener should remain
 		assert.Len(t, emitter.getListeners(), 1)
 		assert.Equal(t, "registered", emitter.getListeners()[0].Name())
@@ -885,5 +887,37 @@ func TestEmitterLeaseClusterID(t *testing.T) {
 		leaseChan := make(chan bool, 1)
 		emitter.leaseCheck(context.Background(), leaseChan)
 		assert.True(t, <-leaseChan)
+	})
+}
+
+func TestEmitterReconcileInterval(t *testing.T) {
+	t.Run("default reconcile interval", func(t *testing.T) {
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepo := leasebackend.NewMockRepository(mockCtrl)
+		emitter := NewEmitter(eventBus, mockLeaseRepo, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		defer emitter.eventCache.Stop()
+		assert.Equal(t, DefaultReconcileInterval, emitter.reconcileInterval)
+	})
+
+	t.Run("WithReconcileInterval overrides default", func(t *testing.T) {
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepo := leasebackend.NewMockRepository(mockCtrl)
+		emitter := NewEmitter(eventBus, mockLeaseRepo, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity, WithReconcileInterval(12*time.Second))
+		defer emitter.eventCache.Stop()
+		assert.Equal(t, 12*time.Second, emitter.reconcileInterval)
+	})
+
+	t.Run("WithReconcileInterval non-positive does not override", func(t *testing.T) {
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepo := leasebackend.NewMockRepository(mockCtrl)
+		emitter := NewEmitter(eventBus, mockLeaseRepo, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity, WithReconcileInterval(0))
+		defer emitter.eventCache.Stop()
+		assert.Equal(t, DefaultReconcileInterval, emitter.reconcileInterval)
 	})
 }

@@ -5,6 +5,8 @@ ARG ALPINE_IMAGE=alpine:3.24.1
 FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS build
 ARG TARGETOS
 ARG TARGETARCH
+ARG GOCACHE="/root/.cache/go-build"
+ARG GOMODCACHE="/go/pkg/mod"
 ARG VERSION=1.0.0
 ARG GIT_SHA=unknown
 
@@ -12,12 +14,14 @@ WORKDIR /build
 COPY . .
 
 # Build the kubectl-testkube binary with MCP support
-RUN cd cmd/kubectl-testkube && \
+RUN --mount=type=cache,target="$GOMODCACHE" \
+    --mount=type=cache,target="$GOCACHE" \
+    cd cmd/kubectl-testkube && \
     GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 go build \
     -ldflags "-X github.com/kubeshop/testkube/pkg/version.Version=${VERSION} \
               -X github.com/kubeshop/testkube/pkg/version.Commit=${GIT_SHA}" \
     -o /app/kubectl-testkube \
-    -mod mod -a .
+    -mod mod .
 
 # Final stage
 FROM ${ALPINE_IMAGE}

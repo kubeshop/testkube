@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"google.golang.org/grpc/codes"
@@ -58,14 +57,6 @@ func marshal(response any) (*cloud.CommandResponse, error) {
 }
 
 func cycleJSON(src any, tgt any) error {
-	b, _ := toJSON(src)
-	return fromJSON(b, tgt)
-}
-
-func toJSON(src any) (json.RawMessage, error) {
-	return jsoniter.Marshal(src)
-}
-
-func fromJSON(msg json.RawMessage, tgt any) error {
-	return jsoniter.Unmarshal(msg, tgt)
+	b, _ := json.Marshal(src)
+	return json.Unmarshal(b, tgt)
 }

@@ -6,6 +6,7 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: testkube-multi-agent
+    dev-quality-gate: "true"
 description: Run only at .dev where these runners are created!
 spec:
   container:
@@ -13,6 +14,8 @@ spec:
       requests:
         cpu: 32m
         memory: 32Mi
+  job:
+    activeDeadlineSeconds: 300 # This suite requires timeout as it schedules using specific agents
   steps:
   - execute:
       parallelism: 2

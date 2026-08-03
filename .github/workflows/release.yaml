@@ -6,12 +6,11 @@ on:
       - "[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
-  id-token: write # needed for keyless signing
-  contents: write
+  contents: read
 
 env:
   TESTKUBE_CHOCO_REPO: https://chocolatey.kubeshop.io/
-  ALPINE_IMAGE: alpine:3.23.3
+  ALPINE_IMAGE: alpine:3.24.1
   BUSYBOX_IMAGE: busybox:1.36.1-musl
 
 jobs:
@@ -29,28 +28,23 @@ jobs:
             path: .builds-darwin.goreleaser.yml
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: stable
-      - name: Go Cache
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          # Disable build caching so a poisoned shared cache cannot influence released artifacts.
+          cache: false
       - name: Get tag
         id: tag
-        uses: dawidd6/action-get-tag@v1
+        uses: dawidd6/action-get-tag@727a6f0a561be04e09013531e73a3983a65e3479 # v1.1.0
         with:
           strip_v: true
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v7
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           distribution: goreleaser-pro
           version: 'v2.3.2' # 2.4.4 fails with "no such file or directory"
@@ -69,7 +63,7 @@ jobs:
           BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
           DOCKER_IMAGE_TAG: ${{steps.tag.outputs.tag}}
       - name: Upload Artifacts
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@0c366cb4fc8897159c94880f94b55bc716ad6a66 # master as of 2026-07-15
         with:
           name: testkube_${{ matrix.name }}
           path: |
@@ -82,40 +76,50 @@ jobs:
     runs-on: depot-ubuntu-22.04
 
     steps:
-      - uses: actions/create-github-app-token@v3
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
         with:
           app-id: 253113
           private-key: ${{ secrets.TESTKUBE_GH_APP_GITOPS_KEY }}
           owner: kubeshop
+          repositories: |
+            testkube
+            homebrew-testkube
+          permission-contents: write
       - name: Get GitHub App User ID
         id: get-user-id
-        run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+        run: echo "user-id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: false
       - name: Configure git
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          USER_ID: ${{ steps.get-user-id.outputs.user-id }}
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
-          git config --global user.email '${{ steps.get-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
-          git config --global url."https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/".insteadOf "https://github.com/"
-      - uses: anchore/sbom-action/download-syft@v0.24.0
+          git config --global user.name "${APP_SLUG}[bot]"
+          git config --global user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+          git config --global url."https://x-access-token:${APP_TOKEN}@github.com/".insteadOf "https://github.com/"
+      - uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
       - name: Download Artifacts for Linux
-        uses: actions/download-artifact@master
+        uses: actions/download-artifact@2a5974104b6d5dbdb2f9468a3e54da3bdd241578 # master as of 2026-07-15
         with:
           name: testkube_linux
           path: linux
       - name: Download Artifacts for Windows
-        uses: actions/download-artifact@master
+        uses: actions/download-artifact@2a5974104b6d5dbdb2f9468a3e54da3bdd241578 # master as of 2026-07-15
         with:
           name: testkube_windows
           path: windows
       - name: Download Artifacts for Darwin
-        uses: actions/download-artifact@master
+        uses: actions/download-artifact@2a5974104b6d5dbdb2f9468a3e54da3bdd241578 # master as of 2026-07-15
         with:
           name: testkube_darwin
           path: darwin
@@ -124,19 +128,13 @@ jobs:
       - name: Add executable mode
         run: chmod -R +x linux/ darwin/
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: stable
-      - name: Go Cache
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          # Disable build caching so a poisoned shared cache cannot influence released artifacts.
+          cache: false
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v7
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           distribution: goreleaser-pro
           version: 'v2.3.2' # 2.4.4 fails with "no such file or directory"
@@ -151,7 +149,7 @@ jobs:
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
       - name: Get tag
         id: tag
-        uses: dawidd6/action-get-tag@v1
+        uses: dawidd6/action-get-tag@727a6f0a561be04e09013531e73a3983a65e3479 # v1.1.0
         with:
           strip_v: true
       - name: Publish package
@@ -191,23 +189,25 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Get tag
         id: tag
-        uses: dawidd6/action-get-tag@v1
+        uses: dawidd6/action-get-tag@727a6f0a561be04e09013531e73a3983a65e3479 # v1.1.0
         with:
           strip_v: true
 
@@ -223,7 +223,7 @@ jobs:
           docker save kindest/node:v1.31.0 > build/kind/images/amd/node.tar
 
       - name: Build and push
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           build-args: |
             segmentio_key=${{secrets.TESTKUBE_SEGMENTIO_KEY}}

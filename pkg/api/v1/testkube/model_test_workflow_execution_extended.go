@@ -136,6 +136,29 @@ func (e *TestWorkflowExecution) Assigned() bool {
 	return e.Result.IsFinished() || len(e.Signature) > 0
 }
 
+// LogFields returns human-readable structured logging key/value pairs describing the
+// execution, so logs carry context (workflow name, trigger/source) beyond the execution ID.
+// It is null-safe for the optional Workflow and RunningContext fields.
+func (e *TestWorkflowExecution) LogFields() []any {
+	if e == nil {
+		return nil
+	}
+
+	fields := []any{"executionId", e.Id}
+	if e.Workflow != nil {
+		fields = append(fields, "workflowName", e.Workflow.Name)
+	}
+	if e.RunningContext != nil && e.RunningContext.Actor != nil {
+		if e.RunningContext.Actor.Type_ != nil {
+			fields = append(fields, "runContextType", string(*e.RunningContext.Actor.Type_))
+		}
+		if e.RunningContext.Actor.Name != "" {
+			fields = append(fields, "runContextName", e.RunningContext.Actor.Name)
+		}
+	}
+	return fields
+}
+
 func (e *TestWorkflowExecution) Clone() *TestWorkflowExecution {
 	if e == nil {
 		return nil

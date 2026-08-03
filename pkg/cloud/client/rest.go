@@ -28,6 +28,10 @@ type RESTClient[I All, O All] struct {
 	Token   string
 }
 
+func setBearerAuth(req *nethttp.Request, token string) {
+	req.Header.Set("Authorization", "Bearer "+token)
+}
+
 func (c RESTClient[I, O]) List() ([]O, error) {
 	path := c.Path
 	r, err := nethttp.NewRequestWithContext(context.Background(), nethttp.MethodGet, c.BaseUrl+path, nil)

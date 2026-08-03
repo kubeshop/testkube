@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	retrygo "github.com/avast/retry-go/v5"
 	errors2 "github.com/pkg/errors"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
@@ -22,6 +23,7 @@ import (
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/repository/channels"
 	testworkflowutils "github.com/kubeshop/testkube/pkg/testworkflows"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
@@ -43,6 +45,8 @@ type agentLoop struct {
 	organizationId      string
 	legacyEnvironmentId string
 	sf                  singleflight.Group
+	// summaryRetryDelay overrides the wait between Summary retries; zero falls back to GetNotificationsRetryDelay.
+	summaryRetryDelay time.Duration
 }
 
 type AgentLoop interface {
@@ -91,7 +95,7 @@ func (a *agentLoop) Start(ctx context.Context, withRunnerRequests bool) error {
 					// After context cancellation exit the loop.
 					return
 				case err != nil:
-					a.logger.Errorw("error running agent connection",
+					a.logger.Warnw("error running agent connection",
 						"name", name,
 						"error", err)
 				}
@@ -134,7 +138,7 @@ func (a *agentLoop) saveEmptyLogs(ctx context.Context, environmentId string, exe
 		return a._saveEmptyLogs(ctx, environmentId, execution)
 	})
 	if err != nil {
-		a.logger.Errorw("failed to save empty log", "executionId", execution.Id, "error", err)
+		a.logger.Errorw("failed to save empty log", append(execution.LogFields(), "error", err)...)
 	}
 	return err
 }
@@ -143,36 +147,71 @@ func (a *agentLoop) finishExecution(ctx context.Context, environmentId string, e
 	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func(_ int) error {
 		err := a.client.FinishExecutionResult(ctx, environmentId, execution.Id, execution.Result)
 		if err != nil {
-			a.logger.Warnw("failed to finish the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
+			a.logger.Warnw("failed to finish the TestWorkflow execution in database", append(execution.LogFields(), "recoverable", true, "error", err)...)
 			return err
 		}
 		return nil
 	})
 	if err != nil {
-		a.logger.Errorw("failed to finish the TestWorkflow execution in database", "recoverable", false, "executionId", execution.Id, "error", err)
+		a.logger.Errorw("failed to finish the TestWorkflow execution in database", append(execution.LogFields(), "recoverable", false, "error", err)...)
 	}
 	return err
 }
 
 func (a *agentLoop) init(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
 	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func(retryCount int) (err error) {
-		a.logger.Infow("Initializing execution", "executionId", execution.Id, "attempt", retryCount)
+		a.logger.Infow("Initializing execution", append(execution.LogFields(), "attempt", retryCount)...)
 		err = a.client.InitExecution(ctx, environmentId, execution.Id, execution.Signature, execution.Namespace)
 		if err != nil {
-			a.logger.Warnw("failed to initialize the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
+			a.logger.Warnw("failed to initialize the TestWorkflow execution in database", append(execution.LogFields(), "recoverable", true, "error", err)...)
 		}
 		return err
 	})
 	if err != nil {
-		a.logger.Errorw("failed to initialize the TestWorkflow execution in database", "recoverable", false, "executionId", execution.Id, "error", err)
+		a.logger.Errorw("failed to initialize the TestWorkflow execution in database", append(execution.LogFields(), "recoverable", false, "error", err)...)
 	}
 	return err
+}
+
+// summaryWithJobRetry fetches the live-notifications summary, waiting out the
+// window where the Job is not yet List-visible (controller.ErrJobTimeout). It
+// reuses the archival path's budget (GetNotificationsRetryCount /
+// GetNotificationsRetryDelay) at a fixed delay. Other errors, successes, and
+// context cancellation return at once.
+func (a *agentLoop) summaryWithJobRetry(ctx context.Context, executionId string, opts executionworkertypes.GetOptions) (*executionworkertypes.SummaryResult, error) {
+	delay := a.summaryRetryDelay
+	if delay <= 0 {
+		delay = GetNotificationsRetryDelay
+	}
+
+	jobNotVisible := func(err error) bool { return errors.Is(err, controller.ErrJobTimeout) }
+
+	status, err := retrygo.NewWithData[*executionworkertypes.SummaryResult](
+		retrygo.Context(ctx),
+		retrygo.RetryIf(jobNotVisible),
+		retrygo.Attempts(GetNotificationsRetryCount),
+		retrygo.Delay(delay),
+		retrygo.DelayType(retrygo.FixedDelay),
+		retrygo.LastErrorOnly(true),
+		retrygo.OnRetry(func(attempt uint, _ error) {
+			a.logger.Infow("job not visible yet, retrying summary for live notifications",
+				"executionId", executionId, "attempt", attempt+1)
+		}),
+	).Do(func() (*executionworkertypes.SummaryResult, error) {
+		return a.worker.Summary(ctx, executionId, opts)
+	})
+
+	if jobNotVisible(err) {
+		a.logger.Warnw("giving up waiting for job to become visible for live notifications",
+			"executionId", executionId, "attempts", GetNotificationsRetryCount)
+	}
+	return status, err
 }
 
 func (a *agentLoop) loopNotifications(ctx context.Context) error {
 	return a.client.ProcessExecutionNotificationRequests(ctx, func(ctx context.Context, req *cloud.TestWorkflowNotificationsRequest) controlplaneclient.NotificationWatcher {
 		// Read the initial status TODO: consider getting from the database
-		status, err := a.worker.Summary(ctx, req.ExecutionId, executionworkertypes.GetOptions{})
+		status, err := a.summaryWithJobRetry(ctx, req.ExecutionId, executionworkertypes.GetOptions{})
 		if err != nil {
 			return channels.NewError[*testkube.TestWorkflowExecutionNotification](err)
 		}
@@ -325,13 +364,17 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, ex
 
 func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId string, executionToken string, runtime *cloud.TestWorkflowRuntime) error {
 	ctx := context.Background()
-	logger := a.logger.With("environmentId", environmentId, "executionId", executionId)
+	logger := a.logger.With("environmentId", environmentId)
 
 	// Get the execution details
 	execution, err := a.client.GetExecution(ctx, environmentId, executionId)
 	if err != nil {
 		return errors2.Wrapf(err, "failed to get execution details '%s/%s' from Control Plane", environmentId, executionId)
 	}
+
+	// Enrich the scoped logger with human-readable context (execution ID, workflow name,
+	// trigger/source) so every downstream log line for this execution is easy to identify.
+	logger = logger.With(execution.LogFields()...)
 	if execution.RunnerId != a.proContext.Agent.ID && execution.RunnerId != "" {
 		return errors.New("execution is assigned to a different runner")
 	}
@@ -353,7 +396,6 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 			Variables: runtime.EnvVars,
 		}
 		logger.Debugw("Received runtime configuration from control plane",
-			"executionId", executionId,
 			"variableCount", len(runtime.EnvVars))
 	}
 
@@ -361,8 +403,7 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 	if testworkflowutils.IsWorkflowSilent(execution.ResolvedWorkflow) {
 		// This overrides any SilentMode settings from the request (CLI flags)
 		execution.SilentMode = testworkflowutils.NewSilenceAllSilentMode()
-		logger.Debugw("Workflow is silent, activated SilentMode for execution",
-			"executionId", executionId)
+		logger.Debugw("Workflow is silent, activated SilentMode for execution")
 	}
 
 	result, err := a.runner.Execute(executionworkertypes.ExecuteRequest{

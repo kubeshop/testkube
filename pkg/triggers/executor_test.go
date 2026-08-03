@@ -4,9 +4,34 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
+	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
+
+// TestNewTriggerRunningContext verifies that executions started by a TestTrigger record the
+// trigger name as their running context, and that it maps to the TESTTRIGGER cloud context.
+// This applies regardless of edition (previously the running context was only set in Pro).
+func TestNewTriggerRunningContext(t *testing.T) {
+	legacy := newTriggerRunningContext("my-trigger")
+
+	assert.NotNil(t, legacy.Actor)
+	assert.Equal(t, "my-trigger", legacy.Actor.Name)
+	assert.NotNil(t, legacy.Actor.Type_)
+	assert.Equal(t, testkube.TESTTRIGGER_TestWorkflowRunningContextActorType, *legacy.Actor.Type_)
+
+	runningContext, untrustedUser := testworkflowexecutor.GetNewRunningContext(legacy, nil)
+	assert.Nil(t, untrustedUser)
+	assert.NotNil(t, runningContext)
+	assert.Equal(t, cloud.RunningContextType_TESTTRIGGER, runningContext.Type)
+	assert.Equal(t, "my-trigger", runningContext.Name)
+}
 
 // TestGetTemplateData_MetadataLabels verifies that Go templates in v1
 // TestTrigger actionParameters work with BOTH JSON-style field names
@@ -134,6 +159,96 @@ func TestGetTemplateData_SimpleFields(t *testing.T) {
 			result, err := s.getTemplateData(e, tt.template)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, string(result))
+		})
+	}
+}
+
+// TestGetTestWorkflowsFromInternal_LabelSelectorMatchExpressions verifies that
+// TestTrigger workflow selection supports Kubernetes labelSelector.matchExpressions
+// and returns only the workflows whose labels satisfy the selector across the
+// standard Kubernetes operators supported for label selectors.
+func TestGetTestWorkflowsFromInternal_LabelSelectorMatchExpressions(t *testing.T) {
+	workflowsFixture := []testkube.TestWorkflow{
+		{Name: "alpha-workflow", Labels: map[string]string{"automation": "team-a"}},
+		{Name: "beta-workflow", Labels: map[string]string{"automation": "team-b"}},
+		{Name: "gamma-workflow", Labels: map[string]string{"region": "us-east-1"}},
+		{Name: "other-workflow", Labels: map[string]string{"automation": "other"}},
+	}
+
+	tests := []struct {
+		name         string
+		requirement  metav1.LabelSelectorRequirement
+		expectedName []string
+	}{
+		{
+			name: "in_operator",
+			requirement: metav1.LabelSelectorRequirement{
+				Key:      "automation",
+				Operator: metav1.LabelSelectorOpIn,
+				Values:   []string{"team-a", "team-b"},
+			},
+			expectedName: []string{"alpha-workflow", "beta-workflow"},
+		},
+		{
+			name: "notin_operator",
+			requirement: metav1.LabelSelectorRequirement{
+				Key:      "automation",
+				Operator: metav1.LabelSelectorOpNotIn,
+				Values:   []string{"other"},
+			},
+			expectedName: []string{"alpha-workflow", "beta-workflow", "gamma-workflow"},
+		},
+		{
+			name: "exists_operator",
+			requirement: metav1.LabelSelectorRequirement{
+				Key:      "automation",
+				Operator: metav1.LabelSelectorOpExists,
+			},
+			expectedName: []string{"alpha-workflow", "beta-workflow", "other-workflow"},
+		},
+		{
+			name: "does_not_exist_operator",
+			requirement: metav1.LabelSelectorRequirement{
+				Key:      "automation",
+				Operator: metav1.LabelSelectorOpDoesNotExist,
+			},
+			expectedName: []string{"gamma-workflow"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockTestWorkflowsClient := testworkflowclient.NewMockTestWorkflowClient(ctrl)
+			mockTestWorkflowsClient.EXPECT().
+				List(gomock.Any(), "", testworkflowclient.ListOptions{}).
+				Return(workflowsFixture, nil).
+				Times(1)
+
+			s := &Service{
+				testWorkflowsClient: mockTestWorkflowsClient,
+				logger:              zap.NewNop().Sugar(),
+			}
+
+			trigger := &internalTrigger{
+				WorkflowSelector: internalTriggerSelector{
+					LabelSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{tt.requirement},
+					},
+				},
+			}
+
+			workflows, err := s.getTestWorkflowsFromInternal(trigger)
+
+			assert.NoError(t, err)
+			assert.Len(t, workflows, len(tt.expectedName))
+			actualNames := make([]string, 0, len(workflows))
+			for i := range workflows {
+				actualNames = append(actualNames, workflows[i].Name)
+			}
+			assert.ElementsMatch(t, tt.expectedName, actualNames)
 		})
 	}
 }

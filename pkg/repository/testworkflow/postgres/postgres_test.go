@@ -64,6 +64,11 @@ func (m *MockTestWorkflowExecutionQueriesInterface) GetFinishedTestWorkflowExecu
 	return args.Get(0).([]sqlc.GetFinishedTestWorkflowExecutionsRow), args.Error(1)
 }
 
+func (m *MockTestWorkflowExecutionQueriesInterface) GetFinishedTestWorkflowExecutionsByWorkflow(ctx context.Context, arg sqlc.GetFinishedTestWorkflowExecutionsByWorkflowParams) ([]sqlc.GetFinishedTestWorkflowExecutionsByWorkflowRow, error) {
+	args := m.Called(ctx, arg)
+	return args.Get(0).([]sqlc.GetFinishedTestWorkflowExecutionsByWorkflowRow), args.Error(1)
+}
+
 func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutionsTotals(ctx context.Context, arg sqlc.GetTestWorkflowExecutionsTotalsParams) ([]sqlc.GetTestWorkflowExecutionsTotalsRow, error) {
 	args := m.Called(ctx, arg)
 	return args.Get(0).([]sqlc.GetTestWorkflowExecutionsTotalsRow), args.Error(1)
@@ -1916,5 +1921,69 @@ func TestPostgresRepository_GetFinished_SilentMode(t *testing.T) {
 		assert.Len(t, result, 1)
 		assert.Nil(t, result[0].SilentMode)
 		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_GetFinished_ByWorkflowFastPath(t *testing.T) {
+	t.Run("RoutesToByWorkflowQueryWithNameAndEndDate", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		repo := &PostgresRepository{
+			queries:        mockQueries,
+			organizationID: "org-1",
+			environmentID:  "env-1",
+		}
+		ctx := context.Background()
+
+		until := time.Date(2026, 6, 26, 12, 0, 0, 0, time.UTC)
+		filter := testworkflow.NewExecutionsFilter().
+			WithName("cloud-ui-e2e").
+			WithPageSize(10).
+			WithEndDate(until)
+
+		expectedParams := sqlc.GetFinishedTestWorkflowExecutionsByWorkflowParams{
+			OrganizationID: "org-1",
+			EnvironmentID:  "env-1",
+			WorkflowName:   pgtype.Text{String: "cloud-ui-e2e", Valid: true},
+			EndDate:        pgtype.Timestamptz{Time: until, Valid: true},
+			Fst:            0,
+			Lmt:            int32(10),
+		}
+		rows := []sqlc.GetFinishedTestWorkflowExecutionsByWorkflowRow{
+			sqlc.GetFinishedTestWorkflowExecutionsByWorkflowRow(createTestRow()),
+		}
+
+		mockQueries.On("GetFinishedTestWorkflowExecutionsByWorkflow", ctx, expectedParams).Return(rows, nil)
+
+		result, err := repo.GetFinished(ctx, filter)
+
+		assert.NoError(t, err)
+		assert.Len(t, result, 1)
+		mockQueries.AssertExpectations(t)
+		mockQueries.AssertNotCalled(t, "GetFinishedTestWorkflowExecutions")
+	})
+
+	t.Run("FallsBackWhenExtraFiltersPresent", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		repo := &PostgresRepository{
+			queries:        mockQueries,
+			organizationID: "org-1",
+			environmentID:  "env-1",
+		}
+		ctx := context.Background()
+
+		filter := testworkflow.NewExecutionsFilter().
+			WithName("cloud-ui-e2e").
+			WithPageSize(10).
+			WithEndDate(time.Now()).
+			WithStatus("passed")
+
+		mockQueries.On("GetFinishedTestWorkflowExecutions", ctx, mock.AnythingOfType("sqlc.GetFinishedTestWorkflowExecutionsParams")).
+			Return([]sqlc.GetFinishedTestWorkflowExecutionsRow{}, nil)
+
+		_, err := repo.GetFinished(ctx, filter)
+
+		assert.NoError(t, err)
+		mockQueries.AssertExpectations(t)
+		mockQueries.AssertNotCalled(t, "GetFinishedTestWorkflowExecutionsByWorkflow")
 	})
 }

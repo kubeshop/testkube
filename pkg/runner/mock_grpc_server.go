@@ -28,6 +28,7 @@ type testGRPCServer struct {
 	getTestWorkflowServiceNotificationsSendPing           bool
 	getTestWorkflowParallelStepNotificationsSendPing      bool
 	callCount                                             int
+	notificationStreamCallCount                           int
 	mu                                                    sync.Mutex
 }
 
@@ -67,6 +68,10 @@ func (s *testGRPCServer) GetRunnerRequests(stream cloud.TestKubeCloudAPI_GetRunn
 }
 
 func (s *testGRPCServer) GetTestWorkflowNotificationsStream(stream cloud.TestKubeCloudAPI_GetTestWorkflowNotificationsStreamServer) error {
+	s.mu.Lock()
+	s.notificationStreamCallCount++
+	s.mu.Unlock()
+
 	if s.getTestWorkflowNotificationsErrorToReturn != nil {
 		return s.getTestWorkflowNotificationsErrorToReturn
 	}
@@ -140,6 +145,12 @@ func (s *testGRPCServer) GetCallCount() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.callCount
+}
+
+func (s *testGRPCServer) GetNotificationStreamCallCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.notificationStreamCallCount
 }
 
 // Helper function to create a test gRPC server and client

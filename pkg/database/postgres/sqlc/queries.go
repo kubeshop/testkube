@@ -25,6 +25,7 @@ type TestWorkflowExecutionQueriesInterface interface {
 	GetTestWorkflowExecutionsSummary(ctx context.Context, arg GetTestWorkflowExecutionsSummaryParams) ([]GetTestWorkflowExecutionsSummaryRow, error)
 	GetTestWorkflowExecutionsSummaryByWorkflow(ctx context.Context, arg GetTestWorkflowExecutionsSummaryByWorkflowParams) ([]GetTestWorkflowExecutionsSummaryByWorkflowRow, error)
 	GetFinishedTestWorkflowExecutions(ctx context.Context, arg GetFinishedTestWorkflowExecutionsParams) ([]GetFinishedTestWorkflowExecutionsRow, error)
+	GetFinishedTestWorkflowExecutionsByWorkflow(ctx context.Context, arg GetFinishedTestWorkflowExecutionsByWorkflowParams) ([]GetFinishedTestWorkflowExecutionsByWorkflowRow, error)
 	GetUnassignedTestWorkflowExecutions(ctx context.Context, arg GetUnassignedTestWorkflowExecutionsParams) ([]GetUnassignedTestWorkflowExecutionsRow, error)
 	CountTestWorkflowExecutions(ctx context.Context, arg CountTestWorkflowExecutionsParams) (int64, error)
 	GetTestWorkflowExecutionWithRunner(ctx context.Context, arg GetTestWorkflowExecutionWithRunnerParams) (GetTestWorkflowExecutionWithRunnerRow, error)

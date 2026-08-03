@@ -1,6 +1,7 @@
 package testworkflows
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -10,7 +11,9 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	common2 "github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -21,6 +24,7 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 	var (
 		selectors []string
 		crdOnly   bool
+		limit     int
 	)
 
 	cmd := &cobra.Command{
@@ -28,16 +32,40 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 		Aliases: []string{"testworkflows", "tw"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Get all available test workflows",
-		Long:    `Getting all available test workflows from given namespace - if no namespace given "testkube" namespace is used`,
+		Long:    `Get all available test workflows. In cloud context (API key) the CLI fetches them from the connected Control Plane environment and ignores the namespace flag. In kubeconfig context it fetches them from the agent in the given namespace (default "testkube").`,
+
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if limit < 0 {
+				return fmt.Errorf("--limit must not be negative")
+			}
+			return nil
+		},
 
 		Run: func(cmd *cobra.Command, args []string) {
 			namespace := cmd.Flag("namespace").Value.String()
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 
+			// Namespace only scopes the query in kubeconfig context, so keep it out of cloud-context error messages.
+			cfg, err := config.Load()
+			ui.ExitOnError("loading config file", err)
+			namespaceSuffix := " in namespace " + namespace
+			if cfg.ContextType == config.ContextTypeCloud {
+				namespaceSuffix = ""
+			}
+
 			if len(args) == 0 {
-				workflows, err := client.ListTestWorkflowWithExecutions(strings.Join(selectors, ","))
-				ui.ExitOnError("getting all test workflows in namespace "+namespace, err)
+				fetchLimit := limit
+				if limit > 0 {
+					fetchLimit = limit + 1
+				}
+				workflows, err := client.ListTestWorkflowWithExecutions(strings.Join(selectors, ","), fetchLimit)
+				ui.ExitOnError("getting all test workflows"+namespaceSuffix, err)
+
+				if limit > 0 && len(workflows) == limit+1 {
+					workflows = workflows[:limit]
+					ui.NewStderrUI(false).Warn(fmt.Sprintf("Showing %d test workflows, more are available on the server. Drop --limit (or use --limit 0) to fetch all.", limit))
+				}
 
 				if crdOnly {
 					uicrd.PrintCRDs(common2.MapSlice(workflows, func(t testkube.TestWorkflowWithExecution) testworkflowsv1.TestWorkflow {
@@ -52,7 +80,8 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 
 			name := args[0]
 			workflow, err := client.GetTestWorkflowWithExecution(name)
-			ui.ExitOnError("getting test workflow in namespace "+namespace, err)
+			common.HandleCLIError(testWorkflowNotFoundError(name, namespace, err))
+			ui.ExitOnError("getting test workflow"+namespaceSuffix, err)
 
 			if crdOnly {
 				uicrd.PrintCRD(testworkflows.MapTestWorkflowAPIToKube(*workflow.Workflow), "TestWorkflow", testworkflowsv1.GroupVersion)
@@ -70,7 +99,28 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
-	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "show only test workflow crd")
+	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "render the fetched test workflows as crd yaml; does not read crds from the cluster")
+	cmd.Flags().IntVar(&limit, "limit", 0, "maximum number of workflows to return, 0 to fetch all")
 
 	return cmd
+}
+
+// testWorkflowNotFoundError returns a CLIError with a CRD-sync hint when a test
+// workflow lookup returns a 404, or nil for a nil or non-404 error.
+func testWorkflowNotFoundError(name, namespace string, err error) *common.CLIError {
+	if !client.IsNotFound(err) {
+		return nil
+	}
+
+	moreInfo := fmt.Sprintf("The workflow may exist only as a Kubernetes CRD in your cluster. "+
+		"When CRD-to-Control Plane synchronization is disabled, workflows created from CRDs are not visible to the API. "+
+		"Check with: kubectl get testworkflows.testworkflows.testkube.io -n %s. "+
+		"Verify you are targeting the right environment with: testkube get context.", namespace)
+
+	return common.NewCLIError(
+		common.TKErrResourceNotFound,
+		fmt.Sprintf("test workflow '%s' not found", name),
+		moreInfo,
+		err,
+	)
 }

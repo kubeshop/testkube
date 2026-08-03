@@ -92,9 +92,6 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 
 	// Build the URL
 	fullURL := c.buildApiUrl(apiReq.Path, apiReq.PathParams, apiReq.Scope)
-	if debugInfo != nil {
-		debugInfo.Data["url"] = fullURL
-	}
 
 	// Add query parameters if present
 	if len(apiReq.QueryParams) > 0 {
@@ -111,6 +108,13 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 		}
 		u.RawQuery = q.Encode()
 		fullURL = u.String()
+	}
+
+	// Record the final URL (including query params) for debugging. This must run
+	// after query params are appended so debug output reflects the request that
+	// was actually sent.
+	if debugInfo != nil {
+		debugInfo.Data["url"] = fullURL
 	}
 
 	// Prepare request body
@@ -166,10 +170,20 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 
 	// Check status code
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		// Read the error body so the caller (and the model) gets an actionable
+		// message instead of a bare status code. The control plane returns
+		// RFC-7807 application/problem+json bodies for 4xx errors.
+		errBody, _ := io.ReadAll(resp.Body)
 		if debugInfo != nil {
 			debugInfo.Data["status"] = resp.StatusCode
 			debugInfo.Data["requestHeaders"] = redactSensitiveHeaders(req.Header)
 			debugInfo.Data["responseHeaders"] = redactSensitiveHeaders(resp.Header)
+			if len(errBody) > 0 {
+				debugInfo.Data["responseBody"] = string(errBody)
+			}
+		}
+		if detail := extractErrorDetail(errBody); detail != "" {
+			return "", fmt.Errorf("API returned status %d: %s", resp.StatusCode, detail)
 		}
 		return "", fmt.Errorf("API returned status %d", resp.StatusCode)
 	}
@@ -188,6 +202,39 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 	}
 
 	return string(bodyBytes), nil
+}
+
+// maxErrorDetailLen bounds how much of an error response body is surfaced to the
+// caller, so a large/unexpected body can't blow up the tool result.
+const maxErrorDetailLen = 2048
+
+// extractErrorDetail pulls a human-readable message out of an error response
+// body. It prefers the RFC-7807 problem+json "detail" (falling back to "title")
+// and otherwise returns the raw body. The result is trimmed and length-capped.
+func extractErrorDetail(body []byte) string {
+	if len(body) == 0 {
+		return ""
+	}
+	var problem struct {
+		Detail string `json:"detail"`
+		Title  string `json:"title"`
+	}
+	if err := json.Unmarshal(body, &problem); err == nil {
+		if problem.Detail != "" {
+			return truncate(strings.TrimSpace(problem.Detail), maxErrorDetailLen)
+		}
+		if problem.Title != "" {
+			return truncate(strings.TrimSpace(problem.Title), maxErrorDetailLen)
+		}
+	}
+	return truncate(strings.TrimSpace(string(body)), maxErrorDetailLen)
+}
+
+func truncate(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "…"
 }
 
 var sensitiveHeaders = []string{
@@ -831,7 +878,7 @@ func (c *APIClient) ListWorkflowTemplates(ctx context.Context, selector string) 
 
 	return c.makeRequest(ctx, APIRequest{
 		Method:      "GET",
-		Path:        "/test-workflow-templates",
+		Path:        "/agent/test-workflow-templates",
 		Scope:       ApiScopeOrgEnv,
 		QueryParams: queryParams,
 	})
@@ -840,7 +887,7 @@ func (c *APIClient) ListWorkflowTemplates(ctx context.Context, selector string) 
 func (c *APIClient) GetWorkflowTemplateDefinition(ctx context.Context, templateName string) (string, error) {
 	return c.makeRequest(ctx, APIRequest{
 		Method: "GET",
-		Path:   "/test-workflow-templates/{templateName}",
+		Path:   "/agent/test-workflow-templates/{templateName}",
 		Scope:  ApiScopeOrgEnv,
 		PathParams: map[string]string{
 			"templateName": templateName,
@@ -854,7 +901,7 @@ func (c *APIClient) GetWorkflowTemplateDefinition(ctx context.Context, templateN
 func (c *APIClient) CreateWorkflowTemplate(ctx context.Context, templateDefinition string) (string, error) {
 	return c.makeRequest(ctx, APIRequest{
 		Method: "POST",
-		Path:   "/test-workflow-templates",
+		Path:   "/agent/test-workflow-templates",
 		Scope:  ApiScopeOrgEnv,
 		Body:   templateDefinition,
 		Headers: map[string]string{
@@ -866,7 +913,7 @@ func (c *APIClient) CreateWorkflowTemplate(ctx context.Context, templateDefiniti
 func (c *APIClient) UpdateWorkflowTemplate(ctx context.Context, templateName, templateDefinition string) (string, error) {
 	return c.makeRequest(ctx, APIRequest{
 		Method: "PUT",
-		Path:   "/test-workflow-templates/{templateName}",
+		Path:   "/agent/test-workflow-templates/{templateName}",
 		Scope:  ApiScopeOrgEnv,
 		PathParams: map[string]string{
 			"templateName": templateName,
@@ -970,4 +1017,107 @@ func (c *APIClient) GetExecutions(ctx context.Context, params tools.ListExecutio
 	}
 
 	return executions, nil
+}
+
+// Insight (ingested metrics) methods
+//
+// These hit the org-scoped insight endpoints under /organizations/{id}/insights.
+// Unlike most workflow/execution endpoints they are not environment-scoped in the
+// path; the environment is passed as the "env" query parameter (empty values are
+// dropped by makeRequest).
+
+func (c *APIClient) ListInsightSeries(ctx context.Context, params tools.InsightSeriesCatalogParams) (string, error) {
+	queryParams := map[string]string{
+		"env":             c.config.EnvId,
+		"workflow":        params.Workflow,
+		"source":          params.Source,
+		"metricKey":       params.MetricKey,
+		"identityFilters": params.IdentityFilters,
+		"q":               params.Query,
+	}
+	if params.Page > 0 {
+		queryParams["page"] = strconv.Itoa(params.Page)
+	}
+	if params.PageSize > 0 {
+		queryParams["pageSize"] = strconv.Itoa(params.PageSize)
+	}
+
+	return c.makeRequest(ctx, APIRequest{
+		Method:      http.MethodGet,
+		Path:        "/insights/series/catalog",
+		Scope:       ApiScopeOrg,
+		QueryParams: queryParams,
+	})
+}
+
+func (c *APIClient) ListInsightMetricKeys(ctx context.Context, params tools.InsightMetricKeysParams) (string, error) {
+	queryParams := map[string]string{
+		"env":             c.config.EnvId,
+		"workflow":        params.Workflow,
+		"source":          params.Source,
+		"identityFilters": params.IdentityFilters,
+		"q":               params.Query,
+	}
+	if params.Page > 0 {
+		queryParams["page"] = strconv.Itoa(params.Page)
+	}
+	if params.PageSize > 0 {
+		queryParams["pageSize"] = strconv.Itoa(params.PageSize)
+	}
+
+	return c.makeRequest(ctx, APIRequest{
+		Method:      http.MethodGet,
+		Path:        "/insights/series/catalog/metric-keys",
+		Scope:       ApiScopeOrg,
+		QueryParams: queryParams,
+	})
+}
+
+func (c *APIClient) GetInsightMetricSeries(ctx context.Context, params tools.InsightMetricSeriesParams) (string, error) {
+	queryParams := map[string]string{
+		"env":             c.config.EnvId,
+		"measure":         params.Measure,
+		"seriesId":        params.SeriesID,
+		"aggregate":       params.Aggregate,
+		"segment":         params.Segment,
+		"workflow":        params.Workflow,
+		"identityFilters": params.IdentityFilters,
+		"status":          params.Status,
+		"tagFilter":       params.TagFilter,
+		"startDate":       params.StartDate,
+		"endDate":         params.EndDate,
+	}
+
+	return c.makeRequest(ctx, APIRequest{
+		Method:      http.MethodGet,
+		Path:        "/insights/series",
+		Scope:       ApiScopeOrg,
+		QueryParams: queryParams,
+	})
+}
+
+func (c *APIClient) ListInsightExecutions(ctx context.Context, params tools.InsightExecutionsParams) (string, error) {
+	queryParams := map[string]string{
+		"env":             c.config.EnvId,
+		"measure":         params.Measure,
+		"identityFilters": params.IdentityFilters,
+		"workflow":        params.Workflow,
+		"status":          params.Status,
+		"tagFilter":       params.TagFilter,
+		"startDate":       params.StartDate,
+		"endDate":         params.EndDate,
+	}
+	if params.Page > 0 {
+		queryParams["page"] = strconv.Itoa(params.Page)
+	}
+	if params.PageSize > 0 {
+		queryParams["pageSize"] = strconv.Itoa(params.PageSize)
+	}
+
+	return c.makeRequest(ctx, APIRequest{
+		Method:      http.MethodGet,
+		Path:        "/insights/series/executions",
+		Scope:       ApiScopeOrg,
+		QueryParams: queryParams,
+	})
 }

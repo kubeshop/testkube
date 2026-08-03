@@ -25,12 +25,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
-	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
-	testsourcev1 "github.com/kubeshop/testkube/api/testsource/v1"
 	"github.com/kubeshop/testkube/pkg/mapper/testtriggers"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 
-	testsuitev3 "github.com/kubeshop/testkube/api/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	workflowtriggersmapper "github.com/kubeshop/testkube/pkg/mapper/workflowtriggers"
@@ -71,9 +68,6 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 	k8sscheme.AddToScheme(scheme)
 	inf := &k8sInformers{scheme: scheme}
 	executorv1.AddToScheme(inf.scheme)
-	testsuitev3.AddToScheme(inf.scheme)
-	testsv3.AddToScheme(inf.scheme)
-	testsourcev1.AddToScheme(inf.scheme)
 	testtriggersv1.AddToScheme(inf.scheme)
 
 	if len(watcherNamespaces) == 0 {
@@ -311,7 +305,7 @@ func (s *Service) startCloudWorkflowTriggerWatch(ctx context.Context, stop <-cha
 		for _, namespace := range namespaces {
 			list, err := s.workflowTriggersClient.List(ctx, s.getEnvironmentId(), workflowtriggerclient.ListOptions{}, namespace)
 			if err != nil {
-				s.logger.Errorf("trigger service: error listing cloud workflow triggers in namespace %q: %v", namespace, err)
+				s.logger.Warnf("trigger service: error listing cloud workflow triggers in namespace %q: %v", namespace, err)
 				failedNamespaces[namespace] = struct{}{}
 				continue
 			}
@@ -407,7 +401,7 @@ func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan st
 		for _, namespace := range namespaces {
 			list, err := s.testTriggersClient.List(ctx, s.getEnvironmentId(), testtriggerclient.ListOptions{}, namespace)
 			if err != nil {
-				s.logger.Errorf("trigger service: error listing cloud test triggers in namespace %q: %v", namespace, err)
+				s.logger.Warnf("trigger service: error listing cloud test triggers in namespace %q: %v", namespace, err)
 				failedNamespaces[namespace] = struct{}{}
 				continue
 			}
@@ -533,8 +527,17 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 		DeleteFunc: func(obj interface{}) {
 			pod, ok := obj.(*corev1.Pod)
 			if !ok {
-				s.logger.Errorf("failed to process delete pod event due to it being an unexpected type, received type %+v", obj)
-				return
+				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+				if !ok {
+					s.logger.Errorf("failed to process delete pod event due to it being an unexpected type, received type %+v", obj)
+					return
+				}
+
+				pod, ok = tombstone.Obj.(*corev1.Pod)
+				if !ok {
+					s.logger.Errorf("failed to process delete pod event due to tombstone containing an unexpected type, received type %+v", tombstone.Obj)
+					return
+				}
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: pod %s/%s deleted", pod.Namespace, pod.Name)
 			event := s.newWatcherEvent(testtrigger.EventDeleted, &pod.ObjectMeta, pod, testtrigger.ResourcePod,

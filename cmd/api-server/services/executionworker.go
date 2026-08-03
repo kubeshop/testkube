@@ -71,5 +71,16 @@ func CreateExecutionWorker(
 		// as the gRPC control plane connection from execution pods may not be available.
 		DisableResourceMetrics: cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken == "",
 		EmptyDirSizeLimit:      cfg.TestkubeEmptyDirSizeLimit,
+		DefaultImagePullPolicy: cfg.TestkubeDefaultImagePullPolicy,
+		DefaultRunnerResources: testworkflowconfig.ContainerResourceConfig{
+			Requests: testworkflowconfig.ContainerResources{
+				CPU:    cfg.TestkubeDefaultRunnerCPURequest,
+				Memory: cfg.TestkubeDefaultRunnerMemRequest,
+			},
+			Limits: testworkflowconfig.ContainerResources{
+				CPU:    cfg.TestkubeDefaultRunnerCPULimit,
+				Memory: cfg.TestkubeDefaultRunnerMemLimit,
+			},
+		},
 	})
 }

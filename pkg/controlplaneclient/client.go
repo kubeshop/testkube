@@ -2,6 +2,7 @@ package controlplaneclient
 
 import (
 	"strings"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -22,6 +23,15 @@ type client struct {
 	proContext config.ProContext
 	opts       ClientOptions
 	logger     *zap.SugaredLogger
+
+	// Persistent notification stream session managers, one per stream kind, created
+	// lazily on first use with the agent's long-lived context. Keeping them across gRPC
+	// reconnects preserves each session's replay buffer and pod-log source, so a
+	// reconnect resumes from the cursor instead of falling back to resume_unavailable.
+	notifMu              sync.Mutex
+	workflowNotifManager *notificationStreamSessionManager[*cloud.TestWorkflowNotificationsRequest]
+	parallelNotifManager *notificationStreamSessionManager[*cloud.TestWorkflowParallelStepNotificationsRequest]
+	serviceNotifManager  *notificationStreamSessionManager[*cloud.TestWorkflowServiceNotificationsRequest]
 }
 
 type ClientOptions struct {

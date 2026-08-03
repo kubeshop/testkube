@@ -99,6 +99,12 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.ListArtifacts(client))
 	mcpServer.AddTool(tools.ReadArtifact(client))
 
+	// Insight (ingested metrics) tools
+	mcpServer.AddTool(tools.ListInsightSeries(client))
+	mcpServer.AddTool(tools.ListInsightMetricKeys(client))
+	mcpServer.AddTool(tools.GetInsightMetricSeries(client))
+	mcpServer.AddTool(tools.ListInsightExecutions(client))
+
 	return mcpServer, nil
 }
 

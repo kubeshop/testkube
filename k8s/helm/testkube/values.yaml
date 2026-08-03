@@ -57,6 +57,15 @@ global:
     createServiceAccountTemplates: true
     # -- Create TestWorkflowTemplates with automatically configured execution
     createOfficialTemplates: true
+    # -- Image used by the built-in TestWorkflowTemplate installer hook Job
+    builtinTemplatesInstaller:
+      image:
+        registry: docker.io
+        repository: kubeshop/testkube-kubectl
+        tag: 1.36.3
+        digest: ""
+        pullPolicy: IfNotPresent
+        pullSecrets: []
     # -- Global TestWorkflowTemplate that will be automatically included for all executions
     globalTemplate:
       # -- Is global template enabled
@@ -112,7 +121,7 @@ mongodb:
     # -- MongoDB image repository
     repository: kubeshop/bitnami-mongodb
     # -- MongoDB image tag
-    tag: 8.3.4
+    tag: 8.3.7
     # -- MongoDB image pull Secret
     pullSecrets: []
   # -- Target MongoDB Feature Compatibility Version used by the FCV hook jobs.
@@ -1300,7 +1309,7 @@ testkube-operator:
       # -- Testkube Operator rbac-proxy image repository
       repository: brancz/kube-rbac-proxy
       # -- Testkube Operator rbac-proxy image tag
-      tag: "v0.22.0"
+      tag: "v0.22.1"
       # -- Testkube Operator rbac-proxy k8s secret for private registries
       pullSecrets: []
     # -- Testkube Operator rbac-proxy resource settings

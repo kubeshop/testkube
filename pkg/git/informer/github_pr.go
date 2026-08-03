@@ -14,6 +14,7 @@ import (
 
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/git/matchers"
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
@@ -200,8 +201,8 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 
 	prConfig := gitConfig.PullRequest
 
-	paths := normalizePaths(gitConfig.Paths)
-	pathsIgnore := normalizePaths(gitConfig.PathsIgnore)
+	paths := matchers.NormalizePaths(gitConfig.Paths)
+	pathsIgnore := matchers.NormalizePaths(gitConfig.PathsIgnore)
 
 	// On the first reconcile pass for a trigger all currently-visible PRs are
 	// recorded as baselines without firing.  Once the sentinel is set, a PR
@@ -210,8 +211,9 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 	prInitialized := i.commits[initKey] != ""
 
 	for _, pr := range prs {
-		// Apply base branch filters before state tracking.
-		if !prMatchesBaseBranch(pr.Base.Ref, prConfig) {
+		// Apply base branch filters before state tracking. A nil prConfig
+		// preserves the pre-refactor "match all" semantic.
+		if prConfig != nil && !matchers.PRMatchesBaseBranch(pr.Base.Ref, prConfig.Branches, prConfig.BranchesIgnore) {
 			continue
 		}
 
@@ -237,12 +239,13 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 		if !hasPrev {
 			action = "opened"
 		} else {
-			action = determinePRAction(prev, currentState, pr)
+			action = matchers.DeterminePRAction(prev, currentState, pr.Head.SHA)
 		}
 
 		// Apply type filter. Advance baseline so the same state is not re-evaluated
-		// on the next reconcile regardless of whether the action matches.
-		if !prMatchesTypes(action, prConfig) {
+		// on the next reconcile regardless of whether the action matches. A nil
+		// prConfig preserves the pre-refactor "match all" semantic.
+		if prConfig != nil && !matchers.PRMatchesTypes(action, prConfig.Types) {
 			i.commits[prKey] = currentState
 			continue
 		}
@@ -256,7 +259,7 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 				log.DefaultLogger.Warnf("git informer: failed to fetch PR #%d files: %v", pr.Number, fileErr)
 				continue
 			}
-			if !prPathsMatch(changedFiles, paths, pathsIgnore) {
+			if !matchers.PRPathsMatch(changedFiles, paths, pathsIgnore) {
 				// Paths do not match; advance baseline to skip this state on the next pass.
 				i.commits[prKey] = currentState
 				continue
@@ -331,79 +334,4 @@ func prCacheKey(triggerKey string, prNumber int) string {
 // set, new PRs that have never been seen before are treated as "opened".
 func prInitKey(triggerKey string) string {
 	return triggerKey + refSeparator + "pr:__init__"
-}
-
-// prMatchesBaseBranch checks if a PR's base branch matches the trigger's branch filters.
-func prMatchesBaseBranch(baseBranch string, prConfig *testkube.TestTriggerContentGitPullRequest) bool {
-	if prConfig == nil {
-		return true
-	}
-	// Check ignore first (takes precedence)
-	if nameMatchesAny(baseBranch, prConfig.BranchesIgnore) {
-		return false
-	}
-	// If branches list is empty, match all
-	if len(prConfig.Branches) == 0 {
-		return true
-	}
-	return nameMatchesAny(baseBranch, prConfig.Branches)
-}
-
-// prMatchesTypes checks if a PR action matches the configured types filter.
-func prMatchesTypes(action string, prConfig *testkube.TestTriggerContentGitPullRequest) bool {
-	if prConfig == nil || len(prConfig.Types) == 0 {
-		return true
-	}
-	for _, t := range prConfig.Types {
-		if strings.EqualFold(strings.TrimSpace(t), action) {
-			return true
-		}
-	}
-	return false
-}
-
-// determinePRAction determines the PR action based on state transitions.
-func determinePRAction(prevEncoded, currentEncoded string, pr githubPR) string {
-	prevParts := strings.SplitN(prevEncoded, ":", 2)
-	currParts := strings.SplitN(currentEncoded, ":", 2)
-
-	prevSHA := ""
-	prevState := ""
-	if len(prevParts) == 2 {
-		prevSHA = prevParts[0]
-		prevState = prevParts[1]
-	}
-
-	currState := ""
-	if len(currParts) == 2 {
-		currState = currParts[1]
-	}
-
-	// State changed to closed
-	if currState == "closed" && prevState != "closed" {
-		return "closed"
-	}
-	// State changed from closed to open (reopened)
-	if currState == "open" && prevState == "closed" {
-		return "reopened"
-	}
-	// SHA changed (new commits pushed)
-	if prevSHA != pr.Head.SHA {
-		return "synchronize"
-	}
-	// Catch-all
-	return "synchronize"
-}
-
-// prPathsMatch checks if any changed file in a PR matches the path filters.
-func prPathsMatch(changedFiles, paths, pathsIgnore []string) bool {
-	for _, file := range changedFiles {
-		if pathIsIgnored(pathsIgnore, file) {
-			continue
-		}
-		if len(paths) == 0 || pathMatchesNormalized(paths, file) {
-			return true
-		}
-	}
-	return false
 }

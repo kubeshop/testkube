@@ -33,7 +33,7 @@ func (s *loader) Reconcile() (listeners common.Listeners) {
 		log.Tracef(s.Log, "Got listeners from loader %T %+v\n", loader, l)
 
 		if err != nil {
-			s.Log.Errorw("error loading listeners", "error", err)
+			s.Log.Warnw("error loading listeners", "error", err)
 			continue
 		}
 		listeners = append(listeners, l...)

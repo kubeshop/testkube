@@ -327,6 +327,32 @@ spec:
             - name: TESTKUBE_REGISTRY
               value: "{{ .Values.global.imageRegistry }}"
             {{- end }}
+            {{- if .Values.defaultImagePullPolicy }}
+            - name: "TESTKUBE_DEFAULT_IMAGE_PULL_POLICY"
+              value: "{{ .Values.defaultImagePullPolicy }}"
+            {{- end }}
+            {{- with .Values.defaultRunnerResources }}
+            {{- with .requests }}
+            {{- if .cpu }}
+            - name: "TESTKUBE_DEFAULT_RUNNER_CPU_REQUEST"
+              value: "{{ .cpu }}"
+            {{- end }}
+            {{- if .memory }}
+            - name: "TESTKUBE_DEFAULT_RUNNER_MEMORY_REQUEST"
+              value: "{{ .memory }}"
+            {{- end }}
+            {{- end }}
+            {{- with .limits }}
+            {{- if .cpu }}
+            - name: "TESTKUBE_DEFAULT_RUNNER_CPU_LIMIT"
+              value: "{{ .cpu }}"
+            {{- end }}
+            {{- if .memory }}
+            - name: "TESTKUBE_DEFAULT_RUNNER_MEMORY_LIMIT"
+              value: "{{ .memory }}"
+            {{- end }}
+            {{- end }}
+            {{- end }}
             {{- if .Values.imageInspectionCache.enabled }}
             - name: "TESTKUBE_ENABLE_IMAGE_DATA_PERSISTENT_CACHE"
               value:  "true"

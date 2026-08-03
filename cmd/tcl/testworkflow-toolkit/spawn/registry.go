@@ -9,10 +9,10 @@
 package spawn
 
 import (
+	"maps"
+	"slices"
 	"sync"
 	"sync/atomic"
-
-	"golang.org/x/exp/maps"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -33,7 +33,7 @@ func NewRegistry() *registry {
 func (r *registry) Indexes() []int64 {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	return maps.Keys(r.statuses)
+	return slices.Collect(maps.Keys(r.statuses))
 }
 
 func (r *registry) SetAddress(index int64, address string) {
@@ -82,7 +82,7 @@ func (r *registry) Destroy(index int64) {
 
 func (r *registry) EachAsyncAtOnce(fn func(int64, string, func())) {
 	r.mu.RLock()
-	indexes := maps.Keys(r.statuses)
+	indexes := slices.Collect(maps.Keys(r.statuses))
 	r.mu.RUnlock()
 
 	var wg sync.WaitGroup

@@ -71,6 +71,31 @@ func TestSanitizeName(t *testing.T) {
 	})
 }
 
+func TestSanitizeLabelValue(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+		want  string
+	}{
+		{name: "empty stays empty", value: "", want: ""},
+		{name: "valid value unchanged", value: "my-workflow.name_1", want: "my-workflow.name_1"},
+		{name: "invalid chars replaced with hyphen", value: "my workflow/name", want: "my-workflow-name"},
+		{name: "leading and trailing punctuation trimmed", value: ".-my-workflow-.", want: "my-workflow"},
+		{name: "truncated to 63 chars", value: strings.Repeat("a", 100), want: strings.Repeat("a", 63)},
+		{name: "unsanitizable value becomes empty", value: strings.Repeat("/", 5), want: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := SanitizeLabelValue(tt.value)
+			assert.Equal(t, tt.want, got)
+			if got != "" {
+				assert.LessOrEqual(t, len(got), 63)
+			}
+		})
+	}
+}
+
 func TestNewTemplate(t *testing.T) {
 
 	t.Run("sprig functions should be available", func(t *testing.T) {

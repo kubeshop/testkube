@@ -11,6 +11,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 // TestkubeEventPrefix is prefix for testkube event
@@ -95,7 +96,7 @@ func sanitizeLabels(labels map[string]string) map[string]string {
 		}
 
 		// Sanitize the label value
-		sanitizedValue := sanitizeLabelValue(value)
+		sanitizedValue := utils.SanitizeLabelValue(value)
 		if sanitizedValue == "" {
 			// Drop the label if the value cannot be sanitized
 			continue
@@ -152,38 +153,6 @@ func sanitizeLabelKey(key string) string {
 	}
 
 	return key
-}
-
-// sanitizeLabelValue sanitizes a label value to conform to Kubernetes label value rules.
-func sanitizeLabelValue(value string) string {
-	if value == "" {
-		return value
-	}
-
-	// Replace invalid characters with hyphens
-	sanitized := strings.Map(func(r rune) rune {
-		if isAllowedLabelRune(r) {
-			return r
-		}
-		return '-'
-	}, value)
-
-	// Truncate if too long
-	if len(sanitized) > validation.LabelValueMaxLength {
-		sanitized = sanitized[:validation.LabelValueMaxLength]
-	}
-
-	// Trim non-alphanumeric characters from start and end
-	sanitized = strings.TrimLeftFunc(sanitized, func(r rune) bool { return !isAlphaNumeric(r) })
-	sanitized = strings.TrimRightFunc(sanitized, func(r rune) bool { return !isAlphaNumeric(r) })
-
-	// Final validation
-	errs := validation.IsValidLabelValue(sanitized)
-	if len(errs) > 0 {
-		return ""
-	}
-
-	return sanitized
 }
 
 // sanitizeDNSSubdomain sanitizes a string to be a valid DNS subdomain.
@@ -248,11 +217,6 @@ func sanitizeDNSLabel(s string) string {
 	}
 
 	return sanitized
-}
-
-// isAllowedLabelRune returns true if the rune is allowed in a label value.
-func isAllowedLabelRune(r rune) bool {
-	return isAlphaNumeric(r) || r == '-' || r == '_' || r == '.'
 }
 
 // isAlphaNumeric returns true if the rune is alphanumeric.

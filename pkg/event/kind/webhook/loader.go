@@ -159,7 +159,6 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 	// load all webhooks from kubernetes CRDs
 	webhookList, err := r.webhookClient.List("")
 	if err != nil {
-		r.log.Errorw("failed to list webhooks", "error", err)
 		return listeners, err
 	}
 
@@ -177,7 +176,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 			}
 
 			if webhookTemplate.Spec.Disabled {
-				r.log.Errorw("error webhook template is disabled", "name", webhook.Name, "template", webhook.Spec.WebhookTemplateRef.Name)
+				r.log.Debugw("webhook template is disabled", "name", webhook.Name, "template", webhook.Spec.WebhookTemplateRef.Name)
 				continue
 			}
 

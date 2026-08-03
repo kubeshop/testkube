@@ -152,7 +152,7 @@ func NewInitCmdDemo() *cobra.Command {
 			if cliErr != nil {
 				if cfg.TelemetryEnabled {
 					cliErr.AddTelemetry(cmd, "kubeconfig not found", "kubeconfig_not_found", license)
-					_, _ = telemetry.HandleCLIErrorTelemetry(common.Version, cliErr)
+					_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
 				}
 				common.HandleCLIError(cliErr)
 			}
@@ -167,7 +167,7 @@ func NewInitCmdDemo() *cobra.Command {
 						cliErr = common.NewCLIError(common.TKErrConfigInitFailed, "Error reading namespace from console", "Check does the current system have a console.", err)
 						if cfg.TelemetryEnabled {
 							cliErr.AddTelemetry(cmd, "input namespace", "reading_namespace_failed", license)
-							_, _ = telemetry.HandleCLIErrorTelemetry(common.Version, cliErr)
+							_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
 						}
 						common.HandleCLIError(cliErr)
 					}
@@ -181,7 +181,7 @@ func NewInitCmdDemo() *cobra.Command {
 					cliErr = common.NewCLIError(common.TKErrConfigInitFailed, "Error reading namespace from console", "Check does the current system have a console.", err)
 					if cfg.TelemetryEnabled {
 						cliErr.AddTelemetry(cmd, "input license", "reading_license_failed", license)
-						_, _ = telemetry.HandleCLIErrorTelemetry(common.Version, cliErr)
+						_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
 					}
 					common.HandleCLIError(cliErr)
 				}
@@ -201,7 +201,7 @@ func NewInitCmdDemo() *cobra.Command {
 				)
 				if cfg.TelemetryEnabled {
 					cliErr.AddTelemetry(cmd, "license validation", "install_license_invalid", license)
-					_, _ = telemetry.HandleCLIErrorTelemetry(common.Version, cliErr)
+					_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
 				}
 				common.HandleCLIError(cliErr)
 			}
@@ -236,7 +236,7 @@ func NewInitCmdDemo() *cobra.Command {
 				spinner.Fail("Failed to install Testkube On-Prem Demo")
 				if cfg.TelemetryEnabled {
 					cliErr.AddTelemetry(cmd, "installing", "install_failed", license)
-					_, _ = telemetry.HandleCLIErrorTelemetry(common.Version, cliErr)
+					_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
 				}
 				common.HandleCLIError(cliErr)
 			}
@@ -250,7 +250,7 @@ func NewInitCmdDemo() *cobra.Command {
 				spinner.Fail("Failed to install Testkube On-Prem Demo")
 				if cfg.TelemetryEnabled {
 					cliErr.AddTelemetry(cmd, "installing", "install_failed", license)
-					_, _ = telemetry.HandleCLIErrorTelemetry(common.Version, cliErr)
+					_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
 				}
 				common.HandleCLIError(cliErr)
 			}
@@ -338,7 +338,7 @@ func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType, licens
 
 func sendTelemetry(cmd *cobra.Command, clientCfg config.Data, license, step string) {
 	if clientCfg.TelemetryEnabled {
-		out, err := telemetry.SendCmdWithLicenseEvent(cmd, common.Version, license, step)
+		out, err := telemetry.SendCmdWithLicenseEvent(cmd, common.Version, common.TelemetryUserID(cmd, &clientCfg), license, step)
 		if ui.Verbose && err != nil {
 			ui.Err(err)
 		}

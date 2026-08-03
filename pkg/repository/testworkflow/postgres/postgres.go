@@ -472,6 +472,7 @@ func (r *PostgresRepository) executionToSummary(row testkube.TestWorkflowExecuti
 		Runtime:              row.Runtime,
 		Reports:              row.Reports,
 		ResourceAggregations: row.ResourceAggregations,
+		SilentMode:           row.SilentMode,
 	}
 }
 
@@ -610,6 +611,34 @@ func (r *PostgresRepository) GetRunning(ctx context.Context) ([]testkube.TestWor
 
 // GetFinished returns finished executions with filter
 func (r *PostgresRepository) GetFinished(ctx context.Context, filter testworkflow.Filter) ([]testkube.TestWorkflowExecution, error) {
+	if isFinishedByWorkflowFastPathFilter(filter) {
+		params := sqlc.GetFinishedTestWorkflowExecutionsByWorkflowParams{
+			OrganizationID: r.organizationID,
+			EnvironmentID:  r.environmentID,
+			WorkflowName:   toPgText(filter.Name()),
+			Fst:            int32(filter.Page() * filter.PageSize()),
+			Lmt:            int32(filter.PageSize()),
+		}
+		if filter.EndDateDefined() {
+			params.EndDate = toPgTimestamp(filter.EndDate())
+		}
+
+		rows, err := r.queries.GetFinishedTestWorkflowExecutionsByWorkflow(ctx, params)
+		if err != nil {
+			return nil, err
+		}
+
+		result := make([]testkube.TestWorkflowExecution, len(rows))
+		for i, row := range rows {
+			execution, err := r.convertCompleteRowToExecutionWithRelated(sqlc.GetTestWorkflowExecutionRow(row))
+			if err != nil {
+				return nil, err
+			}
+			result[i] = *execution
+		}
+		return result, nil
+	}
+
 	params, err := r.buildTestWorkflowExecutionParams(filter)
 	if err != nil {
 		return nil, err
@@ -620,6 +649,10 @@ func (r *PostgresRepository) GetFinished(ctx context.Context, filter testworkflo
 		return nil, err
 	}
 
+	return r.finishedRowsToExecutions(rows)
+}
+
+func (r *PostgresRepository) finishedRowsToExecutions(rows []sqlc.GetFinishedTestWorkflowExecutionsRow) ([]testkube.TestWorkflowExecution, error) {
 	result := make([]testkube.TestWorkflowExecution, len(rows))
 	for i, row := range rows {
 		execution, err := r.convertCompleteRowToExecutionWithRelated(sqlc.GetTestWorkflowExecutionRow(row))
@@ -631,6 +664,27 @@ func (r *PostgresRepository) GetFinished(ctx context.Context, filter testworkflo
 	}
 
 	return result, nil
+}
+
+func isFinishedByWorkflowFastPathFilter(f testworkflow.Filter) bool {
+	if f == nil || !f.NameDefined() {
+		return false
+	}
+	return !f.NamesDefined() &&
+		!f.TextSearchDefined() &&
+		!f.StartDateDefined() &&
+		!f.LastNDaysDefined() &&
+		!f.StatusesDefined() &&
+		!f.RunnerIDDefined() &&
+		!f.AssignedDefined() &&
+		!f.ActorNameDefined() &&
+		!f.ActorTypeDefined() &&
+		!f.GroupIDDefined() &&
+		!f.InitializedDefined() &&
+		!f.HealthRangesDefined() &&
+		f.Selector() == "" &&
+		f.LabelSelector() == nil &&
+		f.TagSelector() == ""
 }
 
 // GetExecutionsTotals returns execution totals with filter
@@ -1722,6 +1776,13 @@ func (r *PostgresRepository) GetTestWorkflowMetrics(ctx context.Context, name st
 			Name:        row.Name,
 			StartTime:   fromPgTimestamp(row.StartTime),
 			RunnerId:    fromPgText(row.RunnerID),
+		}
+		if len(row.SilentMode) > 0 {
+			silentMode, err := fromJSONB[testkube.SilentMode](row.SilentMode)
+			if err != nil {
+				return metrics, err
+			}
+			executions[i].SilentMode = silentMode
 		}
 	}
 
