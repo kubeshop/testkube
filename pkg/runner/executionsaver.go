@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -34,6 +35,7 @@ type executionSaver struct {
 
 	// Intermediate data
 	output       []testkube.TestWorkflowOutput
+	outputMu     sync.Mutex
 	result       *testkube.TestWorkflowResult
 	resultUpdate store.Update
 	resultMu     sync.Mutex
@@ -103,6 +105,17 @@ func (s *executionSaver) watchResultUpdates() {
 				case <-time.After(ExecutionSaverUpdateRetryDelay):
 				}
 			}
+
+			// Persist outputs alongside the result rather than waiting for End(). A
+			// workflow that runs other test workflows is still running while they read
+			// its outputs, so outputs that only land on completion are invisible to
+			// exactly the readers that need them. End() still saves and blocks when
+			// this did not get through.
+			if !s.outputSaved.Load() {
+				if err := s.saveOutput(s.ctx); err == nil {
+					s.outputSaved.Store(true)
+				}
+			}
 		}
 	}
 }
@@ -115,13 +128,18 @@ func (s *executionSaver) UpdateResult(result testkube.TestWorkflowResult) {
 }
 
 func (s *executionSaver) AppendOutput(output ...testkube.TestWorkflowOutput) {
+	s.outputMu.Lock()
 	s.output = append(s.output, output...)
+	s.outputMu.Unlock()
 	s.outputSaved.Store(false)
 }
 
 func (s *executionSaver) saveOutput(ctx context.Context) error {
+	s.outputMu.Lock()
+	output := slices.Clone(s.output)
+	s.outputMu.Unlock()
 	// TODO: Consider AppendOutput ($push) instead
-	return s.client.UpdateExecutionOutput(ctx, s.environmentId, s.id, s.output)
+	return s.client.UpdateExecutionOutput(ctx, s.environmentId, s.id, output)
 }
 
 func (s *executionSaver) saveResult(ctx context.Context, result *testkube.TestWorkflowResult) error {

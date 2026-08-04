@@ -13,6 +13,10 @@ spec:
     workingDir: /data
   steps:
   - name: Publish an output and an artifact
+    id: publish
+    # One step doing both: the output is written by the shell container and the
+    # artifacts container runs after it, which is where the step's id used to get
+    # lost and take the outputs directory with it.
     shell: |
       # /testkube/outputs is the same channel used between steps of a single
       # workflow - here it also crosses the workflow boundary. Values holding a
@@ -26,6 +30,12 @@ spec:
       workingDir: /data
       paths:
       - 'results/**'
+
+  - name: Read the output back within this workflow
+    shell: |
+      set -e
+      echo "own output: {{ step.publish.outputs.token }}"
+      [ "{{ step.publish.outputs.token }}" = "token-from-producer" ] || { echo "unexpected own output"; exit 1; }
 
 ---
 kind: TestWorkflow
@@ -95,7 +105,8 @@ spec:
         cpu: 32m
         memory: 32Mi
   steps:
-  - name: Publish something for the children to read
+  - name: Publish a value and a file for the children to read
+    id: seed
     shell: |
       echo -n "seed-from-parent" > /testkube/outputs/seed
 

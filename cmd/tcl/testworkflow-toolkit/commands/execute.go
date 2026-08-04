@@ -240,10 +240,11 @@ func buildWorkflowExecution(req workflowExecutionRequest) func() error {
 
 					if exec.Result != nil && exec.Result.Status != nil {
 						status := *exec.Result.Status
-						switch status {
-						case testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus:
-							break
-						default:
+						// Ask the result whether it finished, rather than treating every status
+						// other than queued/running as terminal: a child reporting `assigned`,
+						// `starting` or `scheduling` is still on its way, and reading those as
+						// terminal made the parent give up and report the child as failed.
+						if exec.Result.IsFinished() {
 							break loop
 						}
 
