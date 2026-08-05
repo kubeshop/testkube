@@ -10,7 +10,7 @@ spec:
   selector: environment=prod
   payloadTemplate: |-
     {
-      "text": ":alert: Testkube prod-healthcheck failed \n *Name*: {{.TestWorkflowExecution.Name}} \n *Status*: {{ .Type_ }} \n *Logs*: https://app.testkube.dev/organization/{{ index .Envs "TESTKUBE_PRO_ORG_ID" }}/environment/{{ index .Envs "TESTKUBE_PRO_ENV_ID" }}/dashboard/test-workflows/{{ .TestWorkflowExecution.Workflow.Name }}/executions/{{ .TestWorkflowExecution.Id }}"
+      "text": ":alert: Testkube prod-healthcheck failed \n *Name*: {{.TestWorkflowExecution.Name}} \n *Status*: {{ .Type_ }} \n *Logs*: {{ .ExecutionURL }}"
     }
 
 ---
@@ -25,5 +25,5 @@ spec:
   selector: environment=prod
   payloadTemplate: |-
     {
-      "text": ":large_green_circle: Testkube prod-healthcheck - *back to normal* \n *Name*: {{.TestWorkflowExecution.Name}} \n *Status*: {{ .Type_ }} \n *Logs*: https://app.testkube.dev/organization/{{ index .Envs "TESTKUBE_PRO_ORG_ID" }}/environment/{{ index .Envs "TESTKUBE_PRO_ENV_ID" }}/dashboard/test-workflows/{{ .TestWorkflowExecution.Workflow.Name }}/executions/{{ .TestWorkflowExecution.Id }}"
+      "text": ":large_green_circle: Testkube prod-healthcheck - *back to normal* \n *Name*: {{.TestWorkflowExecution.Name}} \n *Status*: {{ .Type_ }} \n *Logs*: {{ .ExecutionURL }}"
     }
