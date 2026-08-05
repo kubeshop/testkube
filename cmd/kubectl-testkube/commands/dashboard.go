@@ -59,6 +59,10 @@ func NewDashboardCmd() *cobra.Command {
 }
 
 func openCloudDashboard(cfg config.Data) {
+	if cfg.CloudContext.UiUri == "" {
+		ui.Failf("The context has no dashboard URI. Pass `--ui-uri-override <url>` to `testkube set context` or `testkube login`.")
+	}
+
 	// open browser
 	uri := fmt.Sprintf("%s/organization/%s/environment/%s", cfg.CloudContext.UiUri, cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId)
 	err := open.Run(uri)

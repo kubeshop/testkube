@@ -10,6 +10,5 @@ spec:
   selector: core-tests=cloud-ui-e2e
   payloadTemplate: |-
     {
-    	"text": ":alert: Cloud UI E2E tests at .dev Postgres \n *Name*: {{.TestWorkflowExecution.Name}} \n *Status*: {{ .Type_ }} \n *Logs*: https://app.testkube.dev/organization/{{ index .Envs "TESTKUBE_PRO_ORG_ID" }}/environment/{{ index .Envs "TESTKUBE_PRO_ENV_ID" }}/dashboard/test-workflows/{{ .TestWorkflowExecution.Workflow.Name }}/executions/{{ .TestWorkflowExecution.Id }}"
+    	"text": ":alert: Cloud UI E2E tests at .dev Postgres \n *Name*: {{.TestWorkflowExecution.Name}} \n *Status*: {{ .Type_ }} \n *Logs*: {{ .ExecutionURL }}"
     }
-
