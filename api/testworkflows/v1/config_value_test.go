@@ -95,6 +95,23 @@ func TestConfigValue_UnmarshalYAML(t *testing.T) {
 	}
 }
 
+func TestResources_UnmarshalLargeNumericMemory(t *testing.T) {
+	containerJSON := []byte(`{
+		"resources": {
+			"limits": {"memory": 8589934592},
+			"requests": {"cpu": "300m", "memory": 8589934592}
+		}
+	}`)
+
+	var container ContainerConfig
+	err := json.Unmarshal(containerJSON, &container)
+	require.NoError(t, err)
+	require.NotNil(t, container.Resources)
+	assert.Equal(t, ConfigValue("8589934592"), container.Resources.Limits["memory"])
+	assert.Equal(t, ConfigValue("300m"), container.Resources.Requests["cpu"])
+	assert.Equal(t, ConfigValue("8589934592"), container.Resources.Requests["memory"])
+}
+
 func TestTestWorkflow_UnmarshalLargeNumericConfigDefault(t *testing.T) {
 	workflowJSON := []byte(`{
 		"apiVersion": "testworkflows.testkube.io/v1",

@@ -7,7 +7,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -58,13 +57,13 @@ var (
 		Command: common.Ptr([]string{"c", "d"}),
 		Args:    common.Ptr([]string{"ar", "gs"}),
 		Resources: &testworkflowsv1.Resources{
-			Limits: map[corev1.ResourceName]intstr.IntOrString{
-				corev1.ResourceCPU:    {Type: intstr.String, StrVal: "300m"},
-				corev1.ResourceMemory: {Type: intstr.Int, IntVal: 1024},
+			Limits: map[corev1.ResourceName]testworkflowsv1.ConfigValue{
+				corev1.ResourceCPU:    "300m",
+				corev1.ResourceMemory: "1024",
 			},
-			Requests: map[corev1.ResourceName]intstr.IntOrString{
-				corev1.ResourceCPU:    {Type: intstr.String, StrVal: "3800m"},
-				corev1.ResourceMemory: {Type: intstr.Int, IntVal: 10204},
+			Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{
+				corev1.ResourceCPU:    "3800m",
+				corev1.ResourceMemory: "10204",
 			},
 		},
 		SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
@@ -203,8 +202,8 @@ var (
 			Command:         common.Ptr([]string{"ab"}),
 			Args:            common.Ptr([]string{"abrgs"}),
 			Resources: &testworkflowsv1.Resources{
-				Requests: map[corev1.ResourceName]intstr.IntOrString{
-					corev1.ResourceMemory: {Type: intstr.String, StrVal: "300m"},
+				Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{
+					corev1.ResourceMemory: "300m",
 				},
 			},
 			SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
@@ -230,8 +229,8 @@ var (
 				Command: common.Ptr([]string{"c", "m", "d"}),
 				Args:    common.Ptr([]string{"arg", "s", "d"}),
 				Resources: &testworkflowsv1.Resources{
-					Limits: map[corev1.ResourceName]intstr.IntOrString{
-						corev1.ResourceCPU: {Type: intstr.Int, IntVal: 444},
+					Limits: map[corev1.ResourceName]testworkflowsv1.ConfigValue{
+						corev1.ResourceCPU: "444",
 					},
 				},
 				SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{

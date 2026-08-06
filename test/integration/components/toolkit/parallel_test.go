@@ -422,13 +422,13 @@ func TestParallelLifecycle_Integration(t *testing.T) {
 				{EnvVar: corev1.EnvVar{Name: "TOTAL", Value: "{{count}}"}},
 			},
 			Resources: &testworkflowsv1.Resources{
-				Requests: map[corev1.ResourceName]intstr.IntOrString{
-					corev1.ResourceCPU:    intstr.FromString("100m"),
-					corev1.ResourceMemory: intstr.FromString("128Mi"),
+				Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{
+					corev1.ResourceCPU:    "100m",
+					corev1.ResourceMemory: "128Mi",
 				},
-				Limits: map[corev1.ResourceName]intstr.IntOrString{
-					corev1.ResourceCPU:    intstr.FromString("200m"),
-					corev1.ResourceMemory: intstr.FromString("256Mi"),
+				Limits: map[corev1.ResourceName]testworkflowsv1.ConfigValue{
+					corev1.ResourceCPU:    "200m",
+					corev1.ResourceMemory: "256Mi",
 				},
 			},
 		},
