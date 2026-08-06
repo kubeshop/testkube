@@ -58,6 +58,11 @@ type testObjWithStringEnumPointers struct {
 	Dummy *testEnum
 }
 
+type testObjWithStringEnumExpressions struct {
+	Value *testEnum `expr:"expression"`
+	Dummy *testEnum
+}
+
 type testObjInterfaced struct {
 	Value map[string][]interface{} `expr:"force"`
 }
@@ -261,6 +266,22 @@ func TestGenericSimplifyWithStringEnumPointers(t *testing.T) {
 	want := testObjWithStringEnumPointers{
 		Value: common.Ptr[testEnum]("55"),
 		Dummy: common.Ptr[testEnum]("{{ 4433 }}"),
+	}
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
+func TestGenericSimplifyWithStringEnumExpressions(t *testing.T) {
+	got := testObjWithStringEnumExpressions{
+		Value: common.Ptr[testEnum]("5 + 3 + ten"),
+		Dummy: common.Ptr[testEnum]("5 + 3 + ten"),
+	}
+	err := Simplify(&got, testMachine)
+
+	want := testObjWithStringEnumExpressions{
+		Value: common.Ptr[testEnum]("18"),
+		Dummy: common.Ptr[testEnum]("5 + 3 + ten"),
 	}
 
 	assert.NoError(t, err)
