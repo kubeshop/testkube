@@ -11439,10 +11439,10 @@ spec:
                   additionalProperties:
                     properties:
                       default:
+                        description: default value - if not provided, the parameter is required
                         anyOf:
                           - type: integer
                           - type: string
-                        description: default value - if not provided, the parameter is required
                         x-kubernetes-int-or-string: true
                       description:
                         description: parameter description
@@ -11453,10 +11453,10 @@ spec:
                           type: string
                         type: array
                       example:
+                        description: exemplary value
                         anyOf:
                           - type: integer
                           - type: string
-                        description: exemplary value
                         x-kubernetes-int-or-string: true
                       exclusiveMaximum:
                         description: maximum value for the number (exclusive)
@@ -23918,10 +23918,10 @@ spec:
                   additionalProperties:
                     properties:
                       default:
+                        description: default value - if not provided, the parameter is required
                         anyOf:
                           - type: integer
                           - type: string
-                        description: default value - if not provided, the parameter is required
                         x-kubernetes-int-or-string: true
                       description:
                         description: parameter description
@@ -23932,10 +23932,10 @@ spec:
                           type: string
                         type: array
                       example:
+                        description: exemplary value
                         anyOf:
                           - type: integer
                           - type: string
-                        description: exemplary value
                         x-kubernetes-int-or-string: true
                       exclusiveMaximum:
                         description: maximum value for the number (exclusive)

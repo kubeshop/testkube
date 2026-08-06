@@ -245,7 +245,7 @@ func (in *CronJobConfig) DeepCopyInto(out *CronJobConfig) {
 	}
 	if in.Config != nil {
 		in, out := &in.Config, &out.Config
-		*out = make(map[string]intstr.IntOrString, len(*in))
+		*out = make(map[string]ConfigValue, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
 		}
@@ -547,12 +547,12 @@ func (in *ParameterSchema) DeepCopyInto(out *ParameterSchema) {
 	}
 	if in.Example != nil {
 		in, out := &in.Example, &out.Example
-		*out = new(intstr.IntOrString)
+		*out = new(ConfigValue)
 		**out = **in
 	}
 	if in.Default != nil {
 		in, out := &in.Default, &out.Default
-		*out = new(intstr.IntOrString)
+		*out = new(ConfigValue)
 		**out = **in
 	}
 	in.ParameterStringSchema.DeepCopyInto(&out.ParameterStringSchema)
@@ -1029,7 +1029,7 @@ func (in *StepExecuteWorkflow) DeepCopyInto(out *StepExecuteWorkflow) {
 	}
 	if in.Config != nil {
 		in, out := &in.Config, &out.Config
-		*out = make(map[string]intstr.IntOrString, len(*in))
+		*out = make(map[string]ConfigValue, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
 		}
@@ -1347,7 +1347,7 @@ func (in *TemplateRef) DeepCopyInto(out *TemplateRef) {
 	*out = *in
 	if in.Config != nil {
 		in, out := &in.Config, &out.Config
-		*out = make(map[string]intstr.IntOrString, len(*in))
+		*out = make(map[string]ConfigValue, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
 		}
@@ -1599,7 +1599,7 @@ func (in *TestWorkflowExecutionRequest) DeepCopyInto(out *TestWorkflowExecutionR
 	*out = *in
 	if in.Config != nil {
 		in, out := &in.Config, &out.Config
-		*out = make(map[string]intstr.IntOrString, len(*in))
+		*out = make(map[string]ConfigValue, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
 		}

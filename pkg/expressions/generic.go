@@ -38,8 +38,11 @@ func hasUnexportedFields(v reflect.Value) bool {
 
 func clone(v reflect.Value) reflect.Value {
 	if v.Kind() == reflect.String {
-		s := v.String()
-		return reflect.ValueOf(&s).Elem()
+		// Keep the named type, so the caller can assign the clone
+		// back into a typed map or slice.
+		r := reflect.New(v.Type()).Elem()
+		r.SetString(v.String())
+		return r
 	} else if v.Kind() == reflect.Struct {
 		r := reflect.New(v.Type()).Elem()
 		t := v.Type()
