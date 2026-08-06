@@ -224,7 +224,7 @@ type StepExecuteWorkflow struct {
 	Tarball map[string]TarballRequest `json:"tarball,omitempty" expr:"template,include"`
 
 	// configuration to pass for the workflow
-	Config map[string]intstr.IntOrString `json:"config,omitempty" expr:"template"`
+	Config map[string]ConfigValue `json:"config,omitempty" expr:"template"`
 
 	// instructions for downloading artifacts produced by executed test workflows
 	Fetch []StepExecuteFetch `json:"fetch,omitempty" expr:"include"`

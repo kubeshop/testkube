@@ -13,7 +13,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/executiondata"
@@ -26,8 +25,8 @@ import (
 func TestDeferredSpecFinalization(t *testing.T) {
 	spec := &testworkflowsv1.StepExecuteWorkflow{
 		Name: "consumer",
-		Config: map[string]intstr.IntOrString{
-			"token": intstr.FromString(`{{ execution("p").outputs.token }}`),
+		Config: map[string]testworkflowsv1.ConfigValue{
+			"token": `{{ execution("p").outputs.token }}`,
 		},
 	}
 
@@ -50,7 +49,7 @@ func TestDeferredSpecFinalization(t *testing.T) {
 
 		workflow := *spec.DeepCopy()
 		require.NoError(t, expressions.Finalize(&workflow, machine))
-		assert.Equal(t, "abc123", workflow.Config["token"].StrVal)
+		assert.Equal(t, testworkflowsv1.ConfigValue("abc123"), workflow.Config["token"])
 	})
 }
 
@@ -65,8 +64,8 @@ func TestDeferredSpecFinalization(t *testing.T) {
 func TestWithheldOutputStopsTheExecution(t *testing.T) {
 	spec := &testworkflowsv1.StepExecuteWorkflow{
 		Name: "consumer",
-		Config: map[string]intstr.IntOrString{
-			"token": intstr.FromString(`{{ execution("p").outputs.token }}`),
+		Config: map[string]testworkflowsv1.ConfigValue{
+			"token": `{{ execution("p").outputs.token }}`,
 		},
 	}
 
@@ -85,7 +84,7 @@ func TestWithheldOutputStopsTheExecution(t *testing.T) {
 
 	markers := executiondata.WithheldMarkersIn(&workflow)
 	require.Len(t, markers, 1, "the marker reaches the configuration of the scheduled execution")
-	assert.NotEmpty(t, workflow.Config["token"].StrVal,
+	assert.NotEmpty(t, workflow.Config["token"].String(),
 		"the consumer must not resolve a withheld output to an empty value")
 
 	err := executiondata.WithheldError("this execution", markers)
