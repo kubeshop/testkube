@@ -10,5 +10,20 @@ spec:
   selector: core-tests=installation
   payloadTemplate: |-
     {
-    	"text": ":alert: Testkube Installation test \n *Name*: {{.TestWorkflowExecution.Name}} \n *Status*: {{ .Type_ }} \n *Logs*: {{ .ExecutionURL }}"
+      "text": ":alert: Testkube Installation test \n *Name*: {{.TestWorkflowExecution.Name}} \n *Status*: {{ .Type_ }} \n *Logs*: {{ .ExecutionURL }}"
+    }
+
+---
+apiVersion: executor.testkube.io/v1
+kind: Webhook
+metadata:
+  name: slack-installation-back-to-normal
+spec:
+  events:
+  - become-testworkflow-up
+  uri: '{{credential("webhook-slack-installation-alerts-url")}}'
+  selector: core-tests=installation
+  payloadTemplate: |-
+    {
+      "text": ":large_green_circle: Testkube Installation test - *back to normal* \n *Name*: {{.TestWorkflowExecution.Name}} \n *Status*: {{ .Type_ }} \n *Logs*: {{ .ExecutionURL }}"
     }
