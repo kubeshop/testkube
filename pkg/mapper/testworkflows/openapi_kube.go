@@ -366,22 +366,22 @@ func MapContentFileAPIToKube(v testkube.TestWorkflowContentFile) testworkflowsv1
 	}
 }
 
-func MapResourcesListAPIToKube(v *testkube.TestWorkflowResourcesList) map[corev1.ResourceName]intstr.IntOrString {
+func MapResourcesListAPIToKube(v *testkube.TestWorkflowResourcesList) map[corev1.ResourceName]testworkflowsv1.ConfigValue {
 	if v == nil {
 		return nil
 	}
-	res := make(map[corev1.ResourceName]intstr.IntOrString)
+	res := make(map[corev1.ResourceName]testworkflowsv1.ConfigValue)
 	if v.Cpu != "" {
-		res[corev1.ResourceCPU] = MapStringToIntOrString(v.Cpu)
+		res[corev1.ResourceCPU] = MapStringToConfigValue(v.Cpu)
 	}
 	if v.Memory != "" {
-		res[corev1.ResourceMemory] = MapStringToIntOrString(v.Memory)
+		res[corev1.ResourceMemory] = MapStringToConfigValue(v.Memory)
 	}
 	if v.Storage != "" {
-		res[corev1.ResourceStorage] = MapStringToIntOrString(v.Storage)
+		res[corev1.ResourceStorage] = MapStringToConfigValue(v.Storage)
 	}
 	if v.EphemeralStorage != "" {
-		res[corev1.ResourceEphemeralStorage] = MapStringToIntOrString(v.EphemeralStorage)
+		res[corev1.ResourceEphemeralStorage] = MapStringToConfigValue(v.EphemeralStorage)
 	}
 	return res
 }
