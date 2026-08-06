@@ -6,6 +6,7 @@ metadata:
   labels:
     core-tests: cloud-ui-e2e-mongo
     artifacts: "true"
+    dev-quality-gate: "true"
 spec:
   content:
     git:

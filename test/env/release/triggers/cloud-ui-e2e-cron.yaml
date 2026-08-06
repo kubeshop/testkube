@@ -1,10 +1,10 @@
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: tw-suite-standard-smoke-cron-trigger
+  name: cloud-ui-e2e-cron-trigger
   labels:
     core-tests: workflows-suite-trigger
-    type: suite-trigger
+    type: workflow-trigger
 spec:
   container:
     resources:
@@ -14,7 +14,7 @@ spec:
   steps:
   - execute:
       workflows:
-      - name: tw-suite-standard-smoke
+      - name: cloud-ui-e2e
   events:
   - cronjob:
-      cron: "15 */6 * * *" # every 6 hours
+      cron: "25 8,16 * * *" # twice a day at 08:25 and 16:25
