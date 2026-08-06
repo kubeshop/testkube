@@ -959,8 +959,8 @@ func MapStepExecuteTestKubeToAPI(v testworkflowsv1.StepExecuteTest) testkube.Tes
 		Description:      v.Description,
 		ExecutionRequest: common.MapPtr(v.ExecutionRequest, MapStepExecuteTestExecutionRequestKubeToAPI),
 		Tarball:          common.MapMap(v.Tarball, MapTarballRequestKubeToAPI),
-		Count:            MapIntOrStringToBoxedString(v.Count),
-		MaxCount:         MapIntOrStringToBoxedString(v.MaxCount),
+		Count:            MapStringTypeToBoxedString(v.Count),
+		MaxCount:         MapStringTypeToBoxedString(v.MaxCount),
 		Matrix:           MapDynamicListMapKubeToAPI(v.Matrix),
 		Shards:           MapDynamicListMapKubeToAPI(v.Shards),
 	}
@@ -988,8 +988,8 @@ func MapStepExecuteTestWorkflowKubeToAPI(v testworkflowsv1.StepExecuteWorkflow) 
 		ExecutionName: v.ExecutionName,
 		Tarball:       common.MapMap(v.Tarball, MapTarballRequestKubeToAPI),
 		Config:        MapConfigValueKubeToAPI(v.Config),
-		Count:         MapIntOrStringToBoxedString(v.Count),
-		MaxCount:      MapIntOrStringToBoxedString(v.MaxCount),
+		Count:         MapStringTypeToBoxedString(v.Count),
+		MaxCount:      MapStringTypeToBoxedString(v.MaxCount),
 		Matrix:        MapDynamicListMapKubeToAPI(v.Matrix),
 		Shards:        MapDynamicListMapKubeToAPI(v.Shards),
 		Selector:      common.MapPtr(v.Selector, MapSelectorToAPI),
@@ -1046,8 +1046,8 @@ func MapStepParallelFetchKubeToAPI(v testworkflowsv1.StepParallelFetch) testkube
 
 func MapStepParallelKubeToAPI(v testworkflowsv1.StepParallel) testkube.TestWorkflowStepParallel {
 	return testkube.TestWorkflowStepParallel{
-		Count:       MapIntOrStringToBoxedString(v.Count),
-		MaxCount:    MapIntOrStringToBoxedString(v.MaxCount),
+		Count:       MapStringTypeToBoxedString(v.Count),
+		MaxCount:    MapStringTypeToBoxedString(v.MaxCount),
 		Matrix:      MapDynamicListMapKubeToAPI(v.Matrix),
 		Shards:      MapDynamicListMapKubeToAPI(v.Shards),
 		Parallelism: v.Parallelism,
@@ -1084,8 +1084,8 @@ func MapStepParallelKubeToAPI(v testworkflowsv1.StepParallel) testkube.TestWorkf
 
 func MapIndependentStepParallelKubeToAPI(v testworkflowsv1.IndependentStepParallel) testkube.TestWorkflowIndependentStepParallel {
 	return testkube.TestWorkflowIndependentStepParallel{
-		Count:       MapIntOrStringToBoxedString(v.Count),
-		MaxCount:    MapIntOrStringToBoxedString(v.MaxCount),
+		Count:       MapStringTypeToBoxedString(v.Count),
+		MaxCount:    MapStringTypeToBoxedString(v.MaxCount),
 		Matrix:      MapDynamicListMapKubeToAPI(v.Matrix),
 		Shards:      MapDynamicListMapKubeToAPI(v.Shards),
 		Parallelism: v.Parallelism,
@@ -1172,8 +1172,8 @@ func MapProbeKubeToAPI(v corev1.Probe) testkube.Probe {
 
 func MapIndependentServiceSpecKubeToAPI(v testworkflowsv1.IndependentServiceSpec) testkube.TestWorkflowIndependentServiceSpec {
 	return testkube.TestWorkflowIndependentServiceSpec{
-		Count:           MapIntOrStringToBoxedString(v.Count),
-		MaxCount:        MapIntOrStringToBoxedString(v.MaxCount),
+		Count:           MapStringTypeToBoxedString(v.Count),
+		MaxCount:        MapStringTypeToBoxedString(v.MaxCount),
 		Matrix:          MapDynamicListMapKubeToAPI(v.Matrix),
 		Shards:          MapDynamicListMapKubeToAPI(v.Shards),
 		Description:     v.Description,
@@ -1201,8 +1201,8 @@ func MapIndependentServiceSpecKubeToAPI(v testworkflowsv1.IndependentServiceSpec
 
 func MapServiceSpecKubeToAPI(v testworkflowsv1.ServiceSpec) testkube.TestWorkflowServiceSpec {
 	return testkube.TestWorkflowServiceSpec{
-		Count:           MapIntOrStringToBoxedString(v.Count),
-		MaxCount:        MapIntOrStringToBoxedString(v.MaxCount),
+		Count:           MapStringTypeToBoxedString(v.Count),
+		MaxCount:        MapStringTypeToBoxedString(v.MaxCount),
 		Matrix:          MapDynamicListMapKubeToAPI(v.Matrix),
 		Shards:          MapDynamicListMapKubeToAPI(v.Shards),
 		Use:             common.MapSlice(v.Use, MapTemplateRefKubeToAPI),

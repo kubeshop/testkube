@@ -289,7 +289,11 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 			} else if ptr.Kind() == reflect.Interface {
 				ptr.Set(reflect.ValueOf(vv))
 			} else {
-				ptr.Set(reflect.ValueOf(&vv))
+				// Build the pointer from the original type. A named string
+				// type, such as ConfigValue, does not accept a *string.
+				instance := reflect.New(v.Type())
+				instance.Elem().SetString(vv)
+				ptr.Set(instance)
 			}
 		} else if (t.value == "template" && !IsTemplateStringWithoutExpressions(v.String())) || force {
 			var expr Expression
