@@ -720,14 +720,14 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 	*out = *in
 	if in.Limits != nil {
 		in, out := &in.Limits, &out.Limits
-		*out = make(map[corev1.ResourceName]intstr.IntOrString, len(*in))
+		*out = make(map[corev1.ResourceName]ConfigValue, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
 		}
 	}
 	if in.Requests != nil {
 		in, out := &in.Requests, &out.Requests
-		*out = make(map[corev1.ResourceName]intstr.IntOrString, len(*in))
+		*out = make(map[corev1.ResourceName]ConfigValue, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
 		}
