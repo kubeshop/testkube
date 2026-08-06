@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -17,7 +18,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -113,7 +113,7 @@ func TestParallelSimpleCountDistribution_Integration(t *testing.T) {
 			Shell: `echo "Worker {{index}} of {{count}}"`,
 		},
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-			Count: common.Ptr(intstr.FromInt(3)),
+			Count: testworkflowsv1.NewConfigValue("3"),
 		},
 		Description: "worker-{{index}}",
 	}
@@ -220,7 +220,7 @@ func TestParallelShardingDistribution_Integration(t *testing.T) {
 			},
 		},
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-			Count: common.Ptr(intstr.FromInt(3)),
+			Count: testworkflowsv1.NewConfigValue("3"),
 			Shards: map[string]testworkflowsv1.DynamicList{
 				"testFiles": {Static: files},
 			},
@@ -269,7 +269,7 @@ func TestParallelismLimit_Integration(t *testing.T) {
 			Shell: `echo "Worker {{index}}" && sleep 1`,
 		},
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-			Count: common.Ptr(intstr.FromInt(5)),
+			Count: testworkflowsv1.NewConfigValue("5"),
 		},
 		Parallelism: 2, // Only 2 at a time
 		Description: "parallel-limited-{{index}}",
@@ -319,7 +319,7 @@ func TestParallelWorkerFailure_Integration(t *testing.T) {
 			},
 		},
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-			Count: common.Ptr(intstr.FromInt(3)),
+			Count: testworkflowsv1.NewConfigValue("3"),
 		},
 		Description: "worker-{{index}}",
 	}
@@ -355,7 +355,7 @@ func TestParallelInvalidImage_Integration(t *testing.T) {
 			},
 		},
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-			Count: common.Ptr(intstr.FromInt(1)),
+			Count: testworkflowsv1.NewConfigValue("1"),
 		},
 	}
 
@@ -390,7 +390,7 @@ func TestParallelLogCollectionOnFailure_Integration(t *testing.T) {
 			},
 		},
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-			Count: common.Ptr(intstr.FromInt(3)),
+			Count: testworkflowsv1.NewConfigValue("3"),
 		},
 		Logs:        &logCondition,
 		Description: "log-test-{{index}}",
@@ -468,7 +468,7 @@ func TestParallelLifecycle_Integration(t *testing.T) {
 			},
 		},
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-			Count: common.Ptr(intstr.FromInt(2)),
+			Count: testworkflowsv1.NewConfigValue("2"),
 		},
 		Description: "lifecycle-test-{{index}}",
 	}
@@ -597,8 +597,11 @@ func executeParallel(t *testing.T, spec *testworkflowsv1.StepParallel) error {
 	// TODO: Switch to --base64 encoding when production parallel command is updated
 	// Increase timeout for complex tests
 	timeout := defaultTestTimeout
-	if spec.Count != nil && spec.Count.IntVal > 3 {
-		timeout = timeout * 2
+	if spec.Count != nil {
+		count, err := strconv.ParseInt(spec.Count.String(), 10, 64)
+		if err == nil && count > 3 {
+			timeout = timeout * 2
+		}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
