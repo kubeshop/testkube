@@ -247,8 +247,8 @@ var (
 			Parallelism: 880,
 			Async:       false,
 			Tests:       []testworkflowsv1.StepExecuteTest{{Name: "some-name-test"}},
-			Workflows: []testworkflowsv1.StepExecuteWorkflow{{Name: "some-workflow", Config: map[string]intstr.IntOrString{
-				"id": {Type: intstr.String, StrVal: "xyzz"},
+			Workflows: []testworkflowsv1.StepExecuteWorkflow{{Name: "some-workflow", Config: map[string]testworkflowsv1.ConfigValue{
+				"id": "xyzz",
 			}}},
 		},
 		Artifacts: &testworkflowsv1.StepArtifacts{
@@ -265,14 +265,14 @@ var (
 		StepOperations: stepBaseOperations,
 		StepDefaults:   stepBaseDefaults,
 		Use: []testworkflowsv1.TemplateRef{
-			{Name: "/abc", Config: map[string]intstr.IntOrString{
-				"xxx": {Type: intstr.Int, IntVal: 322},
+			{Name: "/abc", Config: map[string]testworkflowsv1.ConfigValue{
+				"xxx": "322",
 			}},
 		},
 		Template: &testworkflowsv1.TemplateRef{
 			Name: "other-one",
-			Config: map[string]intstr.IntOrString{
-				"foo": {Type: intstr.String, StrVal: "bar"},
+			Config: map[string]testworkflowsv1.ConfigValue{
+				"foo": "bar",
 			},
 		},
 		Steps: []testworkflowsv1.Step{
@@ -295,14 +295,8 @@ var (
 				Description: "some-description",
 				Type:        "integer",
 				Enum:        []string{"en", "um"},
-				Example: &intstr.IntOrString{
-					Type:   intstr.String,
-					StrVal: "some-vale",
-				},
-				Default: &intstr.IntOrString{
-					Type:   intstr.Int,
-					IntVal: 233,
-				},
+				Example:     testworkflowsv1.NewConfigValue("some-vale"),
+				Default:     testworkflowsv1.NewConfigValue("233"),
 				ParameterStringSchema: testworkflowsv1.ParameterStringSchema{
 					Format:    "url",
 					Pattern:   "^abc$",
@@ -365,9 +359,9 @@ func TestMapTestWorkflowBackAndForth(t *testing.T) {
 			Use: []testworkflowsv1.TemplateRef{
 				{
 					Name: "some-name",
-					Config: map[string]intstr.IntOrString{
-						"some-key":   {Type: intstr.String, StrVal: "some-value"},
-						"some-key-2": {Type: intstr.Int, IntVal: 444},
+					Config: map[string]testworkflowsv1.ConfigValue{
+						"some-key":   "some-value",
+						"some-key-2": "444",
 					},
 				},
 			},

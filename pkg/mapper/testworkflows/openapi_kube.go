@@ -48,6 +48,17 @@ func MapStringPtrToIntOrStringPtr(i *string) *intstr.IntOrString {
 	return common.Ptr(MapStringToIntOrString(*i))
 }
 
+func MapStringToConfigValue(v string) testworkflowsv1.ConfigValue {
+	return testworkflowsv1.ConfigValue(v)
+}
+
+func MapBoxedStringToConfigValue(v *testkube.BoxedString) *testworkflowsv1.ConfigValue {
+	if v == nil {
+		return nil
+	}
+	return testworkflowsv1.NewConfigValue(v.Value)
+}
+
 func MapBoxedStringToString(v *testkube.BoxedString) *string {
 	if v == nil {
 		return nil
@@ -238,8 +249,8 @@ func MapLocalObjectReferenceAPIToKube(v testkube.LocalObjectReference) corev1.Lo
 	return corev1.LocalObjectReference{Name: v.Name}
 }
 
-func MapConfigValueAPIToKube(v map[string]string) map[string]intstr.IntOrString {
-	return common.MapMap(v, MapStringToIntOrString)
+func MapConfigValueAPIToKube(v map[string]string) map[string]testworkflowsv1.ConfigValue {
+	return common.MapMap(v, MapStringToConfigValue)
 }
 
 func MapParameterTypeAPIToKube(v *testkube.TestWorkflowParameterType) testworkflowsv1.ParameterType {
@@ -279,16 +290,16 @@ func MapTimeoutsAPIToKube(v testkube.TestWorkflowTimeouts) testworkflowsv1.TestW
 }
 
 func MapParameterSchemaAPIToKube(v testkube.TestWorkflowParameterSchema) testworkflowsv1.ParameterSchema {
-	var example *intstr.IntOrString
+	var example *testworkflowsv1.ConfigValue
 	if v.Example != "" {
-		example = common.Ptr(MapStringToIntOrString(v.Example))
+		example = testworkflowsv1.NewConfigValue(v.Example)
 	}
 	return testworkflowsv1.ParameterSchema{
 		Description: v.Description,
 		Type:        MapParameterTypeAPIToKube(v.Type_),
 		Enum:        v.Enum,
 		Example:     example,
-		Default:     MapStringPtrToIntOrStringPtr(MapBoxedStringToString(v.Default_)),
+		Default:     MapBoxedStringToConfigValue(v.Default_),
 		ParameterStringSchema: testworkflowsv1.ParameterStringSchema{
 			Format:    v.Format,
 			Pattern:   v.Pattern,

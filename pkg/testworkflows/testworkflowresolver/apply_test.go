@@ -13,7 +13,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -118,22 +117,22 @@ var (
 	tplPodRef       = testworkflowsv1.TemplateRef{Name: "pod"}
 	tplPodConfigRef = testworkflowsv1.TemplateRef{
 		Name: "podConfig",
-		Config: map[string]intstr.IntOrString{
-			"department": {Type: intstr.String, StrVal: "test-department"},
+		Config: map[string]testworkflowsv1.ConfigValue{
+			"department": "test-department",
 		},
 	}
 	tplPodConfigRefEmpty = testworkflowsv1.TemplateRef{Name: "podConfig"}
 	tplEnvRef            = testworkflowsv1.TemplateRef{Name: "env"}
 	tplStepsRef          = testworkflowsv1.TemplateRef{Name: "steps"}
 	tplStepsEnvRef       = testworkflowsv1.TemplateRef{Name: "stepsEnv"}
-	tplStepsConfigRef    = testworkflowsv1.TemplateRef{Name: "stepsConfig", Config: map[string]intstr.IntOrString{
-		"index": {Type: intstr.Int, IntVal: 20},
+	tplStepsConfigRef    = testworkflowsv1.TemplateRef{Name: "stepsConfig", Config: map[string]testworkflowsv1.ConfigValue{
+		"index": "20",
 	}}
-	tplStepsConfigRefStringInvalid = testworkflowsv1.TemplateRef{Name: "stepsConfig", Config: map[string]intstr.IntOrString{
-		"index": {Type: intstr.String, StrVal: "text"},
+	tplStepsConfigRefStringInvalid = testworkflowsv1.TemplateRef{Name: "stepsConfig", Config: map[string]testworkflowsv1.ConfigValue{
+		"index": "text",
 	}}
-	tplStepsConfigRefStringValid = testworkflowsv1.TemplateRef{Name: "stepsConfig", Config: map[string]intstr.IntOrString{
-		"index": {Type: intstr.String, StrVal: "10"},
+	tplStepsConfigRefStringValid = testworkflowsv1.TemplateRef{Name: "stepsConfig", Config: map[string]testworkflowsv1.ConfigValue{
+		"index": "10",
 	}}
 	workflowPod = testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
@@ -585,8 +584,8 @@ func TestApplyTemplatesConfigOverflow(t *testing.T) {
 	wf := workflowPod.DeepCopy()
 	wf.Spec.Use = []testworkflowsv1.TemplateRef{{
 		Name: "podConfig",
-		Config: map[string]intstr.IntOrString{
-			"department": {Type: intstr.String, StrVal: "{{config.value}}"},
+		Config: map[string]testworkflowsv1.ConfigValue{
+			"department": "{{config.value}}",
 		},
 	}}
 	err := ApplyTemplates(wf, templates, nil)
@@ -606,7 +605,7 @@ func TestApplyTemplates_ConditionAlways(t *testing.T) {
 					Config: map[string]testworkflowsv1.ParameterSchema{
 						"result": {
 							Type:    testworkflowsv1.ParameterTypeString,
-							Default: &intstr.IntOrString{Type: intstr.String, StrVal: ""},
+							Default: testworkflowsv1.NewConfigValue(""),
 						},
 					},
 				},
@@ -634,8 +633,8 @@ func TestApplyTemplates_ConditionAlways(t *testing.T) {
 				{StepOperations: testworkflowsv1.StepOperations{Shell: "exit 0"}},
 				{Template: &testworkflowsv1.TemplateRef{
 					Name: "example",
-					Config: map[string]intstr.IntOrString{
-						"result": {Type: intstr.String, StrVal: "{{ passed }}"},
+					Config: map[string]testworkflowsv1.ConfigValue{
+						"result": "{{ passed }}",
 					},
 				}},
 			},

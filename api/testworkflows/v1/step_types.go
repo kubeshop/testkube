@@ -221,7 +221,7 @@ type StepExecuteWorkflow struct {
 	Tarball map[string]TarballRequest `json:"tarball,omitempty" expr:"template,include"`
 
 	// configuration to pass for the workflow
-	Config map[string]intstr.IntOrString `json:"config,omitempty" expr:"template"`
+	Config map[string]ConfigValue `json:"config,omitempty" expr:"template"`
 
 	// Targets helps decide on which runner the execution is scheduled.
 	Target *commonv1.Target `json:"target,omitempty" expr:"include"`
