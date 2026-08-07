@@ -100,3 +100,13 @@ func (n *noCache) Get(ctx context.Context, key string) (*corev1.Secret, error) {
 	n.t.Fatalf("get method should not be invoked when cache is disabled")
 	return nil, nil
 }
+
+func (n *noCache) Delete(ctx context.Context, key string) error {
+	n.t.Fatalf("delete method should not be invoked when cache is disabled")
+	return nil
+}
+
+func (n *noCache) Clear(ctx context.Context) error {
+	n.t.Fatalf("clear method should not be invoked when cache is disabled")
+	return nil
+}
