@@ -292,6 +292,9 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 
 ### Architecture
 
+**Completion Command**: [`cmd/kubectl-testkube/commands/completion.go`] (custom implementation that generates zsh completion under the actual binary name `kubectl-testkube` instead of `testkube` to ensure proper shell integration)
+
+
 **Command Structure**: [`cmd/kubectl-testkube/commands/`](cmd/kubectl-testkube/commands/)
 
 - Root command and command groups (testworkflows, webhooks, artifacts, etc.)
