@@ -40,6 +40,7 @@ type ClientBucket interface {
 	DeleteBucket(ctx context.Context, bucket string, force bool) error
 	BucketExists(ctx context.Context, bucket string) (bool, error)
 	ListBuckets(ctx context.Context) ([]string, error)
+	ListFilesFromBucket(ctx context.Context, bucket, bucketFolder string) ([]testkube.Artifact, error)
 	DownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) (io.Reader, minio.ObjectInfo, error)
 	DownloadArchiveFromBucket(ctx context.Context, bucket, bucketFolder string, masks []string) (io.Reader, error)
 	UploadFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, reader io.Reader, objectSize int64) error

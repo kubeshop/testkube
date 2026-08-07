@@ -68,6 +68,21 @@ func (s *state) SetOutput(ref, name string, value interface{}) {
 	}
 }
 
+// GetOutputsWithPrefix returns the raw JSON of every output whose name starts
+// with the prefix, keyed by the remaining part of the name.
+func (s *state) GetOutputsWithPrefix(prefix string) map[string]string {
+	stateMu.RLock()
+	defer stateMu.RUnlock()
+
+	result := make(map[string]string)
+	for name, value := range s.Output {
+		if strings.HasPrefix(name, prefix) {
+			result[name[len(prefix):]] = value
+		}
+	}
+	return result
+}
+
 func (s *state) GetStep(ref string) *StepData {
 	stateMu.Lock()
 	defer stateMu.Unlock()

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -25,23 +26,26 @@ func SetOutputsDir(dir string) {
 
 // ScanStepOutputs reads files from OutputsDir and stores their contents
 // as per-step outputs. Files exceeding MaxOutputSize are skipped.
-func ScanStepOutputs(stepId string) error {
+// It returns the scanned values, so the caller may publish them further
+// (e.g. as workflow-level outputs readable by a parent workflow).
+func ScanStepOutputs(stepId string) (map[string]string, error) {
 	return scanStepOutputsFrom(outputsDir, stepId)
 }
 
-func scanStepOutputsFrom(dir, stepId string) error {
+func scanStepOutputsFrom(dir, stepId string) (map[string]string, error) {
 	if stepId == "" {
-		return nil
+		return nil, nil
 	}
 
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return nil, nil
 		}
-		return fmt.Errorf("failed to read outputs directory: %w", err)
+		return nil, fmt.Errorf("failed to read outputs directory: %w", err)
 	}
 
+	values := make(map[string]string)
 	state := GetState()
 	for _, entry := range entries {
 		if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") || !entry.Type().IsRegular() {
@@ -65,9 +69,41 @@ func scanStepOutputsFrom(dir, stepId string) error {
 			continue
 		}
 
-		state.SetStepOutput(stepId, name, strings.TrimSpace(string(content)))
+		value := strings.TrimSpace(string(content))
+		state.SetStepOutput(stepId, name, value)
+		values[name] = value
 	}
-	return nil
+	return values, nil
+}
+
+// PartitionSensitiveOutputs splits the scanned outputs into the ones that may leave
+// the pod and the names of the ones that may not.
+//
+// Values are published by printing an instruction to the log stream, which is
+// obfuscated on its way out - a sensitive value would reach the execution record
+// partially masked, so the consumer would silently read a corrupted value. Dropping
+// it keeps the workflow-local output intact while refusing to publish something the
+// reader could not trust.
+func PartitionSensitiveOutputs(values map[string]string, sensitiveWords []string) (publishable map[string]string, withheld []string) {
+	publishable = make(map[string]string, len(values))
+	for name, value := range values {
+		if containsAny(value, sensitiveWords) {
+			withheld = append(withheld, name)
+			continue
+		}
+		publishable[name] = value
+	}
+	sort.Strings(withheld)
+	return publishable, withheld
+}
+
+func containsAny(value string, words []string) bool {
+	for _, word := range words {
+		if word != "" && strings.Contains(value, word) {
+			return true
+		}
+	}
+	return false
 }
 
 func PrepareOutputsDir() error {

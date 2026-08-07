@@ -168,6 +168,12 @@ func (c *Client) listFiles(ctx context.Context, bucket, bucketFolder string) ([]
 	return toReturn, nil
 }
 
+// ListFilesFromBucket lists available files in the given bucket
+func (c *Client) ListFilesFromBucket(ctx context.Context, bucket, bucketFolder string) ([]testkube.Artifact, error) {
+	c.Log.Infow("listing files", "bucket", bucket, "bucketFolder", bucketFolder)
+	return c.listFiles(ctx, bucket, bucketFolder)
+}
+
 // ListFiles lists available files in the bucket from the config
 func (c *Client) ListFiles(ctx context.Context, bucketFolder string) ([]testkube.Artifact, error) {
 	c.Log.Infow("listing files", "bucket", c.bucket, "bucketFolder", bucketFolder)

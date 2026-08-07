@@ -450,6 +450,21 @@ func (mr *MockClientMockRecorder) IsSuperAgent() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsSuperAgent", reflect.TypeOf((*MockClient)(nil).IsSuperAgent))
 }
 
+// ListExecutionArtifactsGetPresignedURLs mocks base method.
+func (m *MockClient) ListExecutionArtifactsGetPresignedURLs(ctx context.Context, environmentId, executionId string, patterns []string) ([]ExecutionArtifact, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListExecutionArtifactsGetPresignedURLs", ctx, environmentId, executionId, patterns)
+	ret0, _ := ret[0].([]ExecutionArtifact)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListExecutionArtifactsGetPresignedURLs indicates an expected call of ListExecutionArtifactsGetPresignedURLs.
+func (mr *MockClientMockRecorder) ListExecutionArtifactsGetPresignedURLs(ctx, environmentId, executionId, patterns any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExecutionArtifactsGetPresignedURLs", reflect.TypeOf((*MockClient)(nil).ListExecutionArtifactsGetPresignedURLs), ctx, environmentId, executionId, patterns)
+}
+
 // ListTestTriggers mocks base method.
 func (m *MockClient) ListTestTriggers(ctx context.Context, environmentId string, options ListTestTriggerOptions, namespace string) TestTriggersReader {
 	m.ctrl.T.Helper()

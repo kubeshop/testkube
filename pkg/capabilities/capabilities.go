@@ -12,6 +12,11 @@ const CapabilityJUnitReports Capability = "junit-reports"
 const CapabilityNewArchitecture Capability = "exec"
 const CapabilityCloudStorage Capability = "tw-storage"
 
+// CapabilityArtifactRead is whether the control plane can grant read access to the
+// artifacts of another execution, which is what read_artifact() and the `fetch`
+// instruction of the `execute` step rely on.
+const CapabilityArtifactRead Capability = "tw-artifact-read"
+
 // CapabilitySourceOfTruth is whether the control plane is ready to act as source of truth.
 // When this capability is present, newer versions of the agent MUST migrate which entails
 // pushing data to the control plane and handing over control to let the control plane be the new source of truth.

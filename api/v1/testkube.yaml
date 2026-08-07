@@ -10030,6 +10030,9 @@ components:
           name:
             type: string
             description: TestWorkflow name to include
+          as:
+            type: string
+            description: name to reference this execution by in the execution() expression, defaults to the TestWorkflow name
           description:
             type: string
             description: TestWorkflow execution description to display
@@ -10042,11 +10045,33 @@ components:
               $ref: "#/components/schemas/TestWorkflowTarballRequest"
           config:
             $ref: "#/components/schemas/TestWorkflowConfigValue"
+          fetch:
+            type: array
+            description: instructions for downloading artifacts produced by executed test workflows
+            items:
+              $ref: "#/components/schemas/TestWorkflowStepExecuteFetch"
           selector:
             $ref: "#/components/schemas/LabelSelector"
             description: label selector for test workflow
           target:
             $ref: "#/components/schemas/ExecutionTarget"
+
+    TestWorkflowStepExecuteFetch:
+      type: object
+      required:
+      - to
+      properties:
+        from:
+          type: string
+          description: execution to download the artifacts from, defaults to the one being executed
+        paths:
+          type: array
+          description: artifact paths to download, relative to the artifact root of the execution
+          items:
+            type: string
+        to:
+          type: string
+          description: directory to download the artifacts to; when the entry fans out over a matrix or shards, include {{ index }} to keep each instance's artifacts apart
 
     TestWorkflowStepExecuteTestRef:
       type: object
