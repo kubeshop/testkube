@@ -266,7 +266,26 @@ type Config struct {
 	TestTriggerGitInformerReconcileInterval  time.Duration `envconfig:"TEST_TRIGGER_GIT_INFORMER_RECONCILE_INTERVAL" default:"1m"`
 	TestTriggerGitInformerPullRetries        int           `envconfig:"TEST_TRIGGER_GIT_INFORMER_PULL_RETRIES" default:"2"`
 	TestTriggerGitInformerPullRetryDelay     time.Duration `envconfig:"TEST_TRIGGER_GIT_INFORMER_PULL_RETRY_DELAY" default:"2s"`
-	ForceSuperAgentMode                      bool          `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"false"`
+	// TestTriggerGitInformerAllowedGitHosts restricts which repository hosts a
+	// git-pull-request trigger may contact with a credential. Comma separated; an
+	// entry with a leading dot matches that domain and its subdomains
+	// (".example.com"), and a single "*" allows any host.
+	//
+	// WARNING: the default is "*", which allows any host. It ships open so that
+	// upgrading does not break operators already polling self-managed GitHub
+	// Enterprise Server or GitLab instances, but it leaves credential release
+	// ungated: a trigger author picks both the uri and the tokenFrom Secret
+	// reference, tokenFrom may name any Secret in the trigger's namespace, and a
+	// hostname alone cannot establish trust ("gitlab.attacker.com" is
+	// indistinguishable from "gitlab.mycompany.com"). An author who can create a
+	// trigger can therefore exfiltrate a Secret they cannot otherwise read.
+	// Restrict this to your own hosts in production. The git informer logs a warning
+	// when it starts while this is "*".
+	//
+	// Setting it to the empty string selects the closed built-in default: the
+	// canonical SaaS hosts (github.com, gitlab.com and their subdomains) only.
+	TestTriggerGitInformerAllowedGitHosts []string `envconfig:"TEST_TRIGGER_GIT_INFORMER_ALLOWED_HOSTS" default:"*"`
+	ForceSuperAgentMode                   bool     `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"false"`
 }
 
 type DeprecatedConfig struct {

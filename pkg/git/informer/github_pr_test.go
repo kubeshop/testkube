@@ -3,10 +3,10 @@ package informer
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -21,25 +21,29 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
-func TestParseGitHubRepo(t *testing.T) {
+func TestSplitGitHubRepoPath(t *testing.T) {
 	tests := []struct {
-		name  string
-		uri   string
-		owner string
-		repo  string
-		ok    bool
+		name     string
+		repoPath string
+		owner    string
+		repo     string
+		ok       bool
 	}{
-		{"https", "https://github.com/kubeshop/testkube.git", "kubeshop", "testkube", true},
-		{"https no .git", "https://github.com/kubeshop/testkube", "kubeshop", "testkube", true},
-		{"ssh", "git@github.com:kubeshop/testkube.git", "kubeshop", "testkube", true},
-		{"not github", "https://gitlab.com/foo/bar.git", "", "", false},
+		{"owner and repo", "kubeshop/testkube", "kubeshop", "testkube", true},
+		// GitHub has no nested namespaces, so a longer path is not a repository.
+		// This is also what stops https://evil.example.com/github.com/owner/repo
+		// from being accepted as a GitHub repository on evil.example.com.
+		{"path injection is rejected", "github.com/owner/repo", "", "", false},
+		{"too few segments", "testkube", "", "", false},
+		{"trailing subpath", "owner/repo/tree/main", "", "", false},
+		{"empty segment", "owner/", "", "", false},
 		{"empty", "", "", "", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			owner, repo, ok := parseGitHubRepo(tt.uri)
+			owner, repo, ok := splitGitHubRepoPath(tt.repoPath)
 			assert.Equal(t, tt.ok, ok)
-			if ok {
+			if tt.ok {
 				assert.Equal(t, tt.owner, owner)
 				assert.Equal(t, tt.repo, repo)
 			}
@@ -47,10 +51,83 @@ func TestParseGitHubRepo(t *testing.T) {
 	}
 }
 
+// TestPRProviderFor_RejectsGitHubRepoFromInjectedPath locks in that a URI whose
+// PATH merely mentions github.com is never treated as a GitHub repository hosted on
+// the URI's own host. Accepting it would send the trigger's token to that host,
+// because the API base is derived from the host while the repository would have
+// been derived from the path.
+func TestPRProviderFor_RejectsGitHubRepoFromInjectedPath(t *testing.T) {
+	// 404 on /version means "not GitLab", so resolution lands on the GitHub branch
+	// and only the repository-path check can reject this.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	// Allow any host, so that only the repository-path check can reject this.
+	inf := &Informer{
+		prAPIBaseFunc: func(_ string) string { return server.URL },
+		options:       Options{AllowedGitHosts: []string{allowAnyGitHostWildcard}},
+	}
+	gitConfig := &testkube.TestTriggerContentGit{
+		Uri:   "https://evil.example.com/github.com/owner/repo",
+		Token: "secret-token",
+	}
+
+	_, err := inf.prProviderFor(context.Background(), "default", gitConfig, newReconcileCache())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "host/owner/repo")
+	assert.NotContains(t, err.Error(), "secret-token")
+}
+
 func TestGitHubAPIBaseFromURI(t *testing.T) {
 	assert.Equal(t, "https://api.github.com", githubAPIBaseFromURI("https://github.com/foo/bar"))
 	assert.Equal(t, "https://github.example.com/api/v3", githubAPIBaseFromURI("https://github.example.com/foo/bar"))
 }
+
+func TestPRMatchesBaseBranch(t *testing.T) {
+	tests := []struct {
+		name     string
+		base     string
+		config   *testkube.TestTriggerContentGitPullRequest
+		expected bool
+	}{
+		{"nil config matches all", "main", nil, true},
+		{"empty branches matches all", "main", &testkube.TestTriggerContentGitPullRequest{}, true},
+		{"branch matches", "main", &testkube.TestTriggerContentGitPullRequest{Branches: []string{"main", "develop"}}, true},
+		{"branch does not match", "feature/x", &testkube.TestTriggerContentGitPullRequest{Branches: []string{"main"}}, false},
+		{"glob match", "release/1.0", &testkube.TestTriggerContentGitPullRequest{Branches: []string{"release/*"}}, true},
+		{"ignore takes precedence", "main", &testkube.TestTriggerContentGitPullRequest{Branches: []string{"main"}, BranchesIgnore: []string{"main"}}, false},
+		{"ignore only", "main", &testkube.TestTriggerContentGitPullRequest{BranchesIgnore: []string{"main"}}, false},
+		{"ignore does not match", "develop", &testkube.TestTriggerContentGitPullRequest{BranchesIgnore: []string{"main"}}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, prMatchesBaseBranch(tt.base, tt.config))
+		})
+	}
+}
+
+func TestPRMatchesTypes(t *testing.T) {
+	tests := []struct {
+		name     string
+		action   string
+		config   *testkube.TestTriggerContentGitPullRequest
+		expected bool
+	}{
+		{"nil config matches all", "opened", nil, true},
+		{"empty types matches all", "synchronize", &testkube.TestTriggerContentGitPullRequest{}, true},
+		{"type matches", "opened", &testkube.TestTriggerContentGitPullRequest{Types: []string{"opened", "synchronize"}}, true},
+		{"type does not match", "closed", &testkube.TestTriggerContentGitPullRequest{Types: []string{"opened"}}, false},
+		{"case insensitive", "Opened", &testkube.TestTriggerContentGitPullRequest{Types: []string{"opened"}}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, prMatchesTypes(tt.action, tt.config))
+		})
+	}
+}
+
 func TestCheckPullRequests_Integration(t *testing.T) {
 	t.Run("first_run_initializes_baseline", func(t *testing.T) {
 		inf := &Informer{
@@ -59,7 +136,7 @@ func TestCheckPullRequests_Integration(t *testing.T) {
 		triggerKey := "v1:default/test"
 
 		// prCacheKey must use refSeparator so cleanup/snapshot logic works correctly.
-		prKey := prCacheKey(triggerKey, 42)
+		prKey := prCacheKey(triggerKey, providerGitHub, 42)
 		expectedKey := "v1:default/test" + refSeparator + "pr:42"
 		assert.Equal(t, expectedKey, prKey)
 
@@ -75,7 +152,7 @@ func TestCheckPullRequests_Integration(t *testing.T) {
 
 	t.Run("detects_state_change", func(t *testing.T) {
 		triggerKey := "v1:default/test"
-		prKey := prCacheKey(triggerKey, 42)
+		prKey := prCacheKey(triggerKey, providerGitHub, 42)
 		inf := &Informer{
 			commits: map[string]string{
 				prKey: "old-sha:open",
@@ -87,10 +164,7 @@ func TestCheckPullRequests_Integration(t *testing.T) {
 
 		assert.NotEqual(t, prev, newState)
 
-		pr := githubPR{}
-		pr.Head.SHA = "new-sha"
-		pr.State = "open"
-		action := matchers.DeterminePRAction(prev, newState, pr.Head.SHA)
+		action := matchers.DeterminePRAction(prev, newState, "new-sha")
 		assert.Equal(t, "synchronize", action)
 	})
 }
@@ -154,8 +228,8 @@ func TestCheckPullRequests_E2E(t *testing.T) {
 		currentPRs = []githubPR{openPR}
 
 		inf := &Informer{
-			commits:           make(map[string]string),
-			githubAPIBaseFunc: apiBaseFunc,
+			commits:       make(map[string]string),
+			prAPIBaseFunc: apiBaseFunc,
 		}
 		trigger := buildPRTrigger(uri, nil)
 		key := "v1:default/test-trigger"
@@ -165,9 +239,9 @@ func TestCheckPullRequests_E2E(t *testing.T) {
 		assert.False(t, result.changed, "first reconcile must not fire")
 
 		// Baseline and init sentinel must be stored.
-		prKey := prCacheKey(key, 1)
+		prKey := prCacheKey(key, providerGitHub, 1)
 		assert.Equal(t, "sha-initial:open", inf.commits[prKey])
-		assert.Equal(t, "1", inf.commits[prInitKey(key)])
+		assert.Equal(t, "1", inf.commits[prInitKey(key, providerGitHub)])
 	})
 
 	t.Run("new_pr_after_init_fires_opened", func(t *testing.T) {
@@ -180,9 +254,9 @@ func TestCheckPullRequests_E2E(t *testing.T) {
 		// Trigger is already initialized (sentinel set).
 		inf := &Informer{
 			commits: map[string]string{
-				prInitKey(key): "1",
+				prInitKey(key, providerGitHub): "1",
 			},
-			githubAPIBaseFunc: apiBaseFunc,
+			prAPIBaseFunc: apiBaseFunc,
 		}
 		trigger := buildPRTrigger(uri, nil)
 
@@ -193,7 +267,7 @@ func TestCheckPullRequests_E2E(t *testing.T) {
 		assert.Equal(t, "2", result.metadata[GitMetaKeyPRNumber])
 
 		// Baseline for PR 2 must be set.
-		assert.Equal(t, "sha-new-pr:open", inf.commits[prCacheKey(key, 2)])
+		assert.Equal(t, "sha-new-pr:open", inf.commits[prCacheKey(key, providerGitHub, 2)])
 	})
 
 	t.Run("transient_file_fetch_error_does_not_advance_baseline", func(t *testing.T) {
@@ -215,15 +289,15 @@ func TestCheckPullRequests_E2E(t *testing.T) {
 		defer errorServer.Close()
 
 		key := "v1:default/test-trigger"
-		prKey := prCacheKey(key, 1)
+		prKey := prCacheKey(key, providerGitHub, 1)
 		originalState := "sha-initial:open"
 
 		inf := &Informer{
 			commits: map[string]string{
-				prInitKey(key): "1",
-				prKey:          originalState,
+				prInitKey(key, providerGitHub): "1",
+				prKey:                          originalState,
 			},
-			githubAPIBaseFunc: func(_ string) string { return errorServer.URL },
+			prAPIBaseFunc: func(_ string) string { return errorServer.URL },
 		}
 
 		// Use a path filter to force the file-fetch code path; the mock server
@@ -244,14 +318,14 @@ func TestCheckPullRequests_E2E(t *testing.T) {
 		currentPRs = []githubPR{closedPR}
 
 		key := "v1:default/test-trigger"
-		prKey := prCacheKey(key, 1)
+		prKey := prCacheKey(key, providerGitHub, 1)
 
 		inf := &Informer{
 			commits: map[string]string{
-				prInitKey(key): "1",
-				prKey:          "sha-initial:open", // state was open
+				prInitKey(key, providerGitHub): "1",
+				prKey:                          "sha-initial:open", // state was open
 			},
-			githubAPIBaseFunc: apiBaseFunc,
+			prAPIBaseFunc: apiBaseFunc,
 		}
 		// Filter only accepts "opened"; "closed" must be rejected.
 		trigger := buildPRTrigger(uri, &testkube.TestTriggerContentGitPullRequest{
@@ -281,7 +355,7 @@ func TestResolvePRToken_GitHubNilProviderWarnsAndFallsBack(t *testing.T) {
 		Token:    "fallback-token",
 	}
 
-	token := inf.resolvePRToken(context.Background(), "default", gitConfig, newReconcileCache())
+	token := inf.resolvePRToken(context.Background(), "default", gitConfig, providerGitHub, newReconcileCache())
 
 	assert.Equal(t, "fallback-token", token)
 	require.Len(t, recordedLogs.FilterMessage(githubPRNoTokenProviderWarning).All(), 1)
@@ -307,8 +381,8 @@ func TestResolvePRToken_GitHubUsesProviderTokenAndCachesSanitizedURI(t *testing.
 		Token:    "other-fallback-token",
 	}
 
-	token1 := inf.resolvePRToken(context.Background(), "default", credentialedConfig, cache)
-	token2 := inf.resolvePRToken(context.Background(), "default", sanitizedConfig, cache)
+	token1 := inf.resolvePRToken(context.Background(), "default", credentialedConfig, providerGitHub, cache)
+	token2 := inf.resolvePRToken(context.Background(), "default", sanitizedConfig, providerGitHub, cache)
 
 	assert.Equal(t, "ghp_prtoken", token1)
 	assert.Equal(t, "ghp_prtoken", token2)
@@ -326,7 +400,7 @@ func TestResolvePRToken_GitHubProviderFailuresFallBack(t *testing.T) {
 			Token:    "fallback-token",
 		}
 
-		token := inf.resolvePRToken(context.Background(), "default", gitConfig, newReconcileCache())
+		token := inf.resolvePRToken(context.Background(), "default", gitConfig, providerGitHub, newReconcileCache())
 
 		assert.Equal(t, "fallback-token", token)
 		assert.Equal(t, 1, provider.calls)
@@ -341,42 +415,55 @@ func TestResolvePRToken_GitHubProviderFailuresFallBack(t *testing.T) {
 			Token:    "fallback-token",
 		}
 
-		token := inf.resolvePRToken(context.Background(), "default", gitConfig, newReconcileCache())
+		token := inf.resolvePRToken(context.Background(), "default", gitConfig, providerGitHub, newReconcileCache())
 
 		assert.Equal(t, "fallback-token", token)
 		assert.Equal(t, 1, provider.calls)
 	})
 }
 
-func TestFetchGitHubPRs_MockServer(t *testing.T) {
+func TestGitHubProviderList_MockServer(t *testing.T) {
 	prs := []githubPR{
 		{Number: 1, State: "open", Title: "PR 1", UpdatedAt: time.Now()},
-		{Number: 2, State: "open", Title: "PR 2", UpdatedAt: time.Now().Add(-time.Hour)},
+		{Number: 2, State: "closed", Title: "PR 2", UpdatedAt: time.Now().Add(-time.Hour)},
 	}
+	prs[0].Head.Ref = "feature/x"
 	prs[0].Head.SHA = "sha1"
 	prs[0].Base.Ref = "main"
+	prs[0].User.Login = "dev"
 	prs[1].Head.SHA = "sha2"
 	prs[1].Base.Ref = "develop"
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "/repos/owner/repo/pulls", r.URL.Path)
-		require.Contains(t, r.Header.Get("Authorization"), "Bearer")
+		require.Equal(t, "Bearer test-token", r.Header.Get("Authorization"))
+		require.Equal(t, "all", r.URL.Query().Get("state"))
+		require.Equal(t, "updated", r.URL.Query().Get("sort"))
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(prs)
 	}))
 	defer server.Close()
 
-	result, err := fetchGitHubPRs(context.Background(), server.URL, "owner", "repo", "test-token", time.Time{})
+	result, err := newGitHubProvider(server.URL, "owner", "repo", "test-token").list(context.Background(), testPRCutoff())
 	require.NoError(t, err)
 	assert.Len(t, result, 2)
 	assert.Equal(t, 1, result[0].Number)
-	assert.Equal(t, "sha1", result[0].Head.SHA)
+	assert.Equal(t, "sha1", result[0].HeadSHA)
+	assert.Equal(t, "feature/x", result[0].HeadRef)
+	assert.Equal(t, "main", result[0].BaseRef)
+	assert.Equal(t, "dev", result[0].Author)
+	// GitHub already reports the normalized state vocabulary.
+	assert.Equal(t, prStateOpen, result[0].State)
+	assert.Equal(t, prStateClosed, result[1].State)
 }
 
-func TestFetchGitHubPRFiles_MockServer(t *testing.T) {
+func TestGitHubProviderChangedFiles_MockServer(t *testing.T) {
 	files := []githubPRFile{
 		{Filename: "src/main.go", Status: "modified"},
 		{Filename: "README.md", Status: "added"},
+		// A rename must surface both paths so a file moved out of a watched
+		// directory still matches a path filter.
+		{Filename: "src/new.go", PreviousFilename: "old/new.go", Status: "renamed"},
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -386,9 +473,34 @@ func TestFetchGitHubPRFiles_MockServer(t *testing.T) {
 	}))
 	defer server.Close()
 
-	result, err := fetchGitHubPRFiles(context.Background(), server.URL, "owner", "repo", "", 42)
+	result, truncated, err := newGitHubProvider(server.URL, "owner", "repo", "").changedFiles(context.Background(), 42)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"src/main.go", "README.md"}, result)
+	assert.Equal(t, []string{"src/main.go", "README.md", "src/new.go", "old/new.go"}, result)
+	assert.False(t, truncated, "a short page means the list is complete")
+}
+
+func TestGitHubProviderChangedFiles_FullPageReportsTruncated(t *testing.T) {
+	// GitHub does not say whether more files exist, so a full page must be treated
+	// as possibly incomplete.
+	files := make([]githubPRFile, 0, githubPRFilesPageSize)
+	for i := range githubPRFilesPageSize {
+		files = append(files, githubPRFile{Filename: fmt.Sprintf("docs/f%d.md", i)})
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(files)
+	}))
+	defer server.Close()
+
+	result, truncated, err := newGitHubProvider(server.URL, "owner", "repo", "").changedFiles(context.Background(), 42)
+	require.NoError(t, err)
+	assert.Len(t, result, githubPRFilesPageSize)
+	assert.True(t, truncated)
+}
+
+func TestGitHubProviderHeadRef(t *testing.T) {
+	assert.Equal(t, "refs/pull/7/head", newGitHubProvider("", "owner", "repo", "").headRef(7))
 }
 
 func TestCheckPullRequests_EndToEnd(t *testing.T) {
@@ -417,70 +529,42 @@ func TestCheckPullRequests_EndToEnd(t *testing.T) {
 	}))
 	defer server.Close()
 
-	inf := &Informer{
-		commits: make(map[string]string),
-	}
-
-	trigger := testkube.TestTrigger{
-		ContentSelector: &testkube.TestTriggerContentSelector{
-			Git: &testkube.TestTriggerContentGit{
-				Uri: "https://github.com/owner/repo.git",
-				PullRequest: &testkube.TestTriggerContentGitPullRequest{
-					Branches: []string{"main"},
-				},
-			},
-		},
-	}
-
 	key := "v1:default/my-pr-trigger"
 
-	// First call: initializes baseline, should not fire.
-	// We need to override the API base. Let's use a wrapper approach.
-	// Since checkPullRequests uses githubAPIBaseFromURI which returns api.github.com,
-	// we need a different approach for E2E test. Let's test with direct function calls.
-
-	// Initialize baseline manually
-	prKey := prCacheKey(key, 10)
-	inf.commits[prKey] = "old-sha:open"
-
-	// Now simulate a check where PR SHA changed
-	prev := inf.commits[prKey]
-	currentState := "deadbeef:open"
-	assert.NotEqual(t, prev, currentState)
-
-	pr := prs[0]
-	action := matchers.DeterminePRAction(prev, currentState, pr.Head.SHA)
-	assert.Equal(t, "synchronize", action)
-
-	// Check branch filter
-	prConfig := trigger.ContentSelector.Git.PullRequest
-	matched := prConfig == nil || matchers.PRMatchesBaseBranch(pr.Base.Ref, prConfig.Branches, prConfig.BranchesIgnore)
-	assert.True(t, matched)
-
-	// Check type filter (no filter = match all)
-	typeMatched := prConfig == nil || matchers.PRMatchesTypes(action, prConfig.Types)
-	assert.True(t, typeMatched)
-
-	// Build expected metadata
-	meta := map[string]string{
-		GitMetaKeyCommit:    pr.Head.SHA,
-		GitMetaKeyRef:       "refs/pull/" + strconv.Itoa(pr.Number) + "/head",
-		GitMetaKeyBranch:    pr.Head.Ref,
-		GitMetaKeyPRNumber:  strconv.Itoa(pr.Number),
-		GitMetaKeyPRAction:  action,
-		GitMetaKeyPRBaseRef: pr.Base.Ref,
-		GitMetaKeyPRHeadRef: pr.Head.Ref,
-		GitMetaKeyPRHeadSHA: pr.Head.SHA,
-		GitMetaKeyPRURL:     pr.HTMLURL,
-		GitMetaKeyPRTitle:   pr.Title,
-		GitMetaKeyPRAuthor:  pr.User.Login,
+	// The trigger is already initialized and PR 10 was last seen at an older
+	// commit, so a fresh poll must report a synchronize with full metadata.
+	inf := &Informer{
+		commits: map[string]string{
+			prInitKey(key, providerGitHub):      "1",
+			prCacheKey(key, providerGitHub, 10): "old-sha:open",
+		},
+		prAPIBaseFunc: func(_ string) string { return server.URL },
 	}
-	assert.Equal(t, "deadbeef", meta[GitMetaKeyCommit])
-	assert.Equal(t, "10", meta[GitMetaKeyPRNumber])
-	assert.Equal(t, "synchronize", meta[GitMetaKeyPRAction])
-	assert.Equal(t, "main", meta[GitMetaKeyPRBaseRef])
-	assert.Equal(t, "feature/x", meta[GitMetaKeyPRHeadRef])
-	assert.Equal(t, "developer", meta[GitMetaKeyPRAuthor])
+
+	trigger := buildPRTrigger("https://github.com/owner/repo.git", &testkube.TestTriggerContentGitPullRequest{
+		Branches: []string{"main"},
+	})
+
+	result, err := inf.checkPullRequests(context.Background(), key, trigger, newReconcileCache())
+	require.NoError(t, err)
+	require.True(t, result.changed, "a new head commit must fire")
+
+	assert.Equal(t, map[string]string{
+		GitMetaKeyCommit:    "deadbeef",
+		GitMetaKeyRef:       "refs/pull/10/head",
+		GitMetaKeyBranch:    "feature/x",
+		GitMetaKeyPRNumber:  "10",
+		GitMetaKeyPRAction:  "synchronize",
+		GitMetaKeyPRBaseRef: "main",
+		GitMetaKeyPRHeadRef: "feature/x",
+		GitMetaKeyPRHeadSHA: "deadbeef",
+		GitMetaKeyPRURL:     "https://github.com/owner/repo/pull/10",
+		GitMetaKeyPRTitle:   "Feature PR",
+		GitMetaKeyPRAuthor:  "developer",
+	}, result.metadata)
+
+	assert.Equal(t, "deadbeef:open", inf.commits[prCacheKey(key, providerGitHub, 10)],
+		"baseline must advance after firing")
 }
 
 // TestPRInitKeyIncludedInSnapshot verifies that the PR initialization sentinel
@@ -489,7 +573,7 @@ func TestCheckPullRequests_EndToEnd(t *testing.T) {
 func TestPRInitKeyIncludedInSnapshot(t *testing.T) {
 	triggerKey := "v1:default/my-pr-trigger"
 
-	initKey := prInitKey(triggerKey)
+	initKey := prInitKey(triggerKey, providerGitHub)
 
 	// Must use refSeparator so triggerKeyFromRefSubKey can extract the base.
 	assert.Contains(t, initKey, refSeparator)
@@ -498,16 +582,16 @@ func TestPRInitKeyIncludedInSnapshot(t *testing.T) {
 	// The init key must be captured by snapshotRefCommits.
 	inf := &Informer{
 		commits: map[string]string{
-			initKey:                                  "1",
-			prCacheKey(triggerKey, 1):                "sha1:open",
-			prCacheKey(triggerKey, 2):                "sha2:closed",
-			"unrelated:key" + refSeparator + "pr:99": "sha3:open",
+			initKey: "1",
+			prCacheKey(triggerKey, providerGitHub, 1): "sha1:open",
+			prCacheKey(triggerKey, providerGitHub, 2): "sha2:closed",
+			"unrelated:key" + refSeparator + "pr:99":  "sha3:open",
 		},
 	}
 	snapshot := inf.snapshotRefCommits(triggerKey)
 
 	assert.Equal(t, "1", snapshot[initKey], "init sentinel must be in snapshot")
-	assert.Equal(t, "sha1:open", snapshot[prCacheKey(triggerKey, 1)])
-	assert.Equal(t, "sha2:closed", snapshot[prCacheKey(triggerKey, 2)])
+	assert.Equal(t, "sha1:open", snapshot[prCacheKey(triggerKey, providerGitHub, 1)])
+	assert.Equal(t, "sha2:closed", snapshot[prCacheKey(triggerKey, providerGitHub, 2)])
 	assert.NotContains(t, snapshot, "unrelated:key"+refSeparator+"pr:99")
 }
