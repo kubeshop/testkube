@@ -98,6 +98,35 @@ func TestAgentCapabilities_Features(t *testing.T) {
 	})
 }
 
+// Testkube-provisioned trial runners must be distinguishable from runners users
+// deployed themselves, since both otherwise report identical heartbeat payloads.
+func TestAgentCapabilities_HostedRunner(t *testing.T) {
+	tests := []struct {
+		name       string
+		runnerName string
+		wantHosted bool
+	}{
+		{"hosted runner", "tkcagent_hr_65fabc123456789012345678", true},
+		{"user-named runner", "my-runner", false},
+		{"unnamed runner", "", false},
+		{"regular agent id as name", "tkcagent_abc123", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.Config{}
+			cfg.RunnerName = tt.runnerName
+
+			caps := AgentCapabilities(cfg)
+			if tt.wantHosted {
+				assert.Contains(t, caps, "hosted-runner")
+			} else {
+				assert.NotContains(t, caps, "hosted-runner")
+			}
+		})
+	}
+}
+
 func TestAgentCapabilities_RunnerPersonaOverrides(t *testing.T) {
 	cfg := &config.Config{}
 	cfg.TestkubeProAgentID = "tkcrun_abc"
