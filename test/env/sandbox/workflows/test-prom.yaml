@@ -41,3 +41,39 @@ spec:
         artifacts:
           paths:
           - '*'
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: junit5-workflow-smoke
+  labels:
+    artifacts: "true"
+    category: unit-component-testing
+    core-tests: workflows
+    junit: "true"
+    tool: junit
+  annotations:
+    argocd.argoproj.io/tracking-id: testkube-prom-metrics-agent:testworkflows.testkube.io/TestWorkflow:sandbox-prom-metrics/junit5-workflow-smoke
+    testkube.io/icon: junit
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/junit/junit5-project
+  container:
+    workingDir: /data/repo/test/junit/junit5-project
+    image: maven:3.9.9-eclipse-temurin-11-alpine
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run tests
+    shell: mvn test -Dtest=TestSmoke1,TestSmoke2
+    artifacts:
+      paths:
+      - target/surefire-reports/**/*
