@@ -48,6 +48,7 @@ metadata:
   name: junit5-workflow-smoke-prom
   labels:
     artifacts: "true"
+    test: new
     category: unit-component-testing
     core-tests: workflows
     junit: "true"
