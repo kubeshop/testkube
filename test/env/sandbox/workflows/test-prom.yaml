@@ -45,7 +45,7 @@ spec:
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: junit5-workflow-smoke
+  name: junit5-workflow-smoke-prom
   labels:
     artifacts: "true"
     category: unit-component-testing
