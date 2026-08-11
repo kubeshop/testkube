@@ -26,6 +26,7 @@ import (
 	tkhttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 type HelmOptions struct {
@@ -84,7 +85,7 @@ func ShowOperatorDeprecationWarning(manager string, noCRDs bool) {
 	ui.NL()
 }
 
-func HelmUpgradeOrInstallTestkubeOnPremDemo(options HelmOptions) *CLIError {
+func HelmUpgradeOrInstallTestkubeOnPremDemo(options HelmOptions, runnerSecretKey string) *CLIError {
 	helmPath, cliErr := lookupHelmPath()
 	if cliErr != nil {
 		return cliErr
@@ -93,6 +94,11 @@ func HelmUpgradeOrInstallTestkubeOnPremDemo(options HelmOptions) *CLIError {
 	if err := updateHelmRepo(helmPath, options.DryRun, true); err != nil {
 		return err
 	}
+
+	if options.SetOptions == nil {
+		options.SetOptions = make(map[string]string)
+	}
+	options.SetOptions[demoRunnerBootstrapSecretKeyPath] = runnerSecretKey
 
 	// For default setup, change the Agent host to a cluster service endpoint,
 	// so it will be possible to install runners in different namespaces.
@@ -120,6 +126,45 @@ func HelmUpgradeOrInstallTestkubeOnPremDemo(options HelmOptions) *CLIError {
 	ui.Debug("Helm install testkube output", output)
 	return nil
 
+}
+
+const (
+	demoRunnerName                   = "demo-runner"
+	demoRunnerID                     = "tkcrun_demo-runner"
+	demoRunnerOrgID                  = "tkcorg_demo"
+	demoRunnerEnvID                  = "tkcenv_my-first-environment"
+	demoRunnerBootstrapSecretKeyPath = "testkube-cloud-api.api.features.bootstrapConfig.config.organizations[0].runners[0].secret_key"
+)
+
+func GenerateDemoAgentSecretKey() string {
+	return "tkckey_agent_" + utils.RandAlphanum(32)
+}
+
+func HelmUpgradeOrInstallTestkubeOnPremDemoRunner(options HelmOptions, runnerSecretKey string) *CLIError {
+	return HelmUpgradeOrInstallGeneric(demoRunnerHelmOptions(options.Namespace, runnerSecretKey, options.DryRun))
+}
+
+func demoRunnerHelmOptions(namespace, runnerSecretKey string, dryRun bool) HelmGenericOptions {
+	return HelmGenericOptions{
+		DryRun:         dryRun,
+		RegistryURL:    "https://kubeshop.github.io/helm-charts",
+		RepositoryName: "kubeshop",
+		ChartName:      "testkube-runner",
+		ReleaseName:    "testkube-" + demoRunnerName,
+		Namespace:      namespace,
+		Args:           []string{"--wait"},
+		Values: map[string]interface{}{
+			"fullnameOverride":  "testkube-demo-runner",
+			"runner.id":         demoRunnerID,
+			"runner.name":       demoRunnerName,
+			"runner.orgId":      demoRunnerOrgID,
+			"runner.envId":      demoRunnerEnvID,
+			"runner.secret":     runnerSecretKey,
+			"cloud.url":         fmt.Sprintf("testkube-enterprise-api.%s.svc.cluster.local:8089", namespace),
+			"cloud.tls.enabled": false,
+			"listener.enabled":  true,
+		},
+	}
 }
 
 func HelmUpgradeOrInstallTestkubeAgent(options HelmOptions, cfg config.Data, isMigration bool) *CLIError {

@@ -21,7 +21,7 @@ const (
 	defaultNamespace       = "testkube"
 	standaloneAgentProfile = "standalone-agent"
 	demoProfile            = "demo"
-	demoValuesUrl          = "https://raw.githubusercontent.com/kubeshop/testkube-cloud-charts/main/charts/testkube-enterprise/profiles/values.demo.yaml"
+	demoValuesUrl          = "https://raw.githubusercontent.com/kubeshop/testkube-cloud-charts/main/charts/testkube-enterprise/profiles/values.demo.v2.yaml"
 	agentProfile           = "agent"
 
 	standaloneInstallationName = "Testkube OSS"
@@ -245,11 +245,26 @@ func NewInitCmdDemo() *cobra.Command {
 			spinner = ui.NewSpinner("Running Helm command...")
 			options.SetOptions = setOptions
 			options.ArgOptions = argOptions
-			cliErr = common.HelmUpgradeOrInstallTestkubeOnPremDemo(options)
+
+			runnerSecretKey := common.GenerateDemoAgentSecretKey()
+
+			cliErr = common.HelmUpgradeOrInstallTestkubeOnPremDemo(options, runnerSecretKey)
 			if cliErr != nil {
 				spinner.Fail("Failed to install Testkube On-Prem Demo")
 				if cfg.TelemetryEnabled {
 					cliErr.AddTelemetry(cmd, "installing", "install_failed", license)
+					_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
+				}
+				common.HandleCLIError(cliErr)
+			}
+			spinner.Success()
+
+			spinner = ui.NewSpinner("Installing Testkube Runner...")
+			cliErr = common.HelmUpgradeOrInstallTestkubeOnPremDemoRunner(options, runnerSecretKey)
+			if cliErr != nil {
+				spinner.Fail("Failed to install Testkube Runner")
+				if cfg.TelemetryEnabled {
+					cliErr.AddTelemetry(cmd, "installing runner", "install_runner_failed", license)
 					_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
 				}
 				common.HandleCLIError(cliErr)
