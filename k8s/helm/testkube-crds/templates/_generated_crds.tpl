@@ -8454,13 +8454,15 @@ spec:
                                 description: in-process retry policy for transient git failures during clone
                                 properties:
                                   count:
-                                    description: max attempts for transient git failures
+                                    description: max attempts for transient git failures (default 5, max 20)
                                     format: int32
+                                    maximum: 20
                                     minimum: 1
                                     type: integer
                                   delay:
-                                    description: base delay between attempts; exponential backoff applies
-                                    pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
                                     type: string
                                 type: object
                               revision:
@@ -10432,13 +10434,15 @@ spec:
                                       description: in-process retry policy for transient git failures during clone
                                       properties:
                                         count:
-                                          description: max attempts for transient git failures
+                                          description: max attempts for transient git failures (default 5, max 20)
                                           format: int32
+                                          maximum: 20
                                           minimum: 1
                                           type: integer
                                         delay:
-                                          description: base delay between attempts; exponential backoff applies
-                                          pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
                                           type: string
                                       type: object
                                     revision:
@@ -11918,13 +11922,15 @@ spec:
                           description: in-process retry policy for transient git failures during clone
                           properties:
                             count:
-                              description: max attempts for transient git failures
+                              description: max attempts for transient git failures (default 5, max 20)
                               format: int32
+                              maximum: 20
                               minimum: 1
                               type: integer
                             delay:
-                              description: base delay between attempts; exponential backoff applies
-                              pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                              description: |-
+                                base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                May be an expression template; validated after resolution.
                               type: string
                           type: object
                         revision:
@@ -12754,13 +12760,15 @@ spec:
                                 description: in-process retry policy for transient git failures during clone
                                 properties:
                                   count:
-                                    description: max attempts for transient git failures
+                                    description: max attempts for transient git failures (default 5, max 20)
                                     format: int32
+                                    maximum: 20
                                     minimum: 1
                                     type: integer
                                   delay:
-                                    description: base delay between attempts; exponential backoff applies
-                                    pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
                                     type: string
                                 type: object
                               revision:
@@ -14126,13 +14134,15 @@ spec:
                                 description: in-process retry policy for transient git failures during clone
                                 properties:
                                   count:
-                                    description: max attempts for transient git failures
+                                    description: max attempts for transient git failures (default 5, max 20)
                                     format: int32
+                                    maximum: 20
                                     minimum: 1
                                     type: integer
                                   delay:
-                                    description: base delay between attempts; exponential backoff applies
-                                    pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
                                     type: string
                                 type: object
                               revision:
@@ -16104,13 +16114,15 @@ spec:
                                       description: in-process retry policy for transient git failures during clone
                                       properties:
                                         count:
-                                          description: max attempts for transient git failures
+                                          description: max attempts for transient git failures (default 5, max 20)
                                           format: int32
+                                          maximum: 20
                                           minimum: 1
                                           type: integer
                                         delay:
-                                          description: base delay between attempts; exponential backoff applies
-                                          pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
                                           type: string
                                       type: object
                                     revision:
@@ -17530,13 +17542,15 @@ spec:
                                 description: in-process retry policy for transient git failures during clone
                                 properties:
                                   count:
-                                    description: max attempts for transient git failures
+                                    description: max attempts for transient git failures (default 5, max 20)
                                     format: int32
+                                    maximum: 20
                                     minimum: 1
                                     type: integer
                                   delay:
-                                    description: base delay between attempts; exponential backoff applies
-                                    pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
                                     type: string
                                 type: object
                               revision:
@@ -19508,13 +19522,15 @@ spec:
                                       description: in-process retry policy for transient git failures during clone
                                       properties:
                                         count:
-                                          description: max attempts for transient git failures
+                                          description: max attempts for transient git failures (default 5, max 20)
                                           format: int32
+                                          maximum: 20
                                           minimum: 1
                                           type: integer
                                         delay:
-                                          description: base delay between attempts; exponential backoff applies
-                                          pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
                                           type: string
                                       type: object
                                     revision:
@@ -21215,13 +21231,15 @@ spec:
                                 description: in-process retry policy for transient git failures during clone
                                 properties:
                                   count:
-                                    description: max attempts for transient git failures
+                                    description: max attempts for transient git failures (default 5, max 20)
                                     format: int32
+                                    maximum: 20
                                     minimum: 1
                                     type: integer
                                   delay:
-                                    description: base delay between attempts; exponential backoff applies
-                                    pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
                                     type: string
                                 type: object
                               revision:
@@ -23128,13 +23146,15 @@ spec:
                                       description: in-process retry policy for transient git failures during clone
                                       properties:
                                         count:
-                                          description: max attempts for transient git failures
+                                          description: max attempts for transient git failures (default 5, max 20)
                                           format: int32
+                                          maximum: 20
                                           minimum: 1
                                           type: integer
                                         delay:
-                                          description: base delay between attempts; exponential backoff applies
-                                          pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
                                           type: string
                                       type: object
                                     revision:
@@ -24557,13 +24577,15 @@ spec:
                           description: in-process retry policy for transient git failures during clone
                           properties:
                             count:
-                              description: max attempts for transient git failures
+                              description: max attempts for transient git failures (default 5, max 20)
                               format: int32
+                              maximum: 20
                               minimum: 1
                               type: integer
                             delay:
-                              description: base delay between attempts; exponential backoff applies
-                              pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                              description: |-
+                                base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                May be an expression template; validated after resolution.
                               type: string
                           type: object
                         revision:
@@ -25393,13 +25415,15 @@ spec:
                                 description: in-process retry policy for transient git failures during clone
                                 properties:
                                   count:
-                                    description: max attempts for transient git failures
+                                    description: max attempts for transient git failures (default 5, max 20)
                                     format: int32
+                                    maximum: 20
                                     minimum: 1
                                     type: integer
                                   delay:
-                                    description: base delay between attempts; exponential backoff applies
-                                    pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
                                     type: string
                                 type: object
                               revision:
@@ -26745,13 +26769,15 @@ spec:
                                 description: in-process retry policy for transient git failures during clone
                                 properties:
                                   count:
-                                    description: max attempts for transient git failures
+                                    description: max attempts for transient git failures (default 5, max 20)
                                     format: int32
+                                    maximum: 20
                                     minimum: 1
                                     type: integer
                                   delay:
-                                    description: base delay between attempts; exponential backoff applies
-                                    pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
                                     type: string
                                 type: object
                               revision:
@@ -28658,13 +28684,15 @@ spec:
                                       description: in-process retry policy for transient git failures during clone
                                       properties:
                                         count:
-                                          description: max attempts for transient git failures
+                                          description: max attempts for transient git failures (default 5, max 20)
                                           format: int32
+                                          maximum: 20
                                           minimum: 1
                                           type: integer
                                         delay:
-                                          description: base delay between attempts; exponential backoff applies
-                                          pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
                                           type: string
                                       type: object
                                     revision:
@@ -30027,13 +30055,15 @@ spec:
                                 description: in-process retry policy for transient git failures during clone
                                 properties:
                                   count:
-                                    description: max attempts for transient git failures
+                                    description: max attempts for transient git failures (default 5, max 20)
                                     format: int32
+                                    maximum: 20
                                     minimum: 1
                                     type: integer
                                   delay:
-                                    description: base delay between attempts; exponential backoff applies
-                                    pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
                                     type: string
                                 type: object
                               revision:
@@ -31940,13 +31970,15 @@ spec:
                                       description: in-process retry policy for transient git failures during clone
                                       properties:
                                         count:
-                                          description: max attempts for transient git failures
+                                          description: max attempts for transient git failures (default 5, max 20)
                                           format: int32
+                                          maximum: 20
                                           minimum: 1
                                           type: integer
                                         delay:
-                                          description: base delay between attempts; exponential backoff applies
-                                          pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
                                           type: string
                                       type: object
                                     revision:

@@ -18,12 +18,13 @@ const (
 
 // ContentGitRetry is an in-process retry policy for transient git failures during clone.
 type ContentGitRetry struct {
-	// max attempts for transient git failures
+	// max attempts for transient git failures (default 5, max 20)
 	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=20
 	Count *int32 `json:"count,omitempty"`
 
-	// base delay between attempts; exponential backoff applies
-	// +kubebuilder:validation:Pattern=^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+	// base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+	// May be an expression template; validated after resolution.
 	Delay string `json:"delay,omitempty" expr:"template"`
 }
 

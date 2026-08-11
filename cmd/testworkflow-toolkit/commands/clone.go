@@ -21,10 +21,14 @@ import (
 )
 
 const (
-	// CloneRetryOnFailureMaxAttempts defines maximum retry attempts for git operations
+	// CloneRetryOnFailureMaxAttempts defines default retry attempts for git operations
 	CloneRetryOnFailureMaxAttempts = 5
-	// CloneRetryOnFailureBaseDelay defines base delay between retries
+	// CloneRetryOnFailureBaseDelay defines default base delay between retries
 	CloneRetryOnFailureBaseDelay = 100 * time.Millisecond
+	// CloneRetryCountCap is the maximum allowed retry attempts (inclusive)
+	CloneRetryCountCap = 20
+	// CloneRetryDelayCap is the maximum allowed base delay between retries
+	CloneRetryDelayCap = 30 * time.Second
 )
 
 var (
@@ -69,8 +73,8 @@ func NewCloneCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.Revision, "revision", "r", "", "commit hash, branch name or tag")
 	cmd.Flags().BoolVar(&opts.Cone, "cone", false, "enable cone mode for sparse checkout")
 	cmd.Flags().StringVar(&opts.Verbosity, "verbosity", "verbose", "logging level (allowed: quiet, normal, verbose)")
-	cmd.Flags().IntVar(&opts.RetryCount, "retry-count", CloneRetryOnFailureMaxAttempts, "max attempts for transient git failures")
-	cmd.Flags().DurationVar(&opts.RetryDelay, "retry-delay", CloneRetryOnFailureBaseDelay, "base delay between git retry attempts")
+	cmd.Flags().IntVar(&opts.RetryCount, "retry-count", CloneRetryOnFailureMaxAttempts, fmt.Sprintf("max attempts for transient git failures (capped at %d)", CloneRetryCountCap))
+	cmd.Flags().DurationVar(&opts.RetryDelay, "retry-delay", CloneRetryOnFailureBaseDelay, fmt.Sprintf("base delay between git retry attempts (capped at %s)", CloneRetryDelayCap))
 
 	return cmd
 }
@@ -179,6 +183,12 @@ func (opts *CloneOptions) retrySettings() (int, time.Duration) {
 	}
 	if opts.RetryDelay > 0 {
 		delay = opts.RetryDelay
+	}
+	if count > CloneRetryCountCap {
+		count = CloneRetryCountCap
+	}
+	if delay > CloneRetryDelayCap {
+		delay = CloneRetryDelayCap
 	}
 	return count, delay
 }

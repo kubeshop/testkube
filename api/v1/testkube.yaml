@@ -10352,11 +10352,13 @@ components:
         count:
           type: integer
           minimum: 1
-          description: max attempts for transient git failures
+          maximum: 20
+          description: max attempts for transient git failures (default 5, max 20)
         delay:
           type: string
-          pattern: "^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$"
-          description: base delay between attempts; exponential backoff applies
+          description: |
+            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+            May be an expression template; validated after resolution.
 
     TestWorkflowContentFile:
       type: object

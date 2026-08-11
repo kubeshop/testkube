@@ -433,6 +433,10 @@ func TestCloneOptionsRetrySettings(t *testing.T) {
 	count, delay = (&CloneOptions{RetryCount: 10, RetryDelay: 500 * time.Millisecond}).retrySettings()
 	assert.Equal(t, 10, count)
 	assert.Equal(t, 500*time.Millisecond, delay)
+
+	count, delay = (&CloneOptions{RetryCount: 1000, RetryDelay: time.Hour}).retrySettings()
+	assert.Equal(t, CloneRetryCountCap, count)
+	assert.Equal(t, CloneRetryDelayCap, delay)
 }
 
 func TestIsCommitHash(t *testing.T) {
