@@ -263,3 +263,61 @@ func testGetPreviousFinishedState(t *testing.T, repo testworkflow.Repository) {
 	require.NoError(t, err)
 	assert.Equal(t, testkube.FAILED_TestWorkflowStatus, status)
 }
+
+func testGetPreviousFinishedStateSkipsSilentWebhookExecutions(t *testing.T, repo testworkflow.Repository) {
+	ctx := context.Background()
+	wfName := "prev-state-silent-skip"
+
+	failedResult := &testkube.TestWorkflowResult{
+		Status:          fixtures.Ptr(testkube.FAILED_TestWorkflowStatus),
+		PredictedStatus: fixtures.Ptr(testkube.FAILED_TestWorkflowStatus),
+		FinishedAt:      time.Now().Add(-2 * time.Minute),
+	}
+	failed := fixtures.NewExecution(wfName,
+		fixtures.WithResult(failedResult),
+		fixtures.WithNumber(1),
+	)
+	failed.StatusAt = failedResult.FinishedAt
+	require.NoError(t, repo.Insert(ctx, failed))
+
+	silentAbortedResult := &testkube.TestWorkflowResult{
+		Status:          fixtures.Ptr(testkube.ABORTED_TestWorkflowStatus),
+		PredictedStatus: fixtures.Ptr(testkube.ABORTED_TestWorkflowStatus),
+		FinishedAt:      time.Now().Add(-time.Minute),
+	}
+	silentAborted := fixtures.NewExecution(wfName,
+		fixtures.WithResult(silentAbortedResult),
+		fixtures.WithNumber(2),
+		fixtures.WithSilentMode(testkube.SilentMode{Webhooks: true}),
+	)
+	silentAborted.StatusAt = silentAbortedResult.FinishedAt
+	require.NoError(t, repo.Insert(ctx, silentAborted))
+
+	status, err := repo.GetPreviousFinishedState(ctx, wfName, time.Now().Add(time.Hour))
+	require.NoError(t, err)
+	assert.Equal(t, testkube.FAILED_TestWorkflowStatus, status,
+		"silent-webhooks execution must not be treated as previous finished state")
+}
+
+func testGetPreviousFinishedStateReturnsEmptyWhenOnlySilent(t *testing.T, repo testworkflow.Repository) {
+	ctx := context.Background()
+	wfName := "prev-state-only-silent"
+
+	silentResult := &testkube.TestWorkflowResult{
+		Status:          fixtures.Ptr(testkube.FAILED_TestWorkflowStatus),
+		PredictedStatus: fixtures.Ptr(testkube.FAILED_TestWorkflowStatus),
+		FinishedAt:      time.Now().Add(-time.Minute),
+	}
+	silent := fixtures.NewExecution(wfName,
+		fixtures.WithResult(silentResult),
+		fixtures.WithNumber(1),
+		fixtures.WithSilentMode(testkube.SilentMode{Webhooks: true}),
+	)
+	silent.StatusAt = silentResult.FinishedAt
+	require.NoError(t, repo.Insert(ctx, silent))
+
+	status, err := repo.GetPreviousFinishedState(ctx, wfName, time.Now().Add(time.Hour))
+	require.NoError(t, err)
+	assert.Equal(t, testkube.TestWorkflowStatus(""), status,
+		"only silent-webhooks executions in history must resolve to empty previous state")
+}

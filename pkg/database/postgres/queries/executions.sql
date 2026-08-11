@@ -974,6 +974,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 WHERE e.workflow_name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
     AND r.finished_at < @date
     AND r.status IN ('passed', 'failed', 'skipped', 'aborted', 'canceled', 'timeout')
+    AND (e.silent_mode IS NULL OR (e.silent_mode->>'webhooks')::boolean IS NOT TRUE)
 ORDER BY r.finished_at DESC
 LIMIT 1;
 
