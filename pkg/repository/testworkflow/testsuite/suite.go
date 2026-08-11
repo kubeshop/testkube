@@ -31,6 +31,9 @@ func RunRepositoryTests(t *testing.T, repo testworkflow.Repository) {
 	t.Run("GetPreviousFinishedStateSkipsSilentWebhookExecutions", func(t *testing.T) {
 		testGetPreviousFinishedStateSkipsSilentWebhookExecutions(t, repo)
 	})
+	t.Run("GetPreviousFinishedStateSkipsLegacyDisableWebhooksExecutions", func(t *testing.T) {
+		testGetPreviousFinishedStateSkipsLegacyDisableWebhooksExecutions(t, repo)
+	})
 	t.Run("GetPreviousFinishedStateReturnsEmptyWhenOnlySilent", func(t *testing.T) {
 		testGetPreviousFinishedStateReturnsEmptyWhenOnlySilent(t, repo)
 	})

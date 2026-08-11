@@ -299,6 +299,41 @@ func testGetPreviousFinishedStateSkipsSilentWebhookExecutions(t *testing.T, repo
 		"silent-webhooks execution must not be treated as previous finished state")
 }
 
+func testGetPreviousFinishedStateSkipsLegacyDisableWebhooksExecutions(t *testing.T, repo testworkflow.Repository) {
+	ctx := context.Background()
+	wfName := "prev-state-legacy-skip"
+
+	failedResult := &testkube.TestWorkflowResult{
+		Status:          fixtures.Ptr(testkube.FAILED_TestWorkflowStatus),
+		PredictedStatus: fixtures.Ptr(testkube.FAILED_TestWorkflowStatus),
+		FinishedAt:      time.Now().Add(-2 * time.Minute),
+	}
+	failed := fixtures.NewExecution(wfName,
+		fixtures.WithResult(failedResult),
+		fixtures.WithNumber(1),
+	)
+	failed.StatusAt = failedResult.FinishedAt
+	require.NoError(t, repo.Insert(ctx, failed))
+
+	legacySilentAbortedResult := &testkube.TestWorkflowResult{
+		Status:          fixtures.Ptr(testkube.ABORTED_TestWorkflowStatus),
+		PredictedStatus: fixtures.Ptr(testkube.ABORTED_TestWorkflowStatus),
+		FinishedAt:      time.Now().Add(-time.Minute),
+	}
+	legacySilentAborted := fixtures.NewExecution(wfName,
+		fixtures.WithResult(legacySilentAbortedResult),
+		fixtures.WithNumber(2),
+		fixtures.WithDisableWebhooks(true),
+	)
+	legacySilentAborted.StatusAt = legacySilentAbortedResult.FinishedAt
+	require.NoError(t, repo.Insert(ctx, legacySilentAborted))
+
+	status, err := repo.GetPreviousFinishedState(ctx, wfName, time.Now().Add(time.Hour))
+	require.NoError(t, err)
+	assert.Equal(t, testkube.FAILED_TestWorkflowStatus, status,
+		"legacy DisableWebhooks execution must not be treated as previous finished state")
+}
+
 func testGetPreviousFinishedStateReturnsEmptyWhenOnlySilent(t *testing.T, repo testworkflow.Repository) {
 	ctx := context.Background()
 	wfName := "prev-state-only-silent"

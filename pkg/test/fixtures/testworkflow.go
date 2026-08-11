@@ -109,6 +109,12 @@ func WithSilentMode(mode testkube.SilentMode) ExecutionOption {
 	}
 }
 
+func WithDisableWebhooks(disabled bool) ExecutionOption {
+	return func(e *testkube.TestWorkflowExecution) {
+		e.DisableWebhooks = disabled
+	}
+}
+
 func NewExecution(name string, opts ...ExecutionOption) testkube.TestWorkflowExecution {
 	e := testkube.TestWorkflowExecution{
 		Id:   fmt.Sprintf("exec-%s-%d", name, time.Now().UnixNano()),

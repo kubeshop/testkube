@@ -975,6 +975,7 @@ WHERE e.workflow_name = @workflow_name::text AND (e.organization_id = @organizat
     AND r.finished_at < @date
     AND r.status IN ('passed', 'failed', 'skipped', 'aborted', 'canceled', 'timeout')
     AND (e.silent_mode IS NULL OR (e.silent_mode->>'webhooks')::boolean IS NOT TRUE)
+    AND e.disable_webhooks IS NOT TRUE
 ORDER BY r.finished_at DESC
 LIMIT 1;
 
