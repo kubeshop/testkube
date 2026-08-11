@@ -81,9 +81,8 @@ func (t *TestTrigger) QuoteTextFields() {
 		if t.Match[i].Path != "" {
 			t.Match[i].Path = fmt.Sprintf("%q", t.Match[i].Path)
 		}
-		if t.Match[i].Operator != nil && *t.Match[i].Operator != "" {
-			quoted := TestTriggerFieldOperator(fmt.Sprintf("%q", string(*t.Match[i].Operator)))
-			t.Match[i].Operator = &quoted
+		if t.Match[i].Operator != "" {
+			t.Match[i].Operator = TestTriggerFieldOperator(fmt.Sprintf("%q", string(t.Match[i].Operator)))
 		}
 		if t.Match[i].Value != "" {
 			t.Match[i].Value = fmt.Sprintf("%q", t.Match[i].Value)
