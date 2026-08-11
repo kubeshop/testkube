@@ -10332,6 +10332,31 @@ components:
           description: paths to fetch for the sparse checkout
           items:
             type: string
+        verbosity:
+          $ref: "#/components/schemas/ContentGitVerbosity"
+        retry:
+          $ref: "#/components/schemas/TestWorkflowContentGitRetry"
+
+    ContentGitVerbosity:
+      type: string
+      description: logging level for the clone. Omit defaults to verbose.
+      enum:
+        - quiet
+        - normal
+        - verbose
+
+    TestWorkflowContentGitRetry:
+      type: object
+      description: in-process retry policy for transient git failures during clone.
+      properties:
+        count:
+          type: integer
+          minimum: 1
+          description: max attempts for transient git failures
+        delay:
+          type: string
+          pattern: "^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$"
+          description: base delay between attempts; exponential backoff applies
 
     TestWorkflowContentFile:
       type: object
