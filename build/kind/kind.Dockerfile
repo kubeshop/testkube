@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Step 1: Use a base image with Docker installed
-FROM docker:29.7.1-dind
+FROM docker:29.7.2-dind
 
 ENV TINI_SUBREAPER=true
 
