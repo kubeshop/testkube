@@ -8450,6 +8450,19 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures
+                                    format: int32
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: base delay between attempts; exponential backoff applies
+                                    pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -8684,6 +8697,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -10408,6 +10428,19 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures
+                                          format: int32
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: base delay between attempts; exponential backoff applies
+                                          pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -10642,6 +10675,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -11874,6 +11914,19 @@ spec:
                           items:
                             type: string
                           type: array
+                        retry:
+                          description: in-process retry policy for transient git failures during clone
+                          properties:
+                            count:
+                              description: max attempts for transient git failures
+                              format: int32
+                              minimum: 1
+                              type: integer
+                            delay:
+                              description: base delay between attempts; exponential backoff applies
+                              pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                              type: string
+                          type: object
                         revision:
                           description: branch, commit or a tag name to fetch
                           type: string
@@ -12108,6 +12161,13 @@ spec:
                               type: object
                               x-kubernetes-map-type: atomic
                           type: object
+                        verbosity:
+                          description: logging level for the clone. Omit defaults to verbose.
+                          enum:
+                            - quiet
+                            - normal
+                            - verbose
+                          type: string
                       type: object
                     tarball:
                       description: tarballs to unpack
@@ -12690,6 +12750,19 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures
+                                    format: int32
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: base delay between attempts; exponential backoff applies
+                                    pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -12924,6 +12997,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -14042,6 +14122,19 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures
+                                    format: int32
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: base delay between attempts; exponential backoff applies
+                                    pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -14276,6 +14369,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -16000,6 +16100,19 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures
+                                          format: int32
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: base delay between attempts; exponential backoff applies
+                                          pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -16234,6 +16347,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -17406,6 +17526,19 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures
+                                    format: int32
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: base delay between attempts; exponential backoff applies
+                                    pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -17640,6 +17773,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -19364,6 +19504,19 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures
+                                          format: int32
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: base delay between attempts; exponential backoff applies
+                                          pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -19598,6 +19751,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -21051,6 +21211,19 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures
+                                    format: int32
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: base delay between attempts; exponential backoff applies
+                                    pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -21285,6 +21458,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -22944,6 +23124,19 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures
+                                          format: int32
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: base delay between attempts; exponential backoff applies
+                                          pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -23178,6 +23371,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -24353,6 +24553,19 @@ spec:
                           items:
                             type: string
                           type: array
+                        retry:
+                          description: in-process retry policy for transient git failures during clone
+                          properties:
+                            count:
+                              description: max attempts for transient git failures
+                              format: int32
+                              minimum: 1
+                              type: integer
+                            delay:
+                              description: base delay between attempts; exponential backoff applies
+                              pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                              type: string
+                          type: object
                         revision:
                           description: branch, commit or a tag name to fetch
                           type: string
@@ -24587,6 +24800,13 @@ spec:
                               type: object
                               x-kubernetes-map-type: atomic
                           type: object
+                        verbosity:
+                          description: logging level for the clone. Omit defaults to verbose.
+                          enum:
+                            - quiet
+                            - normal
+                            - verbose
+                          type: string
                       type: object
                     tarball:
                       description: tarballs to unpack
@@ -25169,6 +25389,19 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures
+                                    format: int32
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: base delay between attempts; exponential backoff applies
+                                    pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -25403,6 +25636,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -26501,6 +26741,19 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures
+                                    format: int32
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: base delay between attempts; exponential backoff applies
+                                    pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -26735,6 +26988,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -28394,6 +28654,19 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures
+                                          format: int32
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: base delay between attempts; exponential backoff applies
+                                          pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -28628,6 +28901,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -29743,6 +30023,19 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures
+                                    format: int32
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: base delay between attempts; exponential backoff applies
+                                    pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -29977,6 +30270,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -31636,6 +31936,19 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures
+                                          format: int32
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: base delay between attempts; exponential backoff applies
+                                          pattern: ^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -31870,6 +32183,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
