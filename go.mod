@@ -48,7 +48,7 @@ require (
 	github.com/nats-io/nats.go v1.52.0
 	github.com/ohler55/ojg v1.28.4
 	github.com/olekukonko/tablewriter v1.1.4
-	github.com/onsi/ginkgo/v2 v2.32.0
+	github.com/onsi/ginkgo/v2 v2.32.1
 	github.com/onsi/gomega v1.42.1
 	github.com/otiai10/copy v1.14.1
 	github.com/pashagolub/pgxmock/v5 v5.1.0
