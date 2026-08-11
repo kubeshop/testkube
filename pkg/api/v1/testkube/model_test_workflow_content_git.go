@@ -29,5 +29,7 @@ type TestWorkflowContentGit struct {
 	// enable cone mode for sparse checkout with paths
 	Cone bool `json:"cone,omitempty"`
 	// paths to fetch for the sparse checkout
-	Paths []string `json:"paths,omitempty"`
+	Paths     []string                     `json:"paths,omitempty"`
+	Verbosity *ContentGitVerbosity         `json:"verbosity,omitempty"`
+	Retry     *TestWorkflowContentGitRetry `json:"retry,omitempty"`
 }
