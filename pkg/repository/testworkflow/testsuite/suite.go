@@ -28,6 +28,15 @@ func RunRepositoryTests(t *testing.T, repo testworkflow.Repository) {
 	t.Run("Count", func(t *testing.T) { testCount(t, repo) })
 	t.Run("GetExecutionsTotals", func(t *testing.T) { testGetExecutionsTotals(t, repo) })
 	t.Run("GetPreviousFinishedState", func(t *testing.T) { testGetPreviousFinishedState(t, repo) })
+	t.Run("GetPreviousFinishedStateSkipsSilentWebhookExecutions", func(t *testing.T) {
+		testGetPreviousFinishedStateSkipsSilentWebhookExecutions(t, repo)
+	})
+	t.Run("GetPreviousFinishedStateSkipsLegacyDisableWebhooksExecutions", func(t *testing.T) {
+		testGetPreviousFinishedStateSkipsLegacyDisableWebhooksExecutions(t, repo)
+	})
+	t.Run("GetPreviousFinishedStateReturnsEmptyWhenOnlySilent", func(t *testing.T) {
+		testGetPreviousFinishedStateReturnsEmptyWhenOnlySilent(t, repo)
+	})
 	t.Run("GetRunning", func(t *testing.T) { testGetRunning(t, repo) })
 	t.Run("GetFinished", func(t *testing.T) { testGetFinished(t, repo) })
 	t.Run("GetUnassigned", func(t *testing.T) { testGetUnassigned(t, repo) })

@@ -84,7 +84,9 @@ func CreateCommands(storageBucket string, storageClient domainstorage.Client, te
 			return
 		}),
 		cloudtestworkflow.CmdTestWorkflowExecutionGetPreviousFinishedState: Handler(func(ctx context.Context, data cloudtestworkflow.ExecutionGetPreviousFinishedStateRequest) (r cloudtestworkflow.ExecutionGetPreviousFinishedStateResponse, err error) {
-			r.Result, err = testWorkflowResultsRepository.GetPreviousFinishedState(ctx, data.WorkflowName, data.Date)
+			r.Result, err = testWorkflowResultsRepository.GetPreviousFinishedState(ctx, data.WorkflowName, data.Date, testworkflow.GetPreviousFinishedStateOptions{
+				SkipSilentWebhookExecutions: data.SkipSilentWebhookExecutions,
+			})
 			return
 		}),
 		cloudtestworkflow.CmdTestWorkflowExecutionInsert: Handler(func(ctx context.Context, data cloudtestworkflow.ExecutionInsertRequest) (r cloudtestworkflow.ExecutionInsertResponse, err error) {

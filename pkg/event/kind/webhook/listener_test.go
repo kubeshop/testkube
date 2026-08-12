@@ -190,7 +190,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		// Mock repository to return previous status as PASSED
 		mockTestWorkflowRepo := testworkflow.NewMockRepository(mockCtrl)
 		mockTestWorkflowRepo.EXPECT().
-			GetPreviousFinishedState(gomock.Any(), "test-workflow", gomock.Any()).
+			GetPreviousFinishedState(gomock.Any(), "test-workflow", gomock.Any(), testworkflow.GetPreviousFinishedStateOptions{SkipSilentWebhookExecutions: true}).
 			Return(testkube.PASSED_TestWorkflowStatus, nil).
 			Times(1)
 
@@ -239,7 +239,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		// Mock repository to return previous status as FAILED
 		mockTestWorkflowRepo := testworkflow.NewMockRepository(mockCtrl)
 		mockTestWorkflowRepo.EXPECT().
-			GetPreviousFinishedState(gomock.Any(), "test-workflow", gomock.Any()).
+			GetPreviousFinishedState(gomock.Any(), "test-workflow", gomock.Any(), testworkflow.GetPreviousFinishedStateOptions{SkipSilentWebhookExecutions: true}).
 			Return(testkube.FAILED_TestWorkflowStatus, nil).
 			Times(1)
 
