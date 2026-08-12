@@ -8922,6 +8922,8 @@ components:
     ExecutionTarget:
       type: object
       properties:
+        schedulerPolicy:
+          $ref: "#/components/schemas/SchedulerPolicy"
         match:
           type: object
           description: runner labels to match
@@ -8941,6 +8943,11 @@ components:
           description: list of runner labels to replicate the executions
           items:
             type: string
+
+    SchedulerPolicy:
+      type: string
+      enum:
+        - OnlyWhenMatches
 
     TestWorkflowWithExecution:
       type: object

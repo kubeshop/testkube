@@ -463,7 +463,7 @@ func (s *Service) mapTargetKubeToGrpcWithEvent(e *watcherEvent, t *internalTrigg
 		return string(data)
 	}
 
-	target := &cloud.ExecutionTarget{}
+	target := &cloud.ExecutionTarget{SchedulerPolicy: string(src.SchedulerPolicy)}
 
 	// Replicate
 	if len(src.Replicate) > 0 {

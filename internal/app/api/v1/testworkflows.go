@@ -496,7 +496,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 
 		var scheduleExecution cloud.ScheduleExecution
 		if request.Target != nil {
-			target := &cloud.ExecutionTarget{Replicate: request.Target.Replicate}
+			target := commonmapper.MapTargetApiToGrpc(request.Target)
 			if request.Target.Match != nil {
 				target.Match = make(map[string]*cloud.ExecutionTargetLabels)
 				for k, v := range request.Target.Match {
@@ -663,7 +663,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 
 		var scheduleExecution cloud.ScheduleExecution
 		if request.Target != nil {
-			target := &cloud.ExecutionTarget{Replicate: request.Target.Replicate}
+			target := commonmapper.MapTargetApiToGrpc(request.Target)
 			if request.Target.Match != nil {
 				target.Match = make(map[string]*cloud.ExecutionTargetLabels)
 				for k, v := range request.Target.Match {
