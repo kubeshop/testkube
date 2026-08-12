@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -94,4 +95,20 @@ func TestGetPodLogs(t *testing.T) {
 	logs, err := GetPodLogs(context.Background(), client, "testkube", "selector")
 	assert.NoError(t, err)
 	assert.Equal(t, []string([]string{}), logs)
+}
+
+func TestGetK8sClientConfigEmptyKubeconfigEnvFallsBackToDefault(t *testing.T) {
+	home := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(home, ".kube"), 0o700))
+	def := writeKubeconfig(t, "cluster-default", "https://default.example.com")
+	content, err := os.ReadFile(def)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(home, ".kube", "config"), content, 0o600))
+
+	t.Setenv("HOME", home)
+	// A set-but-empty KUBECONFIG must behave like an unset one instead of erroring.
+	t.Setenv("KUBECONFIG", "")
+	config, err := GetK8sClientConfig()
+	assert.NoError(t, err)
+	assert.Equal(t, "https://default.example.com", config.Host)
 }

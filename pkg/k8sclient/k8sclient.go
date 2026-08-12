@@ -76,7 +76,7 @@ func GetK8sClientConfig() (*rest.Config, error) {
 		k8sConfigExists = true
 	}
 
-	if cfg, exists := os.LookupEnv("KUBECONFIG"); exists {
+	if cfg, exists := os.LookupEnv("KUBECONFIG"); exists && cfg != "" {
 		// KUBECONFIG may hold a list of files (colon-separated on Unix, semicolon on
 		// Windows); merge them with kubectl's own precedence semantics instead of
 		// treating the whole value as a single path.
