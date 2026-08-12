@@ -198,6 +198,7 @@ Telemetry collects usage analytics to help improve the product. It can be disabl
 
 - Sends a `testkube_api_start` event on startup and a `testkube_api_heartbeat` event every hour
 - Both events include the detected cluster type and agent capabilities
+- Capability tags come from [`cmd/api-server/services/capabilities.go`](cmd/api-server/services/capabilities.go) and cover the agent persona, connection mode, enabled features, and whether this is a Testkube-provisioned hosted runner (`hosted-runner`) rather than a user-deployed one
 
 ### 9. Kubernetes Custom Resource Definitions (CRDs)
 
