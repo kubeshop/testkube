@@ -259,7 +259,7 @@ func testGetPreviousFinishedState(t *testing.T, repo testworkflow.Repository) {
 	err := repo.Insert(ctx, exec)
 	require.NoError(t, err)
 
-	status, err := repo.GetPreviousFinishedState(ctx, wfName, time.Now().Add(time.Hour))
+	status, err := repo.GetPreviousFinishedState(ctx, wfName, time.Now().Add(time.Hour), testworkflow.GetPreviousFinishedStateOptions{})
 	require.NoError(t, err)
 	assert.Equal(t, testkube.FAILED_TestWorkflowStatus, status)
 }
@@ -293,7 +293,7 @@ func testGetPreviousFinishedStateSkipsSilentWebhookExecutions(t *testing.T, repo
 	silentAborted.StatusAt = silentAbortedResult.FinishedAt
 	require.NoError(t, repo.Insert(ctx, silentAborted))
 
-	status, err := repo.GetPreviousFinishedState(ctx, wfName, time.Now().Add(time.Hour))
+	status, err := repo.GetPreviousFinishedState(ctx, wfName, time.Now().Add(time.Hour), testworkflow.GetPreviousFinishedStateOptions{SkipSilentWebhookExecutions: true})
 	require.NoError(t, err)
 	assert.Equal(t, testkube.FAILED_TestWorkflowStatus, status,
 		"silent-webhooks execution must not be treated as previous finished state")
@@ -328,7 +328,7 @@ func testGetPreviousFinishedStateSkipsLegacyDisableWebhooksExecutions(t *testing
 	legacySilentAborted.StatusAt = legacySilentAbortedResult.FinishedAt
 	require.NoError(t, repo.Insert(ctx, legacySilentAborted))
 
-	status, err := repo.GetPreviousFinishedState(ctx, wfName, time.Now().Add(time.Hour))
+	status, err := repo.GetPreviousFinishedState(ctx, wfName, time.Now().Add(time.Hour), testworkflow.GetPreviousFinishedStateOptions{SkipSilentWebhookExecutions: true})
 	require.NoError(t, err)
 	assert.Equal(t, testkube.FAILED_TestWorkflowStatus, status,
 		"legacy DisableWebhooks execution must not be treated as previous finished state")
@@ -351,8 +351,13 @@ func testGetPreviousFinishedStateReturnsEmptyWhenOnlySilent(t *testing.T, repo t
 	silent.StatusAt = silentResult.FinishedAt
 	require.NoError(t, repo.Insert(ctx, silent))
 
-	status, err := repo.GetPreviousFinishedState(ctx, wfName, time.Now().Add(time.Hour))
+	status, err := repo.GetPreviousFinishedState(ctx, wfName, time.Now().Add(time.Hour), testworkflow.GetPreviousFinishedStateOptions{SkipSilentWebhookExecutions: true})
 	require.NoError(t, err)
 	assert.Equal(t, testkube.TestWorkflowStatus(""), status,
 		"only silent-webhooks executions in history must resolve to empty previous state")
+
+	rawStatus, err := repo.GetPreviousFinishedState(ctx, wfName, time.Now().Add(time.Hour), testworkflow.GetPreviousFinishedStateOptions{})
+	require.NoError(t, err)
+	assert.Equal(t, testkube.FAILED_TestWorkflowStatus, rawStatus,
+		"raw mode must include silent-webhooks executions")
 }

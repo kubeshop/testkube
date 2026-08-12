@@ -1481,17 +1481,23 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 WHERE e.workflow_name = $1::text AND (e.organization_id = $2 AND e.environment_id = $3)
     AND r.finished_at < $4
     AND r.status IN ('passed', 'failed', 'skipped', 'aborted', 'canceled', 'timeout')
-    AND (e.silent_mode IS NULL OR (e.silent_mode->>'webhooks')::boolean IS NOT TRUE)
-    AND e.disable_webhooks IS NOT TRUE
+    AND (
+        NOT $5::boolean
+        OR (
+            (e.silent_mode IS NULL OR (e.silent_mode->>'webhooks')::boolean IS NOT TRUE)
+            AND e.disable_webhooks IS NOT TRUE
+        )
+    )
 ORDER BY r.finished_at DESC
 LIMIT 1
 `
 
 type GetPreviousFinishedStateParams struct {
-	WorkflowName   string             `db:"workflow_name" json:"workflow_name"`
-	OrganizationID string             `db:"organization_id" json:"organization_id"`
-	EnvironmentID  string             `db:"environment_id" json:"environment_id"`
-	Date           pgtype.Timestamptz `db:"date" json:"date"`
+	WorkflowName                string             `db:"workflow_name" json:"workflow_name"`
+	OrganizationID              string             `db:"organization_id" json:"organization_id"`
+	EnvironmentID               string             `db:"environment_id" json:"environment_id"`
+	Date                        pgtype.Timestamptz `db:"date" json:"date"`
+	SkipSilentWebhookExecutions bool               `db:"skip_silent_webhook_executions" json:"skip_silent_webhook_executions"`
 }
 
 func (q *Queries) GetPreviousFinishedState(ctx context.Context, arg GetPreviousFinishedStateParams) (pgtype.Text, error) {
@@ -1500,6 +1506,7 @@ func (q *Queries) GetPreviousFinishedState(ctx context.Context, arg GetPreviousF
 		arg.OrganizationID,
 		arg.EnvironmentID,
 		arg.Date,
+		arg.SkipSilentWebhookExecutions,
 	)
 	var status pgtype.Text
 	err := row.Scan(&status)
