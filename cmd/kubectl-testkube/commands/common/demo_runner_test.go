@@ -98,3 +98,48 @@ func Test_demoRunnerHelmOptions(t *testing.T) {
 		assert.True(t, other.DryRun)
 	})
 }
+
+func Test_decideDemoAgentSecretKey(t *testing.T) {
+	t.Parallel()
+
+	const (
+		namespace   = "testkube"
+		existingKey = "tkckey_agent_abcdefghijklmnopqrstuvwxyz012345"
+	)
+
+	t.Run("reuses the existing runner key on re-install", func(t *testing.T) {
+		t.Parallel()
+
+		reuseKey, generate, cliErr := decideDemoAgentSecretKey(true, existingKey, false, namespace)
+		assert.Nil(t, cliErr)
+		assert.False(t, generate, "should not mint a new key when one can be reused")
+		assert.Equal(t, existingKey, reuseKey)
+	})
+
+	t.Run("mints a fresh key on a clean namespace", func(t *testing.T) {
+		t.Parallel()
+
+		reuseKey, generate, cliErr := decideDemoAgentSecretKey(false, "", false, namespace)
+		assert.Nil(t, cliErr)
+		assert.True(t, generate, "should mint a new key when nothing is installed")
+		assert.Equal(t, "", reuseKey)
+	})
+
+	t.Run("errors when a runner exists but its key is unreadable", func(t *testing.T) {
+		t.Parallel()
+
+		reuseKey, generate, cliErr := decideDemoAgentSecretKey(true, "", false, namespace)
+		assert.NotNil(t, cliErr, "must not silently mint a mismatching key")
+		assert.False(t, generate)
+		assert.Equal(t, "", reuseKey)
+	})
+
+	t.Run("errors when the control plane exists but no runner to reuse from", func(t *testing.T) {
+		t.Parallel()
+
+		reuseKey, generate, cliErr := decideDemoAgentSecretKey(false, "", true, namespace)
+		assert.NotNil(t, cliErr, "a fresh key would be rejected by the existing control plane")
+		assert.False(t, generate)
+		assert.Equal(t, "", reuseKey)
+	})
+}

@@ -134,10 +134,98 @@ const (
 	demoRunnerOrgID                  = "tkcorg_demo"
 	demoRunnerEnvID                  = "tkcenv_my-first-environment"
 	demoRunnerBootstrapSecretKeyPath = "testkube-cloud-api.api.features.bootstrapConfig.config.organizations[0].runners[0].secret_key"
+	demoRunnerDeploymentName         = "testkube-demo-runner"
+	demoControlPlaneDeploymentName   = "testkube-enterprise-api"
+	demoRunnerAPIKeyEnvVar           = "TESTKUBE_PRO_API_KEY"
 )
 
 func GenerateDemoAgentSecretKey() string {
 	return "tkckey_agent_" + utils.RandAlphanum(32)
+}
+
+func ResolveDemoAgentSecretKey(namespace string, dryRun bool) (string, *CLIError) {
+	if dryRun {
+		return GenerateDemoAgentSecretKey(), nil
+	}
+
+	runnerExists, err := KubectlResourceExists(namespace, "deployment", demoRunnerDeploymentName)
+	if err != nil {
+		return "", NewCLIError(
+			TKErrKubectlCommandFailed,
+			"Checking for an existing Testkube demo runner",
+			"Check that the kubeconfig (~/.kube/config) has correct permissions and the cluster is reachable by running 'kubectl get nodes'.",
+			err,
+		)
+	}
+
+	var runnerKey string
+	if runnerExists {
+		var keyErr *CLIError
+		runnerKey, keyErr = readDemoRunnerSecretKey(namespace)
+		if keyErr != nil {
+			return "", keyErr
+		}
+	}
+
+	cpExists := false
+	if !runnerExists {
+		cpExists, err = KubectlResourceExists(namespace, "deployment", demoControlPlaneDeploymentName)
+		if err != nil {
+			return "", NewCLIError(
+				TKErrKubectlCommandFailed,
+				"Checking for an existing Testkube Control Plane",
+				"Check that the kubeconfig (~/.kube/config) has correct permissions and the cluster is reachable by running 'kubectl get nodes'.",
+				err,
+			)
+		}
+	}
+
+	reuseKey, generate, cliErr := decideDemoAgentSecretKey(runnerExists, runnerKey, cpExists, namespace)
+	if cliErr != nil {
+		return "", cliErr
+	}
+	if generate {
+		return GenerateDemoAgentSecretKey(), nil
+	}
+	return reuseKey, nil
+}
+
+func decideDemoAgentSecretKey(runnerExists bool, runnerKey string, cpExists bool, namespace string) (reuseKey string, generate bool, cliErr *CLIError) {
+	if runnerExists {
+		if runnerKey != "" {
+			return runnerKey, false, nil
+		}
+		return "", false, NewCLIError(
+			TKErrInvalidInstallConfig,
+			"Existing Testkube demo runner has no readable agent key",
+			fmt.Sprintf("To fix: recreate the cluster, or delete the %q namespace, then run 'testkube init demo' once. (A demo runner already exists but its agent key can't be read, so this install can't reuse it and a fresh key would not match the Control Plane.)", namespace),
+			fmt.Errorf("demo runner %q found but %s env is empty", demoRunnerDeploymentName, demoRunnerAPIKeyEnvVar),
+		)
+	}
+
+	if cpExists {
+		return "", false, NewCLIError(
+			TKErrInvalidInstallConfig,
+			"Testkube Control Plane already installed without a matching demo runner",
+			fmt.Sprintf("To fix: recreate the cluster, or delete the %q namespace, then run 'testkube init demo' once. (The Control Plane already bootstrapped a runner whose key can't be recovered, so installing a fresh key here would be rejected.)", namespace),
+			fmt.Errorf("control plane %q present without demo runner %q", demoControlPlaneDeploymentName, demoRunnerDeploymentName),
+		)
+	}
+
+	return "", true, nil
+}
+
+func readDemoRunnerSecretKey(namespace string) (string, *CLIError) {
+	kubectlPath, cliErr := lookupKubectlPath()
+	if cliErr != nil {
+		return "", cliErr
+	}
+	jsonpath := fmt.Sprintf(`jsonpath={.spec.template.spec.containers[*].env[?(@.name=="%s")].value}`, demoRunnerAPIKeyEnvVar)
+	out, cliErr := runKubectlCommand(kubectlPath, []string{"get", "deployment", demoRunnerDeploymentName, "--namespace", namespace, "-o", jsonpath})
+	if cliErr != nil {
+		return "", cliErr
+	}
+	return strings.TrimSpace(out), nil
 }
 
 func HelmUpgradeOrInstallTestkubeOnPremDemoRunner(options HelmOptions, runnerSecretKey string) *CLIError {
@@ -154,7 +242,7 @@ func demoRunnerHelmOptions(namespace, runnerSecretKey string, dryRun bool) HelmG
 		Namespace:      namespace,
 		Args:           []string{"--wait"},
 		Values: map[string]interface{}{
-			"fullnameOverride":  "testkube-demo-runner",
+			"fullnameOverride":  demoRunnerDeploymentName,
 			"runner.id":         demoRunnerID,
 			"runner.name":       demoRunnerName,
 			"runner.orgId":      demoRunnerOrgID,

@@ -246,7 +246,15 @@ func NewInitCmdDemo() *cobra.Command {
 			options.SetOptions = setOptions
 			options.ArgOptions = argOptions
 
-			runnerSecretKey := common.GenerateDemoAgentSecretKey()
+			runnerSecretKey, cliErr := common.ResolveDemoAgentSecretKey(options.Namespace, options.DryRun)
+			if cliErr != nil {
+				spinner.Fail("Failed to install Testkube On-Prem Demo")
+				if cfg.TelemetryEnabled {
+					cliErr.AddTelemetry(cmd, "resolving agent key", "install_failed", license)
+					_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
+				}
+				common.HandleCLIError(cliErr)
+			}
 
 			cliErr = common.HelmUpgradeOrInstallTestkubeOnPremDemo(options, runnerSecretKey)
 			if cliErr != nil {
