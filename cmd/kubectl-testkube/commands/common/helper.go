@@ -14,8 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
@@ -61,12 +59,11 @@ type HelmGenericOptions struct {
 }
 
 const (
-	github                = "GitHub"
-	gitlab                = "GitLab"
-	google                = "Google"
-	emailLink             = "Email (magic link)"
-	dockerDaemonPrefixLen = 8
-	latestReleaseUrl      = "https://api.github.com/repos/kubeshop/testkube/releases/latest"
+	github           = "GitHub"
+	gitlab           = "GitLab"
+	google           = "Google"
+	emailLink        = "Email (magic link)"
+	latestReleaseUrl = "https://api.github.com/repos/kubeshop/testkube/releases/latest"
 )
 
 func (o HelmOptions) GetApiURI() string {
@@ -1360,58 +1357,52 @@ func prepareTestkubeUpgradeDockerArgs(options HelmOptions, dockerContainerName, 
 }
 
 func StreamDockerLogs(dockerContainerName string) *CLIError {
-	// Create a Docker client
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return NewCLIError(
-			TKErrInvalidDockerConfig,
-			"Invalid docker config",
-			"Check your environment variables used to connect to Docker daemon",
-			err)
-	}
-
-	ctx := context.Background()
-	// Set options to stream logs and show both stdout and stderr logs
-	opts := container.LogsOptions{
-		ShowStdout: true,
-		ShowStderr: true,
-		Follow:     true, // Follow logs in real-time
-		Timestamps: false,
-	}
-
-	// Fetch logs from the container
-	logs, err := cli.ContainerLogs(ctx, dockerContainerName, opts)
+	// Use the Docker CLI instead of the Engine SDK so enterprise/control-plane
+	// binaries that import this package do not link github.com/docker/docker
+	// (flagged by vulnerability scanners for daemon AuthZ CVEs).
+	cmd := exec.Command("docker", "logs", "-f", dockerContainerName)
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return NewCLIError(
 			TKErrDockerLogStreamingFailed,
 			"Docker log streaming failed",
-			"Check that your Testkube Docker Agent container is up and runnning",
+			"Check that the Docker CLI is installed and available in PATH",
 			err)
 	}
-	defer logs.Close()
+	cmd.Stderr = cmd.Stdout
 
-	// Use a buffered scanner to read the logs line by line
-	scanner := bufio.NewScanner(logs)
+	if err := cmd.Start(); err != nil {
+		return NewCLIError(
+			TKErrDockerLogStreamingFailed,
+			"Docker log streaming failed",
+			"Check that your Testkube Docker Agent container is up and running",
+			err)
+	}
+	defer func() {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+	}()
+
+	var installationSucceeded bool
+	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
-		line := scanner.Bytes()
-		if len(line) > dockerDaemonPrefixLen {
-			line = line[dockerDaemonPrefixLen:]
-		}
+		line := scanner.Text()
 
 		if ui.IsVerbose() {
-			fmt.Println(string(line)) // Optional: print logs to console
+			fmt.Println(line)
 		}
 
-		if strings.Contains(string(line), "Testkube installation succeed") {
+		if strings.Contains(line, "Testkube installation succeed") {
+			installationSucceeded = true
 			break
 		}
 
-		if strings.Contains(string(line), "Testkube installation failed") {
+		if strings.Contains(line, "Testkube installation failed") {
 			return NewCLIError(
 				TKErrDockerInstallationFailed,
 				"Docker installation failed",
 				"Check logs of your Testkube Docker Agent container",
-				errors.New(string(line)))
+				errors.New(line))
 		}
 	}
 
@@ -1423,7 +1414,28 @@ func StreamDockerLogs(dockerContainerName string) *CLIError {
 			err)
 	}
 
-	return nil
+	// If we saw the success marker, stop following logs and report success.
+	if installationSucceeded {
+		return nil
+	}
+
+	// The log stream ended (EOF) before either marker was observed. This means
+	// `docker logs -f` exited on its own (e.g. the container was removed, the
+	// daemon disconnected, or access was denied). Treat that as a failure
+	// instead of silently reporting installation success.
+	if err := cmd.Wait(); err != nil {
+		return NewCLIError(
+			TKErrDockerLogStreamingFailed,
+			"Docker log streaming stopped before installation completed",
+			"Check that your Testkube Docker Agent container is up and running",
+			err)
+	}
+
+	return NewCLIError(
+		TKErrDockerLogStreamingFailed,
+		"Docker log stream ended before installation completed",
+		"Check logs of your Testkube Docker Agent container",
+		errors.New("docker logs stream closed without an installation status message"))
 }
 
 func DockerUpgradeTestkubeAgent(options HelmOptions, latestVersion string, cfg config.Data) *CLIError {
