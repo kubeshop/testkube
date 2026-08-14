@@ -127,21 +127,22 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
          ($11::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE($12::text, '') = '' OR e.running_context->'actor'->>'name' = $12::text)
     AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type' = $13::text)
-    AND (COALESCE($14::text, '') = '' OR e.id = $14::text OR e.group_id = $14::text)
-    AND (COALESCE($15, NULL) IS NULL OR
-         ($15::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
-         ($15::boolean = false AND e.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR
+    AND (COALESCE($14::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.running_context->'actor'->>'executionId' = ANY($14::text[]))
+    AND (COALESCE($15::text, '') = '' OR e.id = $15::text OR e.group_id = $15::text)
+    AND (COALESCE($16, NULL) IS NULL OR
+         ($16::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
+         ($16::boolean = false AND e.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+    AND (COALESCE($17::jsonb, '[]'::jsonb) = '[]'::jsonb OR
          EXISTS (
-             SELECT 1 FROM jsonb_array_elements($16::jsonb) AS range_obj
+             SELECT 1 FROM jsonb_array_elements($17::jsonb) AS range_obj
              WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
          )
     )
     AND (
-        (COALESCE($17::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($17::text[]) AS key_condition
+        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($18::text[]) AS key_condition
                 WHERE
                 CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
@@ -149,18 +150,18 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
                     ELSE
                         e.tags ? key_condition
                 END
-            ) = array_length($17::text[], 1)
+            ) = array_length($18::text[], 1)
         )
         AND
-        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($18::text[]) AS cond
+        (COALESCE($19::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($19::text[]) AS cond
                 WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
     AND (
-        (COALESCE($19::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($19::text[]) AS key_condition
+        (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($20::text[]) AS key_condition
                 WHERE
                 CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
@@ -171,15 +172,15 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) > 0
         )
         AND
-        (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
+        (COALESCE($21::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($21::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
     AND (
-        (COALESCE($21::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($21::text[]) AS key_condition
+        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($22::text[]) AS key_condition
                 WHERE
                 CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
@@ -187,13 +188,13 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
                     ELSE
                         w.labels ? key_condition
                 END
-            ) = array_length($21::text[], 1)
+            ) = array_length($22::text[], 1)
         )
         AND
-        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond
+        (COALESCE($23::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($23::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($23::text[]) AS cond)
         )
     )
 `
@@ -212,6 +213,7 @@ type CountTestWorkflowExecutionsParams struct {
 	Assigned           interface{}        `db:"assigned" json:"assigned"`
 	ActorName          string             `db:"actor_name" json:"actor_name"`
 	ActorType          string             `db:"actor_type" json:"actor_type"`
+	ActorExecutionIds  []string           `db:"actor_execution_ids" json:"actor_execution_ids"`
 	GroupID            string             `db:"group_id" json:"group_id"`
 	Initialized        interface{}        `db:"initialized" json:"initialized"`
 	HealthRanges       []byte             `db:"health_ranges" json:"health_ranges"`
@@ -238,6 +240,7 @@ func (q *Queries) CountTestWorkflowExecutions(ctx context.Context, arg CountTest
 		arg.Assigned,
 		arg.ActorName,
 		arg.ActorType,
+		arg.ActorExecutionIds,
 		arg.GroupID,
 		arg.Initialized,
 		arg.HealthRanges,
@@ -525,21 +528,22 @@ WHERE e.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = $1 AN
          ($11::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE($12::text, '') = '' OR e.running_context->'actor'->>'name' = $12::text)
     AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type' = $13::text)
-    AND (COALESCE($14::text, '') = '' OR e.id = $14::text OR e.group_id = $14::text)
-    AND (COALESCE($15, NULL) IS NULL OR
-         ($15::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
-         ($15::boolean = false AND e.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-   AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR
+    AND (COALESCE($14::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.running_context->'actor'->>'executionId' = ANY($14::text[]))
+    AND (COALESCE($15::text, '') = '' OR e.id = $15::text OR e.group_id = $15::text)
+    AND (COALESCE($16, NULL) IS NULL OR
+         ($16::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
+         ($16::boolean = false AND e.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+   AND (COALESCE($17::jsonb, '[]'::jsonb) = '[]'::jsonb OR
           EXISTS (
-              SELECT 1 FROM jsonb_array_elements($16::jsonb) AS range_obj
+              SELECT 1 FROM jsonb_array_elements($17::jsonb) AS range_obj
               WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
                 AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
                 AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
           )
       )
     AND (
-        (COALESCE($17::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($17::text[]) AS key_condition
+        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($18::text[]) AS key_condition
                 WHERE
                 CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
@@ -547,18 +551,18 @@ WHERE e.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = $1 AN
                     ELSE
                         e.tags ? key_condition
                 END
-            ) = array_length($17::text[], 1)
+            ) = array_length($18::text[], 1)
         )
         AND
-        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($18::text[]) AS cond
+        (COALESCE($19::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($19::text[]) AS cond
                 WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
     AND (
-        (COALESCE($19::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($19::text[]) AS key_condition
+        (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($20::text[]) AS key_condition
                 WHERE
                 CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
@@ -569,15 +573,15 @@ WHERE e.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = $1 AN
             ) > 0
         )
         AND
-        (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
+        (COALESCE($21::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($21::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
     AND (
-        (COALESCE($21::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($21::text[]) AS key_condition
+        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($22::text[]) AS key_condition
                 WHERE
                 CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
@@ -585,17 +589,17 @@ WHERE e.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = $1 AN
                     ELSE
                         w.labels ? key_condition
                 END
-            ) = array_length($21::text[], 1)
+            ) = array_length($22::text[], 1)
         )
         AND
-        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond
+        (COALESCE($23::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($23::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($23::text[]) AS cond)
         )
     )
 ORDER BY e.scheduled_at DESC
-LIMIT NULLIF($24, 0) OFFSET $23
+LIMIT NULLIF($25, 0) OFFSET $24
 `
 
 type GetFinishedTestWorkflowExecutionsParams struct {
@@ -612,6 +616,7 @@ type GetFinishedTestWorkflowExecutionsParams struct {
 	Assigned           interface{}        `db:"assigned" json:"assigned"`
 	ActorName          string             `db:"actor_name" json:"actor_name"`
 	ActorType          string             `db:"actor_type" json:"actor_type"`
+	ActorExecutionIds  []string           `db:"actor_execution_ids" json:"actor_execution_ids"`
 	GroupID            string             `db:"group_id" json:"group_id"`
 	Initialized        interface{}        `db:"initialized" json:"initialized"`
 	HealthRanges       []byte             `db:"health_ranges" json:"health_ranges"`
@@ -701,6 +706,7 @@ func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg Get
 		arg.Assigned,
 		arg.ActorName,
 		arg.ActorType,
+		arg.ActorExecutionIds,
 		arg.GroupID,
 		arg.Initialized,
 		arg.HealthRanges,
@@ -2444,21 +2450,22 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
          ($11::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE($12::text, '') = '' OR e.running_context->'actor'->>'name' = $12::text)
     AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type' = $13::text)
-    AND (COALESCE($14::text, '') = '' OR e.id = $14::text OR e.group_id = $14::text)
-    AND (COALESCE($15, NULL) IS NULL OR
-         ($15::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
-         ($15::boolean = false AND e.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-   AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR
+    AND (COALESCE($14::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.running_context->'actor'->>'executionId' = ANY($14::text[]))
+    AND (COALESCE($15::text, '') = '' OR e.id = $15::text OR e.group_id = $15::text)
+    AND (COALESCE($16, NULL) IS NULL OR
+         ($16::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
+         ($16::boolean = false AND e.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+   AND (COALESCE($17::jsonb, '[]'::jsonb) = '[]'::jsonb OR
           EXISTS (
-              SELECT 1 FROM jsonb_array_elements($16::jsonb) AS range_obj
+              SELECT 1 FROM jsonb_array_elements($17::jsonb) AS range_obj
               WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
                 AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
                 AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
           )
       )
     AND (
-        (COALESCE($17::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($17::text[]) AS key_condition
+        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($18::text[]) AS key_condition
                 WHERE
                 CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
@@ -2466,18 +2473,18 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
                     ELSE
                         e.tags ? key_condition
                 END
-            ) = array_length($17::text[], 1)
+            ) = array_length($18::text[], 1)
         )
         AND
-        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($18::text[]) AS cond
+        (COALESCE($19::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($19::text[]) AS cond
                 WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
     AND (
-        (COALESCE($19::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($19::text[]) AS key_condition
+        (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($20::text[]) AS key_condition
                 WHERE
                 CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
@@ -2488,15 +2495,15 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) > 0
         )
         AND
-        (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
+        (COALESCE($21::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($21::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
     AND (
-        (COALESCE($21::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($21::text[]) AS key_condition
+        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($22::text[]) AS key_condition
                 WHERE
                 CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
@@ -2504,17 +2511,17 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
                     ELSE
                         w.labels ? key_condition
                 END
-            ) = array_length($21::text[], 1)
+            ) = array_length($22::text[], 1)
         )
         AND
-        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond
+        (COALESCE($23::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($23::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($23::text[]) AS cond)
         )
     )
 ORDER BY e.organization_id, e.environment_id, e.scheduled_at DESC
-LIMIT NULLIF($24, 0) OFFSET $23
+LIMIT NULLIF($25, 0) OFFSET $24
 `
 
 type GetTestWorkflowExecutionsParams struct {
@@ -2531,6 +2538,7 @@ type GetTestWorkflowExecutionsParams struct {
 	Assigned           interface{}        `db:"assigned" json:"assigned"`
 	ActorName          string             `db:"actor_name" json:"actor_name"`
 	ActorType          string             `db:"actor_type" json:"actor_type"`
+	ActorExecutionIds  []string           `db:"actor_execution_ids" json:"actor_execution_ids"`
 	GroupID            string             `db:"group_id" json:"group_id"`
 	Initialized        interface{}        `db:"initialized" json:"initialized"`
 	HealthRanges       []byte             `db:"health_ranges" json:"health_ranges"`
@@ -2620,6 +2628,7 @@ func (q *Queries) GetTestWorkflowExecutions(ctx context.Context, arg GetTestWork
 		arg.Assigned,
 		arg.ActorName,
 		arg.ActorType,
+		arg.ActorExecutionIds,
 		arg.GroupID,
 		arg.Initialized,
 		arg.HealthRanges,
@@ -2782,21 +2791,22 @@ FROM (
              ($11::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
         AND (COALESCE($12::text, '') = '' OR e.running_context->'actor'->>'name' = $12::text)
         AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type' = $13::text)
-        AND (COALESCE($14::text, '') = '' OR e.id = $14::text OR e.group_id = $14::text)
-        AND (COALESCE($15, NULL) IS NULL OR
-             ($15::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
-             ($15::boolean = false AND e.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-        AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR
+        AND (COALESCE($14::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.running_context->'actor'->>'executionId' = ANY($14::text[]))
+        AND (COALESCE($15::text, '') = '' OR e.id = $15::text OR e.group_id = $15::text)
+        AND (COALESCE($16, NULL) IS NULL OR
+             ($16::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
+             ($16::boolean = false AND e.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+        AND (COALESCE($17::jsonb, '[]'::jsonb) = '[]'::jsonb OR
              EXISTS (
-                 SELECT 1 FROM jsonb_array_elements($16::jsonb) AS range_obj
+                 SELECT 1 FROM jsonb_array_elements($17::jsonb) AS range_obj
                  WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
                    AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
                    AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
              )
         )
         AND (
-            (COALESCE($17::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-                (SELECT COUNT(*) FROM unnest($17::text[]) AS key_condition
+            (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+                (SELECT COUNT(*) FROM unnest($18::text[]) AS key_condition
                     WHERE
                     CASE
                         WHEN key_condition LIKE '%:not_exists' THEN
@@ -2804,18 +2814,18 @@ FROM (
                         ELSE
                             e.tags ? key_condition
                     END
-                ) = array_length($17::text[], 1)
+                ) = array_length($18::text[], 1)
             )
             AND
-            (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-                (SELECT COUNT(*) FROM unnest($18::text[]) AS cond
+            (COALESCE($19::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+                (SELECT COUNT(*) FROM unnest($19::text[]) AS cond
                     WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
                 ) > 0
             )
         )
         AND (
-            (COALESCE($19::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-                (SELECT COUNT(*) FROM unnest($19::text[]) AS key_condition
+            (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+                (SELECT COUNT(*) FROM unnest($20::text[]) AS key_condition
                     WHERE
                     CASE
                         WHEN key_condition LIKE '%:not_exists' THEN
@@ -2826,15 +2836,15 @@ FROM (
                 ) > 0
             )
             AND
-            (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-                (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
+            (COALESCE($21::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+                (SELECT COUNT(*) FROM unnest($21::text[]) AS cond
                     WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
                 ) > 0
             )
         )
         AND (
-            (COALESCE($21::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-                (SELECT COUNT(*) FROM unnest($21::text[]) AS key_condition
+            (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+                (SELECT COUNT(*) FROM unnest($22::text[]) AS key_condition
                     WHERE
                     CASE
                         WHEN key_condition LIKE '%:not_exists' THEN
@@ -2842,17 +2852,17 @@ FROM (
                         ELSE
                             w.labels ? key_condition
                     END
-                ) = array_length($21::text[], 1)
+                ) = array_length($22::text[], 1)
             )
             AND
-            (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-                (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond
+            (COALESCE($23::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+                (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($23::text[]) AS cond
                     WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-                ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond)
+                ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($23::text[]) AS cond)
             )
         )
     ORDER BY e.scheduled_at DESC
-    LIMIT NULLIF($24, 0) OFFSET $23
+    LIMIT NULLIF($25, 0) OFFSET $24
 ) e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
@@ -2875,6 +2885,7 @@ type GetTestWorkflowExecutionsSummaryParams struct {
 	Assigned           interface{}        `db:"assigned" json:"assigned"`
 	ActorName          string             `db:"actor_name" json:"actor_name"`
 	ActorType          string             `db:"actor_type" json:"actor_type"`
+	ActorExecutionIds  []string           `db:"actor_execution_ids" json:"actor_execution_ids"`
 	GroupID            string             `db:"group_id" json:"group_id"`
 	Initialized        interface{}        `db:"initialized" json:"initialized"`
 	HealthRanges       []byte             `db:"health_ranges" json:"health_ranges"`
@@ -2964,6 +2975,7 @@ func (q *Queries) GetTestWorkflowExecutionsSummary(ctx context.Context, arg GetT
 		arg.Assigned,
 		arg.ActorName,
 		arg.ActorType,
+		arg.ActorExecutionIds,
 		arg.GroupID,
 		arg.Initialized,
 		arg.HealthRanges,
@@ -3299,21 +3311,22 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
          ($11::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE($12::text, '') = '' OR e.running_context->'actor'->>'name' = $12::text)
     AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type' = $13::text)
-    AND (COALESCE($14::text, '') = '' OR e.id = $14::text OR e.group_id = $14::text)
-    AND (COALESCE($15, NULL) IS NULL OR
-         ($15::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
-         ($15::boolean = false AND e.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR
+    AND (COALESCE($14::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.running_context->'actor'->>'executionId' = ANY($14::text[]))
+    AND (COALESCE($15::text, '') = '' OR e.id = $15::text OR e.group_id = $15::text)
+    AND (COALESCE($16, NULL) IS NULL OR
+         ($16::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
+         ($16::boolean = false AND e.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+    AND (COALESCE($17::jsonb, '[]'::jsonb) = '[]'::jsonb OR
           EXISTS (
-              SELECT 1 FROM jsonb_array_elements($16::jsonb) AS range_obj
+              SELECT 1 FROM jsonb_array_elements($17::jsonb) AS range_obj
               WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
                 AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
                 AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
           )
       )
     AND (
-        (COALESCE($17::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($17::text[]) AS key_condition
+        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($18::text[]) AS key_condition
                 WHERE
                 CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
@@ -3321,18 +3334,18 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
                     ELSE
                         e.tags ? key_condition
                 END
-            ) = array_length($17::text[], 1)
+            ) = array_length($18::text[], 1)
         )
         AND
-        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($18::text[]) AS cond
+        (COALESCE($19::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($19::text[]) AS cond
                 WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
     AND (
-        (COALESCE($19::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($19::text[]) AS key_condition
+        (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($20::text[]) AS key_condition
                 WHERE
                 CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
@@ -3343,15 +3356,15 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) > 0
         )
         AND
-        (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
+        (COALESCE($21::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($21::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
     AND (
-        (COALESCE($21::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($21::text[]) AS key_condition
+        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($22::text[]) AS key_condition
                 WHERE
                 CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
@@ -3359,13 +3372,13 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
                     ELSE
                         w.labels ? key_condition
                 END
-            ) = array_length($21::text[], 1)
+            ) = array_length($22::text[], 1)
         )
         AND
-        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond
+        (COALESCE($23::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($23::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($23::text[]) AS cond)
         )
     )
 GROUP BY e.status
@@ -3385,6 +3398,7 @@ type GetTestWorkflowExecutionsTotalsParams struct {
 	Assigned           interface{}        `db:"assigned" json:"assigned"`
 	ActorName          string             `db:"actor_name" json:"actor_name"`
 	ActorType          string             `db:"actor_type" json:"actor_type"`
+	ActorExecutionIds  []string           `db:"actor_execution_ids" json:"actor_execution_ids"`
 	GroupID            string             `db:"group_id" json:"group_id"`
 	Initialized        interface{}        `db:"initialized" json:"initialized"`
 	HealthRanges       []byte             `db:"health_ranges" json:"health_ranges"`
@@ -3416,6 +3430,7 @@ func (q *Queries) GetTestWorkflowExecutionsTotals(ctx context.Context, arg GetTe
 		arg.Assigned,
 		arg.ActorName,
 		arg.ActorType,
+		arg.ActorExecutionIds,
 		arg.GroupID,
 		arg.Initialized,
 		arg.HealthRanges,

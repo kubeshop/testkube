@@ -2068,6 +2068,10 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 		params.ActorType = string(filter.ActorType())
 	}
 
+	if filter.ActorExecutionIdsDefined() {
+		params.ActorExecutionIds = filter.ActorExecutionIds()
+	}
+
 	// Group filter
 	if filter.GroupIDDefined() {
 		params.GroupID = filter.GroupID()
@@ -2242,6 +2246,10 @@ func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testwo
 
 	if filter.ActorTypeDefined() {
 		params.ActorType = string(filter.ActorType())
+	}
+
+	if filter.ActorExecutionIdsDefined() {
+		params.ActorExecutionIds = filter.ActorExecutionIds()
 	}
 
 	// Group filter

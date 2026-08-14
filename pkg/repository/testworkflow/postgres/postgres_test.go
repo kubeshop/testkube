@@ -474,6 +474,18 @@ func (m *MockFilter) ActorTypeDefined() bool {
 	return m.Called().Bool(0)
 }
 
+func (m *MockFilter) ActorExecutionIds() []string {
+	args := m.Called()
+	if v, ok := args.Get(0).([]string); ok {
+		return v
+	}
+	return nil
+}
+
+func (m *MockFilter) ActorExecutionIdsDefined() bool {
+	return m.Called().Bool(0)
+}
+
 func (m *MockFilter) GroupID() string {
 	return m.Called().String(0)
 }
@@ -555,6 +567,7 @@ func createTestFilter() *MockFilter {
 	filter.On("AssignedDefined").Return(false)
 	filter.On("ActorNameDefined").Return(false)
 	filter.On("ActorTypeDefined").Return(false)
+	filter.On("ActorExecutionIdsDefined").Return(false)
 	filter.On("GroupIDDefined").Return(false)
 	filter.On("InitializedDefined").Return(false)
 	filter.On("HealthRangesDefined").Return(false)

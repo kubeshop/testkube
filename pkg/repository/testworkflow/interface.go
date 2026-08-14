@@ -85,6 +85,8 @@ type Filter interface {
 	ActorNameDefined() bool
 	ActorType() testkube.TestWorkflowRunningContextActorType
 	ActorTypeDefined() bool
+	ActorExecutionIds() []string
+	ActorExecutionIdsDefined() bool
 	GroupID() string
 	GroupIDDefined() bool
 	RunnerID() string
