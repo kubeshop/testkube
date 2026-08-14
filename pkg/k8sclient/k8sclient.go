@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/pkg/errors"
@@ -75,8 +76,12 @@ func GetK8sClientConfig() (*rest.Config, error) {
 		k8sConfigExists = true
 	}
 
-	if cfg, exists := os.LookupEnv("KUBECONFIG"); exists {
-		config, err = clientcmd.BuildConfigFromFlags("", cfg)
+	if cfg, exists := os.LookupEnv("KUBECONFIG"); exists && cfg != "" {
+		// KUBECONFIG may hold a list of files (colon-separated on Unix, semicolon on
+		// Windows); merge them with kubectl's own precedence semantics instead of
+		// treating the whole value as a single path.
+		loadingRules := &clientcmd.ClientConfigLoadingRules{Precedence: filepath.SplitList(cfg)}
+		config, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{}).ClientConfig()
 	} else if k8sConfigExists {
 		config, err = clientcmd.BuildConfigFromFlags("", cubeConfigPath)
 	} else {
