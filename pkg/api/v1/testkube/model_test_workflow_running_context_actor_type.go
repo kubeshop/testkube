@@ -20,5 +20,5 @@ const (
 	TESTWORKFLOW_TestWorkflowRunningContextActorType          TestWorkflowRunningContextActorType = "testworkflow"
 	TESTWORKFLOWEXECUTION_TestWorkflowRunningContextActorType TestWorkflowRunningContextActorType = "testworkflowexecution"
 	PROGRAM_TestWorkflowRunningContextActorType               TestWorkflowRunningContextActorType = "program"
-	QUALITYLOOP_TestWorkflowRunningContextActorType           TestWorkflowRunningContextActorType = "qualityloop"
+	GITINTEGRATION_TestWorkflowRunningContextActorType        TestWorkflowRunningContextActorType = "gitintegration"
 )

@@ -406,9 +406,9 @@ func Test_triggeredByBucket(t *testing.T) {
 			want: "automation",
 		},
 		{
-			name: "QualityLoop actor",
-			args: args{actorType: "qualityloop"},
-			want: "quality-loop",
+			name: "GitIntegration actor",
+			args: args{actorType: "gitintegration"},
+			want: "git-integration",
 		},
 		{
 			name: "User via CI/CD interface",

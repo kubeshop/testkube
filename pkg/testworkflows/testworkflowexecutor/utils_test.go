@@ -11,10 +11,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud"
 )
 
-func TestGetNewRunningContext_QualityLoopActor(t *testing.T) {
+func TestGetNewRunningContext_GitIntegrationActor(t *testing.T) {
 	legacy := &testkube.TestWorkflowRunningContext{
 		Actor: &testkube.TestWorkflowRunningContextActor{
-			Type_: common.Ptr(testkube.QUALITYLOOP_TestWorkflowRunningContextActorType),
+			Type_: common.Ptr(testkube.GITINTEGRATION_TestWorkflowRunningContextActorType),
 			Name:  "git-provider-github",
 		},
 	}
@@ -27,7 +27,7 @@ func TestGetNewRunningContext_QualityLoopActor(t *testing.T) {
 	assert.Nil(t, untrustedUser)
 }
 
-func TestGetLegacyRunningContext_QualityLoopType(t *testing.T) {
+func TestGetLegacyRunningContext_QualityLoopProtoMapsToGitIntegrationActor(t *testing.T) {
 	req := &cloud.ScheduleRequest{
 		RunningContext: &cloud.RunningContext{
 			Type: cloud.RunningContextType_QUALITYLOOP,
@@ -40,7 +40,7 @@ func TestGetLegacyRunningContext_QualityLoopType(t *testing.T) {
 	require.NotNil(t, rc)
 	require.NotNil(t, rc.Actor)
 	require.NotNil(t, rc.Actor.Type_)
-	assert.Equal(t, testkube.QUALITYLOOP_TestWorkflowRunningContextActorType, *rc.Actor.Type_)
+	assert.Equal(t, testkube.GITINTEGRATION_TestWorkflowRunningContextActorType, *rc.Actor.Type_)
 	assert.Equal(t, "git-provider-github", rc.Actor.Name)
 	require.NotNil(t, rc.Interface_)
 	require.NotNil(t, rc.Interface_.Type_)

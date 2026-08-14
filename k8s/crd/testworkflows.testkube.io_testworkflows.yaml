@@ -12528,7 +12528,7 @@ spec:
                                 - testworkflow
                                 - testworkflowexecution
                                 - program
-                                - qualityloop
+                                - gitintegration
                               type: string
                           required:
                             - type
