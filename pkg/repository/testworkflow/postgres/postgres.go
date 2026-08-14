@@ -679,6 +679,7 @@ func isFinishedByWorkflowFastPathFilter(f testworkflow.Filter) bool {
 		!f.AssignedDefined() &&
 		!f.ActorNameDefined() &&
 		!f.ActorTypeDefined() &&
+		!f.ActorExecutionIdsDefined() &&
 		!f.GroupIDDefined() &&
 		!f.InitializedDefined() &&
 		!f.HealthRangesDefined() &&
@@ -737,6 +738,7 @@ func isNameOnlyFilter(f testworkflow.Filter) bool {
 		!f.AssignedDefined() &&
 		!f.ActorNameDefined() &&
 		!f.ActorTypeDefined() &&
+		!f.ActorExecutionIdsDefined() &&
 		!f.GroupIDDefined() &&
 		!f.InitializedDefined() &&
 		!f.HealthRangesDefined() &&
@@ -1990,6 +1992,7 @@ func (r *PostgresRepository) Count(ctx context.Context, filter testworkflow.Filt
 		Assigned:           params.Assigned,
 		ActorName:          params.ActorName,
 		ActorType:          params.ActorType,
+		ActorExecutionIds:  params.ActorExecutionIds,
 		GroupID:            params.GroupID,
 		Initialized:        params.Initialized,
 		TagKeys:            params.TagKeys,
