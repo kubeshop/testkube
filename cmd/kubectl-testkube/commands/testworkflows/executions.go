@@ -102,7 +102,7 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&logsOnly, "logs-only", false, "show only execution logs")
 	cmd.Flags().StringSliceVarP(&tags, "tag", "", nil, "tag key value pair: --tag key1=value1")
 	cmd.Flags().StringVarP(&actorName, "actor-name", "", "", "test workflow running context actor name")
-	cmd.Flags().StringVarP(&actorType, "actor-type", "", "", "test workflow running context actor type one of cron|testtrigger|user|testworkfow|testworkflowexecution|program|gitintegration")
+	cmd.Flags().StringVarP(&actorType, "actor-type", "", "", "test workflow running context actor type one of cron|testtrigger|user|testworkfow|testworkflowexecution|program|qualityloop")
 	cmd.Flags().StringVarP(&status, "status", "", "", "test workflow execution status filter, supports comma-separated list of statuses (e.g., 'running', 'passed,failed')")
 
 	return cmd
@@ -120,11 +120,11 @@ func validateActorType(actorType testkube.TestWorkflowRunningContextActorType) e
 		testkube.TESTWORKFLOW_TestWorkflowRunningContextActorType:          {},
 		testkube.TESTWORKFLOWEXECUTION_TestWorkflowRunningContextActorType: {},
 		testkube.PROGRAM_TestWorkflowRunningContextActorType:               {},
-		testkube.GITINTEGRATION_TestWorkflowRunningContextActorType:        {},
+		testkube.QUALITYLOOP_TestWorkflowRunningContextActorType:        {},
 	}
 
 	if _, ok := actorTypes[actorType]; !ok {
-		return fmt.Errorf("please pass one of cron|testtrigger|user|testworkfow|testworkflowexecution|program|gitintegration for actor type")
+		return fmt.Errorf("please pass one of cron|testtrigger|user|testworkfow|testworkflowexecution|program|qualityloop for actor type")
 	}
 
 	return nil

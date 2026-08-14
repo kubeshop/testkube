@@ -7550,7 +7550,7 @@ spec:
                                 - testworkflow
                                 - testworkflowexecution
                                 - program
-                                - gitintegration
+                                - qualityloop
                               type: string
                           required:
                             - type
@@ -7925,7 +7925,7 @@ spec:
                                 - testworkflow
                                 - testworkflowexecution
                                 - program
-                                - gitintegration
+                                - qualityloop
                               type: string
                           required:
                             - type
@@ -20540,7 +20540,7 @@ spec:
                                 - testworkflow
                                 - testworkflowexecution
                                 - program
-                                - gitintegration
+                                - qualityloop
                               type: string
                           required:
                             - type

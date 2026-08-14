@@ -104,7 +104,7 @@ type TestWorkflowRunningContext struct {
 }
 
 // supported actors for test workflow running context
-// +kubebuilder:validation:Enum=cron;testtrigger;user;testworkflow;testworkflowexecution;program;gitintegration
+// +kubebuilder:validation:Enum=cron;testtrigger;user;testworkflow;testworkflowexecution;program;qualityloop
 type TestWorkflowRunningContextActorType string
 
 // List of TestWorkflowRunningContextActorType
@@ -115,7 +115,7 @@ const (
 	TESTWORKFLOW_TestWorkflowRunningContextActorType          TestWorkflowRunningContextActorType = "testworkflow"
 	TESTWORKFLOWEXECUTION_TestWorkflowRunningContextActorType TestWorkflowRunningContextActorType = "testworkflowexecution"
 	PROGRAM_TestWorkflowRunningContextActorType               TestWorkflowRunningContextActorType = "program"
-	GITINTEGRATION_TestWorkflowRunningContextActorType        TestWorkflowRunningContextActorType = "gitintegration"
+	QUALITYLOOP_TestWorkflowRunningContextActorType           TestWorkflowRunningContextActorType = "qualityloop"
 )
 
 // running context actor for test workflow execution
