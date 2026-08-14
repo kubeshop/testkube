@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"google.golang.org/appengine/v2/log"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/transport/spdy"
 
@@ -28,6 +27,7 @@ import (
 	"k8s.io/client-go/tools/portforward"
 
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 const (
@@ -375,7 +375,7 @@ func PortForward(ctx context.Context, namespace, serviceName string, servicePort
 			}
 		}()
 		if err = forwarder.ForwardPorts(); err != nil {
-			log.Errorf(ctx, "port forwarding failed: %v", err)
+			log.DefaultLogger.Errorw("port forwarding failed", "error", err)
 		}
 	}()
 	<-readyChan
