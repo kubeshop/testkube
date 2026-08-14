@@ -14,7 +14,7 @@ import (
 func TestGetNewRunningContext_GitIntegrationActor(t *testing.T) {
 	legacy := &testkube.TestWorkflowRunningContext{
 		Actor: &testkube.TestWorkflowRunningContextActor{
-			Type_: common.Ptr(testkube.GITINTEGRATION_TestWorkflowRunningContextActorType),
+			Type_: common.Ptr(testkube.QUALITYLOOP_TestWorkflowRunningContextActorType),
 			Name:  "git-provider-github",
 		},
 	}
@@ -40,7 +40,7 @@ func TestGetLegacyRunningContext_QualityLoopProtoMapsToGitIntegrationActor(t *te
 	require.NotNil(t, rc)
 	require.NotNil(t, rc.Actor)
 	require.NotNil(t, rc.Actor.Type_)
-	assert.Equal(t, testkube.GITINTEGRATION_TestWorkflowRunningContextActorType, *rc.Actor.Type_)
+	assert.Equal(t, testkube.QUALITYLOOP_TestWorkflowRunningContextActorType, *rc.Actor.Type_)
 	assert.Equal(t, "git-provider-github", rc.Actor.Name)
 	require.NotNil(t, rc.Interface_)
 	require.NotNil(t, rc.Interface_.Type_)

@@ -124,7 +124,7 @@ func triggeredByBucket(actorType, interfaceType string) string {
 		return "composite"
 	case testkube.PROGRAM_TestWorkflowRunningContextActorType:
 		return "automation"
-	case testkube.GITINTEGRATION_TestWorkflowRunningContextActorType:
+	case testkube.QUALITYLOOP_TestWorkflowRunningContextActorType:
 		return "git-integration"
 	case testkube.USER_TestWorkflowRunningContextActorType:
 		switch testkube.TestWorkflowRunningContextInterfaceType(interfaceType) {

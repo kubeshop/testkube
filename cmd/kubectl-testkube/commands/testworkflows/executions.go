@@ -120,7 +120,7 @@ func validateActorType(actorType testkube.TestWorkflowRunningContextActorType) e
 		testkube.TESTWORKFLOW_TestWorkflowRunningContextActorType:          {},
 		testkube.TESTWORKFLOWEXECUTION_TestWorkflowRunningContextActorType: {},
 		testkube.PROGRAM_TestWorkflowRunningContextActorType:               {},
-		testkube.GITINTEGRATION_TestWorkflowRunningContextActorType:        {},
+		testkube.QUALITYLOOP_TestWorkflowRunningContextActorType:        {},
 	}
 
 	if _, ok := actorTypes[actorType]; !ok {
