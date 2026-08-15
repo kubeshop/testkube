@@ -200,3 +200,12 @@ func (t *TestTrigger) QuoteTextFields() {
 		}
 	}
 }
+
+// EffectiveEvents normalizes the mutually exclusive event/events forms to a
+// single list: a set event is returned as a one-entry list, otherwise events.
+func (t TestTrigger) EffectiveEvents() []string {
+	if t.Event != "" {
+		return []string{t.Event}
+	}
+	return t.Events
+}
