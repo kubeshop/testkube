@@ -370,6 +370,11 @@ func (in *TestTriggerSpec) DeepCopyInto(out *TestTriggerSpec) {
 		**out = **in
 	}
 	in.ResourceSelector.DeepCopyInto(&out.ResourceSelector)
+	if in.Events != nil {
+		in, out := &in.Events, &out.Events
+		*out = make([]TestTriggerEvent, len(*in))
+		copy(*out, *in)
+	}
 	if in.Match != nil {
 		in, out := &in.Match, &out.Match
 		*out = make([]workflowtriggersv1.WorkflowTriggerFieldCondition, len(*in))
