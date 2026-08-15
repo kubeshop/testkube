@@ -139,6 +139,7 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 				ResourceRef:       request.ResourceRef,
 				ResourceSelector:  request.ResourceSelector,
 				Event:             request.Event,
+				Events:            request.Events,
 				Match:             request.Match,
 				ConditionSpec:     request.ConditionSpec,
 				ProbeSpec:         request.ProbeSpec,
@@ -175,8 +176,15 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 			if request.ResourceSelector != nil {
 				apiTrigger.ResourceSelector = request.ResourceSelector
 			}
+			// Event and Events are mutually exclusive, so setting either form
+			// replaces the other to keep the merged trigger valid.
 			if request.Event != "" {
 				apiTrigger.Event = request.Event
+				apiTrigger.Events = nil
+			}
+			if len(request.Events) > 0 {
+				apiTrigger.Events = request.Events
+				apiTrigger.Event = ""
 			}
 			if request.Match != nil {
 				apiTrigger.Match = request.Match
@@ -416,6 +424,7 @@ func mapAPITestTriggerToUpsertRequest(trigger *testkube.TestTrigger) testkube.Te
 		ResourceRef:       trigger.ResourceRef,
 		ResourceSelector:  trigger.ResourceSelector,
 		Event:             trigger.Event,
+		Events:            trigger.Events,
 		Match:             trigger.Match,
 		ConditionSpec:     trigger.ConditionSpec,
 		ProbeSpec:         trigger.ProbeSpec,
@@ -434,7 +443,11 @@ func mapAPITestTriggerToUpsertRequest(trigger *testkube.TestTrigger) testkube.Te
 // generateTestTriggerName function generates a trigger name from the TestTrigger spec
 // function also takes care of name collisions, not exceeding k8s max object name (63 characters) and not ending with a hyphen '-'
 func generateTestTriggerName(t *testtriggersv1.TestTrigger) string {
-	name := fmt.Sprintf("trigger-%s-%s-%s-%s", t.Spec.Resource, t.Spec.Event, t.Spec.Action, t.Spec.Execution)
+	var event testtriggersv1.TestTriggerEvent
+	if events := t.Spec.EffectiveEvents(); len(events) > 0 {
+		event = events[0]
+	}
+	name := fmt.Sprintf("trigger-%s-%s-%s-%s", t.Spec.Resource, event, t.Spec.Action, t.Spec.Execution)
 	if len(name) > testTriggerMaxNameLength {
 		name = name[:testTriggerMaxNameLength-1]
 	}
