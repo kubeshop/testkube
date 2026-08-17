@@ -589,7 +589,8 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
 		ctx := c.Context()
 		executionID := c.Params("executionID")
-		s.Log.Debugw("rerunning test workflow execution", "id", executionID)
+		latest := c.QueryBool("latest")
+		s.Log.Debugw("rerunning test workflow execution", "id", executionID, "latest", latest)
 
 		errPrefix := "failed to rerun test workflow execution"
 
@@ -605,14 +606,36 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			return s.ClientError(c, errPrefix, err)
 		}
 
-		if execution.ResolvedWorkflow == nil {
-			return s.ClientError(c, errPrefix, errors.New("can't find resolved workflow spec"))
-		}
+		// By default reuse the resolved snapshot from the original execution.
+		// When latest=true, omit it so the scheduler loads and resolves the current workflow definition.
+		var resolvedWorkflow []byte
+		var workflow *testkube.TestWorkflow
+		if latest {
+			name := ""
+			if execution.Workflow != nil {
+				name = execution.Workflow.Name
+			}
+			if name == "" && execution.ResolvedWorkflow != nil {
+				name = execution.ResolvedWorkflow.Name
+			}
+			if name == "" {
+				return s.ClientError(c, errPrefix, errors.New("can't find workflow name"))
+			}
 
-		name := execution.ResolvedWorkflow.Name
-		workflow, err := json.Marshal(execution.ResolvedWorkflow)
-		if err != nil {
-			return s.ClientError(c, errPrefix, err)
+			workflow, err = s.TestWorkflowsClient.Get(ctx, s.getEnvironmentId(), name)
+			if err != nil {
+				return s.ClientError(c, errPrefix, err)
+			}
+		} else {
+			if execution.ResolvedWorkflow == nil {
+				return s.ClientError(c, errPrefix, errors.New("can't find resolved workflow spec"))
+			}
+			workflow = execution.ResolvedWorkflow
+
+			resolvedWorkflow, err = json.Marshal(workflow)
+			if err != nil {
+				return s.ClientError(c, errPrefix, err)
+			}
 		}
 
 		// Load the execution request
@@ -641,17 +664,15 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 
 		// Check if workflow is silent and activate SilentMode accordingly
 		var silentMode *cloud.SilentMode
-		if execution.ResolvedWorkflow != nil {
-			// Check if workflow has silent set to true, and if so, activate SilentMode with all fields to true
-			// This overrides any SilentMode settings from the request (CLI flags)
-			if testworkflowutils.IsWorkflowSilent(execution.ResolvedWorkflow) {
-				silentMode = &cloud.SilentMode{
-					Webhooks: true,
-					Insights: true,
-					Health:   true,
-					Metrics:  true,
-					Cdevents: true,
-				}
+		// Check if workflow has silent set to true, and if so, activate SilentMode with all fields to true
+		// This overrides any SilentMode settings from the request (CLI flags)
+		if testworkflowutils.IsWorkflowSilent(workflow) {
+			silentMode = &cloud.SilentMode{
+				Webhooks: true,
+				Insights: true,
+				Health:   true,
+				Metrics:  true,
+				Cdevents: true,
 			}
 		}
 
@@ -681,7 +702,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			scheduleExecution.Targets = []*cloud.ExecutionTarget{target}
 		}
 
-		scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: name}
+		scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: workflow.Name}
 		scheduleExecution.Config = request.Config
 		if request.Runtime != nil && len(request.Runtime.Variables) > 0 {
 			scheduleExecution.Runtime = &cloud.TestWorkflowRuntime{
@@ -695,7 +716,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			RunningContext:     runningContext,
 			User:               user,
 			ExecutionReference: &executionID,
-			ResolvedWorkflow:   workflow,
+			ResolvedWorkflow:   resolvedWorkflow,
 			SilentMode:         silentMode,
 		})
 
@@ -703,7 +724,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			return s.InternalError(c, errPrefix, "execution error", err)
 		}
 
-		s.Log.Debugw("rerunning test workflow execution", "id", executionID)
+		s.Log.Debugw("rerunning test workflow execution", "id", executionID, "latest", latest)
 		if len(results) != 0 {
 			return c.JSON(results[0])
 		}

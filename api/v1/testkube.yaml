@@ -4448,8 +4448,12 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/executionID"
+        - $ref: "#/components/parameters/Latest"
       summary: Rerun test workflow execution
-      description: Rerun test workflow execution
+      description: |
+        Rerun test workflow execution using the previous execution's parameters.
+        By default the resolved workflow snapshot from the original execution is reused.
+        When `latest=true`, the current workflow definition is used instead while keeping the original parameter set.
       operationId: rerunTestWorkflowExecutionByTestWorkflow
       requestBody:
         description: test workflow running context
@@ -4817,8 +4821,12 @@ paths:
         - api
       parameters:
         - $ref: "#/components/parameters/executionID"
+        - $ref: "#/components/parameters/Latest"
       summary: Rerun test workflow execution
-      description: Rerun test workflow execution
+      description: |
+        Rerun test workflow execution using the previous execution's parameters.
+        By default the resolved workflow snapshot from the original execution is reused.
+        When `latest=true`, the current workflow definition is used instead while keeping the original parameter set.
       operationId: rerunTestWorkflowExecution
       requestBody:
         description: test workflow running context
@@ -12372,6 +12380,14 @@ components:
         type: boolean
         default: false
       description: should inline templates in the resolved workflow
+      required: false
+    Latest:
+      in: query
+      name: latest
+      schema:
+        type: boolean
+        default: false
+      description: when rerunning, use the latest workflow definition instead of the original resolved snapshot while keeping the original parameter set
       required: false
     All:
       in: query
