@@ -26,6 +26,7 @@ import (
 	tkhttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 type HelmOptions struct {
@@ -84,7 +85,7 @@ func ShowOperatorDeprecationWarning(manager string, noCRDs bool) {
 	ui.NL()
 }
 
-func HelmUpgradeOrInstallTestkubeOnPremDemo(options HelmOptions) *CLIError {
+func HelmUpgradeOrInstallTestkubeOnPremDemo(options HelmOptions, runnerSecretKey string) *CLIError {
 	helmPath, cliErr := lookupHelmPath()
 	if cliErr != nil {
 		return cliErr
@@ -93,6 +94,11 @@ func HelmUpgradeOrInstallTestkubeOnPremDemo(options HelmOptions) *CLIError {
 	if err := updateHelmRepo(helmPath, options.DryRun, true); err != nil {
 		return err
 	}
+
+	if options.SetOptions == nil {
+		options.SetOptions = make(map[string]string)
+	}
+	options.SetOptions[demoRunnerBootstrapSecretKeyPath] = runnerSecretKey
 
 	// For default setup, change the Agent host to a cluster service endpoint,
 	// so it will be possible to install runners in different namespaces.
@@ -120,6 +126,133 @@ func HelmUpgradeOrInstallTestkubeOnPremDemo(options HelmOptions) *CLIError {
 	ui.Debug("Helm install testkube output", output)
 	return nil
 
+}
+
+const (
+	demoRunnerName                   = "demo-runner"
+	demoRunnerID                     = "tkcrun_demo-runner"
+	demoRunnerOrgID                  = "tkcorg_demo"
+	demoRunnerEnvID                  = "tkcenv_my-first-environment"
+	demoRunnerBootstrapSecretKeyPath = "testkube-cloud-api.api.features.bootstrapConfig.config.organizations[0].runners[0].secret_key"
+	demoRunnerDeploymentName         = "testkube-demo-runner"
+	demoControlPlaneDeploymentName   = "testkube-enterprise-api"
+	demoRunnerAPIKeyEnvVar           = "TESTKUBE_PRO_API_KEY"
+)
+
+func GenerateDemoAgentSecretKey() string {
+	return "tkckey_agent_" + utils.RandAlphanum(32)
+}
+
+func ResolveDemoAgentSecretKey(namespace string, dryRun bool) (string, *CLIError) {
+	if dryRun {
+		return GenerateDemoAgentSecretKey(), nil
+	}
+
+	runnerExists, err := KubectlResourceExists(namespace, "deployment", demoRunnerDeploymentName)
+	if err != nil {
+		return "", NewCLIError(
+			TKErrKubectlCommandFailed,
+			"Checking for an existing Testkube demo runner",
+			"Check that the kubeconfig (~/.kube/config) has correct permissions and the cluster is reachable by running 'kubectl get nodes'.",
+			err,
+		)
+	}
+
+	var runnerKey string
+	if runnerExists {
+		var keyErr *CLIError
+		runnerKey, keyErr = readDemoRunnerSecretKey(namespace)
+		if keyErr != nil {
+			return "", keyErr
+		}
+	}
+
+	cpExists := false
+	if !runnerExists {
+		cpExists, err = KubectlResourceExists(namespace, "deployment", demoControlPlaneDeploymentName)
+		if err != nil {
+			return "", NewCLIError(
+				TKErrKubectlCommandFailed,
+				"Checking for an existing Testkube Control Plane",
+				"Check that the kubeconfig (~/.kube/config) has correct permissions and the cluster is reachable by running 'kubectl get nodes'.",
+				err,
+			)
+		}
+	}
+
+	reuseKey, generate, cliErr := decideDemoAgentSecretKey(runnerExists, runnerKey, cpExists, namespace)
+	if cliErr != nil {
+		return "", cliErr
+	}
+	if generate {
+		return GenerateDemoAgentSecretKey(), nil
+	}
+	return reuseKey, nil
+}
+
+func decideDemoAgentSecretKey(runnerExists bool, runnerKey string, cpExists bool, namespace string) (reuseKey string, generate bool, cliErr *CLIError) {
+	if runnerExists {
+		if runnerKey != "" {
+			return runnerKey, false, nil
+		}
+		return "", false, NewCLIError(
+			TKErrInvalidInstallConfig,
+			"Existing Testkube demo runner has no readable agent key",
+			fmt.Sprintf("To fix: recreate the cluster, or delete the %q namespace, then run 'testkube init demo' once. (A demo runner already exists but its agent key can't be read, so this install can't reuse it and a fresh key would not match the Control Plane.)", namespace),
+			fmt.Errorf("demo runner %q found but %s env is empty", demoRunnerDeploymentName, demoRunnerAPIKeyEnvVar),
+		)
+	}
+
+	if cpExists {
+		return "", false, NewCLIError(
+			TKErrInvalidInstallConfig,
+			"Testkube Control Plane already installed without a matching demo runner",
+			fmt.Sprintf("To fix: recreate the cluster, or delete the %q namespace, then run 'testkube init demo' once. (The Control Plane already bootstrapped a runner whose key can't be recovered, so installing a fresh key here would be rejected.)", namespace),
+			fmt.Errorf("control plane %q present without demo runner %q", demoControlPlaneDeploymentName, demoRunnerDeploymentName),
+		)
+	}
+
+	return "", true, nil
+}
+
+func readDemoRunnerSecretKey(namespace string) (string, *CLIError) {
+	kubectlPath, cliErr := lookupKubectlPath()
+	if cliErr != nil {
+		return "", cliErr
+	}
+	jsonpath := fmt.Sprintf(`jsonpath={.spec.template.spec.containers[*].env[?(@.name=="%s")].value}`, demoRunnerAPIKeyEnvVar)
+	out, cliErr := runKubectlCommand(kubectlPath, []string{"get", "deployment", demoRunnerDeploymentName, "--namespace", namespace, "-o", jsonpath})
+	if cliErr != nil {
+		return "", cliErr
+	}
+	return strings.TrimSpace(out), nil
+}
+
+func HelmUpgradeOrInstallTestkubeOnPremDemoRunner(options HelmOptions, runnerSecretKey string) *CLIError {
+	return HelmUpgradeOrInstallGeneric(demoRunnerHelmOptions(options.Namespace, runnerSecretKey, options.DryRun))
+}
+
+func demoRunnerHelmOptions(namespace, runnerSecretKey string, dryRun bool) HelmGenericOptions {
+	return HelmGenericOptions{
+		DryRun:         dryRun,
+		RegistryURL:    "https://kubeshop.github.io/helm-charts",
+		RepositoryName: "kubeshop",
+		ChartName:      "testkube-runner",
+		ReleaseName:    "testkube-" + demoRunnerName,
+		Namespace:      namespace,
+		Args:           []string{"--wait"},
+		Values: map[string]interface{}{
+			"fullnameOverride":  demoRunnerDeploymentName,
+			"runner.id":         demoRunnerID,
+			"runner.name":       demoRunnerName,
+			"runner.orgId":      demoRunnerOrgID,
+			"runner.envId":      demoRunnerEnvID,
+			"runner.secret":     runnerSecretKey,
+			"cloud.url":         fmt.Sprintf("testkube-enterprise-api.%s.svc.cluster.local:8089", namespace),
+			"cloud.tls.enabled": false,
+			"listener.enabled":  true,
+		},
+	}
 }
 
 func HelmUpgradeOrInstallTestkubeAgent(options HelmOptions, cfg config.Data, isMigration bool) *CLIError {
