@@ -39,7 +39,6 @@ func TestTestWorkflowTemplateSyncReconcilerUpdateOrCreate(t *testing.T) {
 		fakeKubernetesClient{
 			TestWorkflowTemplate: input,
 		},
-		discardRecorder(),
 		store,
 	)
 
@@ -64,7 +63,6 @@ func TestTestWorkflowTemplateSyncReconcilerDelete(t *testing.T) {
 		fakeKubernetesClient{
 			Err: fakeNotFoundErr,
 		},
-		discardRecorder(),
 		store,
 	)
 
@@ -95,7 +93,6 @@ func TestTestWorkflowTemplateSyncReconcilerDeleteWhenMarkedForDeletion(t *testin
 				},
 			},
 		},
-		discardRecorder(),
 		store,
 	)
 

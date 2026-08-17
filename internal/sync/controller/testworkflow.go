@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -21,13 +20,13 @@ type TestWorkflowStore interface {
 func NewTestWorkflowSyncController(mgr ctrl.Manager, store TestWorkflowStore) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&testworkflowsv1.TestWorkflow{}).
-		Complete(testWorkflowSyncReconciler(mgr.GetClient(), mgr.GetEventRecorder("testworkflow-sync-controller"), store)); err != nil {
+		Complete(testWorkflowSyncReconciler(mgr.GetClient(), store)); err != nil {
 		return fmt.Errorf("create new sync controller for TestWorkflow: %w", err)
 	}
 	return nil
 }
 
-func testWorkflowSyncReconciler(client client.Reader, recorder events.EventRecorder, store TestWorkflowStore) reconcile.Reconciler {
+func testWorkflowSyncReconciler(client client.Reader, store TestWorkflowStore) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 		var workflow testworkflowsv1.TestWorkflow
 		err := client.Get(ctx, req.NamespacedName, &workflow)
@@ -37,9 +36,7 @@ func testWorkflowSyncReconciler(client client.Reader, recorder events.EventRecor
 			// Passing the name here rather than the namespaced name as generally we refer to objects
 			// purely by their name.
 			if err := store.DeleteTestWorkflow(ctx, req.Name); err != nil {
-				// The resource is already gone from the cluster, so there is nothing left to record
-				// an Event against.
-				return ctrl.Result{}, reportSyncError(ctx, recorder, nil, fmt.Errorf("delete TestWorkflow %q from store: %w", req.Name, err))
+				return ctrl.Result{}, terminalOnOwnershipConflict(fmt.Errorf("delete TestWorkflow %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		case err != nil:
@@ -57,14 +54,14 @@ func testWorkflowSyncReconciler(client client.Reader, recorder events.EventRecor
 			// Passing the name here rather than the namespaced name as generally we refer to objects
 			// purely by their name.
 			if err := store.DeleteTestWorkflow(ctx, req.Name); err != nil {
-				return ctrl.Result{}, reportSyncError(ctx, recorder, &workflow, fmt.Errorf("delete TestWorkflow %q from store: %w", req.Name, err))
+				return ctrl.Result{}, terminalOnOwnershipConflict(fmt.Errorf("delete TestWorkflow %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		}
 
 		// Regular update so send the new object into the store.
 		if err := store.UpdateOrCreateTestWorkflow(ctx, workflow); err != nil {
-			return ctrl.Result{}, reportSyncError(ctx, recorder, &workflow, fmt.Errorf("update TestWorkflow %q in store: %w", workflow.Name, err))
+			return ctrl.Result{}, terminalOnOwnershipConflict(fmt.Errorf("update TestWorkflow %q in store: %w", workflow.Name, err))
 		}
 
 		return ctrl.Result{}, nil

@@ -27,7 +27,6 @@ func TestWorkflowTriggerSyncReconcilerUpdateOrCreate(t *testing.T) {
 		fakeKubernetesClient{
 			WorkflowTrigger: input,
 		},
-		discardRecorder(),
 		store,
 	)
 
@@ -52,7 +51,6 @@ func TestWorkflowTriggerSyncReconcilerDelete(t *testing.T) {
 		fakeKubernetesClient{
 			Err: fakeNotFoundErr,
 		},
-		discardRecorder(),
 		store,
 	)
 
@@ -83,7 +81,6 @@ func TestWorkflowTriggerSyncReconcilerDeleteWhenMarkedForDeletion(t *testing.T) 
 				},
 			},
 		},
-		discardRecorder(),
 		store,
 	)
 

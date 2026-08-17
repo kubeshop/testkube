@@ -42,7 +42,6 @@ func TestTestWorkflowSyncReconcilerUpdateOrCreate(t *testing.T) {
 		fakeKubernetesClient{
 			TestWorkflow: input,
 		},
-		discardRecorder(),
 		store,
 	)
 
@@ -67,7 +66,6 @@ func TestTestWorkflowSyncReconcilerDelete(t *testing.T) {
 		fakeKubernetesClient{
 			Err: fakeNotFoundErr,
 		},
-		discardRecorder(),
 		store,
 	)
 
@@ -98,7 +96,6 @@ func TestTestWorkflowSyncReconcilerDeleteWhenMarkedForDeletion(t *testing.T) {
 				},
 			},
 		},
-		discardRecorder(),
 		store,
 	)
 
@@ -127,7 +124,6 @@ func TestTestWorkflowSyncReconcilerOwnershipConflictIsTerminal(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: name},
 			},
 		},
-		discardRecorder(),
 		store,
 	)
 

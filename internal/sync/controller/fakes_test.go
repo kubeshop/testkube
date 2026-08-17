@@ -5,7 +5,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
@@ -15,12 +14,6 @@ import (
 )
 
 var fakeNotFoundErr = errors.NewNotFound(schema.GroupResource{}, "test-error")
-
-// discardRecorder throws away every Event. Tests that assert on Events build their own
-// events.FakeRecorder with a buffered channel instead.
-func discardRecorder() events.EventRecorder {
-	return &events.FakeRecorder{}
-}
 
 type fakeKubernetesClient struct {
 	Err                  error

@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -21,13 +20,13 @@ type TestTriggerStore interface {
 func NewTestTriggerSyncController(mgr ctrl.Manager, store TestTriggerStore) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&testtriggersv1.TestTrigger{}).
-		Complete(testTriggerSyncReconciler(mgr.GetClient(), mgr.GetEventRecorder("testtrigger-sync-controller"), store)); err != nil {
+		Complete(testTriggerSyncReconciler(mgr.GetClient(), store)); err != nil {
 		return fmt.Errorf("create new sync controller for TestTrigger: %w", err)
 	}
 	return nil
 }
 
-func testTriggerSyncReconciler(client client.Reader, recorder events.EventRecorder, store TestTriggerStore) reconcile.Reconciler {
+func testTriggerSyncReconciler(client client.Reader, store TestTriggerStore) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 		var trigger testtriggersv1.TestTrigger
 		err := client.Get(ctx, req.NamespacedName, &trigger)
@@ -37,9 +36,7 @@ func testTriggerSyncReconciler(client client.Reader, recorder events.EventRecord
 			// Passing the name here rather than the namespaced name as generally we refer to objects
 			// purely by their name.
 			if err := store.DeleteTestTrigger(ctx, req.Name); err != nil {
-				// The resource is already gone from the cluster, so there is nothing left to record
-				// an Event against.
-				return ctrl.Result{}, reportSyncError(ctx, recorder, nil, fmt.Errorf("delete TestTrigger %q from store: %w", req.Name, err))
+				return ctrl.Result{}, terminalOnOwnershipConflict(fmt.Errorf("delete TestTrigger %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		case err != nil:
@@ -57,14 +54,14 @@ func testTriggerSyncReconciler(client client.Reader, recorder events.EventRecord
 			// Passing the name here rather than the namespaced name as generally we refer to objects
 			// purely by their name.
 			if err := store.DeleteTestTrigger(ctx, req.Name); err != nil {
-				return ctrl.Result{}, reportSyncError(ctx, recorder, &trigger, fmt.Errorf("delete TestTrigger %q from store: %w", req.Name, err))
+				return ctrl.Result{}, terminalOnOwnershipConflict(fmt.Errorf("delete TestTrigger %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		}
 
 		// Regular update so send the new object into the store.
 		if err := store.UpdateOrCreateTestTrigger(ctx, trigger); err != nil {
-			return ctrl.Result{}, reportSyncError(ctx, recorder, &trigger, fmt.Errorf("update TestTrigger %q in store: %w", trigger.Name, err))
+			return ctrl.Result{}, terminalOnOwnershipConflict(fmt.Errorf("update TestTrigger %q in store: %w", trigger.Name, err))
 		}
 
 		return ctrl.Result{}, nil

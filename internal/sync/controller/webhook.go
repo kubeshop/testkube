@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -21,13 +20,13 @@ type WebhookStore interface {
 func NewWebhookSyncController(mgr ctrl.Manager, store WebhookStore) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&executorv1.Webhook{}).
-		Complete(webhookSyncReconciler(mgr.GetClient(), mgr.GetEventRecorder("webhook-sync-controller"), store)); err != nil {
+		Complete(webhookSyncReconciler(mgr.GetClient(), store)); err != nil {
 		return fmt.Errorf("create new sync controller for Webhook: %w", err)
 	}
 	return nil
 }
 
-func webhookSyncReconciler(client client.Reader, recorder events.EventRecorder, store WebhookStore) reconcile.Reconciler {
+func webhookSyncReconciler(client client.Reader, store WebhookStore) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 		var webhook executorv1.Webhook
 		err := client.Get(ctx, req.NamespacedName, &webhook)
@@ -37,9 +36,7 @@ func webhookSyncReconciler(client client.Reader, recorder events.EventRecorder, 
 			// Passing the name here rather than the namespaced name as generally we refer to objects
 			// purely by their name.
 			if err := store.DeleteWebhook(ctx, req.Name); err != nil {
-				// The resource is already gone from the cluster, so there is nothing left to record
-				// an Event against.
-				return ctrl.Result{}, reportSyncError(ctx, recorder, nil, fmt.Errorf("delete Webhook %q from store: %w", req.Name, err))
+				return ctrl.Result{}, terminalOnOwnershipConflict(fmt.Errorf("delete Webhook %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		case err != nil:
@@ -57,14 +54,14 @@ func webhookSyncReconciler(client client.Reader, recorder events.EventRecorder, 
 			// Passing the name here rather than the namespaced name as generally we refer to objects
 			// purely by their name.
 			if err := store.DeleteWebhook(ctx, req.Name); err != nil {
-				return ctrl.Result{}, reportSyncError(ctx, recorder, &webhook, fmt.Errorf("delete Webhook %q from store: %w", req.Name, err))
+				return ctrl.Result{}, terminalOnOwnershipConflict(fmt.Errorf("delete Webhook %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		}
 
 		// Regular update so send the new object into the store.
 		if err := store.UpdateOrCreateWebhook(ctx, webhook); err != nil {
-			return ctrl.Result{}, reportSyncError(ctx, recorder, &webhook, fmt.Errorf("update Webhook %q in store: %w", webhook.Name, err))
+			return ctrl.Result{}, terminalOnOwnershipConflict(fmt.Errorf("update Webhook %q in store: %w", webhook.Name, err))
 		}
 
 		return ctrl.Result{}, nil

@@ -27,7 +27,6 @@ func TestWebhookSyncReconcilerUpdateOrCreate(t *testing.T) {
 		fakeKubernetesClient{
 			Webhook: input,
 		},
-		discardRecorder(),
 		store,
 	)
 
@@ -52,7 +51,6 @@ func TestWebhookSyncReconcilerDelete(t *testing.T) {
 		fakeKubernetesClient{
 			Err: fakeNotFoundErr,
 		},
-		discardRecorder(),
 		store,
 	)
 
@@ -83,7 +81,6 @@ func TestWebhookSyncReconcilerDeleteWhenMarkedForDeletion(t *testing.T) {
 				},
 			},
 		},
-		discardRecorder(),
 		store,
 	)
 
