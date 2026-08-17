@@ -206,10 +206,11 @@ func NewInitCmdDemo() *cobra.Command {
 				common.HandleCLIError(cliErr)
 			}
 			sendTelemetry(cmd, cfg, license, "license validated")
-
+			
 			ui.NL()
 			ui.Warn("Installation is about to start and may take a several minutes:")
 			ui.NL()
+			ui.Warn("- This install typically works best in a local cluster.")
 			ui.Warn("- Testkube will be installed in the " + kubecontext + " context.")
 			ui.Warn("- Testkube services will be applied to the " + namespace + " namespace.")
 			ui.Warn("- Testkube CRDs and cluster roles will be applied to your cluster.")
