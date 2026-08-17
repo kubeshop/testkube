@@ -42,9 +42,9 @@ type ClientOptions struct {
 	ParentExecutionIDs []string
 
 	// ParentActorType is the actor type of the parent execution. When it belongs
-	// to the "sticky actor" family (currently only QUALITYLOOP), children
-	// scheduled from this parent inherit the same actor type instead of being
-	// stamped as TESTWORKFLOW.
+	// to the "sticky actor" family (currently only QUALITYLOOP, exposed as
+	// gitintegration on the wire), children scheduled from this parent inherit
+	// the same actor type instead of being stamped as TESTWORKFLOW.
 	ParentActorType testkube.TestWorkflowRunningContextActorType
 
 	Runtime     RuntimeConfig

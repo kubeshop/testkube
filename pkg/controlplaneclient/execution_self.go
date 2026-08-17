@@ -20,9 +20,9 @@ type ExecutionsReader channels.Watcher[testkube.TestWorkflowExecution]
 // non-sticky parents; callers should fall back to the default
 // RunningContextType_EXECUTION in that case.
 //
-// Only Quality Loop is sticky today. Extend this set carefully — every actor
-// added here changes the wire semantics of every chained child scheduled by
-// that actor's parents.
+// Only the git-integration actor is sticky today. Extend this set carefully —
+// every actor added here changes the wire semantics of every chained child
+// scheduled by that actor's parents.
 func stickyChildRunningContextType(parentActorType testkube.TestWorkflowRunningContextActorType) (cloud.RunningContextType, bool) {
 	switch parentActorType {
 	case testkube.QUALITYLOOP_TestWorkflowRunningContextActorType:
