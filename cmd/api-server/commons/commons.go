@@ -319,6 +319,7 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		proContext.Agent.Labels = foundProContext.Agent.Labels
 		proContext.Agent.Disabled = foundProContext.Agent.Disabled
 		proContext.Agent.IsSuperAgent = foundProContext.Agent.IsSuperAgent
+		proContext.Agent.Capabilities = foundProContext.Agent.Capabilities
 		proContext.Agent.Environments = common.MapSlice(foundProContext.Agent.Environments, func(env *cloud.ProContextEnvironment) config.ProContextAgentEnvironment {
 			return config.ProContextAgentEnvironment{
 				ID:   env.Id,
