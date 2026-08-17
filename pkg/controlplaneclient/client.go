@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/internal/config"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 )
 
@@ -39,6 +40,12 @@ type ClientOptions struct {
 	ExecutionID        string
 	WorkflowName       string
 	ParentExecutionIDs []string
+
+	// ParentActorType is the actor type of the parent execution. When it belongs
+	// to the "sticky actor" family (currently only QUALITYLOOP), children
+	// scheduled from this parent inherit the same actor type instead of being
+	// stamped as TESTWORKFLOW.
+	ParentActorType testkube.TestWorkflowRunningContextActorType
 
 	Runtime     RuntimeConfig
 	SendTimeout time.Duration

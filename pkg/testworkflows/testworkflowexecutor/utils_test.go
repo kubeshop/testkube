@@ -42,7 +42,29 @@ func TestGetLegacyRunningContext_QualityLoopProtoMapsToGitIntegrationActor(t *te
 	require.NotNil(t, rc.Actor.Type_)
 	assert.Equal(t, testkube.QUALITYLOOP_TestWorkflowRunningContextActorType, *rc.Actor.Type_)
 	assert.Equal(t, "git-provider-github", rc.Actor.Name)
+	assert.Empty(t, rc.Actor.ExecutionId, "root QUALITYLOOP execution should not carry a parent link")
+	assert.Empty(t, rc.Actor.ExecutionPath)
 	require.NotNil(t, rc.Interface_)
 	require.NotNil(t, rc.Interface_.Type_)
 	assert.Equal(t, testkube.CICD_TestWorkflowRunningContextInterfaceType, *rc.Interface_.Type_)
+}
+
+func TestGetLegacyRunningContext_QualityLoopWithParentExecutionIdsPopulatesChainLink(t *testing.T) {
+	req := &cloud.ScheduleRequest{
+		RunningContext: &cloud.RunningContext{
+			Type: cloud.RunningContextType_QUALITYLOOP,
+			Name: "git-provider-github",
+		},
+		ParentExecutionIds: []string{"root-exec-id", "parent-exec-id"},
+	}
+
+	rc := GetLegacyRunningContext(req)
+
+	require.NotNil(t, rc)
+	require.NotNil(t, rc.Actor)
+	require.NotNil(t, rc.Actor.Type_)
+	assert.Equal(t, testkube.QUALITYLOOP_TestWorkflowRunningContextActorType, *rc.Actor.Type_)
+	assert.Equal(t, "parent-exec-id", rc.Actor.ExecutionId,
+		"a chained QUALITYLOOP child must inherit the parent link so ListChildExecutions and cascade abort keep working")
+	assert.Equal(t, "root-exec-id/parent-exec-id", rc.Actor.ExecutionPath)
 }
