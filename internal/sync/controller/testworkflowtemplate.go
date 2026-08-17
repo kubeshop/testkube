@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -20,13 +21,13 @@ type TestWorkflowTemplateStore interface {
 func NewTestWorkflowTemplateSyncController(mgr ctrl.Manager, store TestWorkflowTemplateStore) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&testworkflowsv1.TestWorkflowTemplate{}).
-		Complete(testWorkflowTemplateSyncReconciler(mgr.GetClient(), store)); err != nil {
+		Complete(testWorkflowTemplateSyncReconciler(mgr.GetClient(), mgr.GetEventRecorder("testworkflowtemplate-sync-controller"), store)); err != nil {
 		return fmt.Errorf("create new sync controller for TestWorkflowTemplate: %w", err)
 	}
 	return nil
 }
 
-func testWorkflowTemplateSyncReconciler(client client.Reader, store TestWorkflowTemplateStore) reconcile.Reconciler {
+func testWorkflowTemplateSyncReconciler(client client.Reader, recorder events.EventRecorder, store TestWorkflowTemplateStore) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 		var workflowTemplate testworkflowsv1.TestWorkflowTemplate
 		err := client.Get(ctx, req.NamespacedName, &workflowTemplate)
@@ -36,11 +37,9 @@ func testWorkflowTemplateSyncReconciler(client client.Reader, store TestWorkflow
 			// Passing the name here rather than the namespaced name as generally we refer to objects
 			// purely by their name.
 			if err := store.DeleteTestWorkflowTemplate(ctx, req.Name); err != nil {
-				// Unable to delete for some reason, request a retry.
-				// We might want to selectively handle different errors here, but ideally they should
-				// be handled in the store implementation. If we return abstracted error messages from
-				// the store then we should handle them here.
-				return ctrl.Result{}, fmt.Errorf("delete TestWorkflowTemplate %q from store: %w", req.Name, err)
+				// The resource is already gone from the cluster, so there is nothing left to record
+				// an Event against.
+				return ctrl.Result{}, reportSyncError(ctx, recorder, nil, fmt.Errorf("delete TestWorkflowTemplate %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		case err != nil:
@@ -58,22 +57,14 @@ func testWorkflowTemplateSyncReconciler(client client.Reader, store TestWorkflow
 			// Passing the name here rather than the namespaced name as generally we refer to objects
 			// purely by their name.
 			if err := store.DeleteTestWorkflowTemplate(ctx, req.Name); err != nil {
-				// Unable to delete for some reason, request a retry.
-				// We might want to selectively handle different errors here, but ideally they should
-				// be handled in the store implementation. If we return abstracted error messages from
-				// the store then we should handle them here.
-				return ctrl.Result{}, fmt.Errorf("delete TestWorkflowTemplate %q from store: %w", req.Name, err)
+				return ctrl.Result{}, reportSyncError(ctx, recorder, &workflowTemplate, fmt.Errorf("delete TestWorkflowTemplate %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		}
 
 		// Regular update so send the new object into the store.
 		if err := store.UpdateOrCreateTestWorkflowTemplate(ctx, workflowTemplate); err != nil {
-			// Unable to update or create for some reason, request a retry.
-			// We might want to selectively handle different errors here, but ideally they should
-			// be handled in the store implementation. If we return abstracted error messages from
-			// the store then we should handle them here.
-			return ctrl.Result{}, fmt.Errorf("update TestWorkflowTemplate %q in store: %w", workflowTemplate.Name, err)
+			return ctrl.Result{}, reportSyncError(ctx, recorder, &workflowTemplate, fmt.Errorf("update TestWorkflowTemplate %q in store: %w", workflowTemplate.Name, err))
 		}
 
 		return ctrl.Result{}, nil

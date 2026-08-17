@@ -30,7 +30,7 @@ func (c Client) UpdateOrCreateWorkflowTrigger(ctx context.Context, obj workflowt
 			},
 		},
 	}, c.callOpts...); err != nil {
-		return fmt.Errorf("send request to update or create workflowtrigger: %w", err)
+		return fmt.Errorf("send request to update or create workflowtrigger: %w", translateError(err))
 	}
 
 	return nil
@@ -50,7 +50,7 @@ func (c Client) DeleteWorkflowTrigger(ctx context.Context, name string) error {
 			},
 		},
 	}, c.callOpts...); err != nil {
-		return fmt.Errorf("send request to delete workflowtrigger: %w", err)
+		return fmt.Errorf("send request to delete workflowtrigger: %w", translateError(err))
 	}
 
 	return nil

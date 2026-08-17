@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -20,13 +21,13 @@ type WebhookTemplateStore interface {
 func NewWebhookTemplateSyncController(mgr ctrl.Manager, store WebhookTemplateStore) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&executorv1.WebhookTemplate{}).
-		Complete(webhookTemplateSyncReconciler(mgr.GetClient(), store)); err != nil {
+		Complete(webhookTemplateSyncReconciler(mgr.GetClient(), mgr.GetEventRecorder("webhooktemplate-sync-controller"), store)); err != nil {
 		return fmt.Errorf("create new sync controller for WebhookTemplate: %w", err)
 	}
 	return nil
 }
 
-func webhookTemplateSyncReconciler(client client.Reader, store WebhookTemplateStore) reconcile.Reconciler {
+func webhookTemplateSyncReconciler(client client.Reader, recorder events.EventRecorder, store WebhookTemplateStore) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 		var template executorv1.WebhookTemplate
 		err := client.Get(ctx, req.NamespacedName, &template)
@@ -36,11 +37,9 @@ func webhookTemplateSyncReconciler(client client.Reader, store WebhookTemplateSt
 			// Passing the name here rather than the namespaced name as generally we refer to objects
 			// purely by their name.
 			if err := store.DeleteWebhookTemplate(ctx, req.Name); err != nil {
-				// Unable to delete for some reason, request a retry.
-				// We might want to selectively handle different errors here, but ideally they should
-				// be handled in the store implementation. If we return abstracted error messages from
-				// the store then we should handle them here.
-				return ctrl.Result{}, fmt.Errorf("delete WebhookTemplate %q from store: %w", req.Name, err)
+				// The resource is already gone from the cluster, so there is nothing left to record
+				// an Event against.
+				return ctrl.Result{}, reportSyncError(ctx, recorder, nil, fmt.Errorf("delete WebhookTemplate %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		case err != nil:
@@ -58,22 +57,14 @@ func webhookTemplateSyncReconciler(client client.Reader, store WebhookTemplateSt
 			// Passing the name here rather than the namespaced name as generally we refer to objects
 			// purely by their name.
 			if err := store.DeleteWebhookTemplate(ctx, req.Name); err != nil {
-				// Unable to delete for some reason, request a retry.
-				// We might want to selectively handle different errors here, but ideally they should
-				// be handled in the store implementation. If we return abstracted error messages from
-				// the store then we should handle them here.
-				return ctrl.Result{}, fmt.Errorf("delete WebhookTemplate %q from store: %w", req.Name, err)
+				return ctrl.Result{}, reportSyncError(ctx, recorder, &template, fmt.Errorf("delete WebhookTemplate %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		}
 
 		// Regular update so send the new object into the store.
 		if err := store.UpdateOrCreateWebhookTemplate(ctx, template); err != nil {
-			// Unable to update or create for some reason, request a retry.
-			// We might want to selectively handle different errors here, but ideally they should
-			// be handled in the store implementation. If we return abstracted error messages from
-			// the store then we should handle them here.
-			return ctrl.Result{}, fmt.Errorf("update WebhookTemplate %q in store: %w", template.Name, err)
+			return ctrl.Result{}, reportSyncError(ctx, recorder, &template, fmt.Errorf("update WebhookTemplate %q in store: %w", template.Name, err))
 		}
 
 		return ctrl.Result{}, nil

@@ -27,6 +27,7 @@ func TestTestTriggerSyncReconcilerUpdateOrCreate(t *testing.T) {
 		fakeKubernetesClient{
 			TestTrigger: input,
 		},
+		discardRecorder(),
 		store,
 	)
 
@@ -51,6 +52,7 @@ func TestTestTriggerSyncReconcilerDelete(t *testing.T) {
 		fakeKubernetesClient{
 			Err: fakeNotFoundErr,
 		},
+		discardRecorder(),
 		store,
 	)
 
@@ -81,6 +83,7 @@ func TestTestTriggerSyncReconcilerDeleteWhenMarkedForDeletion(t *testing.T) {
 				},
 			},
 		},
+		discardRecorder(),
 		store,
 	)
 
