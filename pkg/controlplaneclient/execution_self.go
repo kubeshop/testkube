@@ -14,23 +14,6 @@ import (
 
 type ExecutionsReader channels.Watcher[testkube.TestWorkflowExecution]
 
-// stickyChildRunningContextType returns the cloud RunningContextType that a
-// child scheduled from a parent with the given actor type should carry, if the
-// parent belongs to a "sticky actor" family. The bool is false for
-// non-sticky parents; callers should fall back to the default
-// RunningContextType_EXECUTION in that case.
-//
-// Only the git-integration actor is sticky today. Extend this set carefully —
-// every actor added here changes the wire semantics of every chained child
-// scheduled by that actor's parents.
-func stickyChildRunningContextType(parentActorType testkube.TestWorkflowRunningContextActorType) (cloud.RunningContextType, bool) {
-	switch parentActorType {
-	case testkube.QUALITYLOOP_TestWorkflowRunningContextActorType:
-		return cloud.RunningContextType_QUALITYLOOP, true
-	}
-	return cloud.RunningContextType_UNKNOWN, false
-}
-
 type ExecutionSelfClient interface {
 	AppendExecutionReport(ctx context.Context, environmentId, executionId, legacyWorkflowName, stepRef, filePath string, report []byte) error
 	SaveExecutionArtifactGetPresignedURL(ctx context.Context, environmentId, executionId, legacyWorkflowName, stepRef, filePath, contentType string) (string, error)
@@ -68,18 +51,10 @@ func (c *client) SaveExecutionArtifactGetPresignedURL(ctx context.Context, envir
 
 func (c *client) ScheduleExecution(ctx context.Context, environmentId string, request *cloud.ScheduleRequest) ExecutionsReader {
 	if c.opts.ExecutionID != "" {
-		// By default a chained child carries RunningContextType_EXECUTION so
-		// the server maps it to actor.type=testworkflow. If the parent belongs
-		// to a "sticky actor" family, propagate the parent's actor type to the
-		// child instead: children then carry the parent's actor natively.
-		requestType := cloud.RunningContextType_EXECUTION
-		if stickyRunningContextType, ok := stickyChildRunningContextType(c.opts.ParentActorType); ok {
-			requestType = stickyRunningContextType
-		}
 		request.RunningContext = &cloud.RunningContext{
 			Name: c.opts.WorkflowName,
 			Id:   c.opts.ExecutionID,
-			Type: requestType,
+			Type: c.opts.ParentActorType.ChildRunningContextType(),
 		}
 		request.ParentExecutionIds = append(c.opts.ParentExecutionIDs, c.opts.ExecutionID)
 	}
