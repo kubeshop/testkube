@@ -8385,16 +8385,16 @@ components:
 
     TestTriggerContentGitPullRequest:
       type: object
-      description: Pull request trigger configuration for GitHub API polling.
+      description: Pull request trigger configuration. The informer polls the provider REST API for GitHub pull requests or GitLab merge requests; the provider is detected from the git uri.
       properties:
         types:
           type: array
-          description: "PR activity types to watch (e.g. \"opened\", \"synchronize\", \"reopened\", \"closed\"). If empty, all types are watched."
+          description: "PR activity types to watch (e.g. \"opened\", \"synchronize\", \"reopened\", \"closed\"). If empty, all types are watched. The same activity names apply to GitLab merge requests: a merged or closed merge request reports \"closed\", and new commits report \"synchronize\"."
           items:
             type: string
         branches:
           type: array
-          description: "Base branch name patterns to watch (glob supported). If empty, PRs targeting any base branch are watched."
+          description: "Base branch name patterns to watch (glob supported). If empty, PRs targeting any base branch are watched. For GitLab this matches the merge request target branch."
           items:
             type: string
         branchesIgnore:

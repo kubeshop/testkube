@@ -71,6 +71,23 @@ type Options struct {
 	WatcherNamespaces   string
 	KubeClient          kubernetes.Interface
 	GitHubTokenProvider GitHubTokenProvider
+
+	// AllowedGitHosts restricts which repository hosts a pull request trigger may
+	// contact with a credential. Entries match a host exactly, or that domain and any
+	// subdomain when written with a leading dot (".example.com"). A single "*" entry
+	// allows any host.
+	//
+	// When empty, defaultAllowedGitHosts applies: the canonical SaaS hosts only. This
+	// is the only control over where credentials go, because tokenFrom may reference
+	// any Secret in the trigger's namespace and no hostname test can distinguish
+	// "gitlab.attacker.com" from a legitimate self-managed instance. Self-managed
+	// hosts must therefore be listed explicitly.
+	//
+	// Note that the API server does not leave this empty: it defaults
+	// TEST_TRIGGER_GIT_INFORMER_ALLOWED_HOSTS to "*" for backward compatibility, so
+	// the closed default above only applies to callers that pass nothing. A wildcard
+	// allowlist is warned about once at construction.
+	AllowedGitHosts []string
 }
 
 func normalizeOptions(opts Options) Options {
@@ -91,6 +108,15 @@ func normalizeOptions(opts Options) Options {
 	}
 	if opts.PullRetryDelay < 0 {
 		opts.PullRetryDelay = 0
+	}
+	if allowlistIsUnrestricted(opts.AllowedGitHosts) {
+		// Operators do not read the source, and the ungated mode is the one that can
+		// leak a Secret to an author-chosen host. Say so where they will see it.
+		log.DefaultLogger.Warnw("git informer: repository host allowlist is unrestricted",
+			"allowedGitHosts", allowAnyGitHostWildcard,
+			"risk", "any trigger author can send a tokenFrom Secret to a host they control",
+			"remediation", "set TEST_TRIGGER_GIT_INFORMER_ALLOWED_HOSTS to your own git hosts",
+		)
 	}
 	return opts
 }
@@ -123,10 +149,16 @@ type Informer struct {
 	// When nil, the "github" auth type is not supported and will return an error.
 	githubTokenProvider GitHubTokenProvider
 
-	// githubAPIBaseFunc resolves the GitHub REST API base URL from a repo URI.
-	// When nil, the production githubAPIBaseFromURI function is used.
-	// Tests can override this to point at a mock HTTP server.
-	githubAPIBaseFunc func(uri string) string
+	// prAPIBaseFunc resolves the pull request REST API base URL from a repo URI.
+	// When nil, the production githubAPIBaseFromURI / gitlabAPIBaseFromURI
+	// functions are used. Tests can override this to point at a mock HTTP server.
+	prAPIBaseFunc func(uri string) string
+
+	// prProviders caches the detected git provider per repository host for the
+	// process lifetime, so the detection probe for self-managed hosts runs once
+	// rather than on every reconcile pass. Guarded by mu like commits/revisions:
+	// it is only reachable from updateRepositories, which holds the lock.
+	prProviders map[string]providerKind
 }
 
 type reconcileCache struct {
@@ -168,6 +200,7 @@ func NewInformer(
 		matcher:             matcher,
 		commits:             make(map[string]string),
 		revisions:           make(map[string]string),
+		prProviders:         make(map[string]providerKind),
 		namespaces:          resolveNamespaces(options.WatcherNamespaces, namespace),
 		environmentID:       environmentID,
 		options:             options,
@@ -793,7 +826,17 @@ func authClientOptions(gitConfig *testkube.TestTriggerContentGit) ([]client.Opti
 	return authClientOptionsWithResolver(gitConfig, resolveCredentialValue)
 }
 
+// authClientOptions resolves clone credentials for a git-push / git-tag-push
+// trigger. This is the single chokepoint through which the informer hands a
+// credential to go-git, so the host allowlist is enforced here as well as on the
+// pull request polling path: the uri is author-controlled and tokenFrom can name any
+// Secret in the trigger's namespace, so an unrestricted host means an author can
+// direct a Secret they cannot otherwise read at a host they control.
 func (i *Informer) authClientOptions(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit, cache *reconcileCache) ([]client.Option, error) {
+	if err := i.checkGitHostAllowed(gitConfig.Uri); err != nil {
+		return nil, err
+	}
+
 	authType := strings.ToLower(gitConfig.AuthType)
 	if authType == string(testkube.GITHUB_ContentGitAuthType) {
 		return i.githubAuthClientOptions(ctx, gitConfig, cache)
@@ -812,7 +855,7 @@ func (i *Informer) githubAuthClientOptions(ctx context.Context, gitConfig *testk
 		return nil, fmt.Errorf("github authType requires a connected control plane with GitHub App integration")
 	}
 	// Use the per-reconcile cache to avoid repeated gRPC calls for the same URI.
-	uri := sanitizeGitHubTokenURI(gitConfig.Uri)
+	uri := sanitizeTokenURI(gitConfig.Uri)
 	token, ok := cache.githubToken(uri)
 	if !ok {
 		var err error
