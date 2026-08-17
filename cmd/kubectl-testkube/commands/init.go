@@ -206,7 +206,7 @@ func NewInitCmdDemo() *cobra.Command {
 				common.HandleCLIError(cliErr)
 			}
 			sendTelemetry(cmd, cfg, license, "license validated")
-			
+
 			ui.NL()
 			ui.Warn("Installation is about to start and may take a several minutes:")
 			ui.NL()
