@@ -31,6 +31,7 @@ func NewReRunTestWorkflowExecutionCmd() *cobra.Command {
 		parallelStepName         string
 		serviceIndex             int
 		parallelStepIndex        int
+		latest                   bool
 	)
 
 	cmd := &cobra.Command{
@@ -77,7 +78,7 @@ func NewReRunTestWorkflowExecutionCmd() *cobra.Command {
 				name = execution.Workflow.Name
 			}
 
-			execution, err = client.ReRunTestWorkflowExecution(name, execution.Id, runningContext)
+			execution, err = client.ReRunTestWorkflowExecution(name, execution.Id, runningContext, latest)
 			if err != nil {
 				// User friendly Open Source operation error
 				errMessage := err.Error()
@@ -146,6 +147,7 @@ func NewReRunTestWorkflowExecutionCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
+	cmd.Flags().BoolVar(&latest, "latest", false, "use the latest workflow definition instead of the original resolved snapshot, keeping the original parameter set")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
 	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "download artifacts automatically")
 	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
