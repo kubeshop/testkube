@@ -46,6 +46,9 @@ const (
 	CleanupResourcesRetryCount = 5
 	CleanupResourcesRetryDelay = 500 * time.Millisecond
 
+	AbortExecutionRetryCount = 5
+	AbortExecutionRetryDelay = 500 * time.Millisecond
+
 	RecoverLogsRetryOnFailureDelay = 300 * time.Millisecond
 	RecoverLogsRetryMaxAttempts    = 5
 
@@ -86,6 +89,8 @@ type runner struct {
 
 	// cleanupRetryDelay overrides the wait between Destroy retries; zero falls back to CleanupResourcesRetryDelay.
 	cleanupRetryDelay time.Duration
+	// abortRetryDelay overrides the wait between AbortExecution retries; zero falls back to AbortExecutionRetryDelay.
+	abortRetryDelay time.Duration
 }
 
 func New(
@@ -573,8 +578,20 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 }
 
 // abortExecution aborts fetches the execution, updates its result to aborted and finishes it.
+// This runs after the Monitor loop has already given up on the execution, so every
+// control-plane call here is the last line of defence: a transient failure without retry
+// would leave the execution stuck in running state indefinitely.
 func (r *runner) abortExecution(ctx context.Context, environmentID, executionID string) error {
-	execution, err := r.client.GetExecution(context.Background(), environmentID, executionID)
+	var execution *testkube.TestWorkflowExecution
+	delay := r.abortRetryDelay
+	if delay == 0 {
+		delay = AbortExecutionRetryDelay
+	}
+	err := retry(AbortExecutionRetryCount, delay, func(_ int) error {
+		var e error
+		execution, e = r.client.GetExecution(context.Background(), environmentID, executionID)
+		return e
+	})
 	if err != nil {
 		return errors.Wrapf(err, "failed to get execution '%s'", executionID)
 	}
@@ -582,15 +599,24 @@ func (r *runner) abortExecution(ctx context.Context, environmentID, executionID 
 		return errors.New("execution result is nil")
 	}
 	execution.Result.Fatal(errors.New("execution is stuck in running state"), true, time.Now())
-	if err = r.client.UpdateExecutionResult(ctx, environmentID, executionID, execution.Result); err != nil {
+	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
+		return r.client.UpdateExecutionResult(ctx, environmentID, executionID, execution.Result)
+	})
+	if err != nil {
 		return errors.Wrapf(err, "failed to update execution result '%s' to aborted", executionID)
 	}
 
-	if err = r.client.FinishExecutionResult(ctx, environmentID, executionID, execution.Result); err != nil {
+	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
+		return r.client.FinishExecutionResult(ctx, environmentID, executionID, execution.Result)
+	})
+	if err != nil {
 		return errors.Wrapf(err, "failed to finish execution result '%s'", executionID)
 	}
 
-	if err = r.Abort(executionID); err != nil {
+	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
+		return r.Abort(executionID)
+	})
+	if err != nil {
 		return errors.Wrapf(err, "failed to destroy execution '%s'", executionID)
 	}
 
