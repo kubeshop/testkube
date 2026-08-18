@@ -326,7 +326,7 @@ postgresql:
     # -- PostgreSQL image repository
     repository: kubeshop/testkube-postgres
     # -- PostgreSQL image tag
-    tag: 18.4
+    tag: 18.6
     # -- PostgreSQL image pull Secret
     pullSecrets: []
 
