@@ -10,11 +10,11 @@ dependencies:
     repository: "file://../testkube-operator"
   - name: mongodb
     condition: mongodb.enabled
-    version: 8.3.7-0
+    version: 8.3.8-0
     repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
   - name: postgresql
     condition: postgresql.enabled
-    version: 18.4-0
+    version: 18.6-0
     repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
   - name: cloudnative-pg
     version: 0.29.0
