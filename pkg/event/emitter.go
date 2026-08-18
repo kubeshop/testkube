@@ -22,7 +22,18 @@ const (
 	eventEmitterQueueName     string = "emitter"
 	DefaultEventTTL                  = 1 * time.Hour
 	DefaultEventCacheCapacity        = 100000
+
+	// publishRetryCount bounds a short retry loop around bus.PublishTopic so a
+	// brief NATS blip (a few hundred ms while the client reconnects) does not
+	// silently drop an event. The NATS client already buffers publishes during
+	// transient outages; this covers the rare case where Publish returns an
+	// error before the reconnect completes.
+	publishRetryCount = 3
 )
+
+// publishRetryBaseDelay is a var (not a const) so tests can shorten the wait
+// between attempts without waiting the full 200ms budget.
+var publishRetryBaseDelay = 200 * time.Millisecond
 
 // EmitterOption is a functional option for configuring the Emitter.
 type EmitterOption func(*Emitter)
@@ -174,12 +185,31 @@ func (e *Emitter) Notify(event testkube.Event) {
 		"resource", event.Resource,
 		"resource_id", event.ResourceId)
 
-	err := e.bus.PublishTopic(topic, event)
+	var err error
+	for attempt := 0; attempt < publishRetryCount; attempt++ {
+		if attempt > 0 {
+			time.Sleep(time.Duration(attempt) * publishRetryBaseDelay)
+		}
+		err = e.bus.PublishTopic(topic, event)
+		if err == nil {
+			break
+		}
+		if attempt < publishRetryCount-1 {
+			e.log.Warnw("failed to publish event, retrying",
+				append(event.Log(),
+					"event_type", eventType,
+					"topic", topic,
+					"attempt", attempt,
+					"error", err)...)
+		}
+	}
 	if err != nil {
-		e.log.Errorw("failed to publish event",
-			"event_type", eventType,
-			"topic", topic,
-			"error", err)
+		e.log.Errorw("failed to publish event after retries",
+			append(event.Log(),
+				"event_type", eventType,
+				"topic", topic,
+				"attempts", publishRetryCount,
+				"error", err)...)
 		return
 	}
 	e.log.Debugw("event published successfully",
