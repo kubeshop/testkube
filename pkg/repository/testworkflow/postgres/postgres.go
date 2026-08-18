@@ -679,6 +679,7 @@ func isFinishedByWorkflowFastPathFilter(f testworkflow.Filter) bool {
 		!f.AssignedDefined() &&
 		!f.ActorNameDefined() &&
 		!f.ActorTypeDefined() &&
+		!f.ActorExecutionIdsDefined() &&
 		!f.GroupIDDefined() &&
 		!f.InitializedDefined() &&
 		!f.HealthRangesDefined() &&
@@ -737,6 +738,7 @@ func isNameOnlyFilter(f testworkflow.Filter) bool {
 		!f.AssignedDefined() &&
 		!f.ActorNameDefined() &&
 		!f.ActorTypeDefined() &&
+		!f.ActorExecutionIdsDefined() &&
 		!f.GroupIDDefined() &&
 		!f.InitializedDefined() &&
 		!f.HealthRangesDefined() &&
@@ -1990,6 +1992,7 @@ func (r *PostgresRepository) Count(ctx context.Context, filter testworkflow.Filt
 		Assigned:           params.Assigned,
 		ActorName:          params.ActorName,
 		ActorType:          params.ActorType,
+		ActorExecutionIds:  params.ActorExecutionIds,
 		GroupID:            params.GroupID,
 		Initialized:        params.Initialized,
 		TagKeys:            params.TagKeys,
@@ -2066,6 +2069,10 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 
 	if filter.ActorTypeDefined() {
 		params.ActorType = string(filter.ActorType())
+	}
+
+	if filter.ActorExecutionIdsDefined() {
+		params.ActorExecutionIds = filter.ActorExecutionIds()
 	}
 
 	// Group filter
@@ -2242,6 +2249,10 @@ func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testwo
 
 	if filter.ActorTypeDefined() {
 		params.ActorType = string(filter.ActorType())
+	}
+
+	if filter.ActorExecutionIdsDefined() {
+		params.ActorExecutionIds = filter.ActorExecutionIds()
 	}
 
 	// Group filter
