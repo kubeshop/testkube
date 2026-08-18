@@ -43,6 +43,9 @@ const (
 	MonitorRetryCount = 10
 	MonitorRetryDelay = 500 * time.Millisecond
 
+	CleanupResourcesRetryCount = 5
+	CleanupResourcesRetryDelay = 500 * time.Millisecond
+
 	RecoverLogsRetryOnFailureDelay = 300 * time.Millisecond
 	RecoverLogsRetryMaxAttempts    = 5
 
@@ -80,6 +83,9 @@ type runner struct {
 
 	watching sync.Map
 	sf       singleflight.Group
+
+	// cleanupRetryDelay overrides the wait between Destroy retries; zero falls back to CleanupResourcesRetryDelay.
+	cleanupRetryDelay time.Duration
 }
 
 func New(
@@ -309,13 +315,21 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	execution.Result = lastResult
 	r.observeExecutionMetrics(execution)
 
-	err = r.worker.Destroy(context.Background(), execution.Id, executionworkertypes.DestroyOptions{})
-	if err != nil {
-		// TODO: what to do on error?
-		logger.Errorw("failed to cleanup TestWorkflow resources", "error", err)
+	if err := r.destroyResources(context.Background(), execution.Id); err != nil {
+		logger.Errorw("failed to cleanup TestWorkflow resources after retries", "error", err)
 	}
 
 	return nil
+}
+
+func (r *runner) destroyResources(ctx context.Context, executionID string) error {
+	delay := r.cleanupRetryDelay
+	if delay == 0 {
+		delay = CleanupResourcesRetryDelay
+	}
+	return retry(CleanupResourcesRetryCount, delay, func(int) error {
+		return r.worker.Destroy(ctx, executionID, executionworkertypes.DestroyOptions{})
+	})
 }
 
 func (r *runner) recoverServiceLogs(ctx context.Context, saver ExecutionSaver, environmentId string, execution *testkube.TestWorkflowExecution, svc commands.ServiceInfo) error {
