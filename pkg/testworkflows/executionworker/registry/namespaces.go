@@ -6,6 +6,8 @@ import (
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/singleflight"
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -39,8 +41,12 @@ func (r *namespacesRegistry) Register(id, namespace string) {
 }
 
 func (r *namespacesRegistry) hasJobAt(ctx context.Context, id, namespace string) (bool, error) {
-	// TODO: consider retry
-	job, err := r.clientSet.BatchV1().Jobs(namespace).Get(ctx, id, metav1.GetOptions{})
+	var job *batchv1.Job
+	err := kubeReadRetry(func() error {
+		var getErr error
+		job, getErr = r.clientSet.BatchV1().Jobs(namespace).Get(ctx, id, metav1.GetOptions{})
+		return getErr
+	})
 	if k8serrors.IsNotFound(err) {
 		return false, nil
 	} else if err != nil {
@@ -50,11 +56,15 @@ func (r *namespacesRegistry) hasJobAt(ctx context.Context, id, namespace string)
 }
 
 func (r *namespacesRegistry) hasJobTracesAt(ctx context.Context, id, namespace string) (bool, error) {
-	// TODO: consider retry
-	events, err := r.clientSet.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{
-		FieldSelector: "involvedObject.name=" + id,
-		TypeMeta:      metav1.TypeMeta{Kind: "Job"},
-		Limit:         1,
+	var events *corev1.EventList
+	err := kubeReadRetry(func() error {
+		var listErr error
+		events, listErr = r.clientSet.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{
+			FieldSelector: "involvedObject.name=" + id,
+			TypeMeta:      metav1.TypeMeta{Kind: "Job"},
+			Limit:         1,
+		})
+		return listErr
 	})
 	if err != nil {
 		return false, err
