@@ -134,8 +134,13 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	defer r.watching.Delete(execution.Id)
 
 	// Scoped logger carrying human-readable context (workflow name, trigger/source) so every
-	// log line emitted while monitoring this execution is easy to identify.
-	logger := log.DefaultLogger.With(execution.LogFields()...)
+	// log line emitted while monitoring this execution is easy to identify. Env / org are
+	// added so any Errorw the customer sees carries the tenant coordinates needed to route
+	// the incident, matching the ask in TKC-6551.
+	logger := log.DefaultLogger.With(execution.LogFields()...).With(
+		"organizationId", organizationId,
+		"environmentId", environmentId,
+	)
 
 	var notifications executionworkertypes.NotificationsWatcher
 	for i := 0; i < GetNotificationsRetryCount; i++ {
@@ -475,18 +480,24 @@ func (r *runner) Monitor(ctx context.Context, organizationId string, environment
 		return nil
 	}
 
-	// Load the execution
+	// Load the execution. Scoped logger carries the tenant coordinates so retries and the
+	// final failure are attributable to a specific env / org (TKC-6551).
+	logger := log.DefaultLogger.With(
+		"executionId", id,
+		"organizationId", organizationId,
+		"environmentId", environmentId,
+	)
 	var execution *testkube.TestWorkflowExecution
 	err := retry(GetExecutionRetryCount, GetExecutionRetryDelay, func(_ int) (err error) {
 		execution, err = r.client.GetExecution(ctx, environmentId, id)
 		if err != nil {
-			log.DefaultLogger.Warnw("failed to get execution for monitoring, retrying...", "executionId", id, "error", err)
+			logger.Warnw("failed to get execution for monitoring, retrying...", "error", err)
 		}
 		return err
 	})
 	if err != nil {
 		r.watching.Delete(id)
-		log.DefaultLogger.Errorw("failed to get execution for monitoring", "executionId", id, "error", err)
+		logger.Errorw("failed to get execution for monitoring", "error", err)
 		return err
 	}
 	return r.monitor(ctx, organizationId, environmentId, *execution)
@@ -535,8 +546,14 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 	if err == nil {
 		go func() {
 			// The full execution object isn't available here (only the ExecuteRequest), so we
-			// scope with the fields we do have: the execution ID and the workflow name.
-			logger := log.DefaultLogger.With("executionId", request.Execution.Id, "workflowName", request.Workflow.Name)
+			// scope with the fields we do have. Env / org make it possible to route the incident
+			// to the right tenant when the retry budget is exhausted (TKC-6551).
+			logger := log.DefaultLogger.With(
+				"executionId", request.Execution.Id,
+				"workflowName", request.Workflow.Name,
+				"organizationId", request.Execution.OrganizationId,
+				"environmentId", request.Execution.EnvironmentId,
+			)
 			err := retry(MonitorRetryCount, MonitorRetryDelay, func(_ int) error {
 				err := r.Monitor(context.Background(), request.Execution.OrganizationId, request.Execution.EnvironmentId, request.Execution.Id)
 				if err != nil {
