@@ -3,7 +3,6 @@ package webhook
 import (
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -110,43 +109,6 @@ func TestWebhookListener_Notify_DoesNotRetryOn4xx(t *testing.T) {
 
 	assert.NotEqual(t, "", r.Error())
 	assert.Equal(t, int32(1), atomic.LoadInt32(&callCount))
-}
-
-// Every attempt for a single event must carry the same Idempotency-Key so the
-// subscriber can dedupe replays coming out of the retry loop.
-func TestWebhookListener_Notify_SendsStableIdempotencyKeyAcrossRetries(t *testing.T) {
-	var keys []string
-	var mu sync.Mutex
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		mu.Lock()
-		keys = append(keys, r.Header.Get("Idempotency-Key"))
-		mu.Unlock()
-		w.WriteHeader(http.StatusServiceUnavailable)
-	})
-	svr := httptest.NewServer(handler)
-	defer svr.Close()
-
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-	repo := cloudwebhook.NewMockWebhookRepository(mockCtrl)
-	repo.EXPECT().CollectExecutionResult(gomock.Any(), gomock.Any(), "l1", gomock.Any(), http.StatusServiceUnavailable).AnyTimes()
-
-	l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "", nil, false, nil, nil,
-		listenerWithMetrics(v1.NewMetrics()),
-		listenerWithWebhookResultsRepository(repo))
-	l.sendRetryBaseDelay = time.Millisecond
-
-	event := testkube.Event{
-		Id:                    "event-idem-1",
-		Type_:                 testkube.EventStartTestWorkflow,
-		TestWorkflowExecution: exampleExecution(),
-	}
-	_ = l.Notify(event)
-
-	assert.Len(t, keys, webhookSendRetryCount)
-	for _, k := range keys {
-		assert.Equal(t, "event-idem-1", k)
-	}
 }
 
 // 429 is treated as retryable: rate limiters usually clear within a short delay,

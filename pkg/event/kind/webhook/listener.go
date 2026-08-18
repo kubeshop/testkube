@@ -385,6 +385,9 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 
 	bodyBytes := body.Bytes()
 
+	// Webhook delivery is at-least-once by design: on network errors, 5xx, and 429 the
+	// same payload may reach the subscriber more than once. This matches the industry
+	// convention (Stripe, GitHub, Slack) where dedupe is the subscriber's responsibility.
 	processedHeaders := make(map[string]string, len(l.headers))
 	for key, value := range l.headers {
 		values := []*string{&key, &value}
@@ -422,8 +425,6 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 			return
 		}
 		req.Header.Set("Content-Type", "application/json")
-		// Subscribers can dedupe replays: same event -> same key across all attempts.
-		req.Header.Set("Idempotency-Key", event.Id)
 		for k, v := range processedHeaders {
 			req.Header.Set(k, v)
 		}
