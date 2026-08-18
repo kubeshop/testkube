@@ -57,7 +57,7 @@ type Client struct {
 	pollInterval  time.Duration
 }
 
-func executionConfigFromStart(start *executionv1.ExecutionStart, organizationId string) testworkflowconfig.ExecutionConfig {
+func executionConfigFromStart(start *executionv1.ExecutionStart, organizationId string, rc *executionv1.ExecutionRunningContext) testworkflowconfig.ExecutionConfig {
 	return testworkflowconfig.ExecutionConfig{
 		Id:              start.GetExecutionId(),
 		GroupId:         start.GetGroupId(),
@@ -70,7 +70,30 @@ func executionConfigFromStart(start *executionv1.ExecutionStart, organizationId 
 		OrganizationId:  organizationId,
 		EnvironmentId:   start.GetEnvironmentId(),
 		ParentIds:       strings.Join(start.AncestorExecutionIds, "/"),
+		RunningContext:  runningContextFromProto(rc),
 	}
+}
+
+// runningContextFromProto expands the flat proto projection back into the
+// legacy TestWorkflowRunningContext shape the toolkit already knows how to
+// read (parentActorTypeFromRunningContext dereferences Actor.Type_).
+func runningContextFromProto(rc *executionv1.ExecutionRunningContext) *testkube.TestWorkflowRunningContext {
+	if rc == nil {
+		return nil
+	}
+	actorType := rc.GetActorType()
+	actorName := rc.GetActorName()
+	if actorType == "" && actorName == "" {
+		return nil
+	}
+	actor := &testkube.TestWorkflowRunningContextActor{
+		Name: actorName,
+	}
+	if actorType != "" {
+		t := testkube.TestWorkflowRunningContextActorType(actorType)
+		actor.Type_ = &t
+	}
+	return &testkube.TestWorkflowRunningContext{Actor: actor}
 }
 
 // NewClient creates a client for retrieving updates about executions.
@@ -249,7 +272,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 				Runtime: &executionworkertypes.Runtime{
 					Variables: start.GetVariableOverrides(),
 				},
-				Execution:    executionConfigFromStart(start, c.OrganizationId),
+				Execution:    executionConfigFromStart(start, c.OrganizationId, workflowResponse.GetRunningContext()),
 				Workflow:     workflow,
 				ControlPlane: c.ControlPlaneConfig,
 			})
