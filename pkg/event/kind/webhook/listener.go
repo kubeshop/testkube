@@ -405,6 +405,11 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	var respBody []byte
 	var sendErr error
 	for attempt := 0; attempt < l.sendRetryCount; attempt++ {
+		// Reset per-attempt state so a later transport failure does not pair with
+		// the previous attempt's response body or status code in logs and telemetry.
+		respBody = nil
+		statusCode = 0
+
 		if attempt > 0 {
 			time.Sleep(time.Duration(attempt) * l.sendRetryBaseDelay)
 		}
@@ -417,6 +422,8 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 			return
 		}
 		req.Header.Set("Content-Type", "application/json")
+		// Subscribers can dedupe replays: same event -> same key across all attempts.
+		req.Header.Set("Idempotency-Key", event.Id)
 		for k, v := range processedHeaders {
 			req.Header.Set(k, v)
 		}
