@@ -444,11 +444,15 @@ func notifyListener(logger *zap.SugaredLogger, listener common.Listener, event t
 	result := listener.Notify(event)
 
 	if result.Error() != "" {
+		// Include event.Log() so the failure carries executionId / name / labels,
+		// letting on-call trace the incident to a specific workflow execution
+		// without a DB round-trip (TKC-6551).
 		logger.Errorw("listener notification failed",
-			"listener_name", listener.Name(),
-			"listener_kind", listener.Kind(),
-			"event_type", eventType,
-			"error", result.Error())
+			append(event.Log(),
+				"listener_name", listener.Name(),
+				"listener_kind", listener.Kind(),
+				"event_type", eventType,
+				"error", result.Error())...)
 	}
 }
 
