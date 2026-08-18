@@ -6,6 +6,7 @@ import (
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/singleflight"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -42,10 +43,14 @@ func (r *ipsRegistry) load(ctx context.Context, id string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// TODO: consider retry
-	pods, err := r.clientSet.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{
-		LabelSelector: constants.ResourceIdLabelName + "=" + id,
-		Limit:         1,
+	var pods *corev1.PodList
+	err = kubeReadRetry(func() error {
+		var listErr error
+		pods, listErr = r.clientSet.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{
+			LabelSelector: constants.ResourceIdLabelName + "=" + id,
+			Limit:         1,
+		})
+		return listErr
 	})
 	if err != nil {
 		return "", err
