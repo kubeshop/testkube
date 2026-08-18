@@ -12528,6 +12528,7 @@ spec:
                                 - testworkflow
                                 - testworkflowexecution
                                 - program
+                                - gitintegration
                               type: string
                           required:
                             - type

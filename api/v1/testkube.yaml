@@ -7810,6 +7810,7 @@ components:
         - testworkflow
         - testworkflowexecution
         - program
+        - gitintegration
 
     Webhook:
       description: CRD based webhook data
