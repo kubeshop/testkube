@@ -29,9 +29,14 @@ type GetExecutionWorkflowResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// workflow is the requested workflow with any potential
 	// enrichments already applied.
-	Workflow      *v1.TestWorkflow `protobuf:"bytes,1,opt,name=workflow" json:"workflow,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Workflow *v1.TestWorkflow `protobuf:"bytes,1,opt,name=workflow" json:"workflow,omitempty"`
+	// running_context carries the parent execution's actor identity so the
+	// runner can propagate it into the pod config for chained schedules
+	// (used by the sticky-actor family: chained children inherit the parent's
+	// actor when the parent belongs to that set).
+	RunningContext *ExecutionRunningContext `protobuf:"bytes,2,opt,name=running_context,json=runningContext" json:"running_context,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *GetExecutionWorkflowResponse) Reset() {
@@ -71,13 +76,87 @@ func (x *GetExecutionWorkflowResponse) GetWorkflow() *v1.TestWorkflow {
 	return nil
 }
 
+func (x *GetExecutionWorkflowResponse) GetRunningContext() *ExecutionRunningContext {
+	if x != nil {
+		return x.RunningContext
+	}
+	return nil
+}
+
+// ExecutionRunningContext is a minimal projection of the parent execution's
+// running context, carrying only what the runner needs to make sticky-family
+// decisions. Kept flat on purpose; the runner reconstructs the full
+// TestWorkflowRunningContextActor shape when it builds the pod config.
+type ExecutionRunningContext struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// actor_type mirrors TestWorkflowRunningContextActor.Type_, e.g.
+	// "gitintegration", "user", "cron". Empty when the parent had no actor.
+	ActorType *string `protobuf:"bytes,1,opt,name=actor_type,json=actorType" json:"actor_type,omitempty"`
+	// actor_name mirrors TestWorkflowRunningContextActor.Name. Used to
+	// populate the child's RunningContext.Name so downstream reads stay
+	// consistent with the parent's identity.
+	ActorName     *string `protobuf:"bytes,2,opt,name=actor_name,json=actorName" json:"actor_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExecutionRunningContext) Reset() {
+	*x = ExecutionRunningContext{}
+	mi := &file_testkube_testworkflow_execution_v1_get_execution_workflow_response_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecutionRunningContext) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecutionRunningContext) ProtoMessage() {}
+
+func (x *ExecutionRunningContext) ProtoReflect() protoreflect.Message {
+	mi := &file_testkube_testworkflow_execution_v1_get_execution_workflow_response_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecutionRunningContext.ProtoReflect.Descriptor instead.
+func (*ExecutionRunningContext) Descriptor() ([]byte, []int) {
+	return file_testkube_testworkflow_execution_v1_get_execution_workflow_response_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ExecutionRunningContext) GetActorType() string {
+	if x != nil && x.ActorType != nil {
+		return *x.ActorType
+	}
+	return ""
+}
+
+func (x *ExecutionRunningContext) GetActorName() string {
+	if x != nil && x.ActorName != nil {
+		return *x.ActorName
+	}
+	return ""
+}
+
 var File_testkube_testworkflow_execution_v1_get_execution_workflow_response_proto protoreflect.FileDescriptor
 
 const file_testkube_testworkflow_execution_v1_get_execution_workflow_response_proto_rawDesc = "" +
 	"\n" +
-	"Htestkube/testworkflow/execution/v1/get_execution_workflow_response.proto\x12\"testkube.testworkflow.execution.v1\x1a,testkube/testworkflow/v1/test_workflow.proto\"b\n" +
+	"Htestkube/testworkflow/execution/v1/get_execution_workflow_response.proto\x12\"testkube.testworkflow.execution.v1\x1a,testkube/testworkflow/v1/test_workflow.proto\"\xc8\x01\n" +
 	"\x1cGetExecutionWorkflowResponse\x12B\n" +
-	"\bworkflow\x18\x01 \x01(\v2&.testkube.testworkflow.v1.TestWorkflowR\bworkflowB\xcd\x02\n" +
+	"\bworkflow\x18\x01 \x01(\v2&.testkube.testworkflow.v1.TestWorkflowR\bworkflow\x12d\n" +
+	"\x0frunning_context\x18\x02 \x01(\v2;.testkube.testworkflow.execution.v1.ExecutionRunningContextR\x0erunningContext\"W\n" +
+	"\x17ExecutionRunningContext\x12\x1d\n" +
+	"\n" +
+	"actor_type\x18\x01 \x01(\tR\tactorType\x12\x1d\n" +
+	"\n" +
+	"actor_name\x18\x02 \x01(\tR\tactorNameB\xcd\x02\n" +
 	"&com.testkube.testworkflow.execution.v1B!GetExecutionWorkflowResponseProtoP\x01ZUgithub.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1;executionv1\xa2\x02\x03TTE\xaa\x02\"Testkube.Testworkflow.Execution.V1\xca\x02\"Testkube\\Testworkflow\\Execution\\V1\xe2\x02.Testkube\\Testworkflow\\Execution\\V1\\GPBMetadata\xea\x02%Testkube::Testworkflow::Execution::V1b\beditionsp\xe8\a"
 
 var (
@@ -92,18 +171,20 @@ func file_testkube_testworkflow_execution_v1_get_execution_workflow_response_pro
 	return file_testkube_testworkflow_execution_v1_get_execution_workflow_response_proto_rawDescData
 }
 
-var file_testkube_testworkflow_execution_v1_get_execution_workflow_response_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_testkube_testworkflow_execution_v1_get_execution_workflow_response_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_testkube_testworkflow_execution_v1_get_execution_workflow_response_proto_goTypes = []any{
 	(*GetExecutionWorkflowResponse)(nil), // 0: testkube.testworkflow.execution.v1.GetExecutionWorkflowResponse
-	(*v1.TestWorkflow)(nil),              // 1: testkube.testworkflow.v1.TestWorkflow
+	(*ExecutionRunningContext)(nil),      // 1: testkube.testworkflow.execution.v1.ExecutionRunningContext
+	(*v1.TestWorkflow)(nil),              // 2: testkube.testworkflow.v1.TestWorkflow
 }
 var file_testkube_testworkflow_execution_v1_get_execution_workflow_response_proto_depIdxs = []int32{
-	1, // 0: testkube.testworkflow.execution.v1.GetExecutionWorkflowResponse.workflow:type_name -> testkube.testworkflow.v1.TestWorkflow
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	2, // 0: testkube.testworkflow.execution.v1.GetExecutionWorkflowResponse.workflow:type_name -> testkube.testworkflow.v1.TestWorkflow
+	1, // 1: testkube.testworkflow.execution.v1.GetExecutionWorkflowResponse.running_context:type_name -> testkube.testworkflow.execution.v1.ExecutionRunningContext
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_testkube_testworkflow_execution_v1_get_execution_workflow_response_proto_init() }
@@ -117,7 +198,7 @@ func file_testkube_testworkflow_execution_v1_get_execution_workflow_response_pro
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_testkube_testworkflow_execution_v1_get_execution_workflow_response_proto_rawDesc), len(file_testkube_testworkflow_execution_v1_get_execution_workflow_response_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

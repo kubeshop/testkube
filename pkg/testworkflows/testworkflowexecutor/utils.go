@@ -186,11 +186,16 @@ func GetLegacyRunningContext(req *cloud.ScheduleRequest) (runningContext *testku
 			},
 		}
 	case cloud.RunningContextType_QUALITYLOOP:
+		actor := &testkube.TestWorkflowRunningContextActor{
+			Type_: common.Ptr(testkube.QUALITYLOOP_TestWorkflowRunningContextActorType),
+			Name:  req.RunningContext.Name,
+		}
+		if len(req.ParentExecutionIds) > 0 {
+			actor.ExecutionId = req.ParentExecutionIds[len(req.ParentExecutionIds)-1]
+			actor.ExecutionPath = strings.Join(req.ParentExecutionIds, "/")
+		}
 		return &testkube.TestWorkflowRunningContext{
-			Actor: &testkube.TestWorkflowRunningContextActor{
-				Type_: common.Ptr(testkube.QUALITYLOOP_TestWorkflowRunningContextActorType),
-				Name:  req.RunningContext.Name,
-			},
+			Actor: actor,
 			Interface_: &testkube.TestWorkflowRunningContextInterface{
 				Name:  req.RunningContext.Name,
 				Type_: common.Ptr(testkube.CICD_TestWorkflowRunningContextInterfaceType),

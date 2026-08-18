@@ -24,6 +24,7 @@ import (
 	config3 "github.com/kubeshop/testkube/internal/config"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cache"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -194,7 +195,15 @@ func Cloud() (controlplaneclient.Client, error) {
 		ExecutionID:        cfg.Execution.Id,
 		WorkflowName:       cfg.Workflow.Name,
 		ParentExecutionIDs: strings.Split(cfg.Execution.ParentIds, "/"),
+		ParentActorType:    parentActorTypeFromRunningContext(cfg.Execution.RunningContext),
 	}, log.DefaultLogger), nil
+}
+
+func parentActorTypeFromRunningContext(rc *testkube.TestWorkflowRunningContext) testkube.TestWorkflowRunningContextActorType {
+	if rc == nil || rc.Actor == nil || rc.Actor.Type_ == nil {
+		return ""
+	}
+	return *rc.Actor.Type_
 }
 
 func mapProContext(context *cloud.ProContextResponse) config3.ProContext {
