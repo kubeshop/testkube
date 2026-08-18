@@ -70,6 +70,8 @@ func GetNewRunningContext(legacy *testkube.TestWorkflowRunningContext, parentExe
 				if legacy.Actor.Name != "" && legacy.Actor.Email != "" {
 					untrustedUser = &cloud.UserSignature{Name: legacy.Actor.Name, Email: legacy.Actor.Email}
 				}
+			case testkube.QUALITYLOOP_TestWorkflowRunningContextActorType:
+				runningContext = &cloud.RunningContext{Type: cloud.RunningContextType_QUALITYLOOP, Name: legacy.Actor.Name}
 			}
 		}
 		if runningContext == nil && legacy.Interface_ != nil && legacy.Interface_.Type_ != nil {
@@ -181,6 +183,17 @@ func GetLegacyRunningContext(req *cloud.ScheduleRequest) (runningContext *testku
 			},
 			Interface_: &testkube.TestWorkflowRunningContextInterface{
 				Type_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterfaceType),
+			},
+		}
+	case cloud.RunningContextType_QUALITYLOOP:
+		return &testkube.TestWorkflowRunningContext{
+			Actor: &testkube.TestWorkflowRunningContextActor{
+				Type_: common.Ptr(testkube.QUALITYLOOP_TestWorkflowRunningContextActorType),
+				Name:  req.RunningContext.Name,
+			},
+			Interface_: &testkube.TestWorkflowRunningContextInterface{
+				Name:  req.RunningContext.Name,
+				Type_: common.Ptr(testkube.CICD_TestWorkflowRunningContextInterfaceType),
 			},
 		}
 	}
