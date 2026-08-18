@@ -32,6 +32,25 @@
 - Uses interface-based tool design; new tools need registration in both `pkg/mcp/server.go` and control plane's `mcp_handler.go`.
 - See `pkg/mcp/README.md` for architecture, tool patterns, and usage examples.
 
+## GitOps resource sync
+
+- `internal/sync/` implements the agent side of the GitOps (Kubernetes → Control Plane) sync capability. Reconcilers live in `internal/sync/controller/`, one per syncable kind, and the Control Plane client lives in `internal/sync/grpc/`.
+- The syncable kinds are `TestWorkflow`, `TestWorkflowTemplate`, `TestTrigger`, `WorkflowTrigger`, `Webhook`, and `WebhookTemplate`. Adding a kind means touching `internal/sync/controller/`, `internal/sync/grpc/`, the `SyncService` proto, and the Control Plane together.
+- The sync controllers are registered in `cmd/api-server/main.go` behind `proContext.CloudStorageSupportedInControlPlane` and `GITOPS_KUBERNETES_TO_CLOUD_ENABLED`, so they only run for a GitOps-persona agent connected to a Control Plane.
+
+### Resource ownership contract
+
+A synced resource in the Control Plane is exclusively owned by one GitOps agent, so that agents syncing from different namespaces cannot silently overwrite each other's resources. The contract spans four layers, and a change to one usually needs a matching change in the others:
+
+1. **Schema** — `Syncable.gitOpsOwner` in `api/v1/testkube.yaml`, a `GitOpsOwner` holding the authoritative `agentId` plus a display-only `agentName` that may be stale after a rename. Run `make generate-openapi` after editing.
+2. **Wire** — the Control Plane rejects a sync from a non-owning agent with the gRPC status `codes.FailedPrecondition`. That code is reserved for ownership conflicts on the sync API; do not reuse it there for other validation failures, or agents will misreport the cause.
+3. **Agent translation** — `translateError` in `internal/sync/grpc/errors.go` maps `FailedPrecondition` onto the `ErrOwnershipConflict` sentinel in `internal/sync/errors.go`, keeping the original status in the error chain because its message names the current owner. Callers match on the sentinel so that no layer above the client depends on gRPC.
+4. **Reconciliation** — `terminalOnOwnershipConflict` in `internal/sync/controller/errors.go` wraps a conflict in `reconcile.TerminalError` so controller-runtime stops requeueing something no retry can fix, while every other error stays retryable with backoff. Conflicts are deliberately not logged there: controller-runtime already logs whatever a reconciler returns, along with the kind and name of the resource.
+
+`skipUnownedResource` in `cmd/api-server/superagentmigration.go` applies the same rule outside the reconcilers, during SuperAgent migration. That migration retries sync failures forever by design, so a conflict has to break the loop or a single unowned resource wedges the migration indefinitely.
+
+Still to come: Control Plane persistence and enforcement of the owner, and the `testkube.io/gitops-owner` annotation for declaring or transferring ownership from Git. Until those land the agent handles a rejection that nothing yet sends.
+
 ## Regenerating artifacts
 
 - Update the agent OpenAPI files with `make generate-openapi` after schema edits.
@@ -68,6 +87,7 @@
 ## Configuration references
 
 - Agent behavior is driven by env vars defined in `internal/config/config.go` (scan for `envconfig:"..."` tags when researching a toggle).
+- GitOps sync of Kubernetes resources into the Control Plane is gated by `GITOPS_KUBERNETES_TO_CLOUD_ENABLED` (default `false`), and additionally requires the Control Plane to report cloud storage support.
 - Git trigger informer behavior is tuned via `TEST_TRIGGER_GIT_INFORMER_RECONCILE_INTERVAL`, `TEST_TRIGGER_GIT_INFORMER_REPO_DEPTH`, `TEST_TRIGGER_GIT_INFORMER_LIST_TIMEOUT`, `TEST_TRIGGER_GIT_INFORMER_MAX_COMMITS_SCAN`, `TEST_TRIGGER_GIT_INFORMER_PULL_RETRIES`, and `TEST_TRIGGER_GIT_INFORMER_PULL_RETRY_DELAY`.
 - Git trigger informer execution is leader-gated in `cmd/api-server/main.go` through the shared `leader` coordinator tasks, so only the active leader performs periodic git pulls/reconciliation.
 - Helm chart values are the source of deployment defaults; `build/_local/values.dev.yaml` (shaped by the `values.dev.tpl.yaml` template) shows the local overrides used by `tk-dev` if you need a concrete reference.
