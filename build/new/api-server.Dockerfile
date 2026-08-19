@@ -1,7 +1,7 @@
 # this arg has to be defined before the first FROM otherwise the value will be empty
 ARG ALPINE_IMAGE
 
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.26.6-alpine AS build
 ARG TARGETOS
 ARG TARGETARCH
 ARG GOCACHE="/root/.cache/go-build"
