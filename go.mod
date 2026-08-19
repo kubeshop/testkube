@@ -66,7 +66,7 @@ require (
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/afero v1.15.0
 	github.com/spf13/cobra v1.10.2
-	github.com/stretchr/testify v1.12.0
+	github.com/stretchr/testify v1.12.1
 	github.com/valyala/fasthttp v1.73.0
 	github.com/wI2L/jsondiff v0.7.1
 	go.mongodb.org/mongo-driver/v2 v2.8.0
