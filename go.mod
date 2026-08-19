@@ -80,6 +80,7 @@ require (
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.22.0
 	golang.org/x/text v0.41.0
+	google.golang.org/appengine/v2 v2.0.6
 	google.golang.org/grpc v1.83.0
 	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
@@ -120,7 +121,6 @@ require (
 	github.com/andybalholm/brotli v1.2.2 // indirect
 	github.com/antithesishq/antithesis-sdk-go v0.7.2-default-no-op // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
-	github.com/apparentlymart/go-textseg/v17 v17.0.1 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.41.2 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.32.10 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.10 // indirect
@@ -193,6 +193,7 @@ require (
 	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/go-tpm v0.9.8 // indirect
