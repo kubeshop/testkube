@@ -21,10 +21,14 @@ import (
 )
 
 const (
-	// CloneRetryOnFailureMaxAttempts defines maximum retry attempts for git operations
+	// CloneRetryOnFailureMaxAttempts defines default retry attempts for git operations
 	CloneRetryOnFailureMaxAttempts = 5
-	// CloneRetryOnFailureBaseDelay defines base delay between retries
+	// CloneRetryOnFailureBaseDelay defines default base delay between retries
 	CloneRetryOnFailureBaseDelay = 100 * time.Millisecond
+	// CloneRetryCountCap is the maximum allowed retry attempts (inclusive)
+	CloneRetryCountCap = 20
+	// CloneRetryDelayCap is the maximum allowed base delay between retries
+	CloneRetryDelayCap = 30 * time.Second
 )
 
 var (
@@ -34,13 +38,16 @@ var (
 
 // CloneOptions encapsulates all options for the clone command
 type CloneOptions struct {
-	RawPaths []string
-	Username string
-	Token    string
-	SSHKey   string
-	AuthType string
-	Revision string
-	Cone     bool
+	RawPaths   []string
+	Username   string
+	Token      string
+	SSHKey     string
+	AuthType   string
+	Revision   string
+	Cone       bool
+	Verbosity  string
+	RetryCount int
+	RetryDelay time.Duration
 }
 
 // NewCloneCmd creates a new clone command
@@ -65,6 +72,9 @@ func NewCloneCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.AuthType, "authType", "a", "basic", "authentication type (allowed: basic, header, github)")
 	cmd.Flags().StringVarP(&opts.Revision, "revision", "r", "", "commit hash, branch name or tag")
 	cmd.Flags().BoolVar(&opts.Cone, "cone", false, "enable cone mode for sparse checkout")
+	cmd.Flags().StringVar(&opts.Verbosity, "verbosity", "verbose", "logging level (allowed: quiet, normal, verbose)")
+	cmd.Flags().IntVar(&opts.RetryCount, "retry-count", CloneRetryOnFailureMaxAttempts, fmt.Sprintf("max attempts for transient git failures (capped at %d)", CloneRetryCountCap))
+	cmd.Flags().DurationVar(&opts.RetryDelay, "retry-delay", CloneRetryOnFailureBaseDelay, fmt.Sprintf("base delay between git retry attempts (capped at %s)", CloneRetryDelayCap))
 
 	return cmd
 }
@@ -122,29 +132,65 @@ func RunClone(ctx context.Context, rawURI string, outputPath string, opts *Clone
 	// Clean paths for sparse checkout
 	paths := cleanPaths(opts.RawPaths, opts.Cone)
 
-	fmt.Printf("📦 ")
+	if !opts.isQuiet() {
+		fmt.Printf("📦 ")
+	}
 
 	// Perform the clone operation
-	if err := performClone(uri.String(), tmpPath, configArgs, authArgs, opts.Revision, paths, opts.Cone); err != nil {
+	if err := performClone(uri.String(), tmpPath, configArgs, authArgs, opts, paths); err != nil {
 		return fmt.Errorf("error cloning repository: %w", err)
 	}
 
 	// Copy files to destination
-	if err := copyRepositoryContents(tmpPath, destinationPath); err != nil {
+	if err := copyRepositoryContents(tmpPath, destinationPath, opts); err != nil {
 		return fmt.Errorf("error copying files to destination: %w", err)
 	}
 
 	// Adjust file permissions
-	if err := adjustFilePermissions(destinationPath); err != nil {
+	if err := adjustFilePermissions(destinationPath, opts); err != nil {
 		return fmt.Errorf("error adjusting permissions: %w", err)
 	}
 
 	// List directory contents
-	if err := listDirectoryContents(destinationPath); err != nil {
+	if err := listDirectoryContents(destinationPath, opts); err != nil {
 		return fmt.Errorf("error listing directory contents: %w", err)
 	}
 
 	return nil
+}
+
+func (opts *CloneOptions) isQuiet() bool {
+	return opts.Verbosity == "quiet"
+}
+
+// gitLogArgs returns git flags for the configured verbosity. Omit/unknown defaults to verbose.
+func (opts *CloneOptions) gitLogArgs() []string {
+	switch opts.Verbosity {
+	case "quiet":
+		return []string{"--quiet"}
+	case "normal":
+		return nil
+	default:
+		return []string{"--verbose"}
+	}
+}
+
+func (opts *CloneOptions) retrySettings() (int, time.Duration) {
+	count := CloneRetryOnFailureMaxAttempts
+	delay := CloneRetryOnFailureBaseDelay
+	if opts.RetryCount > 0 {
+		count = opts.RetryCount
+	}
+	if opts.RetryDelay > 0 {
+		delay = opts.RetryDelay
+	}
+	if count > CloneRetryCountCap {
+		count = CloneRetryCountCap
+	}
+	if delay > CloneRetryDelayCap {
+		delay = CloneRetryDelayCap
+	}
+	return count, delay
 }
 
 // normalizeGitURI normalizes a git URI by adding appropriate protocol if missing
@@ -304,29 +350,28 @@ func cleanPaths(rawPaths []string, cone bool) []string {
 }
 
 // performClone executes the git clone operation
-func performClone(uri, outputPath string, configArgs, authArgs []string, revision string, paths []string, cone bool) error {
+func performClone(uri, outputPath string, configArgs, authArgs []string, opts *CloneOptions, paths []string) error {
 	if len(paths) == 0 {
-		// Full checkout
-		return performFullClone(uri, outputPath, configArgs, authArgs, revision)
+		return performFullClone(uri, outputPath, configArgs, authArgs, opts)
 	}
-	// Sparse checkout
-	return performSparseClone(uri, outputPath, configArgs, authArgs, revision, paths, cone)
+	return performSparseClone(uri, outputPath, configArgs, authArgs, opts, paths)
 }
 
 // performFullClone performs a full repository clone
-func performFullClone(uri, outputPath string, configArgs, authArgs []string, revision string) error {
+func performFullClone(uri, outputPath string, configArgs, authArgs []string, opts *CloneOptions) error {
 	ui.Debug("performing full checkout")
 
+	retryCount, retryDelay := opts.retrySettings()
 	args := []interface{}{"clone"}
 	// Always clone without checkout so we can resolve `revision` (branch, tag, or commit)
 	// using the same fetch+checkout logic as the sparse path.
-	args = append(args, configArgs, authArgs, "--depth", "1", "--no-checkout", "--verbose", uri, outputPath)
+	args = append(args, configArgs, authArgs, "--depth", "1", "--no-checkout", opts.gitLogArgs(), uri, outputPath)
 
-	if err := RunWithRetry(CloneRetryOnFailureMaxAttempts, CloneRetryOnFailureBaseDelay, "git", args...); err != nil {
+	if err := RunWithRetry(retryCount, retryDelay, "git", args...); err != nil {
 		return err
 	}
 
-	if err := checkoutRevision(outputPath, configArgs, authArgs, revision); err != nil {
+	if err := checkoutRevision(outputPath, configArgs, authArgs, opts); err != nil {
 		return fmt.Errorf("checking out revision: %w", err)
 	}
 
@@ -334,21 +379,18 @@ func performFullClone(uri, outputPath string, configArgs, authArgs []string, rev
 }
 
 // performSparseClone performs a sparse repository clone
-func performSparseClone(uri, outputPath string, configArgs, authArgs []string, revision string, paths []string, cone bool) error {
+func performSparseClone(uri, outputPath string, configArgs, authArgs []string, opts *CloneOptions, paths []string) error {
 	ui.Debug("performing sparse checkout")
 
-	// Initialize sparse repository
-	if err := initializeSparseRepo(uri, outputPath, configArgs, authArgs); err != nil {
+	if err := initializeSparseRepo(uri, outputPath, configArgs, authArgs, opts); err != nil {
 		return fmt.Errorf("initializing sparse repository: %w", err)
 	}
 
-	// Configure sparse checkout
-	if err := configureSparseCheckout(outputPath, configArgs, paths, cone); err != nil {
+	if err := configureSparseCheckout(outputPath, configArgs, paths, opts); err != nil {
 		return fmt.Errorf("configuring sparse checkout: %w", err)
 	}
 
-	// Checkout the revision
-	if err := checkoutRevision(outputPath, configArgs, authArgs, revision); err != nil {
+	if err := checkoutRevision(outputPath, configArgs, authArgs, opts); err != nil {
 		return fmt.Errorf("checking out revision: %w", err)
 	}
 
@@ -356,55 +398,55 @@ func performSparseClone(uri, outputPath string, configArgs, authArgs []string, r
 }
 
 // initializeSparseRepo initializes a sparse git repository without checking out files
-func initializeSparseRepo(uri, outputPath string, configArgs, authArgs []string) error {
+func initializeSparseRepo(uri, outputPath string, configArgs, authArgs []string, opts *CloneOptions) error {
+	retryCount, retryDelay := opts.retrySettings()
 	args := []interface{}{"clone"}
 	args = append(args, configArgs, authArgs,
 		"--filter=blob:none",
 		"--no-checkout",
 		"--sparse",
 		"--depth", "1",
-		"--verbose",
+		opts.gitLogArgs(),
 		uri, outputPath)
 
-	return RunWithRetry(CloneRetryOnFailureMaxAttempts, CloneRetryOnFailureBaseDelay, "git", args...)
+	return RunWithRetry(retryCount, retryDelay, "git", args...)
 }
 
 // configureSparseCheckout sets up sparse checkout patterns
-func configureSparseCheckout(repoPath string, configArgs, paths []string, cone bool) error {
+func configureSparseCheckout(repoPath string, configArgs, paths []string, opts *CloneOptions) error {
+	retryCount, retryDelay := opts.retrySettings()
 	sparseArgs := []interface{}{"-C", repoPath}
 	sparseArgs = append(sparseArgs, configArgs, "sparse-checkout", "set")
 
-	if !cone {
+	if !opts.Cone {
 		sparseArgs = append(sparseArgs, "--no-cone")
 	}
 
 	sparseArgs = append(sparseArgs, paths)
 
-	return RunWithRetry(CloneRetryOnFailureMaxAttempts, CloneRetryOnFailureBaseDelay, "git", sparseArgs...)
+	return RunWithRetry(retryCount, retryDelay, "git", sparseArgs...)
 }
 
 // checkoutRevision checks out a specific revision or the default branch
-func checkoutRevision(repoPath string, configArgs, authArgs []string, revision string) error {
-	if revision == "" {
+func checkoutRevision(repoPath string, configArgs, authArgs []string, opts *CloneOptions) error {
+	if opts.Revision == "" {
 		// For sparse checkout, we need to populate the working directory
 		// The sparse-checkout configuration will control which files are checked out
 		return Run("git", "-C", repoPath, configArgs, "read-tree", "-m", "-u", "HEAD")
 	}
 
-	// Fetch the specific revision
-	if err := fetchRevision(repoPath, configArgs, authArgs, revision); err != nil {
+	if err := fetchRevision(repoPath, configArgs, authArgs, opts); err != nil {
 		return fmt.Errorf("fetching revision: %w", err)
 	}
 
-	// Checkout FETCH_HEAD
 	if err := Run("git", "-C", repoPath, configArgs, "checkout", "FETCH_HEAD"); err != nil {
 		return fmt.Errorf("checking out FETCH_HEAD: %w", err)
 	}
 
 	// Create branch for non-commit references
 	// Skip branch creation if revision looks like a commit hash (40 hex chars)
-	if !isCommitHash(revision) {
-		if err := Run("git", "-C", repoPath, configArgs, "checkout", "-B", revision); err != nil {
+	if !isCommitHash(opts.Revision) {
+		if err := Run("git", "-C", repoPath, configArgs, "checkout", "-B", opts.Revision); err != nil {
 			return fmt.Errorf("creating branch: %w", err)
 		}
 	}
@@ -413,11 +455,12 @@ func checkoutRevision(repoPath string, configArgs, authArgs []string, revision s
 }
 
 // fetchRevision fetches a specific revision from the remote
-func fetchRevision(repoPath string, configArgs, authArgs []string, revision string) error {
+func fetchRevision(repoPath string, configArgs, authArgs []string, opts *CloneOptions) error {
+	retryCount, retryDelay := opts.retrySettings()
 	fetchArgs := []interface{}{"-C", repoPath}
-	fetchArgs = append(fetchArgs, configArgs, "fetch", authArgs, "--depth", "1", "origin", revision)
+	fetchArgs = append(fetchArgs, configArgs, "fetch", authArgs, "--depth", "1", opts.gitLogArgs(), "origin", opts.Revision)
 
-	return RunWithRetry(CloneRetryOnFailureMaxAttempts, CloneRetryOnFailureBaseDelay, "git", fetchArgs...)
+	return RunWithRetry(retryCount, retryDelay, "git", fetchArgs...)
 }
 
 // isCommitHash checks if a string looks like a git commit hash
@@ -434,8 +477,10 @@ func isCommitHash(s string) bool {
 }
 
 // copyRepositoryContents copies repository contents from source to destination
-func copyRepositoryContents(src, dest string) error {
-	fmt.Printf("📥 Moving the contents to %s...\n", dest)
+func copyRepositoryContents(src, dest string, opts *CloneOptions) error {
+	if !opts.isQuiet() {
+		fmt.Printf("📥 Moving the contents to %s...\n", dest)
+	}
 
 	return copy.Copy(src, dest, copy.Options{
 		OnError: func(srcPath, destPath string, err error) error {
@@ -452,8 +497,10 @@ func copyRepositoryContents(src, dest string) error {
 }
 
 // adjustFilePermissions ensures files have appropriate permissions
-func adjustFilePermissions(path string) error {
-	fmt.Printf("📥 Adjusting access permissions...\n")
+func adjustFilePermissions(path string, opts *CloneOptions) error {
+	if !opts.isQuiet() {
+		fmt.Printf("📥 Adjusting access permissions...\n")
+	}
 
 	return filepath.WalkDir(path, func(filePath string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -478,7 +525,11 @@ func adjustFilePermissions(path string) error {
 }
 
 // listDirectoryContents displays the contents of a directory
-func listDirectoryContents(path string) error {
+func listDirectoryContents(path string, opts *CloneOptions) error {
+	if opts.isQuiet() {
+		return nil
+	}
+
 	fmt.Printf("🔎 Destination folder contains following files ...\n")
 
 	return filepath.Walk(path, func(name string, info fs.FileInfo, err error) error {
