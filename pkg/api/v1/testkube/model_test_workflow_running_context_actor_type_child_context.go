@@ -9,3 +9,11 @@ func (t TestWorkflowRunningContextActorType) ChildRunningContextType() cloud.Run
 	}
 	return cloud.RunningContextType_EXECUTION
 }
+
+func (t TestWorkflowRunningContextActorType) ChildRunningContextName(parentName string) string {
+	switch t {
+	case QUALITYLOOP_TestWorkflowRunningContextActorType:
+		return "Git Integration"
+	}
+	return parentName
+}
