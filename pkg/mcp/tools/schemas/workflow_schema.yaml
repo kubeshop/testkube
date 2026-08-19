@@ -144,6 +144,14 @@ spec:
       mountPath: ""
       # Array. Paths to fetch for the sparse checkout. Only fetches specified directories, useful for large monorepos to save time and resources. Each path is relative to the repository root.
       paths: []
+      # String. Logging level for the clone: "quiet", "normal", or "verbose". Omit defaults to "verbose".
+      verbosity: ""
+      # Object. In-process retry policy for transient git failures during clone. Distinct from step-level retry.
+      retry:
+        # Integer. Max attempts for transient git failures (default: 5). Minimum 1.
+        count: 0
+        # String. Base delay between attempts with exponential backoff (default: 100ms). Format like "100ms", "1s".
+        delay: ""
       # String. Branch, commit or a tag name to fetch. Controls which version of the code is checked out. Can use expressions like "{{ config.branch }}" for dynamic revision selection.
       revision: ""
       # String. Plain text SSH private key to fetch with. Used for SSH authentication with the Git repository. Should include the entire key including BEGIN/END lines.
