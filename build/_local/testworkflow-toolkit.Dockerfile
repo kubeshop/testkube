@@ -5,7 +5,7 @@ FROM ${BUSYBOX_IMAGE} AS busybox
 ###################################
 ## Build testworkflow-init
 ###################################
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS builder-init
+FROM --platform=$BUILDPLATFORM golang:1.26.6-alpine AS builder-init
 
 ARG TARGETOS
 ARG TARGETARCH

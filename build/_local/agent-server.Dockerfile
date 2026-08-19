@@ -3,7 +3,7 @@ ARG BUSYBOX_IMAGE
 ###################################
 ## Build
 ###################################
-FROM --platform=$BUILDPLATFORM golang:1.26 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26.6 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -34,7 +34,7 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 ###################################
 ## Debug
 ###################################
-FROM golang:1.26 AS debug
+FROM golang:1.26.6 AS debug
 
 ENV GOTRACEBACK=all
 RUN go install github.com/go-delve/delve/cmd/dlv@v1.26.0
