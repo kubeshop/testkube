@@ -47,3 +47,43 @@ func TestTestWorkflowRunningContextActorType_ChildRunningContextType(t *testing.
 		})
 	}
 }
+
+func TestTestWorkflowRunningContextActorType_ChildRunningContextName(t *testing.T) {
+	tests := []struct {
+		name       string
+		actor      TestWorkflowRunningContextActorType
+		parentName string
+		wanted     string
+	}{
+		{
+			name:       "QUALITYLOOP parent hides internal workflow name",
+			actor:      QUALITYLOOP_TestWorkflowRunningContextActorType,
+			parentName: "ql-parent-kubeshop-testkube-cloud-api",
+			wanted:     "Git Integration",
+		},
+		{
+			name:       "USER parent keeps original workflow name",
+			actor:      USER_TestWorkflowRunningContextActorType,
+			parentName: "user-authored-suite",
+			wanted:     "user-authored-suite",
+		},
+		{
+			name:       "TESTWORKFLOW parent keeps original workflow name",
+			actor:      TESTWORKFLOW_TestWorkflowRunningContextActorType,
+			parentName: "composite-suite",
+			wanted:     "composite-suite",
+		},
+		{
+			name:       "empty actor type keeps original workflow name",
+			actor:      "",
+			parentName: "some-workflow",
+			wanted:     "some-workflow",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wanted, tt.actor.ChildRunningContextName(tt.parentName))
+		})
+	}
+}
