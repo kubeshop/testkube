@@ -25,7 +25,7 @@
     "ts-check": "turbo run ts-check"
   },
   "devDependencies": {
-    "@changesets/cli": "3.0.0",
+    "@changesets/cli": "3.0.1",
     "turbo": "2.10.11",
     "typescript": "7.0.2"
   },
