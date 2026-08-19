@@ -1,6 +1,6 @@
 ARG BUSYBOX_IMAGE
 
-FROM --platform=$BUILDPLATFORM golang:1.26.6-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.27.0-alpine AS build
 ARG TARGETOS
 ARG TARGETARCH
 ARG GOCACHE="/root/.cache/go-build"
