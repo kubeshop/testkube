@@ -629,7 +629,7 @@ func main() {
 			log.DefaultLogger.Infow("webhooks control plane sync enabled", "envID", proContext.EnvID)
 		}
 		log.DefaultLogger.Infow("registering webhook loader", "envID", proContext.EnvID, "orgID", proContext.OrgID)
-		secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
+		secretClient := secret.NewCachedClient(secret.NewClientFor(clientset, cfg.TestkubeNamespace), cfg.TestkubeNamespace, cfg.SecretCacheTTL)
 		webhookLoader := webhook.NewWebhookLoader(
 			webhooksLoaderClient,
 			webhook.WithTestWorkflowResultsRepository(testWorkflowResultsRepository),
