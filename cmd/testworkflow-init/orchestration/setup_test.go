@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/pkg/executiondata"
 )
 
@@ -69,24 +70,32 @@ func TestSetup(t *testing.T) {
 }
 
 func TestGetSensitiveWords(t *testing.T) {
-	t.Run("holds words added at runtime to the minimum length", func(t *testing.T) {
-		// A word shorter than the minimum matches nearly every line, which would mask
-		// unrelated logs and withhold unrelated step outputs wholesale.
+	t.Run("keeps a short word added at runtime", func(t *testing.T) {
+		// This set is the only thing deciding whether a step output may be published, so
+		// dropping a word for being short would publish the credential it stands for
+		// verbatim into the execution record - and mask it nowhere in the logs either.
+		// Production sets the minimum to 4, which must not reach these words.
 		setup := newSetup()
 		setup.SetSensitiveWordMinimumLength(4)
-		setup.AddSensitiveWords("1", "abc", "s3cr3t-value")
+		setup.AddSensitiveWords("a", "abc", "s3cr3t-value")
 
 		words := setup.GetSensitiveWords()
 		assert.Contains(t, words, "s3cr3t-value")
-		assert.NotContains(t, words, "1")
-		assert.NotContains(t, words, "abc")
+		assert.Contains(t, words, "abc", "a three-character credential is still a credential")
+		assert.Contains(t, words, "a")
 	})
 
-	t.Run("keeps every word when no minimum is set", func(t *testing.T) {
+	t.Run("a short output value is withheld from the record", func(t *testing.T) {
+		// The end of the path the previous case guards: a short credential written to the
+		// outputs directory must not leave the workflow.
 		setup := newSetup()
-		setup.AddSensitiveWords("1")
+		setup.SetSensitiveWordMinimumLength(4)
+		setup.AddSensitiveWords("ab")
 
-		assert.Contains(t, setup.GetSensitiveWords(), "1")
+		publishable, withheld := data.PartitionSensitiveOutputs(
+			map[string]string{"token": "ab", "count": "42"}, setup.GetSensitiveWords())
+		assert.Equal(t, map[string]string{"count": "42"}, publishable)
+		assert.Equal(t, []string{"token"}, withheld)
 	})
 }
 
