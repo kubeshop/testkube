@@ -44,7 +44,7 @@ func (r *ipsRegistry) load(ctx context.Context, id string) (string, error) {
 		return "", err
 	}
 	var pods *corev1.PodList
-	err = kubeReadRetry(func() error {
+	err = kubeReadRetry(ctx, func() error {
 		var listErr error
 		pods, listErr = r.clientSet.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{
 			LabelSelector: constants.ResourceIdLabelName + "=" + id,
