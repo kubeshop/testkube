@@ -10,6 +10,7 @@
 package testkube
 
 type ExecutionTarget struct {
+	SchedulerPolicy *SchedulerPolicy `json:"schedulerPolicy,omitempty"`
 	// runner labels to match
 	Match map[string][]string `json:"match,omitempty"`
 	// runner labels to NOT match
