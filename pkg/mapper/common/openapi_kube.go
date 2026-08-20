@@ -6,9 +6,14 @@ import (
 )
 
 func MapTargetApiToKube(v testkube.ExecutionTarget) commonv1.Target {
+	var schedulerPolicy commonv1.SchedulerPolicy
+	if v.SchedulerPolicy != nil {
+		schedulerPolicy = commonv1.SchedulerPolicy(*v.SchedulerPolicy)
+	}
 	return commonv1.Target{
-		Match:     v.Match,
-		Not:       v.Not,
-		Replicate: v.Replicate,
+		SchedulerPolicy: schedulerPolicy,
+		Match:           v.Match,
+		Not:             v.Not,
+		Replicate:       v.Replicate,
 	}
 }

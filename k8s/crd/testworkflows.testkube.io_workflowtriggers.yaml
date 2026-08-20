@@ -132,6 +132,12 @@ spec:
                         items:
                           type: string
                         type: array
+                      schedulerPolicy:
+                        description: SchedulerPolicy controls whether a targeted execution
+                          should be created.
+                        enum:
+                        - OnlyWhenMatches
+                        type: string
                     type: object
                   workflow:
                     description: Workflow identifies which workflow(s) to execute.

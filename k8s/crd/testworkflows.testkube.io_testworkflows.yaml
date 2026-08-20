@@ -1143,6 +1143,11 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    schedulerPolicy:
+                                      description: SchedulerPolicy controls whether a targeted execution should be created.
+                                      enum:
+                                        - OnlyWhenMatches
+                                      type: string
                                   type: object
                               type: object
                             type: array
@@ -1638,6 +1643,11 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        schedulerPolicy:
+                                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                                          enum:
+                                            - OnlyWhenMatches
+                                          type: string
                                       type: object
                                   type: object
                                 type: array
@@ -4231,6 +4241,11 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              schedulerPolicy:
+                                description: SchedulerPolicy controls whether a targeted execution should be created.
+                                enum:
+                                  - OnlyWhenMatches
+                                type: string
                             type: object
                           timezone:
                             description: cron timezone
@@ -4270,6 +4285,11 @@ spec:
                           items:
                             type: string
                           type: array
+                        schedulerPolicy:
+                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                          enum:
+                            - OnlyWhenMatches
+                          type: string
                       type: object
                   type: object
                 job:
@@ -6823,6 +6843,11 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    schedulerPolicy:
+                                      description: SchedulerPolicy controls whether a targeted execution should be created.
+                                      enum:
+                                        - OnlyWhenMatches
+                                      type: string
                                   type: object
                               type: object
                             type: array
@@ -7318,6 +7343,11 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        schedulerPolicy:
+                                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                                          enum:
+                                            - OnlyWhenMatches
+                                          type: string
                                       type: object
                                   type: object
                                 type: array
@@ -10231,6 +10261,11 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    schedulerPolicy:
+                                      description: SchedulerPolicy controls whether a targeted execution should be created.
+                                      enum:
+                                        - OnlyWhenMatches
+                                      type: string
                                   type: object
                               type: object
                             type: array
@@ -10726,6 +10761,11 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        schedulerPolicy:
+                                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                                          enum:
+                                            - OnlyWhenMatches
+                                          type: string
                                       type: object
                                   type: object
                                 type: array
