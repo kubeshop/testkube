@@ -57,6 +57,11 @@ func TestDeferredSpecFinalization(t *testing.T) {
 // An output the producer withheld resolves to a marker instead of the value it was
 // meant to carry. Handing that to another workflow has to fail, rather than configure
 // it with the marker - or, worse, with nothing at all.
+//
+// This pins the contract: a sensitive output is not exchanged between executions, and
+// asking for one is an error naming the channels that can carry it. Turning this back
+// into an empty value would be a silent regression, which is what the marker exists to
+// prevent.
 func TestWithheldOutputStopsTheExecution(t *testing.T) {
 	spec := &testworkflowsv1.StepExecuteWorkflow{
 		Name: "consumer",
@@ -80,9 +85,15 @@ func TestWithheldOutputStopsTheExecution(t *testing.T) {
 
 	markers := executiondata.WithheldMarkersIn(&workflow)
 	require.Len(t, markers, 1, "the marker reaches the configuration of the scheduled execution")
+	assert.NotEmpty(t, workflow.Config["token"].StrVal,
+		"the consumer must not resolve a withheld output to an empty value")
+
 	err := executiondata.WithheldError("this execution", markers)
 	assert.ErrorContains(t, err, "was not published outside the workflow that produced it")
-	assert.ErrorContains(t, err, "output token of workflow producer")
+	assert.ErrorContains(t, err, "output token of workflow producer",
+		"the error names which output of which workflow to stop relying on")
+	assert.ErrorContains(t, err, "read_artifact()",
+		"the error names a channel that can carry the value instead")
 }
 
 func TestClaimExecutionRefs(t *testing.T) {

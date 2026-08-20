@@ -6,6 +6,23 @@
 // in a Registry; the `execution()` function resolves references against it, and
 // falls back to the control plane for references the registry does not know
 // (a raw execution id, or the special "parent" reference).
+//
+// # What outputs can carry
+//
+// Outputs cross the boundary between executions through the execution record, and
+// they reach it by being printed to the log stream, which is obfuscated on its way
+// out. That fixes the contract: an output whose value holds a sensitive word cannot
+// be exchanged between executions. Such a value stays inside the workflow that
+// produced it, where later steps still read it in full through
+// `step.<id>.outputs.<key>`; what leaves is a marker naming what was withheld, and a
+// consumer resolving that marker fails rather than acting on a value that isn't
+// there. This is the intended contract, not a temporary limitation - publishing the
+// value would either corrupt it (the obfuscator masks part of it) or leak it (the
+// execution record is readable by everyone who can read the execution).
+//
+// A value that must genuinely cross executions has to travel outside the log stream:
+// store it as an artifact and read it with `read_artifact()`, or hand it to both
+// workflows as a secret.
 package executiondata
 
 import "github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -18,6 +35,10 @@ const (
 	// OutputsInstructionName is the name of the output instruction a step emits to
 	// publish the values it left in the outputs directory. It makes them part of the
 	// execution record, so a parent workflow can read them back with execution().
+	//
+	// The instruction is printed to the obfuscated log stream, so it carries only the
+	// values that may leave the workflow: a value holding a sensitive word is replaced
+	// by a WithheldMarker. See the package documentation for the contract.
 	OutputsInstructionName = "outputs"
 
 	// ExecutionInstructionPrefix prefixes the output instruction the parent emits for
@@ -41,6 +62,9 @@ type Execution struct {
 	// Status is the final execution status.
 	Status string `json:"status,omitempty"`
 	// Outputs are the values the execution published in its outputs directory.
+	//
+	// An output the execution produced but could not publish - its value holds a
+	// sensitive word - is present here as a WithheldMarker rather than as its value.
 	Outputs map[string]string `json:"outputs,omitempty"`
 }
 
@@ -111,6 +135,9 @@ func FromExecution(execution *testkube.TestWorkflowExecution) Execution {
 // outputs directory; they are flattened into one map here. When two steps use
 // the same key, the later step wins - outputs are ordered as they were appended
 // to the execution record.
+//
+// This is the only channel outputs cross executions through, so what it cannot
+// carry cannot be exchanged - see the package documentation.
 func OutputsOf(execution *testkube.TestWorkflowExecution) map[string]string {
 	if execution == nil {
 		return nil
