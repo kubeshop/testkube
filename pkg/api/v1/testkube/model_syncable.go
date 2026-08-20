@@ -11,6 +11,7 @@ package testkube
 
 // source information about resources that may have been synced from multiple sources. An empty source indicates that the source was the UI/API for backwards compatibility.
 type Syncable struct {
-	CreationSource         *Source `json:"creationSource,omitempty"`
-	LastModificationSource *Source `json:"lastModificationSource,omitempty"`
+	CreationSource         *Source      `json:"creationSource,omitempty"`
+	LastModificationSource *Source      `json:"lastModificationSource,omitempty"`
+	GitOpsOwner            *GitOpsOwner `json:"gitOpsOwner,omitempty"`
 }
