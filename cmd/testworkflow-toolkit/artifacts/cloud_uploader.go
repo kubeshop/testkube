@@ -17,6 +17,14 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
+const (
+	uploadRetryCount = 5
+)
+
+// uploadRetryBaseDelay is a var (not a const) so tests can shorten the wait
+// between attempts without paying the full production budget.
+var uploadRetryBaseDelay = 500 * time.Millisecond
+
 type CloudUploaderRequestEnhancer = func(req *http.Request, path string, size int64)
 
 func NewCloudUploader(
@@ -89,15 +97,44 @@ func (d *cloudUploader) getContentType(path string, size int64) string {
 }
 
 func (d *cloudUploader) putObject(url string, path string, file io.Reader, size int64) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
-	defer cancel()
 	if size == 0 {
 		// http.Request won't send Content-Length: 0, if the body is non-nil
 		file = nil
 	}
+	seeker, canRewind := file.(io.Seeker)
+
+	var lastErr error
+	for attempt := 0; attempt < uploadRetryCount; attempt++ {
+		if attempt > 0 {
+			if !canRewind || file == nil {
+				return lastErr
+			}
+			if _, e := seeker.Seek(0, io.SeekStart); e != nil {
+				return errors.Wrapf(lastErr, "cannot rewind body for retry: %v", e)
+			}
+			time.Sleep(time.Duration(attempt) * uploadRetryBaseDelay)
+		}
+		retryable, err := d.putObjectOnce(url, path, file, size)
+		if err == nil {
+			return nil
+		}
+		lastErr = err
+		if !retryable {
+			return err
+		}
+	}
+	return lastErr
+}
+
+// putObjectOnce performs a single PUT attempt and reports whether the error is
+// worth retrying: transport errors, 5xx, and 429 are retryable; other 4xx are
+// terminal so we do not spam the signed URL with a request that will always fail.
+func (d *cloudUploader) putObjectOnce(url string, path string, file io.Reader, size int64) (retryable bool, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, file)
 	if err != nil {
-		return err
+		return false, err
 	}
 	for _, r := range d.reqEnhancers {
 		r(req, path, size)
@@ -111,14 +148,18 @@ func (d *cloudUploader) putObject(url string, path string, file io.Reader, size 
 	client := &http.Client{Transport: tr}
 	res, err := client.Do(req)
 	if err != nil {
-		return err
+		return true, err
 	}
 	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		b, _ := io.ReadAll(res.Body)
-		return errors.Errorf("failed saving file: status code: %d / message: %s", res.StatusCode, string(b))
+	if res.StatusCode == http.StatusOK {
+		return false, nil
 	}
-	return nil
+	b, _ := io.ReadAll(res.Body)
+	statusErr := errors.Errorf("failed saving file: status code: %d / message: %s", res.StatusCode, string(b))
+	if res.StatusCode >= 500 || res.StatusCode == http.StatusTooManyRequests {
+		return true, statusErr
+	}
+	return false, statusErr
 }
 
 func (d *cloudUploader) upload(path string, file io.Reader, size int64) {
