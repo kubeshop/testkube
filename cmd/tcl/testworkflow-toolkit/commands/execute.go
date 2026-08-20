@@ -322,6 +322,11 @@ func buildWorkflowExecution(req workflowExecutionRequest) func() error {
 // An aliased entry claims one reference no matter how many workflows its selector
 // matched - they form a single group, told apart by execution("<alias>", index).
 // An entry without an alias claims each matched workflow by name.
+//
+// An aliased entry stays addressable by the workflow it ran, which this does not claim:
+// two aliased entries may legitimately run the same workflow and be told apart by their
+// aliases. That leaves the workflow name itself able to address more than one execution,
+// which Registry.Lookup reports when it is used rather than forbidding here.
 func claimExecutionRefs(claimed map[string]string, alias string, workflowNames []string) error {
 	refs := workflowNames
 	if alias != "" {
@@ -351,7 +356,10 @@ func fetchArtifacts(fetch []testworkflowsv1.StepExecuteFetch, entries []executio
 	for i, f := range fetch {
 		sources := entries
 		if f.From != "" {
-			source, ok := registry.Lookup(f.From, 0)
+			source, ok, err := registry.Lookup(f.From, 0)
+			if err != nil {
+				return errors.Wrapf(err, "fetch.%d", i)
+			}
 			if !ok {
 				return executiondata.UnknownRefError(f.From, 0, registry.Refs())
 			}

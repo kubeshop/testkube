@@ -82,6 +82,20 @@ func TestExecutionFunction(t *testing.T) {
 		assert.Contains(t, err.Error(), "run it in an earlier step")
 	})
 
+	t.Run("an ambiguous reference fails instead of picking a child", func(t *testing.T) {
+		// An aliased selector covering "producer" plus a separate unaliased run of it:
+		// both answer to execution("producer"), and configuration built from the wrong
+		// one would read another child's outputs.
+		ambiguous := NewRegistry()
+		ambiguous.Add(Execution{Id: "aliased", Workflow: "producer", Alias: "all", Outputs: map[string]string{"token": "from-selector"}})
+		ambiguous.Add(Execution{Id: "own", Workflow: "producer", Outputs: map[string]string{"token": "from-entry"}})
+
+		_, err := resolve(t, `execution("producer").outputs.token`, NewMachine(MachineOptions{Registry: ambiguous}))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `ambiguous execution "producer"`)
+		assert.Contains(t, err.Error(), "set a unique 'as'")
+	})
+
 	t.Run("rejects malformed arguments", func(t *testing.T) {
 		_, err := resolve(t, `execution()`, machine)
 		assert.ErrorContains(t, err, "expects 1-2 arguments")

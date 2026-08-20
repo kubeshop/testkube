@@ -75,7 +75,11 @@ func NewMachine(opts MachineOptions) expressions.Machine {
 // the common case costs no network call.
 func (o MachineOptions) resolve(ref string, index int64) (Execution, error) {
 	if o.Registry != nil {
-		if execution, ok := o.Registry.Lookup(ref, index); ok {
+		execution, ok, err := o.Registry.Lookup(ref, index)
+		if err != nil {
+			return Execution{}, err
+		}
+		if ok {
 			return execution, nil
 		}
 	}

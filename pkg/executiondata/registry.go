@@ -32,21 +32,36 @@ func (r *Registry) Add(execution Execution) {
 	r.executions = append(r.executions, execution)
 }
 
-func (r *Registry) Lookup(ref string, index int64) (Execution, bool) {
+// Lookup finds the execution a reference addresses at a position.
+//
+// A reference may be a group key, a workflow name or an execution id, and an aliased
+// entry stays addressable by the workflow it ran - so more than one execution can answer
+// to the same reference. An aliased selector covering workflow "a" and a separate entry
+// running "a" without an alias both answer to execution("a", 0). Returning either would
+// hand the caller data from an arbitrary child, so that is reported as an error instead
+// of resolved by insertion order.
+func (r *Registry) Lookup(ref string, index int64) (Execution, bool, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
+	var found Execution
+	matched := false
 	for _, execution := range r.executions {
 		if execution.Index != index {
 			continue
 		}
 		for _, candidate := range execution.Refs() {
-			if candidate == ref {
-				return execution, true
+			if candidate != ref {
+				continue
 			}
+			if matched {
+				return Execution{}, false, AmbiguousRefError(ref, index, found, execution)
+			}
+			found, matched = execution, true
+			break
 		}
 	}
-	return Execution{}, false
+	return found, matched, nil
 }
 
 func (r *Registry) Refs() []string {
@@ -117,6 +132,29 @@ func instructionSafe(name string) string {
 			return '_'
 		}
 	}, name)
+}
+
+// AmbiguousRefError explains that a reference addresses more than one execution, and how
+// to say which one was meant.
+func AmbiguousRefError(ref string, index int64, first, second Execution) error {
+	position := ""
+	if index != 0 {
+		position = fmt.Sprintf(" at index %d", index)
+	}
+	return fmt.Errorf("ambiguous execution %q%s: it addresses both %s and %s - address them by their own 'as' alias, or set a unique 'as' on one of them",
+		ref, position, describeExecution(first), describeExecution(second))
+}
+
+// describeExecution names an execution the way its author would recognise it.
+func describeExecution(e Execution) string {
+	workflow := e.Workflow
+	if workflow == "" {
+		workflow = "unnamed workflow"
+	}
+	if e.Alias != "" {
+		return fmt.Sprintf("the %q run aliased %q", workflow, e.Alias)
+	}
+	return fmt.Sprintf("the unaliased %q run", workflow)
 }
 
 // UnknownRefError explains that a reference could not be resolved, listing what could.
