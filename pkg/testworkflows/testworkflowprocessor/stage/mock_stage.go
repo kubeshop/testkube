@@ -158,20 +158,6 @@ func (mr *MockStageMockRecorder) GetImages(isGroupNeeded any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImages", reflect.TypeOf((*MockStage)(nil).GetImages), isGroupNeeded)
 }
 
-// Id mocks base method.
-func (m *MockStage) Id() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Id")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// Id indicates an expected call of Id.
-func (mr *MockStageMockRecorder) Id() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Id", reflect.TypeOf((*MockStage)(nil).Id))
-}
-
 // HasPause mocks base method.
 func (m *MockStage) HasPause() bool {
 	m.ctrl.T.Helper()
@@ -184,6 +170,20 @@ func (m *MockStage) HasPause() bool {
 func (mr *MockStageMockRecorder) HasPause() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasPause", reflect.TypeOf((*MockStage)(nil).HasPause))
+}
+
+// Id mocks base method.
+func (m *MockStage) Id() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Id")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Id indicates an expected call of Id.
+func (mr *MockStageMockRecorder) Id() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Id", reflect.TypeOf((*MockStage)(nil).Id))
 }
 
 // Len mocks base method.
@@ -302,20 +302,6 @@ func (mr *MockStageMockRecorder) RetryPolicy() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetryPolicy", reflect.TypeOf((*MockStage)(nil).RetryPolicy))
 }
 
-// SetId mocks base method.
-func (m *MockStage) SetId(id string) StageMetadata {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetId", id)
-	ret0, _ := ret[0].(StageMetadata)
-	return ret0
-}
-
-// SetId indicates an expected call of SetId.
-func (mr *MockStageMockRecorder) SetId(id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetId", reflect.TypeOf((*MockStage)(nil).SetId), id)
-}
-
 // SetCategory mocks base method.
 func (m *MockStage) SetCategory(category string) StageMetadata {
 	m.ctrl.T.Helper()
@@ -342,6 +328,20 @@ func (m *MockStage) SetCondition(expr string) StageLifecycle {
 func (mr *MockStageMockRecorder) SetCondition(expr any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCondition", reflect.TypeOf((*MockStage)(nil).SetCondition), expr)
+}
+
+// SetId mocks base method.
+func (m *MockStage) SetId(id string) StageMetadata {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetId", id)
+	ret0, _ := ret[0].(StageMetadata)
+	return ret0
+}
+
+// SetId indicates an expected call of SetId.
+func (mr *MockStageMockRecorder) SetId(id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetId", reflect.TypeOf((*MockStage)(nil).SetId), id)
 }
 
 // SetName mocks base method.

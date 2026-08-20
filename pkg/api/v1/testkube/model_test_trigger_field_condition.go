@@ -11,8 +11,8 @@ package testkube
 
 type TestTriggerFieldCondition struct {
 	// Dot-path to the field in the watched resource, e.g. \".spec.replicas\".
-	Path     string                   `json:"path"`
-	Operator TestTriggerFieldOperator `json:"operator"`
+	Path     string                    `json:"path"`
+	Operator *TestTriggerFieldOperator `json:"operator"`
 	// Value to compare against for value-based operators.
 	Value string `json:"value,omitempty"`
 }
