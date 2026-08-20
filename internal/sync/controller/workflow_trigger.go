@@ -33,7 +33,7 @@ func workflowTriggerSyncReconciler(client client.Reader, store WorkflowTriggerSt
 		switch {
 		case errors.IsNotFound(err):
 			if err := store.DeleteWorkflowTrigger(ctx, req.Name); err != nil {
-				return ctrl.Result{}, fmt.Errorf("delete WorkflowTrigger %q from store: %w", req.Name, err)
+				return ctrl.Result{}, terminalOnOwnershipConflict(fmt.Errorf("delete WorkflowTrigger %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		case err != nil:
@@ -42,13 +42,13 @@ func workflowTriggerSyncReconciler(client client.Reader, store WorkflowTriggerSt
 
 		if !trigger.DeletionTimestamp.IsZero() {
 			if err := store.DeleteWorkflowTrigger(ctx, req.Name); err != nil {
-				return ctrl.Result{}, fmt.Errorf("delete WorkflowTrigger %q from store: %w", req.Name, err)
+				return ctrl.Result{}, terminalOnOwnershipConflict(fmt.Errorf("delete WorkflowTrigger %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		}
 
 		if err := store.UpdateOrCreateWorkflowTrigger(ctx, trigger); err != nil {
-			return ctrl.Result{}, fmt.Errorf("update WorkflowTrigger %q in store: %w", trigger.Name, err)
+			return ctrl.Result{}, terminalOnOwnershipConflict(fmt.Errorf("update WorkflowTrigger %q in store: %w", trigger.Name, err))
 		}
 
 		return ctrl.Result{}, nil
