@@ -2,11 +2,14 @@ package orchestration
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/executiondata"
 )
 
 func TestSetup(t *testing.T) {
@@ -84,6 +87,53 @@ func TestGetSensitiveWords(t *testing.T) {
 		setup.AddSensitiveWords("1")
 
 		assert.Contains(t, setup.GetSensitiveWords(), "1")
+	})
+}
+
+// A computed environment variable is resolved and installed by UseEnv, which no later
+// guard inspects - the command guard only sees arguments. So a withheld output reaching
+// a variable has to stop the step here, rather than arrive at the tool as its value.
+func TestUseEnv_WithheldOutput(t *testing.T) {
+	// UseEnv replaces the process environment, so put it back for the tests after this one.
+	original := os.Environ()
+	t.Cleanup(func() {
+		os.Clearenv()
+		for _, item := range original {
+			key, value, _ := strings.Cut(item, "=")
+			assert.NoError(t, os.Setenv(key, value))
+		}
+	})
+
+	marker := executiondata.WithheldMarker("producer", "token")
+
+	t.Run("a computed variable resolving to a marker stops the step", func(t *testing.T) {
+		require.NoError(t, os.Setenv("_01C_TOKEN", marker))
+		require.NoError(t, os.Setenv("_01C_GREETING", "hello"))
+
+		setup := newSetup()
+		setup.initialize()
+
+		err := setup.UseEnv("01")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, `the "TOKEN" environment variable`)
+		assert.ErrorContains(t, err, "was not published outside the workflow that produced it")
+		assert.ErrorContains(t, err, marker)
+		assert.Empty(t, os.Getenv("TOKEN"), "the marker must not reach the environment")
+	})
+
+	t.Run("a plain variable holding a marker stops the step too", func(t *testing.T) {
+		// A step that spawns workers resolves their specification itself, so the marker
+		// reaches the worker as a literal rather than as something to compute.
+		os.Clearenv()
+		require.NoError(t, os.Setenv("_02_TOKEN", marker))
+
+		setup := newSetup()
+		setup.initialize()
+
+		err := setup.UseEnv("02")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, `the "TOKEN" environment variable`)
+		assert.Empty(t, os.Getenv("TOKEN"), "the marker must not reach the environment")
 	})
 }
 

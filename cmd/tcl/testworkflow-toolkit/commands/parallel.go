@@ -33,6 +33,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/credentials"
+	"github.com/kubeshop/testkube/pkg/executiondata"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
@@ -399,6 +400,14 @@ func (b *ParallelWorkersBuilder) buildSingleWorkerSpec(parallel *testworkflowsv1
 	spec := parallel.DeepCopy()
 	if err := expressions.Simplify(&spec, machines...); err != nil {
 		return WorkerSpec{}, err
+	}
+
+	// An output another workflow withheld resolves to a marker instead of the value it
+	// was meant to carry. The worker would receive it baked into its specification, so
+	// stop here - failing before anything is spawned says which output is missing far
+	// more clearly than every worker failing on its own.
+	if markers := executiondata.WithheldMarkersIn(&spec); len(markers) > 0 {
+		return WorkerSpec{}, executiondata.WithheldError(fmt.Sprintf("worker %d of this parallel step", index), markers)
 	}
 
 	tarballs, err := spawn.ProcessTransfer(b.transferSrv, spec.Transfer, machines...)

@@ -31,6 +31,13 @@ func WithheldMarker(workflow, name string) string {
 	return fmt.Sprintf("%s%s of workflow %s>", withheldMarkerPrefix, name, workflow)
 }
 
+// IsWithheldMarker reports whether a string carries a withheld marker. It is the cheap
+// check for callers holding a single value already - WithheldMarkersIn walks a whole
+// structure, and is what to call once this says there is something to name.
+func IsWithheldMarker(value string) bool {
+	return strings.Contains(value, withheldMarkerPrefix)
+}
+
 // WithheldMarkersIn lists the withheld markers the strings of a value carry,
 // deduplicated and in the order they are found.
 //

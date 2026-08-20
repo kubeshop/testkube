@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/credentials"
+	"github.com/kubeshop/testkube/pkg/executiondata"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/expressions/libs"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
@@ -235,6 +236,9 @@ func (c *setup) UseEnv(group string) error {
 		if _, ok := c.envGroupsComputed[group][k]; ok {
 			envTemplates[k] = v
 		} else {
+			if err := checkWithheldEnv(k, v); err != nil {
+				return err
+			}
 			os.Setenv(k, v)
 		}
 	}
@@ -244,6 +248,9 @@ func (c *setup) UseEnv(group string) error {
 		if _, ok := c.envGroupsComputed[constants.EnvGroupSecrets][k]; ok {
 			envTemplates[k] = v
 		} else {
+			if err := checkWithheldEnv(k, v); err != nil {
+				return err
+			}
 			os.Setenv(k, v)
 		}
 	}
@@ -291,9 +298,27 @@ func (c *setup) UseEnv(group string) error {
 			return errors.Wrapf(err, "failed to compute '%s' environment variable", name)
 		}
 		str, _ := value.Static().StringValue()
+		if err := checkWithheldEnv(name, str); err != nil {
+			return err
+		}
 		os.Setenv(name, str)
 	}
 	return nil
+}
+
+// checkWithheldEnv refuses to install a variable holding a withheld marker.
+//
+// An output another workflow withheld resolves to a marker instead of the value it was
+// meant to carry. Installing it would hand the marker to the tool as the value of the
+// variable, where nothing looks at it again - the command guard only sees arguments,
+// not what arrives through the environment. A plain value is checked as well as a
+// computed one: a step that spawns workers resolves their specification itself, so a
+// marker reaches the worker already baked in as a literal.
+func checkWithheldEnv(name, value string) error {
+	if !executiondata.IsWithheldMarker(value) {
+		return nil
+	}
+	return executiondata.WithheldError(fmt.Sprintf("the %q environment variable", name), executiondata.WithheldMarkersIn(value))
 }
 
 func (c *setup) UseCurrentEnv() error {
