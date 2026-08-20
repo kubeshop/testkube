@@ -93,8 +93,50 @@ func TestGetSensitiveWords(t *testing.T) {
 		setup.AddSensitiveWords("ab")
 
 		publishable, withheld := data.PartitionSensitiveOutputs(
-			map[string]string{"token": "ab", "count": "42"}, setup.GetSensitiveWords())
+			map[string]string{"token": "ab", "count": "42"}, setup.GetSensitiveValues())
 		assert.Equal(t, map[string]string{"count": "42"}, publishable)
+		assert.Equal(t, []string{"token"}, withheld)
+	})
+}
+
+// Masking and classification read different sets. A value too short to mask usefully in
+// the logs is still a secret that may not be published into the execution record, where
+// another workflow could read it back through execution().outputs.
+func TestGetSensitiveValues_EnvironmentSecrets(t *testing.T) {
+	original := os.Environ()
+	t.Cleanup(func() {
+		os.Clearenv()
+		for _, item := range original {
+			key, value, _ := strings.Cut(item, "=")
+			assert.NoError(t, os.Setenv(key, value))
+		}
+	})
+
+	os.Clearenv()
+	require.NoError(t, os.Setenv("_01S_TOKEN", "ab"))
+	require.NoError(t, os.Setenv("_01S_PASSWORD", "long-enough"))
+
+	setup := newSetup()
+	setup.initialize()
+	setup.SetSensitiveWordMinimumLength(4)
+	require.NoError(t, setup.UseEnv("01"))
+
+	t.Run("masking skips a value too short to mask usefully", func(t *testing.T) {
+		words := setup.GetSensitiveWords()
+		assert.Contains(t, words, "long-enough")
+		assert.NotContains(t, words, "ab")
+	})
+
+	t.Run("classification keeps it", func(t *testing.T) {
+		values := setup.GetSensitiveValues()
+		assert.Contains(t, values, "long-enough")
+		assert.Contains(t, values, "ab")
+	})
+
+	t.Run("so a short environment secret is withheld from the record", func(t *testing.T) {
+		publishable, withheld := data.PartitionSensitiveOutputs(
+			map[string]string{"token": "ab", "greeting": "hello"}, setup.GetSensitiveValues())
+		assert.Equal(t, map[string]string{"greeting": "hello"}, publishable)
 		assert.Equal(t, []string{"token"}, withheld)
 	})
 }

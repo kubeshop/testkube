@@ -133,50 +133,58 @@ func (c *setup) AddSensitiveWords(words ...string) {
 	}
 }
 
+// GetSensitiveWords returns the values to mask in the log stream.
+//
+// Values shorter than the configured minimum are left out on purpose: masking two
+// characters rewrites nearly every line they appear in, which destroys the logs while
+// hiding almost nothing. This is a rendering decision - it must not be reused to decide
+// what may leave the pod. See GetSensitiveValues.
 func (c *setup) GetSensitiveWords() []string {
+	return c.sensitiveValues(c.minSensitiveWordLength)
+}
+
+// GetSensitiveValues returns every value marked sensitive, whatever its length.
+//
+// This is the set for deciding what may leave the pod. A step output published into the
+// execution record is readable by everyone who can read that execution, and readable
+// from another workflow through execution().outputs, so a short secret has to count:
+// missing it publishes the secret, while matching on it costs a withheld output, which
+// is announced rather than silent.
+func (c *setup) GetSensitiveValues() []string {
+	return c.sensitiveValues(0)
+}
+
+// sensitiveValues collects the values marked sensitive, skipping the ones shorter than
+// minLength. Words handed over at runtime - the values resolved credential() calls
+// produced - are never skipped, whatever minLength says.
+func (c *setup) sensitiveValues(minLength int) []string {
 	words := make([]string, 0, len(c.envAdditionalSensitive))
 	for value := range c.envAdditionalSensitive {
-		// Deliberately not held to minSensitiveWordLength, unlike the values read from
-		// the environment below. These are words a resolved credential() handed over, and
-		// this set is the only thing deciding whether a step output may be published - a
-		// short credential dropped here would be masked nowhere and published verbatim.
-		// A short word does match aggressively, so logs and outputs suffer; that is the
-		// safe direction to fail, and withheld outputs now say so out loud.
+		words = append(words, value)
+	}
+	appendIfSensitive := func(value string) {
+		if value == "" || len(value) < minLength {
+			return
+		}
 		words = append(words, value)
 	}
 	for _, name := range commonSensitiveVariables {
-		value := os.Getenv(name)
-		if len(value) < c.minSensitiveWordLength {
-			continue
-		}
-		words = append(words, value)
+		appendIfSensitive(os.Getenv(name))
 	}
 	for k := range c.envBase {
-		value := os.Getenv(k)
-		if len(value) < c.minSensitiveWordLength {
-			continue
-		}
 		if _, ok := c.envGroupsSensitive[c.envSelectedGroup][k]; ok {
-			words = append(words, value)
+			appendIfSensitive(os.Getenv(k))
 		}
 	}
 	for k := range c.envGroups[c.envSelectedGroup] {
-		value := os.Getenv(k)
-		if len(value) < c.minSensitiveWordLength {
-			continue
-		}
 		if _, ok := c.envGroupsSensitive[c.envSelectedGroup][k]; ok {
-			words = append(words, value)
+			appendIfSensitive(os.Getenv(k))
 		}
 	}
 	// TODO(TKC-2585): Avoid adding the secrets to all the groups without isolation
 	for k := range c.envGroups[constants.EnvGroupSecrets] {
-		value := os.Getenv(k)
-		if len(value) < c.minSensitiveWordLength {
-			continue
-		}
 		if _, ok := c.envGroupsSensitive[constants.EnvGroupSecrets][k]; ok {
-			words = append(words, value)
+			appendIfSensitive(os.Getenv(k))
 		}
 	}
 	return words

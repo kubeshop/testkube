@@ -260,7 +260,9 @@ func handleExecuteAction(action *lite.ActionExecute, ctx *ExecutionContext) Acti
 		// those, rather than something the reader would silently misread: the real value
 		// stays in this workflow's state, while a workflow reading the output resolves
 		// the marker and fails instead of quietly using an empty value.
-		publishable, withheld := data.PartitionSensitiveOutputs(values, orchestration.Setup.GetSensitiveWords())
+		// Classified against every sensitive value, not the masking set: a value too short
+		// to be worth masking in the logs is still a secret that may not be published.
+		publishable, withheld := data.PartitionSensitiveOutputs(values, orchestration.Setup.GetSensitiveValues())
 		workflowName := data.GetState().InternalConfig.Workflow.Name
 		for _, name := range withheld {
 			marker := executiondata.WithheldMarker(workflowName, name)
