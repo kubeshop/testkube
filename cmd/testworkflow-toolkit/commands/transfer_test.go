@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -155,6 +156,10 @@ func TestProcessTransferPair(t *testing.T) {
 	})
 
 	t.Run("handles connection errors", func(t *testing.T) {
+		oldDelay := transferRetryBaseDelay
+		transferRetryBaseDelay = time.Millisecond
+		defer func() { transferRetryBaseDelay = oldDelay }()
+
 		// Create test files
 		tempDir := t.TempDir()
 		err := os.WriteFile(filepath.Join(tempDir, "test.txt"), []byte("test"), 0644)
@@ -164,9 +169,10 @@ func TestProcessTransferPair(t *testing.T) {
 		output := &bytes.Buffer{}
 		exitCode := ProcessTransferPair(tempDir+":test.txt=http://localhost:99999/upload", output)
 
-		// Verify failure
+		// Verify failure: network errors are retryable, so the message reflects
+		// exhaustion of the retry budget and still names the underlying cause.
 		assert.Equal(t, 1, exitCode, "should return exit code 1 on connection error")
-		assert.Contains(t, output.String(), "error: send the tarball request")
+		assert.Contains(t, output.String(), "send the tarball request")
 	})
 
 	t.Run("handles empty directory", func(t *testing.T) {
@@ -247,6 +253,11 @@ func TestProcessTransfers(t *testing.T) {
 	})
 
 	t.Run("stops on first failure", func(t *testing.T) {
+		// Shorten the retry backoff so the test is not paced by production timings.
+		oldDelay := transferRetryBaseDelay
+		transferRetryBaseDelay = time.Millisecond
+		defer func() { transferRetryBaseDelay = oldDelay }()
+
 		// Create test files
 		tempDir := t.TempDir()
 		err := os.WriteFile(filepath.Join(tempDir, "test.txt"), []byte("test"), 0644)
@@ -273,9 +284,64 @@ func TestProcessTransfers(t *testing.T) {
 		}
 		exitCode := ProcessTransfers(pairs, output)
 
-		// Verify failure
+		// Verify failure: 500 is retryable, so the first pair exhausts the retry
+		// budget before we give up and skip the second pair.
 		assert.Equal(t, 1, exitCode, "should return exit code 1 on first failure")
-		assert.Equal(t, 1, requestCount, "should have made only 1 request")
+		assert.Equal(t, transferRetryCount, requestCount, "should have exhausted the retry budget on the failing pair")
 		assert.Contains(t, output.String(), "status code 500")
+	})
+
+	// A brief 5xx blip should be hidden from the caller: the retry loop replays
+	// the tarball on the same URL and the transfer eventually succeeds.
+	t.Run("retries transient 5xx then succeeds", func(t *testing.T) {
+		oldDelay := transferRetryBaseDelay
+		transferRetryBaseDelay = time.Millisecond
+		defer func() { transferRetryBaseDelay = oldDelay }()
+
+		tempDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "test.txt"), []byte("test"), 0644))
+
+		requestCount := 0
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestCount++
+			io.Copy(io.Discard, r.Body)
+			if requestCount < 2 {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		}))
+		defer server.Close()
+
+		output := &bytes.Buffer{}
+		exitCode := ProcessTransfers([]string{tempDir + ":test.txt=" + server.URL + "/upload"}, output)
+
+		assert.Equal(t, 0, exitCode)
+		assert.Equal(t, 2, requestCount)
+	})
+
+	// 4xx is a caller / config error and would keep failing on the same URL,
+	// so retry short-circuits after the first attempt.
+	t.Run("does not retry on 4xx", func(t *testing.T) {
+		oldDelay := transferRetryBaseDelay
+		transferRetryBaseDelay = time.Millisecond
+		defer func() { transferRetryBaseDelay = oldDelay }()
+
+		tempDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "test.txt"), []byte("test"), 0644))
+
+		requestCount := 0
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestCount++
+			io.Copy(io.Discard, r.Body)
+			w.WriteHeader(http.StatusBadRequest)
+		}))
+		defer server.Close()
+
+		output := &bytes.Buffer{}
+		exitCode := ProcessTransfers([]string{tempDir + ":test.txt=" + server.URL + "/upload"}, output)
+
+		assert.Equal(t, 1, exitCode)
+		assert.Equal(t, 1, requestCount, "should not retry 4xx")
 	})
 }
