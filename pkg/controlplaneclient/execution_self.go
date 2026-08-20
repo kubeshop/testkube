@@ -77,9 +77,9 @@ func (c *client) ListExecutionArtifactsGetPresignedURLs(ctx context.Context, env
 func (c *client) ScheduleExecution(ctx context.Context, environmentId string, request *cloud.ScheduleRequest) ExecutionsReader {
 	if c.opts.ExecutionID != "" {
 		request.RunningContext = &cloud.RunningContext{
-			Name: c.opts.WorkflowName,
+			Name: c.opts.ParentActorType.ChildRunningContextName(c.opts.WorkflowName),
 			Id:   c.opts.ExecutionID,
-			Type: cloud.RunningContextType_EXECUTION,
+			Type: c.opts.ParentActorType.ChildRunningContextType(),
 		}
 		request.ParentExecutionIds = append(c.opts.ParentExecutionIDs, c.opts.ExecutionID)
 	}

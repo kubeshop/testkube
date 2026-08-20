@@ -440,6 +440,24 @@ func MapGitAuthTypeKubeToAPI(v testsv3.GitAuthType) *testkube.ContentGitAuthType
 	return common.Ptr(testkube.ContentGitAuthType(v))
 }
 
+func MapGitVerbosityKubeToAPI(v testworkflowsv1.ContentGitVerbosity) *testkube.ContentGitVerbosity {
+	if v == "" {
+		return nil
+	}
+	return common.Ptr(testkube.ContentGitVerbosity(v))
+}
+
+func MapContentGitRetryKubeToAPI(v testworkflowsv1.ContentGitRetry) testkube.TestWorkflowContentGitRetry {
+	var count int32
+	if v.Count != nil {
+		count = *v.Count
+	}
+	return testkube.TestWorkflowContentGitRetry{
+		Count: count,
+		Delay: v.Delay,
+	}
+}
+
 func MapImagePullPolicyKubeToAPI(v corev1.PullPolicy) *testkube.ImagePullPolicy {
 	if v == "" {
 		return nil
@@ -503,6 +521,8 @@ func MapContentGitKubeToAPI(v testworkflowsv1.ContentGit) testkube.TestWorkflowC
 		MountPath:    v.MountPath,
 		Cone:         v.Cone,
 		Paths:        v.Paths,
+		Verbosity:    MapGitVerbosityKubeToAPI(v.Verbosity),
+		Retry:        common.MapPtr(v.Retry, MapContentGitRetryKubeToAPI),
 	}
 }
 

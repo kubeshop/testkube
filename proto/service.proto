@@ -358,6 +358,7 @@ enum RunningContextType {
   TESTTRIGGER = 5;
   KUBERNETESOBJECT = 6;
   EXECUTION = 7;
+  QUALITYLOOP = 8;
 }
 
 message RunningContext {

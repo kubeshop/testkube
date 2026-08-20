@@ -4448,8 +4448,12 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/executionID"
+        - $ref: "#/components/parameters/Latest"
       summary: Rerun test workflow execution
-      description: Rerun test workflow execution
+      description: |
+        Rerun test workflow execution using the previous execution's parameters.
+        By default the resolved workflow snapshot from the original execution is reused.
+        When `latest=true`, the current workflow definition is used instead while keeping the original parameter set.
       operationId: rerunTestWorkflowExecutionByTestWorkflow
       requestBody:
         description: test workflow running context
@@ -4817,8 +4821,12 @@ paths:
         - api
       parameters:
         - $ref: "#/components/parameters/executionID"
+        - $ref: "#/components/parameters/Latest"
       summary: Rerun test workflow execution
-      description: Rerun test workflow execution
+      description: |
+        Rerun test workflow execution using the previous execution's parameters.
+        By default the resolved workflow snapshot from the original execution is reused.
+        When `latest=true`, the current workflow definition is used instead while keeping the original parameter set.
       operationId: rerunTestWorkflowExecution
       requestBody:
         description: test workflow running context
@@ -7802,6 +7810,7 @@ components:
         - testworkflow
         - testworkflowexecution
         - program
+        - gitintegration
 
     Webhook:
       description: CRD based webhook data
@@ -10349,6 +10358,33 @@ components:
           description: paths to fetch for the sparse checkout
           items:
             type: string
+        verbosity:
+          $ref: "#/components/schemas/ContentGitVerbosity"
+        retry:
+          $ref: "#/components/schemas/TestWorkflowContentGitRetry"
+
+    ContentGitVerbosity:
+      type: string
+      description: logging level for the clone. Omit defaults to verbose.
+      enum:
+        - quiet
+        - normal
+        - verbose
+
+    TestWorkflowContentGitRetry:
+      type: object
+      description: in-process retry policy for transient git failures during clone.
+      properties:
+        count:
+          type: integer
+          minimum: 1
+          maximum: 20
+          description: max attempts for transient git failures (default 5, max 20)
+        delay:
+          type: string
+          description: |
+            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+            May be an expression template; validated after resolution.
 
     TestWorkflowContentFile:
       type: object
@@ -12390,6 +12426,14 @@ components:
         type: boolean
         default: false
       description: should inline templates in the resolved workflow
+      required: false
+    Latest:
+      in: query
+      name: latest
+      schema:
+        type: boolean
+        default: false
+      description: when rerunning, use the latest workflow definition instead of the original resolved snapshot while keeping the original parameter set
       required: false
     All:
       in: query

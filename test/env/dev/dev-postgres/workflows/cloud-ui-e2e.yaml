@@ -1,4 +1,3 @@
-# Make sure to update workflows for both dev (postgres) and dev-mongo environment
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
@@ -12,48 +11,72 @@ metadata:
     category: e2e-ui-testing
     dev-quality-gate: "true"
 spec:
+  config:
+    revision:
+      type: string
+      default: main
   content:
     git:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
-      revision: '{{ config.GIT_REVISION }}'
-      paths:
-      - js/packages/e2e-tests
+      revision: '{{ config.revision }}'
       authType: github
+      paths:
+      - js
   job:
     activeDeadlineSeconds: 1200
-  config:
-    CLOUD_BASE_URL: {type: string, default: 'https://app.testkube.dev'}
-    GIT_REVISION: {type: string, default: 'main'}
   container:
+    workingDir: /data/repo/js/packages/e2e-tests
+    image: mcr.microsoft.com/playwright:v1.62.1-noble
     resources:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/js/packages/e2e-tests
-    image: mcr.microsoft.com/playwright:v1.59.1-noble
-    env:
-    - name: CLOUD_BASE_URL
-      value: '{{ config.CLOUD_BASE_URL }}'
-    - name: CLOUD_API_URL
-      value: 'https://api.testkube.dev'
-    - name: TEST_ORG_ID
-      value: 'tkcorg_9deb42dda2197657'
-    - name: TEST_ORG_SLUG
-      value: 'testkube'
-    - name: TEST_ENV_ID # Env with connected agent (Testkube-cloud-test-dev-E2E) - used for running some of the tests
-      value: 'tkcenv_f2eedeef4063f90f'
-    - name: TEST_ENV_SLUG
-      value: 'testkube-cloud-test-dev-e2e'
-    - name: TEST_FIXTURE_USER # Test user having access to connected environment
-      value: 'test-user-10'
-    - name: TESTKUBE_NAMESPACE # namespace where agent is installed
-      value: 'testkube-agent-e2e'
+  services:
+    ui:
+      count: 'config.revision == "main" ? 0 : 1'
+      image: node:24-bookworm
+      transfer:
+      - from: /data/repo
+      workingDir: /data/repo/js
+      shell: |
+        npm ci
+        npm run build --workspace=@testkube/web
+        (cd packages/web && npm run env:vercel)
+        (cd packages/web && npx vite preview --host 0.0.0.0 --port 5173)
+      resources:
+        requests:
+          cpu: 2
+          memory: 2Gi
+      timeout: 10m
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 5173
+        periodSeconds: 2
   steps:
   - name: Install dependencies
     shell: npm install
   - name: Run tests
     timeout: 15m
-    shell: npx playwright test --retries=1
+    run:
+      env:
+      - name: CLOUD_BASE_URL
+        value: '{{ config.revision == "main" ? "https://app.testkube.dev" : "http://" + services.ui.0.ip + ":5173" }}'
+      - name: CLOUD_API_URL
+        value: https://api.testkube.dev
+      - name: TEST_ORG_ID
+        value: tkcorg_9deb42dda2197657
+      - name: TEST_ORG_SLUG
+        value: testkube
+      - name: TEST_ENV_ID
+        value: tkcenv_f2eedeef4063f90f
+      - name: TEST_ENV_SLUG
+        value: testkube-cloud-test-dev-e2e
+      - name: TEST_FIXTURE_USER
+        value: test-user-10
+      - name: TESTKUBE_NAMESPACE
+        value: testkube-agent-e2e
+      shell: npx playwright test --retries=1
     artifacts:
       paths:
       - playwright-report/**
@@ -78,7 +101,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
-      revision: '{{ config.GIT_REVISION }}'
+      revision: '{{ config.revision }}'
       paths:
       - js/packages/e2e-tests
       usernameFrom:
@@ -93,11 +116,11 @@ spec:
     activeDeadlineSeconds: 1200
   config:
     CLOUD_BASE_URL: {type: string, default: 'https://app.testkube.dev'}
-    GIT_REVISION: {type: string, default: 'main'}
+    revision: {type: string, default: 'main'}
     SHARDS: {type: integer, default: 10}
   container:
     workingDir: /data/repo/js/packages/e2e-tests
-    image: mcr.microsoft.com/playwright:v1.59.1-noble
+    image: mcr.microsoft.com/playwright:v1.62.1-noble
     resources:
       requests:
         cpu: 256m

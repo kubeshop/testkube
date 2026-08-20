@@ -574,7 +574,9 @@ func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 			log.Warn("unable to determine become state, testworkflow execution results queries not supported")
 			return false, nil
 		}
-		prevStatus, err := l.testWorkflowResultsRepository.GetPreviousFinishedState(context.Background(), event.TestWorkflowExecution.Workflow.Name, event.TestWorkflowExecution.StatusAt)
+		prevStatus, err := l.testWorkflowResultsRepository.GetPreviousFinishedState(context.Background(), event.TestWorkflowExecution.Workflow.Name, event.TestWorkflowExecution.StatusAt, testworkflow.GetPreviousFinishedStateOptions{
+			SkipSilentWebhookExecutions: true,
+		})
 		if err != nil {
 			return false, err
 		}
