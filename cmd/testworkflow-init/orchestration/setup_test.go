@@ -65,6 +65,28 @@ func TestSetup(t *testing.T) {
 	assert.Equal(t, "256m", resources.Limits.CPU)
 }
 
+func TestGetSensitiveWords(t *testing.T) {
+	t.Run("holds words added at runtime to the minimum length", func(t *testing.T) {
+		// A word shorter than the minimum matches nearly every line, which would mask
+		// unrelated logs and withhold unrelated step outputs wholesale.
+		setup := newSetup()
+		setup.SetSensitiveWordMinimumLength(4)
+		setup.AddSensitiveWords("1", "abc", "s3cr3t-value")
+
+		words := setup.GetSensitiveWords()
+		assert.Contains(t, words, "s3cr3t-value")
+		assert.NotContains(t, words, "1")
+		assert.NotContains(t, words, "abc")
+	})
+
+	t.Run("keeps every word when no minimum is set", func(t *testing.T) {
+		setup := newSetup()
+		setup.AddSensitiveWords("1")
+
+		assert.Contains(t, setup.GetSensitiveWords(), "1")
+	})
+}
+
 func TestSetupInitialize_TableDriven(t *testing.T) {
 	tests := []struct {
 		name              string

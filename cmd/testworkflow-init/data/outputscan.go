@@ -81,9 +81,10 @@ func scanStepOutputsFrom(dir, stepId string) (map[string]string, error) {
 //
 // Values are published by printing an instruction to the log stream, which is
 // obfuscated on its way out - a sensitive value would reach the execution record
-// partially masked, so the consumer would silently read a corrupted value. Dropping
+// partially masked, so the consumer would silently read a corrupted value. Withholding
 // it keeps the workflow-local output intact while refusing to publish something the
-// reader could not trust.
+// reader could not trust; the caller publishes a marker in its place, so that a reader
+// asking for it fails instead of receiving nothing.
 func PartitionSensitiveOutputs(values map[string]string, sensitiveWords []string) (publishable map[string]string, withheld []string) {
 	publishable = make(map[string]string, len(values))
 	for name, value := range values {

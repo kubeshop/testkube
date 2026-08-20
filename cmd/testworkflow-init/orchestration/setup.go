@@ -135,6 +135,12 @@ func (c *setup) AddSensitiveWords(words ...string) {
 func (c *setup) GetSensitiveWords() []string {
 	words := make([]string, 0, len(c.envAdditionalSensitive))
 	for value := range c.envAdditionalSensitive {
+		// Words added at runtime hold to the same minimum as the ones read from the
+		// environment below. A one-character word matches nearly every line, which masks
+		// unrelated logs and withholds unrelated step outputs wholesale.
+		if len(value) < c.minSensitiveWordLength {
+			continue
+		}
 		words = append(words, value)
 	}
 	for _, name := range commonSensitiveVariables {

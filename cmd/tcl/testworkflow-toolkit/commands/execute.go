@@ -143,6 +143,15 @@ func buildWorkflowExecution(req workflowExecutionRequest) func() error {
 			return errors.Wrapf(err, "'%s' workflow: computing execution", req.spec.Name)
 		}
 
+		// An output another workflow withheld resolves to a marker instead of the value
+		// it was meant to carry. Scheduling this execution would configure it with the
+		// marker, so stop while the cause is still visible.
+		if markers := executiondata.WithheldMarkersIn(&workflow); len(markers) > 0 {
+			err = executiondata.WithheldError("this execution", markers)
+			ui.Errf("failed to compute execution: %s: %s", req.spec.Name, err.Error())
+			return errors.Wrapf(err, "'%s' workflow: computing execution", req.spec.Name)
+		}
+
 		async := req.async
 		tags := config.ExecutionTags()
 		target := common.MapPtr(workflow.Target, commonmapper.MapTargetKubeToAPI)

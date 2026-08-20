@@ -256,11 +256,16 @@ func handleExecuteAction(action *lite.ActionExecute, ctx *ExecutionContext) Acti
 		// running this one via `execute` can read them back from the execution record.
 		//
 		// The instruction travels through the obfuscated log stream, so a value holding
-		// a sensitive word would arrive partially masked. Withhold those rather than
-		// publish something the reader would silently misread.
+		// a sensitive word would arrive partially masked. Publish a marker in place of
+		// those, rather than something the reader would silently misread: the real value
+		// stays in this workflow's state, while a workflow reading the output resolves
+		// the marker and fails instead of quietly using an empty value.
 		publishable, withheld := data.PartitionSensitiveOutputs(values, orchestration.Setup.GetSensitiveWords())
+		workflowName := data.GetState().InternalConfig.Workflow.Name
 		for _, name := range withheld {
-			ctx.StdoutUnsafe.Warnf("warn: step output %q holds a sensitive value, so it is not published outside this workflow\n", name)
+			marker := executiondata.WithheldMarker(workflowName, name)
+			ctx.StdoutUnsafe.Warnf("warn: step output %q holds a sensitive value, so it is not published outside this workflow: a workflow reading it gets %s and fails\n", name, marker)
+			publishable[name] = marker
 		}
 		if len(publishable) > 0 {
 			ctx.Stdout.Printf("%s", instructions.SprintOutput(step.Ref, executiondata.OutputsInstructionName, publishable))

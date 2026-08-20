@@ -54,6 +54,37 @@ func TestDeferredSpecFinalization(t *testing.T) {
 	})
 }
 
+// An output the producer withheld resolves to a marker instead of the value it was
+// meant to carry. Handing that to another workflow has to fail, rather than configure
+// it with the marker - or, worse, with nothing at all.
+func TestWithheldOutputStopsTheExecution(t *testing.T) {
+	spec := &testworkflowsv1.StepExecuteWorkflow{
+		Name: "consumer",
+		Config: map[string]intstr.IntOrString{
+			"token": intstr.FromString(`{{ execution("p").outputs.token }}`),
+		},
+	}
+
+	registry := executiondata.NewRegistry()
+	registry.Add(executiondata.Execution{
+		Id:       "exec-1",
+		Workflow: "producer",
+		Alias:    "p",
+		Outputs:  map[string]string{"token": executiondata.WithheldMarker("producer", "token")},
+	})
+	machine := executiondata.NewMachine(executiondata.MachineOptions{Registry: registry})
+
+	workflow := *spec.DeepCopy()
+	require.NoError(t, expressions.Finalize(&workflow, machine),
+		"the marker is an ordinary value, so resolution itself succeeds")
+
+	markers := executiondata.WithheldMarkersIn(&workflow)
+	require.Len(t, markers, 1, "the marker reaches the configuration of the scheduled execution")
+	err := executiondata.WithheldError("this execution", markers)
+	assert.ErrorContains(t, err, "was not published outside the workflow that produced it")
+	assert.ErrorContains(t, err, "output token of workflow producer")
+}
+
 func TestClaimExecutionRefs(t *testing.T) {
 	t.Run("an entry is addressed by its workflow name", func(t *testing.T) {
 		claimed := map[string]string{}
