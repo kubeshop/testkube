@@ -42,7 +42,7 @@ func (r *namespacesRegistry) Register(id, namespace string) {
 
 func (r *namespacesRegistry) hasJobAt(ctx context.Context, id, namespace string) (bool, error) {
 	var job *batchv1.Job
-	err := kubeReadRetry(func() error {
+	err := kubeReadRetry(ctx, func() error {
 		var getErr error
 		job, getErr = r.clientSet.BatchV1().Jobs(namespace).Get(ctx, id, metav1.GetOptions{})
 		return getErr
@@ -57,7 +57,7 @@ func (r *namespacesRegistry) hasJobAt(ctx context.Context, id, namespace string)
 
 func (r *namespacesRegistry) hasJobTracesAt(ctx context.Context, id, namespace string) (bool, error) {
 	var events *corev1.EventList
-	err := kubeReadRetry(func() error {
+	err := kubeReadRetry(ctx, func() error {
 		var listErr error
 		events, listErr = r.clientSet.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{
 			FieldSelector: "involvedObject.name=" + id,
