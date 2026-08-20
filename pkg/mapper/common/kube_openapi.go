@@ -6,9 +6,15 @@ import (
 )
 
 func MapTargetKubeToAPI(v commonv1.Target) testkube.ExecutionTarget {
+	var schedulerPolicy *testkube.SchedulerPolicy
+	if v.SchedulerPolicy != "" {
+		value := testkube.SchedulerPolicy(v.SchedulerPolicy)
+		schedulerPolicy = &value
+	}
 	return testkube.ExecutionTarget{
-		Match:     v.Match,
-		Not:       v.Not,
-		Replicate: v.Replicate,
+		SchedulerPolicy: schedulerPolicy,
+		Match:           v.Match,
+		Not:             v.Not,
+		Replicate:       v.Replicate,
 	}
 }
