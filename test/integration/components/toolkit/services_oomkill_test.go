@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/commands"
@@ -58,8 +57,8 @@ func oomService() map[string]testworkflowsv1.ServiceSpec {
 					ContainerConfig: testworkflowsv1.ContainerConfig{
 						Image: "python:3.14.3-slim-trixie",
 						Resources: &testworkflowsv1.Resources{
-							Limits: map[corev1.ResourceName]intstr.IntOrString{
-								corev1.ResourceMemory: intstr.FromString(oomTestMemoryLimit),
+							Limits: map[corev1.ResourceName]testworkflowsv1.ConfigValue{
+								corev1.ResourceMemory: oomTestMemoryLimit,
 							},
 						},
 					},

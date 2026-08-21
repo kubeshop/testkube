@@ -551,16 +551,15 @@ func MapContentFileKubeToAPI(v testworkflowsv1.ContentFile) testkube.TestWorkflo
 	}
 }
 
-func MapResourcesListKubeToAPI(v map[corev1.ResourceName]intstr.IntOrString) *testkube.TestWorkflowResourcesList {
+func MapResourcesListKubeToAPI(v map[corev1.ResourceName]testworkflowsv1.ConfigValue) *testkube.TestWorkflowResourcesList {
 	if len(v) == 0 {
 		return nil
 	}
-	empty := intstr.IntOrString{Type: intstr.String, StrVal: ""}
 	return &testkube.TestWorkflowResourcesList{
-		Cpu:              MapIntOrStringToString(common.GetMapValue(v, corev1.ResourceCPU, empty)),
-		Memory:           MapIntOrStringToString(common.GetMapValue(v, corev1.ResourceMemory, empty)),
-		Storage:          MapIntOrStringToString(common.GetMapValue(v, corev1.ResourceStorage, empty)),
-		EphemeralStorage: MapIntOrStringToString(common.GetMapValue(v, corev1.ResourceEphemeralStorage, empty)),
+		Cpu:              common.GetMapValue(v, corev1.ResourceCPU, "").String(),
+		Memory:           common.GetMapValue(v, corev1.ResourceMemory, "").String(),
+		Storage:          common.GetMapValue(v, corev1.ResourceStorage, "").String(),
+		EphemeralStorage: common.GetMapValue(v, corev1.ResourceEphemeralStorage, "").String(),
 	}
 }
 
