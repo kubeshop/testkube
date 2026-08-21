@@ -3,6 +3,7 @@ package utilization
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
@@ -18,6 +19,7 @@ const (
 	slowSamplingInterval    = 15 * time.Second
 	fastSamplingInterval    = 1 * time.Second
 	defaultSamplingInterval = fastSamplingInterval
+	recorderShutdownTimeout = 5 * time.Second
 )
 
 type MetricRecorder struct {
@@ -25,6 +27,7 @@ type MetricRecorder struct {
 	format           core.Formatter
 	samplingInterval time.Duration
 	tags             []core.KeyValue
+	samples 		 atomic.Int64
 }
 
 type Option func(*MetricRecorder)
@@ -70,6 +73,10 @@ func NewMetricsRecorder(opts ...Option) *MetricRecorder {
 
 }
 
+func (r *MetricRecorder) Samples() int64 {
+	return r.samples.Load()
+}
+
 // Start starts the metric recorder and writes the metrics to the writer at the specified interval.
 // MetricRecorder runs a loop at the specified interval, gathers metrics, formats them using the provided Formatter and writes them using the provided Writer.
 // For practical purposes, most often is a FileWriter uses to write the metrics to a file.
@@ -91,7 +98,9 @@ func (r *MetricRecorder) Start(ctx context.Context) {
 		case <-t.C:
 			metrics, _ := r.record()
 			// write the aggregated metrics
-			_ = r.write(ctx, metrics, previous)
+			if err := r.write(ctx, metrics, previous); err == nil {
+				r.samples.Add(1)
+			}
 			previous = metrics
 		}
 	}
@@ -144,7 +153,7 @@ func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 		if err != nil {
 			instructions.PrintOutput(
 				config.ExecutionConfig.Step,
-				"resource-metrics-warning",
+				core.ResourceMetricsWarningOutputName,
 				instructions.NewExecutionWarning("resource-metrics", "Resource Metrics Issue", err.Error()),
 			)
 		}
@@ -180,13 +189,28 @@ func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 	}
 	// create the metrics recorder
 	r := NewMetricsRecorder(WithWriter(w))
+	recorderStopped := make(chan struct{})
 	go func() {
+		defer close(recorderStopped)
 		r.Start(cancelCtx)
 	}()
 	// run the function
 	fn()
 	cancel()
+	select {
+	case <-recorderStopped:
+	case <-time.After(recorderShutdownTimeout):
+		stdoutUnsafe.Warn("timed out waiting for the resource metrics recorder to stop\n")
+	}
 	if err = postProcessFn(); err != nil {
 		stdoutUnsafe.Warnf("failed to run post process function: %v\n", err)
+		return
+	}
+	if r.Samples() == 0 {
+		instructions.PrintOutput(
+			config.ExecutionConfig.Step,
+			core.ResourceMetricsStatusOutputName,
+			core.ResourceMetricsStatus{Reason: core.ResourceMetricsReasonNoSamples},
+		)
 	}
 }
