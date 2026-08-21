@@ -29,7 +29,6 @@ type MetricRecorder struct {
 	tags             []core.KeyValue
 	samples          atomic.Int64
 	writeErr         atomic.Pointer[error]
-	closeErr         atomic.Pointer[error]
 }
 
 type Option func(*MetricRecorder)
@@ -86,20 +85,12 @@ func (r *MetricRecorder) WriteError() error {
 	return nil
 }
 
-func (r *MetricRecorder) CloseError() error {
-	if err := r.closeErr.Load(); err != nil {
-		return *err
-	}
-	return nil
-}
-
 // Start starts the metric recorder and writes the metrics to the writer at the specified interval.
 // MetricRecorder runs a loop at the specified interval, gathers metrics, formats them using the provided Formatter and writes them using the provided Writer.
 // For practical purposes, most often is a FileWriter uses to write the metrics to a file.
+// The writer is not closed here: its owner closes it, so that finalizing the file is
+// ordered against whatever reads it next.
 func (r *MetricRecorder) Start(ctx context.Context) {
-	stdout := output.Std
-	stdoutUnsafe := stdout.Direct()
-
 	t := time.NewTicker(r.samplingInterval)
 	defer t.Stop()
 
@@ -107,10 +98,6 @@ func (r *MetricRecorder) Start(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			if err := r.writer.Close(ctx); err != nil {
-				r.closeErr.Store(&err)
-				stdoutUnsafe.Warnf("failed to close writer: %v\n", err)
-			}
 			return
 		case <-t.C:
 			metrics, _ := r.record()
@@ -219,6 +206,10 @@ func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 	var shutdownErr error
 	select {
 	case <-recorderStopped:
+		if cErr := w.Close(context.Background()); cErr != nil {
+			shutdownErr = cErr
+			stdoutUnsafe.Warnf("failed to close the resource metrics writer: %v\n", cErr)
+		}
 	case <-time.After(recorderShutdownTimeout):
 		shutdownErr = errors.New("timed out waiting for the resource metrics recorder to stop")
 		stdoutUnsafe.Warn("timed out waiting for the resource metrics recorder to stop\n")
@@ -229,9 +220,6 @@ func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 	}
 	if shutdownErr != nil {
 		err = shutdownErr
-		return
-	}
-	if err = r.CloseError(); err != nil {
 		return
 	}
 	if err = r.WriteError(); err != nil {
