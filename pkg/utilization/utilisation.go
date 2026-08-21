@@ -213,6 +213,10 @@ func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 	case <-time.After(recorderShutdownTimeout):
 		shutdownErr = errors.New("timed out waiting for the resource metrics recorder to stop")
 		stdoutUnsafe.Warn("timed out waiting for the resource metrics recorder to stop\n")
+		go func() {
+			<-recorderStopped
+			_ = w.Close(context.Background())
+		}()
 	}
 	if err = postProcessFn(); err != nil {
 		stdoutUnsafe.Warnf("failed to run post process function: %v\n", err)
