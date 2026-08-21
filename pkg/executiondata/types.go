@@ -44,7 +44,12 @@ const (
 	// ExecutionInstructionPrefix prefixes the output instruction the parent emits for
 	// each child it schedules. The suffix is the child's alias, so that every child
 	// gets its own entry instead of overwriting the previous one.
-	ExecutionInstructionPrefix = "testworkflow-execution."
+	//
+	// Deliberately not under "testworkflow-": the dashboard groups instruction names by
+	// the pattern ^testworkflow(-.*)?$ and reads them as the status of a single child,
+	// so a name in that family would be read as one - this one carries a list, and every
+	// field the dashboard looked for would be missing.
+	ExecutionInstructionPrefix = "executiondata."
 )
 
 // Execution is the data a workflow may read about another execution.

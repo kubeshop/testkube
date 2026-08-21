@@ -121,9 +121,14 @@ func TestRegistryKey(t *testing.T) {
 }
 
 func TestExecutionInstructionName(t *testing.T) {
-	assert.Equal(t, "testworkflow-execution.my-workflow", ExecutionInstructionName("my-workflow"))
-	assert.Equal(t, "testworkflow-execution.odd_name", ExecutionInstructionName("odd.name"),
+	assert.Equal(t, "executiondata.my-workflow", ExecutionInstructionName("my-workflow"))
+	assert.Equal(t, "executiondata.odd_name", ExecutionInstructionName("odd.name"),
 		"characters the instruction grammar rejects must not leak into the name")
+
+	// The dashboard reads every instruction named ^testworkflow(-.*)?$ as the status of
+	// one child execution. This one carries a list, so it has to stay out of that family.
+	assert.NotRegexp(t, `^testworkflow(-.*)?$`, ExecutionInstructionName("my-workflow"))
+	assert.NotRegexp(t, `^test(-.*)?$`, ExecutionInstructionName("my-workflow"))
 }
 
 func TestOutputsOf(t *testing.T) {
