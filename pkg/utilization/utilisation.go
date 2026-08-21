@@ -227,11 +227,11 @@ func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 		err = shutdownErr
 		return
 	}
-	if err = postProcessFn(); err != nil {
-		stdoutUnsafe.Warnf("failed to run post process function: %v\n", err)
+	if err = r.CloseError(); err != nil {
 		return
 	}
-	if err = r.CloseError(); err != nil {
+	if err = postProcessFn(); err != nil {
+		stdoutUnsafe.Warnf("failed to run post process function: %v\n", err)
 		return
 	}
 	if err = r.WriteError(); err != nil {
