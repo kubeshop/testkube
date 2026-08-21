@@ -2,6 +2,7 @@ package data
 
 import (
 	"encoding/json"
+	"net/http"
 	"strings"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
@@ -38,11 +39,22 @@ func ExecutionDataMachine() expressions.Machine {
 // as it schedules more test workflows.
 func ExecutionDataMachineFor(registry *executiondata.Registry) expressions.Machine {
 	return executiondata.NewMachine(executiondata.MachineOptions{
-		Registry:   registry,
-		Repository: ExecutionDataRepository(),
-		ParentIds:  ParentExecutionIds(),
+		Registry:       registry,
+		Repository:     ExecutionDataRepository(),
+		ParentIds:      ParentExecutionIds(),
+		ArtifactClient: ArtifactClient(),
 	})
 }
+
+// ArtifactClient downloads artifacts of other executions from object storage, following
+// the same certificate decision the control plane client was given.
+func ArtifactClient() *http.Client {
+	return artifactClient
+}
+
+// artifactClient is built once: it holds a connection pool, and every download in this
+// process talks to the same object storage.
+var artifactClient = executiondata.NewArtifactClient(storageSkipVerify)
 
 // ExecutionDataRepository reads executions and their artifacts from the control plane.
 func ExecutionDataRepository() executiondata.ExecutionRepository {

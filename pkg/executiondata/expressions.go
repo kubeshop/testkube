@@ -3,6 +3,7 @@ package executiondata
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
@@ -23,6 +24,10 @@ type MachineOptions struct {
 	Repository ExecutionRepository
 	// ParentIds is the chain of executions that led to this one, oldest first.
 	ParentIds []string
+	// ArtifactClient downloads from object storage, which read_artifact() talks to
+	// directly rather than through the control plane. May be nil, in which case storage
+	// certificates are verified - see NewArtifactClient.
+	ArtifactClient *http.Client
 }
 
 // NewMachine registers the functions reading data from other executions.
@@ -63,7 +68,7 @@ func NewMachine(opts MachineOptions) expressions.Machine {
 			if err != nil {
 				return nil, true, err
 			}
-			content, err := ReadArtifact(context.Background(), opts.Repository, execution.Id, path)
+			content, err := ReadArtifact(context.Background(), opts.Repository, opts.ArtifactClient, execution.Id, path)
 			if err != nil {
 				return nil, true, fmt.Errorf("reading artifact of execution %q: %w", ref, err)
 			}

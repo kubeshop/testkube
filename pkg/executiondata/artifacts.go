@@ -2,6 +2,7 @@ package executiondata
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,8 +21,36 @@ const (
 	ArtifactDownloadTimeout = 60 * time.Second
 )
 
+// NewArtifactClient builds the client for downloading from object storage.
+//
+// The timeout bounds the whole exchange, body included, unlike a context deadline the
+// caller would have to keep alive while streaming.
+//
+// skipVerify mirrors the control plane client's StorageSkipVerify option. Object storage
+// in a self-hosted deployment commonly presents a certificate from a private CA that the
+// worker image has no reason to trust, and every other storage path in the worker -
+// uploading an artifact, uploading logs - already honours the setting. A download that
+// did not would fail against the very storage the workflow had just written to.
+func NewArtifactClient(skipVerify bool) *http.Client {
+	client := &http.Client{Timeout: ArtifactDownloadTimeout}
+	if skipVerify {
+		// A clone, not http.DefaultTransport itself: assigning to the shared transport
+		// would make every other client in this process skip verification too.
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402 -- deployment opted in, see above
+		client.Transport = transport
+	}
+	return client
+}
+
+// verifyingArtifactClient serves a caller that passed no client. Verifying is the safe
+// default: a deployment that needs otherwise says so.
+var verifyingArtifactClient = NewArtifactClient(false)
+
 // ReadArtifact downloads a single artifact of an execution and returns its content.
-func ReadArtifact(ctx context.Context, repository ExecutionRepository, id, path string) (string, error) {
+//
+// client may be nil, in which case storage certificates are verified.
+func ReadArtifact(ctx context.Context, repository ExecutionRepository, client *http.Client, id, path string) (string, error) {
 	if repository == nil {
 		return "", fmt.Errorf("cannot read artifacts: this workflow has no connection to the control plane")
 	}
@@ -40,7 +69,7 @@ func ReadArtifact(ctx context.Context, repository ExecutionRepository, id, path 
 			path, artifact.Size, MaxInlineArtifactSize)
 	}
 
-	return download(ctx, artifact.Url, path)
+	return download(ctx, client, artifact.Url, path)
 }
 
 // exactArtifact picks the artifact stored under the requested path. The control plane
@@ -68,7 +97,9 @@ type FetchResult struct {
 
 // FetchArtifacts downloads every artifact of an execution matching the patterns into dir,
 // preserving the layout the execution stored them in.
-func FetchArtifacts(ctx context.Context, repository ExecutionRepository, id string, patterns []string, dir string) (FetchResult, error) {
+//
+// client may be nil, in which case storage certificates are verified.
+func FetchArtifacts(ctx context.Context, repository ExecutionRepository, client *http.Client, id string, patterns []string, dir string) (FetchResult, error) {
 	var result FetchResult
 	if repository == nil {
 		return result, fmt.Errorf("cannot fetch artifacts: this workflow has no connection to the control plane")
@@ -90,7 +121,7 @@ func FetchArtifacts(ctx context.Context, repository ExecutionRepository, id stri
 		if err = os.MkdirAll(filepath.Dir(target), 0755); err != nil {
 			return result, fmt.Errorf("creating directory for artifact %q: %w", artifact.Path, err)
 		}
-		written, err := downloadTo(ctx, artifact.Url, artifact.Path, target)
+		written, err := downloadTo(ctx, client, artifact.Url, artifact.Path, target)
 		if err != nil {
 			return result, err
 		}
@@ -111,8 +142,8 @@ func targetPath(dir, path string) (string, error) {
 	return filepath.Join(filepath.Clean(dir), clean), nil
 }
 
-func downloadTo(ctx context.Context, url, path, target string) (int64, error) {
-	res, err := get(ctx, url, path)
+func downloadTo(ctx context.Context, client *http.Client, url, path, target string) (int64, error) {
+	res, err := get(ctx, client, url, path)
 	if err != nil {
 		return 0, err
 	}
@@ -131,8 +162,8 @@ func downloadTo(ctx context.Context, url, path, target string) (int64, error) {
 	return written, nil
 }
 
-func download(ctx context.Context, url, path string) (string, error) {
-	res, err := get(ctx, url, path)
+func download(ctx context.Context, client *http.Client, url, path string) (string, error) {
+	res, err := get(ctx, client, url, path)
 	if err != nil {
 		return "", err
 	}
@@ -151,16 +182,15 @@ func download(ctx context.Context, url, path string) (string, error) {
 	return string(content), nil
 }
 
-// artifactClient bounds the whole exchange, body included, unlike a context deadline
-// that the caller would have to keep alive while streaming.
-var artifactClient = &http.Client{Timeout: ArtifactDownloadTimeout}
-
-func get(ctx context.Context, url, path string) (*http.Response, error) {
+func get(ctx context.Context, client *http.Client, url, path string) (*http.Response, error) {
+	if client == nil {
+		client = verifyingArtifactClient
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("downloading artifact %q: %w", path, err)
 	}
-	res, err := artifactClient.Do(req)
+	res, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("downloading artifact %q: %w", path, err)
 	}

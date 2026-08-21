@@ -28,7 +28,7 @@ func TestFetchArtifacts(t *testing.T) {
 		}, nil)
 
 		dir := t.TempDir()
-		result, err := FetchArtifacts(context.Background(), repository, "exec-1", []string{"results/**"}, dir)
+		result, err := FetchArtifacts(context.Background(), repository, nil, "exec-1", []string{"results/**"}, dir)
 		require.NoError(t, err)
 		assert.Equal(t, 2, result.Files)
 		assert.Equal(t, int64(len("content of /a")+len("content of /b")), result.Bytes)
@@ -49,18 +49,18 @@ func TestFetchArtifacts(t *testing.T) {
 			Return([]Artifact{{Path: "../../etc/passwd", Url: server.URL + "/a"}}, nil)
 
 		dir := t.TempDir()
-		_, err := FetchArtifacts(context.Background(), repository, "exec-1", nil, dir)
+		_, err := FetchArtifacts(context.Background(), repository, nil, "exec-1", nil, dir)
 		assert.ErrorContains(t, err, "would be written outside")
 	})
 
 	t.Run("reports a missing target directory", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		_, err := FetchArtifacts(context.Background(), NewMockExecutionRepository(ctrl), "exec-1", nil, "")
+		_, err := FetchArtifacts(context.Background(), NewMockExecutionRepository(ctrl), nil, "exec-1", nil, "")
 		assert.ErrorContains(t, err, "no target directory")
 	})
 
 	t.Run("explains a missing control plane connection", func(t *testing.T) {
-		_, err := FetchArtifacts(context.Background(), nil, "exec-1", nil, t.TempDir())
+		_, err := FetchArtifacts(context.Background(), nil, nil, "exec-1", nil, t.TempDir())
 		assert.ErrorContains(t, err, "no connection to the control plane")
 	})
 }

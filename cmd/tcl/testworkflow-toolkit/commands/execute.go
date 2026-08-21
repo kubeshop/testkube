@@ -367,7 +367,7 @@ func fetchArtifacts(fetch []testworkflowsv1.StepExecuteFetch, entries []executio
 		}
 
 		for _, source := range sources {
-			result, err := executiondata.FetchArtifacts(context.Background(), repository, source.Id, f.Paths, f.To)
+			result, err := executiondata.FetchArtifacts(context.Background(), repository, data.ArtifactClient(), source.Id, f.Paths, f.To)
 			if err != nil {
 				return errors.Wrapf(err, "fetch.%d", i)
 			}
