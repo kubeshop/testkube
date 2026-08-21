@@ -31,6 +31,11 @@ import (
 
 var _ common.Listener = (*WebhookListener)(nil)
 
+const (
+	webhookSendRetryCount     = 5
+	webhookSendRetryBaseDelay = 500 * time.Millisecond
+)
+
 func NewWebhookListener(
 	name, uri, selector string,
 	events []testkube.EventType,
@@ -54,6 +59,8 @@ func NewWebhookListener(
 		disabled:           disabled,
 		config:             config,
 		parameters:         parameters,
+		sendRetryCount:     webhookSendRetryCount,
+		sendRetryBaseDelay: webhookSendRetryBaseDelay,
 	}
 
 	for _, opt := range opts {
@@ -81,6 +88,9 @@ type WebhookListener struct {
 	grpcClient cloud.TestKubeCloudAPIClient
 	apiKey     string
 	agentID    string
+
+	sendRetryCount     int
+	sendRetryBaseDelay time.Duration
 
 	// Optional fields
 	testWorkflowResultsRepository testworkflow.Repository
@@ -373,14 +383,12 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		return
 	}
 
-	request, err := http.NewRequestWithContext(context.Background(), http.MethodPost, string(uri), body)
-	if err != nil {
-		log.Errorw("webhook request creating error", "error", err)
-		result = testkube.NewFailedEventResult(event.Id, err)
-		return
-	}
+	bodyBytes := body.Bytes()
 
-	request.Header.Set("Content-Type", "application/json")
+	// Webhook delivery is at-least-once by design: on network errors, 5xx, and 429 the
+	// same payload may reach the subscriber more than once. This matches the industry
+	// convention (Stripe, GitHub, Slack) where dedupe is the subscriber's responsibility.
+	processedHeaders := make(map[string]string, len(l.headers))
 	for key, value := range l.headers {
 		values := []*string{&key, &value}
 		for i := range values {
@@ -394,31 +402,75 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 			*values[i] = string(data)
 		}
 
-		request.Header.Set(key, value)
+		processedHeaders[key] = value
 	}
 
-	var resp *http.Response
-	resp, err = l.HttpClient.Do(request)
-	if err != nil {
-		log.Errorw("webhook send error", "error", err)
-		result = testkube.NewFailedEventResult(event.Id, err)
+	var respBody []byte
+	var sendErr error
+	for attempt := 0; attempt < l.sendRetryCount; attempt++ {
+		// Reset per-attempt state so a later transport failure does not pair with
+		// the previous attempt's response body or status code in logs and telemetry.
+		respBody = nil
+		statusCode = 0
+
+		if attempt > 0 {
+			time.Sleep(time.Duration(attempt) * l.sendRetryBaseDelay)
+		}
+
+		var req *http.Request
+		req, err = http.NewRequestWithContext(context.Background(), http.MethodPost, string(uri), bytes.NewReader(bodyBytes))
+		if err != nil {
+			log.Errorw("webhook request creating error", "error", err)
+			result = testkube.NewFailedEventResult(event.Id, err)
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		for k, v := range processedHeaders {
+			req.Header.Set(k, v)
+		}
+
+		var resp *http.Response
+		resp, sendErr = l.HttpClient.Do(req)
+		if sendErr != nil {
+			if attempt < l.sendRetryCount-1 {
+				log.Warnw("webhook send transient error, retrying", "attempt", attempt, "error", sendErr)
+			}
+			continue
+		}
+
+		respBody, sendErr = io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if sendErr != nil {
+			if attempt < l.sendRetryCount-1 {
+				log.Warnw("webhook read response transient error, retrying", "attempt", attempt, "error", sendErr)
+			}
+			continue
+		}
+
+		statusCode = resp.StatusCode
+		if statusCode >= 500 || statusCode == http.StatusTooManyRequests {
+			sendErr = fmt.Errorf("webhook response with retryable status code: %d", statusCode)
+			if attempt < l.sendRetryCount-1 {
+				log.Warnw("webhook returned retryable status, retrying", "attempt", attempt, "status", statusCode)
+			}
+			continue
+		}
+
+		sendErr = nil
+		break
+	}
+
+	responseStr := string(respBody)
+	if sendErr != nil {
+		err = sendErr
+		log.Errorw("webhook send error after retries", "error", err, "status", statusCode, "response", responseStr)
+		result = testkube.NewFailedEventResult(event.Id, err).WithResult(responseStr)
 		return
 	}
-	defer resp.Body.Close()
 
-	var data []byte
-	data, err = io.ReadAll(resp.Body)
-	if err != nil {
-		log.Errorw("webhook read response error", "error", err)
-		result = testkube.NewFailedEventResult(event.Id, err)
-		return
-	}
-
-	responseStr := string(data)
-	statusCode = resp.StatusCode
-	if resp.StatusCode >= 400 {
-		err = fmt.Errorf("webhook response with bad status code: %d", resp.StatusCode)
-		log.Errorw("webhook send error", "error", err, "status", resp.StatusCode, "response", responseStr)
+	if statusCode >= 400 {
+		err = fmt.Errorf("webhook response with bad status code: %d", statusCode)
+		log.Errorw("webhook send error", "error", err, "status", statusCode, "response", responseStr)
 		result = testkube.NewFailedEventResult(event.Id, err).WithResult(responseStr)
 		return
 	}
