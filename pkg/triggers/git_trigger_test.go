@@ -127,7 +127,7 @@ func TestMatchGitTrigger_DoesNotExecuteUnrelatedV2TriggerWithSameName(t *testing
 		Namespace:         "default",
 		Source:            triggerSourceV2,
 		ResourceKind:      "content",
-		Event:             string(v1.TestTriggerEventGitPush),
+		Events:            []string{string(v1.TestTriggerEventGitPush)},
 		ResourceName:      "another-content",
 		ResourceNamespace: "default",
 	}
@@ -204,7 +204,7 @@ func TestMatchGitTrigger_ReturnsErrorWhenTargetStatusIsStaleNonContent(t *testin
 		Namespace:    "default",
 		Source:       triggerSourceV1,
 		ResourceKind: "tests",
-		Event:        string(v1.TestTriggerEventCreated),
+		Events:       []string{string(v1.TestTriggerEventCreated)},
 	}
 
 	s := &Service{
@@ -348,47 +348,47 @@ func TestIsGitSyntheticTargetReady(t *testing.T) {
 	}{
 		{
 			"git-push event is ready",
-			&internalTrigger{ResourceKind: "content", Event: string(v1.TestTriggerEventGitPush)},
+			&internalTrigger{ResourceKind: "content", Events: []string{string(v1.TestTriggerEventGitPush)}},
 			true,
 		},
 		{
 			"git-tag-push event is ready",
-			&internalTrigger{ResourceKind: "content", Event: string(v1.TestTriggerEventGitTagPush)},
+			&internalTrigger{ResourceKind: "content", Events: []string{string(v1.TestTriggerEventGitTagPush)}},
 			true,
 		},
 		{
 			"git-pull-request event is ready",
-			&internalTrigger{ResourceKind: "content", Event: string(v1.TestTriggerEventGitPullRequest)},
+			&internalTrigger{ResourceKind: "content", Events: []string{string(v1.TestTriggerEventGitPullRequest)}},
 			true,
 		},
 		{
 			"modified event is not ready",
-			&internalTrigger{ResourceKind: "content", Event: "modified"},
+			&internalTrigger{ResourceKind: "content", Events: []string{"modified"}},
 			false,
 		},
 		{
 			"created event is not ready",
-			&internalTrigger{ResourceKind: "content", Event: "created"},
+			&internalTrigger{ResourceKind: "content", Events: []string{"created"}},
 			false,
 		},
 		{
 			"disabled trigger is not ready",
-			&internalTrigger{ResourceKind: "content", Event: string(v1.TestTriggerEventGitPush), Disabled: true},
+			&internalTrigger{ResourceKind: "content", Events: []string{string(v1.TestTriggerEventGitPush)}, Disabled: true},
 			false,
 		},
 		{
 			"non-content resource is not ready",
-			&internalTrigger{ResourceKind: "deployment", Event: string(v1.TestTriggerEventGitPush)},
+			&internalTrigger{ResourceKind: "deployment", Events: []string{string(v1.TestTriggerEventGitPush)}},
 			false,
 		},
 		{
 			"case insensitive resource kind",
-			&internalTrigger{ResourceKind: "Content", Event: string(v1.TestTriggerEventGitPush)},
+			&internalTrigger{ResourceKind: "Content", Events: []string{string(v1.TestTriggerEventGitPush)}},
 			true,
 		},
 		{
 			"case insensitive event",
-			&internalTrigger{ResourceKind: "content", Event: "Git-Push"},
+			&internalTrigger{ResourceKind: "content", Events: []string{"Git-Push"}},
 			true,
 		},
 	}
