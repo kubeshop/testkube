@@ -29,6 +29,7 @@ type MetricRecorder struct {
 	tags             []core.KeyValue
 	samples          atomic.Int64
 	writeErr         atomic.Pointer[error]
+	closeErr         atomic.Pointer[error]
 }
 
 type Option func(*MetricRecorder)
@@ -85,6 +86,13 @@ func (r *MetricRecorder) WriteError() error {
 	return nil
 }
 
+func (r *MetricRecorder) CloseError() error {
+	if err := r.closeErr.Load(); err != nil {
+		return *err
+	}
+	return nil
+}
+
 // Start starts the metric recorder and writes the metrics to the writer at the specified interval.
 // MetricRecorder runs a loop at the specified interval, gathers metrics, formats them using the provided Formatter and writes them using the provided Writer.
 // For practical purposes, most often is a FileWriter uses to write the metrics to a file.
@@ -100,6 +108,7 @@ func (r *MetricRecorder) Start(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			if err := r.writer.Close(ctx); err != nil {
+				r.closeErr.Store(&err)
 				stdoutUnsafe.Warnf("failed to close writer: %v\n", err)
 			}
 			return
@@ -214,6 +223,9 @@ func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 	}
 	if err = postProcessFn(); err != nil {
 		stdoutUnsafe.Warnf("failed to run post process function: %v\n", err)
+		return
+	}
+	if err = r.CloseError(); err != nil {
 		return
 	}
 	if r.Samples() > 0 {
