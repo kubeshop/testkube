@@ -14,9 +14,11 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/commands"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/runtime"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
+	"github.com/kubeshop/testkube/pkg/executiondata"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
@@ -246,8 +248,29 @@ func handleExecuteAction(action *lite.ActionExecute, ctx *ExecutionContext) Acti
 
 	// Scan per-step outputs directory after execution
 	if step.Id != "" {
-		if err := data.ScanStepOutputs(step.Id); err != nil {
+		values, err := data.ScanStepOutputs(step.Id)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "warn: failed to scan step outputs: %s\n", err.Error())
+		}
+		// Publish them as workflow-level outputs too, so that a parent workflow
+		// running this one via `execute` can read them back from the execution record.
+		//
+		// The instruction travels through the obfuscated log stream, so a value holding
+		// a sensitive word would arrive partially masked. Publish a marker in place of
+		// those, rather than something the reader would silently misread: the real value
+		// stays in this workflow's state, while a workflow reading the output resolves
+		// the marker and fails instead of quietly using an empty value.
+		// Classified against every sensitive value, not the masking set: a value too short
+		// to be worth masking in the logs is still a secret that may not be published.
+		publishable, withheld := data.PartitionSensitiveOutputs(values, orchestration.Setup.GetSensitiveValues())
+		workflowName := data.GetState().InternalConfig.Workflow.Name
+		for _, name := range withheld {
+			marker := executiondata.WithheldMarker(workflowName, name)
+			ctx.StdoutUnsafe.Warnf("warn: step output %q holds a sensitive value, so it is not published outside this workflow: a workflow reading it gets %s and fails\n", name, marker)
+			publishable[name] = marker
+		}
+		if len(publishable) > 0 {
+			ctx.Stdout.Printf("%s", instructions.SprintOutput(step.Ref, executiondata.OutputsInstructionName, publishable))
 		}
 	}
 

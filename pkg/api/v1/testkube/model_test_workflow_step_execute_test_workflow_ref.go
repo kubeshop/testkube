@@ -12,12 +12,15 @@ package testkube
 type TestWorkflowStepExecuteTestWorkflowRef struct {
 	// TestWorkflow name to include
 	Name string `json:"name,omitempty"`
+	// name to reference this execution by in the execution() expression, defaults to the TestWorkflow name
+	As string `json:"as,omitempty"`
 	// TestWorkflow execution description to display
 	Description string `json:"description,omitempty"`
 	// TestWorkflow execution name override
 	ExecutionName string                                `json:"executionName,omitempty"`
 	Tarball       map[string]TestWorkflowTarballRequest `json:"tarball,omitempty"`
 	Config        map[string]string                     `json:"config,omitempty"`
+	Fetch         []TestWorkflowStepExecuteFetch        `json:"fetch,omitempty"`
 	Selector      *LabelSelector                        `json:"selector,omitempty"`
 	Target        *ExecutionTarget                      `json:"target,omitempty"`
 	Count         *BoxedString                          `json:"count,omitempty"`

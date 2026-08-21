@@ -9,6 +9,7 @@
 package commands
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -29,6 +30,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/credentials"
+	"github.com/kubeshop/testkube/pkg/executiondata"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
@@ -59,8 +61,98 @@ type executionResult struct {
 	Status string `json:"status"`
 }
 
-func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async bool) (func() error, error) {
+// executionRecorder tracks the test workflows this step schedules, so their outputs
+// can be read back with the execution() expression - by later entries of the same
+// step, and by later steps of the workflow.
+//
+// Every change is published as an output instruction, which puts the group into the
+// workflow state (for the following steps) and into the execution record (for the API).
+type executionRecorder struct {
+	mu       sync.Mutex
+	registry *executiondata.Registry
+	// claimed tracks the references this step has taken over from earlier steps
+	claimed map[string]struct{}
+}
+
+func newExecutionRecorder(registry *executiondata.Registry) *executionRecorder {
+	return &executionRecorder{registry: registry, claimed: map[string]struct{}{}}
+}
+
+// schedule records a freshly scheduled execution and assigns it a position within
+// its group, so that fan-out instances can be addressed as execution("name", index).
+func (r *executionRecorder) schedule(alias, workflowName string, exec testkube.TestWorkflowExecution) executiondata.Execution {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	entry := executiondata.Execution{
+		Id:       exec.Id,
+		Name:     exec.Name,
+		Workflow: workflowName,
+		Alias:    alias,
+	}
+
+	// An earlier step may have run the same workflow. This step redefines what the
+	// reference means, so drop the stale group before indexing into it - otherwise
+	// execution("name") would keep pointing at the previous step's run.
+	if _, ok := r.claimed[entry.Key()]; !ok {
+		r.claimed[entry.Key()] = struct{}{}
+		r.registry.Reset(entry.Key())
+	}
+	entry.Index = int64(len(r.registry.Group(entry.Key())))
+	if exec.Result != nil && exec.Result.Status != nil {
+		entry.Status = string(*exec.Result.Status)
+	}
+	r.store(entry)
+	return entry
+}
+
+// complete refreshes an entry once its execution finished, adding the outputs it published.
+func (r *executionRecorder) complete(entry executiondata.Execution, exec testkube.TestWorkflowExecution) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	entry.Outputs = executiondata.OutputsOf(&exec)
+	if exec.Result != nil && exec.Result.Status != nil {
+		entry.Status = string(*exec.Result.Status)
+	}
+	r.store(entry)
+}
+
+// store must be called with the lock held.
+func (r *executionRecorder) store(entry executiondata.Execution) {
+	r.registry.Add(entry)
+	instructions.PrintOutput(config.Ref(), executiondata.ExecutionInstructionName(entry.Key()), r.registry.Group(entry.Key()))
+}
+
+// workflowExecutionRequest is a single test workflow execution the step will run.
+// The spec is kept unresolved until the operation starts, so that its configuration
+// may reference executions scheduled earlier by the same step.
+type workflowExecutionRequest struct {
+	spec     *testworkflowsv1.StepExecuteWorkflow
+	machines []expressions.Machine
+	alias    string
+	async    bool
+	recorder *executionRecorder
+}
+
+func buildWorkflowExecution(req workflowExecutionRequest) func() error {
 	return func() (err error) {
+		workflow := *req.spec.DeepCopy()
+		if err = expressions.Finalize(&workflow, req.machines...); err != nil {
+			ui.Errf("failed to compute execution: %s: %s", req.spec.Name, err.Error())
+			return errors.Wrapf(err, "'%s' workflow: computing execution", req.spec.Name)
+		}
+
+		// An output another workflow withheld resolves to a marker instead of the value
+		// it was meant to carry. Scheduling this execution would configure it with the
+		// marker, so stop while the cause is still visible.
+		if markers := executiondata.WithheldMarkersIn(&workflow); len(markers) > 0 {
+			err = executiondata.WithheldError("this execution", markers)
+			ui.Errf("failed to compute execution: %s: %s", req.spec.Name, err.Error())
+			return errors.Wrapf(err, "'%s' workflow: computing execution", req.spec.Name)
+		}
+
+		async := req.async
 		tags := config.ExecutionTags()
 		target := common.MapPtr(workflow.Target, commonmapper.MapTargetKubeToAPI)
 
@@ -89,13 +181,17 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 		}
 
 		// Print information about scheduled execution
-		for _, exec := range execs {
+		entries := make([]executiondata.Execution, len(execs))
+		for i, exec := range execs {
 			instructions.PrintOutput(config.Ref(), "testworkflow-start", &testWorkflowExecutionDetails{
 				Id:               exec.Id,
 				Name:             exec.Name,
 				TestWorkflowName: exec.Workflow.Name,
 				Description:      workflow.Description,
 			})
+
+			// Register it, so the following executions and steps may read its data
+			entries[i] = req.recorder.schedule(req.alias, exec.Workflow.Name, exec)
 
 			description := ""
 			if workflow.Description != "" {
@@ -105,6 +201,9 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 		}
 
 		if async {
+			if len(workflow.Fetch) > 0 {
+				ui.Warn("skipping 'fetch': artifacts are only available after an execution finishes, and this step is asynchronous")
+			}
 			return
 		}
 
@@ -115,7 +214,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 
 		wg.Add(len(execs))
 		for i := range execs {
-			go func(exec testkube.TestWorkflowExecution) {
+			go func(entry executiondata.Execution, exec testkube.TestWorkflowExecution) {
 				defer wg.Done()
 				prevStatus := testkube.QUEUED_TestWorkflowStatus
 				var gErr error
@@ -150,10 +249,11 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 
 					if exec.Result != nil && exec.Result.Status != nil {
 						status := *exec.Result.Status
-						switch status {
-						case testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus:
-							break
-						default:
+						// Ask the result whether it finished, rather than treating every status
+						// other than queued/running as terminal: a child reporting `assigned`,
+						// `starting` or `scheduling` is still on its way, and reading those as
+						// terminal made the parent give up and report the child as failed.
+						if exec.Result.IsFinished() {
 							break loop
 						}
 
@@ -164,6 +264,11 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 						prevStatus = status
 					}
 				}
+
+				// Publish the outputs the execution produced, so the following
+				// executions and steps may read them with the execution() expression.
+				// The execution record carries them once the status is terminal.
+				req.recorder.complete(entry, exec)
 
 				// Safe status access after loop
 				if exec.Result == nil || exec.Result.Status == nil {
@@ -184,9 +289,18 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 
 				instructions.PrintOutput(config.Ref(), "testworkflow-end", &executionResult{Id: exec.Id, Status: string(status)})
 				fmt.Printf("%s • %s\n", color(exec.Name), string(status))
-			}(execs[i])
+			}(entries[i], execs[i])
 		}
 		wg.Wait()
+
+		// Download the artifacts the executions produced, even when they failed -
+		// a failed run's artifacts are usually the interesting ones.
+		if fetchErr := fetchArtifacts(workflow.Fetch, entries, req.recorder.registry); fetchErr != nil {
+			ui.Errf("failed to fetch artifacts: %s", fetchErr.Error())
+			mu.Lock()
+			errs = append(errs, fetchErr)
+			mu.Unlock()
+		}
 
 		// Handle collected errors
 		if len(errs) > 0 {
@@ -198,7 +312,69 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 		}
 
 		return
-	}, nil
+	}
+}
+
+// claimExecutionRefs reserves the references an entry will be addressed by. Two
+// entries answering to the same reference would make execution() ambiguous, so ask
+// for an explicit alias instead of silently picking a winner.
+//
+// An aliased entry claims one reference no matter how many workflows its selector
+// matched - they form a single group, told apart by execution("<alias>", index).
+// An entry without an alias claims each matched workflow by name.
+//
+// An aliased entry stays addressable by the workflow it ran, which this does not claim:
+// two aliased entries may legitimately run the same workflow and be told apart by their
+// aliases. That leaves the workflow name itself able to address more than one execution,
+// which Registry.Lookup reports when it is used rather than forbidding here.
+func claimExecutionRefs(claimed map[string]string, alias string, workflowNames []string) error {
+	refs := workflowNames
+	if alias != "" {
+		refs = []string{alias}
+	}
+	for _, ref := range refs {
+		if previous, ok := claimed[ref]; ok {
+			return fmt.Errorf("duplicated execution reference %q, already used by %q: set a unique 'as' on one of them", ref, previous)
+		}
+		claimed[ref] = workflowNames[0]
+	}
+	return nil
+}
+
+// fetchArtifacts downloads artifacts produced by executed test workflows into the
+// local file system, so large payloads can cross the workflow boundary without going
+// through an expression.
+//
+// An entry without 'from' fetches from the executions it was declared on; otherwise the
+// reference is resolved against everything this workflow has executed so far.
+func fetchArtifacts(fetch []testworkflowsv1.StepExecuteFetch, entries []executiondata.Execution, registry *executiondata.Registry) error {
+	if len(fetch) == 0 {
+		return nil
+	}
+
+	repository := data.ExecutionDataRepository()
+	for i, f := range fetch {
+		sources := entries
+		if f.From != "" {
+			source, ok, err := registry.Lookup(f.From, 0)
+			if err != nil {
+				return errors.Wrapf(err, "fetch.%d", i)
+			}
+			if !ok {
+				return executiondata.UnknownRefError(f.From, 0, registry.Refs())
+			}
+			sources = []executiondata.Execution{source}
+		}
+
+		for _, source := range sources {
+			result, err := executiondata.FetchArtifacts(context.Background(), repository, data.ArtifactClient(), source.Id, f.Paths, f.To)
+			if err != nil {
+				return errors.Wrapf(err, "fetch.%d", i)
+			}
+			fmt.Printf("%s • fetched %d files (%d bytes) into %s\n", ui.LightCyan(source.Name), result.Files, result.Bytes, f.To)
+		}
+	}
+	return nil
 }
 
 func registerTransfer(transferSrv transfer.Server, request map[string]testworkflowsv1.TarballRequest, machines ...expressions.Machine) (expressions.Machine, error) {
@@ -285,15 +461,25 @@ func NewExecuteCmd() *cobra.Command {
 				}
 			}
 
-			// Initialize internal machine
+			// Initialize internal machine.
+			// The registry is seeded with the test workflows executed by the previous steps,
+			// and grows as this step schedules more of them.
 			credMachine := credentials.NewCredentialMachine(data.Credentials())
-			baseMachine := expressions.CombinedMachines(data.GetBaseTestWorkflowMachine(), data.ExecutionMachine(), credMachine)
+			recorder := newExecutionRecorder(data.ExecutionRegistry())
+			baseMachine := expressions.CombinedMachines(
+				data.GetBaseTestWorkflowMachine(),
+				data.ExecutionMachine(),
+				data.ExecutionDataMachineFor(recorder.registry),
+				credMachine,
+			)
 
 			// Initialize transfer server
 			transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, config.IP(), constants.DefaultTransferPort)
 
 			// Build operations to run
 			operations := make([]func() error, 0)
+			// aliases guards against two entries claiming the same execution() reference
+			aliases := make(map[string]string)
 			for _, s := range workflows {
 				var w testworkflowsv1.StepExecuteWorkflow
 				err := json.Unmarshal([]byte(s), &w)
@@ -341,6 +527,17 @@ func NewExecuteCmd() *cobra.Command {
 					ui.Fail(errors.Wrap(err, "matrix and sharding"))
 				}
 
+				// Resolve the reference this entry will be addressed by. It cannot depend
+				// on any sibling execution, so it is safe to compute it up-front.
+				alias, err := expressions.EvalTemplate(w.As, baseMachine)
+				if err != nil {
+					ui.Fail(errors.Wrapf(err, "'%s' workflow: computing the 'as' reference", w.Name))
+				}
+
+				if err := claimExecutionRefs(aliases, alias, testWorkflowNames); err != nil {
+					ui.Fail(err)
+				}
+
 				for _, testWorkflowName := range testWorkflowNames {
 					fmt.Printf("%s: %s\n", commontcl.ServiceLabel(testWorkflowName), params.Humanize())
 
@@ -349,6 +546,7 @@ func NewExecuteCmd() *cobra.Command {
 						// Clone the spec
 						spec := w.DeepCopy()
 						spec.Name = testWorkflowName
+						spec.As = alias
 
 						// Build files for transfer
 						tarballMachine, err := registerTransfer(transferSrv, spec.Tarball, baseMachine, params.MachineAt(i))
@@ -357,16 +555,16 @@ func NewExecuteCmd() *cobra.Command {
 						}
 						spec.Tarball = nil
 
-						// Prepare the operation to run
-						err = expressions.Finalize(&spec, baseMachine, tarballMachine, params.MachineAt(i))
-						if err != nil {
-							ui.Fail(errors.Wrapf(err, "'%s' workflow: computing execution", spec.Name))
-						}
-						fn, err := buildWorkflowExecution(*spec, async)
-						if err != nil {
-							ui.Fail(err)
-						}
-						operations = append(operations, fn)
+						// Prepare the operation to run. The spec stays unresolved until the
+						// operation starts, so that its configuration may reference the
+						// executions scheduled before it.
+						operations = append(operations, buildWorkflowExecution(workflowExecutionRequest{
+							spec:     spec,
+							machines: []expressions.Machine{baseMachine, tarballMachine, params.MachineAt(i)},
+							alias:    alias,
+							async:    async,
+							recorder: recorder,
+						}))
 					}
 				}
 			}

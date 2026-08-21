@@ -2,11 +2,15 @@ package orchestration
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/pkg/executiondata"
 )
 
 func TestSetup(t *testing.T) {
@@ -63,6 +67,125 @@ func TestSetup(t *testing.T) {
 	assert.Equal(t, "128m", resources.Requests.CPU)
 	assert.Equal(t, "2048", resources.Limits.Memory)
 	assert.Equal(t, "256m", resources.Limits.CPU)
+}
+
+func TestGetSensitiveWords(t *testing.T) {
+	t.Run("keeps a short word added at runtime", func(t *testing.T) {
+		// This set is the only thing deciding whether a step output may be published, so
+		// dropping a word for being short would publish the credential it stands for
+		// verbatim into the execution record - and mask it nowhere in the logs either.
+		// Production sets the minimum to 4, which must not reach these words.
+		setup := newSetup()
+		setup.SetSensitiveWordMinimumLength(4)
+		setup.AddSensitiveWords("a", "abc", "s3cr3t-value")
+
+		words := setup.GetSensitiveWords()
+		assert.Contains(t, words, "s3cr3t-value")
+		assert.Contains(t, words, "abc", "a three-character credential is still a credential")
+		assert.Contains(t, words, "a")
+	})
+
+	t.Run("a short output value is withheld from the record", func(t *testing.T) {
+		// The end of the path the previous case guards: a short credential written to the
+		// outputs directory must not leave the workflow.
+		setup := newSetup()
+		setup.SetSensitiveWordMinimumLength(4)
+		setup.AddSensitiveWords("ab")
+
+		publishable, withheld := data.PartitionSensitiveOutputs(
+			map[string]string{"token": "ab", "count": "42"}, setup.GetSensitiveValues())
+		assert.Equal(t, map[string]string{"count": "42"}, publishable)
+		assert.Equal(t, []string{"token"}, withheld)
+	})
+}
+
+// Masking and classification read different sets. A value too short to mask usefully in
+// the logs is still a secret that may not be published into the execution record, where
+// another workflow could read it back through execution().outputs.
+func TestGetSensitiveValues_EnvironmentSecrets(t *testing.T) {
+	original := os.Environ()
+	t.Cleanup(func() {
+		os.Clearenv()
+		for _, item := range original {
+			key, value, _ := strings.Cut(item, "=")
+			assert.NoError(t, os.Setenv(key, value))
+		}
+	})
+
+	os.Clearenv()
+	require.NoError(t, os.Setenv("_01S_TOKEN", "ab"))
+	require.NoError(t, os.Setenv("_01S_PASSWORD", "long-enough"))
+
+	setup := newSetup()
+	setup.initialize()
+	setup.SetSensitiveWordMinimumLength(4)
+	require.NoError(t, setup.UseEnv("01"))
+
+	t.Run("masking skips a value too short to mask usefully", func(t *testing.T) {
+		words := setup.GetSensitiveWords()
+		assert.Contains(t, words, "long-enough")
+		assert.NotContains(t, words, "ab")
+	})
+
+	t.Run("classification keeps it", func(t *testing.T) {
+		values := setup.GetSensitiveValues()
+		assert.Contains(t, values, "long-enough")
+		assert.Contains(t, values, "ab")
+	})
+
+	t.Run("so a short environment secret is withheld from the record", func(t *testing.T) {
+		publishable, withheld := data.PartitionSensitiveOutputs(
+			map[string]string{"token": "ab", "greeting": "hello"}, setup.GetSensitiveValues())
+		assert.Equal(t, map[string]string{"greeting": "hello"}, publishable)
+		assert.Equal(t, []string{"token"}, withheld)
+	})
+}
+
+// A computed environment variable is resolved and installed by UseEnv, which no later
+// guard inspects - the command guard only sees arguments. So a withheld output reaching
+// a variable has to stop the step here, rather than arrive at the tool as its value.
+func TestUseEnv_WithheldOutput(t *testing.T) {
+	// UseEnv replaces the process environment, so put it back for the tests after this one.
+	original := os.Environ()
+	t.Cleanup(func() {
+		os.Clearenv()
+		for _, item := range original {
+			key, value, _ := strings.Cut(item, "=")
+			assert.NoError(t, os.Setenv(key, value))
+		}
+	})
+
+	marker := executiondata.WithheldMarker("producer", "token")
+
+	t.Run("a computed variable resolving to a marker stops the step", func(t *testing.T) {
+		require.NoError(t, os.Setenv("_01C_TOKEN", marker))
+		require.NoError(t, os.Setenv("_01C_GREETING", "hello"))
+
+		setup := newSetup()
+		setup.initialize()
+
+		err := setup.UseEnv("01")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, `the "TOKEN" environment variable`)
+		assert.ErrorContains(t, err, "was not published outside the workflow that produced it")
+		assert.ErrorContains(t, err, marker)
+		assert.Empty(t, os.Getenv("TOKEN"), "the marker must not reach the environment")
+	})
+
+	t.Run("a plain variable holding a marker stops the step too", func(t *testing.T) {
+		// A step that spawns workers resolves their specification itself, so the marker
+		// reaches the worker as a literal rather than as something to compute.
+		os.Clearenv()
+		require.NoError(t, os.Setenv("_02_TOKEN", marker))
+
+		setup := newSetup()
+		setup.initialize()
+
+		err := setup.UseEnv("02")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, `the "TOKEN" environment variable`)
+		assert.Empty(t, os.Getenv("TOKEN"), "the marker must not reach the environment")
+	})
 }
 
 func TestSetupInitialize_TableDriven(t *testing.T) {

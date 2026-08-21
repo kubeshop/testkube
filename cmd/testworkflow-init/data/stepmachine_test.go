@@ -153,7 +153,9 @@ func TestScanStepOutputs(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "token"), []byte("abc123\n"), 0644))
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "count"), []byte("42"), 0644))
 
-		require.NoError(t, scanStepOutputsFrom(dir, "auth"))
+		values, err := scanStepOutputsFrom(dir, "auth")
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{"token": "abc123", "count": "42"}, values)
 
 		val, ok := resolveStepExpr(t, "step.auth.outputs.token")
 		assert.True(t, ok)
@@ -171,7 +173,8 @@ func TestScanStepOutputs(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(dir, ".hidden"), []byte("secret"), 0644))
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "visible"), []byte("ok"), 0644))
 
-		require.NoError(t, scanStepOutputsFrom(dir, "auth"))
+		_, err := scanStepOutputsFrom(dir, "auth")
+		require.NoError(t, err)
 
 		val, ok := resolveStepExpr(t, "step.auth.outputs.visible")
 		assert.True(t, ok)
@@ -184,15 +187,59 @@ func TestScanStepOutputs(t *testing.T) {
 
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "big"), []byte(strings.Repeat("x", MaxOutputSize+1)), 0644))
 
-		require.NoError(t, scanStepOutputsFrom(dir, "auth"))
+		_, err := scanStepOutputsFrom(dir, "auth")
+		require.NoError(t, err)
 
 		_, ok := resolveStepExpr(t, "step.auth.outputs.big")
 		assert.False(t, ok)
 	})
 
 	t.Run("noop for empty id or missing dir", func(t *testing.T) {
-		assert.NoError(t, scanStepOutputsFrom("/nonexistent", ""))
-		assert.NoError(t, scanStepOutputsFrom("/nonexistent", "build"))
+		values, err := scanStepOutputsFrom("/nonexistent", "")
+		assert.NoError(t, err)
+		assert.Nil(t, values)
+
+		values, err = scanStepOutputsFrom("/nonexistent", "build")
+		assert.NoError(t, err)
+		assert.Nil(t, values)
+	})
+}
+
+func TestPartitionSensitiveOutputs(t *testing.T) {
+	t.Run("withholds values holding a sensitive word", func(t *testing.T) {
+		values := map[string]string{
+			"token":    "Bearer s3cr3t-value",
+			"count":    "42",
+			"endpoint": "https://api.example.com",
+		}
+
+		publishable, withheld := PartitionSensitiveOutputs(values, []string{"s3cr3t-value"})
+		assert.Equal(t, map[string]string{"count": "42", "endpoint": "https://api.example.com"}, publishable)
+		assert.Equal(t, []string{"token"}, withheld,
+			"the whole value is withheld, because publishing it obfuscated would corrupt it")
+	})
+
+	t.Run("publishes everything when nothing is sensitive", func(t *testing.T) {
+		values := map[string]string{"count": "42"}
+
+		publishable, withheld := PartitionSensitiveOutputs(values, []string{"unrelated"})
+		assert.Equal(t, values, publishable)
+		assert.Empty(t, withheld)
+	})
+
+	t.Run("ignores empty sensitive words", func(t *testing.T) {
+		// An empty word matches every string, which would withhold everything.
+		publishable, withheld := PartitionSensitiveOutputs(map[string]string{"count": "42"}, []string{""})
+		assert.Equal(t, map[string]string{"count": "42"}, publishable)
+		assert.Empty(t, withheld)
+	})
+
+	t.Run("reports withheld names in a stable order", func(t *testing.T) {
+		values := map[string]string{"b": "secret", "a": "secret", "c": "fine"}
+
+		publishable, withheld := PartitionSensitiveOutputs(values, []string{"secret"})
+		assert.Equal(t, map[string]string{"c": "fine"}, publishable)
+		assert.Equal(t, []string{"a", "b"}, withheld)
 	})
 }
 
