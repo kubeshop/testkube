@@ -124,7 +124,24 @@ func (s *Server) GetExecutionWorkflow(ctx context.Context, req *executionv1.GetE
 		Workflow: &testworkflowv1.TestWorkflow{
 			Json: data,
 		},
+		RunningContext: projectRunningContext(execution.RunningContext),
 	}, nil
+}
+
+// projectRunningContext extracts the parent execution's actor identity into
+// the minimal shape the runner needs to make sticky-family decisions. Returns
+// nil when there is nothing meaningful to propagate.
+func projectRunningContext(rc *testkube.TestWorkflowRunningContext) *executionv1.ExecutionRunningContext {
+	if rc == nil || rc.Actor == nil {
+		return nil
+	}
+	out := &executionv1.ExecutionRunningContext{
+		ActorName: common.Ptr(rc.Actor.Name),
+	}
+	if rc.Actor.Type_ != nil {
+		out.ActorType = common.Ptr(string(*rc.Actor.Type_))
+	}
+	return out
 }
 
 func (s *Server) Register(ctx context.Context, request *cloud.RegisterRequest) (*cloud.RegisterResponse, error) {
