@@ -28,6 +28,7 @@ type MetricRecorder struct {
 	samplingInterval time.Duration
 	tags             []core.KeyValue
 	samples          atomic.Int64
+	writeErr         atomic.Pointer[error]
 }
 
 type Option func(*MetricRecorder)
@@ -77,6 +78,13 @@ func (r *MetricRecorder) Samples() int64 {
 	return r.samples.Load()
 }
 
+func (r *MetricRecorder) WriteError() error {
+	if err := r.writeErr.Load(); err != nil {
+		return *err
+	}
+	return nil
+}
+
 // Start starts the metric recorder and writes the metrics to the writer at the specified interval.
 // MetricRecorder runs a loop at the specified interval, gathers metrics, formats them using the provided Formatter and writes them using the provided Writer.
 // For practical purposes, most often is a FileWriter uses to write the metrics to a file.
@@ -98,7 +106,9 @@ func (r *MetricRecorder) Start(ctx context.Context) {
 		case <-t.C:
 			metrics, _ := r.record()
 			// write the aggregated metrics
-			if err := r.write(ctx, metrics, previous); err == nil {
+			if err := r.write(ctx, metrics, previous); err != nil {
+				r.writeErr.Store(&err)
+			} else {
 				r.samples.Add(1)
 			}
 			previous = metrics
@@ -206,11 +216,16 @@ func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 		stdoutUnsafe.Warnf("failed to run post process function: %v\n", err)
 		return
 	}
-	if r.Samples() == 0 {
-		instructions.PrintOutput(
-			config.ExecutionConfig.Step,
-			core.ResourceMetricsStatusOutputName,
-			core.ResourceMetricsStatus{Reason: core.ResourceMetricsReasonNoSamples},
-		)
+	if r.Samples() > 0 {
+		return
 	}
+	if err = r.WriteError(); err != nil {
+		stdoutUnsafe.Warnf("failed to write resource metrics: %v\n", err)
+		return
+	}
+	instructions.PrintOutput(
+		config.ExecutionConfig.Step,
+		core.ResourceMetricsStatusOutputName,
+		core.ResourceMetricsStatus{Reason: core.ResourceMetricsReasonNoSamples},
+	)
 }
