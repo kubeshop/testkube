@@ -8776,10 +8776,10 @@ spec:
                             items:
                               properties:
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test execution description to display
@@ -9071,10 +9071,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: test name to run
@@ -9104,10 +9104,10 @@ spec:
                                   description: configuration to pass for the workflow
                                   type: object
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test workflow execution description to display
@@ -9120,10 +9120,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: workflow name to run
@@ -9246,10 +9246,10 @@ spec:
                             description: global content that should be fetched into all containers
                             x-kubernetes-preserve-unknown-fields: true
                           count:
+                            description: static number of sharded instances to spawn
                             anyOf:
                               - type: integer
                               - type: string
-                            description: static number of sharded instances to spawn
                             x-kubernetes-int-or-string: true
                           delay:
                             description: delay before the step
@@ -9276,10 +9276,10 @@ spec:
                                 items:
                                   properties:
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test execution description to display
@@ -9571,10 +9571,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: test name to run
@@ -9604,10 +9604,10 @@ spec:
                                       description: configuration to pass for the workflow
                                       type: object
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test workflow execution description to display
@@ -9620,10 +9620,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: workflow name to run
@@ -9718,10 +9718,10 @@ spec:
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           maxCount:
+                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             anyOf:
                               - type: integer
                               - type: string
-                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             x-kubernetes-int-or-string: true
                           negative:
                             description: is the step expected to fail
@@ -10748,10 +10748,10 @@ spec:
                                   type: array
                               type: object
                             count:
+                              description: static number of sharded instances to spawn
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: static number of sharded instances to spawn
                               x-kubernetes-int-or-string: true
                             description:
                               description: service description to display
@@ -10880,10 +10880,10 @@ spec:
                               type: object
                               x-kubernetes-preserve-unknown-fields: true
                             maxCount:
+                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               x-kubernetes-int-or-string: true
                             pod:
                               description: configuration for the scheduled pod
@@ -13084,10 +13084,10 @@ spec:
                             type: array
                         type: object
                       count:
+                        description: static number of sharded instances to spawn
                         anyOf:
                           - type: integer
                           - type: string
-                        description: static number of sharded instances to spawn
                         x-kubernetes-int-or-string: true
                       description:
                         description: service description to display
@@ -13216,10 +13216,10 @@ spec:
                         type: object
                         x-kubernetes-preserve-unknown-fields: true
                       maxCount:
+                        description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                         anyOf:
                           - type: integer
                           - type: string
-                        description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                         x-kubernetes-int-or-string: true
                       pod:
                         description: configuration for the scheduled pod
@@ -14476,10 +14476,10 @@ spec:
                             items:
                               properties:
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test execution description to display
@@ -14771,10 +14771,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: test name to run
@@ -14804,10 +14804,10 @@ spec:
                                   description: configuration to pass for the workflow
                                   type: object
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test workflow execution description to display
@@ -14820,10 +14820,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: workflow name to run
@@ -14946,10 +14946,10 @@ spec:
                             description: global content that should be fetched into all containers
                             x-kubernetes-preserve-unknown-fields: true
                           count:
+                            description: static number of sharded instances to spawn
                             anyOf:
                               - type: integer
                               - type: string
-                            description: static number of sharded instances to spawn
                             x-kubernetes-int-or-string: true
                           delay:
                             description: delay before the step
@@ -14976,10 +14976,10 @@ spec:
                                 items:
                                   properties:
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test execution description to display
@@ -15271,10 +15271,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: test name to run
@@ -15304,10 +15304,10 @@ spec:
                                       description: configuration to pass for the workflow
                                       type: object
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test workflow execution description to display
@@ -15320,10 +15320,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: workflow name to run
@@ -15418,10 +15418,10 @@ spec:
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           maxCount:
+                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             anyOf:
                               - type: integer
                               - type: string
-                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             x-kubernetes-int-or-string: true
                           negative:
                             description: is the step expected to fail
@@ -16448,10 +16448,10 @@ spec:
                                   type: array
                               type: object
                             count:
+                              description: static number of sharded instances to spawn
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: static number of sharded instances to spawn
                               x-kubernetes-int-or-string: true
                             description:
                               description: service description to display
@@ -16580,10 +16580,10 @@ spec:
                               type: object
                               x-kubernetes-preserve-unknown-fields: true
                             maxCount:
+                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               x-kubernetes-int-or-string: true
                             pod:
                               description: configuration for the scheduled pod
@@ -17894,10 +17894,10 @@ spec:
                             items:
                               properties:
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test execution description to display
@@ -18189,10 +18189,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: test name to run
@@ -18222,10 +18222,10 @@ spec:
                                   description: configuration to pass for the workflow
                                   type: object
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test workflow execution description to display
@@ -18238,10 +18238,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: workflow name to run
@@ -18364,10 +18364,10 @@ spec:
                             description: global content that should be fetched into all containers
                             x-kubernetes-preserve-unknown-fields: true
                           count:
+                            description: static number of sharded instances to spawn
                             anyOf:
                               - type: integer
                               - type: string
-                            description: static number of sharded instances to spawn
                             x-kubernetes-int-or-string: true
                           delay:
                             description: delay before the step
@@ -18394,10 +18394,10 @@ spec:
                                 items:
                                   properties:
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test execution description to display
@@ -18689,10 +18689,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: test name to run
@@ -18722,10 +18722,10 @@ spec:
                                       description: configuration to pass for the workflow
                                       type: object
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test workflow execution description to display
@@ -18738,10 +18738,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: workflow name to run
@@ -18836,10 +18836,10 @@ spec:
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           maxCount:
+                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             anyOf:
                               - type: integer
                               - type: string
-                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             x-kubernetes-int-or-string: true
                           negative:
                             description: is the step expected to fail
@@ -19866,10 +19866,10 @@ spec:
                                   type: array
                               type: object
                             count:
+                              description: static number of sharded instances to spawn
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: static number of sharded instances to spawn
                               x-kubernetes-int-or-string: true
                             description:
                               description: service description to display
@@ -19998,10 +19998,10 @@ spec:
                               type: object
                               x-kubernetes-preserve-unknown-fields: true
                             maxCount:
+                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               x-kubernetes-int-or-string: true
                             pod:
                               description: configuration for the scheduled pod
@@ -21594,10 +21594,10 @@ spec:
                             items:
                               properties:
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test execution description to display
@@ -21889,10 +21889,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: test name to run
@@ -21922,10 +21922,10 @@ spec:
                                   description: configuration to pass for the workflow
                                   type: object
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test workflow execution description to display
@@ -21938,10 +21938,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: workflow name to run
@@ -22052,10 +22052,10 @@ spec:
                                 type: string
                             type: object
                           count:
+                            description: static number of sharded instances to spawn
                             anyOf:
                               - type: integer
                               - type: string
-                            description: static number of sharded instances to spawn
                             x-kubernetes-int-or-string: true
                           delay:
                             description: delay before the step
@@ -22079,10 +22079,10 @@ spec:
                                 items:
                                   properties:
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test execution description to display
@@ -22374,10 +22374,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: test name to run
@@ -22407,10 +22407,10 @@ spec:
                                       description: configuration to pass for the workflow
                                       type: object
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test workflow execution description to display
@@ -22423,10 +22423,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: workflow name to run
@@ -22515,10 +22515,10 @@ spec:
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           maxCount:
+                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             anyOf:
                               - type: integer
                               - type: string
-                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             x-kubernetes-int-or-string: true
                           negative:
                             description: is the step expected to fail
@@ -23501,10 +23501,10 @@ spec:
                                   type: array
                               type: object
                             count:
+                              description: static number of sharded instances to spawn
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: static number of sharded instances to spawn
                               x-kubernetes-int-or-string: true
                             description:
                               description: service description to display
@@ -23633,10 +23633,10 @@ spec:
                               type: object
                               x-kubernetes-preserve-unknown-fields: true
                             maxCount:
+                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               x-kubernetes-int-or-string: true
                             pod:
                               description: configuration for the scheduled pod
@@ -25780,10 +25780,10 @@ spec:
                             type: array
                         type: object
                       count:
+                        description: static number of sharded instances to spawn
                         anyOf:
                           - type: integer
                           - type: string
-                        description: static number of sharded instances to spawn
                         x-kubernetes-int-or-string: true
                       description:
                         description: service description to display
@@ -25912,10 +25912,10 @@ spec:
                         type: object
                         x-kubernetes-preserve-unknown-fields: true
                       maxCount:
+                        description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                         anyOf:
                           - type: integer
                           - type: string
-                        description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                         x-kubernetes-int-or-string: true
                       pod:
                         description: configuration for the scheduled pod
@@ -27152,10 +27152,10 @@ spec:
                             items:
                               properties:
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test execution description to display
@@ -27447,10 +27447,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: test name to run
@@ -27480,10 +27480,10 @@ spec:
                                   description: configuration to pass for the workflow
                                   type: object
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test workflow execution description to display
@@ -27496,10 +27496,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: workflow name to run
@@ -27610,10 +27610,10 @@ spec:
                                 type: string
                             type: object
                           count:
+                            description: static number of sharded instances to spawn
                             anyOf:
                               - type: integer
                               - type: string
-                            description: static number of sharded instances to spawn
                             x-kubernetes-int-or-string: true
                           delay:
                             description: delay before the step
@@ -27637,10 +27637,10 @@ spec:
                                 items:
                                   properties:
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test execution description to display
@@ -27932,10 +27932,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: test name to run
@@ -27965,10 +27965,10 @@ spec:
                                       description: configuration to pass for the workflow
                                       type: object
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test workflow execution description to display
@@ -27981,10 +27981,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: workflow name to run
@@ -28073,10 +28073,10 @@ spec:
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           maxCount:
+                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             anyOf:
                               - type: integer
                               - type: string
-                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             x-kubernetes-int-or-string: true
                           negative:
                             description: is the step expected to fail
@@ -29059,10 +29059,10 @@ spec:
                                   type: array
                               type: object
                             count:
+                              description: static number of sharded instances to spawn
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: static number of sharded instances to spawn
                               x-kubernetes-int-or-string: true
                             description:
                               description: service description to display
@@ -29191,10 +29191,10 @@ spec:
                               type: object
                               x-kubernetes-preserve-unknown-fields: true
                             maxCount:
+                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               x-kubernetes-int-or-string: true
                             pod:
                               description: configuration for the scheduled pod
@@ -30448,10 +30448,10 @@ spec:
                             items:
                               properties:
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test execution description to display
@@ -30743,10 +30743,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: test name to run
@@ -30776,10 +30776,10 @@ spec:
                                   description: configuration to pass for the workflow
                                   type: object
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test workflow execution description to display
@@ -30792,10 +30792,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: workflow name to run
@@ -30906,10 +30906,10 @@ spec:
                                 type: string
                             type: object
                           count:
+                            description: static number of sharded instances to spawn
                             anyOf:
                               - type: integer
                               - type: string
-                            description: static number of sharded instances to spawn
                             x-kubernetes-int-or-string: true
                           delay:
                             description: delay before the step
@@ -30933,10 +30933,10 @@ spec:
                                 items:
                                   properties:
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test execution description to display
@@ -31228,10 +31228,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: test name to run
@@ -31261,10 +31261,10 @@ spec:
                                       description: configuration to pass for the workflow
                                       type: object
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test workflow execution description to display
@@ -31277,10 +31277,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: workflow name to run
@@ -31369,10 +31369,10 @@ spec:
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           maxCount:
+                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             anyOf:
                               - type: integer
                               - type: string
-                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             x-kubernetes-int-or-string: true
                           negative:
                             description: is the step expected to fail
@@ -32355,10 +32355,10 @@ spec:
                                   type: array
                               type: object
                             count:
+                              description: static number of sharded instances to spawn
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: static number of sharded instances to spawn
                               x-kubernetes-int-or-string: true
                             description:
                               description: service description to display
@@ -32487,10 +32487,10 @@ spec:
                               type: object
                               x-kubernetes-preserve-unknown-fields: true
                             maxCount:
+                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               x-kubernetes-int-or-string: true
                             pod:
                               description: configuration for the scheduled pod
