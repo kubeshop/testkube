@@ -216,23 +216,29 @@ func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 	// run the function
 	fn()
 	cancel()
+	var shutdownErr error
 	select {
 	case <-recorderStopped:
 	case <-time.After(recorderShutdownTimeout):
+		shutdownErr = errors.New("timed out waiting for the resource metrics recorder to stop")
 		stdoutUnsafe.Warn("timed out waiting for the resource metrics recorder to stop\n")
 	}
 	if err = postProcessFn(); err != nil {
 		stdoutUnsafe.Warnf("failed to run post process function: %v\n", err)
 		return
 	}
-	if err = r.CloseError(); err != nil {
+	if shutdownErr != nil {
+		err = shutdownErr
 		return
 	}
-	if r.Samples() > 0 {
+	if err = r.CloseError(); err != nil {
 		return
 	}
 	if err = r.WriteError(); err != nil {
 		stdoutUnsafe.Warnf("failed to write resource metrics: %v\n", err)
+		return
+	}
+	if r.Samples() > 0 {
 		return
 	}
 	instructions.PrintOutput(
