@@ -27,7 +27,7 @@ type MetricRecorder struct {
 	format           core.Formatter
 	samplingInterval time.Duration
 	tags             []core.KeyValue
-	samples 		 atomic.Int64
+	samples          atomic.Int64
 }
 
 type Option func(*MetricRecorder)
