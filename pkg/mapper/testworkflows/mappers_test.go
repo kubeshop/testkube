@@ -247,9 +247,18 @@ var (
 			Parallelism: 880,
 			Async:       false,
 			Tests:       []testworkflowsv1.StepExecuteTest{{Name: "some-name-test"}},
-			Workflows: []testworkflowsv1.StepExecuteWorkflow{{Name: "some-workflow", Config: map[string]intstr.IntOrString{
-				"id": {Type: intstr.String, StrVal: "xyzz"},
-			}}},
+			Workflows: []testworkflowsv1.StepExecuteWorkflow{{
+				Name: "some-workflow",
+				As:   "some-alias",
+				Config: map[string]intstr.IntOrString{
+					"id": {Type: intstr.String, StrVal: "xyzz"},
+				},
+				Fetch: []testworkflowsv1.StepExecuteFetch{{
+					From:  "some-alias",
+					Paths: []string{"results/**"},
+					To:    "/data/results",
+				}},
+			}},
 		},
 		Artifacts: &testworkflowsv1.StepArtifacts{
 			Compress: &testworkflowsv1.ArtifactCompression{

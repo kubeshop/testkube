@@ -842,6 +842,26 @@ func (mr *MockTestKubeCloudAPIClientMockRecorder) InitExecution(ctx, in any, opt
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitExecution", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).InitExecution), varargs...)
 }
 
+// ListExecutionArtifactsPresigned mocks base method.
+func (m *MockTestKubeCloudAPIClient) ListExecutionArtifactsPresigned(ctx context.Context, in *ListExecutionArtifactsPresignedRequest, opts ...grpc.CallOption) (*ListExecutionArtifactsPresignedResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListExecutionArtifactsPresigned", varargs...)
+	ret0, _ := ret[0].(*ListExecutionArtifactsPresignedResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListExecutionArtifactsPresigned indicates an expected call of ListExecutionArtifactsPresigned.
+func (mr *MockTestKubeCloudAPIClientMockRecorder) ListExecutionArtifactsPresigned(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExecutionArtifactsPresigned", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).ListExecutionArtifactsPresigned), varargs...)
+}
+
 // ListTestTriggerLabels mocks base method.
 func (m *MockTestKubeCloudAPIClient) ListTestTriggerLabels(ctx context.Context, in *ListTestTriggerLabelsRequest, opts ...grpc.CallOption) (*ListTestTriggerLabelsResponse, error) {
 	m.ctrl.T.Helper()

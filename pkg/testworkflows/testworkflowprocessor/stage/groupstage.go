@@ -148,14 +148,25 @@ func (s *groupStage) Flatten() []Stage {
 		return s.children
 	}
 
-	// Merge stage into single one below if possible
 	first := s.children[0]
+
+	// Hand the step's identity to the stage running its operation, whether or not the
+	// group can be merged away. A step that expands into several stages - an operation
+	// plus artifacts, say - is not merged, and leaving the id behind on the group meant
+	// no stage owned it: the outputs directory was never prepared and never scanned, so
+	// the step could not publish outputs at all.
+	//
+	// Only the first stage gets it. The id decides which stage clears and rescans the
+	// outputs directory, so sharing it with a trailing stage would wipe what the
+	// operation just published.
+	if first.Id() == "" {
+		first.SetId(s.id)
+	}
+
+	// Merge stage into single one below if possible
 	if len(s.children) == 1 && (s.name == "" || first.Name() == "") && (s.timeout == "" || first.Timeout() == "") && (!s.paused || !first.Paused()) {
 		if first.Name() == "" {
 			first.SetName(s.name)
-		}
-		if first.Id() == "" {
-			first.SetId(s.id)
 		}
 		if first.Condition() == "" {
 			// Virtualize with the default condition

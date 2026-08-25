@@ -1046,13 +1046,23 @@ func MapSelectorToCRD(v testkube.LabelSelector) metav1.LabelSelector {
 	}
 }
 
+func MapStepExecuteFetchAPIToKube(v testkube.TestWorkflowStepExecuteFetch) testworkflowsv1.StepExecuteFetch {
+	return testworkflowsv1.StepExecuteFetch{
+		From:  v.From,
+		Paths: v.Paths,
+		To:    v.To,
+	}
+}
+
 func MapStepExecuteTestWorkflowAPIToKube(v testkube.TestWorkflowStepExecuteTestWorkflowRef) testworkflowsv1.StepExecuteWorkflow {
 	return testworkflowsv1.StepExecuteWorkflow{
 		Name:          v.Name,
+		As:            v.As,
 		Description:   v.Description,
 		ExecutionName: v.ExecutionName,
 		Tarball:       common.MapMap(v.Tarball, MapTarballRequestAPIToKube),
 		Config:        MapConfigValueAPIToKube(v.Config),
+		Fetch:         common.MapSlice(v.Fetch, MapStepExecuteFetchAPIToKube),
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
 			Count:    MapBoxedStringToIntOrString(v.Count),
 			MaxCount: MapBoxedStringToIntOrString(v.MaxCount),

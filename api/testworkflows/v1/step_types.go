@@ -209,6 +209,9 @@ type StepExecuteWorkflow struct {
 	// selector is used to identify a group of test workflows based on their metadata labels
 	Selector *metav1.LabelSelector `json:"selector,omitempty" expr:"include"`
 
+	// name to reference this execution by in the execution() expression, defaults to the workflow name
+	As string `json:"as,omitempty" expr:"template"`
+
 	// test workflow execution description to display
 	Description string `json:"description,omitempty" expr:"template"`
 
@@ -223,8 +226,24 @@ type StepExecuteWorkflow struct {
 	// configuration to pass for the workflow
 	Config map[string]intstr.IntOrString `json:"config,omitempty" expr:"template"`
 
+	// instructions for downloading artifacts produced by executed test workflows
+	Fetch []StepExecuteFetch `json:"fetch,omitempty" expr:"include"`
+
 	// Targets helps decide on which runner the execution is scheduled.
 	Target *commonv1.Target `json:"target,omitempty" expr:"include"`
+}
+
+// StepExecuteFetch downloads artifacts produced by an executed test workflow.
+type StepExecuteFetch struct {
+	// execution to download the artifacts from, defaults to the one being executed
+	From string `json:"from,omitempty" expr:"template"`
+
+	// artifact paths to download, relative to the artifact root of the execution
+	Paths []string `json:"paths,omitempty" expr:"template"`
+
+	// directory to download the artifacts to; when the entry fans out over a matrix or
+	// shards, include {{ index }} to keep each instance's artifacts apart
+	To string `json:"to" expr:"template"`
 }
 
 type StepParallel struct {

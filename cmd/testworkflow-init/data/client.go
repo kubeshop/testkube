@@ -15,6 +15,12 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
+// storageSkipVerify decides whether object storage certificates are verified. Storage in
+// a self-hosted deployment commonly presents a certificate from a private CA that this
+// image has no reason to trust, and the control plane hands out presigned URLs for that
+// host. Kept as one constant so that uploading and downloading cannot disagree about it.
+const storageSkipVerify = true
+
 var (
 	cloudMu     sync.Mutex
 	cloudClient controlplaneclient.Client
@@ -51,7 +57,7 @@ func CloudClient() controlplaneclient.Client {
 				},
 			},
 		}, controlplaneclient.ClientOptions{
-			StorageSkipVerify:  true,
+			StorageSkipVerify:  storageSkipVerify,
 			ExecutionID:        cfg.Execution.Id,
 			WorkflowName:       cfg.Workflow.Name,
 			ParentExecutionIDs: strings.Split(cfg.Execution.ParentIds, "/"),

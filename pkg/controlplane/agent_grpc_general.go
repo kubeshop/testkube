@@ -19,7 +19,10 @@ import (
 )
 
 func (s *Server) GetProContext(_ context.Context, _ *emptypb.Empty) (*cloud.ProContextResponse, error) {
-	caps := []*cloud.Capability{{Name: string(capabilities.CapabilityNewArchitecture), Enabled: true}} //nolint
+	caps := []*cloud.Capability{
+		{Name: string(capabilities.CapabilityNewArchitecture), Enabled: true}, //nolint
+		{Name: string(capabilities.CapabilityArtifactRead), Enabled: true},
+	}
 	if s.cfg.FeatureTestWorkflowsCloudStorage {
 		caps = append(caps, &cloud.Capability{Name: string(capabilities.CapabilityCloudStorage), Enabled: true})
 	}
