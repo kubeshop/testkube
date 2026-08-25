@@ -368,6 +368,12 @@ spec:
                     items:
                       type: string
                     type: array
+                  schedulerPolicy:
+                    description: SchedulerPolicy controls whether a targeted execution
+                      should be created.
+                    enum:
+                    - OnlyWhenMatches
+                    type: string
                 type: object
               uri:
                 description: Uri is address where webhook should be made (golang template
@@ -570,6 +576,12 @@ spec:
                     items:
                       type: string
                     type: array
+                  schedulerPolicy:
+                    description: SchedulerPolicy controls whether a targeted execution
+                      should be created.
+                    enum:
+                    - OnlyWhenMatches
+                    type: string
                 type: object
               uri:
                 description: Uri is address where webhook should be made (golang template
@@ -6533,6 +6545,12 @@ spec:
                         items:
                           type: string
                         type: array
+                      schedulerPolicy:
+                        description: SchedulerPolicy controls whether a targeted execution
+                          should be created.
+                        enum:
+                        - OnlyWhenMatches
+                        type: string
                     type: object
                 type: object
               concurrencyPolicy:
@@ -7160,6 +7178,12 @@ spec:
                     items:
                       type: string
                     type: array
+                  schedulerPolicy:
+                    description: SchedulerPolicy controls whether a targeted execution
+                      should be created.
+                    enum:
+                    - OnlyWhenMatches
+                    type: string
                 type: object
               match:
                 description: |-
@@ -7550,6 +7574,7 @@ spec:
                                 - testworkflow
                                 - testworkflowexecution
                                 - program
+                                - gitintegration
                               type: string
                           required:
                             - type
@@ -7600,6 +7625,11 @@ spec:
                           items:
                             type: string
                           type: array
+                        schedulerPolicy:
+                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                          enum:
+                            - OnlyWhenMatches
+                          type: string
                       type: object
                     testWorkflowExecutionName:
                       description: test workflow execution name started the test workflow execution
@@ -7924,6 +7954,7 @@ spec:
                                 - testworkflow
                                 - testworkflowexecution
                                 - program
+                                - gitintegration
                               type: string
                           required:
                             - type
@@ -8450,6 +8481,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -8684,6 +8730,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -9131,6 +9184,11 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    schedulerPolicy:
+                                      description: SchedulerPolicy controls whether a targeted execution should be created.
+                                      enum:
+                                        - OnlyWhenMatches
+                                      type: string
                                   type: object
                               type: object
                             type: array
@@ -9626,6 +9684,11 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        schedulerPolicy:
+                                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                                          enum:
+                                            - OnlyWhenMatches
+                                          type: string
                                       type: object
                                   type: object
                                 type: array
@@ -10408,6 +10471,21 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures (default 5, max 20)
+                                          format: int32
+                                          maximum: 20
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -10642,6 +10720,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -11874,6 +11959,21 @@ spec:
                           items:
                             type: string
                           type: array
+                        retry:
+                          description: in-process retry policy for transient git failures during clone
+                          properties:
+                            count:
+                              description: max attempts for transient git failures (default 5, max 20)
+                              format: int32
+                              maximum: 20
+                              minimum: 1
+                              type: integer
+                            delay:
+                              description: |-
+                                base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                May be an expression template; validated after resolution.
+                              type: string
+                          type: object
                         revision:
                           description: branch, commit or a tag name to fetch
                           type: string
@@ -12108,6 +12208,13 @@ spec:
                               type: object
                               x-kubernetes-map-type: atomic
                           type: object
+                        verbosity:
+                          description: logging level for the clone. Omit defaults to verbose.
+                          enum:
+                            - quiet
+                            - normal
+                            - verbose
+                          type: string
                       type: object
                     tarball:
                       description: tarballs to unpack
@@ -12175,6 +12282,11 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              schedulerPolicy:
+                                description: SchedulerPolicy controls whether a targeted execution should be created.
+                                enum:
+                                  - OnlyWhenMatches
+                                type: string
                             type: object
                           timezone:
                             description: cron timezone
@@ -12214,6 +12326,11 @@ spec:
                           items:
                             type: string
                           type: array
+                        schedulerPolicy:
+                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                          enum:
+                            - OnlyWhenMatches
+                          type: string
                       type: object
                   type: object
                 job:
@@ -12690,6 +12807,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -12924,6 +13056,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -14042,6 +14181,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -14276,6 +14430,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -14723,6 +14884,11 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    schedulerPolicy:
+                                      description: SchedulerPolicy controls whether a targeted execution should be created.
+                                      enum:
+                                        - OnlyWhenMatches
+                                      type: string
                                   type: object
                               type: object
                             type: array
@@ -15218,6 +15384,11 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        schedulerPolicy:
+                                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                                          enum:
+                                            - OnlyWhenMatches
+                                          type: string
                                       type: object
                                   type: object
                                 type: array
@@ -16000,6 +16171,21 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures (default 5, max 20)
+                                          format: int32
+                                          maximum: 20
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -16234,6 +16420,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -17406,6 +17599,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -17640,6 +17848,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -18087,6 +18302,11 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    schedulerPolicy:
+                                      description: SchedulerPolicy controls whether a targeted execution should be created.
+                                      enum:
+                                        - OnlyWhenMatches
+                                      type: string
                                   type: object
                               type: object
                             type: array
@@ -18582,6 +18802,11 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        schedulerPolicy:
+                                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                                          enum:
+                                            - OnlyWhenMatches
+                                          type: string
                                       type: object
                                   type: object
                                 type: array
@@ -19364,6 +19589,21 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures (default 5, max 20)
+                                          format: int32
+                                          maximum: 20
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -19598,6 +19838,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -20538,6 +20785,7 @@ spec:
                                 - testworkflow
                                 - testworkflowexecution
                                 - program
+                                - gitintegration
                               type: string
                           required:
                             - type
@@ -21051,6 +21299,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -21285,6 +21548,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -21732,6 +22002,11 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    schedulerPolicy:
+                                      description: SchedulerPolicy controls whether a targeted execution should be created.
+                                      enum:
+                                        - OnlyWhenMatches
+                                      type: string
                                   type: object
                               type: object
                             type: array
@@ -22212,6 +22487,11 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        schedulerPolicy:
+                                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                                          enum:
+                                            - OnlyWhenMatches
+                                          type: string
                                       type: object
                                   type: object
                                 type: array
@@ -22944,6 +23224,21 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures (default 5, max 20)
+                                          format: int32
+                                          maximum: 20
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -23178,6 +23473,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -24353,6 +24655,21 @@ spec:
                           items:
                             type: string
                           type: array
+                        retry:
+                          description: in-process retry policy for transient git failures during clone
+                          properties:
+                            count:
+                              description: max attempts for transient git failures (default 5, max 20)
+                              format: int32
+                              maximum: 20
+                              minimum: 1
+                              type: integer
+                            delay:
+                              description: |-
+                                base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                May be an expression template; validated after resolution.
+                              type: string
+                          type: object
                         revision:
                           description: branch, commit or a tag name to fetch
                           type: string
@@ -24587,6 +24904,13 @@ spec:
                               type: object
                               x-kubernetes-map-type: atomic
                           type: object
+                        verbosity:
+                          description: logging level for the clone. Omit defaults to verbose.
+                          enum:
+                            - quiet
+                            - normal
+                            - verbose
+                          type: string
                       type: object
                     tarball:
                       description: tarballs to unpack
@@ -24654,6 +24978,11 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              schedulerPolicy:
+                                description: SchedulerPolicy controls whether a targeted execution should be created.
+                                enum:
+                                  - OnlyWhenMatches
+                                type: string
                             type: object
                           timezone:
                             description: cron timezone
@@ -24693,6 +25022,11 @@ spec:
                           items:
                             type: string
                           type: array
+                        schedulerPolicy:
+                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                          enum:
+                            - OnlyWhenMatches
+                          type: string
                       type: object
                   type: object
                 job:
@@ -25169,6 +25503,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -25403,6 +25752,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -26501,6 +26857,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -26735,6 +27106,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -27182,6 +27560,11 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    schedulerPolicy:
+                                      description: SchedulerPolicy controls whether a targeted execution should be created.
+                                      enum:
+                                        - OnlyWhenMatches
+                                      type: string
                                   type: object
                               type: object
                             type: array
@@ -27662,6 +28045,11 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        schedulerPolicy:
+                                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                                          enum:
+                                            - OnlyWhenMatches
+                                          type: string
                                       type: object
                                   type: object
                                 type: array
@@ -28394,6 +28782,21 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures (default 5, max 20)
+                                          format: int32
+                                          maximum: 20
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -28628,6 +29031,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -29743,6 +30153,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -29977,6 +30402,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -30424,6 +30856,11 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    schedulerPolicy:
+                                      description: SchedulerPolicy controls whether a targeted execution should be created.
+                                      enum:
+                                        - OnlyWhenMatches
+                                      type: string
                                   type: object
                               type: object
                             type: array
@@ -30904,6 +31341,11 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        schedulerPolicy:
+                                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                                          enum:
+                                            - OnlyWhenMatches
+                                          type: string
                                       type: object
                                   type: object
                                 type: array
@@ -31636,6 +32078,21 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures (default 5, max 20)
+                                          format: int32
+                                          maximum: 20
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -31870,6 +32327,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -32750,6 +33214,12 @@ spec:
                         items:
                           type: string
                         type: array
+                      schedulerPolicy:
+                        description: SchedulerPolicy controls whether a targeted execution
+                          should be created.
+                        enum:
+                        - OnlyWhenMatches
+                        type: string
                     type: object
                   workflow:
                     description: Workflow identifies which workflow(s) to execute.

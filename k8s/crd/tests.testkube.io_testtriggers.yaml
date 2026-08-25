@@ -91,6 +91,12 @@ spec:
                         items:
                           type: string
                         type: array
+                      schedulerPolicy:
+                        description: SchedulerPolicy controls whether a targeted execution
+                          should be created.
+                        enum:
+                        - OnlyWhenMatches
+                        type: string
                     type: object
                 type: object
               concurrencyPolicy:
@@ -718,6 +724,12 @@ spec:
                     items:
                       type: string
                     type: array
+                  schedulerPolicy:
+                    description: SchedulerPolicy controls whether a targeted execution
+                      should be created.
+                    enum:
+                    - OnlyWhenMatches
+                    type: string
                 type: object
               match:
                 description: |-

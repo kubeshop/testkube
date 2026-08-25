@@ -57,15 +57,6 @@ global:
     createServiceAccountTemplates: true
     # -- Create TestWorkflowTemplates with automatically configured execution
     createOfficialTemplates: true
-    # -- Image used by the built-in TestWorkflowTemplate installer hook Job
-    builtinTemplatesInstaller:
-      image:
-        registry: docker.io
-        repository: kubeshop/testkube-kubectl
-        tag: 1.36.3
-        digest: ""
-        pullPolicy: IfNotPresent
-        pullSecrets: []
     # -- Global TestWorkflowTemplate that will be automatically included for all executions
     globalTemplate:
       # -- Is global template enabled
@@ -121,7 +112,7 @@ mongodb:
     # -- MongoDB image repository
     repository: kubeshop/bitnami-mongodb
     # -- MongoDB image tag
-    tag: 8.3.7
+    tag: 8.3.8
     # -- MongoDB image pull Secret
     pullSecrets: []
   # -- Target MongoDB Feature Compatibility Version used by the FCV hook jobs.
@@ -326,7 +317,7 @@ postgresql:
     # -- PostgreSQL image repository
     repository: kubeshop/testkube-postgres
     # -- PostgreSQL image tag
-    tag: 18.4
+    tag: 18.6
     # -- PostgreSQL image pull Secret
     pullSecrets: []
 

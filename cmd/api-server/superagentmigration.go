@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strings"
 	"time"
@@ -40,6 +41,21 @@ type superAgentMigrationGRPCClient interface {
 
 type superAgentMigrationKubernetesResourceLister interface {
 	List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error
+}
+
+// skipUnownedResource reports whether a failure to sync a resource during migration is an ownership
+// conflict. Those cannot be cleared by retrying, so the resource is skipped and reported; blocking
+// the migration on it would wedge the agent indefinitely with no way out.
+func skipUnownedResource(log superAgentMigrationLogger, kind, name string, err error) bool {
+	if !errors.Is(err, syncagent.ErrOwnershipConflict) {
+		return false
+	}
+
+	log.Errorw("resource is owned by another GitOps agent, skipping it during SuperAgent migration. It will not be present in the Control Plane until its ownership is resolved.",
+		kind, name,
+		"error", err.Error())
+
+	return true
 }
 
 type superAgentMigrationSyncStore interface {
@@ -165,6 +181,9 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 			for _, t := range testTriggerList.Items {
 				for {
 					if err := syncStore.UpdateOrCreateTestTrigger(ctx, t); err != nil {
+						if skipUnownedResource(log, "TestTrigger", t.Name, err) {
+							break
+						}
 						retryAfter := b.Duration()
 						log.Errorw("error updating or creating TestTrigger, unable to migrate SuperAgent, will retry after backoff.",
 							"TestTrigger", t.Name,
@@ -182,6 +201,9 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 			for _, t := range testWorkflowTemplateList.Items {
 				for {
 					if err := syncStore.UpdateOrCreateTestWorkflowTemplate(ctx, t); err != nil {
+						if skipUnownedResource(log, "TestWorkflowTemplate", t.Name, err) {
+							break
+						}
 						retryAfter := b.Duration()
 						log.Errorw("error updating or creating TestWorkflowTemplate, unable to migrate SuperAgent, will retry after backoff.",
 							"TestWorkflowTemplate", t.Name,
@@ -197,6 +219,9 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 			for _, t := range testWorkflowList.Items {
 				for {
 					if err := syncStore.UpdateOrCreateTestWorkflow(ctx, t); err != nil {
+						if skipUnownedResource(log, "TestWorkflow", t.Name, err) {
+							break
+						}
 						retryAfter := b.Duration()
 						log.Errorw("error updating or creating TestWorkflow, unable to migrate SuperAgent, will retry after backoff.",
 							"TestWorkflow", t.Name,
@@ -212,6 +237,9 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 			for _, t := range webhookList.Items {
 				for {
 					if err := syncStore.UpdateOrCreateWebhook(ctx, t); err != nil {
+						if skipUnownedResource(log, "Webhook", t.Name, err) {
+							break
+						}
 						retryAfter := b.Duration()
 						log.Errorw("error updating or creating Webhook, unable to migrate SuperAgent, will retry after backoff.",
 							"Webhook", t.Name,
@@ -227,6 +255,9 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 			for _, t := range webhookTemplateList.Items {
 				for {
 					if err := syncStore.UpdateOrCreateWebhookTemplate(ctx, t); err != nil {
+						if skipUnownedResource(log, "WebhookTemplate", t.Name, err) {
+							break
+						}
 						retryAfter := b.Duration()
 						log.Errorw("error updating or creating WebhookTemplate, unable to migrate SuperAgent, will retry after backoff.",
 							"WebhookTemplate", t.Name,

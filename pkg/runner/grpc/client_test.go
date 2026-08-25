@@ -24,7 +24,7 @@ func TestExecutionConfigFromStart_PropagatesTags(t *testing.T) {
 		Tags:                 map[string]string{"env": "staging", "suite": "smoke"},
 	}
 
-	cfg := executionConfigFromStart(start, "org-1")
+	cfg := executionConfigFromStart(start, "org-1", nil)
 
 	require.Equal(t, "exec-1", cfg.Id)
 	require.Equal(t, "org-1", cfg.OrganizationId)
