@@ -40,9 +40,34 @@ func (r *Registry) Add(execution Execution) {
 // running "a" without an alias both answer to execution("a", 0). Returning either would
 // hand the caller data from an arbitrary child, so that is reported as an error instead
 // of resolved by insertion order.
+//
+// An execution id is matched before anything else and without regard to the index. An id
+// names one execution outright, whereas an alias or a workflow name names a group whose
+// members are told apart by index - so filtering an id by index would hide every member of
+// a fan-out but the first. A caller passing an id together with an index therefore gets the
+// execution the id names, and the index is not consulted; the index cannot contradict it,
+// because an unspecified index and an explicit 0 are the same argument here.
 func (r *Registry) Lookup(ref string, index int64) (Execution, bool, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
+
+	// Ids come from the control plane and each execution is registered under a single
+	// key, so two entries cannot share one - this reports a collision rather than
+	// picking, to keep that an invariant instead of an assumption.
+	var byId Execution
+	foundById := false
+	for _, execution := range r.executions {
+		if execution.Id == "" || execution.Id != ref {
+			continue
+		}
+		if foundById {
+			return Execution{}, false, AmbiguousRefError(ref, index, byId, execution)
+		}
+		byId, foundById = execution, true
+	}
+	if foundById {
+		return byId, true, nil
+	}
 
 	var found Execution
 	matched := false

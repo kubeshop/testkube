@@ -124,6 +124,40 @@ func TestExecutionFunctionFanOut(t *testing.T) {
 
 	_, err = resolve(t, `execution("s", 2).outputs.n`, machine)
 	assert.ErrorContains(t, err, `unknown execution "s" at index 2`)
+
+	t.Run("a member past the first is addressable by its id", func(t *testing.T) {
+		// Handing an id down is how a workflow addresses an execution it did not schedule
+		// itself, and the id of a fan-out member has to work like any other.
+		value, err := resolve(t, `execution("exec-2").outputs.n`, machine)
+		require.NoError(t, err)
+		assert.Equal(t, "second", value)
+	})
+}
+
+// An id the registry knows must resolve from the registry, not by asking the control plane.
+// The record it would answer with carries neither the alias nor the index, and for a child
+// that has only just finished it can still be behind what the registry already holds.
+func TestExecutionFunctionIdPrefersTheRegistry(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	// No EXPECT: a call to the control plane fails the test.
+	repository := NewMockExecutionRepository(ctrl)
+
+	registry := NewRegistry()
+	registry.Add(Execution{Id: "exec-1", Workflow: "shard", Alias: "s", Index: 0})
+	registry.Add(Execution{Id: "exec-2", Workflow: "shard", Alias: "s", Index: 1, Outputs: map[string]string{"n": "second"}})
+	machine := NewMachine(MachineOptions{Registry: registry, Repository: repository})
+
+	value, err := resolve(t, `execution("exec-2").outputs.n`, machine)
+	require.NoError(t, err)
+	assert.Equal(t, "second", value)
+
+	value, err = resolve(t, `execution("exec-2").index`, machine)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), value, "the position is only known locally")
+
+	value, err = resolve(t, `execution("exec-2").alias`, machine)
+	require.NoError(t, err)
+	assert.Equal(t, "s", value, "the alias is only known locally")
 }
 
 func TestExecutionFunctionParent(t *testing.T) {
