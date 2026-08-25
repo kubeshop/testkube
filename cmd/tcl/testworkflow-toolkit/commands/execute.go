@@ -346,22 +346,22 @@ func claimExecutionRefs(claimed map[string]string, alias string, workflowNames [
 // through an expression.
 //
 // An entry without 'from' fetches from the executions it was declared on; otherwise the
-// reference is resolved against everything this workflow has executed so far.
+// reference is resolved the way execution() resolves one: against what this workflow has
+// executed so far, falling back to the control plane for a reference the registry does not
+// know - a raw execution id handed down as configuration, or "parent".
 func fetchArtifacts(fetch []testworkflowsv1.StepExecuteFetch, entries []executiondata.Execution, registry *executiondata.Registry) error {
 	if len(fetch) == 0 {
 		return nil
 	}
 
 	repository := data.ExecutionDataRepository()
+	resolver := data.ExecutionResolver(registry)
 	for i, f := range fetch {
 		sources := entries
 		if f.From != "" {
-			source, ok, err := registry.Lookup(f.From, 0)
+			source, err := resolver.Resolve(context.Background(), f.From, 0)
 			if err != nil {
 				return errors.Wrapf(err, "fetch.%d", i)
-			}
-			if !ok {
-				return executiondata.UnknownRefError(f.From, 0, registry.Refs())
 			}
 			sources = []executiondata.Execution{source}
 		}
