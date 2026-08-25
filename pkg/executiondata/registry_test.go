@@ -32,6 +32,64 @@ func TestRegistryGroups(t *testing.T) {
 	})
 }
 
+// An id names one execution; an index only tells apart the members of a group. Filtering
+// an id by index hid every member of a fan-out but the first, so an id was addressable
+// only if its position happened to match the index the caller asked for - which, for the
+// common execution("<id>") with no index, meant only index 0.
+func TestRegistryLookupById(t *testing.T) {
+	registry := NewRegistry()
+	registry.Add(Execution{Id: "shard-0", Workflow: "shard", Alias: "s", Index: 0})
+	registry.Add(Execution{Id: "shard-1", Workflow: "shard", Alias: "s", Index: 1})
+	registry.Add(Execution{Id: "shard-2", Workflow: "shard", Alias: "s", Index: 2})
+
+	t.Run("an id past the first position resolves without an index", func(t *testing.T) {
+		for _, id := range []string{"shard-0", "shard-1", "shard-2"} {
+			execution, ok, err := registry.Lookup(id, 0)
+			require.NoError(t, err, id)
+			require.True(t, ok, id)
+			assert.Equal(t, id, execution.Id)
+		}
+	})
+
+	t.Run("the entry keeps its position and alias", func(t *testing.T) {
+		// Resolving through the control plane instead would answer with a record that
+		// carries neither, so the local entry has to be the one that is found.
+		execution, ok, err := registry.Lookup("shard-2", 0)
+		require.NoError(t, err)
+		require.True(t, ok)
+		assert.Equal(t, int64(2), execution.Index)
+		assert.Equal(t, "s", execution.Alias)
+	})
+
+	t.Run("an index alongside an id is not consulted", func(t *testing.T) {
+		// An unspecified index and an explicit 0 are the same argument here, so an index
+		// cannot contradict an id - the id names the execution on its own.
+		execution, ok, err := registry.Lookup("shard-1", 7)
+		require.NoError(t, err)
+		require.True(t, ok)
+		assert.Equal(t, "shard-1", execution.Id)
+	})
+
+	t.Run("a group key still addresses a position", func(t *testing.T) {
+		execution, ok, err := registry.Lookup("s", 2)
+		require.NoError(t, err)
+		require.True(t, ok)
+		assert.Equal(t, "shard-2", execution.Id)
+
+		_, ok, err = registry.Lookup("s", 3)
+		require.NoError(t, err)
+		assert.False(t, ok, "the group has three members")
+	})
+
+	t.Run("an unknown id resolves to nothing rather than erroring", func(t *testing.T) {
+		// The caller falls back to the control plane, which is what serves an id this
+		// workflow did not schedule itself.
+		_, ok, err := registry.Lookup("shard-9", 0)
+		require.NoError(t, err)
+		assert.False(t, ok)
+	})
+}
+
 func TestRegistryReset(t *testing.T) {
 	// A later step running the same workflow takes the reference over, so it must be
 	// able to drop what an earlier step left behind before indexing into the group.

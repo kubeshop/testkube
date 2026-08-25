@@ -56,6 +56,17 @@ func ArtifactClient() *http.Client {
 // process talks to the same object storage.
 var artifactClient = executiondata.NewArtifactClient(storageSkipVerify)
 
+// ExecutionResolver resolves a reference to an execution the way an expression does -
+// against a caller-owned registry first, then the control plane. The `fetch` block uses it
+// so that a reference means the same thing there as it does in execution().
+func ExecutionResolver(registry *executiondata.Registry) executiondata.Resolver {
+	return executiondata.Resolver{
+		Registry:   registry,
+		Repository: ExecutionDataRepository(),
+		ParentIds:  ParentExecutionIds(),
+	}
+}
+
 // ExecutionDataRepository reads executions and their artifacts from the control plane.
 func ExecutionDataRepository() executiondata.ExecutionRepository {
 	cfg := GetState().InternalConfig.Execution

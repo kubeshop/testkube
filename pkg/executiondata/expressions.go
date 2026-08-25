@@ -76,58 +76,17 @@ func NewMachine(opts MachineOptions) expressions.Machine {
 		})
 }
 
-// resolve finds an execution by reference, preferring the local registry so that
-// the common case costs no network call.
-func (o MachineOptions) resolve(ref string, index int64) (Execution, error) {
-	if o.Registry != nil {
-		execution, ok, err := o.Registry.Lookup(ref, index)
-		if err != nil {
-			return Execution{}, err
-		}
-		if ok {
-			return execution, nil
-		}
-	}
-
-	id := ref
-	if ref == ParentRef {
-		if len(o.ParentIds) == 0 {
-			return Execution{}, fmt.Errorf("cannot resolve execution(%q): this execution has no parent", ParentRef)
-		}
-		id = o.ParentIds[len(o.ParentIds)-1]
-	}
-
-	// Fan-out indexes only exist within the local registry - anything resolved
-	// through the control plane is a single execution addressed by its id.
-	if index != 0 {
-		return Execution{}, UnknownRefError(ref, index, o.knownRefs())
-	}
-
-	if o.Repository == nil {
-		return Execution{}, UnknownRefError(ref, index, o.knownRefs())
-	}
-
-	execution, err := o.Repository.Get(context.Background(), id)
-	if err != nil {
-		if ref == ParentRef {
-			return Execution{}, fmt.Errorf("reading parent execution %s: %w", id, err)
-		}
-		return Execution{}, fmt.Errorf("reading execution %q: %w", ref, err)
-	}
-	if execution.Id == "" {
-		return Execution{}, UnknownRefError(ref, index, o.knownRefs())
-	}
-	if ref == ParentRef {
-		execution.Alias = ParentRef
-	}
-	return execution, nil
+// Resolver is the reference resolution the machine performs, exposed so that the parts of
+// a step which address executions outside an expression - the `fetch` block - resolve a
+// reference exactly as an expression does.
+func (o MachineOptions) Resolver() Resolver {
+	return Resolver{Registry: o.Registry, Repository: o.Repository, ParentIds: o.ParentIds}
 }
 
-func (o MachineOptions) knownRefs() []string {
-	if o.Registry == nil {
-		return nil
-	}
-	return o.Registry.Refs()
+// resolve finds an execution by reference. An expression function has no context of its
+// own to pass down.
+func (o MachineOptions) resolve(ref string, index int64) (Execution, error) {
+	return o.Resolver().Resolve(context.Background(), ref, index)
 }
 
 // parseRefArgs reads the (ref) or (ref, index) argument pair shared by the
