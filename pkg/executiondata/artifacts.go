@@ -86,7 +86,7 @@ func exactArtifact(artifacts []Artifact, path string) (Artifact, error) {
 	if len(artifacts) > 1 {
 		return Artifact{}, fmt.Errorf("%q matches %d artifacts: point at a single file, or use a 'fetch' block to download them all", path, len(artifacts))
 	}
-	return artifacts[0], nil
+	return Artifact{}, fmt.Errorf("artifact %q not found", path)
 }
 
 // FetchResult summarises a completed fetch.
