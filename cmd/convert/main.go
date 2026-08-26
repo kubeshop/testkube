@@ -232,8 +232,8 @@ func (o *options) validate() error {
 //
 // This deliberately takes file paths rather than reading a Kubernetes secret the
 // way the API server's commons.MustGetMongoDatabase does: the convert tool has
-// no cluster client, and the Job template mounts the same secret so the paths
-// are available either way.
+// no cluster client, so callers must mount any required TLS material and pass
+// the file paths via flags/env vars.
 func (o *options) sslConfig() *storage.MongoSSLConfig {
 	if o.mongoClientCert == "" && o.mongoCAFile == "" {
 		return nil
