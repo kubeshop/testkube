@@ -10,7 +10,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-
 type ExecutionSequence struct {
 	Name           string             `db:"name" json:"name"`
 	Number         int32              `db:"number" json:"number"`

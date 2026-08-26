@@ -87,7 +87,6 @@ func (m *sequenceMigrator) Migrate(ctx context.Context) (*Stats, error) {
 		return stats, err
 	}
 
-	stats.finish()
 	stats.Print(m.log, nil)
 	return stats, nil
 }

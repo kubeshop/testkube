@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-
 type ExecutionSequence struct {
 	Name           string             `db:"name" json:"name"`
 	Number         int32              `db:"number" json:"number"`

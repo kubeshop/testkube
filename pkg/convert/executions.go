@@ -103,7 +103,6 @@ func (m *executionMigrator) Migrate(ctx context.Context) (*Stats, error) {
 		return stats, err
 	}
 
-	stats.finish()
 	stats.Print(m.log, resume)
 	return stats, nil
 }

@@ -67,7 +67,9 @@ func (s *Stats) finish() {
 	s.EndTime = time.Now()
 }
 
-// Duration is the wall-clock time the task took.
+// Duration is the wall-clock time the task took, or the time elapsed so far if
+// it has not finished yet. That fallback is what lets a task defer its single
+// finish call and still have Print report a sensible duration.
 func (s *Stats) Duration() time.Duration {
 	if s.EndTime.IsZero() {
 		return time.Since(s.StartTime)
