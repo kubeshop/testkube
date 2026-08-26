@@ -161,11 +161,16 @@ func (m *executionMigrator) run(ctx context.Context, stats *Stats, cp *checkpoin
 	}
 
 	for cursor.Next(ctx) {
-		var raw struct {
-			MongoID bson.ObjectID `bson:"_id"`
-		}
-		if err := cursor.Decode(&raw); err != nil {
-			return fmt.Errorf("failed to decode execution _id: %w", err)
+		// Read the paging key straight out of the raw document rather than
+		// decoding it separately. A second cursor.Decode would unmarshal the whole
+		// document again -- resolvedWorkflow and result.steps included -- to reach
+		// one field that a targeted lookup finds without leaving bson.
+		mongoID, err := documentMongoID(cursor.Current)
+		if err != nil {
+			// Never skippable, whatever --skip-errors says: without a usable _id
+			// there is no position to checkpoint, and carrying on would leave the
+			// resume point pointing at the wrong place.
+			return err
 		}
 
 		// Decode into the same struct the API serves. The document is left in its
@@ -174,11 +179,11 @@ func (m *executionMigrator) run(ctx context.Context, stats *Stats, cp *checkpoin
 		// passthrough is exactly right.
 		var execution testkube.TestWorkflowExecution
 		if err := cursor.Decode(&execution); err != nil {
-			stats.addError("failed to decode execution %s: %v", raw.MongoID.Hex(), err)
+			stats.addError("failed to decode execution %s: %v", mongoID.Hex(), err)
 			if !m.config.SkipErrors {
-				return fmt.Errorf("failed to decode execution %s: %w", raw.MongoID.Hex(), err)
+				return fmt.Errorf("failed to decode execution %s: %w", mongoID.Hex(), err)
 			}
-			batchEnd, pending = raw.MongoID, true
+			batchEnd, pending = mongoID, true
 			continue
 		}
 
@@ -186,11 +191,11 @@ func (m *executionMigrator) run(ctx context.Context, stats *Stats, cp *checkpoin
 			if !m.config.SkipErrors {
 				return err
 			}
-			batchEnd, pending = raw.MongoID, true
+			batchEnd, pending = mongoID, true
 			continue
 		}
 
-		batchEnd, pending = raw.MongoID, true
+		batchEnd, pending = mongoID, true
 		inBatch++
 
 		if inBatch >= m.config.BatchSize {
@@ -205,6 +210,28 @@ func (m *executionMigrator) run(ctx context.Context, stats *Stats, cp *checkpoin
 	}
 
 	return flush()
+}
+
+// documentMongoID reads the _id of a raw document without unmarshalling the rest
+// of it. MongoDB writes _id first, so the lookup stops at the head of the
+// document instead of walking a payload that carries the resolved workflow and
+// every step result.
+//
+// A non-ObjectID _id is rejected rather than tolerated: the checkpoint stores the
+// position as a hex ObjectID, so an _id it cannot represent would leave the
+// resume point unrecoverable.
+func documentMongoID(raw bson.Raw) (bson.ObjectID, error) {
+	value, err := raw.LookupErr("_id")
+	if err != nil {
+		return bson.ObjectID{}, fmt.Errorf("execution document has no _id: %w", err)
+	}
+
+	id, ok := value.ObjectIDOK()
+	if !ok {
+		return bson.ObjectID{}, fmt.Errorf(
+			"execution document _id is a %s, not an ObjectID, so it cannot be checkpointed", value.Type)
+	}
+	return id, nil
 }
 
 // batchCounts tracks child-row totals for the batch currently being staged, so
