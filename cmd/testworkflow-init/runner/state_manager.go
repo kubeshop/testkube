@@ -9,6 +9,8 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
 type StateManager interface {
@@ -120,21 +122,31 @@ func (sm *stateManager) LoadInitialState() error {
 	signature := orchestration.Setup.GetSignature()
 	containerResources := orchestration.Setup.GetContainerResources()
 
-	if actionGroups != nil {
+	shouldInitState := actionGroups != nil
+	if shouldInitState {
 		sm.stdoutUnsafe.Print("Initializing state...")
-		state := data.GetState()
-		state.Actions = actionGroups
-		state.InternalConfig = internalConfig
-		state.Signature = signature
-		state.ContainerResources = containerResources
+		sm.initState(actionGroups, internalConfig, signature, containerResources)
 		sm.stdoutUnsafe.Print(" done\n")
 	} else {
-		// ContainerResources reflects the current container's downward-api values.
-		// Step containers do not receive the actions env var so the block above is
-		// skipped for them; without this write they would inherit the init helper's
-		// stale (namespace-default or zero) resources for the entire metrics run.
-		data.GetState().ContainerResources = containerResources
+		sm.updateContainerResources(containerResources)
 	}
 
 	return nil
+}
+
+func (sm *stateManager) initState(
+	actionGroups [][]lite.LiteAction,
+	internalConfig testworkflowconfig.InternalConfig,
+	signature []testworkflowconfig.SignatureConfig,
+	containerResources testworkflowconfig.ContainerResourceConfig,
+) {
+	state := data.GetState()
+	state.Actions = actionGroups
+	state.InternalConfig = internalConfig
+	state.Signature = signature
+	state.ContainerResources = containerResources
+}
+
+func (sm *stateManager) updateContainerResources(containerResources testworkflowconfig.ContainerResourceConfig) {
+	data.SetContainerResources(containerResources)
 }
