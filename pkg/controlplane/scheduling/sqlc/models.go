@@ -10,16 +10,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-type ConvertCheckpoint struct {
-	Task           string             `db:"task" json:"task"`
-	LastMongoID    pgtype.Text        `db:"last_mongo_id" json:"last_mongo_id"`
-	ProcessedCount int64              `db:"processed_count" json:"processed_count"`
-	FailedCount    int64              `db:"failed_count" json:"failed_count"`
-	SkippedCount   int64              `db:"skipped_count" json:"skipped_count"`
-	CompletedAt    pgtype.Timestamptz `db:"completed_at" json:"completed_at"`
-	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
 
 type ExecutionSequence struct {
 	Name           string             `db:"name" json:"name"`
