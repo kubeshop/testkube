@@ -1560,3 +1560,79 @@ testkube-operator:
     # ref: https://cloud.google.com/kubernetes-engine/docs/how-to/prepare-arm-workloads-for-deployment#node-affinity-multi-arch-arm
     # -- Tolerations to schedule a workload to nodes with any architecture type. Required for deployment to GKE cluster.
     tolerations: []
+
+# Mongo -> Postgres conversion Job
+#
+# One-shot migration of control-plane data (Test Workflow executions and their
+# execution-number counters) from MongoDB into PostgreSQL, for installations
+# moving off MongoDB.
+#
+# The DSNs are read from `testkube-api.mongodb` and `testkube-api.postgresql`, so
+# there is nothing to configure here beyond enabling the Job.
+#
+# Usage: set `convert.enabled=true`, wait for the Job to complete, point the API
+# at PostgreSQL, then set it back to false. The Job is safe to re-run.
+convert:
+  # -- Toggle whether to run the Mongo to Postgres conversion Job
+  enabled: false
+
+  image:
+    # -- Convert tool image registry
+    registry: docker.io
+    # -- Convert tool image repository
+    repository: kubeshop/testkube-convert
+    # -- Convert tool image tag; defaults to the chart's appVersion when empty
+    tag: ""
+    # -- Convert tool image pull policy
+    pullPolicy: IfNotPresent
+    # -- Convert tool image pull Secret
+    pullSecrets: []
+
+  # -- MongoDB database to read from
+  mongoDatabase: "testkube"
+
+  # -- Executions committed per transaction
+  batchSize: 1000
+  # -- MongoDB cursor batch size
+  readBatchSize: 500
+
+  # -- Read and serialize everything without writing; useful as a pre-flight check
+  dryRun: false
+  # -- Continue past documents that cannot be migrated instead of aborting
+  skipErrors: false
+  # -- Compare source and target counts after migrating
+  verify: true
+  # -- Tasks to leave out; valid values are `executions` and `sequences`
+  skip: []
+
+  # -- Retries. The Job resumes from its checkpoint, so a retry continues rather
+  # -- than restarting the migration.
+  backoffLimit: 3
+  # -- Delete the finished Job after this many seconds; empty keeps it for inspection
+  ttlSecondsAfterFinished: ""
+
+  # -- Job annotations
+  annotations: {}
+  # -- Job pod annotations
+  podAnnotations: {}
+  # -- Job service account name
+  serviceAccountName: ""
+  # -- Job pod security context
+  podSecurityContext: {}
+  # -- Job container security context
+  containerSecurityContext: {}
+  # -- Job node selector
+  nodeSelector: {}
+  # -- Job affinity
+  affinity: {}
+  # -- Job tolerations
+  tolerations: []
+  # -- Job resource requests and limits
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+  # -- Additional environment variables for the Job container
+  extraEnv: []
