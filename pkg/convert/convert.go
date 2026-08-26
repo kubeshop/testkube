@@ -259,12 +259,15 @@ func (c *Converter) verify(ctx context.Context, result *Result) ([]string, error
 			return nil, fmt.Errorf("failed to count migrated sequences: %w", err)
 		}
 
-		expected := stats.Total - stats.CumulativeFailed - stats.CumulativeSkipped
-		c.log.Infof("Sequences: %d in mongo, %d in postgres (%d migratable)", stats.Total, pgCount, expected)
+		// Sequence documents can exist in both the legacy name-keyed and current _id-keyed shapes.
+		// The migrator folds those duplicates, so the expected Postgres row count is the number of
+		// unique counters written (stats.Processed), not the raw document count.
+		expected := stats.Processed
+		c.log.Infof("Sequences: %d in mongo, %d in postgres (%d expected)", stats.Total, pgCount, expected)
 		if pgCount < expected {
 			warnings = append(warnings, fmt.Sprintf(
-				"sequences: postgres holds %d rows but %d were expected (%d in mongo, %d skipped as non-testworkflow)",
-				pgCount, expected, stats.Total, stats.CumulativeSkipped))
+				"sequences: postgres holds %d rows but %d were expected (processed=%d failed=%d skipped=%d of %d in mongo)",
+				pgCount, expected, stats.Processed, stats.CumulativeFailed, stats.CumulativeSkipped, stats.Total))
 		}
 	}
 
