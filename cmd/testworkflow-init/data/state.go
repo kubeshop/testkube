@@ -187,6 +187,13 @@ func (s *state) SetCurrentStatus(expression string) {
 	s.CurrentStatus = expression
 }
 
+func SetContainerResources(cr testworkflowconfig.ContainerResourceConfig) {
+	stateMu.Lock()
+	defer stateMu.Unlock()
+
+	currentState.ContainerResources = cr
+}
+
 var currentState = &state{
 	Output: map[string]string{},
 	Steps:  map[string]*StepData{},
