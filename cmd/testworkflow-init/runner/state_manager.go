@@ -128,6 +128,12 @@ func (sm *stateManager) LoadInitialState() error {
 		state.Signature = signature
 		state.ContainerResources = containerResources
 		sm.stdoutUnsafe.Print(" done\n")
+	} else {
+		// ContainerResources reflects the current container's downward-api values.
+		// Step containers do not receive the actions env var so the block above is
+		// skipped for them; without this write they would inherit the init helper's
+		// stale (namespace-default or zero) resources for the entire metrics run.
+		data.GetState().ContainerResources = containerResources
 	}
 
 	return nil
