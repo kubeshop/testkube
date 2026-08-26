@@ -297,7 +297,7 @@ build-convert: ## Build the Mongo -> Postgres convert tool
 	@echo "Building convert tool ($(GOOS)/$(GOARCH))..."
 	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build \
 		$(GOFLAGS) \
-		-ldflags='$(LD_FLAGS_API)' \
+		-ldflags='-s -w -X main.commit=$(COMMIT) -X main.date=$(DATE) -X main.builtBy=$(USER) -X github.com/kubeshop/testkube/pkg/version.Version=$(VERSION) -X github.com/kubeshop/testkube/pkg/version.Commit=$(COMMIT)' \
 		-o $(CONVERT_BIN) \
 		./cmd/convert/
 	@echo "Convert tool built: $(CONVERT_BIN)"
