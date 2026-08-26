@@ -25,7 +25,7 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 # space, and CA certificates to reach a TLS-enabled MongoDB or DocumentDB.
 FROM ${ALPINE_IMAGE}
 RUN apk --no-cache upgrade && apk --no-cache add ca-certificates libssl3
-WORKDIR /root/
+WORKDIR /tmp
 COPY --from=build /app /bin/app
 USER 1001
 ENTRYPOINT ["/bin/app"]
