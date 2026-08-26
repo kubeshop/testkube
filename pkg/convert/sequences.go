@@ -49,6 +49,7 @@ type sequenceMigrator struct {
 	config Config
 }
 
+func newSequenceMigrator(db *mongo.Database, pg *pgxpool.Pool, log *zap.SugaredLogger, cfg Config) *sequenceMigrator {
 	return &sequenceMigrator{
 		mongo:  db.Collection(sequencesCollection, options.Collection().SetBSONOptions(&options.BSONOptions{ObjectIDAsHexString: true})),
 		pg:     pg,
