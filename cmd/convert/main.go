@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -43,6 +44,10 @@ var (
 	builtBy string
 	date    string
 )
+
+// shutdownTimeout bounds the cleanup that runs after the main context is done,
+// so a hung close cannot keep a Job's pod alive indefinitely.
+const shutdownTimeout = 10 * time.Second
 
 type options struct {
 	mongoDSN        string
@@ -159,7 +164,14 @@ func run(ctx context.Context, o *options) error {
 		return fmt.Errorf("failed to connect to MongoDB: %w", err)
 	}
 	defer func() {
-		if err := mongoDB.Client().Disconnect(ctx); err != nil {
+		// Not ctx: a Job that took a SIGTERM reaches this defer with ctx already
+		// cancelled, and disconnecting on a cancelled context gives up before it
+		// has closed anything. Cleanup gets its own deadline so the sockets are
+		// released on the shutdown path too, which is the path that matters.
+		disconnectCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		defer cancel()
+
+		if err := mongoDB.Client().Disconnect(disconnectCtx); err != nil {
 			logger.Warnf("failed to disconnect from MongoDB: %v", err)
 		}
 	}()
@@ -270,7 +282,18 @@ func (o *options) connectPostgres(ctx context.Context, logger *zap.SugaredLogger
 		return pool, nil
 	}
 
-	if err := applyMigrations(ctx, stdlib.OpenDBFromPool(pool), logger); err != nil {
+	// goose speaks database/sql, so the pool is wrapped for the migration and the
+	// wrapper closed again once it is done. Closing it releases the connections it
+	// borrowed without touching the pool, which pgx documents explicitly and which
+	// matters here because the pool is the caller's return value.
+	db := stdlib.OpenDBFromPool(pool)
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Warnf("failed to close the migration connection: %v", err)
+		}
+	}()
+
+	if err := applyMigrations(ctx, db, logger); err != nil {
 		pool.Close()
 		// Unlike the API server, which only warns, an out-of-date schema here is
 		// fatal: the COPY statements below name columns that may not exist yet.
