@@ -5,7 +5,7 @@
 // directly against port-forwarded databases:
 //
 //	convert --mongo-dsn mongodb://localhost:27017 --mongo-db testkube \
-//	        --postgres-dsn 'postgres://testkube:pass@localhost:5432/backend?sslmode=disable'
+//	        --postgres-dsn 'postgres://user:pass@localhost:5432/backend?sslmode=disable'
 //
 // Runs are resumable and safe to repeat: progress is checkpointed in the same
 // transaction as the data it describes, so an interrupted run continues where it
