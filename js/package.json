@@ -31,7 +31,7 @@
   },
   "optionalDependencies": {
     "@esbuild/linux-x64": "0.28.2",
-    "@rollup/rollup-linux-x64-gnu": "4.62.5"
+    "@rollup/rollup-linux-x64-gnu": "4.63.0"
   },
   "packageManager": "npm@12.0.2",
   "engines": {
