@@ -103,6 +103,13 @@ func (m *executionMigrator) Migrate(ctx context.Context) (*Stats, error) {
 		return stats, err
 	}
 
+	// This task resumes from a position, so its own counters describe only the
+	// documents it read. Verification compares the whole collection against the
+	// whole table, so it needs the earlier runs' totals added back -- otherwise a
+	// re-run with nothing left to do would look as though rows had gone missing.
+	stats.CumulativeFailed = m.priorFailed + stats.Failed
+	stats.CumulativeSkipped = m.priorSkipped + stats.Skipped
+
 	stats.Print(m.log, resume)
 	return stats, nil
 }

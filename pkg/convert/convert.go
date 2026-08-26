@@ -229,12 +229,16 @@ func (c *Converter) verify(ctx context.Context, result *Result) ([]string, error
 			return nil, fmt.Errorf("failed to count migrated executions: %w", err)
 		}
 
-		expected := stats.Total - stats.Failed - stats.Skipped
+		// Cumulative, not per-run: this compares the whole collection against the
+		// whole table, so a resumed run has to discount what earlier runs declined
+		// as well as its own. Using the per-run counters made a re-run with nothing
+		// left to do report every previously declined document as a missing row.
+		expected := stats.Total - stats.CumulativeFailed - stats.CumulativeSkipped
 		c.log.Infof("Executions: %d in mongo, %d in postgres (%d expected)", stats.Total, pgCount, expected)
 		if pgCount < expected {
 			warnings = append(warnings, fmt.Sprintf(
 				"executions: postgres holds %d rows but %d were expected (%d in mongo, %d failed, %d skipped)",
-				pgCount, expected, stats.Total, stats.Failed, stats.Skipped))
+				pgCount, expected, stats.Total, stats.CumulativeFailed, stats.CumulativeSkipped))
 		}
 
 		missingStatus, err := countExecutionsMissingStatus(ctx, c.pg)
@@ -255,12 +259,12 @@ func (c *Converter) verify(ctx context.Context, result *Result) ([]string, error
 			return nil, fmt.Errorf("failed to count migrated sequences: %w", err)
 		}
 
-		expected := stats.Total - stats.Failed - stats.Skipped
+		expected := stats.Total - stats.CumulativeFailed - stats.CumulativeSkipped
 		c.log.Infof("Sequences: %d in mongo, %d in postgres (%d migratable)", stats.Total, pgCount, expected)
 		if pgCount < expected {
 			warnings = append(warnings, fmt.Sprintf(
 				"sequences: postgres holds %d rows but %d were expected (%d in mongo, %d skipped as non-testworkflow)",
-				pgCount, expected, stats.Total, stats.Skipped))
+				pgCount, expected, stats.Total, stats.CumulativeSkipped))
 		}
 	}
 

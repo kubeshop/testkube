@@ -12,6 +12,12 @@ import (
 // a run. The counters stay exact; only the listing is truncated.
 const maxReportedErrors = 10
 
+// maxRetainedErrors caps how many failure messages are kept in memory. A run
+// over a damaged collection with --skip-errors could otherwise accumulate one
+// string per document, in a process that is already holding a batch. Enough are
+// kept to see a pattern; Failed remains the authoritative count.
+const maxRetainedErrors = 100
+
 // Stats accumulates the outcome of one migration task. Counters are only
 // incremented for records that made it into a committed batch, so
 // Processed+Failed+Skipped is the number of source documents actually seen --
@@ -23,6 +29,20 @@ type Stats struct {
 	Processed int64
 	Failed    int64
 	Skipped   int64 // deliberately not migrated (e.g. non-testworkflow sequences)
+
+	// CumulativeFailed and CumulativeSkipped count every document the migration
+	// has declined across all of its runs, where Failed and Skipped cover only
+	// this one. Verification needs the cumulative figures: it compares the source
+	// collection against the whole target table, and a resumed run's own counters
+	// say nothing about what an earlier run already declined.
+	//
+	// Each task sets these to whatever total is correct for how it reads. A task
+	// that resumes from a position adds the checkpoint's totals to its own; a task
+	// that rescans the collection every time reports only its own, because those
+	// already cover every document. Adding the checkpoint's totals in that second
+	// case would count the same documents twice.
+	CumulativeFailed  int64
+	CumulativeSkipped int64
 
 	Batches int64
 
@@ -50,11 +70,14 @@ func newStats(task string) *Stats {
 	return &Stats{Task: task, StartTime: time.Now(), Errors: make([]string, 0)}
 }
 
-// addError records a failure. The counter is always bumped; the message is
-// retained for the report.
+// addError records a failure. The counter is always bumped, but the message is
+// only retained up to maxRetainedErrors, so Failed and len(Errors) diverge on a
+// run with many failures and Failed is the one to report.
 func (s *Stats) addError(format string, args ...interface{}) {
 	s.Failed++
-	s.Errors = append(s.Errors, fmt.Sprintf(format, args...))
+	if len(s.Errors) < maxRetainedErrors {
+		s.Errors = append(s.Errors, fmt.Sprintf(format, args...))
+	}
 }
 
 // addSkip records a document that was intentionally not migrated.
@@ -110,16 +133,22 @@ func (s *Stats) Print(log *zap.SugaredLogger, resume *resumeInfo) {
 	}
 	log.Info(rule)
 
-	if len(s.Errors) == 0 {
+	if s.Failed == 0 {
 		return
 	}
 
-	log.Warnf("Encountered %d errors (showing up to %d):", len(s.Errors), maxReportedErrors)
-	for i, e := range s.Errors {
-		if i >= maxReportedErrors {
-			log.Warnf("... and %d more", len(s.Errors)-maxReportedErrors)
-			break
-		}
-		log.Warnf("  %d. %s", i+1, e)
+	// Failed, not len(Errors): messages stop being retained past
+	// maxRetainedErrors, so the slice understates how many failures there were.
+	shown := int64(len(s.Errors))
+	if shown > maxReportedErrors {
+		shown = maxReportedErrors
+	}
+
+	log.Warnf("Encountered %d errors (showing %d):", s.Failed, shown)
+	for i := int64(0); i < shown; i++ {
+		log.Warnf("  %d. %s", i+1, s.Errors[i])
+	}
+	if omitted := s.Failed - shown; omitted > 0 {
+		log.Warnf("... and %d more", omitted)
 	}
 }

@@ -87,6 +87,13 @@ func (m *sequenceMigrator) Migrate(ctx context.Context) (*Stats, error) {
 		return stats, err
 	}
 
+	// This task rereads the whole collection on every run rather than resuming
+	// from a position, so its own counters already cover every document. Adding
+	// the checkpoint's totals here would count the same skipped documents once per
+	// run and drive the expected row count negative.
+	stats.CumulativeFailed = stats.Failed
+	stats.CumulativeSkipped = stats.Skipped
+
 	stats.Print(m.log, nil)
 	return stats, nil
 }

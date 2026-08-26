@@ -559,6 +559,13 @@ func TestConvertCheckpointsTrailingFailures_Integration(t *testing.T) {
 	assert.Zero(t, second.Stats[TaskExecutions].Processed, "nothing left to migrate")
 	assert.Zero(t, second.Stats[TaskExecutions].Failed,
 		"the trailing failures must not be reported again")
+
+	// Verification has to discount the earlier run's failures, which live only in
+	// the checkpoint by now. Comparing the collection against the table using this
+	// run's own counters would report all three as missing rows.
+	assert.Equal(t, int64(3), second.Stats[TaskExecutions].CumulativeFailed,
+		"the earlier run's failures must be carried forward from the checkpoint")
+	assert.Empty(t, second.Warnings, "a settled migration must not warn")
 	assert.False(t, second.Failed(), "a re-run must converge instead of failing forever")
 	assert.Equal(t, int64(5), countExecutions(t, f.pg), "no extra rows on the re-run")
 }
