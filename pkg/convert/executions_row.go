@@ -146,8 +146,7 @@ func writeSignatureRows(w io.Writer, executionID string, signatures []testkube.T
 	parentID *string, order *int32) error {
 	for i := range signatures {
 		sig := &signatures[i]
-		*order++
-
+		(*order)++
 		parent := copyNull
 		if parentID != nil {
 			parent = *parentID
