@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -509,6 +510,57 @@ func TestConvertSkipsInvalidExecutions_Integration(t *testing.T) {
 	assert.Empty(t, result.Warnings, "a known failure is not a verification mismatch")
 	assert.True(t, result.Failed(), "but the run must still report failure")
 	assert.Equal(t, int64(5), countExecutions(t, f.pg))
+}
+
+// Documents that cannot be migrated still have to advance the checkpoint, even
+// when they fall after the last batch that carried any rows. Otherwise their
+// position is never recorded, and every later run reads them again, fails on
+// them again, and reports the same failures forever -- which for a Job with a
+// backoffLimit means retrying to no purpose.
+func TestConvertCheckpointsTrailingFailures_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
+	ctx := context.Background()
+	f := newFixture(t)
+
+	// Exactly one batch worth of valid executions, so the in-loop flush resets
+	// the batch counter and the invalid documents that follow are the only thing
+	// left when the cursor drains.
+	seedExecutions(t, f, 5)
+	for i := range 3 {
+		_, err := f.mongoDB.Collection(testworkflowmongo.CollectionName).
+			InsertOne(ctx, bson.M{"id": fmt.Sprintf("exec-broken-%d", i), "name": ""})
+		require.NoError(t, err)
+	}
+
+	first := f.convert(t, Config{BatchSize: 5, SkipErrors: true})
+	require.Equal(t, int64(5), first.Stats[TaskExecutions].Processed)
+	require.Equal(t, int64(3), first.Stats[TaskExecutions].Failed)
+
+	// The checkpoint must sit at the very last document, not at the last one that
+	// migrated successfully.
+	var checkpointed string
+	require.NoError(t, f.pg.QueryRow(ctx,
+		`SELECT last_mongo_id FROM convert_checkpoints WHERE task = $1`, TaskExecutions).Scan(&checkpointed))
+
+	var newest struct {
+		MongoID bson.ObjectID `bson:"_id"`
+	}
+	require.NoError(t, f.mongoDB.Collection(testworkflowmongo.CollectionName).
+		FindOne(ctx, bson.M{}, options.FindOne().SetSort(bson.D{{Key: "_id", Value: -1}})).
+		Decode(&newest))
+
+	assert.Equal(t, newest.MongoID.Hex(), checkpointed,
+		"the checkpoint must advance past the trailing failures")
+
+	// And the consequence that actually matters: a second run finds nothing left
+	// to do rather than re-reading and re-failing the same three documents.
+	second := f.convert(t, Config{BatchSize: 5, SkipErrors: true})
+	assert.Zero(t, second.Stats[TaskExecutions].Processed, "nothing left to migrate")
+	assert.Zero(t, second.Stats[TaskExecutions].Failed,
+		"the trailing failures must not be reported again")
+	assert.False(t, second.Failed(), "a re-run must converge instead of failing forever")
+	assert.Equal(t, int64(5), countExecutions(t, f.pg), "no extra rows on the re-run")
 }
 
 // Without --skip-errors the same document must abort the run, so an operator

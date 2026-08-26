@@ -66,6 +66,11 @@ func (b *executionBuffers) reset() {
 // Migrate walks the collection from the stored checkpoint and copies it across
 // in batches. Each batch is committed together with its checkpoint, so an
 // interrupted run resumes exactly where it stopped.
+//
+// The checkpoint's completed flag is deliberately not used to short-circuit: the
+// stored position already makes a finished run a no-op, and honouring the flag
+// would instead refuse executions that arrived after it was set, which is
+// exactly what happens when an operator converts before the final cutover.
 func (m *executionMigrator) Migrate(ctx context.Context) (*Stats, error) {
 	stats := newStats(TaskExecutions)
 	defer stats.finish()
@@ -126,6 +131,12 @@ func (m *executionMigrator) run(ctx context.Context, stats *Stats, cp *checkpoin
 		counts   batchCounts
 		inBatch  int
 		batchEnd bson.ObjectID
+		// pending records that batchEnd has moved past what the checkpoint holds.
+		// It is not the same as inBatch > 0: a document that could not be migrated
+		// advances the position without staging any rows, and its position still
+		// has to be committed or the next run would read it again, fail on it
+		// again, and never make progress past it.
+		pending bool
 		// Guards against duplicate ids inside a single batch, which would abort
 		// the whole COPY on the primary key. Scoped per batch on purpose:
 		// _id paging already rules out duplicates across batches, and a run-wide
@@ -134,7 +145,7 @@ func (m *executionMigrator) run(ctx context.Context, stats *Stats, cp *checkpoin
 	)
 
 	flush := func() error {
-		if inBatch == 0 {
+		if !pending {
 			return nil
 		}
 		if err := m.commitBatch(ctx, &buffers, &counts, batchEnd, stats, cp); err != nil {
@@ -143,6 +154,7 @@ func (m *executionMigrator) run(ctx context.Context, stats *Stats, cp *checkpoin
 		buffers.reset()
 		counts = batchCounts{}
 		inBatch = 0
+		pending = false
 		seen = make(map[string]struct{}, m.config.BatchSize)
 		m.log.Infof("Executions: %d/%d migrated (%d batches, %d failed, %d skipped)",
 			stats.Processed, stats.Total, stats.Batches, stats.Failed, stats.Skipped)
@@ -167,7 +179,7 @@ func (m *executionMigrator) run(ctx context.Context, stats *Stats, cp *checkpoin
 			if !m.config.SkipErrors {
 				return fmt.Errorf("failed to decode execution %s: %w", raw.MongoID.Hex(), err)
 			}
-			batchEnd = raw.MongoID
+			batchEnd, pending = raw.MongoID, true
 			continue
 		}
 
@@ -175,11 +187,11 @@ func (m *executionMigrator) run(ctx context.Context, stats *Stats, cp *checkpoin
 			if !m.config.SkipErrors {
 				return err
 			}
-			batchEnd = raw.MongoID
+			batchEnd, pending = raw.MongoID, true
 			continue
 		}
 
-		batchEnd = raw.MongoID
+		batchEnd, pending = raw.MongoID, true
 		inBatch++
 
 		if inBatch >= m.config.BatchSize {
@@ -344,7 +356,7 @@ func (m *executionMigrator) commitBatch(ctx context.Context, buffers *executionB
 	batchEnd bson.ObjectID, stats *Stats, cp *checkpoint) error {
 	if m.config.DryRun {
 		m.applyCounts(stats, counts)
-		stats.Batches++
+		countBatch(stats, counts)
 		m.log.Debugf("dry run: would commit %d executions", counts.executions)
 		return nil
 	}
@@ -398,8 +410,18 @@ func (m *executionMigrator) commitBatch(ctx context.Context, buffers *executionB
 	}
 
 	m.applyCounts(stats, counts)
-	stats.Batches++
+	countBatch(stats, counts)
 	return nil
+}
+
+// countBatch records a committed batch, ignoring one that carried no rows. A
+// trailing run of documents that could not be migrated still has to commit, to
+// move the checkpoint past them, but reporting that as a batch would overstate
+// the work done.
+func countBatch(stats *Stats, counts *batchCounts) {
+	if counts.executions > 0 {
+		stats.Batches++
+	}
 }
 
 func (m *executionMigrator) applyCounts(stats *Stats, counts *batchCounts) {
