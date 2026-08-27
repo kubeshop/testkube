@@ -188,6 +188,11 @@ func (s *state) SetCurrentStatus(expression string) {
 }
 
 func SetContainerResources(cr testworkflowconfig.ContainerResourceConfig) {
+	// Trigger the load-once, so readState (which reassigns currentState) runs before we mutate it.
+	// Without this the write can land on the initial empty currentState and get discarded by a
+	// later readState from disk.
+	_ = GetState()
+
 	stateMu.Lock()
 	defer stateMu.Unlock()
 
