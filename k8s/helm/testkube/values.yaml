@@ -1592,9 +1592,9 @@ convert:
   mongoDatabase: "testkube"
 
   # -- Executions committed per transaction
-  batchSize: 1000
+  batchSize: 100000
   # -- MongoDB cursor batch size
-  readBatchSize: 500
+  readBatchSize: 10000
 
   # -- Read and serialize everything without writing; useful as a pre-flight check
   dryRun: false
