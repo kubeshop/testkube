@@ -46,11 +46,11 @@ message ControlMessage {
 // BridgeHello carries session identity for the Bridge's first frame.
 message BridgeHello {
   // runspace_id is the runspace this Bridge session belongs to.
-  string runspace_id  = 1;
+  string runspace_id = 1;
   // org_id is the organization that owns the runspace.
-  string org_id       = 2;
+  string org_id = 2;
   // env_id is the environment that owns the runspace.
-  string env_id       = 3;
+  string env_id = 3;
   // bridge_version is the semver of the Bridge binary, for compatibility checks.
   string bridge_version = 4;
 }
@@ -65,9 +65,9 @@ message BridgeAck {
 // on its stdout channel.
 message ControllerEvent {
   // type is the event type identifier (e.g. "file.changed", "step.complete").
-  string type    = 1;
+  string type = 1;
   // payload is the raw JSON body of the event.
-  bytes  payload = 2;
+  bytes payload = 2;
 }
 
 // SendToController is a JSON payload to be written to the Controller's stdin.
