@@ -92,7 +92,15 @@ func saveCheckpoint(ctx context.Context, tx pgx.Tx, cp *checkpoint) error {
 
 // markCheckpointComplete stamps completed_at once a task has drained its source
 // collection, so a later run reports "already done" instead of re-scanning.
-func markCheckpointComplete(ctx context.Context, db *pgxpool.Pool, cp *checkpoint) error {
+//
+// It takes dryRun and declines rather than leaving that to its callers. Every
+// other writer on this path already self-guards, and this one being the
+// exception is what let a dry run leave a checkpoint row behind.
+func markCheckpointComplete(ctx context.Context, db *pgxpool.Pool, cp *checkpoint, dryRun bool) error {
+	if dryRun {
+		return nil
+	}
+
 	tx, err := db.Begin(ctx)
 	if err != nil {
 		return err

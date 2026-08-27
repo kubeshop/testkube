@@ -58,9 +58,14 @@ type Config struct {
 	// ReadBatchSize is the MongoDB cursor batch size.
 	ReadBatchSize int
 
-	// DryRun reads and serializes everything but commits nothing. Unlike the
-	// cloud tool, which skips serialization entirely, this exercises the full
-	// mapping so a dry run actually validates the data.
+	// DryRun reads and serializes everything but writes no data. Unlike the cloud
+	// tool, which skips serialization entirely, this exercises the full mapping so
+	// a dry run actually validates the data.
+	//
+	// Every writer checks this itself rather than relying on its caller, so that
+	// adding one cannot quietly leak a write into a dry run. Schema is the
+	// exception and is still applied: the checkpoint lookup and the verification
+	// counts both read tables that have to exist first.
 	DryRun bool
 
 	// Reset truncates the target tables and clears all checkpoints first.

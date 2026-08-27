@@ -131,7 +131,7 @@ to discard migrated data and start over.`,
 	f.IntVar(&o.readBatchSize, "read-batch-size", envInt("CONVERT_READ_BATCH_SIZE", convert.DefaultReadBatchSize),
 		"MongoDB cursor batch size [CONVERT_READ_BATCH_SIZE]")
 	f.BoolVar(&o.dryRun, "dry-run", envBool("CONVERT_DRY_RUN", false),
-		"Read and serialize everything but commit nothing [CONVERT_DRY_RUN]")
+		"Read and serialize everything but write no data; schema migrations still apply [CONVERT_DRY_RUN]")
 	f.BoolVar(&o.reset, "reset", envBool("CONVERT_RESET", false),
 		"Discard already-migrated data and checkpoints, then start over [CONVERT_RESET]")
 	f.BoolVar(&o.resetConfirmed, "yes", envBool("CONVERT_RESET_CONFIRMED", false),

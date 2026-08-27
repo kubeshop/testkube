@@ -99,7 +99,7 @@ func (m *executionMigrator) Migrate(ctx context.Context) (*Stats, error) {
 		return stats, err
 	}
 
-	if err := markCheckpointComplete(ctx, m.pg, cp); err != nil {
+	if err := markCheckpointComplete(ctx, m.pg, cp, m.config.DryRun); err != nil {
 		return stats, err
 	}
 

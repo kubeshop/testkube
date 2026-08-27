@@ -514,16 +514,23 @@ func TestConvertDryRun_Integration(t *testing.T) {
 	f := newFixture(t)
 	seedExecutions(t, f, 10)
 
+	sequences := f.mongoDB.Collection(sequencemongo.CollectionSequences)
+	_, err := sequences.InsertOne(ctx, bson.M{"_id": "tw-workflow-a", "number": 7, "executionType": "tw"})
+	require.NoError(t, err)
+
 	result := f.convert(t, Config{DryRun: true})
 
 	assert.Equal(t, int64(10), result.Stats[TaskExecutions].Processed,
 		"a dry run must still serialize every execution")
 	assert.Zero(t, result.Stats[TaskExecutions].Failed)
-	assert.Zero(t, countExecutions(t, f.pg), "a dry run must write nothing")
 
-	var checkpoints int64
-	require.NoError(t, f.pg.QueryRow(ctx, `SELECT count(*) FROM convert_checkpoints`).Scan(&checkpoints))
-	assert.Zero(t, checkpoints, "a dry run must not record progress")
+	// Every table the migration touches, including convert_checkpoints. Each
+	// writer guards itself against a dry run, so a leak appears in whichever one
+	// forgot -- and checking only the tables a previous leak touched is how the
+	// next one gets missed.
+	for table, count := range countRows(t, f.pg) {
+		assert.Zero(t, count, "a dry run must write nothing, but %s holds %d rows", table, count)
+	}
 }
 
 // An execution that cannot satisfy the target schema must be reported and, with
@@ -668,6 +675,7 @@ func countRows(t *testing.T, pg *pgxpool.Pool) map[string]int64 {
 		"test_workflow_resource_aggregations",
 		"test_workflows",
 		"execution_sequences",
+		"convert_checkpoints",
 	}
 
 	out := make(map[string]int64, len(tables))
