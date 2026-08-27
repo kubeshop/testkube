@@ -145,6 +145,15 @@ func buildExecution(i int) testkube.TestWorkflowExecution {
 			Description: "a migrated workflow",
 			Labels:      map[string]string{"app.kubernetes.io/part-of": "testkube"},
 			Created:     scheduled.Add(-time.Hour),
+			// A snapshot always carries its spec, and TestWorkflow.ConvertDots
+			// dereferences it unguarded, so omitting it would build data no
+			// installation holds. The dotted pod label also covers escaping inside
+			// the spec, which travels as one JSONB column.
+			Spec: &testkube.TestWorkflowSpec{
+				Pod: &testkube.TestWorkflowPodConfig{
+					Labels: map[string]string{"app.kubernetes.io/managed-by": "testkube"},
+				},
+			},
 		},
 		ResolvedWorkflow: &testkube.TestWorkflow{
 			Name:      fmt.Sprintf("workflow-%03d", i),
