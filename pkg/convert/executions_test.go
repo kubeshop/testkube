@@ -2,10 +2,14 @@ package convert
 
 import (
 	"testing"
+	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/bson"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // rawDoc marshals a document the way the driver hands it to the cursor.
@@ -139,4 +143,81 @@ func TestFixtureDotEscapingRoundTrips(t *testing.T) {
 	escaped := original.Clone().EscapeDots()
 	assert.NotEqual(t, original.Tags, escaped.Tags,
 		"the fixture must contain dotted keys for this to be testing anything")
+}
+
+// The two drivers return the same instants in different locations: BSON carries
+// no zone so the Mongo driver decodes in the local one, while pgx returns
+// TIMESTAMPTZ in UTC. Comparing executions by reflection treats that as a
+// difference, which is why the integration comparison uses a comparer.
+func TestExecutionComparerIgnoresLocationButNotInstant(t *testing.T) {
+	t.Parallel()
+
+	instant := time.Date(2026, 3, 1, 10, 0, 0, 0, time.UTC)
+
+	t.Run("same instant in a different location is equal", func(t *testing.T) {
+		t.Parallel()
+
+		elsewhere := instant.In(time.FixedZone("CEST", 2*60*60))
+		require.NotEqual(t, instant.Location(), elsewhere.Location(),
+			"the two values must differ by location for this to test anything")
+
+		a := testkube.TestWorkflowExecution{Id: "exec-1", ScheduledAt: instant}
+		b := testkube.TestWorkflowExecution{Id: "exec-1", ScheduledAt: elsewhere}
+
+		assert.Empty(t, cmp.Diff(a, b, executionComparer),
+			"a differing location alone must not read as a difference")
+		assert.NotEqual(t, a, b,
+			"and plain equality must still see one, or the comparer is redundant")
+	})
+
+	t.Run("a different instant is still a difference", func(t *testing.T) {
+		t.Parallel()
+
+		a := testkube.TestWorkflowExecution{Id: "exec-1", ScheduledAt: instant}
+		b := testkube.TestWorkflowExecution{Id: "exec-1", ScheduledAt: instant.Add(time.Second)}
+
+		assert.NotEmpty(t, cmp.Diff(a, b, executionComparer),
+			"the comparer must not paper over a real timestamp difference")
+	})
+}
+
+// The cross-backend comparison requires every child collection to be populated,
+// because the two repositories disagree about absent children and neither
+// disagreement is the migrator's to fix:
+//
+//   - PostgresRepository.Get rebuilds Signature, Output, Reports and
+//     ResourceAggregations only when the corresponding rows exist, leaving them
+//     nil otherwise.
+//   - MongoRepository.Insert defaults a nil Reports to an empty slice, so Mongo
+//     serves [] where Postgres serves nil for an execution with no reports.
+//
+// PostgresRepository.Insert stores absent children exactly as the migrator does,
+// so these are repository-level differences rather than migration bugs. Keeping
+// the fixture fully populated keeps the comparison pointed at the migrator. An
+// execution with genuinely absent children needs its own assertions, not this
+// one.
+func TestFixturePopulatesEveryChildCollection(t *testing.T) {
+	t.Parallel()
+
+	execution := buildExecution(1)
+
+	assert.NotEmpty(t, execution.Signature, "signatures must be populated")
+	assert.NotEmpty(t, execution.Output, "outputs must be populated")
+	assert.NotEmpty(t, execution.Reports, "reports must be populated")
+	require.NotNil(t, execution.Result, "the result must be populated")
+
+	agg := execution.ResourceAggregations
+	require.NotNil(t, agg, "the resource aggregations report must be populated")
+	assert.NotEmpty(t, agg.Global, "global aggregations must be populated")
+	assert.NotEmpty(t, agg.Step, "step aggregations must be populated")
+
+	// Both aggregation columns must survive the JSONB encoding the migrator
+	// writes, since it is an empty encoding that leaves the column NULL and sends
+	// the report back as nil.
+	for name, value := range map[string]any{"global": agg.Global, "step": agg.Step} {
+		encoded, err := toJSONBytes(value)
+		require.NoError(t, err)
+		assert.NotEqual(t, copyNull, escapeJSONB(encoded),
+			"%s must not serialize to a NULL column", name)
+	}
 }

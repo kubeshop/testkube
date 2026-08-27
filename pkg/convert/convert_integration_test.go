@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -138,7 +139,21 @@ func buildExecution(i int) testkube.TestWorkflowExecution {
 				Failed: 1,
 			},
 		}},
-		ResourceAggregations: &testkube.TestWorkflowExecutionResourceAggregationsReport{},
+		// Populated, not an empty report: the two repositories disagree about absent
+		// children, so an empty one would read back as nil from Postgres and intact
+		// from Mongo. TestFixturePopulatesEveryChildCollection has the details and
+		// guards the rule.
+		ResourceAggregations: &testkube.TestWorkflowExecutionResourceAggregationsReport{
+			Global: map[string]map[string]testkube.TestWorkflowExecutionResourceAggregations{
+				"cpu": {"millicores": {Total: 1200, Min: 10, Max: 400, Avg: 120, StdDev: 35.5}},
+			},
+			Step: []testkube.TestWorkflowExecutionStepResourceAggregations{{
+				Ref: "root",
+				Aggregations: map[string]map[string]testkube.TestWorkflowExecutionResourceAggregations{
+					"memory": {"bytes": {Total: 4096, Min: 512, Max: 2048, Avg: 1024}},
+				},
+			}},
+		},
 		Workflow: &testkube.TestWorkflow{
 			Name:        fmt.Sprintf("workflow-%03d", i),
 			Namespace:   "testkube",
@@ -224,7 +239,29 @@ func TestConvertExecutions_Integration(t *testing.T) {
 		fromPostgres, err := f.pgRepo.Get(ctx, seed.Id)
 		require.NoError(t, err, "execution %s must exist in postgres", seed.Id)
 
-		assert.Equal(t, fromMongo, fromPostgres, "execution %s must round-trip identically", seed.Id)
+		assertExecutionsEqual(t, fromMongo, fromPostgres, seed.Id)
+	}
+}
+
+// executionComparer compares two executions by value, treating timestamps as
+// equal when they name the same instant.
+//
+// The two drivers hand back the same instants in different locations: BSON
+// datetimes carry no zone, so the Mongo driver decodes them in the local one,
+// while pgx returns TIMESTAMPTZ in UTC. reflect-based equality compares the
+// Location pointer as well as the instant and calls that a difference, so it
+// would fail everywhere except on a machine whose local zone is UTC -- and pass
+// there for the wrong reason.
+var executionComparer = cmp.Comparer(func(a, b time.Time) bool { return a.Equal(b) })
+
+// assertExecutionsEqual reports the difference between what each backend serves
+// for the same execution. cmp names the differing field, where a reflect-based
+// assertion prints both structs in full and leaves the reader to find it.
+func assertExecutionsEqual(t *testing.T, fromMongo, fromPostgres testkube.TestWorkflowExecution, id string) {
+	t.Helper()
+
+	if diff := cmp.Diff(fromMongo, fromPostgres, executionComparer); diff != "" {
+		t.Errorf("execution %s differs between backends (-mongo +postgres):\n%s", id, diff)
 	}
 }
 
