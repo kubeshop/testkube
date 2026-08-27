@@ -190,8 +190,9 @@ func (s *state) SetCurrentStatus(expression string) {
 func SetContainerResources(cr testworkflowconfig.ContainerResourceConfig) {
 	// Trigger the load-once so readState (which populates currentState from disk)
 	// runs before this write. Without this, a caller that invokes the setter
-	// before any GetState() writes into the initial empty currentState, and a
-	// later GetState() call overwrites those fields with the on-disk contents.
+	// before any GetState() call writes into the initial empty currentState,
+	// and a later GetState() call overwrites those fields with the on-disk
+	// contents.
 	_ = GetState()
 
 	stateMu.Lock()
