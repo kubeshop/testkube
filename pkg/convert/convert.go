@@ -47,8 +47,8 @@ const (
 // smaller value keeps both the footprint and the lock duration predictable
 // while still giving COPY plenty to work with.
 const (
-	DefaultBatchSize     = 1000
-	DefaultReadBatchSize = 500
+	DefaultBatchSize     = 10000
+	DefaultReadBatchSize = 1000
 )
 
 // Config controls one conversion run.
