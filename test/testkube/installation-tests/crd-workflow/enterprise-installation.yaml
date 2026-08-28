@@ -6,6 +6,8 @@ metadata:
     core-tests: installation
 description: "Enterprise installation test - DinD+kind"
 spec:
+  execution:
+    silent: true
   system:
     pureByDefault: true
   job:
