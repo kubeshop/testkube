@@ -536,13 +536,13 @@ func startPodObserver(t *testing.T, namespace string) (*PodObserver, error) {
 	// ResourceVersion, SendInitialEvents, AllowWatchBookmarks, etc. required by the
 	// WatchListClient feature gate enabled by default in client-go v0.35+.
 	watchList := &cache.ListWatch{
-		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+		ListWithContextFunc: func(ctx context.Context, options metav1.ListOptions) (runtime.Object, error) {
 			options.LabelSelector = labelSelector
-			return globalK8sClient.CoreV1().Pods(namespace).List(context.Background(), options)
+			return globalK8sClient.CoreV1().Pods(namespace).List(ctx, options)
 		},
-		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+		WatchFuncWithContext: func(ctx context.Context, options metav1.ListOptions) (watch.Interface, error) {
 			options.LabelSelector = labelSelector
-			return globalK8sClient.CoreV1().Pods(namespace).Watch(context.Background(), options)
+			return globalK8sClient.CoreV1().Pods(namespace).Watch(ctx, options)
 		},
 	}
 

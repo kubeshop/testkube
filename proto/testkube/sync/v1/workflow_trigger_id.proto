@@ -5,5 +5,6 @@ package testkube.sync.v1;
 // WorkflowTriggerId is the information required to
 // uniquely identify a WorkflowTrigger object.
 message WorkflowTriggerId {
+  // Id is the unique ID string for a WorkflowTrigger.
   string id = 1;
 }
