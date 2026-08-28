@@ -109,16 +109,14 @@ func (s *TestTriggerSpec) Validate() []error {
 
 	if s.Event != "" && len(s.Events) > 0 {
 		errs = append(errs, fmt.Errorf("only one of event or events can be set"))
-	} else if s.Event == "" && len(s.Events) == 0 {
+		return errs
+	}
+	if s.Event == "" && len(s.Events) == 0 {
 		errs = append(errs, fmt.Errorf("one of event or events must be set"))
+		return errs
 	}
 
 	effectiveEvents := s.EffectiveEvents()
-	if len(effectiveEvents) == 0 {
-		// Neither form is set (already reported above); still validate the
-		// remaining rules against an empty event so their errors surface too.
-		effectiveEvents = []TestTriggerEvent{""}
-	}
 
 	isContentResource := s.Resource == TestTriggerResourceContent || (s.ResourceRef != nil && s.ResourceRef.Kind == string(TestTriggerResourceContent))
 
