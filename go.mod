@@ -33,7 +33,7 @@ require (
 	github.com/google/go-containerregistry v0.22.0
 	github.com/google/uuid v1.6.0
 	github.com/gookit/color v1.6.1
-	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.4
 	github.com/h2non/filetype v1.1.3
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/itchyny/gojq v0.12.19
@@ -46,12 +46,12 @@ require (
 	github.com/mark3labs/mcp-go v0.58.0
 	github.com/mattn/go-isatty v0.0.24
 	github.com/minio/minio-go/v7 v7.3.0
-	github.com/nats-io/nats-server/v2 v2.14.5
+	github.com/nats-io/nats-server/v2 v2.14.6
 	github.com/nats-io/nats.go v1.53.1
 	github.com/ohler55/ojg v1.28.5
 	github.com/olekukonko/tablewriter v1.1.4
 	github.com/onsi/ginkgo/v2 v2.32.1
-	github.com/onsi/gomega v1.42.1
+	github.com/onsi/gomega v1.43.0
 	github.com/otiai10/copy v1.14.1
 	github.com/pashagolub/pgxmock/v5 v5.1.0
 	github.com/pkg/errors v0.9.1
@@ -69,8 +69,8 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/valyala/fasthttp v1.73.0
 	github.com/wI2L/jsondiff v0.7.1
-	go.mongodb.org/mongo-driver/v2 v2.8.1
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.70.0
+	go.mongodb.org/mongo-driver/v2 v2.8.2
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.71.0
 	go.opentelemetry.io/otel v1.46.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.46.0
 	go.opentelemetry.io/otel/sdk v1.46.0
@@ -307,7 +307,7 @@ require (
 	golang.org/x/tools v0.49.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260819154853-08b0e4226688 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260825221802-da73d73af1c5 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect

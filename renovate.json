@@ -2,5 +2,18 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        ".github/workflows/new-build.yaml"
+      ],
+      "matchStrings": [
+        "MCP_PUBLISHER_VERSION:\\s*(?<currentValue>v\\S+)"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "modelcontextprotocol/registry"
+    }
   ]
 }
