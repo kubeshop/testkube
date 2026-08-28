@@ -135,3 +135,33 @@ func buildAPITrigger() testkube.TestTrigger {
 		ConcurrencyPolicy: &concurrency,
 	}
 }
+
+func TestKubernetesTestTriggerClient_CreateAndUpdateCarryEventsList(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockClient := testtriggersclientv1.NewMockInterface(ctrl)
+	client := NewKubernetesTestTriggerClient(mockClient)
+
+	trigger := buildAPITrigger()
+	trigger.Event = ""
+	trigger.Events = []string{"created", "modified"}
+
+	mockClient.EXPECT().Create(gomock.Any()).DoAndReturn(func(crd *testtriggersv1.TestTrigger) (*testtriggersv1.TestTrigger, error) {
+		assert.Empty(t, crd.Spec.Event)
+		require.Len(t, crd.Spec.Events, 2)
+		assert.Equal(t, testtriggersv1.TestTriggerEvent("created"), crd.Spec.Events[0])
+		assert.Equal(t, testtriggersv1.TestTriggerEvent("modified"), crd.Spec.Events[1])
+		return crd, nil
+	})
+	require.NoError(t, client.Create(context.Background(), "", trigger))
+
+	existing := &testtriggersv1.TestTrigger{}
+	existing.Name = trigger.Name
+	existing.Namespace = trigger.Namespace
+	mockClient.EXPECT().Get(trigger.Name, gomock.Any()).Return(existing, nil)
+	mockClient.EXPECT().Update(gomock.Any()).DoAndReturn(func(crd *testtriggersv1.TestTrigger) (*testtriggersv1.TestTrigger, error) {
+		assert.Empty(t, crd.Spec.Event)
+		require.Len(t, crd.Spec.Events, 2)
+		return crd, nil
+	})
+	require.NoError(t, client.Update(context.Background(), "", trigger))
+}
