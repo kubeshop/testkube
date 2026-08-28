@@ -178,6 +178,9 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 			}
 			// Event and Events are mutually exclusive, so setting either form
 			// replaces the other to keep the merged trigger valid.
+			if request.Event != "" && len(request.Events) > 0 {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: only one of event or events can be set", errPrefix))
+			}
 			if request.Event != "" {
 				apiTrigger.Event = request.Event
 				apiTrigger.Events = nil
