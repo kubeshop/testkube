@@ -399,6 +399,55 @@ func TestApplyTemplatesStepPropagatesPodViaTemplate(t *testing.T) {
 	}
 }
 
+func TestApplyTemplatesStepPropagatesPodWorkflowVolumeWinsOverTemplate(t *testing.T) {
+	tplWithVolumes := testworkflowsv1.TestWorkflowTemplate{
+		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					Volumes: []corev1.Volume{{
+						Name: "cfg-vol",
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{Name: "from-template"},
+							},
+						},
+					}},
+				},
+			},
+		},
+	}
+	tpls := map[string]*testworkflowsv1.TestWorkflowTemplate{"podVol": &tplWithVolumes}
+	ref := testworkflowsv1.TemplateRef{Name: "podVol"}
+
+	spec := &testworkflowsv1.TestWorkflowSpec{
+		TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+			Pod: &testworkflowsv1.PodConfig{
+				Volumes: []corev1.Volume{{
+					Name: "cfg-vol",
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{Name: "from-workflow"},
+						},
+					},
+				}},
+			},
+		},
+	}
+	s := *basicStep.DeepCopy()
+	s.Use = []testworkflowsv1.TemplateRef{ref}
+
+	_, err := applyTemplatesToStep(s, spec, tpls, nil)
+
+	assert.NoError(t, err)
+	if assert.Len(t, spec.Pod.Volumes, 1) {
+		got := spec.Pod.Volumes[0]
+		assert.Equal(t, "cfg-vol", got.Name)
+		if assert.NotNil(t, got.ConfigMap) {
+			assert.Equal(t, "from-workflow", got.ConfigMap.Name)
+		}
+	}
+}
+
 func TestApplyTemplatesStepPropagatesPodDedupeVolumes(t *testing.T) {
 	tplWithVolumes := testworkflowsv1.TestWorkflowTemplate{
 		Spec: testworkflowsv1.TestWorkflowTemplateSpec{

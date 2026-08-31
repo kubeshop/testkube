@@ -17,17 +17,22 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 )
 
+// dedupeVolumesByName keeps the LAST entry per Name so a workflow-level
+// declaration wins over a template-provided one with the same name.
+// MergePodConfig prepends the template's Volumes before the enclosing spec's,
+// so the workflow copy trails and overrides the template copy in place.
 func dedupeVolumesByName(vs []corev1.Volume) []corev1.Volume {
 	if len(vs) < 2 {
 		return vs
 	}
-	seen := make(map[string]struct{}, len(vs))
-	out := vs[:0]
+	idx := make(map[string]int, len(vs))
+	out := make([]corev1.Volume, 0, len(vs))
 	for _, v := range vs {
-		if _, ok := seen[v.Name]; ok {
+		if i, ok := idx[v.Name]; ok {
+			out[i] = v
 			continue
 		}
-		seen[v.Name] = struct{}{}
+		idx[v.Name] = len(out)
 		out = append(out, v)
 	}
 	return out
