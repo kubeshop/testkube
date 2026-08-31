@@ -249,14 +249,21 @@ func TestRunCoalescesNotifierBurst(t *testing.T) {
 	// Wait for startup.
 	require.True(t, waitForCallCount(p, 1, time.Second), "startup push did not land")
 
-	// Fire a burst of 10 events spaced inside the debounce window. Each event
-	// resets the timer, so only one push should fire after the burst quiets.
+	// Fire a burst of 10 events without sleeping between them. Each event
+	// resets the debounce timer, so they must collapse into a single push.
+	// Sleeping inside the loop races the 50ms timer on a contended runner:
+	// 10×5ms plus scheduling can exceed debounce and produce a mid-burst push.
 	for i := 0; i < 10; i++ {
 		notifier <- struct{}{}
-		time.Sleep(5 * time.Millisecond)
 	}
 
-	// Wait long enough for the debounce timer to actually fire after the burst.
+	if !waitForCallCount(p, 2, time.Second) {
+		cancel()
+		<-done
+		t.Fatalf("expected coalesced notifier push within 1s, got %d total pushes", p.callCount())
+	}
+
+	// Quiet period: another debounce window plus margin, to catch a stray third push.
 	time.Sleep(150 * time.Millisecond)
 
 	cancel()

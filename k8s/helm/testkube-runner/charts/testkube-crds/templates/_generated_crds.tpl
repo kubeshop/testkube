@@ -7108,7 +7108,9 @@ spec:
                 description: whether test trigger is disabled
                 type: boolean
               event:
-                description: On which Event for a Resource should an Action be triggered
+                description: |-
+                  On which Event for a Resource should an Action be triggered.
+                  Exactly one of Event or Events must be specified.
                 enum:
                 - created
                 - modified
@@ -7143,6 +7145,48 @@ spec:
                 - event-updated
                 - event-deleted
                 type: string
+              events:
+                description: |-
+                  Events is a list of Events for a Resource on which an Action should be triggered;
+                  the trigger fires when any event in the list occurs.
+                  Exactly one of Event or Events must be specified.
+                items:
+                  description: TestTriggerEvent defines event for test triggers
+                  enum:
+                  - created
+                  - modified
+                  - deleted
+                  - git-push
+                  - git-tag-push
+                  - git-pull-request
+                  - deployment-scale-update
+                  - deployment-image-update
+                  - deployment-env-update
+                  - deployment-containers-modified
+                  - deployment-generation-modified
+                  - deployment-resource-modified
+                  - event-start-test
+                  - event-end-test-success
+                  - event-end-test-failed
+                  - event-end-test-aborted
+                  - event-end-test-timeout
+                  - event-start-testsuite
+                  - event-end-testsuite-success
+                  - event-end-testsuite-failed
+                  - event-end-testsuite-aborted
+                  - event-end-testsuite-timeout
+                  - event-queue-testworkflow
+                  - event-start-testworkflow
+                  - event-end-testworkflow-success
+                  - event-end-testworkflow-failed
+                  - event-end-testworkflow-aborted
+                  - event-end-testworkflow-canceled
+                  - event-end-testworkflow-not-passed
+                  - event-created
+                  - event-updated
+                  - event-deleted
+                  type: string
+                type: array
               execution:
                 description: Execution identifies for which test execution should
                   an Action be executed
@@ -7472,7 +7516,6 @@ spec:
                 type: object
             required:
             - action
-            - event
             - execution
             - testSelector
             type: object

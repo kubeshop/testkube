@@ -718,6 +718,32 @@ func TestIsGitContentTrigger(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "events list with git events only",
+			trigger: testkube.TestTrigger{
+				Events:   []string{string(testtriggersv1.TestTriggerEventGitPush), string(testtriggersv1.TestTriggerEventGitPullRequest)},
+				Resource: &resource,
+				ContentSelector: &testkube.TestTriggerContentSelector{
+					Git: &testkube.TestTriggerContentGit{
+						Uri: "https://github.com/example/repo.git",
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "events list with a non-git event",
+			trigger: testkube.TestTrigger{
+				Events:   []string{string(testtriggersv1.TestTriggerEventGitPush), "created"},
+				Resource: &resource,
+				ContentSelector: &testkube.TestTriggerContentSelector{
+					Git: &testkube.TestTriggerContentGit{
+						Uri: "https://github.com/example/repo.git",
+					},
+				},
+			},
+			expected: false,
+		},
 	}
 
 	for _, tt := range tests {

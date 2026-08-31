@@ -7450,7 +7450,6 @@ components:
       description: test trigger create or update request body
       type: object
       required:
-        - event
         - action
         - execution
         - testSelector
@@ -8149,7 +8148,6 @@ components:
     TestTrigger:
       type: object
       required:
-        - event
         - action
         - execution
         - testSelector
@@ -8189,8 +8187,16 @@ components:
           $ref: "#/components/schemas/TestTriggerSelector"
         event:
           type: string
-          description: listen for event for selected resource
+          description: listen for event for selected resource; exactly one of event and events must be specified
           example: modified
+        events:
+          type: array
+          description: listen for any of the listed events for selected resource; exactly one of event and events must be specified
+          items:
+            type: string
+          example:
+            - created
+            - modified
         match:
           type: array
           description: Match filters which object changes fire the trigger (ANDed).
