@@ -412,19 +412,40 @@ func TestApplyTemplatesStepPropagatesPodDedupeVolumes(t *testing.T) {
 	tpls := map[string]*testworkflowsv1.TestWorkflowTemplate{"podVol": &tplWithVolumes}
 	ref := testworkflowsv1.TemplateRef{Name: "podVol"}
 
-	s := *basicStep.DeepCopy()
-	s.Use = []testworkflowsv1.TemplateRef{ref, ref}
-	spec := &testworkflowsv1.TestWorkflowSpec{}
+	cases := map[string]func() *testworkflowsv1.TestWorkflowSpec{
+		"repeated ref in one step's Use[]": func() *testworkflowsv1.TestWorkflowSpec {
+			spec := &testworkflowsv1.TestWorkflowSpec{}
+			s := *basicStep.DeepCopy()
+			s.Use = []testworkflowsv1.TemplateRef{ref, ref}
+			_, err := applyTemplatesToStep(s, spec, tpls, nil)
+			assert.NoError(t, err)
+			return spec
+		},
+		"sibling steps using same .template": func() *testworkflowsv1.TestWorkflowSpec {
+			spec := &testworkflowsv1.TestWorkflowSpec{}
+			s1 := *basicStep.DeepCopy()
+			s1.Template = &ref
+			s2 := *basicStep.DeepCopy()
+			s2.Template = &ref
+			_, err := applyTemplatesToStep(s1, spec, tpls, nil)
+			assert.NoError(t, err)
+			_, err = applyTemplatesToStep(s2, spec, tpls, nil)
+			assert.NoError(t, err)
+			return spec
+		},
+	}
 
-	_, err := applyTemplatesToStep(s, spec, tpls, nil)
-
-	assert.NoError(t, err)
-	if assert.NotNil(t, spec.Pod) {
-		names := make([]string, 0, len(spec.Pod.Volumes))
-		for _, v := range spec.Pod.Volumes {
-			names = append(names, v.Name)
-		}
-		assert.Equal(t, []string{"cfg-vol"}, names, "same template used twice must not duplicate pod.volumes")
+	for name, setup := range cases {
+		t.Run(name, func(t *testing.T) {
+			spec := setup()
+			if assert.NotNil(t, spec.Pod) {
+				names := make([]string, 0, len(spec.Pod.Volumes))
+				for _, v := range spec.Pod.Volumes {
+					names = append(names, v.Name)
+				}
+				assert.Equal(t, []string{"cfg-vol"}, names)
+			}
+		})
 	}
 }
 

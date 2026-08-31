@@ -152,6 +152,7 @@ func applyTemplatesToStep(step testworkflowsv1.Step, spec *testworkflowsv1.TestW
 		}
 		if spec != nil && tpl.Spec.Pod != nil {
 			spec.Pod = MergePodConfig(tpl.Spec.Pod, spec.Pod)
+			spec.Pod.Volumes = dedupeVolumesByName(spec.Pod.Volumes)
 		}
 		isolate := testworkflowsv1.Step{}
 		err = InjectStepTemplate(&isolate, tpl)
