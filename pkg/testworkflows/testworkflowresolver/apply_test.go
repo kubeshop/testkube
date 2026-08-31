@@ -353,7 +353,7 @@ func TestApplyTemplatesMergeMultipleConfigurable(t *testing.T) {
 func TestApplyTemplatesStepBasic(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplEnvRef}
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *basicStep.DeepCopy()
 	want.Container.Env = append(tplEnv.Spec.Container.Env, want.Container.Env...)
@@ -365,7 +365,7 @@ func TestApplyTemplatesStepBasic(t *testing.T) {
 func TestApplyTemplatesStepIgnorePod(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplPodRef}
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *basicStep.DeepCopy()
 
@@ -373,10 +373,44 @@ func TestApplyTemplatesStepIgnorePod(t *testing.T) {
 	assert.Equal(t, want, s)
 }
 
+// TestApplyTemplatesStepPropagatesPodViaUse asserts that a step-level template
+// referenced via steps[].use[] contributes its Pod fields to the enclosing spec.
+// Regression guard: when the merger silently drops these fields, K8s API rejects
+// the resulting Job with `spec.template.spec.containers[0].volumeMounts[N].name:
+// Not found: "..."` because the container's volumeMounts survive the merge but
+// their backing pod.volumes do not.
+func TestApplyTemplatesStepPropagatesPodViaUse(t *testing.T) {
+	s := *basicStep.DeepCopy()
+	s.Use = []testworkflowsv1.TemplateRef{tplPodRef}
+	spec := &testworkflowsv1.TestWorkflowSpec{}
+
+	_, err := applyTemplatesToStep(s, spec, templates, nil)
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, spec.Pod, "template Pod should have been merged into spec.Pod") {
+		assert.Equal(t, tplPod.Spec.Pod.Labels, spec.Pod.Labels)
+	}
+}
+
+// TestApplyTemplatesStepPropagatesPodViaTemplate covers the alternative
+// steps[].template.name syntax path, which shares the same silent-drop bug.
+func TestApplyTemplatesStepPropagatesPodViaTemplate(t *testing.T) {
+	s := *basicStep.DeepCopy()
+	s.Template = &tplPodRef
+	spec := &testworkflowsv1.TestWorkflowSpec{}
+
+	_, err := applyTemplatesToStep(s, spec, templates, nil)
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, spec.Pod, "template Pod should have been merged into spec.Pod") {
+		assert.Equal(t, tplPod.Spec.Pod.Labels, spec.Pod.Labels)
+	}
+}
+
 func TestApplyTemplatesStepBasicIsolatedIgnore(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Template = &tplEnvRef
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *basicStep.DeepCopy()
 
@@ -387,7 +421,7 @@ func TestApplyTemplatesStepBasicIsolatedIgnore(t *testing.T) {
 func TestApplyTemplatesStepBasicIsolated(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Template = &tplStepsRef
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *basicStep.DeepCopy()
 	want.Steps = append([]testworkflowsv1.Step{
@@ -403,7 +437,7 @@ func TestApplyTemplatesStepBasicIsolated(t *testing.T) {
 func TestApplyTemplatesStepBasicIsolatedWrapped(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Template = &tplStepsEnvRef
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *basicStep.DeepCopy()
 	want.Steps = append([]testworkflowsv1.Step{{
@@ -426,7 +460,7 @@ func TestApplyTemplatesStepBasicIsolatedWrapped(t *testing.T) {
 func TestApplyTemplatesStepBasicSteps(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplStepsRef}
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *basicStep.DeepCopy()
 	want.Setup = []testworkflowsv1.Step{
@@ -445,7 +479,7 @@ func TestApplyTemplatesStepBasicSteps(t *testing.T) {
 func TestApplyTemplatesStepBasicMultipleSteps(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplStepsRef, tplStepsConfigRef}
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *basicStep.DeepCopy()
 	want.Setup = []testworkflowsv1.Step{
@@ -470,7 +504,7 @@ func TestApplyTemplatesStepBasicMultipleSteps(t *testing.T) {
 func TestApplyTemplatesStepAdvancedIsolated(t *testing.T) {
 	s := *advancedStep.DeepCopy()
 	s.Template = &tplStepsRef
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *advancedStep.DeepCopy()
 	want.Steps = append([]testworkflowsv1.Step{
@@ -486,7 +520,7 @@ func TestApplyTemplatesStepAdvancedIsolated(t *testing.T) {
 func TestApplyTemplatesStepAdvancedIsolatedWrapped(t *testing.T) {
 	s := *advancedStep.DeepCopy()
 	s.Template = &tplStepsEnvRef
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *advancedStep.DeepCopy()
 	want.Steps = append([]testworkflowsv1.Step{{
@@ -512,7 +546,7 @@ func TestApplyTemplatesParallel(t *testing.T) {
 		Use:   []testworkflowsv1.TemplateRef{tplStepsEnvRef},
 		Steps: []testworkflowsv1.Step{basicStep},
 	}
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *advancedStep.DeepCopy()
 	want.Parallel = &testworkflowsv1.StepParallel{
@@ -540,7 +574,7 @@ func TestApplyTemplatesParallel(t *testing.T) {
 func TestApplyTemplatesStepAdvancedSteps(t *testing.T) {
 	s := *advancedStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplStepsRef}
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *advancedStep.DeepCopy()
 	want.Setup = []testworkflowsv1.Step{
@@ -559,7 +593,7 @@ func TestApplyTemplatesStepAdvancedSteps(t *testing.T) {
 func TestApplyTemplatesStepAdvancedMultipleSteps(t *testing.T) {
 	s := *advancedStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplStepsRef, tplStepsConfigRef}
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *advancedStep.DeepCopy()
 	want.Setup = []testworkflowsv1.Step{
