@@ -17,6 +17,22 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 )
 
+func dedupeVolumesByName(vs []corev1.Volume) []corev1.Volume {
+	if len(vs) < 2 {
+		return vs
+	}
+	seen := make(map[string]struct{}, len(vs))
+	out := vs[:0]
+	for _, v := range vs {
+		if _, ok := seen[v.Name]; ok {
+			continue
+		}
+		seen[v.Name] = struct{}{}
+		out = append(out, v)
+	}
+	return out
+}
+
 func MergePodConfig(dst, include *testworkflowsv1.PodConfig) *testworkflowsv1.PodConfig {
 	if dst == nil {
 		return include

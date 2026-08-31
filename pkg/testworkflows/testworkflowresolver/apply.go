@@ -133,12 +133,9 @@ func applyTemplatesToStep(step testworkflowsv1.Step, spec *testworkflowsv1.TestW
 		if err != nil {
 			return step, errors.Wrap(err, fmt.Sprintf(".use[%d]: resolving template", i))
 		}
-		// Pod is a workflow-scoped concern; a step-level template that carries pod
-		// fields (e.g. Volumes backing its Container.VolumeMounts) must have them
-		// applied to the enclosing spec, otherwise the resulting Job is rejected
-		// by the K8s API with "volume not found".
 		if spec != nil && tpl.Spec.Pod != nil {
 			spec.Pod = MergePodConfig(tpl.Spec.Pod, spec.Pod)
+			spec.Pod.Volumes = dedupeVolumesByName(spec.Pod.Volumes)
 		}
 		err = InjectStepTemplate(&step, tpl)
 		if err != nil {

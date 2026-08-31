@@ -373,12 +373,6 @@ func TestApplyTemplatesStepIgnorePod(t *testing.T) {
 	assert.Equal(t, want, s)
 }
 
-// TestApplyTemplatesStepPropagatesPodViaUse asserts that a step-level template
-// referenced via steps[].use[] contributes its Pod fields to the enclosing spec.
-// Regression guard: when the merger silently drops these fields, K8s API rejects
-// the resulting Job with `spec.template.spec.containers[0].volumeMounts[N].name:
-// Not found: "..."` because the container's volumeMounts survive the merge but
-// their backing pod.volumes do not.
 func TestApplyTemplatesStepPropagatesPodViaUse(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplPodRef}
@@ -387,13 +381,11 @@ func TestApplyTemplatesStepPropagatesPodViaUse(t *testing.T) {
 	_, err := applyTemplatesToStep(s, spec, templates, nil)
 
 	assert.NoError(t, err)
-	if assert.NotNil(t, spec.Pod, "template Pod should have been merged into spec.Pod") {
+	if assert.NotNil(t, spec.Pod) {
 		assert.Equal(t, tplPod.Spec.Pod.Labels, spec.Pod.Labels)
 	}
 }
 
-// TestApplyTemplatesStepPropagatesPodViaTemplate covers the alternative
-// steps[].template.name syntax path, which shares the same silent-drop bug.
 func TestApplyTemplatesStepPropagatesPodViaTemplate(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Template = &tplPodRef
@@ -402,8 +394,37 @@ func TestApplyTemplatesStepPropagatesPodViaTemplate(t *testing.T) {
 	_, err := applyTemplatesToStep(s, spec, templates, nil)
 
 	assert.NoError(t, err)
-	if assert.NotNil(t, spec.Pod, "template Pod should have been merged into spec.Pod") {
+	if assert.NotNil(t, spec.Pod) {
 		assert.Equal(t, tplPod.Spec.Pod.Labels, spec.Pod.Labels)
+	}
+}
+
+func TestApplyTemplatesStepPropagatesPodDedupeVolumes(t *testing.T) {
+	tplWithVolumes := testworkflowsv1.TestWorkflowTemplate{
+		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					Volumes: []corev1.Volume{{Name: "cfg-vol"}},
+				},
+			},
+		},
+	}
+	tpls := map[string]*testworkflowsv1.TestWorkflowTemplate{"podVol": &tplWithVolumes}
+	ref := testworkflowsv1.TemplateRef{Name: "podVol"}
+
+	s := *basicStep.DeepCopy()
+	s.Use = []testworkflowsv1.TemplateRef{ref, ref}
+	spec := &testworkflowsv1.TestWorkflowSpec{}
+
+	_, err := applyTemplatesToStep(s, spec, tpls, nil)
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, spec.Pod) {
+		names := make([]string, 0, len(spec.Pod.Volumes))
+		for _, v := range spec.Pod.Volumes {
+			names = append(names, v.Name)
+		}
+		assert.Equal(t, []string{"cfg-vol"}, names, "same template used twice must not duplicate pod.volumes")
 	}
 }
 
