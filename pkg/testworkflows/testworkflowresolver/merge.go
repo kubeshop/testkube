@@ -19,11 +19,6 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 )
 
-// checkTemplatePodVolumeConflict rejects a template that would introduce a
-// pod.volume whose Name already appears in the accumulator with a different
-// VolumeSource. Silent last-wins would let the loser template's container
-// mount the wrong ConfigMap/Secret/etc; a workflow-declared source would be
-// discarded by the merge order. Fail loudly instead so the author reconciles.
 func checkTemplatePodVolumeConflict(existing, incoming *testworkflowsv1.PodConfig, tplName string) error {
 	if existing == nil || incoming == nil {
 		return nil
