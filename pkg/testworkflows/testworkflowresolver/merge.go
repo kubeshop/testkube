@@ -9,7 +9,9 @@
 package testworkflowresolver
 
 import (
+	"fmt"
 	"maps"
+	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -17,10 +19,32 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 )
 
-// dedupeVolumesByName keeps the LAST entry per Name so a workflow-level
-// declaration wins over a template-provided one with the same name.
-// MergePodConfig prepends the template's Volumes before the enclosing spec's,
-// so the workflow copy trails and overrides the template copy in place.
+// checkTemplatePodVolumeConflict rejects a template that would introduce a
+// pod.volume whose Name already appears in the accumulator with a different
+// VolumeSource. Silent last-wins would let the loser template's container
+// mount the wrong ConfigMap/Secret/etc; a workflow-declared source would be
+// discarded by the merge order. Fail loudly instead so the author reconciles.
+func checkTemplatePodVolumeConflict(existing, incoming *testworkflowsv1.PodConfig, tplName string) error {
+	if existing == nil || incoming == nil {
+		return nil
+	}
+	existingByName := make(map[string]corev1.Volume, len(existing.Volumes))
+	for _, v := range existing.Volumes {
+		existingByName[v.Name] = v
+	}
+	for _, iv := range incoming.Volumes {
+		ev, ok := existingByName[iv.Name]
+		if !ok {
+			continue
+		}
+		if reflect.DeepEqual(ev.VolumeSource, iv.VolumeSource) {
+			continue
+		}
+		return fmt.Errorf("template %q declares pod.volume %q that conflicts with an existing declaration", tplName, iv.Name)
+	}
+	return nil
+}
+
 func dedupeVolumesByName(vs []corev1.Volume) []corev1.Volume {
 	if len(vs) < 2 {
 		return vs

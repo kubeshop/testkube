@@ -399,52 +399,68 @@ func TestApplyTemplatesStepPropagatesPodViaTemplate(t *testing.T) {
 	}
 }
 
-func TestApplyTemplatesStepPropagatesPodWorkflowVolumeWinsOverTemplate(t *testing.T) {
-	tplWithVolumes := testworkflowsv1.TestWorkflowTemplate{
-		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
+func TestApplyTemplatesStepPropagatesPodErrorsOnVolumeSourceConflict(t *testing.T) {
+	mkTpl := func(cmName string) *testworkflowsv1.TestWorkflowTemplate {
+		return &testworkflowsv1.TestWorkflowTemplate{
+			Spec: testworkflowsv1.TestWorkflowTemplateSpec{
+				TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+					Pod: &testworkflowsv1.PodConfig{
+						Volumes: []corev1.Volume{{
+							Name: "cfg-vol",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{Name: cmName},
+								},
+							},
+						}},
+					},
+				},
+			},
+		}
+	}
+	mkWorkflowVol := func(cmName string) *testworkflowsv1.TestWorkflowSpec {
+		return &testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Pod: &testworkflowsv1.PodConfig{
 					Volumes: []corev1.Volume{{
 						Name: "cfg-vol",
 						VolumeSource: corev1.VolumeSource{
 							ConfigMap: &corev1.ConfigMapVolumeSource{
-								LocalObjectReference: corev1.LocalObjectReference{Name: "from-template"},
+								LocalObjectReference: corev1.LocalObjectReference{Name: cmName},
 							},
 						},
 					}},
 				},
 			},
-		},
-	}
-	tpls := map[string]*testworkflowsv1.TestWorkflowTemplate{"podVol": &tplWithVolumes}
-	ref := testworkflowsv1.TemplateRef{Name: "podVol"}
-
-	spec := &testworkflowsv1.TestWorkflowSpec{
-		TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-			Pod: &testworkflowsv1.PodConfig{
-				Volumes: []corev1.Volume{{
-					Name: "cfg-vol",
-					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{Name: "from-workflow"},
-						},
-					},
-				}},
-			},
-		},
-	}
-	s := *basicStep.DeepCopy()
-	s.Use = []testworkflowsv1.TemplateRef{ref}
-
-	_, err := applyTemplatesToStep(s, spec, tpls, nil)
-
-	assert.NoError(t, err)
-	if assert.Len(t, spec.Pod.Volumes, 1) {
-		got := spec.Pod.Volumes[0]
-		assert.Equal(t, "cfg-vol", got.Name)
-		if assert.NotNil(t, got.ConfigMap) {
-			assert.Equal(t, "from-workflow", got.ConfigMap.Name)
 		}
+	}
+
+	cases := map[string]func() (testworkflowsv1.Step, *testworkflowsv1.TestWorkflowSpec, map[string]*testworkflowsv1.TestWorkflowTemplate){
+		"workflow declares same name with different source": func() (testworkflowsv1.Step, *testworkflowsv1.TestWorkflowSpec, map[string]*testworkflowsv1.TestWorkflowTemplate) {
+			tpls := map[string]*testworkflowsv1.TestWorkflowTemplate{"tplA": mkTpl("from-template")}
+			s := *basicStep.DeepCopy()
+			s.Use = []testworkflowsv1.TemplateRef{{Name: "tplA"}}
+			return s, mkWorkflowVol("from-workflow"), tpls
+		},
+		"sibling templates disagree on source": func() (testworkflowsv1.Step, *testworkflowsv1.TestWorkflowSpec, map[string]*testworkflowsv1.TestWorkflowTemplate) {
+			tpls := map[string]*testworkflowsv1.TestWorkflowTemplate{
+				"tplA": mkTpl("from-A"),
+				"tplB": mkTpl("from-B"),
+			}
+			s := *basicStep.DeepCopy()
+			s.Use = []testworkflowsv1.TemplateRef{{Name: "tplA"}, {Name: "tplB"}}
+			return s, &testworkflowsv1.TestWorkflowSpec{}, tpls
+		},
+	}
+
+	for name, setup := range cases {
+		t.Run(name, func(t *testing.T) {
+			s, spec, tpls := setup()
+			_, err := applyTemplatesToStep(s, spec, tpls, nil)
+			if assert.Error(t, err) {
+				assert.Contains(t, err.Error(), "conflicts with an existing declaration")
+			}
+		})
 	}
 }
 

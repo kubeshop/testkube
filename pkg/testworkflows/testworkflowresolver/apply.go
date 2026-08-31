@@ -134,6 +134,9 @@ func applyTemplatesToStep(step testworkflowsv1.Step, spec *testworkflowsv1.TestW
 			return step, errors.Wrap(err, fmt.Sprintf(".use[%d]: resolving template", i))
 		}
 		if spec != nil && tpl.Spec.Pod != nil {
+			if err := checkTemplatePodVolumeConflict(spec.Pod, tpl.Spec.Pod, ref.Name); err != nil {
+				return step, errors.Wrap(err, fmt.Sprintf(".use[%d]: injecting template", i))
+			}
 			spec.Pod = MergePodConfig(tpl.Spec.Pod, spec.Pod)
 			spec.Pod.Volumes = dedupeVolumesByName(spec.Pod.Volumes)
 		}
@@ -151,6 +154,9 @@ func applyTemplatesToStep(step testworkflowsv1.Step, spec *testworkflowsv1.TestW
 			return step, errors.Wrap(err, ".template: resolving template")
 		}
 		if spec != nil && tpl.Spec.Pod != nil {
+			if err := checkTemplatePodVolumeConflict(spec.Pod, tpl.Spec.Pod, step.Template.Name); err != nil {
+				return step, errors.Wrap(err, ".template: injecting template")
+			}
 			spec.Pod = MergePodConfig(tpl.Spec.Pod, spec.Pod)
 			spec.Pod.Volumes = dedupeVolumesByName(spec.Pod.Volumes)
 		}
