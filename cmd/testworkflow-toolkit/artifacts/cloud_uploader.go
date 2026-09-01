@@ -106,11 +106,13 @@ func (d *cloudUploader) putObject(url string, path string, file io.Reader, size 
 	var lastErr error
 	for attempt := 0; attempt < uploadRetryCount; attempt++ {
 		if attempt > 0 {
-			if !canRewind || file == nil {
-				return lastErr
-			}
-			if _, e := seeker.Seek(0, io.SeekStart); e != nil {
-				return errors.Wrapf(lastErr, "cannot rewind body for retry: %v", e)
+			if file != nil {
+				if !canRewind {
+					return lastErr
+				}
+				if _, e := seeker.Seek(0, io.SeekStart); e != nil {
+					return errors.Wrapf(lastErr, "cannot rewind body for retry: %v", e)
+				}
 			}
 			time.Sleep(time.Duration(attempt) * uploadRetryBaseDelay)
 		}

@@ -60,6 +60,29 @@ func TestCloudUploader_putObject_DoesNotRetryOn4xx(t *testing.T) {
 	assert.Equal(t, int32(1), atomic.LoadInt32(&calls))
 }
 
+// A zero-byte artifact has no body to rewind, so the retry loop must not
+// short-circuit on it. Empty PUTs are inherently replayable; 5xx blips should
+// still be recovered.
+func TestCloudUploader_putObject_RetriesZeroByteBodyOn5xx(t *testing.T) {
+	withShortUploadBackoff(t)
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		n := atomic.AddInt32(&calls, 1)
+		if n < 3 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	u := &cloudUploader{}
+	err := u.putObject(server.URL, "empty.txt", bytes.NewReader(nil), 0)
+
+	assert.NoError(t, err)
+	assert.Equal(t, int32(3), atomic.LoadInt32(&calls))
+}
+
 // Exhausting the retry budget must surface an error so the caller sets the
 // error flag on the uploader (visible as "failed" in the artifact summary).
 func TestCloudUploader_putObject_GivesUpAfterRetryBudget(t *testing.T) {
