@@ -52,7 +52,6 @@ spec:
         expect enterprise-installation-expect-file.exp
     timeout: 720s
   - name: Wait for Testkube core components to be ready
-    optional: true
     shell: |
       kubectl get deployments -ntestkube
       for dep in testkube-demo-runner testkube-enterprise-api testkube-enterprise-dex testkube-enterprise-minio testkube-enterprise-ui testkube-enterprise-worker-service; do
