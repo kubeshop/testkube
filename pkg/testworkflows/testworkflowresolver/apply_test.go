@@ -434,29 +434,37 @@ func TestApplyTemplatesStepPropagatesPodErrorsOnVolumeSourceConflict(t *testing.
 			},
 		}
 	}
+	mkStep := func(refs ...string) testworkflowsv1.Step {
+		s := *basicStep.DeepCopy()
+		for _, r := range refs {
+			s.Use = append(s.Use, testworkflowsv1.TemplateRef{Name: r})
+		}
+		return s
+	}
 
-	cases := map[string]func() (testworkflowsv1.Step, *testworkflowsv1.TestWorkflowSpec, map[string]*testworkflowsv1.TestWorkflowTemplate){
-		"workflow declares same name with different source": func() (testworkflowsv1.Step, *testworkflowsv1.TestWorkflowSpec, map[string]*testworkflowsv1.TestWorkflowTemplate) {
-			tpls := map[string]*testworkflowsv1.TestWorkflowTemplate{"tplA": mkTpl("from-template")}
-			s := *basicStep.DeepCopy()
-			s.Use = []testworkflowsv1.TemplateRef{{Name: "tplA"}}
-			return s, mkWorkflowVol("from-workflow"), tpls
+	tests := map[string]struct {
+		step testworkflowsv1.Step
+		spec *testworkflowsv1.TestWorkflowSpec
+		tpls map[string]*testworkflowsv1.TestWorkflowTemplate
+	}{
+		"workflow declares same name with different source": {
+			step: mkStep("tplA"),
+			spec: mkWorkflowVol("from-workflow"),
+			tpls: map[string]*testworkflowsv1.TestWorkflowTemplate{"tplA": mkTpl("from-template")},
 		},
-		"sibling templates disagree on source": func() (testworkflowsv1.Step, *testworkflowsv1.TestWorkflowSpec, map[string]*testworkflowsv1.TestWorkflowTemplate) {
-			tpls := map[string]*testworkflowsv1.TestWorkflowTemplate{
+		"sibling templates disagree on source": {
+			step: mkStep("tplA", "tplB"),
+			spec: &testworkflowsv1.TestWorkflowSpec{},
+			tpls: map[string]*testworkflowsv1.TestWorkflowTemplate{
 				"tplA": mkTpl("from-A"),
 				"tplB": mkTpl("from-B"),
-			}
-			s := *basicStep.DeepCopy()
-			s.Use = []testworkflowsv1.TemplateRef{{Name: "tplA"}, {Name: "tplB"}}
-			return s, &testworkflowsv1.TestWorkflowSpec{}, tpls
+			},
 		},
 	}
 
-	for name, setup := range cases {
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			s, spec, tpls := setup()
-			_, err := applyTemplatesToStep(s, spec, tpls, nil)
+			_, err := applyTemplatesToStep(tc.step, tc.spec, tc.tpls, nil)
 			if assert.Error(t, err) {
 				assert.Contains(t, err.Error(), "conflicts with an existing declaration")
 			}
@@ -477,32 +485,35 @@ func TestApplyTemplatesStepPropagatesPodDedupeVolumes(t *testing.T) {
 	tpls := map[string]*testworkflowsv1.TestWorkflowTemplate{"podVol": &tplWithVolumes}
 	ref := testworkflowsv1.TemplateRef{Name: "podVol"}
 
-	cases := map[string]func() *testworkflowsv1.TestWorkflowSpec{
-		"repeated ref in one step's Use[]": func() *testworkflowsv1.TestWorkflowSpec {
-			spec := &testworkflowsv1.TestWorkflowSpec{}
-			s := *basicStep.DeepCopy()
-			s.Use = []testworkflowsv1.TemplateRef{ref, ref}
-			_, err := applyTemplatesToStep(s, spec, tpls, nil)
-			assert.NoError(t, err)
-			return spec
+	mkStepUse := func(refs ...testworkflowsv1.TemplateRef) testworkflowsv1.Step {
+		s := *basicStep.DeepCopy()
+		s.Use = refs
+		return s
+	}
+	mkStepTemplate := func(r testworkflowsv1.TemplateRef) testworkflowsv1.Step {
+		s := *basicStep.DeepCopy()
+		s.Template = &r
+		return s
+	}
+
+	tests := map[string]struct {
+		steps []testworkflowsv1.Step
+	}{
+		"repeated ref in one step's Use[]": {
+			steps: []testworkflowsv1.Step{mkStepUse(ref, ref)},
 		},
-		"sibling steps using same .template": func() *testworkflowsv1.TestWorkflowSpec {
-			spec := &testworkflowsv1.TestWorkflowSpec{}
-			s1 := *basicStep.DeepCopy()
-			s1.Template = &ref
-			s2 := *basicStep.DeepCopy()
-			s2.Template = &ref
-			_, err := applyTemplatesToStep(s1, spec, tpls, nil)
-			assert.NoError(t, err)
-			_, err = applyTemplatesToStep(s2, spec, tpls, nil)
-			assert.NoError(t, err)
-			return spec
+		"sibling steps using same .template": {
+			steps: []testworkflowsv1.Step{mkStepTemplate(ref), mkStepTemplate(ref)},
 		},
 	}
 
-	for name, setup := range cases {
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			spec := setup()
+			spec := &testworkflowsv1.TestWorkflowSpec{}
+			for _, s := range tc.steps {
+				_, err := applyTemplatesToStep(s, spec, tpls, nil)
+				assert.NoError(t, err)
+			}
 			if assert.NotNil(t, spec.Pod) {
 				names := make([]string, 0, len(spec.Pod.Volumes))
 				for _, v := range spec.Pod.Volumes {
