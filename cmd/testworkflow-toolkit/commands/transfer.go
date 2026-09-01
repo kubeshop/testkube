@@ -18,8 +18,6 @@ const (
 	transferRetryCount = 3
 )
 
-// transferRetryBaseDelay is a var (not a const) so tests can shorten the wait
-// between attempts without paying the full production budget.
 var transferRetryBaseDelay = 500 * time.Millisecond
 
 func NewTransferCmd() *cobra.Command {
@@ -91,9 +89,6 @@ func ProcessTransferPair(pair string, output io.Writer) int {
 	return 1
 }
 
-// sendTarballOnce runs a single pack-and-send attempt and reports whether the
-// error is worth retrying. Transport errors, 5xx, and 429 are retryable; other
-// 4xx and local packing failures are terminal.
 func sendTarballOnce(dirPath string, patterns []string, url string) (retryable bool, err error) {
 	errChan := make(chan error, 1)
 	reader, writer := io.Pipe()

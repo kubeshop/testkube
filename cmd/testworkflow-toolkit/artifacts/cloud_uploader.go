@@ -21,8 +21,6 @@ const (
 	uploadRetryCount = 5
 )
 
-// uploadRetryBaseDelay is a var (not a const) so tests can shorten the wait
-// between attempts without paying the full production budget.
 var uploadRetryBaseDelay = 500 * time.Millisecond
 
 type CloudUploaderRequestEnhancer = func(req *http.Request, path string, size int64)
@@ -128,9 +126,6 @@ func (d *cloudUploader) putObject(url string, path string, file io.Reader, size 
 	return lastErr
 }
 
-// putObjectOnce performs a single PUT attempt and reports whether the error is
-// worth retrying: transport errors, 5xx, and 429 are retryable; other 4xx are
-// terminal so we do not spam the signed URL with a request that will always fail.
 func (d *cloudUploader) putObjectOnce(url string, path string, file io.Reader, size int64) (retryable bool, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
