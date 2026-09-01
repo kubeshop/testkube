@@ -43,7 +43,7 @@ spec:
             name: testkube-agent-secrets
             key: ENTERPRISE_INSTALLATION_TEST_LICENSE_KEY
       - name: TESTKUBE_INIT_COMMAND
-        value: "testkube init demo --no-confirm --license {{ env.LICENSE_KEY }} --helm-arg wait= --helm-arg timeout=10m --helm-set testkube-cloud-api.additionalEnv.FEATURE_SOURCE_OF_TRUTH_ON_ENV_CREATE=false --verbose"
+        value: "testkube init demo --no-confirm --license {{ env.LICENSE_KEY }} --helm-arg wait= --helm-arg timeout=10m --helm-set testkube-cloud-api.additionalEnv.FEATURE_SOURCE_OF_TRUTH_ON_ENV_CREATE=true --verbose"
       shell: |
         helm version
         helm list -n testkube-enterprise-installation-test
@@ -55,27 +55,60 @@ spec:
     optional: true
     shell: |
       kubectl get deployments -ntestkube
-      for dep in testkube-api-server testkube-minio-testkube testkube-enterprise-api testkube-enterprise-dex testkube-enterprise-minio testkube-enterprise-mongodb testkube-enterprise-ui testkube-enterprise-worker-service; do
+      for dep in testkube-demo-runner testkube-enterprise-api testkube-enterprise-dex testkube-enterprise-minio testkube-enterprise-ui testkube-enterprise-worker-service; do
         echo "⏳ Waiting for $dep..."
         kubectl rollout status deployment/$dep -n testkube --timeout=300s || exit 1
       done
 
-      echo "⏳ Waiting for testkube-api-server endpoint..."
+      echo "⏳ Waiting for testkube-enterprise-postgresql..."
+      kubectl rollout status statefulset/testkube-enterprise-postgresql -n testkube --timeout=300s || exit 1
+
+      echo "⏳ Waiting for testkube-enterprise-api endpoint..."
       for i in {1..30}; do
-        kubectl get endpoints testkube-api-server -n testkube -o jsonpath='{.subsets[*].addresses[*].ip}' | \
+        kubectl get endpoints testkube-enterprise-api -n testkube -o jsonpath='{.subsets[*].addresses[*].ip}' | \
           grep -qE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' && break
         sleep 2
       done
 
       echo "✅ Testkube core components and API service are ready."
-  - name: Apply TestWorkflow
+  - name: Create and run TestWorkflow via control plane
     workingDir: /data/repo/test/postman/crd-workflow
+    timeout: 300s
     shell: |
-      kubectl apply -f smoke.yaml -n testkube
-      kubectl get testworkflow postman-workflow-smoke-junit -n testkube && echo "found" || kubectl get all -n testkube
-  - name: Run TestWorkflow
-    timeout: 180s
-    shell: testkube run tw postman-workflow-smoke-junit --watch && echo "executed correctly"
+      set -e
+      apt-get update >/dev/null 2>&1 && apt-get install -y jq curl >/dev/null 2>&1
+
+      kubectl port-forward -n testkube svc/testkube-enterprise-dex 5556:5556 >/tmp/pf-dex.log 2>&1 &
+      kubectl port-forward -n testkube svc/testkube-enterprise-api 8088:8088 >/tmp/pf-api.log 2>&1 &
+      trap 'kill $(jobs -p) 2>/dev/null || true' EXIT
+      DEX=http://localhost:5556
+      API=http://localhost:8088
+      for i in $(seq 1 30); do curl -so /dev/null "$API" && break; sleep 1; done
+
+      ID_TOKEN=$(curl -sS "$DEX/token" \
+        -d grant_type=password \
+        -d username=admin@example.com \
+        -d password=password \
+        -d scope="openid email groups offline_access" \
+        -d client_id=testkube-enterprise \
+        -d client_secret=QWkVzs3nct6HZM5hxsPzwaZtq | jq -r .id_token)
+      API_TOKEN=$(curl -sS -X POST "$API/organizations/tkcorg_demo/tokens" \
+        -H "Authorization: Bearer $ID_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{"name":"install-test","scopes":[{"resource":"org","identifier":"tkcorg_demo","role":"admin"},{"resource":"env","identifier":"tkcenv_my-first-environment","role":"admin"}]}' \
+        | jq -r '.token')
+
+      testkube set context \
+        --api-uri-override "$API" \
+        --api-key "$API_TOKEN" \
+        --org-id tkcorg_demo \
+        --env-id tkcenv_my-first-environment
+
+      awk 'BEGIN{n=0} /^---$/{n++; next} {print > ("tw_" n ".yaml")}' smoke.yaml
+      for f in tw_*.yaml; do
+        testkube create testworkflow --update -f "$f"
+      done
+      testkube run tw postman-workflow-smoke-junit --watch && echo "executed correctly"
   - name: Dump pod logs and describe
     condition: always
     shell: |
