@@ -33,6 +33,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/credentials"
+	"github.com/kubeshop/testkube/pkg/executiondata"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
@@ -242,7 +243,7 @@ func parseAndValidateSpec(specContent string, cfg *config.ConfigV2, base64Encode
 	parser.NormalizeParallelSpec(parallel)
 
 	// Preserve env.* expressions for parallel workers
-	baseMachine := spawn.ParallelCreateBaseMachineWithoutEnv(cfg, stateMachine, credentialMachine)
+	baseMachine := spawn.ParallelCreateBaseMachineWithoutEnv(cfg, stateMachine, data.ExecutionDataMachine(), credentialMachine)
 
 	params, err := commontcl.GetParamsSpec(parallel.Matrix, parallel.Shards, parallel.Count, parallel.MaxCount, baseMachine)
 	if err != nil {
@@ -260,7 +261,7 @@ func prepareWorkers(parallel *testworkflowsv1.StepParallel, params *commontcl.Pa
 	transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, cfg.IP(), constants.DefaultTransferPort)
 
 	// Preserve env.* expressions for parallel workers
-	baseMachine := spawn.ParallelCreateBaseMachineWithoutEnv(cfg, stateMachine, credentialMachine)
+	baseMachine := spawn.ParallelCreateBaseMachineWithoutEnv(cfg, stateMachine, data.ExecutionDataMachine(), credentialMachine)
 
 	builder := NewParallelWorkersBuilder(transferSrv, baseMachine, params, cfg)
 	workers, err := builder.BuildWorkerSpecs(parallel)
@@ -399,6 +400,14 @@ func (b *ParallelWorkersBuilder) buildSingleWorkerSpec(parallel *testworkflowsv1
 	spec := parallel.DeepCopy()
 	if err := expressions.Simplify(&spec, machines...); err != nil {
 		return WorkerSpec{}, err
+	}
+
+	// An output another workflow withheld resolves to a marker instead of the value it
+	// was meant to carry. The worker would receive it baked into its specification, so
+	// stop here - failing before anything is spawned says which output is missing far
+	// more clearly than every worker failing on its own.
+	if markers := executiondata.WithheldMarkersIn(&spec); len(markers) > 0 {
+		return WorkerSpec{}, executiondata.WithheldError(fmt.Sprintf("worker %d of this parallel step", index), markers)
 	}
 
 	tarballs, err := spawn.ProcessTransfer(b.transferSrv, spec.Transfer, machines...)
@@ -842,7 +851,7 @@ func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params
 	resumeOrchestrator := NewResumeOrchestrator(registry, updates, namespaces, descriptions, cfg)
 	go resumeOrchestrator.Start(execCtx)
 
-	fullBaseMachine := spawn.ParallelCreateBaseMachine(cfg, stateMachine, credentialMachine)
+	fullBaseMachine := spawn.ParallelCreateBaseMachine(cfg, stateMachine, data.ExecutionDataMachine(), credentialMachine)
 	executor := NewWorkerExecutor(storage, registry, updates, fullBaseMachine, cfg)
 
 	// ExecuteParallel callback - matches worker by index and namespace

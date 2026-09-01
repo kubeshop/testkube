@@ -615,6 +615,8 @@ func newDefaultTestTriggersService(t *testing.T, trigger *testtriggersv1.TestTri
 func TestService_matchResourceSelector_matchLabels(t *testing.T) {
 
 	e := &watcherEvent{
+
+		eventType: "modified",
 		resourceLabels: map[string]string{
 			"app": "test",
 		},
@@ -623,6 +625,7 @@ func TestService_matchResourceSelector_matchLabels(t *testing.T) {
 	testTrigger := &testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
 		Spec: testtriggersv1.TestTriggerSpec{
+			Event: "modified",
 			ResourceSelector: testtriggersv1.TestTriggerSelector{
 				LabelSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
@@ -681,6 +684,8 @@ func TestService_matchResourceSelector_matchLabels_noMatch(t *testing.T) {
 func TestService_matchResourceSelector_matchExpression(t *testing.T) {
 
 	e := &watcherEvent{
+
+		eventType: "modified",
 		resourceLabels: map[string]string{
 			"app": "test",
 		},
@@ -689,6 +694,7 @@ func TestService_matchResourceSelector_matchExpression(t *testing.T) {
 	testTrigger := &testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
 		Spec: testtriggersv1.TestTriggerSpec{
+			Event: "modified",
 			ResourceSelector: testtriggersv1.TestTriggerSelector{
 				LabelSelector: &metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
@@ -812,7 +818,9 @@ func TestService_matchSelector_emptySelector(t *testing.T) {
 func TestService_matchSelector_matchLabels(t *testing.T) {
 
 	e := &watcherEvent{
-		resource: "deployment",
+
+		eventType: "modified",
+		resource:  "deployment",
 		// Event labels should take precedence over the resource labels
 		EventLabels: map[string]string{
 			"label-source":            "listener",
@@ -826,6 +834,7 @@ func TestService_matchSelector_matchLabels(t *testing.T) {
 	testTrigger := &testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
 		Spec: testtriggersv1.TestTriggerSpec{
+			Event: "modified",
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"label-source": "listener",
@@ -861,7 +870,8 @@ func TestService_matchSelector_matchLabels_resourceKindCaseInsensitive(t *testin
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := &watcherEvent{
-				resource: "deployment",
+				eventType: "modified",
+				resource:  "deployment",
 				EventLabels: map[string]string{
 					eventLabelKeyResourceKind:      "Deployment",
 					eventLabelKeyResourceName:      "backend-api",
@@ -872,6 +882,7 @@ func TestService_matchSelector_matchLabels_resourceKindCaseInsensitive(t *testin
 			testTrigger := &testtriggersv1.TestTrigger{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
 				Spec: testtriggersv1.TestTriggerSpec{
+					Event: "modified",
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							eventLabelKeyResourceKind:      tc.selectorKindValue,
@@ -901,7 +912,9 @@ func TestService_matchSelector_matchLabels_resourceKindCaseInsensitive(t *testin
 func TestService_matchSelector_matchExpression(t *testing.T) {
 
 	e := &watcherEvent{
-		resource: "deployment",
+
+		eventType: "modified",
+		resource:  "deployment",
 		EventLabels: map[string]string{
 			"label-source":            "listener",
 			eventLabelKeyResourceKind: "Deployment",
@@ -914,6 +927,7 @@ func TestService_matchSelector_matchExpression(t *testing.T) {
 	testTrigger := &testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
 		Spec: testtriggersv1.TestTriggerSpec{
+			Event: "modified",
 			Selector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
@@ -978,6 +992,8 @@ func TestService_matchSelector_noMatch(t *testing.T) {
 func TestService_matchSelector_matchResourceSelector(t *testing.T) {
 
 	e := &watcherEvent{
+
+		eventType: "modified",
 		resource:  "deployment",
 		name:      "test-deployment",
 		Namespace: "testkube",
@@ -990,6 +1006,7 @@ func TestService_matchSelector_matchResourceSelector(t *testing.T) {
 	testTrigger := &testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
 		Spec: testtriggersv1.TestTriggerSpec{
+			Event:    "modified",
 			Resource: "deployment",
 			ResourceSelector: testtriggersv1.TestTriggerSelector{
 				NameRegex: "test-deploy.*",
@@ -1119,6 +1136,87 @@ func TestService_match_v1Scenarios(t *testing.T) {
 				eventType: "created",
 			},
 			shouldFire: true,
+		},
+		"events list matches any member": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t-multi1", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Resource: testtriggersv1.TestTriggerResourceDeployment,
+					ResourceSelector: testtriggersv1.TestTriggerSelector{
+						Name:      "api-server",
+						Namespace: "production",
+					},
+					Events: []testtriggersv1.TestTriggerEvent{
+						testtriggersv1.TestTriggerEventCreated,
+						testtriggersv1.TestTriggerEventModified,
+					},
+					Execution: testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{
+						Name: "smoke-test",
+					},
+				},
+			},
+			event: &watcherEvent{
+				resource:  "deployment",
+				name:      "api-server",
+				Namespace: "production",
+				eventType: "modified",
+			},
+			shouldFire: true,
+		},
+		"events list matches first member": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t-multi2", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Resource: testtriggersv1.TestTriggerResourceDeployment,
+					ResourceSelector: testtriggersv1.TestTriggerSelector{
+						Name:      "api-server",
+						Namespace: "production",
+					},
+					Events: []testtriggersv1.TestTriggerEvent{
+						testtriggersv1.TestTriggerEventCreated,
+						testtriggersv1.TestTriggerEventModified,
+					},
+					Execution: testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{
+						Name: "smoke-test",
+					},
+				},
+			},
+			event: &watcherEvent{
+				resource:  "deployment",
+				name:      "api-server",
+				Namespace: "production",
+				eventType: "created",
+			},
+			shouldFire: true,
+		},
+		"event not in events list does not match": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t-multi3", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Resource: testtriggersv1.TestTriggerResourceDeployment,
+					ResourceSelector: testtriggersv1.TestTriggerSelector{
+						Name:      "api-server",
+						Namespace: "production",
+					},
+					Events: []testtriggersv1.TestTriggerEvent{
+						testtriggersv1.TestTriggerEventCreated,
+						testtriggersv1.TestTriggerEventDeleted,
+					},
+					Execution: testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{
+						Name: "smoke-test",
+					},
+				},
+			},
+			event: &watcherEvent{
+				resource:  "deployment",
+				name:      "api-server",
+				Namespace: "production",
+				eventType: "modified",
+			},
+			shouldFire: false,
 		},
 		"wrong resource type does not match": {
 			trigger: &testtriggersv1.TestTrigger{
@@ -1606,6 +1704,58 @@ func TestService_match_V1_AllBuiltinResources_CaseFolded(t *testing.T) {
 			}
 			require.NoError(t, s.match(context.Background(), event))
 			assert.True(t, fired, "v1 %q trigger must match an event with resource=%q (case-folded)", r, r)
+		})
+	}
+}
+
+func TestMatchEventOrCause(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		targetEvents []string
+		event        *watcherEvent
+		want         bool
+	}{
+		"single event matches": {
+			targetEvents: []string{"modified"},
+			event:        &watcherEvent{eventType: "modified"},
+			want:         true,
+		},
+		"single event does not match": {
+			targetEvents: []string{"created"},
+			event:        &watcherEvent{eventType: "modified"},
+			want:         false,
+		},
+		"events list matches any member": {
+			targetEvents: []string{"created", "modified", "deleted"},
+			event:        &watcherEvent{eventType: "deleted"},
+			want:         true,
+		},
+		"events list does not match non-member": {
+			targetEvents: []string{"created", "deleted"},
+			event:        &watcherEvent{eventType: "modified"},
+			want:         false,
+		},
+		"events list matches cause": {
+			targetEvents: []string{"created", "deployment-image-update"},
+			event: &watcherEvent{
+				eventType: "modified",
+				causes:    []testtrigger.Cause{"deployment-image-update"},
+			},
+			want: true,
+		},
+		"empty events list never matches": {
+			targetEvents: nil,
+			event:        &watcherEvent{eventType: "modified"},
+			want:         false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tc.want, matchEventOrCause(tc.targetEvents, tc.event))
 		})
 	}
 }

@@ -7450,7 +7450,6 @@ components:
       description: test trigger create or update request body
       type: object
       required:
-        - event
         - action
         - execution
         - testSelector
@@ -8149,7 +8148,6 @@ components:
     TestTrigger:
       type: object
       required:
-        - event
         - action
         - execution
         - testSelector
@@ -8189,8 +8187,16 @@ components:
           $ref: "#/components/schemas/TestTriggerSelector"
         event:
           type: string
-          description: listen for event for selected resource
+          description: listen for event for selected resource; exactly one of event and events must be specified
           example: modified
+        events:
+          type: array
+          description: listen for any of the listed events for selected resource; exactly one of event and events must be specified
+          items:
+            type: string
+          example:
+            - created
+            - modified
         match:
           type: array
           description: Match filters which object changes fire the trigger (ANDed).
@@ -10046,6 +10052,9 @@ components:
           name:
             type: string
             description: TestWorkflow name to include
+          as:
+            type: string
+            description: name to reference this execution by in the execution() expression, defaults to the TestWorkflow name
           description:
             type: string
             description: TestWorkflow execution description to display
@@ -10058,11 +10067,33 @@ components:
               $ref: "#/components/schemas/TestWorkflowTarballRequest"
           config:
             $ref: "#/components/schemas/TestWorkflowConfigValue"
+          fetch:
+            type: array
+            description: instructions for downloading artifacts produced by executed test workflows
+            items:
+              $ref: "#/components/schemas/TestWorkflowStepExecuteFetch"
           selector:
             $ref: "#/components/schemas/LabelSelector"
             description: label selector for test workflow
           target:
             $ref: "#/components/schemas/ExecutionTarget"
+
+    TestWorkflowStepExecuteFetch:
+      type: object
+      required:
+      - to
+      properties:
+        from:
+          type: string
+          description: execution to download the artifacts from, defaults to the one being executed
+        paths:
+          type: array
+          description: artifact paths to download, relative to the artifact root of the execution
+          items:
+            type: string
+        to:
+          type: string
+          description: directory to download the artifacts to; when the entry fans out over a matrix or shards, include {{ index }} to keep each instance's artifacts apart
 
     TestWorkflowStepExecuteTestRef:
       type: object

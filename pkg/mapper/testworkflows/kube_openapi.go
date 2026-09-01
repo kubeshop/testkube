@@ -1002,13 +1002,23 @@ func MapSelectorToAPI(v metav1.LabelSelector) testkube.LabelSelector {
 	}
 }
 
+func MapStepExecuteFetchKubeToAPI(v testworkflowsv1.StepExecuteFetch) testkube.TestWorkflowStepExecuteFetch {
+	return testkube.TestWorkflowStepExecuteFetch{
+		From:  v.From,
+		Paths: v.Paths,
+		To:    v.To,
+	}
+}
+
 func MapStepExecuteTestWorkflowKubeToAPI(v testworkflowsv1.StepExecuteWorkflow) testkube.TestWorkflowStepExecuteTestWorkflowRef {
 	return testkube.TestWorkflowStepExecuteTestWorkflowRef{
 		Name:          v.Name,
+		As:            v.As,
 		Description:   v.Description,
 		ExecutionName: v.ExecutionName,
 		Tarball:       common.MapMap(v.Tarball, MapTarballRequestKubeToAPI),
 		Config:        MapConfigValueKubeToAPI(v.Config),
+		Fetch:         common.MapSlice(v.Fetch, MapStepExecuteFetchKubeToAPI),
 		Count:         MapIntOrStringToBoxedString(v.Count),
 		MaxCount:      MapIntOrStringToBoxedString(v.MaxCount),
 		Matrix:        MapDynamicListMapKubeToAPI(v.Matrix),

@@ -43,6 +43,7 @@ service TestKubeCloudAPI {
 
     // Execution
     rpc SaveExecutionArtifactPresigned(SaveExecutionArtifactPresignedRequest) returns (SaveExecutionArtifactPresignedResponse);
+    rpc ListExecutionArtifactsPresigned(ListExecutionArtifactsPresignedRequest) returns (ListExecutionArtifactsPresignedResponse);
     rpc AppendExecutionReport(AppendExecutionReportRequest) returns (AppendExecutionReportResponse);
 
     // CRD Synchronisation
@@ -617,6 +618,23 @@ message SaveExecutionArtifactPresignedRequest {
 
 message SaveExecutionArtifactPresignedResponse {
   string url = 1;
+}
+
+// ListExecutionArtifactsPresignedRequest asks for read access to the artifacts of
+// another execution, so that a workflow may consume what a workflow it ran produced.
+message ListExecutionArtifactsPresignedRequest {
+  string id = 1; // execution to read the artifacts of
+  repeated string patterns = 2; // glob patterns; empty matches everything
+}
+
+message ExecutionArtifactRef {
+  string path = 1; // path relative to the execution's artifact root
+  string url = 2; // presigned URL to download the artifact from
+  int64 size = 3;
+}
+
+message ListExecutionArtifactsPresignedResponse {
+  repeated ExecutionArtifactRef artifacts = 1;
 }
 
 message AppendExecutionReportRequest {
