@@ -48,7 +48,7 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		}
 
 		// Event matching (v1 triggers also match on deployment-specific causes)
-		if !matchEventOrCause(t.Event, e) {
+		if !matchEventOrCause(t.Events, e) {
 			continue
 		}
 
@@ -234,13 +234,15 @@ func matchInternalSelector(sel *internalTriggerSelector, triggerNamespace string
 	return nameMatched && namespaceMatched
 }
 
-func matchEventOrCause(targetEvent string, event *watcherEvent) bool {
-	if targetEvent == string(event.eventType) {
-		return true
-	}
-	for _, c := range event.causes {
-		if targetEvent == string(c) {
+func matchEventOrCause(targetEvents []string, event *watcherEvent) bool {
+	for _, targetEvent := range targetEvents {
+		if targetEvent == string(event.eventType) {
 			return true
+		}
+		for _, c := range event.causes {
+			if targetEvent == string(c) {
+				return true
+			}
 		}
 	}
 	return false

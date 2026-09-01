@@ -57,8 +57,15 @@ type TestTriggerSpec struct {
 	// ResourceSelector identifies which Kubernetes Objects should be watched
 	// +optional
 	ResourceSelector TestTriggerSelector `json:"resourceSelector,omitempty"`
-	// On which Event for a Resource should an Action be triggered
-	Event TestTriggerEvent `json:"event"`
+	// On which Event for a Resource should an Action be triggered.
+	// Exactly one of Event or Events must be specified.
+	// +optional
+	Event TestTriggerEvent `json:"event,omitempty"`
+	// Events is a list of Events for a Resource on which an Action should be triggered;
+	// the trigger fires when any event in the list occurs.
+	// Exactly one of Event or Events must be specified.
+	// +optional
+	Events []TestTriggerEvent `json:"events,omitempty"`
 	// Match filters which object changes fire the trigger.
 	// Each entry evaluates a dot-path on the watched object (e.g. ".status.currentStepIndex",
 	// ".spec.template.spec.containers.0.image") with an operator. All entries must pass (AND logic).
@@ -93,6 +100,15 @@ type TestTriggerSpec struct {
 	Delay *metav1.Duration `json:"delay,omitempty"`
 	// whether test trigger is disabled
 	Disabled bool `json:"disabled,omitempty"`
+}
+
+// EffectiveEvents normalizes the two event forms to a single list: a set Event
+// is treated as a single-entry list, otherwise the Events list is returned.
+func (s *TestTriggerSpec) EffectiveEvents() []TestTriggerEvent {
+	if s.Event != "" {
+		return []TestTriggerEvent{s.Event}
+	}
+	return s.Events
 }
 
 // TestTriggerResource defines resource for test triggers

@@ -229,7 +229,14 @@ func (r *TestWorkflowResult) Equal(r2 *TestWorkflowResult) bool {
 }
 
 func (r *TestWorkflowResult) Fatal(err error, aborted bool, ts time.Time) {
-	r.Initialization.ErrorMessage = err.Error()
+	if r.Initialization == nil {
+		r.Initialization = &TestWorkflowStepResult{}
+	}
+	if err != nil {
+		r.Initialization.ErrorMessage = err.Error()
+	} else if r.Initialization.ErrorMessage == "" {
+		r.Initialization.ErrorMessage = "fatal error without details"
+	}
 	r.Status = common.Ptr(FAILED_TestWorkflowStatus)
 	r.PredictedStatus = r.Status
 	if aborted {

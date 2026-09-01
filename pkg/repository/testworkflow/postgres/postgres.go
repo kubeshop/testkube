@@ -1777,6 +1777,13 @@ func (r *PostgresRepository) GetTestWorkflowMetrics(ctx context.Context, name st
 			StartTime:   fromPgTimestamp(row.StartTime),
 			RunnerId:    fromPgText(row.RunnerID),
 		}
+		if len(row.SilentMode) > 0 {
+			silentMode, err := fromJSONB[testkube.SilentMode](row.SilentMode)
+			if err != nil {
+				return metrics, err
+			}
+			executions[i].SilentMode = silentMode
+		}
 	}
 
 	metrics = common.CalculateMetrics(executions)
@@ -1788,12 +1795,13 @@ func (r *PostgresRepository) GetTestWorkflowMetrics(ctx context.Context, name st
 }
 
 // GetPreviousFinishedState gets previous finished state
-func (r *PostgresRepository) GetPreviousFinishedState(ctx context.Context, testWorkflowName string, date time.Time) (testkube.TestWorkflowStatus, error) {
+func (r *PostgresRepository) GetPreviousFinishedState(ctx context.Context, testWorkflowName string, date time.Time, opts testworkflow.GetPreviousFinishedStateOptions) (testkube.TestWorkflowStatus, error) {
 	status, err := r.queries.GetPreviousFinishedState(ctx, sqlc.GetPreviousFinishedStateParams{
-		WorkflowName:   testWorkflowName,
-		Date:           toPgTimestamp(date),
-		OrganizationID: r.organizationID,
-		EnvironmentID:  r.environmentID,
+		WorkflowName:                testWorkflowName,
+		Date:                        toPgTimestamp(date),
+		OrganizationID:              r.organizationID,
+		EnvironmentID:               r.environmentID,
+		SkipSilentWebhookExecutions: opts.SkipSilentWebhookExecutions,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

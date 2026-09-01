@@ -106,6 +106,7 @@ func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 			return s.ClientError(c, errPrefix, errors.New("matchExpressions are not supported"))
 		}
 
+		var deleteErr error
 		workflows := make([]testkube.TestWorkflow, 0)
 		testWorkflowNames := c.Query("testWorkflowNames")
 		if testWorkflowNames != "" {
@@ -117,6 +118,18 @@ func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 				}
 				workflows = append(workflows, *workflow)
 			}
+
+			deleted := make([]testkube.TestWorkflow, 0, len(workflows))
+			for _, workflow := range workflows {
+				err = s.TestWorkflowsClient.Delete(ctx, environmentId, workflow.Name)
+				s.Metrics.IncDeleteTestWorkflow(err)
+				if err != nil {
+					// stop deleting, but still clean up executions for what is already gone
+					deleteErr, workflows = err, deleted
+					break
+				}
+				deleted = append(deleted, workflow)
+			}
 		} else {
 			workflows, err = s.TestWorkflowsClient.List(ctx, environmentId, testworkflowclient.ListOptions{
 				Labels: labelSelector.MatchLabels,
@@ -124,17 +137,15 @@ func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 			if err != nil {
 				return s.BadGateway(c, errPrefix, "client problem", err)
 			}
-		}
 
-		// Delete
-		_, err = s.TestWorkflowsClient.DeleteByLabels(ctx, environmentId, labelSelector.MatchLabels)
-		if err != nil {
-			return s.ClientError(c, errPrefix, err)
-		}
+			_, err = s.TestWorkflowsClient.DeleteByLabels(ctx, environmentId, labelSelector.MatchLabels)
+			if err != nil {
+				return s.ClientError(c, errPrefix, err)
+			}
 
-		// Mark as deleted
-		for range workflows {
-			s.Metrics.IncDeleteTestWorkflow(err)
+			for range workflows {
+				s.Metrics.IncDeleteTestWorkflow(err)
+			}
 		}
 
 		// Delete the executions
@@ -152,6 +163,10 @@ func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 			if err != nil {
 				return s.ClientError(c, "deleting executions", err)
 			}
+		}
+
+		if deleteErr != nil {
+			return s.ClientError(c, errPrefix, deleteErr)
 		}
 
 		return c.SendStatus(http.StatusNoContent)
@@ -481,7 +496,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 
 		var scheduleExecution cloud.ScheduleExecution
 		if request.Target != nil {
-			target := &cloud.ExecutionTarget{Replicate: request.Target.Replicate}
+			target := commonmapper.MapTargetApiToGrpc(request.Target)
 			if request.Target.Match != nil {
 				target.Match = make(map[string]*cloud.ExecutionTargetLabels)
 				for k, v := range request.Target.Match {
@@ -574,7 +589,8 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
 		ctx := c.Context()
 		executionID := c.Params("executionID")
-		s.Log.Debugw("rerunning test workflow execution", "id", executionID)
+		latest := c.QueryBool("latest")
+		s.Log.Debugw("rerunning test workflow execution", "id", executionID, "latest", latest)
 
 		errPrefix := "failed to rerun test workflow execution"
 
@@ -590,14 +606,36 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			return s.ClientError(c, errPrefix, err)
 		}
 
-		if execution.ResolvedWorkflow == nil {
-			return s.ClientError(c, errPrefix, errors.New("can't find resolved workflow spec"))
-		}
+		// By default reuse the resolved snapshot from the original execution.
+		// When latest=true, omit it so the scheduler loads and resolves the current workflow definition.
+		var resolvedWorkflow []byte
+		var workflow *testkube.TestWorkflow
+		if latest {
+			name := ""
+			if execution.Workflow != nil {
+				name = execution.Workflow.Name
+			}
+			if name == "" && execution.ResolvedWorkflow != nil {
+				name = execution.ResolvedWorkflow.Name
+			}
+			if name == "" {
+				return s.ClientError(c, errPrefix, errors.New("can't find workflow name"))
+			}
 
-		name := execution.ResolvedWorkflow.Name
-		workflow, err := json.Marshal(execution.ResolvedWorkflow)
-		if err != nil {
-			return s.ClientError(c, errPrefix, err)
+			workflow, err = s.TestWorkflowsClient.Get(ctx, s.getEnvironmentId(), name)
+			if err != nil {
+				return s.ClientError(c, errPrefix, err)
+			}
+		} else {
+			if execution.ResolvedWorkflow == nil {
+				return s.ClientError(c, errPrefix, errors.New("can't find resolved workflow spec"))
+			}
+			workflow = execution.ResolvedWorkflow
+
+			resolvedWorkflow, err = json.Marshal(workflow)
+			if err != nil {
+				return s.ClientError(c, errPrefix, err)
+			}
 		}
 
 		// Load the execution request
@@ -626,17 +664,15 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 
 		// Check if workflow is silent and activate SilentMode accordingly
 		var silentMode *cloud.SilentMode
-		if execution.ResolvedWorkflow != nil {
-			// Check if workflow has silent set to true, and if so, activate SilentMode with all fields to true
-			// This overrides any SilentMode settings from the request (CLI flags)
-			if testworkflowutils.IsWorkflowSilent(execution.ResolvedWorkflow) {
-				silentMode = &cloud.SilentMode{
-					Webhooks: true,
-					Insights: true,
-					Health:   true,
-					Metrics:  true,
-					Cdevents: true,
-				}
+		// Check if workflow has silent set to true, and if so, activate SilentMode with all fields to true
+		// This overrides any SilentMode settings from the request (CLI flags)
+		if testworkflowutils.IsWorkflowSilent(workflow) {
+			silentMode = &cloud.SilentMode{
+				Webhooks: true,
+				Insights: true,
+				Health:   true,
+				Metrics:  true,
+				Cdevents: true,
 			}
 		}
 
@@ -648,7 +684,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 
 		var scheduleExecution cloud.ScheduleExecution
 		if request.Target != nil {
-			target := &cloud.ExecutionTarget{Replicate: request.Target.Replicate}
+			target := commonmapper.MapTargetApiToGrpc(request.Target)
 			if request.Target.Match != nil {
 				target.Match = make(map[string]*cloud.ExecutionTargetLabels)
 				for k, v := range request.Target.Match {
@@ -666,7 +702,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			scheduleExecution.Targets = []*cloud.ExecutionTarget{target}
 		}
 
-		scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: name}
+		scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: workflow.Name}
 		scheduleExecution.Config = request.Config
 		if request.Runtime != nil && len(request.Runtime.Variables) > 0 {
 			scheduleExecution.Runtime = &cloud.TestWorkflowRuntime{
@@ -680,7 +716,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			RunningContext:     runningContext,
 			User:               user,
 			ExecutionReference: &executionID,
-			ResolvedWorkflow:   workflow,
+			ResolvedWorkflow:   resolvedWorkflow,
 			SilentMode:         silentMode,
 		})
 
@@ -688,7 +724,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			return s.InternalError(c, errPrefix, "execution error", err)
 		}
 
-		s.Log.Debugw("rerunning test workflow execution", "id", executionID)
+		s.Log.Debugw("rerunning test workflow execution", "id", executionID, "latest", latest)
 		if len(results) != 0 {
 			return c.JSON(results[0])
 		}

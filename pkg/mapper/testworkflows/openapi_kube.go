@@ -256,6 +256,24 @@ func MapGitAuthTypeAPIToKube(v *testkube.ContentGitAuthType) testsv3.GitAuthType
 	return testsv3.GitAuthType(*v)
 }
 
+func MapGitVerbosityAPIToKube(v *testkube.ContentGitVerbosity) testworkflowsv1.ContentGitVerbosity {
+	if v == nil {
+		return ""
+	}
+	return testworkflowsv1.ContentGitVerbosity(*v)
+}
+
+func MapContentGitRetryAPIToKube(v testkube.TestWorkflowContentGitRetry) testworkflowsv1.ContentGitRetry {
+	var count *int32
+	if v.Count > 0 {
+		count = common.Ptr(v.Count)
+	}
+	return testworkflowsv1.ContentGitRetry{
+		Count: count,
+		Delay: v.Delay,
+	}
+}
+
 func MapImagePullPolicyAPIToKube(v *testkube.ImagePullPolicy) corev1.PullPolicy {
 	if v == nil {
 		return ""
@@ -327,6 +345,8 @@ func MapContentGitAPIToKube(v testkube.TestWorkflowContentGit) testworkflowsv1.C
 		MountPath:    v.MountPath,
 		Cone:         v.Cone,
 		Paths:        v.Paths,
+		Verbosity:    MapGitVerbosityAPIToKube(v.Verbosity),
+		Retry:        common.MapPtr(v.Retry, MapContentGitRetryAPIToKube),
 	}
 }
 
@@ -1026,13 +1046,23 @@ func MapSelectorToCRD(v testkube.LabelSelector) metav1.LabelSelector {
 	}
 }
 
+func MapStepExecuteFetchAPIToKube(v testkube.TestWorkflowStepExecuteFetch) testworkflowsv1.StepExecuteFetch {
+	return testworkflowsv1.StepExecuteFetch{
+		From:  v.From,
+		Paths: v.Paths,
+		To:    v.To,
+	}
+}
+
 func MapStepExecuteTestWorkflowAPIToKube(v testkube.TestWorkflowStepExecuteTestWorkflowRef) testworkflowsv1.StepExecuteWorkflow {
 	return testworkflowsv1.StepExecuteWorkflow{
 		Name:          v.Name,
+		As:            v.As,
 		Description:   v.Description,
 		ExecutionName: v.ExecutionName,
 		Tarball:       common.MapMap(v.Tarball, MapTarballRequestAPIToKube),
 		Config:        MapConfigValueAPIToKube(v.Config),
+		Fetch:         common.MapSlice(v.Fetch, MapStepExecuteFetchAPIToKube),
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
 			Count:    MapBoxedStringToIntOrString(v.Count),
 			MaxCount: MapBoxedStringToIntOrString(v.MaxCount),

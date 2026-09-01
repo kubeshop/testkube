@@ -46,6 +46,47 @@ func TestVersioning(t *testing.T) {
 	})
 }
 
+func TestLte(t *testing.T) {
+	t.Run("equal versions in different string forms", func(t *testing.T) {
+		// Regression: "1.0" and "1.0.0" are semantically equal and must be <=.
+		ok, err := Lte("1.0", "1.0.0")
+		assert.NoError(t, err)
+		assert.True(t, ok)
+
+		ok, err = Lte("v1.2.3", "1.2.3")
+		assert.NoError(t, err)
+		assert.True(t, ok)
+	})
+
+	t.Run("strictly less-than", func(t *testing.T) {
+		ok, err := Lte("1.0.0", "1.0.1")
+		assert.NoError(t, err)
+		assert.True(t, ok)
+	})
+
+	t.Run("greater-than is not lte", func(t *testing.T) {
+		ok, err := Lte("2.0.0", "1.9.9")
+		assert.NoError(t, err)
+		assert.False(t, ok)
+	})
+
+	t.Run("invalid version returns error", func(t *testing.T) {
+		_, err := Lte("not-a-version", "1.0.0")
+		assert.Error(t, err)
+	})
+}
+
+func TestGetNewestEmpty(t *testing.T) {
+	t.Run("empty list returns empty string without panicking", func(t *testing.T) {
+		assert.Equal(t, "", GetNewest(nil))
+		assert.Equal(t, "", GetNewest([]string{}))
+	})
+
+	t.Run("no valid versions returns empty string", func(t *testing.T) {
+		assert.Equal(t, "", GetNewest([]string{"not-a-version", "also-bad"}))
+	})
+}
+
 func TestNextPrerelease(t *testing.T) {
 
 	t.Run("beta postfix", func(t *testing.T) {

@@ -68,6 +68,21 @@ func (s *state) SetOutput(ref, name string, value interface{}) {
 	}
 }
 
+// GetOutputsWithPrefix returns the raw JSON of every output whose name starts
+// with the prefix, keyed by the remaining part of the name.
+func (s *state) GetOutputsWithPrefix(prefix string) map[string]string {
+	stateMu.RLock()
+	defer stateMu.RUnlock()
+
+	result := make(map[string]string)
+	for name, value := range s.Output {
+		if strings.HasPrefix(name, prefix) {
+			result[name[len(prefix):]] = value
+		}
+	}
+	return result
+}
+
 func (s *state) GetStep(ref string) *StepData {
 	stateMu.Lock()
 	defer stateMu.Unlock()
@@ -170,6 +185,20 @@ func (s *state) SetCurrentStatus(expression string) {
 	defer stateMu.Unlock()
 
 	s.CurrentStatus = expression
+}
+
+func SetContainerResources(cr testworkflowconfig.ContainerResourceConfig) {
+	// Trigger the load-once so readState (which populates currentState from disk)
+	// runs before this write. Without this, a caller that invokes the setter
+	// before any GetState() call writes into the initial empty currentState,
+	// and a later GetState() call overwrites those fields with the on-disk
+	// contents.
+	_ = GetState()
+
+	stateMu.Lock()
+	defer stateMu.Unlock()
+
+	currentState.ContainerResources = cr
 }
 
 var currentState = &state{

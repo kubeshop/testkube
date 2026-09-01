@@ -6,6 +6,12 @@ import (
 	"github.com/kubeshop/testkube/internal/config"
 )
 
+// hostedRunnerNamePrefix identifies runners that Testkube provisions itself for
+// trial users rather than ones deployed into a user's own infrastructure. The
+// control plane assigns the name at provisioning time; it must stay in sync with
+// naming.HostedRunnerAgentName in testkube-cloud-api.
+const hostedRunnerNamePrefix = "tkcagent_hr_"
+
 // AgentCapabilities extracts a list of capability tags from the agent
 // configuration. These are included in heartbeat and start telemetry events
 // to provide visibility into how the agent is deployed.
@@ -32,6 +38,9 @@ func AgentCapabilities(cfg *config.Config) []string {
 	}
 	if cfg.FloatingRunner {
 		caps = append(caps, "floating-runner")
+	}
+	if strings.HasPrefix(cfg.RunnerName, hostedRunnerNamePrefix) {
+		caps = append(caps, "hosted-runner")
 	}
 	if cfg.EnableK8sControllers {
 		caps = append(caps, "k8s-controllers")

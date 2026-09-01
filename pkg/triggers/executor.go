@@ -10,7 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/util/jsonpath"
 
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
@@ -462,7 +463,7 @@ func (s *Service) mapTargetKubeToGrpcWithEvent(e *watcherEvent, t *internalTrigg
 		return string(data)
 	}
 
-	target := &cloud.ExecutionTarget{}
+	target := &cloud.ExecutionTarget{SchedulerPolicy: string(src.SchedulerPolicy)}
 
 	// Replicate
 	if len(src.Replicate) > 0 {
@@ -553,17 +554,22 @@ func (s *Service) getTestWorkflowsFromInternal(t *internalTrigger) ([]testworkfl
 	}
 
 	if sel.LabelSelector != nil {
-		if len(sel.LabelSelector.MatchExpressions) > 0 {
-			return nil, errors.New("error creating selector from test resource label selector: MatchExpressions not supported")
-		}
-		s.logger.Debugf("trigger service: executor component: fetching TestWorkflow with label %s", sel.LabelSelector.MatchLabels)
-		testWorkflowsList, err := s.testWorkflowsClient.List(context.Background(), s.getEnvironmentId(), testworkflowclient.ListOptions{
-			Labels: sel.LabelSelector.MatchLabels,
-		})
+		s.logger.Debugf("trigger service: executor component: fetching TestWorkflow with label selector matchLabels=%v matchExpressions=%v",
+			sel.LabelSelector.MatchLabels, sel.LabelSelector.MatchExpressions)
+		k8sSelector, err := v1.LabelSelectorAsSelector(sel.LabelSelector)
 		if err != nil {
 			return nil, err
 		}
+		testWorkflowsList, err := s.testWorkflowsClient.List(context.Background(), s.getEnvironmentId(), testworkflowclient.ListOptions{})
+		if err != nil {
+			s.logger.Errorf("failed to list test workflows for trigger labelSelector filtering: %v", err)
+			return nil, err
+		}
 		for i := range testWorkflowsList {
+			workflowLabelSet := labels.Set(testWorkflowsList[i].Labels)
+			if !k8sSelector.Matches(workflowLabelSet) {
+				continue
+			}
 			testWorkflows = append(testWorkflows, *testworkflows.MapAPIToKube(&testWorkflowsList[i]))
 		}
 	}

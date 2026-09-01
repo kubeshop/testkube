@@ -178,24 +178,55 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 		opts.Master.Insecure)
 
 	// override whole URIs usually composed from prefix - host parts
-	if cmd.Flag("agent-uri-override") != nil && cmd.Flags().Changed("agent-uri-override") {
+	if flagChanged(cmd, "agent-uri-override") {
 		uris.WithAgentURI(cmd.Flag("agent-uri-override").Value.String())
 	}
 
-	if cmd.Flag("api-uri-override") != nil && cmd.Flags().Changed("api-uri-override") {
+	if flagChanged(cmd, "api-uri-override") {
 		uris.WithApiURI(cmd.Flag("api-uri-override").Value.String())
+
+		// The composed UI URI points to the SaaS dashboard by default. That
+		// default is wrong when the API URI targets a different control plane.
+		// The CLI cannot derive the dashboard host from the API URI, so it
+		// clears the UI URI instead.
+		if !uiConfigured(cmd, cfg) {
+			uris.WithUiURI("")
+		}
 	}
 
-	if cmd.Flag("ui-uri-override") != nil && cmd.Flags().Changed("ui-uri-override") {
+	if flagChanged(cmd, "ui-uri-override") {
 		uris.WithUiURI(cmd.Flag("ui-uri-override").Value.String())
 	}
 
-	if cmd.Flag("auth-uri-override") != nil && cmd.Flags().Changed("auth-uri-override") {
+	if flagChanged(cmd, "auth-uri-override") {
 		uris.WithAuthURI(cmd.Flag("auth-uri-override").Value.String())
 	}
 
 	opts.Master.URIs = uris
 
+}
+
+// uiConfigured reports whether any input defines the dashboard location.
+// The input can be a UI URI override, a UI prefix, or a root domain,
+// from the command line or from the saved configuration.
+func uiConfigured(cmd *cobra.Command, cfg *config.Data) bool {
+	for _, name := range []string{
+		"ui-uri-override",
+		"ui-prefix",
+		"cloud-ui-prefix",
+		"root-domain",
+		"pro-root-domain",
+		"cloud-root-domain",
+	} {
+		if flagChanged(cmd, name) {
+			return true
+		}
+	}
+	return cfg != nil && (cfg.Master.UiUrlPrefix != "" || cfg.Master.RootDomain != "")
+}
+
+func flagChanged(cmd *cobra.Command, name string) bool {
+	return cmd != nil && cmd.Flag(name) != nil && cmd.Flags().Changed(name)
 }
 
 // ResolveSkipTLS returns the effective skip-TLS value with precedence:

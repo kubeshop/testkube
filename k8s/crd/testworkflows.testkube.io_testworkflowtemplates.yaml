@@ -440,6 +440,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -674,6 +689,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -1032,6 +1054,9 @@ spec:
                             description: workflows to run
                             items:
                               properties:
+                                as:
+                                  description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -1052,6 +1077,28 @@ spec:
                                 executionName:
                                   description: unique execution name to use
                                   type: string
+                                fetch:
+                                  description: instructions for downloading artifacts produced by executed test workflows
+                                  items:
+                                    description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                    properties:
+                                      from:
+                                        description: execution to download the artifacts from, defaults to the one being executed
+                                        type: string
+                                      paths:
+                                        description: artifact paths to download, relative to the artifact root of the execution
+                                        items:
+                                          type: string
+                                        type: array
+                                      to:
+                                        description: |-
+                                          directory to download the artifacts to; when the entry fans out over a matrix or
+                                          shards, include {{ index }} to keep each instance's artifacts apart
+                                        type: string
+                                    required:
+                                      - to
+                                    type: object
+                                  type: array
                                 matrix:
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
@@ -1121,6 +1168,11 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    schedulerPolicy:
+                                      description: SchedulerPolicy controls whether a targeted execution should be created.
+                                      enum:
+                                        - OnlyWhenMatches
+                                      type: string
                                   type: object
                               type: object
                             type: array
@@ -1512,6 +1564,9 @@ spec:
                                 description: workflows to run
                                 items:
                                   properties:
+                                    as:
+                                      description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -1532,6 +1587,28 @@ spec:
                                     executionName:
                                       description: unique execution name to use
                                       type: string
+                                    fetch:
+                                      description: instructions for downloading artifacts produced by executed test workflows
+                                      items:
+                                        description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                        properties:
+                                          from:
+                                            description: execution to download the artifacts from, defaults to the one being executed
+                                            type: string
+                                          paths:
+                                            description: artifact paths to download, relative to the artifact root of the execution
+                                            items:
+                                              type: string
+                                            type: array
+                                          to:
+                                            description: |-
+                                              directory to download the artifacts to; when the entry fans out over a matrix or
+                                              shards, include {{ index }} to keep each instance's artifacts apart
+                                            type: string
+                                        required:
+                                          - to
+                                        type: object
+                                      type: array
                                     matrix:
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
@@ -1601,6 +1678,11 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        schedulerPolicy:
+                                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                                          enum:
+                                            - OnlyWhenMatches
+                                          type: string
                                       type: object
                                   type: object
                                 type: array
@@ -2333,6 +2415,21 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures (default 5, max 20)
+                                          format: int32
+                                          maximum: 20
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -2567,6 +2664,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -3742,6 +3846,21 @@ spec:
                           items:
                             type: string
                           type: array
+                        retry:
+                          description: in-process retry policy for transient git failures during clone
+                          properties:
+                            count:
+                              description: max attempts for transient git failures (default 5, max 20)
+                              format: int32
+                              maximum: 20
+                              minimum: 1
+                              type: integer
+                            delay:
+                              description: |-
+                                base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                May be an expression template; validated after resolution.
+                              type: string
+                          type: object
                         revision:
                           description: branch, commit or a tag name to fetch
                           type: string
@@ -3976,6 +4095,13 @@ spec:
                               type: object
                               x-kubernetes-map-type: atomic
                           type: object
+                        verbosity:
+                          description: logging level for the clone. Omit defaults to verbose.
+                          enum:
+                            - quiet
+                            - normal
+                            - verbose
+                          type: string
                       type: object
                     tarball:
                       description: tarballs to unpack
@@ -4043,6 +4169,11 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              schedulerPolicy:
+                                description: SchedulerPolicy controls whether a targeted execution should be created.
+                                enum:
+                                  - OnlyWhenMatches
+                                type: string
                             type: object
                           timezone:
                             description: cron timezone
@@ -4082,6 +4213,11 @@ spec:
                           items:
                             type: string
                           type: array
+                        schedulerPolicy:
+                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                          enum:
+                            - OnlyWhenMatches
+                          type: string
                       type: object
                   type: object
                 job:
@@ -4558,6 +4694,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -4792,6 +4943,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -5890,6 +6048,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -6124,6 +6297,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -6482,6 +6662,9 @@ spec:
                             description: workflows to run
                             items:
                               properties:
+                                as:
+                                  description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -6502,6 +6685,28 @@ spec:
                                 executionName:
                                   description: unique execution name to use
                                   type: string
+                                fetch:
+                                  description: instructions for downloading artifacts produced by executed test workflows
+                                  items:
+                                    description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                    properties:
+                                      from:
+                                        description: execution to download the artifacts from, defaults to the one being executed
+                                        type: string
+                                      paths:
+                                        description: artifact paths to download, relative to the artifact root of the execution
+                                        items:
+                                          type: string
+                                        type: array
+                                      to:
+                                        description: |-
+                                          directory to download the artifacts to; when the entry fans out over a matrix or
+                                          shards, include {{ index }} to keep each instance's artifacts apart
+                                        type: string
+                                    required:
+                                      - to
+                                    type: object
+                                  type: array
                                 matrix:
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
@@ -6571,6 +6776,11 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    schedulerPolicy:
+                                      description: SchedulerPolicy controls whether a targeted execution should be created.
+                                      enum:
+                                        - OnlyWhenMatches
+                                      type: string
                                   type: object
                               type: object
                             type: array
@@ -6962,6 +7172,9 @@ spec:
                                 description: workflows to run
                                 items:
                                   properties:
+                                    as:
+                                      description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -6982,6 +7195,28 @@ spec:
                                     executionName:
                                       description: unique execution name to use
                                       type: string
+                                    fetch:
+                                      description: instructions for downloading artifacts produced by executed test workflows
+                                      items:
+                                        description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                        properties:
+                                          from:
+                                            description: execution to download the artifacts from, defaults to the one being executed
+                                            type: string
+                                          paths:
+                                            description: artifact paths to download, relative to the artifact root of the execution
+                                            items:
+                                              type: string
+                                            type: array
+                                          to:
+                                            description: |-
+                                              directory to download the artifacts to; when the entry fans out over a matrix or
+                                              shards, include {{ index }} to keep each instance's artifacts apart
+                                            type: string
+                                        required:
+                                          - to
+                                        type: object
+                                      type: array
                                     matrix:
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
@@ -7051,6 +7286,11 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        schedulerPolicy:
+                                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                                          enum:
+                                            - OnlyWhenMatches
+                                          type: string
                                       type: object
                                   type: object
                                 type: array
@@ -7783,6 +8023,21 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures (default 5, max 20)
+                                          format: int32
+                                          maximum: 20
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -8017,6 +8272,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -9132,6 +9394,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -9366,6 +9643,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -9724,6 +10008,9 @@ spec:
                             description: workflows to run
                             items:
                               properties:
+                                as:
+                                  description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -9744,6 +10031,28 @@ spec:
                                 executionName:
                                   description: unique execution name to use
                                   type: string
+                                fetch:
+                                  description: instructions for downloading artifacts produced by executed test workflows
+                                  items:
+                                    description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                    properties:
+                                      from:
+                                        description: execution to download the artifacts from, defaults to the one being executed
+                                        type: string
+                                      paths:
+                                        description: artifact paths to download, relative to the artifact root of the execution
+                                        items:
+                                          type: string
+                                        type: array
+                                      to:
+                                        description: |-
+                                          directory to download the artifacts to; when the entry fans out over a matrix or
+                                          shards, include {{ index }} to keep each instance's artifacts apart
+                                        type: string
+                                    required:
+                                      - to
+                                    type: object
+                                  type: array
                                 matrix:
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
@@ -9813,6 +10122,11 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    schedulerPolicy:
+                                      description: SchedulerPolicy controls whether a targeted execution should be created.
+                                      enum:
+                                        - OnlyWhenMatches
+                                      type: string
                                   type: object
                               type: object
                             type: array
@@ -10204,6 +10518,9 @@ spec:
                                 description: workflows to run
                                 items:
                                   properties:
+                                    as:
+                                      description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -10224,6 +10541,28 @@ spec:
                                     executionName:
                                       description: unique execution name to use
                                       type: string
+                                    fetch:
+                                      description: instructions for downloading artifacts produced by executed test workflows
+                                      items:
+                                        description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                        properties:
+                                          from:
+                                            description: execution to download the artifacts from, defaults to the one being executed
+                                            type: string
+                                          paths:
+                                            description: artifact paths to download, relative to the artifact root of the execution
+                                            items:
+                                              type: string
+                                            type: array
+                                          to:
+                                            description: |-
+                                              directory to download the artifacts to; when the entry fans out over a matrix or
+                                              shards, include {{ index }} to keep each instance's artifacts apart
+                                            type: string
+                                        required:
+                                          - to
+                                        type: object
+                                      type: array
                                     matrix:
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
@@ -10293,6 +10632,11 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        schedulerPolicy:
+                                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                                          enum:
+                                            - OnlyWhenMatches
+                                          type: string
                                       type: object
                                   type: object
                                 type: array
@@ -11025,6 +11369,21 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures (default 5, max 20)
+                                          format: int32
+                                          maximum: 20
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -11259,6 +11618,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack

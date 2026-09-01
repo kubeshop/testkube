@@ -111,7 +111,7 @@ type TestWorkflowAPI interface {
 	GetTestWorkflow(id string) (testkube.TestWorkflow, error)
 	GetTestWorkflowWithExecution(id string) (testkube.TestWorkflowWithExecution, error)
 	ListTestWorkflows(selector string) (testkube.TestWorkflows, error)
-	ListTestWorkflowWithExecutions(selector string) (testkube.TestWorkflowWithExecutions, error)
+	ListTestWorkflowWithExecutions(selector string, limit int) (testkube.TestWorkflowWithExecutions, error)
 	DeleteTestWorkflows(selector string) error
 	CreateTestWorkflow(workflow testkube.TestWorkflow) (testkube.TestWorkflow, error)
 	UpdateTestWorkflow(workflow testkube.TestWorkflow) (testkube.TestWorkflow, error)
@@ -139,7 +139,7 @@ type TestWorkflowExecutionAPI interface {
 	GetTestWorkflowExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadTestWorkflowArtifact(executionID, fileName, destination string) (artifact string, err error)
 	DownloadTestWorkflowArtifactArchive(executionID, destination string, masks []string) (archive string, err error)
-	ReRunTestWorkflowExecution(workflow string, id string, runningContext *testkube.TestWorkflowRunningContext) (testkube.TestWorkflowExecution, error)
+	ReRunTestWorkflowExecution(workflow string, id string, runningContext *testkube.TestWorkflowRunningContext, latest bool) (testkube.TestWorkflowExecution, error)
 	UpdateTestWorkflowExecutionTags(executionID string, tags map[string]string) error
 	ValidateTestWorkflow(body []byte) error
 	ExportExecutions(destination string, since string) (fileName string, err error)

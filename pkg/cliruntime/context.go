@@ -15,6 +15,43 @@ import (
 // system, Docker container, or Kubernetes pod).
 const CliRunContextLocal = "others|local"
 
+// AIToolNone is the value returned by DetectAITool when the CLI was not invoked
+// by a recognized AI coding agent.
+const AIToolNone = ""
+
+// DetectAITool returns a stable identifier for the AI coding agent that invoked
+// the CLI, or AIToolNone when none is detected. Detection relies solely on
+// environment variables the agents set in the subprocesses they spawn, mirroring
+// the env-var approach used by CliRunContext.
+//
+// Signals (checked in order):
+//   - claude-code: CLAUDECODE (non-empty)
+//   - codex:       CODEX_SANDBOX or CODEX_SANDBOX_NETWORK_DISABLED (present)
+//   - cursor:      CURSOR_TRACE_ID (non-empty) or CURSOR_AGENT (present)
+//   - gemini-cli:  GEMINI_CLI (present)
+func DetectAITool() string {
+	if value := os.Getenv("CLAUDECODE"); value != "" {
+		return "claude-code"
+	}
+	if _, ok := os.LookupEnv("CODEX_SANDBOX"); ok {
+		return "codex"
+	}
+	if _, ok := os.LookupEnv("CODEX_SANDBOX_NETWORK_DISABLED"); ok {
+		return "codex"
+	}
+	if value := os.Getenv("CURSOR_TRACE_ID"); value != "" {
+		return "cursor"
+	}
+	if _, ok := os.LookupEnv("CURSOR_AGENT"); ok {
+		return "cursor"
+	}
+	if _, ok := os.LookupEnv("GEMINI_CLI"); ok {
+		return "gemini-cli"
+	}
+
+	return AIToolNone
+}
+
 // IsRunningInDocker detects whether the current process is running inside a
 // Docker (or compatible OCI) container.
 //

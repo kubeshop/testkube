@@ -5,6 +5,7 @@ metadata:
   labels:
     core-tests: workflows-suite
     type: workflow-suite
+    dev-quality-gate: "true"
 description: "UI examples"
 spec:
   container:

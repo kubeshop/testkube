@@ -9,6 +9,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/runtime"
+	"github.com/kubeshop/testkube/pkg/executiondata"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
@@ -74,6 +75,13 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 	// Ensure the command is not empty after expansion
 	if len(command) == 0 {
 		output.ExitErrorf(constants.CodeInputError, "command is required")
+	}
+
+	// An output another workflow withheld resolves to a marker instead of the value it
+	// was meant to carry. Running the command would hand the marker to the tool as if
+	// it were that value, so fail while the cause is still visible.
+	if markers := executiondata.WithheldMarkersIn(command); len(markers) > 0 {
+		output.ExitErrorf(constants.CodeInputError, "%s", executiondata.WithheldError("the command of this step", markers).Error())
 	}
 
 	// Run the operation with context

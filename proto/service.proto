@@ -43,6 +43,7 @@ service TestKubeCloudAPI {
 
     // Execution
     rpc SaveExecutionArtifactPresigned(SaveExecutionArtifactPresignedRequest) returns (SaveExecutionArtifactPresignedResponse);
+    rpc ListExecutionArtifactsPresigned(ListExecutionArtifactsPresignedRequest) returns (ListExecutionArtifactsPresignedResponse);
     rpc AppendExecutionReport(AppendExecutionReportRequest) returns (AppendExecutionReportResponse);
 
     // CRD Synchronisation
@@ -346,6 +347,7 @@ message ExecutionTarget {
   map<string, ExecutionTargetLabels> match = 1; // runner labels to filter by
   map<string, ExecutionTargetLabels> not = 2; // runner labels to filter against
   repeated string replicate = 3; // runner labels to replicate by
+  string scheduler_policy = 4; // policy controlling whether a targeted execution is created
 }
 
 enum RunningContextType {
@@ -357,6 +359,7 @@ enum RunningContextType {
   TESTTRIGGER = 5;
   KUBERNETESOBJECT = 6;
   EXECUTION = 7;
+  QUALITYLOOP = 8;
 }
 
 message RunningContext {
@@ -615,6 +618,23 @@ message SaveExecutionArtifactPresignedRequest {
 
 message SaveExecutionArtifactPresignedResponse {
   string url = 1;
+}
+
+// ListExecutionArtifactsPresignedRequest asks for read access to the artifacts of
+// another execution, so that a workflow may consume what a workflow it ran produced.
+message ListExecutionArtifactsPresignedRequest {
+  string id = 1; // execution to read the artifacts of
+  repeated string patterns = 2; // glob patterns; empty matches everything
+}
+
+message ExecutionArtifactRef {
+  string path = 1; // path relative to the execution's artifact root
+  string url = 2; // presigned URL to download the artifact from
+  int64 size = 3;
+}
+
+message ListExecutionArtifactsPresignedResponse {
+  repeated ExecutionArtifactRef artifacts = 1;
 }
 
 message AppendExecutionReportRequest {

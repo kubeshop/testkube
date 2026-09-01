@@ -55,6 +55,8 @@ Controllers watch Kubernetes Custom Resource Definitions (CRDs) and trigger acti
 
 Controllers are enabled via `ENABLE_K8S_CONTROLLERS=true` and use [controller-runtime](https://github.com/kubernetes-sigs/controller-runtime).
 
+**GitOps sync controllers** (Connected Mode only): [`internal/sync/controller/`](internal/sync/controller/) holds a second set of reconcilers — one each for `TestWorkflow`, `TestWorkflowTemplate`, `TestTrigger`, `WorkflowTrigger`, `Webhook`, and `WebhookTemplate` — that push Kubernetes resources into the Control Plane over the gRPC `SyncService` ([`internal/sync/grpc/`](internal/sync/grpc/)). They are registered separately in `cmd/api-server/main.go` behind `GITOPS_KUBERNETES_TO_CLOUD_ENABLED`. Because the Control Plane grants exclusive ownership of a synced resource to a single GitOps agent, a sync it rejects as an ownership conflict is returned as a `reconcile.TerminalError` instead of being retried, so one agent cannot overwrite another's resources and cannot spin on a conflict it has no way to resolve. See [`AGENTS.md`](AGENTS.md) for the full ownership contract.
+
 ### 3. TestWorkflow Execution Runtime
 
 Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows) as an abstraction layer for running any kind of test inside Kubernetes.
@@ -198,6 +200,7 @@ Telemetry collects usage analytics to help improve the product. It can be disabl
 
 - Sends a `testkube_api_start` event on startup and a `testkube_api_heartbeat` event every hour
 - Both events include the detected cluster type and agent capabilities
+- Capability tags come from [`cmd/api-server/services/capabilities.go`](cmd/api-server/services/capabilities.go) and cover the agent persona, connection mode, enabled features, and whether this is a Testkube-provisioned hosted runner (`hosted-runner`) rather than a user-deployed one
 
 ### 9. Kubernetes Custom Resource Definitions (CRDs)
 
@@ -247,6 +250,7 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
   - **Definition**: [`api/testtriggers/v1/testtrigger_types.go`](api/testtriggers/v1/testtrigger_types.go)
   - **Purpose**: Automatically triggers tests/workflows based on Kubernetes events
   - **Features**: Watches Pods, Deployments, Services, etc. and triggers executions; supports git-content based triggers reconciled by the git informer
+  - **Event forms**: `spec.event` (single) and `spec.events` (list) are mutually exclusive; validation in `api/testtriggers/v1/validation.go` enforces exactly one, and consumers normalize both forms through `EffectiveEvents()` (CRD spec and API model each expose it) — new event consumers must use the normalized list, never read `spec.event` directly
   - **Leader behavior**: Git informer reconciliation is registered as a leader-coordinated task in `cmd/api-server/main.go`, so only the elected leader performs git polling/pulls
 
 #### Deprecated CRDs
@@ -291,6 +295,9 @@ The Helm chart deploys:
 The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kubectl plugin that provides a command-line interface for managing tests, workflows, and executions.
 
 ### Architecture
+
+**Completion Command**: [`cmd/kubectl-testkube/commands/completion.go`] (custom implementation that generates zsh completion under the actual binary name `kubectl-testkube` instead of `testkube` to ensure proper shell integration)
+
 
 **Command Structure**: [`cmd/kubectl-testkube/commands/`](cmd/kubectl-testkube/commands/)
 

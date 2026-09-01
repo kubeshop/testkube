@@ -159,7 +159,7 @@ func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType string,
 func sendAttemptTelemetry(cmd *cobra.Command, clientCfg config.Data) {
 	if clientCfg.TelemetryEnabled {
 		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `testkube disable telemetry`")
-		out, err := telemetry.SendCmdAttemptEvent(cmd, common.Version)
+		out, err := telemetry.SendCmdAttemptEvent(cmd, common.Version, common.TelemetryUserID(cmd, &clientCfg))
 		if ui.Verbose && err != nil {
 			ui.Err(err)
 		}

@@ -85,6 +85,7 @@ spec:
                                 - testworkflow
                                 - testworkflowexecution
                                 - program
+                                - gitintegration
                               type: string
                           required:
                             - type
@@ -135,6 +136,11 @@ spec:
                           items:
                             type: string
                           type: array
+                        schedulerPolicy:
+                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                          enum:
+                            - OnlyWhenMatches
+                          type: string
                       type: object
                     testWorkflowExecutionName:
                       description: test workflow execution name started the test workflow execution
@@ -459,6 +465,7 @@ spec:
                                 - testworkflow
                                 - testworkflowexecution
                                 - program
+                                - gitintegration
                               type: string
                           required:
                             - type

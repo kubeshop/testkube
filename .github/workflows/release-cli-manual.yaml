@@ -16,7 +16,7 @@ permissions:
 
 env:
   TESTKUBE_CHOCO_REPO: https://chocolatey.kubeshop.io/
-  ALPINE_IMAGE: alpine:3.23.3
+  ALPINE_IMAGE: alpine:3.24.1
   BUSYBOX_IMAGE: busybox:1.36.1-musl
 
 jobs:
@@ -78,7 +78,7 @@ jobs:
           BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
           DOCKER_IMAGE_TAG: ${{steps.tag.outputs.tag}}
       - name: Upload Artifacts
-        uses: actions/upload-artifact@0c366cb4fc8897159c94880f94b55bc716ad6a66 # master as of 2026-07-15
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
         with:
           name: testkube_${{ matrix.name }}
           path: |
@@ -104,9 +104,10 @@ jobs:
           permission-contents: write
       - name: Get GitHub App User ID
         id: get-user-id
-        run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+        run: echo "user-id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -115,23 +116,27 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           persist-credentials: false
       - name: Configure git
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          USER_ID: ${{ steps.get-user-id.outputs.user-id }}
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
-          git config --global user.email '${{ steps.get-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
-          git config --global url."https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/".insteadOf "https://github.com/"
-      - uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+          git config --global user.name "${APP_SLUG}[bot]"
+          git config --global user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+          git config --global url."https://x-access-token:${APP_TOKEN}@github.com/".insteadOf "https://github.com/"
+      - uses: anchore/sbom-action/download-syft@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
       - name: Download Artifacts for Linux
-        uses: actions/download-artifact@2a5974104b6d5dbdb2f9468a3e54da3bdd241578 # master as of 2026-07-15
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: testkube_linux
           path: linux
       - name: Download Artifacts for Windows
-        uses: actions/download-artifact@2a5974104b6d5dbdb2f9468a3e54da3bdd241578 # master as of 2026-07-15
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: testkube_windows
           path: windows
       - name: Download Artifacts for Darwin
-        uses: actions/download-artifact@2a5974104b6d5dbdb2f9468a3e54da3bdd241578 # master as of 2026-07-15
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: testkube_darwin
           path: darwin
@@ -156,8 +161,9 @@ jobs:
         id: release-check
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
-          if gh release view "${{ steps.tag.outputs.tag }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "skip_publish=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip_publish=false" >> "$GITHUB_OUTPUT"

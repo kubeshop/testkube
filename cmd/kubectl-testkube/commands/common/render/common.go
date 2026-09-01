@@ -73,6 +73,12 @@ func PrintTestWorkflowExecutionURIs(execution *testkube.TestWorkflowExecution) {
 		return
 	}
 
+	// An empty UI URI means the context has no known dashboard location,
+	// for example an on-prem context created with --api-uri-override only.
+	if cfg.CloudContext.UiUri == "" {
+		return
+	}
+
 	if execution.Result == nil || !execution.Result.IsFinished() {
 		return
 	}
