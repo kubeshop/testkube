@@ -104,7 +104,7 @@ func UnpackTarball(dirPath string, stream io.Reader) error {
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			err := os.Mkdir(filePath, 0755)
+			err := os.MkdirAll(filePath, 0755)
 			if err != nil {
 				return errors.Wrapf(err, "%s: create directory", filePath)
 			}
@@ -127,6 +127,11 @@ func UnpackTarball(dirPath string, stream io.Reader) error {
 			err := os.MkdirAll(filepath.Dir(filePath), 0755)
 			if err != nil {
 				return errors.Wrapf(err, "%s: create directory tree", filePath)
+			}
+			if _, statErr := os.Lstat(filePath); statErr == nil {
+				if rmErr := os.Remove(filePath); rmErr != nil {
+					return errors.Wrapf(rmErr, "%s: replace existing entry before symlink", filePath)
+				}
 			}
 			err = os.Symlink(header.Linkname, filePath)
 			if err != nil {
