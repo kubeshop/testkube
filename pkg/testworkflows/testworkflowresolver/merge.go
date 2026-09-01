@@ -9,13 +9,53 @@
 package testworkflowresolver
 
 import (
+	"fmt"
 	"maps"
+	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 )
+
+func checkTemplatePodVolumeConflict(existing, incoming *testworkflowsv1.PodConfig, tplName string) error {
+	if existing == nil || incoming == nil {
+		return nil
+	}
+	existingByName := make(map[string]corev1.Volume, len(existing.Volumes))
+	for _, v := range existing.Volumes {
+		existingByName[v.Name] = v
+	}
+	for _, iv := range incoming.Volumes {
+		ev, ok := existingByName[iv.Name]
+		if !ok {
+			continue
+		}
+		if reflect.DeepEqual(ev.VolumeSource, iv.VolumeSource) {
+			continue
+		}
+		return fmt.Errorf("template %q declares pod.volume %q that conflicts with an existing declaration", tplName, iv.Name)
+	}
+	return nil
+}
+
+func dedupeVolumesByName(vs []corev1.Volume) []corev1.Volume {
+	if len(vs) < 2 {
+		return vs
+	}
+	idx := make(map[string]int, len(vs))
+	out := make([]corev1.Volume, 0, len(vs))
+	for _, v := range vs {
+		if i, ok := idx[v.Name]; ok {
+			out[i] = v
+			continue
+		}
+		idx[v.Name] = len(out)
+		out = append(out, v)
+	}
+	return out
+}
 
 func MergePodConfig(dst, include *testworkflowsv1.PodConfig) *testworkflowsv1.PodConfig {
 	if dst == nil {
