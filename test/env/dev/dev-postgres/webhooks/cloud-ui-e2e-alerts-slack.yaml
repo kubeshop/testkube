@@ -25,5 +25,5 @@ spec:
   selector: core-tests=cloud-ui-e2e
   payloadTemplate: |-
     {
-      "text": ":large_green_circle: *Cloud UI E2E {{ .TestWorkflowExecution.Workflow.Name }} recovered*\n*Logs*: {{ .ExecutionURL }}"
+      "text": ":large_green_circle: *Cloud UI E2E {{ .TestWorkflowExecution.Workflow.Name }} recovered on .dev Postgres*\n*Logs*: {{ .ExecutionURL }}"
     }
