@@ -10,7 +10,7 @@ spec:
   selector: environment=prod
   payloadTemplate: |-
     {
-      "text": ":alert: Testkube prod-healthcheck failed \n *Name*: {{.TestWorkflowExecution.Name}} \n *Status*: {{ .Type_ }} \n *Logs*: {{ .ExecutionURL }}"
+      "text": ":alert: *Prod healthcheck {{ .TestWorkflowExecution.Workflow.Name }} failed*\n*Execution*: {{.TestWorkflowExecution.Name}}\n*Status*: {{ .Type_ }}\n*Possible Severity*: Critical\n*Possible Impact*: Production connectivity issue, production agent/control plane issue, or an execution issue in a `.dev` environment.\n*Logs*: {{ .ExecutionURL }}"
     }
 
 ---
@@ -25,5 +25,5 @@ spec:
   selector: environment=prod
   payloadTemplate: |-
     {
-      "text": ":large_green_circle: Testkube prod-healthcheck - *back to normal* \n *Name*: {{.TestWorkflowExecution.Name}} \n *Status*: {{ .Type_ }} \n *Logs*: {{ .ExecutionURL }}"
+      "text": ":large_green_circle: *Prod healthcheck {{ .TestWorkflowExecution.Workflow.Name }} recovered*\n*Logs*: {{ .ExecutionURL }}"
     }
