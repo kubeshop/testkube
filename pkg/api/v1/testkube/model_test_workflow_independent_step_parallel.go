@@ -32,7 +32,7 @@ type TestWorkflowIndependentStepParallel struct {
 	Run       *TestWorkflowStepRun       `json:"run,omitempty"`
 	Execute   *TestWorkflowStepExecute   `json:"execute,omitempty"`
 	Artifacts *TestWorkflowStepArtifacts `json:"artifacts,omitempty"`
-	Cache      *TestWorkflowStepCache       `json:"cache,omitempty"`
+	Cache     *TestWorkflowStepCache     `json:"cache,omitempty"`
 	// how many resources could be scheduled in parallel
 	Parallelism int32 `json:"parallelism,omitempty"`
 	// abort remaining parallel workers on first failure
