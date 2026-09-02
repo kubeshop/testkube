@@ -176,3 +176,47 @@ func (t *rewritingTransport) RoundTrip(r *http.Request) (*http.Response, error) 
 	}
 	return resp, nil
 }
+
+func TestBuildLifecycleRules(t *testing.T) {
+	t.Run("no policy leaves the bucket alone", func(t *testing.T) {
+		// An empty rule set means SetExpirationPolicies makes no call at all, so a
+		// lifecycle an operator configured by hand is not cleared.
+		assert.Empty(t, buildLifecycleRules(ExpirationPolicy{}))
+		assert.Empty(t, buildLifecycleRules(ExpirationPolicy{CachePrefix: ".tkcache/v1"}))
+	})
+
+	t.Run("bucket expiration only", func(t *testing.T) {
+		rules := buildLifecycleRules(ExpirationPolicy{Days: 30})
+
+		require.Len(t, rules, 1)
+		assert.Equal(t, "expiration_policy", rules[0].ID)
+		assert.Equal(t, "Enabled", rules[0].Status)
+		assert.Equal(t, 30, int(rules[0].Expiration.Days))
+		// Unfiltered, so it still covers the whole bucket as it always did.
+		assert.Empty(t, rules[0].RuleFilter.Prefix)
+	})
+
+	t.Run("cache expiration only", func(t *testing.T) {
+		rules := buildLifecycleRules(ExpirationPolicy{CachePrefix: ".tkcache/v1", CacheDays: 7})
+
+		require.Len(t, rules, 1)
+		assert.Equal(t, "cache_expiration_policy", rules[0].ID)
+		assert.Equal(t, ".tkcache/v1", rules[0].RuleFilter.Prefix)
+		assert.Equal(t, 7, int(rules[0].Expiration.Days))
+	})
+
+	t.Run("cache expiration needs a prefix", func(t *testing.T) {
+		// Without one the rule would expire the entire bucket on the cache schedule.
+		assert.Empty(t, buildLifecycleRules(ExpirationPolicy{CacheDays: 7}))
+	})
+
+	t.Run("both rules travel together", func(t *testing.T) {
+		// SetBucketLifecycle replaces the configuration wholesale, so the bucket-wide
+		// rule has to be present in the same call or setting a cache TTL would drop it.
+		rules := buildLifecycleRules(ExpirationPolicy{Days: 30, CachePrefix: ".tkcache/v1", CacheDays: 7})
+
+		require.Len(t, rules, 2)
+		assert.Equal(t, "expiration_policy", rules[0].ID)
+		assert.Equal(t, "cache_expiration_policy", rules[1].ID)
+	})
+}

@@ -250,6 +250,21 @@ func (mr *MockClientMockRecorder) ListFilesFromBucket(ctx, bucket, bucketFolder 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFilesFromBucket", reflect.TypeOf((*MockClient)(nil).ListFilesFromBucket), ctx, bucket, bucketFolder)
 }
 
+// ListObjectsFromBucket mocks base method.
+func (m *MockClient) ListObjectsFromBucket(ctx context.Context, bucket, prefix string, limit int) ([]ObjectInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListObjectsFromBucket", ctx, bucket, prefix, limit)
+	ret0, _ := ret[0].([]ObjectInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListObjectsFromBucket indicates an expected call of ListObjectsFromBucket.
+func (mr *MockClientMockRecorder) ListObjectsFromBucket(ctx, bucket, prefix, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListObjectsFromBucket", reflect.TypeOf((*MockClient)(nil).ListObjectsFromBucket), ctx, bucket, prefix, limit)
+}
+
 // PlaceFiles mocks base method.
 func (m *MockClient) PlaceFiles(ctx context.Context, bucketFolders []string, prefix string) error {
 	m.ctrl.T.Helper()

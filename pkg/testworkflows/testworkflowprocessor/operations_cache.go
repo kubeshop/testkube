@@ -1,0 +1,185 @@
+package testworkflowprocessor
+
+import (
+	"errors"
+	"fmt"
+	"path/filepath"
+	"strings"
+
+	corev1 "k8s.io/api/core/v1"
+
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/executioncache"
+	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
+)
+
+// cacheStateEnvName points both cache stages at the file they hand over through.
+const cacheStateEnvName = "TK_CACHE_STATE"
+
+// validateCache rejects a cache block that cannot work, at bundle time.
+//
+// These are the only cache failures that are fatal, and deliberately so: they are
+// authoring mistakes with no sensible runtime fallback, and failing here surfaces them
+// before a pod is ever created. Everything that can go wrong at runtime - a miss, a
+// corrupt archive, unreachable storage - degrades to an uncached run instead.
+func validateCache(cache *testworkflowsv1.StepCache) error {
+	if cache.Key == "" {
+		return errors.New("cache: a key is required")
+	}
+	if len(cache.Paths) == 0 {
+		return errors.New("cache: there needs to be at least one path to cache")
+	}
+	for i, path := range cache.Paths {
+		if path == "" {
+			return fmt.Errorf("cache.paths[%d]: path is empty", i)
+		}
+	}
+	return nil
+}
+
+// mountCachePaths gives every cached path a volume shared across the step's containers.
+//
+// This is not an optimization, it is what makes the feature work at all. Each stage of a
+// step becomes its own container, and containers in a pod share volumes but not their
+// root filesystems. A path restored outside any volume would land in the restore
+// container's own filesystem, where the container that runs the install cannot see it -
+// so the cache would appear to work and silently do nothing.
+//
+// The mount is appended to the parent container so that every sibling stage of the step
+// sees it, including the save stage that a later operation creates.
+func mountCachePaths(layer Intermediate, container stage.Container, selfContainer stage.Container, cache *testworkflowsv1.StepCache) error {
+	for i, path := range cache.Paths {
+		explicit := cache.Mount != nil
+		wanted := !explicit || *cache.Mount
+
+		if wanted && selfContainer.HasVolumeAt(path) {
+			// Already inside a volume - the repository clone, or the default /data -
+			// so reusing it keeps the cache alongside the content it belongs to.
+			continue
+		}
+		if !wanted {
+			if !selfContainer.HasVolumeAt(path) {
+				return fmt.Errorf("cache.paths[%d]: %s: is not part of any volume: should be mounted", i, path)
+			}
+			continue
+		}
+
+		volumeMount := layer.AddEmptyDirVolume(nil, path)
+		container.AppendVolumeMounts(volumeMount)
+	}
+	return nil
+}
+
+// cacheToolkitCommand builds the toolkit invocation, passing the step's volume mounts so
+// the walker knows which roots it may read and write.
+func cacheToolkitCommand(container stage.Container, verb string) []string {
+	cmd := []string{constants.DefaultToolkitPath, "cache", verb}
+	for _, mount := range container.VolumeMounts() {
+		if mount.MountPath == constants.DefaultInternalPath {
+			continue
+		}
+		cmd = append(cmd, "-m", strings.TrimRight(mount.MountPath, `/\`))
+	}
+	return cmd
+}
+
+// ProcessCacheRestore restores the cache before the step's own operations run.
+//
+// Registered after the content operations so that the repository is already checked out
+// when the toolkit resolves the key: a key derived from a lockfile cannot be computed
+// before the file exists.
+func ProcessCacheRestore(_ InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
+	if step.Cache == nil {
+		return nil, nil
+	}
+	if err := validateCache(step.Cache); err != nil {
+		return nil, err
+	}
+
+	selfContainer := container.CreateChild().
+		ApplyCR(&testworkflowsv1.ContainerConfig{WorkingDir: step.Cache.WorkingDir})
+	self := stage.NewContainerStage(layer.NextRef(), selfContainer)
+	self.SetCategory("Restore cache")
+
+	// Pure: it only writes into mounted volumes, so it may share a container with a
+	// neighbouring stage. mountCachePaths is what makes that claim true.
+	self.SetPure(true)
+
+	if err := mountCachePaths(layer, container, selfContainer, step.Cache); err != nil {
+		return nil, err
+	}
+
+	// The two stages are separate containers, so the save stage cannot simply
+	// recompute the key: an install may rewrite the very lockfile the key hashes -
+	// npm ci does - and the entry would then be stored under a key nothing ever looks
+	// up. The restore stage records what it resolved, and the save stage reads it back.
+	// Setting the variable on the parent container shares it with every sibling.
+	stateFile := filepath.Join(constants.DefaultTestkubePath, ".cache", self.Ref()+".json")
+	container.AppendEnv(corev1.EnvVar{Name: cacheStateEnvName, Value: stateFile})
+
+	encoded, err := expressions.EncodeBase64JSON(executioncache.Args{
+		Key:         step.Cache.Key,
+		RestoreKeys: step.Cache.RestoreKeys,
+		Paths:       step.Cache.Paths,
+		Scope:       string(executioncache.ParseScope(string(step.Cache.Scope))),
+		State:       stateFile,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("cache: encoding the restore arguments: %w", err)
+	}
+
+	selfContainer.
+		SetImage(constants.DefaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand(cacheToolkitCommand(container, "restore")...).
+		SetArgs("--base64", encoded).
+		EnableToolkit(self.Ref())
+
+	return self, nil
+}
+
+// ProcessCacheSave stores the cache once the step's operations have passed.
+//
+// Note that no condition is set. An empty condition inherits the step group's, which is
+// "passed", and that is exactly right: a failed install must not be published under a
+// content-hash key, because every later run would restore the broken tree and no user
+// could invalidate it. This is the one place the behaviour deliberately differs from the
+// artifacts stage, which runs on "always".
+func ProcessCacheSave(_ InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
+	if step.Cache == nil {
+		return nil, nil
+	}
+	if err := validateCache(step.Cache); err != nil {
+		return nil, err
+	}
+
+	selfContainer := container.CreateChild().
+		ApplyCR(&testworkflowsv1.ContainerConfig{WorkingDir: step.Cache.WorkingDir})
+	self := stage.NewContainerStage(layer.NextRef(), selfContainer)
+	self.SetCategory("Save cache")
+	self.SetPure(true)
+
+	// The volumes already exist: the restore stage added them to the shared parent, and
+	// mounting them again here would allocate a second, empty emptyDir over the top.
+
+	encoded, err := expressions.EncodeBase64JSON(executioncache.Args{
+		Key:         step.Cache.Key,
+		RestoreKeys: step.Cache.RestoreKeys,
+		Paths:       step.Cache.Paths,
+		Scope:       string(executioncache.ParseScope(string(step.Cache.Scope))),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("cache: encoding the save arguments: %w", err)
+	}
+
+	selfContainer.
+		SetImage(constants.DefaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand(cacheToolkitCommand(container, "save")...).
+		SetArgs("--base64", encoded).
+		EnableToolkit(self.Ref())
+
+	return self, nil
+}

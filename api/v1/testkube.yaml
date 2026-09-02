@@ -9888,6 +9888,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowStepExecute"
         artifacts:
           $ref: "#/components/schemas/TestWorkflowStepArtifacts"
+        cache:
+          $ref: "#/components/schemas/TestWorkflowStepCache"
 
     TestWorkflowIndependentStep:
       type: object
@@ -9940,6 +9942,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowStepExecute"
         artifacts:
           $ref: "#/components/schemas/TestWorkflowStepArtifacts"
+        cache:
+          $ref: "#/components/schemas/TestWorkflowStepCache"
         parallel:
           $ref: "#/components/schemas/TestWorkflowIndependentStepParallel"
         setup:
@@ -10011,6 +10015,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowStepExecute"
         artifacts:
           $ref: "#/components/schemas/TestWorkflowStepArtifacts"
+        cache:
+          $ref: "#/components/schemas/TestWorkflowStepCache"
         parallel:
           $ref: "#/components/schemas/TestWorkflowStepParallel"
         setup:
@@ -10276,6 +10282,40 @@ components:
             type: string
           minItems: 1
       required:
+        - paths
+
+    TestWorkflowStepCache:
+      type: object
+      properties:
+        key:
+          type: string
+          description: key to store the cache entry under, usually derived from a lockfile
+          minLength: 1
+          maxLength: 512
+        restoreKeys:
+          type: array
+          description: key prefixes to fall back to when there is no entry for the exact key
+          items:
+            type: string
+          maxItems: 10
+        paths:
+          type: array
+          description: paths to store in the cache, relative to the working directory
+          items:
+            type: string
+          minItems: 1
+        workingDir:
+          $ref: "#/components/schemas/BoxedString"
+        scope:
+          type: string
+          description: how widely the cache entry is shared
+          enum:
+            - workflow
+            - environment
+        mount:
+          $ref: "#/components/schemas/BoxedBoolean"
+      required:
+        - key
         - paths
 
     TestWorkflowStepArtifactsCompression:
