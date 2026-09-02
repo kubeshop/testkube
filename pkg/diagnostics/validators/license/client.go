@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"time"
 )
 
 type LicenseResponse struct {
@@ -43,7 +44,10 @@ func (c *Client) ValidateLicense(licenseRequest LicenseRequest) (*LicenseRespons
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, c.url, bytes.NewBuffer(reqBody))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url, bytes.NewBuffer(reqBody))
 	if err != nil {
 		return nil, err
 	}
