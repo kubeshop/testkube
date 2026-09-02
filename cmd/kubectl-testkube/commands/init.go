@@ -13,6 +13,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/pro"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	licensevalidator "github.com/kubeshop/testkube/pkg/diagnostics/validators/license"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -27,7 +28,6 @@ const (
 	standaloneInstallationName = "Testkube OSS"
 	demoInstallationName       = "Testkube On-Prem demo"
 	agentInstallationName      = "Testkube Agent"
-	licenseFormat              = "XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-V3"
 )
 
 func NewInitCmd() *cobra.Command {
@@ -189,23 +189,27 @@ func NewInitCmdDemo() *cobra.Command {
 			}
 			sendTelemetry(cmd, cfg, license, "license found")
 
-			hasExpectedLength := len(license) == len(licenseFormat)
-			hasExpectedPrefix := strings.HasPrefix(license, "key/")
-			valid := hasExpectedLength || hasExpectedPrefix
-			if !valid {
+			licenseName := ""
+			resp, validateErr := licensevalidator.NewClient().ValidateLicense(licensevalidator.LicenseRequest{License: license})
+			switch {
+			case validateErr != nil:
+				ui.Debug("license validation request failed, continuing", validateErr.Error())
+			case resp != nil && !resp.Valid:
 				cliErr = common.NewCLIError(
 					common.TKErrConfigInitFailed,
 					"Invalid license key",
-					"Check have you correctly inputted your license key or request a trial license at https://testkube.io/download",
-					fmt.Errorf("license key is missing or has invalid format"),
+					"Check that your license key is correct and active, or request a trial license at https://testkube.io/download",
+					fmt.Errorf("license validation failed: code=%q %s", resp.Code, resp.Message),
 				)
 				if cfg.TelemetryEnabled {
 					cliErr.AddTelemetry(cmd, "license validation", "install_license_invalid", license)
 					_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
 				}
 				common.HandleCLIError(cliErr)
+			case resp != nil:
+				licenseName = resp.License.Name
 			}
-			sendTelemetry(cmd, cfg, license, "license validated")
+			sendTelemetry(cmd, cfg, license, "license validated", licenseName)
 
 			ui.NL()
 			ui.Warn("Installation is about to start and may take a several minutes:")
@@ -224,7 +228,7 @@ func NewInitCmdDemo() *cobra.Command {
 			}
 
 			spinner := ui.NewSpinner("Running Kubectl command...")
-			sendTelemetry(cmd, cfg, license, "installing started")
+			sendTelemetry(cmd, cfg, license, "installing started", licenseName)
 			options := common.HelmOptions{
 				Namespace:     namespace,
 				LicenseKey:    license,
@@ -280,7 +284,7 @@ func NewInitCmdDemo() *cobra.Command {
 			}
 			spinner.Success()
 
-			sendTelemetry(cmd, cfg, license, "installing finished")
+			sendTelemetry(cmd, cfg, license, "installing finished", licenseName)
 
 			cfg.Namespace = namespace
 			err = config.Save(cfg)
@@ -296,16 +300,16 @@ func NewInitCmdDemo() *cobra.Command {
 				return
 			}
 
-			sendTelemetry(cmd, cfg, license, "user confirmed proceeding")
+			sendTelemetry(cmd, cfg, license, "user confirmed proceeding", licenseName)
 
 			ui.Info("You can use `testkube dashboard` to access Testkube without exposing services.")
 			ui.NL()
 
 			if ok := ui.Confirm("Do you want to open the dashboard?"); !ok {
-				sendTelemetry(cmd, cfg, license, "skipping dashboard")
+				sendTelemetry(cmd, cfg, license, "skipping dashboard", licenseName)
 				return
 			}
-			sendTelemetry(cmd, cfg, license, "opening dashboard")
+			sendTelemetry(cmd, cfg, license, "opening dashboard", licenseName)
 			cfg, err = config.Load()
 			ui.ExitOnError("Cannot open dashboard", err)
 
@@ -360,9 +364,13 @@ func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType, licens
 	}
 }
 
-func sendTelemetry(cmd *cobra.Command, clientCfg config.Data, license, step string) {
+func sendTelemetry(cmd *cobra.Command, clientCfg config.Data, license, step string, userIDOverride ...string) {
 	if clientCfg.TelemetryEnabled {
-		out, err := telemetry.SendCmdWithLicenseEvent(cmd, common.Version, common.TelemetryUserID(cmd, &clientCfg), license, step)
+		userID := common.TelemetryUserID(cmd, &clientCfg)
+		if len(userIDOverride) > 0 && userIDOverride[0] != "" {
+			userID = userIDOverride[0]
+		}
+		out, err := telemetry.SendCmdWithLicenseEvent(cmd, common.Version, userID, license, step)
 		if ui.Verbose && err != nil {
 			ui.Err(err)
 		}
