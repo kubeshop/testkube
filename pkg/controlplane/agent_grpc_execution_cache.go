@@ -114,6 +114,30 @@ func (s *Server) GetExecutionCachePresigned(ctx context.Context, req *cloud.GetE
 		return nil, err
 	}
 
+	exactObject := scope.objectName(req.Key)
+
+	// Check the exact key directly so a large scope cannot hide an exact hit behind the listing limit.
+	exactEntries, err := s.listCacheEntries(ctx, exactObject, 1)
+	if err != nil {
+		return nil, err
+	}
+	for _, entry := range exactEntries {
+		if entry.Key != exactObject {
+			continue
+		}
+		url, err := s.storageClient.PresignDownloadFileFromBucket(ctx, s.cfg.StorageBucket, "", entry.Key, CachePresignedURLExpiration)
+		if err != nil {
+			return nil, err
+		}
+		return &cloud.GetExecutionCachePresignedResponse{
+			Hit:        true,
+			Exact:      true,
+			MatchedKey: req.Key,
+			Url:        url,
+			Size:       entry.Size,
+		}, nil
+	}
+
 	entries, err := s.listCacheEntries(ctx, scope.prefix()+"/", MaxCacheRestoreCandidates)
 	if err != nil {
 		return nil, err
@@ -129,7 +153,7 @@ func (s *Server) GetExecutionCachePresigned(ctx context.Context, req *cloud.GetE
 		prefixes = append(prefixes, scope.objectNamePrefix(restoreKey))
 	}
 
-	match, exact, found := executioncache.MatchRestore(entries, scope.objectName(req.Key), prefixes)
+	match, exact, found := executioncache.MatchRestore(entries, exactObject, prefixes)
 	if !found {
 		// A miss is a normal answer, not an error: the agent then installs from the
 		// network exactly as it would without any cache.
