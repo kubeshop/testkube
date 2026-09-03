@@ -44,9 +44,14 @@ type SaveRequest struct {
 type SaveResult struct {
 	URL string
 	// AlreadyExists reports that this key is already stored, so the upload should be
-	// skipped. Entries are immutable for their lifetime, which is what makes a
-	// content-hash key trustworthy: the first writer wins, and a later run cannot
-	// swap out what an earlier one stored.
+	// skipped.
+	//
+	// This is deduplication rather than a guarantee that the entry cannot change:
+	// a control plane checks for the key and grants the URL in two steps, so two
+	// executions saving the same key concurrently can both be granted one, and the
+	// later upload replaces the earlier entry. Since both arrived at the same
+	// content-derived key they are storing equivalent trees, and a save only follows
+	// a miss, so this costs a redundant upload rather than a wrong entry.
 	AlreadyExists bool
 }
 

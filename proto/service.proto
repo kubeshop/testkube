@@ -679,7 +679,7 @@ message SaveExecutionCachePresignedRequest {
 
 message SaveExecutionCachePresignedResponse {
   string url = 1;          // presigned PUT; empty when already_exists
-  bool already_exists = 2; // a written key is immutable for its lifetime
+  bool already_exists = 2; // the key is already stored, so the upload is skipped
 }
 
 message AppendExecutionReportRequest {

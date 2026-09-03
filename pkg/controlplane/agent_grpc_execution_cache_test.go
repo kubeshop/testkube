@@ -280,8 +280,9 @@ func TestSaveExecutionCachePresigned(t *testing.T) {
 		assert.False(t, res.AlreadyExists)
 	})
 
-	// Immutability is what makes a content-hash key trustworthy: the first writer wins,
-	// so a later run cannot swap out what an earlier one stored.
+	// Deduplication, not immutability: this skips the upload for a key that is already
+	// there, but the lookup and the grant are two steps, so it cannot stop two
+	// executions racing on the same key. See SaveExecutionCachePresigned.
 	t.Run("an existing key is not granted a second write", func(t *testing.T) {
 		server, storageClient, repository := newCacheServer(t)
 		expectExecution(repository, cacheTestWorkflow)

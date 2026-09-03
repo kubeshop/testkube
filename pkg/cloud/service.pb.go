@@ -5053,7 +5053,7 @@ type SaveExecutionCachePresignedResponse struct {
 	unknownFields protoimpl.UnknownFields
 
 	Url           string `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`                                           // presigned PUT; empty when already_exists
-	AlreadyExists bool   `protobuf:"varint,2,opt,name=already_exists,json=alreadyExists,proto3" json:"already_exists,omitempty"` // a written key is immutable for its lifetime
+	AlreadyExists bool   `protobuf:"varint,2,opt,name=already_exists,json=alreadyExists,proto3" json:"already_exists,omitempty"` // the key is already stored, so the upload is skipped
 }
 
 func (x *SaveExecutionCachePresignedResponse) Reset() {

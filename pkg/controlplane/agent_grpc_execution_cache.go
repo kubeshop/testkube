@@ -200,10 +200,19 @@ func (s *Server) SaveExecutionCachePresigned(ctx context.Context, req *cloud.Sav
 
 	objectName := scope.objectName(req.Key)
 
-	// An entry is immutable for its lifetime. That is what makes a content-hash key
-	// trustworthy: the first writer of a key wins, so a later run cannot swap out what
-	// an earlier one stored, and a race between two executions costs one wasted upload
-	// rather than an overwrite.
+	// Skip the upload when the key is already stored. This is deduplication, not a
+	// guarantee: the lookup and the grant are two steps, so two executions saving the
+	// same key can both find nothing, both be granted a URL, and the later upload then
+	// replaces the earlier entry. Making it a guarantee needs the write itself to be
+	// conditional - a presigned PUT carrying If-None-Match, or a reservation the grant
+	// takes atomically - neither of which this storage interface can express today.
+	//
+	// What that costs is bounded. Racing writers arrived at the same key, which is
+	// derived from content, so they are storing equivalent trees; and a save only
+	// happens after a miss, so once an entry exists later runs hit it and never write.
+	// The exposure is that a workflow able to write a scope can replace an entry there
+	// by racing, on top of being able to write one in the first place - which is the
+	// caveat scope: environment already carries.
 	existing, err := s.listCacheEntries(ctx, objectName, 1)
 	if err != nil {
 		return nil, err
