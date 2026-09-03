@@ -45,12 +45,9 @@ func validateCache(cache *testworkflowsv1.StepCache) error {
 		// cache would appear to work and quietly do nothing, which is the exact failure
 		// the mandatory mounting exists to prevent.
 		//
-		// Everything resolvable before scheduling - config, workflow and execution
-		// values - has already been substituted by the time this runs, so this only
-		// rejects paths that depend on the pod itself.
-		if !expressions.IsTemplateStringWithoutExpressions(declared) {
-			return fmt.Errorf("cache.paths[%d]: %q: a cache path cannot contain an expression that is only resolvable inside the pod, because the volume to mount has to be decided before it starts; use a config value, or write the path out", i, declared)
-		}
+	}
+	if cache.WorkingDir != nil && !expressions.IsTemplateStringWithoutExpressions(*cache.WorkingDir) {
+		return fmt.Errorf("cache.workingDir: %q: a cache workingDir cannot contain an expression that is only resolvable inside the pod, because mount paths must be decided before it starts", *cache.WorkingDir)
 	}
 	return nil
 }
