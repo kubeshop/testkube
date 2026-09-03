@@ -161,6 +161,48 @@ func (o UnpackOptions) permits(containerPath string) bool {
 	return false
 }
 
+// normalizeEntryName turns a tar entry's name into the one slash-separated relative form
+// that the rest of the extraction uses, or reports it as unsafe.
+//
+// Doing this in a single place is the point. A tar entry's name is always
+// slash-separated by the format, but an archive can put anything in it, and deciding
+// safety with host path rules while acting on a normalized string means the set of
+// names that get through depends on which machine is unpacking.
+func normalizeEntryName(raw string) (string, error) {
+	unsafe := func() error {
+		return fmt.Errorf("unsafe file path in the tarball: %s", raw)
+	}
+
+	name := filepath.ToSlash(raw)
+	if name == "" {
+		return "", unsafe()
+	}
+
+	// Absolute, judged on the normalized name rather than by the host's rules.
+	if strings.HasPrefix(name, "/") {
+		return "", unsafe()
+	}
+
+	// A volume or drive-qualified name is not a relative container path either, and
+	// path.Join would silently treat it as one.
+	if first, _, _ := strings.Cut(name, "/"); strings.Contains(first, ":") {
+		return "", unsafe()
+	}
+
+	// Any parent traversal at all, which is stricter than the extraction strictly needs
+	// - "a/../b" resolves inside the root - but keeps a name that reads as an escape
+	// from being accepted on the grounds that it happens to cancel out.
+	if relativeCheckRe.MatchString(name) {
+		return "", unsafe()
+	}
+
+	cleaned := path.Clean(name)
+	if cleaned == "." || cleaned == ".." || strings.HasPrefix(cleaned, "../") || strings.HasPrefix(cleaned, "/") {
+		return "", unsafe()
+	}
+	return cleaned, nil
+}
+
 // UnpackTarball extracts an archive into dirPath.
 //
 // Extraction goes through os.Root, so every path is resolved inside dirPath by the
@@ -206,8 +248,15 @@ func UnpackTarball(dirPath string, stream io.Reader, opts ...UnpackOption) error
 		if err != nil {
 			return errors.Wrap(err, "get next entry from tarball")
 		}
-		if filepath.IsAbs(header.Name) || relativeCheckRe.MatchString(filepath.ToSlash(header.Name)) {
-			return fmt.Errorf("unsafe file path in the tarball: %s", header.Name)
+		// Normalize once, then validate what was normalized. Checking the raw name with
+		// host rules and then handing the slash-separated form to os.Root would make the
+		// guarantee depend on the platform: "\abs" is not absolute to filepath.IsAbs on
+		// Linux, and on Windows it is not absolute either, yet ToSlash turns it into
+		// "/abs". Everything below - the allowlist and every os.Root call - now sees the
+		// same string the check saw.
+		name, err := normalizeEntryName(header.Name)
+		if err != nil {
+			return err
 		}
 
 		entries++
@@ -216,8 +265,7 @@ func UnpackTarball(dirPath string, stream io.Reader, opts ...UnpackOption) error
 		}
 
 		// Kept for error messages and for the mode; os.Root does the resolving.
-		filePath := filepath.Join(dirPath, header.Name)
-		name := filepath.ToSlash(header.Name)
+		filePath := filepath.Join(dirPath, filepath.FromSlash(name))
 
 		// Where this entry would land inside the container, which is what the caller's
 		// allowlist is expressed in.

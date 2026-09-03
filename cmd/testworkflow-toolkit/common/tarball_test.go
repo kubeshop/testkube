@@ -166,7 +166,8 @@ func TestUnpackTarball_KeepsRelativeSymlinks(t *testing.T) {
 
 	target, err := os.Readlink(filepath.Join(dir, "bin", "cli"))
 	require.NoError(t, err)
-	assert.Equal(t, "../pkg/real.js", target)
+	// Readlink reports the target with the host's separators, so compare in one form.
+	assert.Equal(t, "../pkg/real.js", filepath.ToSlash(target))
 	// Reachable through the link, which is the point of keeping it.
 	_, err = os.Stat(filepath.Join(dir, "bin", "cli"))
 	assert.NoError(t, err)
@@ -364,4 +365,70 @@ func TestWriteTarballFrom_RoundTripsThroughTheAllowlist(t *testing.T) {
 	restored, err = os.ReadFile(filepath.Join(second, "dep.jar"))
 	require.NoError(t, err)
 	assert.Equal(t, "jar", string(restored))
+}
+
+// TestNormalizeEntryName pins the check that decides what an archive may name.
+//
+// It is a table over the normalized form rather than the raw one on purpose: judging the
+// raw name with host rules and then acting on the slash-separated form made the set of
+// accepted names depend on the machine doing the unpacking. A backslash-absolute name is
+// the clearest case - filepath.IsAbs calls "\abs" relative on both Linux and Windows,
+// while ToSlash turns it into "/abs".
+func TestNormalizeEntryName(t *testing.T) {
+	t.Run("accepted", func(t *testing.T) {
+		for raw, want := range map[string]string{
+			"file.txt":          "file.txt",
+			"sub/file.txt":      "sub/file.txt",
+			"sub//file.txt":     "sub/file.txt",
+			"./sub/file.txt":    "sub/file.txt",
+			"sub/./file.txt":    "sub/file.txt",
+			"deps/pkg/index.js": "deps/pkg/index.js",
+		} {
+			got, err := normalizeEntryName(raw)
+			assert.NoError(t, err, "%q should be accepted", raw)
+			assert.Equal(t, want, got, "%q", raw)
+		}
+	})
+
+	t.Run("rejected", func(t *testing.T) {
+		for _, raw := range []string{
+			"",
+			"/abs.txt",
+			`\abs.txt`,        // absolute only once normalized - the reported case
+			`\server\share\x`, // UNC, likewise
+			"C:/abs.txt",
+			`C:\abs.txt`,
+			"..",
+			"../escape.txt",
+			`..\escape.txt`,
+			"sub/../../escape.txt",
+			"sub/..",
+			".",
+		} {
+			_, err := normalizeEntryName(raw)
+			assert.ErrorContains(t, err, "unsafe file path", "%q should be rejected", raw)
+		}
+	})
+
+	t.Run("the same string the check saw is what gets used", func(t *testing.T) {
+		// The normalized name is what reaches the allowlist and os.Root, so a name that
+		// passes must not still contain host separators for those to reinterpret.
+		got, err := normalizeEntryName(`sub/file.txt`)
+		require.NoError(t, err)
+		assert.NotContains(t, got, `\`)
+	})
+}
+
+// TestUnpackTarball_RejectsBackslashAbsoluteNames is the end-to-end form of the case
+// above: it must be refused by the name check rather than reaching os.Root and relying
+// on that to object.
+func TestUnpackTarball_RejectsBackslashAbsoluteNames(t *testing.T) {
+	for _, name := range []string{`\abs.txt`, `C:\abs.txt`, `..\escape.txt`} {
+		t.Run(name, func(t *testing.T) {
+			err := UnpackTarball(t.TempDir(), tarballOf(t,
+				tar.Header{Name: name, Typeflag: tar.TypeReg, Mode: 0o644, Size: 1},
+			))
+			assert.ErrorContains(t, err, "unsafe file path")
+		})
+	}
 }
