@@ -145,8 +145,7 @@ func ProcessCacheRestore(_ InternalProcessor, layer Intermediate, container stag
 	// npm ci does - and the entry would then be stored under a key nothing ever looks
 	// up. The restore stage records what it resolved, and the save stage reads it back.
 	// Setting the variable on the parent container shares it with every sibling.
-	stateFile := filepath.Join(constants.DefaultTestkubePath, ".cache", self.Ref()+".json")
-	container.AppendEnv(corev1.EnvVar{Name: cacheStateEnvName, Value: stateFile})
+	stateFile := filepath.ToSlash(filepath.Join(constants.DefaultTestkubePath, ".cache", self.Ref()+".json"))
 
 	encoded, err := expressions.EncodeBase64JSON(executioncache.Args{
 		Key:         step.Cache.Key,
