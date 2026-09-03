@@ -315,6 +315,48 @@ func TestProcessCache_RejectsTemplatedPaths(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+
+// TestProcessCache_RejectsATemplatedWorkingDir is the same hole one level up.
+//
+// A relative cached path is resolved against the working directory, so the base has to
+// be decidable here too. mountCachePaths only uses it when it evaluates, and would
+// otherwise silently fall back to a different base than the toolkit arrives at inside
+// the pod - leaving a volume mounted somewhere the restore never writes.
+func TestProcessCache_RejectsATemplatedWorkingDir(t *testing.T) {
+	build := func(workingDir string) error {
+		_, err := bundleWithCache(t, testworkflowsv1.Step{
+			StepOperations: testworkflowsv1.StepOperations{
+				Shell: "true",
+				Cache: &testworkflowsv1.StepCache{
+					Key:        "k",
+					Paths:      []string{"node_modules"},
+					WorkingDir: common.Ptr(workingDir),
+				},
+			},
+		})
+		return err
+	}
+
+	for _, declared := range []string{
+		"{{ env.HOME }}/app",
+		"/src/{{ step.x.outputs.dir }}",
+	} {
+		assert.ErrorContains(t, build(declared), "cannot contain an expression",
+			"%q depends on the pod, so the base for a relative path cannot be decided", declared)
+	}
+
+	// A concrete base is fine, and so is no override at all.
+	assert.NoError(t, build("/src"))
+
+	_, err := bundleWithCache(t, testworkflowsv1.Step{
+		StepOperations: testworkflowsv1.StepOperations{
+			Shell: "true",
+			Cache: &testworkflowsv1.StepCache{Key: "k", Paths: []string{"node_modules"}},
+		},
+	})
+	assert.NoError(t, err)
+}
+
 // TestProcessCache_ScopeDefaultsToWorkflow: an omitted or unrecognised scope must
 // resolve to the narrowest one. Widening sharing is a trust decision, so it only ever
 // happens because a workflow asked for it explicitly.
