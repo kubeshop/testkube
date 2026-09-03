@@ -78,6 +78,7 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 - Core TestWorkflow executor (`testworkflowexecutor/`)
 - TestWorkflow processing and step execution
 - Result aggregation and status management
+- [`localrunner/`](pkg/testworkflows/localrunner/) supplies an offline developer loop for the sequential core. It validates an unpersisted TestWorkflow YAML locally, relays optional uncommitted source through an exact-run BusyBox Service, constructs the normal Kubernetes worker directly, follows structured notifications, and cleans only resources bearing that run ID. It targets developer-owned Kind/k3d contexts and intentionally does not create a TestWorkflow CRD, Testkube execution record, API client, telemetry, analytics, artifact upload, or webhook.
 
 ### 4. Storage Layer
 
@@ -304,6 +305,7 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 - Root command and command groups (testworkflows, webhooks, artifacts, etc.)
 - Common utilities: [`cmd/kubectl-testkube/commands/common/`](cmd/kubectl-testkube/commands/common/)
 - Client abstraction: Works with both standalone API and control plane APIs
+- [`cmd/kubectl-testkube/commands/local/`](cmd/kubectl-testkube/commands/local/) is the exception to the ordinary client path: its `testkube local` subcommands use kubeconfig/client-go directly and root lifecycle hooks skip API/Control Plane, telemetry, and update work for that command ancestry. It keeps a narrow supported TestWorkflow subset and uses exact local-run labels for cleanup.
 
 **Client Layer**:
 

@@ -14,7 +14,7 @@
 ## Entry points
 
 - `cmd/api-server` is the main agent API server; agent personas (superagent, runner, listener, GitOps, etc.) are enabled through Helm values and env configuration.
-- `cmd/kubectl-testkube` is the Testkube CLI for managing tests, workflows, and interacting with Testkube installations.
+- `cmd/kubectl-testkube` is the Testkube CLI for managing tests, workflows, and interacting with Testkube installations. Its `local` command family directly runs a deliberately narrow TestWorkflow subset on a developer-selected Kind or k3d cluster without a Testkube API or TestWorkflow CRD.
 - `cmd/testworkflow-init` initializes TestWorkflow execution containers and orchestrates workflow step groups.
 - `cmd/kubectl-testkube/commands/completion.go` implements custom completion generation that ensures zsh completion works with the actual binary name (`kubectl-testkube`)
 - `cmd/testworkflow-toolkit` provides runtime utilities and commands for TestWorkflow containers (artifacts, services, parallel execution, etc.).
@@ -81,6 +81,13 @@ Still to come: Control Plane persistence and enforcement of the owner, and the `
 - Adding a new install channel: extend `DetectInstallSource` and add a test case to `install_source_test.go` that exercises the new path under the relevant `goos`.
 - Adding a new CI/runtime detection: extend `pkg/cliruntime/context.go` so both telemetry and the update-check feature stay in sync.
 - Adding a new AI-tool detection: extend `DetectAITool` in `pkg/cliruntime/context.go` (add the env-var check and a `TestDetectAITool` case in `context_test.go`); no telemetry wiring changes are needed since payloads already read the `AITool` field.
+
+## Offline local TestWorkflow loop
+
+- `cmd/kubectl-testkube/commands/local/` contains the thin `testkube local` Cobra family. `root.go` recognizes this command ancestry and skips ordinary CLI Cloud-context validation, Testkube API construction, telemetry, and update checks. Root configuration can still be read before Cobra executes; that is a local file operation, not a Control Plane request.
+- `pkg/testworkflows/localrunner/` owns offline YAML/schema validation, Kind/k3d context safety, the supported-feature gate, direct Kubernetes-worker execution, source archive/relay handling, pause control through API-server port-forwarding, and exact run-label cleanup. The source relay path token is bearer-like and must never be logged.
+- Every local run uses `testkube.io/local=true` and an exact `testkube.io/local-run-id` label. Cleanup must select that exact run and must never delete the `testkube-local` namespace or pre-existing user Secrets/ConfigMaps. New generated runtime resources need the label propagation seam in `pkg/testworkflows/testworkflowprocessor.Bundle.AddLabels`.
+- Keep the support boundary explicit: local mode has no Testkube persistence, history, analytics, webhooks, artifact storage, resource metrics, API token, or Control Plane configuration. It does still need normal Kubernetes credentials and, today, registry-resolvable runtime image metadata.
 
 ## On-prem demo install
 
