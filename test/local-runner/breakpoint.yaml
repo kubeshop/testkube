@@ -1,0 +1,13 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: local-runner-breakpoint
+spec:
+  container:
+    image: busybox:1.37.0
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Continue from local breakpoint
+    paused: true
+    shell: echo breakpoint-continued

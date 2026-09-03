@@ -1,0 +1,17 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: local-runner-playwright-e2e
+  labels:
+    app.kubernetes.io/part-of: testkube-local-runner-e2e
+spec:
+  container:
+    image: mcr.microsoft.com/playwright:v1.56.1
+    workingDir: /data/repo
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+    - name: Install Playwright dependencies
+      shell: npm ci
+    - name: Run fake app browser check
+      shell: npx playwright test --reporter=line
