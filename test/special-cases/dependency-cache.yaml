@@ -1,0 +1,115 @@
+# Step dependency cache - the two sharing scopes.
+#
+# A step's `cache` block restores directories from object storage before the step runs
+# and saves them back once the step passes, so dependency installs survive between
+# executions. Both workflows below are safe to run repeatedly: a cache is an
+# optimization, so a miss just means the install happens over the network, exactly as it
+# would without any cache.
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-cache-workflow-scope
+  labels:
+    core-tests: special-cases
+description: "Dependency cache, workflow scope - node_modules keyed on a lockfile, private to this workflow"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - js
+  container:
+    image: node:22-alpine
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+    # hash_files() and the relative cache paths both resolve against this directory.
+    workingDir: /data/repo/js
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Install dependencies
+    cache:
+      # The key is what makes the entry correct rather than merely fast: it digests the
+      # lockfile's *contents*, so editing a dependency produces a different key and the
+      # stale tree is never restored. Prefer hash_files over hash(glob(...)), which
+      # digests the matched paths and so does not change when a file's contents do.
+      key: 'npm-{{ hash_files("package-lock.json") }}'
+      # Tried in order when the exact key misses, newest entry first within a prefix. A
+      # partial hit still saves under the exact key afterwards, so the next run hits.
+      restoreKeys:
+      - 'npm-'
+      paths:
+      - node_modules
+      # The default. Stated here only to contrast with the workflow below: entries are
+      # private to this workflow, so nothing another workflow writes can be restored
+      # into this one.
+      scope: workflow
+    shell: |
+      # `npm ci` needs no cache to work - it just gets slower without one, which is the
+      # whole point of the feature degrading to a miss rather than failing.
+      npm ci --prefer-offline --no-audit --fund=false
+      test -d node_modules || { echo "FAIL: node_modules missing after install"; exit 1; }
+
+  - name: Report what the cache did
+    shell: |
+      # Both stages log a line of their own ("cache: hit ...", "cache: miss ..."), so a
+      # cold first run and a warm second run are visible in the step logs.
+      echo "installed $(ls node_modules | wc -l) top-level packages"
+
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-cache-environment-scope
+  labels:
+    core-tests: special-cases
+description: "Dependency cache, environment scope - a Go module cache shared with every workflow in the environment"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - go.mod
+      - go.sum
+  container:
+    image: golang:1.26-alpine
+    resources:
+      requests:
+        cpu: 512m
+        memory: 1Gi
+    workingDir: /data/repo
+  job:
+    activeDeadlineSeconds: 900
+  steps:
+  - name: Warm the module cache
+    cache:
+      key: 'gomod-{{ hash_files("go.sum") }}'
+      restoreKeys:
+      - 'gomod-'
+      # Neither path sits inside a volume the step already has, so a volume is mounted
+      # at each one automatically - without that they would be restored into the restore
+      # container's own filesystem, where the container running the build cannot see
+      # them. Set `mount: false` only for a path that is already covered, for instance
+      # one inside the repository checkout; on an uncovered path it is refused rather
+      # than silently doing nothing.
+      paths:
+      - /root/go/pkg/mod
+      - /root/.cache/go-build
+      # Shared with every workflow in the environment, so two workflows that build the
+      # same module set download it once between them.
+      #
+      # This widens a trust boundary, not just a cache. Any workflow that may write this
+      # scope can influence what every other workflow in the environment restores, and a
+      # restored dependency tree is code that later runs. Use it where every workflow in
+      # the environment is equally trusted; keep the default `workflow` scope otherwise.
+      # Entries are immutable for their lifetime, so the first writer of a given key
+      # wins and a later run cannot swap out what it stored.
+      scope: environment
+    shell: |
+      go mod download all
+      test -d /root/go/pkg/mod || { echo "FAIL: module cache missing after download"; exit 1; }
+      echo "module cache is $(du -sh /root/go/pkg/mod | cut -f1)"

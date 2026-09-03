@@ -3,6 +3,7 @@ package testworkflowprocessor
 import (
 	"errors"
 	"fmt"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -39,6 +40,14 @@ func validateCache(cache *testworkflowsv1.StepCache) error {
 	return nil
 }
 
+// isAbsContainerPath reports whether p is absolute inside the container.
+//
+// Not filepath.IsAbs: that answers for the host the processor happens to run on, and on
+// Windows it rejects "/root/.m2". Container paths are always POSIX.
+func isAbsContainerPath(p string) bool {
+	return strings.HasPrefix(p, "/")
+}
+
 // mountCachePaths gives every cached path a volume shared across the step's containers.
 //
 // This is not an optimization, it is what makes the feature work at all. Each stage of a
@@ -50,33 +59,43 @@ func validateCache(cache *testworkflowsv1.StepCache) error {
 // The mount is appended to the parent container so that every sibling stage of the step
 // sees it, including the save stage that a later operation creates.
 func mountCachePaths(layer Intermediate, container stage.Container, selfContainer stage.Container, cache *testworkflowsv1.StepCache) error {
-	for i, p := range cache.Paths {
+	for i, declared := range cache.Paths {
 		explicit := cache.Mount != nil
 		wanted := !explicit || *cache.Mount
 
-		path := p
-		if !filepath.IsAbs(path) {
-			wd, err := expressions.EvalTemplate(selfContainer.WorkingDir(), expressions.StdLibMachine)
-			if err != nil || wd == "" || !filepath.IsAbs(wd) {
-				return fmt.Errorf("cache.paths[%d]: %q: relative path requires an absolute workingDir (set step.workingDir or cache.workingDir)", i, p)
+		// Resolve against the working directory when it is already known, so that the
+		// volume check and the mount below deal in one unambiguous path.
+		//
+		// Resolved with `path`, not `filepath`: these are paths inside a Linux
+		// container, and on a Windows host filepath.IsAbs("/root/.m2") is false, which
+		// would misclassify a perfectly good absolute path as relative.
+		//
+		// A working directory that is not known yet is not an error. It is the common
+		// case - the default container config sets none, so an image's own WORKDIR
+		// decides - and a relative path left as declared is resolved against the
+		// container's working directory when the volume mounts are finalized, exactly as
+		// it is for the artifacts and tarball steps.
+		cachePath := declared
+		if !isAbsContainerPath(cachePath) {
+			if wd, err := expressions.EvalTemplate(selfContainer.WorkingDir(), expressions.StdLibMachine); err == nil && isAbsContainerPath(wd) {
+				cachePath = path.Join(wd, declared)
 			}
-			path = filepath.Join(wd, p)
 		}
-		path = filepath.Clean(path)
+		cachePath = path.Clean(cachePath)
 
-		if wanted && selfContainer.HasVolumeAt(path) {
+		if wanted && selfContainer.HasVolumeAt(cachePath) {
 			// Already inside a volume - the repository clone, or the default /data -
 			// so reusing it keeps the cache alongside the content it belongs to.
 			continue
 		}
 		if !wanted {
-			if !selfContainer.HasVolumeAt(path) {
-				return fmt.Errorf("cache.paths[%d]: %s: is not part of any volume: should be mounted", i, path)
+			if !selfContainer.HasVolumeAt(cachePath) {
+				return fmt.Errorf("cache.paths[%d]: %s: is not part of any volume: should be mounted", i, cachePath)
 			}
 			continue
 		}
 
-		volumeMount := layer.AddEmptyDirVolume(nil, path)
+		volumeMount := layer.AddEmptyDirVolume(nil, cachePath)
 		container.AppendVolumeMounts(volumeMount)
 	}
 	return nil

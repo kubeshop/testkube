@@ -280,6 +280,7 @@ func (c *Client) ListObjectsFromBucket(ctx context.Context, bucket, prefix strin
 	}
 
 	return objects, nil
+}
 
 // ListFiles lists available files in the bucket from the config
 func (c *Client) ListFiles(ctx context.Context, bucketFolder string) ([]testkube.Artifact, error) {
