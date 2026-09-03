@@ -50,9 +50,19 @@ func validateCache(cache *testworkflowsv1.StepCache) error {
 // The mount is appended to the parent container so that every sibling stage of the step
 // sees it, including the save stage that a later operation creates.
 func mountCachePaths(layer Intermediate, container stage.Container, selfContainer stage.Container, cache *testworkflowsv1.StepCache) error {
-	for i, path := range cache.Paths {
+	for i, p := range cache.Paths {
 		explicit := cache.Mount != nil
 		wanted := !explicit || *cache.Mount
+
+		path := p
+		if !filepath.IsAbs(path) {
+			wd, err := expressions.EvalTemplate(selfContainer.WorkingDir(), expressions.StdLibMachine)
+			if err != nil || wd == "" || !filepath.IsAbs(wd) {
+				return fmt.Errorf("cache.paths[%d]: %q: relative path requires an absolute workingDir (set step.workingDir or cache.workingDir)", i, p)
+			}
+			path = filepath.Join(wd, p)
+		}
+		path = filepath.Clean(path)
 
 		if wanted && selfContainer.HasVolumeAt(path) {
 			// Already inside a volume - the repository clone, or the default /data -
