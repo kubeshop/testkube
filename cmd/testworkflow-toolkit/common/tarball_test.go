@@ -340,6 +340,9 @@ func TestUnpackTarball_AllowedRootsConfineACacheArchive(t *testing.T) {
 // entry, say - the allowlist would refuse the whole archive and every cache would miss.
 func TestWriteTarballFrom_RoundTripsThroughTheAllowlist(t *testing.T) {
 	source := t.TempDir()
+	if filepath.VolumeName(source) != "" {
+		t.Skip("test assumes POSIX-rooted absolute paths; Windows drive paths won't match the '/'-rooted walker")
+	}
 	first := filepath.Join(source, "node_modules")
 	second := filepath.Join(source, "m2")
 	require.NoError(t, os.MkdirAll(filepath.Join(first, "pkg"), 0o755))
