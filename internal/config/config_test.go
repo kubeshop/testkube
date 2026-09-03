@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -27,6 +28,16 @@ func TestGet(t *testing.T) {
 // expiration rules of anyone whose bucket lifecycle is managed elsewhere - a change in
 // how long their objects live, caused by nothing but an upgrade.
 func TestExpirationSettingsAreOptIn(t *testing.T) {
+	// Unset rather than read whatever the shell happens to hold: this is a test about
+	// the declared defaults, so an environment that configures an expiration - as a
+	// real deployment does - must not make it fail.
+	for _, name := range []string{"STORAGE_EXPIRATION", "STORAGE_CACHE_EXPIRATION"} {
+		if previous, ok := os.LookupEnv(name); ok {
+			require.NoError(t, os.Unsetenv(name))
+			t.Cleanup(func() { _ = os.Setenv(name, previous) })
+		}
+	}
+
 	cfg, err := Get()
 	require.NoError(t, err)
 
