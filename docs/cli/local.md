@@ -14,7 +14,8 @@ Control Plane, synchronize CLI settings, send telemetry, run an update check,
 or produce Testkube history, analytics, webhooks, or resource metrics.
 
 Use a normal committed Testkube execution when persisted history, policy,
-services, parallelism, artifacts, or Control Plane integration matter.
+services, parallelism, Testkube-backed artifact storage, or Control Plane
+integration matter.
 
 ## Prerequisites
 
@@ -42,6 +43,8 @@ testkube local run --file <testworkflow.yaml>
   [--source-include <pattern> ...]
   [--source-exclude <pattern> ...]
   [--max-source-bytes <bytes>]
+  [--artifacts-dir <directory>]
+  [--max-artifact-bytes <bytes>]
   [--config <key=value> ...]
   [--variable <key=value> ...]
   [--namespace testkube-local]
@@ -58,9 +61,10 @@ testkube local shell <run-id> [Kubernetes selection flags]
 testkube local clean <run-id> [Kubernetes selection flags]
 ```
 
-`--dry-run` validates the local YAML, source options, and Kubernetes selection
-without creating a namespace, inspecting images, uploading source, or creating
-workloads. It is useful before the first real run on a cluster.
+`--dry-run` validates the local YAML, source and artifact-export options, and
+Kubernetes selection without creating a namespace, inspecting images,
+uploading source, starting an artifact relay, or creating workloads. It is
+useful before the first real run on a cluster.
 
 ## Kubernetes context safety
 
@@ -89,6 +93,8 @@ keep every subsequent command explicit about its context:
 ```bash
 kind create cluster --name testkube-local-e2e --wait 5m
 
+artifact_root="$(mktemp -d)"
+
 kubectl --context kind-testkube-local-e2e \
   apply -f test/local-runner/playwright-e2e/fake-app.yaml
 kubectl --context kind-testkube-local-e2e \
@@ -97,7 +103,10 @@ kubectl --context kind-testkube-local-e2e \
 /tmp/testkube-local local run \
   --context kind-testkube-local-e2e \
   --file test/local-runner/playwright-e2e/workflow.yaml \
-  --source test/local-runner/playwright-e2e/source
+  --source test/local-runner/playwright-e2e/source \
+  --artifacts-dir "$artifact_root"
+
+find "$artifact_root" -type f | sort
 ```
 
 The fixture uses `mcr.microsoft.com/playwright:v1.56.1` and a source project
@@ -105,9 +114,11 @@ locked to `@playwright/test` `1.56.1`. Keep those versions aligned. `npm ci`
 therefore needs npm-registry access unless the test image/source has been
 prepared for an offline environment.
 
-The test workflow contains no TestWorkflow `services` or artifact block. The
-fake app is deployed independently so the local workflow can validate a real
-browser path without invoking unsupported TestWorkflow service semantics.
+The test workflow contains no TestWorkflow `services`. The fake app is deployed
+independently so the local workflow can validate a real browser path without
+invoking unsupported TestWorkflow service semantics. Its artifact block exports
+the Playwright JUnit report, HTML report, screenshot, video, trace, and a
+deterministic proof JSON file to the local `artifact_root` directory.
 
 For a source checkout whose TestWorkflow init and toolkit images are not
 published or reachable from Kind, be aware that the current processor also
@@ -123,6 +134,7 @@ After recording the result, remove the disposable cluster by its exact name:
 
 ```bash
 kind delete cluster --name testkube-local-e2e
+rm -rf -- "$artifact_root"
 ```
 
 ## k3d example
@@ -133,6 +145,8 @@ current:
 ```bash
 k3d cluster create testkube-local-e2e --wait
 
+artifact_root="$(mktemp -d)"
+
 kubectl --context k3d-testkube-local-e2e \
   apply -f test/local-runner/playwright-e2e/fake-app.yaml
 kubectl --context k3d-testkube-local-e2e \
@@ -141,10 +155,74 @@ kubectl --context k3d-testkube-local-e2e \
 /tmp/testkube-local local run \
   --context k3d-testkube-local-e2e \
   --file test/local-runner/playwright-e2e/workflow.yaml \
-  --source test/local-runner/playwright-e2e/source
+  --source test/local-runner/playwright-e2e/source \
+  --artifacts-dir "$artifact_root"
 
 k3d cluster delete testkube-local-e2e
+rm -rf -- "$artifact_root"
 ```
+
+## Local artifact export
+
+Use the ordinary TestWorkflow `artifacts` block together with an explicit host
+output root:
+
+```bash
+artifact_root="$(mktemp -d)"
+
+/tmp/testkube-local local run \
+  --context kind-testkube-local-e2e \
+  --file workflow.yaml \
+  --artifacts-dir "$artifact_root"
+```
+
+`--artifacts-dir` is deliberately required for every local workflow that
+declares artifacts. Without it, preflight rejects the workflow before creating
+Kubernetes resources rather than accidentally invoking the normal Cloud
+artifact uploader. Artifact selection retains the workflow's `workingDir`,
+`paths`, conditions, retries, and optional compression behavior.
+Conversely, supplying `--artifacts-dir` for a workflow without a
+`step.artifacts` block is rejected, so an apparently successful local run
+cannot leave an empty, misleading export directory.
+
+Each run receives a new output directory at
+`<artifacts-dir>/<run-id>/`; the CLI prints the run ID and downloaded path.
+Inside that directory, export paths are namespaced by artifact stage under
+per-step `steps/<TK_REF>/` subdirectories, so two steps cannot silently
+overwrite each other. The checked-in Playwright fixture uses
+`test-results/**/*` and `playwright-report/**/*`, so a successful export
+contains the JUnit report, HTML report, trace/video/screenshot output, and a
+`direct-local-proof.json` file.
+
+The default total local artifact-export limit is 100 MiB. Set
+`--max-artifact-bytes` to a narrower or larger explicit bound when appropriate.
+The relay enforces the bound while it receives the workflow output, and the
+CLI applies the same bound while it safely extracts the relay archive below
+that one run directory. For `compress` blocks the resulting compressed archive
+is exported as one ordinary file and is not automatically unpacked. The host
+extractor rejects unsafe archive paths and special files rather than allowing a
+workflow-created archive to escape the chosen host root. One run accepts at
+most 1,000 artifact files; each relative artifact path can contain at most
+eight components. Those caps make the relay a bounded developer feedback path
+rather than a general-purpose file synchronization mechanism.
+
+This path is local only: workflow containers upload to a short-lived,
+exact-run artifact relay in the selected cluster, and the CLI transfers the
+result directly to the supplied directory. It does not contact a Testkube API,
+Control Plane, object store, or Testkube artifact service. `--keep` retains the
+run-owned relay for debugging; normal cleanup and `testkube local clean
+<run-id>` remove that Kubernetes relay and its run-owned credentials. They do
+not remove the downloaded host directory, so inspect it first and then delete
+the exact `<artifacts-dir>/<run-id>` directory when it is no longer needed.
+The artifact stage targets the exact ready receiver Pod address, not a
+selector-based Service, so another Pod cannot join an observable selector and
+receive the relay token or exported files.
+
+The companion `test/local-runner/playwright-e2e/workflow-failure.yaml` uses
+the same source fixture with a deliberately impossible counter assertion. It
+is an end-to-end regression case: the local command returns the workflow
+failure only after exporting the failing run's reports to its new per-run host
+directory.
 
 ## Running uncommitted source
 
@@ -196,10 +274,11 @@ Use `--source-include` for an intentional exception, for example:
 The local runner is deliberately a narrow Kubernetes execution path. It
 supports one TestWorkflow document, sequential `setup`, `steps`, and `after`
 trees, ordinary `run`, `shell`, and delay operations, top-level files/Git/
-tarball content or `--source`, literal environment values, existing local
-Secret and ConfigMap references, conditions, retries, timeouts, optional or
-negative steps, non-sensitive configuration, variables, and ordinary
-low-security Job/Pod settings.
+tarball content or `--source`, local artifact blocks when `--artifacts-dir` is
+explicit, literal environment values, existing local Secret and ConfigMap
+references, conditions, retries, timeouts, optional or negative steps,
+non-sensitive configuration, variables, and ordinary low-security Job/Pod
+settings.
 
 It rejects or does not support the following features because they depend on
 the Control Plane, additional worker behavior, storage, or unsafe Kubernetes
@@ -207,7 +286,8 @@ semantics:
 
 - Top-level or step template references (`spec.use`, `use`, or `template`).
 - TestWorkflow `services`, parallel steps, nested `execute`, and workflow PVCs.
-- Artifact blocks, execution events/webhooks, storage/analytics features, and
+- Artifact blocks without `--artifacts-dir`, Cloud artifact storage and
+  post-processing, execution events/webhooks, storage/analytics features, and
   any operation requiring a Testkube API URL or execution token.
 - A source override combined with conflicting nested Git content or tarball
   mounts.
@@ -235,9 +315,9 @@ commands can also operate on an exact retained run ID from another terminal.
 ## Cleanup and retained runs
 
 Each invocation receives a unique run ID and labels its owned Job, Pod,
-generated ConfigMaps/Secrets/PVCs, and source relay resources with
-`testkube.io/local-run-id=<run-id>`. By default, terminal success, failure,
-abort, and interrupt paths remove only those exact resources.
+generated ConfigMaps/Secrets/PVCs, source relay resources, and local artifact
+relay resources with `testkube.io/local-run-id=<run-id>`. By default, terminal
+success, failure, abort, and interrupt paths remove only those exact resources.
 
 Use `--keep` to retain a run for debugging. The command prints the run ID and
 copy-paste inspection commands; later remove only that run with:
@@ -264,6 +344,8 @@ command. Do not replace it with `kubectl delete namespace testkube-local`.
 
 A successful local run confirms the generated Kubernetes execution and its
 terminal TestWorkflow result. It is not an authoritative Testkube execution:
-it does not appear in Testkube execution history, analytics, artifacts,
-webhooks, metrics, or dashboards. Commit/push and use the normal Testkube
-workflow when the run needs those durable product behaviors.
+it does not appear in Testkube execution history, analytics, Testkube artifact
+storage, webhooks, metrics, or dashboards. A local artifact export is only the
+host directory selected with `--artifacts-dir`, not a Testkube artifact record.
+Commit/push and use the normal Testkube workflow when the run needs those
+durable product behaviors.
