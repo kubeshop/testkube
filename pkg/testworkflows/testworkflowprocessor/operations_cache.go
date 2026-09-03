@@ -143,7 +143,7 @@ func ProcessCacheRestore(_ InternalProcessor, layer Intermediate, container stag
 	// up. The restore stage records what it resolved, and the save stage reads it back.
 	// Setting the variable on the parent container shares it with every sibling.
 	stateFile := filepath.ToSlash(filepath.Join(constants.DefaultTestkubePath, ".cache", self.Ref()+".json"))
-
+	container.AppendEnv(corev1.EnvVar{Name: cacheStateEnvName, Value: stateFile})
 	encoded, err := expressions.EncodeBase64JSON(executioncache.Args{
 		Key:         step.Cache.Key,
 		RestoreKeys: step.Cache.RestoreKeys,
