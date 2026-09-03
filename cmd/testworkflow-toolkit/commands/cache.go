@@ -7,7 +7,9 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -71,8 +73,9 @@ func newCacheRestoreCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&encoded, "base64", "", "base64-encoded cache specification")
-	// Accepted and ignored: the processor passes the step's mounts to both stages, and a
-	// restore writes wherever the archive says, confined by os.Root inside UnpackTarball.
+	// Accepted and ignored: the processor passes the step's mounts to both stages, but a
+	// restore is confined to the paths the step declared in its cache block, which is
+	// narrower than its volumes - see downloadCache.
 	cmd.Flags().StringArrayP("mount", "m", nil, "volume roots (unused by restore)")
 	return cmd
 }
@@ -156,15 +159,18 @@ func resolveCacheSpec(encoded string) (spec executioncache.Args, resolved execut
 
 // absoluteCachePath resolves a path against the step's working directory, matching how
 // the processor decided which volume to mount for it.
-func absoluteCachePath(path string) string {
-	if filepath.IsAbs(path) {
-		return filepath.Clean(path)
+// Resolved with `path`, not `filepath`: a cache path names a directory inside a Linux
+// container, and it has to agree byte for byte with the allowlist the unpacker checks
+// entries against, which is expressed the same way.
+func absoluteCachePath(declared string) string {
+	if strings.HasPrefix(declared, "/") {
+		return path.Clean(declared)
 	}
 	wd, err := os.Getwd()
 	if err != nil {
 		wd = "/"
 	}
-	return filepath.Clean(filepath.Join(wd, path))
+	return path.Clean(path.Join(filepath.ToSlash(wd), declared))
 }
 
 func runCacheRestore(ctx context.Context, encoded string, repository executioncache.Repository, out io.Writer) error {
@@ -209,7 +215,7 @@ func runCacheRestore(ctx context.Context, encoded string, repository executionca
 	}
 
 	started := time.Now()
-	if err := downloadCache(ctx, entry.URL); err != nil {
+	if err := downloadCache(ctx, entry.URL, spec.Paths); err != nil {
 		// A half-unpacked node_modules is worse than none: an install would find some
 		// of what it needs and skip the rest. Clear what was written and report a miss.
 		clearCachePaths(spec.Paths, out)
@@ -347,10 +353,18 @@ func cacheTempDir() string {
 
 // downloadCache fetches an entry and unpacks it at the root.
 //
-// The archive holds paths relative to "/", because a cache may span several volumes, so
-// there is no single destination directory to confine it to. The confinement that
-// matters is inside UnpackTarball, which resolves every entry through os.Root.
-func downloadCache(ctx context.Context, url string) error {
+// The archive holds paths relative to "/", because a cache may span several volumes and
+// so has no single destination directory to extract into. That makes os.Root's
+// confinement to "/" no confinement at all, so the paths this step asked to restore are
+// passed as an allowlist: an archive is written by whoever populated the cache, and
+// under an environment-scoped cache that is another workflow, which must not be able to
+// write anywhere else in this container.
+//
+// The step's own mount roots would be a weaker allowlist - they cover every volume the
+// step has, including the repository checkout - so the declared cache paths are used
+// instead. A rejection is treated like any other failed restore: the paths are cleared
+// and the step reports a miss, rather than running against a tree that was filtered.
+func downloadCache(ctx context.Context, url string, allowedPaths []string) error {
 	client := &http.Client{Timeout: cacheTransferTimeout}
 
 	var lastErr error
@@ -372,7 +386,8 @@ func downloadCache(ctx context.Context, url string) error {
 		if err == nil {
 			err = common.UnpackTarball("/", resp.Body,
 				common.WithMaxTotalBytes(cacheMaxUnpackedSize),
-				common.WithMaxEntries(cacheMaxEntries))
+				common.WithMaxEntries(cacheMaxEntries),
+				common.WithAllowedRoots(allowedPaths...))
 			resp.Body.Close()
 			if err == nil {
 				return nil

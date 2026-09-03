@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -149,9 +150,12 @@ func TestRunCacheRestore_UnresolvableKeyIsNotFatal(t *testing.T) {
 
 func TestRunCacheRestore_Hit(t *testing.T) {
 	root := t.TempDir()
-	// Restores unpack at "/", so point the archive at a path inside the temp dir.
-	relative := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
-	archive := cacheTarball(t, filepath.ToSlash(filepath.Join(relative, "restored.txt"))[1:], "from-cache")
+	// A cache is unpacked at "/", so the entry name and the declared cache path are both
+	// derived from one POSIX form of the temp dir. On Linux that is the temp dir itself;
+	// elsewhere the drive letter is dropped, which keeps the two consistent so the
+	// allowlist is exercised rather than tripped by host path syntax.
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	archive := cacheTarball(t, strings.TrimPrefix(posix+"/restored.txt", "/"), "from-cache")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write(archive)
@@ -163,7 +167,7 @@ func TestRunCacheRestore_Hit(t *testing.T) {
 
 	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
 		Key:   "npm-abc",
-		Paths: []string{root},
+		Paths: []string{posix},
 		State: statePath,
 	}), &fakeCacheRepository{
 		restore: executioncache.RestoreResult{
@@ -173,6 +177,11 @@ func TestRunCacheRestore_Hit(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Contains(t, out.String(), "cache: hit")
+	// The archive really was written, not merely reported: this also proves the
+	// allowlist admits the paths the step declared.
+	restored, readErr := os.ReadFile(filepath.Join(root, "restored.txt"))
+	require.NoError(t, readErr)
+	assert.Equal(t, "from-cache", string(restored))
 
 	state := readState(t, statePath)
 	assert.Equal(t, executioncache.HitExact, state.Hit)
@@ -181,8 +190,8 @@ func TestRunCacheRestore_Hit(t *testing.T) {
 
 func TestRunCacheRestore_PartialHitIsRecordedSoSaveStillRuns(t *testing.T) {
 	root := t.TempDir()
-	relative := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
-	archive := cacheTarball(t, filepath.ToSlash(filepath.Join(relative, "restored.txt"))[1:], "older")
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	archive := cacheTarball(t, strings.TrimPrefix(posix+"/restored.txt", "/"), "older")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write(archive)
@@ -195,7 +204,7 @@ func TestRunCacheRestore_PartialHitIsRecordedSoSaveStillRuns(t *testing.T) {
 	require.NoError(t, runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
 		Key:         "npm-new",
 		RestoreKeys: []string{"npm-"},
-		Paths:       []string{root},
+		Paths:       []string{posix},
 		State:       statePath,
 	}), &fakeCacheRepository{
 		restore: executioncache.RestoreResult{
@@ -211,6 +220,8 @@ func TestRunCacheRestore_PartialHitIsRecordedSoSaveStillRuns(t *testing.T) {
 // installer is worse than an empty one, because the install would skip what is present.
 func TestRunCacheRestore_CorruptArchiveClearsPartialState(t *testing.T) {
 	root := t.TempDir()
+	// Container paths, as the code now resolves them: see TestRunCacheRestore_Hit.
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
 	require.NoError(t, os.WriteFile(filepath.Join(root, "stale.txt"), []byte("x"), 0o644))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -223,7 +234,7 @@ func TestRunCacheRestore_CorruptArchiveClearsPartialState(t *testing.T) {
 
 	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
 		Key:   "npm-abc",
-		Paths: []string{root},
+		Paths: []string{posix},
 		State: statePath,
 	}), &fakeCacheRepository{
 		restore: executioncache.RestoreResult{Hit: true, Exact: true, MatchedKey: "npm-abc", URL: server.URL},
@@ -481,4 +492,58 @@ func TestControlPlaneCacheRepositoryPropagatesForDegrading(t *testing.T) {
 		Key: "npm-abc", Paths: []string{t.TempDir()},
 	}), repository, out))
 	assert.Contains(t, out.String(), "cannot serve dependency caches")
+}
+
+// TestRunCacheRestore_RejectsAnArchiveReachingOutsideTheDeclaredPaths is the command-level
+// half of the allowlist.
+//
+// The archive is written by whoever populated the entry, and under an environment-scoped
+// cache that is another workflow. An entry outside the paths this step declared must not
+// be written - and because a filtered tree is not a tree the step asked for, the whole
+// restore is abandoned: the declared paths are cleared and the step reports a miss so it
+// rebuilds from scratch.
+func TestRunCacheRestore_RejectsAnArchiveReachingOutsideTheDeclaredPaths(t *testing.T) {
+	root := t.TempDir()
+	// Container paths, as the code now resolves them: see TestRunCacheRestore_Hit.
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	declaredPosix := posix + "/deps"
+	declared := filepath.Join(root, "deps")
+	require.NoError(t, os.MkdirAll(declared, 0o755))
+	// Something the previous step left behind, which the failed restore must clear.
+	require.NoError(t, os.WriteFile(filepath.Join(declared, "stale.txt"), []byte("x"), 0o644))
+
+	elsewhere := filepath.Join(root, "elsewhere")
+	require.NoError(t, os.MkdirAll(elsewhere, 0o755))
+
+	// Names are relative to "/", which is where a cache archive is unpacked.
+	outside := strings.TrimPrefix(filepath.ToSlash(filepath.Join(elsewhere, "planted.txt")), "/")
+	archive := cacheTarball(t, outside, "planted-by-another-workflow")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(archive)
+	}))
+	defer server.Close()
+
+	statePath := filepath.Join(t.TempDir(), "state.json")
+	out := &bytes.Buffer{}
+
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{declaredPosix},
+		State: statePath,
+	}), &fakeCacheRepository{
+		restore: executioncache.RestoreResult{Hit: true, Exact: true, MatchedKey: "npm-abc", URL: server.URL},
+	}, out)
+
+	assert.NoError(t, err, "a hostile archive is a miss, not a failed step")
+	assert.Contains(t, out.String(), "cache: miss")
+
+	_, statErr := os.Stat(filepath.Join(elsewhere, "planted.txt"))
+	assert.True(t, os.IsNotExist(statErr), "the archive wrote outside the declared paths")
+
+	entries, readErr := os.ReadDir(declared)
+	require.NoError(t, readErr)
+	assert.Empty(t, entries, "the declared paths must be cleared after a refused restore")
+
+	assert.Equal(t, executioncache.HitMiss, readState(t, statePath).Hit)
 }

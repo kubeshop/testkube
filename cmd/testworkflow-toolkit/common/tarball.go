@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -109,6 +110,9 @@ type UnpackOptions struct {
 	MaxTotalBytes int64
 	// MaxEntries caps how many entries are extracted. 0 means unlimited.
 	MaxEntries int
+	// AllowedRoots restricts extraction to entries landing inside one of these
+	// container paths. Empty means the whole destination is writable.
+	AllowedRoots []string
 }
 
 type UnpackOption func(*UnpackOptions)
@@ -119,6 +123,42 @@ func WithMaxTotalBytes(n int64) UnpackOption {
 
 func WithMaxEntries(n int) UnpackOption {
 	return func(o *UnpackOptions) { o.MaxEntries = n }
+}
+
+// WithAllowedRoots restricts extraction to the given container paths.
+//
+// Confining to the destination directory is not enough on its own when that directory
+// is the filesystem root, which is what unpacking a dependency cache needs: the entries
+// name paths spread across several volumes, so there is no single subdirectory to
+// extract into. os.Root then bounds the extraction to "/", which bounds nothing.
+//
+// An archive is written by whoever populated the cache, and under an environment-scoped
+// cache that is another workflow. So the reader states which paths it asked to have
+// restored, and anything else in the archive - a file in the repository checkout, a
+// binary on the shared internal volume - is refused rather than written somewhere the
+// step never declared and the cleanup would not reach.
+func WithAllowedRoots(roots ...string) UnpackOption {
+	return func(o *UnpackOptions) {
+		for _, root := range roots {
+			if root == "" {
+				continue
+			}
+			o.AllowedRoots = append(o.AllowedRoots, path.Clean(root))
+		}
+	}
+}
+
+// permits reports whether an entry resolving to containerPath may be written.
+func (o UnpackOptions) permits(containerPath string) bool {
+	if len(o.AllowedRoots) == 0 {
+		return true
+	}
+	for _, root := range o.AllowedRoots {
+		if containerPath == root || strings.HasPrefix(containerPath, root+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 // UnpackTarball extracts an archive into dirPath.
@@ -178,6 +218,12 @@ func UnpackTarball(dirPath string, stream io.Reader, opts ...UnpackOption) error
 		// Kept for error messages and for the mode; os.Root does the resolving.
 		filePath := filepath.Join(dirPath, header.Name)
 		name := filepath.ToSlash(header.Name)
+
+		// Where this entry would land inside the container, which is what the caller's
+		// allowlist is expressed in.
+		if !options.permits(path.Join(path.Clean(filepath.ToSlash(dirPath)), name)) {
+			return fmt.Errorf("tarball entry %s is outside the paths this step asked to restore", name)
+		}
 
 		// Only the permission bits are honoured. header.Mode is attacker-controlled in
 		// an archive from another execution, and nothing in a dependency tree needs
