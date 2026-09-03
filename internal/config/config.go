@@ -39,11 +39,16 @@ type OSSControlPlaneConfig struct {
 	StorageEndpoint   string `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
 	StorageBucket     string `envconfig:"STORAGE_BUCKET" default:"testkube-logs"`
 	StorageExpiration int    `envconfig:"STORAGE_EXPIRATION"`
-	// StorageCacheExpiration expires step dependency caches, in days. Defaulted rather
-	// than left at 0 because a cache is derived data: keeping it forever is a storage
-	// leak with nothing to show for it, unlike an artifact somebody may need to read
-	// back. Set to 0 to disable cache eviction.
-	StorageCacheExpiration       int    `envconfig:"STORAGE_CACHE_EXPIRATION" default:"7"`
+	// StorageCacheExpiration expires step dependency caches, in days. 0 disables it.
+	//
+	// Deliberately opt-in, with no default, matching StorageExpiration above. Setting
+	// either one makes the API server apply a bucket lifecycle at startup, and a
+	// lifecycle is replaced wholesale rather than merged - so a non-zero default here
+	// would silently drop the transition and expiration rules of any installation whose
+	// bucket lifecycle is managed elsewhere, purely by upgrading. An operator who wants
+	// cache eviction asks for it; until then caches expire only under
+	// StorageExpiration, if that is set at all.
+	StorageCacheExpiration       int    `envconfig:"STORAGE_CACHE_EXPIRATION"`
 	StorageAccessKeyID           string `envconfig:"STORAGE_ACCESSKEYID" default:""`
 	StorageSecretAccessKey       string `envconfig:"STORAGE_SECRETACCESSKEY" default:""`
 	StorageRegion                string `envconfig:"STORAGE_REGION" default:""`

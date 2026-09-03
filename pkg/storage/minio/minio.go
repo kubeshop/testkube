@@ -111,6 +111,12 @@ func (c *Client) SetExpirationPolicies(policy ExpirationPolicy) error {
 	// Nothing configured: leave the bucket alone rather than clearing a lifecycle an
 	// operator may have set by hand. This preserves the original behaviour, which
 	// skipped the call entirely when no expiration was configured.
+	//
+	// This is load-bearing, and the reason neither expiration setting carries a
+	// default. SetBucketLifecycle replaces the configuration wholesale, so the moment
+	// any rule is configured, every rule Testkube does not know about is dropped. A
+	// default on either setting would therefore change object retention on installations
+	// that manage their bucket lifecycle elsewhere, just by upgrading.
 	if len(rules) == 0 {
 		return nil
 	}
