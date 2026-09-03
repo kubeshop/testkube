@@ -260,8 +260,11 @@ func (c *Client) ListObjectsFromBucket(ctx context.Context, bucket, prefix strin
 		return nil, ErrArtifactsNotFound
 	}
 
+	listCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	var objects []storage.ObjectInfo
-	for obj := range c.minioClient.ListObjects(ctx, bucket, minio.ListObjectsOptions{Prefix: prefix, Recursive: true}) {
+	for obj := range c.minioClient.ListObjects(listCtx, bucket, minio.ListObjectsOptions{Prefix: prefix, Recursive: true}) {
 		if obj.Err != nil {
 			return nil, obj.Err
 		}
@@ -271,12 +274,12 @@ func (c *Client) ListObjectsFromBucket(ctx context.Context, bucket, prefix strin
 			LastModified: obj.LastModified,
 		})
 		if limit > 0 && len(objects) >= limit {
+			cancel()
 			break
 		}
 	}
 
 	return objects, nil
-}
 
 // ListFiles lists available files in the bucket from the config
 func (c *Client) ListFiles(ctx context.Context, bucketFolder string) ([]testkube.Artifact, error) {
