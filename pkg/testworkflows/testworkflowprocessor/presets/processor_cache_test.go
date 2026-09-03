@@ -315,7 +315,6 @@ func TestProcessCache_RejectsTemplatedPaths(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-
 // TestProcessCache_RejectsATemplatedWorkingDir is the same hole one level up.
 //
 // A relative cached path is resolved against the working directory, so the base has to
