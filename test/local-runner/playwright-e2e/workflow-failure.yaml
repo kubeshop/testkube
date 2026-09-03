@@ -1,7 +1,7 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: local-runner-playwright-e2e
+  name: local-runner-playwright-artifact-failure
   labels:
     app.kubernetes.io/part-of: testkube-local-runner-e2e
 spec:
@@ -13,7 +13,11 @@ spec:
   steps:
     - name: Install Playwright dependencies
       shell: npm ci
-    - name: Run fake app browser check
+    - name: Run failing browser check with artifacts
+      container:
+        env:
+          - name: EXPECTED_COUNTER
+            value: "2"
       shell: npx playwright test
       artifacts:
         workingDir: /data/repo

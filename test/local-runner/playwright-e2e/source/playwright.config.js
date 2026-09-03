@@ -6,10 +6,17 @@ module.exports = defineConfig({
   expect: {
     timeout: 5_000,
   },
-  reporter: 'line',
+  outputDir: 'test-results',
+  reporter: [
+    ['line'],
+    ['junit', { outputFile: 'test-results/junit.xml' }],
+    ['html', { outputFolder: 'playwright-report', open: 'never' }],
+  ],
   use: {
     actionTimeout: 0,
-    trace: 'retain-on-failure',
+    trace: 'on',
+    screenshot: 'on',
+    video: 'on',
     ...devices['Desktop Chrome'],
   },
 });
