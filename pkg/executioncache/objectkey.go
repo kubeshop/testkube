@@ -83,7 +83,13 @@ func ValidateKey(key string) error {
 	return nil
 }
 
-// encodeKey turns a key into one path segment that cannot express a path.
+// EncodeKey turns a key into one path segment that cannot express a path.
+//
+// Exported because both control planes need it and neither may reimplement it. They do
+// not share a storage layout - the commercial one is multi-tenant, keyed by organization
+// and environment - but they must encode a key the same way, because this is the part
+// that keeps attacker-influenced text from becoming a path, and two encoders would be
+// two chances to get that wrong.
 //
 // Percent-encoding rather than hashing, because it is prefix-preserving: every character
 // encodes independently, so a prefix of the key encodes to a prefix of the segment. That
@@ -94,7 +100,7 @@ func ValidateKey(key string) error {
 //
 // '/' becomes %2F and '.' is escaped, so neither a separator nor a ".." segment can
 // appear however the key was written.
-func encodeKey(key string) string {
+func EncodeKey(key string) string {
 	var out strings.Builder
 	out.Grow(len(key))
 	for i := 0; i < len(key); i++ {
@@ -147,7 +153,7 @@ func ScopePrefix(environmentID, workflowName string, scope Scope) string {
 
 // ObjectName is the object holding the entry for an exact key.
 func ObjectName(environmentID, workflowName string, scope Scope, key string) string {
-	return ScopePrefix(environmentID, workflowName, scope) + "/" + encodeKey(key) + ObjectSuffix
+	return ScopePrefix(environmentID, workflowName, scope) + "/" + EncodeKey(key) + ObjectSuffix
 }
 
 // ObjectNamePrefix is the prefix matching every entry whose key starts with keyPrefix.
@@ -155,7 +161,7 @@ func ObjectName(environmentID, workflowName string, scope Scope, key string) str
 // Deliberately has no ObjectSuffix: a restore key matches on the start of a key, so the
 // query has to stay open-ended.
 func ObjectNamePrefix(environmentID, workflowName string, scope Scope, keyPrefix string) string {
-	return ScopePrefix(environmentID, workflowName, scope) + "/" + encodeKey(keyPrefix)
+	return ScopePrefix(environmentID, workflowName, scope) + "/" + EncodeKey(keyPrefix)
 }
 
 // KeyFromObjectName recovers the key a workflow wrote from a stored object's name, so

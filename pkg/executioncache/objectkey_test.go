@@ -170,3 +170,35 @@ func TestKeyFromObjectNameToleratesForeignNames(t *testing.T) {
 	assert.Equal(t, "abc%zz", KeyFromObjectName(prefix, prefix+"/abc%zz"+ObjectSuffix))
 	assert.Equal(t, "somewhere/else", KeyFromObjectName(prefix, "somewhere/else"))
 }
+
+// TestEncodeKeyIsSafeAndPrefixPreserving covers EncodeKey directly, because it is the
+// seam both control planes share. They keep their own storage layouts - the commercial
+// one is keyed by organization and environment - but a second implementation of this
+// would be a second chance to let attacker-influenced text become a path.
+func TestEncodeKeyIsSafeAndPrefixPreserving(t *testing.T) {
+	safeSegment := regexp.MustCompile(`^[A-Za-z0-9_%-]*$`)
+
+	for _, key := range []string{
+		"npm-abc",
+		"../../e/shared",
+		"a/b",
+		"/absolute",
+		"..",
+		".",
+		"key with spaces",
+		"npm-你好",
+		"100%",
+	} {
+		encoded := EncodeKey(key)
+		assert.Regexp(t, safeSegment, encoded, "%q must encode to one path segment", key)
+		assert.NotContains(t, encoded, "/", "%q", key)
+		assert.NotContains(t, encoded, ".", "%q", key)
+	}
+
+	// Prefix-preserving, which is what lets a restore key be a plain prefix query.
+	assert.True(t, strings.HasPrefix(EncodeKey("npm-abc"), EncodeKey("npm-")))
+	assert.False(t, strings.HasPrefix(EncodeKey("pip-abc"), EncodeKey("npm-")))
+
+	// And round-trips, so a plane can report the key an author wrote.
+	assert.Equal(t, "../../e/shared", KeyFromObjectName("", EncodeKey("../../e/shared")))
+}
