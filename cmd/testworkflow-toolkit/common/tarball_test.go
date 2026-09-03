@@ -244,7 +244,6 @@ func TestUnpackTarball_FreshExtract(t *testing.T) {
 	require.NoError(t, err)
 }
 
-
 // TestUnpackTarball_AllowedRootsConfineACacheArchive guards the case that makes an
 // environment-scoped cache safe to read.
 //
