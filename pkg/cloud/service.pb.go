@@ -4823,9 +4823,9 @@ func (x *ListExecutionArtifactsPresignedResponse) GetArtifacts() []*ExecutionArt
 // GetExecutionCachePresignedRequest asks whether a dependency cache entry exists for
 // the workflow of this execution, and for a temporary URL to download it from.
 //
-// The scope is resolved from the execution, never from the request: deriving the
-// workflow server-side is what stops one workflow reading or poisoning another's cache.
-// The key is opaque text and is never used as a path.
+// The server derives the workflow/environment from the execution id and enforces that a
+// workflow-scoped entry cannot be accessed by another workflow, regardless of the
+// requested scope value.
 type GetExecutionCachePresignedRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
