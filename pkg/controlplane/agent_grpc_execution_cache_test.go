@@ -55,15 +55,37 @@ func cacheObject(scope executioncache.Scope, key string) string {
 	return executioncache.ObjectName(cacheTestEnv, cacheTestWorkflow, scope, key)
 }
 
+// expectExactProbe mirrors the handler's direct lookup of the exact key.
+//
+// It runs before the scope listing on purpose: a scope holding more entries than
+// MaxCacheRestoreCandidates could otherwise hide an exact hit behind the limit, so the
+// key a workflow actually asked for is never left to chance. Passing no entries makes
+// the probe a miss and the scope listing below is then what answers.
+func expectExactProbe(storageClient *storage.MockClient, objectName string, entries ...storage.ObjectInfo) {
+	storageClient.EXPECT().
+		ListObjectsFromBucket(gomock.Any(), cacheTestBucket, objectName, 1).
+		Return(entries, nil)
+}
+
+// expectScopeListing mirrors the bounded listing of everything a scope can see, which
+// is what the restore keys are matched against.
+func expectScopeListing(storageClient *storage.MockClient, entries []storage.ObjectInfo, err error) *gomock.Call {
+	return storageClient.EXPECT().
+		ListObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), MaxCacheRestoreCandidates).
+		Return(entries, err)
+}
+
 func TestGetExecutionCachePresigned(t *testing.T) {
 	t.Run("exact hit is signed at the key that was asked for", func(t *testing.T) {
 		server, storageClient, repository := newCacheServer(t)
 		expectExecution(repository, cacheTestWorkflow)
 
 		wanted := cacheObject(executioncache.ScopeWorkflow, "npm-abc")
+		// The probe answers, so the scope is never listed at all.
+		expectExactProbe(storageClient, wanted, storage.ObjectInfo{Key: wanted, Size: 42, LastModified: time.Now()})
 		storageClient.EXPECT().
 			ListObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), MaxCacheRestoreCandidates).
-			Return([]storage.ObjectInfo{{Key: wanted, Size: 42, LastModified: time.Now()}}, nil)
+			Times(0)
 		storageClient.EXPECT().
 			PresignDownloadFileFromBucket(gomock.Any(), cacheTestBucket, "", wanted, CachePresignedURLExpiration).
 			Return("https://storage/entry", nil)
@@ -86,12 +108,11 @@ func TestGetExecutionCachePresigned(t *testing.T) {
 
 		older := cacheObject(executioncache.ScopeWorkflow, "npm-old")
 		newer := cacheObject(executioncache.ScopeWorkflow, "npm-new")
-		storageClient.EXPECT().
-			ListObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), MaxCacheRestoreCandidates).
-			Return([]storage.ObjectInfo{
-				{Key: older, LastModified: time.Now().Add(-time.Hour)},
-				{Key: newer, LastModified: time.Now()},
-			}, nil)
+		expectExactProbe(storageClient, cacheObject(executioncache.ScopeWorkflow, "npm-absent"))
+		expectScopeListing(storageClient, []storage.ObjectInfo{
+			{Key: older, LastModified: time.Now().Add(-time.Hour)},
+			{Key: newer, LastModified: time.Now()},
+		}, nil)
 		storageClient.EXPECT().
 			PresignDownloadFileFromBucket(gomock.Any(), cacheTestBucket, "", newer, CachePresignedURLExpiration).
 			Return("https://storage/newer", nil)
@@ -110,11 +131,10 @@ func TestGetExecutionCachePresigned(t *testing.T) {
 		server, storageClient, repository := newCacheServer(t)
 		expectExecution(repository, cacheTestWorkflow)
 
-		storageClient.EXPECT().
-			ListObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), MaxCacheRestoreCandidates).
-			Return([]storage.ObjectInfo{
-				{Key: cacheObject(executioncache.ScopeWorkflow, "unrelated"), LastModified: time.Now()},
-			}, nil)
+		expectExactProbe(storageClient, cacheObject(executioncache.ScopeWorkflow, "npm-absent"))
+		expectScopeListing(storageClient, []storage.ObjectInfo{
+			{Key: cacheObject(executioncache.ScopeWorkflow, "unrelated"), LastModified: time.Now()},
+		}, nil)
 
 		res, err := server.GetExecutionCachePresigned(context.Background(), &cloud.GetExecutionCachePresignedRequest{
 			Id: "exec-1", Key: "npm-absent", RestoreKeys: []string{""},
@@ -128,9 +148,8 @@ func TestGetExecutionCachePresigned(t *testing.T) {
 		server, storageClient, repository := newCacheServer(t)
 		expectExecution(repository, cacheTestWorkflow)
 
-		storageClient.EXPECT().
-			ListObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), MaxCacheRestoreCandidates).
-			Return(nil, nil)
+		expectExactProbe(storageClient, cacheObject(executioncache.ScopeWorkflow, "npm-abc"))
+		expectScopeListing(storageClient, nil, nil)
 
 		res, err := server.GetExecutionCachePresigned(context.Background(), &cloud.GetExecutionCachePresignedRequest{
 			Id: "exec-1", Key: "npm-abc",
@@ -146,9 +165,11 @@ func TestGetExecutionCachePresigned(t *testing.T) {
 		server, storageClient, repository := newCacheServer(t)
 		expectExecution(repository, cacheTestWorkflow)
 
+		// Both lookups meet the missing bucket, and neither may surface as a fault.
 		storageClient.EXPECT().
-			ListObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), MaxCacheRestoreCandidates).
+			ListObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), 1).
 			Return(nil, minio.ErrArtifactsNotFound)
+		expectScopeListing(storageClient, nil, minio.ErrArtifactsNotFound)
 
 		res, err := server.GetExecutionCachePresigned(context.Background(), &cloud.GetExecutionCachePresignedRequest{
 			Id: "exec-1", Key: "npm-abc",
@@ -165,8 +186,8 @@ func TestGetExecutionCachePresigned(t *testing.T) {
 		expectExecution(repository, cacheTestWorkflow)
 
 		var listed string
-		storageClient.EXPECT().
-			ListObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), MaxCacheRestoreCandidates).
+		expectExactProbe(storageClient, cacheObject(executioncache.ScopeEnvironment, "npm-abc"))
+		expectScopeListing(storageClient, nil, nil).
 			DoAndReturn(func(_ context.Context, _, prefix string, _ int) ([]storage.ObjectInfo, error) {
 				listed = prefix
 				return nil, nil
