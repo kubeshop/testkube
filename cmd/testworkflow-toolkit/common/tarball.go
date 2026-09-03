@@ -161,42 +161,47 @@ func (o UnpackOptions) permits(containerPath string) bool {
 	return false
 }
 
-// normalizeEntryName turns a tar entry's name into the one slash-separated relative form
-// that the rest of the extraction uses, or reports it as unsafe.
+// normalizeEntryName turns a tar entry's name into the one relative form that the rest
+// of the extraction uses, or reports it as unsafe.
 //
-// Doing this in a single place is the point. A tar entry's name is always
-// slash-separated by the format, but an archive can put anything in it, and deciding
-// safety with host path rules while acting on a normalized string means the set of
-// names that get through depends on which machine is unpacking.
+// A tar entry name is slash-separated by the format, whatever host wrote it, so this
+// judges it with `path` and never with `filepath`. Deliberately no ToSlash: that is a
+// host-dependent rewrite, and applying it made the decision depend on the machine doing
+// the unpacking - "\abs" survives untouched on Linux, where it is an ordinary one-segment
+// filename that happens to contain a backslash, and becomes "/abs" on Windows, where the
+// check then read it as absolute. Neither outcome is wrong about its own platform, which
+// is exactly the problem: the same archive must be judged the same way everywhere.
+//
+// So a backslash is treated as what it is in a POSIX filename - a character - and the
+// same string that was validated is the one every os.Root call and the allowlist get.
 func normalizeEntryName(raw string) (string, error) {
 	unsafe := func() error {
 		return fmt.Errorf("unsafe file path in the tarball: %s", raw)
 	}
 
-	name := filepath.ToSlash(raw)
-	if name == "" {
+	if raw == "" {
 		return "", unsafe()
 	}
 
-	// Absolute, judged on the normalized name rather than by the host's rules.
-	if strings.HasPrefix(name, "/") {
+	// Absolute by the only rule a tar name has.
+	if strings.HasPrefix(raw, "/") {
 		return "", unsafe()
 	}
 
-	// A volume or drive-qualified name is not a relative container path either, and
-	// path.Join would silently treat it as one.
-	if first, _, _ := strings.Cut(name, "/"); strings.Contains(first, ":") {
+	// A volume or drive-qualified name is not a relative path anywhere, and path.Join
+	// would silently treat it as one.
+	if first, _, _ := strings.Cut(raw, "/"); strings.Contains(first, ":") {
 		return "", unsafe()
 	}
 
 	// Any parent traversal at all, which is stricter than the extraction strictly needs
 	// - "a/../b" resolves inside the root - but keeps a name that reads as an escape
 	// from being accepted on the grounds that it happens to cancel out.
-	if relativeCheckRe.MatchString(name) {
+	if relativeCheckRe.MatchString(raw) {
 		return "", unsafe()
 	}
 
-	cleaned := path.Clean(name)
+	cleaned := path.Clean(raw)
 	if cleaned == "." || cleaned == ".." || strings.HasPrefix(cleaned, "../") || strings.HasPrefix(cleaned, "/") {
 		return "", unsafe()
 	}

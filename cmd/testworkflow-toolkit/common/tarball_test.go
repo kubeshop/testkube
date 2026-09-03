@@ -369,11 +369,11 @@ func TestWriteTarballFrom_RoundTripsThroughTheAllowlist(t *testing.T) {
 
 // TestNormalizeEntryName pins the check that decides what an archive may name.
 //
-// It is a table over the normalized form rather than the raw one on purpose: judging the
-// raw name with host rules and then acting on the slash-separated form made the set of
-// accepted names depend on the machine doing the unpacking. A backslash-absolute name is
-// the clearest case - filepath.IsAbs calls "\abs" relative on both Linux and Windows,
-// while ToSlash turns it into "/abs".
+// The backslash cases are the ones that matter, and they are why this judges the name
+// with `path` and never rewrites it with ToSlash. A tar entry name is slash-separated by
+// the format, whatever host wrote the archive, so a backslash in it is a character in a
+// filename rather than a separator - and it has to be read that way everywhere, or the
+// same archive is judged differently depending on where it is unpacked.
 func TestNormalizeEntryName(t *testing.T) {
 	t.Run("accepted", func(t *testing.T) {
 		for raw, want := range map[string]string{
@@ -383,6 +383,13 @@ func TestNormalizeEntryName(t *testing.T) {
 			"./sub/file.txt":    "sub/file.txt",
 			"sub/./file.txt":    "sub/file.txt",
 			"deps/pkg/index.js": "deps/pkg/index.js",
+
+			// One segment each, whose name merely contains backslashes. Refusing these
+			// would refuse legitimate POSIX filenames; accepting them on one host and
+			// not another is the inconsistency this check exists to remove.
+			"\\abs.txt":      "\\abs.txt",
+			"..\\escape.txt": "..\\escape.txt",
+			"\\\\server\\x":  "\\\\server\\x",
 		} {
 			got, err := normalizeEntryName(raw)
 			assert.NoError(t, err, "%q should be accepted", raw)
@@ -394,13 +401,10 @@ func TestNormalizeEntryName(t *testing.T) {
 		for _, raw := range []string{
 			"",
 			"/abs.txt",
-			`\abs.txt`,        // absolute only once normalized - the reported case
-			`\server\share\x`, // UNC, likewise
 			"C:/abs.txt",
-			`C:\abs.txt`,
+			"C:\\abs.txt", // drive-qualified, which is not a relative path anywhere
 			"..",
 			"../escape.txt",
-			`..\escape.txt`,
 			"sub/../../escape.txt",
 			"sub/..",
 			".",
@@ -410,20 +414,40 @@ func TestNormalizeEntryName(t *testing.T) {
 		}
 	})
 
-	t.Run("the same string the check saw is what gets used", func(t *testing.T) {
-		// The normalized name is what reaches the allowlist and os.Root, so a name that
-		// passes must not still contain host separators for those to reinterpret.
-		got, err := normalizeEntryName(`sub/file.txt`)
-		require.NoError(t, err)
-		assert.NotContains(t, got, `\`)
+	t.Run("the decision does not depend on the host", func(t *testing.T) {
+		// The point of the change: the answer for a name is a property of the name. Run
+		// through filepath, these two disagreed across platforms.
+		_, err := normalizeEntryName("/abs.txt")
+		assert.Error(t, err, "a slash-absolute name is absolute everywhere")
+
+		got, err := normalizeEntryName("\\abs.txt")
+		assert.NoError(t, err, "a backslash name is one filename everywhere")
+		assert.Equal(t, "\\abs.txt", got, "and is passed on exactly as it was validated")
 	})
 }
 
-// TestUnpackTarball_RejectsBackslashAbsoluteNames is the end-to-end form of the case
-// above: it must be refused by the name check rather than reaching os.Root and relying
-// on that to object.
-func TestUnpackTarball_RejectsBackslashAbsoluteNames(t *testing.T) {
-	for _, name := range []string{`\abs.txt`, `C:\abs.txt`, `..\escape.txt`} {
+// TestUnpackTarball_BackslashNamesPassTheNameCheck is the end-to-end form: a name holding
+// backslashes is not rejected as a path, because it is not one.
+//
+// It asserts only that the name check let it through, not what landed on disk. What a
+// backslash means to the filesystem is genuinely host-dependent - one filename on a
+// POSIX host, a separator on Windows, where os.Root then refuses it - and that is the
+// one part of this the validation deliberately does not try to paper over.
+func TestUnpackTarball_BackslashNamesPassTheNameCheck(t *testing.T) {
+	err := UnpackTarball(t.TempDir(), tarballOf(t,
+		tar.Header{Name: "weird\\name.txt", Typeflag: tar.TypeReg, Mode: 0o644, Size: 1},
+	))
+	if err != nil {
+		assert.NotContains(t, err.Error(), "unsafe file path",
+			"a backslash in a tar name is a character, not a path to refuse")
+	}
+}
+
+// TestUnpackTarball_RejectsDriveQualifiedNames covers the one backslash-adjacent form
+// that is refused: a drive-qualified name is not relative on any host, and path.Join
+// would quietly treat it as one.
+func TestUnpackTarball_RejectsDriveQualifiedNames(t *testing.T) {
+	for _, name := range []string{"C:\\abs.txt", "C:/abs.txt"} {
 		t.Run(name, func(t *testing.T) {
 			err := UnpackTarball(t.TempDir(), tarballOf(t,
 				tar.Header{Name: name, Typeflag: tar.TypeReg, Mode: 0o644, Size: 1},
