@@ -77,6 +77,36 @@ func (b *Bundle) SetRunnerId(runnerId string) {
 	}
 }
 
+// AddLabels applies caller-owned labels to every generated resource. The Job
+// and its pod template both receive the labels, so Pods created after the Job
+// retain the same exact ownership selector.
+func (b *Bundle) AddLabels(labels map[string]string) {
+	if len(labels) == 0 {
+		return
+	}
+	apply := func(obj metav1.Object) {
+		objectLabels := obj.GetLabels()
+		if objectLabels == nil {
+			objectLabels = make(map[string]string, len(labels))
+		}
+		for key, value := range labels {
+			objectLabels[key] = value
+		}
+		obj.SetLabels(objectLabels)
+	}
+	apply(&b.Job)
+	apply(&b.Job.Spec.Template)
+	for i := range b.ConfigMaps {
+		apply(&b.ConfigMaps[i])
+	}
+	for i := range b.Secrets {
+		apply(&b.Secrets[i])
+	}
+	for i := range b.Pvcs {
+		apply(&b.Pvcs[i])
+	}
+}
+
 func (b *Bundle) Deploy(ctx context.Context, clientSet kubernetes.Interface, namespace string) (err error) {
 	if b.Job.Namespace != "" {
 		namespace = b.Job.Namespace

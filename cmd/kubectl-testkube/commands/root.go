@@ -14,6 +14,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
+	localcmd "github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/local"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/pro"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/cmd/tcl/kubectl-testkube/devbox"
@@ -75,6 +76,7 @@ func init() {
 	RootCmd.AddCommand(NewMcpCmd())
 	RootCmd.AddCommand(NewDockerCmd())
 	RootCmd.AddCommand(NewMarketplaceCmd())
+	RootCmd.AddCommand(localcmd.NewLocalCmd())
 	RootCmd.AddCommand(pro.NewLoginCmd())
 	RootCmd.AddCommand(NewInstallCmd())
 
@@ -89,6 +91,14 @@ var RootCmd = &cobra.Command{
 	Short: "Testkube entrypoint for kubectl plugin",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		ui.SetVerbose(verbose)
+
+		// Local commands operate directly against a developer-selected Kubernetes
+		// cluster and must not depend on, validate, or report to a Testkube API.
+		// Check the full ancestry because Cobra invokes this hook with the leaf
+		// command (for example, "run" for "testkube local run").
+		if isLocalCommand(cmd) {
+			return
+		}
 
 		// don't validate context before set and completion
 		if cmd.Name() == "context" || (cmd.Parent() != nil && cmd.Parent().Name() == "completion") {
@@ -109,6 +119,13 @@ var RootCmd = &cobra.Command{
 	},
 
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		// Keep local commands fully offline after execution too: the ordinary
+		// post-run lifecycle creates an API client, syncs telemetry settings,
+		// emits telemetry, and performs an update check.
+		if isLocalCommand(cmd) {
+			return
+		}
+
 		clientCfg, err := config.Load()
 		ui.WarnOnError("loading config", err)
 
@@ -161,6 +178,37 @@ var RootCmd = &cobra.Command{
 		ui.PrintOnError("Displaying usage", err)
 		cmd.DisableAutoGenTag = true
 	},
+}
+
+// isLocalCommand reports whether cmd is in the local command family. Cobra
+// passes the leaf command to persistent hooks, so checking only cmd.Name()
+// would miss invocations such as "testkube local run" and "testkube local
+// clean".
+func isLocalCommand(cmd *cobra.Command) bool {
+	for current := cmd; current != nil; current = current.Parent() {
+		if current.Name() == "local" {
+			return true
+		}
+	}
+	return false
+}
+
+// exitCoder is intentionally structural so an independently implemented
+// command package can return a typed error without importing this parent
+// package (which would create an import cycle). The root process preserves
+// the requested non-zero code; all existing errors retain the historical
+// exit status of 1.
+type exitCoder interface {
+	error
+	ExitCode() int
+}
+
+func exitCodeForError(err error) int {
+	var coded exitCoder
+	if errors.As(err, &coded) && coded.ExitCode() > 0 {
+		return coded.ExitCode()
+	}
+	return 1
 }
 
 // isPreRunTelemetry determines if telemetry should be sent in PreRun for this command
@@ -265,6 +313,6 @@ func Execute() {
 
 	if err := RootCmd.ExecuteContext(ctx); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		os.Exit(exitCodeForError(err))
 	}
 }

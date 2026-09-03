@@ -62,5 +62,16 @@ func (c *client) Resume() error {
 }
 
 func (c *client) Close() {
-	c.cancel()
+	if c == nil {
+		return
+	}
+	if c.cancel != nil {
+		c.cancel()
+	}
+	// Canceling the dial context alone does not interrupt a subsequent blocked
+	// read or write. Closing the established connection lets host-side callers
+	// bound a port-forwarded control operation without leaking a goroutine.
+	if c.conn != nil {
+		_ = c.conn.Close()
+	}
 }

@@ -22,13 +22,20 @@ type Runtime struct {
 
 // TODO: Consider some context data
 type ExecuteRequest struct {
-	Token       string
-	ResourceId  string // defaults to execution ID
-	GroupId     string
-	Workflow    testworkflowsv1.TestWorkflow // TODO: Use OpenAPI object
-	Secrets     map[string]map[string]string
-	ScheduledAt *time.Time
-	Runtime     *Runtime // Runtime configuration overrides
+	Token      string
+	ResourceId string // defaults to execution ID
+	GroupId    string
+	Workflow   testworkflowsv1.TestWorkflow // TODO: Use OpenAPI object
+	Secrets    map[string]map[string]string
+	// Labels are copied to every resource generated for this execution. They
+	// are useful to callers that own a direct Kubernetes lifecycle, such as the
+	// offline local runner, without changing the TestWorkflow schema.
+	Labels map[string]string
+	// TTLSecondsAfterFinished is an optional Kubernetes Job crash fallback. It
+	// never replaces the caller's explicit cleanup responsibility.
+	TTLSecondsAfterFinished *int32
+	ScheduledAt             *time.Time
+	Runtime                 *Runtime // Runtime configuration overrides
 
 	Execution           testworkflowconfig.ExecutionConfig
 	ControlPlane        testworkflowconfig.ControlPlaneConfig // TODO: Think if it's required

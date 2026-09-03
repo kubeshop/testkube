@@ -174,6 +174,12 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	if w.config.RunnerId != "" {
 		bundle.SetRunnerId(w.config.RunnerId)
 	}
+	// Let a direct Kubernetes caller attach an exact ownership selector to all
+	// generated resources without baking that concern into TestWorkflow YAML.
+	bundle.AddLabels(request.Labels)
+	if request.TTLSecondsAfterFinished != nil {
+		bundle.Job.Spec.TTLSecondsAfterFinished = request.TTLSecondsAfterFinished
+	}
 
 	// Register namespace information in the cache
 	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
