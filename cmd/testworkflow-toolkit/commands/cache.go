@@ -13,8 +13,8 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 
-	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	initdata "github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/pkg/executioncache"
 	"github.com/kubeshop/testkube/pkg/expressions"
 )

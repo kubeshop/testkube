@@ -36,14 +36,14 @@ type OSSControlPlaneConfig struct {
 	APIPostgresDSN string `envconfig:"API_POSTGRES_DSN" default:""`
 
 	// Minio
-	StorageEndpoint              string `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
-	StorageBucket                string `envconfig:"STORAGE_BUCKET" default:"testkube-logs"`
-	StorageExpiration            int    `envconfig:"STORAGE_EXPIRATION"`
+	StorageEndpoint   string `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
+	StorageBucket     string `envconfig:"STORAGE_BUCKET" default:"testkube-logs"`
+	StorageExpiration int    `envconfig:"STORAGE_EXPIRATION"`
 	// StorageCacheExpiration expires step dependency caches, in days. Defaulted rather
 	// than left at 0 because a cache is derived data: keeping it forever is a storage
 	// leak with nothing to show for it, unlike an artifact somebody may need to read
 	// back. Set to 0 to disable cache eviction.
-	StorageCacheExpiration int `envconfig:"STORAGE_CACHE_EXPIRATION" default:"7"`
+	StorageCacheExpiration       int    `envconfig:"STORAGE_CACHE_EXPIRATION" default:"7"`
 	StorageAccessKeyID           string `envconfig:"STORAGE_ACCESSKEYID" default:""`
 	StorageSecretAccessKey       string `envconfig:"STORAGE_SECRETACCESSKEY" default:""`
 	StorageRegion                string `envconfig:"STORAGE_REGION" default:""`
