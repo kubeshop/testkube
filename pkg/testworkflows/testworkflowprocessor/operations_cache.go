@@ -16,9 +16,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
-// cacheStateEnvName points both cache stages at the file they hand over through.
-const cacheStateEnvName = "TK_CACHE_STATE"
-
 // validateCache rejects a cache block that cannot work, at bundle time.
 //
 // These are the only cache failures that are fatal, and deliberately so: they are
