@@ -95,16 +95,6 @@ func newCacheSaveCmd() *cobra.Command {
 			out := cmd.OutOrStdout()
 			if statePath == "" {
 				statePath = os.Getenv("TK_CACHE_STATE")
-				if statePath == "" {
-					const suffix = "TK_CACHE_STATE"
-					for _, kv := range os.Environ() {
-						name, value, ok := strings.Cut(kv, "=")
-						if ok && strings.HasSuffix(name, suffix) {
-							statePath = value
-							break
-						}
-					}
-				}
 			}
 			if err := runCacheSave(cmd.Context(), encoded, mounts, statePath, maxSize, newCacheRepository(), out); err != nil {
 				fmt.Fprintf(out, "cache: not saved: %s\n", err.Error())
