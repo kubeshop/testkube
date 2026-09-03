@@ -20,6 +20,14 @@ func TestNewLocalCmdUsesAnIndependentLocalNamespaceDefault(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, name, found.Name())
 	}
+	run, _, err := command.Find([]string{"run"})
+	require.NoError(t, err)
+	artifactsDir := run.Flags().Lookup("artifacts-dir")
+	maxArtifacts := run.Flags().Lookup("max-artifact-bytes")
+	require.NotNil(t, artifactsDir)
+	require.NotNil(t, maxArtifacts)
+	assert.Equal(t, "", artifactsDir.DefValue)
+	assert.Equal(t, "104857600", maxArtifacts.DefValue)
 }
 
 func TestParseAssignmentsAndRunIDValidation(t *testing.T) {
@@ -34,4 +42,13 @@ func TestParseAssignmentsAndRunIDValidation(t *testing.T) {
 	assert.NoError(t, exactlyOneRunID(&cobra.Command{}, []string{"local-safe"}))
 	assert.True(t, localrunner.IsUsageError(exactlyOneRunID(&cobra.Command{}, []string{"bad/run"})))
 	assert.True(t, localrunner.IsUsageError(exactlyOneRunID(&cobra.Command{}, nil)))
+}
+
+func TestRunRejectsExplicitNonPositiveArtifactLimitBeforeWorkflowWork(t *testing.T) {
+	command := NewLocalCmd()
+	command.SetArgs([]string{"run", "--max-artifact-bytes=0"})
+	err := command.Execute()
+	require.Error(t, err)
+	assert.True(t, localrunner.IsUsageError(err))
+	assert.Contains(t, err.Error(), "--max-artifact-bytes")
 }

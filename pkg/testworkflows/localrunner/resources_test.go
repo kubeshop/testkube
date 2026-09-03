@@ -2,17 +2,45 @@ package localrunner
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestLabelsUseStableCollisionResistantValueForLongRunIDs(t *testing.T) {
+	sharedPrefix := "local-" + strings.Repeat("a", 80)
+	firstRunID := sharedPrefix + "-first"
+	secondRunID := sharedPrefix + "-second"
+
+	first, err := Labels(firstRunID, "workflow")
+	require.NoError(t, err)
+	repeated, err := Labels(firstRunID, "workflow")
+	require.NoError(t, err)
+	second, err := Labels(secondRunID, "workflow")
+	require.NoError(t, err)
+
+	firstValue := first[LocalRunIDLabel]
+	assert.Equal(t, firstValue, repeated[LocalRunIDLabel])
+	assert.NotEqual(t, firstValue, second[LocalRunIDLabel])
+	assert.LessOrEqual(t, len(firstValue), validation.LabelValueMaxLength)
+	assert.Empty(t, validation.IsValidLabelValue(firstValue))
+	assert.True(t, strings.HasPrefix(firstValue, sharedPrefix[:38]+"-"))
+}
+
+func TestLabelsRejectLongRunIDWithUnsafeCharacters(t *testing.T) {
+	_, err := Labels("local-"+strings.Repeat("a", 80)+"/unsafe", "workflow")
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "not Kubernetes-safe")
+}
 
 func TestResourceManagerCleanSelectsOnlyExactRunLabels(t *testing.T) {
 	ctx := context.Background()
@@ -51,6 +79,29 @@ func TestResourceManagerCleanSelectsOnlyExactRunLabels(t *testing.T) {
 
 	// A second exact cleanup is deliberately harmless.
 	require.NoError(t, manager.Clean(ctx, "local-demo-a"))
+}
+
+func TestResourceManagerCleanUsesNormalizedLongRunIDLabel(t *testing.T) {
+	ctx := context.Background()
+	longRunID := "local-" + strings.Repeat("a", 80) + "-first"
+	otherLongRunID := "local-" + strings.Repeat("a", 80) + "-second"
+	labels, err := Labels(longRunID, "workflow")
+	require.NoError(t, err)
+	otherLabels, err := Labels(otherLongRunID, "workflow")
+	require.NoError(t, err)
+	client := fake.NewClientset(
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: DefaultNamespace}},
+		&batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "matching", Namespace: DefaultNamespace, Labels: labels}},
+		&batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "other", Namespace: DefaultNamespace, Labels: otherLabels}},
+	)
+
+	manager := NewResourceManager(client, DefaultNamespace)
+	require.NoError(t, manager.Clean(ctx, longRunID))
+
+	_, err = client.BatchV1().Jobs(DefaultNamespace).Get(ctx, "matching", metav1.GetOptions{})
+	assert.Error(t, err)
+	_, err = client.BatchV1().Jobs(DefaultNamespace).Get(ctx, "other", metav1.GetOptions{})
+	require.NoError(t, err)
 }
 
 func TestResourceManagerEnsureNamespaceAndReportsStaleRuns(t *testing.T) {

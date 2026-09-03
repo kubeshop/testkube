@@ -2,6 +2,7 @@ package testworkflowprocessor
 
 import (
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/testworkflows/localartifacts"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
@@ -295,7 +297,44 @@ func ProcessContentTarball(_ InternalProcessor, layer Intermediate, container st
 	return stage, nil
 }
 
+// ProcessArtifactsWithLocalUpload returns the artifact operation used by the
+// offline local runner. It preserves the standard StepArtifacts selection and
+// archive behavior, but sends the files to the run-owned in-cluster relay
+// instead of the Control Plane. The bearer token is injected only into the
+// generated artifact stage from the supplied Secret key.
+func ProcessArtifactsWithLocalUpload(uploadURL, tokenSecretName string) Operation {
+	return func(_ InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
+		return processArtifacts(layer, container, step, &localArtifactUpload{
+			uploadURL:       uploadURL,
+			tokenSecretName: tokenSecretName,
+		})
+	}
+}
+
 func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
+	return processArtifacts(layer, container, step, nil)
+}
+
+type localArtifactUpload struct {
+	uploadURL       string
+	tokenSecretName string
+}
+
+func (o *localArtifactUpload) validate() error {
+	parsed, err := url.ParseRequestURI(o.uploadURL)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return errors.New("local artifact upload URL must be an absolute HTTP URL")
+	}
+	if parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return errors.New("local artifact upload URL must not contain credentials, query, or fragment")
+	}
+	if o.tokenSecretName == "" {
+		return errors.New("local artifact token Secret name must not be empty")
+	}
+	return nil
+}
+
+func processArtifacts(layer Intermediate, container stage.Container, step testworkflowsv1.Step, localUpload *localArtifactUpload) (stage.Stage, error) {
 	if step.Artifacts == nil {
 		return nil, nil
 	}
@@ -311,10 +350,31 @@ func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container stage.C
 	stage.SetCondition("always")
 	stage.SetCategory("Upload artifacts")
 
-	// Allow to combine it within other containers
-	stage.SetPure(true)
+	// Normal artifact uploads are pure and may share an internal workflow
+	// container. The local relay token, however, must not become visible to a
+	// user shell merely because its preceding step can be merged with this one.
+	// Keep the local variant in its own action group; the Cloud behavior remains
+	// unchanged.
+	if localUpload == nil {
+		stage.SetPure(true)
+	}
 
 	cmd := []string{constants.DefaultToolkitPath, "artifacts"}
+	if localUpload != nil {
+		if err := localUpload.validate(); err != nil {
+			return nil, err
+		}
+		cmd = append(cmd, "--local-upload-url", localUpload.uploadURL)
+		selfContainer.AppendEnv(corev1.EnvVar{
+			Name: localartifacts.TokenEnvName,
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: localUpload.tokenSecretName},
+					Key:                  localartifacts.TokenSecretKey,
+				},
+			},
+		})
+	}
 	for _, mount := range container.VolumeMounts() {
 		if mount.MountPath == constants.DefaultInternalPath {
 			continue

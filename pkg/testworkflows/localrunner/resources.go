@@ -2,8 +2,11 @@ package localrunner
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -22,7 +25,10 @@ const (
 	cleanupPollInterval      = 250 * time.Millisecond
 	staleRunThreshold        = 24 * time.Hour
 	localNamespaceLabelValue = "true"
+	localRunIDHashBytes      = 12
 )
+
+var localRunIDLabelPattern = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9_.-]*[A-Za-z0-9])?$`)
 
 // ResourceManager owns only resources explicitly labelled by localrunner. It
 // is intentionally unable to remove a namespace or select by object name.
@@ -60,29 +66,63 @@ func (m *ResourceManager) EnsureNamespace(ctx context.Context) error {
 }
 
 // Labels returns the exact ownership labels used on every local-run resource.
-// Component must be a valid Kubernetes label value to keep selectors safe.
+// Long run IDs are represented by a stable, collision-resistant label value;
+// callers must use this function or localSelector instead of constructing a
+// selector with the raw run ID. Component must be a valid Kubernetes label
+// value to keep selectors safe.
 func Labels(runID, component string) (map[string]string, error) {
-	if runID == "" {
-		return nil, UsageError("local run ID must not be empty")
-	}
 	if component == "" {
 		return nil, UsageError("local component must not be empty")
 	}
-	if messages := validation.IsValidLabelValue(runID); len(messages) > 0 {
-		return nil, UsageError("local run ID %q is not Kubernetes-safe: %s", runID, strings.Join(messages, "; "))
+	localRunID, err := localRunIDLabelValue(runID)
+	if err != nil {
+		return nil, err
 	}
 	if messages := validation.IsValidLabelValue(component); len(messages) > 0 {
 		return nil, UsageError("local component %q is not Kubernetes-safe: %s", component, strings.Join(messages, "; "))
 	}
 	return map[string]string{
 		LocalLabel:          localLabelValue,
-		LocalRunIDLabel:     runID,
+		LocalRunIDLabel:     localRunID,
 		LocalComponentLabel: component,
 	}, nil
 }
 
-func localSelector(runID string) string {
-	return fmt.Sprintf("%s=%s,%s=%s", LocalLabel, localLabelValue, LocalRunIDLabel, runID)
+// localRunIDLabelValue returns the value used to identify runID in Kubernetes
+// labels. Kubernetes limits label values to 63 bytes, while a run ID can be
+// longer when it comes from a workflow name or an older retained run. The
+// readable prefix plus 96 bits of SHA-256 keeps independently generated IDs
+// stable and makes collisions impractical without accepting an unsafe raw
+// value.
+func localRunIDLabelValue(runID string) (string, error) {
+	if runID == "" {
+		return "", UsageError("local run ID must not be empty")
+	}
+	if len(runID) <= validation.LabelValueMaxLength {
+		if messages := validation.IsValidLabelValue(runID); len(messages) > 0 {
+			return "", UsageError("local run ID %q is not Kubernetes-safe: %s", runID, strings.Join(messages, "; "))
+		}
+		return runID, nil
+	}
+	if !localRunIDLabelPattern.MatchString(runID) {
+		return "", UsageError("local run ID %q is not Kubernetes-safe: must contain only alphanumeric characters, '-', '_' or '.', and start and end with an alphanumeric character", runID)
+	}
+
+	// Keep a useful prefix but reserve enough room for a delimiter and a 96-bit
+	// digest of the complete, untruncated ID. A raw ID is valid label syntax at
+	// this point, so slicing by byte is safe: valid label values are ASCII.
+	prefixLimit := validation.LabelValueMaxLength - 1 - localRunIDHashBytes*2
+	prefix := strings.TrimRight(runID[:prefixLimit], "-_.")
+	digest := sha256.Sum256([]byte(runID))
+	return prefix + "-" + hex.EncodeToString(digest[:localRunIDHashBytes]), nil
+}
+
+func localSelector(runID string) (string, error) {
+	localRunID, err := localRunIDLabelValue(runID)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s=%s,%s=%s", LocalLabel, localLabelValue, LocalRunIDLabel, localRunID), nil
 }
 
 // Clean deletes exactly one local run's resources. It intentionally leaves any
@@ -98,7 +138,10 @@ func (m *ResourceManager) Clean(ctx context.Context, runID string) error {
 		}
 		return fmt.Errorf("get namespace %q before local cleanup: %w", m.namespace, err)
 	}
-	selector := localSelector(runID)
+	selector, err := localSelector(runID)
+	if err != nil {
+		return err
+	}
 	foreground := metav1.DeletePropagationForeground
 	deleteOptions := metav1.DeleteOptions{PropagationPolicy: &foreground}
 	listOptions := metav1.ListOptions{LabelSelector: selector}

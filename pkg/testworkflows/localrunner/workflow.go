@@ -98,7 +98,7 @@ func ApplyConfig(workflow *testworkflowsv1.TestWorkflow, config map[string]strin
 // Testkube API, separate execution workers, or artifact persistence. The
 // returned error always names the user-facing YAML field that was rejected.
 func ValidateSupported(workflow *testworkflowsv1.TestWorkflow, hasLocalSource, interactive, autoContinue bool) error {
-	return ValidateSupportedInNamespace(workflow, "", hasLocalSource, interactive, autoContinue)
+	return ValidateSupportedInNamespaceWithArtifacts(workflow, "", hasLocalSource, false, interactive, autoContinue)
 }
 
 // ValidateSupportedInNamespace is the local compatibility gate with an
@@ -106,6 +106,14 @@ func ValidateSupported(workflow *testworkflowsv1.TestWorkflow, hasLocalSource, i
 // a workflow that would otherwise redirect a local run to another namespace
 // before any Kubernetes object is created.
 func ValidateSupportedInNamespace(workflow *testworkflowsv1.TestWorkflow, namespace string, hasLocalSource, interactive, autoContinue bool) error {
+	return ValidateSupportedInNamespaceWithArtifacts(workflow, namespace, hasLocalSource, false, interactive, autoContinue)
+}
+
+// ValidateSupportedInNamespaceWithArtifacts is the local compatibility gate
+// for callers that explicitly opted into private host artifact export. The
+// ordinary public validation helpers keep artifacts disabled by default so a
+// caller cannot accidentally enable a storage path without a destination.
+func ValidateSupportedInNamespaceWithArtifacts(workflow *testworkflowsv1.TestWorkflow, namespace string, hasLocalSource, allowArtifacts, interactive, autoContinue bool) error {
 	if workflow == nil {
 		return UsageError("workflow is required")
 	}
@@ -149,7 +157,7 @@ func ValidateSupportedInNamespace(workflow *testworkflowsv1.TestWorkflow, namesp
 		{name: "spec.after", steps: workflow.Spec.After},
 	} {
 		for i := range group.steps {
-			found, err := validateStep(group.steps[i], fmt.Sprintf("%s[%d]", group.name, i), hasLocalSource)
+			found, err := validateStep(group.steps[i], fmt.Sprintf("%s[%d]", group.name, i), hasLocalSource, allowArtifacts)
 			if err != nil {
 				return err
 			}
@@ -172,7 +180,7 @@ func validateContent(content *testworkflowsv1.Content, path string, hasLocalSour
 	return nil
 }
 
-func validateStep(step testworkflowsv1.Step, path string, hasLocalSource bool) (bool, error) {
+func validateStep(step testworkflowsv1.Step, path string, hasLocalSource, allowArtifacts bool) (bool, error) {
 	if len(step.Use) > 0 {
 		return false, UsageError("%s.use is not supported by testkube local", path)
 	}
@@ -189,7 +197,12 @@ func validateStep(step testworkflowsv1.Step, path string, hasLocalSource bool) (
 		return false, UsageError("%s.parallel is not supported by testkube local", path)
 	}
 	if step.Artifacts != nil {
-		return false, UsageError("%s.artifacts is not supported by testkube local", path)
+		if !allowArtifacts {
+			return false, UsageError("%s.artifacts requires --artifacts-dir for testkube local", path)
+		}
+		if len(step.Artifacts.Paths) == 0 {
+			return false, UsageError("%s.artifacts.paths must contain at least one path", path)
+		}
 	}
 	if err := validateContainerSecurity(step.Container, path+".container"); err != nil {
 		return false, err
@@ -211,7 +224,7 @@ func validateStep(step testworkflowsv1.Step, path string, hasLocalSource bool) (
 		{name: path + ".steps", steps: step.Steps},
 	} {
 		for i := range children.steps {
-			childPaused, err := validateStep(children.steps[i], fmt.Sprintf("%s[%d]", children.name, i), hasLocalSource)
+			childPaused, err := validateStep(children.steps[i], fmt.Sprintf("%s[%d]", children.name, i), hasLocalSource, allowArtifacts)
 			if err != nil {
 				return false, err
 			}
@@ -219,6 +232,26 @@ func validateStep(step testworkflowsv1.Step, path string, hasLocalSource bool) (
 		}
 	}
 	return paused, nil
+}
+
+// workflowHasArtifacts walks every sequential local-run step shape. It is
+// deliberately separate from validation so Prepare can reject a stray
+// --artifacts-dir without creating a host directory or Kubernetes resource.
+func workflowHasArtifacts(workflow *testworkflowsv1.TestWorkflow) bool {
+	if workflow == nil {
+		return false
+	}
+	var hasArtifacts func([]testworkflowsv1.Step) bool
+	hasArtifacts = func(steps []testworkflowsv1.Step) bool {
+		for i := range steps {
+			step := &steps[i]
+			if step.Artifacts != nil || hasArtifacts(step.Setup) || hasArtifacts(step.Steps) {
+				return true
+			}
+		}
+		return false
+	}
+	return hasArtifacts(workflow.Spec.Setup) || hasArtifacts(workflow.Spec.Steps) || hasArtifacts(workflow.Spec.After)
 }
 
 func validatePodSecurity(pod *testworkflowsv1.PodConfig, path string) error {

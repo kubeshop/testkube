@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -38,6 +39,11 @@ const DefaultMaxSourceBytes int64 = 100 << 20
 // random path on a reconnect or a reconstructed notification stream.
 var localSourceURLPattern = regexp.MustCompile(`https?://local-source-[a-z0-9-]+(?::[0-9]+)?/[a-f0-9]+\.tar\.gz`)
 
+// localArtifactURLPattern catches opaque receiver endpoints reconstructed in
+// a runtime error. The bearer token itself is delivered through a Secret env
+// variable and is separately redacted when it is known to the local runner.
+var localArtifactURLPattern = regexp.MustCompile(`https?://local-artifacts-[a-z0-9-]+(?::[0-9]+)?`)
+
 // redactedLocalSourceError preserves errors.Is/errors.As while ensuring a
 // temporary source relay URL or token can never reach Cobra's terminal error
 // renderer. The original error remains available to callers through Unwrap.
@@ -59,6 +65,31 @@ func redactLocalSourceError(err error, redactions ...string) error {
 	return &redactedLocalSourceError{err: err, redactions: redactions}
 }
 
+type redactedLocalArtifactError struct {
+	err        error
+	redactions []string
+}
+
+func (e *redactedLocalArtifactError) Error() string {
+	value := localSourceURLPattern.ReplaceAllString(e.err.Error(), "<local-source>")
+	value = localArtifactURLPattern.ReplaceAllString(value, "<local-artifact>")
+	for _, secret := range e.redactions {
+		if secret != "" {
+			value = strings.ReplaceAll(value, secret, "<local-artifact>")
+		}
+	}
+	return value
+}
+
+func (e *redactedLocalArtifactError) Unwrap() error { return e.err }
+
+func redactLocalArtifactError(err error, redactions ...string) error {
+	if err == nil {
+		return nil
+	}
+	return &redactedLocalArtifactError{err: err, redactions: redactions}
+}
+
 func localKubeconfigFlag(kubeconfig string) string {
 	if kubeconfig == "" {
 		return ""
@@ -67,13 +98,20 @@ func localKubeconfigFlag(kubeconfig string) string {
 }
 
 func localInspectHint(runID, namespace, contextName, kubeconfig string) string {
+	labelRunID, err := localRunIDLabelValue(runID)
+	if err != nil {
+		// Run IDs printed by the local runner have already passed validation.
+		// Retain the original value only as a defensive fallback for this
+		// best-effort human hint.
+		labelRunID = runID
+	}
 	return fmt.Sprintf(
 		"kubectl%s --context %s -n %s get job,pod,service,secret,configmap,pvc -l %s=%s",
 		localKubeconfigFlag(kubeconfig),
 		shellQuote(contextName),
 		shellQuote(namespace),
 		LocalRunIDLabel,
-		shellQuote(runID),
+		shellQuote(labelRunID),
 	)
 }
 
@@ -91,25 +129,27 @@ func localCleanHint(runID, namespace, contextName, kubeconfig string) string {
 // run`. It intentionally contains Kubernetes selection rather than any
 // Testkube API configuration.
 type Options struct {
-	FilePath       string
-	SourceDir      string
-	SourceMount    string
-	SourceIncludes []string
-	SourceExcludes []string
-	MaxSourceBytes int64
-	Config         map[string]string
-	Variables      map[string]string
-	Namespace      string
-	Kubeconfig     string
-	ContextName    string
-	AllowNonLocal  bool
-	Interactive    bool
-	AutoContinue   bool
-	Keep           bool
-	DryRun         bool
-	In             io.Reader
-	Out            io.Writer
-	ErrOut         io.Writer
+	FilePath         string
+	SourceDir        string
+	SourceMount      string
+	SourceIncludes   []string
+	SourceExcludes   []string
+	MaxSourceBytes   int64
+	ArtifactsDir     string
+	MaxArtifactBytes int64
+	Config           map[string]string
+	Variables        map[string]string
+	Namespace        string
+	Kubeconfig       string
+	ContextName      string
+	AllowNonLocal    bool
+	Interactive      bool
+	AutoContinue     bool
+	Keep             bool
+	DryRun           bool
+	In               io.Reader
+	Out              io.Writer
+	ErrOut           io.Writer
 }
 
 // PreparedRun holds only local state and direct Kubernetes configuration. It
@@ -122,6 +162,7 @@ type PreparedRun struct {
 	Namespace  string
 	Kubeconfig string
 	Source     *SourcePlan
+	Artifacts  *ArtifactPlan
 }
 
 // Result is returned for an executed workflow. A non-passing result is also
@@ -155,7 +196,8 @@ func Prepare(ctx context.Context, opts Options) (*PreparedRun, error) {
 	// before applying configuration. Configuration resolution is local today,
 	// but this ordering keeps the no-Control-Plane contract explicit and avoids
 	// ever trying to resolve a template reference from a local invocation.
-	if err = ValidateSupportedInNamespace(workflow, opts.Namespace, opts.SourceDir != "", opts.Interactive, opts.AutoContinue); err != nil {
+	allowArtifacts := strings.TrimSpace(opts.ArtifactsDir) != ""
+	if err = ValidateSupportedInNamespaceWithArtifacts(workflow, opts.Namespace, opts.SourceDir != "", allowArtifacts, opts.Interactive, opts.AutoContinue); err != nil {
 		return nil, err
 	}
 	workflow, err = ApplyConfig(workflow, opts.Config)
@@ -164,7 +206,7 @@ func Prepare(ctx context.Context, opts Options) (*PreparedRun, error) {
 	}
 	// Re-run the structural gate after configuration in case a parameterized
 	// value resolved to a local-runner-incompatible field.
-	if err = ValidateSupportedInNamespace(workflow, opts.Namespace, opts.SourceDir != "", opts.Interactive, opts.AutoContinue); err != nil {
+	if err = ValidateSupportedInNamespaceWithArtifacts(workflow, opts.Namespace, opts.SourceDir != "", allowArtifacts, opts.Interactive, opts.AutoContinue); err != nil {
 		return nil, err
 	}
 	workflow = workflow.DeepCopy()
@@ -184,6 +226,28 @@ func Prepare(ctx context.Context, opts Options) (*PreparedRun, error) {
 		Target:     target,
 		Namespace:  opts.Namespace,
 		Kubeconfig: opts.Kubeconfig,
+	}
+	if opts.MaxArtifactBytes < 0 {
+		return nil, UsageError("--max-artifact-bytes must be greater than zero")
+	}
+	if workflowHasArtifacts(workflow) {
+		maxBytes := opts.MaxArtifactBytes
+		if maxBytes == 0 {
+			maxBytes = DefaultMaxArtifactBytes
+		}
+		plan, planErr := PrepareArtifactPlan(opts.ArtifactsDir, maxBytes)
+		if planErr != nil {
+			return nil, planErr
+		}
+		if plan == nil {
+			return nil, UsageError("workflow artifacts require --artifacts-dir for testkube local")
+		}
+		if planErr = ensureArtifactDestinationAbsent(filepath.Join(plan.Destination, prepared.RunID)); planErr != nil {
+			return nil, UsageError("validate --artifacts-dir: %v", planErr)
+		}
+		prepared.Artifacts = plan
+	} else if allowArtifacts {
+		return nil, UsageError("--artifacts-dir requires at least one step.artifacts block")
 	}
 	if opts.SourceDir != "" {
 		root, err := sourceRoot(opts.SourceDir)
@@ -228,9 +292,13 @@ func Run(ctx context.Context, opts Options) (result *Result, err error) {
 	// Source-rewrite and relay errors can contain the temporary bearer-like URL
 	// in processor or transport details. Register this before any cleanup defer
 	// so it is the final transformation of every returned error.
+	var artifactRelay *ArtifactRelay
 	defer func() {
 		if prepared.Source != nil && prepared.Source.URL != "" {
 			err = redactLocalSourceError(err, prepared.Source.URL)
+		}
+		if artifactRelay != nil {
+			err = redactLocalArtifactError(err, artifactRelay.URL, artifactRelay.token)
 		}
 	}()
 	out := opts.Out
@@ -243,7 +311,7 @@ func Run(ctx context.Context, opts Options) (result *Result, err error) {
 	}
 	fmt.Fprintf(out, "local run: %s (%s, namespace %s)\n", prepared.RunID, KubeTargetDescription(prepared.Target), prepared.Namespace)
 	if opts.DryRun {
-		fmt.Fprintln(out, "dry run: workflow and local-source inputs are valid; no Kubernetes resources were created")
+		fmt.Fprintln(out, "dry run: workflow, local-source, and local-artifact inputs are valid; no Kubernetes resources were created")
 		return &Result{RunID: prepared.RunID, Status: "validated", Passed: true, Namespace: prepared.Namespace}, nil
 	}
 
@@ -331,12 +399,24 @@ func Run(ctx context.Context, opts Options) (result *Result, err error) {
 		}
 		fmt.Fprintf(out, "source: local archive (%d files, %d bytes) -> %s\n", summary.Files, summary.Bytes, prepared.Source.MountPath)
 	}
+	if prepared.Artifacts != nil {
+		artifactRelay, err = CreateArtifactRelay(ctx, client, prepared.Target.RESTConfig, prepared.Namespace, prepared.RunID, prepared.Artifacts.MaxBytes)
+		if err != nil {
+			if ctx.Err() != nil {
+				return nil, InterruptedError(ctx.Err())
+			}
+			return nil, ExecutionError("create local artifact relay: %v", err)
+		}
+	}
 
 	workflowLabels, err := Labels(prepared.RunID, "workflow")
 	if err != nil {
 		return nil, err
 	}
-	worker := newLocalWorker(client, prepared.Namespace, prepared.RunID)
+	worker, err := newLocalWorker(client, prepared.Namespace, prepared.RunID, artifactRelay)
+	if err != nil {
+		return nil, err
+	}
 	now := time.Now().UTC()
 	ttl := int32(defaultJobTTL / time.Second)
 	execution := testworkflowconfig.ExecutionConfig{
@@ -374,7 +454,7 @@ func Run(ctx context.Context, opts Options) (result *Result, err error) {
 		}
 		return abortErr
 	}
-	return followWorkflow(ctx, client, worker, deployed, prepared, control, abort, opts, out, errOut)
+	return followWorkflow(ctx, client, worker, deployed, prepared, control, abort, opts, out, errOut, artifactRelay)
 }
 
 const (
@@ -383,7 +463,11 @@ const (
 	localJobStatusPollInterval = 250 * time.Millisecond
 )
 
-func newLocalWorker(client kubernetes.Interface, namespace, runID string) executionworkertypes.Worker {
+func newLocalWorker(client kubernetes.Interface, namespace, runID string, artifactRelay *ArtifactRelay) (executionworkertypes.Worker, error) {
+	config, err := localWorkerConfig(namespace, runID)
+	if err != nil {
+		return nil, err
+	}
 	secretClient := secret.NewClientFor(client, namespace)
 	inspector := imageinspector.NewInspector(
 		"",
@@ -391,17 +475,42 @@ func newLocalWorker(client kubernetes.Interface, namespace, runID string) execut
 		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret]()),
 		imageinspector.NewMemoryStorage(),
 	)
-	return executionworker.NewKubernetes(client, presets.NewOpenSource(inspector), kubernetesworker.Config{
+	processor := presets.NewOpenSource(inspector)
+	if artifactRelay != nil {
+		processor = presets.NewOpenSourceWithLocalArtifacts(inspector, artifactRelay.URL, artifactRelay.SecretName)
+	}
+	return executionworker.NewKubernetes(client, processor, config), nil
+}
+
+func localWorkerConfig(namespace, runID string) (kubernetesworker.Config, error) {
+	workerID, err := localWorkerIdentity(runID)
+	if err != nil {
+		return kubernetesworker.Config{}, err
+	}
+	return kubernetesworker.Config{
 		Cluster: kubernetesworker.ClusterConfig{
-			Id:               "local-" + runID,
+			Id:               workerID,
 			DefaultNamespace: namespace,
 			Namespaces:       map[string]kubernetesworker.NamespaceConfig{namespace: {}},
 		},
-		RunnerId:               "local-" + runID,
+		RunnerId:               workerID,
 		Connection:             testworkflowconfig.WorkerConnectionConfig{},
 		DisableResourceMetrics: true,
 		AllowLowSecurityFields: false,
-	})
+	}, nil
+}
+
+// localWorkerIdentity is both the worker cluster ID and the runner label
+// value. Prefixing a local run ID with "local-" keeps short IDs readable, but
+// may exceed Kubernetes' 63-byte label limit for a long workflow name. Reuse
+// the exact local-run label normalization so both identities remain stable,
+// safe, and collision-resistant.
+func localWorkerIdentity(runID string) (string, error) {
+	identity, err := localRunIDLabelValue("local-" + runID)
+	if err != nil {
+		return "", fmt.Errorf("derive local worker identity: %w", err)
+	}
+	return identity, nil
 }
 
 func followWorkflow(
@@ -414,7 +523,12 @@ func followWorkflow(
 	abort func() error,
 	opts Options,
 	out, errOut io.Writer,
+	artifactRelays ...*ArtifactRelay,
 ) (*Result, error) {
+	var artifactRelay *ArtifactRelay
+	if len(artifactRelays) > 0 {
+		artifactRelay = artifactRelays[0]
+	}
 	watchCtx, cancelWatch := context.WithCancel(ctx)
 	defer cancelWatch()
 	watcher := worker.Notifications(watchCtx, prepared.RunID, executionworkertypes.NotificationsOptions{
@@ -428,9 +542,40 @@ func followWorkflow(
 	lastStepStatuses := map[string]string{}
 	lastPause := ""
 	finish := func(result *Result) (*Result, error) {
+		var artifactErr error
+		if artifactRelay != nil && prepared.Artifacts != nil {
+			if err := waitForLocalJobTerminal(ctx, client, prepared.Namespace, prepared.RunID); err != nil {
+				if ctx.Err() != nil {
+					if abortErr := abort(); abortErr != nil {
+						fmt.Fprintf(errOut, "warning: abort local workflow %s after interrupt: %v\n", prepared.RunID, abortErr)
+					}
+					return nil, InterruptedError(ctx.Err())
+				}
+				artifactErr = fmt.Errorf("wait for workflow artifact stage: %w", err)
+			} else {
+				summary, downloadErr := artifactRelay.Download(ctx, prepared.Artifacts.Destination, prepared.RunID)
+				if downloadErr != nil {
+					if ctx.Err() != nil {
+						if abortErr := abort(); abortErr != nil {
+							fmt.Fprintf(errOut, "warning: abort local workflow %s after interrupt: %v\n", prepared.RunID, abortErr)
+						}
+						return nil, InterruptedError(ctx.Err())
+					}
+					artifactErr = downloadErr
+				} else {
+					fmt.Fprintf(out, "artifacts: downloaded %d files (%d bytes) -> %s\n", summary.Files, summary.Bytes, summary.Destination)
+				}
+			}
+		}
 		fmt.Fprintf(out, "result: %s\n", result.Status)
 		if !result.Passed {
+			if artifactErr != nil {
+				return result, ExecutionError("local workflow %s finished with %s; local artifact export: %v", prepared.RunID, result.Status, artifactErr)
+			}
 			return result, ExecutionError("local workflow %s finished with %s", prepared.RunID, result.Status)
+		}
+		if artifactErr != nil {
+			return result, ExecutionError("export local artifacts for %s: %v", prepared.RunID, artifactErr)
 		}
 		return result, nil
 	}
@@ -475,7 +620,7 @@ func followWorkflow(
 			return nil, nil, false
 		}
 		if notification.Log != "" {
-			renderLogRedacted(out, notification.Log, localLogRedactions(prepared.Source))
+			renderLogRedacted(out, notification.Log, localLogRedactions(prepared.Source, artifactRelay))
 		}
 		if notification.Output != nil {
 			fmt.Fprintf(out, "output: %s\n", notification.Output.Name)
@@ -601,6 +746,25 @@ func followWorkflow(
 	}
 }
 
+func waitForLocalJobTerminal(ctx context.Context, client kubernetes.Interface, namespace, runID string) error {
+	ticker := time.NewTicker(localJobStatusPollInterval)
+	defer ticker.Stop()
+	for {
+		finished, _, _, err := localJobOutcome(ctx, client, namespace, runID)
+		if err != nil {
+			return err
+		}
+		if finished {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+		}
+	}
+}
+
 var errBreakpointAbort = errors.New("local workflow abort requested")
 
 func localJobOutcome(ctx context.Context, client kubernetes.Interface, namespace, runID string) (finished, passed bool, status string, err error) {
@@ -610,12 +774,6 @@ func localJobOutcome(ctx context.Context, client kubernetes.Interface, namespace
 	}
 	if err != nil {
 		return false, false, "", err
-	}
-	if job.Status.Succeeded > 0 {
-		return true, true, "passed", nil
-	}
-	if job.Status.Failed > 0 {
-		return true, false, "failed", nil
 	}
 	for _, condition := range job.Status.Conditions {
 		if condition.Status != corev1.ConditionTrue {
@@ -766,22 +924,33 @@ func renderLogRedacted(out io.Writer, logs string, redactions []string) {
 	}
 }
 
-func localLogRedactions(source *SourcePlan) []string {
-	if source == nil || source.URL == "" {
-		return nil
+func localLogRedactions(source *SourcePlan, artifactRelays ...*ArtifactRelay) []string {
+	redactions := make([]string, 0, 4)
+	if source != nil && source.URL != "" {
+		token := source.URL[strings.LastIndex(source.URL, "/")+1:]
+		token = strings.TrimSuffix(token, ".tar.gz")
+		redactions = append(redactions, source.URL, token)
 	}
-	token := source.URL[strings.LastIndex(source.URL, "/")+1:]
-	token = strings.TrimSuffix(token, ".tar.gz")
-	return []string{source.URL, token}
+	if len(artifactRelays) > 0 && artifactRelays[0] != nil {
+		// The endpoint is local-run plumbing rather than useful user output. The
+		// token is a credential and must never reach structured runtime logs.
+		redactions = append(redactions, artifactRelays[0].URL, artifactRelays[0].token)
+	}
+	return redactions
 }
 
 func redactLogValues(value string, redactions []string) string {
 	value = localSourceURLPattern.ReplaceAllString(value, "<local-source>")
+	value = localArtifactURLPattern.ReplaceAllString(value, "<local-artifact>")
 	for _, secret := range redactions {
 		if secret == "" {
 			continue
 		}
-		value = strings.ReplaceAll(value, secret, "<local-source>")
+		placeholder := "<local-source>"
+		if strings.Contains(secret, "local-artifacts") {
+			placeholder = "<local-artifact>"
+		}
+		value = strings.ReplaceAll(value, secret, placeholder)
 	}
 	return value
 }

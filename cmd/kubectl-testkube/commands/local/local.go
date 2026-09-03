@@ -51,17 +51,19 @@ func addTargetFlags(cmd *cobra.Command, target *targetOptions) {
 }
 
 type runOptions struct {
-	filePath       string
-	sourceDir      string
-	sourceMount    string
-	sourceIncludes []string
-	sourceExcludes []string
-	maxSourceBytes int64
-	config         []string
-	variables      []string
-	autoContinue   bool
-	keep           bool
-	dryRun         bool
+	filePath         string
+	sourceDir        string
+	sourceMount      string
+	sourceIncludes   []string
+	sourceExcludes   []string
+	maxSourceBytes   int64
+	artifactsDir     string
+	maxArtifactBytes int64
+	config           []string
+	variables        []string
+	autoContinue     bool
+	keep             bool
+	dryRun           bool
 }
 
 func newRunCmd(target *targetOptions) *cobra.Command {
@@ -71,6 +73,9 @@ func newRunCmd(target *targetOptions) *cobra.Command {
 		Short: "Execute a local TestWorkflow without a Testkube API or CRD",
 		Args:  noArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			if cmd.Flags().Changed("max-artifact-bytes") && options.maxArtifactBytes <= 0 {
+				return localrunner.UsageError("--max-artifact-bytes must be greater than zero")
+			}
 			config, err := parseAssignments(options.config, "--config")
 			if err != nil {
 				return err
@@ -81,25 +86,27 @@ func newRunCmd(target *targetOptions) *cobra.Command {
 			}
 			interactive := isTerminal(cmd.InOrStdin()) && isTerminal(cmd.OutOrStdout())
 			_, err = localrunner.Run(cmd.Context(), localrunner.Options{
-				FilePath:       options.filePath,
-				SourceDir:      options.sourceDir,
-				SourceMount:    options.sourceMount,
-				SourceIncludes: options.sourceIncludes,
-				SourceExcludes: options.sourceExcludes,
-				MaxSourceBytes: options.maxSourceBytes,
-				Config:         config,
-				Variables:      variables,
-				Namespace:      target.namespace,
-				Kubeconfig:     target.kubeconfig,
-				ContextName:    target.contextName,
-				AllowNonLocal:  target.allowNonLocal,
-				Interactive:    interactive,
-				AutoContinue:   options.autoContinue,
-				Keep:           options.keep,
-				DryRun:         options.dryRun,
-				In:             cmd.InOrStdin(),
-				Out:            cmd.OutOrStdout(),
-				ErrOut:         cmd.ErrOrStderr(),
+				FilePath:         options.filePath,
+				SourceDir:        options.sourceDir,
+				SourceMount:      options.sourceMount,
+				SourceIncludes:   options.sourceIncludes,
+				SourceExcludes:   options.sourceExcludes,
+				MaxSourceBytes:   options.maxSourceBytes,
+				ArtifactsDir:     options.artifactsDir,
+				MaxArtifactBytes: options.maxArtifactBytes,
+				Config:           config,
+				Variables:        variables,
+				Namespace:        target.namespace,
+				Kubeconfig:       target.kubeconfig,
+				ContextName:      target.contextName,
+				AllowNonLocal:    target.allowNonLocal,
+				Interactive:      interactive,
+				AutoContinue:     options.autoContinue,
+				Keep:             options.keep,
+				DryRun:           options.dryRun,
+				In:               cmd.InOrStdin(),
+				Out:              cmd.OutOrStdout(),
+				ErrOut:           cmd.ErrOrStderr(),
 			})
 			return err
 		},
@@ -110,6 +117,8 @@ func newRunCmd(target *targetOptions) *cobra.Command {
 	cmd.Flags().StringArrayVar(&options.sourceIncludes, "source-include", nil, "Testkube-ignore pattern to include (may be repeated)")
 	cmd.Flags().StringArrayVar(&options.sourceExcludes, "source-exclude", nil, "Testkube-ignore pattern to exclude (may be repeated)")
 	cmd.Flags().Int64Var(&options.maxSourceBytes, "max-source-bytes", localrunner.DefaultMaxSourceBytes, "maximum uncompressed local source bytes")
+	cmd.Flags().StringVar(&options.artifactsDir, "artifacts-dir", "", "host directory for private local workflow artifacts")
+	cmd.Flags().Int64Var(&options.maxArtifactBytes, "max-artifact-bytes", localrunner.DefaultMaxArtifactBytes, "maximum total local artifact-export bytes")
 	cmd.Flags().StringArrayVar(&options.config, "config", nil, "non-sensitive workflow configuration key=value (may be repeated)")
 	cmd.Flags().StringArrayVarP(&options.variables, "variable", "v", nil, "runtime variable key=value (may be repeated)")
 	cmd.Flags().BoolVar(&options.autoContinue, "auto-continue", false, "continue paused workflow steps automatically")

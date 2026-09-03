@@ -57,9 +57,10 @@ func (d *tarProcessor) Add(uploader Uploader, path string, file fs.File, stat fs
 }
 
 func (d *tarProcessor) End() (err error) {
-	if d.ts != nil {
-		<-d.ts.Done()
+	if d.ts == nil {
+		return nil
 	}
+	<-d.ts.Done()
 	err = d.ts.Close()
 	if err != nil {
 		return fmt.Errorf("problem closing writer: %w", err)

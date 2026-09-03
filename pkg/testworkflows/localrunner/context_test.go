@@ -1,6 +1,7 @@
 package localrunner
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -50,4 +51,16 @@ func TestRecoveryHintsQuoteDynamicArgumentsAndPreserveKubeconfig(t *testing.T) {
 	assert.Contains(t, clean, "--kubeconfig '/tmp/local cluster'\"'\"'s config'")
 	assert.Contains(t, clean, "--context 'kind-demo; echo unsafe'")
 	assert.Contains(t, clean, "'local-demo'")
+}
+
+func TestInspectHintUsesNormalizedLongRunIDLabel(t *testing.T) {
+	runID := "local-inspect-" + strings.Repeat("a", 80)
+	labelRunID, err := localRunIDLabelValue(runID)
+	if err != nil {
+		t.Fatalf("localRunIDLabelValue(%q): %v", runID, err)
+	}
+
+	inspect := localInspectHint(runID, DefaultNamespace, "kind-local", "")
+	assert.Contains(t, inspect, LocalRunIDLabel+"='"+labelRunID+"'")
+	assert.NotContains(t, inspect, runID)
 }

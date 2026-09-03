@@ -2,6 +2,7 @@ package localrunner
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,16 +15,17 @@ import (
 )
 
 func TestLocalControlActivePodSelectsOnlyWorkflowComponent(t *testing.T) {
-	labels, err := Labels("local-control", "workflow")
+	runID := "local-control-" + strings.Repeat("a", 80)
+	labels, err := Labels(runID, "workflow")
 	require.NoError(t, err)
-	relayLabels, err := Labels("local-control", "source-relay")
+	relayLabels, err := Labels(runID, "source-relay")
 	require.NoError(t, err)
 	client := fake.NewClientset(
 		&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "relay", Namespace: DefaultNamespace, Labels: relayLabels}, Status: corev1.PodStatus{Phase: corev1.PodRunning}},
 		&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "workflow", Namespace: DefaultNamespace, Labels: labels}, Status: corev1.PodStatus{Phase: corev1.PodRunning}},
 	)
 	control := NewLocalControl(client, nil, DefaultNamespace)
-	pod, err := control.ActivePod(context.Background(), "local-control")
+	pod, err := control.ActivePod(context.Background(), runID)
 	require.NoError(t, err)
 	assert.Equal(t, "workflow", pod.Name)
 }

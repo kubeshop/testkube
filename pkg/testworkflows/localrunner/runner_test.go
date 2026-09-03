@@ -11,7 +11,9 @@ import (
 	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/stretchr/testify/assert"
@@ -30,6 +32,24 @@ func TestNewRunIDIsKubernetesSafeAndUnique(t *testing.T) {
 	assert.True(t, strings.HasPrefix(first, "local-demo-workflow-unsafe-"))
 	_, err := Labels(first, "workflow")
 	require.NoError(t, err)
+}
+
+func TestLocalWorkerConfigUsesSafeIdentityForLongPlaywrightFailureRun(t *testing.T) {
+	// This has the shape and length of the real failure fixture's generated
+	// local run ID. Adding the historical worker "local-" prefix made the
+	// runner label exceed the Kubernetes 63-byte label-value limit.
+	const runID = "local-local-runner-playwright-artifact-failure-e3c8d96f3008"
+
+	config, err := localWorkerConfig(DefaultNamespace, runID)
+	require.NoError(t, err)
+	repeated, err := localWorkerConfig(DefaultNamespace, runID)
+	require.NoError(t, err)
+
+	assert.Equal(t, config.Cluster.Id, config.RunnerId)
+	assert.Equal(t, config.RunnerId, repeated.RunnerId)
+	assert.LessOrEqual(t, len(config.RunnerId), validation.LabelValueMaxLength)
+	assert.Empty(t, validation.IsValidLabelValue(config.RunnerId))
+	assert.NotEqual(t, "local-"+runID, config.RunnerId)
 }
 
 func TestLocalLogAndResultHelpers(t *testing.T) {
@@ -57,6 +77,17 @@ func TestRenderLogRedactsRuntimeSourceURLWithoutPreparedSource(t *testing.T) {
 	assert.Equal(t, "Downloading <local-source>\n", output.String())
 }
 
+func TestRenderLogRedactsLocalArtifactEndpointAndToken(t *testing.T) {
+	artifactRelay := &ArtifactRelay{
+		URL:   "http://local-artifacts-local-run-012345:8080/upload",
+		token: "artifact-relay-token",
+	}
+	var output bytes.Buffer
+	renderLogRedacted(&output, "Uploading to http://local-artifacts-local-run-012345:8080/upload with artifact-relay-token\n", localLogRedactions(nil, artifactRelay))
+	assert.Equal(t, "Uploading to <local-artifact>/upload with <local-source>\n", output.String())
+	assert.NotContains(t, output.String(), "artifact-relay-token")
+}
+
 func TestRedactLocalSourceErrorPreservesCauseAndHidesRelayCredentials(t *testing.T) {
 	const (
 		token = "abcdef0123456789"
@@ -70,10 +101,24 @@ func TestRedactLocalSourceErrorPreservesCauseAndHidesRelayCredentials(t *testing
 	assert.Contains(t, err.Error(), "<local-source>")
 }
 
+func TestRedactLocalArtifactErrorPreservesCauseAndHidesRelayCredentials(t *testing.T) {
+	const (
+		token = "abcdef0123456789"
+		url   = "http://local-artifacts-local-run-012345:8080"
+	)
+	cause := errors.New("artifact relay request failed for " + url + " with token " + token)
+	err := redactLocalArtifactError(cause, url, token)
+	assert.ErrorIs(t, err, cause)
+	assert.NotContains(t, err.Error(), token)
+	assert.NotContains(t, err.Error(), url)
+	assert.Contains(t, err.Error(), "<local-artifact>")
+}
+
 func TestLocalJobOutcomeUsesKubernetesTerminalStatus(t *testing.T) {
 	client := fake.NewClientset(
-		&batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "passed", Namespace: DefaultNamespace}, Status: batchv1.JobStatus{Succeeded: 1}},
-		&batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "failed", Namespace: DefaultNamespace}, Status: batchv1.JobStatus{Failed: 1}},
+		&batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "passed", Namespace: DefaultNamespace}, Status: batchv1.JobStatus{Succeeded: 1, Conditions: []batchv1.JobCondition{{Type: batchv1.JobComplete, Status: corev1.ConditionTrue}}}},
+		&batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "failed", Namespace: DefaultNamespace}, Status: batchv1.JobStatus{Failed: 1, Conditions: []batchv1.JobCondition{{Type: batchv1.JobFailed, Status: corev1.ConditionTrue}}}},
+		&batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "retrying", Namespace: DefaultNamespace}, Status: batchv1.JobStatus{Failed: 1}},
 	)
 	finished, passed, status, err := localJobOutcome(context.Background(), client, DefaultNamespace, "passed")
 	require.NoError(t, err)
@@ -85,6 +130,9 @@ func TestLocalJobOutcomeUsesKubernetesTerminalStatus(t *testing.T) {
 	assert.True(t, finished)
 	assert.False(t, passed)
 	assert.Equal(t, "failed", status)
+	finished, _, _, err = localJobOutcome(context.Background(), client, DefaultNamespace, "retrying")
+	require.NoError(t, err)
+	assert.False(t, finished)
 }
 
 func TestBreakpointShellInputStopsAtExplicitExit(t *testing.T) {
@@ -178,7 +226,13 @@ func TestFollowWorkflowDrainsTrailingStructuredLogsAfterJobFallback(t *testing.T
 	worker.EXPECT().Notifications(gomock.Any(), "local-follow", gomock.Any()).Return(watcher)
 	client := fake.NewClientset(&batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{Name: "local-follow", Namespace: DefaultNamespace},
-		Status:     batchv1.JobStatus{Succeeded: 1},
+		Status: batchv1.JobStatus{
+			Succeeded: 1,
+			Conditions: []batchv1.JobCondition{{
+				Type:   batchv1.JobComplete,
+				Status: corev1.ConditionTrue,
+			}},
+		},
 	})
 	go func() {
 		// Let the Job-status polling fallback observe completion first, then
@@ -215,7 +269,13 @@ func TestFollowWorkflowFallsBackToJobWhenNotificationsClose(t *testing.T) {
 	watcher.Close(errors.New("watch disconnected"))
 	client := fake.NewClientset(&batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{Name: "local-follow", Namespace: DefaultNamespace},
-		Status:     batchv1.JobStatus{Succeeded: 1},
+		Status: batchv1.JobStatus{
+			Succeeded: 1,
+			Conditions: []batchv1.JobCondition{{
+				Type:   batchv1.JobComplete,
+				Status: corev1.ConditionTrue,
+			}},
+		},
 	})
 	var output bytes.Buffer
 	var errOutput bytes.Buffer

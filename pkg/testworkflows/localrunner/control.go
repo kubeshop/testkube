@@ -262,7 +262,7 @@ func (c *LocalControl) ActivePod(ctx context.Context, runID string) (*corev1.Pod
 	if err != nil {
 		return nil, err
 	}
-	selector := fmt.Sprintf("%s=%s,%s=%s,%s=%s", LocalLabel, localLabelValue, LocalRunIDLabel, runID, LocalComponentLabel, labels[LocalComponentLabel])
+	selector := fmt.Sprintf("%s=%s,%s=%s,%s=%s", LocalLabel, localLabelValue, LocalRunIDLabel, labels[LocalRunIDLabel], LocalComponentLabel, labels[LocalComponentLabel])
 	pods, err := c.client.CoreV1().Pods(c.namespace).List(ctx, metav1.ListOptions{LabelSelector: selector})
 	if err != nil {
 		return nil, fmt.Errorf("list local workflow pods for run %q: %w", runID, err)

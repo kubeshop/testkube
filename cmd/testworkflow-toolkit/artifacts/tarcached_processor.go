@@ -71,10 +71,16 @@ func (d *tarCachedProcessor) Add(uploader Uploader, path string, file fs.File, s
 
 func (d *tarCachedProcessor) End() (err error) {
 	defer d.clean()
-
-	if d.ts != nil {
-		<-d.ts.Done()
+	if d.ts == nil {
+		if d.file != nil {
+			if closeErr := d.file.Close(); closeErr != nil {
+				return fmt.Errorf("problem closing empty disk cache: %w", closeErr)
+			}
+		}
+		return nil
 	}
+
+	<-d.ts.Done()
 	err = d.ts.Close()
 	if err != nil {
 		return fmt.Errorf("problem closing writer: %w", err)

@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -46,6 +48,29 @@ func TestValidateSupportedRejectsNonInteractivePause(t *testing.T) {
 	if err := ValidateSupported(workflow, false, false, true); err != nil {
 		t.Fatalf("ValidateSupported with --auto-continue: %v", err)
 	}
+}
+
+func TestValidateSupportedGatesArtifactsBehindExplicitLocalDestination(t *testing.T) {
+	workflow := &testworkflowsv1.TestWorkflow{Spec: testworkflowsv1.TestWorkflowSpec{Steps: []testworkflowsv1.Step{{
+		StepOperations: testworkflowsv1.StepOperations{Artifacts: &testworkflowsv1.StepArtifacts{Paths: []string{"test-results/**/*"}}},
+	}}}}
+	err := ValidateSupportedInNamespace(workflow, DefaultNamespace, false, true, false)
+	require.Error(t, err)
+	assert.True(t, IsUsageError(err))
+	assert.Contains(t, err.Error(), "spec.steps[0].artifacts requires --artifacts-dir")
+
+	err = ValidateSupportedInNamespaceWithArtifacts(workflow, DefaultNamespace, false, true, true, false)
+	require.NoError(t, err)
+}
+
+func TestWorkflowHasArtifactsWalksNestedSequentialSteps(t *testing.T) {
+	workflow := &testworkflowsv1.TestWorkflow{Spec: testworkflowsv1.TestWorkflowSpec{Steps: []testworkflowsv1.Step{{
+		Setup: []testworkflowsv1.Step{{
+			StepOperations: testworkflowsv1.StepOperations{Artifacts: &testworkflowsv1.StepArtifacts{Paths: []string{"report.xml"}}},
+		}},
+	}}}}
+	assert.True(t, workflowHasArtifacts(workflow))
+	assert.False(t, workflowHasArtifacts(&testworkflowsv1.TestWorkflow{}))
 }
 
 func TestValidateSupportedRejectsUnsafeOrRedirectingWorkflowFields(t *testing.T) {

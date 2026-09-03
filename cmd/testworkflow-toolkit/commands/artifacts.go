@@ -17,6 +17,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/pkg/mapper/cdevents"
+	"github.com/kubeshop/testkube/pkg/testworkflows/localartifacts"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -36,6 +37,7 @@ func NewArtifactsCmd() *cobra.Command {
 		compress          string
 		compressCachePath string
 		unpack            bool
+		localUploadURL    string
 	)
 
 	cmd := &cobra.Command{
@@ -74,36 +76,50 @@ func NewArtifactsCmd() *cobra.Command {
 			}
 
 			var handlerOpts []artifacts.HandlerOpts
-			// Archive
 			cfg := config.Config()
-			client, err := env.Cloud()
-			if err != nil {
-				ui.Failf("could not create cloud client: %v", err)
-			}
-
-			postProcessors := make([]artifacts.PostProcessor, 0, 5)
-			if env.HasJunitSupport() {
-				postProcessors = append(postProcessors, artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix))
-			}
-			postProcessors = append(postProcessors, artifacts.NewArtilleryReportPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix))
-			postProcessors = append(postProcessors, artifacts.NewJMeterStatisticsPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix))
-			postProcessors = append(postProcessors, artifacts.NewK6SummaryPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix))
-			postProcessors = append(postProcessors, artifacts.NewInfluxLineProtocolPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix))
-			if len(postProcessors) == 1 {
-				handlerOpts = append(handlerOpts, artifacts.WithPostProcessor(postProcessors[0]))
-			} else {
-				handlerOpts = append(handlerOpts, artifacts.WithPostProcessor(artifacts.NewCompositePostProcessor(postProcessors...)))
-			}
-			if compress != "" {
-				processor = artifacts.NewTarCachedProcessor(compress, compressCachePath)
-				opts := []artifacts.CloudUploaderOpt{cloudAddGzipEncoding}
+			if localUploadURL != "" {
 				if unpack {
-					opts = append(opts, cloudUnpack)
+					ui.Failf("--unpack is not supported with --local-upload-url")
 				}
-				uploader = artifacts.NewCloudUploader(client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), opts...)
+				uploader, err = artifacts.NewLocalUploader(localUploadURL, os.Getenv(localartifacts.TokenEnvName), config.Ref())
+				if err != nil {
+					ui.Failf("could not create local artifact uploader: %v", err)
+				}
+				if compress != "" {
+					processor = artifacts.NewTarCachedProcessor(compress, compressCachePath)
+				} else {
+					processor = artifacts.NewDirectProcessor()
+				}
 			} else {
-				processor = artifacts.NewDirectProcessor()
-				uploader = artifacts.NewCloudUploader(client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), artifacts.WithParallelismCloud(30), artifacts.CloudDetectMimetype)
+				client, err := env.Cloud()
+				if err != nil {
+					ui.Failf("could not create cloud client: %v", err)
+				}
+
+				postProcessors := make([]artifacts.PostProcessor, 0, 5)
+				if env.HasJunitSupport() {
+					postProcessors = append(postProcessors, artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix))
+				}
+				postProcessors = append(postProcessors, artifacts.NewArtilleryReportPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix))
+				postProcessors = append(postProcessors, artifacts.NewJMeterStatisticsPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix))
+				postProcessors = append(postProcessors, artifacts.NewK6SummaryPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix))
+				postProcessors = append(postProcessors, artifacts.NewInfluxLineProtocolPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix))
+				if len(postProcessors) == 1 {
+					handlerOpts = append(handlerOpts, artifacts.WithPostProcessor(postProcessors[0]))
+				} else {
+					handlerOpts = append(handlerOpts, artifacts.WithPostProcessor(artifacts.NewCompositePostProcessor(postProcessors...)))
+				}
+				if compress != "" {
+					processor = artifacts.NewTarCachedProcessor(compress, compressCachePath)
+					opts := []artifacts.CloudUploaderOpt{cloudAddGzipEncoding}
+					if unpack {
+						opts = append(opts, cloudUnpack)
+					}
+					uploader = artifacts.NewCloudUploader(client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), opts...)
+				} else {
+					processor = artifacts.NewDirectProcessor()
+					uploader = artifacts.NewCloudUploader(client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), artifacts.WithParallelismCloud(30), artifacts.CloudDetectMimetype)
+				}
 			}
 
 			// Isolate the files under specific prefix
@@ -112,7 +128,7 @@ func NewArtifactsCmd() *cobra.Command {
 			}
 
 			// Support cd events
-			if cfg.ControlPlane.CDEventsTarget != "" {
+			if localUploadURL == "" && cfg.ControlPlane.CDEventsTarget != "" {
 				handlerOpts = append(handlerOpts, artifacts.WithCDEventsTarget(cfg.ControlPlane.CDEventsTarget))
 				handlerOpts = append(handlerOpts, artifacts.WithCDEventsArtifactParameters(cdevents.CDEventsArtifactParameters{
 					Id:           cfg.Execution.Id,
@@ -134,6 +150,8 @@ func NewArtifactsCmd() *cobra.Command {
 	cmd.Flags().StringVar(&compress, "compress", "", "tgz name if should be compressed")
 	cmd.Flags().BoolVar(&unpack, "unpack", false, "minio only: unpack the file if compressed")
 	cmd.Flags().StringVar(&compressCachePath, "compress-cache", "", "local cache path for passing compressed archive through")
+	cmd.Flags().StringVar(&localUploadURL, "local-upload-url", "", "internal: upload artifacts to a local run relay")
+	_ = cmd.Flags().MarkHidden("local-upload-url")
 
 	return cmd
 }
