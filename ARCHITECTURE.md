@@ -101,7 +101,7 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 - Buckets: `testkube-artifacts`, `testkube-logs`
 - Storage interface: [`pkg/storage/`](pkg/storage/)
 - Also stores step dependency caches under the `.tkcache/v1` prefix, keyed and scoped by [`pkg/executioncache/`](pkg/executioncache/) so that a workflow-scoped entry cannot be addressed by another workflow. Retention is a prefix-filtered bucket lifecycle rule; see "Configuration references" in [`AGENTS.md`](AGENTS.md) for why both expiration settings are opt-in.
-- Pods never use the MinIO SDK. The toolkit uses presigned URLs from the Control Plane over gRPC and performs plain HTTP PUT/GET; dependency-cache transfers will use the new cache presign RPCs once the agent-side wiring is implemented.
+- Pods never use the MinIO SDK. The toolkit asks the Control Plane for a presigned URL over gRPC and performs a plain HTTP PUT/GET, so object-store credentials stay out of workflow containers. Dependency caches use their own presign RPCs (`GetExecutionCachePresigned`, `SaveExecutionCachePresigned`), which resolve the cache scope from the execution rather than from the request.
 
 **NATS** (Message Queue)
 

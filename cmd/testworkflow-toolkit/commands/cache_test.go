@@ -416,3 +416,69 @@ func writeState(t *testing.T, path string, state executioncache.State) {
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(path, encoded, 0o644))
 }
+
+// stubCacheClient is the control-plane client the repository wraps.
+type stubCacheClient struct {
+	restore    executioncache.RestoreResult
+	restoreErr error
+	save       executioncache.SaveResult
+	saveErr    error
+
+	sawEnvironment string
+	sawExecution   string
+	sawScope       executioncache.Scope
+}
+
+func (s *stubCacheClient) GetExecutionCachePresignedURL(_ context.Context, environmentId, executionId string, req executioncache.RestoreRequest) (executioncache.RestoreResult, error) {
+	s.sawEnvironment, s.sawExecution, s.sawScope = environmentId, executionId, req.Scope
+	return s.restore, s.restoreErr
+}
+
+func (s *stubCacheClient) SaveExecutionCacheGetPresignedURL(_ context.Context, environmentId, executionId string, req executioncache.SaveRequest) (executioncache.SaveResult, error) {
+	s.sawEnvironment, s.sawExecution, s.sawScope = environmentId, executionId, req.Scope
+	return s.save, s.saveErr
+}
+
+// TestControlPlaneCacheRepository checks the wiring between the commands and the
+// control-plane client: the pod's own identity is carried, not taken per call, and the
+// scope travels through untouched.
+func TestControlPlaneCacheRepository(t *testing.T) {
+	stub := &stubCacheClient{restore: executioncache.RestoreResult{Hit: true, Exact: true, URL: "https://storage/x"}}
+	repository := controlPlaneCacheRepository{client: stub, environmentID: "env-1", executionID: "exec-1"}
+
+	got, err := repository.Restore(context.Background(), executioncache.RestoreRequest{
+		Key: "npm-abc", Scope: executioncache.ScopeEnvironment,
+	})
+	require.NoError(t, err)
+	assert.True(t, got.Hit)
+	assert.Equal(t, "env-1", stub.sawEnvironment)
+	assert.Equal(t, "exec-1", stub.sawExecution)
+	assert.Equal(t, executioncache.ScopeEnvironment, stub.sawScope)
+
+	stub.save = executioncache.SaveResult{URL: "https://storage/put"}
+	saved, err := repository.Save(context.Background(), executioncache.SaveRequest{
+		Key: "npm-abc", Scope: executioncache.ScopeWorkflow, Size: 10,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "https://storage/put", saved.URL)
+	assert.Equal(t, executioncache.ScopeWorkflow, stub.sawScope)
+}
+
+// TestControlPlaneCacheRepositoryPropagatesForDegrading: the repository does not swallow
+// errors itself. It hands them up so that runCacheRestore/runCacheSave classify them -
+// Unimplemented and a refusal become a miss, anything else stays visible.
+func TestControlPlaneCacheRepositoryPropagatesForDegrading(t *testing.T) {
+	stub := &stubCacheClient{restoreErr: status.Error(codes.Unimplemented, "no such method")}
+	repository := controlPlaneCacheRepository{client: stub, environmentID: "env-1", executionID: "exec-1"}
+
+	_, err := repository.Restore(context.Background(), executioncache.RestoreRequest{Key: "npm-abc"})
+	require.Error(t, err)
+	assert.True(t, executioncache.IsUnsupported(err))
+
+	// And the command layer turns exactly that into a miss rather than a failure.
+	out := &bytes.Buffer{}
+	assert.NoError(t, runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key: "npm-abc", Paths: []string{t.TempDir()},
+	}), repository, out))
+	assert.Contains(t, out.String(), "cannot serve dependency caches")
+}

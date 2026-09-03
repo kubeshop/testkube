@@ -12,6 +12,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -155,4 +156,34 @@ func ObjectName(environmentID, workflowName string, scope Scope, key string) str
 // query has to stay open-ended.
 func ObjectNamePrefix(environmentID, workflowName string, scope Scope, keyPrefix string) string {
 	return ScopePrefix(environmentID, workflowName, scope) + "/" + encodeKey(keyPrefix)
+}
+
+// KeyFromObjectName recovers the key a workflow wrote from a stored object's name, so
+// that a restore can report which entry it used in the terms the author recognises
+// rather than as an encoded path.
+//
+// An object this package did not write is returned as-is: reporting the raw name is more
+// useful than reporting nothing, and it is not worth an error on a reporting path.
+func KeyFromObjectName(prefix, objectName string) string {
+	encoded := strings.TrimPrefix(objectName, prefix+"/")
+	encoded = strings.TrimSuffix(encoded, ObjectSuffix)
+
+	var out strings.Builder
+	out.Grow(len(encoded))
+	for i := 0; i < len(encoded); i++ {
+		if encoded[i] != '%' {
+			out.WriteByte(encoded[i])
+			continue
+		}
+		if i+2 >= len(encoded) {
+			return encoded
+		}
+		value, err := strconv.ParseUint(encoded[i+1:i+3], 16, 8)
+		if err != nil {
+			return encoded
+		}
+		out.WriteByte(byte(value))
+		i += 2
+	}
+	return out.String()
 }

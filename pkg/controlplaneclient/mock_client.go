@@ -16,6 +16,7 @@ import (
 
 	testkube "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	cloud "github.com/kubeshop/testkube/pkg/cloud"
+	executioncache "github.com/kubeshop/testkube/pkg/executioncache"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -316,6 +317,21 @@ func (m *MockClient) GetExecution(ctx context.Context, environmentId, executionI
 func (mr *MockClientMockRecorder) GetExecution(ctx, environmentId, executionId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecution", reflect.TypeOf((*MockClient)(nil).GetExecution), ctx, environmentId, executionId)
+}
+
+// GetExecutionCachePresignedURL mocks base method.
+func (m *MockClient) GetExecutionCachePresignedURL(ctx context.Context, environmentId, executionId string, req executioncache.RestoreRequest) (executioncache.RestoreResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExecutionCachePresignedURL", ctx, environmentId, executionId, req)
+	ret0, _ := ret[0].(executioncache.RestoreResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExecutionCachePresignedURL indicates an expected call of GetExecutionCachePresignedURL.
+func (mr *MockClientMockRecorder) GetExecutionCachePresignedURL(ctx, environmentId, executionId, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecutionCachePresignedURL", reflect.TypeOf((*MockClient)(nil).GetExecutionCachePresignedURL), ctx, environmentId, executionId, req)
 }
 
 // GetGitHubToken mocks base method.
@@ -621,6 +637,21 @@ func (m *MockClient) SaveExecutionArtifactGetPresignedURL(ctx context.Context, e
 func (mr *MockClientMockRecorder) SaveExecutionArtifactGetPresignedURL(ctx, environmentId, executionId, legacyWorkflowName, stepRef, filePath, contentType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveExecutionArtifactGetPresignedURL", reflect.TypeOf((*MockClient)(nil).SaveExecutionArtifactGetPresignedURL), ctx, environmentId, executionId, legacyWorkflowName, stepRef, filePath, contentType)
+}
+
+// SaveExecutionCacheGetPresignedURL mocks base method.
+func (m *MockClient) SaveExecutionCacheGetPresignedURL(ctx context.Context, environmentId, executionId string, req executioncache.SaveRequest) (executioncache.SaveResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveExecutionCacheGetPresignedURL", ctx, environmentId, executionId, req)
+	ret0, _ := ret[0].(executioncache.SaveResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SaveExecutionCacheGetPresignedURL indicates an expected call of SaveExecutionCacheGetPresignedURL.
+func (mr *MockClientMockRecorder) SaveExecutionCacheGetPresignedURL(ctx, environmentId, executionId, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveExecutionCacheGetPresignedURL", reflect.TypeOf((*MockClient)(nil).SaveExecutionCacheGetPresignedURL), ctx, environmentId, executionId, req)
 }
 
 // SaveExecutionLogs mocks base method.

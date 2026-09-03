@@ -134,3 +134,39 @@ func TestParseScopeDefaultsToNarrowest(t *testing.T) {
 	assert.Equal(t, ScopeWorkflow, ParseScope("Environment"))
 	assert.Equal(t, ScopeWorkflow, ParseScope("anything-else"))
 }
+
+// TestKeyFromObjectNameRoundTrips covers the reporting path: a restore says which entry
+// it used, and it has only the object name to say it from.
+func TestKeyFromObjectNameRoundTrips(t *testing.T) {
+	keys := []string{
+		"npm-abc123",
+		"npm-{{weird}}",
+		"a/b",
+		"../../e/shared",
+		"key with spaces",
+		"npm-你好",
+		"100%",
+		"-_.~",
+	}
+
+	for _, key := range keys {
+		t.Run(key, func(t *testing.T) {
+			for _, scope := range []Scope{ScopeWorkflow, ScopeEnvironment} {
+				prefix := ScopePrefix("env-1", "wf-1", scope)
+				name := ObjectName("env-1", "wf-1", scope, key)
+				assert.Equal(t, key, KeyFromObjectName(prefix, name))
+			}
+		})
+	}
+}
+
+// TestKeyFromObjectNameToleratesForeignNames: the reporting path must not panic or lie
+// loudly on an object some other writer put in the bucket.
+func TestKeyFromObjectNameToleratesForeignNames(t *testing.T) {
+	prefix := ScopePrefix("env-1", "wf-1", ScopeWorkflow)
+
+	// Truncated escape, invalid hex, and a name outside the prefix entirely.
+	assert.Equal(t, "abc%", KeyFromObjectName(prefix, prefix+"/abc%"+ObjectSuffix))
+	assert.Equal(t, "abc%zz", KeyFromObjectName(prefix, prefix+"/abc%zz"+ObjectSuffix))
+	assert.Equal(t, "somewhere/else", KeyFromObjectName(prefix, "somewhere/else"))
+}
