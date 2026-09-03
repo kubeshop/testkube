@@ -14,11 +14,9 @@ import (
 // at bundle time would also swallow the line that tells an operator why nothing was
 // cached.
 //
-// TODO: return the gRPC-backed repository once GetExecutionCachePresigned and
-// SaveExecutionCachePresigned are generated from proto/service.proto. The RPCs are
-// declared there already; until `make generate-protobuf` runs, pkg/cloud has no types
-// for them. Everything above this function is complete and tested against the
-// executioncache.Repository interface, so wiring it is a change to this one function.
+// TODO: return a gRPC-backed repository once the agent-side wiring is implemented
+// (calling GetExecutionCachePresigned / SaveExecutionCachePresigned and performing the
+// HTTP transfers via the returned presigned URLs).
 func newCacheRepository() executioncache.Repository {
 	if !capabilities.Enabled(env.GetCapabilities(), capabilities.CapabilityDependencyCache) {
 		return executioncache.Unsupported(
