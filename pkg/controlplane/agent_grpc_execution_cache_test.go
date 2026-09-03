@@ -339,3 +339,41 @@ func TestCacheObjectNamesAreConfined(t *testing.T) {
 		require.NoError(t, err)
 	}
 }
+
+// TestSaveExecutionCachePresignedRejectsANegativeSize guards a value nothing acts on
+// yet, which is the reason to reject it now: the size is what a quota would be enforced
+// against, so once enforcement exists a negative one would compare below every limit.
+func TestSaveExecutionCachePresignedRejectsANegativeSize(t *testing.T) {
+	server, storageClient, repository := newCacheServer(t)
+	// Refused before the execution is even looked up, let alone storage touched.
+	repository.EXPECT().Get(gomock.Any(), gomock.Any()).Times(0)
+	storageClient.EXPECT().ListObjectsFromBucket(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	_, err := server.SaveExecutionCachePresigned(context.Background(), &cloud.SaveExecutionCachePresignedRequest{
+		Id: "exec-1", Key: "npm-abc", Size: -1,
+	})
+
+	require.Error(t, err)
+	assert.Equal(t, codes.InvalidArgument, status.Code(err))
+	assert.Contains(t, err.Error(), "cannot be negative")
+}
+
+// TestSaveExecutionCachePresignedAcceptsAZeroSize: an empty cached directory is a
+// legitimate thing to store, so zero is not the same as negative.
+func TestSaveExecutionCachePresignedAcceptsAZeroSize(t *testing.T) {
+	server, storageClient, repository := newCacheServer(t)
+	expectExecution(repository, cacheTestWorkflow)
+
+	wanted := cacheObject(executioncache.ScopeWorkflow, "npm-abc")
+	storageClient.EXPECT().ListObjectsFromBucket(gomock.Any(), cacheTestBucket, wanted, 1).Return(nil, nil)
+	storageClient.EXPECT().
+		PresignUploadFileToBucket(gomock.Any(), cacheTestBucket, "", wanted, CachePresignedURLExpiration).
+		Return("https://storage/put", nil)
+
+	res, err := server.SaveExecutionCachePresigned(context.Background(), &cloud.SaveExecutionCachePresignedRequest{
+		Id: "exec-1", Key: "npm-abc", Size: 0,
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "https://storage/put", res.Url)
+}

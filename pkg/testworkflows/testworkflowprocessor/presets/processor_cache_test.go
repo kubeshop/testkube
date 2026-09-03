@@ -269,6 +269,52 @@ func TestProcessCache_Rejects(t *testing.T) {
 	}), "should be mounted")
 }
 
+// TestProcessCache_RejectsTemplatedPaths covers a hole in the mandatory mounting.
+//
+// Which paths need a volume of their own has to be decided here, before the pod exists,
+// while the toolkit resolves the same paths later inside it. A path still holding a
+// pod-side expression would get a volume mounted at the literal template while the
+// restore wrote to whatever it resolved to - so the cache would appear to work and
+// quietly do nothing, which is precisely what the mounting exists to prevent.
+func TestProcessCache_RejectsTemplatedPaths(t *testing.T) {
+	build := func(paths []string) error {
+		_, err := bundleWithCache(t, testworkflowsv1.Step{
+			StepOperations: testworkflowsv1.StepOperations{
+				Shell: "true",
+				Cache: &testworkflowsv1.StepCache{Key: "k", Paths: paths},
+			},
+		})
+		return err
+	}
+
+	for _, declared := range []string{
+		"{{ env.HOME }}/.m2",
+		"/data/{{ env.DIR }}",
+		"{{ step.x.outputs.dir }}",
+	} {
+		assert.ErrorContains(t, build([]string{declared}), "cannot contain an expression",
+			"%q depends on the pod, so the volume to mount cannot be decided", declared)
+	}
+
+	// A concrete path is fine, and so is one built from values substituted before the
+	// pod is scheduled - by the time this runs those are already literals.
+	assert.NoError(t, build([]string{"/root/.m2"}))
+	assert.NoError(t, build([]string{"node_modules"}))
+
+	// The key is the opposite case and has to stay templatable: resolving it needs the
+	// repository, which only exists inside the pod.
+	_, err := bundleWithCache(t, testworkflowsv1.Step{
+		StepOperations: testworkflowsv1.StepOperations{
+			Shell: "true",
+			Cache: &testworkflowsv1.StepCache{
+				Key:   `npm-{{ hash_files("package-lock.json") }}`,
+				Paths: []string{"node_modules"},
+			},
+		},
+	})
+	assert.NoError(t, err)
+}
+
 // TestProcessCache_ScopeDefaultsToWorkflow: an omitted or unrecognised scope must
 // resolve to the narrowest one. Widening sharing is a trust decision, so it only ever
 // happens because a workflow asked for it explicitly.

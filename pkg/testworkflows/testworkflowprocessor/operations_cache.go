@@ -32,9 +32,24 @@ func validateCache(cache *testworkflowsv1.StepCache) error {
 	if len(cache.Paths) == 0 {
 		return errors.New("cache: there needs to be at least one path to cache")
 	}
-	for i, path := range cache.Paths {
-		if path == "" {
+	for i, declared := range cache.Paths {
+		if declared == "" {
 			return fmt.Errorf("cache.paths[%d]: path is empty", i)
+		}
+
+		// A path still holding an expression cannot be honoured, and failing quietly
+		// would be the worst outcome. mountCachePaths has to decide here, before the pod
+		// exists, which paths need a volume of their own; the toolkit resolves the same
+		// paths later, inside the pod. If the two disagree, a volume is mounted at the
+		// literal template while the restore writes to whatever it resolved to - so the
+		// cache would appear to work and quietly do nothing, which is the exact failure
+		// the mandatory mounting exists to prevent.
+		//
+		// Everything resolvable before scheduling - config, workflow and execution
+		// values - has already been substituted by the time this runs, so this only
+		// rejects paths that depend on the pod itself.
+		if !expressions.IsTemplateStringWithoutExpressions(declared) {
+			return fmt.Errorf("cache.paths[%d]: %q: a cache path cannot contain an expression that is only resolvable inside the pod, because the volume to mount has to be decided before it starts; use a config value, or write the path out", i, declared)
 		}
 	}
 	return nil

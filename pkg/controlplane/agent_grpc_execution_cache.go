@@ -185,6 +185,14 @@ func (s *Server) SaveExecutionCachePresigned(ctx context.Context, req *cloud.Sav
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
+	// The size is what a quota would be enforced against, so a negative one is refused
+	// rather than carried forward. Nothing here acts on it yet, which is precisely why
+	// it is worth rejecting now: once enforcement exists, a value that compares below
+	// every limit would pass it, and the agent has no reason to send one.
+	if req.Size < 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "cache entry size cannot be negative, %d provided", req.Size)
+	}
+
 	scope, err := s.resolveCacheScope(ctx, req.Id, req.Scope)
 	if err != nil {
 		return nil, err
