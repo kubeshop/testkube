@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -812,4 +813,32 @@ func (c *Client) PresignUploadFileToBucket(ctx context.Context, bucket, bucketFo
 		return "", err
 	}
 	return url.String(), nil
+}
+
+// ifNoneMatchHeader is how S3 and MinIO spell "only if this object does not exist".
+const ifNoneMatchHeader = "If-None-Match"
+
+// PresignCreateFileToBucket returns a presigned PUT that fails if the object is already
+// there, along with the header carrying that condition.
+//
+// PresignHeader signs the header in, so the upload is rejected unless the caller sends
+// it: the condition cannot be dropped to turn the request back into a plain overwrite.
+// A store that honours it answers a losing upload with 412 Precondition Failed.
+func (c *Client) PresignCreateFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, expires time.Duration) (string, map[string]string, error) {
+	if err := c.Connect(); err != nil {
+		return "", nil, err
+	}
+	if bucketFolder != "" {
+		filePath = strings.Trim(bucketFolder, "/") + "/" + filePath
+	}
+	c.Log.Debugw("presigning conditional put object in minio", "file", filePath, "bucket", bucket)
+
+	headers := http.Header{}
+	headers.Set(ifNoneMatchHeader, "*")
+
+	url, err := c.minioClient.PresignHeader(ctx, http.MethodPut, bucket, filePath, expires, nil, headers)
+	if err != nil {
+		return "", nil, err
+	}
+	return url.String(), map[string]string{ifNoneMatchHeader: "*"}, nil
 }

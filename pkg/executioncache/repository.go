@@ -3,6 +3,7 @@ package executioncache
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -43,16 +44,35 @@ type SaveRequest struct {
 // SaveResult is where to upload to.
 type SaveResult struct {
 	URL string
-	// AlreadyExists reports that this key is already stored, so the upload should be
-	// skipped.
+	// AlreadyExists reports that this key is already stored, so the upload is skipped.
 	//
-	// This is deduplication rather than a guarantee that the entry cannot change:
-	// a control plane checks for the key and grants the URL in two steps, so two
-	// executions saving the same key concurrently can both be granted one, and the
-	// later upload replaces the earlier entry. Since both arrived at the same
-	// content-derived key they are storing equivalent trees, and a save only follows
-	// a miss, so this costs a redundant upload rather than a wrong entry.
+	// This is the cheap path, not the guarantee. Looking the key up and granting the URL
+	// are two steps, so two executions saving the same key can both be told it is
+	// absent; what stops the second one overwriting the first is Headers below.
 	AlreadyExists bool
+	// Headers must be sent with the upload, verbatim.
+	//
+	// They carry a condition - "only if this object does not exist" - and are covered by
+	// the signature, so an upload that drops them is rejected rather than quietly
+	// becoming an overwrite. That is what makes an entry immutable once stored: of two
+	// executions racing on one key, exactly one upload can succeed.
+	//
+	// The losing upload is refused by the store, which is a normal outcome and not a
+	// failure: the other execution stored an equivalent tree under the same
+	// content-derived key. Callers should treat a refusal the way they treat
+	// AlreadyExists.
+	Headers map[string]string
+}
+
+// UploadRefused reports whether an upload was rejected because the entry already
+// existed, which is how a store answers a conditional write it will not apply.
+//
+// Kept here so both the agent and any other caller agree on which status means "someone
+// else won the race" rather than "the upload failed".
+func UploadRefused(statusCode int) bool {
+	// 412 is the conditional-write refusal; S3 also answers 409 for a conflicting
+	// concurrent write on the same key.
+	return statusCode == http.StatusPreconditionFailed || statusCode == http.StatusConflict
 }
 
 // Repository is what the cache commands need from the control plane.

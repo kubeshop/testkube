@@ -680,6 +680,15 @@ message SaveExecutionCachePresignedRequest {
 message SaveExecutionCachePresignedResponse {
   string url = 1;          // presigned PUT; empty when already_exists
   bool already_exists = 2; // the key is already stored, so the upload is skipped
+  // Headers the agent must send with the upload, verbatim.
+  //
+  // They are covered by the signature, so an upload that omits them is rejected. That
+  // is what makes the write conditional and the entry immutable once stored: the
+  // condition asks the store to refuse an object that already exists, so two executions
+  // racing on one key cannot both succeed, and the loser is told rather than
+  // overwriting. The header differs between object stores, which is why the control
+  // plane names it instead of the agent assuming one.
+  map<string, string> required_headers = 3;
 }
 
 message AppendExecutionReportRequest {

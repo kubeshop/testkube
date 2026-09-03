@@ -200,19 +200,9 @@ func (s *Server) SaveExecutionCachePresigned(ctx context.Context, req *cloud.Sav
 
 	objectName := scope.objectName(req.Key)
 
-	// Skip the upload when the key is already stored. This is deduplication, not a
-	// guarantee: the lookup and the grant are two steps, so two executions saving the
-	// same key can both find nothing, both be granted a URL, and the later upload then
-	// replaces the earlier entry. Making it a guarantee needs the write itself to be
-	// conditional - a presigned PUT carrying If-None-Match, or a reservation the grant
-	// takes atomically - neither of which this storage interface can express today.
-	//
-	// What that costs is bounded. Racing writers arrived at the same key, which is
-	// derived from content, so they are storing equivalent trees; and a save only
-	// happens after a miss, so once an entry exists later runs hit it and never write.
-	// The exposure is that a workflow able to write a scope can replace an entry there
-	// by racing, on top of being able to write one in the first place - which is the
-	// caveat scope: environment already carries.
+	// Skip the upload when the key is already stored. This is only the cheap path: the
+	// lookup and the grant are two steps, so two executions saving the same key can
+	// both be told it is absent.
 	existing, err := s.listCacheEntries(ctx, objectName, 1)
 	if err != nil {
 		return nil, err
@@ -223,10 +213,15 @@ func (s *Server) SaveExecutionCachePresigned(ctx context.Context, req *cloud.Sav
 		}
 	}
 
-	url, err := s.storageClient.PresignUploadFileToBucket(ctx, s.cfg.StorageBucket, "", objectName, CachePresignedURLExpiration)
+	// What actually makes an entry immutable is the condition on the write. The headers
+	// carrying it are signed in, so an upload that drops them is rejected instead of
+	// becoming an overwrite, and of two executions racing on one key exactly one upload
+	// can succeed. The loser is refused and told, rather than replacing what the winner
+	// stored.
+	url, headers, err := s.storageClient.PresignCreateFileToBucket(ctx, s.cfg.StorageBucket, "", objectName, CachePresignedURLExpiration)
 	if err != nil {
 		return nil, err
 	}
 
-	return &cloud.SaveExecutionCachePresignedResponse{Url: url}, nil
+	return &cloud.SaveExecutionCachePresignedResponse{Url: url, RequiredHeaders: headers}, nil
 }

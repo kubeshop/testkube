@@ -279,6 +279,22 @@ func (mr *MockClientMockRecorder) PlaceFiles(ctx, bucketFolders, prefix any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PlaceFiles", reflect.TypeOf((*MockClient)(nil).PlaceFiles), ctx, bucketFolders, prefix)
 }
 
+// PresignCreateFileToBucket mocks base method.
+func (m *MockClient) PresignCreateFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, expires time.Duration) (string, map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PresignCreateFileToBucket", ctx, bucket, bucketFolder, filePath, expires)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(map[string]string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// PresignCreateFileToBucket indicates an expected call of PresignCreateFileToBucket.
+func (mr *MockClientMockRecorder) PresignCreateFileToBucket(ctx, bucket, bucketFolder, filePath, expires any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PresignCreateFileToBucket", reflect.TypeOf((*MockClient)(nil).PresignCreateFileToBucket), ctx, bucket, bucketFolder, filePath, expires)
+}
+
 // PresignDownloadFileFromBucket mocks base method.
 func (m *MockClient) PresignDownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string, expires time.Duration) (string, error) {
 	m.ctrl.T.Helper()

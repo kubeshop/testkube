@@ -63,5 +63,9 @@ func (c *client) SaveExecutionCacheGetPresignedURL(ctx context.Context, environm
 	if err != nil {
 		return executioncache.SaveResult{}, err
 	}
-	return executioncache.SaveResult{URL: res.Url, AlreadyExists: res.AlreadyExists}, nil
+	return executioncache.SaveResult{
+		URL:           res.Url,
+		AlreadyExists: res.AlreadyExists,
+		Headers:       res.RequiredHeaders,
+	}, nil
 }

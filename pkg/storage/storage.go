@@ -65,4 +65,12 @@ type ClientBucket interface {
 	DeleteFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) error
 	PresignDownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string, expires time.Duration) (string, error)
 	PresignUploadFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, expires time.Duration) (string, error)
+	// PresignCreateFileToBucket returns a presigned PUT that succeeds only while the
+	// object does not exist, together with the headers the caller has to send.
+	//
+	// The headers carry the condition and are covered by the signature, so an upload
+	// that omits them is rejected rather than quietly becoming an overwrite. They are
+	// returned rather than assumed because the condition is spelled differently by
+	// different object stores.
+	PresignCreateFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, expires time.Duration) (string, map[string]string, error)
 }

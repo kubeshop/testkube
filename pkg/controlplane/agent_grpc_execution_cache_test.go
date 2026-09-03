@@ -268,8 +268,8 @@ func TestSaveExecutionCachePresigned(t *testing.T) {
 			ListObjectsFromBucket(gomock.Any(), cacheTestBucket, wanted, 1).
 			Return(nil, nil)
 		storageClient.EXPECT().
-			PresignUploadFileToBucket(gomock.Any(), cacheTestBucket, "", wanted, CachePresignedURLExpiration).
-			Return("https://storage/put", nil)
+			PresignCreateFileToBucket(gomock.Any(), cacheTestBucket, "", wanted, CachePresignedURLExpiration).
+			Return("https://storage/put", map[string]string{"If-None-Match": "*"}, nil)
 
 		res, err := server.SaveExecutionCachePresigned(context.Background(), &cloud.SaveExecutionCachePresignedRequest{
 			Id: "exec-1", Key: "npm-abc", Size: 1024,
@@ -291,7 +291,7 @@ func TestSaveExecutionCachePresigned(t *testing.T) {
 		storageClient.EXPECT().
 			ListObjectsFromBucket(gomock.Any(), cacheTestBucket, wanted, 1).
 			Return([]storage.ObjectInfo{{Key: wanted}}, nil)
-		storageClient.EXPECT().PresignUploadFileToBucket(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+		storageClient.EXPECT().PresignCreateFileToBucket(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 
 		res, err := server.SaveExecutionCachePresigned(context.Background(), &cloud.SaveExecutionCachePresignedRequest{
 			Id: "exec-1", Key: "npm-abc",
@@ -331,8 +331,8 @@ func TestCacheObjectNamesAreConfined(t *testing.T) {
 				return nil, nil
 			})
 		storageClient.EXPECT().
-			PresignUploadFileToBucket(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-			Return("https://storage/put", nil)
+			PresignCreateFileToBucket(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return("https://storage/put", nil, nil)
 
 		_, err := server.SaveExecutionCachePresigned(context.Background(), &cloud.SaveExecutionCachePresignedRequest{
 			Id: "exec-1", Key: key,
@@ -368,8 +368,8 @@ func TestSaveExecutionCachePresignedAcceptsAZeroSize(t *testing.T) {
 	wanted := cacheObject(executioncache.ScopeWorkflow, "npm-abc")
 	storageClient.EXPECT().ListObjectsFromBucket(gomock.Any(), cacheTestBucket, wanted, 1).Return(nil, nil)
 	storageClient.EXPECT().
-		PresignUploadFileToBucket(gomock.Any(), cacheTestBucket, "", wanted, CachePresignedURLExpiration).
-		Return("https://storage/put", nil)
+		PresignCreateFileToBucket(gomock.Any(), cacheTestBucket, "", wanted, CachePresignedURLExpiration).
+		Return("https://storage/put", map[string]string{"If-None-Match": "*"}, nil)
 
 	res, err := server.SaveExecutionCachePresigned(context.Background(), &cloud.SaveExecutionCachePresignedRequest{
 		Id: "exec-1", Key: "npm-abc", Size: 0,
@@ -377,4 +377,33 @@ func TestSaveExecutionCachePresignedAcceptsAZeroSize(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "https://storage/put", res.Url)
+}
+
+// TestSaveExecutionCachePresignedReturnsTheCondition is what makes a stored entry
+// immutable rather than merely deduplicated.
+//
+// The grant must be a conditional write and must hand the agent the headers carrying
+// that condition: they are covered by the signature, so an upload that omits them is
+// rejected instead of becoming a plain overwrite, and of two executions racing on one
+// key exactly one upload can be applied.
+func TestSaveExecutionCachePresignedReturnsTheCondition(t *testing.T) {
+	server, storageClient, repository := newCacheServer(t)
+	expectExecution(repository, cacheTestWorkflow)
+
+	wanted := cacheObject(executioncache.ScopeWorkflow, "npm-abc")
+	storageClient.EXPECT().ListObjectsFromBucket(gomock.Any(), cacheTestBucket, wanted, 1).Return(nil, nil)
+	// The unconditional presign must not be used for a cache entry at all.
+	storageClient.EXPECT().PresignUploadFileToBucket(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	storageClient.EXPECT().
+		PresignCreateFileToBucket(gomock.Any(), cacheTestBucket, "", wanted, CachePresignedURLExpiration).
+		Return("https://storage/put", map[string]string{"If-None-Match": "*"}, nil)
+
+	res, err := server.SaveExecutionCachePresigned(context.Background(), &cloud.SaveExecutionCachePresignedRequest{
+		Id: "exec-1", Key: "npm-abc", Size: 10,
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "https://storage/put", res.Url)
+	assert.Equal(t, map[string]string{"If-None-Match": "*"}, res.RequiredHeaders,
+		"the agent cannot satisfy a signed condition it was not told about")
 }

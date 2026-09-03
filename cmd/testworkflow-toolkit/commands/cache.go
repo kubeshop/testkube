@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -317,7 +318,14 @@ func runCacheSave(ctx context.Context, encoded string, mounts []string, statePat
 	}
 
 	started := time.Now()
-	if err := uploadCache(ctx, upload.URL, archive, size); err != nil {
+	if err := uploadCache(ctx, upload.URL, upload.Headers, archive, size); err != nil {
+		if errors.Is(err, errCacheEntryWon) {
+			// Losing the race is not a failure. Both executions reached the same
+			// content-derived key, so the entry now stored is the one this step would
+			// have written, and the next run will hit it.
+			fmt.Fprintf(out, "cache: %q was stored by another execution first, nothing to save\n", key)
+			return nil
+		}
 		fmt.Fprintf(out, "cache: not saving %q: %s\n", key, err.Error())
 		return nil
 	}
@@ -410,7 +418,21 @@ func downloadCache(ctx context.Context, url string, allowedPaths []string) error
 	return lastErr
 }
 
-func uploadCache(ctx context.Context, url string, archive *os.File, size int64) error {
+// errCacheEntryWon reports that another execution stored this key first.
+//
+// The control plane signs the upload with a condition - only if the object is absent -
+// so of two executions racing on one key exactly one upload is applied and the other is
+// refused. That is the mechanism keeping a stored entry immutable, and being the loser
+// is a normal outcome: the winner stored an equivalent tree under the same
+// content-derived key.
+var errCacheEntryWon = errors.New("another execution stored this key first")
+
+// uploadCache sends the archive, with whatever headers the grant requires.
+//
+// The headers are covered by the signature, so they are not optional decoration: an
+// upload that omits them is rejected, which is deliberate - it means the condition
+// cannot be dropped to turn the request back into a plain overwrite.
+func uploadCache(ctx context.Context, url string, headers map[string]string, archive *os.File, size int64) error {
 	client := &http.Client{Timeout: cacheTransferTimeout}
 
 	var lastErr error
@@ -424,6 +446,9 @@ func uploadCache(ctx context.Context, url string, archive *os.File, size int64) 
 		}
 		req.ContentLength = size
 		req.Header.Set("Content-Type", "application/gzip")
+		for name, value := range headers {
+			req.Header.Set(name, value)
+		}
 
 		resp, err := client.Do(req)
 		if err == nil {
@@ -431,6 +456,11 @@ func uploadCache(ctx context.Context, url string, archive *os.File, size int64) 
 			resp.Body.Close()
 			if status >= 200 && status < 300 {
 				return nil
+			}
+			// The condition refused the write, so the entry is already there. Retrying
+			// would only be refused again.
+			if executioncache.UploadRefused(status) {
+				return errCacheEntryWon
 			}
 			err = fmt.Errorf("status code %d", status)
 			// A rejected grant will be rejected again.

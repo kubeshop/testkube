@@ -547,3 +547,77 @@ func TestRunCacheRestore_RejectsAnArchiveReachingOutsideTheDeclaredPaths(t *test
 
 	assert.Equal(t, executioncache.HitMiss, readState(t, statePath).Hit)
 }
+
+// TestRunCacheSave_SendsTheConditionalHeaders is what makes an entry immutable.
+//
+// The control plane signs the condition into the upload, so the agent has to send the
+// headers verbatim: an upload without them is rejected rather than silently becoming a
+// plain overwrite.
+func TestRunCacheSave_SendsTheConditionalHeaders(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(root, "dep.txt"), []byte("installed"), 0o644))
+
+	var seen http.Header
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seen = r.Header.Clone()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	out := &bytes.Buffer{}
+	require.NoError(t, runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{root},
+	}), []string{root}, "", cacheDefaultMaxSize, &fakeCacheRepository{
+		save: executioncache.SaveResult{
+			URL:     server.URL,
+			Headers: map[string]string{"If-None-Match": "*"},
+		},
+	}, out))
+
+	assert.Equal(t, "*", seen.Get("If-None-Match"), "the signed condition must reach the store")
+	assert.Contains(t, out.String(), "cache: saved")
+}
+
+// TestRunCacheSave_ARefusedUploadIsNotAFailure covers losing the race the condition
+// creates: exactly one of two executions saving a key can succeed, and the loser is
+// refused. That is a normal outcome, because the winner stored an equivalent tree under
+// the same content-derived key.
+func TestRunCacheSave_ARefusedUploadIsNotAFailure(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(root, "dep.txt"), []byte("installed"), 0o644))
+
+	for _, refusal := range []int{http.StatusPreconditionFailed, http.StatusConflict} {
+		t.Run(http.StatusText(refusal), func(t *testing.T) {
+			var attempts int
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				attempts++
+				w.WriteHeader(refusal)
+			}))
+			defer server.Close()
+
+			out := &bytes.Buffer{}
+			err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+				Key:   "npm-abc",
+				Paths: []string{root},
+			}), []string{root}, "", cacheDefaultMaxSize, &fakeCacheRepository{
+				save: executioncache.SaveResult{
+					URL:     server.URL,
+					Headers: map[string]string{"If-None-Match": "*"},
+				},
+			}, out)
+
+			assert.NoError(t, err)
+			assert.Contains(t, out.String(), "stored by another execution first")
+			assert.Equal(t, 1, attempts, "a refused condition will refuse again, so it must not be retried")
+		})
+	}
+}
+
+func TestUploadRefused(t *testing.T) {
+	assert.True(t, executioncache.UploadRefused(http.StatusPreconditionFailed))
+	assert.True(t, executioncache.UploadRefused(http.StatusConflict))
+	assert.False(t, executioncache.UploadRefused(http.StatusOK))
+	assert.False(t, executioncache.UploadRefused(http.StatusForbidden))
+	assert.False(t, executioncache.UploadRefused(http.StatusInternalServerError))
+}
