@@ -1120,7 +1120,7 @@ func MapStepParallelKubeToAPI(v testworkflowsv1.StepParallel) testkube.TestWorkf
 		Run:         common.MapPtr(v.Run, MapStepRunKubeToAPI),
 		Execute:     common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
 		Artifacts:   common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
-		Cache:   common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
+		Cache:       common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
 		Pvcs:        common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
 	}
 }
@@ -1157,7 +1157,7 @@ func MapIndependentStepParallelKubeToAPI(v testworkflowsv1.IndependentStepParall
 		Run:         common.MapPtr(v.Run, MapStepRunKubeToAPI),
 		Execute:     common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
 		Artifacts:   common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
-		Cache:   common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
+		Cache:       common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
 		Pvcs:        common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
 	}
 }
@@ -1295,7 +1295,7 @@ func MapStepKubeToAPI(v testworkflowsv1.Step) testkube.TestWorkflowStep {
 		Container:  common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
 		Execute:    common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
 		Artifacts:  common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
-		Cache:  common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
+		Cache:      common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
 		Setup:      common.MapSlice(v.Setup, MapStepKubeToAPI),
 		Steps:      common.MapSlice(v.Steps, MapStepKubeToAPI),
 		Parallel:   common.MapPtr(v.Parallel, MapStepParallelKubeToAPI),
@@ -1322,7 +1322,7 @@ func MapIndependentStepKubeToAPI(v testworkflowsv1.IndependentStep) testkube.Tes
 		Container:  common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
 		Execute:    common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
 		Artifacts:  common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
-		Cache:  common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
+		Cache:      common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
 		Setup:      common.MapSlice(v.Setup, MapIndependentStepKubeToAPI),
 		Steps:      common.MapSlice(v.Steps, MapIndependentStepKubeToAPI),
 		Parallel:   common.MapPtr(v.Parallel, MapIndependentStepParallelKubeToAPI),
