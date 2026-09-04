@@ -206,3 +206,59 @@ func TestInMemoryCache_SetAndGet(t *testing.T) {
 		})
 	}
 }
+
+func TestInMemoryCache_DeleteAndClear(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name    string
+		drop    func(cache *InMemoryCache[string]) error
+		wantKey string
+		want    string
+		wantErr error
+	}{
+		{
+			name:    "delete drops the named key",
+			drop:    func(c *InMemoryCache[string]) error { return c.Delete(ctx, "first") },
+			wantKey: "first",
+			wantErr: ErrNotFound,
+		},
+		{
+			name:    "delete leaves the other keys alone",
+			drop:    func(c *InMemoryCache[string]) error { return c.Delete(ctx, "first") },
+			wantKey: "second",
+			want:    "second-value",
+		},
+		{
+			name:    "delete of an absent key is not an error",
+			drop:    func(c *InMemoryCache[string]) error { return c.Delete(ctx, "absent") },
+			wantKey: "first",
+			want:    "first-value",
+		},
+		{
+			name:    "clear drops every key",
+			drop:    func(c *InMemoryCache[string]) error { return c.Clear(ctx) },
+			wantKey: "second",
+			wantErr: ErrNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cache := NewInMemoryCache[string]()
+			require.NoError(t, cache.Set(ctx, "first", "first-value", time.Hour))
+			require.NoError(t, cache.Set(ctx, "second", "second-value", time.Hour))
+
+			require.NoError(t, tt.drop(cache))
+
+			got, err := cache.Get(ctx, tt.wantKey)
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
