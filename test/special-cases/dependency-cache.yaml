@@ -8,6 +8,8 @@
 #
 # Both also cache the package manager's own store rather than the tree it installs -
 # npm's _cacache, Go's cache/download - and that is the one choice here worth copying.
+# For npm it is not even a trade: `npm ci` deletes node_modules before installing, so
+# caching that tree stores and fetches it for nothing.
 # A cache is bound by how many entries it holds and not by how many bytes: packing and
 # restoring both spend their time per file. A store is a few thousand larger,
 # already-compressed files; the installed tree beside it is tens of thousands of small
@@ -63,12 +65,23 @@ spec:
       restoreKeys:
       - 'npm-v3-'
       paths:
-      # npm's own content-addressed store, not the node_modules it installs. Same
-      # reasoning as cache/download in the workflow below, and the same measurement
-      # behind it: a cache is bound by how many entries it has, and an installed tree
-      # is tens of thousands of small files where the store is a few thousand larger,
-      # already-compressed ones. node_modules is derived from this; `npm ci` rebuilds
-      # it, and the shell below proves it can do so with the network off.
+      # npm's own content-addressed store, not the node_modules it installs.
+      #
+      # For npm the decisive reason is not entry count but that `npm ci` removes
+      # node_modules before it installs. A restored tree was therefore deleted before
+      # anything could read it: the cache did the work of storing and fetching a
+      # hundred megabytes for no effect whatsoever, and the install still went to the
+      # registry for every tarball, because the store it needed was the thing not being
+      # cached. Caching node_modules is only useful to `npm install`, which is
+      # incremental; with `npm ci` it is strictly waste.
+      #
+      # The entry-count argument applies too, as it does to cache/download in the
+      # workflow below - a cache spends its time per file, not per byte. Measured on
+      # this lockfile: _cacache is 40.7M across 517 files, three per package, where
+      # node_modules is 97.3M across 2496 files. At this size the whole save is 665ms
+      # (368ms packing, 286ms uploading, 37 MB) against a 368ms restore, so what this
+      # buys here is not speed but an install that needs no registry at all - 171
+      # packages in 3s with the network off.
       #
       # Note this path needs a volume of its own, where node_modules sat inside the
       # repository checkout and reused that one. Both cases are covered by
