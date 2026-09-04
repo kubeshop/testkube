@@ -2,6 +2,7 @@ package presets
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -201,9 +202,25 @@ func TestProcessCache_SharesTheStateFile(t *testing.T) {
 // volumes but not their root filesystems, so a path outside every volume is restored
 // where the container running the install cannot see it.
 func TestProcessCache_MountsUncoveredPaths(t *testing.T) {
+	// Counts the volumes the cached paths got, which is what these assertions are about.
+	// The save stage's staging volume is left out deliberately: it is one per cached
+	// step regardless of how many paths there are, so counting it would add a constant
+	// to every expectation below and stop the numbers describing anything.
 	emptyDirCount := func(res *testworkflowprocessor.Bundle) int {
+		staging := map[string]struct{}{}
+		for _, container := range res.Job.Spec.Template.Spec.Containers {
+			for _, mount := range container.VolumeMounts {
+				if mount.MountPath == cacheTempDirPath {
+					staging[mount.Name] = struct{}{}
+				}
+			}
+		}
+
 		var count int
 		for _, volume := range res.Job.Spec.Template.Spec.Volumes {
+			if _, isStaging := staging[volume.Name]; isStaging {
+				continue
+			}
 			if volume.EmptyDir != nil {
 				count++
 			}
@@ -267,6 +284,80 @@ func TestProcessCache_Rejects(t *testing.T) {
 	assert.ErrorContains(t, build(&testworkflowsv1.StepCache{
 		Key: "k", Paths: []string{"/root/.m2"}, Mount: common.Ptr(false),
 	}), "should be mounted")
+}
+
+// TestProcessCache_StagesTheArchiveOnItsOwnVolume covers the volume the save stage
+// writes its archive to before uploading it.
+//
+// It has to be a real mount in the pod spec, and it has to be its own volume. Sharing
+// /tmp - which every container already has - would put a multi-gigabyte archive under
+// the same size limit as whatever the step itself writes there, and exceeding a volume's
+// size limit evicts the pod, which is the one outcome a cache must never cause.
+//
+// Read from the pod spec rather than the actions, because that is the distinction that
+// matters here: the cache stages are pure and get merged into a neighbouring container,
+// so a volume mount added to the stage's own container would not survive, while its env
+// would - leaving TK_CACHE_TMP_DIR pointing at a directory that does not exist.
+func TestProcessCache_StagesTheArchiveOnItsOwnVolume(t *testing.T) {
+	res, err := bundleWithCache(t, testworkflowsv1.Step{
+		StepOperations: testworkflowsv1.StepOperations{
+			Shell: "npm ci",
+			Cache: &testworkflowsv1.StepCache{Key: "k", Paths: []string{"/root/.m2"}},
+		},
+	})
+	require.NoError(t, err)
+
+	var mounted *corev1.VolumeMount
+	for _, container := range res.Job.Spec.Template.Spec.Containers {
+		for i, mount := range container.VolumeMounts {
+			if mount.MountPath == cacheTempDirPath {
+				mounted = &container.VolumeMounts[i]
+			}
+		}
+	}
+	require.NotNil(t, mounted, "the staging directory has to be mounted in the pod, not just named in an env var")
+	assert.NotEqual(t, "/tmp", mounted.MountPath)
+
+	// Its own volume, sized from the same limit the save refuses at, so the archive
+	// cannot overrun the volume before the toolkit gets to decline it.
+	var source *corev1.Volume
+	for i, volume := range res.Job.Spec.Template.Spec.Volumes {
+		if volume.Name == mounted.Name {
+			source = &res.Job.Spec.Template.Spec.Volumes[i]
+		}
+	}
+	require.NotNil(t, source)
+	require.NotNil(t, source.EmptyDir, "staging belongs on an emptyDir, not the container's own filesystem")
+	require.NotNil(t, source.EmptyDir.SizeLimit)
+	assert.Equal(t, executioncache.MaxArchiveSize+cacheTempDirHeadroom, source.EmptyDir.SizeLimit.Value())
+
+	// The save stage is pointed at it, and told the same limit the volume was sized from.
+	var save stageCommand
+	for _, s := range stageCommands(res) {
+		if strings.Contains(s.Line, "cache save") {
+			save = s
+		}
+	}
+	require.NotEmpty(t, save.Line, "there should be a cache save stage")
+	assert.Contains(t, save.Line, "--max-size "+strconv.FormatInt(executioncache.MaxArchiveSize, 10))
+
+	// Read from the pod, and by suffix: a stage's environment is emitted into the
+	// container under a group-scoped name (_0_, _1_, ...), which testworkflow-init
+	// strips back to the bare name before running the stage. Same reasoning as
+	// TestProcessCache_SharesTheStateFile.
+	var staging []string
+	for _, container := range append(res.Job.Spec.Template.Spec.InitContainers, res.Job.Spec.Template.Spec.Containers...) {
+		for _, envVar := range container.Env {
+			if strings.HasSuffix(envVar.Name, "TK_CACHE_TMP_DIR") {
+				staging = append(staging, envVar.Value)
+			}
+		}
+	}
+	assert.Contains(t, staging, cacheTempDirPath, "the save stage has to be told where to stage")
+
+	// And the walker is not told it may read the staging directory: an archive that is a
+	// candidate for packing into itself is a trap worth closing by construction.
+	assert.NotContains(t, save.Line, "-m "+cacheTempDirPath)
 }
 
 // TestProcessCache_RejectsTemplatedPaths covers a hole in the mandatory mounting.
@@ -462,3 +553,9 @@ func TestProcessCache_SaveIsConditional(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, "true", conditions[artifactRef])
 }
+
+// Mirrors the processor's own constants, so a change to either has to be deliberate.
+const (
+	cacheTempDirPath     = "/.tktw-cache"
+	cacheTempDirHeadroom = 64 << 20
+)
