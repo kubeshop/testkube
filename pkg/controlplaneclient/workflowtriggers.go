@@ -57,7 +57,7 @@ func (c *client) ListWorkflowTriggers(ctx context.Context, environmentId string,
 		Selector:   options.Selector,
 		Namespace:  namespace,
 	}
-	res, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.ListWorkflowTriggers, req)
+	res, err := callWithRetry(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.ListWorkflowTriggers, req)
 	if err != nil {
 		return channels.NewError[*testkube.WorkflowTrigger](err)
 	}
