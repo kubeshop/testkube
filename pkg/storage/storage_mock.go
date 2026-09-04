@@ -250,6 +250,21 @@ func (mr *MockClientMockRecorder) ListFilesFromBucket(ctx, bucket, bucketFolder 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFilesFromBucket", reflect.TypeOf((*MockClient)(nil).ListFilesFromBucket), ctx, bucket, bucketFolder)
 }
 
+// ListObjectsFromBucket mocks base method.
+func (m *MockClient) ListObjectsFromBucket(ctx context.Context, bucket, prefix string, limit int) ([]ObjectInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListObjectsFromBucket", ctx, bucket, prefix, limit)
+	ret0, _ := ret[0].([]ObjectInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListObjectsFromBucket indicates an expected call of ListObjectsFromBucket.
+func (mr *MockClientMockRecorder) ListObjectsFromBucket(ctx, bucket, prefix, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListObjectsFromBucket", reflect.TypeOf((*MockClient)(nil).ListObjectsFromBucket), ctx, bucket, prefix, limit)
+}
+
 // PlaceFiles mocks base method.
 func (m *MockClient) PlaceFiles(ctx context.Context, bucketFolders []string, prefix string) error {
 	m.ctrl.T.Helper()
@@ -262,6 +277,22 @@ func (m *MockClient) PlaceFiles(ctx context.Context, bucketFolders []string, pre
 func (mr *MockClientMockRecorder) PlaceFiles(ctx, bucketFolders, prefix any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PlaceFiles", reflect.TypeOf((*MockClient)(nil).PlaceFiles), ctx, bucketFolders, prefix)
+}
+
+// PresignCreateFileToBucket mocks base method.
+func (m *MockClient) PresignCreateFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, expires time.Duration) (string, map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PresignCreateFileToBucket", ctx, bucket, bucketFolder, filePath, expires)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(map[string]string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// PresignCreateFileToBucket indicates an expected call of PresignCreateFileToBucket.
+func (mr *MockClientMockRecorder) PresignCreateFileToBucket(ctx, bucket, bucketFolder, filePath, expires any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PresignCreateFileToBucket", reflect.TypeOf((*MockClient)(nil).PresignCreateFileToBucket), ctx, bucket, bucketFolder, filePath, expires)
 }
 
 // PresignDownloadFileFromBucket mocks base method.

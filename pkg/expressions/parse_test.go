@@ -323,6 +323,14 @@ func TestCompileStandardLib(t *testing.T) {
 	assert.Equal(t, `"''"`, MustCompile(`shellquote(null)`).String())
 	assert.Equal(t, `["a","b","c","a b c"]`, MustCompile(`shellparse("a b c 'a b c'")`).String())
 	assert.Equal(t, `"abc  d"`, MustCompile(`trim("   abc  d  \n  ")`).String())
+	// sha256("abc"+NUL), i.e. the argument separator is part of the digest.
+	assert.Equal(t, `"dc1114cd074914bd872cc1f9a23ec910ea2203bc79779ab2e17da25782a624fc"`,
+		MustCompile(`hash("abc")`).String())
+	assert.Len(t, MustCompile(`hash("abc")`).String(), 66) // 64 hex chars plus the quotes
+	// The separator is what keeps these apart.
+	assert.NotEqual(t, MustCompile(`hash("ab")`).String(), MustCompile(`hash("a","b")`).String())
+	// Non-strings hash their canonical JSON, so map key order cannot shift the digest.
+	assert.Equal(t, MustCompile(`hash({"a":1,"b":2})`).String(), MustCompile(`hash({"b":2,"a":1})`).String())
 	assert.Equal(t, `"abc"`, MustCompile(`yaml("\"abc\"")`).String())
 	assert.Equal(t, `{"foo":{"bar":"baz"}}`, MustCompile(`yaml("foo:\n  bar: 'baz'")`).String())
 	assert.Equal(t, `"foo:\n    bar: baz\n"`, MustCompile(`toyaml({"foo":{"bar":"baz"}})`).String())
@@ -401,6 +409,25 @@ a:
 	assert.Equal(t, `null`, MustCompile(`any()`).String())
 	assert.InDelta(t, time.Now().UnixMilli(), must(time.Parse(RFC3339Millis, must(MustCompile(`date()`).Static().StringValue()))).UnixMilli(), 5)
 	assert.Equal(t, time.Now().Truncate(24*time.Hour).UnixMilli(), must(time.Parse("2006-01-02", must(MustCompile(`date("2006-01-02")`).Static().StringValue()))).UnixMilli())
+}
+
+// TestCompileHashDefersFileArgument pins the property the step cache depends on.
+//
+// A cache key such as 'npm-{{ hash(file("package-lock.json")) }}' is compiled on the
+// control plane, where no filesystem machine is registered and the repository has not
+// been cloned. hash() is a stdlib function, and StdLibMachine is consulted before any
+// other, so the only thing stopping it from folding to a digest of nothing is that
+// ToStdFunctionHandler declines while an argument is still an unresolved call. If that
+// ever changes, every cache key in every workflow silently collapses onto one value,
+// so assert it directly rather than by inference.
+func TestCompileHashDefersFileArgument(t *testing.T) {
+	assert.Equal(t, `hash(file("package-lock.json"))`, MustCompile(`hash(file("package-lock.json"))`).String())
+	assert.Equal(t, `hash(hash_files("*.lock"))`, MustCompile(`hash(hash_files("*.lock"))`).String())
+	// Still deferred when only one of several arguments is unresolved.
+	assert.Equal(t, `hash("npm",file("go.sum"))`, MustCompile(`hash("npm", file("go.sum"))`).String())
+	// A fully literal argument folds, which is both harmless and wanted.
+	assert.Equal(t, `"dc1114cd074914bd872cc1f9a23ec910ea2203bc79779ab2e17da25782a624fc"`,
+		MustCompile(`hash("abc")`).String())
 }
 
 func TestCompileWildcard_Unknown(t *testing.T) {

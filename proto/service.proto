@@ -45,6 +45,8 @@ service TestKubeCloudAPI {
     rpc SaveExecutionArtifactPresigned(SaveExecutionArtifactPresignedRequest) returns (SaveExecutionArtifactPresignedResponse);
     rpc ListExecutionArtifactsPresigned(ListExecutionArtifactsPresignedRequest) returns (ListExecutionArtifactsPresignedResponse);
     rpc AppendExecutionReport(AppendExecutionReportRequest) returns (AppendExecutionReportResponse);
+    rpc GetExecutionCachePresigned(GetExecutionCachePresignedRequest) returns (GetExecutionCachePresignedResponse);
+    rpc SaveExecutionCachePresigned(SaveExecutionCachePresignedRequest) returns (SaveExecutionCachePresignedResponse);
 
     // CRD Synchronisation
     // -- Test Workflows
@@ -635,6 +637,58 @@ message ExecutionArtifactRef {
 
 message ListExecutionArtifactsPresignedResponse {
   repeated ExecutionArtifactRef artifacts = 1;
+}
+
+// ExecutionCacheScope is how widely a step's dependency cache entry is shared.
+//
+// The zero value is the narrowest scope deliberately: a field this side fails to
+// understand must never widen who can write what a workflow will later execute.
+enum ExecutionCacheScope {
+  EXECUTION_CACHE_SCOPE_WORKFLOW = 0;
+  EXECUTION_CACHE_SCOPE_ENVIRONMENT = 1;
+}
+
+// GetExecutionCachePresignedRequest asks whether a dependency cache entry exists for
+// the workflow of this execution, and for a temporary URL to download it from.
+//
+// The server derives the workflow/environment from the execution id and enforces that a
+// workflow-scoped entry cannot be accessed by another workflow, regardless of the
+// requested scope value.
+message GetExecutionCachePresignedRequest {
+  string id = 1;                    // execution asking for the entry
+  string key = 2;                   // exact key to look for
+  repeated string restore_keys = 3; // fallback key prefixes, in priority order
+  ExecutionCacheScope scope = 4;
+}
+
+message GetExecutionCachePresignedResponse {
+  bool hit = 1;           // false is a miss, which is not an error
+  string matched_key = 2; // the key actually found; equals `key` when exact
+  bool exact = 3;
+  string url = 4;         // presigned GET; empty when hit is false
+  int64 size = 5;         // compressed size in bytes
+}
+
+message SaveExecutionCachePresignedRequest {
+  string id = 1;
+  string key = 2;
+  ExecutionCacheScope scope = 3;
+  int64 size = 4; // size the agent intends to upload, so a quota can be refused
+                  // before the transfer rather than after it
+}
+
+message SaveExecutionCachePresignedResponse {
+  string url = 1;          // presigned PUT; empty when already_exists
+  bool already_exists = 2; // the key is already stored, so the upload is skipped
+  // Headers the agent must send with the upload, verbatim.
+  //
+  // They are covered by the signature, so an upload that omits them is rejected. That
+  // is what makes the write conditional and the entry immutable once stored: the
+  // condition asks the store to refuse an object that already exists, so two executions
+  // racing on one key cannot both succeed, and the loser is told rather than
+  // overwriting. The header differs between object stores, which is why the control
+  // plane names it instead of the agent assuming one.
+  map<string, string> required_headers = 3;
 }
 
 message AppendExecutionReportRequest {

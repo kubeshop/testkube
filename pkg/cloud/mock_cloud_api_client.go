@@ -562,6 +562,26 @@ func (mr *MockTestKubeCloudAPIClientMockRecorder) GetExecution(ctx, in any, opts
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecution", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).GetExecution), varargs...)
 }
 
+// GetExecutionCachePresigned mocks base method.
+func (m *MockTestKubeCloudAPIClient) GetExecutionCachePresigned(ctx context.Context, in *GetExecutionCachePresignedRequest, opts ...grpc.CallOption) (*GetExecutionCachePresignedResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetExecutionCachePresigned", varargs...)
+	ret0, _ := ret[0].(*GetExecutionCachePresignedResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExecutionCachePresigned indicates an expected call of GetExecutionCachePresigned.
+func (mr *MockTestKubeCloudAPIClientMockRecorder) GetExecutionCachePresigned(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecutionCachePresigned", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).GetExecutionCachePresigned), varargs...)
+}
+
 // GetGitHubToken mocks base method.
 func (m *MockTestKubeCloudAPIClient) GetGitHubToken(ctx context.Context, in *GetGitHubTokenRequest, opts ...grpc.CallOption) (*GetGitHubTokenResponse, error) {
 	m.ctrl.T.Helper()
@@ -1120,6 +1140,26 @@ func (mr *MockTestKubeCloudAPIClientMockRecorder) SaveExecutionArtifactPresigned
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, in}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveExecutionArtifactPresigned", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).SaveExecutionArtifactPresigned), varargs...)
+}
+
+// SaveExecutionCachePresigned mocks base method.
+func (m *MockTestKubeCloudAPIClient) SaveExecutionCachePresigned(ctx context.Context, in *SaveExecutionCachePresignedRequest, opts ...grpc.CallOption) (*SaveExecutionCachePresignedResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SaveExecutionCachePresigned", varargs...)
+	ret0, _ := ret[0].(*SaveExecutionCachePresignedResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SaveExecutionCachePresigned indicates an expected call of SaveExecutionCachePresigned.
+func (mr *MockTestKubeCloudAPIClientMockRecorder) SaveExecutionCachePresigned(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveExecutionCachePresigned", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).SaveExecutionCachePresigned), varargs...)
 }
 
 // SaveExecutionLogsPresigned mocks base method.

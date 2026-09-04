@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -65,22 +66,89 @@ func (c *Client) Connect() error {
 	return err
 }
 
+const (
+	// expirationPolicyRuleID is unchanged from when this was the only rule, so that an
+	// existing lifecycle is updated in place rather than gaining a second copy.
+	expirationPolicyRuleID = "expiration_policy"
+	// cacheExpirationPolicyRuleID expires dependency caches on their own schedule.
+	cacheExpirationPolicyRuleID = "cache_expiration_policy"
+)
+
+// ExpirationPolicy is the whole bucket lifecycle that Testkube manages.
+//
+// It is one struct rather than a call per rule because SetBucketLifecycle replaces the
+// configuration wholesale: setting a cache rule in a second call would silently drop the
+// bucket-wide one.
+type ExpirationPolicy struct {
+	// Days expires everything in the bucket. 0 disables the rule.
+	Days int
+	// CachePrefix is the object prefix dependency caches live under.
+	CachePrefix string
+	// CacheDays expires dependency caches. 0 disables the rule.
+	CacheDays int
+}
+
+// SetExpirationPolicy expires everything in the bucket after the given number of days.
+//
+// Deprecated: use SetExpirationPolicies, which can also expire dependency caches on
+// their own schedule.
 func (c *Client) SetExpirationPolicy(expirationDays int) error {
-	if expirationDays != 0 && c.minioClient != nil {
-		lifecycleConfig := &lifecycle.Configuration{
-			Rules: []lifecycle.Rule{
-				{
-					ID:     "expiration_policy",
-					Status: "Enabled",
-					Expiration: lifecycle.Expiration{
-						Days: lifecycle.ExpirationDays(expirationDays),
-					},
-				},
-			},
-		}
-		return c.minioClient.SetBucketLifecycle(context.TODO(), c.bucket, lifecycleConfig)
+	return c.SetExpirationPolicies(ExpirationPolicy{Days: expirationDays})
+}
+
+// SetExpirationPolicies applies the bucket lifecycle.
+//
+// Note that the bucket-wide rule is deliberately left unfiltered, so it still covers
+// cache objects too. Where two rules match one object, the earliest expiration applies,
+// so a cache TTL can only ever bring eviction forward relative to the bucket-wide one,
+// never postpone it. Callers that let an operator configure both should say so.
+func (c *Client) SetExpirationPolicies(policy ExpirationPolicy) error {
+	if c.minioClient == nil {
+		return nil
 	}
-	return nil
+
+	rules := buildLifecycleRules(policy)
+
+	// Nothing configured: leave the bucket alone rather than clearing a lifecycle an
+	// operator may have set by hand. This preserves the original behaviour, which
+	// skipped the call entirely when no expiration was configured.
+	//
+	// This is load-bearing, and the reason neither expiration setting carries a
+	// default. SetBucketLifecycle replaces the configuration wholesale, so the moment
+	// any rule is configured, every rule Testkube does not know about is dropped. A
+	// default on either setting would therefore change object retention on installations
+	// that manage their bucket lifecycle elsewhere, just by upgrading.
+	if len(rules) == 0 {
+		return nil
+	}
+
+	return c.minioClient.SetBucketLifecycle(context.TODO(), c.bucket, &lifecycle.Configuration{Rules: rules})
+}
+
+// buildLifecycleRules turns the policy into the rules it implies, kept separate from the
+// call so the layout can be asserted without a live object store.
+func buildLifecycleRules(policy ExpirationPolicy) []lifecycle.Rule {
+	rules := make([]lifecycle.Rule, 0, 2)
+	if policy.Days != 0 {
+		rules = append(rules, lifecycle.Rule{
+			ID:     expirationPolicyRuleID,
+			Status: "Enabled",
+			Expiration: lifecycle.Expiration{
+				Days: lifecycle.ExpirationDays(policy.Days),
+			},
+		})
+	}
+	if policy.CacheDays != 0 && policy.CachePrefix != "" {
+		rules = append(rules, lifecycle.Rule{
+			ID:         cacheExpirationPolicyRuleID,
+			Status:     "Enabled",
+			RuleFilter: lifecycle.Filter{Prefix: policy.CachePrefix},
+			Expiration: lifecycle.Expiration{
+				Days: lifecycle.ExpirationDays(policy.CacheDays),
+			},
+		})
+	}
+	return rules
 }
 
 // CreateBucket creates new S3 like bucket
@@ -172,6 +240,47 @@ func (c *Client) listFiles(ctx context.Context, bucket, bucketFolder string) ([]
 func (c *Client) ListFilesFromBucket(ctx context.Context, bucket, bucketFolder string) ([]testkube.Artifact, error) {
 	c.Log.Infow("listing files", "bucket", bucket, "bucketFolder", bucketFolder)
 	return c.listFiles(ctx, bucket, bucketFolder)
+}
+
+// ListObjectsFromBucket lists objects under a prefix, with their sizes and modification
+// times, stopping after limit entries. A limit of 0 means unlimited.
+//
+// Unlike listFiles, the returned keys are the full object names rather than names made
+// relative to the prefix, because a caller that picks one still has to address it.
+func (c *Client) ListObjectsFromBucket(ctx context.Context, bucket, prefix string, limit int) ([]storage.ObjectInfo, error) {
+	if err := c.Connect(); err != nil {
+		return nil, err
+	}
+
+	exists, err := c.minioClient.BucketExists(ctx, bucket)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		c.Log.Debugw("bucket doesn't exist", "bucket", bucket)
+		return nil, ErrArtifactsNotFound
+	}
+
+	listCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	var objects []storage.ObjectInfo
+	for obj := range c.minioClient.ListObjects(listCtx, bucket, minio.ListObjectsOptions{Prefix: prefix, Recursive: true}) {
+		if obj.Err != nil {
+			return nil, obj.Err
+		}
+		objects = append(objects, storage.ObjectInfo{
+			Key:          obj.Key,
+			Size:         obj.Size,
+			LastModified: obj.LastModified,
+		})
+		if limit > 0 && len(objects) >= limit {
+			cancel()
+			break
+		}
+	}
+
+	return objects, nil
 }
 
 // ListFiles lists available files in the bucket from the config
@@ -704,4 +813,32 @@ func (c *Client) PresignUploadFileToBucket(ctx context.Context, bucket, bucketFo
 		return "", err
 	}
 	return url.String(), nil
+}
+
+// ifNoneMatchHeader is how S3 and MinIO spell "only if this object does not exist".
+const ifNoneMatchHeader = "If-None-Match"
+
+// PresignCreateFileToBucket returns a presigned PUT that fails if the object is already
+// there, along with the header carrying that condition.
+//
+// PresignHeader signs the header in, so the upload is rejected unless the caller sends
+// it: the condition cannot be dropped to turn the request back into a plain overwrite.
+// A store that honours it answers a losing upload with 412 Precondition Failed.
+func (c *Client) PresignCreateFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, expires time.Duration) (string, map[string]string, error) {
+	if err := c.Connect(); err != nil {
+		return "", nil, err
+	}
+	if bucketFolder != "" {
+		filePath = strings.Trim(bucketFolder, "/") + "/" + filePath
+	}
+	c.Log.Debugw("presigning conditional put object in minio", "file", filePath, "bucket", bucket)
+
+	headers := http.Header{}
+	headers.Set(ifNoneMatchHeader, "*")
+
+	url, err := c.minioClient.PresignHeader(ctx, http.MethodPut, bucket, filePath, expires, nil, headers)
+	if err != nil {
+		return "", nil, err
+	}
+	return url.String(), map[string]string{ifNoneMatchHeader: "*"}, nil
 }

@@ -266,6 +266,14 @@ var (
 			},
 			Paths: []string{"/get", "/from/there"},
 		},
+		Cache: &testworkflowsv1.StepCache{
+			Key:         "npm-some-key",
+			RestoreKeys: []string{"npm-", "deps-"},
+			Paths:       []string{"node_modules", "/root/.npm"},
+			WorkingDir:  common.Ptr("/data/repo"),
+			Scope:       testworkflowsv1.CacheScopeEnvironment,
+			Mount:       common.Ptr(false),
+		},
 	}
 	step = testworkflowsv1.Step{
 		StepMeta:       stepBaseMeta,
