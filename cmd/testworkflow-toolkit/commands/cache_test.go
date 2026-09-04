@@ -632,6 +632,10 @@ func TestRunCacheSave_SendsTheConditionalHeaders(t *testing.T) {
 
 	assert.Equal(t, "*", seen.Get("If-None-Match"), "the signed condition must reach the store")
 	assert.Contains(t, out.String(), "cache: saved")
+	// Packing and uploading are reported separately, because timing only the transfer
+	// reported a number with little to do with how long the step actually waited.
+	assert.Contains(t, out.String(), "packing and")
+	assert.Contains(t, out.String(), "uploading")
 }
 
 // TestRunCacheSave_ARefusedUploadIsNotAFailure covers losing the race the condition
