@@ -77,10 +77,19 @@ func WriteTarballFrom(stream io.Writer, dirPath string, files []string, mounts [
 	if err != nil {
 		return 0, err
 	}
+	buffer := make([]byte, copyBufferSize)
 	err = walker.Walk(os.DirFS("/"), func(path string, file fs.File, stat fs.FileInfo, err error) error {
 		if err != nil {
 			fmt.Printf("Warning: '%s' has been ignored, as there was a problem reading it: %s\n", path, err.Error())
 			return nil
+		}
+		// The walker opens every entry and hands it over without closing it. For a
+		// dependency cache that is a few hundred thousand descriptors held until the
+		// garbage collector runs each file's finalizer - which is what closes an
+		// *os.File nobody closed - so the cost lands as GC pressure during the pack and
+		// the run depends on the container's descriptor limit being generous.
+		if file != nil {
+			defer file.Close()
 		}
 
 		// Append the file to the archive
@@ -106,9 +115,13 @@ func WriteTarballFrom(stream io.Writer, dirPath string, files []string, mounts [
 			return err
 		}
 
-		// Copy the contents for regular files
+		// Copy the contents for regular files, through one reused buffer. io.Copy
+		// allocates a 32 KiB one per call, which across a dependency cache's file count
+		// is gigabytes of garbage for no benefit. readOnly hides the file's WriteTo,
+		// which io.CopyBuffer prefers over the buffer it was handed, and which falls
+		// back to allocating its own for a destination like a tar writer.
 		if !isSymlink {
-			if _, err = io.Copy(tarStream, file); err != nil {
+			if _, err = io.CopyBuffer(tarStream, readOnly{file}, buffer); err != nil {
 				return err
 			}
 		}
@@ -394,6 +407,15 @@ func UnpackTarball(dirPath string, stream io.Reader, opts ...UnpackOption) error
 		}
 	}
 	return nil
+}
+
+// readOnly exposes only Read, for the same reason writeOnly exposes only Write.
+type readOnly struct {
+	r io.Reader
+}
+
+func (o readOnly) Read(p []byte) (int, error) {
+	return o.r.Read(p)
 }
 
 // writeOnly exposes only Write, so io.CopyBuffer uses the buffer it was handed.

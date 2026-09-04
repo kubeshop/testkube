@@ -4,8 +4,11 @@ import (
 	"archive/tar"
 	"bytes"
 	"fmt"
+	"io"
 	"math/rand"
+	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/klauspost/compress/gzip"
@@ -67,6 +70,40 @@ func BenchmarkUnpackDependencyTree(b *testing.B) {
 		b.StartTimer()
 		if err := UnpackTarball(destination, bytes.NewReader(archive)); err != nil {
 			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkPackDependencyTree measures the other half. The shape is the same, because
+// both halves are bound by per-entry work rather than by volume.
+func BenchmarkPackDependencyTree(b *testing.B) {
+	source := b.TempDir()
+	if filepath.VolumeName(source) != "" {
+		b.Skip("packing walks from \"/\"; a Windows drive path cannot be reached from there")
+	}
+	const dirs, filesPerDir = 300, 8
+	body := make([]byte, 3<<10)
+	for d := 0; d < dirs; d++ {
+		dir := filepath.Join(source, fmt.Sprintf("host%d", d%4), fmt.Sprintf("repo%d@v1.0.0", d), "internal")
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			b.Fatal(err)
+		}
+		for f := 0; f < filesPerDir; f++ {
+			if err := os.WriteFile(filepath.Join(dir, fmt.Sprintf("file%d.go", f)), body, 0o644); err != nil {
+				b.Fatal(err)
+			}
+		}
+	}
+	root := filepath.ToSlash(source)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		entries, err := WriteTarballFrom(io.Discard, "/", []string{root, path.Join(root, "**")}, []string{root})
+		if err != nil {
+			b.Fatal(err)
+		}
+		if entries != dirs*filesPerDir {
+			b.Fatalf("packed %d entries, want %d", entries, dirs*filesPerDir)
 		}
 	}
 }
