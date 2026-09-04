@@ -5,13 +5,25 @@
 # executions. Both workflows below are safe to run repeatedly: a cache is an
 # optimization, so a miss just means the install happens over the network, exactly as it
 # would without any cache.
+#
+# Both also cache the package manager's own store rather than the tree it installs -
+# npm's _cacache, Go's cache/download - and that is the one choice here worth copying.
+# A cache is bound by how many entries it holds and not by how many bytes: packing and
+# restoring both spend their time per file. A store is a few thousand larger,
+# already-compressed files; the installed tree beside it is tens of thousands of small
+# ones and is derived from the store anyway. Measured on the Go workflow below, moving
+# from one to the other took the save from 36.6s to 9.2s and the restore from 38.6s to
+# 5.2s, while the archive itself only halved - the difference is all entry count.
+#
+# Each workflow proves the "derived" half rather than asserting it, by deleting the
+# installed tree and rebuilding it from the store with the network turned off.
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: special-cases-cache-workflow-scope
   labels:
     core-tests: special-cases
-description: "Dependency cache, workflow scope - node_modules keyed on a lockfile, private to this workflow"
+description: "Dependency cache, workflow scope - npm's package store keyed on a lockfile, private to this workflow"
 spec:
   content:
     git:
@@ -25,8 +37,14 @@ spec:
       requests:
         cpu: 256m
         memory: 256Mi
-    # hash_files() and the relative cache paths both resolve against this directory.
+    # hash_files() resolves against this directory.
     workingDir: /data/repo/js
+    # Stated rather than inherited, for the same reason the workflow below states
+    # GOMODCACHE: the cached path has to be somewhere this workflow decided, not
+    # wherever the image happens to put it.
+    env:
+    - name: npm_config_cache
+      value: /root/.npm
   job:
     activeDeadlineSeconds: 600
   steps:
@@ -36,16 +54,26 @@ spec:
       # lockfile's *contents*, so editing a dependency produces a different key and the
       # stale tree is never restored. Prefer hash_files over hash(glob(...)), which
       # digests the matched paths and so does not change when a file's contents do.
-      # See the v2 note in the workflow below: the segment is a cache-key version, and
-      # bumping it is the only way past entries that were stored under the old one,
-      # because an entry cannot be rewritten.
-      key: 'npm-v2-{{ hash_files("package-lock.json") }}'
+      # See the version note in the workflow below: the segment is a cache-key version,
+      # and bumping it is the only way past entries stored under the old one, because an
+      # entry cannot be rewritten. v3 is the move to _cacache below.
+      key: 'npm-v3-{{ hash_files("package-lock.json") }}'
       # Tried in order when the exact key misses, newest entry first within a prefix. A
       # partial hit still saves under the exact key afterwards, so the next run hits.
       restoreKeys:
-      - 'npm-v2-'
+      - 'npm-v3-'
       paths:
-      - node_modules
+      # npm's own content-addressed store, not the node_modules it installs. Same
+      # reasoning as cache/download in the workflow below, and the same measurement
+      # behind it: a cache is bound by how many entries it has, and an installed tree
+      # is tens of thousands of small files where the store is a few thousand larger,
+      # already-compressed ones. node_modules is derived from this; `npm ci` rebuilds
+      # it, and the shell below proves it can do so with the network off.
+      #
+      # Note this path needs a volume of its own, where node_modules sat inside the
+      # repository checkout and reused that one. Both cases are covered by
+      # TestProcessCache_MountsUncoveredPaths.
+      - /root/.npm/_cacache
       # The default. Stated here only to contrast with the workflow below: entries are
       # private to this workflow, so nothing another workflow writes can be restored
       # into this one.
@@ -55,11 +83,23 @@ spec:
       # `npm ci` needs no cache to work - it just gets slower without one, which is the
       # whole point of the feature degrading to a miss rather than failing.
       npm ci --prefer-offline --no-audit --fund=false
-      # Non-empty, so that a save cannot store an empty tree. Note what this still
-      # cannot check: `npm ci` rebuilds node_modules whether or not the restore brought
+
+      # Non-empty, so that a save cannot store an empty store. Note what this still
+      # cannot check: `npm ci` repopulates both whether or not the restore brought
       # anything back, so nothing in a single execution can tell a hit from a miss.
       # tw-cache-roundtrip in test/suites is where that is asserted, by running twice.
-      [ -n "$(ls -A node_modules 2>/dev/null)" ] || { echo "FAIL: node_modules is empty after install"; exit 1; }
+      [ -n "$(ls -A /root/.npm/_cacache 2>/dev/null)" ] || { echo "FAIL: the npm store is empty after install"; exit 1; }
+      echo "/root/.npm/_cacache is $(du -sh /root/.npm/_cacache | cut -f1) in $(find /root/.npm/_cacache -type f | wc -l) files"
+      echo "node_modules, left uncached, is $(du -sh node_modules | cut -f1) in $(find node_modules -type f | wc -l) files"
+
+      # The claim that makes caching the store rather than the tree correct, executed
+      # rather than asserted: with node_modules gone and the network off, `npm ci`
+      # rebuilds it from _cacache alone. --offline rather than --prefer-offline, because
+      # the point is that it must not be allowed to reach the registry and quietly pass.
+      rm -rf node_modules
+      npm ci --offline --no-audit --fund=false \
+        || { echo "FAIL: _cacache alone did not satisfy the lockfile"; exit 1; }
+      echo "reinstalled the whole lockfile offline from _cacache alone"
 
   - name: Report what the cache did
     shell: |
