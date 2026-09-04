@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -672,6 +673,69 @@ func TestRunCacheSave_ARefusedUploadIsNotAFailure(t *testing.T) {
 			assert.Equal(t, 1, attempts, "a refused condition will refuse again, so it must not be retried")
 		})
 	}
+}
+
+// TestUploadCache_RetriesAfterAFailedAttempt covers the retry actually being able to
+// happen. http.Client.Do closes the request body, and the body here is the archive
+// file itself, so a second attempt found it closed and the upload died with
+// "file already closed" - masking whatever the first attempt had really failed with.
+func TestUploadCache_RetriesAfterAFailedAttempt(t *testing.T) {
+	archive := writeTempArchive(t, "cache-contents")
+
+	var attempts int
+	var received []int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts++
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		received = append(received, len(body))
+		if attempts == 1 {
+			// Retryable: not one of the statuses that mean "this grant will never work".
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	stat, err := archive.Stat()
+	require.NoError(t, err)
+
+	err = uploadCache(context.Background(), server.URL, map[string]string{"If-None-Match": "*"}, archive, stat.Size())
+	require.NoError(t, err, "a retryable failure must not end the upload")
+	assert.Equal(t, 2, attempts)
+	// Both attempts have to send the whole archive: a body the first attempt consumed
+	// without rewinding would upload a truncated entry, which is worse than not caching.
+	assert.Equal(t, []int{len("cache-contents"), len("cache-contents")}, received)
+}
+
+// TestUploadCache_ReportsTheRealFailure keeps the cause visible when every attempt
+// fails. Returning whatever the last rewind happened to produce hid the status the store
+// actually answered with.
+func TestUploadCache_ReportsTheRealFailure(t *testing.T) {
+	archive := writeTempArchive(t, "cache-contents")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotImplemented)
+	}))
+	defer server.Close()
+
+	stat, err := archive.Stat()
+	require.NoError(t, err)
+
+	err = uploadCache(context.Background(), server.URL, nil, archive, stat.Size())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "501", "the status the store answered with is the whole diagnosis")
+}
+
+func writeTempArchive(t *testing.T, contents string) *os.File {
+	t.Helper()
+	file, err := os.CreateTemp(t.TempDir(), "cache-*.tar.gz")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = file.Close() })
+	_, err = file.WriteString(contents)
+	require.NoError(t, err)
+	return file
 }
 
 func TestUploadRefused(t *testing.T) {

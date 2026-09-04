@@ -493,9 +493,19 @@ func uploadCache(ctx context.Context, url string, headers map[string]string, arc
 	var lastErr error
 	for attempt := 1; attempt <= cacheRetryMaxAttempts; attempt++ {
 		if _, err := archive.Seek(0, io.SeekStart); err != nil {
+			if lastErr != nil {
+				// Whatever stopped the previous attempt is the useful half. Returning
+				// the rewind failure on its own reported a symptom of retrying and hid
+				// the reason there was anything to retry.
+				return fmt.Errorf("%w (and the archive could not be rewound to retry: %s)", lastErr, err)
+			}
 			return err
 		}
-		req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, archive)
+		// io.NopCloser, because http.Client.Do closes the request body and the body here
+		// is the archive itself - so a plain *os.File left every attempt after the first
+		// to fail on the rewind above with "file already closed", whatever the store had
+		// actually answered.
+		req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, io.NopCloser(archive))
 		if err != nil {
 			return err
 		}
@@ -518,8 +528,13 @@ func uploadCache(ctx context.Context, url string, headers map[string]string, arc
 				return errCacheEntryWon
 			}
 			err = fmt.Errorf("status code %d", status)
-			// A rejected grant will be rejected again.
-			if status == http.StatusForbidden || status == http.StatusBadRequest {
+			// None of these change on a second attempt: the first two are a grant the
+			// store will not honour, and the others are the store saying it does not
+			// implement what the request asked of it - most likely the condition that
+			// makes the write conditional at all.
+			switch status {
+			case http.StatusForbidden, http.StatusBadRequest,
+				http.StatusNotImplemented, http.StatusMethodNotAllowed:
 				return err
 			}
 		}
