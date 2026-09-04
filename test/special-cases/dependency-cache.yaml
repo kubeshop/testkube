@@ -36,11 +36,14 @@ spec:
       # lockfile's *contents*, so editing a dependency produces a different key and the
       # stale tree is never restored. Prefer hash_files over hash(glob(...)), which
       # digests the matched paths and so does not change when a file's contents do.
-      key: 'npm-{{ hash_files("package-lock.json") }}'
+      # See the v2 note in the workflow below: the segment is a cache-key version, and
+      # bumping it is the only way past entries that were stored under the old one,
+      # because an entry cannot be rewritten.
+      key: 'npm-v2-{{ hash_files("package-lock.json") }}'
       # Tried in order when the exact key misses, newest entry first within a prefix. A
       # partial hit still saves under the exact key afterwards, so the next run hits.
       restoreKeys:
-      - 'npm-'
+      - 'npm-v2-'
       paths:
       - node_modules
       # The default. Stated here only to contrast with the workflow below: entries are
@@ -48,10 +51,15 @@ spec:
       # into this one.
       scope: workflow
     shell: |
+      set -e
       # `npm ci` needs no cache to work - it just gets slower without one, which is the
       # whole point of the feature degrading to a miss rather than failing.
       npm ci --prefer-offline --no-audit --fund=false
-      test -d node_modules || { echo "FAIL: node_modules missing after install"; exit 1; }
+      # Non-empty, so that a save cannot store an empty tree. Note what this still
+      # cannot check: `npm ci` rebuilds node_modules whether or not the restore brought
+      # anything back, so nothing in a single execution can tell a hit from a miss.
+      # tw-cache-roundtrip in test/suites is where that is asserted, by running twice.
+      [ -n "$(ls -A node_modules 2>/dev/null)" ] || { echo "FAIL: node_modules is empty after install"; exit 1; }
 
   - name: Report what the cache did
     shell: |
@@ -82,14 +90,29 @@ spec:
         cpu: 512m
         memory: 1Gi
     workingDir: /data/repo
+    # Stated rather than assumed, and this is not housekeeping: the official golang
+    # images set GOPATH=/go, so the module cache lands in /go/pkg/mod and nothing is
+    # ever written to $HOME/go/pkg/mod - which is where a cache block naming the Go
+    # default would point. Naming the directories here makes the paths below true
+    # instead of leaving them to an image detail that can change under the workflow.
+    env:
+    - name: GOMODCACHE
+      value: /root/go/pkg/mod
+    - name: GOCACHE
+      value: /root/.cache/go-build
   job:
     activeDeadlineSeconds: 900
   steps:
   - name: Warm the module cache
     cache:
-      key: 'gomod-{{ hash_files("go.sum") }}'
+      # The v2 segment is a cache-key version, bumped whenever what gets stored under
+      # the key changes shape. It has to, because an entry is immutable for its
+      # lifetime: entries written before the cached paths were corrected still answer
+      # the old key, and a restoreKeys prefix would keep matching them. Versioning the
+      # prefix is how a cache is invalidated when nothing about go.sum changed.
+      key: 'gomod-v2-{{ hash_files("go.sum") }}'
       restoreKeys:
-      - 'gomod-'
+      - 'gomod-v2-'
       # Neither path sits inside a volume the step already has, so a volume is mounted
       # at each one automatically - without that they would be restored into the restore
       # container's own filesystem, where the container running the build cannot see
@@ -110,6 +133,25 @@ spec:
       # wins and a later run cannot swap out what it stored.
       scope: environment
     shell: |
+      set -e
       go mod download all
-      test -d /root/go/pkg/mod || { echo "FAIL: module cache missing after download"; exit 1; }
-      echo "module cache is $(du -sh /root/go/pkg/mod | cut -f1)"
+      # Something has to actually compile, or GOCACHE is stored empty: a module
+      # download fills GOMODCACHE and leaves the build cache untouched. It cannot be a
+      # package from the repository - the content above checks out go.mod and go.sum
+      # and nothing else - so a throwaway module is built instead, which is enough to
+      # compile the standard library packages it pulls in.
+      mkdir -p /tmp/warm
+      cd /tmp/warm
+      go mod init warm >/dev/null
+      printf 'package main\n\nimport "fmt"\n\nfunc main() { fmt.Println("warm") }\n' > main.go
+      go build -o /dev/null .
+      cd /data/repo
+
+      # Non-empty, not merely present. `test -d` would pass on its own: the cache
+      # mounts a volume at every path it manages, so both directories exist before
+      # anything runs, whether or not a single byte was written to them. That is what
+      # let this workflow report success while caching nothing at all.
+      for dir in /root/go/pkg/mod /root/.cache/go-build; do
+        [ -n "$(ls -A "$dir" 2>/dev/null)" ] || { echo "FAIL: $dir is empty, so there is nothing to cache"; exit 1; }
+        echo "$dir is $(du -sh "$dir" | cut -f1)"
+      done
