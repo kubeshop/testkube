@@ -386,7 +386,6 @@ func TestRunCacheSave_RefusesAnOversizedArchive(t *testing.T) {
 	assert.Zero(t, repository.saveCalls, "an oversized archive must not be granted an upload")
 }
 
-
 // TestRunCacheSave_RefusesAnEmptyArchive guards the consequence of entries being
 // immutable: storing nothing under a key can never be undone.
 //
