@@ -273,10 +273,16 @@ func runCacheSave(ctx context.Context, encoded string, mounts []string, statePat
 		return nil
 	}
 
+	// Timed from here, not from the upload. Packing reads and compresses the whole tree
+	// and is usually the larger half of a save, so timing only the transfer reported a
+	// number that had little to do with how long the step waited.
+	started := time.Now()
+
 	archive, size, entries, err := packCache(paths, mounts)
 	if err != nil {
 		return fmt.Errorf("packing the cache: %w", err)
 	}
+	packed := time.Since(started)
 	defer func() {
 		_ = archive.Close()
 		_ = os.Remove(archive.Name())
@@ -317,7 +323,7 @@ func runCacheSave(ctx context.Context, encoded string, mounts []string, statePat
 		return nil
 	}
 
-	started := time.Now()
+	uploadStarted := time.Now()
 	if err := uploadCache(ctx, upload.URL, upload.Headers, archive, size); err != nil {
 		if errors.Is(err, errCacheEntryWon) {
 			// Losing the race is not a failure. Both executions reached the same
@@ -330,8 +336,12 @@ func runCacheSave(ctx context.Context, encoded string, mounts []string, statePat
 		return nil
 	}
 
-	fmt.Fprintf(out, "cache: saved %q (%s in %s)\n",
-		key, humanize.Bytes(uint64(size)), time.Since(started).Truncate(time.Millisecond))
+	// Both halves are reported separately: they scale with different things - packing
+	// with the size and file count of the tree, the upload with the archive and the
+	// link - so one total hides which of them to do something about.
+	fmt.Fprintf(out, "cache: saved %q (%s in %s, %s packing and %s uploading)\n",
+		key, humanize.Bytes(uint64(size)), time.Since(started).Truncate(time.Millisecond),
+		packed.Truncate(time.Millisecond), time.Since(uploadStarted).Truncate(time.Millisecond))
 	return nil
 }
 
