@@ -1,11 +1,14 @@
 package libs
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
@@ -82,6 +85,50 @@ func readFile(fsys fs.FS, workingDir string, values ...expressions.StaticValue) 
 	return string(content), nil
 }
 
+// hashFiles hashes the *contents* of every file matching the patterns.
+//
+// This exists because hash(glob(...)) hashes the list of paths instead, which
+// changes when a file is added or removed but not when one is edited - a cache key
+// built that way silently never invalidates. Hashing contents is almost always what
+// the caller meant, and for more than one lockfile it is the only correct form.
+func hashFiles(fsys fs.FS, workingDir string, values ...expressions.StaticValue) (interface{}, error) {
+	matches, err := globFs(fsys, workingDir, values...)
+	if err != nil {
+		return nil, fmt.Errorf("hash_files(): %w", err)
+	}
+	paths, _ := matches.([]string)
+
+	// globFs walks one root at a time, so its order follows the patterns. Sort, or the
+	// same set of files would hash differently depending on how it was matched.
+	sort.Strings(paths)
+
+	if len(paths) == 0 {
+		// No match is not an error: a lockfile that does not exist yet is a normal
+		// state for a workflow being written. Callers that need a real key treat an
+		// empty result as "do not cache" rather than failing the step.
+		return "", nil
+	}
+
+	h := sha256.New()
+	for _, path := range paths {
+		file, err := fsys.Open(strings.TrimLeft(path, "/"))
+		if err != nil {
+			return nil, fmt.Errorf("hash_files(): opening %s: %w", path, err)
+		}
+		contents := sha256.New()
+		_, err = io.Copy(contents, file)
+		_ = file.Close()
+		if err != nil {
+			return nil, fmt.Errorf("hash_files(): reading %s: %w", path, err)
+		}
+		// Fold the path in too, so that moving a file changes the result.
+		_, _ = h.Write([]byte(path))
+		_, _ = h.Write([]byte{0})
+		_, _ = h.Write(contents.Sum(nil))
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
 func createGlobMatcher(patterns []string) func(string) bool {
 	return func(filePath string) bool {
 		for _, p := range patterns {
@@ -154,6 +201,10 @@ func NewFsMachine(fsys fs.FS, workingDir string) expressions.Machine {
 		}).
 		RegisterFunction("glob", func(values ...expressions.StaticValue) (interface{}, bool, error) {
 			v, err := globFs(fsys, workingDir, values...)
+			return v, true, err
+		}).
+		RegisterFunction("hash_files", func(values ...expressions.StaticValue) (interface{}, bool, error) {
+			v, err := hashFiles(fsys, workingDir, values...)
 			return v, true, err
 		})
 }

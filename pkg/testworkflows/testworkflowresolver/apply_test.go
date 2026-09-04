@@ -353,7 +353,7 @@ func TestApplyTemplatesMergeMultipleConfigurable(t *testing.T) {
 func TestApplyTemplatesStepBasic(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplEnvRef}
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *basicStep.DeepCopy()
 	want.Container.Env = append(tplEnv.Spec.Container.Env, want.Container.Env...)
@@ -365,7 +365,7 @@ func TestApplyTemplatesStepBasic(t *testing.T) {
 func TestApplyTemplatesStepIgnorePod(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplPodRef}
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *basicStep.DeepCopy()
 
@@ -373,10 +373,162 @@ func TestApplyTemplatesStepIgnorePod(t *testing.T) {
 	assert.Equal(t, want, s)
 }
 
+func TestApplyTemplatesStepPropagatesPodViaUse(t *testing.T) {
+	s := *basicStep.DeepCopy()
+	s.Use = []testworkflowsv1.TemplateRef{tplPodRef}
+	spec := &testworkflowsv1.TestWorkflowSpec{}
+
+	_, err := applyTemplatesToStep(s, spec, templates, nil)
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, spec.Pod) {
+		assert.Equal(t, tplPod.Spec.Pod.Labels, spec.Pod.Labels)
+	}
+}
+
+func TestApplyTemplatesStepPropagatesPodViaTemplate(t *testing.T) {
+	s := *basicStep.DeepCopy()
+	s.Template = &tplPodRef
+	spec := &testworkflowsv1.TestWorkflowSpec{}
+
+	_, err := applyTemplatesToStep(s, spec, templates, nil)
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, spec.Pod) {
+		assert.Equal(t, tplPod.Spec.Pod.Labels, spec.Pod.Labels)
+	}
+}
+
+func TestApplyTemplatesStepPropagatesPodErrorsOnVolumeSourceConflict(t *testing.T) {
+	mkTpl := func(cmName string) *testworkflowsv1.TestWorkflowTemplate {
+		return &testworkflowsv1.TestWorkflowTemplate{
+			Spec: testworkflowsv1.TestWorkflowTemplateSpec{
+				TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+					Pod: &testworkflowsv1.PodConfig{
+						Volumes: []corev1.Volume{{
+							Name: "cfg-vol",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{Name: cmName},
+								},
+							},
+						}},
+					},
+				},
+			},
+		}
+	}
+	mkWorkflowVol := func(cmName string) *testworkflowsv1.TestWorkflowSpec {
+		return &testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					Volumes: []corev1.Volume{{
+						Name: "cfg-vol",
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{Name: cmName},
+							},
+						},
+					}},
+				},
+			},
+		}
+	}
+	mkStep := func(refs ...string) testworkflowsv1.Step {
+		s := *basicStep.DeepCopy()
+		for _, r := range refs {
+			s.Use = append(s.Use, testworkflowsv1.TemplateRef{Name: r})
+		}
+		return s
+	}
+
+	tests := map[string]struct {
+		step testworkflowsv1.Step
+		spec *testworkflowsv1.TestWorkflowSpec
+		tpls map[string]*testworkflowsv1.TestWorkflowTemplate
+	}{
+		"workflow declares same name with different source": {
+			step: mkStep("tplA"),
+			spec: mkWorkflowVol("from-workflow"),
+			tpls: map[string]*testworkflowsv1.TestWorkflowTemplate{"tplA": mkTpl("from-template")},
+		},
+		"sibling templates disagree on source": {
+			step: mkStep("tplA", "tplB"),
+			spec: &testworkflowsv1.TestWorkflowSpec{},
+			tpls: map[string]*testworkflowsv1.TestWorkflowTemplate{
+				"tplA": mkTpl("from-A"),
+				"tplB": mkTpl("from-B"),
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, err := applyTemplatesToStep(tc.step, tc.spec, tc.tpls, nil)
+			if assert.Error(t, err) {
+				assert.Contains(t, err.Error(), "conflicts with an existing declaration")
+			}
+		})
+	}
+}
+
+func TestApplyTemplatesStepPropagatesPodDedupeVolumes(t *testing.T) {
+	tplWithVolumes := testworkflowsv1.TestWorkflowTemplate{
+		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					Volumes: []corev1.Volume{{Name: "cfg-vol"}},
+				},
+			},
+		},
+	}
+	tpls := map[string]*testworkflowsv1.TestWorkflowTemplate{"podVol": &tplWithVolumes}
+	ref := testworkflowsv1.TemplateRef{Name: "podVol"}
+
+	mkStepUse := func(refs ...testworkflowsv1.TemplateRef) testworkflowsv1.Step {
+		s := *basicStep.DeepCopy()
+		s.Use = refs
+		return s
+	}
+	mkStepTemplate := func(r testworkflowsv1.TemplateRef) testworkflowsv1.Step {
+		s := *basicStep.DeepCopy()
+		s.Template = &r
+		return s
+	}
+
+	tests := map[string]struct {
+		steps []testworkflowsv1.Step
+	}{
+		"repeated ref in one step's Use[]": {
+			steps: []testworkflowsv1.Step{mkStepUse(ref, ref)},
+		},
+		"sibling steps using same .template": {
+			steps: []testworkflowsv1.Step{mkStepTemplate(ref), mkStepTemplate(ref)},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			spec := &testworkflowsv1.TestWorkflowSpec{}
+			for _, s := range tc.steps {
+				_, err := applyTemplatesToStep(s, spec, tpls, nil)
+				assert.NoError(t, err)
+			}
+			if assert.NotNil(t, spec.Pod) {
+				names := make([]string, 0, len(spec.Pod.Volumes))
+				for _, v := range spec.Pod.Volumes {
+					names = append(names, v.Name)
+				}
+				assert.Equal(t, []string{"cfg-vol"}, names)
+			}
+		})
+	}
+}
+
 func TestApplyTemplatesStepBasicIsolatedIgnore(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Template = &tplEnvRef
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *basicStep.DeepCopy()
 
@@ -387,7 +539,7 @@ func TestApplyTemplatesStepBasicIsolatedIgnore(t *testing.T) {
 func TestApplyTemplatesStepBasicIsolated(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Template = &tplStepsRef
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *basicStep.DeepCopy()
 	want.Steps = append([]testworkflowsv1.Step{
@@ -403,7 +555,7 @@ func TestApplyTemplatesStepBasicIsolated(t *testing.T) {
 func TestApplyTemplatesStepBasicIsolatedWrapped(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Template = &tplStepsEnvRef
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *basicStep.DeepCopy()
 	want.Steps = append([]testworkflowsv1.Step{{
@@ -426,7 +578,7 @@ func TestApplyTemplatesStepBasicIsolatedWrapped(t *testing.T) {
 func TestApplyTemplatesStepBasicSteps(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplStepsRef}
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *basicStep.DeepCopy()
 	want.Setup = []testworkflowsv1.Step{
@@ -445,7 +597,7 @@ func TestApplyTemplatesStepBasicSteps(t *testing.T) {
 func TestApplyTemplatesStepBasicMultipleSteps(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplStepsRef, tplStepsConfigRef}
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *basicStep.DeepCopy()
 	want.Setup = []testworkflowsv1.Step{
@@ -470,7 +622,7 @@ func TestApplyTemplatesStepBasicMultipleSteps(t *testing.T) {
 func TestApplyTemplatesStepAdvancedIsolated(t *testing.T) {
 	s := *advancedStep.DeepCopy()
 	s.Template = &tplStepsRef
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *advancedStep.DeepCopy()
 	want.Steps = append([]testworkflowsv1.Step{
@@ -486,7 +638,7 @@ func TestApplyTemplatesStepAdvancedIsolated(t *testing.T) {
 func TestApplyTemplatesStepAdvancedIsolatedWrapped(t *testing.T) {
 	s := *advancedStep.DeepCopy()
 	s.Template = &tplStepsEnvRef
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *advancedStep.DeepCopy()
 	want.Steps = append([]testworkflowsv1.Step{{
@@ -512,7 +664,7 @@ func TestApplyTemplatesParallel(t *testing.T) {
 		Use:   []testworkflowsv1.TemplateRef{tplStepsEnvRef},
 		Steps: []testworkflowsv1.Step{basicStep},
 	}
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *advancedStep.DeepCopy()
 	want.Parallel = &testworkflowsv1.StepParallel{
@@ -540,7 +692,7 @@ func TestApplyTemplatesParallel(t *testing.T) {
 func TestApplyTemplatesStepAdvancedSteps(t *testing.T) {
 	s := *advancedStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplStepsRef}
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *advancedStep.DeepCopy()
 	want.Setup = []testworkflowsv1.Step{
@@ -559,7 +711,7 @@ func TestApplyTemplatesStepAdvancedSteps(t *testing.T) {
 func TestApplyTemplatesStepAdvancedMultipleSteps(t *testing.T) {
 	s := *advancedStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplStepsRef, tplStepsConfigRef}
-	s, err := applyTemplatesToStep(s, templates, nil)
+	s, err := applyTemplatesToStep(s, nil, templates, nil)
 
 	want := *advancedStep.DeepCopy()
 	want.Setup = []testworkflowsv1.Step{

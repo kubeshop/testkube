@@ -1,0 +1,32 @@
+suite: testkube-api built-in templates
+templates:
+  - templates/testworkflows/builtin-templates-hook.yaml
+release:
+  name: testkube
+  namespace: testkube
+tests:
+  - it: installs templates through a hook Job instead of direct custom resource hooks
+    asserts:
+      - hasDocuments:
+          count: 2
+      - isKind:
+          of: ConfigMap
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: testkube-testkube-api-builtin-templates
+        documentIndex: 0
+      - isKind:
+          of: Job
+        documentIndex: 1
+      - equal:
+          path: metadata.name
+          value: testkube-testkube-api-builtin-templates
+        documentIndex: 1
+
+  - it: renders nothing when built-in templates are disabled
+    set:
+      global.testWorkflows.createServiceAccountTemplates: false
+    asserts:
+      - hasDocuments:
+          count: 0

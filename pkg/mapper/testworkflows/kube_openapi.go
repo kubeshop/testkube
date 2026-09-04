@@ -1051,6 +1051,17 @@ func MapStepArtifactsKubeToAPI(v testworkflowsv1.StepArtifacts) testkube.TestWor
 	}
 }
 
+func MapStepCacheKubeToAPI(v testworkflowsv1.StepCache) testkube.TestWorkflowStepCache {
+	return testkube.TestWorkflowStepCache{
+		Key:         v.Key,
+		RestoreKeys: v.RestoreKeys,
+		Paths:       v.Paths,
+		WorkingDir:  MapStringToBoxedString(v.WorkingDir),
+		Scope:       string(v.Scope),
+		Mount:       MapBoolToBoxedBoolean(v.Mount),
+	}
+}
+
 func MapRetryPolicyKubeToAPI(v testworkflowsv1.RetryPolicy) testkube.TestWorkflowRetryPolicy {
 	return testkube.TestWorkflowRetryPolicy{
 		Count: v.Count,
@@ -1109,6 +1120,7 @@ func MapStepParallelKubeToAPI(v testworkflowsv1.StepParallel) testkube.TestWorkf
 		Run:         common.MapPtr(v.Run, MapStepRunKubeToAPI),
 		Execute:     common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
 		Artifacts:   common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
+		Cache:       common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
 		Pvcs:        common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
 	}
 }
@@ -1145,6 +1157,7 @@ func MapIndependentStepParallelKubeToAPI(v testworkflowsv1.IndependentStepParall
 		Run:         common.MapPtr(v.Run, MapStepRunKubeToAPI),
 		Execute:     common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
 		Artifacts:   common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
+		Cache:       common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
 		Pvcs:        common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
 	}
 }
@@ -1282,6 +1295,7 @@ func MapStepKubeToAPI(v testworkflowsv1.Step) testkube.TestWorkflowStep {
 		Container:  common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
 		Execute:    common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
 		Artifacts:  common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
+		Cache:      common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
 		Setup:      common.MapSlice(v.Setup, MapStepKubeToAPI),
 		Steps:      common.MapSlice(v.Steps, MapStepKubeToAPI),
 		Parallel:   common.MapPtr(v.Parallel, MapStepParallelKubeToAPI),
@@ -1308,6 +1322,7 @@ func MapIndependentStepKubeToAPI(v testworkflowsv1.IndependentStep) testkube.Tes
 		Container:  common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
 		Execute:    common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
 		Artifacts:  common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
+		Cache:      common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
 		Setup:      common.MapSlice(v.Setup, MapIndependentStepKubeToAPI),
 		Steps:      common.MapSlice(v.Steps, MapIndependentStepKubeToAPI),
 		Parallel:   common.MapPtr(v.Parallel, MapIndependentStepParallelKubeToAPI),

@@ -58,6 +58,56 @@ Still to come: Control Plane persistence and enforcement of the owner, and the `
 - Regenerate SQL code when query files change via `make generate-sqlc`.
 - Refresh mocks for new or updated interfaces using `make generate-mocks`.
 
+## Transient-failure retries
+
+- `pkg/runner/runner.go` runs `worker.Destroy` (cleanup of the execution's Secrets/Pods after the workflow ends) through the shared `retry()` helper via `destroyResources`. Bounded by `CleanupResourcesRetryCount` and `CleanupResourcesRetryDelay`; a brief `kube-apiserver` blip during teardown should not leave orphan resources in the customer namespace.
+- `pkg/event/kind/webhook/listener.go` retries the outbound `HttpClient.Do` for `sendRetryCount` attempts with a linear `sendRetryBaseDelay`. Retryable outcomes: network errors, `5xx`, and `429`. Other `4xx` short-circuit so a bad URL / auth failure is not spammed at the subscriber. Delivery is intentionally at-least-once (subscribers own dedupe, matching Stripe/GitHub/Slack convention).
+
+## Step dependency cache
+
+A step's `cache` block (`api/testworkflows/v1/step_types.go`, `StepCache`) restores
+directories from object storage before the step runs and saves them back once it passes,
+so dependency installs survive between executions.
+
+- `pkg/executioncache/` is the transport-free core: the object-key derivation
+  (`objectkey.go`), the restore-key match policy (`match.go`), the payload and handshake
+  shapes both sides share (`args.go`), and the repository interface plus its
+  degrade-to-miss classification (`repository.go`). **The Control Plane must import this
+  package rather than reimplement it** — a disagreement produces entries the other side
+  can never find, so every run silently misses its own cache.
+- `ProcessCacheRestore` / `ProcessCacheSave` in
+  `pkg/testworkflows/testworkflowprocessor/operations_cache.go`, registered in **both**
+  presets. Restore sits after the content operations so the repository is checked out
+  when the key is resolved; save sits after the step's work and before artifacts.
+- `cmd/testworkflow-toolkit/commands/cache.go` is the pod-side half. It never exits
+  non-zero: a cache is an optimization, so a miss, an unreachable Control Plane, a
+  missing capability, a corrupt archive or a refused upload all leave the step to install
+  from the network.
+
+Three constraints are easy to break and worth knowing before editing any of it:
+
+- **The specification travels base64-encoded in one argument.** `testworkflow-init`
+  resolves every container argument with `expressions.FinalizerFail` and exits the step
+  on failure, so a key holding `hash_files()` over an absent lockfile would kill the step
+  rather than miss the cache. `TestProcessCache_KeyTemplateStaysOpaque` guards this.
+- **The two stages hand the resolved key over through `TK_CACHE_STATE`** on the shared
+  `/testkube` volume instead of each computing it. They are separate containers, and an
+  install may rewrite the very lockfile the key hashes (`npm ci` does), so a recomputed
+  key could store the entry where nothing later searches for it.
+- **Cached paths are mounted automatically.** Each stage is its own container, and
+  containers share volumes but not their root filesystems, so a path outside every volume
+  is restored where the container running the install cannot see it. `mount: false` on an
+  uncovered path is refused at bundle time rather than silently doing nothing.
+
+The save stage sets no condition, inheriting `passed` — deliberately unlike the artifacts
+stage, which is `always`: publishing a failed install under a content-hash key would
+poison every later run with no way for a user to invalidate it.
+
+`hash()` (`pkg/expressions/stdlib.go`) and `hash_files()`
+(`pkg/expressions/libs/fs.go`) exist for building keys. Prefer `hash_files`:
+`hash(glob(...))` digests the matched **paths**, so it does not change when a file's
+contents do.
+
 ## Telemetry and cluster detection
 
 - `pkg/telemetry/` contains all telemetry event construction, sending, and cluster identification logic.
@@ -93,6 +143,7 @@ Still to come: Control Plane persistence and enforcement of the owner, and the `
 - Git trigger informer execution is leader-gated in `cmd/api-server/main.go` through the shared `leader` coordinator tasks, so only the active leader performs periodic git pulls/reconciliation.
 - Helm chart values are the source of deployment defaults; `build/_local/values.dev.yaml` (shaped by the `values.dev.tpl.yaml` template) shows the local overrides used by `tk-dev` if you need a concrete reference.
 - CLI update-check toggle: set `TESTKUBE_DISABLE_UPDATE_CHECK=1` to suppress both the per-command hint and the `testkube version` status block. The CLI persists `lastUpdateCheckAt` and `latestKnownVersion` in `~/.testkube/config.json` to throttle the per-command hint to once per day.
+- Object retention is driven by `STORAGE_EXPIRATION` (whole bucket, in days) and `STORAGE_CACHE_EXPIRATION` (step dependency caches under the `.tkcache/v1` prefix, in days). **Both are deliberately opt-in with no default.** `SetExpirationPolicies` in `pkg/storage/minio/minio.go` applies them in a single `SetBucketLifecycle` call, which replaces the bucket lifecycle wholesale rather than merging, so configuring either one drops any rule Testkube did not write. Giving either a default would therefore change object retention on installations whose bucket lifecycle is managed elsewhere, purely by upgrading; `TestExpirationSettingsAreOptIn` guards that. Note also that the bucket-wide rule is unfiltered and so covers cache objects too, and the earlier expiration wins — a cache TTL can only bring eviction forward, never postpone it, and `MustGetMinioClient` warns when it is set longer than the bucket-wide one.
 
 ## Architecture reference
 

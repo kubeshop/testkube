@@ -43,6 +43,24 @@ global:
       inline: false
       name: global-template
       spec: null
+    builtinTemplatesInstaller:
+      image:
+        registry: docker.io
+        repository: kubeshop/testkube-kubectl
+        tag: 1.36.3
+        digest: ""
+        pullPolicy: IfNotPresent
+        pullSecrets: []
+      ttlSecondsAfterFinished: 300
+      backoffLimit: 10
+      annotations: {}
+      labels: {}
+      podAnnotations: {}
+      podSecurityContext: {}
+      securityContext: {}
+      nodeSelector: {}
+      affinity: {}
+      tolerations: []
 
 ### @section Common parameters
 ## Kubernetes version (using Helm capabilities if not set)
@@ -487,6 +505,18 @@ storage:
   bucket: "testkube-artifacts"
   ## expiration period in days
   expiration: 0
+  ## Expiration period in days for step dependency caches, which live under the
+  ## .tkcache/v1 prefix. 0 leaves them to the bucket-wide expiration above.
+  ##
+  ## Both default to 0 on purpose. Setting either one makes the API server apply a
+  ## bucket lifecycle at startup, and a lifecycle is replaced wholesale rather than
+  ## merged, so any rule Testkube did not write is dropped. Leave both at 0 if the
+  ## bucket's lifecycle is managed elsewhere.
+  ##
+  ## The bucket-wide rule is unfiltered and so covers cache objects too, and the
+  ## earlier expiration wins: this can only bring cache eviction forward, never
+  ## postpone it past `expiration`.
+  cacheExpiration: 0
   ## Toggle whether to enable TLS in the storage client
   SSL: false
   ## Skip Verify is used to configure storage client not to verify SSL certificates

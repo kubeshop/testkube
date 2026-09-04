@@ -8152,6 +8152,49 @@ spec:
                             description: working directory to override, so it will be used as a base dir
                             type: string
                         type: object
+                      cache:
+                        description: dependency cache to restore before and save after this step's operations
+                        properties:
+                          key:
+                            description: |-
+                              key to store the entry under, usually derived from a lockfile,
+                              e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          mount:
+                            description: |-
+                              should a volume be mounted at every cached path that is not part of one already
+                              (true if not specified); a path outside any volume would otherwise be restored
+                              into a container's own filesystem, where the step that needs it cannot see it
+                            type: boolean
+                          paths:
+                            description: paths to store in the cache, relative to the working directory
+                            items:
+                              type: string
+                            minItems: 1
+                            type: array
+                          restoreKeys:
+                            description: |-
+                              key prefixes to fall back to when there is no entry for the exact key,
+                              tried in order, where the most recently saved match wins
+                            items:
+                              type: string
+                            maxItems: 10
+                            type: array
+                          scope:
+                            description: how widely the entry is shared (defaults to workflow)
+                            enum:
+                              - workflow
+                              - environment
+                            type: string
+                          workingDir:
+                            description: working directory to override, so it will be used as a base dir
+                            type: string
+                        required:
+                          - key
+                          - paths
+                        type: object
                       condition:
                         description: |-
                           expression to declare under which conditions the step should be run
@@ -9303,6 +9346,49 @@ spec:
                               workingDir:
                                 description: working directory to override, so it will be used as a base dir
                                 type: string
+                            type: object
+                          cache:
+                            description: dependency cache to restore before and save after this step's operations
+                            properties:
+                              key:
+                                description: |-
+                                  key to store the entry under, usually derived from a lockfile,
+                                  e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                                maxLength: 512
+                                minLength: 1
+                                type: string
+                              mount:
+                                description: |-
+                                  should a volume be mounted at every cached path that is not part of one already
+                                  (true if not specified); a path outside any volume would otherwise be restored
+                                  into a container's own filesystem, where the step that needs it cannot see it
+                                type: boolean
+                              paths:
+                                description: paths to store in the cache, relative to the working directory
+                                items:
+                                  type: string
+                                minItems: 1
+                                type: array
+                              restoreKeys:
+                                description: |-
+                                  key prefixes to fall back to when there is no entry for the exact key,
+                                  tried in order, where the most recently saved match wins
+                                items:
+                                  type: string
+                                maxItems: 10
+                                type: array
+                              scope:
+                                description: how widely the entry is shared (defaults to workflow)
+                                enum:
+                                  - workflow
+                                  - environment
+                                type: string
+                              workingDir:
+                                description: working directory to override, so it will be used as a base dir
+                                type: string
+                            required:
+                              - key
+                              - paths
                             type: object
                           config:
                             description: make the instance configurable with some input data for scheduling it
@@ -13902,6 +13988,49 @@ spec:
                             description: working directory to override, so it will be used as a base dir
                             type: string
                         type: object
+                      cache:
+                        description: dependency cache to restore before and save after this step's operations
+                        properties:
+                          key:
+                            description: |-
+                              key to store the entry under, usually derived from a lockfile,
+                              e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          mount:
+                            description: |-
+                              should a volume be mounted at every cached path that is not part of one already
+                              (true if not specified); a path outside any volume would otherwise be restored
+                              into a container's own filesystem, where the step that needs it cannot see it
+                            type: boolean
+                          paths:
+                            description: paths to store in the cache, relative to the working directory
+                            items:
+                              type: string
+                            minItems: 1
+                            type: array
+                          restoreKeys:
+                            description: |-
+                              key prefixes to fall back to when there is no entry for the exact key,
+                              tried in order, where the most recently saved match wins
+                            items:
+                              type: string
+                            maxItems: 10
+                            type: array
+                          scope:
+                            description: how widely the entry is shared (defaults to workflow)
+                            enum:
+                              - workflow
+                              - environment
+                            type: string
+                          workingDir:
+                            description: working directory to override, so it will be used as a base dir
+                            type: string
+                        required:
+                          - key
+                          - paths
+                        type: object
                       condition:
                         description: |-
                           expression to declare under which conditions the step should be run
@@ -15053,6 +15182,49 @@ spec:
                               workingDir:
                                 description: working directory to override, so it will be used as a base dir
                                 type: string
+                            type: object
+                          cache:
+                            description: dependency cache to restore before and save after this step's operations
+                            properties:
+                              key:
+                                description: |-
+                                  key to store the entry under, usually derived from a lockfile,
+                                  e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                                maxLength: 512
+                                minLength: 1
+                                type: string
+                              mount:
+                                description: |-
+                                  should a volume be mounted at every cached path that is not part of one already
+                                  (true if not specified); a path outside any volume would otherwise be restored
+                                  into a container's own filesystem, where the step that needs it cannot see it
+                                type: boolean
+                              paths:
+                                description: paths to store in the cache, relative to the working directory
+                                items:
+                                  type: string
+                                minItems: 1
+                                type: array
+                              restoreKeys:
+                                description: |-
+                                  key prefixes to fall back to when there is no entry for the exact key,
+                                  tried in order, where the most recently saved match wins
+                                items:
+                                  type: string
+                                maxItems: 10
+                                type: array
+                              scope:
+                                description: how widely the entry is shared (defaults to workflow)
+                                enum:
+                                  - workflow
+                                  - environment
+                                type: string
+                              workingDir:
+                                description: working directory to override, so it will be used as a base dir
+                                type: string
+                            required:
+                              - key
+                              - paths
                             type: object
                           config:
                             description: make the instance configurable with some input data for scheduling it
@@ -17370,6 +17542,49 @@ spec:
                             description: working directory to override, so it will be used as a base dir
                             type: string
                         type: object
+                      cache:
+                        description: dependency cache to restore before and save after this step's operations
+                        properties:
+                          key:
+                            description: |-
+                              key to store the entry under, usually derived from a lockfile,
+                              e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          mount:
+                            description: |-
+                              should a volume be mounted at every cached path that is not part of one already
+                              (true if not specified); a path outside any volume would otherwise be restored
+                              into a container's own filesystem, where the step that needs it cannot see it
+                            type: boolean
+                          paths:
+                            description: paths to store in the cache, relative to the working directory
+                            items:
+                              type: string
+                            minItems: 1
+                            type: array
+                          restoreKeys:
+                            description: |-
+                              key prefixes to fall back to when there is no entry for the exact key,
+                              tried in order, where the most recently saved match wins
+                            items:
+                              type: string
+                            maxItems: 10
+                            type: array
+                          scope:
+                            description: how widely the entry is shared (defaults to workflow)
+                            enum:
+                              - workflow
+                              - environment
+                            type: string
+                          workingDir:
+                            description: working directory to override, so it will be used as a base dir
+                            type: string
+                        required:
+                          - key
+                          - paths
+                        type: object
                       condition:
                         description: |-
                           expression to declare under which conditions the step should be run
@@ -18521,6 +18736,49 @@ spec:
                               workingDir:
                                 description: working directory to override, so it will be used as a base dir
                                 type: string
+                            type: object
+                          cache:
+                            description: dependency cache to restore before and save after this step's operations
+                            properties:
+                              key:
+                                description: |-
+                                  key to store the entry under, usually derived from a lockfile,
+                                  e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                                maxLength: 512
+                                minLength: 1
+                                type: string
+                              mount:
+                                description: |-
+                                  should a volume be mounted at every cached path that is not part of one already
+                                  (true if not specified); a path outside any volume would otherwise be restored
+                                  into a container's own filesystem, where the step that needs it cannot see it
+                                type: boolean
+                              paths:
+                                description: paths to store in the cache, relative to the working directory
+                                items:
+                                  type: string
+                                minItems: 1
+                                type: array
+                              restoreKeys:
+                                description: |-
+                                  key prefixes to fall back to when there is no entry for the exact key,
+                                  tried in order, where the most recently saved match wins
+                                items:
+                                  type: string
+                                maxItems: 10
+                                type: array
+                              scope:
+                                description: how widely the entry is shared (defaults to workflow)
+                                enum:
+                                  - workflow
+                                  - environment
+                                type: string
+                              workingDir:
+                                description: working directory to override, so it will be used as a base dir
+                                type: string
+                            required:
+                              - key
+                              - paths
                             type: object
                           config:
                             description: make the instance configurable with some input data for scheduling it
@@ -21120,6 +21378,49 @@ spec:
                             description: working directory to override, so it will be used as a base dir
                             type: string
                         type: object
+                      cache:
+                        description: dependency cache to restore before and save after this step's operations
+                        properties:
+                          key:
+                            description: |-
+                              key to store the entry under, usually derived from a lockfile,
+                              e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          mount:
+                            description: |-
+                              should a volume be mounted at every cached path that is not part of one already
+                              (true if not specified); a path outside any volume would otherwise be restored
+                              into a container's own filesystem, where the step that needs it cannot see it
+                            type: boolean
+                          paths:
+                            description: paths to store in the cache, relative to the working directory
+                            items:
+                              type: string
+                            minItems: 1
+                            type: array
+                          restoreKeys:
+                            description: |-
+                              key prefixes to fall back to when there is no entry for the exact key,
+                              tried in order, where the most recently saved match wins
+                            items:
+                              type: string
+                            maxItems: 10
+                            type: array
+                          scope:
+                            description: how widely the entry is shared (defaults to workflow)
+                            enum:
+                              - workflow
+                              - environment
+                            type: string
+                          workingDir:
+                            description: working directory to override, so it will be used as a base dir
+                            type: string
+                        required:
+                          - key
+                          - paths
+                        type: object
                       condition:
                         description: |-
                           expression to declare under which conditions the step should be run
@@ -22268,6 +22569,49 @@ spec:
                               workingDir:
                                 description: working directory to override, so it will be used as a base dir
                                 type: string
+                            type: object
+                          cache:
+                            description: dependency cache to restore before and save after this step's operations
+                            properties:
+                              key:
+                                description: |-
+                                  key to store the entry under, usually derived from a lockfile,
+                                  e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                                maxLength: 512
+                                minLength: 1
+                                type: string
+                              mount:
+                                description: |-
+                                  should a volume be mounted at every cached path that is not part of one already
+                                  (true if not specified); a path outside any volume would otherwise be restored
+                                  into a container's own filesystem, where the step that needs it cannot see it
+                                type: boolean
+                              paths:
+                                description: paths to store in the cache, relative to the working directory
+                                items:
+                                  type: string
+                                minItems: 1
+                                type: array
+                              restoreKeys:
+                                description: |-
+                                  key prefixes to fall back to when there is no entry for the exact key,
+                                  tried in order, where the most recently saved match wins
+                                items:
+                                  type: string
+                                maxItems: 10
+                                type: array
+                              scope:
+                                description: how widely the entry is shared (defaults to workflow)
+                                enum:
+                                  - workflow
+                                  - environment
+                                type: string
+                              workingDir:
+                                description: working directory to override, so it will be used as a base dir
+                                type: string
+                            required:
+                              - key
+                              - paths
                             type: object
                           count:
                             anyOf:
@@ -26728,6 +27072,49 @@ spec:
                             description: working directory to override, so it will be used as a base dir
                             type: string
                         type: object
+                      cache:
+                        description: dependency cache to restore before and save after this step's operations
+                        properties:
+                          key:
+                            description: |-
+                              key to store the entry under, usually derived from a lockfile,
+                              e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          mount:
+                            description: |-
+                              should a volume be mounted at every cached path that is not part of one already
+                              (true if not specified); a path outside any volume would otherwise be restored
+                              into a container's own filesystem, where the step that needs it cannot see it
+                            type: boolean
+                          paths:
+                            description: paths to store in the cache, relative to the working directory
+                            items:
+                              type: string
+                            minItems: 1
+                            type: array
+                          restoreKeys:
+                            description: |-
+                              key prefixes to fall back to when there is no entry for the exact key,
+                              tried in order, where the most recently saved match wins
+                            items:
+                              type: string
+                            maxItems: 10
+                            type: array
+                          scope:
+                            description: how widely the entry is shared (defaults to workflow)
+                            enum:
+                              - workflow
+                              - environment
+                            type: string
+                          workingDir:
+                            description: working directory to override, so it will be used as a base dir
+                            type: string
+                        required:
+                          - key
+                          - paths
+                        type: object
                       condition:
                         description: |-
                           expression to declare under which conditions the step should be run
@@ -27876,6 +28263,49 @@ spec:
                               workingDir:
                                 description: working directory to override, so it will be used as a base dir
                                 type: string
+                            type: object
+                          cache:
+                            description: dependency cache to restore before and save after this step's operations
+                            properties:
+                              key:
+                                description: |-
+                                  key to store the entry under, usually derived from a lockfile,
+                                  e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                                maxLength: 512
+                                minLength: 1
+                                type: string
+                              mount:
+                                description: |-
+                                  should a volume be mounted at every cached path that is not part of one already
+                                  (true if not specified); a path outside any volume would otherwise be restored
+                                  into a container's own filesystem, where the step that needs it cannot see it
+                                type: boolean
+                              paths:
+                                description: paths to store in the cache, relative to the working directory
+                                items:
+                                  type: string
+                                minItems: 1
+                                type: array
+                              restoreKeys:
+                                description: |-
+                                  key prefixes to fall back to when there is no entry for the exact key,
+                                  tried in order, where the most recently saved match wins
+                                items:
+                                  type: string
+                                maxItems: 10
+                                type: array
+                              scope:
+                                description: how widely the entry is shared (defaults to workflow)
+                                enum:
+                                  - workflow
+                                  - environment
+                                type: string
+                              workingDir:
+                                description: working directory to override, so it will be used as a base dir
+                                type: string
+                            required:
+                              - key
+                              - paths
                             type: object
                           count:
                             anyOf:
@@ -30074,6 +30504,49 @@ spec:
                             description: working directory to override, so it will be used as a base dir
                             type: string
                         type: object
+                      cache:
+                        description: dependency cache to restore before and save after this step's operations
+                        properties:
+                          key:
+                            description: |-
+                              key to store the entry under, usually derived from a lockfile,
+                              e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          mount:
+                            description: |-
+                              should a volume be mounted at every cached path that is not part of one already
+                              (true if not specified); a path outside any volume would otherwise be restored
+                              into a container's own filesystem, where the step that needs it cannot see it
+                            type: boolean
+                          paths:
+                            description: paths to store in the cache, relative to the working directory
+                            items:
+                              type: string
+                            minItems: 1
+                            type: array
+                          restoreKeys:
+                            description: |-
+                              key prefixes to fall back to when there is no entry for the exact key,
+                              tried in order, where the most recently saved match wins
+                            items:
+                              type: string
+                            maxItems: 10
+                            type: array
+                          scope:
+                            description: how widely the entry is shared (defaults to workflow)
+                            enum:
+                              - workflow
+                              - environment
+                            type: string
+                          workingDir:
+                            description: working directory to override, so it will be used as a base dir
+                            type: string
+                        required:
+                          - key
+                          - paths
+                        type: object
                       condition:
                         description: |-
                           expression to declare under which conditions the step should be run
@@ -31222,6 +31695,49 @@ spec:
                               workingDir:
                                 description: working directory to override, so it will be used as a base dir
                                 type: string
+                            type: object
+                          cache:
+                            description: dependency cache to restore before and save after this step's operations
+                            properties:
+                              key:
+                                description: |-
+                                  key to store the entry under, usually derived from a lockfile,
+                                  e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                                maxLength: 512
+                                minLength: 1
+                                type: string
+                              mount:
+                                description: |-
+                                  should a volume be mounted at every cached path that is not part of one already
+                                  (true if not specified); a path outside any volume would otherwise be restored
+                                  into a container's own filesystem, where the step that needs it cannot see it
+                                type: boolean
+                              paths:
+                                description: paths to store in the cache, relative to the working directory
+                                items:
+                                  type: string
+                                minItems: 1
+                                type: array
+                              restoreKeys:
+                                description: |-
+                                  key prefixes to fall back to when there is no entry for the exact key,
+                                  tried in order, where the most recently saved match wins
+                                items:
+                                  type: string
+                                maxItems: 10
+                                type: array
+                              scope:
+                                description: how widely the entry is shared (defaults to workflow)
+                                enum:
+                                  - workflow
+                                  - environment
+                                type: string
+                              workingDir:
+                                description: working directory to override, so it will be used as a base dir
+                                type: string
+                            required:
+                              - key
+                              - paths
                             type: object
                           count:
                             anyOf:

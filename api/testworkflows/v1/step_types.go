@@ -82,6 +82,9 @@ type StepOperations struct {
 
 	// scrape artifacts from the volumes
 	Artifacts *StepArtifacts `json:"artifacts,omitempty" expr:"include"`
+
+	// dependency cache to restore before and save after this step's operations
+	Cache *StepCache `json:"cache,omitempty" expr:"include"`
 }
 
 type IndependentStep struct {
@@ -446,6 +449,56 @@ type ArtifactCompression struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name" expr:"template"`
+}
+
+// CacheScope declares how widely a cache entry is shared.
+type CacheScope string
+
+const (
+	// CacheScopeWorkflow shares an entry only with other executions of the same workflow.
+	CacheScopeWorkflow CacheScope = "workflow"
+	// CacheScopeEnvironment shares an entry with every workflow in the environment.
+	// Any workflow that may write such an entry can influence what every other
+	// workflow restores, so this widens a trust boundary, not just a cache.
+	CacheScopeEnvironment CacheScope = "environment"
+)
+
+// StepCache restores directories from object storage before the step's operations run
+// and saves them back once the step has passed, so that dependency installs survive
+// between executions.
+//
+// A cache is only ever an optimization: a miss, a corrupt entry, storage that cannot be
+// reached, or a control plane too old to serve caches all degrade the step to an
+// uncached run rather than failing it.
+type StepCache struct {
+	// key to store the entry under, usually derived from a lockfile,
+	// e.g. 'npm-{{ hash_files("package-lock.json") }}'
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=512
+	Key string `json:"key" expr:"template"`
+
+	// key prefixes to fall back to when there is no entry for the exact key,
+	// tried in order, where the most recently saved match wins
+	// +kubebuilder:validation:MaxItems=10
+	RestoreKeys []string `json:"restoreKeys,omitempty" expr:"template"`
+
+	// paths to store in the cache, relative to the working directory
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	Paths []string `json:"paths" expr:"template"`
+
+	// working directory to override, so it will be used as a base dir
+	WorkingDir *string `json:"workingDir,omitempty" expr:"template"`
+
+	// how widely the entry is shared (defaults to workflow)
+	// +kubebuilder:validation:Enum=workflow;environment
+	Scope CacheScope `json:"scope,omitempty" expr:"ignore"`
+
+	// should a volume be mounted at every cached path that is not part of one already
+	// (true if not specified); a path outside any volume would otherwise be restored
+	// into a container's own filesystem, where the step that needs it cannot see it
+	Mount *bool `json:"mount,omitempty" expr:"ignore"`
 }
 
 type TestExecutionRequest struct {

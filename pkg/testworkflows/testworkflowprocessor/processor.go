@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
-	"path/filepath"
+	"path"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -442,14 +443,21 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			return nil, errors.Wrap(err, "finalizing container's resources")
 		}
 
-		// Resolve relative paths in the volumeMounts relatively to the working dir
+		// Resolve relative paths in the volumeMounts relatively to the working dir.
+		//
+		// Resolved with `path`, not `filepath`: a mount path and a working directory are
+		// paths inside a Linux container, not paths on whatever host the processor runs
+		// on. They agree on Linux, so this only matters elsewhere - but there
+		// filepath.IsAbs("/root/.m2") is false, so an absolute mount path would be
+		// joined onto the working directory, and Join would then put backslashes into a
+		// MountPath that Kubernetes and the container both read as POSIX.
 		workingDir := constants.DefaultDataPath
 		if containers[i].WorkingDir != "" {
 			workingDir = containers[i].WorkingDir
 		}
 		for j := range containers[i].VolumeMounts {
-			if !filepath.IsAbs(containers[i].VolumeMounts[j].MountPath) {
-				containers[i].VolumeMounts[j].MountPath = filepath.Clean(filepath.Join(workingDir, containers[i].VolumeMounts[j].MountPath))
+			if !strings.HasPrefix(containers[i].VolumeMounts[j].MountPath, "/") {
+				containers[i].VolumeMounts[j].MountPath = path.Clean(path.Join(workingDir, containers[i].VolumeMounts[j].MountPath))
 			}
 			if _, ok := volumeNameMap[containers[i].VolumeMounts[j].Name]; ok {
 				secretMountPaths[containers[i].Name] = append(secretMountPaths[containers[i].Name], containers[i].VolumeMounts[j].MountPath)

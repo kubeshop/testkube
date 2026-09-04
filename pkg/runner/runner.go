@@ -43,6 +43,12 @@ const (
 	MonitorRetryCount = 10
 	MonitorRetryDelay = 500 * time.Millisecond
 
+	CleanupResourcesRetryCount = 5
+	CleanupResourcesRetryDelay = 500 * time.Millisecond
+
+	AbortExecutionRetryCount = 5
+	AbortExecutionRetryDelay = 500 * time.Millisecond
+
 	RecoverLogsRetryOnFailureDelay = 300 * time.Millisecond
 	RecoverLogsRetryMaxAttempts    = 5
 
@@ -80,6 +86,11 @@ type runner struct {
 
 	watching sync.Map
 	sf       singleflight.Group
+
+	// cleanupRetryDelay overrides the wait between Destroy retries; zero falls back to CleanupResourcesRetryDelay.
+	cleanupRetryDelay time.Duration
+	// abortRetryDelay overrides the wait between AbortExecution retries; zero falls back to AbortExecutionRetryDelay.
+	abortRetryDelay time.Duration
 }
 
 func New(
@@ -123,8 +134,13 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	defer r.watching.Delete(execution.Id)
 
 	// Scoped logger carrying human-readable context (workflow name, trigger/source) so every
-	// log line emitted while monitoring this execution is easy to identify.
-	logger := log.DefaultLogger.With(execution.LogFields()...)
+	// log line emitted while monitoring this execution is easy to identify. Env / org are
+	// added so any Errorw the customer sees carries the tenant coordinates needed to route
+	// the incident, matching the ask in TKC-6551.
+	logger := log.DefaultLogger.With(execution.LogFields()...).With(
+		"organizationId", organizationId,
+		"environmentId", environmentId,
+	)
 
 	var notifications executionworkertypes.NotificationsWatcher
 	for i := 0; i < GetNotificationsRetryCount; i++ {
@@ -309,13 +325,21 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	execution.Result = lastResult
 	r.observeExecutionMetrics(execution)
 
-	err = r.worker.Destroy(context.Background(), execution.Id, executionworkertypes.DestroyOptions{})
-	if err != nil {
-		// TODO: what to do on error?
-		logger.Errorw("failed to cleanup TestWorkflow resources", "error", err)
+	if err := r.destroyResources(context.Background(), execution.Id); err != nil {
+		logger.Errorw("failed to cleanup TestWorkflow resources after retries", "error", err)
 	}
 
 	return nil
+}
+
+func (r *runner) destroyResources(ctx context.Context, executionID string) error {
+	delay := r.cleanupRetryDelay
+	if delay == 0 {
+		delay = CleanupResourcesRetryDelay
+	}
+	return retry(CleanupResourcesRetryCount, delay, func(int) error {
+		return r.worker.Destroy(ctx, executionID, executionworkertypes.DestroyOptions{})
+	})
 }
 
 func (r *runner) recoverServiceLogs(ctx context.Context, saver ExecutionSaver, environmentId string, execution *testkube.TestWorkflowExecution, svc commands.ServiceInfo) error {
@@ -456,18 +480,24 @@ func (r *runner) Monitor(ctx context.Context, organizationId string, environment
 		return nil
 	}
 
-	// Load the execution
+	// Load the execution. Scoped logger carries the tenant coordinates so retries and the
+	// final failure are attributable to a specific env / org (TKC-6551).
+	logger := log.DefaultLogger.With(
+		"executionId", id,
+		"organizationId", organizationId,
+		"environmentId", environmentId,
+	)
 	var execution *testkube.TestWorkflowExecution
 	err := retry(GetExecutionRetryCount, GetExecutionRetryDelay, func(_ int) (err error) {
 		execution, err = r.client.GetExecution(ctx, environmentId, id)
 		if err != nil {
-			log.DefaultLogger.Warnw("failed to get execution for monitoring, retrying...", "executionId", id, "error", err)
+			logger.Warnw("failed to get execution for monitoring, retrying...", "error", err)
 		}
 		return err
 	})
 	if err != nil {
 		r.watching.Delete(id)
-		log.DefaultLogger.Errorw("failed to get execution for monitoring", "executionId", id, "error", err)
+		logger.Errorw("failed to get execution for monitoring", "error", err)
 		return err
 	}
 	return r.monitor(ctx, organizationId, environmentId, *execution)
@@ -516,8 +546,14 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 	if err == nil {
 		go func() {
 			// The full execution object isn't available here (only the ExecuteRequest), so we
-			// scope with the fields we do have: the execution ID and the workflow name.
-			logger := log.DefaultLogger.With("executionId", request.Execution.Id, "workflowName", request.Workflow.Name)
+			// scope with the fields we do have. Env / org make it possible to route the incident
+			// to the right tenant when the retry budget is exhausted (TKC-6551).
+			logger := log.DefaultLogger.With(
+				"executionId", request.Execution.Id,
+				"workflowName", request.Workflow.Name,
+				"organizationId", request.Execution.OrganizationId,
+				"environmentId", request.Execution.EnvironmentId,
+			)
 			err := retry(MonitorRetryCount, MonitorRetryDelay, func(_ int) error {
 				err := r.Monitor(context.Background(), request.Execution.OrganizationId, request.Execution.EnvironmentId, request.Execution.Id)
 				if err != nil {
@@ -559,8 +595,20 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 }
 
 // abortExecution aborts fetches the execution, updates its result to aborted and finishes it.
+// This runs after the Monitor loop has already given up on the execution, so every
+// control-plane call here is the last line of defence: a transient failure without retry
+// would leave the execution stuck in running state indefinitely.
 func (r *runner) abortExecution(ctx context.Context, environmentID, executionID string) error {
-	execution, err := r.client.GetExecution(context.Background(), environmentID, executionID)
+	var execution *testkube.TestWorkflowExecution
+	delay := r.abortRetryDelay
+	if delay == 0 {
+		delay = AbortExecutionRetryDelay
+	}
+	err := retry(AbortExecutionRetryCount, delay, func(_ int) error {
+		var e error
+		execution, e = r.client.GetExecution(context.Background(), environmentID, executionID)
+		return e
+	})
 	if err != nil {
 		return errors.Wrapf(err, "failed to get execution '%s'", executionID)
 	}
@@ -568,15 +616,24 @@ func (r *runner) abortExecution(ctx context.Context, environmentID, executionID 
 		return errors.New("execution result is nil")
 	}
 	execution.Result.Fatal(errors.New("execution is stuck in running state"), true, time.Now())
-	if err = r.client.UpdateExecutionResult(ctx, environmentID, executionID, execution.Result); err != nil {
+	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
+		return r.client.UpdateExecutionResult(ctx, environmentID, executionID, execution.Result)
+	})
+	if err != nil {
 		return errors.Wrapf(err, "failed to update execution result '%s' to aborted", executionID)
 	}
 
-	if err = r.client.FinishExecutionResult(ctx, environmentID, executionID, execution.Result); err != nil {
+	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
+		return r.client.FinishExecutionResult(ctx, environmentID, executionID, execution.Result)
+	})
+	if err != nil {
 		return errors.Wrapf(err, "failed to finish execution result '%s'", executionID)
 	}
 
-	if err = r.Abort(executionID); err != nil {
+	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
+		return r.Abort(executionID)
+	})
+	if err != nil {
 		return errors.Wrapf(err, "failed to destroy execution '%s'", executionID)
 	}
 

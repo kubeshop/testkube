@@ -36,9 +36,19 @@ type OSSControlPlaneConfig struct {
 	APIPostgresDSN string `envconfig:"API_POSTGRES_DSN" default:""`
 
 	// Minio
-	StorageEndpoint              string `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
-	StorageBucket                string `envconfig:"STORAGE_BUCKET" default:"testkube-logs"`
-	StorageExpiration            int    `envconfig:"STORAGE_EXPIRATION"`
+	StorageEndpoint   string `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
+	StorageBucket     string `envconfig:"STORAGE_BUCKET" default:"testkube-logs"`
+	StorageExpiration int    `envconfig:"STORAGE_EXPIRATION"`
+	// StorageCacheExpiration expires step dependency caches, in days. 0 disables it.
+	//
+	// Deliberately opt-in, with no default, matching StorageExpiration above. Setting
+	// either one makes the API server apply a bucket lifecycle at startup, and a
+	// lifecycle is replaced wholesale rather than merged - so a non-zero default here
+	// would silently drop the transition and expiration rules of any installation whose
+	// bucket lifecycle is managed elsewhere, purely by upgrading. An operator who wants
+	// cache eviction asks for it; until then caches expire only under
+	// StorageExpiration, if that is set at all.
+	StorageCacheExpiration       int    `envconfig:"STORAGE_CACHE_EXPIRATION"`
 	StorageAccessKeyID           string `envconfig:"STORAGE_ACCESSKEYID" default:""`
 	StorageSecretAccessKey       string `envconfig:"STORAGE_SECRETACCESSKEY" default:""`
 	StorageRegion                string `envconfig:"STORAGE_REGION" default:""`

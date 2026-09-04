@@ -35,6 +35,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
+	"github.com/kubeshop/testkube/pkg/executioncache"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
@@ -129,7 +130,18 @@ func MustGetMinioClient(cfg *config.Config) domainstorage.Client {
 	)
 	err := minioClient.Connect()
 	ExitOnError("Connecting to minio", err)
-	if expErr := minioClient.SetExpirationPolicy(cfg.StorageExpiration); expErr != nil {
+	// The bucket-wide rule is unfiltered, so it covers cache objects too and the
+	// earlier of the two expirations wins. Warn rather than silently applying a cache
+	// TTL that the bucket-wide one overrides.
+	if cfg.StorageExpiration > 0 && cfg.StorageCacheExpiration > cfg.StorageExpiration {
+		log.DefaultLogger.Warnw("cache expiration is longer than the bucket expiration, so caches expire with the bucket",
+			"cacheExpirationDays", cfg.StorageCacheExpiration, "storageExpirationDays", cfg.StorageExpiration)
+	}
+	if expErr := minioClient.SetExpirationPolicies(minio.ExpirationPolicy{
+		Days:        cfg.StorageExpiration,
+		CachePrefix: executioncache.ObjectPrefix,
+		CacheDays:   cfg.StorageCacheExpiration,
+	}); expErr != nil {
 		log.DefaultLogger.Errorw("Error setting expiration policy", "error", expErr)
 	}
 	return minioClient
