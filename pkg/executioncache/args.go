@@ -26,6 +26,15 @@ type Args struct {
 	State string `json:"state,omitempty"`
 }
 
+// MaxArchiveSize caps the archive a save may write.
+//
+// It lives here because two packages have to agree on it: the toolkit refuses to store
+// anything larger, and the processor sizes the staging volume that archive is written to
+// from the same number. Two independently chosen defaults would mean a limit the volume
+// cannot hold - and exceeding a volume's size limit evicts the pod, which would take the
+// execution down instead of skipping the cache.
+const MaxArchiveSize int64 = 5 << 30
+
 // Hit describes how a restore resolved.
 type Hit string
 

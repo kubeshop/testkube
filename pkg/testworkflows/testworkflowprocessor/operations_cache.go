@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/executioncache"
@@ -18,6 +20,27 @@ import (
 
 // cacheStateEnvName points both cache stages at the file they hand over through.
 const cacheStateEnvName = "TK_CACHE_STATE"
+
+const (
+	// cacheTempDirEnvName tells the save stage where to stage the archive it uploads.
+	cacheTempDirEnvName = "TK_CACHE_TMP_DIR"
+
+	// cacheTempDirPath is a volume of its own rather than the /tmp every container
+	// already has.
+	//
+	// Sharing /tmp would put a multi-gigabyte archive under the same size limit as
+	// whatever the step itself writes there, and exceeding a volume's size limit evicts
+	// the pod - so a large cache and a chatty step would combine to kill the execution,
+	// which is the one thing a cache must never do. On its own volume the archive is
+	// bounded by the cache's own limit and by nothing else.
+	cacheTempDirPath = "/.tktw-cache"
+
+	// cacheTempDirHeadroom covers filesystem overhead on top of the archive itself. The
+	// pack stops at the limit, so the archive cannot exceed it, but the volume is
+	// accounted with its metadata and a limit of exactly the archive size would leave no
+	// room for that.
+	cacheTempDirHeadroom = 64 << 20
+)
 
 // validateCache rejects a cache block that cannot work, at bundle time.
 //
@@ -212,8 +235,18 @@ func ProcessCacheSave(_ InternalProcessor, layer Intermediate, container stage.C
 	self.SetCategory("Save cache")
 	self.SetPure(true)
 
-	// The volumes already exist: the restore stage added them to the shared parent, and
-	// mounting them again here would allocate a second, empty emptyDir over the top.
+	// The cached paths' volumes already exist: the restore stage added them to the
+	// shared parent, and mounting them again here would allocate a second, empty
+	// emptyDir over the top.
+	//
+	// The staging volume is this stage's own, because it is the only stage that writes
+	// an archive. Putting it on the parent would hand the step's own container a mount
+	// it has no use for, and would put the staging directory among the roots the walker
+	// is told it may read - so the archive would be a candidate for packing into itself.
+	stagingLimit := resource.NewQuantity(executioncache.MaxArchiveSize+cacheTempDirHeadroom, resource.BinarySI)
+	selfContainer.
+		AppendVolumeMounts(layer.AddEmptyDirVolume(&corev1.EmptyDirVolumeSource{SizeLimit: stagingLimit}, cacheTempDirPath)).
+		AppendEnv(corev1.EnvVar{Name: cacheTempDirEnvName, Value: cacheTempDirPath})
 
 	encoded, err := expressions.EncodeBase64JSON(executioncache.Args{
 		Key:         step.Cache.Key,
@@ -229,7 +262,7 @@ func ProcessCacheSave(_ InternalProcessor, layer Intermediate, container stage.C
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
 		SetCommand(cacheToolkitCommand(container, "save")...).
-		SetArgs("--base64", encoded).
+		SetArgs("--base64", encoded, "--max-size", strconv.FormatInt(executioncache.MaxArchiveSize, 10)).
 		EnableToolkit(self.Ref())
 
 	return self, nil

@@ -27,10 +27,10 @@ const (
 	// a failed step, so this only decides how hard the optimization tries.
 	cacheRetryMaxAttempts = 5
 
-	// cacheDefaultMaxSize caps the archive a save will upload. The tarball is written
-	// to /tmp, which is an emptyDir counted against the pod's size limit, so an
-	// unbounded cache could fill the volume and take the run down with it.
-	cacheDefaultMaxSize = 5 << 30 // 5 GiB
+	// cacheDefaultMaxSize caps the archive a save will write. The processor sizes the
+	// staging volume from the same constant, so the two cannot drift into a limit the
+	// volume is too small to hold.
+	cacheDefaultMaxSize = executioncache.MaxArchiveSize
 
 	// cacheMaxUnpackedSize and cacheMaxEntries bound what a restore may expand into.
 	// The archive was written by an earlier - possibly different - workflow, so its
@@ -278,8 +278,13 @@ func runCacheSave(ctx context.Context, encoded string, mounts []string, statePat
 	// number that had little to do with how long the step waited.
 	started := time.Now()
 
-	archive, size, entries, err := packCache(paths, mounts)
+	archive, size, entries, err := packCache(paths, mounts, maxSize)
 	if err != nil {
+		if errors.Is(err, errArchiveTooLarge) {
+			fmt.Fprintf(out, "cache: not saving %q: the archive is over the %s limit\n",
+				key, humanize.Bytes(uint64(maxSize)))
+			return nil
+		}
 		return fmt.Errorf("packing the cache: %w", err)
 	}
 	packed := time.Since(started)
@@ -295,12 +300,6 @@ func runCacheSave(ctx context.Context, encoded string, mounts []string, statePat
 	// step did not need to install - and either way there is nothing to cache.
 	if entries == 0 {
 		fmt.Fprintf(out, "cache: not saving %q: nothing was found under %s\n", key, strings.Join(paths, ", "))
-		return nil
-	}
-
-	if maxSize > 0 && size > maxSize {
-		fmt.Fprintf(out, "cache: not saving %q: the archive is %s, over the %s limit\n",
-			key, humanize.Bytes(uint64(size)), humanize.Bytes(uint64(maxSize)))
 		return nil
 	}
 
@@ -368,7 +367,31 @@ func cachePackPatterns(paths []string) []string {
 // entries it holds.
 //
 // A real file rather than a streaming buffer, so that a retried upload can rewind.
-func packCache(paths []string, mounts []string) (file *os.File, size int64, entries int, err error) {
+// errArchiveTooLarge stops a pack that has reached the size limit.
+//
+// The limit is enforced while writing rather than checked afterwards, because the
+// archive is staged on a volume sized from the same limit: writing the whole thing and
+// then refusing it would overrun that volume first, and exceeding a volume's size limit
+// evicts the pod. A cache that cannot be stored has to skip, not take the step down.
+var errArchiveTooLarge = errors.New("archive is over the size limit")
+
+// boundedWriter fails the write once more than limit bytes have gone through it.
+type boundedWriter struct {
+	w       io.Writer
+	limit   int64
+	written int64
+}
+
+func (b *boundedWriter) Write(p []byte) (int, error) {
+	if b.limit > 0 && b.written+int64(len(p)) > b.limit {
+		return 0, errArchiveTooLarge
+	}
+	n, err := b.w.Write(p)
+	b.written += int64(n)
+	return n, err
+}
+
+func packCache(paths []string, mounts []string, maxSize int64) (file *os.File, size int64, entries int, err error) {
 	file, err = os.CreateTemp(cacheTempDir(), "cache-*.tar.gz")
 	if err != nil {
 		return nil, 0, 0, err
@@ -380,7 +403,7 @@ func packCache(paths []string, mounts []string) (file *os.File, size int64, entr
 
 	// Root at "/" with the absolute paths as patterns: cached paths may live in several
 	// volumes at once and have no common ancestor below the root.
-	entries, err = common.WriteTarballFrom(file, "/", cachePackPatterns(paths), mounts)
+	entries, err = common.WriteTarballFrom(&boundedWriter{w: file, limit: maxSize}, "/", cachePackPatterns(paths), mounts)
 	if err != nil {
 		discard()
 		return nil, 0, 0, err
