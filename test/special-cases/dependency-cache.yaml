@@ -153,5 +153,13 @@ spec:
       # let this workflow report success while caching nothing at all.
       for dir in /root/go/pkg/mod /root/.cache/go-build; do
         [ -n "$(ls -A "$dir" 2>/dev/null)" ] || { echo "FAIL: $dir is empty, so there is nothing to cache"; exit 1; }
-        echo "$dir is $(du -sh "$dir" | cut -f1)"
+        echo "$dir is $(du -sh "$dir" | cut -f1) in $(find "$dir" -type f | wc -l) files"
       done
+
+      # Both halves of a cache scale with the number of entries rather than with the
+      # bytes, so this reports the split that decides whether caching the whole module
+      # cache is the right shape. cache/download holds the module zips and their
+      # metadata and is what Go actually needs; the extracted <module>@<version> trees
+      # beside it are derived from those zips and are where nearly all the file count
+      # lives. Caching only the former trades tar entries for local re-extraction.
+      echo "of which cache/download is $(du -sh /root/go/pkg/mod/cache/download | cut -f1) in $(find /root/go/pkg/mod/cache/download -type f | wc -l) files"
