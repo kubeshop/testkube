@@ -105,14 +105,14 @@ spec:
   steps:
   - name: Warm the module cache
     cache:
-      # The v2 segment is a cache-key version, bumped whenever what gets stored under
-      # the key changes shape. It has to, because an entry is immutable for its
-      # lifetime: entries written before the cached paths were corrected still answer
-      # the old key, and a restoreKeys prefix would keep matching them. Versioning the
-      # prefix is how a cache is invalidated when nothing about go.sum changed.
-      key: 'gomod-v2-{{ hash_files("go.sum") }}'
+      # The version segment is bumped whenever what gets stored under the key changes
+      # shape. It has to be, because an entry is immutable for its lifetime: entries
+      # written under the old shape still answer the old key, and a restoreKeys prefix
+      # would keep matching them. Versioning the prefix is how a cache is invalidated
+      # when nothing about go.sum changed - v3 is the move to cache/download below.
+      key: 'gomod-v3-{{ hash_files("go.sum") }}'
       restoreKeys:
-      - 'gomod-v2-'
+      - 'gomod-v3-'
       # Neither path sits inside a volume the step already has, so a volume is mounted
       # at each one automatically - without that they would be restored into the restore
       # container's own filesystem, where the container running the build cannot see
@@ -120,7 +120,20 @@ spec:
       # one inside the repository checkout; on an uncovered path it is refused rather
       # than silently doing nothing.
       paths:
-      - /root/go/pkg/mod
+      # cache/download and not the whole module cache, because both halves of a cache
+      # scale with the number of entries and not with the bytes. Measured on this
+      # workflow: /root/go/pkg/mod is 2.2G across 98370 files, of which cache/download
+      # is 479M across 4927 files - twenty times fewer entries and a fifth of the size.
+      #
+      # Nothing is lost by leaving the rest out. cache/download holds the module zips
+      # and their metadata and is the authoritative store; the extracted
+      # <module>@<version> trees beside it are derived from those zips, and Go
+      # re-extracts them on demand. The shell below proves that rather than asserting
+      # it, by deleting them and resolving again with the network turned off.
+      #
+      # The zips are also already compressed, so the archive is close to the same size
+      # as the directory and the compressor has almost nothing to do.
+      - /root/go/pkg/mod/cache/download
       - /root/.cache/go-build
       # Shared with every workflow in the environment, so two workflows that build the
       # same module set download it once between them.
@@ -151,15 +164,17 @@ spec:
       # mounts a volume at every path it manages, so both directories exist before
       # anything runs, whether or not a single byte was written to them. That is what
       # let this workflow report success while caching nothing at all.
-      for dir in /root/go/pkg/mod /root/.cache/go-build; do
+      for dir in /root/go/pkg/mod/cache/download /root/.cache/go-build; do
         [ -n "$(ls -A "$dir" 2>/dev/null)" ] || { echo "FAIL: $dir is empty, so there is nothing to cache"; exit 1; }
         echo "$dir is $(du -sh "$dir" | cut -f1) in $(find "$dir" -type f | wc -l) files"
       done
+      echo "left uncached: $(find /root/go/pkg/mod -maxdepth 1 -mindepth 1 ! -name cache -type d | wc -l) extracted module trees"
 
-      # Both halves of a cache scale with the number of entries rather than with the
-      # bytes, so this reports the split that decides whether caching the whole module
-      # cache is the right shape. cache/download holds the module zips and their
-      # metadata and is what Go actually needs; the extracted <module>@<version> trees
-      # beside it are derived from those zips and are where nearly all the file count
-      # lives. Caching only the former trades tar entries for local re-extraction.
-      echo "of which cache/download is $(du -sh /root/go/pkg/mod/cache/download | cut -f1) in $(find /root/go/pkg/mod/cache/download -type f | wc -l) files"
+      # The claim that makes caching only cache/download correct, executed rather than
+      # asserted: with the extracted trees deleted and the network off, everything still
+      # resolves, because the zips are all Go needs. If this ever stops holding, the
+      # cached paths above are wrong and this is where it surfaces.
+      find /root/go/pkg/mod -maxdepth 1 -mindepth 1 ! -name cache -exec rm -rf {} \;
+      GOPROXY=off GOFLAGS=-mod=mod go mod download all \
+        || { echo "FAIL: cache/download alone did not satisfy the module graph"; exit 1; }
+      echo "resolved the whole module graph offline from cache/download alone"
