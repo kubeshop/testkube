@@ -125,6 +125,11 @@ spec:
       # workflow: /root/go/pkg/mod is 2.2G across 98370 files, of which cache/download
       # is 479M across 4927 files - twenty times fewer entries and a fifth of the size.
       #
+      # What that bought, measured on the same workflow: the save went from 36.6s
+      # (29.2s packing, 7.4s uploading, 893 MB) to 9.2s (4.4s packing, 4.8s uploading,
+      # 471 MB), and the restore from 38.6s to 5.2s. Packing improved by more than the
+      # size did, which is the point: it was spending its time on the file count.
+      #
       # Nothing is lost by leaving the rest out. cache/download holds the module zips
       # and their metadata and is the authoritative store; the extracted
       # <module>@<version> trees beside it are derived from those zips, and Go
