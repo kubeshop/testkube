@@ -249,6 +249,20 @@ func TestRunCacheRestore_CorruptArchiveClearsPartialState(t *testing.T) {
 	assert.Equal(t, executioncache.HitMiss, readState(t, statePath).Hit)
 }
 
+// requireContainerPaths skips a test that packs real directories through the cache save.
+//
+// A cache is packed rooted at "/" with container-absolute paths, which is what the
+// walker and the allowlist agree on. A Windows temp directory is "C:\..." - not rooted
+// at "/" and not a valid io/fs path - so the walk finds nothing there and the test would
+// report a failure about the host rather than about the cache. This code only ever runs
+// in Linux containers.
+func requireContainerPaths(t *testing.T, dir string) {
+	t.Helper()
+	if filepath.VolumeName(dir) != "" {
+		t.Skip("test packs container-absolute paths; a Windows drive path cannot be walked from \"/\"")
+	}
+}
+
 func TestRunCacheSave_SkipsOnExactHit(t *testing.T) {
 	statePath := filepath.Join(t.TempDir(), "state.json")
 	writeState(t, statePath, executioncache.State{Key: "npm-abc", Hit: executioncache.HitExact})
@@ -270,6 +284,7 @@ func TestRunCacheSave_SkipsOnExactHit(t *testing.T) {
 // under a key no later run will search for.
 func TestRunCacheSave_UsesTheKeyRestoreResolved(t *testing.T) {
 	root := t.TempDir()
+	requireContainerPaths(t, root)
 	require.NoError(t, os.WriteFile(filepath.Join(root, "dep.txt"), []byte("installed"), 0o644))
 
 	statePath := filepath.Join(t.TempDir(), "state.json")
@@ -300,6 +315,7 @@ func TestRunCacheSave_UsesTheKeyRestoreResolved(t *testing.T) {
 
 func TestRunCacheSave_DegradesQuietly(t *testing.T) {
 	root := t.TempDir()
+	requireContainerPaths(t, root)
 	require.NoError(t, os.WriteFile(filepath.Join(root, "dep.txt"), []byte("installed"), 0o644))
 
 	refusing := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -355,6 +371,7 @@ func TestRunCacheSave_DegradesQuietly(t *testing.T) {
 
 func TestRunCacheSave_RefusesAnOversizedArchive(t *testing.T) {
 	root := t.TempDir()
+	requireContainerPaths(t, root)
 	require.NoError(t, os.WriteFile(filepath.Join(root, "dep.txt"), bytes.Repeat([]byte("a"), 4096), 0o644))
 
 	repository := &fakeCacheRepository{}
@@ -367,6 +384,43 @@ func TestRunCacheSave_RefusesAnOversizedArchive(t *testing.T) {
 
 	assert.Contains(t, out.String(), "over the")
 	assert.Zero(t, repository.saveCalls, "an oversized archive must not be granted an upload")
+}
+
+// TestRunCacheSave_RefusesAnEmptyArchive guards the consequence of entries being
+// immutable: storing nothing under a key can never be undone.
+//
+// An empty archive would answer every later run with a hit that restores nothing, and no
+// rerun could displace it, so the key would be poisoned for the lifetime of the entry.
+// Nothing to pack means the paths were never created - the install wrote somewhere else,
+// or the step had nothing to do - and either way there is nothing worth a key.
+func TestRunCacheSave_RefusesAnEmptyArchive(t *testing.T) {
+	// Empty rather than missing, so this is about there being no content rather than
+	// about a path that cannot be read. Directories are not archived, so both pack
+	// nothing - on every host, which is why this one runs where the tests above cannot.
+	root := t.TempDir()
+
+	repository := &fakeCacheRepository{}
+	out := &bytes.Buffer{}
+
+	require.NoError(t, runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{root},
+	}), []string{root}, "", cacheDefaultMaxSize, repository, out))
+
+	assert.Contains(t, out.String(), "nothing was found")
+	assert.Zero(t, repository.saveCalls, "an empty archive must not be granted an upload")
+}
+
+// TestCachePackPatterns pins what the cached paths are turned into before the walker
+// sees them. A bare path matches only the directory, which the walker skips, so without
+// the "/**" form the archive comes out empty and the cache silently does nothing; without
+// the bare form a cached path naming a single file is never packed.
+func TestCachePackPatterns(t *testing.T) {
+	assert.Equal(t,
+		[]string{"/data/node_modules", "/data/node_modules/**", "/root/.m2", "/root/.m2/**"},
+		cachePackPatterns([]string{"/data/node_modules", "/root/.m2"}))
+
+	assert.Empty(t, cachePackPatterns(nil))
 }
 
 func TestRunCache_RejectsAMalformedPayload(t *testing.T) {
@@ -555,6 +609,7 @@ func TestRunCacheRestore_RejectsAnArchiveReachingOutsideTheDeclaredPaths(t *test
 // plain overwrite.
 func TestRunCacheSave_SendsTheConditionalHeaders(t *testing.T) {
 	root := t.TempDir()
+	requireContainerPaths(t, root)
 	require.NoError(t, os.WriteFile(filepath.Join(root, "dep.txt"), []byte("installed"), 0o644))
 
 	var seen http.Header
@@ -585,6 +640,7 @@ func TestRunCacheSave_SendsTheConditionalHeaders(t *testing.T) {
 // the same content-derived key.
 func TestRunCacheSave_ARefusedUploadIsNotAFailure(t *testing.T) {
 	root := t.TempDir()
+	requireContainerPaths(t, root)
 	require.NoError(t, os.WriteFile(filepath.Join(root, "dep.txt"), []byte("installed"), 0o644))
 
 	for _, refusal := range []int{http.StatusPreconditionFailed, http.StatusConflict} {

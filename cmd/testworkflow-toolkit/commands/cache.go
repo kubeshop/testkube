@@ -273,7 +273,7 @@ func runCacheSave(ctx context.Context, encoded string, mounts []string, statePat
 		return nil
 	}
 
-	archive, size, err := packCache(paths, mounts)
+	archive, size, entries, err := packCache(paths, mounts)
 	if err != nil {
 		return fmt.Errorf("packing the cache: %w", err)
 	}
@@ -281,6 +281,16 @@ func runCacheSave(ctx context.Context, encoded string, mounts []string, statePat
 		_ = archive.Close()
 		_ = os.Remove(archive.Name())
 	}()
+
+	// Storing nothing under a key is worse than storing nothing at all: an entry is
+	// immutable for its lifetime, so an empty archive would answer every later run with
+	// a hit that restores nothing, and no rerun could displace it. Nothing to pack means
+	// the paths were never created - the install put its output somewhere else, or the
+	// step did not need to install - and either way there is nothing to cache.
+	if entries == 0 {
+		fmt.Fprintf(out, "cache: not saving %q: nothing was found under %s\n", key, strings.Join(paths, ", "))
+		return nil
+	}
 
 	if maxSize > 0 && size > maxSize {
 		fmt.Fprintf(out, "cache: not saving %q: the archive is %s, over the %s limit\n",
@@ -325,31 +335,53 @@ func runCacheSave(ctx context.Context, encoded string, mounts []string, statePat
 	return nil
 }
 
+// cachePackPatterns turns the cached paths into the patterns the walker matches against.
+//
+// A cached path names a directory, but the walker tests every candidate against the
+// patterns with doublestar and skips directories - and "/data/node_modules" matches only
+// the directory itself, so a bare path matches nothing whatsoever. The archive then comes
+// out empty, the save succeeds, and the next run gets a hit that restores nothing: the
+// cache appears to work and quietly does not.
+//
+// Appending "/**" is what makes the contents match. The bare path is kept alongside it
+// because "/x/**" does not match "/x", and a cached path is allowed to be a single file.
+func cachePackPatterns(paths []string) []string {
+	patterns := make([]string, 0, len(paths)*2)
+	for _, declared := range paths {
+		patterns = append(patterns, declared, path.Join(declared, "**"))
+	}
+	return patterns
+}
+
 // packCache writes the cached paths into a temporary archive and returns it with its
-// size, which a presigned PUT needs up front as a Content-Length.
+// size, which a presigned PUT needs up front as a Content-Length, and the number of
+// entries it holds.
 //
 // A real file rather than a streaming buffer, so that a retried upload can rewind.
-func packCache(paths []string, mounts []string) (*os.File, int64, error) {
-	file, err := os.CreateTemp(cacheTempDir(), "cache-*.tar.gz")
+func packCache(paths []string, mounts []string) (file *os.File, size int64, entries int, err error) {
+	file, err = os.CreateTemp(cacheTempDir(), "cache-*.tar.gz")
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
+	}
+	discard := func() {
+		_ = file.Close()
+		_ = os.Remove(file.Name())
 	}
 
 	// Root at "/" with the absolute paths as patterns: cached paths may live in several
 	// volumes at once and have no common ancestor below the root.
-	if err := common.WriteTarballFrom(file, "/", paths, mounts); err != nil {
-		_ = file.Close()
-		_ = os.Remove(file.Name())
-		return nil, 0, err
+	entries, err = common.WriteTarballFrom(file, "/", cachePackPatterns(paths), mounts)
+	if err != nil {
+		discard()
+		return nil, 0, 0, err
 	}
 
 	stat, err := file.Stat()
 	if err != nil {
-		_ = file.Close()
-		_ = os.Remove(file.Name())
-		return nil, 0, err
+		discard()
+		return nil, 0, 0, err
 	}
-	return file, stat.Size(), nil
+	return file, stat.Size(), entries, nil
 }
 
 func cacheTempDir() string {

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -338,6 +339,10 @@ func TestUnpackTarball_AllowedRootsConfineACacheArchive(t *testing.T) {
 // allowlist: an archive this code actually produces for a cache must still restore in
 // full. If the walker emitted anything outside the packed paths - a parent directory
 // entry, say - the allowlist would refuse the whole archive and every cache would miss.
+//
+// The packed files are deleted before unpacking, which is the whole point. Reading them
+// back without deleting them proves nothing: they were already there, so the assertions
+// passed against an empty archive for as long as this test existed in that form.
 func TestWriteTarballFrom_RoundTripsThroughTheAllowlist(t *testing.T) {
 	source := t.TempDir()
 	if filepath.VolumeName(source) != "" {
@@ -356,7 +361,12 @@ func TestWriteTarballFrom_RoundTripsThroughTheAllowlist(t *testing.T) {
 	// Packed exactly as the cache save does: rooted at "/", with the cached paths as
 	// both the patterns and the readable mounts.
 	buf := &bytes.Buffer{}
-	require.NoError(t, WriteTarballFrom(buf, "/", []string{firstPath, secondPath}, []string{firstPath, secondPath}))
+	entries, err := WriteTarballFrom(buf, "/", cachePatternsFor(firstPath, secondPath), []string{firstPath, secondPath})
+	require.NoError(t, err)
+	require.Equal(t, 2, entries, "both cached files have to be in the archive")
+
+	require.NoError(t, os.RemoveAll(first))
+	require.NoError(t, os.RemoveAll(second))
 
 	// Restored exactly as the cache restore does, with those same paths as the allowlist.
 	require.NoError(t, UnpackTarball("/", buf, WithAllowedRoots(firstPath, secondPath)))
@@ -368,6 +378,93 @@ func TestWriteTarballFrom_RoundTripsThroughTheAllowlist(t *testing.T) {
 	restored, err = os.ReadFile(filepath.Join(second, "dep.jar"))
 	require.NoError(t, err)
 	assert.Equal(t, "jar", string(restored))
+}
+
+// cachePatternsFor mirrors cachePackPatterns in the toolkit's cache command, which is
+// what turns a cached directory into patterns the walker can match. Duplicated rather
+// than imported because that package imports this one.
+func cachePatternsFor(paths ...string) []string {
+	patterns := make([]string, 0, len(paths)*2)
+	for _, declared := range paths {
+		patterns = append(patterns, declared, path.Join(declared, "**"))
+	}
+	return patterns
+}
+
+// TestWriteTarballFrom_ABarePathMatchesNothing pins the walker behaviour that made the
+// cache silently store empty archives, so that the workaround above is not mistaken for
+// belt-and-braces and quietly dropped.
+//
+// The walker matches candidates against the patterns with doublestar and skips
+// directories. A pattern naming a directory therefore matches the directory and nothing
+// else - not one file inside it - so packing a cached path as written produces an empty
+// archive with no error at all.
+func TestWriteTarballFrom_ABarePathMatchesNothing(t *testing.T) {
+	source := t.TempDir()
+	if filepath.VolumeName(source) != "" {
+		t.Skip("test assumes POSIX-rooted absolute paths; Windows drive paths won't match the '/'-rooted walker")
+	}
+	cached := filepath.Join(source, "cache-probe")
+	require.NoError(t, os.MkdirAll(filepath.Join(cached, "sub"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(cached, "marker"), []byte("m"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(cached, "sub", "deep"), []byte("d"), 0o644))
+
+	cachedPath := filepath.ToSlash(cached)
+
+	buf := &bytes.Buffer{}
+	entries, err := WriteTarballFrom(buf, "/", []string{cachedPath}, []string{cachedPath})
+	require.NoError(t, err, "the bare path fails silently rather than loudly, which is what made this hard to see")
+	assert.Zero(t, entries, "a bare directory path matches only the directory, which is skipped")
+
+	// With the pattern the cache actually uses, everything under the path is packed, at
+	// any depth.
+	buf = &bytes.Buffer{}
+	entries, err = WriteTarballFrom(buf, "/", cachePatternsFor(cachedPath), []string{cachedPath})
+	require.NoError(t, err)
+	assert.Equal(t, 2, entries)
+
+	names := tarballEntryNames(t, buf)
+	assert.Contains(t, names, strings.TrimPrefix(cachedPath, "/")+"/marker")
+	assert.Contains(t, names, strings.TrimPrefix(cachedPath, "/")+"/sub/deep")
+}
+
+// TestWriteTarballFrom_PacksASingleCachedFile is why the bare path is kept alongside
+// "/**": that pattern does not match the path itself, so a cached path that names one
+// file would otherwise pack nothing.
+func TestWriteTarballFrom_PacksASingleCachedFile(t *testing.T) {
+	source := t.TempDir()
+	if filepath.VolumeName(source) != "" {
+		t.Skip("test assumes POSIX-rooted absolute paths; Windows drive paths won't match the '/'-rooted walker")
+	}
+	cached := filepath.Join(source, "one.jar")
+	require.NoError(t, os.WriteFile(cached, []byte("jar"), 0o644))
+
+	cachedPath := filepath.ToSlash(cached)
+
+	buf := &bytes.Buffer{}
+	entries, err := WriteTarballFrom(buf, "/", cachePatternsFor(cachedPath), []string{filepath.ToSlash(source)})
+	require.NoError(t, err)
+	assert.Equal(t, 1, entries)
+	assert.Contains(t, tarballEntryNames(t, buf), strings.TrimPrefix(cachedPath, "/"))
+}
+
+func tarballEntryNames(t *testing.T, buf *bytes.Buffer) []string {
+	t.Helper()
+
+	gz, err := gzip.NewReader(buf)
+	require.NoError(t, err)
+	defer gz.Close()
+
+	var names []string
+	reader := tar.NewReader(gz)
+	for {
+		header, err := reader.Next()
+		if err != nil {
+			break
+		}
+		names = append(names, header.Name)
+	}
+	return names
 }
 
 // TestNormalizeEntryName pins the check that decides what an archive may name.

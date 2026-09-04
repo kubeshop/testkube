@@ -23,7 +23,8 @@ var (
 
 // WriteTarball packs files matching the patterns, resolved against dirPath.
 func WriteTarball(stream io.Writer, dirPath string, files []string) error {
-	return WriteTarballFrom(stream, dirPath, files, nil)
+	_, err := WriteTarballFrom(stream, dirPath, files, nil)
+	return err
 }
 
 // WriteTarballFrom packs files matching the patterns, rooted at dirPath and restricted
@@ -35,13 +36,16 @@ func WriteTarball(stream io.Writer, dirPath string, files []string) error {
 // needs a root of "/" together with the set of directories that may actually be read;
 // the walker would otherwise reduce the root to "/" and offer no way to bound it.
 // Entry names stay relative to the root, so UnpackTarball's own path checks still apply.
-func WriteTarballFrom(stream io.Writer, dirPath string, files []string, mounts []string) error {
+//
+// Returns how many entries were written, because "matched nothing" and "matched
+// something" are not the same outcome to the caller and the archive itself cannot be
+// told apart by size: an empty tarball is a valid one, a few dozen bytes long.
+func WriteTarballFrom(stream io.Writer, dirPath string, files []string, mounts []string) (entries int, err error) {
 	// Ensure the absolute path
 	if !filepath.IsAbs(dirPath) {
-		var err error
 		dirPath, err = filepath.Abs(dirPath)
 		if err != nil {
-			return errors.Wrap(err, "failed to build absolute path for writing tarball")
+			return 0, errors.Wrap(err, "failed to build absolute path for writing tarball")
 		}
 	}
 	if len(mounts) == 0 {
@@ -57,7 +61,7 @@ func WriteTarballFrom(stream io.Writer, dirPath string, files []string, mounts [
 	// Append all the files
 	walker, err := artifacts.CreateWalker(files, mounts, dirPath)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	err = walker.Walk(os.DirFS("/"), func(path string, file fs.File, stat fs.FileInfo, err error) error {
 		if err != nil {
@@ -90,12 +94,15 @@ func WriteTarballFrom(stream io.Writer, dirPath string, files []string, mounts [
 
 		// Copy the contents for regular files
 		if !isSymlink {
-			_, err = io.Copy(tarStream, file)
+			if _, err = io.Copy(tarStream, file); err != nil {
+				return err
+			}
 		}
 
-		return err
+		entries++
+		return nil
 	})
-	return err
+	return entries, err
 }
 
 // UnpackOptions bounds what an archive may expand into.
