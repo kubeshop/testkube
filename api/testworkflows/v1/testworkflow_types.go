@@ -16,7 +16,6 @@ package v1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // TestWorkflowSpec defines the desired state of TestWorkflow
@@ -49,7 +48,7 @@ type TemplateRef struct {
 	// name of the template to include
 	Name string `json:"name"`
 	// trait configuration values if needed
-	Config map[string]intstr.IntOrString `json:"config,omitempty" expr:"template"`
+	Config map[string]ConfigValue `json:"config,omitempty" expr:"template"`
 }
 
 // TestWorkflowStatusSummary contains information about the TestWorkflow status.

@@ -422,8 +422,8 @@ func MapLocalObjectReferenceKubeToAPI(v corev1.LocalObjectReference) testkube.Lo
 	return testkube.LocalObjectReference{Name: v.Name}
 }
 
-func MapConfigValueKubeToAPI(v map[string]intstr.IntOrString) map[string]string {
-	return common.MapMap(v, MapIntOrStringToString)
+func MapConfigValueKubeToAPI(v map[string]testworkflowsv1.ConfigValue) map[string]string {
+	return common.MapMap(v, testworkflowsv1.ConfigValue.String)
 }
 
 func MapParameterTypeKubeToAPI(v testworkflowsv1.ParameterType) *testkube.TestWorkflowParameterType {
@@ -470,8 +470,8 @@ func MapParameterSchemaKubeToAPI(v testworkflowsv1.ParameterSchema) testkube.Tes
 		Description:      v.Description,
 		Type_:            MapParameterTypeKubeToAPI(v.Type),
 		Enum:             v.Enum,
-		Example:          common.ResolvePtr(common.MapPtr(v.Example, MapIntOrStringToString), ""),
-		Default_:         MapStringToBoxedString(MapIntOrStringPtrToStringPtr(v.Default)),
+		Example:          common.ResolvePtr(common.MapPtr(v.Example, testworkflowsv1.ConfigValue.String), ""),
+		Default_:         MapStringTypeToBoxedString(v.Default),
 		Format:           v.Format,
 		Pattern:          v.Pattern,
 		MinLength:        MapInt64ToBoxedInteger(v.MinLength),
