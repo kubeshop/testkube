@@ -160,3 +160,10 @@ func TestNewDateFilterRFC3339FractionalSeconds(t *testing.T) {
 	// Must NOT have been advanced to 23:59
 	assertion.Equal(0, dFilter.End.Second())
 }
+
+func TestIsPassingDateFilterWhenInvalidStartAndValidEnd(t *testing.T) {
+	assertion := require.New(t)
+	dFilter := NewDateFilter("", "2024-01-31")
+	assertion.True(dFilter.IsPassing(time.Date(2024, 1, 15, 10, 0, 0, 0, time.UTC)), "Date before end date should pass")
+	assertion.False(dFilter.IsPassing(time.Date(2024, 2, 5, 10, 0, 0, 0, time.UTC)), "Date after end date should fail even when start date is invalid")
+}
