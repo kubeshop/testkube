@@ -55,14 +55,11 @@ func NewDateFilter(startDate string, endDate string) DateFilter {
 // IsPassing reports whether date falls within the filter's configured range.
 // Both the start and end bounds are inclusive.
 func (dFilter DateFilter) IsPassing(date time.Time) bool {
-	if !dFilter.IsStartValid {
-		return true
-	}
-	if dFilter.Start.After(date) {
+	if dFilter.IsStartValid && dFilter.Start.After(date) {
 		return false
 	}
-	if !dFilter.IsEndValid {
-		return true
+	if dFilter.IsEndValid && dFilter.End.Before(date) {
+		return false
 	}
-	return !dFilter.End.Before(date)
+	return true
 }
