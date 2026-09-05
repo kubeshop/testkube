@@ -384,7 +384,7 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | testkube-api.storage.accessKey | string | `"minio123"` | MinIO Secret Access Key |
 | testkube-api.storage.accessKeyId | string | `"minio"` | MinIO Access Key ID |
 | testkube-api.storage.bucket | string | `"testkube-artifacts"` | MinIO Bucket |
-| testkube-api.storage.cacheExpiration | int | `0` | Expiration period in days for step dependency caches (the .tkcache/v1 prefix). 0 leaves them to the bucket-wide `expiration`. Both default to 0 because setting either one makes the API server apply a bucket lifecycle, replacing it wholesale rather than merging, so any rule Testkube did not write is dropped. |
+| testkube-api.storage.cacheExpiration | int | `1` | Expiration period in days for step dependency caches (the .tkcache/v1 prefix). Defaults to 1 day, the shortest an object store lifecycle can express; 0 disables it and leaves them to the bucket-wide `expiration`, which stays at 0 because that rule is unfiltered and would expire artifacts too. Testkube preserves lifecycle rules it did not write, so neither setting disturbs one managed elsewhere. |
 | testkube-api.storage.certSecret.baseMountPath | string | `"/etc/client-certs/storage"` | Base path to mount the client certificate secret |
 | testkube-api.storage.certSecret.caFile | string | `"ca.crt"` | Path to ca file (used for self-signed certificates) |
 | testkube-api.storage.certSecret.certFile | string | `"cert.crt"` | Path to client certificate file |

@@ -200,7 +200,7 @@ A Helm chart for Testkube api
 | storage.accessKey | string | `""` |  |
 | storage.accessKeyId | string | `""` |  |
 | storage.bucket | string | `"testkube-artifacts"` |  |
-| storage.cacheExpiration | int | `0` |  |
+| storage.cacheExpiration | int | `1` |  |
 | storage.certSecret.baseMountPath | string | `"/etc/client-certs/storage"` |  |
 | storage.certSecret.caFile | string | `"ca.crt"` |  |
 | storage.certSecret.certFile | string | `"cert.crt"` |  |

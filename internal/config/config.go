@@ -41,14 +41,19 @@ type OSSControlPlaneConfig struct {
 	StorageExpiration int    `envconfig:"STORAGE_EXPIRATION"`
 	// StorageCacheExpiration expires step dependency caches, in days. 0 disables it.
 	//
-	// Deliberately opt-in, with no default, matching StorageExpiration above. Setting
-	// either one makes the API server apply a bucket lifecycle at startup, and a
-	// lifecycle is replaced wholesale rather than merged - so a non-zero default here
-	// would silently drop the transition and expiration rules of any installation whose
-	// bucket lifecycle is managed elsewhere, purely by upgrading. An operator who wants
-	// cache eviction asks for it; until then caches expire only under
-	// StorageExpiration, if that is set at all.
-	StorageCacheExpiration       int    `envconfig:"STORAGE_CACHE_EXPIRATION"`
+	// One day, because a cache entry is disposable by construction: it is keyed on the
+	// contents of a lockfile, so an entry that is still wanted is rewritten by the next
+	// run that misses it, and one that is not wanted is dead weight in the bucket. Days
+	// are the finest granularity an object store's lifecycle offers, so 1 is the
+	// shortest expiry that can be expressed - it is 24 hours, not a rounding of one.
+	//
+	// A default is only safe because SetExpirationPolicies merges rather than replaces.
+	// Applying a lifecycle rewrites the bucket's configuration wholesale, so before that
+	// merge existed, defaulting this would have dropped the rules of any installation
+	// managing its bucket lifecycle elsewhere, by nothing but an upgrade. Do not give
+	// StorageExpiration a default on this reasoning: that rule is unfiltered and governs
+	// every object in the bucket, where this one is confined to the cache prefix.
+	StorageCacheExpiration       int    `envconfig:"STORAGE_CACHE_EXPIRATION" default:"1"`
 	StorageAccessKeyID           string `envconfig:"STORAGE_ACCESSKEYID" default:""`
 	StorageSecretAccessKey       string `envconfig:"STORAGE_SECRETACCESSKEY" default:""`
 	StorageRegion                string `envconfig:"STORAGE_REGION" default:""`
