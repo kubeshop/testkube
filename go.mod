@@ -1,6 +1,6 @@
 module github.com/kubeshop/testkube
 
-go 1.26.0
+go 1.27.0
 
 toolchain go1.27.1
 
@@ -87,13 +87,11 @@ require (
 	k8s.io/apiextensions-apiserver v0.36.4
 	k8s.io/apimachinery v0.36.4
 	k8s.io/client-go v0.36.4
-	k8s.io/kube-openapi v0.0.0-20260821135717-be32def86098
+	k8s.io/kube-openapi v0.0.0-20260904170622-9ab3195f2a72
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3
 	sigs.k8s.io/controller-runtime v0.24.1
 	sigs.k8s.io/yaml v1.6.0
 )
-
-require github.com/opencontainers/go-digest v1.0.0 // indirect
 
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect
@@ -246,6 +244,7 @@ require (
 	github.com/olekukonko/cat v0.0.0-20250911104152-50322a0618f6 // indirect
 	github.com/olekukonko/errors v1.2.0 // indirect
 	github.com/olekukonko/ll v0.1.6 // indirect
+	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
 	github.com/package-url/packageurl-go v0.1.2 // indirect
@@ -322,6 +321,7 @@ require (
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.1 // indirect
+	sigs.k8s.io/structured-merge-diff/v7 v7.0.0 // indirect
 )
 
 tool (
