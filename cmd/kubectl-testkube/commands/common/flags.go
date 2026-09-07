@@ -107,6 +107,13 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, isDockerCmd bool
 
 	cmd.Flags().StringVar(&opts.Master.OrgId, "org-id", "", "Testkube Pro organization id [required for centralized mode]"+neededForLogin)
 	cmd.Flags().StringVar(&opts.Master.EnvId, "env-id", "", "Testkube Pro environment id [required for centralized mode]"+neededForLogin)
+
+	// Name-based alternatives to the id flags, so that non-interactive logins can
+	// pass the same friendly names the interactive selector displays.
+	cmd.Flags().StringVar(&opts.Master.OrgName, "org-name", "", "Testkube Pro organization name, alternative to --org-id"+neededForLogin)
+	cmd.Flags().StringVar(&opts.Master.EnvName, "env-name", "", "Testkube Pro environment name or slug, alternative to --env-id"+neededForLogin)
+	cmd.MarkFlagsMutuallyExclusive("org-id", "org-name")
+	cmd.MarkFlagsMutuallyExclusive("env-id", "env-name")
 }
 
 func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data) {

@@ -44,8 +44,26 @@ func NewSetContextCmd() *cobra.Command {
 
 			switch cfg.ContextType {
 			case config.ContextTypeCloud:
-				if opts.Master.OrgId == "" && opts.Master.EnvId == "" && apiKey == "" && opts.Master.RootDomain == "" {
-					ui.Errf("Please provide at least one of the following flags: --org-id, --env-id, --api-key, --root-domain")
+				if opts.Master.OrgId == "" && opts.Master.EnvId == "" && opts.Master.OrgName == "" &&
+					opts.Master.EnvName == "" && apiKey == "" && opts.Master.RootDomain == "" {
+					ui.Errf("Please provide at least one of the following flags: --org-id, --org-name, --env-id, --env-name, --api-key, --root-domain")
+				}
+
+				// Names have to become ids before anything is written, and the
+				// lookup needs a token: the one being set if there is one,
+				// otherwise whatever the context already holds.
+				if opts.Master.OrgName != "" || opts.Master.EnvName != "" {
+					lookupToken := apiKey
+					if lookupToken == "" {
+						lookupToken = cfg.CloudContext.ApiKey
+					}
+					if lookupToken == "" {
+						ui.Failf("Resolving --org-name or --env-name requires an API key, pass --api-key or log in first")
+					}
+
+					err := common.ResolveNamedOrgAndEnv(opts.Master.URIs.Api, lookupToken, &opts.Master,
+						cfg.CloudContext.OrganizationId, cfg.SkipTLS || cfg.CloudContext.SkipTLS)
+					ui.ExitOnError("resolving organization and environment", err)
 				}
 
 				var dcName *string
@@ -106,5 +124,11 @@ func NewSetContextCmd() *cobra.Command {
 	cmd.Flags().StringVar(&dockerContainerName, "docker-container", "testkube-agent", "Docker container name for Testkube Docker Agent")
 
 	common.PopulateMasterFlags(cmd, &opts, false)
+
+	// The deprecated aliases carry ids, so they conflict with the name flags in
+	// the same way --org-id and --env-id do.
+	cmd.MarkFlagsMutuallyExclusive("org", "org-name")
+	cmd.MarkFlagsMutuallyExclusive("env", "env-name")
+
 	return cmd
 }

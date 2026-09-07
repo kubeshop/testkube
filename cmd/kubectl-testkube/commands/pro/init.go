@@ -120,7 +120,19 @@ func NewInitCmd() *cobra.Command {
 				sendErrTelemetry(cmd, cfg, "login", err)
 				ui.ExitOnError("user login", err)
 			}
-			err = common.PopulateLoginDataToContext(options.Master.OrgId, options.Master.EnvId, tokenType, token, refreshToken, "", options, cfg)
+			// A user who was already logged in has no fresh token here, so fall
+			// back to the one stored in the context to look org/env up with.
+			lookupToken := token
+			if lookupToken == "" {
+				lookupToken = cfg.CloudContext.ApiKey
+			}
+			orgID, envID, err := common.ResolveOrgAndEnvIDs(options.Master.URIs.Api, lookupToken, options.Master, skipTLS)
+			if err != nil {
+				sendErrTelemetry(cmd, cfg, "setting_context", err)
+				ui.ExitOnError("resolving organization and environment", err)
+			}
+
+			err = common.PopulateLoginDataToContext(orgID, envID, tokenType, token, refreshToken, "", options, cfg)
 			if err != nil {
 				sendErrTelemetry(cmd, cfg, "setting_context", err)
 				ui.ExitOnError("Setting Pro environment context", err)

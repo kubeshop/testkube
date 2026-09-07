@@ -120,17 +120,29 @@ func NewConnectCmd() *cobra.Command {
 			// os.Exit) cannot leak a temp directory created by the export block.
 			common.ProcessMasterFlags(cmd, &masterOpts, &cfg)
 
-			if masterOpts.Master.EnvId == "" {
-				ui.Failf("You need pass valid environment id to connect to Pro")
-			}
-			if masterOpts.Master.OrgId == "" {
-				ui.Failf("You need pass valid organization id to connect to Pro")
-			}
+			// The api key and api uri are checked first because resolving a name
+			// into an id needs both; without them the lookup would fail with a
+			// transport error instead of saying which flag is missing.
 			if apiKey == "" {
 				ui.Failf("You need pass valid api key to connect to Pro")
 			}
 			if masterOpts.Master.URIs.Api == "" {
 				ui.Failf("You need pass valid uri api to connect to Pro")
+			}
+
+			// Resolve any name flags into ids, so the checks below and everything
+			// downstream keep working purely in ids.
+			if masterOpts.Master.OrgName != "" || masterOpts.Master.EnvName != "" {
+				err := common.ResolveNamedOrgAndEnv(masterOpts.Master.URIs.Api, apiKey, &masterOpts.Master,
+					cfg.CloudContext.OrganizationId, cfg.SkipTLS || cfg.CloudContext.SkipTLS)
+				ui.ExitOnError("resolving organization and environment", err)
+			}
+
+			if masterOpts.Master.EnvId == "" {
+				ui.Failf("You need pass valid environment id to connect to Pro")
+			}
+			if masterOpts.Master.OrgId == "" {
+				ui.Failf("You need pass valid organization id to connect to Pro")
 			}
 			if masterOpts.Master.URIs.Agent == "" {
 				ui.Failf("You need pass valid uri agent to connect to Pro")
