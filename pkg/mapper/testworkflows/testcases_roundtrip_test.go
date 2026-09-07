@@ -8,6 +8,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // TestStepTestCasesRoundTrip is the regression guard for a bug this test would
@@ -109,4 +110,62 @@ func TestTestCaseToleranceRoundTrip_ZeroIsNotUnset(t *testing.T) {
 	got = MapTestCaseToleranceAPIToKube(MapTestCaseToleranceKubeToAPI(unset))
 	assert.Nil(t, got.MaxFailed, "an unset threshold must stay unset")
 	assert.Nil(t, got.MinPassed)
+}
+
+// TestExecutionResultTestCaseFieldsAreMapped covers the other two types this
+// feature added that cross the CRD/API boundary.
+//
+// These map in one direction only - the API model is the primary shape and the
+// CRD mirror exists for the execution's status - so there is no round trip to
+// assert. What can still go wrong is the same thing that went wrong with the
+// step: a field added to both types and forgotten in the mapper between them.
+func TestExecutionResultTestCaseFieldsAreMapped(t *testing.T) {
+	t.Run("step result carries the counters", func(t *testing.T) {
+		result := testkube.TestWorkflowStepResult{
+			TestResults: &testkube.TestWorkflowStepTestResults{
+				Tests: 1043, Passed: 1035, Failed: 8, Muted: 8,
+				Tolerated: true, RequirementApplied: true,
+				IdentitiesIncomplete: true, Unrepresented: 23,
+				UnusedMutePatterns: []string{"test_retired_*"},
+			},
+		}
+
+		got := MapTestWorkflowStepResultAPIToKube(result)
+		require.NotNil(t, got.TestResults)
+		assert.Equal(t, int32(1043), got.TestResults.Tests)
+		assert.Equal(t, int32(8), got.TestResults.Muted)
+		assert.True(t, got.TestResults.Tolerated)
+		assert.True(t, got.TestResults.RequirementApplied)
+		assert.True(t, got.TestResults.IdentitiesIncomplete)
+		assert.Equal(t, int32(23), got.TestResults.Unrepresented)
+		assert.Equal(t, []string{"test_retired_*"}, got.TestResults.UnusedMutePatterns)
+	})
+
+	t.Run("report carries the failures", func(t *testing.T) {
+		report := testkube.TestWorkflowReport{
+			Ref:  "step-1",
+			Kind: "junit",
+			Summary: &testkube.TestWorkflowReportSummary{
+				Tests: 10, Passed: 8, Failed: 2, Muted: 1, Unexpected: 1,
+			},
+			Failures: []testkube.TestWorkflowReportFailure{
+				{Id: "s/c/broke", Status: "failed", Muted: true, Message: "flaked"},
+			},
+			FailuresTruncated: true,
+		}
+
+		got := MapTestWorkflowReportAPIToKube(report)
+		require.Len(t, got.Failures, 1)
+		assert.Equal(t, "s/c/broke", got.Failures[0].Id)
+		assert.True(t, got.Failures[0].Muted)
+		assert.True(t, got.FailuresTruncated)
+		require.NotNil(t, got.Summary)
+		assert.Equal(t, int32(1), got.Summary.Muted)
+		assert.Equal(t, int32(1), got.Summary.Unexpected)
+	})
+
+	t.Run("absent stays absent", func(t *testing.T) {
+		assert.Nil(t, MapTestWorkflowStepResultAPIToKube(testkube.TestWorkflowStepResult{}).TestResults)
+		assert.Empty(t, MapTestWorkflowReportAPIToKube(testkube.TestWorkflowReport{}).Failures)
+	})
 }

@@ -1653,6 +1653,6 @@ func MapStepTestCasesKubeToAPI(v testworkflowsv1.StepTestCases) testkube.TestWor
 		Mute:     common.MapPtr(v.Mute, MapTestCaseSelectorKubeToAPI),
 		Tolerate: common.MapPtr(v.Tolerate, MapTestCaseToleranceKubeToAPI),
 		Enforce:  v.Enforce,
-		Select:   common.MapPtr(v.Select, MapTestCaseSelectionKubeToAPI),
+		Select_:  common.MapPtr(v.Select, MapTestCaseSelectionKubeToAPI),
 	}
 }
