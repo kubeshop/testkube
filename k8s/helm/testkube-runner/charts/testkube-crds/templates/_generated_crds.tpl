@@ -7831,6 +7831,24 @@ spec:
                             type: object
                         type: object
                       type: array
+                    rerun:
+                      description: narrows this execution to specific test cases
+                      properties:
+                        executionId:
+                          description: the execution the previous results are read from
+                          type: string
+                        onlyFailed:
+                          description: restrict the selection to test cases that did not pass
+                          type: boolean
+                        testCases:
+                          description: |-
+                            an explicit selection, instead of or alongside ExecutionId. Capped; a
+                            larger selection belongs in the workflow's own `select` block, which
+                            resolves it in the pod without a size limit.
+                          items:
+                            type: string
+                          type: array
+                      type: object
                     resolvedWorkflow:
                       x-kubernetes-preserve-unknown-fields: true
                     resourceAggregations:

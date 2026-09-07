@@ -24,4 +24,6 @@ type TestWorkflowExecutionRequest struct {
 	RunningContext  *TestWorkflowRunningContext `json:"runningContext,omitempty"`
 	// parent execution ids
 	ParentExecutionIds []string `json:"parentExecutionIds,omitempty"`
+	// narrow this execution to specific test cases. Has an effect only on a step declaring `testCases.select`, which is what says how the names reach the test runner.
+	TestCases []string `json:"testCases,omitempty"`
 }

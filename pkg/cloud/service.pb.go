@@ -5057,11 +5057,15 @@ type AppendExecutionReportRequest struct {
 	Id       string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Step     string `protobuf:"bytes,2,opt,name=step,proto3" json:"step,omitempty"`
 	FilePath string `protobuf:"bytes,3,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"`
-	// Deprecated: the raw report. The agent parses it in the pod now - it has to,
+	// Legacy: the raw report. The agent parses it in the pod now - it has to,
 	// because muting decides the step's verdict and only the pod can still change
 	// it - so the fields below carry the parse and this is redundant. Still sent
 	// for a control plane that predates them; a server that reads `summary`
 	// should ignore it.
+	//
+	// Not marked deprecated, despite reading like it: a client that stopped
+	// populating this would break every control plane older than the parsed
+	// fields, so sending it is required rather than discouraged.
 	Report []byte `protobuf:"bytes,4,opt,name=report,proto3" json:"report,omitempty"`
 	// kind is the report format that was parsed, e.g. "junit".
 	Kind    string             `protobuf:"bytes,5,opt,name=kind,proto3" json:"kind,omitempty"`
