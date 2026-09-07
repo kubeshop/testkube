@@ -16,6 +16,9 @@ func NewOpenSource(inspector imageinspector.Inspector) testworkflowprocessor.Pro
 		Register(testworkflowprocessor.ProcessNestedSetupSteps).
 		Register(testworkflowprocessor.ProcessRunCommand).
 		Register(testworkflowprocessor.ProcessShellCommand).
+		// After the operations that create the container a policy attaches to,
+		// so it sees the step whose report it describes.
+		Register(testworkflowprocessor.StubTestCases).
 		Register(testworkflowprocessor.StubExecute).
 		Register(testworkflowprocessor.StubParallel).
 		Register(testworkflowprocessor.ProcessNestedSteps).
@@ -32,6 +35,9 @@ func NewPro(inspector imageinspector.Inspector) testworkflowprocessor.Processor 
 		Register(testworkflowprocessor.ProcessNestedSetupSteps).
 		Register(testworkflowprocessor.ProcessRunCommand).
 		Register(testworkflowprocessor.ProcessShellCommand).
+		// After the operations that create the container a policy attaches to,
+		// so it sees the step whose report it describes.
+		Register(testworkflowprocessortcl.ProcessTestCases).
 		Register(testworkflowprocessortcl.ProcessExecute).
 		Register(testworkflowprocessortcl.ProcessParallel).
 		Register(testworkflowprocessor.ProcessNestedSteps).

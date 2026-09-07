@@ -86,10 +86,11 @@ func process(currentStatus string, parents []string, stage stage2.Stage, parentC
 		}
 		actions = append(actions, actiontypes.Action{
 			Execute: &lite.ActionExecute{
-				Ref:      exec.Ref(),
-				Negative: exec.Negative(),
-				Toolkit:  toolkit,
-				Pure:     pure,
+				Ref:       exec.Ref(),
+				Negative:  exec.Negative(),
+				Toolkit:   toolkit,
+				Pure:      pure,
+				TestCases: buildTestCasesAction(exec.TestCases()),
 			},
 		})
 	}

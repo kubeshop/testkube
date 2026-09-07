@@ -96,6 +96,18 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 
 	success := result.ExitCode == 0
 
+	// A testCases policy replaces the exit code as the source of the verdict:
+	// the tool exits non-zero for a failure the workflow may have declared
+	// acceptable. Only a Pro preset can put a policy here - see StubTestCases.
+	details := ""
+	if run.TestCases != nil {
+		workingDir := ""
+		if container.Config.WorkingDir != nil {
+			workingDir = *container.Config.WorkingDir
+		}
+		success, details = applyTestCases(run.TestCases, workingDir, int(result.ExitCode))
+	}
+
 	// Compute the result
 	if run.Negative {
 		success = !success
@@ -115,5 +127,5 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 
 	// Notify about the status
 	step.SetStatus(status).SetExitCode(result.ExitCode)
-	orchestration.FinishExecution(step, constants.ExecutionResult{ExitCode: result.ExitCode, Iteration: int(step.Iteration)})
+	orchestration.FinishExecution(step, constants.ExecutionResult{ExitCode: result.ExitCode, Details: details, Iteration: int(step.Iteration)})
 }

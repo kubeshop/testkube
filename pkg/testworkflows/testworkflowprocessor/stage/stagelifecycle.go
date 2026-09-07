@@ -18,6 +18,7 @@ type StageLifecycle interface {
 	Paused() bool
 	RetryPolicy() testworkflowsv1.RetryPolicy
 	Timeout() string
+	TestCases() *testworkflowsv1.StepTestCases
 
 	SetNegative(negative bool) StageLifecycle
 	SetOptional(optional bool) StageLifecycle
@@ -26,6 +27,7 @@ type StageLifecycle interface {
 	AppendConditions(expr ...string) StageLifecycle
 	SetRetryPolicy(policy *testworkflowsv1.RetryPolicy) StageLifecycle
 	SetTimeout(tpl string) StageLifecycle
+	SetTestCases(policy *testworkflowsv1.StepTestCases) StageLifecycle
 }
 
 type stageLifecycle struct {
@@ -35,6 +37,7 @@ type stageLifecycle struct {
 	condition string
 	retry     testworkflowsv1.RetryPolicy
 	timeout   string
+	testCases *testworkflowsv1.StepTestCases
 }
 
 func NewStageLifecycle() StageLifecycle {
@@ -114,5 +117,17 @@ func (s *stageLifecycle) SetTimeout(tpl string) StageLifecycle {
 
 func (s *stageLifecycle) SetPaused(paused bool) StageLifecycle {
 	s.paused = paused
+	return s
+}
+
+// TestCases is the step's report policy. Like the retry policy, it is only ever
+// set on the container stage that actually ran the tool: a policy on a group
+// stage would have no report of its own to read.
+func (s *stageLifecycle) TestCases() *testworkflowsv1.StepTestCases {
+	return s.testCases
+}
+
+func (s *stageLifecycle) SetTestCases(policy *testworkflowsv1.StepTestCases) StageLifecycle {
+	s.testCases = policy
 	return s
 }

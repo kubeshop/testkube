@@ -158,20 +158,6 @@ func (mr *MockStageMockRecorder) GetImages(isGroupNeeded any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImages", reflect.TypeOf((*MockStage)(nil).GetImages), isGroupNeeded)
 }
 
-// Id mocks base method.
-func (m *MockStage) Id() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Id")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// Id indicates an expected call of Id.
-func (mr *MockStageMockRecorder) Id() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Id", reflect.TypeOf((*MockStage)(nil).Id))
-}
-
 // HasPause mocks base method.
 func (m *MockStage) HasPause() bool {
 	m.ctrl.T.Helper()
@@ -184,6 +170,20 @@ func (m *MockStage) HasPause() bool {
 func (mr *MockStageMockRecorder) HasPause() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasPause", reflect.TypeOf((*MockStage)(nil).HasPause))
+}
+
+// Id mocks base method.
+func (m *MockStage) Id() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Id")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Id indicates an expected call of Id.
+func (mr *MockStageMockRecorder) Id() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Id", reflect.TypeOf((*MockStage)(nil).Id))
 }
 
 // Len mocks base method.
@@ -302,20 +302,6 @@ func (mr *MockStageMockRecorder) RetryPolicy() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetryPolicy", reflect.TypeOf((*MockStage)(nil).RetryPolicy))
 }
 
-// SetId mocks base method.
-func (m *MockStage) SetId(id string) StageMetadata {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetId", id)
-	ret0, _ := ret[0].(StageMetadata)
-	return ret0
-}
-
-// SetId indicates an expected call of SetId.
-func (mr *MockStageMockRecorder) SetId(id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetId", reflect.TypeOf((*MockStage)(nil).SetId), id)
-}
-
 // SetCategory mocks base method.
 func (m *MockStage) SetCategory(category string) StageMetadata {
 	m.ctrl.T.Helper()
@@ -342,6 +328,20 @@ func (m *MockStage) SetCondition(expr string) StageLifecycle {
 func (mr *MockStageMockRecorder) SetCondition(expr any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCondition", reflect.TypeOf((*MockStage)(nil).SetCondition), expr)
+}
+
+// SetId mocks base method.
+func (m *MockStage) SetId(id string) StageMetadata {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetId", id)
+	ret0, _ := ret[0].(StageMetadata)
+	return ret0
+}
+
+// SetId indicates an expected call of SetId.
+func (mr *MockStageMockRecorder) SetId(id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetId", reflect.TypeOf((*MockStage)(nil).SetId), id)
 }
 
 // SetName mocks base method.
@@ -414,6 +414,20 @@ func (mr *MockStageMockRecorder) SetRetryPolicy(policy any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRetryPolicy", reflect.TypeOf((*MockStage)(nil).SetRetryPolicy), policy)
 }
 
+// SetTestCases mocks base method.
+func (m *MockStage) SetTestCases(policy *v1.StepTestCases) StageLifecycle {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetTestCases", policy)
+	ret0, _ := ret[0].(StageLifecycle)
+	return ret0
+}
+
+// SetTestCases indicates an expected call of SetTestCases.
+func (mr *MockStageMockRecorder) SetTestCases(policy any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTestCases", reflect.TypeOf((*MockStage)(nil).SetTestCases), policy)
+}
+
 // SetTimeout mocks base method.
 func (m *MockStage) SetTimeout(tpl string) StageLifecycle {
 	m.ctrl.T.Helper()
@@ -440,6 +454,20 @@ func (m *MockStage) Signature() Signature {
 func (mr *MockStageMockRecorder) Signature() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Signature", reflect.TypeOf((*MockStage)(nil).Signature))
+}
+
+// TestCases mocks base method.
+func (m *MockStage) TestCases() *v1.StepTestCases {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TestCases")
+	ret0, _ := ret[0].(*v1.StepTestCases)
+	return ret0
+}
+
+// TestCases indicates an expected call of TestCases.
+func (mr *MockStageMockRecorder) TestCases() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TestCases", reflect.TypeOf((*MockStage)(nil).TestCases))
 }
 
 // Timeout mocks base method.

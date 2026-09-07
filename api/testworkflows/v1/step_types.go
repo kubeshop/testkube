@@ -100,6 +100,10 @@ type IndependentStep struct {
 
 	StepOperations `json:",inline" expr:"include"`
 
+	// what this step's test report means: which failures to tolerate, the pass
+	// requirement, and which test cases to narrow this run to
+	TestCases *StepTestCases `json:"testCases,omitempty" expr:"include"`
+
 	// instructions for parallel execution
 	Parallel *IndependentStepParallel `json:"parallel,omitempty" expr:"include"`
 
@@ -129,6 +133,10 @@ type Step struct {
 	Setup []Step `json:"setup,omitempty" expr:"include"`
 
 	StepOperations `json:",inline" expr:"include"`
+
+	// what this step's test report means: which failures to tolerate, the pass
+	// requirement, and which test cases to narrow this run to
+	TestCases *StepTestCases `json:"testCases,omitempty" expr:"include"`
 
 	// single template to run in this step
 	Template *TemplateRef `json:"template,omitempty" expr:"include"`

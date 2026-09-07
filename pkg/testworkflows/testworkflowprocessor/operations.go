@@ -43,6 +43,7 @@ func ProcessShellCommand(_ InternalProcessor, layer Intermediate, container stag
 	stage := stage.NewContainerStage(layer.NextRef(), shell)
 	stage.SetCategory("Run shell command")
 	stage.SetRetryPolicy(step.Retry)
+	stage.SetTestCases(step.TestCases)
 	return stage, nil
 }
 
@@ -53,6 +54,7 @@ func ProcessRunCommand(_ InternalProcessor, layer Intermediate, container stage.
 	container = container.CreateChild().ApplyCR(&step.Run.ContainerConfig)
 	stage := stage.NewContainerStage(layer.NextRef(), container)
 	stage.SetRetryPolicy(step.Retry)
+	stage.SetTestCases(step.TestCases)
 	stage.SetCategory("Run")
 	if step.Run.Shell != nil {
 		if step.Run.Command != nil || step.Run.Args != nil {
@@ -355,6 +357,25 @@ func StubParallel(_ InternalProcessor, _ Intermediate, _ stage.Container, step t
 func StubServices(_ InternalProcessor, _ Intermediate, _ stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if len(step.Services) != 0 {
 		return nil, constants.ErrOpenSourceServicesOperationIsNotAvailable
+	}
+	return nil, nil
+}
+
+// StubTestCases refuses a `testCases` block in the open source edition.
+//
+// The whole cloud-only gate for the feature is this one operation: the Pro
+// preset registers ProcessTestCases in its place, so an open source deployment
+// can never emit a policy into the action list. That is why the verdict itself
+// stays open source - it is unreachable here rather than absent.
+//
+// It refuses rather than ignoring the block, unlike the dependency cache which
+// deliberately degrades to a no-op. A cache is an optimization, so a workflow
+// that ran before it existed has to keep running; a mute policy is the
+// opposite - ignoring it keeps a pipeline red that its author declared green,
+// and ignoring a selection silently re-runs the entire suite.
+func StubTestCases(_ InternalProcessor, _ Intermediate, _ stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
+	if step.TestCases != nil {
+		return nil, constants.ErrOpenSourceTestCasesOperationIsNotAvailable
 	}
 	return nil, nil
 }

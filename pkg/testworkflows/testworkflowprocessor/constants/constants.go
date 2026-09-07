@@ -53,12 +53,13 @@ var (
 			{EnvVar: corev1.EnvVar{Name: "CI", Value: "1"}},
 		},
 	}
-	DefaultInitImage                             = getInitImage()
-	DefaultToolkitImage                          = getToolkitImage()
-	DefaultInitImageBusyboxBinaryPath            = "/.tktw-bin"
-	ErrOpenSourceExecuteOperationIsNotAvailable  = errors.New(`"execute" ` + OpenSourceOperationErrorMessage)
-	ErrOpenSourceParallelOperationIsNotAvailable = errors.New(`"parallel" ` + OpenSourceOperationErrorMessage)
-	ErrOpenSourceServicesOperationIsNotAvailable = errors.New(`"services" ` + OpenSourceOperationErrorMessage)
+	DefaultInitImage                              = getInitImage()
+	DefaultToolkitImage                           = getToolkitImage()
+	DefaultInitImageBusyboxBinaryPath             = "/.tktw-bin"
+	ErrOpenSourceExecuteOperationIsNotAvailable   = errors.New(`"execute" ` + OpenSourceOperationErrorMessage)
+	ErrOpenSourceParallelOperationIsNotAvailable  = errors.New(`"parallel" ` + OpenSourceOperationErrorMessage)
+	ErrOpenSourceServicesOperationIsNotAvailable  = errors.New(`"services" ` + OpenSourceOperationErrorMessage)
+	ErrOpenSourceTestCasesOperationIsNotAvailable = errors.New(`"testCases" ` + OpenSourceOperationErrorMessage)
 )
 
 func getInitImage() string {

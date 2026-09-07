@@ -22,6 +22,52 @@ type ActionExecute struct {
 	Negative bool   `json:"n,omitempty"`
 	Toolkit  bool   `json:"t,omitempty"`
 	Pure     bool   `json:"p,omitempty"`
+
+	// TestCases is the step's testCases policy, resolved. Nil unless the step
+	// declared one, which an open source deployment cannot do - see
+	// StubTestCases.
+	TestCases *ActionTestCases `json:"tc,omitempty"`
+}
+
+// ActionTestCases is the testCases policy as the init process needs it: paths
+// to read, patterns to match, and the numbers to compare against.
+//
+// It is a flattened copy of the CRD types rather than the types themselves,
+// following the reason this whole package exists - the init binary pays for
+// every struct it links, so it carries only the fields it acts on.
+type ActionTestCases struct {
+	ReportPaths  []string `json:"rp,omitempty"`
+	ReportFormat string   `json:"rf,omitempty"`
+	OnMissing    string   `json:"om,omitempty"`
+
+	MuteInclude []string `json:"mi,omitempty"`
+	MuteExclude []string `json:"me,omitempty"`
+
+	Tolerate *ActionTestCasesTolerance `json:"tl,omitempty"`
+	Enforce  string                    `json:"en,omitempty"`
+
+	Select *ActionTestCasesSelect `json:"sl,omitempty"`
+}
+
+type ActionTestCasesTolerance struct {
+	MaxFailed        *int32 `json:"mf,omitempty"`
+	MaxFailedPercent *int32 `json:"mfp,omitempty"`
+	MinPassed        *int32 `json:"mp,omitempty"`
+	MinPassedPercent *int32 `json:"mpp,omitempty"`
+}
+
+type ActionTestCasesSelect struct {
+	From         string   `json:"f,omitempty"`
+	Status       []string `json:"st,omitempty"`
+	Include      []string `json:"in,omitempty"`
+	Exclude      []string `json:"ex,omitempty"`
+	Cases        []string `json:"cs,omitempty"`
+	IncludeMuted bool     `json:"im,omitempty"`
+	As           string   `json:"as,omitempty"`
+	Collapse     string   `json:"cl,omitempty"`
+	WritePath    string   `json:"wp,omitempty"`
+	WriteSep     string   `json:"ws,omitempty"`
+	Empty        string   `json:"em,omitempty"`
 }
 
 type ActionPause struct {
