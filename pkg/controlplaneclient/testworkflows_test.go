@@ -79,6 +79,7 @@ func TestNotificationStreamSessionManagerReplaysAfterCursor(t *testing.T) {
 
 	manager := newNotificationStreamSessionManager(
 		ctx,
+		"workflow",
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -120,6 +121,7 @@ func TestNotificationStreamSessionSurvivesReaderDropAndResumesLive(t *testing.T)
 	emit := make(chan string)
 	manager := newNotificationStreamSessionManager(
 		ctx,
+		"workflow",
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -172,7 +174,7 @@ func TestSendNotificationResponseReturnsContextErrorWhenCanceled(t *testing.T) {
 }
 
 func TestNotificationStreamSessionPublishDoesNotHoldLockForSlowSubscriber(t *testing.T) {
-	session := newNotificationStreamSession()
+	session := newNotificationStreamSession(nil)
 	sub, _, _, _, _ := session.subscribe(0, 1)
 	for i := 0; i < cap(sub.ch); i++ {
 		sub.ch <- notificationStreamEvent{}
@@ -208,7 +210,7 @@ func TestNotificationStreamSessionPublishDoesNotHoldLockForSlowSubscriber(t *tes
 }
 
 func TestWorkflowProtocolEventsDoNotAdvanceApplicationSeqNo(t *testing.T) {
-	session := newNotificationStreamSession()
+	session := newNotificationStreamSession(nil)
 
 	ready := buildCloudProtocol("stream-1", session.currentSeqNo(), cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_READY, "")
 	require.Equal(t, uint32(0), ready.SeqNo)
@@ -223,7 +225,7 @@ func TestWorkflowProtocolEventsDoNotAdvanceApplicationSeqNo(t *testing.T) {
 }
 
 func TestNotificationStreamSessionReplayUnavailableForTrimmedCursor(t *testing.T) {
-	session := newNotificationStreamSession()
+	session := newNotificationStreamSession(nil)
 	for i := 0; i < workflowNotificationReplayMaxEvents+2; i++ {
 		session.publish(&testkube.TestWorkflowExecutionNotification{Log: "log"})
 	}
@@ -246,6 +248,7 @@ func TestNotificationStreamSessionManagerStartsFreshAfterDoneSessionWithoutResum
 	var processCalls atomic.Int32
 	manager := newNotificationStreamSessionManager(
 		ctx,
+		"workflow",
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -282,6 +285,7 @@ func TestNotificationStreamSessionManagerStartsFreshAfterErroredDoneSessionWithR
 	var processCalls atomic.Int32
 	manager := newNotificationStreamSessionManager(
 		ctx,
+		"workflow",
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -340,6 +344,7 @@ func TestNotificationStreamSessionManagerFreshResumeStartsFromLiveTail(t *testin
 	release := make(chan struct{})
 	manager := newNotificationStreamSessionManager(
 		ctx,
+		"workflow",
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -385,6 +390,7 @@ func TestNotificationStreamSessionManagerMarksResumeUnavailableForFreshSessionWi
 	release := make(chan struct{})
 	manager := newNotificationStreamSessionManager(
 		ctx,
+		"workflow",
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -417,6 +423,7 @@ func TestNotificationStreamSessionManagerStartsFreshForConcurrentViewersWithoutR
 	var processCalls atomic.Int32
 	manager := newNotificationStreamSessionManager(
 		ctx,
+		"workflow",
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -468,6 +475,7 @@ func TestNotificationStreamSessionManagerExpiresDoneSessionsWithoutAttach(t *tes
 	release := make(chan struct{})
 	manager := newNotificationStreamSessionManager(
 		ctx,
+		"workflow",
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -502,6 +510,7 @@ func TestNotificationStreamSessionManagerSweepExpiredRemovesDonePastTTLSession(t
 	release := make(chan struct{})
 	manager := newNotificationStreamSessionManager(
 		ctx,
+		"workflow",
 		func(req *cloud.TestWorkflowNotificationsRequest) string {
 			return req.ExecutionId
 		},
@@ -597,6 +606,7 @@ func TestNotificationStreamSessionReplacementCancelsOrphanedSource(t *testing.T)
 
 	manager := newNotificationStreamSessionManager(
 		ctx,
+		"workflow",
 		func(req *cloud.TestWorkflowNotificationsRequest) string { return req.ExecutionId },
 		func(sourceCtx context.Context, _ *cloud.TestWorkflowNotificationsRequest) NotificationWatcher {
 			sourceCtxs <- sourceCtx
