@@ -112,16 +112,32 @@ func validateSelection(selection *testworkflowsv1.TestCaseSelection) error {
 		return nil
 	}
 
-	// The verdict half of the policy - mute, tolerate, enforce - is wired
-	// through to the init process; narrowing a run is not yet. Refusing the
-	// block is the honest intermediate state: accepting it would mean silently
-	// running the whole suite when the author asked for a subset.
-	//
-	// When selection lands, this becomes the real check: `from` restricted to
-	// SelectFromSelf, `status` and `empty` against their enums, the
-	// include/exclude globs through testresults.Selector.Validate, and a
-	// non-empty write.path whenever write is set.
-	return fmt.Errorf("testCases: select is not available yet")
+	switch from := strings.TrimSpace(selection.From); from {
+	case "", SelectFromSelf:
+	default:
+		if strings.HasPrefix(from, "step:") {
+			return fmt.Errorf("testCases: select.from %q is not available yet; only %q is supported today", from, SelectFromSelf)
+		}
+		return fmt.Errorf("testCases: select.from %q is not a known source; use %q", from, SelectFromSelf)
+	}
+
+	if _, err := testresults.ParseStatuses(selection.Status); err != nil {
+		return fmt.Errorf("testCases: select.status: %w", err)
+	}
+	if err := validateEnum("select.empty", selection.Empty, "all", "skip", "fail"); err != nil {
+		return err
+	}
+
+	filter := testresults.Selector{Include: selection.Include, Exclude: selection.Exclude}
+	if err := filter.Validate(); err != nil {
+		return fmt.Errorf("testCases: select: %w", err)
+	}
+
+	if selection.Write != nil && strings.TrimSpace(selection.Write.Path) == "" {
+		return fmt.Errorf("testCases: select.write.path is required when write is set")
+	}
+
+	return nil
 }
 
 // validateEnum accepts an empty value, which means the field's default.

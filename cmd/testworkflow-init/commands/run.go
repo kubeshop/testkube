@@ -25,6 +25,38 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 		return
 	}
 
+	workingDir := ""
+	if container.Config.WorkingDir != nil {
+		workingDir = *container.Config.WorkingDir
+	}
+
+	// Narrow the run to specific test cases, before the command is resolved so
+	// that the selection is visible to its arguments. This reads the report a
+	// previous attempt left behind; the verdict below reads the one this attempt
+	// is about to write.
+	selection := &testCasesSelection{}
+	if run.TestCases != nil && run.TestCases.Select != nil {
+		resolved, err := resolveTestCaseSelection(run.TestCases, workingDir)
+		if err != nil {
+			output.ExitErrorf(constants.CodeInputError, "test case selection: %s", err.Error())
+		}
+		selection = resolved
+		if err = selection.Export(); err != nil {
+			output.ExitErrorf(constants.CodeInternal, "test case selection: %s", err.Error())
+		}
+		// The selection machine goes first so that testCases.* resolves before
+		// anything else claims the name.
+		machine = expressions.CombinedMachines(selection.Machine(), machine)
+
+		// Nothing selected means either the first attempt of a narrowing retry,
+		// which must run everything, or a re-run step with nothing left to do.
+		if !selection.Narrowed {
+			if finished := applyEmptySelectionPolicy(step, run.TestCases.Select.Empty); finished {
+				return
+			}
+		}
+	}
+
 	// Obtain command to run
 	command := make([]string, 0)
 	if container.Config.Command != nil {
@@ -102,11 +134,7 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 	// acceptable. Only a Pro preset can put a policy here - see StubTestCases.
 	var outcome testCasesOutcome
 	if run.TestCases != nil {
-		workingDir := ""
-		if container.Config.WorkingDir != nil {
-			workingDir = *container.Config.WorkingDir
-		}
-		outcome = applyTestCases(run.TestCases, workingDir, int(result.ExitCode))
+		outcome = applyTestCases(run.TestCases, workingDir, int(result.ExitCode), selection.Narrowed)
 		success = outcome.Success
 	}
 

@@ -128,13 +128,80 @@ func TestProcessTestCases_RejectsIncoherentTolerance(t *testing.T) {
 	})
 }
 
-func TestProcessTestCases_RefusesSelectionUntilItIsWired(t *testing.T) {
-	// Accepting the block while nothing acts on it would silently run the whole
-	// suite when the author asked for a subset.
-	err := processStep(&testworkflowsv1.StepTestCases{
+func TestProcessTestCases_AcceptsASelection(t *testing.T) {
+	require.NoError(t, processStep(&testworkflowsv1.StepTestCases{
 		Report: report(),
-		Select: &testworkflowsv1.TestCaseSelection{From: "self"},
+		Mute:   &testworkflowsv1.TestCaseSelector{Include: []string{"test_flaky_*"}},
+		Select: &testworkflowsv1.TestCaseSelection{
+			From:     "self",
+			Status:   []string{"failed", "errored"},
+			Include:  []string{"tests.payments/**"},
+			As:       `{{ testcase.classname }}::{{ testcase.name }}`,
+			Collapse: `-Dtest={{ join(selected, ",") }}`,
+			Write:    &testworkflowsv1.TestCaseSelectionWrite{Path: "run/selected.txt"},
+			Empty:    "skip",
+		},
+	}))
+}
+
+func TestProcessTestCases_RejectsUnavailableSelectionSources(t *testing.T) {
+	t.Run("step reference", func(t *testing.T) {
+		// Resolving a step reference needs the whole workflow, which an
+		// Operation is not handed. Refusing beats silently running everything.
+		err := processStep(&testworkflowsv1.StepTestCases{
+			Report: report(),
+			Select: &testworkflowsv1.TestCaseSelection{From: "step:first_pass"},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not available yet")
 	})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "select is not available yet")
+
+	t.Run("unknown source", func(t *testing.T) {
+		err := processStep(&testworkflowsv1.StepTestCases{
+			Report: report(),
+			Select: &testworkflowsv1.TestCaseSelection{From: "yesterday"},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not a known source")
+	})
+}
+
+func TestProcessTestCases_RejectsBadSelectionFields(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		selection *testworkflowsv1.TestCaseSelection
+		want      string
+	}{
+		{
+			"selecting passing tests",
+			&testworkflowsv1.TestCaseSelection{Status: []string{"passed"}},
+			"tells us nothing",
+		},
+		{
+			"unknown status",
+			&testworkflowsv1.TestCaseSelection{Status: []string{"exploded"}},
+			"not a test case outcome",
+		},
+		{
+			"unknown empty policy",
+			&testworkflowsv1.TestCaseSelection{Empty: "shrug"},
+			"select.empty",
+		},
+		{
+			"unusable filter glob",
+			&testworkflowsv1.TestCaseSelection{Include: []string{"["}},
+			"invalid pattern",
+		},
+		{
+			"write without a path",
+			&testworkflowsv1.TestCaseSelection{Write: &testworkflowsv1.TestCaseSelectionWrite{}},
+			"select.write.path is required",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := processStep(&testworkflowsv1.StepTestCases{Report: report(), Select: tc.selection})
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.want)
+		})
+	}
 }
