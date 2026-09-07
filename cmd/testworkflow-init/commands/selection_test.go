@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
@@ -26,7 +27,7 @@ func TestResolveSelection_FirstAttemptHasNothingToNarrowTo(t *testing.T) {
 	selection, err := resolveTestCaseSelection(&lite.ActionTestCases{
 		ReportPaths: []string{"junit.xml"},
 		Select:      &lite.ActionTestCasesSelect{From: "self"},
-	}, t.TempDir())
+	}, t.TempDir(), nil)
 	require.NoError(t, err)
 
 	assert.False(t, selection.Narrowed)
@@ -40,7 +41,7 @@ func TestResolveSelection_SecondAttemptTakesThePreviousFailures(t *testing.T) {
 	selection, err := resolveTestCaseSelection(&lite.ActionTestCases{
 		ReportPaths: []string{"junit.xml"},
 		Select:      &lite.ActionTestCasesSelect{From: "self"},
-	}, dir)
+	}, dir, nil)
 	require.NoError(t, err)
 
 	assert.True(t, selection.Narrowed)
@@ -58,7 +59,7 @@ func TestResolveSelection_MutedCasesAreNotReRun(t *testing.T) {
 		ReportPaths: []string{"junit.xml"},
 		MuteInclude: []string{"test_flaky_*"},
 		Select:      &lite.ActionTestCasesSelect{From: "self"},
-	}, dir)
+	}, dir, nil)
 	require.NoError(t, err)
 
 	assert.NotContains(t, selection.Entries, "s/tests.a/test_flaky_a",
@@ -75,7 +76,7 @@ func TestResolveSelection_ProjectionReachesTheTool(t *testing.T) {
 			From: "self",
 			As:   `{{ testcase.classname }}::{{ testcase.name }}`,
 		},
-	}, dir)
+	}, dir, nil)
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{
@@ -95,7 +96,7 @@ func TestResolveSelection_WritesTheOverflowFile(t *testing.T) {
 			As:        `{{ testcase.name }}`,
 			WritePath: "run/selected.txt",
 		},
-	}, dir)
+	}, dir, nil)
 	require.NoError(t, err)
 
 	require.NotEmpty(t, selection.File, "the path is reported so the step can name it")
@@ -114,7 +115,7 @@ func TestResolveSelection_CustomSeparator(t *testing.T) {
 			From: "self", As: `{{ testcase.name }}`,
 			WritePath: "s.txt", WriteSep: ",",
 		},
-	}, dir)
+	}, dir, nil)
 	require.NoError(t, err)
 
 	content, err := os.ReadFile(selection.File)
@@ -128,7 +129,7 @@ func TestResolveSelection_NoFileWrittenWhenNothingSelected(t *testing.T) {
 	selection, err := resolveTestCaseSelection(&lite.ActionTestCases{
 		ReportPaths: []string{"junit.xml"},
 		Select:      &lite.ActionTestCasesSelect{From: "self", WritePath: "s.txt"},
-	}, t.TempDir())
+	}, t.TempDir(), nil)
 	require.NoError(t, err)
 	assert.Empty(t, selection.File)
 }
@@ -137,7 +138,7 @@ func TestResolveSelection_ExplicitCasesNeedNoReport(t *testing.T) {
 	selection, err := resolveTestCaseSelection(&lite.ActionTestCases{
 		ReportPaths: []string{"junit.xml"},
 		Select:      &lite.ActionTestCasesSelect{Cases: []string{"tests.a::test_one"}},
-	}, t.TempDir())
+	}, t.TempDir(), nil)
 	require.NoError(t, err)
 
 	assert.True(t, selection.Narrowed)
@@ -150,7 +151,7 @@ func TestResolveSelection_RejectsABadStatus(t *testing.T) {
 	_, err := resolveTestCaseSelection(&lite.ActionTestCases{
 		ReportPaths: []string{"junit.xml"},
 		Select:      &lite.ActionTestCasesSelect{From: "self", Status: []string{"passed"}},
-	}, dir)
+	}, dir, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "tells us nothing")
 }
@@ -221,7 +222,7 @@ func TestResolveSelection_AbsoluteWritePath(t *testing.T) {
 	selection, err := resolveTestCaseSelection(&lite.ActionTestCases{
 		ReportPaths: []string{"junit.xml"},
 		Select:      &lite.ActionTestCasesSelect{From: "self", WritePath: target},
-	}, dir)
+	}, dir, nil)
 	require.NoError(t, err)
 	assert.Equal(t, target, selection.File, "an absolute path is taken as written")
 }
@@ -244,7 +245,7 @@ func TestNarrowingRetry_AcrossTwoAttempts(t *testing.T) {
 	}
 
 	// Attempt 1: no report yet, so the whole suite runs.
-	first, err := resolveTestCaseSelection(policy, dir)
+	first, err := resolveTestCaseSelection(policy, dir, nil)
 	require.NoError(t, err)
 	require.False(t, first.Narrowed, "the first attempt cannot narrow against nothing")
 
@@ -263,7 +264,7 @@ func TestNarrowingRetry_AcrossTwoAttempts(t *testing.T) {
 
 	// Attempt 2: the selection now reads attempt 1's report and takes only the
 	// unmuted failures - the muted one is not re-run.
-	second, err := resolveTestCaseSelection(policy, dir)
+	second, err := resolveTestCaseSelection(policy, dir, nil)
 	require.NoError(t, err)
 	require.True(t, second.Narrowed)
 	assert.Equal(t, []string{"test_one", "test_two"}, second.Entries,
@@ -283,7 +284,7 @@ func TestNarrowingRetry_AcrossTwoAttempts(t *testing.T) {
 	assert.Contains(t, retried.Details, "measured a subset")
 
 	// And a third resolution finds nothing left, so the retry has converged.
-	third, err := resolveTestCaseSelection(policy, dir)
+	third, err := resolveTestCaseSelection(policy, dir, nil)
 	require.NoError(t, err)
 	assert.False(t, third.Narrowed, "nothing failed, so there is nothing left to narrow to")
 }
@@ -310,7 +311,7 @@ func TestResolveSelection_ReRunsAnotherStepsFailures(t *testing.T) {
 		},
 	}
 
-	selection, err := resolveTestCaseSelection(policy, dir)
+	selection, err := resolveTestCaseSelection(policy, dir, nil)
 	require.NoError(t, err)
 	assert.True(t, selection.Narrowed)
 	assert.Equal(t, []string{"test_flaky_a", "test_real_bug", "test_boom"}, selection.Entries,
@@ -339,9 +340,60 @@ func TestResolveSelection_EmptyWhenTheOtherStepPassedEverything(t *testing.T) {
 	selection, err := resolveTestCaseSelection(&lite.ActionTestCases{
 		ReportPaths: []string{"second.xml"},
 		Select:      &lite.ActionTestCasesSelect{Paths: []string{"first.xml"}, Empty: "skip"},
-	}, dir)
+	}, dir, nil)
 	require.NoError(t, err)
 
 	assert.False(t, selection.Narrowed,
 		"nothing failed, so `empty: skip` will skip the re-run step entirely")
+}
+
+// TestResolveSelection_TestCasesNamedByTheScheduler covers the half of a rerun
+// policy the pod can act on today: an explicit list carried with the execution,
+// from an API or CLI caller who named the test cases rather than the workflow
+// declaring them.
+//
+// The other half - an execution to read previous results from - needs another
+// execution's report, which the pod cannot reach yet.
+func TestResolveSelection_TestCasesNamedByTheScheduler(t *testing.T) {
+	rerun := &testworkflowconfig.RerunConfig{
+		ExecutionId: "exec-1",
+		OnlyFailed:  true,
+		TestCases:   []string{"tests.a::test_one", "tests.b::test_two"},
+	}
+
+	t.Run("with no report of its own", func(t *testing.T) {
+		selection, err := resolveTestCaseSelection(&lite.ActionTestCases{
+			ReportPaths: []string{"junit.xml"},
+			Select:      &lite.ActionTestCasesSelect{From: "self"},
+		}, t.TempDir(), rerun)
+		require.NoError(t, err)
+
+		assert.True(t, selection.Narrowed)
+		assert.Equal(t, []string{"tests.a::test_one", "tests.b::test_two"}, selection.Entries,
+			"taken verbatim: the caller already wrote them in the shape their tool wants")
+	})
+
+	t.Run("alongside what the report selected", func(t *testing.T) {
+		dir := reportWith(t, previousAttempt)
+		selection, err := resolveTestCaseSelection(&lite.ActionTestCases{
+			ReportPaths: []string{"junit.xml"},
+			Select:      &lite.ActionTestCasesSelect{From: "self", As: `{{ testcase.name }}`},
+		}, dir, rerun)
+		require.NoError(t, err)
+
+		assert.Equal(t, []string{
+			"test_flaky_a", "test_real_bug", "test_boom",
+			"tests.a::test_one", "tests.b::test_two",
+		}, selection.Entries, "the scheduler's names join after the projected ones, unshaped")
+	})
+
+	t.Run("an empty policy changes nothing", func(t *testing.T) {
+		selection, err := resolveTestCaseSelection(&lite.ActionTestCases{
+			ReportPaths: []string{"junit.xml"},
+			Select:      &lite.ActionTestCasesSelect{From: "self"},
+		}, t.TempDir(), &testworkflowconfig.RerunConfig{ExecutionId: "exec-1", OnlyFailed: true})
+		require.NoError(t, err)
+		assert.False(t, selection.Narrowed,
+			"a reference without names is not something the pod can act on yet")
+	})
 }

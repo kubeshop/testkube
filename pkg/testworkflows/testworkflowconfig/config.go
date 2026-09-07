@@ -39,6 +39,26 @@ type ExecutionConfig struct {
 	GlobalEnv        []testworkflowsv1.EnvVar             `json:"G,omitempty"`
 	SecretMountPaths map[string][]string                  `json:"S,omitempty"`
 	RunningContext   *testkube.TestWorkflowRunningContext `json:"R,omitempty"`
+	Rerun            *RerunConfig                         `json:"U,omitempty"`
+}
+
+// RerunConfig narrows an execution to specific test cases.
+//
+// Only the reference travels: the selection itself is resolved in the pod
+// against the report the referenced execution produced. A suite of ten thousand
+// test cases would not survive being carried as a list through scheduling, and
+// the pod is where the report already is.
+//
+// It has an effect only on a step declaring `testCases.select`, since Testkube
+// does not know any runner's filter flag - the workflow has to say how selected
+// names reach the tool.
+type RerunConfig struct {
+	// ExecutionId is where the previous results are read from.
+	ExecutionId string `json:"i,omitempty"`
+	// OnlyFailed restricts the selection to test cases that did not pass.
+	OnlyFailed bool `json:"f,omitempty"`
+	// TestCases is an explicit selection, instead of or alongside ExecutionId.
+	TestCases []string `json:"c,omitempty"`
 }
 
 type WorkflowConfig struct {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"maps"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -71,6 +72,19 @@ func executionConfigFromStart(start *executionv1.ExecutionStart, organizationId 
 		EnvironmentId:   start.GetEnvironmentId(),
 		ParentIds:       strings.Join(start.AncestorExecutionIds, "/"),
 		RunningContext:  runningContextFromProto(rc),
+		Rerun:           rerunConfigFromProto(start.GetRerun()),
+	}
+}
+
+// rerunConfigFromProto carries the rerun selection across to the pod.
+func rerunConfigFromProto(rerun *executionv1.RerunPolicy) *testworkflowconfig.RerunConfig {
+	if rerun == nil {
+		return nil
+	}
+	return &testworkflowconfig.RerunConfig{
+		ExecutionId: rerun.GetExecutionId(),
+		OnlyFailed:  rerun.GetOnlyFailed(),
+		TestCases:   slices.Clone(rerun.GetTestCases()),
 	}
 }
 
@@ -83,11 +97,17 @@ func runningContextFromProto(rc *executionv1.ExecutionRunningContext) *testkube.
 	}
 	actorType := rc.GetActorType()
 	actorName := rc.GetActorName()
-	if actorType == "" && actorName == "" {
+	// The execution reference alone is enough to build a context: a rerun of an
+	// execution that had no actor still has to tell the pod what it is a rerun
+	// of, or execution.runningContext.actor.executionReference resolves to
+	// empty here while the legacy start path fills it from the execution record.
+	executionReference := rc.GetExecutionReference()
+	if actorType == "" && actorName == "" && executionReference == "" {
 		return nil
 	}
 	actor := &testkube.TestWorkflowRunningContextActor{
-		Name: actorName,
+		Name:               actorName,
+		ExecutionReference: executionReference,
 	}
 	if actorType != "" {
 		t := testkube.TestWorkflowRunningContextActorType(actorType)

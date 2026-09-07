@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testresults"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
@@ -51,7 +52,7 @@ type testCasesSelection struct {
 //
 // Finding no report is not an error - the first attempt has not produced one -
 // and neither is selecting nothing. The caller's `empty` policy decides.
-func resolveTestCaseSelection(policy *lite.ActionTestCases, workingDir string) (*testCasesSelection, error) {
+func resolveTestCaseSelection(policy *lite.ActionTestCases, workingDir string, rerun *testworkflowconfig.RerunConfig) (*testCasesSelection, error) {
 	selection := &testCasesSelection{}
 	if policy.Select == nil {
 		return selection, nil
@@ -94,6 +95,12 @@ func resolveTestCaseSelection(policy *lite.ActionTestCases, workingDir string) (
 		selection.Entries = append(selection.Entries, policy.Select.Cases...)
 	}
 
+	// A selection may also arrive with the execution, from an API or CLI caller
+	// who named the test cases rather than the workflow declaring them. It joins
+	// verbatim for the same reason select.cases does: the caller has already
+	// written the names in the shape their tool wants.
+	selection.Entries = append(selection.Entries, rerunTestCases(rerun)...)
+
 	selection.Narrowed = len(selection.Entries) > 0
 
 	if selection.Narrowed && policy.Select.WritePath != "" {
@@ -105,6 +112,19 @@ func resolveTestCaseSelection(policy *lite.ActionTestCases, workingDir string) (
 	}
 
 	return selection, nil
+}
+
+// rerunTestCases are the test cases the execution itself was narrowed to, named
+// by whoever scheduled it rather than by the workflow.
+//
+// Only the explicit list is usable here. The rest of the rerun policy - the
+// execution to read previous results from - needs the report of *another*
+// execution, which the pod cannot reach yet.
+func rerunTestCases(rerun *testworkflowconfig.RerunConfig) []string {
+	if rerun == nil {
+		return nil
+	}
+	return rerun.TestCases
 }
 
 // Machine exposes the selection to the step's command.
