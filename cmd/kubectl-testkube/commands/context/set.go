@@ -49,6 +49,14 @@ func NewSetContextCmd() *cobra.Command {
 					ui.Errf("Please provide at least one of the following flags: --org-id, --org-name, --env-id, --env-name, --api-key, --root-domain")
 				}
 
+				// Everything below — the name lookups, the display names fetched
+				// afterwards, and the URI persisted by PopulateCloudConfig — has
+				// to point at the Control Plane the user is actually on. Without
+				// an explicit flag ProcessMasterFlags composes the SaaS host from
+				// prefixes, which for a custom Control Plane is both the wrong
+				// place to look and the wrong thing to save.
+				opts.Master.URIs.Api = common.ControlPlaneAPIURI(cmd, opts.Master.URIs.Api, &cfg)
+
 				// Names have to become ids before anything is written, and the
 				// lookup needs a token: the one being set if there is one,
 				// otherwise whatever the context already holds.

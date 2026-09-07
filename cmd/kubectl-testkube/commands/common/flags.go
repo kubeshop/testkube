@@ -213,6 +213,34 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 
 }
 
+// ControlPlaneAPIURI returns the URI to reach the Control Plane with.
+//
+// An explicitly configured location wins. Otherwise the URI already stored in
+// the context does, because ProcessMasterFlags composes its URI from prefixes
+// and a root domain and so falls back to the SaaS host, which is the wrong
+// place to look for the organizations of someone logged into a custom Control
+// Plane. `composed` is the URI ProcessMasterFlags produced.
+func ControlPlaneAPIURI(cmd *cobra.Command, composed string, cfg *config.Data) string {
+	for _, name := range []string{
+		"api-uri-override",
+		"api-prefix",
+		"cloud-api-prefix",
+		"root-domain",
+		"pro-root-domain",
+		"cloud-root-domain",
+	} {
+		if flagChanged(cmd, name) {
+			return composed
+		}
+	}
+
+	if cfg != nil && cfg.CloudContext.ApiUri != "" {
+		return cfg.CloudContext.ApiUri
+	}
+
+	return composed
+}
+
 // uiConfigured reports whether any input defines the dashboard location.
 // The input can be a UI URI override, a UI prefix, or a root domain,
 // from the command line or from the saved configuration.
