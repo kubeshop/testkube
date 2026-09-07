@@ -229,6 +229,8 @@ type TestWorkflowStepResult struct {
 	StartedAt metav1.Time `json:"startedAt,omitempty"`
 	// when the container was finished
 	FinishedAt metav1.Time `json:"finishedAt,omitempty"`
+	// what the step's test report said, when it declared a testCases policy
+	TestResults *TestWorkflowStepTestResults `json:"testResults,omitempty"`
 }
 
 // TestWorkfloStepwStatus has step status of TestWorkflow
@@ -266,6 +268,26 @@ type TestWorkflowReport struct {
 	// file path to full report in artifact storage
 	File    string                     `json:"file,omitempty"`
 	Summary *TestWorkflowReportSummary `json:"summary,omitempty"`
+	// the test cases that did not pass, so they can be listed or re-run without
+	// downloading the full report. Capped, with FailuresTruncated set when the
+	// cap was reached; the complete set is always in the report file.
+	Failures []TestWorkflowReportFailure `json:"failures,omitempty"`
+	// whether Failures holds only part of the non-passing test cases
+	FailuresTruncated bool `json:"failuresTruncated,omitempty"`
+}
+
+// TestWorkflowReportFailure is a single test case that did not pass
+type TestWorkflowReportFailure struct {
+	// canonical test case address, "<suite>/<classname>/<name>"
+	Id string `json:"id,omitempty"`
+	// how the test case did not pass
+	// +kubebuilder:validation:Enum=failed;errored;skipped
+	Status string `json:"status,omitempty"`
+	// whether the step's mute patterns covered this test case, so it did not
+	// count against the step
+	Muted bool `json:"muted,omitempty"`
+	// failure message, truncated
+	Message string `json:"message,omitempty"`
 }
 
 // TestWorkflowReportSummary contains report summary of TestWorkflow
@@ -280,8 +302,50 @@ type TestWorkflowReportSummary struct {
 	Skipped int32 `json:"skipped,omitempty"`
 	// number of error test cases
 	Errored int32 `json:"errored,omitempty"`
+	// number of failing test cases the step's mute patterns covered
+	Muted int32 `json:"muted,omitempty"`
+	// number of failing test cases the mute patterns did not cover
+	Unexpected int32 `json:"unexpected,omitempty"`
+	// whether the pass requirement was met
+	Tolerated bool `json:"tolerated,omitempty"`
 	// total duration of all test cases in milliseconds
 	Duration int64 `json:"duration,omitempty"`
+}
+
+// TestWorkflowStepTestResults is what a step's test report said, when the step
+// declared a testCases policy.
+//
+// It is present whether the step passed or failed: a muted failure is
+// tolerated, not hidden.
+type TestWorkflowStepTestResults struct {
+	// total number of test cases
+	Tests int32 `json:"tests,omitempty"`
+	// number of passed test cases
+	Passed int32 `json:"passed,omitempty"`
+	// number of failed test cases
+	Failed int32 `json:"failed,omitempty"`
+	// number of errored test cases
+	Errored int32 `json:"errored,omitempty"`
+	// number of skipped test cases
+	Skipped int32 `json:"skipped,omitempty"`
+	// number of failing test cases the mute patterns covered
+	Muted int32 `json:"muted,omitempty"`
+	// number of failing test cases the mute patterns did not cover
+	Unexpected int32 `json:"unexpected,omitempty"`
+	// whether the step met its pass requirement
+	Tolerated bool `json:"tolerated,omitempty"`
+	// whether a pass requirement was evaluated at all. False when the run
+	// measured a subset, because a threshold over a subset means nothing, in
+	// which case the bar was simply that nothing unexpected failed.
+	RequirementApplied bool `json:"requirementApplied,omitempty"`
+	// whether the report described more test cases than it named. When it did,
+	// mute could not be applied and the report's own counters were believed.
+	IdentitiesIncomplete bool `json:"identitiesIncomplete,omitempty"`
+	// how many test cases the report claimed beyond the ones it named
+	Unrepresented int32 `json:"unrepresented,omitempty"`
+	// mute patterns that matched no test case - dead quarantine config, surfaced
+	// so that mute lists do not outlive the bugs they were written for
+	UnusedMutePatterns []string `json:"unusedMutePatterns,omitempty"`
 }
 
 type TestWorkflowExecutionResourceAggregationsByField map[string]*TestWorkflowExecutionResourceAggregations

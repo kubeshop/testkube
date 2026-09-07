@@ -1552,21 +1552,52 @@ func MapTemplateListAPIToKube(v []testkube.TestWorkflowTemplate) testworkflowsv1
 
 func MapTestWorkflowReportSummaryAPIToKube(v testkube.TestWorkflowReportSummary) testworkflowsv1.TestWorkflowReportSummary {
 	return testworkflowsv1.TestWorkflowReportSummary{
-		Tests:    v.Tests,
-		Passed:   v.Passed,
-		Failed:   v.Failed,
-		Skipped:  v.Skipped,
-		Errored:  v.Errored,
-		Duration: v.Duration,
+		Tests:      v.Tests,
+		Passed:     v.Passed,
+		Failed:     v.Failed,
+		Skipped:    v.Skipped,
+		Errored:    v.Errored,
+		Muted:      v.Muted,
+		Unexpected: v.Unexpected,
+		Tolerated:  v.Tolerated,
+		Duration:   v.Duration,
+	}
+}
+
+func MapTestWorkflowReportFailureAPIToKube(v testkube.TestWorkflowReportFailure) testworkflowsv1.TestWorkflowReportFailure {
+	return testworkflowsv1.TestWorkflowReportFailure{
+		Id:      v.Id,
+		Status:  v.Status,
+		Muted:   v.Muted,
+		Message: v.Message,
 	}
 }
 
 func MapTestWorkflowReportAPIToKube(v testkube.TestWorkflowReport) testworkflowsv1.TestWorkflowReport {
 	return testworkflowsv1.TestWorkflowReport{
-		Ref:     v.Ref,
-		Kind:    v.Kind,
-		File:    v.File,
-		Summary: common.MapPtr(v.Summary, MapTestWorkflowReportSummaryAPIToKube),
+		Ref:               v.Ref,
+		Kind:              v.Kind,
+		File:              v.File,
+		Summary:           common.MapPtr(v.Summary, MapTestWorkflowReportSummaryAPIToKube),
+		Failures:          common.MapSlice(v.Failures, MapTestWorkflowReportFailureAPIToKube),
+		FailuresTruncated: v.FailuresTruncated,
+	}
+}
+
+func MapTestWorkflowStepTestResultsAPIToKube(v testkube.TestWorkflowStepTestResults) testworkflowsv1.TestWorkflowStepTestResults {
+	return testworkflowsv1.TestWorkflowStepTestResults{
+		Tests:                v.Tests,
+		Passed:               v.Passed,
+		Failed:               v.Failed,
+		Errored:              v.Errored,
+		Skipped:              v.Skipped,
+		Muted:                v.Muted,
+		Unexpected:           v.Unexpected,
+		Tolerated:            v.Tolerated,
+		RequirementApplied:   v.RequirementApplied,
+		IdentitiesIncomplete: v.IdentitiesIncomplete,
+		Unrepresented:        v.Unrepresented,
+		UnusedMutePatterns:   v.UnusedMutePatterns,
 	}
 }
 
@@ -1576,10 +1607,11 @@ func MapTestWorkflowStepResultAPIToKube(v testkube.TestWorkflowStepResult) testw
 		Status: common.MapPtr(v.Status, func(status testkube.TestWorkflowStepStatus) testworkflowsv1.TestWorkflowStepStatus {
 			return (testworkflowsv1.TestWorkflowStepStatus)(status)
 		}),
-		ExitCode:   int64(v.ExitCode),
-		QueuedAt:   metav1.Time{Time: v.QueuedAt},
-		StartedAt:  metav1.Time{Time: v.StartedAt},
-		FinishedAt: metav1.Time{Time: v.FinishedAt},
+		ExitCode:    int64(v.ExitCode),
+		QueuedAt:    metav1.Time{Time: v.QueuedAt},
+		StartedAt:   metav1.Time{Time: v.StartedAt},
+		FinishedAt:  metav1.Time{Time: v.FinishedAt},
+		TestResults: common.MapPtr(v.TestResults, MapTestWorkflowStepTestResultsAPIToKube),
 	}
 }
 
