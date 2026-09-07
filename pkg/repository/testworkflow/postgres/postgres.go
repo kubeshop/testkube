@@ -436,6 +436,17 @@ func (r *PostgresRepository) convertReportsFromJSON(reports []map[string]interfa
 
 			result[i].Summary = summaryObj
 		}
+
+		result[i].FailuresTruncated = getBoolFromMap(report, "failuresTruncated")
+		if failures, ok := report["failures"]; ok && failures != nil {
+			failureBytes, err := json.Marshal(failures)
+			if err != nil {
+				return nil, err
+			}
+			if err = json.Unmarshal(failureBytes, &result[i].Failures); err != nil {
+				return nil, err
+			}
+		}
 	}
 	return result, nil
 }
@@ -1185,13 +1196,26 @@ func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWor
 			return err
 		}
 
+		// Only write the column when there is something to write, so a report
+		// with no failures leaves NULL rather than an empty array. The partial
+		// index then covers only the rows that carry failures.
+		var failures []byte
+		if len(report.Failures) > 0 {
+			failures, err = toJSONB(report.Failures)
+			if err != nil {
+				return err
+			}
+		}
+
 		err = qtx.InsertTestWorkflowReport(ctx, sqlc.InsertTestWorkflowReportParams{
-			ExecutionID: executionId,
-			Ref:         toPgText(report.Ref),
-			Kind:        toPgText(report.Kind),
-			File:        toPgText(report.File),
-			Summary:     summary,
-			RepOrder:    maxOrder + int32(i) + 1,
+			ExecutionID:       executionId,
+			Ref:               toPgText(report.Ref),
+			Kind:              toPgText(report.Kind),
+			File:              toPgText(report.File),
+			Summary:           summary,
+			Failures:          failures,
+			FailuresTruncated: report.FailuresTruncated,
+			RepOrder:          maxOrder + int32(i) + 1,
 		})
 		if err != nil {
 			return err

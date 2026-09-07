@@ -83,14 +83,16 @@ type TestWorkflowOutput struct {
 }
 
 type TestWorkflowReport struct {
-	ExecutionID string             `db:"execution_id" json:"execution_id"`
-	Ref         pgtype.Text        `db:"ref" json:"ref"`
-	Kind        pgtype.Text        `db:"kind" json:"kind"`
-	File        pgtype.Text        `db:"file" json:"file"`
-	Summary     []byte             `db:"summary" json:"summary"`
-	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	RepOrder    int32              `db:"rep_order" json:"rep_order"`
-	ID          uuid.UUID          `db:"id" json:"id"`
+	ExecutionID       string             `db:"execution_id" json:"execution_id"`
+	Ref               pgtype.Text        `db:"ref" json:"ref"`
+	Kind              pgtype.Text        `db:"kind" json:"kind"`
+	File              pgtype.Text        `db:"file" json:"file"`
+	Summary           []byte             `db:"summary" json:"summary"`
+	CreatedAt         pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	RepOrder          int32              `db:"rep_order" json:"rep_order"`
+	ID                uuid.UUID          `db:"id" json:"id"`
+	Failures          []byte             `db:"failures" json:"failures"`
+	FailuresTruncated bool               `db:"failures_truncated" json:"failures_truncated"`
 }
 
 type TestWorkflowResourceAggregation struct {

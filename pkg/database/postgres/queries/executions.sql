@@ -45,7 +45,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -106,7 +108,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -197,7 +201,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -258,7 +264,9 @@ SELECT DISTINCT ON (e.workflow_name)
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -320,7 +328,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -382,7 +392,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -534,7 +546,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -704,7 +718,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -854,8 +870,8 @@ VALUES (@execution_id, @ref, @name, @value, @out_order);
 SELECT COALESCE(MAX(rep_order), 0)::int FROM test_workflow_reports WHERE execution_id = @execution_id;
 
 -- name: InsertTestWorkflowReport :exec
-INSERT INTO test_workflow_reports (execution_id, ref, kind, file, summary, rep_order)
-VALUES (@execution_id, @ref, @kind, @file, @summary, @rep_order);
+INSERT INTO test_workflow_reports (execution_id, ref, kind, file, summary, failures, failures_truncated, rep_order)
+VALUES (@execution_id, @ref, @kind, @file, @summary, @failures, @failures_truncated, @rep_order);
 
 -- name: UpsertTestWorkflowResourceAggregations :exec
 INSERT INTO test_workflow_resource_aggregations (execution_id, global, step)
@@ -1074,7 +1090,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -1186,7 +1204,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -1342,7 +1362,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -1498,7 +1520,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json

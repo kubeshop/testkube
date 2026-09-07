@@ -17,6 +17,8 @@ func RunRepositoryTests(t *testing.T, repo testworkflow.Repository) {
 	t.Run("UpdateResultStrict", func(t *testing.T) { testUpdateResultStrict(t, repo) })
 	t.Run("FinishResultStrict", func(t *testing.T) { testFinishResultStrict(t, repo) })
 	t.Run("UpdateReport", func(t *testing.T) { testUpdateReport(t, repo) })
+	t.Run("UpdateReportFailures", func(t *testing.T) { testUpdateReportFailures(t, repo) })
+	t.Run("UpdateReportWithoutFailures", func(t *testing.T) { testUpdateReportWithoutFailures(t, repo) })
 	t.Run("UpdateOutput", func(t *testing.T) { testUpdateOutput(t, repo) })
 	t.Run("UpdateResourceAggregations", func(t *testing.T) { testUpdateResourceAggregations(t, repo) })
 	t.Run("UpdateTags", func(t *testing.T) { testUpdateTags(t, repo) })

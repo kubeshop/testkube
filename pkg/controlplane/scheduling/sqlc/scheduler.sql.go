@@ -151,7 +151,7 @@ func (q *Queries) GetExecutionOutputs(ctx context.Context, executionID string) (
 }
 
 const getExecutionReports = `-- name: GetExecutionReports :many
-SELECT execution_id, ref, kind, file, summary, created_at, rep_order, id
+SELECT execution_id, ref, kind, file, summary, created_at, rep_order, id, failures, failures_truncated
 FROM test_workflow_reports
 WHERE execution_id = $1::text
 `
@@ -174,6 +174,8 @@ func (q *Queries) GetExecutionReports(ctx context.Context, executionID string) (
 			&i.CreatedAt,
 			&i.RepOrder,
 			&i.ID,
+			&i.Failures,
+			&i.FailuresTruncated,
 		); err != nil {
 			return nil, err
 		}

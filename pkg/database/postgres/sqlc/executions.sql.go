@@ -498,7 +498,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -840,7 +842,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -1102,7 +1106,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -1307,7 +1313,9 @@ SELECT DISTINCT ON (e.workflow_name)
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -1568,7 +1576,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -1778,7 +1788,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -1975,7 +1987,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -2231,7 +2245,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -2434,7 +2450,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -2774,7 +2792,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -3120,7 +3140,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -3630,7 +3652,9 @@ SELECT
                 'ref', rep.ref,
                 'kind', rep.kind,
                 'file', rep.file,
-                'summary', rep.summary
+                'summary', rep.summary,
+                'failures', rep.failures,
+                'failuresTruncated', rep.failures_truncated
             ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
@@ -3964,17 +3988,19 @@ func (q *Queries) InsertTestWorkflowOutput(ctx context.Context, arg InsertTestWo
 }
 
 const insertTestWorkflowReport = `-- name: InsertTestWorkflowReport :exec
-INSERT INTO test_workflow_reports (execution_id, ref, kind, file, summary, rep_order)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO test_workflow_reports (execution_id, ref, kind, file, summary, failures, failures_truncated, rep_order)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 `
 
 type InsertTestWorkflowReportParams struct {
-	ExecutionID string      `db:"execution_id" json:"execution_id"`
-	Ref         pgtype.Text `db:"ref" json:"ref"`
-	Kind        pgtype.Text `db:"kind" json:"kind"`
-	File        pgtype.Text `db:"file" json:"file"`
-	Summary     []byte      `db:"summary" json:"summary"`
-	RepOrder    int32       `db:"rep_order" json:"rep_order"`
+	ExecutionID       string      `db:"execution_id" json:"execution_id"`
+	Ref               pgtype.Text `db:"ref" json:"ref"`
+	Kind              pgtype.Text `db:"kind" json:"kind"`
+	File              pgtype.Text `db:"file" json:"file"`
+	Summary           []byte      `db:"summary" json:"summary"`
+	Failures          []byte      `db:"failures" json:"failures"`
+	FailuresTruncated bool        `db:"failures_truncated" json:"failures_truncated"`
+	RepOrder          int32       `db:"rep_order" json:"rep_order"`
 }
 
 func (q *Queries) InsertTestWorkflowReport(ctx context.Context, arg InsertTestWorkflowReportParams) error {
@@ -3984,6 +4010,8 @@ func (q *Queries) InsertTestWorkflowReport(ctx context.Context, arg InsertTestWo
 		arg.Kind,
 		arg.File,
 		arg.Summary,
+		arg.Failures,
+		arg.FailuresTruncated,
 		arg.RepOrder,
 	)
 	return err
