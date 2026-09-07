@@ -95,9 +95,18 @@ type ExecutionRunningContext struct {
 	// actor_name mirrors TestWorkflowRunningContextActor.Name. Used to
 	// populate the child's RunningContext.Name so downstream reads stay
 	// consistent with the parent's identity.
-	ActorName     *string `protobuf:"bytes,2,opt,name=actor_name,json=actorName" json:"actor_name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ActorName *string `protobuf:"bytes,2,opt,name=actor_name,json=actorName" json:"actor_name,omitempty"`
+	// execution_reference mirrors TestWorkflowRunningContextActor.ExecutionReference:
+	// the execution this one is a rerun of.
+	//
+	// Without it the accessor execution.runningContext.actor.executionReference
+	// resolves to empty inside the pod on this start path, because
+	// runningContextFromProto can only carry across what this message declares.
+	// The legacy path fills it from the execution record, so a workflow reading
+	// that accessor behaves differently depending on which path started it.
+	ExecutionReference *string `protobuf:"bytes,3,opt,name=execution_reference,json=executionReference" json:"execution_reference,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ExecutionRunningContext) Reset() {
@@ -144,6 +153,13 @@ func (x *ExecutionRunningContext) GetActorName() string {
 	return ""
 }
 
+func (x *ExecutionRunningContext) GetExecutionReference() string {
+	if x != nil && x.ExecutionReference != nil {
+		return *x.ExecutionReference
+	}
+	return ""
+}
+
 var File_testkube_testworkflow_execution_v1_get_execution_workflow_response_proto protoreflect.FileDescriptor
 
 const file_testkube_testworkflow_execution_v1_get_execution_workflow_response_proto_rawDesc = "" +
@@ -151,12 +167,13 @@ const file_testkube_testworkflow_execution_v1_get_execution_workflow_response_pr
 	"Htestkube/testworkflow/execution/v1/get_execution_workflow_response.proto\x12\"testkube.testworkflow.execution.v1\x1a,testkube/testworkflow/v1/test_workflow.proto\"\xc8\x01\n" +
 	"\x1cGetExecutionWorkflowResponse\x12B\n" +
 	"\bworkflow\x18\x01 \x01(\v2&.testkube.testworkflow.v1.TestWorkflowR\bworkflow\x12d\n" +
-	"\x0frunning_context\x18\x02 \x01(\v2;.testkube.testworkflow.execution.v1.ExecutionRunningContextR\x0erunningContext\"W\n" +
+	"\x0frunning_context\x18\x02 \x01(\v2;.testkube.testworkflow.execution.v1.ExecutionRunningContextR\x0erunningContext\"\x88\x01\n" +
 	"\x17ExecutionRunningContext\x12\x1d\n" +
 	"\n" +
 	"actor_type\x18\x01 \x01(\tR\tactorType\x12\x1d\n" +
 	"\n" +
-	"actor_name\x18\x02 \x01(\tR\tactorNameB\xcd\x02\n" +
+	"actor_name\x18\x02 \x01(\tR\tactorName\x12/\n" +
+	"\x13execution_reference\x18\x03 \x01(\tR\x12executionReferenceB\xcd\x02\n" +
 	"&com.testkube.testworkflow.execution.v1B!GetExecutionWorkflowResponseProtoP\x01ZUgithub.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1;executionv1\xa2\x02\x03TTE\xaa\x02\"Testkube.Testworkflow.Execution.V1\xca\x02\"Testkube\\Testworkflow\\Execution\\V1\xe2\x02.Testkube\\Testworkflow\\Execution\\V1\\GPBMetadata\xea\x02%Testkube::Testworkflow::Execution::V1b\beditionsp\xe8\a"
 
 var (
