@@ -369,6 +369,11 @@ func main() {
 	// The control plane enforces that runner capability cannot be changed via this path.
 	if proContext.APIKey != "" {
 		startupCapabilities := buildStartupCapabilities(cfg)
+		// The agent's own flags decide every capability except runner, which
+		// the Control Plane owns. Start from that list so the gates below have
+		// an answer even when the Control Plane cannot be asked, and replace it
+		// with the stored set once the update succeeds.
+		proContext.Agent.Capabilities = startupCapabilities
 		updateCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		updateCtx = metadata.NewOutgoingContext(updateCtx, metadata.New(map[string]string{
 			controlplaneclient.AgentSecretKeyMetadataName: proContext.APIKey,
@@ -435,6 +440,7 @@ func main() {
 				)
 			}
 		} else {
+			proContext.Agent.Capabilities = resp.Capabilities
 			log.DefaultLogger.Infow("updated startup capabilities in control plane",
 				"capabilities", stringifyCapabilities(resp.Capabilities),
 			)
@@ -784,10 +790,10 @@ func main() {
 	api.ClusterDiscoverer = clusterdiscovery.New(clientset, cfg.TestkubeNamespace).WithSchemas(apiextClient)
 	api.Init(httpServer)
 
-	// Push watchable cluster-resources snapshot to CP on startup, on CRD
-	// informer events, and as an hourly safety net. CP caches the result to
-	// render the TestTrigger resourceRef picker (see AgentInventoryService).
-	if proContext.APIKey != "" {
+	// Push a cluster-resources snapshot to the CP on startup, on CRD informer
+	// events, and as an hourly safety net. The CP caches it to render the
+	// TestTrigger resourceRef picker (see AgentInventoryService).
+	if intconfig.ShouldPushClusterInventory(proContext) {
 		crdNotifier := inventorycontroller.StartCRDChangeNotifier(ctx, apiextClient, log.DefaultLogger)
 		clusterResourcesController := &inventorycontroller.ClusterResourcesController{
 			Discoverer: api.ClusterDiscoverer,
