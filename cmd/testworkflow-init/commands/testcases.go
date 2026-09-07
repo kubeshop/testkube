@@ -10,37 +10,50 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testresults"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
+// testCasesOutcome is what the policy decided, in the three shapes the rest of
+// the step needs it: the verdict, a line for a person, and the counters for the
+// execution record.
+type testCasesOutcome struct {
+	Success bool
+	Details string
+	Results *testkube.TestWorkflowStepTestResults
+}
+
 // applyTestCases decides the step's verdict from the report the tool just
 // produced, replacing the bare "exit code is zero" reading.
 //
-// It returns the verdict and a one-line summary for the step's error message,
-// which reaches the execution record through ExecutionResult.Details. The
-// summary is returned whether the step passed or failed: muted must never mean
-// silent, so the numbers are always reported.
+// The summary and counters are produced whether the step passed or failed:
+// muted must never mean silent, so the numbers are always reported.
 //
 // This runs after the command and before `negative` is applied - the policy
 // decides what "failed" means, and negative inverts that.
-func applyTestCases(policy *lite.ActionTestCases, workingDir string, exitCode int) (bool, string) {
+func applyTestCases(policy *lite.ActionTestCases, workingDir string, exitCode int) testCasesOutcome {
 	report, found, err := readTestReport(policy.ReportPaths, workingDir)
 	if err != nil {
-		return false, fmt.Sprintf("could not read the test report: %s", err)
+		return testCasesOutcome{Details: fmt.Sprintf("could not read the test report: %s", err)}
 	}
 
 	if !found {
 		where := strings.Join(policy.ReportPaths, ", ")
 		switch policy.OnMissing {
 		case "ignore":
-			return exitCode == 0, ""
+			return testCasesOutcome{Success: exitCode == 0}
 		case "warn":
-			return exitCode == 0, fmt.Sprintf("no test report found at %s", where)
+			return testCasesOutcome{
+				Success: exitCode == 0,
+				Details: fmt.Sprintf("no test report found at %s", where),
+			}
 		default:
 			// Failing by default is the safety catch: it stops a mute policy
 			// masking a step that crashed before it could write a report.
-			return false, fmt.Sprintf("no test report found at %s, and report.onMissing is fail", where)
+			return testCasesOutcome{
+				Details: fmt.Sprintf("no test report found at %s, and report.onMissing is fail", where),
+			}
 		}
 	}
 
@@ -51,7 +64,7 @@ func applyTestCases(policy *lite.ActionTestCases, workingDir string, exitCode in
 		Narrowed: false,
 	})
 	if err != nil {
-		return false, fmt.Sprintf("could not evaluate the test report: %s", err)
+		return testCasesOutcome{Details: fmt.Sprintf("could not evaluate the test report: %s", err)}
 	}
 
 	details := verdict.Describe()
@@ -60,7 +73,30 @@ func applyTestCases(policy *lite.ActionTestCases, workingDir string, exitCode in
 		// is what stops mute lists outliving the bugs they were written for.
 		details += fmt.Sprintf(". Mute patterns matching nothing: %s", strings.Join(unused, ", "))
 	}
-	return verdict.Success, details
+
+	return testCasesOutcome{
+		Success: verdict.Success,
+		Details: details,
+		Results: stepTestResults(verdict),
+	}
+}
+
+// stepTestResults converts the verdict into the execution record's shape.
+func stepTestResults(verdict testresults.Verdict) *testkube.TestWorkflowStepTestResults {
+	return &testkube.TestWorkflowStepTestResults{
+		Tests:                verdict.Summary.Tests,
+		Passed:               verdict.Summary.Passed,
+		Failed:               verdict.Summary.Failed,
+		Errored:              verdict.Summary.Errored,
+		Skipped:              verdict.Summary.Skipped,
+		Muted:                int32(len(verdict.Muted)),
+		Unexpected:           int32(len(verdict.Unexpected)),
+		Tolerated:            verdict.Tolerated,
+		RequirementApplied:   verdict.ToleranceApplied,
+		IdentitiesIncomplete: verdict.IdentitiesIncomplete,
+		Unrepresented:        verdict.Unrepresented,
+		UnusedMutePatterns:   verdict.UnusedMutePatterns,
+	}
 }
 
 // testCasesPolicy converts the action payload into the evaluator's policy.

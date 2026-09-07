@@ -6,6 +6,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/runtime"
@@ -99,13 +100,14 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 	// A testCases policy replaces the exit code as the source of the verdict:
 	// the tool exits non-zero for a failure the workflow may have declared
 	// acceptable. Only a Pro preset can put a policy here - see StubTestCases.
-	details := ""
+	var outcome testCasesOutcome
 	if run.TestCases != nil {
 		workingDir := ""
 		if container.Config.WorkingDir != nil {
 			workingDir = *container.Config.WorkingDir
 		}
-		success, details = applyTestCases(run.TestCases, workingDir, int(result.ExitCode))
+		outcome = applyTestCases(run.TestCases, workingDir, int(result.ExitCode))
+		success = outcome.Success
 	}
 
 	// Compute the result
@@ -125,7 +127,11 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 		return
 	}
 
-	// Notify about the status
+	// Notify about the status. The counters go out before the execution result,
+	// so a reader sees what the report said before the verdict built from it.
+	if outcome.Results != nil {
+		instructions.PrintHintDetails(step.Ref, constants.InstructionTestResults, outcome.Results)
+	}
 	step.SetStatus(status).SetExitCode(result.ExitCode)
-	orchestration.FinishExecution(step, constants.ExecutionResult{ExitCode: result.ExitCode, Details: details, Iteration: int(step.Iteration)})
+	orchestration.FinishExecution(step, constants.ExecutionResult{ExitCode: result.ExitCode, Details: outcome.Details, Iteration: int(step.Iteration)})
 }

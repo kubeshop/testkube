@@ -206,6 +206,12 @@ func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction, exec
 		if executionResult.Details != "" {
 			step.ErrorMessage = executionResult.Details
 		}
+	case constants.InstructionTestResults:
+		serialized, _ := json.Marshal(hint.Value)
+		var testResults testkube.TestWorkflowStepTestResults
+		if err := json.Unmarshal(serialized, &testResults); err == nil {
+			step.TestResults = &testResults
+		}
 	case constants.InstructionPause:
 		pauseTsStr := hint.Value.(string)
 		pauseTs, err := time.Parse(time.RFC3339Nano, pauseTsStr)
