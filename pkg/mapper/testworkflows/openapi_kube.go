@@ -1683,6 +1683,15 @@ func MapTestWorkflowExecutionAPIToKube(v *testkube.TestWorkflowExecution) *testw
 		Tags:                      v.Tags,
 		// Pro edition only (tcl protected code)
 		RunningContext: common.MapPtr(v.RunningContext, mappertcl.MapTestWorkflowRunningContextAPIToKube),
+		Rerun:          common.MapPtr(v.Rerun, MapTestWorkflowRerunAPIToKube),
+	}
+}
+
+func MapTestWorkflowRerunAPIToKube(v testkube.TestWorkflowRerun) testworkflowsv1.TestWorkflowRerun {
+	return testworkflowsv1.TestWorkflowRerun{
+		ExecutionId: v.ExecutionId,
+		OnlyFailed:  v.OnlyFailed,
+		TestCases:   v.TestCases,
 	}
 }
 

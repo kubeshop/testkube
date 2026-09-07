@@ -94,6 +94,31 @@ type TestWorkflowExecutionDetails struct {
 	Tags map[string]string `json:"tags,omitempty"`
 	// running context for the test workflow execution (Pro edition only)
 	RunningContext *TestWorkflowRunningContext `json:"runningContext,omitempty"`
+	// narrows this execution to specific test cases
+	Rerun *TestWorkflowRerun `json:"rerun,omitempty"`
+}
+
+// TestWorkflowRerun narrows an execution to specific test cases, so that
+// re-running a failed suite does not repeat the tests that already passed.
+//
+// It is recorded on the execution because that is how it reaches the runner:
+// the scheduler writes it here, and the runner reads it back when it starts the
+// pod. Only the reference travels - the selection itself is resolved inside the
+// pod, against the report the referenced execution produced, because a suite of
+// ten thousand test cases would not survive being carried as a list.
+//
+// It has an effect only on a step declaring `testCases.select`. Testkube does
+// not know any runner's filter flag by design, so without such a step there is
+// nothing for this to act on.
+type TestWorkflowRerun struct {
+	// the execution the previous results are read from
+	ExecutionId string `json:"executionId,omitempty"`
+	// restrict the selection to test cases that did not pass
+	OnlyFailed bool `json:"onlyFailed,omitempty"`
+	// an explicit selection, instead of or alongside ExecutionId. Capped; a
+	// larger selection belongs in the workflow's own `select` block, which
+	// resolves it in the pod without a size limit.
+	TestCases []string `json:"testCases,omitempty"`
 }
 
 // running context for test workflow execution

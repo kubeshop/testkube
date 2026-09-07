@@ -8933,6 +8933,14 @@ components:
           description: parent execution ids
           items:
             type: string
+        testCases:
+          type: array
+          description: |
+            narrow this execution to specific test cases. Has an effect only on a
+            step declaring `testCases.select`, which is what says how the names
+            reach the test runner.
+          items:
+            type: string
 
     ExecutionTarget:
       type: object
@@ -9083,10 +9091,44 @@ components:
           $ref: "#/components/schemas/TestWorkflowExecutionConfig"
         runtime:
           $ref: "#/components/schemas/TestWorkflowExecutionRuntime"
+        rerun:
+          $ref: "#/components/schemas/TestWorkflowRerun"
       required:
         - id
         - name
         - workflow
+
+    TestWorkflowRerun:
+      type: object
+      description: |
+        narrows an execution to specific test cases, so that re-running a failed
+        suite does not repeat the tests that already passed.
+
+        It is recorded on the execution because that is how it reaches the
+        runner: the scheduler writes it here, and the runner reads it back when
+        it starts the pod. Only the reference travels - the selection itself is
+        resolved inside the pod, against the report the referenced execution
+        produced, because a suite of ten thousand test cases would not survive
+        being carried as a list.
+
+        It has an effect only on a step declaring `testCases.select`. Testkube
+        does not know any runner's filter flag by design, so without such a step
+        there is nothing for this to act on.
+      properties:
+        executionId:
+          type: string
+          description: the execution the previous results are read from
+        onlyFailed:
+          type: boolean
+          description: restrict the selection to test cases that did not pass
+        testCases:
+          type: array
+          description: |
+            an explicit selection, instead of or alongside executionId. Capped;
+            a larger selection belongs in the workflow's own `select` block,
+            which resolves it in the pod without a size limit.
+          items:
+            type: string
 
     TestWorkflowExecutionSummary:
       type: object
