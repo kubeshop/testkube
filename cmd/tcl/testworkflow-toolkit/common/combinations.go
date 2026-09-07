@@ -16,8 +16,6 @@ import (
 	"slices"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/util/intstr"
-
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -53,20 +51,21 @@ func GetMatrixValues(matrix map[string][]interface{}, index int64) map[string]in
 	return result
 }
 
-func ReadCount(s intstr.IntOrString, machines ...expressions.Machine) (int64, error) {
-	countExpr, err := expressions.CompileAndResolve(s.String(), machines...)
+func ReadCount(s testworkflowsv1.ConfigValue, machines ...expressions.Machine) (int64, error) {
+	value := s.String()
+	countExpr, err := expressions.CompileAndResolve(value, machines...)
 	if err != nil {
-		return 0, fmt.Errorf("%s: invalid: %s", s.String(), err)
+		return 0, fmt.Errorf("%s: invalid: %s", value, err)
 	}
 	if countExpr.Static() == nil {
-		return 0, fmt.Errorf("%s: could not resolve: %s", s.String(), err)
+		return 0, fmt.Errorf("%s: could not resolve", value)
 	}
 	countVal, err := countExpr.Static().IntValue()
 	if err != nil {
-		return 0, fmt.Errorf("%s: could not convert to int: %s", s.String(), err)
+		return 0, fmt.Errorf("%s: could not convert to int: %s", value, err)
 	}
 	if countVal < 0 {
-		return 0, fmt.Errorf("%s: should not be lower than zero", s.String())
+		return 0, fmt.Errorf("%s: should not be lower than zero", value)
 	}
 	return countVal, nil
 }
@@ -222,7 +221,7 @@ func (p *ParamsSpec) Humanize() string {
 	return fmt.Sprintf("%d executions requested: %s", p.Count, strings.Join(infos, ", "))
 }
 
-func GetParamsSpec(origMatrix map[string]testworkflowsv1.DynamicList, origShards map[string]testworkflowsv1.DynamicList, origCount *intstr.IntOrString, origMaxCount *intstr.IntOrString, machines ...expressions.Machine) (*ParamsSpec, error) {
+func GetParamsSpec(origMatrix map[string]testworkflowsv1.DynamicList, origShards map[string]testworkflowsv1.DynamicList, origCount *testworkflowsv1.ConfigValue, origMaxCount *testworkflowsv1.ConfigValue, machines ...expressions.Machine) (*ParamsSpec, error) {
 	// Resolve the shards and matrix
 	shards, err := readParams(origShards, machines...)
 	if err != nil {
