@@ -8,6 +8,8 @@ import (
 
 func RunRepositoryTests(t *testing.T, repo testworkflow.Repository) {
 	t.Run("InsertAndGet", func(t *testing.T) { testInsertAndGet(t, repo) })
+	t.Run("InsertAndGetRerun", func(t *testing.T) { testInsertAndGetRerun(t, repo) })
+	t.Run("InsertAndGetWithoutRerun", func(t *testing.T) { testInsertAndGetWithoutRerun(t, repo) })
 	t.Run("GetByNameAndTestWorkflow", func(t *testing.T) { testGetByNameAndTestWorkflow(t, repo) })
 	t.Run("GetWithRunner", func(t *testing.T) { testGetWithRunner(t, repo) })
 	t.Run("Update", func(t *testing.T) { testUpdate(t, repo) })

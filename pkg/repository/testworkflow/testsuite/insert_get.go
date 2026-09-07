@@ -71,3 +71,49 @@ func testGetWithRunner(t *testing.T, repo testworkflow.Repository) {
 
 	assert.Equal(t, execution.Id, got.Id)
 }
+
+// testInsertAndGetRerun covers the field that carries a rerun selection from
+// the scheduler to the runner.
+//
+// It has to survive a round trip through storage, because that round trip *is*
+// the delivery mechanism: the scheduler writes it onto the execution and the
+// runner reads it back when it starts the pod. If it were dropped here, a
+// rerun would silently run the whole suite.
+func testInsertAndGetRerun(t *testing.T, repo testworkflow.Repository) {
+	ctx := context.Background()
+
+	execution := fixtures.NewExecution("insert-get-rerun-test",
+		fixtures.WithStatus(testkube.QUEUED_TestWorkflowStatus),
+	)
+	execution.Rerun = &testkube.TestWorkflowRerun{
+		ExecutionId: "exec-original",
+		OnlyFailed:  true,
+		TestCases:   []string{"tests.a::test_one", "tests.b::test_two"},
+	}
+
+	require.NoError(t, repo.Insert(ctx, execution))
+
+	got, err := repo.Get(ctx, execution.Id)
+	require.NoError(t, err)
+
+	require.NotNil(t, got.Rerun)
+	assert.Equal(t, "exec-original", got.Rerun.ExecutionId)
+	assert.True(t, got.Rerun.OnlyFailed)
+	assert.Equal(t, []string{"tests.a::test_one", "tests.b::test_two"}, got.Rerun.TestCases)
+}
+
+// testInsertAndGetWithoutRerun keeps the ordinary case honest: an execution
+// that is not a rerun must come back without one, rather than with an empty
+// struct a reader could mistake for a selection.
+func testInsertAndGetWithoutRerun(t *testing.T, repo testworkflow.Repository) {
+	ctx := context.Background()
+
+	execution := fixtures.NewExecution("insert-get-no-rerun-test",
+		fixtures.WithStatus(testkube.QUEUED_TestWorkflowStatus),
+	)
+	require.NoError(t, repo.Insert(ctx, execution))
+
+	got, err := repo.Get(ctx, execution.Id)
+	require.NoError(t, err)
+	assert.Nil(t, got.Rerun)
+}

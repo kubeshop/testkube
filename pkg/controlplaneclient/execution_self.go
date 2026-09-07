@@ -33,10 +33,6 @@ func (c *client) AppendExecutionReport(ctx context.Context, environmentId, execu
 		FilePath: filePath,
 		// Still sent for a control plane that predates the parsed fields. One
 		// that reads Summary should ignore it.
-		//
-		//nolint:staticcheck // the generated marker is stale: the proto comment
-		// said "Deprecated:" before it was reworded, and the field is required
-		// rather than discouraged. Drop this once the protobuf is regenerated.
 		Report: report,
 	}
 	applyReportDigest(&req, digest)

@@ -163,6 +163,15 @@ func (e *IntermediateExecution) SetSilentMode(silentMode *testkube.SilentMode) *
 	return e
 }
 
+// SetRerun records the test case selection this execution was narrowed to.
+//
+// It goes on the execution because that is how it reaches the runner: written
+// here by the scheduler, read back when the pod is started.
+func (e *IntermediateExecution) SetRerun(rerun *testkube.TestWorkflowRerun) *IntermediateExecution {
+	e.execution.Rerun = rerun
+	return e
+}
+
 // IsSilent checks if the workflow has silent set to true in its execution schema
 func (e *IntermediateExecution) IsSilent() bool {
 	if e.cr == nil {

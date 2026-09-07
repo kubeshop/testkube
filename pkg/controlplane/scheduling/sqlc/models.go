@@ -70,6 +70,7 @@ type TestWorkflowExecution struct {
 	SilentMode                *testkube.SilentMode                                 `db:"silent_mode" json:"silent_mode"`
 	WorkflowName              pgtype.Text                                          `db:"workflow_name" json:"workflow_name"`
 	Status                    pgtype.Text                                          `db:"status" json:"status"`
+	Rerun                     *testkube.TestWorkflowRerun                          `db:"rerun" json:"rerun"`
 }
 
 type TestWorkflowOutput struct {
