@@ -58,6 +58,16 @@ Still to come: Control Plane persistence and enforcement of the owner, and the `
 - Regenerate SQL code when query files change via `make generate-sqlc`.
 - Refresh mocks for new or updated interfaces using `make generate-mocks`.
 
+## Test-case results (JUnit parsing, mute, selective rerun)
+
+- `pkg/testresults/` parses test reports and decides the per-test-case verdict for a step's `testCases` block. `junit.go` streams a JUnit report token-by-token (a ten-thousand-case file is several megabytes and the init process holds the test tool's memory alongside its own); `selector.go` matches test cases by glob over `TestCase.ID()`; `verdict.go` applies mute, then the pass requirement, then `enforce`.
+- The package is **open source on purpose even though the feature is connected-mode only.** The gate is the processor preset, not a runtime capability check: an open source deployment registers `StubTestCases` and so can never emit a policy for this code to act on. Do not move the verdict into `pkg/tcl/` — the availability is commercial, the algorithm is not, and `cmd/testworkflow-init` deliberately imports nothing from `pkg/tcl`.
+- The verdict has to run in the init process (`cmd/testworkflow-init/commands/run.go`) because that is the only place a step's status is decided. Nothing the Control Plane learns afterwards can retroactively change it.
+- Two invariants that are easy to break and are covered by tests:
+  - **A report may describe more tests than it names** (`Report.Unrepresented`). `test/junit-pregenerated-reports/high-level-without-testcases.xml` declares 24 tests with 4 failures while naming one case, which passed. When identities are incomplete, mute is not applied at all and the report's own counters are believed — trusting the named cases alone turns such a report green.
+  - **A pass requirement is only meaningful over the full suite**, so `Tolerate` is evaluated only when the run was not narrowed by a selection. It deliberately does **not** accumulate across narrowing retries; that is documented behaviour with a test pinning it, not a bug to fix.
+- Fixtures are the specification for parser behaviour: `cmd/testworkflow-toolkit/common/testdata/junit.go` and `test/junit-pregenerated-reports/`. Add a case there rather than inventing XML in a test.
+
 ## Transient-failure retries
 
 - `pkg/runner/runner.go` runs `worker.Destroy` (cleanup of the execution's Secrets/Pods after the workflow ends) through the shared `retry()` helper via `destroyResources`. Bounded by `CleanupResourcesRetryCount` and `CleanupResourcesRetryDelay`; a brief `kube-apiserver` blip during teardown should not leave orphan resources in the customer namespace.
