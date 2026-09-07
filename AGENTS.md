@@ -82,6 +82,14 @@ Still to come: Control Plane persistence and enforcement of the owner, and the `
 - Adding a new CI/runtime detection: extend `pkg/cliruntime/context.go` so both telemetry and the update-check feature stay in sync.
 - Adding a new AI-tool detection: extend `DetectAITool` in `pkg/cliruntime/context.go` (add the env-var check and a `TestDetectAITool` case in `context_test.go`); no telemetry wiring changes are needed since payloads already read the `AITool` field.
 
+## CLI organization and environment resolution
+
+- `cmd/kubectl-testkube/commands/common/orgenv.go` is the single place a CLI command turns flags into a Control Plane organization and environment. New commands that accept an org/env should call it rather than reading `--org-id`/`--env-id` themselves.
+- Two entry points: `ResolveOrgAndEnvIDs` applies the full precedence chain (explicit id, then name, then the interactive selector) and suits commands that can prompt; `ResolveNamedOrgAndEnv` only converts names that were supplied and never prompts, for commands like `set context` and `pro connect` that treat a missing org/env as valid input.
+- `ResolveOrgID` / `ResolveEnvID` (`common/organizations.go`, `common/environments.go`) do the name lookup. Matching is exact and case-sensitive, mirroring the interactive selector; an environment name falls back to `Environment.Slug`. A name matching nothing, or more than one record, is an error listing the alternatives — display names carry no uniqueness guarantee, so a duplicate must never resolve to an arbitrary pick.
+- `selectorInteractive` gates the selectors on a TTY. `ui.Select` discards pterm's error, so on a non-interactive stream it returns an empty id that only fails much later; the gate turns that into an immediate error naming the flag to pass. It is a var so tests can override it, matching `hintsEnabled` in `common/uihints.go`.
+- `common.ControlPlaneAPIURI` (`common/flags.go`) chooses the host a lookup talks to. `ProcessMasterFlags` composes its URI from prefixes and a root domain and so yields the SaaS host when no flag is given; anything looking up organizations or environments for an already-configured Control Plane must go through this helper instead of using `opts.Master.URIs.Api` directly.
+
 ## On-prem demo install
 
 - `testkube init demo` (`cmd/kubectl-testkube/commands/init.go`) installs the On-Prem demo on the new architecture: the Control Plane (enterprise chart + `values.demo.v2.yaml`) plus a **separate** listener-enabled runner (`kubeshop/testkube-runner`). The bundled agent is gone.
