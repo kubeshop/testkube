@@ -370,10 +370,10 @@ func (m *notificationStreamSessionManager[Request]) runSweeper(interval time.Dur
 	}
 }
 
-// addReplayBytes applies a signed byte delta to the gauge. Adds are matched by
-// their own release deltas, so overlapping managers of the same kind (e.g. a
-// new manager built on gRPC reconnect while an old one's sessions still drain)
-// sum correctly and the gauge nets back to zero once every session drops.
+// addReplayBytes applies a signed byte delta to the gauge. Every session of one
+// kind shares the gauge, and each add is matched by that session's own release
+// delta, so the gauge is the live total across sessions and returns to zero
+// once every session drops, with no manager-wide recount.
 func (m *notificationStreamSessionManager[Request]) addReplayBytes(delta int) {
 	if delta == 0 {
 		return

@@ -3,10 +3,14 @@ package controlplaneclient
 import (
 	"context"
 	"errors"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	gomock "go.uber.org/mock/gomock"
@@ -647,5 +651,298 @@ func TestNotificationStreamSessionReplacementCancelsOrphanedSource(t *testing.T)
 	case <-firstSource.Done():
 	case <-time.After(2 * time.Second):
 		t.Fatal("replaced session source context was not cancelled")
+	}
+}
+
+// newMetricsTestSessionManager builds a manager whose kind label is the test name.
+// The metrics live on the shared default registry, so a unique kind keeps each
+// test's readings apart from the other tests in the package.
+func newMetricsTestSessionManager(t *testing.T, process func(context.Context, *cloud.TestWorkflowNotificationsRequest) NotificationWatcher) *notificationStreamSessionManager[*cloud.TestWorkflowNotificationsRequest] {
+	t.Helper()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	return newNotificationStreamSessionManager(
+		ctx,
+		t.Name(),
+		func(req *cloud.TestWorkflowNotificationsRequest) string { return req.ExecutionId },
+		process,
+	)
+}
+
+// blockingNotificationSource returns a process function whose watcher sends one
+// log line and then stays open until the test finishes the execution id, with
+// the error the source should end with.
+func blockingNotificationSource(t *testing.T) (func(context.Context, *cloud.TestWorkflowNotificationsRequest) NotificationWatcher, func(executionID string, err error)) {
+	t.Helper()
+
+	type sourceEnd struct {
+		err  error
+		done chan struct{}
+	}
+	var mu sync.Mutex
+	ends := make(map[string]*sourceEnd)
+	process := func(_ context.Context, req *cloud.TestWorkflowNotificationsRequest) NotificationWatcher {
+		end := &sourceEnd{done: make(chan struct{})}
+		mu.Lock()
+		ends[req.ExecutionId] = end
+		mu.Unlock()
+		watcher := channels.NewWatcher[*testkube.TestWorkflowExecutionNotification]()
+		go func() {
+			watcher.Send(&testkube.TestWorkflowExecutionNotification{Log: "line"})
+			<-end.done
+			watcher.Close(end.err)
+		}()
+		return watcher
+	}
+	// finish waits for the source, because runSource starts it on its own goroutine.
+	finish := func(executionID string, err error) {
+		var end *sourceEnd
+		require.Eventually(t, func() bool {
+			mu.Lock()
+			defer mu.Unlock()
+			end = ends[executionID]
+			return end != nil
+		}, 2*time.Second, time.Millisecond, "no source was started for %q", executionID)
+		end.err = err
+		close(end.done)
+	}
+	t.Cleanup(func() {
+		mu.Lock()
+		defer mu.Unlock()
+		for _, end := range ends {
+			select {
+			case <-end.done:
+			default:
+				close(end.done)
+			}
+		}
+	})
+	return process, finish
+}
+
+func metricValue(t *testing.T, collector prometheus.Collector) float64 {
+	t.Helper()
+	return testutil.ToFloat64(collector)
+}
+
+// histogramSampleCount reads one label set's sample count. testutil.CollectAndCount
+// on a curried vector counts every label set in the vector, so it cannot isolate a
+// single kind on the shared registry.
+func histogramSampleCount(t *testing.T, observer prometheus.Observer) uint64 {
+	t.Helper()
+
+	var metric dto.Metric
+	require.NoError(t, observer.(prometheus.Metric).Write(&metric))
+	return metric.GetHistogram().GetSampleCount()
+}
+
+func sessionReplayBytes(session *notificationStreamSession) int {
+	session.mu.Lock()
+	defer session.mu.Unlock()
+	return session.replayBytes
+}
+
+func waitForNotificationSessionDone(t *testing.T, session *notificationStreamSession) {
+	t.Helper()
+
+	require.Eventually(t, func() bool {
+		done, _ := session.status()
+		return done
+	}, 2*time.Second, time.Millisecond)
+}
+
+func TestNotificationStreamSessionManagerMetricsFollowSessionLifecycle(t *testing.T) {
+	process, finish := blockingNotificationSource(t)
+	manager := newMetricsTestSessionManager(t, process)
+	manager.sessionIdleTTL = time.Minute
+	kind := manager.kind
+
+	// A fresh attach creates one active session with one subscriber.
+	session, sub, _, _, _, _ := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
+	assert.Equal(t, float64(1), metricValue(t, liveLogSessionsCreatedTotal.WithLabelValues(kind)))
+	assert.Equal(t, float64(1), metricValue(t, liveLogSessions.WithLabelValues(kind, "active")))
+	assert.Equal(t, float64(0), metricValue(t, liveLogSessions.WithLabelValues(kind, "done")))
+	assert.Equal(t, float64(1), metricValue(t, liveLogSubscribers.WithLabelValues(kind)))
+
+	// A second viewer that resumes the same stream shares the session.
+	_, sub2, _, _, _, _ := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1", ResumeAfterSeqNo: 1})
+	assert.Equal(t, float64(1), metricValue(t, liveLogSessionsCreatedTotal.WithLabelValues(kind)))
+	assert.Equal(t, float64(2), metricValue(t, liveLogSubscribers.WithLabelValues(kind)))
+
+	// The source ends: the session moves from active to done and records its duration.
+	finish("exec-1", nil)
+	waitForNotificationSessionDone(t, session)
+	require.Eventually(t, func() bool {
+		return metricValue(t, liveLogSessions.WithLabelValues(kind, "active")) == 0 &&
+			metricValue(t, liveLogSessions.WithLabelValues(kind, "done")) == 1 &&
+			histogramSampleCount(t, liveLogSourceDurationSeconds.WithLabelValues(kind)) == 1
+	}, 2*time.Second, time.Millisecond)
+	assert.Greater(t, metricValue(t, liveLogReplayBytes.WithLabelValues(kind)), float64(0))
+
+	// Viewers leave: the subscriber gauge returns to zero.
+	manager.detach(session, sub)
+	manager.detach(session, sub2)
+	assert.Equal(t, float64(0), metricValue(t, liveLogSubscribers.WithLabelValues(kind)))
+
+	// The idle TTL passes: the sweep evicts the done session and frees its buffer.
+	manager.sweepExpired(time.Now().Add(2 * manager.sessionIdleTTL))
+	assert.Equal(t, float64(0), metricValue(t, liveLogSessions.WithLabelValues(kind, "done")))
+	assert.Equal(t, float64(1), metricValue(t, liveLogSessionsEvictedTotal.WithLabelValues(kind, "ttl")))
+	assert.Equal(t, float64(0), metricValue(t, liveLogReplayBytes.WithLabelValues(kind)))
+}
+
+func TestNotificationStreamSessionManagerReplayBytesGaugeTracksBufferedBytes(t *testing.T) {
+	process, finish := blockingNotificationSource(t)
+	manager := newMetricsTestSessionManager(t, process)
+	manager.sessionIdleTTL = time.Minute
+	kind := manager.kind
+	gauge := func() float64 { return metricValue(t, liveLogReplayBytes.WithLabelValues(kind)) }
+
+	// The viewers leave at once: this test only reads the replay buffer, and an
+	// unread subscription would block publish once its channel fills.
+	first, firstSub, _, _, _, _ := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
+	manager.detach(first, firstSub)
+
+	// The source's first line lands in the buffer before the test publishes more,
+	// so every later reading compares a settled session against the gauge.
+	require.Eventually(t, func() bool { return sessionReplayBytes(first) > 0 }, 2*time.Second, time.Millisecond)
+	assert.Equal(t, float64(sessionReplayBytes(first)), gauge())
+
+	// Every buffered notification adds its size to the gauge.
+	first.publish(&testkube.TestWorkflowExecutionNotification{Log: "hello"})
+	assert.Equal(t, float64(sessionReplayBytes(first)), gauge())
+
+	// Once the buffer trims old events, the gauge follows the trimmed total.
+	for i := 0; i < workflowNotificationReplayMaxEvents; i++ {
+		first.publish(&testkube.TestWorkflowExecutionNotification{Log: "fill"})
+	}
+	first.mu.Lock()
+	replayLen := len(first.replay)
+	first.mu.Unlock()
+	require.Equal(t, workflowNotificationReplayMaxEvents, replayLen)
+	firstBytes := sessionReplayBytes(first)
+	assert.Equal(t, float64(firstBytes), gauge())
+
+	// Sessions of one kind share the gauge, so a second session adds to it.
+	second, secondSub, _, _, _, _ := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-2", StreamId: "stream-2"})
+	manager.detach(second, secondSub)
+	require.Eventually(t, func() bool { return sessionReplayBytes(second) > 0 }, 2*time.Second, time.Millisecond)
+	second.publish(&testkube.TestWorkflowExecutionNotification{Log: "second"})
+	secondBytes := sessionReplayBytes(second)
+	assert.Equal(t, float64(firstBytes+secondBytes), gauge())
+
+	// When the sweep evicts one session, the gauge drops by that session's bytes only.
+	finish("exec-1", nil)
+	waitForNotificationSessionDone(t, first)
+	manager.sweepExpired(time.Now().Add(2 * manager.sessionIdleTTL))
+	assert.Equal(t, float64(secondBytes), gauge())
+
+	// When the sweep evicts the last session, the gauge returns to zero.
+	finish("exec-2", nil)
+	waitForNotificationSessionDone(t, second)
+	manager.sweepExpired(time.Now().Add(2 * manager.sessionIdleTTL))
+	assert.Equal(t, float64(0), gauge())
+}
+
+func TestNotificationStreamSessionManagerResumeMetricsCountResult(t *testing.T) {
+	tests := []struct {
+		name        string
+		prepare     func(t *testing.T, manager *notificationStreamSessionManager[*cloud.TestWorkflowNotificationsRequest])
+		req         *cloud.TestWorkflowNotificationsRequest
+		available   float64
+		unavailable float64
+	}{
+		{
+			name: "resume inside the replay buffer is available",
+			prepare: func(t *testing.T, manager *notificationStreamSessionManager[*cloud.TestWorkflowNotificationsRequest]) {
+				session, sub, _, _, _, _ := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
+				t.Cleanup(func() { manager.detach(session, sub) })
+				session.publish(&testkube.TestWorkflowExecutionNotification{Log: "two"})
+			},
+			req:         &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1", ResumeAfterSeqNo: 1},
+			available:   1,
+			unavailable: 0,
+		},
+		{
+			name:        "resume without a session is unavailable",
+			prepare:     func(*testing.T, *notificationStreamSessionManager[*cloud.TestWorkflowNotificationsRequest]) {},
+			req:         &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1", ResumeAfterSeqNo: 5},
+			available:   0,
+			unavailable: 1,
+		},
+		{
+			name:        "start from zero is not a resume",
+			prepare:     func(*testing.T, *notificationStreamSessionManager[*cloud.TestWorkflowNotificationsRequest]) {},
+			req:         &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"},
+			available:   0,
+			unavailable: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			process, _ := blockingNotificationSource(t)
+			manager := newMetricsTestSessionManager(t, process)
+			kind := manager.kind
+			tt.prepare(t, manager)
+
+			session, sub, _, _, _, _ := manager.attach(tt.req)
+			t.Cleanup(func() { manager.detach(session, sub) })
+
+			assert.Equal(t, tt.available, metricValue(t, liveLogResumeTotal.WithLabelValues(kind, "available")))
+			assert.Equal(t, tt.unavailable, metricValue(t, liveLogResumeTotal.WithLabelValues(kind, "unavailable")))
+		})
+	}
+}
+
+func TestNotificationStreamSessionManagerEvictionMetricsCountReason(t *testing.T) {
+	tests := []struct {
+		name      string
+		sourceErr error
+		evict     func(t *testing.T, manager *notificationStreamSessionManager[*cloud.TestWorkflowNotificationsRequest])
+		reason    string
+	}{
+		{
+			name:      "idle TTL sweep evicts a done session",
+			sourceErr: nil,
+			evict: func(t *testing.T, manager *notificationStreamSessionManager[*cloud.TestWorkflowNotificationsRequest]) {
+				manager.sweepExpired(time.Now().Add(2 * manager.sessionIdleTTL))
+			},
+			reason: "ttl",
+		},
+		{
+			name:      "resume after a failed source evicts the errored session",
+			sourceErr: errors.New("source failed"),
+			evict: func(t *testing.T, manager *notificationStreamSessionManager[*cloud.TestWorkflowNotificationsRequest]) {
+				session, sub, _, _, _, _ := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1", ResumeAfterSeqNo: 1})
+				t.Cleanup(func() { manager.detach(session, sub) })
+			},
+			reason: "error",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			process, finish := blockingNotificationSource(t)
+			manager := newMetricsTestSessionManager(t, process)
+			manager.sessionIdleTTL = time.Minute
+			kind := manager.kind
+
+			session, sub, _, _, _, _ := manager.attach(&cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
+			finish("exec-1", tt.sourceErr)
+			waitForNotificationSessionDone(t, session)
+			manager.detach(session, sub)
+			require.Eventually(t, func() bool {
+				return metricValue(t, liveLogSessions.WithLabelValues(kind, "done")) == 1
+			}, 2*time.Second, time.Millisecond)
+
+			tt.evict(t, manager)
+
+			assert.Equal(t, float64(1), metricValue(t, liveLogSessionsEvictedTotal.WithLabelValues(kind, tt.reason)))
+			assert.Equal(t, float64(0), metricValue(t, liveLogSessions.WithLabelValues(kind, "done")))
+			manager.mu.Lock()
+			current := manager.sessions["exec-1:stream-1"]
+			manager.mu.Unlock()
+			assert.NotSame(t, session, current, "evicted session must leave the manager")
+		})
 	}
 }
