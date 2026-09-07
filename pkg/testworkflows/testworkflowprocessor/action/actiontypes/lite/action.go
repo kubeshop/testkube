@@ -58,6 +58,7 @@ type ActionTestCasesTolerance struct {
 
 type ActionTestCasesSelect struct {
 	From         string   `json:"f,omitempty"`
+	Paths        []string `json:"pt,omitempty"`
 	Status       []string `json:"st,omitempty"`
 	Include      []string `json:"in,omitempty"`
 	Exclude      []string `json:"ex,omitempty"`

@@ -145,15 +145,16 @@ func TestProcessTestCases_AcceptsASelection(t *testing.T) {
 }
 
 func TestProcessTestCases_RejectsUnavailableSelectionSources(t *testing.T) {
-	t.Run("step reference", func(t *testing.T) {
-		// Resolving a step reference needs the whole workflow, which an
-		// Operation is not handed. Refusing beats silently running everything.
+	t.Run("step reference points at the simpler way", func(t *testing.T) {
+		// A step reference would need the whole workflow to resolve, and is
+		// unnecessary: the steps share a file system, so the error names the
+		// field that does the same job rather than only refusing.
 		err := processStep(&testworkflowsv1.StepTestCases{
 			Report: report(),
 			Select: &testworkflowsv1.TestCaseSelection{From: "step:first_pass"},
 		})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "not available yet")
+		assert.Contains(t, err.Error(), "select.paths")
 	})
 
 	t.Run("unknown source", func(t *testing.T) {

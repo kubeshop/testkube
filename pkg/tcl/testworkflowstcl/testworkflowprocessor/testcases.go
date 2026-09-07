@@ -116,7 +116,12 @@ func validateSelection(selection *testworkflowsv1.TestCaseSelection) error {
 	case "", SelectFromSelf:
 	default:
 		if strings.HasPrefix(from, "step:") {
-			return fmt.Errorf("testCases: select.from %q is not available yet; only %q is supported today", from, SelectFromSelf)
+			// A step reference would need the whole workflow to resolve, which
+			// an Operation is not handed. It is also unnecessary: the steps
+			// share a file system, so pointing select.paths at the other step's
+			// report does the same job without a reference between them.
+			return fmt.Errorf("testCases: select.from %q is not supported; to re-run what another step failed, "+
+				"set select.paths to that step's report.paths instead", from)
 		}
 		return fmt.Errorf("testCases: select.from %q is not a known source; use %q", from, SelectFromSelf)
 	}

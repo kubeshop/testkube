@@ -287,3 +287,61 @@ func TestNarrowingRetry_AcrossTwoAttempts(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, third.Narrowed, "nothing failed, so there is nothing left to narrow to")
 }
+
+// TestResolveSelection_ReRunsAnotherStepsFailures covers the second in-execution
+// shape: a later step that re-runs what an earlier one failed.
+//
+// The two steps share a file system, so this needs no reference between them -
+// and it is why the selection reads its own paths rather than the step's report
+// paths. A shared path could not work: the verdict has to judge *this* step's
+// report while the selection draws from the other one.
+func TestResolveSelection_ReRunsAnotherStepsFailures(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "first.xml"), []byte(previousAttempt), 0o600))
+
+	policy := &lite.ActionTestCases{
+		// This step's own report, which does not exist yet - the tool is about
+		// to write it, and the verdict will read it afterwards.
+		ReportPaths: []string{"second.xml"},
+		Select: &lite.ActionTestCasesSelect{
+			Paths: []string{"first.xml"},
+			As:    `{{ testcase.name }}`,
+			Empty: "skip",
+		},
+	}
+
+	selection, err := resolveTestCaseSelection(policy, dir)
+	require.NoError(t, err)
+	assert.True(t, selection.Narrowed)
+	assert.Equal(t, []string{"test_flaky_a", "test_real_bug", "test_boom"}, selection.Entries,
+		"the earlier step's failures, even though this step has written nothing")
+
+	// The tool re-runs them and two now pass; the verdict reads this step's own
+	// report, not the one the selection came from.
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "second.xml"), []byte(`<testsuite name="s" tests="3">
+  <testcase name="test_flaky_a" classname="tests.a"/>
+  <testcase name="test_real_bug" classname="tests.b"/>
+  <testcase name="test_boom" classname="tests.b"><error message="still broken"/></testcase>
+</testsuite>`), 0o600))
+
+	outcome := applyTestCases(policy, dir, 1, selection.Narrowed)
+	require.NotNil(t, outcome.Results)
+	assert.Equal(t, int32(3), outcome.Results.Tests, "the verdict judged the re-run, not the first pass")
+	assert.Equal(t, int32(1), outcome.Results.Unexpected)
+	assert.False(t, outcome.Success)
+}
+
+func TestResolveSelection_EmptyWhenTheOtherStepPassedEverything(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "first.xml"),
+		[]byte(`<testsuite name="s" tests="1"><testcase name="ok" classname="c"/></testsuite>`), 0o600))
+
+	selection, err := resolveTestCaseSelection(&lite.ActionTestCases{
+		ReportPaths: []string{"second.xml"},
+		Select:      &lite.ActionTestCasesSelect{Paths: []string{"first.xml"}, Empty: "skip"},
+	}, dir)
+	require.NoError(t, err)
+
+	assert.False(t, selection.Narrowed,
+		"nothing failed, so `empty: skip` will skip the re-run step entirely")
+}

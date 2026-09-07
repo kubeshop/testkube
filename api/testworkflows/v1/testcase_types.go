@@ -86,17 +86,25 @@ type TestCaseTolerance struct {
 // TestCaseSelection narrows a run to specific test cases, so a retry re-runs
 // only what failed instead of the whole suite.
 type TestCaseSelection struct {
-	// where the previous results come from. Defaults to self.
-	//
-	// self is this step's own previous retry attempt, which is what makes a
-	// retry re-run only what failed: the selection is resolved before the
-	// command and the verdict after it, so for a tool that overwrites its
-	// report the file holds the previous attempt's results exactly when the
-	// selection reads it.
-	//
-	// Referring to another step, or to another execution, is not available yet.
+	// which execution the previous results come from. Defaults to self, this
+	// execution. Reading another execution's results is not available yet.
 	// +kubebuilder:validation:Enum=self
 	From string `json:"from,omitempty" expr:"template"`
+
+	// report paths the selection reads the previous results from, defaulting to
+	// report.paths - this step's own previous attempt.
+	//
+	// Leaving it unset is what makes a retry re-run only what failed: the
+	// selection is resolved before the command and the verdict after it, so for
+	// a tool that overwrites its report the file holds the previous attempt's
+	// results exactly when the selection reads it, and this attempt's by the
+	// time the verdict does.
+	//
+	// Point it at an earlier step's report to re-run what *that* step failed.
+	// The two steps share a file system, so this needs no reference between
+	// them - and it keeps the file the selection reads separate from the one
+	// the verdict judges, which a shared path could not.
+	Paths []string `json:"paths,omitempty" expr:"template"`
 
 	// which outcomes to take; defaults to failed and errored
 	// +kubebuilder:validation:items:Enum=failed;errored;skipped

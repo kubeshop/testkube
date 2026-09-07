@@ -42,6 +42,7 @@ func buildTestCasesAction(policy *testworkflowsv1.StepTestCases) *lite.ActionTes
 	if policy.Select != nil {
 		action.Select = &lite.ActionTestCasesSelect{
 			From:         policy.Select.From,
+			Paths:        policy.Select.Paths,
 			Status:       policy.Select.Status,
 			Include:      policy.Select.Include,
 			Exclude:      policy.Select.Exclude,

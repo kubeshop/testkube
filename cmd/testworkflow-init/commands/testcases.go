@@ -57,7 +57,16 @@ func resolveTestCaseSelection(policy *lite.ActionTestCases, workingDir string) (
 		return selection, nil
 	}
 
-	report, found, err := readTestReport(policy.ReportPaths, workingDir)
+	// The selection reads its own paths when given some, which is how a step
+	// re-runs what an *earlier* step failed: the verdict still judges this
+	// step's report, while the selection draws from the other one. Defaulting
+	// to the step's own report is `from: self` - the narrowing retry.
+	sourcePaths := policy.Select.Paths
+	if len(sourcePaths) == 0 {
+		sourcePaths = policy.ReportPaths
+	}
+
+	report, found, err := readTestReport(sourcePaths, workingDir)
 	if err != nil {
 		return nil, fmt.Errorf("reading the previous report: %w", err)
 	}
