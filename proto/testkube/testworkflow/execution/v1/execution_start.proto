@@ -3,6 +3,7 @@ edition = "2023";
 package testkube.testworkflow.execution.v1;
 
 import "google/protobuf/timestamp.proto";
+import "testkube/testworkflow/execution/v1/rerun_policy.proto";
 
 // ExecutionStart contains fields used to initially start an Execution.
 message ExecutionStart {
@@ -40,4 +41,7 @@ message ExecutionStart {
   // tags contains execution-level metadata tags forwarded to the runner so
   // expressions like execution.tags.<key> can be resolved in all start paths.
   map<string, string> tags = 12;
+  // rerun narrows this Execution to specific test cases. Unset for an ordinary
+  // execution, which runs everything.
+  RerunPolicy rerun = 13;
 }

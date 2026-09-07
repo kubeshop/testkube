@@ -30,4 +30,13 @@ message ExecutionRunningContext {
   // populate the child's RunningContext.Name so downstream reads stay
   // consistent with the parent's identity.
   string actor_name = 2;
+  // execution_reference mirrors TestWorkflowRunningContextActor.ExecutionReference:
+  // the execution this one is a rerun of.
+  //
+  // Without it the accessor execution.runningContext.actor.executionReference
+  // resolves to empty inside the pod on this start path, because
+  // runningContextFromProto can only carry across what this message declares.
+  // The legacy path fills it from the execution record, so a workflow reading
+  // that accessor behaves differently depending on which path started it.
+  string execution_reference = 3;
 }

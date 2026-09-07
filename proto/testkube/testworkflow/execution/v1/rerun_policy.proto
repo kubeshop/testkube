@@ -1,0 +1,29 @@
+edition = "2023";
+
+package testkube.testworkflow.execution.v1;
+
+// RerunPolicy narrows an Execution to specific test cases, so that re-running a
+// failed suite does not repeat the tests that already passed.
+//
+// It only takes effect for a step that declares `testCases.select`. Testkube
+// deliberately does not know any runner's filter flag, so the workflow itself
+// has to say how the selected test case names reach the tool; without such a
+// step there is nothing for this to act on.
+//
+// The selection is resolved inside the pod, from the report the referenced
+// execution produced, rather than being expanded here. A suite of ten thousand
+// test cases would not survive being carried as a list through the scheduling
+// path, and the pod is where the report already is.
+message RerunPolicy {
+  // execution_id is where the previous results are read from - the Execution
+  // being rerun. The Control Plane must confirm it belongs to the caller's
+  // environment before honouring it, or this becomes a way to read another
+  // environment's artifacts.
+  string execution_id = 1;
+  // only_failed restricts the selection to test cases that did not pass.
+  bool only_failed = 2;
+  // test_cases is an explicit selection, instead of or alongside execution_id.
+  // Capped by the Control Plane; a larger selection belongs in the workflow's
+  // own `select` block, which has no such limit.
+  repeated string test_cases = 3;
+}

@@ -386,6 +386,26 @@ message SilentMode {
   bool cdevents = 5;
 }
 
+// RerunPolicy narrows an execution to specific test cases, so that re-running a
+// failed suite does not repeat the tests that already passed.
+//
+// It only takes effect for a step that declares `testCases.select`: Testkube
+// deliberately does not know any runner's filter flag, so the workflow has to
+// say how selected test case names reach the tool. A request carrying this for
+// a workflow with no such step is rejected rather than silently running
+// everything.
+message RerunPolicy {
+  // execution_id is where the previous results are read from - the execution
+  // being rerun. Must be in the caller's environment.
+  string execution_id = 1;
+  // only_failed restricts the selection to test cases that did not pass.
+  bool only_failed = 2;
+  // test_cases is an explicit selection, instead of or alongside execution_id.
+  // Capped by the server; a larger selection belongs in the workflow's own
+  // `select` block, which resolves it inside the pod without a size limit.
+  repeated string test_cases = 3;
+}
+
 message ScheduleRequest {
   // Test Workflow details
   repeated ScheduleExecution executions = 2;
@@ -408,6 +428,9 @@ message ScheduleRequest {
 
   // Silent mode settings
   optional SilentMode silent_mode = 12;
+
+  // Narrow the execution to specific test cases
+  optional RerunPolicy rerun = 13;
 }
 
 message ScheduleResponse {
@@ -637,11 +660,55 @@ message ListExecutionArtifactsPresignedResponse {
   repeated ExecutionArtifactRef artifacts = 1;
 }
 
+// TestReportSummary counts the test cases in a report, after the step's mute
+// patterns and pass requirement were applied.
+message TestReportSummary {
+  int32 tests = 1;
+  int32 passed = 2;
+  int32 failed = 3;
+  int32 skipped = 4;
+  int32 errored = 5;
+  int64 duration = 6; // milliseconds
+  // muted is how many failing test cases the step's mute patterns covered.
+  int32 muted = 7;
+  // unexpected is how many they did not.
+  int32 unexpected = 8;
+  // tolerated is whether the step met its pass requirement.
+  bool tolerated = 9;
+}
+
+// TestCaseFailure is a single test case that did not pass.
+message TestCaseFailure {
+  // id is the canonical address, "<suite>/<classname>/<name>".
+  string id = 1;
+  // status is failed, errored or skipped.
+  string status = 2;
+  // muted is whether the step's mute patterns covered it, so it did not count
+  // against the step.
+  bool muted = 3;
+  // message is the failure text, truncated.
+  string message = 4;
+}
+
 message AppendExecutionReportRequest {
   string id = 1;
   string step = 2;
   string file_path = 3;
-  bytes report = 4; // TODO: avoid sending report - it could be fetched directly from the artifact instead
+  // Deprecated: the raw report. The agent parses it in the pod now - it has to,
+  // because muting decides the step's verdict and only the pod can still change
+  // it - so the fields below carry the parse and this is redundant. Still sent
+  // for a control plane that predates them; a server that reads `summary`
+  // should ignore it.
+  bytes report = 4;
+
+  // kind is the report format that was parsed, e.g. "junit".
+  string kind = 5;
+  TestReportSummary summary = 6;
+  // failures are the test cases that did not pass. Capped, with
+  // failures_truncated set when the cap was reached; the complete set is always
+  // in the report file at file_path.
+  repeated TestCaseFailure failures = 7;
+  bool failures_truncated = 8;
 }
 
 message AppendExecutionReportResponse {
