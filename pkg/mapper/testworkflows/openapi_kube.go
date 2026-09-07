@@ -1379,11 +1379,12 @@ func MapStepAPIToKube(v testkube.TestWorkflowStep) testworkflowsv1.Step {
 			WorkingDir: MapBoxedStringToString(v.WorkingDir),
 			Container:  common.MapPtr(v.Container, MapContainerConfigAPIToKube),
 		},
-		Use:      common.MapSlice(v.Use, MapTemplateRefAPIToKube),
-		Template: common.MapPtr(v.Template, MapTemplateRefAPIToKube),
-		Setup:    common.MapSlice(v.Setup, MapStepAPIToKube),
-		Steps:    common.MapSlice(v.Steps, MapStepAPIToKube),
-		Parallel: common.MapPtr(v.Parallel, MapStepParallelAPIToKube),
+		TestCases: common.MapPtr(v.TestCases, MapStepTestCasesAPIToKube),
+		Use:       common.MapSlice(v.Use, MapTemplateRefAPIToKube),
+		Template:  common.MapPtr(v.Template, MapTemplateRefAPIToKube),
+		Setup:     common.MapSlice(v.Setup, MapStepAPIToKube),
+		Steps:     common.MapSlice(v.Steps, MapStepAPIToKube),
+		Parallel:  common.MapPtr(v.Parallel, MapStepParallelAPIToKube),
 	}
 }
 
@@ -1417,9 +1418,10 @@ func MapIndependentStepAPIToKube(v testkube.TestWorkflowIndependentStep) testwor
 			WorkingDir: MapBoxedStringToString(v.WorkingDir),
 			Container:  common.MapPtr(v.Container, MapContainerConfigAPIToKube),
 		},
-		Setup:    common.MapSlice(v.Setup, MapIndependentStepAPIToKube),
-		Steps:    common.MapSlice(v.Steps, MapIndependentStepAPIToKube),
-		Parallel: common.MapPtr(v.Parallel, MapIndependentStepParallelAPIToKube),
+		TestCases: common.MapPtr(v.TestCases, MapStepTestCasesAPIToKube),
+		Setup:     common.MapSlice(v.Setup, MapIndependentStepAPIToKube),
+		Steps:     common.MapSlice(v.Steps, MapIndependentStepAPIToKube),
+		Parallel:  common.MapPtr(v.Parallel, MapIndependentStepParallelAPIToKube),
 	}
 }
 
@@ -1875,5 +1877,67 @@ func MapTestWorkflowExecutionHealthAPIToKube(h *testkube.TestWorkflowExecutionHe
 func MapTestWorkflowStatusSummaryAPIToKube(v testkube.TestWorkflowStatusSummary) testworkflowsv1.TestWorkflowStatusSummary {
 	return testworkflowsv1.TestWorkflowStatusSummary{
 		Health: MapTestWorkflowExecutionHealthAPIToKube(v.Health),
+	}
+}
+
+func MapTestCaseReportAPIToKube(v testkube.TestWorkflowTestCaseReport) testworkflowsv1.TestCaseReport {
+	return testworkflowsv1.TestCaseReport{
+		Format:    v.Format,
+		Paths:     v.Paths,
+		OnMissing: v.OnMissing,
+	}
+}
+
+func MapTestCaseSelectorAPIToKube(v testkube.TestWorkflowTestCaseSelector) testworkflowsv1.TestCaseSelector {
+	return testworkflowsv1.TestCaseSelector{
+		Include: v.Include,
+		Exclude: v.Exclude,
+	}
+}
+
+// MapTestCaseToleranceAPIToKube converts the pass requirement.
+//
+// The thresholds are boxed on the wire so that an unset requirement stays
+// distinguishable from a zero one - `maxFailed: 0` means "tolerate nothing",
+// which is a different statement from not asking at all.
+func MapTestCaseToleranceAPIToKube(v testkube.TestWorkflowTestCaseTolerance) testworkflowsv1.TestCaseTolerance {
+	return testworkflowsv1.TestCaseTolerance{
+		MaxFailed:        MapBoxedIntegerToInt32(v.MaxFailed),
+		MaxFailedPercent: MapBoxedIntegerToInt32(v.MaxFailedPercent),
+		MinPassed:        MapBoxedIntegerToInt32(v.MinPassed),
+		MinPassedPercent: MapBoxedIntegerToInt32(v.MinPassedPercent),
+	}
+}
+
+func MapTestCaseSelectionWriteAPIToKube(v testkube.TestWorkflowTestCaseSelectionWrite) testworkflowsv1.TestCaseSelectionWrite {
+	return testworkflowsv1.TestCaseSelectionWrite{
+		Path:      v.Path,
+		Separator: v.Separator,
+	}
+}
+
+func MapTestCaseSelectionAPIToKube(v testkube.TestWorkflowTestCaseSelection) testworkflowsv1.TestCaseSelection {
+	return testworkflowsv1.TestCaseSelection{
+		From:         v.From,
+		Paths:        v.Paths,
+		Status:       v.Status,
+		Include:      v.Include,
+		Exclude:      v.Exclude,
+		Cases:        v.Cases,
+		IncludeMuted: v.IncludeMuted,
+		As:           v.As,
+		Collapse:     v.Collapse,
+		Write:        common.MapPtr(v.Write, MapTestCaseSelectionWriteAPIToKube),
+		Empty:        v.Empty,
+	}
+}
+
+func MapStepTestCasesAPIToKube(v testkube.TestWorkflowStepTestCases) testworkflowsv1.StepTestCases {
+	return testworkflowsv1.StepTestCases{
+		Report:   common.MapPtr(v.Report, MapTestCaseReportAPIToKube),
+		Mute:     common.MapPtr(v.Mute, MapTestCaseSelectorAPIToKube),
+		Tolerate: common.MapPtr(v.Tolerate, MapTestCaseToleranceAPIToKube),
+		Enforce:  v.Enforce,
+		Select:   common.MapPtr(v.Select, MapTestCaseSelectionAPIToKube),
 	}
 }

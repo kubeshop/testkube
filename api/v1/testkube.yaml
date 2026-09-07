@@ -10082,6 +10082,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowStepExecute"
         artifacts:
           $ref: "#/components/schemas/TestWorkflowStepArtifacts"
+        testCases:
+          $ref: "#/components/schemas/TestWorkflowStepTestCases"
         parallel:
           $ref: "#/components/schemas/TestWorkflowIndependentStepParallel"
         setup:
@@ -10153,6 +10155,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowStepExecute"
         artifacts:
           $ref: "#/components/schemas/TestWorkflowStepArtifacts"
+        testCases:
+          $ref: "#/components/schemas/TestWorkflowStepTestCases"
         parallel:
           $ref: "#/components/schemas/TestWorkflowStepParallel"
         setup:
@@ -10439,6 +10443,167 @@ components:
           description: until when it should retry (defaults to "passed")
       required:
         - count
+
+    TestWorkflowStepTestCases:
+      type: object
+      description: |
+        what this step's test report means: which failing test cases may be
+        tolerated, what the pass requirement is, and which test cases this run
+        should be narrowed to.
+
+        Available in connected mode only.
+      properties:
+        report:
+          $ref: "#/components/schemas/TestWorkflowTestCaseReport"
+        mute:
+          $ref: "#/components/schemas/TestWorkflowTestCaseSelector"
+        tolerate:
+          $ref: "#/components/schemas/TestWorkflowTestCaseTolerance"
+        enforce:
+          type: string
+          enum:
+            - onFailure
+            - always
+          description: |
+            how far the policy may move the verdict: onFailure (default) only
+            turns a failure into a pass, always additionally fails a zero-exit
+            run that misses the requirement.
+        select:
+          $ref: "#/components/schemas/TestWorkflowTestCaseSelection"
+
+    TestWorkflowTestCaseReport:
+      type: object
+      description: where this step's test report is, and what a missing one means
+      properties:
+        format:
+          type: string
+          enum:
+            - junit
+          description: report format
+        paths:
+          type: array
+          description: report paths, relative to the run container's working directory; globs allowed
+          items:
+            type: string
+        onMissing:
+          type: string
+          enum:
+            - fail
+            - warn
+            - ignore
+          description: |
+            what a missing report means; defaults to fail, which is the safety
+            catch that stops mute masking a step that crashed before it could
+            write one.
+
+    TestWorkflowTestCaseSelector:
+      type: object
+      description: |
+        names test cases by glob over "<suite>/<classname>/<name>". A pattern
+        naming no separator is matched against the test name alone, which is
+        what survives the churn that makes identities unstable.
+      properties:
+        include:
+          type: array
+          items:
+            type: string
+        exclude:
+          type: array
+          items:
+            type: string
+
+    TestWorkflowTestCaseTolerance:
+      type: object
+      description: |
+        the pass requirement; every field that is set must hold. Applied only to
+        a run that measured the whole suite - a run narrowed by select skips it,
+        because a threshold over a subset means nothing.
+      properties:
+        maxFailed:
+          $ref: "#/components/schemas/BoxedInteger"
+        maxFailedPercent:
+          $ref: "#/components/schemas/BoxedInteger"
+        minPassed:
+          $ref: "#/components/schemas/BoxedInteger"
+        minPassedPercent:
+          $ref: "#/components/schemas/BoxedInteger"
+
+    TestWorkflowTestCaseSelection:
+      type: object
+      description: narrows a run to specific test cases, so a retry re-runs only what failed
+      properties:
+        from:
+          type: string
+          enum:
+            - self
+          description: which execution the previous results come from; defaults to self
+        paths:
+          type: array
+          description: |
+            report paths the selection reads, defaulting to report.paths - this
+            step's own previous attempt. Point it at an earlier step's report to
+            re-run what that step failed.
+          items:
+            type: string
+        status:
+          type: array
+          description: which outcomes to take; defaults to failed and errored
+          items:
+            type: string
+            enum:
+              - failed
+              - errored
+              - skipped
+        include:
+          type: array
+          items:
+            type: string
+        exclude:
+          type: array
+          items:
+            type: string
+        cases:
+          type: array
+          description: an explicit list of test cases, taken verbatim
+          items:
+            type: string
+        includeMuted:
+          type: boolean
+          description: |
+            re-run cases that mute covers. Off by default: a muted failure has
+            already been decided not to matter, and re-running it every attempt
+            is what stops a narrowing retry converging.
+        as:
+          type: string
+          description: |
+            per-entry projection handed to the tool; testcase.{id,suite,classname,name,status}
+            is in scope. This is what keeps the feature tool-agnostic.
+        collapse:
+          type: string
+          description: collapse the whole selection into a single entry; selected is in scope
+        write:
+          $ref: "#/components/schemas/TestWorkflowTestCaseSelectionWrite"
+        empty:
+          type: string
+          enum:
+            - all
+            - skip
+            - fail
+          description: |
+            what an empty selection means; defaults to all, which is what lets
+            the first attempt of a narrowing retry run the whole suite.
+
+    TestWorkflowTestCaseSelectionWrite:
+      type: object
+      description: writes the selection to a file, for a selection too large to pass as arguments
+      properties:
+        path:
+          type: string
+        separator:
+          type: string
+          description: entry separator; defaults to a newline
+      required:
+        - path
 
     TestWorkflowTarget:
       type: object

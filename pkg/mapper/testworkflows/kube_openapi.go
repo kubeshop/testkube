@@ -1281,6 +1281,7 @@ func MapStepKubeToAPI(v testworkflowsv1.Step) testkube.TestWorkflowStep {
 		Container:  common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
 		Execute:    common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
 		Artifacts:  common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
+		TestCases:  common.MapPtr(v.TestCases, MapStepTestCasesKubeToAPI),
 		Setup:      common.MapSlice(v.Setup, MapStepKubeToAPI),
 		Steps:      common.MapSlice(v.Steps, MapStepKubeToAPI),
 		Parallel:   common.MapPtr(v.Parallel, MapStepParallelKubeToAPI),
@@ -1307,6 +1308,7 @@ func MapIndependentStepKubeToAPI(v testworkflowsv1.IndependentStep) testkube.Tes
 		Container:  common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
 		Execute:    common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
 		Artifacts:  common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
+		TestCases:  common.MapPtr(v.TestCases, MapStepTestCasesKubeToAPI),
 		Setup:      common.MapSlice(v.Setup, MapIndependentStepKubeToAPI),
 		Steps:      common.MapSlice(v.Steps, MapIndependentStepKubeToAPI),
 		Parallel:   common.MapPtr(v.Parallel, MapIndependentStepParallelKubeToAPI),
@@ -1590,5 +1592,67 @@ func MapTestWorkflowStatusSummaryKubeToAPI(v testworkflowsv1.TestWorkflowStatusS
 
 	return &testkube.TestWorkflowStatusSummary{
 		Health: MapTestWorkflowExecutionHealthKubeToAPI(v.Health),
+	}
+}
+
+func MapTestCaseReportKubeToAPI(v testworkflowsv1.TestCaseReport) testkube.TestWorkflowTestCaseReport {
+	return testkube.TestWorkflowTestCaseReport{
+		Format:    v.Format,
+		Paths:     v.Paths,
+		OnMissing: v.OnMissing,
+	}
+}
+
+func MapTestCaseSelectorKubeToAPI(v testworkflowsv1.TestCaseSelector) testkube.TestWorkflowTestCaseSelector {
+	return testkube.TestWorkflowTestCaseSelector{
+		Include: v.Include,
+		Exclude: v.Exclude,
+	}
+}
+
+// MapTestCaseToleranceKubeToAPI converts the pass requirement.
+//
+// The thresholds are boxed on the wire so that an unset requirement stays
+// distinguishable from a zero one - `maxFailed: 0` means "tolerate nothing",
+// which is a different statement from not asking at all.
+func MapTestCaseToleranceKubeToAPI(v testworkflowsv1.TestCaseTolerance) testkube.TestWorkflowTestCaseTolerance {
+	return testkube.TestWorkflowTestCaseTolerance{
+		MaxFailed:        MapInt32ToBoxedInteger(v.MaxFailed),
+		MaxFailedPercent: MapInt32ToBoxedInteger(v.MaxFailedPercent),
+		MinPassed:        MapInt32ToBoxedInteger(v.MinPassed),
+		MinPassedPercent: MapInt32ToBoxedInteger(v.MinPassedPercent),
+	}
+}
+
+func MapTestCaseSelectionWriteKubeToAPI(v testworkflowsv1.TestCaseSelectionWrite) testkube.TestWorkflowTestCaseSelectionWrite {
+	return testkube.TestWorkflowTestCaseSelectionWrite{
+		Path:      v.Path,
+		Separator: v.Separator,
+	}
+}
+
+func MapTestCaseSelectionKubeToAPI(v testworkflowsv1.TestCaseSelection) testkube.TestWorkflowTestCaseSelection {
+	return testkube.TestWorkflowTestCaseSelection{
+		From:         v.From,
+		Paths:        v.Paths,
+		Status:       v.Status,
+		Include:      v.Include,
+		Exclude:      v.Exclude,
+		Cases:        v.Cases,
+		IncludeMuted: v.IncludeMuted,
+		As:           v.As,
+		Collapse:     v.Collapse,
+		Write:        common.MapPtr(v.Write, MapTestCaseSelectionWriteKubeToAPI),
+		Empty:        v.Empty,
+	}
+}
+
+func MapStepTestCasesKubeToAPI(v testworkflowsv1.StepTestCases) testkube.TestWorkflowStepTestCases {
+	return testkube.TestWorkflowStepTestCases{
+		Report:   common.MapPtr(v.Report, MapTestCaseReportKubeToAPI),
+		Mute:     common.MapPtr(v.Mute, MapTestCaseSelectorKubeToAPI),
+		Tolerate: common.MapPtr(v.Tolerate, MapTestCaseToleranceKubeToAPI),
+		Enforce:  v.Enforce,
+		Select:   common.MapPtr(v.Select, MapTestCaseSelectionKubeToAPI),
 	}
 }
