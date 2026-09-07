@@ -3,6 +3,7 @@ package renderer
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -11,6 +12,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	tclcmd "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/cmd"
+	"github.com/kubeshop/testkube/pkg/testworkflows"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -89,8 +91,71 @@ func printPrettyOutput(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 		}
 	}
 
+	printTestCaseResults(ui, execution)
+
 	if execution.Result != nil && execution.Result.Initialization != nil && execution.Result.Initialization.ErrorMessage != "" {
 		ui.NL()
 		ui.Err(errors.New(execution.Result.Initialization.ErrorMessage))
+	}
+}
+
+// printTestCaseResults reports what each step's test report said.
+//
+// A step that passed because its failures were muted is indistinguishable from
+// one that had nothing to fail unless the counts are shown, and the whole point
+// of muting is that a failure is tolerated rather than hidden. Steps without a
+// testCases policy contribute nothing, so the section is absent for the
+// workflows that do not use the feature.
+func printTestCaseResults(ui *ui.UI, execution testkube.TestWorkflowExecution) {
+	if execution.Result == nil || len(execution.Result.Steps) == 0 {
+		return
+	}
+
+	// Walking the signatures rather than the results map keeps the steps in the
+	// order the workflow declares them, which the map does not preserve.
+	printed := false
+	for _, signature := range testworkflows.FlattenSignatures(execution.Signature) {
+		step, ok := execution.Result.Steps[signature.Ref]
+		if !ok || step.TestResults == nil || step.TestResults.Tests == 0 {
+			continue
+		}
+		if !printed {
+			ui.NL()
+			ui.Info("Test cases:")
+			printed = true
+		}
+		printStepTestResults(ui, signature.Label(), step.TestResults)
+	}
+}
+
+func printStepTestResults(ui *ui.UI, name string, results *testkube.TestWorkflowStepTestResults) {
+	summary := fmt.Sprintf("%d/%d passed", results.Passed, results.Tests)
+	if results.Muted > 0 {
+		summary += fmt.Sprintf(", %d muted", results.Muted)
+	}
+	if results.Unexpected > 0 {
+		summary += fmt.Sprintf(", %d unexpected", results.Unexpected)
+	}
+	if results.Skipped > 0 {
+		summary += fmt.Sprintf(", %d skipped", results.Skipped)
+	}
+	ui.Warn(fmt.Sprintf("  %s:", name), summary)
+
+	switch {
+	case results.IdentitiesIncomplete:
+		// The reason mute did not apply, which otherwise looks like mute being
+		// broken rather than the report being unusable.
+		ui.Warn("    note:", fmt.Sprintf("the report describes %d test cases it does not name, so mute was not applied",
+			results.Unrepresented))
+	case results.RequirementApplied && results.Tolerated:
+		ui.Warn("    note:", "within the pass requirement")
+	case results.RequirementApplied:
+		ui.Warn("    note:", "short of the pass requirement")
+	}
+
+	if len(results.UnusedMutePatterns) > 0 {
+		// Dead quarantine config. Naming it is what stops mute lists outliving
+		// the bugs they were written for.
+		ui.Warn("    unused mute patterns:", strings.Join(results.UnusedMutePatterns, ", "))
 	}
 }

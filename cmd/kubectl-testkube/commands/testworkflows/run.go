@@ -761,7 +761,7 @@ func printSingleResultDifference(r1 testkube.TestWorkflowStepResult, r2 testkube
 	}
 	took := r2.FinishedAt.Sub(r2.QueuedAt).Round(time.Millisecond)
 
-	printStatus(signature, r2Status, took, index, steps, name, r2.ErrorMessage, prefix)
+	printStatus(signature, r2Status, took, index, steps, name, r2.ErrorMessage, prefix, r2.TestResults)
 	return true
 }
 
@@ -1097,26 +1097,47 @@ func printStatusHeader(i, n int, name, prefix string) {
 	}
 }
 
+// testCasesSuffix describes what a step's test report said, for the status line.
+//
+// A step that passed because its failures were muted looks identical to one
+// that had nothing to fail, so the counts are shown on both outcomes - the
+// point of muting is that it is tolerated, not that it is hidden.
+func testCasesSuffix(results *testkube.TestWorkflowStepTestResults) string {
+	if results == nil || results.Tests == 0 {
+		return ""
+	}
+
+	parts := []string{fmt.Sprintf("%d/%d passed", results.Passed, results.Tests)}
+	if results.Muted > 0 {
+		parts = append(parts, fmt.Sprintf("%d muted", results.Muted))
+	}
+	if results.Unexpected > 0 {
+		parts = append(parts, fmt.Sprintf("%d unexpected", results.Unexpected))
+	}
+	return " · " + strings.Join(parts, ", ")
+}
+
 // printStatus prints colored step status based on result
 func printStatus(s testkube.TestWorkflowSignature, rStatus testkube.TestWorkflowStepStatus, took time.Duration,
-	i, n int, name string, errorMessage, prefix string) {
+	i, n int, name string, errorMessage, prefix string, testResults *testkube.TestWorkflowStepTestResults) {
 	if len(errorMessage) > 0 {
 		fmt.Printf("\n%s%s", prefix, ui.Red(errorMessage))
 	}
+	cases := testCasesSuffix(testResults)
 	switch rStatus {
 	case testkube.RUNNING_TestWorkflowStepStatus:
 		printStatusHeader(i, n, name, prefix)
 	case testkube.SKIPPED_TestWorkflowStepStatus:
 		fmt.Println(prefix + ui.LightGray("• skipped"))
 	case testkube.PASSED_TestWorkflowStepStatus:
-		fmt.Println("\n" + prefix + ui.Green(fmt.Sprintf("• passed in %s", took)))
+		fmt.Println("\n" + prefix + ui.Green(fmt.Sprintf("• passed in %s%s", took, cases)))
 	case testkube.ABORTED_TestWorkflowStepStatus:
 		fmt.Println("\n" + prefix + ui.Red("• aborted"))
 	default:
 		if s.Optional {
-			fmt.Println("\n" + prefix + ui.Yellow(fmt.Sprintf("• %s in %s (ignored)", string(rStatus), took)))
+			fmt.Println("\n" + prefix + ui.Yellow(fmt.Sprintf("• %s in %s (ignored)%s", string(rStatus), took, cases)))
 		} else {
-			fmt.Println("\n" + prefix + ui.Red(fmt.Sprintf("• %s in %s", string(rStatus), took)))
+			fmt.Println("\n" + prefix + ui.Red(fmt.Sprintf("• %s in %s%s", string(rStatus), took, cases)))
 		}
 	}
 }
@@ -1273,7 +1294,7 @@ func printStepResultIfExists(steps []testkube.TestWorkflowSignature, state *logP
 		took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
 		if state.stepIndex != -1 && state.stepIndex < len(steps) {
 			printStatus(steps[state.stepIndex], *ps.Status, took, state.stepIndex, len(steps),
-				steps[state.stepIndex].Label(), ps.ErrorMessage, state.prefix)
+				steps[state.stepIndex].Label(), ps.ErrorMessage, state.prefix, ps.TestResults)
 		}
 	}
 }
@@ -1285,7 +1306,7 @@ func printRemainingSteps(steps []testkube.TestWorkflowSignature, state *logPrint
 			if ps, ok := state.results[step.Ref]; ok && ps.Status != nil {
 				took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
 				printStatus(step, *ps.Status, took, state.stepIndex, len(steps),
-					steps[state.stepIndex].Label(), ps.ErrorMessage, state.prefix)
+					steps[state.stepIndex].Label(), ps.ErrorMessage, state.prefix, ps.TestResults)
 			}
 
 			state.stepIndex++

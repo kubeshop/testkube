@@ -1132,3 +1132,26 @@ func TestExtractResults(t *testing.T) {
 		assert.Len(t, results, 1)
 	})
 }
+
+func TestTestCasesSuffix(t *testing.T) {
+	// The suffix rides on the step's status line while it is being watched, so
+	// a muted failure is visible as it happens rather than only afterwards.
+	t.Run("absent without a policy", func(t *testing.T) {
+		assert.Empty(t, testCasesSuffix(nil))
+		assert.Empty(t, testCasesSuffix(&testkube.TestWorkflowStepTestResults{}),
+			"a policy that produced no test cases adds nothing to the line")
+	})
+
+	t.Run("counts", func(t *testing.T) {
+		assert.Equal(t, " · 1035/1043 passed, 8 muted",
+			testCasesSuffix(&testkube.TestWorkflowStepTestResults{Tests: 1043, Passed: 1035, Muted: 8}))
+
+		assert.Equal(t, " · 90/100 passed, 6 muted, 4 unexpected",
+			testCasesSuffix(&testkube.TestWorkflowStepTestResults{
+				Tests: 100, Passed: 90, Muted: 6, Unexpected: 4}))
+
+		assert.Equal(t, " · 10/10 passed",
+			testCasesSuffix(&testkube.TestWorkflowStepTestResults{Tests: 10, Passed: 10}),
+			"nothing muted or unexpected, so neither is mentioned")
+	})
+}
