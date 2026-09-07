@@ -132,9 +132,17 @@ func NewConnectCmd() *cobra.Command {
 
 			// Resolve any name flags into ids, so the checks below and everything
 			// downstream keep working purely in ids.
+			//
+			// No organization is inherited from the current context here. This
+			// migrates an installation to Pro and is largely one-way, so the
+			// organization is required explicitly rather than picked up from
+			// whatever context happens to be saved; --env-id has no fallback
+			// either. Only the lookup honors an already-configured Control
+			// Plane, since the connection itself targets the given --api-uri.
 			if masterOpts.Master.OrgName != "" || masterOpts.Master.EnvName != "" {
-				err := common.ResolveNamedOrgAndEnv(masterOpts.Master.URIs.Api, apiKey, &masterOpts.Master,
-					cfg.CloudContext.OrganizationId, cfg.SkipTLS || cfg.CloudContext.SkipTLS)
+				lookupURI := common.ControlPlaneAPIURI(cmd, masterOpts.Master.URIs.Api, &cfg)
+				err := common.ResolveNamedOrgAndEnv(lookupURI, apiKey, &masterOpts.Master,
+					"", cfg.SkipTLS || cfg.CloudContext.SkipTLS)
 				ui.ExitOnError("resolving organization and environment", err)
 			}
 
