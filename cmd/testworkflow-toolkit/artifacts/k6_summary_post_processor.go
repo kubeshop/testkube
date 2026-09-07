@@ -115,7 +115,7 @@ func (p *K6SummaryPostProcessor) add(path string) error {
 	}
 
 	fmt.Printf("Processing k6 summary report: %s\n", ui.LightCyan(path))
-	if err := p.client.AppendExecutionReport(context.Background(), p.environmentId, p.executionId, p.workflowName, p.stepRef, uploadPath, data); err != nil {
+	if err := p.client.AppendExecutionReport(context.Background(), p.environmentId, p.executionId, p.workflowName, p.stepRef, uploadPath, data, nil); err != nil {
 		return errors.Wrapf(err, "failed to send k6 summary report %s", stat.Name())
 	}
 	return nil

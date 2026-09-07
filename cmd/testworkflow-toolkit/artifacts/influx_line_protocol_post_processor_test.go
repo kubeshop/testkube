@@ -116,7 +116,7 @@ func TestInfluxLineProtocolPostProcessorAddUploadsReport(t *testing.T) {
 
 	mockClient := controlplaneclient.NewMockClient(mockCtrl)
 	mockClient.EXPECT().
-		AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", "metrics.influx", report).
+		AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", "metrics.influx", report, gomock.Nil()).
 		Return(nil)
 
 	pp := NewInfluxLineProtocolPostProcessor(mockFS, mockClient, "env123", "exec123", "workflow123", "step123", "/", "")

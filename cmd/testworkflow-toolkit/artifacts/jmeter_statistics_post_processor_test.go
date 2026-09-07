@@ -115,7 +115,7 @@ func TestJMeterStatisticsPostProcessorAddUploadsReport(t *testing.T) {
 
 	mockClient := controlplaneclient.NewMockClient(mockCtrl)
 	mockClient.EXPECT().
-		AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", "report/statistics.json", report).
+		AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", "report/statistics.json", report, gomock.Nil()).
 		Return(nil)
 
 	pp := NewJMeterStatisticsPostProcessor(mockFS, mockClient, "env123", "exec123", "workflow123", "step123", "/", "")

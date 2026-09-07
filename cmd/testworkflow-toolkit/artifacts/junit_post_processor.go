@@ -1,6 +1,7 @@
 package artifacts
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 
 	"github.com/kubeshop/testkube/pkg/filesystem"
+	"github.com/kubeshop/testkube/pkg/testresults"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -94,7 +96,7 @@ func (p *JUnitPostProcessor) add(path string) error {
 	}
 	buffer = buffer[:n] // Trim buffer to actual bytes read
 
-	if !isJUnitReport(buffer) {
+	if !testresults.Sniff(buffer) {
 		return nil
 	}
 
@@ -106,16 +108,34 @@ func (p *JUnitPostProcessor) add(path string) error {
 	xmlData := append(buffer, rest...)
 
 	fmt.Printf("Processing JUnit report: %s\n", ui.LightCyan(path))
-	if err := p.sendJUnitReport(uploadPath, xmlData); err != nil {
+
+	// Parse here rather than leaving it to the control plane. The agent already
+	// parses this report in the pod - muting decides the step's verdict and only
+	// the pod can still change it - so re-parsing server-side is duplicated work
+	// on a file that may be megabytes of XML.
+	//
+	// A report we cannot read is still worth uploading: the artifact is the
+	// record, and a control plane that predates the parsed fields reads the raw
+	// bytes anyway.
+	var digest *testresults.Digest
+	report, parseErr := testresults.Parse(bytes.NewReader(xmlData))
+	if parseErr == nil {
+		parsed := report.Digest()
+		digest = &parsed
+	} else {
+		fmt.Printf("warn: JUnit report %s could not be parsed, sending it unparsed: %s\n", path, parseErr)
+	}
+
+	if err := p.sendJUnitReport(uploadPath, xmlData, digest); err != nil {
 		return errors.Wrapf(err, "failed to send JUnit report %s", stat.Name())
 	}
 	return nil
 }
 
 // sendJUnitReport sends the JUnit report to the Agent gRPC API.
-func (p *JUnitPostProcessor) sendJUnitReport(path string, report []byte) error {
+func (p *JUnitPostProcessor) sendJUnitReport(path string, report []byte, digest *testresults.Digest) error {
 	// TODO: think if it's valid for the parallel steps that have independent refs
-	return p.client.AppendExecutionReport(context.Background(), p.environmentId, p.executionId, p.workflowName, p.stepRef, path, report)
+	return p.client.AppendExecutionReport(context.Background(), p.environmentId, p.executionId, p.workflowName, p.stepRef, path, report, digest)
 }
 
 // isXMLFile checks if the file is an XML file based on the extension.
@@ -125,24 +145,6 @@ func isXMLFile(stat fs.FileInfo) bool {
 	}
 
 	return strings.HasSuffix(stat.Name(), ".xml")
-}
-
-// isJUnitReport checks if the XML data is a JUnit report.
-func isJUnitReport(xmlData []byte) bool {
-	tags := []string{
-		"<testsuite",
-		"<testsuites",
-	}
-
-	content := string(xmlData)
-
-	for _, tag := range tags {
-		if strings.Contains(content, tag) {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (p *JUnitPostProcessor) End() error {

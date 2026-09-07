@@ -694,11 +694,15 @@ message AppendExecutionReportRequest {
   string id = 1;
   string step = 2;
   string file_path = 3;
-  // Deprecated: the raw report. The agent parses it in the pod now - it has to,
+  // Legacy: the raw report. The agent parses it in the pod now - it has to,
   // because muting decides the step's verdict and only the pod can still change
   // it - so the fields below carry the parse and this is redundant. Still sent
   // for a control plane that predates them; a server that reads `summary`
   // should ignore it.
+  //
+  // Not marked deprecated, despite reading like it: a client that stopped
+  // populating this would break every control plane older than the parsed
+  // fields, so sending it is required rather than discouraged.
   bytes report = 4;
 
   // kind is the report format that was parsed, e.g. "junit".

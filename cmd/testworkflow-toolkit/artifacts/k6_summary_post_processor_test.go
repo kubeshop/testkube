@@ -123,7 +123,7 @@ func TestK6SummaryPostProcessorAddUploadsSummary(t *testing.T) {
 
 	mockClient := controlplaneclient.NewMockClient(mockCtrl)
 	mockClient.EXPECT().
-		AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", "summary.json", summary).
+		AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", "summary.json", summary, gomock.Nil()).
 		Return(nil)
 
 	pp := NewK6SummaryPostProcessor(mockFS, mockClient, "env123", "exec123", "workflow123", "step123", "/", "")

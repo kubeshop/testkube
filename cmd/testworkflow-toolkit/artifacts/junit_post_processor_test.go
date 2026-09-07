@@ -13,6 +13,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common/testdata"
 	"github.com/kubeshop/testkube/pkg/filesystem"
+	"github.com/kubeshop/testkube/pkg/testresults"
 )
 
 func TestJUnitPostProcessor_Add(t *testing.T) {
@@ -42,7 +43,7 @@ func TestJUnitPostProcessor_Add(t *testing.T) {
 			name: "valid junit report",
 			setup: func(client *controlplaneclient.MockClient) {
 				client.EXPECT().
-					AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", "report/junit.xml", []byte(testdata.BasicJUnit)).
+					AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", "report/junit.xml", []byte(testdata.BasicJUnit), gomock.Not(gomock.Nil())).
 					Return(nil)
 			},
 			path: "report/junit.xml",
@@ -82,7 +83,7 @@ func TestJUnitPostProcessor_Add_WithPathPrefix(t *testing.T) {
 	pp := NewJUnitPostProcessor(mockFS, mockClient, "env123", "exec123", "workflow123", "step123", "/test_root", pathPrefix)
 
 	mockClient.EXPECT().
-		AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", filepath.Join(pathPrefix, filePath), []byte(junitContent)).
+		AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", filepath.Join(pathPrefix, filePath), []byte(junitContent), gomock.Not(gomock.Nil())).
 		Return(nil)
 
 	err := pp.Add(filePath)
@@ -184,7 +185,7 @@ func TestIsJUnitReport(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			ok := isJUnitReport(data)
+			ok := testresults.Sniff(data)
 			assert.Equal(t, tc.want, ok)
 		})
 	}

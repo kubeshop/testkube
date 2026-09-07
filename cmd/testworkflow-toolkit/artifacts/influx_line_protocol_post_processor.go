@@ -119,7 +119,7 @@ func (p *InfluxLineProtocolPostProcessor) add(path string) error {
 	}
 
 	fmt.Printf("Processing InfluxDB line protocol report: %s\n", ui.LightCyan(path))
-	if err := p.client.AppendExecutionReport(context.Background(), p.environmentId, p.executionId, p.workflowName, p.stepRef, uploadPath, data); err != nil {
+	if err := p.client.AppendExecutionReport(context.Background(), p.environmentId, p.executionId, p.workflowName, p.stepRef, uploadPath, data, nil); err != nil {
 		return errors.Wrapf(err, "failed to send InfluxDB line protocol report %s", stat.Name())
 	}
 	return nil

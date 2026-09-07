@@ -60,7 +60,7 @@ func TestHandler_CloudUploader(t *testing.T) {
 	}
 	setJUnitPostProcessorExpectations := func(client *controlplaneclient.MockClient) {
 		client.EXPECT().
-			AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", "report/junit.xml", []byte(testdata.BasicJUnit)).
+			AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", "report/junit.xml", []byte(testdata.BasicJUnit), gomock.Not(gomock.Nil())).
 			Return(nil)
 	}
 

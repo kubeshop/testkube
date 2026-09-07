@@ -16,6 +16,7 @@ import (
 
 	testkube "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	cloud "github.com/kubeshop/testkube/pkg/cloud"
+	testresults "github.com/kubeshop/testkube/pkg/testresults"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -44,17 +45,17 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 }
 
 // AppendExecutionReport mocks base method.
-func (m *MockClient) AppendExecutionReport(ctx context.Context, environmentId, executionId, legacyWorkflowName, stepRef, filePath string, report []byte) error {
+func (m *MockClient) AppendExecutionReport(ctx context.Context, environmentId, executionId, legacyWorkflowName, stepRef, filePath string, report []byte, digest *testresults.Digest) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AppendExecutionReport", ctx, environmentId, executionId, legacyWorkflowName, stepRef, filePath, report)
+	ret := m.ctrl.Call(m, "AppendExecutionReport", ctx, environmentId, executionId, legacyWorkflowName, stepRef, filePath, report, digest)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AppendExecutionReport indicates an expected call of AppendExecutionReport.
-func (mr *MockClientMockRecorder) AppendExecutionReport(ctx, environmentId, executionId, legacyWorkflowName, stepRef, filePath, report any) *gomock.Call {
+func (mr *MockClientMockRecorder) AppendExecutionReport(ctx, environmentId, executionId, legacyWorkflowName, stepRef, filePath, report, digest any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendExecutionReport", reflect.TypeOf((*MockClient)(nil).AppendExecutionReport), ctx, environmentId, executionId, legacyWorkflowName, stepRef, filePath, report)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendExecutionReport", reflect.TypeOf((*MockClient)(nil).AppendExecutionReport), ctx, environmentId, executionId, legacyWorkflowName, stepRef, filePath, report, digest)
 }
 
 // CreateTestTrigger mocks base method.
