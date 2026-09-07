@@ -11815,15 +11815,8 @@ spec:
                                 type: array
                               from:
                                 description: |-
-                                  where the previous results come from. Defaults to self.
-
-                                  self is this step's own previous retry attempt, which is what makes a
-                                  retry re-run only what failed: the selection is resolved before the
-                                  command and the verdict after it, so for a tool that overwrites its
-                                  report the file holds the previous attempt's results exactly when the
-                                  selection reads it.
-
-                                  Referring to another step, or to another execution, is not available yet.
+                                  which execution the previous results come from. Defaults to self, this
+                                  execution. Reading another execution's results is not available yet.
                                 enum:
                                   - self
                                 type: string
@@ -11841,6 +11834,24 @@ spec:
                                   muted set. Turn it on only to find out whether a muted test has started
                                   passing again.
                                 type: boolean
+                              paths:
+                                description: |-
+                                  report paths the selection reads the previous results from, defaulting to
+                                  report.paths - this step's own previous attempt.
+
+                                  Leaving it unset is what makes a retry re-run only what failed: the
+                                  selection is resolved before the command and the verdict after it, so for
+                                  a tool that overwrites its report the file holds the previous attempt's
+                                  results exactly when the selection reads it, and this attempt's by the
+                                  time the verdict does.
+
+                                  Point it at an earlier step's report to re-run what *that* step failed.
+                                  The two steps share a file system, so this needs no reference between
+                                  them - and it keeps the file the selection reads separate from the one
+                                  the verdict judges, which a shared path could not.
+                                items:
+                                  type: string
+                                type: array
                               status:
                                 description: which outcomes to take; defaults to failed and errored
                                 items:
@@ -17730,15 +17741,8 @@ spec:
                                 type: array
                               from:
                                 description: |-
-                                  where the previous results come from. Defaults to self.
-
-                                  self is this step's own previous retry attempt, which is what makes a
-                                  retry re-run only what failed: the selection is resolved before the
-                                  command and the verdict after it, so for a tool that overwrites its
-                                  report the file holds the previous attempt's results exactly when the
-                                  selection reads it.
-
-                                  Referring to another step, or to another execution, is not available yet.
+                                  which execution the previous results come from. Defaults to self, this
+                                  execution. Reading another execution's results is not available yet.
                                 enum:
                                   - self
                                 type: string
@@ -17756,6 +17760,24 @@ spec:
                                   muted set. Turn it on only to find out whether a muted test has started
                                   passing again.
                                 type: boolean
+                              paths:
+                                description: |-
+                                  report paths the selection reads the previous results from, defaulting to
+                                  report.paths - this step's own previous attempt.
+
+                                  Leaving it unset is what makes a retry re-run only what failed: the
+                                  selection is resolved before the command and the verdict after it, so for
+                                  a tool that overwrites its report the file holds the previous attempt's
+                                  results exactly when the selection reads it, and this attempt's by the
+                                  time the verdict does.
+
+                                  Point it at an earlier step's report to re-run what *that* step failed.
+                                  The two steps share a file system, so this needs no reference between
+                                  them - and it keeps the file the selection reads separate from the one
+                                  the verdict judges, which a shared path could not.
+                                items:
+                                  type: string
+                                type: array
                               status:
                                 description: which outcomes to take; defaults to failed and errored
                                 items:
@@ -21363,15 +21385,8 @@ spec:
                                 type: array
                               from:
                                 description: |-
-                                  where the previous results come from. Defaults to self.
-
-                                  self is this step's own previous retry attempt, which is what makes a
-                                  retry re-run only what failed: the selection is resolved before the
-                                  command and the verdict after it, so for a tool that overwrites its
-                                  report the file holds the previous attempt's results exactly when the
-                                  selection reads it.
-
-                                  Referring to another step, or to another execution, is not available yet.
+                                  which execution the previous results come from. Defaults to self, this
+                                  execution. Reading another execution's results is not available yet.
                                 enum:
                                   - self
                                 type: string
@@ -21389,6 +21404,24 @@ spec:
                                   muted set. Turn it on only to find out whether a muted test has started
                                   passing again.
                                 type: boolean
+                              paths:
+                                description: |-
+                                  report paths the selection reads the previous results from, defaulting to
+                                  report.paths - this step's own previous attempt.
+
+                                  Leaving it unset is what makes a retry re-run only what failed: the
+                                  selection is resolved before the command and the verdict after it, so for
+                                  a tool that overwrites its report the file holds the previous attempt's
+                                  results exactly when the selection reads it, and this attempt's by the
+                                  time the verdict does.
+
+                                  Point it at an earlier step's report to re-run what *that* step failed.
+                                  The two steps share a file system, so this needs no reference between
+                                  them - and it keeps the file the selection reads separate from the one
+                                  the verdict judges, which a shared path could not.
+                                items:
+                                  type: string
+                                type: array
                               status:
                                 description: which outcomes to take; defaults to failed and errored
                                 items:
@@ -25176,15 +25209,8 @@ spec:
                                 type: array
                               from:
                                 description: |-
-                                  where the previous results come from. Defaults to self.
-
-                                  self is this step's own previous retry attempt, which is what makes a
-                                  retry re-run only what failed: the selection is resolved before the
-                                  command and the verdict after it, so for a tool that overwrites its
-                                  report the file holds the previous attempt's results exactly when the
-                                  selection reads it.
-
-                                  Referring to another step, or to another execution, is not available yet.
+                                  which execution the previous results come from. Defaults to self, this
+                                  execution. Reading another execution's results is not available yet.
                                 enum:
                                   - self
                                 type: string
@@ -25202,6 +25228,24 @@ spec:
                                   muted set. Turn it on only to find out whether a muted test has started
                                   passing again.
                                 type: boolean
+                              paths:
+                                description: |-
+                                  report paths the selection reads the previous results from, defaulting to
+                                  report.paths - this step's own previous attempt.
+
+                                  Leaving it unset is what makes a retry re-run only what failed: the
+                                  selection is resolved before the command and the verdict after it, so for
+                                  a tool that overwrites its report the file holds the previous attempt's
+                                  results exactly when the selection reads it, and this attempt's by the
+                                  time the verdict does.
+
+                                  Point it at an earlier step's report to re-run what *that* step failed.
+                                  The two steps share a file system, so this needs no reference between
+                                  them - and it keeps the file the selection reads separate from the one
+                                  the verdict judges, which a shared path could not.
+                                items:
+                                  type: string
+                                type: array
                               status:
                                 description: which outcomes to take; defaults to failed and errored
                                 items:
@@ -30949,15 +30993,8 @@ spec:
                                 type: array
                               from:
                                 description: |-
-                                  where the previous results come from. Defaults to self.
-
-                                  self is this step's own previous retry attempt, which is what makes a
-                                  retry re-run only what failed: the selection is resolved before the
-                                  command and the verdict after it, so for a tool that overwrites its
-                                  report the file holds the previous attempt's results exactly when the
-                                  selection reads it.
-
-                                  Referring to another step, or to another execution, is not available yet.
+                                  which execution the previous results come from. Defaults to self, this
+                                  execution. Reading another execution's results is not available yet.
                                 enum:
                                   - self
                                 type: string
@@ -30975,6 +31012,24 @@ spec:
                                   muted set. Turn it on only to find out whether a muted test has started
                                   passing again.
                                 type: boolean
+                              paths:
+                                description: |-
+                                  report paths the selection reads the previous results from, defaulting to
+                                  report.paths - this step's own previous attempt.
+
+                                  Leaving it unset is what makes a retry re-run only what failed: the
+                                  selection is resolved before the command and the verdict after it, so for
+                                  a tool that overwrites its report the file holds the previous attempt's
+                                  results exactly when the selection reads it, and this attempt's by the
+                                  time the verdict does.
+
+                                  Point it at an earlier step's report to re-run what *that* step failed.
+                                  The two steps share a file system, so this needs no reference between
+                                  them - and it keeps the file the selection reads separate from the one
+                                  the verdict judges, which a shared path could not.
+                                items:
+                                  type: string
+                                type: array
                               status:
                                 description: which outcomes to take; defaults to failed and errored
                                 items:
@@ -34460,15 +34515,8 @@ spec:
                                 type: array
                               from:
                                 description: |-
-                                  where the previous results come from. Defaults to self.
-
-                                  self is this step's own previous retry attempt, which is what makes a
-                                  retry re-run only what failed: the selection is resolved before the
-                                  command and the verdict after it, so for a tool that overwrites its
-                                  report the file holds the previous attempt's results exactly when the
-                                  selection reads it.
-
-                                  Referring to another step, or to another execution, is not available yet.
+                                  which execution the previous results come from. Defaults to self, this
+                                  execution. Reading another execution's results is not available yet.
                                 enum:
                                   - self
                                 type: string
@@ -34486,6 +34534,24 @@ spec:
                                   muted set. Turn it on only to find out whether a muted test has started
                                   passing again.
                                 type: boolean
+                              paths:
+                                description: |-
+                                  report paths the selection reads the previous results from, defaulting to
+                                  report.paths - this step's own previous attempt.
+
+                                  Leaving it unset is what makes a retry re-run only what failed: the
+                                  selection is resolved before the command and the verdict after it, so for
+                                  a tool that overwrites its report the file holds the previous attempt's
+                                  results exactly when the selection reads it, and this attempt's by the
+                                  time the verdict does.
+
+                                  Point it at an earlier step's report to re-run what *that* step failed.
+                                  The two steps share a file system, so this needs no reference between
+                                  them - and it keeps the file the selection reads separate from the one
+                                  the verdict judges, which a shared path could not.
+                                items:
+                                  type: string
+                                type: array
                               status:
                                 description: which outcomes to take; defaults to failed and errored
                                 items:
