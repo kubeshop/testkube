@@ -7750,6 +7750,37 @@ spec:
                       items:
                         description: TestWorkflowReport contains report of TestWorkflow
                         properties:
+                          failures:
+                            description: |-
+                              the test cases that did not pass, so they can be listed or re-run without
+                              downloading the full report. Capped, with FailuresTruncated set when the
+                              cap was reached; the complete set is always in the report file.
+                            items:
+                              description: TestWorkflowReportFailure is a single test case that did not pass
+                              properties:
+                                id:
+                                  description: canonical test case address, "<suite>/<classname>/<name>"
+                                  type: string
+                                message:
+                                  description: failure message, truncated
+                                  type: string
+                                muted:
+                                  description: |-
+                                    whether the step's mute patterns covered this test case, so it did not
+                                    count against the step
+                                  type: boolean
+                                status:
+                                  description: how the test case did not pass
+                                  enum:
+                                    - failed
+                                    - errored
+                                    - skipped
+                                  type: string
+                              type: object
+                            type: array
+                          failuresTruncated:
+                            description: whether Failures holds only part of the non-passing test cases
+                            type: boolean
                           file:
                             description: file path to full report in artifact storage
                             type: string
@@ -7774,6 +7805,10 @@ spec:
                                 description: number of failed test cases
                                 format: int32
                                 type: integer
+                              muted:
+                                description: number of failing test cases the step's mute patterns covered
+                                format: int32
+                                type: integer
                               passed:
                                 description: number of passed test cases
                                 format: int32
@@ -7784,6 +7819,13 @@ spec:
                                 type: integer
                               tests:
                                 description: total number of test cases
+                                format: int32
+                                type: integer
+                              tolerated:
+                                description: whether the pass requirement was met
+                                type: boolean
+                              unexpected:
+                                description: number of failing test cases the mute patterns did not cover
                                 format: int32
                                 type: integer
                             type: object
@@ -7877,6 +7919,63 @@ spec:
                             status:
                               description: TestWorkfloStepwStatus has step status of TestWorkflow
                               type: string
+                            testResults:
+                              description: what the step's test report said, when it declared a testCases policy
+                              properties:
+                                errored:
+                                  description: number of errored test cases
+                                  format: int32
+                                  type: integer
+                                failed:
+                                  description: number of failed test cases
+                                  format: int32
+                                  type: integer
+                                identitiesIncomplete:
+                                  description: |-
+                                    whether the report described more test cases than it named. When it did,
+                                    mute could not be applied and the report's own counters were believed.
+                                  type: boolean
+                                muted:
+                                  description: number of failing test cases the mute patterns covered
+                                  format: int32
+                                  type: integer
+                                passed:
+                                  description: number of passed test cases
+                                  format: int32
+                                  type: integer
+                                requirementApplied:
+                                  description: |-
+                                    whether a pass requirement was evaluated at all. False when the run
+                                    measured a subset, because a threshold over a subset means nothing, in
+                                    which case the bar was simply that nothing unexpected failed.
+                                  type: boolean
+                                skipped:
+                                  description: number of skipped test cases
+                                  format: int32
+                                  type: integer
+                                tests:
+                                  description: total number of test cases
+                                  format: int32
+                                  type: integer
+                                tolerated:
+                                  description: whether the step met its pass requirement
+                                  type: boolean
+                                unexpected:
+                                  description: number of failing test cases the mute patterns did not cover
+                                  format: int32
+                                  type: integer
+                                unrepresented:
+                                  description: how many test cases the report claimed beyond the ones it named
+                                  format: int32
+                                  type: integer
+                                unusedMutePatterns:
+                                  description: |-
+                                    mute patterns that matched no test case - dead quarantine config, surfaced
+                                    so that mute lists do not outlive the bugs they were written for
+                                  items:
+                                    type: string
+                                  type: array
+                              type: object
                           type: object
                         pausedMs:
                           description: Pause duration in milliseconds
@@ -7954,6 +8053,63 @@ spec:
                               status:
                                 description: TestWorkfloStepwStatus has step status of TestWorkflow
                                 type: string
+                              testResults:
+                                description: what the step's test report said, when it declared a testCases policy
+                                properties:
+                                  errored:
+                                    description: number of errored test cases
+                                    format: int32
+                                    type: integer
+                                  failed:
+                                    description: number of failed test cases
+                                    format: int32
+                                    type: integer
+                                  identitiesIncomplete:
+                                    description: |-
+                                      whether the report described more test cases than it named. When it did,
+                                      mute could not be applied and the report's own counters were believed.
+                                    type: boolean
+                                  muted:
+                                    description: number of failing test cases the mute patterns covered
+                                    format: int32
+                                    type: integer
+                                  passed:
+                                    description: number of passed test cases
+                                    format: int32
+                                    type: integer
+                                  requirementApplied:
+                                    description: |-
+                                      whether a pass requirement was evaluated at all. False when the run
+                                      measured a subset, because a threshold over a subset means nothing, in
+                                      which case the bar was simply that nothing unexpected failed.
+                                    type: boolean
+                                  skipped:
+                                    description: number of skipped test cases
+                                    format: int32
+                                    type: integer
+                                  tests:
+                                    description: total number of test cases
+                                    format: int32
+                                    type: integer
+                                  tolerated:
+                                    description: whether the step met its pass requirement
+                                    type: boolean
+                                  unexpected:
+                                    description: number of failing test cases the mute patterns did not cover
+                                    format: int32
+                                    type: integer
+                                  unrepresented:
+                                    description: how many test cases the report claimed beyond the ones it named
+                                    format: int32
+                                    type: integer
+                                  unusedMutePatterns:
+                                    description: |-
+                                      mute patterns that matched no test case - dead quarantine config, surfaced
+                                      so that mute lists do not outlive the bugs they were written for
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                             type: object
                           type: object
                         totalDuration:
@@ -11565,6 +11721,171 @@ spec:
                             type: string
                         required:
                           - name
+                        type: object
+                      testCases:
+                        description: |-
+                          what this step's test report means: which failures to tolerate, the pass
+                          requirement, and which test cases to narrow this run to
+                        properties:
+                          enforce:
+                            description: |-
+                              how far the policy may move the verdict: onFailure (default) only turns a
+                              failure into a pass, always additionally fails a zero-exit run that misses
+                              the requirement
+                            enum:
+                              - onFailure
+                              - always
+                            type: string
+                          mute:
+                            description: test cases whose failure must not fail the step
+                            properties:
+                              exclude:
+                                items:
+                                  type: string
+                                type: array
+                              include:
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          report:
+                            description: report to read after the command finishes
+                            properties:
+                              format:
+                                description: report format; only junit is understood today
+                                enum:
+                                  - junit
+                                type: string
+                              onMissing:
+                                description: |-
+                                  what a missing report means: fail (default), warn, or ignore.
+
+                                  Failing by default is the safety catch that stops `mute` masking a step
+                                  that crashed before it could write a report.
+                                enum:
+                                  - fail
+                                  - warn
+                                  - ignore
+                                type: string
+                              paths:
+                                description: |-
+                                  report paths, relative to the run container's working directory; globs are
+                                  allowed and absolute paths are accepted
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          select:
+                            description: test cases this run should be narrowed to
+                            properties:
+                              as:
+                                description: |-
+                                  per-entry projection handed to the tool; `testcase.{id,suite,classname,name,status}`
+                                  is in scope. Defaults to the canonical id.
+
+                                  This is what keeps the feature tool-agnostic: Testkube never learns a
+                                  runner's filter flag, it renders identities in the shape the user asks for.
+                                type: string
+                              cases:
+                                description: an explicit list of test cases, instead of or alongside `from`
+                                items:
+                                  type: string
+                                type: array
+                              collapse:
+                                description: |-
+                                  collapse the whole selection into a single entry; `selected` is in scope.
+                                  Only evaluated when the selection is not empty.
+                                type: string
+                              empty:
+                                description: |-
+                                  what an empty selection means: all (default) runs everything, skip skips
+                                  the step, fail fails it.
+
+                                  all is right for `from: self`, where the first attempt has produced no
+                                  report yet and must run the whole suite. It is usually wrong for a
+                                  dedicated re-run step, which wants skip.
+                                enum:
+                                  - all
+                                  - skip
+                                  - fail
+                                type: string
+                              exclude:
+                                items:
+                                  type: string
+                                type: array
+                              from:
+                                description: |-
+                                  where the previous results come from. Defaults to self.
+
+                                  self is this step's own previous retry attempt, which is what makes a
+                                  retry re-run only what failed: the selection is resolved before the
+                                  command and the verdict after it, so for a tool that overwrites its
+                                  report the file holds the previous attempt's results exactly when the
+                                  selection reads it.
+
+                                  Referring to another step, or to another execution, is not available yet.
+                                enum:
+                                  - self
+                                type: string
+                              include:
+                                description: narrow further, same glob form as mute
+                                items:
+                                  type: string
+                                type: array
+                              includeMuted:
+                                description: |-
+                                  re-run cases that `mute` covers. Off by default: a muted failure is one we
+                                  have already decided not to care about, so re-running it costs time on
+                                  every attempt and can never change the verdict. It is also what lets a
+                                  narrowing retry converge - otherwise the selection never shrinks below the
+                                  muted set. Turn it on only to find out whether a muted test has started
+                                  passing again.
+                                type: boolean
+                              status:
+                                description: which outcomes to take; defaults to failed and errored
+                                items:
+                                  enum:
+                                    - failed
+                                    - errored
+                                    - skipped
+                                  type: string
+                                type: array
+                              write:
+                                description: |-
+                                  write the entries to a file, for a selection too large to pass as
+                                  arguments or a runner that wants an arguments file
+                                properties:
+                                  path:
+                                    type: string
+                                  separator:
+                                    description: entry separator; defaults to a newline
+                                    type: string
+                                required:
+                                  - path
+                                type: object
+                            type: object
+                          tolerate:
+                            description: pass requirement, evaluated over the failures `mute` did not cover
+                            properties:
+                              maxFailed:
+                                format: int32
+                                minimum: 0
+                                type: integer
+                              maxFailedPercent:
+                                format: int32
+                                maximum: 100
+                                minimum: 0
+                                type: integer
+                              minPassed:
+                                format: int32
+                                minimum: 0
+                                type: integer
+                              minPassedPercent:
+                                format: int32
+                                maximum: 100
+                                minimum: 0
+                                type: integer
+                            type: object
                         type: object
                       timeout:
                         description: maximum time this step may take
@@ -17316,6 +17637,171 @@ spec:
                         required:
                           - name
                         type: object
+                      testCases:
+                        description: |-
+                          what this step's test report means: which failures to tolerate, the pass
+                          requirement, and which test cases to narrow this run to
+                        properties:
+                          enforce:
+                            description: |-
+                              how far the policy may move the verdict: onFailure (default) only turns a
+                              failure into a pass, always additionally fails a zero-exit run that misses
+                              the requirement
+                            enum:
+                              - onFailure
+                              - always
+                            type: string
+                          mute:
+                            description: test cases whose failure must not fail the step
+                            properties:
+                              exclude:
+                                items:
+                                  type: string
+                                type: array
+                              include:
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          report:
+                            description: report to read after the command finishes
+                            properties:
+                              format:
+                                description: report format; only junit is understood today
+                                enum:
+                                  - junit
+                                type: string
+                              onMissing:
+                                description: |-
+                                  what a missing report means: fail (default), warn, or ignore.
+
+                                  Failing by default is the safety catch that stops `mute` masking a step
+                                  that crashed before it could write a report.
+                                enum:
+                                  - fail
+                                  - warn
+                                  - ignore
+                                type: string
+                              paths:
+                                description: |-
+                                  report paths, relative to the run container's working directory; globs are
+                                  allowed and absolute paths are accepted
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          select:
+                            description: test cases this run should be narrowed to
+                            properties:
+                              as:
+                                description: |-
+                                  per-entry projection handed to the tool; `testcase.{id,suite,classname,name,status}`
+                                  is in scope. Defaults to the canonical id.
+
+                                  This is what keeps the feature tool-agnostic: Testkube never learns a
+                                  runner's filter flag, it renders identities in the shape the user asks for.
+                                type: string
+                              cases:
+                                description: an explicit list of test cases, instead of or alongside `from`
+                                items:
+                                  type: string
+                                type: array
+                              collapse:
+                                description: |-
+                                  collapse the whole selection into a single entry; `selected` is in scope.
+                                  Only evaluated when the selection is not empty.
+                                type: string
+                              empty:
+                                description: |-
+                                  what an empty selection means: all (default) runs everything, skip skips
+                                  the step, fail fails it.
+
+                                  all is right for `from: self`, where the first attempt has produced no
+                                  report yet and must run the whole suite. It is usually wrong for a
+                                  dedicated re-run step, which wants skip.
+                                enum:
+                                  - all
+                                  - skip
+                                  - fail
+                                type: string
+                              exclude:
+                                items:
+                                  type: string
+                                type: array
+                              from:
+                                description: |-
+                                  where the previous results come from. Defaults to self.
+
+                                  self is this step's own previous retry attempt, which is what makes a
+                                  retry re-run only what failed: the selection is resolved before the
+                                  command and the verdict after it, so for a tool that overwrites its
+                                  report the file holds the previous attempt's results exactly when the
+                                  selection reads it.
+
+                                  Referring to another step, or to another execution, is not available yet.
+                                enum:
+                                  - self
+                                type: string
+                              include:
+                                description: narrow further, same glob form as mute
+                                items:
+                                  type: string
+                                type: array
+                              includeMuted:
+                                description: |-
+                                  re-run cases that `mute` covers. Off by default: a muted failure is one we
+                                  have already decided not to care about, so re-running it costs time on
+                                  every attempt and can never change the verdict. It is also what lets a
+                                  narrowing retry converge - otherwise the selection never shrinks below the
+                                  muted set. Turn it on only to find out whether a muted test has started
+                                  passing again.
+                                type: boolean
+                              status:
+                                description: which outcomes to take; defaults to failed and errored
+                                items:
+                                  enum:
+                                    - failed
+                                    - errored
+                                    - skipped
+                                  type: string
+                                type: array
+                              write:
+                                description: |-
+                                  write the entries to a file, for a selection too large to pass as
+                                  arguments or a runner that wants an arguments file
+                                properties:
+                                  path:
+                                    type: string
+                                  separator:
+                                    description: entry separator; defaults to a newline
+                                    type: string
+                                required:
+                                  - path
+                                type: object
+                            type: object
+                          tolerate:
+                            description: pass requirement, evaluated over the failures `mute` did not cover
+                            properties:
+                              maxFailed:
+                                format: int32
+                                minimum: 0
+                                type: integer
+                              maxFailedPercent:
+                                format: int32
+                                maximum: 100
+                                minimum: 0
+                                type: integer
+                              minPassed:
+                                format: int32
+                                minimum: 0
+                                type: integer
+                              minPassedPercent:
+                                format: int32
+                                maximum: 100
+                                minimum: 0
+                                type: integer
+                            type: object
+                        type: object
                       timeout:
                         description: maximum time this step may take
                         type: string
@@ -20783,6 +21269,171 @@ spec:
                             type: string
                         required:
                           - name
+                        type: object
+                      testCases:
+                        description: |-
+                          what this step's test report means: which failures to tolerate, the pass
+                          requirement, and which test cases to narrow this run to
+                        properties:
+                          enforce:
+                            description: |-
+                              how far the policy may move the verdict: onFailure (default) only turns a
+                              failure into a pass, always additionally fails a zero-exit run that misses
+                              the requirement
+                            enum:
+                              - onFailure
+                              - always
+                            type: string
+                          mute:
+                            description: test cases whose failure must not fail the step
+                            properties:
+                              exclude:
+                                items:
+                                  type: string
+                                type: array
+                              include:
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          report:
+                            description: report to read after the command finishes
+                            properties:
+                              format:
+                                description: report format; only junit is understood today
+                                enum:
+                                  - junit
+                                type: string
+                              onMissing:
+                                description: |-
+                                  what a missing report means: fail (default), warn, or ignore.
+
+                                  Failing by default is the safety catch that stops `mute` masking a step
+                                  that crashed before it could write a report.
+                                enum:
+                                  - fail
+                                  - warn
+                                  - ignore
+                                type: string
+                              paths:
+                                description: |-
+                                  report paths, relative to the run container's working directory; globs are
+                                  allowed and absolute paths are accepted
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          select:
+                            description: test cases this run should be narrowed to
+                            properties:
+                              as:
+                                description: |-
+                                  per-entry projection handed to the tool; `testcase.{id,suite,classname,name,status}`
+                                  is in scope. Defaults to the canonical id.
+
+                                  This is what keeps the feature tool-agnostic: Testkube never learns a
+                                  runner's filter flag, it renders identities in the shape the user asks for.
+                                type: string
+                              cases:
+                                description: an explicit list of test cases, instead of or alongside `from`
+                                items:
+                                  type: string
+                                type: array
+                              collapse:
+                                description: |-
+                                  collapse the whole selection into a single entry; `selected` is in scope.
+                                  Only evaluated when the selection is not empty.
+                                type: string
+                              empty:
+                                description: |-
+                                  what an empty selection means: all (default) runs everything, skip skips
+                                  the step, fail fails it.
+
+                                  all is right for `from: self`, where the first attempt has produced no
+                                  report yet and must run the whole suite. It is usually wrong for a
+                                  dedicated re-run step, which wants skip.
+                                enum:
+                                  - all
+                                  - skip
+                                  - fail
+                                type: string
+                              exclude:
+                                items:
+                                  type: string
+                                type: array
+                              from:
+                                description: |-
+                                  where the previous results come from. Defaults to self.
+
+                                  self is this step's own previous retry attempt, which is what makes a
+                                  retry re-run only what failed: the selection is resolved before the
+                                  command and the verdict after it, so for a tool that overwrites its
+                                  report the file holds the previous attempt's results exactly when the
+                                  selection reads it.
+
+                                  Referring to another step, or to another execution, is not available yet.
+                                enum:
+                                  - self
+                                type: string
+                              include:
+                                description: narrow further, same glob form as mute
+                                items:
+                                  type: string
+                                type: array
+                              includeMuted:
+                                description: |-
+                                  re-run cases that `mute` covers. Off by default: a muted failure is one we
+                                  have already decided not to care about, so re-running it costs time on
+                                  every attempt and can never change the verdict. It is also what lets a
+                                  narrowing retry converge - otherwise the selection never shrinks below the
+                                  muted set. Turn it on only to find out whether a muted test has started
+                                  passing again.
+                                type: boolean
+                              status:
+                                description: which outcomes to take; defaults to failed and errored
+                                items:
+                                  enum:
+                                    - failed
+                                    - errored
+                                    - skipped
+                                  type: string
+                                type: array
+                              write:
+                                description: |-
+                                  write the entries to a file, for a selection too large to pass as
+                                  arguments or a runner that wants an arguments file
+                                properties:
+                                  path:
+                                    type: string
+                                  separator:
+                                    description: entry separator; defaults to a newline
+                                    type: string
+                                required:
+                                  - path
+                                type: object
+                            type: object
+                          tolerate:
+                            description: pass requirement, evaluated over the failures `mute` did not cover
+                            properties:
+                              maxFailed:
+                                format: int32
+                                minimum: 0
+                                type: integer
+                              maxFailedPercent:
+                                format: int32
+                                maximum: 100
+                                minimum: 0
+                                type: integer
+                              minPassed:
+                                format: int32
+                                minimum: 0
+                                type: integer
+                              minPassedPercent:
+                                format: int32
+                                maximum: 100
+                                minimum: 0
+                                type: integer
+                            type: object
                         type: object
                       timeout:
                         description: maximum time this step may take
@@ -24432,6 +25083,171 @@ spec:
                       steps:
                         description: sub-steps to run
                         x-kubernetes-preserve-unknown-fields: true
+                      testCases:
+                        description: |-
+                          what this step's test report means: which failures to tolerate, the pass
+                          requirement, and which test cases to narrow this run to
+                        properties:
+                          enforce:
+                            description: |-
+                              how far the policy may move the verdict: onFailure (default) only turns a
+                              failure into a pass, always additionally fails a zero-exit run that misses
+                              the requirement
+                            enum:
+                              - onFailure
+                              - always
+                            type: string
+                          mute:
+                            description: test cases whose failure must not fail the step
+                            properties:
+                              exclude:
+                                items:
+                                  type: string
+                                type: array
+                              include:
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          report:
+                            description: report to read after the command finishes
+                            properties:
+                              format:
+                                description: report format; only junit is understood today
+                                enum:
+                                  - junit
+                                type: string
+                              onMissing:
+                                description: |-
+                                  what a missing report means: fail (default), warn, or ignore.
+
+                                  Failing by default is the safety catch that stops `mute` masking a step
+                                  that crashed before it could write a report.
+                                enum:
+                                  - fail
+                                  - warn
+                                  - ignore
+                                type: string
+                              paths:
+                                description: |-
+                                  report paths, relative to the run container's working directory; globs are
+                                  allowed and absolute paths are accepted
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          select:
+                            description: test cases this run should be narrowed to
+                            properties:
+                              as:
+                                description: |-
+                                  per-entry projection handed to the tool; `testcase.{id,suite,classname,name,status}`
+                                  is in scope. Defaults to the canonical id.
+
+                                  This is what keeps the feature tool-agnostic: Testkube never learns a
+                                  runner's filter flag, it renders identities in the shape the user asks for.
+                                type: string
+                              cases:
+                                description: an explicit list of test cases, instead of or alongside `from`
+                                items:
+                                  type: string
+                                type: array
+                              collapse:
+                                description: |-
+                                  collapse the whole selection into a single entry; `selected` is in scope.
+                                  Only evaluated when the selection is not empty.
+                                type: string
+                              empty:
+                                description: |-
+                                  what an empty selection means: all (default) runs everything, skip skips
+                                  the step, fail fails it.
+
+                                  all is right for `from: self`, where the first attempt has produced no
+                                  report yet and must run the whole suite. It is usually wrong for a
+                                  dedicated re-run step, which wants skip.
+                                enum:
+                                  - all
+                                  - skip
+                                  - fail
+                                type: string
+                              exclude:
+                                items:
+                                  type: string
+                                type: array
+                              from:
+                                description: |-
+                                  where the previous results come from. Defaults to self.
+
+                                  self is this step's own previous retry attempt, which is what makes a
+                                  retry re-run only what failed: the selection is resolved before the
+                                  command and the verdict after it, so for a tool that overwrites its
+                                  report the file holds the previous attempt's results exactly when the
+                                  selection reads it.
+
+                                  Referring to another step, or to another execution, is not available yet.
+                                enum:
+                                  - self
+                                type: string
+                              include:
+                                description: narrow further, same glob form as mute
+                                items:
+                                  type: string
+                                type: array
+                              includeMuted:
+                                description: |-
+                                  re-run cases that `mute` covers. Off by default: a muted failure is one we
+                                  have already decided not to care about, so re-running it costs time on
+                                  every attempt and can never change the verdict. It is also what lets a
+                                  narrowing retry converge - otherwise the selection never shrinks below the
+                                  muted set. Turn it on only to find out whether a muted test has started
+                                  passing again.
+                                type: boolean
+                              status:
+                                description: which outcomes to take; defaults to failed and errored
+                                items:
+                                  enum:
+                                    - failed
+                                    - errored
+                                    - skipped
+                                  type: string
+                                type: array
+                              write:
+                                description: |-
+                                  write the entries to a file, for a selection too large to pass as
+                                  arguments or a runner that wants an arguments file
+                                properties:
+                                  path:
+                                    type: string
+                                  separator:
+                                    description: entry separator; defaults to a newline
+                                    type: string
+                                required:
+                                  - path
+                                type: object
+                            type: object
+                          tolerate:
+                            description: pass requirement, evaluated over the failures `mute` did not cover
+                            properties:
+                              maxFailed:
+                                format: int32
+                                minimum: 0
+                                type: integer
+                              maxFailedPercent:
+                                format: int32
+                                maximum: 100
+                                minimum: 0
+                                type: integer
+                              minPassed:
+                                format: int32
+                                minimum: 0
+                                type: integer
+                              minPassedPercent:
+                                format: int32
+                                maximum: 100
+                                minimum: 0
+                                type: integer
+                            type: object
+                        type: object
                       timeout:
                         description: maximum time this step may take
                         type: string
@@ -30040,6 +30856,171 @@ spec:
                       steps:
                         description: sub-steps to run
                         x-kubernetes-preserve-unknown-fields: true
+                      testCases:
+                        description: |-
+                          what this step's test report means: which failures to tolerate, the pass
+                          requirement, and which test cases to narrow this run to
+                        properties:
+                          enforce:
+                            description: |-
+                              how far the policy may move the verdict: onFailure (default) only turns a
+                              failure into a pass, always additionally fails a zero-exit run that misses
+                              the requirement
+                            enum:
+                              - onFailure
+                              - always
+                            type: string
+                          mute:
+                            description: test cases whose failure must not fail the step
+                            properties:
+                              exclude:
+                                items:
+                                  type: string
+                                type: array
+                              include:
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          report:
+                            description: report to read after the command finishes
+                            properties:
+                              format:
+                                description: report format; only junit is understood today
+                                enum:
+                                  - junit
+                                type: string
+                              onMissing:
+                                description: |-
+                                  what a missing report means: fail (default), warn, or ignore.
+
+                                  Failing by default is the safety catch that stops `mute` masking a step
+                                  that crashed before it could write a report.
+                                enum:
+                                  - fail
+                                  - warn
+                                  - ignore
+                                type: string
+                              paths:
+                                description: |-
+                                  report paths, relative to the run container's working directory; globs are
+                                  allowed and absolute paths are accepted
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          select:
+                            description: test cases this run should be narrowed to
+                            properties:
+                              as:
+                                description: |-
+                                  per-entry projection handed to the tool; `testcase.{id,suite,classname,name,status}`
+                                  is in scope. Defaults to the canonical id.
+
+                                  This is what keeps the feature tool-agnostic: Testkube never learns a
+                                  runner's filter flag, it renders identities in the shape the user asks for.
+                                type: string
+                              cases:
+                                description: an explicit list of test cases, instead of or alongside `from`
+                                items:
+                                  type: string
+                                type: array
+                              collapse:
+                                description: |-
+                                  collapse the whole selection into a single entry; `selected` is in scope.
+                                  Only evaluated when the selection is not empty.
+                                type: string
+                              empty:
+                                description: |-
+                                  what an empty selection means: all (default) runs everything, skip skips
+                                  the step, fail fails it.
+
+                                  all is right for `from: self`, where the first attempt has produced no
+                                  report yet and must run the whole suite. It is usually wrong for a
+                                  dedicated re-run step, which wants skip.
+                                enum:
+                                  - all
+                                  - skip
+                                  - fail
+                                type: string
+                              exclude:
+                                items:
+                                  type: string
+                                type: array
+                              from:
+                                description: |-
+                                  where the previous results come from. Defaults to self.
+
+                                  self is this step's own previous retry attempt, which is what makes a
+                                  retry re-run only what failed: the selection is resolved before the
+                                  command and the verdict after it, so for a tool that overwrites its
+                                  report the file holds the previous attempt's results exactly when the
+                                  selection reads it.
+
+                                  Referring to another step, or to another execution, is not available yet.
+                                enum:
+                                  - self
+                                type: string
+                              include:
+                                description: narrow further, same glob form as mute
+                                items:
+                                  type: string
+                                type: array
+                              includeMuted:
+                                description: |-
+                                  re-run cases that `mute` covers. Off by default: a muted failure is one we
+                                  have already decided not to care about, so re-running it costs time on
+                                  every attempt and can never change the verdict. It is also what lets a
+                                  narrowing retry converge - otherwise the selection never shrinks below the
+                                  muted set. Turn it on only to find out whether a muted test has started
+                                  passing again.
+                                type: boolean
+                              status:
+                                description: which outcomes to take; defaults to failed and errored
+                                items:
+                                  enum:
+                                    - failed
+                                    - errored
+                                    - skipped
+                                  type: string
+                                type: array
+                              write:
+                                description: |-
+                                  write the entries to a file, for a selection too large to pass as
+                                  arguments or a runner that wants an arguments file
+                                properties:
+                                  path:
+                                    type: string
+                                  separator:
+                                    description: entry separator; defaults to a newline
+                                    type: string
+                                required:
+                                  - path
+                                type: object
+                            type: object
+                          tolerate:
+                            description: pass requirement, evaluated over the failures `mute` did not cover
+                            properties:
+                              maxFailed:
+                                format: int32
+                                minimum: 0
+                                type: integer
+                              maxFailedPercent:
+                                format: int32
+                                maximum: 100
+                                minimum: 0
+                                type: integer
+                              minPassed:
+                                format: int32
+                                minimum: 0
+                                type: integer
+                              minPassedPercent:
+                                format: int32
+                                maximum: 100
+                                minimum: 0
+                                type: integer
+                            type: object
+                        type: object
                       timeout:
                         description: maximum time this step may take
                         type: string
@@ -33386,6 +34367,171 @@ spec:
                       steps:
                         description: sub-steps to run
                         x-kubernetes-preserve-unknown-fields: true
+                      testCases:
+                        description: |-
+                          what this step's test report means: which failures to tolerate, the pass
+                          requirement, and which test cases to narrow this run to
+                        properties:
+                          enforce:
+                            description: |-
+                              how far the policy may move the verdict: onFailure (default) only turns a
+                              failure into a pass, always additionally fails a zero-exit run that misses
+                              the requirement
+                            enum:
+                              - onFailure
+                              - always
+                            type: string
+                          mute:
+                            description: test cases whose failure must not fail the step
+                            properties:
+                              exclude:
+                                items:
+                                  type: string
+                                type: array
+                              include:
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          report:
+                            description: report to read after the command finishes
+                            properties:
+                              format:
+                                description: report format; only junit is understood today
+                                enum:
+                                  - junit
+                                type: string
+                              onMissing:
+                                description: |-
+                                  what a missing report means: fail (default), warn, or ignore.
+
+                                  Failing by default is the safety catch that stops `mute` masking a step
+                                  that crashed before it could write a report.
+                                enum:
+                                  - fail
+                                  - warn
+                                  - ignore
+                                type: string
+                              paths:
+                                description: |-
+                                  report paths, relative to the run container's working directory; globs are
+                                  allowed and absolute paths are accepted
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          select:
+                            description: test cases this run should be narrowed to
+                            properties:
+                              as:
+                                description: |-
+                                  per-entry projection handed to the tool; `testcase.{id,suite,classname,name,status}`
+                                  is in scope. Defaults to the canonical id.
+
+                                  This is what keeps the feature tool-agnostic: Testkube never learns a
+                                  runner's filter flag, it renders identities in the shape the user asks for.
+                                type: string
+                              cases:
+                                description: an explicit list of test cases, instead of or alongside `from`
+                                items:
+                                  type: string
+                                type: array
+                              collapse:
+                                description: |-
+                                  collapse the whole selection into a single entry; `selected` is in scope.
+                                  Only evaluated when the selection is not empty.
+                                type: string
+                              empty:
+                                description: |-
+                                  what an empty selection means: all (default) runs everything, skip skips
+                                  the step, fail fails it.
+
+                                  all is right for `from: self`, where the first attempt has produced no
+                                  report yet and must run the whole suite. It is usually wrong for a
+                                  dedicated re-run step, which wants skip.
+                                enum:
+                                  - all
+                                  - skip
+                                  - fail
+                                type: string
+                              exclude:
+                                items:
+                                  type: string
+                                type: array
+                              from:
+                                description: |-
+                                  where the previous results come from. Defaults to self.
+
+                                  self is this step's own previous retry attempt, which is what makes a
+                                  retry re-run only what failed: the selection is resolved before the
+                                  command and the verdict after it, so for a tool that overwrites its
+                                  report the file holds the previous attempt's results exactly when the
+                                  selection reads it.
+
+                                  Referring to another step, or to another execution, is not available yet.
+                                enum:
+                                  - self
+                                type: string
+                              include:
+                                description: narrow further, same glob form as mute
+                                items:
+                                  type: string
+                                type: array
+                              includeMuted:
+                                description: |-
+                                  re-run cases that `mute` covers. Off by default: a muted failure is one we
+                                  have already decided not to care about, so re-running it costs time on
+                                  every attempt and can never change the verdict. It is also what lets a
+                                  narrowing retry converge - otherwise the selection never shrinks below the
+                                  muted set. Turn it on only to find out whether a muted test has started
+                                  passing again.
+                                type: boolean
+                              status:
+                                description: which outcomes to take; defaults to failed and errored
+                                items:
+                                  enum:
+                                    - failed
+                                    - errored
+                                    - skipped
+                                  type: string
+                                type: array
+                              write:
+                                description: |-
+                                  write the entries to a file, for a selection too large to pass as
+                                  arguments or a runner that wants an arguments file
+                                properties:
+                                  path:
+                                    type: string
+                                  separator:
+                                    description: entry separator; defaults to a newline
+                                    type: string
+                                required:
+                                  - path
+                                type: object
+                            type: object
+                          tolerate:
+                            description: pass requirement, evaluated over the failures `mute` did not cover
+                            properties:
+                              maxFailed:
+                                format: int32
+                                minimum: 0
+                                type: integer
+                              maxFailedPercent:
+                                format: int32
+                                maximum: 100
+                                minimum: 0
+                                type: integer
+                              minPassed:
+                                format: int32
+                                minimum: 0
+                                type: integer
+                              minPassedPercent:
+                                format: int32
+                                maximum: 100
+                                minimum: 0
+                                type: integer
+                            type: object
+                        type: object
                       timeout:
                         description: maximum time this step may take
                         type: string

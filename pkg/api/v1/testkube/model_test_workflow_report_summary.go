@@ -20,6 +20,12 @@ type TestWorkflowReportSummary struct {
 	Skipped int32 `json:"skipped,omitempty"`
 	// number of error test cases
 	Errored int32 `json:"errored,omitempty"`
+	// number of failing test cases the step's mute patterns covered
+	Muted int32 `json:"muted,omitempty"`
+	// number of failing test cases the mute patterns did not cover
+	Unexpected int32 `json:"unexpected,omitempty"`
+	// whether the pass requirement was met
+	Tolerated bool `json:"tolerated,omitempty"`
 	// total duration of all test cases in milliseconds
 	Duration int64 `json:"duration,omitempty"`
 }

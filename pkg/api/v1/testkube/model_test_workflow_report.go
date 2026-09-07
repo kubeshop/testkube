@@ -17,4 +17,8 @@ type TestWorkflowReport struct {
 	// file path to full report in artifact storage
 	File    string                     `json:"file,omitempty"`
 	Summary *TestWorkflowReportSummary `json:"summary,omitempty"`
+	// the test cases that did not pass, so that they can be listed or re-run without downloading the full report. Capped, with failuresTruncated set when the cap was reached; the complete set is always in the report file.
+	Failures []TestWorkflowReportFailure `json:"failures,omitempty"`
+	// whether failures holds only part of the non-passing test cases
+	FailuresTruncated bool `json:"failuresTruncated,omitempty"`
 }

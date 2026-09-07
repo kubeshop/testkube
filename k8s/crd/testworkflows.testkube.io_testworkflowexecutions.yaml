@@ -218,6 +218,37 @@ spec:
                       items:
                         description: TestWorkflowReport contains report of TestWorkflow
                         properties:
+                          failures:
+                            description: |-
+                              the test cases that did not pass, so they can be listed or re-run without
+                              downloading the full report. Capped, with FailuresTruncated set when the
+                              cap was reached; the complete set is always in the report file.
+                            items:
+                              description: TestWorkflowReportFailure is a single test case that did not pass
+                              properties:
+                                id:
+                                  description: canonical test case address, "<suite>/<classname>/<name>"
+                                  type: string
+                                message:
+                                  description: failure message, truncated
+                                  type: string
+                                muted:
+                                  description: |-
+                                    whether the step's mute patterns covered this test case, so it did not
+                                    count against the step
+                                  type: boolean
+                                status:
+                                  description: how the test case did not pass
+                                  enum:
+                                    - failed
+                                    - errored
+                                    - skipped
+                                  type: string
+                              type: object
+                            type: array
+                          failuresTruncated:
+                            description: whether Failures holds only part of the non-passing test cases
+                            type: boolean
                           file:
                             description: file path to full report in artifact storage
                             type: string
@@ -242,6 +273,10 @@ spec:
                                 description: number of failed test cases
                                 format: int32
                                 type: integer
+                              muted:
+                                description: number of failing test cases the step's mute patterns covered
+                                format: int32
+                                type: integer
                               passed:
                                 description: number of passed test cases
                                 format: int32
@@ -252,6 +287,13 @@ spec:
                                 type: integer
                               tests:
                                 description: total number of test cases
+                                format: int32
+                                type: integer
+                              tolerated:
+                                description: whether the pass requirement was met
+                                type: boolean
+                              unexpected:
+                                description: number of failing test cases the mute patterns did not cover
                                 format: int32
                                 type: integer
                             type: object
@@ -345,6 +387,63 @@ spec:
                             status:
                               description: TestWorkfloStepwStatus has step status of TestWorkflow
                               type: string
+                            testResults:
+                              description: what the step's test report said, when it declared a testCases policy
+                              properties:
+                                errored:
+                                  description: number of errored test cases
+                                  format: int32
+                                  type: integer
+                                failed:
+                                  description: number of failed test cases
+                                  format: int32
+                                  type: integer
+                                identitiesIncomplete:
+                                  description: |-
+                                    whether the report described more test cases than it named. When it did,
+                                    mute could not be applied and the report's own counters were believed.
+                                  type: boolean
+                                muted:
+                                  description: number of failing test cases the mute patterns covered
+                                  format: int32
+                                  type: integer
+                                passed:
+                                  description: number of passed test cases
+                                  format: int32
+                                  type: integer
+                                requirementApplied:
+                                  description: |-
+                                    whether a pass requirement was evaluated at all. False when the run
+                                    measured a subset, because a threshold over a subset means nothing, in
+                                    which case the bar was simply that nothing unexpected failed.
+                                  type: boolean
+                                skipped:
+                                  description: number of skipped test cases
+                                  format: int32
+                                  type: integer
+                                tests:
+                                  description: total number of test cases
+                                  format: int32
+                                  type: integer
+                                tolerated:
+                                  description: whether the step met its pass requirement
+                                  type: boolean
+                                unexpected:
+                                  description: number of failing test cases the mute patterns did not cover
+                                  format: int32
+                                  type: integer
+                                unrepresented:
+                                  description: how many test cases the report claimed beyond the ones it named
+                                  format: int32
+                                  type: integer
+                                unusedMutePatterns:
+                                  description: |-
+                                    mute patterns that matched no test case - dead quarantine config, surfaced
+                                    so that mute lists do not outlive the bugs they were written for
+                                  items:
+                                    type: string
+                                  type: array
+                              type: object
                           type: object
                         pausedMs:
                           description: Pause duration in milliseconds
@@ -422,6 +521,63 @@ spec:
                               status:
                                 description: TestWorkfloStepwStatus has step status of TestWorkflow
                                 type: string
+                              testResults:
+                                description: what the step's test report said, when it declared a testCases policy
+                                properties:
+                                  errored:
+                                    description: number of errored test cases
+                                    format: int32
+                                    type: integer
+                                  failed:
+                                    description: number of failed test cases
+                                    format: int32
+                                    type: integer
+                                  identitiesIncomplete:
+                                    description: |-
+                                      whether the report described more test cases than it named. When it did,
+                                      mute could not be applied and the report's own counters were believed.
+                                    type: boolean
+                                  muted:
+                                    description: number of failing test cases the mute patterns covered
+                                    format: int32
+                                    type: integer
+                                  passed:
+                                    description: number of passed test cases
+                                    format: int32
+                                    type: integer
+                                  requirementApplied:
+                                    description: |-
+                                      whether a pass requirement was evaluated at all. False when the run
+                                      measured a subset, because a threshold over a subset means nothing, in
+                                      which case the bar was simply that nothing unexpected failed.
+                                    type: boolean
+                                  skipped:
+                                    description: number of skipped test cases
+                                    format: int32
+                                    type: integer
+                                  tests:
+                                    description: total number of test cases
+                                    format: int32
+                                    type: integer
+                                  tolerated:
+                                    description: whether the step met its pass requirement
+                                    type: boolean
+                                  unexpected:
+                                    description: number of failing test cases the mute patterns did not cover
+                                    format: int32
+                                    type: integer
+                                  unrepresented:
+                                    description: how many test cases the report claimed beyond the ones it named
+                                    format: int32
+                                    type: integer
+                                  unusedMutePatterns:
+                                    description: |-
+                                      mute patterns that matched no test case - dead quarantine config, surfaced
+                                      so that mute lists do not outlive the bugs they were written for
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                             type: object
                           type: object
                         totalDuration:

@@ -22,5 +22,6 @@ type TestWorkflowStepResult struct {
 	// when the container was started
 	StartedAt time.Time `json:"startedAt,omitempty"`
 	// when the container was finished
-	FinishedAt time.Time `json:"finishedAt,omitempty"`
+	FinishedAt  time.Time                    `json:"finishedAt,omitempty"`
+	TestResults *TestWorkflowStepTestResults `json:"testResults,omitempty"`
 }
