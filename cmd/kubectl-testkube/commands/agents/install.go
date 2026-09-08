@@ -42,40 +42,7 @@ func NewInstallAgentCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the agent")
-	common2.PopulateRunnerFlags(cmd, false)
-	return cmd
-}
-
-// NewInstallRunnerCommand creates a command equivalent to `install agent --runner`.
-// It intentionally does not expose the --listener flag.
-func NewInstallRunnerCommand() *cobra.Command {
-	var namespace string
-
-	cmd := &cobra.Command{
-		Use:  "runner <name>",
-		Args: cobra.MaximumNArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			// Check for deprecated --type flag usage
-			if cmd.Flags().Changed("type") {
-				ui.Warn("⚠️  The --type/-t flag is deprecated.")
-				ui.Info("This command installs a runner-only agent by default.")
-				ui.Hint("For more flexibility, use 'testkube install agent' with:")
-				ui.Info("  --runner    : Enable runner capability")
-				ui.Info("  --listener  : Enable listener capability")
-				ui.Info("  --gitops    : Enable GitOps capability")
-				ui.Info("  --webhooks  : Enable webhooks capability")
-				ui.NL()
-				return
-			}
-
-			// Force runner-only behavior
-			_ = cmd.Flags().Set("runner", "true")
-			UiInstallAgent(cmd, strings.Join(args, ""), []string{"testkube.io/source=cloud"})
-		},
-	}
-
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the agent")
-	common2.PopulateRunnerFlags(cmd, true)
+	common2.PopulateRunnerFlags(cmd)
 	return cmd
 }
 
