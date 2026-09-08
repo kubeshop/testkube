@@ -98,6 +98,7 @@ type RunOptions struct {
 	TargetMatch              []string
 	TargetNot                []string
 	TargetReplicate          []string
+	TestCases                []string
 }
 
 // ExecutionOptions contains options for processing executions
@@ -175,6 +176,11 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&opts.TargetMatch, "target", nil, "runner labels to match")
 	cmd.Flags().StringArrayVar(&opts.TargetNot, "target-not", nil, "runner labels to not match")
 	cmd.Flags().StringArrayVar(&opts.TargetReplicate, "target-replicate", nil, "runner labels to replicate over")
+	// Needs a step declaring testCases.select, since Testkube knows no runner's
+	// filter flag: the workflow has to say how the selected names reach the tool.
+	// The server refuses the request when none does.
+	cmd.Flags().StringArrayVar(&opts.TestCases, "test-case", nil,
+		"run only the matching test cases, as a glob over \"<suite>/<classname>/<name>\" (repeatable); requires a step with testCases.select")
 
 	return cmd
 }
@@ -238,7 +244,7 @@ func runTestWorkflow(opts *RunOptions) func(*cobra.Command, []string) {
 		}
 
 		request, cliErr := buildExecutionRequest(cfg, runContext, interfaceType, opts.ExecutionName, config,
-			variables, silentMode, opts.Tags, targetOpts)
+			variables, silentMode, opts.Tags, targetOpts, opts.TestCases)
 		common.HandleCLIError(cliErr)
 
 		executions, err := executeWorkflows(client, args, opts.Selectors, request)
@@ -369,6 +375,7 @@ func buildExecutionRequest(
 	silentMode *testkube.SilentMode,
 	tags map[string]string,
 	targetOpts TargetOptions,
+	testCases []string,
 ) (testkube.TestWorkflowExecutionRequest, *common.CLIError) {
 
 	var runningContext *testkube.TestWorkflowRunningContext
@@ -383,6 +390,7 @@ func buildExecutionRequest(
 		Tags:           tags,
 		RunningContext: runningContext,
 		Target:         &testkube.ExecutionTarget{},
+		TestCases:      testCases,
 	}
 
 	// Backward compatibility: set DisableWebhooks if silent webhooks is enabled

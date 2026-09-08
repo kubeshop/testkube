@@ -3,6 +3,7 @@ package scheduling
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -297,6 +298,17 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 			}
 		}
 
+		// Checked here rather than in the handlers because this is the first point
+		// that holds the resolved workflow, templates and all: a request naming a
+		// workflow by name or selector does not carry one, and a template can be
+		// what introduces the step that makes narrowing possible.
+		if narrowsTestCases(req.GetRerun()) && !testworkflows.SelectsTestCases(current.Execution().ResolvedWorkflow) {
+			current.SetError("Cannot narrow this execution to specific test cases", errors.New(
+				"no step declares testCases.select, which is what tells Testkube how the selected test case "+
+					"names reach your test runner; without it the whole suite would run"))
+			continue
+		}
+
 		// Apply silent flag from workflow spec to SilentMode
 		if current.IsSilent() {
 			current.SetSilentMode(testworkflows.NewSilenceAllSilentMode())
@@ -452,4 +464,13 @@ func validateRerunPolicy(rerun *cloud.RerunPolicy) error {
 	}
 
 	return nil
+}
+
+// narrowsTestCases reports whether the request asks for fewer test cases than
+// the workflow would otherwise run.
+//
+// An execution id on its own does not: it is recorded so the pod can resolve the
+// "rerun" reference, and a workflow may reference it or not.
+func narrowsTestCases(rerun *cloud.RerunPolicy) bool {
+	return rerun != nil && (rerun.GetOnlyFailed() || len(rerun.GetTestCases()) > 0)
 }

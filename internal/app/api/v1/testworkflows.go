@@ -557,6 +557,15 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			scheduleExecution.Config = request.Config
 		}
 
+		// A fresh run narrowed to named test cases travels the same way a rerun's
+		// does: only the list, resolved against nothing, because the caller has
+		// already written the names in the shape their tool wants. The enqueuer
+		// refuses it if no step declares testCases.select.
+		var narrowed *cloud.RerunPolicy
+		if len(request.TestCases) > 0 {
+			narrowed = &cloud.RerunPolicy{TestCases: request.TestCases}
+		}
+
 		results, err := s.testWorkflowExecutor.Execute(ctx, &cloud.ScheduleRequest{
 			Executions:           []*cloud.ScheduleExecution{&scheduleExecution},
 			DisableWebhooks:      request.DisableWebhooks,
@@ -566,6 +575,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			KubernetesObjectName: request.TestWorkflowExecutionName,
 			User:                 user,
 			SilentMode:           silentMode,
+			Rerun:                narrowed,
 		})
 
 		if err != nil {
