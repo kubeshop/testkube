@@ -154,3 +154,164 @@ func TestResolveSelection_RemoteSourceWithNoReport(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, selection.Narrowed)
 }
+
+// recordedFailures builds a source whose execution record already carries the
+// failures, and whose artifact store would fail if touched - the point being
+// that it is not touched.
+func recordedFailures(t *testing.T, executionId string, reports []executiondata.Report) reportSource {
+	t.Helper()
+
+	repository := executiondata.NewMockExecutionRepository(gomock.NewController(t))
+	repository.EXPECT().
+		Get(gomock.Any(), executionId).
+		Return(executiondata.Execution{Id: executionId, Reports: reports}, nil).
+		AnyTimes()
+
+	return reportSource{
+		Resolver:   executiondata.Resolver{Repository: repository, RerunId: executionId},
+		Repository: repository,
+	}
+}
+
+func failed(ids ...string) []executiondata.ReportFailure {
+	failures := make([]executiondata.ReportFailure, 0, len(ids))
+	for _, id := range ids {
+		failures = append(failures, executiondata.ReportFailure{Id: id, Status: "failed"})
+	}
+	return failures
+}
+
+// The record outlives the artifacts, so preferring it is what lets a rerun
+// narrow against an execution whose report file has been pruned. It also spares
+// the pod a download and the deployment an artifact-read capability.
+//
+// ListArtifacts is deliberately not expected: gomock failing on an unexpected
+// call is the assertion that nothing was downloaded.
+func TestResolveSelection_PrefersTheFailuresOnTheRecord(t *testing.T) {
+	source := recordedFailures(t, "exec-1", []executiondata.Report{{
+		Ref:      "step1",
+		File:     "reports/out.xml",
+		Failures: failed("s/tests.b/test_real_bug", "s/tests.b/test_boom"),
+	}})
+
+	selection, err := resolveTestCaseSelection(context.Background(), &lite.ActionTestCases{
+		ReportPaths: []string{"reports/out.xml"},
+		Select: &lite.ActionTestCasesSelect{
+			From:  executiondata.RerunRef,
+			Paths: []string{"reports/out.xml"},
+			As:    `{{ testcase.name }}`,
+		},
+	}, t.TempDir(), &testworkflowconfig.RerunConfig{ExecutionId: "exec-1"}, source)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"test_real_bug", "test_boom"}, selection.Entries)
+	assert.Equal(t, []string{"s/tests.b/test_real_bug", "s/tests.b/test_boom"}, selection.Addresses)
+}
+
+// The muted failures on the record are excluded the same way they are in a
+// parsed report, since both go through the same selection.
+func TestResolveSelection_RecordRespectsMute(t *testing.T) {
+	source := recordedFailures(t, "exec-1", []executiondata.Report{{
+		Failures: []executiondata.ReportFailure{
+			{Id: "s/c/test_flaky_a", Status: "failed", Muted: true},
+			{Id: "s/c/test_real", Status: "failed"},
+		},
+	}})
+
+	selection, err := resolveTestCaseSelection(context.Background(), &lite.ActionTestCases{
+		ReportPaths: []string{"reports/out.xml"},
+		MuteInclude: []string{"test_flaky_*"},
+		Select: &lite.ActionTestCasesSelect{
+			From:  executiondata.RerunRef,
+			Paths: []string{"reports/out.xml"},
+		},
+	}, t.TempDir(), &testworkflowconfig.RerunConfig{ExecutionId: "exec-1"}, source)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"s/c/test_real"}, selection.Entries)
+}
+
+// A truncated list must send the caller to the report rather than narrow to its
+// prefix: narrowing to the first 2000 of 5000 failures would test less than it
+// claimed and pass on the rest.
+func TestResolveSelection_TruncatedRecordFallsBackToTheReport(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(previousAttempt))
+	}))
+	defer server.Close()
+
+	repository := executiondata.NewMockExecutionRepository(gomock.NewController(t))
+	repository.EXPECT().
+		Get(gomock.Any(), "exec-1").
+		Return(executiondata.Execution{Id: "exec-1", Reports: []executiondata.Report{{
+			Failures:  failed("s/c/only-the-first-one"),
+			Truncated: true,
+		}}}, nil).
+		AnyTimes()
+	repository.EXPECT().
+		ListArtifacts(gomock.Any(), "exec-1", gomock.Any()).
+		Return([]executiondata.Artifact{{
+			Path: "reports/out.xml",
+			Url:  server.URL,
+			Size: int64(len(previousAttempt)),
+		}}, nil)
+
+	source := reportSource{
+		Resolver:   executiondata.Resolver{Repository: repository, RerunId: "exec-1"},
+		Repository: repository,
+		Client:     server.Client(),
+	}
+
+	selection, err := resolveTestCaseSelection(context.Background(), &lite.ActionTestCases{
+		ReportPaths: []string{"reports/out.xml"},
+		Select: &lite.ActionTestCasesSelect{
+			From:  executiondata.RerunRef,
+			Paths: []string{"reports/out.xml"},
+			As:    `{{ testcase.name }}`,
+		},
+	}, t.TempDir(), &testworkflowconfig.RerunConfig{ExecutionId: "exec-1"}, source)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"test_flaky_a", "test_real_bug", "test_boom"}, selection.Entries,
+		"the whole story comes from the report, not the prefix on the record")
+}
+
+// A record carrying no reports means nothing was stored, not that nothing
+// failed, so the report still has to be read.
+func TestResolveSelection_RecordWithoutReportsFallsBack(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(previousAttempt))
+	}))
+	defer server.Close()
+
+	repository := executiondata.NewMockExecutionRepository(gomock.NewController(t))
+	repository.EXPECT().
+		Get(gomock.Any(), "exec-1").
+		Return(executiondata.Execution{Id: "exec-1"}, nil).
+		AnyTimes()
+	repository.EXPECT().
+		ListArtifacts(gomock.Any(), "exec-1", gomock.Any()).
+		Return([]executiondata.Artifact{{
+			Path: "reports/out.xml",
+			Url:  server.URL,
+			Size: int64(len(previousAttempt)),
+		}}, nil)
+
+	source := reportSource{
+		Resolver:   executiondata.Resolver{Repository: repository, RerunId: "exec-1"},
+		Repository: repository,
+		Client:     server.Client(),
+	}
+
+	selection, err := resolveTestCaseSelection(context.Background(), &lite.ActionTestCases{
+		ReportPaths: []string{"reports/out.xml"},
+		Select: &lite.ActionTestCasesSelect{
+			From:  executiondata.RerunRef,
+			Paths: []string{"reports/out.xml"},
+			As:    `{{ testcase.name }}`,
+		},
+	}, t.TempDir(), &testworkflowconfig.RerunConfig{ExecutionId: "exec-1"}, source)
+	require.NoError(t, err)
+
+	assert.Len(t, selection.Entries, 3)
+}

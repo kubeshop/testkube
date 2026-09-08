@@ -196,3 +196,71 @@ func TestDigest_EmptyReport(t *testing.T) {
 	assert.Empty(t, digest.Failures)
 	assert.False(t, digest.Truncated)
 }
+
+// The round trip through ID has to be exact, because that string is what the
+// glob patterns match against.
+func TestTestCaseFromIDRoundTrips(t *testing.T) {
+	for _, id := range []string{
+		"s/c/test_one",
+		"//TestFoo",
+		"s//test_two",
+		"/c/test_three",
+		// Parameterized names carry all sorts of things, including separators.
+		"suite/Class/test_x[a/b]",
+		"suite/Class/test_y[a, b]",
+	} {
+		t.Run(id, func(t *testing.T) {
+			assert.Equal(t, id, TestCaseFromID(id, StatusFailed).ID())
+		})
+	}
+}
+
+func TestTestCaseFromIDSplitsTheSegments(t *testing.T) {
+	testCase := TestCaseFromID("Payments/CheckoutTest/test_total", StatusErrored)
+
+	assert.Equal(t, "Payments", testCase.Suite())
+	assert.Equal(t, "CheckoutTest", testCase.Classname)
+	assert.Equal(t, "test_total", testCase.Name)
+	assert.Equal(t, StatusErrored, testCase.Status)
+}
+
+// A rebuilt report has to be selectable from, which means Unrepresented must
+// read zero: a failure list names everything it describes, and a non-zero
+// Declared would make the selection refuse it as unaddressable.
+func TestReportFromFailuresIsSelectable(t *testing.T) {
+	report := ReportFromFailures([]DigestFailure{
+		{Id: "s/c/test_one", Status: StatusFailed},
+		{Id: "s/c/test_two", Status: StatusErrored},
+		{Id: "s/c/test_three", Status: StatusSkipped},
+	})
+
+	require.Zero(t, report.Unrepresented())
+
+	entries, err := Selection{}.Resolve(report)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"s/c/test_one", "s/c/test_two"}, entries,
+		"the default statuses take the failures and errors, not the skip")
+
+	addresses, err := Selection{}.Addresses(report)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"s/c/test_one", "s/c/test_two"}, addresses)
+}
+
+// Mute exclusion and the include filter both work off the id, so they behave the
+// same against a rebuilt report as against a parsed one.
+func TestReportFromFailuresRespectsMuteAndFilters(t *testing.T) {
+	report := ReportFromFailures([]DigestFailure{
+		{Id: "s/c/test_flaky_a", Status: StatusFailed},
+		{Id: "s/c/test_real", Status: StatusFailed},
+	})
+
+	entries, err := Selection{Mute: Selector{Include: []string{"test_flaky_*"}}}.Resolve(report)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"s/c/test_real"}, entries)
+}
+
+func TestReportFromFailuresEmpty(t *testing.T) {
+	report := ReportFromFailures(nil)
+	assert.Empty(t, report.Cases)
+	assert.Zero(t, report.Unrepresented())
+}

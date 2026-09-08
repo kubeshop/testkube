@@ -79,6 +79,40 @@ type Execution struct {
 	// An output the execution produced but could not publish - its value holds a
 	// sensitive word - is present here as a WithheldMarker rather than as its value.
 	Outputs map[string]string `json:"outputs,omitempty"`
+
+	// Reports are the test reports the execution produced, reduced to the test
+	// cases that did not pass. They come off the execution record rather than out
+	// of the report files, so they outlive the artifacts: a rerun narrowed
+	// against an execution whose artifacts have been pruned still has something
+	// to narrow with.
+	//
+	// Absent for an execution resolved out of the local registry, which is built
+	// from what the `execute` step published rather than from the record. A
+	// caller that needs them falls back to reading the report itself.
+	Reports []Report `json:"reports,omitempty"`
+}
+
+// Report is one of an execution's test reports, as the execution record holds
+// it: the non-passing test cases it named, and whether that list is complete.
+type Report struct {
+	// Ref is the step the report belongs to.
+	Ref string `json:"ref,omitempty"`
+	// File is the artifact the report was uploaded as.
+	File string `json:"file,omitempty"`
+	// Failures are the test cases that did not pass, by canonical address.
+	Failures []ReportFailure `json:"failures,omitempty"`
+	// Truncated says the list is a prefix rather than the whole story, because
+	// the report named more failures than the record carries. A caller narrowing
+	// a run has to read the report itself in that case: narrowing to a prefix
+	// would quietly test less than it claimed to.
+	Truncated bool `json:"truncated,omitempty"`
+}
+
+// ReportFailure is a single test case that did not pass.
+type ReportFailure struct {
+	Id     string `json:"id"`
+	Status string `json:"status,omitempty"`
+	Muted  bool   `json:"muted,omitempty"`
 }
 
 // Key is the primary reference of the execution - its alias when the parent gave
@@ -132,6 +166,7 @@ func FromExecution(execution *testkube.TestWorkflowExecution) Execution {
 		Id:      execution.Id,
 		Name:    execution.Name,
 		Outputs: OutputsOf(execution),
+		Reports: ReportsOf(execution),
 	}
 	if execution.Workflow != nil {
 		result.Workflow = execution.Workflow.Name
@@ -167,4 +202,37 @@ func OutputsOf(execution *testkube.TestWorkflowExecution) map[string]string {
 		}
 	}
 	return values
+}
+
+// ReportsOf reduces an execution's test reports to the failures they named.
+//
+// A report with no failures recorded is skipped rather than carried empty: the
+// two are indistinguishable afterwards, and a caller has to be able to tell
+// "this report named no failures" from "this record carries none", since only
+// the second means it has to go and read the report.
+func ReportsOf(execution *testkube.TestWorkflowExecution) []Report {
+	if execution == nil {
+		return nil
+	}
+	var reports []Report
+	for _, report := range execution.Reports {
+		if len(report.Failures) == 0 {
+			continue
+		}
+		failures := make([]ReportFailure, 0, len(report.Failures))
+		for _, failure := range report.Failures {
+			failures = append(failures, ReportFailure{
+				Id:     failure.Id,
+				Status: failure.Status,
+				Muted:  failure.Muted,
+			})
+		}
+		reports = append(reports, Report{
+			Ref:       report.Ref,
+			File:      report.File,
+			Failures:  failures,
+			Truncated: report.FailuresTruncated,
+		})
+	}
+	return reports
 }

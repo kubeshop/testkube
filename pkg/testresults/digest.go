@@ -1,5 +1,7 @@
 package testresults
 
+import "strings"
+
 const (
 	// MaxDigestFailures caps how many non-passing test cases a digest names.
 	//
@@ -127,4 +129,52 @@ func (r Report) Digest() Digest {
 	}
 
 	return digest
+}
+
+// ReportFromFailures rebuilds a report from a stored failure list.
+//
+// The control plane keeps the non-passing test cases of a report alongside the
+// execution record, which outlives the report file: artifacts are pruned on a
+// retention schedule and the row is not. So a selection narrowed against an
+// earlier execution can be resolved from this rather than by downloading the
+// report, which also spares the pod an artifact download and the deployment an
+// artifact-read capability.
+//
+// Only non-passing cases are stored, which costs a selection nothing: passing
+// cases can never be selected - see ParseStatuses.
+//
+// Declared is deliberately left zero. It exists so a report that describes more
+// tests than it names can be recognised, and a failure list names everything it
+// describes; leaving it set would make Unrepresented misreport the difference
+// and refuse the selection.
+func ReportFromFailures(failures []DigestFailure) Report {
+	report := Report{Cases: make([]TestCase, 0, len(failures))}
+	for _, failure := range failures {
+		report.Cases = append(report.Cases, TestCaseFromID(failure.Id, failure.Status))
+	}
+	return report
+}
+
+// TestCaseFromID reverses TestCase.ID.
+//
+// The id is three fields joined by "/", so splitting into exactly three parts
+// puts each one back and any "/" inside the test's own name stays with it -
+// which matters, because parameterized names contain all sorts of things. The
+// round trip through ID is therefore exact, and that is what the glob matching
+// depends on.
+//
+// A suite name containing "/" is the one shape this cannot take apart. The id
+// still reconstructs, so patterns keep working; only `as` reading
+// testcase.suite or testcase.classname would see the split in the wrong place.
+func TestCaseFromID(id string, status Status) TestCase {
+	parts := strings.SplitN(id, "/", 3)
+	for len(parts) < 3 {
+		parts = append(parts, "")
+	}
+
+	testCase := TestCase{Classname: parts[1], Name: parts[2], Status: status}
+	if parts[0] != "" {
+		testCase.SuitePath = []string{parts[0]}
+	}
+	return testCase
 }

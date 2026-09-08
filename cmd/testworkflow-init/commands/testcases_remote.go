@@ -43,6 +43,14 @@ func (s reportSource) readRemoteReport(ctx context.Context, ref string, patterns
 		return testresults.Report{}, false, err
 	}
 
+	// The execution record carries the failures its reports named, which is both
+	// cheaper than downloading them and longer-lived: artifacts are pruned on a
+	// retention schedule and the record is not. Reading the report itself is the
+	// fallback, for a record that carries none or carries only a prefix.
+	if report, ok := reportFromRecord(execution); ok {
+		return report, true, nil
+	}
+
 	artifacts, err := s.Repository.ListArtifacts(ctx, execution.Id, patterns)
 	if err != nil {
 		return testresults.Report{}, false, fmt.Errorf("listing the reports of execution %s: %w", execution.Id, err)
@@ -87,4 +95,38 @@ func executionReportSource() reportSource {
 		Repository: data.ExecutionDataRepository(),
 		Client:     data.ArtifactClient(),
 	}
+}
+
+// reportFromRecord rebuilds the previous results from what the execution record
+// holds, reporting whether it could.
+//
+// It refuses a truncated list rather than narrowing to its prefix: a run
+// narrowed to the first two thousand of five thousand failures would test less
+// than it claimed to and pass on the rest. The report file still holds them all,
+// so the caller reads that instead.
+//
+// A record with no reports at all is equally not usable - it means nothing was
+// stored, not that nothing failed - and the caller has to look at the report to
+// tell the difference.
+func reportFromRecord(execution executiondata.Execution) (testresults.Report, bool) {
+	if len(execution.Reports) == 0 {
+		return testresults.Report{}, false
+	}
+
+	failures := make([]testresults.DigestFailure, 0)
+	for _, report := range execution.Reports {
+		if report.Truncated {
+			return testresults.Report{}, false
+		}
+		for _, failure := range report.Failures {
+			failures = append(failures, testresults.DigestFailure{
+				Id:     failure.Id,
+				Status: testresults.Status(failure.Status),
+			})
+		}
+	}
+	if len(failures) == 0 {
+		return testresults.Report{}, false
+	}
+	return testresults.ReportFromFailures(failures), true
 }
