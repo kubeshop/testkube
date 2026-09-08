@@ -7,8 +7,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/gookit/color"
-
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/internal/common"
 )
@@ -526,6 +524,7 @@ func (r *TestWorkflowResult) HealTimestamps(sigSequence []TestWorkflowSignature,
 }
 
 func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSignature, errorStr, defaultErrorStr string, terminationCode string) {
+	// The stored message must stay plain text. The API and telemetry read it without a terminal renderer.
 	errorMessage := fmt.Sprintf("The execution has been %s. (%s)", terminationCode, errorStr)
 	if errorStr == "" {
 		errorMessage = fmt.Sprintf("The execution has been %s.", terminationCode)
@@ -562,9 +561,10 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 		}
 		if aborted || canceled {
 			step.Status = common.Ptr(SKIPPED_TestWorkflowStepStatus)
-			step.ErrorMessage = fmt.Sprintf("The execution was aborted before. %s", color.FgDarkGray.Render("("+errorStr+")"))
 			if canceled {
-				step.ErrorMessage = fmt.Sprintf("The execution was canceled before. %s", color.FgDarkGray.Render("("+errorStr+")"))
+				step.ErrorMessage = fmt.Sprintf("The execution was canceled before. (%s)", errorStr)
+			} else {
+				step.ErrorMessage = fmt.Sprintf("The execution was aborted before. (%s)", errorStr)
 			}
 		} else {
 			if terminationCode == string(CANCELED_TestWorkflowStatus) {
