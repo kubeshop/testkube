@@ -237,6 +237,47 @@ func ValidateExecutionRequest(req *cloud.ScheduleRequest) error {
 		return errors.New("resolved workflow can trigger only execution of a single named TestWorkflow")
 	}
 
+	if err := ValidateRerunPolicy(req.GetRerun()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Rerun selection limits. The explicit list is carried through scheduling and
+// inlined into the config the pod reads, so it is bounded by what that can hold
+// rather than by anything about test cases.
+const (
+	MaxRerunTestCases     = 1000
+	MaxRerunTestCaseBytes = 64 * 1024
+)
+
+// ValidateRerunPolicy bounds a narrowed execution's explicit test case list.
+//
+// It lives here, in the shared request validation, so that both the open source
+// scheduler and the control plane's enforce it: a limit only one of them applies
+// is a limit that does not exist.
+//
+// Over the limit is refused rather than truncated. Truncating is the dangerous
+// option - a caller who asked for five thousand specific tests and silently got
+// a thousand would read the result as those tests having passed.
+func ValidateRerunPolicy(rerun *cloud.RerunPolicy) error {
+	cases := rerun.GetTestCases()
+	if len(cases) > MaxRerunTestCases {
+		return fmt.Errorf("rerun selection names %d test cases, more than the %d that can be carried; "+
+			"use the workflow's testCases.select block, which resolves against a report inside the pod",
+			len(cases), MaxRerunTestCases)
+	}
+
+	var size int
+	for _, name := range cases {
+		size += len(name)
+	}
+	if size > MaxRerunTestCaseBytes {
+		return fmt.Errorf("rerun selection is %d bytes of test case names, more than the %d that can be carried; "+
+			"use the workflow's testCases.select block instead", size, MaxRerunTestCaseBytes)
+	}
+
 	return nil
 }
 

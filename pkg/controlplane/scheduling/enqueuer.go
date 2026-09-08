@@ -220,9 +220,6 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 	}
 
 	if rerun := req.GetRerun(); rerun != nil {
-		if err := validateRerunPolicy(rerun); err != nil {
-			return nil, err
-		}
 		executionBase.SetRerun(&testkube.TestWorkflowRerun{
 			ExecutionId: rerun.GetExecutionId(),
 			OnlyFailed:  rerun.GetOnlyFailed(),
@@ -430,40 +427,6 @@ func countMapBytes(m map[string]string) int {
 		totalBytes += len(k) + len(v)
 	}
 	return totalBytes
-}
-
-// Rerun selection limits. The explicit list is carried through scheduling and
-// into the ConfigMap the pod reads, so it cannot be unbounded - a suite of ten
-// thousand test cases belongs in the workflow's own `select` block, which
-// resolves against a report inside the pod and has no such limit.
-const (
-	MaxRerunTestCases     = 1000
-	MaxRerunTestCaseBytes = 64 * 1024
-)
-
-// validateRerunPolicy rejects a selection too large to carry.
-//
-// It fails the request rather than truncating: a caller who asked for 5000
-// specific test cases and silently got 1000 would read the result as those
-// tests passing.
-func validateRerunPolicy(rerun *cloud.RerunPolicy) error {
-	cases := rerun.GetTestCases()
-	if len(cases) > MaxRerunTestCases {
-		return fmt.Errorf("rerun selection names %d test cases, more than the %d that can be carried; "+
-			"use the workflow's testCases.select block, which resolves against a report inside the pod",
-			len(cases), MaxRerunTestCases)
-	}
-
-	var size int
-	for _, name := range cases {
-		size += len(name)
-	}
-	if size > MaxRerunTestCaseBytes {
-		return fmt.Errorf("rerun selection is %d bytes of test case names, more than the %d that can be carried; "+
-			"use the workflow's testCases.select block instead", size, MaxRerunTestCaseBytes)
-	}
-
-	return nil
 }
 
 // narrowsTestCases reports whether the request asks for fewer test cases than
