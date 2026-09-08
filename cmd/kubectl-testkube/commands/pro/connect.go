@@ -197,10 +197,13 @@ func NewConnectCmd() *cobra.Command {
 			}
 
 			// Set pro connect defaults: enable all capabilities, auto-create, global
-			for _, flag := range []string{"runner", "listener", "gitops", "webhooks", "create", "global"} {
+			for _, flag := range []string{"listener", "gitops", "webhooks", "create", "global"} {
 				if !cmd.Flags().Changed(flag) {
 					_ = cmd.Flags().Set(flag, "true")
 				}
+			}
+			if !cmd.Flags().Changed("execution") && !cmd.Flags().Changed("runner") {
+				_ = cmd.Flags().Set("execution", "true")
 			}
 
 			ui.H2("Switching OSS Standalone Agent to Cloud Runner mode")

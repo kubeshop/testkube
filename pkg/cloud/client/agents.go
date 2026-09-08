@@ -43,6 +43,7 @@ type AgentInput struct {
 type AgentCapability string
 
 const (
+	AgentCapabilityExecution     AgentCapability = "execution"
 	AgentCapabilityRunner        AgentCapability = "runner"
 	AgentCapabilityListener      AgentCapability = "listener"
 	AgentCapabilityGitops        AgentCapability = "gitops"
@@ -160,7 +161,7 @@ func (c AgentsClient) CreateRunner(envId string, name string, labels map[string]
 		Type:         AgentRunnerType,
 		Labels:       common.Ptr(labels),
 		Floating:     floating,
-		Capabilities: []AgentCapability{AgentCapabilityRunner},
+		Capabilities: []AgentCapability{AgentCapabilityExecution, AgentCapabilityRunner},
 	}
 	return c.Create(agent)
 }

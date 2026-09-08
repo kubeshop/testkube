@@ -343,12 +343,33 @@ func PopulateRunnerFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool("floating", false, "(with --create) create as a floating agent")
 
 	// Components selection
-	cmd.Flags().Bool("runner", false, "enable runner component (default: enabled when no component flags are set)")
+	AddExecutionCapabilityFlags(cmd)
 	cmd.Flags().Bool("listener", false, "enable listener component (default: enabled when no component flags are set)")
 	cmd.Flags().Bool("gitops", false, "enable gitops capability")
 	cmd.Flags().Bool("webhooks", false, "enable webhooks capability")
 
 	// Deprecated flag
 	cmd.Flags().StringP("type", "t", "", "[DEPRECATED] agent type - use capability flags instead")
-	cmd.Flags().MarkDeprecated("type", "use --runner, --listener, --gitops, and/or --webhooks instead")
+	cmd.Flags().MarkDeprecated("type", "use --execution, --listener, --gitops, and/or --webhooks instead")
+}
+
+// AddExecutionCapabilityFlags registers --execution and the deprecated --runner alias.
+func AddExecutionCapabilityFlags(cmd *cobra.Command) {
+	cmd.Flags().Bool("execution", false, "enable execution capability (default: enabled when no component flags are set)")
+	cmd.Flags().Bool("runner", false, "enable execution capability")
+	_ = cmd.Flags().MarkDeprecated("runner", "use --execution instead")
+}
+
+// ExecutionCapabilityFromFlags reads --execution, falling back to deprecated --runner.
+// --execution wins when both are set.
+func ExecutionCapabilityFromFlags(cmd *cobra.Command) (changed, enabled bool) {
+	if cmd.Flags().Changed("execution") {
+		enabled, _ = cmd.Flags().GetBool("execution")
+		return true, enabled
+	}
+	if cmd.Flags().Changed("runner") {
+		enabled, _ = cmd.Flags().GetBool("runner")
+		return true, enabled
+	}
+	return false, false
 }

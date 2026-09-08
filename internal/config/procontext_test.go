@@ -9,8 +9,15 @@ import (
 )
 
 func TestShouldPushClusterInventory(t *testing.T) {
-	listener := []cloud.AgentCapability{cloud.AgentCapability_AGENT_CAPABILITY_RUNNER, cloud.AgentCapability_AGENT_CAPABILITY_LISTENER}
-	runnerOnly := []cloud.AgentCapability{cloud.AgentCapability_AGENT_CAPABILITY_RUNNER}
+	listener := []cloud.AgentCapability{
+		cloud.AgentCapability_AGENT_CAPABILITY_RUNNER,
+		cloud.AgentCapability_AGENT_CAPABILITY_EXECUTION,
+		cloud.AgentCapability_AGENT_CAPABILITY_LISTENER,
+	}
+	executionOnly := []cloud.AgentCapability{
+		cloud.AgentCapability_AGENT_CAPABILITY_RUNNER,
+		cloud.AgentCapability_AGENT_CAPABILITY_EXECUTION,
+	}
 	tests := []struct {
 		name       string
 		proContext ProContext
@@ -27,8 +34,8 @@ func TestShouldPushClusterInventory(t *testing.T) {
 			want:       true,
 		},
 		{
-			name:       "connected runner-only agent does not push",
-			proContext: ProContext{APIKey: "key", Agent: ProContextAgent{Capabilities: runnerOnly}},
+			name:       "connected execution-only agent does not push",
+			proContext: ProContext{APIKey: "key", Agent: ProContextAgent{Capabilities: executionOnly}},
 			want:       false,
 		},
 		{

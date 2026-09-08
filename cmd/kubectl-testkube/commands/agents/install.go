@@ -29,7 +29,7 @@ func NewInstallAgentCommand() *cobra.Command {
 			if cmd.Flags().Changed("type") {
 				ui.Warn("⚠️  The --type/-t flag is deprecated.")
 				ui.Info("Please use capability flags instead:")
-				ui.Info("  --runner    : Enable runner capability")
+				ui.Info("  --execution : Enable execution capability")
 				ui.Info("  --listener  : Enable listener capability")
 				ui.Info("  --gitops    : Enable GitOps capability")
 				ui.Info("  --webhooks  : Enable webhooks capability")
@@ -110,18 +110,17 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 	isGlobalRunner, _ := cmd.Flags().GetBool("global")
 	runnerGroup, _ := cmd.Flags().GetString("group")
 	// Component flags
-	runnerChanged := cmd.Flags().Changed("runner")
+	executionChanged, enableExecution := common2.ExecutionCapabilityFromFlags(cmd)
 	listenerChanged := cmd.Flags().Changed("listener")
 	gitopsChanged := cmd.Flags().Changed("gitops")
 	webhooksChanged := cmd.Flags().Changed("webhooks")
-	anyChanged := runnerChanged || listenerChanged || gitopsChanged || webhooksChanged
-	enableRunner, _ := cmd.Flags().GetBool("runner")
+	anyChanged := executionChanged || listenerChanged || gitopsChanged || webhooksChanged
 	enableListener, _ := cmd.Flags().GetBool("listener")
 	enableGitops, _ := cmd.Flags().GetBool("gitops")
 	enableWebhooks, _ := cmd.Flags().GetBool("webhooks")
 	// we default to both capabilities if none flags are set
 	if !anyChanged {
-		enableRunner = true
+		enableExecution = true
 		enableListener = true
 	}
 
@@ -169,7 +168,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 			isGlobalRunner,
 			runnerGroup,
 			floating,
-			enableRunner,
+			enableExecution,
 			enableListener,
 			enableGitops,
 			enableWebhooks,
@@ -275,7 +274,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 
 	// Install runner chart
 	helmOpts := CreateRunnerHelmOptions(controlPlane, ns, version, dryRun, map[string]interface{}{
-		"runner.enabled":   enableRunner,
+		"runner.enabled":   enableExecution,
 		"listener.enabled": enableListener,
 		"gitops.enabled":   enableGitops,
 		"webhooks.enabled": enableWebhooks,

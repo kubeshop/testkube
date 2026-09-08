@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -25,7 +26,7 @@ func NewCreateAgentCommand() *cobra.Command {
 			if cmd.Flags().Changed("type") {
 				ui.Warn("⚠️  The --type/-t flag is deprecated.")
 				ui.Info("Please use capability flags instead:")
-				ui.Info("  --runner    : Enable runner capability")
+				ui.Info("  --execution : Enable execution capability")
 				ui.Info("  --listener  : Enable listener capability")
 				ui.Info("  --gitops    : Enable GitOps capability")
 				ui.Info("  --webhooks  : Enable webhooks capability")
@@ -33,18 +34,17 @@ func NewCreateAgentCommand() *cobra.Command {
 				return
 			}
 
-			runnerChanged := cmd.Flags().Changed("runner")
+			executionChanged, enableExecution := common.ExecutionCapabilityFromFlags(cmd)
 			listenerChanged := cmd.Flags().Changed("listener")
 			gitopsChanged := cmd.Flags().Changed("gitops")
 			webhooksChanged := cmd.Flags().Changed("webhooks")
-			anyChanged := runnerChanged || listenerChanged || gitopsChanged || webhooksChanged
-			enableRunner, _ := cmd.Flags().GetBool("runner")
+			anyChanged := executionChanged || listenerChanged || gitopsChanged || webhooksChanged
 			enableListener, _ := cmd.Flags().GetBool("listener")
 			enableGitops, _ := cmd.Flags().GetBool("gitops")
 			enableWebhooks, _ := cmd.Flags().GetBool("webhooks")
 			// we default to both capabilities if none flags are set
 			if !anyChanged {
-				enableRunner = true
+				enableExecution = true
 				enableListener = true
 			}
 
@@ -56,7 +56,7 @@ func NewCreateAgentCommand() *cobra.Command {
 				global,
 				group,
 				floating,
-				enableRunner,
+				enableExecution,
 				enableListener,
 				enableGitops,
 				enableWebhooks,
@@ -64,8 +64,8 @@ func NewCreateAgentCommand() *cobra.Command {
 			ui.NL()
 			ui.Hint("Install the agent with command:")
 			installCmd := fmt.Sprintf("testkube install agent %s --secret %s", agent.Name, agent.SecretKey)
-			if enableRunner {
-				installCmd += " --runner"
+			if enableExecution {
+				installCmd += " --execution"
 			}
 			if enableListener {
 				installCmd += " --listener"
@@ -87,14 +87,14 @@ func NewCreateAgentCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&floating, "floating", false, "create as a floating agent")
 
 	// Components selection
-	cmd.Flags().Bool("runner", false, "enable runner capability (default: enabled when no component flags are set)")
+	common.AddExecutionCapabilityFlags(cmd)
 	cmd.Flags().Bool("listener", false, "enable listener capability (default: enabled when no component flags are set)")
 	cmd.Flags().Bool("gitops", false, "enable gitops capability")
 	cmd.Flags().Bool("webhooks", false, "enable webhooks capability")
 
 	// Deprecated flag
 	cmd.Flags().StringVarP(&agentType, "type", "t", "", "[DEPRECATED] agent type - use capability flags instead")
-	cmd.Flags().MarkDeprecated("type", "use --runner, --listener, --gitops, and/or --webhooks instead")
+	cmd.Flags().MarkDeprecated("type", "use --execution, --listener, --gitops, and/or --webhooks instead")
 
 	return cmd
 }
