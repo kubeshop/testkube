@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -439,6 +440,7 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 			EnvironmentSlug:  a.proContext.GetEnvSlug(environmentId),
 			ParentIds:        parentIds,
 			RunningContext:   execution.RunningContext,
+			Rerun:            rerunConfigFromExecution(execution.Rerun),
 		},
 		Workflow:     testworkflowmappers.MapTestWorkflowAPIToKube(*execution.ResolvedWorkflow),
 		ControlPlane: a.controlPlaneConfig, // TODO: fetch it from the control plane?
@@ -470,4 +472,27 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 	}
 
 	return nil
+}
+
+// rerunConfigFromExecution carries the rerun selection from the execution
+// record across to the pod.
+//
+// The scheduler records the policy on the execution rather than handing it
+// straight to the runner, because this path reconstructs the pod's config from
+// the record when it picks the execution up. Without this the reference would
+// be stored faithfully and never reach the step that needs it, and a caller who
+// asked to re-run named test cases would get a full run with no indication that
+// their selection had been dropped.
+//
+// The typed runner path does the same from its own proto - see
+// rerunConfigFromProto in pkg/runner/grpc.
+func rerunConfigFromExecution(rerun *testkube.TestWorkflowRerun) *testworkflowconfig.RerunConfig {
+	if rerun == nil {
+		return nil
+	}
+	return &testworkflowconfig.RerunConfig{
+		ExecutionId: rerun.ExecutionId,
+		OnlyFailed:  rerun.OnlyFailed,
+		TestCases:   slices.Clone(rerun.TestCases),
+	}
 }

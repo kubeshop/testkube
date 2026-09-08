@@ -75,6 +75,9 @@ func TestRunningContextFromProto_CarriesExecutionReference(t *testing.T) {
 	})
 }
 
+// The legacy agent path has to do the same from the execution record, and did
+// not until it was noticed - see TestRerunConfigFromExecution in pkg/runner.
+// Either half quietly dropping the policy runs the whole suite and says nothing.
 func TestExecutionConfigFromStart_CarriesRerunPolicy(t *testing.T) {
 	start := &executionv1.ExecutionStart{
 		ExecutionId: ptr("exec-2"),
