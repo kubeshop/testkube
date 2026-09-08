@@ -31,3 +31,11 @@ spec:
       - name: junit-report-high-level-failure
       - name: junit-report-high-level-testcase-both-error-and-failure
       - name: junit-report-high-level-without-testcases
+      # Connected mode only: a standalone agent rejects a testCases policy.
+      - name: junit5-workflow-testcases-mute-all
+      - name: junit5-workflow-testcases-mute-partial
+      - name: junit5-workflow-testcases-missing-report
+      - name: junit5-workflow-testcases-threshold-met
+      - name: junit5-workflow-testcases-enforce-always
+      - name: junit5-workflow-testcases-narrowing-retry
+      - name: junit5-workflow-testcases-rerun-target

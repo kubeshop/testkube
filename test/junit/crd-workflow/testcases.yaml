@@ -1,0 +1,347 @@
+# Fixtures for the `testCases` block: muting, pass requirements and narrowing.
+#
+# They all run the junit5-project in test/junit/junit5-project, whose TestSmokeFail
+# class fails test1, test3 and test4 and passes test2, test5 and test6 - six cases,
+# three of them failing, every time. TestSmoke1 has six passing cases and
+# TestSmoke2 four, so the whole project is 16 cases with 3 failures.
+#
+# The expected outcome is carried by the `core-tests` label, as elsewhere in this
+# directory: `workflows` must pass, `expected-fail` must fail. That is the whole
+# assertion for most of these - the point of muting is that a red tool makes a
+# green step, which is only meaningful if the suite fails when it should.
+#
+# `testCases` is available in connected mode only, so these need a cloud-connected
+# environment. A standalone agent rejects them at processing time, which is itself
+# worth seeing once.
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  # Every failure is muted, so the step passes although Maven exits non-zero.
+  name: junit5-workflow-testcases-mute-all
+  labels:
+    core-tests: workflows
+    tool: junit
+    artifacts: "true"
+    junit: "true"
+    testcases: "true"
+    category: unit-component-testing
+  annotations:
+    testkube.io/icon: junit
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+        - test/junit/junit5-project
+  container:
+    image: maven:3.9.9-eclipse-temurin-11-alpine
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+    workingDir: /data/repo/test/junit/junit5-project
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+    - name: Run tests
+      testCases:
+        report:
+          format: junit
+          paths: ["target/surefire-reports/*.xml"]
+          onMissing: fail
+        mute:
+          # Named without a suite or classname, which matches on the test name
+          # alone - the form that survives shard and classname churn.
+          include: ["test1", "test3", "test4"]
+      shell: mvn test -Dtest=TestSmokeFail
+      artifacts:
+        paths:
+          - "target/surefire-reports/**/*"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  # One failure is left unmuted, so the step still fails. Without this the
+  # fixture above would pass even if muting swallowed everything.
+  name: junit5-workflow-testcases-mute-partial
+  labels:
+    core-tests: expected-fail
+    artifacts: "true"
+    junit: "true"
+    testcases: "true"
+    category: unit-component-testing
+  annotations:
+    testkube.io/icon: junit
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+        - test/junit/junit5-project
+  container:
+    image: maven:3.9.9-eclipse-temurin-11-alpine
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+    workingDir: /data/repo/test/junit/junit5-project
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+    - name: Run tests
+      testCases:
+        report:
+          paths: ["target/surefire-reports/*.xml"]
+        mute:
+          # The canonical address in full, so both pattern forms are exercised.
+          # test4 is deliberately absent.
+          include:
+            - "TestSmokeFail/TestSmokeFail/test1"
+            - "TestSmokeFail/TestSmokeFail/test3"
+      shell: mvn test -Dtest=TestSmokeFail
+      artifacts:
+        paths:
+          - "target/surefire-reports/**/*"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  # onMissing defaults to fail, which is the safety catch that stops a mute
+  # policy rescuing a step that died before writing a report. Here the command
+  # succeeds and writes nothing, and the step must still fail.
+  name: junit5-workflow-testcases-missing-report
+  labels:
+    core-tests: expected-fail
+    junit: "true"
+    testcases: "true"
+    category: unit-component-testing
+  annotations:
+    testkube.io/icon: junit
+spec:
+  container:
+    image: alpine:3.20
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+    workingDir: /data
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+    - name: Produce no report at all
+      testCases:
+        report:
+          paths: ["reports/*.xml"]
+        # Muting everything would rescue this step if the missing report did not
+        # fail it first, which is exactly what is being checked.
+        mute:
+          include: ["**/*"]
+      shell: echo "the tool exited cleanly and wrote nothing"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  # Three failures of six, tolerated in bulk rather than by name, so the step
+  # passes although Maven exits non-zero.
+  name: junit5-workflow-testcases-threshold-met
+  labels:
+    core-tests: workflows
+    tool: junit
+    artifacts: "true"
+    junit: "true"
+    testcases: "true"
+    category: unit-component-testing
+  annotations:
+    testkube.io/icon: junit
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+        - test/junit/junit5-project
+  container:
+    image: maven:3.9.9-eclipse-temurin-11-alpine
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+    workingDir: /data/repo/test/junit/junit5-project
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+    - name: Run tests
+      testCases:
+        report:
+          paths: ["target/surefire-reports/*.xml"]
+        tolerate:
+          maxFailed: 3
+      shell: mvn test -Dtest=TestSmokeFail
+      artifacts:
+        paths:
+          - "target/surefire-reports/**/*"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  # A green tool that misses its bar. TestSmoke1 passes all six of its cases and
+  # Maven exits zero, so only `enforce: always` can fail this - which is the one
+  # thing it exists to do.
+  name: junit5-workflow-testcases-enforce-always
+  labels:
+    core-tests: expected-fail
+    artifacts: "true"
+    junit: "true"
+    testcases: "true"
+    category: unit-component-testing
+  annotations:
+    testkube.io/icon: junit
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+        - test/junit/junit5-project
+  container:
+    image: maven:3.9.9-eclipse-temurin-11-alpine
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+    workingDir: /data/repo/test/junit/junit5-project
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+    - name: Run tests
+      testCases:
+        report:
+          paths: ["target/surefire-reports/*.xml"]
+        tolerate:
+          # Six cases exist, so this can never be met.
+          minPassed: 10
+        enforce: always
+      shell: mvn test -Dtest=TestSmoke1
+      artifacts:
+        paths:
+          - "target/surefire-reports/**/*"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  # The narrowing retry, which is the mechanism the feature rests on. Attempt 1
+  # runs all six cases of TestSmokeFail; attempt 2 is handed only the three that
+  # failed. The step fails either way - those cases always fail - so what to
+  # check is the final report, which must name three cases and not six.
+  #
+  # Driven through the environment variables rather than argv so that they are
+  # exercised too: nothing else covers TK_SELECTED_TESTS end to end. The
+  # conditional is what keeps attempt 1 running the whole class rather than
+  # nothing, and keeps its report free of the other test classes so that
+  # attempt 2's report is unambiguous.
+  name: junit5-workflow-testcases-narrowing-retry
+  labels:
+    core-tests: expected-fail
+    artifacts: "true"
+    junit: "true"
+    testcases: "true"
+    category: unit-component-testing
+  annotations:
+    testkube.io/icon: junit
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+        - test/junit/junit5-project
+  container:
+    image: maven:3.9.9-eclipse-temurin-11-alpine
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+    workingDir: /data/repo/test/junit/junit5-project
+  job:
+    activeDeadlineSeconds: 900
+  steps:
+    - name: Run tests, narrowing on retry
+      retry:
+        count: 1
+      testCases:
+        report:
+          paths: ["target/surefire-reports/*.xml"]
+        select:
+          # Maven's own shape: Class#method.
+          as: "{{ testcase.classname }}#{{ testcase.name }}"
+      shell: |
+        set -e
+        echo "selected test cases: $TK_SELECTED_TESTS_COUNT"
+        if [ "$TK_SELECTED_TESTS_COUNT" -gt 0 ]; then
+          mvn test -Dtest="$(printf '%s' "$TK_SELECTED_TESTS" | tr '\n' ',')"
+        else
+          mvn test -Dtest=TestSmokeFail
+        fi
+      artifacts:
+        paths:
+          - "target/surefire-reports/**/*"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  # A workflow declaring select, so that `testkube rerun --only-failed` and
+  # `testkube run --test-case` have something to act on: without a select block
+  # both are refused, which is a case worth checking against this one.
+  #
+  # Run it, then re-run the execution it produces:
+  #
+  #   testkube rerun twe <id> --only-failed
+  #
+  # The second execution must report three cases rather than six, seeded from
+  # the first execution's report because attempt 1 has none of its own.
+  name: junit5-workflow-testcases-rerun-target
+  labels:
+    core-tests: expected-fail
+    artifacts: "true"
+    junit: "true"
+    testcases: "true"
+    category: unit-component-testing
+  annotations:
+    testkube.io/icon: junit
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+        - test/junit/junit5-project
+  container:
+    image: maven:3.9.9-eclipse-temurin-11-alpine
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+    workingDir: /data/repo/test/junit/junit5-project
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+    - name: Run tests
+      testCases:
+        report:
+          paths: ["target/surefire-reports/*.xml"]
+        select:
+          as: "{{ testcase.classname }}#{{ testcase.name }}"
+      shell: |
+        set -e
+        echo "selected test cases: $TK_SELECTED_TESTS_COUNT"
+        if [ "$TK_SELECTED_TESTS_COUNT" -gt 0 ]; then
+          mvn test -Dtest="$(printf '%s' "$TK_SELECTED_TESTS" | tr '\n' ',')"
+        else
+          mvn test -Dtest=TestSmokeFail
+        fi
+      artifacts:
+        paths:
+          - "target/surefire-reports/**/*"
