@@ -49,6 +49,10 @@ func ProcessTestCases(_ testworkflowprocessor.InternalProcessor, _ testworkflowp
 		return nil, nil
 	}
 
+	if err := validatePlacement(step); err != nil {
+		return nil, err
+	}
+
 	// Everything the policy can express is a statement about a report, so
 	// without one there is nothing it could act on.
 	if policy.Report == nil || len(policy.Report.Paths) == 0 {
@@ -164,4 +168,34 @@ func validateEnum(field, value string, allowed ...string) error {
 		}
 	}
 	return fmt.Errorf("testCases: %s %q is not one of %s", field, value, strings.Join(allowed, ", "))
+}
+
+// validatePlacement refuses a policy on a step that cannot act on one.
+//
+// The policy travels on the container stage that ProcessRunCommand or
+// ProcessShellCommand creates, so a step with neither has nothing to attach it
+// to. Left unchecked it validates cleanly and then does nothing - the step runs,
+// the report is never read, and a mute policy the author wrote is silently
+// absent. That is the failure mode this whole feature exists to avoid, so it is
+// refused rather than ignored.
+//
+// The message names where the policy belongs, because the mistake is almost
+// always a policy one level too high: on the group that contains the test step,
+// or on the parallel block rather than the step it runs.
+func validatePlacement(step testworkflowsv1.Step) error {
+	if step.Run != nil || step.Shell != "" {
+		return nil
+	}
+
+	switch {
+	case step.Parallel != nil:
+		return fmt.Errorf("testCases: a parallel block cannot carry a testCases policy; " +
+			"move it onto the step inside `parallel` that runs the tests")
+	case len(step.Steps) > 0 || len(step.Setup) > 0:
+		return fmt.Errorf("testCases: this step only groups other steps, so there is no test report to read; " +
+			"move the policy onto the nested step that runs the tests")
+	default:
+		return fmt.Errorf("testCases: a testCases policy needs `run` or `shell` on the same step, " +
+			"since it reads the report that command produces")
+	}
 }

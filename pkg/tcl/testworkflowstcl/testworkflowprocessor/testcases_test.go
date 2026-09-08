@@ -19,8 +19,14 @@ import (
 
 func ptr(v int32) *int32 { return &v }
 
+// processStep validates a policy on a step that can actually carry one - the
+// shell is what the policy attaches to, and a step without it is refused. See
+// TestProcessTestCases_RejectsAPolicyThatCannotTakeEffect.
 func processStep(policy *testworkflowsv1.StepTestCases) error {
-	_, err := ProcessTestCases(nil, nil, nil, testworkflowsv1.Step{TestCases: policy})
+	_, err := ProcessTestCases(nil, nil, nil, testworkflowsv1.Step{
+		StepOperations: testworkflowsv1.StepOperations{Shell: "pytest"},
+		TestCases:      policy,
+	})
 	return err
 }
 
@@ -228,4 +234,89 @@ func TestProcessTestCases_RejectsBadSelectionFields(t *testing.T) {
 			assert.Contains(t, err.Error(), tc.want)
 		})
 	}
+}
+
+// A policy the step cannot act on used to validate cleanly and then do nothing:
+// the step ran, the report was never read, and a mute policy the author wrote
+// was silently absent. That is the failure mode the feature exists to avoid.
+func TestProcessTestCases_RejectsAPolicyThatCannotTakeEffect(t *testing.T) {
+	policy := &testworkflowsv1.StepTestCases{Report: report()}
+
+	for _, tc := range []struct {
+		name string
+		step testworkflowsv1.Step
+		says string
+	}{
+		{
+			name: "a parallel block",
+			step: testworkflowsv1.Step{
+				Parallel:  &testworkflowsv1.StepParallel{},
+				TestCases: policy,
+			},
+			says: "move it onto the step inside `parallel`",
+		},
+		{
+			name: "a step that only groups others",
+			step: testworkflowsv1.Step{
+				Steps:     []testworkflowsv1.Step{{}},
+				TestCases: policy,
+			},
+			says: "move the policy onto the nested step",
+		},
+		{
+			name: "a setup group",
+			step: testworkflowsv1.Step{
+				Setup:     []testworkflowsv1.Step{{}},
+				TestCases: policy,
+			},
+			says: "move the policy onto the nested step",
+		},
+		{
+			name: "artifacts with no command",
+			step: testworkflowsv1.Step{
+				StepOperations: testworkflowsv1.StepOperations{
+					Artifacts: &testworkflowsv1.StepArtifacts{Paths: []string{"reports/**"}},
+				},
+				TestCases: policy,
+			},
+			says: "needs `run` or `shell`",
+		},
+		{
+			name: "nothing at all",
+			step: testworkflowsv1.Step{TestCases: policy},
+			says: "needs `run` or `shell`",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := ProcessTestCases(nil, nil, nil, tc.step)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.says, "the message has to name where the policy belongs")
+		})
+	}
+}
+
+// The two placements that do work. A step with both a command and artifacts is
+// the ordinary shape - the policy lands on the container that ran the tool, not
+// on the one that uploads its output.
+func TestProcessTestCases_AcceptsAPolicyOnACommand(t *testing.T) {
+	policy := &testworkflowsv1.StepTestCases{Report: report()}
+
+	t.Run("shell", func(t *testing.T) {
+		_, err := ProcessTestCases(nil, nil, nil, testworkflowsv1.Step{
+			StepOperations: testworkflowsv1.StepOperations{Shell: "pytest"},
+			TestCases:      policy,
+		})
+		require.NoError(t, err)
+	})
+
+	t.Run("run alongside artifacts", func(t *testing.T) {
+		_, err := ProcessTestCases(nil, nil, nil, testworkflowsv1.Step{
+			StepOperations: testworkflowsv1.StepOperations{
+				Run:       &testworkflowsv1.StepRun{},
+				Artifacts: &testworkflowsv1.StepArtifacts{Paths: []string{"reports/**"}},
+			},
+			TestCases: policy,
+		})
+		require.NoError(t, err)
+	})
 }
