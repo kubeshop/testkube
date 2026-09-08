@@ -42,10 +42,12 @@ func (c *client) AppendExecutionReport(ctx context.Context, environmentId, execu
 
 // applyReportDigest fills the parsed fields of the request.
 //
-// Muted, Unexpected and Tolerated are deliberately left unset: the report says
-// which test cases failed, while whether a failure was tolerated is the step's
-// verdict, decided in a different container from the one uploading artifacts.
-// The step result carries that, and the two are joined by step reference.
+// Muted, Unexpected and Tolerated come from the step's verdict rather than the
+// report - a report says which test cases failed and nothing about which
+// failures the workflow declared acceptable. They stay zero when no verdict was
+// recorded, which is every step that declares no testCases policy: reporting
+// "0 muted, 0 tolerated" for a workflow that never asked for muting says the
+// same thing as saying nothing, while a fabricated unexpected count would not.
 func applyReportDigest(req *cloud.AppendExecutionReportRequest, digest *testresults.Digest) {
 	if digest == nil {
 		return
@@ -60,12 +62,18 @@ func applyReportDigest(req *cloud.AppendExecutionReportRequest, digest *testresu
 		Errored:  digest.Counts.Errored,
 		Duration: digest.Counts.DurationMs,
 	}
+	if digest.VerdictApplied {
+		req.Summary.Muted = digest.Muted
+		req.Summary.Unexpected = digest.Unexpected
+		req.Summary.Tolerated = digest.Tolerated
+	}
 	req.FailuresTruncated = digest.Truncated
 	req.Failures = make([]*cloud.TestCaseFailure, 0, len(digest.Failures))
 	for _, failure := range digest.Failures {
 		req.Failures = append(req.Failures, &cloud.TestCaseFailure{
 			Id:      failure.Id,
 			Status:  string(failure.Status),
+			Muted:   failure.Muted,
 			Message: failure.Message,
 		})
 	}

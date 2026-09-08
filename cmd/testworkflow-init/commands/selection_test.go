@@ -257,7 +257,7 @@ func TestNarrowingRetry_AcrossTwoAttempts(t *testing.T) {
   <testcase name="test_two" classname="c"><failure message="broken"/></testcase>
 </testsuite>`), 0o600))
 
-	verdict := applyTestCases(policy, dir, 1, first.Narrowed)
+	verdict := applyTestCases("rtest", policy, dir, 1, first.Narrowed)
 	assert.False(t, verdict.Success, "two unmuted failures, so the step fails and the retry runs")
 	require.NotNil(t, verdict.Results)
 	assert.True(t, verdict.Results.RequirementApplied, "a full run is measured against the requirement")
@@ -276,7 +276,7 @@ func TestNarrowingRetry_AcrossTwoAttempts(t *testing.T) {
   <testcase name="test_two" classname="c"/>
 </testsuite>`), 0o600))
 
-	retried := applyTestCases(policy, dir, 0, second.Narrowed)
+	retried := applyTestCases("rtest", policy, dir, 0, second.Narrowed)
 	assert.True(t, retried.Success)
 	require.NotNil(t, retried.Results)
 	assert.False(t, retried.Results.RequirementApplied,
@@ -325,7 +325,7 @@ func TestResolveSelection_ReRunsAnotherStepsFailures(t *testing.T) {
   <testcase name="test_boom" classname="tests.b"><error message="still broken"/></testcase>
 </testsuite>`), 0o600))
 
-	outcome := applyTestCases(policy, dir, 1, selection.Narrowed)
+	outcome := applyTestCases("rtest", policy, dir, 1, selection.Narrowed)
 	require.NotNil(t, outcome.Results)
 	assert.Equal(t, int32(3), outcome.Results.Tests, "the verdict judged the re-run, not the first pass")
 	assert.Equal(t, int32(1), outcome.Results.Unexpected)

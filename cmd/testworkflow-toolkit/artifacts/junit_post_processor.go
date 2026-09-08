@@ -28,6 +28,10 @@ type JUnitPostProcessor struct {
 	executionId   string
 	workflowName  string
 	stepRef       string
+
+	// verdicts are what the containers that decided their steps' verdicts left
+	// behind, keyed by the report file each covers. Loaded once in Start.
+	verdicts map[string]testresults.ReportVerdict
 }
 
 func NewJUnitPostProcessor(
@@ -51,7 +55,17 @@ func NewJUnitPostProcessor(
 	}
 }
 
+// Start loads the verdicts recorded by the steps whose reports this will upload.
+//
+// A failure here is worth a warning and nothing more: without the verdicts the
+// reports still upload, they just cannot say which failures were muted.
 func (p *JUnitPostProcessor) Start() error {
+	verdicts, err := testresults.ReadVerdicts()
+	if err != nil {
+		fmt.Printf("warn: JUnit processing: could not read the test case verdicts, muted counts will be missing: %s\n", err)
+		return nil
+	}
+	p.verdicts = verdicts
 	return nil
 }
 
@@ -121,6 +135,12 @@ func (p *JUnitPostProcessor) add(path string) error {
 	report, parseErr := testresults.Parse(bytes.NewReader(xmlData))
 	if parseErr == nil {
 		parsed := report.Digest()
+		// The XML says which test cases failed and cannot say which of those
+		// failures the workflow declared acceptable - that was decided in another
+		// container, against this same file.
+		if verdict, ok := p.verdictFor(absPath); ok {
+			parsed = parsed.ApplyVerdict(verdict)
+		}
 		digest = &parsed
 	} else {
 		fmt.Printf("warn: JUnit report %s could not be parsed, sending it unparsed: %s\n", path, parseErr)
@@ -130,6 +150,21 @@ func (p *JUnitPostProcessor) add(path string) error {
 		return errors.Wrapf(err, "failed to send JUnit report %s", stat.Name())
 	}
 	return nil
+}
+
+// verdictFor finds the verdict recorded against a report file.
+//
+// The join is on the file itself rather than the step reference, because the
+// artifacts stage carries a reference of its own, distinct from the stage that
+// ran the tests. Both sides record absolute paths; a report nobody reached a
+// verdict on - which is every report from a step with no testCases policy -
+// simply has none.
+func (p *JUnitPostProcessor) verdictFor(absPath string) (testresults.ReportVerdict, bool) {
+	if len(p.verdicts) == 0 {
+		return testresults.ReportVerdict{}, false
+	}
+	verdict, ok := p.verdicts[filepath.Clean(absPath)]
+	return verdict, ok
 }
 
 // sendJUnitReport sends the JUnit report to the Agent gRPC API.

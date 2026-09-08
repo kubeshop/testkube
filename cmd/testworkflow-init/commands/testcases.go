@@ -67,7 +67,7 @@ func resolveTestCaseSelection(policy *lite.ActionTestCases, workingDir string, r
 		sourcePaths = policy.ReportPaths
 	}
 
-	report, found, err := readTestReport(sourcePaths, workingDir)
+	report, _, found, err := readTestReport(sourcePaths, workingDir)
 	if err != nil {
 		return nil, fmt.Errorf("reading the previous report: %w", err)
 	}
@@ -230,8 +230,8 @@ type testCasesOutcome struct {
 //
 // This runs after the command and before `negative` is applied - the policy
 // decides what "failed" means, and negative inverts that.
-func applyTestCases(policy *lite.ActionTestCases, workingDir string, exitCode int, narrowed bool) testCasesOutcome {
-	report, found, err := readTestReport(policy.ReportPaths, workingDir)
+func applyTestCases(ref string, policy *lite.ActionTestCases, workingDir string, exitCode int, narrowed bool) testCasesOutcome {
+	report, files, found, err := readTestReport(policy.ReportPaths, workingDir)
 	if err != nil {
 		return testCasesOutcome{Details: fmt.Sprintf("could not read the test report: %s", err)}
 	}
@@ -270,6 +270,14 @@ func applyTestCases(policy *lite.ActionTestCases, workingDir string, exitCode in
 		// A mute pattern matching nothing is dead quarantine config. Saying so
 		// is what stops mute lists outliving the bugs they were written for.
 		details += fmt.Sprintf(". Mute patterns matching nothing: %s", strings.Join(unused, ", "))
+	}
+
+	// Hand the verdict to the container that will upload these reports. It can
+	// read which cases failed out of the XML, but not which failures this step
+	// declared acceptable. Losing the handoff costs the muted counts on the
+	// uploaded report, not the step's status, which is already decided.
+	if err := recordVerdict(ref, files, verdict); err != nil {
+		fmt.Printf("warn: could not record the test case verdict for the report upload: %s\n", err)
 	}
 
 	return testCasesOutcome{
@@ -319,29 +327,59 @@ func testCasesPolicy(policy *lite.ActionTestCases) testresults.Policy {
 // found is false when the patterns matched nothing, which the caller treats
 // according to report.onMissing rather than as an error - a report that is
 // legitimately absent is a policy question, not a failure to read.
-func readTestReport(patterns []string, workingDir string) (testresults.Report, bool, error) {
+// readTestReport parses the reports the patterns name, returning their merge
+// along with the files it read. The file list is what lets the verdict be handed
+// to the container that uploads those same files.
+func readTestReport(patterns []string, workingDir string) (testresults.Report, []string, bool, error) {
 	files, err := matchReportFiles(patterns, workingDir)
 	if err != nil {
-		return testresults.Report{}, false, err
+		return testresults.Report{}, nil, false, err
 	}
 	if len(files) == 0 {
-		return testresults.Report{}, false, nil
+		return testresults.Report{}, nil, false, nil
 	}
 
 	reports := make([]testresults.Report, 0, len(files))
 	for _, file := range files {
 		handle, err := os.Open(file)
 		if err != nil {
-			return testresults.Report{}, false, fmt.Errorf("opening %s: %w", file, err)
+			return testresults.Report{}, nil, false, fmt.Errorf("opening %s: %w", file, err)
 		}
 		report, err := testresults.Parse(handle)
 		handle.Close()
 		if err != nil {
-			return testresults.Report{}, false, fmt.Errorf("parsing %s: %w", file, err)
+			return testresults.Report{}, nil, false, fmt.Errorf("parsing %s: %w", file, err)
 		}
 		reports = append(reports, report)
 	}
-	return testresults.Merge(reports...), true, nil
+	return testresults.Merge(reports...), files, true, nil
+}
+
+// recordVerdict leaves the muted decision where the artifacts container can find
+// it, keyed by the report files it was read from.
+func recordVerdict(ref string, files []string, verdict testresults.Verdict) error {
+	muted := make([]string, 0, len(verdict.Muted))
+	for _, testCase := range verdict.Muted {
+		muted = append(muted, testCase.ID())
+	}
+
+	absolute := make([]string, 0, len(files))
+	for _, file := range files {
+		// The uploader resolves its own paths against the artifacts root, so both
+		// sides have to be absolute for the join to land.
+		path, err := filepath.Abs(file)
+		if err != nil {
+			path = file
+		}
+		absolute = append(absolute, path)
+	}
+
+	return testresults.WriteVerdict(ref, testresults.ReportVerdict{
+		Reports:    absolute,
+		Muted:      muted,
+		Unexpected: int32(len(verdict.Unexpected)),
+		Tolerated:  verdict.Tolerated,
+	})
 }
 
 // matchReportFiles expands the patterns into concrete files, sorted so that a

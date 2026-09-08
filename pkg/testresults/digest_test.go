@@ -28,10 +28,10 @@ func TestDigest_NamesTheNonPassingCases(t *testing.T) {
 	assert.Equal(t, StatusSkipped, digest.Failures[2].Status, "a skip is non-passing, so it is named")
 }
 
-func TestDigest_CarriesNothingAboutMuting(t *testing.T) {
-	// The artifacts step uploads reports; the verdict runs in a different
-	// container. Whether a failure was tolerated belongs to the step result,
-	// joined by step reference - not guessed at here.
+func TestDigest_CarriesNothingAboutMutingOnItsOwn(t *testing.T) {
+	// A report says which test cases failed. Which of those failures the
+	// workflow declared acceptable is not in the XML - it is the step's verdict,
+	// decided in another container - so a bare digest must not claim to know.
 	report, err := Parse(strings.NewReader(
 		`<testsuite name="s" tests="1"><testcase name="flaky" classname="c"><failure/></testcase></testsuite>`))
 	require.NoError(t, err)
@@ -39,8 +39,96 @@ func TestDigest_CarriesNothingAboutMuting(t *testing.T) {
 	digest := report.Digest()
 	require.Len(t, digest.Failures, 1)
 	assert.Equal(t, "s/c/flaky", digest.Failures[0].Id)
-	// There is deliberately no muted field to assert on; this test exists to
-	// make that a decision rather than an omission.
+	assert.False(t, digest.Failures[0].Muted)
+	assert.False(t, digest.VerdictApplied, "nothing has told this digest what the verdict was")
+	assert.Zero(t, digest.Muted)
+	assert.Zero(t, digest.Unexpected)
+}
+
+func TestDigest_ApplyVerdictMarksTheMutedFailures(t *testing.T) {
+	report, err := Parse(strings.NewReader(`<testsuite name="s" tests="3">
+  <testcase name="ok" classname="c"/>
+  <testcase name="known" classname="c"><failure message="expected"/></testcase>
+  <testcase name="real" classname="c"><failure message="not expected"/></testcase>
+</testsuite>`))
+	require.NoError(t, err)
+
+	digest := report.Digest().ApplyVerdict(ReportVerdict{
+		Muted:     []string{"s/c/known"},
+		Tolerated: true,
+	})
+
+	require.Len(t, digest.Failures, 2)
+	byID := map[string]DigestFailure{}
+	for _, failure := range digest.Failures {
+		byID[failure.Id] = failure
+	}
+	assert.True(t, byID["s/c/known"].Muted)
+	assert.False(t, byID["s/c/real"].Muted)
+
+	assert.True(t, digest.VerdictApplied)
+	assert.Equal(t, int32(1), digest.Muted)
+	assert.Equal(t, int32(1), digest.Unexpected)
+	assert.True(t, digest.Tolerated)
+}
+
+// A step may name several report files and the verdict covers their merge, so
+// most of its muted ids belong to the other files. Counting those here would
+// report more muted cases than this report has failures.
+func TestDigest_ApplyVerdictIgnoresMutedIdsFromOtherReports(t *testing.T) {
+	report, err := Parse(strings.NewReader(
+		`<testsuite name="s" tests="1"><testcase name="known" classname="c"><failure/></testcase></testsuite>`))
+	require.NoError(t, err)
+
+	digest := report.Digest().ApplyVerdict(ReportVerdict{
+		Muted: []string{"s/c/known", "other/c/elsewhere", "other/c/also-elsewhere"},
+	})
+
+	assert.Equal(t, int32(1), digest.Muted, "only the case this report names counts")
+	assert.Equal(t, int32(0), digest.Unexpected)
+}
+
+// Muting cannot make a report have fewer failures than zero, whatever the
+// verdict claims - a mismatched handoff must not produce a negative counter.
+func TestDigest_ApplyVerdictNeverReportsNegativeUnexpected(t *testing.T) {
+	report, err := Parse(strings.NewReader(
+		`<testsuite name="s" tests="1"><testcase name="ok" classname="c"/></testsuite>`))
+	require.NoError(t, err)
+
+	digest := report.Digest().ApplyVerdict(ReportVerdict{Muted: []string{"s/c/ok"}})
+
+	assert.Equal(t, int32(0), digest.Unexpected)
+}
+
+// Skipped cases are named as non-passing but are not failures, so muting must
+// not count them and they must not inflate the unexpected total either.
+func TestDigest_ApplyVerdictCountsFailuresNotSkips(t *testing.T) {
+	report, err := Parse(strings.NewReader(`<testsuite name="s" tests="3">
+  <testcase name="skipped" classname="c"><skipped/></testcase>
+  <testcase name="known" classname="c"><failure/></testcase>
+  <testcase name="boom" classname="c"><error/></testcase>
+</testsuite>`))
+	require.NoError(t, err)
+
+	digest := report.Digest().ApplyVerdict(ReportVerdict{Muted: []string{"s/c/known"}})
+
+	assert.Equal(t, int32(1), digest.Muted)
+	assert.Equal(t, int32(1), digest.Unexpected, "the errored case, not the skipped one")
+}
+
+// ApplyVerdict must not write through to the digest it was called on, which the
+// caller may still be holding.
+func TestDigest_ApplyVerdictDoesNotMutateTheOriginal(t *testing.T) {
+	report, err := Parse(strings.NewReader(
+		`<testsuite name="s" tests="1"><testcase name="known" classname="c"><failure/></testcase></testsuite>`))
+	require.NoError(t, err)
+
+	original := report.Digest()
+	_ = original.ApplyVerdict(ReportVerdict{Muted: []string{"s/c/known"}})
+
+	require.Len(t, original.Failures, 1)
+	assert.False(t, original.Failures[0].Muted)
+	assert.False(t, original.VerdictApplied)
 }
 
 func TestDigest_BelievesDeclaredCountersWhenCasesAreUnnamed(t *testing.T) {

@@ -1,12 +1,14 @@
 package artifacts
 
 import (
+	"context"
 	"io"
 	"io/fs"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	gomock "go.uber.org/mock/gomock"
 
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
@@ -189,4 +191,95 @@ func TestIsJUnitReport(t *testing.T) {
 			assert.Equal(t, tc.want, ok)
 		})
 	}
+}
+
+// The whole point of the handoff: the uploaded report has to say which failures
+// the step declared acceptable, and only the container that decided the verdict
+// knows. Joined on the report file, because the artifacts stage carries a step
+// reference of its own that would never match the stage that ran the tests.
+func TestJUnitPostProcessor_AppliesTheVerdictRecordedForTheReport(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	t.Setenv("TESTKUBE_TW_INTERNAL_PATH", t.TempDir())
+
+	root := t.TempDir()
+	reportPath := filepath.Join(root, "junit.xml")
+	junit := []byte(`<testsuite name="s" tests="2">
+  <testcase name="known" classname="c"><failure message="expected"/></testcase>
+  <testcase name="real" classname="c"><failure message="not expected"/></testcase>
+</testsuite>`)
+
+	require.NoError(t, testresults.WriteVerdict("rrun1", testresults.ReportVerdict{
+		Reports:   []string{reportPath},
+		Muted:     []string{"s/c/known"},
+		Tolerated: true,
+	}))
+
+	mockFS := filesystem.NewMockFileSystem(mockCtrl)
+	mockFS.EXPECT().OpenFileRO(reportPath).Return(filesystem.NewMockFile("junit.xml", junit), nil)
+	mockClient := controlplaneclient.NewMockClient(mockCtrl)
+
+	var got *testresults.Digest
+	mockClient.EXPECT().
+		AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "artifacts-step", "junit.xml", junit, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, _, _, _, _ string, _ []byte, digest *testresults.Digest) error {
+			got = digest
+			return nil
+		})
+
+	// The step reference here is the artifacts stage's, deliberately not the one
+	// the verdict was written under.
+	pp := NewJUnitPostProcessor(mockFS, mockClient, "env123", "exec123", "workflow123", "artifacts-step", root, "")
+	require.NoError(t, pp.Start())
+	require.NoError(t, pp.Add("junit.xml"))
+
+	require.NotNil(t, got)
+	assert.True(t, got.VerdictApplied)
+	assert.Equal(t, int32(1), got.Muted)
+	assert.Equal(t, int32(1), got.Unexpected)
+	assert.True(t, got.Tolerated)
+
+	byID := map[string]bool{}
+	for _, failure := range got.Failures {
+		byID[failure.Id] = failure.Muted
+	}
+	assert.True(t, byID["s/c/known"])
+	assert.False(t, byID["s/c/real"])
+}
+
+// A step with no testCases policy reaches no verdict, which is almost every step
+// there is. Its report still uploads, and says nothing it cannot know.
+func TestJUnitPostProcessor_LeavesTheVerdictUnsetWhenNoneWasRecorded(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	t.Setenv("TESTKUBE_TW_INTERNAL_PATH", t.TempDir())
+
+	root := t.TempDir()
+	junit := []byte(`<testsuite name="s" tests="1">
+  <testcase name="real" classname="c"><failure message="not expected"/></testcase>
+</testsuite>`)
+
+	mockFS := filesystem.NewMockFileSystem(mockCtrl)
+	mockFS.EXPECT().OpenFileRO(filepath.Join(root, "junit.xml")).Return(filesystem.NewMockFile("junit.xml", junit), nil)
+	mockClient := controlplaneclient.NewMockClient(mockCtrl)
+
+	var got *testresults.Digest
+	mockClient.EXPECT().
+		AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", "junit.xml", junit, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, _, _, _, _ string, _ []byte, digest *testresults.Digest) error {
+			got = digest
+			return nil
+		})
+
+	pp := NewJUnitPostProcessor(mockFS, mockClient, "env123", "exec123", "workflow123", "step123", root, "")
+	require.NoError(t, pp.Start())
+	require.NoError(t, pp.Add("junit.xml"))
+
+	require.NotNil(t, got)
+	assert.False(t, got.VerdictApplied, "no verdict was recorded, so none may be claimed")
+	assert.Zero(t, got.Muted)
+	require.Len(t, got.Failures, 1)
+	assert.False(t, got.Failures[0].Muted)
 }

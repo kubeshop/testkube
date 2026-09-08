@@ -23,21 +23,71 @@ type DigestFailure struct {
 	Status Status
 	// Message is the failure text, truncated.
 	Message string
+	// Muted is whether the step's mute patterns covered this case. Only set once
+	// ApplyVerdict has been called; a report on its own cannot know it.
+	Muted bool
 }
 
 // Digest is the parse of a report, small enough to travel with the execution
 // record and to be queried without downloading the report itself.
 //
-// It deliberately carries nothing about muting. A report says which test cases
-// failed; whether a failure was tolerated is the step's verdict, decided in a
-// different container from the one that uploads artifacts. The step result
-// carries that, and the two are joined by step reference.
+// A report on its own says which test cases failed and nothing about which
+// failures were expected: muting is a property of the workflow's policy, not of
+// the XML. The verdict fields below are filled in by ApplyVerdict from what the
+// container that decided the step's status left behind, and stay zero when no
+// verdict was recorded - which is every step that declares no testCases policy.
 type Digest struct {
 	Counts   Summary
 	Failures []DigestFailure
 	// Truncated is set when the cap was reached, so a reader knows Failures is
 	// a prefix rather than the whole story.
 	Truncated bool
+
+	// Muted is how many failing test cases the mute patterns covered.
+	Muted int32
+	// Unexpected is how many they did not.
+	Unexpected int32
+	// Tolerated is whether the step met its pass requirement.
+	Tolerated bool
+	// VerdictApplied distinguishes "no failures were muted" from "no verdict was
+	// recorded", which are the same three zeroes otherwise.
+	VerdictApplied bool
+}
+
+// ApplyVerdict fills in what the report could not know on its own.
+//
+// Muted ids that name no case in this digest are ignored rather than counted:
+// a step may name several report files, and the verdict covers their merge, so
+// most of its muted ids belong to the other files. Counting them here would
+// report more muted cases than the report has failures.
+func (d Digest) ApplyVerdict(verdict ReportVerdict) Digest {
+	muted := make(map[string]bool, len(verdict.Muted))
+	for _, id := range verdict.Muted {
+		muted[id] = true
+	}
+
+	failures := make([]DigestFailure, len(d.Failures))
+	copy(failures, d.Failures)
+
+	var count int32
+	for i := range failures {
+		if muted[failures[i].Id] {
+			failures[i].Muted = true
+			count++
+		}
+	}
+
+	d.Failures = failures
+	d.Muted = count
+	// Derived here rather than taken from the verdict for the same reason: the
+	// verdict's own count spans every report file the step named.
+	d.Unexpected = d.Counts.Failed + d.Counts.Errored - count
+	if d.Unexpected < 0 {
+		d.Unexpected = 0
+	}
+	d.Tolerated = verdict.Tolerated
+	d.VerdictApplied = true
+	return d
 }
 
 // Digest summarises a report for the execution record.
