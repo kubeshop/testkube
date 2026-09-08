@@ -126,3 +126,45 @@ func TestResolver(t *testing.T) {
 		})
 	})
 }
+
+// The "rerun" reference exists so a workflow can say "the execution I am a rerun
+// of" without being handed its id: the workflow is written once and rerun many
+// times, and the scheduler decides which execution that is.
+func TestResolveRerunRef(t *testing.T) {
+	repository := NewMockExecutionRepository(gomock.NewController(t))
+	repository.EXPECT().
+		Get(gomock.Any(), "exec-0").
+		Return(Execution{Id: "exec-0", Name: "wf-1"}, nil)
+
+	execution, err := Resolver{Repository: repository, RerunId: "exec-0"}.
+		Resolve(context.Background(), RerunRef, 0)
+	require.NoError(t, err)
+
+	assert.Equal(t, "exec-0", execution.Id)
+	assert.Equal(t, RerunRef, execution.Alias, "the reference is the name it answers to")
+}
+
+func TestResolveRerunRefWhenNotARerun(t *testing.T) {
+	_, err := Resolver{Repository: NewMockExecutionRepository(gomock.NewController(t))}.
+		Resolve(context.Background(), RerunRef, 0)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not a rerun of another one")
+}
+
+// A rerun id must not make the parent reference resolvable, or vice versa: they
+// are different executions and confusing them would read the wrong report.
+func TestResolveRerunAndParentStayApart(t *testing.T) {
+	repository := NewMockExecutionRepository(gomock.NewController(t))
+	repository.EXPECT().Get(gomock.Any(), "exec-parent").Return(Execution{Id: "exec-parent"}, nil)
+	repository.EXPECT().Get(gomock.Any(), "exec-rerun").Return(Execution{Id: "exec-rerun"}, nil)
+
+	resolver := Resolver{Repository: repository, ParentIds: []string{"exec-parent"}, RerunId: "exec-rerun"}
+
+	parent, err := resolver.Resolve(context.Background(), ParentRef, 0)
+	require.NoError(t, err)
+	assert.Equal(t, "exec-parent", parent.Id)
+
+	rerun, err := resolver.Resolve(context.Background(), RerunRef, 0)
+	require.NoError(t, err)
+	assert.Equal(t, "exec-rerun", rerun.Id)
+}

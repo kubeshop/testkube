@@ -18,14 +18,18 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
-// SelectFromSelf is the only selection source available today: this step's own
-// previous retry attempt.
+// SelectFromSelf is the default selection source: this step's own previous retry
+// attempt, read off the pod's file system.
 //
-// Step references - `step:<id>` - need the whole workflow to resolve, which an
-// Operation cannot see: it is handed one step at a time. Resolving them belongs
-// with ResolveAndValidateStepIds, the existing whole-workflow walk, and is not
-// wired up yet. Until it is, a reference is rejected rather than silently
-// meaning "run everything".
+// Any other source names another execution and is resolved at runtime the way
+// execution() resolves a reference - the reserved "rerun" and "parent", or an
+// id, workflow name or alias. Those cannot be checked here: whether an execution
+// exists is not knowable at processing time.
+//
+// Step references - `step:<id>` - are the one form deliberately refused. They
+// would need the whole workflow to resolve, which an Operation is not handed,
+// and they are unnecessary: steps share a file system, so pointing select.paths
+// at the other step's report does the same job.
 const SelectFromSelf = "self"
 
 // ProcessTestCases validates a step's testCases policy.
@@ -112,18 +116,22 @@ func validateSelection(selection *testworkflowsv1.TestCaseSelection) error {
 		return nil
 	}
 
-	switch from := strings.TrimSpace(selection.From); from {
-	case "", SelectFromSelf:
-	default:
-		if strings.HasPrefix(from, "step:") {
-			// A step reference would need the whole workflow to resolve, which
-			// an Operation is not handed. It is also unnecessary: the steps
-			// share a file system, so pointing select.paths at the other step's
-			// report does the same job without a reference between them.
-			return fmt.Errorf("testCases: select.from %q is not supported; to re-run what another step failed, "+
-				"set select.paths to that step's report.paths instead", from)
-		}
-		return fmt.Errorf("testCases: select.from %q is not a known source; use %q", from, SelectFromSelf)
+	from := strings.TrimSpace(selection.From)
+	switch {
+	case from == "" || from == SelectFromSelf:
+	case strings.HasPrefix(from, "step:"):
+		// A step reference would need the whole workflow to resolve, which an
+		// Operation is not handed. It is also unnecessary: the steps share a
+		// file system, so pointing select.paths at the other step's report does
+		// the same job without a reference between them.
+		return fmt.Errorf("testCases: select.from %q is not supported; to re-run what another step failed, "+
+			"set select.paths to that step's report.paths instead", from)
+	case len(selection.Paths) == 0:
+		// Another execution's report is found among its artifacts, and nothing
+		// here can guess which of them it is. Refusing beats resolving the
+		// reference at runtime only to select nothing from it.
+		return fmt.Errorf("testCases: select.from %q reads another execution's report, so select.paths has to say "+
+			"which of its artifacts hold it", from)
 	}
 
 	if _, err := testresults.ParseStatuses(selection.Status); err != nil {

@@ -157,13 +157,36 @@ func TestProcessTestCases_RejectsUnavailableSelectionSources(t *testing.T) {
 		assert.Contains(t, err.Error(), "select.paths")
 	})
 
-	t.Run("unknown source", func(t *testing.T) {
-		err := processStep(&testworkflowsv1.StepTestCases{
-			Report: report(),
-			Select: &testworkflowsv1.TestCaseSelection{From: "yesterday"},
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "not a known source")
+	// Another execution's report is one of its artifacts, and nothing here can
+	// guess which. Refusing beats resolving the reference at runtime only to
+	// select nothing out of it.
+	t.Run("another execution without paths to its report", func(t *testing.T) {
+		for _, from := range []string{"rerun", "parent", "some-workflow", "exec-1"} {
+			t.Run(from, func(t *testing.T) {
+				err := processStep(&testworkflowsv1.StepTestCases{
+					Report: report(),
+					Select: &testworkflowsv1.TestCaseSelection{From: from},
+				})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "select.paths has to say")
+			})
+		}
+	})
+
+	// Whether an execution exists is not knowable at processing time, so any
+	// reference that names paths is accepted here and resolved in the pod.
+	t.Run("another execution with paths is accepted", func(t *testing.T) {
+		for _, from := range []string{"rerun", "parent", "some-workflow"} {
+			t.Run(from, func(t *testing.T) {
+				require.NoError(t, processStep(&testworkflowsv1.StepTestCases{
+					Report: report(),
+					Select: &testworkflowsv1.TestCaseSelection{
+						From:  from,
+						Paths: []string{"reports/**/*.xml"},
+					},
+				}))
+			})
+		}
 	})
 }
 

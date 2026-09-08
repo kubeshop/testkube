@@ -1,6 +1,8 @@
 package executiondata
 
 import (
+	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -97,4 +99,61 @@ func TestReadArtifactFunction(t *testing.T) {
 		_, err := resolve(t, `read_artifact("p", "results/summary.json")`, machine)
 		assert.ErrorContains(t, err, "no connection to the control plane")
 	})
+}
+
+// StreamArtifact exists because read_artifact() cannot serve a report: its
+// MaxInlineArtifactSize is a megabyte, smaller than the reports worth reading.
+func TestStreamArtifact(t *testing.T) {
+	body := strings.Repeat("x", MaxInlineArtifactSize+1024)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(body))
+	}))
+	defer server.Close()
+
+	reader, err := StreamArtifact(context.Background(), server.Client(), Artifact{
+		Path: "reports/out.xml",
+		Url:  server.URL,
+		Size: int64(len(body)),
+	})
+	require.NoError(t, err)
+	defer reader.Close()
+
+	content, err := io.ReadAll(reader)
+	require.NoError(t, err)
+	assert.Len(t, content, len(body), "a report over the inline limit still streams")
+}
+
+func TestStreamArtifactRejectsAnOversizedArtifact(t *testing.T) {
+	_, err := StreamArtifact(context.Background(), nil, Artifact{
+		Path: "reports/huge.xml",
+		Size: MaxParsedArtifactSize + 1,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "over the")
+}
+
+// The reported size is metadata, so the reader is capped regardless: a control
+// plane understating a size must not let an unbounded body into the pod.
+func TestStreamArtifactCapsTheBodyWhateverTheSizeSaid(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// Far more than the cap, offered by a server that claimed nothing.
+		for i := 0; i < (MaxParsedArtifactSize/1024)+64; i++ {
+			if _, err := w.Write([]byte(strings.Repeat("y", 1024))); err != nil {
+				return
+			}
+		}
+	}))
+	defer server.Close()
+
+	reader, err := StreamArtifact(context.Background(), server.Client(), Artifact{
+		Path: "reports/lying.xml",
+		Url:  server.URL,
+		Size: 0,
+	})
+	require.NoError(t, err)
+	defer reader.Close()
+
+	content, err := io.ReadAll(reader)
+	require.NoError(t, err)
+	assert.LessOrEqual(t, len(content), MaxParsedArtifactSize)
 }

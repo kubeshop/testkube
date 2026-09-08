@@ -86,9 +86,21 @@ type TestCaseTolerance struct {
 // TestCaseSelection narrows a run to specific test cases, so a retry re-runs
 // only what failed instead of the whole suite.
 type TestCaseSelection struct {
-	// which execution the previous results come from. Defaults to self, this
-	// execution. Reading another execution's results is not available yet.
-	// +kubebuilder:validation:Enum=self
+	// which execution the previous results come from, most local first:
+	//
+	//	self      - this execution, from the report on disk (the default)
+	//	rerun     - the execution this one is a rerun of
+	//	parent    - the execution that scheduled this one
+	//	<other>   - an execution id, workflow name or alias, as execution() takes
+	//
+	// Anything other than self reads the other execution's report artifacts,
+	// which needs the control plane to grant artifact read access.
+	//
+	// A step left on self is still seeded from the rerun policy when the
+	// execution carries one and has no local report yet - which is the first
+	// attempt of `testkube rerun --only-failed`. That needs no configuration
+	// because the two can never collide: on the first attempt there is no local
+	// report to prefer, and on every later attempt there is.
 	From string `json:"from,omitempty" expr:"template"`
 
 	// report paths the selection reads the previous results from, defaulting to

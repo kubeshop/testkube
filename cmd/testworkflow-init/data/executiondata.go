@@ -42,6 +42,7 @@ func ExecutionDataMachineFor(registry *executiondata.Registry) expressions.Machi
 		Registry:       registry,
 		Repository:     ExecutionDataRepository(),
 		ParentIds:      ParentExecutionIds(),
+		RerunId:        RerunExecutionId(),
 		ArtifactClient: ArtifactClient(),
 	})
 }
@@ -64,6 +65,7 @@ func ExecutionResolver(registry *executiondata.Registry) executiondata.Resolver 
 		Registry:   registry,
 		Repository: ExecutionDataRepository(),
 		ParentIds:  ParentExecutionIds(),
+		RerunId:    RerunExecutionId(),
 	}
 }
 
@@ -87,4 +89,14 @@ func ParentExecutionIds() []string {
 		}
 	}
 	return ids
+}
+
+// RerunExecutionId is the execution this one is a rerun of, empty when it is not
+// one. It is what the reserved "rerun" reference resolves to.
+func RerunExecutionId() string {
+	rerun := GetState().InternalConfig.Execution.Rerun
+	if rerun == nil {
+		return ""
+	}
+	return rerun.ExecutionId
 }

@@ -17,6 +17,16 @@ const (
 	// Larger files belong in a `fetch` block, which writes them to disk instead.
 	MaxInlineArtifactSize = 1024 * 1024
 
+	// MaxParsedArtifactSize caps an artifact read to be parsed rather than
+	// handed to an expression.
+	//
+	// Far larger than MaxInlineArtifactSize because the two guard different
+	// things: that limit protects an expression from holding a whole file as a
+	// string, while a parser streams and holds only what it extracts. A JUnit
+	// report for ten thousand test cases is several megabytes, so the inline
+	// limit would reject exactly the reports this exists to read.
+	MaxParsedArtifactSize = 64 * 1024 * 1024
+
 	// ArtifactDownloadTimeout bounds a single artifact download.
 	ArtifactDownloadTimeout = 60 * time.Second
 )
@@ -88,6 +98,43 @@ func exactArtifact(artifacts []Artifact, path string) (Artifact, error) {
 	}
 	return Artifact{}, fmt.Errorf("artifact %q not found", path)
 }
+
+// StreamArtifact opens an artifact for reading, without holding it in memory or
+// writing it to disk.
+//
+// This is the path for an artifact that is going to be parsed - a test report
+// read to work out which test cases failed. read_artifact() cannot serve that:
+// its MaxInlineArtifactSize is a megabyte, which is smaller than the reports
+// worth reading, and it returns a string rather than a reader.
+//
+// The reader is capped at MaxParsedArtifactSize even when the control plane
+// reported a size below it, because that size is metadata and the cap is the
+// thing actually protecting the pod's memory. The caller closes the reader.
+//
+// client may be nil, in which case storage certificates are verified.
+func StreamArtifact(ctx context.Context, client *http.Client, artifact Artifact) (io.ReadCloser, error) {
+	if artifact.Size > MaxParsedArtifactSize {
+		return nil, fmt.Errorf("artifact %q is %d bytes, over the %d byte limit for a report",
+			artifact.Path, artifact.Size, MaxParsedArtifactSize)
+	}
+
+	res, err := get(ctx, client, artifact.Url, artifact.Path)
+	if err != nil {
+		return nil, err
+	}
+	return &cappedBody{
+		Reader: io.LimitReader(res.Body, MaxParsedArtifactSize),
+		body:   res.Body,
+	}, nil
+}
+
+// cappedBody is the response body behind a size limit, closing the real body.
+type cappedBody struct {
+	io.Reader
+	body io.ReadCloser
+}
+
+func (c *cappedBody) Close() error { return c.body.Close() }
 
 // FetchResult summarises a completed fetch.
 type FetchResult struct {

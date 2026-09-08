@@ -20,6 +20,8 @@ type Resolver struct {
 	Repository ExecutionRepository
 	// ParentIds is the chain of executions that led to this one, oldest first.
 	ParentIds []string
+	// RerunId is the execution this one is a rerun of, empty when it is not one.
+	RerunId string
 }
 
 // Resolve finds the execution a reference addresses, or explains why it cannot.
@@ -35,11 +37,17 @@ func (r Resolver) Resolve(ctx context.Context, ref string, index int64) (Executi
 	}
 
 	id := ref
-	if ref == ParentRef {
+	switch ref {
+	case ParentRef:
 		if len(r.ParentIds) == 0 {
 			return Execution{}, fmt.Errorf("cannot resolve execution(%q): this execution has no parent", ParentRef)
 		}
 		id = r.ParentIds[len(r.ParentIds)-1]
+	case RerunRef:
+		if r.RerunId == "" {
+			return Execution{}, fmt.Errorf("cannot resolve execution(%q): this execution is not a rerun of another one", RerunRef)
+		}
+		id = r.RerunId
 	}
 
 	// Fan-out indexes only exist within the local registry - anything resolved
@@ -62,8 +70,8 @@ func (r Resolver) Resolve(ctx context.Context, ref string, index int64) (Executi
 	if execution.Id == "" {
 		return Execution{}, UnknownRefError(ref, index, r.knownRefs())
 	}
-	if ref == ParentRef {
-		execution.Alias = ParentRef
+	if ref == ParentRef || ref == RerunRef {
+		execution.Alias = ref
 	}
 	return execution, nil
 }

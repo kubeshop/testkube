@@ -36,7 +36,8 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 	// is about to write.
 	selection := &testCasesSelection{}
 	if run.TestCases != nil && run.TestCases.Select != nil {
-		resolved, err := resolveTestCaseSelection(run.TestCases, workingDir, state.InternalConfig.Execution.Rerun)
+		resolved, err := resolveTestCaseSelection(ctx, run.TestCases, workingDir,
+			state.InternalConfig.Execution.Rerun, executionReportSource())
 		if err != nil {
 			output.ExitErrorf(constants.CodeInputError, "test case selection: %s", err.Error())
 		}

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executiondata"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testresults"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
@@ -62,7 +64,7 @@ type testCasesSelection struct {
 //
 // Finding no report is not an error - the first attempt has not produced one -
 // and neither is selecting nothing. The caller's `empty` policy decides.
-func resolveTestCaseSelection(policy *lite.ActionTestCases, workingDir string, rerun *testworkflowconfig.RerunConfig) (*testCasesSelection, error) {
+func resolveTestCaseSelection(ctx context.Context, policy *lite.ActionTestCases, workingDir string, rerun *testworkflowconfig.RerunConfig, source reportSource) (*testCasesSelection, error) {
 	selection := &testCasesSelection{}
 	if policy.Select == nil {
 		return selection, nil
@@ -77,9 +79,9 @@ func resolveTestCaseSelection(policy *lite.ActionTestCases, workingDir string, r
 		sourcePaths = policy.ReportPaths
 	}
 
-	report, _, found, err := readTestReport(sourcePaths, workingDir)
+	report, found, err := readSelectionSource(ctx, policy, sourcePaths, workingDir, rerun, source)
 	if err != nil {
-		return nil, fmt.Errorf("reading the previous report: %w", err)
+		return nil, err
 	}
 
 	if found {
@@ -133,12 +135,71 @@ func resolveTestCaseSelection(policy *lite.ActionTestCases, workingDir string, r
 	return selection, nil
 }
 
+// readSelectionSource reads the previous results the selection draws from, which
+// is either this pod's own file system or another execution's artifacts.
+//
+// The local read comes first for `self`, and a step left on `self` falls back to
+// the execution's rerun policy when it finds nothing. That fallback is what makes
+// `testkube rerun --only-failed` work on a workflow written for a narrowing
+// retry: the first attempt has no report of its own, so it takes the failures of
+// the execution being rerun, and every later attempt prefers the report it just
+// wrote. The two orderings can never conflict, so neither has to be configured.
+func readSelectionSource(
+	ctx context.Context,
+	policy *lite.ActionTestCases,
+	sourcePaths []string,
+	workingDir string,
+	rerun *testworkflowconfig.RerunConfig,
+	source reportSource,
+) (testresults.Report, bool, error) {
+	from := policy.Select.From
+	if from != "" && from != selectFromSelf {
+		report, found, err := source.readRemoteReport(ctx, from, policy.Select.Paths)
+		if err != nil {
+			return testresults.Report{}, false, fmt.Errorf("reading the report of %q: %w", from, err)
+		}
+		return report, found, nil
+	}
+
+	report, _, found, err := readTestReport(sourcePaths, workingDir)
+	if err != nil {
+		return testresults.Report{}, false, fmt.Errorf("reading the previous report: %w", err)
+	}
+	if found {
+		return report, true, nil
+	}
+
+	if !seedsFromRerun(rerun) {
+		return report, false, nil
+	}
+	// The rerun names an execution but not where its report is, so the step's own
+	// report paths are the only thing that can: the same workflow produced both.
+	remote, found, err := source.readRemoteReport(ctx, executiondata.RerunRef, policy.ReportPaths)
+	if err != nil {
+		return testresults.Report{}, false, fmt.Errorf("reading the report of the execution being rerun: %w", err)
+	}
+	return remote, found, nil
+}
+
+// selectFromSelf is the default source: this execution, read off the disk.
+const selectFromSelf = "self"
+
+// seedsFromRerun reports whether the execution was narrowed to the failures of
+// another one, which is what --only-failed asks for.
+//
+// An explicit test case list does not seed anything, even alongside onlyFailed:
+// it already *is* the selection, named by the caller in their tool's own shape,
+// so there is nothing to derive from a report and no reason to fetch one.
+func seedsFromRerun(rerun *testworkflowconfig.RerunConfig) bool {
+	return rerun != nil && rerun.OnlyFailed && rerun.ExecutionId != "" && len(rerun.TestCases) == 0
+}
+
 // rerunTestCases are the test cases the execution itself was narrowed to, named
 // by whoever scheduled it rather than by the workflow.
 //
-// Only the explicit list is usable here. The rest of the rerun policy - the
-// execution to read previous results from - needs the report of *another*
-// execution, which the pod cannot reach yet.
+// These join verbatim, without a report: the caller has already written them in
+// the shape their tool wants. The other half of the rerun policy - narrowing to
+// whatever failed - is served by readSelectionSource.
 func rerunTestCases(rerun *testworkflowconfig.RerunConfig) []string {
 	if rerun == nil {
 		return nil
