@@ -54,6 +54,12 @@ type Input struct {
 	// wrongly apply the threshold to a separate `from: step:<id>` step, which is
 	// attempt 1 of its own step yet still ran a subset.
 	Narrowed bool
+
+	// Selected are the canonical addresses the run was narrowed to, from
+	// Selection.Addresses. The verdict checks them against the report the run
+	// produced, because a narrowed run that tested nothing looks exactly like a
+	// narrowed run that passed.
+	Selected []string
 }
 
 // Verdict is the outcome of applying a policy to a report.
@@ -83,6 +89,16 @@ type Verdict struct {
 	// UnusedMutePatterns are mute patterns that matched nothing: dead quarantine
 	// config, and the thing that stops mute lists outliving their bugs.
 	UnusedMutePatterns []string
+
+	// SelectedMissing are addresses the run was narrowed to that the report does
+	// not name. A few of them mean the suite shrank; all of them mean the tool
+	// ran no tests at all, and NothingSelectedRan says so.
+	SelectedMissing []string
+	// NothingSelectedRan is set when the run was narrowed to test cases and the
+	// report names none of them. The step fails on it however green the tool
+	// looked, because a filter it spells differently than the report does
+	// matches nothing and exits zero.
+	NothingSelectedRan bool
 
 	// IdentitiesIncomplete is set when the report described more tests than it
 	// named, so mute could not be applied. See Unrepresented.
@@ -149,7 +165,44 @@ func Evaluate(report Report, policy Policy, input Input) (Verdict, error) {
 		verdict.Success = input.ExitCode == 0 || verdict.Tolerated
 	}
 
+	// Checked last, and allowed to override a pass under either enforce mode.
+	// This is not a threshold the workflow chose to relax - it is the evidence
+	// that the run measured anything at all, and without it a narrowing retry
+	// whose filter matched nothing reports a green step having tested nothing.
+	//
+	// Skipped for a report whose identities were unusable: it can neither
+	// confirm nor deny an address, and IdentitiesIncomplete already says so.
+	// Note that an *empty* report is not that case - a tool that ran nothing
+	// declares nothing and names nothing, which is exactly what this catches.
+	if !verdict.IdentitiesIncomplete {
+		verdict.SelectedMissing = missingFromReport(report, input.Selected)
+		if len(input.Selected) > 0 && len(verdict.SelectedMissing) == len(input.Selected) {
+			verdict.NothingSelectedRan = true
+			verdict.Success = false
+		}
+	}
+
 	return verdict, nil
+}
+
+// missingFromReport returns the selected addresses the report does not name.
+func missingFromReport(report Report, selected []string) []string {
+	if len(selected) == 0 {
+		return nil
+	}
+
+	present := make(map[string]bool, len(report.Cases))
+	for _, testCase := range report.Cases {
+		present[testCase.ID()] = true
+	}
+
+	var missing []string
+	for _, address := range selected {
+		if !present[address] {
+			missing = append(missing, address)
+		}
+	}
+	return missing
 }
 
 // satisfied reports whether every threshold that was set holds.
@@ -197,6 +250,19 @@ func (v Verdict) Describe() string {
 	}
 
 	fmt.Fprintf(&builder, ", %d unexpected", len(v.Unexpected))
+
+	// Said before the pass requirement, because it explains a failure the
+	// requirement cannot: the numbers above may all look fine.
+	if v.NothingSelectedRan {
+		fmt.Fprintf(&builder, " — this run was narrowed to %d test cases and the report names none of them,"+
+			" so nothing was actually tested; check that the selection reaches your runner in the shape it expects",
+			len(v.SelectedMissing))
+		return builder.String()
+	}
+	if len(v.SelectedMissing) > 0 {
+		fmt.Fprintf(&builder, " — %d selected test cases did not run", len(v.SelectedMissing))
+	}
+
 	switch {
 	case v.ToleranceApplied && v.Tolerated:
 		builder.WriteString(" — within the pass requirement")

@@ -198,18 +198,49 @@ func TestSelectionMachine_ExposesCountAndFile(t *testing.T) {
 
 func TestSelection_Export(t *testing.T) {
 	t.Setenv(EnvSelectedTests, "stale")
+	t.Setenv(EnvSelectedTestsFile, "stale")
 	t.Setenv(EnvSelectedTestsCount, "stale")
 
 	selection := &testCasesSelection{Entries: []string{"a", "b"}, Narrowed: true, File: "/data/s.txt"}
 	require.NoError(t, selection.Export())
-	assert.Equal(t, "/data/s.txt", os.Getenv(EnvSelectedTests))
+
+	// The variable named for the selected tests holds the selected tests. It
+	// used to hold the file path, which meant it was empty for every selection
+	// that did not ask for a file - which is nearly all of them.
+	assert.Equal(t, "a\nb", os.Getenv(EnvSelectedTests))
+	assert.Equal(t, "/data/s.txt", os.Getenv(EnvSelectedTestsFile))
 	assert.Equal(t, "2", os.Getenv(EnvSelectedTestsCount))
 
 	// An empty selection has to clear the variables, not leave the previous
 	// attempt's values for the tool to pick up.
 	require.NoError(t, (&testCasesSelection{}).Export())
 	assert.Empty(t, os.Getenv(EnvSelectedTests))
+	assert.Empty(t, os.Getenv(EnvSelectedTestsFile))
 	assert.Equal(t, "0", os.Getenv(EnvSelectedTestsCount))
+}
+
+// A selection is exported without a file whenever select.write is not asked
+// for, which is the case the old behaviour got wrong.
+func TestSelection_ExportWithoutAFile(t *testing.T) {
+	selection := &testCasesSelection{Entries: []string{"Payments/CheckoutTest/test_total"}, Narrowed: true}
+	require.NoError(t, selection.Export())
+
+	assert.Equal(t, "Payments/CheckoutTest/test_total", os.Getenv(EnvSelectedTests))
+	assert.Empty(t, os.Getenv(EnvSelectedTestsFile))
+	assert.Equal(t, "1", os.Getenv(EnvSelectedTestsCount))
+}
+
+// Newlines, because a test case name may contain a space or a comma and any
+// other separator would split one name into two.
+func TestSelection_ExportSeparatesEntriesByNewline(t *testing.T) {
+	selection := &testCasesSelection{
+		Entries:  []string{"suite/Class/test_one[a, b]", "suite/Class/test two"},
+		Narrowed: true,
+	}
+	require.NoError(t, selection.Export())
+
+	assert.Equal(t, "suite/Class/test_one[a, b]\nsuite/Class/test two", os.Getenv(EnvSelectedTests))
+	assert.Equal(t, "2", os.Getenv(EnvSelectedTestsCount))
 }
 
 func TestResolveSelection_AbsoluteWritePath(t *testing.T) {
@@ -257,7 +288,7 @@ func TestNarrowingRetry_AcrossTwoAttempts(t *testing.T) {
   <testcase name="test_two" classname="c"><failure message="broken"/></testcase>
 </testsuite>`), 0o600))
 
-	verdict := applyTestCases("rtest", policy, dir, 1, first.Narrowed)
+	verdict := applyTestCases("rtest", policy, dir, 1, first)
 	assert.False(t, verdict.Success, "two unmuted failures, so the step fails and the retry runs")
 	require.NotNil(t, verdict.Results)
 	assert.True(t, verdict.Results.RequirementApplied, "a full run is measured against the requirement")
@@ -276,7 +307,7 @@ func TestNarrowingRetry_AcrossTwoAttempts(t *testing.T) {
   <testcase name="test_two" classname="c"/>
 </testsuite>`), 0o600))
 
-	retried := applyTestCases("rtest", policy, dir, 0, second.Narrowed)
+	retried := applyTestCases("rtest", policy, dir, 0, second)
 	assert.True(t, retried.Success)
 	require.NotNil(t, retried.Results)
 	assert.False(t, retried.Results.RequirementApplied,
@@ -325,7 +356,7 @@ func TestResolveSelection_ReRunsAnotherStepsFailures(t *testing.T) {
   <testcase name="test_boom" classname="tests.b"><error message="still broken"/></testcase>
 </testsuite>`), 0o600))
 
-	outcome := applyTestCases("rtest", policy, dir, 1, selection.Narrowed)
+	outcome := applyTestCases("rtest", policy, dir, 1, selection)
 	require.NotNil(t, outcome.Results)
 	assert.Equal(t, int32(3), outcome.Results.Tests, "the verdict judged the re-run, not the first pass")
 	assert.Equal(t, int32(1), outcome.Results.Unexpected)
@@ -396,4 +427,67 @@ func TestResolveSelection_TestCasesNamedByTheScheduler(t *testing.T) {
 		assert.False(t, selection.Narrowed,
 			"a reference without names is not something the pod can act on yet")
 	})
+}
+
+// The guardrail, driven through the real path rather than the verdict alone: a
+// retry narrows to the failures, the tool's filter matches nothing, and the tool
+// exits zero having run no tests. Without this the step passes.
+func TestNarrowingRetry_AStaleSelectionFailsTheStep(t *testing.T) {
+	dir := t.TempDir()
+	report := filepath.Join(dir, "junit.xml")
+	policy := &lite.ActionTestCases{
+		ReportPaths: []string{"junit.xml"},
+		Select:      &lite.ActionTestCasesSelect{From: "self"},
+	}
+
+	require.NoError(t, os.WriteFile(report, []byte(`<testsuite name="s" tests="2">
+  <testcase name="test_ok" classname="c"/>
+  <testcase name="test_one" classname="c"><failure message="broken"/></testcase>
+</testsuite>`), 0o600))
+
+	// The retry narrows to the one failure.
+	selection, err := resolveTestCaseSelection(policy, dir, nil)
+	require.NoError(t, err)
+	require.True(t, selection.Narrowed)
+	require.Equal(t, []string{"s/c/test_one"}, selection.Addresses)
+
+	// The tool ran nothing and wrote a report naming nobody the selection asked
+	// for, then exited zero.
+	require.NoError(t, os.WriteFile(report, []byte(
+		`<testsuite name="s" tests="0"></testsuite>`), 0o600))
+
+	outcome := applyTestCases("rtest", policy, dir, 0, selection)
+
+	assert.False(t, outcome.Success, "a run that tested none of its selection cannot pass")
+	assert.Contains(t, outcome.Details, "the report names none of them")
+}
+
+// The same path when the selection did run: the guardrail must not fire on the
+// ordinary case it exists to protect.
+func TestNarrowingRetry_ASelectionThatRanPasses(t *testing.T) {
+	dir := t.TempDir()
+	report := filepath.Join(dir, "junit.xml")
+	policy := &lite.ActionTestCases{
+		ReportPaths: []string{"junit.xml"},
+		Select:      &lite.ActionTestCasesSelect{From: "self"},
+	}
+
+	require.NoError(t, os.WriteFile(report, []byte(`<testsuite name="s" tests="2">
+  <testcase name="test_ok" classname="c"/>
+  <testcase name="test_one" classname="c"><failure message="broken"/></testcase>
+</testsuite>`), 0o600))
+
+	selection, err := resolveTestCaseSelection(policy, dir, nil)
+	require.NoError(t, err)
+	require.Equal(t, []string{"s/c/test_one"}, selection.Addresses)
+
+	// The retry re-ran it and it passed this time.
+	require.NoError(t, os.WriteFile(report, []byte(`<testsuite name="s" tests="1">
+  <testcase name="test_one" classname="c"/>
+</testsuite>`), 0o600))
+
+	outcome := applyTestCases("rtest", policy, dir, 0, selection)
+
+	assert.True(t, outcome.Success)
+	assert.NotContains(t, outcome.Details, "did not run")
 }

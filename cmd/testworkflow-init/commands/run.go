@@ -134,7 +134,7 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 	// acceptable. Only a Pro preset can put a policy here - see StubTestCases.
 	var outcome testCasesOutcome
 	if run.TestCases != nil {
-		outcome = applyTestCases(run.Ref, run.TestCases, workingDir, int(result.ExitCode), selection.Narrowed)
+		outcome = applyTestCases(run.Ref, run.TestCases, workingDir, int(result.ExitCode), selection)
 		success = outcome.Success
 	}
 

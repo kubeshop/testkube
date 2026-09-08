@@ -60,7 +60,7 @@ func TestApplyTestCases_MutedFailuresPassTheStep(t *testing.T) {
 	outcome := applyTestCases("rtest", &lite.ActionTestCases{
 		ReportPaths: []string{"junit.xml"},
 		MuteInclude: []string{"test_flaky_*"},
-	}, dir, 1, false)
+	}, dir, 1, &testCasesSelection{})
 
 	assert.True(t, outcome.Success, "the only failure was muted, so the tool's exit code is overridden")
 	assert.Contains(t, outcome.Details, "(1 muted)", "muted must never mean silent")
@@ -81,7 +81,7 @@ func TestApplyTestCases_UnmutedFailureStillFails(t *testing.T) {
 	outcome := applyTestCases("rtest", &lite.ActionTestCases{
 		ReportPaths: []string{"junit.xml"},
 		MuteInclude: []string{"test_flaky_*"},
-	}, dir, 1, false)
+	}, dir, 1, &testCasesSelection{})
 
 	assert.False(t, outcome.Success)
 	assert.Contains(t, outcome.Details, "(2 muted)")
@@ -102,7 +102,7 @@ func TestApplyTestCases_MissingReport(t *testing.T) {
 		outcome := applyTestCases("rtest", &lite.ActionTestCases{
 			ReportPaths: []string{"junit.xml"},
 			MuteInclude: []string{"**/*"},
-		}, empty, 1, false)
+		}, empty, 1, &testCasesSelection{})
 		assert.False(t, outcome.Success)
 		assert.Contains(t, outcome.Details, "no test report found")
 		assert.Contains(t, outcome.Details, "onMissing is fail")
@@ -112,20 +112,20 @@ func TestApplyTestCases_MissingReport(t *testing.T) {
 	t.Run("warn keeps the exit code", func(t *testing.T) {
 		outcome := applyTestCases("rtest", &lite.ActionTestCases{
 			ReportPaths: []string{"junit.xml"}, OnMissing: "warn",
-		}, empty, 0, false)
+		}, empty, 0, &testCasesSelection{})
 		assert.True(t, outcome.Success)
 		assert.Contains(t, outcome.Details, "no test report found")
 
 		outcome = applyTestCases("rtest", &lite.ActionTestCases{
 			ReportPaths: []string{"junit.xml"}, OnMissing: "warn",
-		}, empty, 1, false)
+		}, empty, 1, &testCasesSelection{})
 		assert.False(t, outcome.Success, "warn does not rescue a genuine failure")
 	})
 
 	t.Run("ignore is silent", func(t *testing.T) {
 		outcome := applyTestCases("rtest", &lite.ActionTestCases{
 			ReportPaths: []string{"junit.xml"}, OnMissing: "ignore",
-		}, empty, 0, false)
+		}, empty, 0, &testCasesSelection{})
 		assert.True(t, outcome.Success)
 		assert.Empty(t, outcome.Details)
 	})
@@ -138,7 +138,7 @@ func TestApplyTestCases_Thresholds(t *testing.T) {
 		outcome := applyTestCases("rtest", &lite.ActionTestCases{
 			ReportPaths: []string{"junit.xml"},
 			Tolerate:    &lite.ActionTestCasesTolerance{MaxFailed: ptr(3)},
-		}, dir, 1, false)
+		}, dir, 1, &testCasesSelection{})
 		assert.True(t, outcome.Success)
 		require.NotNil(t, outcome.Results)
 		assert.True(t, outcome.Results.RequirementApplied,
@@ -149,7 +149,7 @@ func TestApplyTestCases_Thresholds(t *testing.T) {
 		outcome := applyTestCases("rtest", &lite.ActionTestCases{
 			ReportPaths: []string{"junit.xml"},
 			Tolerate:    &lite.ActionTestCasesTolerance{MaxFailed: ptr(2)},
-		}, dir, 1, false)
+		}, dir, 1, &testCasesSelection{})
 		assert.False(t, outcome.Success)
 		assert.Contains(t, outcome.Details, "short of the pass requirement")
 	})
@@ -159,7 +159,7 @@ func TestApplyTestCases_Thresholds(t *testing.T) {
 			ReportPaths: []string{"junit.xml"},
 			Tolerate:    &lite.ActionTestCasesTolerance{MaxFailed: ptr(0)},
 			Enforce:     "always",
-		}, dir, 0, false)
+		}, dir, 0, &testCasesSelection{})
 		assert.False(t, outcome.Success)
 	})
 
@@ -167,7 +167,7 @@ func TestApplyTestCases_Thresholds(t *testing.T) {
 		outcome := applyTestCases("rtest", &lite.ActionTestCases{
 			ReportPaths: []string{"junit.xml"},
 			Tolerate:    &lite.ActionTestCasesTolerance{MaxFailed: ptr(0)},
-		}, dir, 0, false)
+		}, dir, 0, &testCasesSelection{})
 		assert.True(t, outcome.Success, "the default only ever downgrades a failure")
 	})
 }
@@ -178,7 +178,7 @@ func TestApplyTestCases_UnusedMutePatternsAreSurfaced(t *testing.T) {
 	outcome := applyTestCases("rtest", &lite.ActionTestCases{
 		ReportPaths: []string{"junit.xml"},
 		MuteInclude: []string{"test_flaky_*", "test_retired_*"},
-	}, dir, 1, false)
+	}, dir, 1, &testCasesSelection{})
 
 	assert.Contains(t, outcome.Details, "Mute patterns matching nothing: test_retired_*",
 		"dead quarantine config has to be visible or mute lists rot")
@@ -197,7 +197,7 @@ func TestApplyTestCases_GlobAndMultipleReports(t *testing.T) {
 
 	outcome := applyTestCases("rtest", &lite.ActionTestCases{
 		ReportPaths: []string{"reports/**/*.xml"},
-	}, dir, 1, false)
+	}, dir, 1, &testCasesSelection{})
 
 	assert.False(t, outcome.Success)
 	assert.Contains(t, outcome.Details, "2 test cases", "both files are merged into one report")
@@ -211,7 +211,7 @@ func TestApplyTestCases_UnparseableReportFailsLoudly(t *testing.T) {
 	outcome := applyTestCases("rtest", &lite.ActionTestCases{
 		ReportPaths: []string{"junit.xml"},
 		MuteInclude: []string{"**/*"},
-	}, dir, 1, false)
+	}, dir, 1, &testCasesSelection{})
 
 	assert.False(t, outcome.Success, "a report we cannot read must not be treated as empty and muted")
 	assert.Contains(t, outcome.Details, "could not read the test report")
@@ -228,7 +228,7 @@ func TestApplyTestCases_ReportNamingFewerTestsThanDeclared(t *testing.T) {
 	outcome := applyTestCases("rtest", &lite.ActionTestCases{
 		ReportPaths: []string{"junit.xml"},
 		MuteInclude: []string{"**/*"},
-	}, dir, 1, false)
+	}, dir, 1, &testCasesSelection{})
 
 	assert.False(t, outcome.Success)
 	assert.Contains(t, outcome.Details, "does not name")
@@ -250,7 +250,7 @@ func TestApplyTestCases_RecordsTheVerdictForTheReportUpload(t *testing.T) {
 	outcome := applyTestCases("rrun1", &lite.ActionTestCases{
 		ReportPaths: []string{"junit.xml"},
 		MuteInclude: []string{"test_flaky_*"},
-	}, dir, 1, false)
+	}, dir, 1, &testCasesSelection{})
 	assert.False(t, outcome.Success, "one unmuted failure remains")
 
 	verdicts, err := testresults.ReadVerdicts()
@@ -274,7 +274,7 @@ func TestApplyTestCases_RecordsToleratedWhenTheRequirementWasMet(t *testing.T) {
 		ReportPaths: []string{"junit.xml"},
 		MuteInclude: []string{"test_flaky_*"},
 		Tolerate:    &lite.ActionTestCasesTolerance{MaxFailed: ptr(1)},
-	}, dir, 1, false)
+	}, dir, 1, &testCasesSelection{})
 	assert.True(t, outcome.Success)
 
 	verdicts, err := testresults.ReadVerdicts()
@@ -292,7 +292,7 @@ func TestApplyTestCases_RecordsNothingWithoutAReport(t *testing.T) {
 	applyTestCases("rrun1", &lite.ActionTestCases{
 		ReportPaths: []string{"junit.xml"},
 		OnMissing:   "ignore",
-	}, t.TempDir(), 0, false)
+	}, t.TempDir(), 0, &testCasesSelection{})
 
 	verdicts, err := testresults.ReadVerdicts()
 	require.NoError(t, err)

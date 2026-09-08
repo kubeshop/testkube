@@ -25,7 +25,12 @@ import (
 // Environment variables carrying the selection, for a shell that would rather
 // not write an expression.
 const (
-	EnvSelectedTests      = "TK_SELECTED_TESTS"
+	// EnvSelectedTests carries the selected entries, one per line.
+	EnvSelectedTests = "TK_SELECTED_TESTS"
+	// EnvSelectedTestsFile carries the path select.write produced, empty when
+	// it was not asked for. Kept apart from EnvSelectedTests, which used to
+	// hold this and so was empty for every selection that wanted no file.
+	EnvSelectedTestsFile  = "TK_SELECTED_TESTS_FILE"
 	EnvSelectedTestsCount = "TK_SELECTED_TESTS_COUNT"
 )
 
@@ -34,6 +39,11 @@ type testCasesSelection struct {
 	// Entries are what the tool should be invoked with, already projected.
 	// Always non-nil in intent: empty means "run everything".
 	Entries []string
+	// Addresses are the canonical ids behind Entries, kept so the verdict can
+	// check that the cases this run was narrowed to actually ran. Empty for a
+	// selection that came from an explicit list rather than a report, which has
+	// no address to check against.
+	Addresses []string
 	// Narrowed is whether anything was actually selected. It gates the pass
 	// requirement, because a threshold over a subset means nothing.
 	Narrowed bool
@@ -77,7 +87,7 @@ func resolveTestCaseSelection(policy *lite.ActionTestCases, workingDir string, r
 		if err != nil {
 			return nil, err
 		}
-		entries, err := testresults.Selection{
+		resolver := testresults.Selection{
 			Statuses:     statuses,
 			Filter:       testresults.Selector{Include: policy.Select.Include, Exclude: policy.Select.Exclude},
 			Mute:         testresults.Selector{Include: policy.MuteInclude, Exclude: policy.MuteExclude},
@@ -85,11 +95,20 @@ func resolveTestCaseSelection(policy *lite.ActionTestCases, workingDir string, r
 			Cases:        policy.Select.Cases,
 			As:           policy.Select.As,
 			Collapse:     policy.Select.Collapse,
-		}.Resolve(report)
+		}
+		entries, err := resolver.Resolve(report)
 		if err != nil {
 			return nil, err
 		}
 		selection.Entries = entries
+
+		// Kept alongside the projected entries so the verdict can tell a
+		// narrowed run that passed from one that tested nothing.
+		addresses, err := resolver.Addresses(report)
+		if err != nil {
+			return nil, err
+		}
+		selection.Addresses = addresses
 	} else if len(policy.Select.Cases) > 0 {
 		// An explicit list does not need a report to have existed.
 		selection.Entries = append(selection.Entries, policy.Select.Cases...)
@@ -147,8 +166,16 @@ func (s *testCasesSelection) Machine() expressions.Machine {
 
 // Export puts the selection in the environment, so a shell can use it without
 // touching the expression language.
+//
+// The entries are newline-separated rather than delimited by anything else: a
+// test case name may contain a space or a comma - parameterized names routinely
+// do - so any other separator would split names in half. A shell reads it with
+// `while read`, or `xargs -d '\n'`.
 func (s *testCasesSelection) Export() error {
-	if err := os.Setenv(EnvSelectedTests, s.File); err != nil {
+	if err := os.Setenv(EnvSelectedTests, strings.Join(s.Entries, "\n")); err != nil {
+		return err
+	}
+	if err := os.Setenv(EnvSelectedTestsFile, s.File); err != nil {
 		return err
 	}
 	return os.Setenv(EnvSelectedTestsCount, strconv.Itoa(len(s.Entries)))
@@ -230,7 +257,7 @@ type testCasesOutcome struct {
 //
 // This runs after the command and before `negative` is applied - the policy
 // decides what "failed" means, and negative inverts that.
-func applyTestCases(ref string, policy *lite.ActionTestCases, workingDir string, exitCode int, narrowed bool) testCasesOutcome {
+func applyTestCases(ref string, policy *lite.ActionTestCases, workingDir string, exitCode int, selection *testCasesSelection) testCasesOutcome {
 	report, files, found, err := readTestReport(policy.ReportPaths, workingDir)
 	if err != nil {
 		return testCasesOutcome{Details: fmt.Sprintf("could not read the test report: %s", err)}
@@ -259,7 +286,8 @@ func applyTestCases(ref string, policy *lite.ActionTestCases, workingDir string,
 		ExitCode: exitCode,
 		// A narrowed run measured a subset, so the pass requirement is not
 		// evaluated against it - a threshold over a subset means nothing.
-		Narrowed: narrowed,
+		Narrowed: selection.Narrowed,
+		Selected: selection.Addresses,
 	})
 	if err != nil {
 		return testCasesOutcome{Details: fmt.Sprintf("could not evaluate the test report: %s", err)}
@@ -270,6 +298,12 @@ func applyTestCases(ref string, policy *lite.ActionTestCases, workingDir string,
 		// A mute pattern matching nothing is dead quarantine config. Saying so
 		// is what stops mute lists outliving the bugs they were written for.
 		details += fmt.Sprintf(". Mute patterns matching nothing: %s", strings.Join(unused, ", "))
+	}
+	if missing := verdict.SelectedMissing; len(missing) > 0 {
+		// Naming a few beats the count alone: the usual cause is the runner
+		// spelling a test differently than the report does, which you can only
+		// see by reading one.
+		details += fmt.Sprintf(". Selected but absent from the report: %s", summarizeList(missing, maxNamedMissing))
 	}
 
 	// Hand the verdict to the container that will upload these reports. It can
@@ -423,4 +457,17 @@ func splitPatternRoot(pattern, workingDir string) (root, relative string) {
 		workingDir = "/"
 	}
 	return workingDir, pattern
+}
+
+// maxNamedMissing caps how many absent test cases the step log names. A
+// selection can be thousands of entries and every one of them can be missing;
+// the point of the line is to show what the mismatch looks like.
+const maxNamedMissing = 10
+
+// summarizeList renders at most limit entries, saying how many were left out.
+func summarizeList(entries []string, limit int) string {
+	if len(entries) <= limit {
+		return strings.Join(entries, ", ")
+	}
+	return fmt.Sprintf("%s and %d more", strings.Join(entries[:limit], ", "), len(entries)-limit)
 }

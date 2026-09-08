@@ -110,6 +110,31 @@ func (s Selection) pick(report Report) ([]TestCase, error) {
 	return picked, nil
 }
 
+// Addresses are the canonical ids of the test cases the selection picked out of
+// the report, before projection.
+//
+// Resolve hands the tool whatever shape the workflow asked for, which may be
+// unrecognisable as an address - `^TestFoo$` for go test, a single collapsed
+// `-Dtest=a,b` for Maven. The verdict needs the addresses instead, to check that
+// the cases it narrowed the run to actually ran: a filter the tool spells
+// differently than the report does matches nothing, the tool exits zero having
+// run no tests, and the step would otherwise pass.
+//
+// Only cases picked from the report are returned. An explicit `cases` list is
+// user-supplied text in the tool's own shape, so there is no address to check it
+// against.
+func (s Selection) Addresses(report Report) ([]string, error) {
+	picked, err := s.pick(report)
+	if err != nil {
+		return nil, err
+	}
+	addresses := make([]string, 0, len(picked))
+	for _, testCase := range picked {
+		addresses = append(addresses, testCase.ID())
+	}
+	return addresses, nil
+}
+
 // project renders each case through As.
 func (s Selection) project(cases []TestCase) ([]string, error) {
 	if len(cases) == 0 {

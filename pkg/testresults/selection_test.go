@@ -204,3 +204,43 @@ func TestParseStatuses(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, empty)
 }
+
+// Addresses are the canonical ids behind the projection, which is what the
+// verdict checks the report against. The projection itself may be
+// unrecognisable as an address.
+func TestSelection_AddressesAreCanonicalRegardlessOfProjection(t *testing.T) {
+	selection := Selection{As: `^{{ testcase.name }}$`}
+
+	entries, err := selection.Resolve(previousRun())
+	require.NoError(t, err)
+	addresses, err := selection.Addresses(previousRun())
+	require.NoError(t, err)
+
+	require.Len(t, addresses, len(entries))
+	for _, address := range addresses {
+		assert.Contains(t, address, "/", "an address keeps its segments")
+		assert.NotContains(t, address, "^", "the projection is not an address")
+	}
+}
+
+// An explicit list is user-supplied text in the tool's own shape, so there is
+// no address to check it against and none is invented.
+func TestSelection_AddressesExcludeExplicitCases(t *testing.T) {
+	selection := Selection{Cases: []string{"tests.a::test_one"}}
+
+	addresses, err := selection.Addresses(Report{})
+	require.NoError(t, err)
+	assert.Empty(t, addresses)
+}
+
+// The same filters apply as to Resolve, so the two never describe different
+// sets of test cases.
+func TestSelection_AddressesRespectTheMuteExclusion(t *testing.T) {
+	selection := Selection{Mute: Selector{Include: []string{"test_flaky_*"}}}
+
+	addresses, err := selection.Addresses(previousRun())
+	require.NoError(t, err)
+	for _, address := range addresses {
+		assert.NotContains(t, address, "test_flaky_")
+	}
+}

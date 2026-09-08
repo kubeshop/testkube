@@ -302,3 +302,116 @@ func TestEvaluate_ErroredCountsAsFailing(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, muted.Success, "an errored case is mutable like a failed one")
 }
+
+// The hazard this guards: a narrowing retry passes the selection to the tool in
+// a shape the tool spells differently than the report does, so the filter
+// matches nothing, the tool runs zero tests and exits zero. Everything else
+// about the run looks like a pass.
+func TestEvaluate_ANarrowedRunThatTestedNothingFails(t *testing.T) {
+	// The report is from the previous attempt: the tool overwrote nothing,
+	// because it ran nothing.
+	verdict, err := Evaluate(synth(0, 2, 0), Policy{}, Input{
+		ExitCode: 0,
+		Narrowed: true,
+		Selected: []string{"s/c/test_gone_i0", "s/c/test_gone_i1"},
+	})
+	require.NoError(t, err)
+
+	assert.True(t, verdict.NothingSelectedRan)
+	assert.False(t, verdict.Success, "a green exit code must not carry a run that tested nothing")
+	assert.Len(t, verdict.SelectedMissing, 2)
+	assert.Contains(t, verdict.Describe(), "the report names none of them")
+}
+
+// enforce: onFailure only ever downgrades a failure into a pass, but this is not
+// a threshold the workflow relaxed - it is the evidence the run measured
+// anything - so it overrides a pass in either mode.
+func TestEvaluate_NothingSelectedRanOverridesEnforceOnFailure(t *testing.T) {
+	for _, enforce := range []Enforce{EnforceOnFailure, EnforceAlways} {
+		t.Run(string(enforce), func(t *testing.T) {
+			verdict, err := Evaluate(synth(5, 0, 0), Policy{Enforce: enforce}, Input{
+				ExitCode: 0,
+				Narrowed: true,
+				Selected: []string{"s/c/test_absent"},
+			})
+			require.NoError(t, err)
+			assert.False(t, verdict.Success)
+		})
+	}
+}
+
+// A suite can legitimately lose a test between runs, so some of the selection
+// going missing is reported rather than fatal. Only all of it means the tool
+// ran nothing.
+func TestEvaluate_SomeSelectedMissingIsReportedNotFatal(t *testing.T) {
+	verdict, err := Evaluate(synth(2, 0, 0), Policy{}, Input{
+		ExitCode: 0,
+		Narrowed: true,
+		Selected: []string{"s/c/test_ok_i0", "s/c/test_ok_i1", "s/c/test_deleted"},
+	})
+	require.NoError(t, err)
+
+	assert.False(t, verdict.NothingSelectedRan)
+	assert.True(t, verdict.Success)
+	assert.Equal(t, []string{"s/c/test_deleted"}, verdict.SelectedMissing)
+	assert.Contains(t, verdict.Describe(), "1 selected test cases did not run")
+}
+
+// The ordinary narrowing retry: everything selected ran, so nothing is reported.
+func TestEvaluate_NothingMissingWhenTheSelectionRan(t *testing.T) {
+	verdict, err := Evaluate(synth(2, 0, 0), Policy{}, Input{
+		ExitCode: 0,
+		Narrowed: true,
+		Selected: []string{"s/c/test_ok_i0", "s/c/test_ok_i1"},
+	})
+	require.NoError(t, err)
+
+	assert.Empty(t, verdict.SelectedMissing)
+	assert.False(t, verdict.NothingSelectedRan)
+	assert.True(t, verdict.Success)
+}
+
+// An unnarrowed run has no selection to check, which is every run of every step
+// that does not use `select`.
+func TestEvaluate_NoSelectionNothingChecked(t *testing.T) {
+	verdict, err := Evaluate(synth(5, 0, 0), Policy{}, Input{ExitCode: 0})
+	require.NoError(t, err)
+
+	assert.Empty(t, verdict.SelectedMissing)
+	assert.False(t, verdict.NothingSelectedRan)
+	assert.True(t, verdict.Success)
+}
+
+// A report that named no test cases cannot confirm or deny an address.
+// IdentitiesIncomplete already says its identities were unusable; failing here
+// too would be two complaints about one unreadable report.
+func TestEvaluate_UnnamedReportDoesNotTriggerTheGuardrail(t *testing.T) {
+	report := Report{Declared: Summary{Tests: 4, Failed: 4}}
+	verdict, err := Evaluate(report, Policy{}, Input{
+		ExitCode: 1,
+		Narrowed: true,
+		Selected: []string{"s/c/test_one"},
+	})
+	require.NoError(t, err)
+
+	assert.True(t, verdict.IdentitiesIncomplete)
+	assert.False(t, verdict.NothingSelectedRan)
+	assert.Empty(t, verdict.SelectedMissing)
+}
+
+// An empty report and an unreadable one look similar and must not be treated
+// alike. A report that declares tests it does not name cannot be checked
+// against an address; a report that declares nothing and names nothing is a
+// tool that ran nothing, which is precisely what the guardrail is for.
+func TestEvaluate_AnEmptyReportIsNotAnUnreadableOne(t *testing.T) {
+	verdict, err := Evaluate(Report{}, Policy{}, Input{
+		ExitCode: 0,
+		Narrowed: true,
+		Selected: []string{"s/c/test_one"},
+	})
+	require.NoError(t, err)
+
+	require.False(t, verdict.IdentitiesIncomplete, "nothing was declared, so nothing is unaccounted for")
+	assert.True(t, verdict.NothingSelectedRan)
+	assert.False(t, verdict.Success)
+}
