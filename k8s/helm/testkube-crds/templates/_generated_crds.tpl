@@ -11832,11 +11832,7 @@ spec:
                                   type: string
                                 type: array
                               from:
-                                description: |-
-                                  which execution the previous results come from. Defaults to self, this
-                                  execution. Reading another execution's results is not available yet.
-                                enum:
-                                  - self
+                                description: "which execution the previous results come from, most local first:\n\n\tself      - this execution, from the report on disk (the default)\n\trerun     - the execution this one is a rerun of\n\tparent    - the execution that scheduled this one\n\t<other>   - an execution id, workflow name or alias, as execution() takes\n\nAnything other than self reads the other execution's report artifacts,\nwhich needs the control plane to grant artifact read access.\n\nA step left on self is still seeded from the rerun policy when the\nexecution carries one and has no local report yet - which is the first\nattempt of `testkube rerun --only-failed`. That needs no configuration\nbecause the two can never collide: on the first attempt there is no local\nreport to prefer, and on every later attempt there is."
                                 type: string
                               include:
                                 description: narrow further, same glob form as mute
@@ -17758,11 +17754,7 @@ spec:
                                   type: string
                                 type: array
                               from:
-                                description: |-
-                                  which execution the previous results come from. Defaults to self, this
-                                  execution. Reading another execution's results is not available yet.
-                                enum:
-                                  - self
+                                description: "which execution the previous results come from, most local first:\n\n\tself      - this execution, from the report on disk (the default)\n\trerun     - the execution this one is a rerun of\n\tparent    - the execution that scheduled this one\n\t<other>   - an execution id, workflow name or alias, as execution() takes\n\nAnything other than self reads the other execution's report artifacts,\nwhich needs the control plane to grant artifact read access.\n\nA step left on self is still seeded from the rerun policy when the\nexecution carries one and has no local report yet - which is the first\nattempt of `testkube rerun --only-failed`. That needs no configuration\nbecause the two can never collide: on the first attempt there is no local\nreport to prefer, and on every later attempt there is."
                                 type: string
                               include:
                                 description: narrow further, same glob form as mute
@@ -21402,11 +21394,7 @@ spec:
                                   type: string
                                 type: array
                               from:
-                                description: |-
-                                  which execution the previous results come from. Defaults to self, this
-                                  execution. Reading another execution's results is not available yet.
-                                enum:
-                                  - self
+                                description: "which execution the previous results come from, most local first:\n\n\tself      - this execution, from the report on disk (the default)\n\trerun     - the execution this one is a rerun of\n\tparent    - the execution that scheduled this one\n\t<other>   - an execution id, workflow name or alias, as execution() takes\n\nAnything other than self reads the other execution's report artifacts,\nwhich needs the control plane to grant artifact read access.\n\nA step left on self is still seeded from the rerun policy when the\nexecution carries one and has no local report yet - which is the first\nattempt of `testkube rerun --only-failed`. That needs no configuration\nbecause the two can never collide: on the first attempt there is no local\nreport to prefer, and on every later attempt there is."
                                 type: string
                               include:
                                 description: narrow further, same glob form as mute
@@ -25226,11 +25214,7 @@ spec:
                                   type: string
                                 type: array
                               from:
-                                description: |-
-                                  which execution the previous results come from. Defaults to self, this
-                                  execution. Reading another execution's results is not available yet.
-                                enum:
-                                  - self
+                                description: "which execution the previous results come from, most local first:\n\n\tself      - this execution, from the report on disk (the default)\n\trerun     - the execution this one is a rerun of\n\tparent    - the execution that scheduled this one\n\t<other>   - an execution id, workflow name or alias, as execution() takes\n\nAnything other than self reads the other execution's report artifacts,\nwhich needs the control plane to grant artifact read access.\n\nA step left on self is still seeded from the rerun policy when the\nexecution carries one and has no local report yet - which is the first\nattempt of `testkube rerun --only-failed`. That needs no configuration\nbecause the two can never collide: on the first attempt there is no local\nreport to prefer, and on every later attempt there is."
                                 type: string
                               include:
                                 description: narrow further, same glob form as mute
@@ -31010,11 +30994,7 @@ spec:
                                   type: string
                                 type: array
                               from:
-                                description: |-
-                                  which execution the previous results come from. Defaults to self, this
-                                  execution. Reading another execution's results is not available yet.
-                                enum:
-                                  - self
+                                description: "which execution the previous results come from, most local first:\n\n\tself      - this execution, from the report on disk (the default)\n\trerun     - the execution this one is a rerun of\n\tparent    - the execution that scheduled this one\n\t<other>   - an execution id, workflow name or alias, as execution() takes\n\nAnything other than self reads the other execution's report artifacts,\nwhich needs the control plane to grant artifact read access.\n\nA step left on self is still seeded from the rerun policy when the\nexecution carries one and has no local report yet - which is the first\nattempt of `testkube rerun --only-failed`. That needs no configuration\nbecause the two can never collide: on the first attempt there is no local\nreport to prefer, and on every later attempt there is."
                                 type: string
                               include:
                                 description: narrow further, same glob form as mute
@@ -34532,11 +34512,7 @@ spec:
                                   type: string
                                 type: array
                               from:
-                                description: |-
-                                  which execution the previous results come from. Defaults to self, this
-                                  execution. Reading another execution's results is not available yet.
-                                enum:
-                                  - self
+                                description: "which execution the previous results come from, most local first:\n\n\tself      - this execution, from the report on disk (the default)\n\trerun     - the execution this one is a rerun of\n\tparent    - the execution that scheduled this one\n\t<other>   - an execution id, workflow name or alias, as execution() takes\n\nAnything other than self reads the other execution's report artifacts,\nwhich needs the control plane to grant artifact read access.\n\nA step left on self is still seeded from the rerun policy when the\nexecution carries one and has no local report yet - which is the first\nattempt of `testkube rerun --only-failed`. That needs no configuration\nbecause the two can never collide: on the first attempt there is no local\nreport to prefer, and on every later attempt there is."
                                 type: string
                               include:
                                 description: narrow further, same glob form as mute
