@@ -26,7 +26,16 @@ const (
 type DeclineExecutionRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// execution_id is the unique identifier of the execution that has failed.
-	ExecutionId   *string `protobuf:"bytes,1,opt,name=execution_id,json=executionId" json:"execution_id,omitempty"`
+	ExecutionId *string `protobuf:"bytes,1,opt,name=execution_id,json=executionId" json:"execution_id,omitempty"`
+	// reason is a short fixed token that names why the runner could not start
+	// the execution, for example "image-pull-failed" or "job-create-failed".
+	// The Control Plane stores it on the execution result so a user can read
+	// the cause without the runner log.
+	Reason *string `protobuf:"bytes,2,opt,name=reason" json:"reason,omitempty"`
+	// message is the human-readable error from the runner. It can contain image
+	// names and registry hosts, so the Control Plane must not send it outside
+	// the deployment.
+	Message       *string `protobuf:"bytes,3,opt,name=message" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -68,13 +77,29 @@ func (x *DeclineExecutionRequest) GetExecutionId() string {
 	return ""
 }
 
+func (x *DeclineExecutionRequest) GetReason() string {
+	if x != nil && x.Reason != nil {
+		return *x.Reason
+	}
+	return ""
+}
+
+func (x *DeclineExecutionRequest) GetMessage() string {
+	if x != nil && x.Message != nil {
+		return *x.Message
+	}
+	return ""
+}
+
 var File_testkube_testworkflow_execution_v1_decline_execution_request_proto protoreflect.FileDescriptor
 
 const file_testkube_testworkflow_execution_v1_decline_execution_request_proto_rawDesc = "" +
 	"\n" +
-	"Btestkube/testworkflow/execution/v1/decline_execution_request.proto\x12\"testkube.testworkflow.execution.v1\"<\n" +
+	"Btestkube/testworkflow/execution/v1/decline_execution_request.proto\x12\"testkube.testworkflow.execution.v1\"n\n" +
 	"\x17DeclineExecutionRequest\x12!\n" +
-	"\fexecution_id\x18\x01 \x01(\tR\vexecutionIdB\xc8\x02\n" +
+	"\fexecution_id\x18\x01 \x01(\tR\vexecutionId\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessageB\xc8\x02\n" +
 	"&com.testkube.testworkflow.execution.v1B\x1cDeclineExecutionRequestProtoP\x01ZUgithub.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1;executionv1\xa2\x02\x03TTE\xaa\x02\"Testkube.Testworkflow.Execution.V1\xca\x02\"Testkube\\Testworkflow\\Execution\\V1\xe2\x02.Testkube\\Testworkflow\\Execution\\V1\\GPBMetadata\xea\x02%Testkube::Testworkflow::Execution::V1b\beditionsp\xe8\a"
 
 var (
