@@ -37,8 +37,8 @@ type runner interface {
 	Execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error)
 	Pause(executionId string) error
 	Resume(executionId string) error
-	Abort(executionId string) error
-	Cancel(executionId string) error
+	Abort(executionId string, reason string) error
+	Cancel(executionId string, reason string) error
 }
 
 type workflowStore interface {
@@ -205,7 +205,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 			})
 		case executionv1.ExecutionState_EXECUTION_STATE_CANCELLED:
 			wg.Go(func() {
-				err := c.runner.Cancel(transition.GetExecutionId())
+				err := c.runner.Cancel(transition.GetExecutionId(), transition.GetReason())
 				switch {
 				case errors.Is(err, registry.ErrResourceNotFound):
 					// Mission failed successfully!
@@ -219,7 +219,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 			})
 		case executionv1.ExecutionState_EXECUTION_STATE_ABORTED:
 			wg.Go(func() {
-				err := c.runner.Abort(transition.GetExecutionId())
+				err := c.runner.Abort(transition.GetExecutionId(), transition.GetReason())
 				switch {
 				case errors.Is(err, registry.ErrResourceNotFound):
 					// Mission failed successfully!

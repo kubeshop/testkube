@@ -68,8 +68,10 @@ type Runner interface {
 	Notifications(ctx context.Context, id string) executionworkertypes.NotificationsWatcher
 	Pause(id string) error
 	Resume(id string) error
-	Abort(id string) error
-	Cancel(id string) error
+	// Abort stops the execution and records the cause the control plane sent. The cause can be empty.
+	Abort(id string, reason string) error
+	// Cancel stops the execution and records the cause the control plane sent. The cause can be empty.
+	Cancel(id string, reason string) error
 }
 
 type runner struct {
@@ -653,16 +655,17 @@ func (r *runner) Resume(id string) error {
 }
 
 // Abort stops the execution on a request from the control plane.
-// The control plane does not send a cause yet, so the result names the actor only.
-func (r *runner) Abort(id string) error {
+func (r *runner) Abort(id string, reason string) error {
 	return r.worker.Abort(context.Background(), id, executionworkertypes.DestroyOptions{
-		Actor: executionworkertypes.AbortActorControlPlane,
+		Actor:  executionworkertypes.AbortActorControlPlane,
+		Reason: reason,
 	})
 }
 
 // Cancel stops the execution on a request from a user. The control plane relays the request.
-func (r *runner) Cancel(id string) error {
+func (r *runner) Cancel(id string, reason string) error {
 	return r.worker.Cancel(context.Background(), id, executionworkertypes.DestroyOptions{
-		Actor: executionworkertypes.AbortActorUser,
+		Actor:  executionworkertypes.AbortActorUser,
+		Reason: reason,
 	})
 }
