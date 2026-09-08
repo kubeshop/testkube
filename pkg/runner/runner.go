@@ -615,7 +615,8 @@ func (r *runner) abortExecution(ctx context.Context, environmentID, executionID 
 	if execution.Result == nil {
 		return errors.New("execution result is nil")
 	}
-	execution.Result.Fatal(errors.New("execution is stuck in running state"), true, time.Now())
+	const stuckReason = "execution is stuck in running state"
+	execution.Result.Fatal(errors.New(stuckReason), true, time.Now())
 	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
 		return r.client.UpdateExecutionResult(ctx, environmentID, executionID, execution.Result)
 	})
@@ -631,7 +632,10 @@ func (r *runner) abortExecution(ctx context.Context, environmentID, executionID 
 	}
 
 	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
-		return r.Abort(executionID)
+		return r.worker.Abort(context.Background(), executionID, executionworkertypes.DestroyOptions{
+			Actor:  executionworkertypes.AbortActorRunner,
+			Reason: stuckReason,
+		})
 	})
 	if err != nil {
 		return errors.Wrapf(err, "failed to destroy execution '%s'", executionID)
@@ -648,10 +652,17 @@ func (r *runner) Resume(id string) error {
 	return r.worker.Resume(context.Background(), id, executionworkertypes.ControlOptions{})
 }
 
+// Abort stops the execution on a request from the control plane.
+// The control plane does not send a cause yet, so the result names the actor only.
 func (r *runner) Abort(id string) error {
-	return r.worker.Abort(context.Background(), id, executionworkertypes.DestroyOptions{})
+	return r.worker.Abort(context.Background(), id, executionworkertypes.DestroyOptions{
+		Actor: executionworkertypes.AbortActorControlPlane,
+	})
 }
 
+// Cancel stops the execution on a request from a user. The control plane relays the request.
 func (r *runner) Cancel(id string) error {
-	return r.worker.Cancel(context.Background(), id, executionworkertypes.DestroyOptions{})
+	return r.worker.Cancel(context.Background(), id, executionworkertypes.DestroyOptions{
+		Actor: executionworkertypes.AbortActorUser,
+	})
 }
