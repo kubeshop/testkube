@@ -1099,6 +1099,7 @@ func buildStartupCapabilities(cfg *intconfig.Config) []cloud.AgentCapability {
 	caps := make([]cloud.AgentCapability, 0, 4)
 	if !cfg.DisableRunner {
 		caps = append(caps, cloud.AgentCapability_AGENT_CAPABILITY_RUNNER)
+		caps = append(caps, cloud.AgentCapability_AGENT_CAPABILITY_EXECUTION)
 	}
 	if !cfg.DisableTestTriggers {
 		caps = append(caps, cloud.AgentCapability_AGENT_CAPABILITY_LISTENER)
