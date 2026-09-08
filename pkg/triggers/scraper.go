@@ -85,6 +85,7 @@ func (s *Service) abortRunningTestWorkflowExecutions(ctx context.Context, status
 			// Obtain the controller
 			err = s.executionWorkerClient.Abort(ctx, execution.Id, executionworkertypes.DestroyOptions{
 				Namespace: s.testkubeNamespace,
+				Actor:     executionworkertypes.AbortActorTrigger,
 			})
 			if err != nil {
 				s.logger.Errorf("trigger service: execution scraper component: error aborting test workflow execution: %v", err)

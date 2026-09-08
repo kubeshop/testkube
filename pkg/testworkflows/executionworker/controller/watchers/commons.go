@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	constants2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -302,16 +303,25 @@ func GetJobError(job *batchv1.Job) string {
 			}
 		}
 	}
-	var msg string
-	if job.DeletionTimestamp != nil {
-		msg = "Job has been aborted"
-	}
+	// The worker annotates a stop with the actor and an optional cause. A deleted
+	// job without the annotation is a stop by an unknown party.
 	if job.Annotations != nil {
-		if terminationReason, ok := job.Annotations["testkube.io/termination-reason"]; ok && terminationReason != "" {
-			msg = terminationReason
+		actor := executionworkertypes.AbortActor(job.Annotations[constants2.AnnotationTerminationActor])
+		reason := job.Annotations[constants2.AnnotationTerminationReason]
+		if actor != "" || reason != "" {
+			if reason == "" {
+				return actor.Sentence()
+			}
+			if actor == "" {
+				return reason
+			}
+			return actor.Sentence() + ": " + reason
 		}
 	}
-	return msg
+	if job.DeletionTimestamp != nil {
+		return executionworkertypes.AbortActorSystem.Sentence()
+	}
+	return ""
 }
 
 func GetTerminationCode(job *batchv1.Job) string {

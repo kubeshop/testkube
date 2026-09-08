@@ -554,7 +554,7 @@ func (w *worker) Abort(ctx context.Context, id string, options executionworkerty
 			return err
 		}
 	}
-	if err := w.patchTerminationAnnotations(ctx, id, options.Namespace, testkube.ABORTED_TestWorkflowStatus, "Job has been aborted by the system"); err != nil {
+	if err := w.patchTerminationAnnotations(ctx, id, options.Namespace, testkube.ABORTED_TestWorkflowStatus, options.TerminationActor(executionworkertypes.AbortActorSystem), options.Reason); err != nil {
 		return errors.Wrapf(err, "failed to patch job %s/%s with termination code & reason", options.Namespace, id)
 	}
 	// It may safely destroy all the resources - the trace should be still readable.
@@ -568,17 +568,18 @@ func (w *worker) Cancel(ctx context.Context, id string, options executionworkert
 			return err
 		}
 	}
-	if err := w.patchTerminationAnnotations(ctx, id, options.Namespace, testkube.CANCELED_TestWorkflowStatus, "Job has been canceled by a user"); err != nil {
+	if err := w.patchTerminationAnnotations(ctx, id, options.Namespace, testkube.CANCELED_TestWorkflowStatus, options.TerminationActor(executionworkertypes.AbortActorUser), options.Reason); err != nil {
 		return errors.Wrapf(err, "failed to patch job %s/%s with termination code & reason", options.Namespace, id)
 	}
 	return w.Destroy(ctx, id, options)
 }
 
-func (w *worker) patchTerminationAnnotations(ctx context.Context, id string, namespace string, status testkube.TestWorkflowStatus, reason string) error {
+func (w *worker) patchTerminationAnnotations(ctx context.Context, id string, namespace string, status testkube.TestWorkflowStatus, actor executionworkertypes.AbortActor, reason string) error {
 	patch := map[string]interface{}{
 		"metadata": map[string]any{
 			"annotations": map[string]string{
 				constants.AnnotationTerminationCode:   string(status),
+				constants.AnnotationTerminationActor:  string(actor),
 				constants.AnnotationTerminationReason: reason,
 			},
 		},

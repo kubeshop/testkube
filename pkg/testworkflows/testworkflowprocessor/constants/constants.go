@@ -36,6 +36,7 @@ const (
 	RootOperationName               = "root"
 	AnnotationTerminationCode       = "testkube.io/termination-code"
 	AnnotationTerminationReason     = "testkube.io/termination-reason"
+	AnnotationTerminationActor      = "testkube.io/termination-actor"
 )
 
 var (
