@@ -1,0 +1,578 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: web-unit
+  labels:
+    category: unit-component-testing
+    quality-loop: "true"
+    core-tests: cloud-ui
+    artifacts: "true"
+    junit: "true"
+    team: frontend
+    package: web
+    tool: vitest
+spec:
+  system:
+    pureByDefault: true
+  config:
+    revision:
+      description: Git ref to clone (branch, tag, or SHA). Quality Loop injects the
+        PR head.
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube-cloud-api.git
+      revision: '{{config.revision}}'
+      authType: github
+      cone: true
+      paths:
+      - js
+  container:
+    workingDir: /data/repo/js
+    image: node:24-bookworm
+    resources:
+      limits:
+        cpu: 4
+        memory: 6Gi
+      requests:
+        cpu: 2
+        memory: 4Gi
+  job:
+    activeDeadlineSeconds: 1200
+  steps:
+  - name: Install
+    shell: corepack enable npm && npm ci
+  - name: Test
+    shell: |
+      mkdir -p /data/artifacts
+      npm test -w @testkube/web -- \
+        --reporter=default \
+        --reporter=junit \
+        --outputFile.junit=/data/artifacts/junit.xml
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '**/*'
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: backoffice-unit
+  labels:
+    category: unit-component-testing
+    quality-loop: "true"
+    core-tests: backoffice
+    artifacts: "true"
+    junit: "true"
+    team: frontend
+    package: backoffice
+    tool: vitest
+spec:
+  system:
+    pureByDefault: true
+  config:
+    revision:
+      description: Git ref to clone (branch, tag, or SHA). Quality Loop injects the
+        PR head.
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube-cloud-api.git
+      revision: '{{config.revision}}'
+      authType: github
+      cone: true
+      paths:
+      - js
+  container:
+    workingDir: /data/repo/js
+    image: node:24-bookworm
+    resources:
+      limits:
+        cpu: 4
+        memory: 6Gi
+      requests:
+        cpu: 2
+        memory: 4Gi
+  job:
+    activeDeadlineSeconds: 1200
+  steps:
+  - name: Install
+    shell: corepack enable npm && npm ci
+  - name: Test
+    shell: |
+      mkdir -p /data/artifacts
+      npm test -w @testkube/backoffice -- \
+        --reporter=default \
+        --reporter=junit \
+        --outputFile.junit=/data/artifacts/junit.xml
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '**/*'
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: runspace-controller-unit
+  labels:
+    category: unit-component-testing
+    quality-loop: "true"
+    core-tests: cloud-api
+    artifacts: "true"
+    junit: "true"
+    team: backend
+    package: runspace-controller
+    tool: vitest
+spec:
+  system:
+    pureByDefault: true
+  config:
+    revision:
+      description: Git ref to clone (branch, tag, or SHA). Quality Loop injects the
+        PR head.
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube-cloud-api.git
+      revision: '{{config.revision}}'
+      authType: github
+      cone: true
+      paths:
+      - js
+  container:
+    workingDir: /data/repo/js
+    image: node:24-bookworm
+    resources:
+      limits:
+        cpu: 4
+        memory: 6Gi
+      requests:
+        cpu: 2
+        memory: 4Gi
+  job:
+    activeDeadlineSeconds: 1200
+  steps:
+  - name: Install
+    shell: corepack enable npm && npm ci
+  - name: Test
+    shell: |
+      mkdir -p /data/artifacts
+      npm test -w @testkube-ai/runspace-controller -- \
+        --reporter=default \
+        --reporter=junit \
+        --outputFile.junit=/data/artifacts/junit.xml
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '**/*'
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: lint-go
+  labels:
+    category: static-analysis
+    quality-loop: "true"
+    core-tests: cloud-api
+    team: backend
+    tool: golangci-lint
+spec:
+  config:
+    revision:
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube-cloud-api.git
+      revision: '{{config.revision}}'
+      authType: github
+  container:
+    workingDir: /data/repo
+    resources:
+      limits:
+        cpu: 4
+        memory: 8Gi
+      requests:
+        cpu: 2
+        memory: 4Gi
+  job:
+    activeDeadlineSeconds: 1200
+  steps:
+  - name: Lint OpenAPI
+    run:
+      image: stoplight/spectral:6.14.2
+      shell: spectral lint api/v1/base.yaml
+  - name: Lint Golang
+    run:
+      image: golangci/golangci-lint:v2.12.2
+      env:
+      - name: GOPROXY
+        value: https://proxy.golang.org,direct
+      shell: |-
+        golangci-lint run -c ./.golangci.yml \
+          --timeout=10m \
+          --issues-exit-code=1 \
+          --max-issues-per-linter=0 \
+          ./...
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: lint-js
+  labels:
+    category: static-analysis
+    quality-loop: "true"
+    core-tests: cloud-ui
+    team: frontend
+    tool: turbo
+spec:
+  system:
+    pureByDefault: true
+  config:
+    revision:
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube-cloud-api.git
+      revision: '{{config.revision}}'
+      authType: github
+      cone: true
+      paths:
+      - js
+  container:
+    workingDir: /data/repo/js
+    image: node:24-bookworm
+    env:
+    - name: NODE_OPTIONS
+      value: --max_old_space_size=4096
+    resources:
+      limits:
+        cpu: 4
+        memory: 8Gi
+      requests:
+        cpu: 2
+        memory: 4Gi
+  job:
+    activeDeadlineSeconds: 1200
+  steps:
+  - name: Validate lockfile platform entries
+    shell: |
+      node -e "
+      const lock = require('./package-lock.json');
+      const pkgs = lock.packages || {};
+      const required = ['@rollup/rollup-linux-x64-gnu', '@esbuild/linux-x64'];
+      const bad = [];
+      for (const [name, entry] of Object.entries(pkgs)) {
+        if (required.some(r => name.includes(r)) && (!entry.version || !entry.resolved)) {
+          bad.push(name + ' is incomplete (missing version/resolved)');
+        }
+      }
+      if (bad.length) { console.error(bad.join('\\n')); process.exit(1); }
+      console.log('Lockfile platform entries: OK');
+      "
+  - name: Install
+    shell: corepack enable npm && npm ci
+  - name: Check TypeScript types
+    shell: npx turbo run ts-check --cache-dir=.turbo
+  - name: Check formatting
+    shell: npx turbo run format:check --cache-dir=.turbo
+  - name: Check linters
+    shell: npx turbo run lint --cache-dir=.turbo
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: lint-helm
+  labels:
+    category: static-analysis
+    quality-loop: "true"
+    core-tests: cloud-api
+    team: backend
+    tool: helm
+spec:
+  config:
+    revision:
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube-cloud-api.git
+      revision: '{{config.revision}}'
+      authType: github
+      cone: true
+      paths:
+      - helm
+      - Makefile
+  container:
+    workingDir: /data/repo
+    image: alpine/helm:3.16.4
+    resources:
+      limits:
+        cpu: 2
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Vendor check and lint
+    shell: |-
+      set -euo pipefail
+      apk add --no-cache git make bash
+      make helm-vendor-check
+      make helm-lint
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: gomod-codegen
+  labels:
+    category: build-integration
+    quality-loop: "true"
+    core-tests: cloud-api
+    team: backend
+    tool: go
+spec:
+  config:
+    revision:
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube-cloud-api.git
+      revision: '{{config.revision}}'
+      authType: github
+  container:
+    workingDir: /data/repo
+    image: golang:1.26.6-bookworm
+    env:
+    - name: GOPROXY
+      value: https://proxy.golang.org,direct
+    resources:
+      limits:
+        cpu: 4
+        memory: 8Gi
+      requests:
+        cpu: 2
+        memory: 4Gi
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Check go.mod, go.sum, and OpenAPI
+    shell: |-
+      set -euo pipefail
+      apt-get update -qq
+      apt-get install -y -qq git make
+      git config --global --add safe.directory /data/repo
+
+      go mod tidy
+      if [ -n "$(git status -s -uno)" ]; then
+        echo "Go modules are not synchronized. Run 'go mod tidy' and commit."
+        git status -s -uno
+        git --no-pager diff
+        exit 1
+      fi
+
+      make generate-openapi-spec
+      changed=$(git status -s -uno pkg/ internal/ ':(exclude)internal/server/apidocs/testkube-cloud-docs.json' | wc -l)
+      if [ "$changed" -gt 0 ]; then
+        echo "Generated OpenAPI models are not synchronized. Run 'make generate-openapi-spec' and commit."
+        git status -s -uno pkg/ internal/ ':(exclude)internal/server/apidocs/testkube-cloud-docs.json'
+        git --no-pager diff pkg/ internal/ ':(exclude)internal/server/apidocs/testkube-cloud-docs.json'
+        exit 1
+      fi
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: test-app
+  labels:
+    category: api-testing
+    quality-loop: "true"
+    coverage: "true"
+    core-tests: cloud-api
+    artifacts: "true"
+    junit: "true"
+    team: backend
+    tool: go
+spec:
+  config:
+    revision:
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube-cloud-api.git
+      revision: '{{config.revision}}'
+      authType: github
+  container:
+    workingDir: /data/repo
+    image: golang:1.26.6-bookworm
+    env:
+    - name: E2E
+      value: "y"
+    - name: INTEGRATION
+      value: "y"
+    - name: GOPROXY
+      value: https://proxy.golang.org,direct
+    - name: VAULT_ADDR
+      value: http://127.0.0.1:8200
+    - name: VAULT_TOKEN
+      value: root
+    - name: API_POSTGRES_URL
+      value: postgres://postgres:postgres@127.0.0.1:5432/testkube_users_test?sslmode=disable
+    - name: OAUTH_ISSUER_URL
+      value: https://api.testkube.dev/idp
+    - name: API_ADDRESS
+      value: https://api.testkube.dev/idp
+    - name: DASHBOARD_ADDRESS
+      value: https://app.testkube.dev
+    - name: STORAGE_EMULATOR_HOST
+      value: http://127.0.0.1:4443
+    - name: GOOGLE_CLOUD_PROJECT
+      value: test
+    resources:
+      limits:
+        cpu: 8
+        memory: 16Gi
+      requests:
+        cpu: 4
+        memory: 8Gi
+  job:
+    activeDeadlineSeconds: 1800
+  services:
+    gcs:
+      logs: always
+      timeout: 180s
+      image: fsouza/fake-gcs-server:1.52.2
+      args:
+      - -scheme
+      - http
+      - -port
+      - "4443"
+      - -public-host
+      - 127.0.0.1:4443
+      - -backend
+      - memory
+      readinessProbe:
+        tcpSocket:
+          port: 4443
+        periodSeconds: 1
+    minio:
+      logs: always
+      timeout: 180s
+      image: bitnamilegacy/minio:2025.5.24@sha256:451fe6858cb770cc9d0e77ba811ce287420f781c7c1b806a386f6896471a349c
+      env:
+      - name: MINIO_ROOT_USER
+        value: minio99
+      - name: MINIO_ROOT_PASSWORD
+        value: minio123
+      - name: MINIO_DEFAULT_BUCKETS
+        value: test-bucket
+      - name: MINIO_SKIP_CLIENT
+        value: "yes"
+      readinessProbe:
+        httpGet:
+          path: /minio/health/ready
+          port: 9000
+        periodSeconds: 2
+    mongo:
+      logs: always
+      timeout: 180s
+      image: mongo:6.0.27
+      readinessProbe:
+        tcpSocket:
+          port: 27017
+        periodSeconds: 1
+    nats:
+      logs: always
+      timeout: 180s
+      image: nats:2.9.11
+      readinessProbe:
+        tcpSocket:
+          port: 4222
+        periodSeconds: 1
+    postgres:
+      logs: always
+      timeout: 180s
+      image: postgres:18.4
+      env:
+      - name: POSTGRES_USER
+        value: postgres
+      - name: POSTGRES_PASSWORD
+        value: postgres
+      - name: POSTGRES_DB
+        value: testkube_users_test
+      readinessProbe:
+        tcpSocket:
+          port: 5432
+        periodSeconds: 1
+    smtp:
+      logs: always
+      timeout: 180s
+      image: rnwood/smtp4dev:v3
+      readinessProbe:
+        tcpSocket:
+          port: 25
+        periodSeconds: 1
+    vault:
+      logs: always
+      timeout: 180s
+      image: hashicorp/vault:2.0.1
+      env:
+      - name: VAULT_DEV_ROOT_TOKEN_ID
+        value: root
+      - name: VAULT_DEV_LISTEN_ADDRESS
+        value: 0.0.0.0:8200
+      securityContext:
+        capabilities:
+          add:
+          - IPC_LOCK
+      readinessProbe:
+        tcpSocket:
+          port: 8200
+        periodSeconds: 1
+  steps:
+  - name: Run tests
+    shell: |
+      set -euo pipefail
+      apt-get update -qq
+      apt-get install -y -qq socat curl
+      git config --global --add safe.directory /data/repo
+      mkdir -p /data/artifacts
+
+      forward() {{"{"}}
+        local port="$1" dest="$2"
+        socat TCP-LISTEN:${{"{"}}port},bind=127.0.0.1,fork,reuseaddr TCP:${{"{"}}dest} &
+      }
+      forward 27017 "{{services.mongo.0.ip}}:27017"
+      forward 4222 "{{services.nats.0.ip}}:4222"
+      forward 9000 "{{services.minio.0.ip}}:9000"
+      forward 5432 "{{services.postgres.0.ip}}:5432"
+      forward 8200 "{{services.vault.0.ip}}:8200"
+      forward 2525 "{{services.smtp.0.ip}}:25"
+      forward 4443 "{{services.gcs.0.ip}}:4443"
+      sleep 1
+
+      curl -sS -X POST "http://127.0.0.1:4443/storage/v1/b?project=test" \
+        -H "Content-Type: application/json" \
+        -d '{{"{"}}"name":"testkube_integration_tests"}' \
+        || true
+
+      set +e
+      go tool gotestsum --format pkgname --hide-summary skipped \
+        --junitfile /data/artifacts/junit.xml \
+        -- -coverprofile=/data/artifacts/coverage.out -covermode=atomic ./...
+      code=$?
+      echo "gotestsum_exit=${{"{"}}code}"
+      kill $(jobs -p) 2>/dev/null
+      wait
+      exit "${{"{"}}code}"
+    artifacts:
+      paths:
+      - /data/artifacts/**
