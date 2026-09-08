@@ -42,3 +42,17 @@ func (c SharedClient) GetDebugInfo() (debugInfo testkube.DebugInfo, err error) {
 	uri := c.debugInfoTransport.GetURI("/debug")
 	return c.debugInfoTransport.Execute(http.MethodGet, uri, nil, nil)
 }
+
+// singleValueParams lifts the single-valued parameter map the transports have
+// always taken into the repeating shape their implementations now work in, so
+// that only the calls which need a repeated parameter have to think about it.
+func singleValueParams(params map[string]string) map[string][]string {
+	if params == nil {
+		return nil
+	}
+	values := make(map[string][]string, len(params))
+	for key, value := range params {
+		values[key] = []string{value}
+	}
+	return values
+}

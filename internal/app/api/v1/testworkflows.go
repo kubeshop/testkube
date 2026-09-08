@@ -594,6 +594,18 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 
 		errPrefix := "failed to rerun test workflow execution"
 
+		// Narrow the rerun to specific test cases. One parameter per test case
+		// rather than a delimited string, because parameterized test names
+		// contain commas.
+		onlyFailed := c.QueryBool("onlyFailed")
+		testCases := c.Context().QueryArgs().PeekMulti("testCase")
+		narrowedTo := make([]string, 0, len(testCases))
+		for _, testCase := range testCases {
+			if len(testCase) > 0 {
+				narrowedTo = append(narrowedTo, string(testCase))
+			}
+		}
+
 		// Load the running context
 		var twrContext testkube.TestWorkflowRunningContext
 		err = c.BodyParser(&twrContext)
@@ -709,6 +721,23 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 				EnvVars: request.Runtime.Variables,
 			}
 		}
+		// Build the rerun policy against whichever workflow definition this rerun
+		// will actually run: the stored snapshot by default, the current one for
+		// latest=true. Both are already in `workflow`.
+		var rerun *cloud.RerunPolicy
+		if onlyFailed || len(narrowedTo) > 0 {
+			if !testworkflowutils.SelectsTestCases(workflow) {
+				return s.ClientError(c, errPrefix, errors.New(
+					"no step declares testCases.select, which is what tells Testkube how the selected test case "+
+						"names reach your test runner; without it the whole suite would run"))
+			}
+			rerun = &cloud.RerunPolicy{
+				ExecutionId: execution.Id,
+				OnlyFailed:  onlyFailed,
+				TestCases:   narrowedTo,
+			}
+		}
+
 		results, err := s.testWorkflowExecutor.Execute(ctx, &cloud.ScheduleRequest{
 			Executions:         []*cloud.ScheduleExecution{&scheduleExecution},
 			DisableWebhooks:    request.DisableWebhooks,
@@ -718,6 +747,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			ExecutionReference: &executionID,
 			ResolvedWorkflow:   resolvedWorkflow,
 			SilentMode:         silentMode,
+			Rerun:              rerun,
 		})
 
 		if err != nil {

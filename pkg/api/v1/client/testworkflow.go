@@ -328,27 +328,48 @@ func (c TestWorkflowClient) UpdateTestWorkflowExecutionTags(executionID string, 
 	return c.testWorkflowExecutionTransport.Validate(http.MethodPatch, uri, body, nil)
 }
 
+// ReRunOptions are the choices a rerun can be given, as an options struct
+// rather than a positional list that grows with every one of them.
+type ReRunOptions struct {
+	RunningContext *testkube.TestWorkflowRunningContext
+	// Latest uses the current workflow definition instead of the original
+	// resolved snapshot, keeping the original parameter set.
+	Latest bool
+	// OnlyFailed narrows the rerun to the test cases that did not pass.
+	OnlyFailed bool
+	// TestCases narrows it to these test cases, as globs over the canonical
+	// "<suite>/<classname>/<name>" address.
+	//
+	// Sent one parameter per entry rather than as a delimited string, because
+	// parameterized test names contain commas.
+	TestCases []string
+}
+
 // ReRunTestWorkflowExecution reruns selected execution.
-// When latest is true, the current workflow definition is used instead of the original resolved snapshot,
-// while keeping the original parameter set.
-func (c TestWorkflowClient) ReRunTestWorkflowExecution(workflow, id string, runningContext *testkube.TestWorkflowRunningContext, latest bool) (result testkube.TestWorkflowExecution, err error) {
+func (c TestWorkflowClient) ReRunTestWorkflowExecution(workflow, id string, opts ReRunOptions) (result testkube.TestWorkflowExecution, err error) {
 	if workflow == "" {
 		return result, fmt.Errorf("test workflow name '%s' is not valid", workflow)
 	}
 
 	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/rerun", workflow, id)
 
-	body, err := json.Marshal(runningContext)
+	body, err := json.Marshal(opts.RunningContext)
 	if err != nil {
 		return result, err
 	}
 
-	params := map[string]string{}
-	if latest {
-		params["latest"] = "true"
+	params := map[string][]string{}
+	if opts.Latest {
+		params["latest"] = []string{"true"}
+	}
+	if opts.OnlyFailed {
+		params["onlyFailed"] = []string{"true"}
+	}
+	if len(opts.TestCases) > 0 {
+		params["testCase"] = opts.TestCases
 	}
 
-	return c.testWorkflowExecutionTransport.Execute(http.MethodPost, uri, body, params)
+	return c.testWorkflowExecutionTransport.ExecuteWithParams(http.MethodPost, uri, body, params)
 }
 
 // ExportExecutions downloads the export archive from the server

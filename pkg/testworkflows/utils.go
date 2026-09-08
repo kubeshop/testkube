@@ -49,3 +49,38 @@ func NewSilenceAllSilentMode() *testkube.SilentMode {
 		Cdevents: true,
 	}
 }
+
+// SelectsTestCases reports whether any step declares testCases.select.
+//
+// It is what makes a narrowed rerun meaningful. Testkube knows no runner's
+// filter flag by design, so the workflow has to say how selected test case
+// names reach the tool; without such a step, narrowing a rerun would run the
+// whole suite and the caller would have no way to tell. Callers use this to
+// refuse the request instead.
+func SelectsTestCases(workflow *testkube.TestWorkflow) bool {
+	if workflow == nil || workflow.Spec == nil {
+		return false
+	}
+	for _, steps := range [][]testkube.TestWorkflowStep{workflow.Spec.Setup, workflow.Spec.Steps, workflow.Spec.After} {
+		if stepsSelectTestCases(steps) {
+			return true
+		}
+	}
+	return false
+}
+
+// stepsSelectTestCases walks a step list and the steps nested inside it.
+//
+// Parallel blocks are not walked: the processor refuses a testCases policy
+// there, so one could not take effect anyway.
+func stepsSelectTestCases(steps []testkube.TestWorkflowStep) bool {
+	for _, step := range steps {
+		if step.TestCases != nil && step.TestCases.Select_ != nil {
+			return true
+		}
+		if stepsSelectTestCases(step.Setup) || stepsSelectTestCases(step.Steps) {
+			return true
+		}
+	}
+	return false
+}

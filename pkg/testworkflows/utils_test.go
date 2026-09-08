@@ -12,6 +12,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -399,4 +401,63 @@ func TestFlattenSignatures(t *testing.T) {
 			}
 		})
 	}
+}
+
+func selectingStep() testkube.TestWorkflowStep {
+	return testkube.TestWorkflowStep{
+		TestCases: &testkube.TestWorkflowStepTestCases{
+			Select_: &testkube.TestWorkflowTestCaseSelection{},
+		},
+	}
+}
+
+func TestSelectsTestCases(t *testing.T) {
+	t.Run("a top-level step", func(t *testing.T) {
+		assert.True(t, SelectsTestCases(&testkube.TestWorkflow{
+			Spec: &testkube.TestWorkflowSpec{Steps: []testkube.TestWorkflowStep{selectingStep()}},
+		}))
+	})
+
+	// setup and after run test steps too, so a selection there is as real as one
+	// in the main list.
+	t.Run("a setup step", func(t *testing.T) {
+		assert.True(t, SelectsTestCases(&testkube.TestWorkflow{
+			Spec: &testkube.TestWorkflowSpec{Setup: []testkube.TestWorkflowStep{selectingStep()}},
+		}))
+	})
+
+	t.Run("an after step", func(t *testing.T) {
+		assert.True(t, SelectsTestCases(&testkube.TestWorkflow{
+			Spec: &testkube.TestWorkflowSpec{After: []testkube.TestWorkflowStep{selectingStep()}},
+		}))
+	})
+
+	t.Run("a nested step", func(t *testing.T) {
+		assert.True(t, SelectsTestCases(&testkube.TestWorkflow{
+			Spec: &testkube.TestWorkflowSpec{Steps: []testkube.TestWorkflowStep{{
+				Steps: []testkube.TestWorkflowStep{{Setup: []testkube.TestWorkflowStep{selectingStep()}}},
+			}}},
+		}))
+	})
+
+	// A policy without `select` mutes or applies a threshold; it says nothing
+	// about how selected names would reach the tool, so it cannot carry a rerun.
+	t.Run("a testCases policy with no select", func(t *testing.T) {
+		assert.False(t, SelectsTestCases(&testkube.TestWorkflow{
+			Spec: &testkube.TestWorkflowSpec{Steps: []testkube.TestWorkflowStep{{
+				TestCases: &testkube.TestWorkflowStepTestCases{},
+			}}},
+		}))
+	})
+
+	t.Run("no policy at all", func(t *testing.T) {
+		assert.False(t, SelectsTestCases(&testkube.TestWorkflow{
+			Spec: &testkube.TestWorkflowSpec{Steps: []testkube.TestWorkflowStep{{Name: "run"}}},
+		}))
+	})
+
+	t.Run("nothing to look at", func(t *testing.T) {
+		assert.False(t, SelectsTestCases(nil))
+		assert.False(t, SelectsTestCases(&testkube.TestWorkflow{}))
+	})
 }

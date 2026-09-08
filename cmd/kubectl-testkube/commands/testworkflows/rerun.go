@@ -13,6 +13,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
 	testkubecfg "github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	tclcmd "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/cmd"
 	"github.com/kubeshop/testkube/pkg/telemetry"
@@ -32,6 +33,8 @@ func NewReRunTestWorkflowExecutionCmd() *cobra.Command {
 		serviceIndex             int
 		parallelStepIndex        int
 		latest                   bool
+		onlyFailed               bool
+		testCases                []string
 	)
 
 	cmd := &cobra.Command{
@@ -78,7 +81,12 @@ func NewReRunTestWorkflowExecutionCmd() *cobra.Command {
 				name = execution.Workflow.Name
 			}
 
-			execution, err = client.ReRunTestWorkflowExecution(name, execution.Id, runningContext, latest)
+			execution, err = client.ReRunTestWorkflowExecution(name, execution.Id, apiclient.ReRunOptions{
+				RunningContext: runningContext,
+				Latest:         latest,
+				OnlyFailed:     onlyFailed,
+				TestCases:      testCases,
+			})
 			if err != nil {
 				// User friendly Open Source operation error
 				errMessage := err.Error()
@@ -148,6 +156,12 @@ func NewReRunTestWorkflowExecutionCmd() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().BoolVar(&latest, "latest", false, "use the latest workflow definition instead of the original resolved snapshot, keeping the original parameter set")
+	// Both need a step declaring testCases.select: Testkube knows no runner's
+	// filter flag, so the workflow has to say how the selected names reach the
+	// tool. The server rejects the request when none does, rather than running
+	// the whole suite and leaving the caller to notice.
+	cmd.Flags().BoolVar(&onlyFailed, "only-failed", false, "rerun only the test cases that did not pass; requires a step with testCases.select")
+	cmd.Flags().StringArrayVar(&testCases, "test-case", nil, "rerun only the matching test cases, as a glob over \"<suite>/<classname>/<name>\" (repeatable); requires a step with testCases.select")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
 	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "download artifacts automatically")
 	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")

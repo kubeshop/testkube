@@ -68,15 +68,24 @@ type ProxyClient[A All] struct {
 
 // baseExecute is base execute method
 func (t ProxyClient[A]) baseExec(method, uri, resource string, body []byte, params map[string]string) (resp rest.Result, err error) {
+	return t.baseExecValues(method, uri, resource, body, singleValueParams(params))
+}
+
+// baseExecValues is baseExec for parameters that may repeat. Param appends
+// rather than replaces, so calling it once per value is what produces a
+// repeated query parameter.
+func (t ProxyClient[A]) baseExecValues(method, uri, resource string, body []byte, params map[string][]string) (resp rest.Result, err error) {
 	req := t.getProxy(method).
 		Suffix(uri)
 	if body != nil {
 		req.Body(body)
 	}
 
-	for key, value := range params {
-		if value != "" {
-			req.Param(key, value)
+	for key, values := range params {
+		for _, value := range values {
+			if value != "" {
+				req.Param(key, value)
+			}
 		}
 	}
 
@@ -92,6 +101,16 @@ func (t ProxyClient[A]) baseExec(method, uri, resource string, body []byte, para
 // Execute is a method to make an api call for a single object
 func (t ProxyClient[A]) Execute(method, uri string, body []byte, params map[string]string) (result A, err error) {
 	resp, err := t.baseExec(method, uri, fmt.Sprintf("%T", result), body, params)
+	if err != nil {
+		return result, err
+	}
+
+	return t.getFromResponse(resp)
+}
+
+// ExecuteWithParams is Execute for a call carrying a parameter that repeats.
+func (t ProxyClient[A]) ExecuteWithParams(method, uri string, body []byte, params map[string][]string) (result A, err error) {
+	resp, err := t.baseExecValues(method, uri, fmt.Sprintf("%T", result), body, params)
 	if err != nil {
 		return result, err
 	}

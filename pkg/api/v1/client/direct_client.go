@@ -78,6 +78,12 @@ type DirectClient[A All] struct {
 
 // baseExecute is base execute method
 func (t DirectClient[A]) baseExec(method, uri, resource string, body []byte, params map[string]string) (resp *http.Response, err error) {
+	return t.baseExecValues(method, uri, resource, body, singleValueParams(params))
+}
+
+// baseExecValues is baseExec for parameters that may repeat, such as a filter
+// given once per value rather than as one delimited string.
+func (t DirectClient[A]) baseExecValues(method, uri, resource string, body []byte, params map[string][]string) (resp *http.Response, err error) {
 	var buffer io.Reader
 	if body != nil {
 		buffer = bytes.NewBuffer(body)
@@ -90,9 +96,11 @@ func (t DirectClient[A]) baseExec(method, uri, resource string, body []byte, par
 
 	req.Header.Set("Content-Type", "application/json")
 	q := req.URL.Query()
-	for key, value := range params {
-		if value != "" {
-			q.Add(key, value)
+	for key, values := range params {
+		for _, value := range values {
+			if value != "" {
+				q.Add(key, value)
+			}
 		}
 	}
 	req.URL.RawQuery = q.Encode()
@@ -117,6 +125,17 @@ func (t DirectClient[A]) WithSSEClient(client *http.Client) DirectClient[A] {
 // Execute is a method to make an api call for a single object
 func (t DirectClient[A]) Execute(method, uri string, body []byte, params map[string]string) (result A, err error) {
 	resp, err := t.baseExec(method, uri, fmt.Sprintf("%T", result), body, params)
+	if err != nil {
+		return result, err
+	}
+	defer resp.Body.Close()
+
+	return t.getFromResponse(resp)
+}
+
+// ExecuteWithParams is Execute for a call carrying a parameter that repeats.
+func (t DirectClient[A]) ExecuteWithParams(method, uri string, body []byte, params map[string][]string) (result A, err error) {
+	resp, err := t.baseExecValues(method, uri, fmt.Sprintf("%T", result), body, params)
 	if err != nil {
 		return result, err
 	}

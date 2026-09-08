@@ -139,7 +139,7 @@ type TestWorkflowExecutionAPI interface {
 	GetTestWorkflowExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadTestWorkflowArtifact(executionID, fileName, destination string) (artifact string, err error)
 	DownloadTestWorkflowArtifactArchive(executionID, destination string, masks []string) (archive string, err error)
-	ReRunTestWorkflowExecution(workflow string, id string, runningContext *testkube.TestWorkflowRunningContext, latest bool) (testkube.TestWorkflowExecution, error)
+	ReRunTestWorkflowExecution(workflow string, id string, opts ReRunOptions) (testkube.TestWorkflowExecution, error)
 	UpdateTestWorkflowExecutionTags(executionID string, tags map[string]string) error
 	ValidateTestWorkflow(body []byte) error
 	ExportExecutions(destination string, since string) (fileName string, err error)
@@ -203,6 +203,7 @@ type All interface {
 // Transport provides methods to execute api calls
 type Transport[A All] interface {
 	Execute(method, uri string, body []byte, params map[string]string) (result A, err error)
+	ExecuteWithParams(method, uri string, body []byte, params map[string][]string) (result A, err error)
 	ExecuteMultiple(method, uri string, body []byte, params map[string]string) (result []A, err error)
 	Delete(uri, selector string, isContentExpected bool) error
 	ExecuteMethod(method, uri string, params map[string]string, isContentExpected bool) error

@@ -148,3 +148,63 @@ func TestListTestWorkflowWithExecutions(t *testing.T) {
 		})
 	}
 }
+
+// The selection has to arrive as one parameter per test case. Joining it into a
+// delimited string would corrupt parameterized names, which contain commas.
+func TestReRunTestWorkflowExecution_SendsTheSelectionAsRepeatedParams(t *testing.T) {
+	var got *http.Request
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r
+		w.Header().Set("Content-Type", "application/json")
+		require.NoError(t, json.NewEncoder(w).Encode(testkube.TestWorkflowExecution{Id: "exec-2"}))
+	}))
+	defer server.Close()
+
+	client := newTestWorkflowClientForServer(server)
+	execution, err := client.ReRunTestWorkflowExecution("wf", "exec-1", ReRunOptions{
+		OnlyFailed: true,
+		Latest:     true,
+		TestCases:  []string{"s/c/test_one[a,b]", "s/c/test_two"},
+	})
+	require.NoError(t, err)
+	require.Equal(t, "exec-2", execution.Id)
+
+	require.NotNil(t, got)
+	query := got.URL.Query()
+	assert.Equal(t, "true", query.Get("onlyFailed"))
+	assert.Equal(t, "true", query.Get("latest"))
+	assert.Equal(t, []string{"s/c/test_one[a,b]", "s/c/test_two"}, query["testCase"],
+		"a comma inside a parameterized name must survive")
+}
+
+// A plain rerun must not start carrying parameters that narrow it.
+func TestReRunTestWorkflowExecution_SendsNothingExtraWhenNotNarrowed(t *testing.T) {
+	var got *http.Request
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r
+		w.Header().Set("Content-Type", "application/json")
+		require.NoError(t, json.NewEncoder(w).Encode(testkube.TestWorkflowExecution{Id: "exec-2"}))
+	}))
+	defer server.Close()
+
+	client := newTestWorkflowClientForServer(server)
+	_, err := client.ReRunTestWorkflowExecution("wf", "exec-1", ReRunOptions{})
+	require.NoError(t, err)
+
+	require.NotNil(t, got)
+	query := got.URL.Query()
+	assert.Empty(t, query.Get("onlyFailed"))
+	assert.Empty(t, query.Get("latest"))
+	assert.Empty(t, query["testCase"])
+}
+
+func TestReRunTestWorkflowExecution_RejectsAnEmptyWorkflowName(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		t.Error("the request should not have been sent")
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	_, err := newTestWorkflowClientForServer(server).ReRunTestWorkflowExecution("", "exec-1", ReRunOptions{})
+	require.Error(t, err)
+}
