@@ -1,8 +1,9 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: quality-loop-suite
+  name: oss-quality-loop-suite
   labels:
+    dev-quality-gate: "true"
     core-tests: workflows-suite
     type: suite
 spec:
@@ -15,11 +16,10 @@ spec:
   - execute:
       parallelism: 2
       workflows:
-      - name: web-unit
-      - name: backoffice-unit
-      - name: runspace-controller-unit
-      - name: lint-go
-      - name: lint-js
-      - name: lint-helm
-      - name: gomod-codegen
-      - name: test-app
+      - name: docs-prettier
+      - name: oss-lint-go
+      - name: oss-lint-proto
+      - name: oss-integration-tests
+      - name: oss-unit-tests
+      - name: oss-verify-crds
+      - name: oss-verify-protobuf

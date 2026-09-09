@@ -1,7 +1,7 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: quality-loop-suite-cron-trigger
+  name: cloud-quality-loop-suite-cron-trigger
   labels:
     core-tests: workflows-suite-trigger
     type: suite-trigger
@@ -14,7 +14,7 @@ spec:
   steps:
   - execute:
       workflows:
-      - name: quality-loop-suite
+      - name: cloud-quality-loop-suite
   events:
   - cronjob:
       cron: "58 6,18 * * *" # twice a day at 06:58 and 18:58
