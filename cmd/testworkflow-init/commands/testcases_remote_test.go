@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -212,6 +213,7 @@ func TestResolveSelection_PrefersTheFailuresOnTheRecord(t *testing.T) {
 // parsed report, since both go through the same selection.
 func TestResolveSelection_RecordRespectsMute(t *testing.T) {
 	source := recordedFailures(t, "exec-1", []executiondata.Report{{
+		File: "reports/out.xml",
 		Failures: []executiondata.ReportFailure{
 			{Id: "s/c/test_flaky_a", Status: "failed", Muted: true},
 			{Id: "s/c/test_real", Status: "failed"},
@@ -314,4 +316,122 @@ func TestResolveSelection_RecordWithoutReportsFallsBack(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Len(t, selection.Entries, 3)
+}
+
+// An execution has a report per step that produced one, and they are different
+// suites. Merging them all would hand the runner test cases belonging to another
+// step, which either run the wrong tests or name nothing the tool recognises.
+func TestResolveSelection_RecordTakesOnlyTheNamedReport(t *testing.T) {
+	source := recordedFailures(t, "exec-1", []executiondata.Report{
+		{
+			Ref:      "unit",
+			File:     "reports/unit.xml",
+			Failures: failed("unit/UnitTest/test_one"),
+		},
+		{
+			Ref:      "integration",
+			File:     "reports/integration.xml",
+			Failures: failed("integration/IntegrationTest/test_two"),
+		},
+	})
+
+	selection, err := resolveTestCaseSelection(context.Background(), &lite.ActionTestCases{
+		ReportPaths: []string{"reports/unit.xml"},
+		Select: &lite.ActionTestCasesSelect{
+			From:  executiondata.RerunRef,
+			Paths: []string{"reports/unit.xml"},
+		},
+	}, t.TempDir(), &testworkflowconfig.RerunConfig{ExecutionId: "exec-1"}, source)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"unit/UnitTest/test_one"}, selection.Entries,
+		"the other step's failures belong to another suite")
+}
+
+// A glob selects the reports it names and no others.
+func TestResolveSelection_RecordMatchesGlobs(t *testing.T) {
+	source := recordedFailures(t, "exec-1", []executiondata.Report{
+		{File: "reports/shard-1.xml", Failures: failed("s/c/test_one")},
+		{File: "reports/shard-2.xml", Failures: failed("s/c/test_two")},
+		{File: "other/unrelated.xml", Failures: failed("other/c/test_three")},
+	})
+
+	selection, err := resolveTestCaseSelection(context.Background(), &lite.ActionTestCases{
+		ReportPaths: []string{"reports/*.xml"},
+		Select: &lite.ActionTestCasesSelect{
+			From:  executiondata.RerunRef,
+			Paths: []string{"reports/*.xml"},
+		},
+	}, t.TempDir(), &testworkflowconfig.RerunConfig{ExecutionId: "exec-1"}, source)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"s/c/test_one", "s/c/test_two"}, selection.Entries)
+}
+
+// A report stored under an upload prefix keeps its name but not its leading
+// path, and matching nothing sends the caller to the artifacts - where the
+// control plane does the matching, as it does for every other artifact lookup.
+func TestResolveSelection_RecordThatMatchesNothingFallsBack(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(previousAttempt))
+	}))
+	defer server.Close()
+
+	repository := executiondata.NewMockExecutionRepository(gomock.NewController(t))
+	repository.EXPECT().
+		Get(gomock.Any(), "exec-1").
+		Return(executiondata.Execution{Id: "exec-1", Reports: []executiondata.Report{{
+			File:     "chrome/junit/junit-430a259975c005f61f158f2084f5b1dc.xml",
+			Failures: failed("s/c/stale"),
+		}}}, nil).
+		AnyTimes()
+	repository.EXPECT().
+		ListArtifacts(gomock.Any(), "exec-1", gomock.Any()).
+		Return([]executiondata.Artifact{{
+			Path: "reports/out.xml",
+			Url:  server.URL,
+			Size: int64(len(previousAttempt)),
+		}}, nil)
+
+	source := reportSource{
+		Resolver:   executiondata.Resolver{Repository: repository, RerunId: "exec-1"},
+		Repository: repository,
+		Client:     server.Client(),
+	}
+
+	selection, err := resolveTestCaseSelection(context.Background(), &lite.ActionTestCases{
+		ReportPaths: []string{"reports/out.xml"},
+		Select: &lite.ActionTestCasesSelect{
+			From:  executiondata.RerunRef,
+			Paths: []string{"reports/out.xml"},
+			As:    `{{ testcase.name }}`,
+		},
+	}, t.TempDir(), &testworkflowconfig.RerunConfig{ExecutionId: "exec-1"}, source)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"test_flaky_a", "test_real_bug", "test_boom"}, selection.Entries,
+		"the artifacts answer when the stored path does not match")
+}
+
+// A pattern naming no directory is matched against the base name too, so a
+// report uploaded under a prefix is still recognised.
+func TestMatchesReportPath(t *testing.T) {
+	for _, tc := range []struct {
+		file     string
+		patterns []string
+		want     bool
+	}{
+		{"reports/out.xml", []string{"reports/out.xml"}, true},
+		{"reports/out.xml", []string{"reports/*.xml"}, true},
+		{"reports/nested/out.xml", []string{"reports/**/*.xml"}, true},
+		{"reports/out.xml", []string{"reports/other.xml"}, false},
+		{"prefix/reports/out.xml", []string{"out.xml"}, true},
+		{"prefix/reports/out.xml", []string{"reports/out.xml"}, false},
+		{"", []string{"reports/out.xml"}, false},
+		{"reports/out.xml", nil, false},
+	} {
+		t.Run(tc.file+" vs "+strings.Join(tc.patterns, ","), func(t *testing.T) {
+			assert.Equal(t, tc.want, matchesReportPath(tc.file, tc.patterns))
+		})
+	}
 }

@@ -4,6 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"path"
+	"path/filepath"
+	"strings"
+
+	"github.com/bmatcuk/doublestar/v4"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/pkg/executiondata"
@@ -47,7 +52,7 @@ func (s reportSource) readRemoteReport(ctx context.Context, ref string, patterns
 	// cheaper than downloading them and longer-lived: artifacts are pruned on a
 	// retention schedule and the record is not. Reading the report itself is the
 	// fallback, for a record that carries none or carries only a prefix.
-	if report, ok := reportFromRecord(execution); ok {
+	if report, ok := reportFromRecord(execution, patterns); ok {
 		return report, true, nil
 	}
 
@@ -100,24 +105,36 @@ func executionReportSource() reportSource {
 // reportFromRecord rebuilds the previous results from what the execution record
 // holds, reporting whether it could.
 //
+// Only the reports the patterns name are read. An execution has a report per
+// step that produced one, and they are different suites: merging them all would
+// hand the runner test cases that belong to another step, which either run the
+// wrong tests or name nothing the tool recognises. select.paths is required for
+// a remote source precisely so this can be answered.
+//
 // It refuses a truncated list rather than narrowing to its prefix: a run
 // narrowed to the first two thousand of five thousand failures would test less
 // than it claimed to and pass on the rest. The report file still holds them all,
 // so the caller reads that instead.
 //
-// A record with no reports at all is equally not usable - it means nothing was
-// stored, not that nothing failed - and the caller has to look at the report to
-// tell the difference.
-func reportFromRecord(execution executiondata.Execution) (testresults.Report, bool) {
+// Matching nothing is not an error either. The stored path carries whatever
+// prefix the artifact was uploaded under, which need not resemble the pattern
+// the workflow wrote; falling back to listing the artifacts lets the control
+// plane do the matching, as it does for every other artifact lookup.
+func reportFromRecord(execution executiondata.Execution, patterns []string) (testresults.Report, bool) {
 	if len(execution.Reports) == 0 {
 		return testresults.Report{}, false
 	}
 
 	failures := make([]testresults.DigestFailure, 0)
+	matched := false
 	for _, report := range execution.Reports {
+		if !matchesReportPath(report.File, patterns) {
+			continue
+		}
 		if report.Truncated {
 			return testresults.Report{}, false
 		}
+		matched = true
 		for _, failure := range report.Failures {
 			failures = append(failures, testresults.DigestFailure{
 				Id:     failure.Id,
@@ -125,8 +142,34 @@ func reportFromRecord(execution executiondata.Execution) (testresults.Report, bo
 			})
 		}
 	}
-	if len(failures) == 0 {
+	if !matched || len(failures) == 0 {
 		return testresults.Report{}, false
 	}
 	return testresults.ReportFromFailures(failures), true
+}
+
+// matchesReportPath reports whether a stored report path is one the patterns
+// asked for.
+//
+// The patterns are the same globs report.paths uses, matched against the path
+// the report was stored under rather than against a file system. A pattern
+// naming no directory is also tried against the base name, since a report
+// uploaded under a prefix keeps its name but not its leading path.
+func matchesReportPath(file string, patterns []string) bool {
+	if file == "" {
+		return false
+	}
+	file = filepath.ToSlash(file)
+	for _, pattern := range patterns {
+		pattern = filepath.ToSlash(pattern)
+		if ok, err := doublestar.Match(pattern, file); err == nil && ok {
+			return true
+		}
+		if !strings.Contains(pattern, "/") {
+			if ok, err := doublestar.Match(pattern, path.Base(file)); err == nil && ok {
+				return true
+			}
+		}
+	}
+	return false
 }

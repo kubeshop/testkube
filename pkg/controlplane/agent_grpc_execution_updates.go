@@ -2,6 +2,7 @@ package controlplane
 
 import (
 	"context"
+	"slices"
 	"strings"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -117,5 +118,25 @@ func createExecutionStart(exe testkube.TestWorkflowExecution, info scheduling.Ru
 		WorkflowName:         common.Ptr(workflowName),
 		VariableOverrides:    variableOverrides,
 		Tags:                 exe.Tags,
+		Rerun:                rerunPolicyOf(exe.Rerun),
+	}
+}
+
+// rerunPolicyOf carries the test case selection an execution was narrowed to
+// across to the runner.
+//
+// The scheduler records it on the execution rather than handing it to the
+// runner, so every path that builds an ExecutionStart has to read it back off
+// the record. Omitting it here does not fail: the pod simply receives no
+// selection and runs the whole suite, reporting a green rerun that re-tested
+// everything the caller asked it not to.
+func rerunPolicyOf(rerun *testkube.TestWorkflowRerun) *executionv1.RerunPolicy {
+	if rerun == nil {
+		return nil
+	}
+	return &executionv1.RerunPolicy{
+		ExecutionId: common.Ptr(rerun.ExecutionId),
+		OnlyFailed:  common.Ptr(rerun.OnlyFailed),
+		TestCases:   slices.Clone(rerun.TestCases),
 	}
 }
