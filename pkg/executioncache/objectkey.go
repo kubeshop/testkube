@@ -38,6 +38,23 @@ const (
 
 	// maxSegmentChars bounds a sanitized name segment before its disambiguating hash.
 	maxSegmentChars = 48
+
+	// segmentHashBytes is how much of the name's digest disambiguates a segment.
+	//
+	// Eight, not four, because this is what separates one workflow's cache from
+	// another's and the slug in front of it cannot be relied on to differ. Two names
+	// longer than maxSegmentChars that agree on their first maxSegmentChars characters
+	// slug identically - "nightly-suite-for-payments-eu-west-1" and "...-eu-west-2"
+	// past the cut, which is an ordinary way to name generated workflows - and from
+	// there the hash is the only thing keeping their scopes apart.
+	//
+	// Four bytes is 32 bits, so a birthday collision among names sharing a slug is
+	// likelier than it looks for a tenant with thousands of them. The consequence is
+	// not a wrong cache key but two workflows sharing a scope: one restores a
+	// dependency tree the other wrote, and a restored dependency tree is code that then
+	// runs. Eight bytes costs eight characters in an object name that has a thousand to
+	// spend, so there is no reason to price an isolation boundary at 32 bits.
+	segmentHashBytes = 8
 )
 
 // Scope is how widely a cache entry is shared.
@@ -135,7 +152,7 @@ func sanitizeSegment(name string) string {
 		trimmed = trimmed[:maxSegmentChars]
 	}
 	sum := sha256.Sum256([]byte(name))
-	return trimmed + "-" + hex.EncodeToString(sum[:4])
+	return trimmed + "-" + hex.EncodeToString(sum[:segmentHashBytes])
 }
 
 // ScopePrefix is the folder holding every entry a given scope can see.
