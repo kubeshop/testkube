@@ -69,9 +69,16 @@ func NewSetContextCmd() *cobra.Command {
 						ui.Failf("Resolving --org-name or --env-name requires an API key, pass --api-key or log in first")
 					}
 
-					err := common.ResolveNamedOrgAndEnv(opts.Master.URIs.Api, lookupToken, &opts.Master,
-						cfg.CloudContext.OrganizationId, cfg.SkipTLS || cfg.CloudContext.SkipTLS)
-					ui.ExitOnError("resolving organization and environment", err)
+					lookupSkipTLS := cfg.SkipTLS || cfg.CloudContext.SkipTLS
+
+					// The organization has to resolve first: the environment
+					// lookup is scoped to it.
+					err := common.ResolveNamedOrg(opts.Master.URIs.Api, lookupToken, &opts.Master, lookupSkipTLS)
+					ui.ExitOnError("resolving organization", err)
+
+					err = common.ResolveNamedEnv(opts.Master.URIs.Api, lookupToken, &opts.Master,
+						cfg.CloudContext.OrganizationId, lookupSkipTLS)
+					ui.ExitOnError("resolving environment", err)
 				}
 
 				var dcName *string

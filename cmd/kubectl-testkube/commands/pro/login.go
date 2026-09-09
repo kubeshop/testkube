@@ -157,8 +157,13 @@ func NewLoginCmd() *cobra.Command {
 			}
 			ui.ExitOnError("getting token", err)
 
-			orgID, envID, err := common.ResolveOrgAndEnvIDs(opts.Master.URIs.Api, token, opts.Master, skipTLS)
-			ui.ExitOnError("resolving organization and environment", err)
+			// The organization has to resolve first: the environment lookup is
+			// scoped to it.
+			orgID, err := common.ResolveOrgOrPrompt(opts.Master.URIs.Api, token, opts.Master, skipTLS)
+			ui.ExitOnError("resolving organization", err)
+
+			envID, err := common.ResolveEnvOrPrompt(opts.Master.URIs.Api, token, orgID, opts.Master, skipTLS)
+			ui.ExitOnError("resolving environment", err)
 
 			err = common.PopulateLoginDataToContext(orgID, envID, tokenType, token, refreshToken, "", opts, cfg)
 			ui.ExitOnError("saving config file", err)

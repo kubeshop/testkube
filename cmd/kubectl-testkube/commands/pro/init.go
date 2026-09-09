@@ -126,10 +126,18 @@ func NewInitCmd() *cobra.Command {
 			if lookupToken == "" {
 				lookupToken = cfg.CloudContext.ApiKey
 			}
-			orgID, envID, err := common.ResolveOrgAndEnvIDs(options.Master.URIs.Api, lookupToken, options.Master, skipTLS)
+			// The organization has to resolve first: the environment lookup is
+			// scoped to it.
+			orgID, err := common.ResolveOrgOrPrompt(options.Master.URIs.Api, lookupToken, options.Master, skipTLS)
 			if err != nil {
 				sendErrTelemetry(cmd, cfg, "setting_context", err)
-				ui.ExitOnError("resolving organization and environment", err)
+				ui.ExitOnError("resolving organization", err)
+			}
+
+			envID, err := common.ResolveEnvOrPrompt(options.Master.URIs.Api, lookupToken, orgID, options.Master, skipTLS)
+			if err != nil {
+				sendErrTelemetry(cmd, cfg, "setting_context", err)
+				ui.ExitOnError("resolving environment", err)
 			}
 
 			err = common.PopulateLoginDataToContext(orgID, envID, tokenType, token, refreshToken, "", options, cfg)

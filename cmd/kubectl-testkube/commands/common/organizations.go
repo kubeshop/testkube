@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
@@ -75,6 +76,52 @@ func ResolveOrgID(url, token, name string, skipTLS ...bool) (string, error) {
 	}
 
 	return matched[0].Id, nil
+}
+
+// ResolveNamedOrg replaces the organization name on master with the id it
+// refers to, and does nothing when no name was given. It never prompts, so it
+// suits commands that treat a missing organization as valid input rather than
+// something to ask about.
+//
+// Call this before ResolveNamedEnv: the environment lookup is scoped to an
+// organization and reads the id this sets. The id and name flags are mutually
+// exclusive at the cobra level, so a caller cannot reach this with both set.
+func ResolveNamedOrg(apiURL, token string, master *config.Master, skipTLS bool) error {
+	if master.OrgName == "" {
+		return nil
+	}
+
+	orgID, err := ResolveOrgID(apiURL, token, master.OrgName, skipTLS)
+	if err != nil {
+		return err
+	}
+	master.OrgId = orgID
+
+	return nil
+}
+
+// ResolveOrgOrPrompt determines which organization the command should act on:
+// an explicit id wins, then a name resolved against the Control Plane, and only
+// when neither is given does the user get an interactive selector.
+//
+// Unlike ResolveNamedOrg this may prompt, so it suits commands that can ask.
+// Resolve the organization before the environment: ResolveEnvOrPrompt needs the
+// id this returns to scope its lookup.
+func ResolveOrgOrPrompt(apiURL, token string, master config.Master, skipTLS bool) (string, error) {
+	if master.OrgId != "" {
+		return master.OrgId, nil
+	}
+
+	if master.OrgName != "" {
+		return ResolveOrgID(apiURL, token, master.OrgName, skipTLS)
+	}
+
+	if !selectorInteractive() {
+		return "", fmt.Errorf("no organization selected and the terminal is not interactive, pass --org-id or --org-name")
+	}
+
+	orgID, _, err := UiGetOrganizationId(apiURL, token, skipTLS)
+	return orgID, err
 }
 
 func UiGetOrganizationId(url, token string, skipTLS ...bool) (string, string, error) {

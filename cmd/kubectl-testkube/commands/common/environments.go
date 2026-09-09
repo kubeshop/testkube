@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
@@ -84,6 +85,63 @@ func matchEnvs(envs []cloudclient.Environment, match func(cloudclient.Environmen
 		}
 	}
 	return matched
+}
+
+// ResolveNamedEnv replaces the environment name on master with the id it refers
+// to, and does nothing when no name was given. It never prompts, so it suits
+// commands that treat a missing environment as valid input rather than
+// something to ask about.
+//
+// Environments are scoped to an organization, so this reads the id ResolveNamedOrg
+// set and falls back to orgIDFallback when the command itself did not set one,
+// such as an organization already stored in the context. The id and name flags
+// are mutually exclusive at the cobra level, so a caller cannot reach this with
+// both set.
+func ResolveNamedEnv(apiURL, token string, master *config.Master, orgIDFallback string, skipTLS bool) error {
+	if master.EnvName == "" {
+		return nil
+	}
+
+	orgID := master.OrgId
+	if orgID == "" {
+		orgID = orgIDFallback
+	}
+	if orgID == "" {
+		return fmt.Errorf("cannot resolve environment %q without an organization, pass --org-id or --org-name", master.EnvName)
+	}
+
+	envID, err := ResolveEnvID(apiURL, token, orgID, master.EnvName, skipTLS)
+	if err != nil {
+		return err
+	}
+	master.EnvId = envID
+
+	return nil
+}
+
+// ResolveEnvOrPrompt determines which environment the command should act on
+// within orgID: an explicit id wins, then a name resolved against the Control
+// Plane, and only when neither is given does the user get an interactive
+// selector.
+//
+// Unlike ResolveNamedEnv this may prompt, so it suits commands that can ask.
+// orgID is the organization the lookup is scoped to, as returned by
+// ResolveOrgOrPrompt.
+func ResolveEnvOrPrompt(apiURL, token, orgID string, master config.Master, skipTLS bool) (string, error) {
+	if master.EnvId != "" {
+		return master.EnvId, nil
+	}
+
+	if master.EnvName != "" {
+		return ResolveEnvID(apiURL, token, orgID, master.EnvName, skipTLS)
+	}
+
+	if !selectorInteractive() {
+		return "", fmt.Errorf("no environment selected and the terminal is not interactive, pass --env-id or --env-name")
+	}
+
+	envID, _, err := UiGetEnvironmentID(apiURL, token, orgID, skipTLS)
+	return envID, err
 }
 
 func UiGetEnvironmentID(url, token, orgID string, skipTLS ...bool) (string, string, error) {

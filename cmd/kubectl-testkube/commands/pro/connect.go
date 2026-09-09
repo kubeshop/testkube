@@ -144,9 +144,16 @@ func NewConnectCmd() *cobra.Command {
 			// whatever context happens to be saved; --env-id has no fallback
 			// either.
 			if masterOpts.Master.OrgName != "" || masterOpts.Master.EnvName != "" {
-				err := common.ResolveNamedOrgAndEnv(masterOpts.Master.URIs.Api, apiKey, &masterOpts.Master,
-					"", cfg.SkipTLS || cfg.CloudContext.SkipTLS)
-				ui.ExitOnError("resolving organization and environment", err)
+				lookupSkipTLS := cfg.SkipTLS || cfg.CloudContext.SkipTLS
+
+				// The organization has to resolve first: the environment lookup
+				// is scoped to it.
+				err := common.ResolveNamedOrg(masterOpts.Master.URIs.Api, apiKey, &masterOpts.Master, lookupSkipTLS)
+				ui.ExitOnError("resolving organization", err)
+
+				err = common.ResolveNamedEnv(masterOpts.Master.URIs.Api, apiKey, &masterOpts.Master,
+					"", lookupSkipTLS)
+				ui.ExitOnError("resolving environment", err)
 			}
 
 			if masterOpts.Master.EnvId == "" {
