@@ -58,7 +58,7 @@ func TestArtifactsHandlerRun(t *testing.T) {
 		Return(server.URL, nil).
 		Times(2)
 	mockClient.EXPECT().
-		AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", gomock.Any(), gomock.Any()).
+		AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil)
 	uploader := artifacts.NewCloudUploader(mockClient, "env123", "exec123", "workflow123", "step123")
 	mockFs := filesystem.NewMockFileSystem(mockCtrl)
