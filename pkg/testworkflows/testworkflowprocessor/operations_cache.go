@@ -60,6 +60,16 @@ func validateCache(cache *testworkflowsv1.StepCache) error {
 			return fmt.Errorf("cache.paths[%d]: path is empty", i)
 		}
 
+		cleaned := path.Clean(declared)
+		if cleaned == "/" {
+			return fmt.Errorf("cache.paths[%d]: %q: caching the container root is not supported", i, declared)
+		}
+		for _, seg := range strings.Split(declared, "/") {
+			if seg == ".." {
+				return fmt.Errorf("cache.paths[%d]: %q: cache path must not contain '..' segments", i, declared)
+			}
+		}
+
 		// A path still holding an expression cannot be honoured, and failing quietly
 		// would be the worst outcome. mountCachePaths has to decide here, before the pod
 		// exists, which paths need a volume of their own; the toolkit resolves the same
