@@ -141,7 +141,7 @@ func IsUnsupported(err error) bool {
 // control plane working correctly and saying no, so it degrades to a miss too.
 func IsRefused(err error) bool {
 	switch status.Code(err) {
-	case codes.ResourceExhausted, codes.PermissionDenied, codes.InvalidArgument, codes.NotFound:
+	case codes.ResourceExhausted, codes.PermissionDenied, codes.InvalidArgument, codes.NotFound, codes.FailedPrecondition:
 		return true
 	default:
 		return false
