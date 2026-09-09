@@ -13,7 +13,6 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -21,7 +20,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/rand"
 )
 
-func buildTemplate(template *testworkflowsv1.TestWorkflowTemplate, cfg map[string]intstr.IntOrString,
+func buildTemplate(template *testworkflowsv1.TestWorkflowTemplate, cfg map[string]testworkflowsv1.ConfigValue,
 	externalize func(key, value string) (expressions.Expression, error)) (*testworkflowsv1.TestWorkflowTemplate, error) {
 	v, err := ApplyWorkflowTemplateConfig(template.DeepCopy(), cfg, externalize)
 	if err != nil {
@@ -44,7 +43,7 @@ func getTemplate(name string, templates map[string]*testworkflowsv1.TestWorkflow
 	return tpl, fmt.Errorf(`template "%s" not found`, name)
 }
 
-func getConfiguredTemplate(name string, cfg map[string]intstr.IntOrString, templates map[string]*testworkflowsv1.TestWorkflowTemplate,
+func getConfiguredTemplate(name string, cfg map[string]testworkflowsv1.ConfigValue, templates map[string]*testworkflowsv1.TestWorkflowTemplate,
 	externalize func(key, value string) (expressions.Expression, error)) (tpl *testworkflowsv1.TestWorkflowTemplate, err error) {
 	tpl, err = getTemplate(name, templates)
 	if err != nil {

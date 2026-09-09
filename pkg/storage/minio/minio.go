@@ -102,27 +102,87 @@ func (c *Client) SetExpirationPolicy(expirationDays int) error {
 // cache objects too. Where two rules match one object, the earliest expiration applies,
 // so a cache TTL can only ever bring eviction forward relative to the bucket-wide one,
 // never postpone it. Callers that let an operator configure both should say so.
+// noSuchLifecycleConfiguration is how an object store says the bucket has no lifecycle
+// at all, which is the ordinary starting state rather than a fault.
+const noSuchLifecycleConfiguration = "NoSuchLifecycleConfiguration"
+
+// SetExpirationPolicies applies Testkube's expiration rules without disturbing anyone
+// else's.
+//
+// SetBucketLifecycle replaces the bucket's configuration wholesale, so writing only the
+// rules Testkube knows about would drop the transition and expiration rules of any
+// installation that manages its bucket lifecycle elsewhere. The existing configuration
+// is therefore read first and everything Testkube does not own is carried through. That
+// is what allows an expiration to carry a default at all: without it, a default would
+// change object retention on every such installation by nothing but an upgrade.
 func (c *Client) SetExpirationPolicies(policy ExpirationPolicy) error {
 	if c.minioClient == nil {
 		return nil
 	}
 
-	rules := buildLifecycleRules(policy)
+	owned := buildLifecycleRules(policy)
 
-	// Nothing configured: leave the bucket alone rather than clearing a lifecycle an
-	// operator may have set by hand. This preserves the original behaviour, which
-	// skipped the call entirely when no expiration was configured.
-	//
-	// This is load-bearing, and the reason neither expiration setting carries a
-	// default. SetBucketLifecycle replaces the configuration wholesale, so the moment
-	// any rule is configured, every rule Testkube does not know about is dropped. A
-	// default on either setting would therefore change object retention on installations
-	// that manage their bucket lifecycle elsewhere, just by upgrading.
-	if len(rules) == 0 {
+	existing, err := c.currentLifecycleRules()
+	if err != nil {
+		// Fail closed. Writing without knowing what is already there would replace
+		// exactly the rules this exists to protect, and an expiration schedule is not
+		// worth that: a bucket that cleans up late is recoverable, one whose retention
+		// silently changed is not. The caller logs this and carries on.
+		return errors.Wrap(err, "reading the bucket lifecycle before applying expiration policies")
+	}
+
+	var hadOwned bool
+	for _, rule := range existing {
+		if isOwnedLifecycleRule(rule.ID) {
+			hadOwned = true
+			break
+		}
+	}
+
+	// Nothing to add and nothing of ours to withdraw, so there is no reason to write -
+	// including to a bucket that never had a lifecycle and should not gain an empty one.
+	if len(owned) == 0 && !hadOwned {
 		return nil
 	}
 
-	return c.minioClient.SetBucketLifecycle(context.TODO(), c.bucket, &lifecycle.Configuration{Rules: rules})
+	merged := mergeLifecycleRules(existing, owned)
+	return c.minioClient.SetBucketLifecycle(context.TODO(), c.bucket, &lifecycle.Configuration{Rules: merged})
+}
+
+// currentLifecycleRules reads what the bucket already has, treating "no lifecycle" as
+// an empty set rather than an error.
+func (c *Client) currentLifecycleRules() ([]lifecycle.Rule, error) {
+	config, err := c.minioClient.GetBucketLifecycle(context.TODO(), c.bucket)
+	if err != nil {
+		if minio.ToErrorResponse(err).Code == noSuchLifecycleConfiguration {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if config == nil {
+		return nil, nil
+	}
+	return config.Rules, nil
+}
+
+// isOwnedLifecycleRule reports whether a rule is one Testkube writes. Ownership is by
+// ID, which is why both IDs are constants rather than spelled out at each use.
+func isOwnedLifecycleRule(id string) bool {
+	return id == expirationPolicyRuleID || id == cacheExpirationPolicyRuleID
+}
+
+// mergeLifecycleRules keeps every rule Testkube does not own and replaces the ones it
+// does. Rules are matched by ID, so a rule Testkube no longer configures is dropped
+// rather than left behind - turning an expiration off has to actually turn it off.
+func mergeLifecycleRules(existing, owned []lifecycle.Rule) []lifecycle.Rule {
+	merged := make([]lifecycle.Rule, 0, len(existing)+len(owned))
+	for _, rule := range existing {
+		if isOwnedLifecycleRule(rule.ID) {
+			continue
+		}
+		merged = append(merged, rule)
+	}
+	return append(merged, owned...)
 }
 
 // buildLifecycleRules turns the policy into the rules it implies, kept separate from the

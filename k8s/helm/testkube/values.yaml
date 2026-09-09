@@ -1052,10 +1052,11 @@ testkube-api:
     # -- MinIO Expiration period in days
     expiration: 0
     # -- Expiration period in days for step dependency caches (the .tkcache/v1 prefix).
-    # 0 leaves them to the bucket-wide `expiration`. Both default to 0 because setting
-    # either one makes the API server apply a bucket lifecycle, replacing it wholesale
-    # rather than merging, so any rule Testkube did not write is dropped.
-    cacheExpiration: 0
+    # Defaults to 1 day, the shortest an object store lifecycle can express; 0 disables
+    # it and leaves them to the bucket-wide `expiration`, which stays at 0 because that
+    # rule is unfiltered and would expire artifacts too. Testkube preserves lifecycle
+    # rules it did not write, so neither setting disturbs one managed elsewhere.
+    cacheExpiration: 1
     # -- MinIO Use SSL
     SSL: false
     # -- Toggle whether to verify TLS certificates

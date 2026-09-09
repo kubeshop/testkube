@@ -63,7 +63,7 @@ spec:
     activeDeadlineSeconds: 300
   steps:
   - name: Run test
-    shell: /home/node/artillery/bin/run run artillery-smoke-test.yaml
+    shell: artillery run artillery-smoke-test.yaml
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -97,6 +97,40 @@ spec:
       name: official/artillery/v1
       config:
         version: 2.0.23
+        run: "mkdir -p /data/artifacts && artillery run artillery-smoke-test.yaml -o /data/artifacts/artillery-report.json"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: artillery-workflow-smoke-template-latest
+  labels:
+    core-tests: workflows
+    tool: artillery
+    category: performance-testing
+  annotations:
+    testkube.io/icon: artillery
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 256Mi
+    workingDir: /data/repo/test/artillery
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run from template
+    content:
+      git:
+        uri: https://github.com/kubeshop/testkube
+        revision: main
+        paths:
+        - test/artillery/artillery-smoke-test.yaml
+    workingDir: /data/repo/test/artillery
+    template:
+      name: official/artillery/v1
+      config:
+        version: latest
         run: "mkdir -p /data/artifacts && artillery run artillery-smoke-test.yaml -o /data/artifacts/artillery-report.json"
 ---
 kind: TestWorkflow

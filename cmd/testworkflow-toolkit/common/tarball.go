@@ -273,6 +273,20 @@ func UnpackTarball(dirPath string, stream io.Reader, opts ...UnpackOption) error
 	if err != nil {
 		return errors.Wrap(err, "start reading gzip")
 	}
+	// Closed to honour the contract and for symmetry with the writer above, not to
+	// release anything. The writer's Close is load-bearing - it flushes the trailer -
+	// where this one reports a stored error and does nothing else:
+	//
+	//	func (f *decompressor) Close() error {
+	//		if f.err == io.EOF { return nil }
+	//		return f.err
+	//	}
+	//
+	// There is no pool to hand a buffer back to and no descriptor in play: it does not
+	// touch the underlying reader, which the caller owns and closes. Any error it could
+	// report has already surfaced through tarReader.Next or the copy below. Written down
+	// because "an unclosed reader" reads like a leak, and this one is not.
+	defer uncompressedStream.Close()
 	tarReader := tar.NewReader(uncompressedStream)
 
 	var entries int

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -218,5 +219,70 @@ func TestBuildLifecycleRules(t *testing.T) {
 		require.Len(t, rules, 2)
 		assert.Equal(t, "expiration_policy", rules[0].ID)
 		assert.Equal(t, "cache_expiration_policy", rules[1].ID)
+	})
+}
+
+// TestMergeLifecycleRules covers what makes a default cache expiration safe to ship.
+//
+// SetBucketLifecycle replaces a bucket's configuration wholesale. Testkube writes one
+// on startup, so without this merge every installation that manages its bucket
+// lifecycle elsewhere would lose those rules on upgrade - a change in how long their
+// objects live, caused by nothing they did.
+func TestMergeLifecycleRules(t *testing.T) {
+	foreign := lifecycle.Rule{
+		ID:     "customer-glacier-transition",
+		Status: "Enabled",
+		Expiration: lifecycle.Expiration{
+			Days: lifecycle.ExpirationDays(365),
+		},
+	}
+
+	t.Run("a rule Testkube does not own is carried through", func(t *testing.T) {
+		owned := buildLifecycleRules(ExpirationPolicy{CachePrefix: ".tkcache/v1", CacheDays: 1})
+		require.Len(t, owned, 1)
+
+		merged := mergeLifecycleRules([]lifecycle.Rule{foreign}, owned)
+
+		require.Len(t, merged, 2)
+		assert.Equal(t, foreign.ID, merged[0].ID, "the foreign rule has to survive, and keep its place")
+		assert.Equal(t, cacheExpirationPolicyRuleID, merged[1].ID)
+	})
+
+	t.Run("a rule Testkube owns is replaced, not duplicated", func(t *testing.T) {
+		stale := lifecycle.Rule{
+			ID:         cacheExpirationPolicyRuleID,
+			Status:     "Enabled",
+			Expiration: lifecycle.Expiration{Days: lifecycle.ExpirationDays(30)},
+		}
+		owned := buildLifecycleRules(ExpirationPolicy{CachePrefix: ".tkcache/v1", CacheDays: 1})
+
+		merged := mergeLifecycleRules([]lifecycle.Rule{foreign, stale}, owned)
+
+		require.Len(t, merged, 2)
+		assert.Equal(t, foreign.ID, merged[0].ID)
+		assert.Equal(t, cacheExpirationPolicyRuleID, merged[1].ID)
+		assert.Equal(t, 1, int(merged[1].Expiration.Days), "the new value has to win over the stored one")
+	})
+
+	t.Run("turning an expiration off withdraws its rule", func(t *testing.T) {
+		stale := lifecycle.Rule{
+			ID:         cacheExpirationPolicyRuleID,
+			Status:     "Enabled",
+			Expiration: lifecycle.Expiration{Days: lifecycle.ExpirationDays(30)},
+		}
+
+		// Nothing configured, so nothing is owned - and the rule from a previous run
+		// has to go, or setting the expiration to 0 would leave it deleting caches.
+		merged := mergeLifecycleRules([]lifecycle.Rule{foreign, stale}, buildLifecycleRules(ExpirationPolicy{}))
+
+		require.Len(t, merged, 1)
+		assert.Equal(t, foreign.ID, merged[0].ID)
+	})
+
+	t.Run("both owned rules are recognised", func(t *testing.T) {
+		assert.True(t, isOwnedLifecycleRule(expirationPolicyRuleID))
+		assert.True(t, isOwnedLifecycleRule(cacheExpirationPolicyRuleID))
+		assert.False(t, isOwnedLifecycleRule("customer-glacier-transition"))
+		assert.False(t, isOwnedLifecycleRule(""), "an unnamed rule belongs to whoever wrote it, not to us")
 	})
 }

@@ -202,3 +202,35 @@ func TestEncodeKeyIsSafeAndPrefixPreserving(t *testing.T) {
 	// And round-trips, so a plane can report the key an author wrote.
 	assert.Equal(t, "../../e/shared", KeyFromObjectName("", EncodeKey("../../e/shared")))
 }
+
+// TestSanitizeSegmentSeparatesNamesThatSlugAlike pins the part of a scope prefix that
+// actually does the separating.
+//
+// Two names longer than maxSegmentChars that agree on their first maxSegmentChars
+// characters produce the same slug, which is an ordinary way for generated workflow
+// names to look. From there the appended digest is the only thing keeping their scopes
+// apart, so it is sized as an isolation boundary rather than as a tie-breaker: the
+// consequence of a collision is one workflow restoring a dependency tree another wrote,
+// and a restored dependency tree is code that then runs.
+func TestSanitizeSegmentSeparatesNamesThatSlugAlike(t *testing.T) {
+	shared := "nightly-integration-suite-for-payments-service-eu"
+	require.Greater(t, len(shared), maxSegmentChars-4,
+		"the fixture has to be long enough that the two names below share a slug")
+
+	first := shared + "-west-1"
+	second := shared + "-west-2"
+
+	// The premise: the slugs really are identical, so the digest is doing all the work.
+	assert.Equal(t, first[:maxSegmentChars], second[:maxSegmentChars])
+
+	a := ScopePrefix("env-1", first, ScopeWorkflow)
+	b := ScopePrefix("env-1", second, ScopeWorkflow)
+	assert.NotEqual(t, a, b, "two workflows must not share a cache scope")
+
+	// And the digest is wide enough to be relied on for that. Four bytes is 32 bits,
+	// where a birthday collision among a few thousand such names stops being remote.
+	assert.GreaterOrEqual(t, segmentHashBytes, 8,
+		"a scope boundary should not rest on fewer than 64 bits")
+	assert.Regexp(t, `-[0-9a-f]{16}$`, sanitizeSegment(first),
+		"the digest has to actually reach the segment at its declared width")
+}
