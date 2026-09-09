@@ -366,10 +366,11 @@ func main() {
 	)
 
 	// Keep startup-time capabilities in sync with runtime flags.
-	// The control plane enforces that runner capability cannot be changed via this path.
+	// The control plane enforces that the execution entitlement (runner/execution)
+	// cannot be changed via this path.
 	if proContext.APIKey != "" {
 		startupCapabilities := buildStartupCapabilities(cfg)
-		// The agent's own flags decide every capability except runner, which
+		// The agent's own flags decide every capability except execution, which
 		// the Control Plane owns. Start from that list so the gates below have
 		// an answer even when the Control Plane cannot be asked, and replace it
 		// with the stored set once the update succeeds.
@@ -1099,6 +1100,7 @@ func buildStartupCapabilities(cfg *intconfig.Config) []cloud.AgentCapability {
 	caps := make([]cloud.AgentCapability, 0, 4)
 	if !cfg.DisableRunner {
 		caps = append(caps, cloud.AgentCapability_AGENT_CAPABILITY_RUNNER)
+		caps = append(caps, cloud.AgentCapability_AGENT_CAPABILITY_EXECUTION)
 	}
 	if !cfg.DisableTestTriggers {
 		caps = append(caps, cloud.AgentCapability_AGENT_CAPABILITY_LISTENER)

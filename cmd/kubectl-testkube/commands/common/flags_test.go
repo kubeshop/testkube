@@ -74,3 +74,44 @@ func TestProcessMasterFlags_UiUri(t *testing.T) {
 		})
 	}
 }
+
+func TestExecutionCapabilityFromFlags(t *testing.T) {
+	t.Parallel()
+
+	parse := func(t *testing.T, args ...string) *cobra.Command {
+		t.Helper()
+		cmd := &cobra.Command{Use: "test"}
+		AddExecutionCapabilityFlags(cmd)
+		cmd.SetArgs(args)
+		require.NoError(t, cmd.ParseFlags(args))
+		return cmd
+	}
+
+	t.Run("neither flag is unchanged and disabled", func(t *testing.T) {
+		t.Parallel()
+		changed, enabled := ExecutionCapabilityFromFlags(parse(t))
+		assert.False(t, changed)
+		assert.False(t, enabled)
+	})
+
+	t.Run("execution enables the capability", func(t *testing.T) {
+		t.Parallel()
+		changed, enabled := ExecutionCapabilityFromFlags(parse(t, "--execution"))
+		assert.True(t, changed)
+		assert.True(t, enabled)
+	})
+
+	t.Run("runner aliases to execution", func(t *testing.T) {
+		t.Parallel()
+		changed, enabled := ExecutionCapabilityFromFlags(parse(t, "--runner"))
+		assert.True(t, changed)
+		assert.True(t, enabled)
+	})
+
+	t.Run("execution wins when both flags are set", func(t *testing.T) {
+		t.Parallel()
+		changed, enabled := ExecutionCapabilityFromFlags(parse(t, "--execution=false", "--runner"))
+		assert.True(t, changed)
+		assert.False(t, enabled)
+	})
+}
