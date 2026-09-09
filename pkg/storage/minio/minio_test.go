@@ -5,8 +5,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/stretchr/testify/assert"
@@ -285,4 +287,46 @@ func TestMergeLifecycleRules(t *testing.T) {
 		assert.False(t, isOwnedLifecycleRule("customer-glacier-transition"))
 		assert.False(t, isOwnedLifecycleRule(""), "an unnamed rule belongs to whoever wrote it, not to us")
 	})
+}
+
+// TestPresignCreateFileToBucketReturnsExactlyTheSignedHeaders pins the invariant that
+// keeps a conditional grant usable: the headers handed back are the headers the
+// signature covers, no more and no less.
+//
+// Both directions matter. A header that is signed but not returned leaves the caller
+// building an upload the store refuses with a 403 - which reads as a permissions problem
+// rather than a missing header, and is exactly how the commercial plane's two sets
+// drifted apart. A header returned but not signed is dead weight the caller sends for
+// nothing.
+//
+// V4 records the names it signed in the URL, so this needs no object store: signing is
+// local, and the comparison is against X-Amz-SignedHeaders.
+func TestPresignCreateFileToBucketReturnsExactlyTheSignedHeaders(t *testing.T) {
+	client := NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "bucket")
+	require.NoError(t, client.Connect())
+
+	signed, required, err := client.PresignCreateFileToBucket(
+		context.Background(), "bucket", "", "caches/entry.tar.gz", 15*time.Minute)
+	require.NoError(t, err)
+	require.NotEmpty(t, required, "a conditional grant has to carry at least its condition")
+
+	parsed, err := url.Parse(signed)
+	require.NoError(t, err)
+
+	got := strings.Split(parsed.Query().Get("X-Amz-SignedHeaders"), ";")
+
+	// "host" is always signed and is not something a caller supplies, so it is the one
+	// name expected on top of the returned set.
+	want := []string{"host"}
+	for name := range required {
+		want = append(want, strings.ToLower(name))
+	}
+
+	assert.ElementsMatch(t, want, got,
+		"the signed headers and the returned headers have to be the same set")
+
+	// And the condition itself is among them, so the grant is actually conditional
+	// rather than merely symmetric.
+	assert.Equal(t, "*", required[ifNoneMatchHeader])
+	assert.Contains(t, got, strings.ToLower(ifNoneMatchHeader))
 }

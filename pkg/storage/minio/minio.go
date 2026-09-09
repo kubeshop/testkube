@@ -893,12 +893,28 @@ func (c *Client) PresignCreateFileToBucket(ctx context.Context, bucket, bucketFo
 	}
 	c.Log.Debugw("presigning conditional put object in minio", "file", filePath, "bucket", bucket)
 
+	// One source for both the signature and the answer, so a header can never be signed
+	// without being reported. Writing each value twice - once into what gets signed, once
+	// into what gets returned - is how the commercial plane's two sets drifted apart, and
+	// a signed header the caller is never told about is refused with a 403 that reads as
+	// a permissions problem rather than a missing header.
+	//
+	// Only the condition is signed here, deliberately. The agent also sends a
+	// Content-Type, and leaving it out of the signature is what keeps a divergence in
+	// that value harmless - nothing in the cache reads it, so there is nothing to gain
+	// by making the upload depend on it.
+	//
+	// Map order does not matter: V4 signing sorts the signed headers itself.
+	required := map[string]string{ifNoneMatchHeader: "*"}
+
 	headers := http.Header{}
-	headers.Set(ifNoneMatchHeader, "*")
+	for name, value := range required {
+		headers.Set(name, value)
+	}
 
 	url, err := c.minioClient.PresignHeader(ctx, http.MethodPut, bucket, filePath, expires, nil, headers)
 	if err != nil {
 		return "", nil, err
 	}
-	return url.String(), map[string]string{ifNoneMatchHeader: "*"}, nil
+	return url.String(), required, nil
 }
