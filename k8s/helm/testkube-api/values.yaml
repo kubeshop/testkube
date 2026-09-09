@@ -504,6 +504,7 @@ storage:
   token: ""
   bucket: "testkube-artifacts"
   ## expiration period in days
+  # -- Days any object in the bucket survives, artifacts and logs included. 0 disables it, and is the default: this rule is unfiltered, so a non-zero value expires everything in the bucket rather than only caches.
   expiration: 0
   ## Expiration period in days for step dependency caches, which live under the
   ## .tkcache/v1 prefix. 0 disables it and leaves them to the bucket-wide expiration
@@ -523,6 +524,7 @@ storage:
   ## The bucket-wide rule is unfiltered and so covers cache objects too, and the
   ## earlier expiration wins: this can only bring cache eviction forward, never
   ## postpone it past `expiration`.
+  # -- Days a step dependency cache entry survives, under the .tkcache/v1 prefix. Defaults to 1, the shortest an object store lifecycle can express; 0 disables it and leaves entries to `expiration`. Confined to the cache prefix, so unlike `expiration` it can only ever delete caches.
   cacheExpiration: 1
   ## Toggle whether to enable TLS in the storage client
   SSL: false
