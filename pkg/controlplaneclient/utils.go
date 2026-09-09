@@ -130,13 +130,29 @@ type notificationStreamSession struct {
 	errored     bool
 	lastSeqNo   uint32
 	lastActive  time.Time
+	limits      notificationReplayLimits
 }
 
-func newNotificationStreamSession() *notificationStreamSession {
+// notificationReplayLimits bounds a session's replay buffer. The oldest events
+// are dropped once either bound is exceeded.
+type notificationReplayLimits struct {
+	maxEvents int
+	maxBytes  int
+}
+
+func defaultNotificationReplayLimits() notificationReplayLimits {
+	return notificationReplayLimits{
+		maxEvents: workflowNotificationReplayMaxEvents,
+		maxBytes:  workflowNotificationReplayMaxBytes,
+	}
+}
+
+func newNotificationStreamSession(limits notificationReplayLimits) *notificationStreamSession {
 	return &notificationStreamSession{
 		nextSeqNo:   1,
 		subscribers: make(map[uint64]*notificationStreamSubscription),
 		lastActive:  time.Now(),
+		limits:      limits,
 	}
 }
 
@@ -188,7 +204,7 @@ func (s *notificationStreamSession) publish(notification *testkube.TestWorkflowE
 	if seqNo > 0 {
 		s.replay = append(s.replay, event)
 		s.replayBytes += approximateNotificationBytes(notification)
-		for len(s.replay) > workflowNotificationReplayMaxEvents || s.replayBytes > workflowNotificationReplayMaxBytes {
+		for len(s.replay) > s.limits.maxEvents || s.replayBytes > s.limits.maxBytes {
 			s.replayBytes -= approximateNotificationBytes(s.replay[0].notification)
 			s.replay[0].notification = nil
 			s.replay = s.replay[1:]
@@ -304,12 +320,15 @@ type notificationStreamSessionManager[Request notificationRequest] struct {
 	nextID         atomic.Uint64
 	sessions       map[string]*notificationStreamSession
 	sessionIdleTTL time.Duration
+	replayLimits   notificationReplayLimits
+	kind           string
 	key            func(Request) string
 	process        func(ctx context.Context, req Request) NotificationWatcher
 }
 
 func newNotificationStreamSessionManager[Request notificationRequest](
 	ctx context.Context,
+	kind string,
 	key func(Request) string,
 	process func(ctx context.Context, req Request) NotificationWatcher,
 ) *notificationStreamSessionManager[Request] {
@@ -317,9 +336,12 @@ func newNotificationStreamSessionManager[Request notificationRequest](
 		ctx:            ctx,
 		sessions:       make(map[string]*notificationStreamSession),
 		sessionIdleTTL: workflowNotificationSessionIdleTTL,
+		replayLimits:   defaultNotificationReplayLimits(),
+		kind:           kind,
 		key:            key,
 		process:        process,
 	}
+	liveLogMetrics.add(m)
 	go m.runSweeper(workflowNotificationSweepInterval)
 	return m
 }
@@ -327,18 +349,55 @@ func newNotificationStreamSessionManager[Request notificationRequest](
 // runSweeper reclaims expired sessions on a fixed interval regardless of attach
 // traffic. This covers a manager that goes idle (attach never runs to sweep) and a
 // done session re-attached near its TTL boundary that escapes scheduleExpiration's
-// single AfterFunc. It stops when the manager's context is done.
+// single AfterFunc. It stops when the manager's context is done, and the manager
+// leaves the metrics collector at that point.
 func (m *notificationStreamSessionManager[Request]) runSweeper(interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-m.ctx.Done():
+			liveLogMetrics.remove(m)
 			return
 		case <-ticker.C:
 			m.sweepExpired(time.Now())
 		}
 	}
+}
+
+func (m *notificationStreamSessionManager[Request]) liveLogKind() string {
+	return m.kind
+}
+
+// liveLogStats reads the manager's gauges from its sessions. The collector calls
+// it at scrape time, so the gauges cannot drift from the sessions map.
+func (m *notificationStreamSessionManager[Request]) liveLogStats() liveLogStats {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	var stats liveLogStats
+	for _, session := range m.sessions {
+		session.mu.Lock()
+		if session.done {
+			stats.doneSessions++
+		} else {
+			stats.activeSessions++
+		}
+		stats.subscribers += len(session.subscribers)
+		stats.replayBytes += session.replayBytes
+		session.mu.Unlock()
+	}
+	return stats
+}
+
+// removeSessionLocked is the only way a session leaves the sessions map, so every
+// eviction is counted once with its reason. The caller holds m.mu.
+func (m *notificationStreamSessionManager[Request]) removeSessionLocked(key string, session *notificationStreamSession, reason string) {
+	if m.sessions[key] != session {
+		return
+	}
+	delete(m.sessions, key)
+	liveLogSessionsEvictedTotal.WithLabelValues(m.kind, reason).Inc()
 }
 
 func (m *notificationStreamSessionManager[Request]) sessionKey(req Request) string {
@@ -355,7 +414,7 @@ func (m *notificationStreamSessionManager[Request]) sweepExpired(now time.Time) 
 	defer m.mu.Unlock()
 	for sessionKey, session := range m.sessions {
 		if session.expired(now, m.sessionIdleTTL) {
-			delete(m.sessions, sessionKey)
+			m.removeSessionLocked(sessionKey, session, liveLogEvictionReasonTTL)
 		}
 	}
 }
@@ -374,22 +433,26 @@ func (m *notificationStreamSessionManager[Request]) attach(req Request) (*notifi
 	var replaced *notificationStreamSession
 	session := m.sessions[key]
 	if req.GetResumeAfterSeqNo() == 0 {
+		if session != nil {
+			m.removeSessionLocked(key, session, liveLogEvictionReasonReplaced)
+		}
 		replaced = session
 		session = nil
 	} else if session != nil {
 		done, errored := session.status()
 		if done && errored {
-			delete(m.sessions, key)
+			m.removeSessionLocked(key, session, liveLogEvictionReasonErrored)
 			session = nil
 		}
 	}
 	freshSession := false
 	var sourceCtx context.Context
 	if session == nil {
-		session = newNotificationStreamSession()
+		session = newNotificationStreamSession(m.replayLimits)
 		sourceCtx, session.cancel = context.WithCancel(m.ctx)
 		m.sessions[key] = session
 		freshSession = true
+		liveLogSessionsCreatedTotal.WithLabelValues(m.kind).Inc()
 	}
 	subscriptionID := m.nextID.Add(1)
 	m.mu.Unlock()
@@ -413,6 +476,13 @@ func (m *notificationStreamSessionManager[Request]) attach(req Request) (*notifi
 			available = false
 		}
 	}
+	if req.GetResumeAfterSeqNo() > 0 {
+		result := "unavailable"
+		if available {
+			result = "available"
+		}
+		liveLogResumeTotal.WithLabelValues(m.kind, result).Inc()
+	}
 	return session, sub, replay, available, lastSeqNo, done
 }
 
@@ -421,11 +491,8 @@ func (m *notificationStreamSessionManager[Request]) scheduleExpiration(key strin
 		m.mu.Lock()
 		defer m.mu.Unlock()
 
-		if m.sessions[key] != session {
-			return
-		}
 		if session.expired(time.Now(), m.sessionIdleTTL) {
-			delete(m.sessions, key)
+			m.removeSessionLocked(key, session, liveLogEvictionReasonTTL)
 		}
 	})
 }
@@ -441,10 +508,16 @@ func shouldPublishLiveResumeNotification(notification *testkube.TestWorkflowExec
 }
 
 func (m *notificationStreamSessionManager[Request]) runSource(ctx context.Context, key string, session *notificationStreamSession, req Request, liveOnlyAfter time.Time) {
+	started := time.Now()
 	var sourceErr error
 	defer func() {
 		session.close(sourceErr != nil)
 		session.stopSource()
+		result := liveLogResultOK
+		if sourceErr != nil {
+			result = liveLogResultError
+		}
+		liveLogSourceDurationSeconds.WithLabelValues(m.kind, result).Observe(time.Since(started).Seconds())
 		m.scheduleExpiration(key, session)
 	}()
 

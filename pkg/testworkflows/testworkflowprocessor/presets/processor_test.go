@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -13,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	constants2 "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
@@ -129,8 +129,8 @@ func getSpec(actions actiontypes.ActionGroups) string {
 	return string(v)
 }
 
-func workflowInt(v int32) *intstr.IntOrString {
-	return &intstr.IntOrString{Type: intstr.Int, IntVal: v}
+func workflowInt(v int) *testworkflowsv1.ConfigValue {
+	return testworkflowsv1.NewConfigValue(strconv.Itoa(v))
 }
 
 func TestProcessEmpty(t *testing.T) {

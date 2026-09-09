@@ -3,7 +3,6 @@ package v1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
@@ -180,10 +179,10 @@ type StepExecuteStrategy struct {
 	Matrix map[string]DynamicList `json:"matrix,omitempty" expr:"force"`
 
 	// static number of sharded instances to spawn
-	Count *intstr.IntOrString `json:"count,omitempty" expr:"expression"`
+	Count *ConfigValue `json:"count,omitempty" expr:"expression"`
 
 	// dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
-	MaxCount *intstr.IntOrString `json:"maxCount,omitempty" expr:"expression"`
+	MaxCount *ConfigValue `json:"maxCount,omitempty" expr:"expression"`
 
 	// parameters that should be distributed across sharded instances
 	Shards map[string]DynamicList `json:"shards,omitempty" expr:"force"`
@@ -227,7 +226,7 @@ type StepExecuteWorkflow struct {
 	Tarball map[string]TarballRequest `json:"tarball,omitempty" expr:"template,include"`
 
 	// configuration to pass for the workflow
-	Config map[string]intstr.IntOrString `json:"config,omitempty" expr:"template"`
+	Config map[string]ConfigValue `json:"config,omitempty" expr:"template"`
 
 	// instructions for downloading artifacts produced by executed test workflows
 	Fetch []StepExecuteFetch `json:"fetch,omitempty" expr:"include"`

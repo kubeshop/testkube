@@ -12,18 +12,17 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 )
 
 func TestApplyConfigTestWorkflow(t *testing.T) {
-	cfg := map[string]intstr.IntOrString{
-		"foo":    {Type: intstr.Int, IntVal: 30},
-		"bar":    {Type: intstr.String, StrVal: "some value"},
-		"baz":    {Type: intstr.String, StrVal: "some {{ 30 }} value"},
-		"foobar": {Type: intstr.String, StrVal: "some {{ unknown(300) }} value"},
+	cfg := map[string]testworkflowsv1.ConfigValue{
+		"foo":    "30",
+		"bar":    "some value",
+		"baz":    "some {{ 30 }} value",
+		"foobar": "some {{ unknown(300) }} value",
 	}
 	want := &testworkflowsv1.TestWorkflow{
 		Description: "{{some description here }}",
@@ -77,10 +76,10 @@ func TestApplyConfigTestWorkflow(t *testing.T) {
 }
 
 func TestApplyMissingConfig(t *testing.T) {
-	cfg := map[string]intstr.IntOrString{
-		"foo":    {Type: intstr.Int, IntVal: 30},
-		"bar":    {Type: intstr.String, StrVal: "some value"},
-		"foobar": {Type: intstr.String, StrVal: "some {{ unknown(300) }} value"},
+	cfg := map[string]testworkflowsv1.ConfigValue{
+		"foo":    "30",
+		"bar":    "some value",
+		"foobar": "some {{ unknown(300) }} value",
 	}
 	_, err := ApplyWorkflowConfig(&testworkflowsv1.TestWorkflow{
 		Description: "{{some description here }}",
@@ -111,17 +110,17 @@ func TestApplyMissingConfig(t *testing.T) {
 }
 
 func TestApplyConfigDefaults(t *testing.T) {
-	cfg := map[string]intstr.IntOrString{
-		"foo":    {Type: intstr.Int, IntVal: 30},
-		"bar":    {Type: intstr.String, StrVal: "some value"},
-		"foobar": {Type: intstr.String, StrVal: "some {{ unknown(300) }} value"},
+	cfg := map[string]testworkflowsv1.ConfigValue{
+		"foo":    "30",
+		"bar":    "some value",
+		"foobar": "some {{ unknown(300) }} value",
 	}
 	want := &testworkflowsv1.TestWorkflow{
 		Description: "{{some description here }}",
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Config: map[string]testworkflowsv1.ParameterSchema{
-					"baz": {Default: &intstr.IntOrString{Type: intstr.String, StrVal: "something"}},
+					"baz": {Default: testworkflowsv1.NewConfigValue("something")},
 				},
 				Pod: &testworkflowsv1.PodConfig{
 					ServiceAccountName: "abra 30",
@@ -146,7 +145,7 @@ func TestApplyConfigDefaults(t *testing.T) {
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Config: map[string]testworkflowsv1.ParameterSchema{
-					"baz": {Default: &intstr.IntOrString{Type: intstr.String, StrVal: "something"}},
+					"baz": {Default: testworkflowsv1.NewConfigValue("something")},
 				},
 				Pod: &testworkflowsv1.PodConfig{
 					ServiceAccountName: "abra {{config.foo}}",
@@ -172,8 +171,8 @@ func TestApplyConfigDefaults(t *testing.T) {
 }
 
 func TestInvalidInteger(t *testing.T) {
-	cfg := map[string]intstr.IntOrString{
-		"foo": {Type: intstr.String, StrVal: "some value"},
+	cfg := map[string]testworkflowsv1.ConfigValue{
+		"foo": "some value",
 	}
 	_, err := ApplyWorkflowConfig(&testworkflowsv1.TestWorkflow{
 		Description: "{{some description here }}",
@@ -195,11 +194,11 @@ func TestInvalidInteger(t *testing.T) {
 }
 
 func TestApplyConfigTestWorkflowTemplate(t *testing.T) {
-	cfg := map[string]intstr.IntOrString{
-		"foo":    {Type: intstr.Int, IntVal: 30},
-		"bar":    {Type: intstr.String, StrVal: "some value"},
-		"baz":    {Type: intstr.String, StrVal: "some {{ 30 }} value"},
-		"foobar": {Type: intstr.String, StrVal: "some {{ unknown(300) }} value"},
+	cfg := map[string]testworkflowsv1.ConfigValue{
+		"foo":    "30",
+		"bar":    "some value",
+		"baz":    "some {{ 30 }} value",
+		"foobar": "some {{ unknown(300) }} value",
 	}
 	want := &testworkflowsv1.TestWorkflowTemplate{
 		Description: "{{some description here }}",
@@ -257,11 +256,11 @@ func TestApplyConfigTestWorkflowTemplateIntegerSecurityContext(t *testing.T) {
 				Config: map[string]testworkflowsv1.ParameterSchema{
 					"runAsUser": {
 						Type:    testworkflowsv1.ParameterTypeInteger,
-						Default: &intstr.IntOrString{Type: intstr.Int, IntVal: 65532},
+						Default: testworkflowsv1.NewConfigValue("65532"),
 					},
 					"runAsGroup": {
 						Type:    testworkflowsv1.ParameterTypeInteger,
-						Default: &intstr.IntOrString{Type: intstr.Int, IntVal: 65532},
+						Default: testworkflowsv1.NewConfigValue("65532"),
 					},
 				},
 				Container: &testworkflowsv1.ContainerConfig{

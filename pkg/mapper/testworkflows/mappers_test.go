@@ -7,7 +7,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -58,13 +57,13 @@ var (
 		Command: common.Ptr([]string{"c", "d"}),
 		Args:    common.Ptr([]string{"ar", "gs"}),
 		Resources: &testworkflowsv1.Resources{
-			Limits: map[corev1.ResourceName]intstr.IntOrString{
-				corev1.ResourceCPU:    {Type: intstr.String, StrVal: "300m"},
-				corev1.ResourceMemory: {Type: intstr.Int, IntVal: 1024},
+			Limits: map[corev1.ResourceName]testworkflowsv1.ConfigValue{
+				corev1.ResourceCPU:    "300m",
+				corev1.ResourceMemory: "1024",
 			},
-			Requests: map[corev1.ResourceName]intstr.IntOrString{
-				corev1.ResourceCPU:    {Type: intstr.String, StrVal: "3800m"},
-				corev1.ResourceMemory: {Type: intstr.Int, IntVal: 10204},
+			Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{
+				corev1.ResourceCPU:    "3800m",
+				corev1.ResourceMemory: "10204",
 			},
 		},
 		SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
@@ -203,8 +202,8 @@ var (
 			Command:         common.Ptr([]string{"ab"}),
 			Args:            common.Ptr([]string{"abrgs"}),
 			Resources: &testworkflowsv1.Resources{
-				Requests: map[corev1.ResourceName]intstr.IntOrString{
-					corev1.ResourceMemory: {Type: intstr.String, StrVal: "300m"},
+				Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{
+					corev1.ResourceMemory: "300m",
 				},
 			},
 			SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
@@ -230,8 +229,8 @@ var (
 				Command: common.Ptr([]string{"c", "m", "d"}),
 				Args:    common.Ptr([]string{"arg", "s", "d"}),
 				Resources: &testworkflowsv1.Resources{
-					Limits: map[corev1.ResourceName]intstr.IntOrString{
-						corev1.ResourceCPU: {Type: intstr.Int, IntVal: 444},
+					Limits: map[corev1.ResourceName]testworkflowsv1.ConfigValue{
+						corev1.ResourceCPU: "444",
 					},
 				},
 				SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
@@ -250,8 +249,8 @@ var (
 			Workflows: []testworkflowsv1.StepExecuteWorkflow{{
 				Name: "some-workflow",
 				As:   "some-alias",
-				Config: map[string]intstr.IntOrString{
-					"id": {Type: intstr.String, StrVal: "xyzz"},
+				Config: map[string]testworkflowsv1.ConfigValue{
+					"id": "xyzz",
 				},
 				Fetch: []testworkflowsv1.StepExecuteFetch{{
 					From:  "some-alias",
@@ -282,14 +281,14 @@ var (
 		StepOperations: stepBaseOperations,
 		StepDefaults:   stepBaseDefaults,
 		Use: []testworkflowsv1.TemplateRef{
-			{Name: "/abc", Config: map[string]intstr.IntOrString{
-				"xxx": {Type: intstr.Int, IntVal: 322},
+			{Name: "/abc", Config: map[string]testworkflowsv1.ConfigValue{
+				"xxx": "322",
 			}},
 		},
 		Template: &testworkflowsv1.TemplateRef{
 			Name: "other-one",
-			Config: map[string]intstr.IntOrString{
-				"foo": {Type: intstr.String, StrVal: "bar"},
+			Config: map[string]testworkflowsv1.ConfigValue{
+				"foo": "bar",
 			},
 		},
 		Steps: []testworkflowsv1.Step{
@@ -312,14 +311,8 @@ var (
 				Description: "some-description",
 				Type:        "integer",
 				Enum:        []string{"en", "um"},
-				Example: &intstr.IntOrString{
-					Type:   intstr.String,
-					StrVal: "some-vale",
-				},
-				Default: &intstr.IntOrString{
-					Type:   intstr.Int,
-					IntVal: 233,
-				},
+				Example:     testworkflowsv1.NewConfigValue("some-vale"),
+				Default:     testworkflowsv1.NewConfigValue("233"),
 				ParameterStringSchema: testworkflowsv1.ParameterStringSchema{
 					Format:    "url",
 					Pattern:   "^abc$",
@@ -382,9 +375,9 @@ func TestMapTestWorkflowBackAndForth(t *testing.T) {
 			Use: []testworkflowsv1.TemplateRef{
 				{
 					Name: "some-name",
-					Config: map[string]intstr.IntOrString{
-						"some-key":   {Type: intstr.String, StrVal: "some-value"},
-						"some-key-2": {Type: intstr.Int, IntVal: 444},
+					Config: map[string]testworkflowsv1.ConfigValue{
+						"some-key":   "some-value",
+						"some-key-2": "444",
 					},
 				},
 			},
