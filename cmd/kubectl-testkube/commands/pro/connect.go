@@ -148,16 +148,33 @@ func NewConnectCmd() *cobra.Command {
 
 				// The organization has to resolve first: the environment lookup
 				// is scoped to it.
-				err := common.ResolveNamedOrg(masterOpts.Master.URIs.Api, apiKey, &masterOpts.Master, lookupSkipTLS)
-				ui.ExitOnError("resolving organization", err)
+				if err := common.ResolveNamedOrg(masterOpts.Master.URIs.Api, apiKey, &masterOpts.Master, lookupSkipTLS); err != nil {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrInvalidRuntimeParameter,
+						"Failed to resolve the organization",
+						"Check the name given to --org-name, or pass --org-id with the organization id instead.",
+						err,
+					))
+				}
 
-				err = common.ResolveNamedEnv(masterOpts.Master.URIs.Api, apiKey, &masterOpts.Master,
-					"", lookupSkipTLS)
-				ui.ExitOnError("resolving environment", err)
+				if err := common.ResolveNamedEnv(masterOpts.Master.URIs.Api, apiKey, &masterOpts.Master,
+					"", lookupSkipTLS); err != nil {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrInvalidRuntimeParameter,
+						"Failed to resolve the environment",
+						"Check the name given to --env-name, or pass --env-id with the environment id instead.",
+						err,
+					))
+				}
 			}
 
 			if masterOpts.Master.EnvId == "" {
-				ui.Failf("You need pass valid environment id to connect to Pro")
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrInvalidRuntimeParameter,
+					"Missing environment",
+					"Pass --env-id with the environment id, or --env-name to resolve one by name.",
+					errors.New("no environment given to connect to Pro"),
+				))
 			}
 			if masterOpts.Master.OrgId == "" {
 				ui.Failf("You need pass valid organization id to connect to Pro")
