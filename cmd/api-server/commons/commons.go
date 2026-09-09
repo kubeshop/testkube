@@ -130,6 +130,16 @@ func MustGetMinioClient(cfg *config.Config) domainstorage.Client {
 	)
 	err := minioClient.Connect()
 	ExitOnError("Connecting to minio", err)
+	// Ensure the bucket exists before applying lifecycle rules. The controlplane service
+	// creates buckets after this client is constructed, but expiration policies need the
+	// bucket to exist to be set successfully.
+	exists, err := minioClient.BucketExists(context.Background(), cfg.StorageBucket)
+	if err == nil && !exists {
+		if err := minioClient.CreateBucket(context.Background(), cfg.StorageBucket); err != nil && !strings.Contains(err.Error(), "already exists") {
+			log.DefaultLogger.Warnw("failed to create bucket before applying expiration policies", "bucket", cfg.StorageBucket, "error", err)
+		}
+	}
+
 	// The bucket-wide rule is unfiltered, so it covers cache objects too and the
 	// earlier of the two expirations wins. Warn rather than silently applying a cache
 	// TTL that the bucket-wide one overrides.
