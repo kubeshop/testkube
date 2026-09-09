@@ -413,8 +413,9 @@ func TestResolveSelection_RecordThatMatchesNothingFallsBack(t *testing.T) {
 		"the artifacts answer when the stored path does not match")
 }
 
-// A pattern naming no directory is matched against the base name too, so a
-// report uploaded under a prefix is still recognised.
+// Matching is against the whole stored path, with no fall back to the base
+// name: a slashless pattern means a report at the root and nothing else. See
+// TestResolveSelection_RecordDoesNotMergeReportsSharingABaseName for why.
 func TestMatchesReportPath(t *testing.T) {
 	for _, tc := range []struct {
 		file     string
@@ -425,8 +426,11 @@ func TestMatchesReportPath(t *testing.T) {
 		{"reports/out.xml", []string{"reports/*.xml"}, true},
 		{"reports/nested/out.xml", []string{"reports/**/*.xml"}, true},
 		{"reports/out.xml", []string{"reports/other.xml"}, false},
-		{"prefix/reports/out.xml", []string{"out.xml"}, true},
+		{"junit.xml", []string{"junit.xml"}, true},
+		{"unit/junit.xml", []string{"junit.xml"}, false},
+		{"prefix/reports/out.xml", []string{"out.xml"}, false},
 		{"prefix/reports/out.xml", []string{"reports/out.xml"}, false},
+		{"prefix/reports/out.xml", []string{"**/reports/out.xml"}, true},
 		{"", []string{"reports/out.xml"}, false},
 		{"reports/out.xml", nil, false},
 	} {
@@ -434,4 +438,54 @@ func TestMatchesReportPath(t *testing.T) {
 			assert.Equal(t, tc.want, matchesReportPath(tc.file, tc.patterns))
 		})
 	}
+}
+
+// Several steps of one execution commonly upload a report of the same name
+// under different prefixes. A slashless pattern must not sweep them all up:
+// merging two suites hands the runner test cases from a step it knows nothing
+// about, which is the whole reason the paths are matched at all.
+//
+// Nothing matches here, so the artifacts answer instead - where the control
+// plane matches against how they are really stored.
+func TestResolveSelection_RecordDoesNotMergeReportsSharingABaseName(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(previousAttempt))
+	}))
+	defer server.Close()
+
+	repository := executiondata.NewMockExecutionRepository(gomock.NewController(t))
+	repository.EXPECT().
+		Get(gomock.Any(), "exec-1").
+		Return(executiondata.Execution{Id: "exec-1", Reports: []executiondata.Report{
+			{Ref: "unit", File: "unit/junit.xml", Failures: failed("unit/UnitTest/test_one")},
+			{Ref: "integration", File: "integration/junit.xml", Failures: failed("integration/IntegrationTest/test_two")},
+		}}, nil).
+		AnyTimes()
+	repository.EXPECT().
+		ListArtifacts(gomock.Any(), "exec-1", gomock.Any()).
+		Return([]executiondata.Artifact{{
+			Path: "junit.xml",
+			Url:  server.URL,
+			Size: int64(len(previousAttempt)),
+		}}, nil)
+
+	source := reportSource{
+		Resolver:   executiondata.Resolver{Repository: repository, RerunId: "exec-1"},
+		Repository: repository,
+		Client:     server.Client(),
+	}
+
+	selection, err := resolveTestCaseSelection(context.Background(), &lite.ActionTestCases{
+		ReportPaths: []string{"junit.xml"},
+		Select: &lite.ActionTestCasesSelect{
+			From:  executiondata.RerunRef,
+			Paths: []string{"junit.xml"},
+			As:    `{{ testcase.name }}`,
+		},
+	}, t.TempDir(), &testworkflowconfig.RerunConfig{ExecutionId: "exec-1"}, source)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"test_flaky_a", "test_real_bug", "test_boom"}, selection.Entries)
+	assert.NotContains(t, selection.Entries, "test_one", "the unit step's failures are not this step's")
+	assert.NotContains(t, selection.Entries, "test_two", "and neither are the integration step's")
 }

@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
 
@@ -151,24 +149,29 @@ func reportFromRecord(execution executiondata.Execution, patterns []string) (tes
 // matchesReportPath reports whether a stored report path is one the patterns
 // asked for.
 //
-// The patterns are the same globs report.paths uses, matched against the path
-// the report was stored under rather than against a file system. A pattern
-// naming no directory is also tried against the base name, since a report
-// uploaded under a prefix keeps its name but not its leading path.
+// The patterns are the same globs report.paths uses, matched against the whole
+// path the report was stored under rather than against a file system.
+//
+// Matching is deliberately strict, with no fall back to the base name. Several
+// steps of one execution commonly upload a report of the same name under
+// different prefixes, so letting `junit.xml` match `unit/junit.xml` and
+// `integration/junit.xml` alike would merge two unrelated suites into one
+// selection - the defect this matching exists to prevent, reintroduced for the
+// most ordinary pattern there is. A pattern that names no directory means a
+// report at the root, and that is all it is taken to mean.
+//
+// The cost is that a report stored under a prefix the workflow did not write
+// simply does not match, and the caller lists the artifacts instead. That is
+// the right trade: the control plane matches patterns against how artifacts are
+// actually stored, and it is where every other artifact lookup already goes.
 func matchesReportPath(file string, patterns []string) bool {
 	if file == "" {
 		return false
 	}
 	file = filepath.ToSlash(file)
 	for _, pattern := range patterns {
-		pattern = filepath.ToSlash(pattern)
-		if ok, err := doublestar.Match(pattern, file); err == nil && ok {
+		if ok, err := doublestar.Match(filepath.ToSlash(pattern), file); err == nil && ok {
 			return true
-		}
-		if !strings.Contains(pattern, "/") {
-			if ok, err := doublestar.Match(pattern, path.Base(file)); err == nil && ok {
-				return true
-			}
 		}
 	}
 	return false
