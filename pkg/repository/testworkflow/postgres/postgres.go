@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 	"strings"
 	"time"
 
@@ -121,11 +122,32 @@ func toPgTimestamp(t time.Time) pgtype.Timestamptz {
 	return pgtype.Timestamptz{Time: t, Valid: true}
 }
 
+// toJSONB encodes a value for a JSONB column, storing SQL NULL for an absent
+// one.
+//
+// The nil check has to look past the interface. A nil *T handed to an
+// interface{} parameter is not a nil interface - it carries a type - so
+// `v == nil` is false and json.Marshal writes the four bytes "null". Read back,
+// that unmarshals into a zero value and yields a pointer to it, so a field that
+// was absent going in comes out present and empty. Nothing downstream can tell
+// those apart, which is how an execution that was never a rerun ends up with a
+// rerun policy naming no execution.
 func toJSONB(v interface{}) ([]byte, error) {
-	if v == nil {
+	if v == nil || isNilPointer(v) {
 		return nil, nil
 	}
 	return json.Marshal(v)
+}
+
+// isNilPointer reports whether v holds a nil pointer, map or slice.
+func isNilPointer(v interface{}) bool {
+	value := reflect.ValueOf(v)
+	switch value.Kind() {
+	case reflect.Ptr, reflect.Map, reflect.Slice, reflect.Interface:
+		return value.IsNil()
+	default:
+		return false
+	}
 }
 
 func fromPgText(t pgtype.Text) string {
@@ -156,8 +178,14 @@ func fromPgTimestamp(t pgtype.Timestamptz) time.Time {
 	return t.Time
 }
 
+// fromJSONB decodes a JSONB column, returning nil for an absent value.
+//
+// A literal JSON null counts as absent as well as an empty column. Unmarshalling
+// it would leave the zero value and return a pointer to it, turning something
+// that was never stored into something stored empty - and rows written before
+// toJSONB stopped emitting "null" hold exactly that.
 func fromJSONB[T any](data []byte) (*T, error) {
-	if len(data) == 0 {
+	if len(data) == 0 || string(data) == "null" {
 		return nil, nil
 	}
 	var result T
