@@ -286,3 +286,40 @@ func TestParse_MessageBudget(t *testing.T) {
 	assert.LessOrEqual(t, retained, MaxTotalMessageBytes+MaxMessageBytes)
 	assert.Empty(t, report.Cases[len(report.Cases)-1].Message, "the budget ran out before the end")
 }
+
+// JUnit has no "passed" attribute, so a report that only declares counters has
+// to have its passes derived. It matters because such a report is believed on
+// its counters rather than its named cases, and a zero here makes every
+// minPassed requirement fail against a report that satisfied it.
+func TestParse_DerivesDeclaredPasses(t *testing.T) {
+	report, err := Parse(strings.NewReader(
+		`<testsuite name="s" tests="10" failures="2" errors="1" skipped="3"></testsuite>`))
+	require.NoError(t, err)
+
+	assert.Equal(t, int32(10), report.Declared.Tests)
+	assert.Equal(t, int32(4), report.Declared.Passed, "10 tests less 2 failed, 1 errored and 3 skipped")
+	assert.Equal(t, int32(2), report.Declared.Failed)
+}
+
+// The counters come from a tool and need not add up, so the derivation clamps
+// rather than reporting a negative number of passes.
+func TestParse_DerivedPassesNeverGoNegative(t *testing.T) {
+	report, err := Parse(strings.NewReader(
+		`<testsuite name="s" tests="2" failures="5"></testsuite>`))
+	require.NoError(t, err)
+
+	assert.Zero(t, report.Declared.Passed)
+}
+
+// Nested suites each declare their own counters, and the derived passes have to
+// accumulate with the rest.
+func TestParse_DerivedPassesAccumulateAcrossSuites(t *testing.T) {
+	report, err := Parse(strings.NewReader(`<testsuites>
+  <testsuite name="a" tests="4" failures="1"></testsuite>
+  <testsuite name="b" tests="6" failures="0" skipped="2"></testsuite>
+</testsuites>`))
+	require.NoError(t, err)
+
+	assert.Equal(t, int32(10), report.Declared.Tests)
+	assert.Equal(t, int32(7), report.Declared.Passed, "3 from a, 4 from b")
+}

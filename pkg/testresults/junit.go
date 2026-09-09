@@ -201,18 +201,31 @@ func parseDurationMs(value string) int64 {
 
 // declaredSummary reads the counter attributes off a <testsuites> or <testsuite>.
 func declaredSummary(element xml.StartElement) Summary {
-	return Summary{
+	summary := Summary{
 		Tests:      parseCount(attr(element, "tests")),
 		Failed:     parseCount(attr(element, "failures")),
 		Errored:    parseCount(attr(element, "errors")),
 		Skipped:    parseCount(attr(element, "skipped")),
 		DurationMs: parseDurationMs(attr(element, "time")),
 	}
+
+	// JUnit has no "passed" attribute: a report states its total and what went
+	// wrong, and the passes are whatever is left. Deriving it matters because a
+	// report that names no test cases is believed on its counters instead - so
+	// leaving this zero made every minPassed requirement fail against a report
+	// that in fact satisfied it, and reported "0 passed" for it everywhere.
+	//
+	// Clamped at zero: the counters come from a tool and need not add up.
+	if passed := summary.Tests - summary.Failed - summary.Errored - summary.Skipped; passed > 0 {
+		summary.Passed = passed
+	}
+	return summary
 }
 
 // addDeclared accumulates one suite's declared counters into the total.
 func addDeclared(total *Summary, next Summary) {
 	total.Tests += next.Tests
+	total.Passed += next.Passed
 	total.Failed += next.Failed
 	total.Errored += next.Errored
 	total.Skipped += next.Skipped

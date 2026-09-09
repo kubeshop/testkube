@@ -69,7 +69,12 @@ Still to come: Control Plane persistence and enforcement of the owner, and the `
 - Two invariants that are easy to break and are covered by tests:
   - **A report may describe more tests than it names** (`Report.Unrepresented`). `test/junit-pregenerated-reports/high-level-without-testcases.xml` declares 24 tests with 4 failures while naming one case, which passed. When identities are incomplete, mute is not applied at all and the report's own counters are believed — trusting the named cases alone turns such a report green.
   - **A pass requirement is only meaningful over the full suite**, so `Tolerate` is evaluated only when the run was not narrowed by a selection. It deliberately does **not** accumulate across narrowing retries; that is documented behaviour with a test pinning it, not a bug to fix.
-- Fixtures are the specification for parser behaviour: `cmd/testworkflow-toolkit/common/testdata/junit.go` and `test/junit-pregenerated-reports/`. Add a case there rather than inventing XML in a test.
+  - **A declared summary derives its passes.** JUnit has no `passed` attribute, so `declaredSummary` computes `tests - failures - errors - skipped`. Without it every `minPassed` requirement is measured against zero and fails against a report that satisfied it.
+  - **A narrowed run that tested none of its selection fails**, whatever the exit code and under either `enforce` mode. A filter the tool spells differently than the report does matches nothing, the tool exits zero having run nothing, and every other number looks like a pass.
+- The verdict reaches the uploaded report through a file on the internal volume (`pkg/testresults/handoff.go`), **joined by report file path, not by step reference** — the artifacts stage is given a reference of its own, so a join on step ref matches nothing. The toolkit cannot re-derive muting: it has the XML, not the policy.
+- A selection from another execution (`select.from`) prefers the failures stored on that execution's record over downloading its report — the record outlives the artifacts. Two things it must keep doing: **match `select.paths`** (an execution has a report per step, and merging them hands the runner another suite's test cases) and **fall back on a truncated list** (narrowing to a prefix tests less than it claimed and passes on the rest).
+- **Every path that builds an `ExecutionStart` must set `Rerun` from the execution record.** The scheduler records the policy there rather than handing it to the runner, so a writer that forgets it sends the pod no selection and the whole suite runs, reporting success. This has been missed twice: audit the proto writers, not just the `ExecutionConfig` construction sites.
+- Fixtures are the specification for parser behaviour: `cmd/testworkflow-toolkit/common/testdata/junit.go` and `test/junit-pregenerated-reports/`. Add a case there rather than inventing XML in a test. End-to-end fixtures for the policy itself live in `test/junit/crd-workflow/testcases.yaml`, where the expected outcome is the `core-tests` label.
 
 ## Transient-failure retries
 
@@ -111,6 +116,7 @@ Still to come: Control Plane persistence and enforcement of the owner, and the `
 - Git trigger informer execution is leader-gated in `cmd/api-server/main.go` through the shared `leader` coordinator tasks, so only the active leader performs periodic git pulls/reconciliation.
 - Helm chart values are the source of deployment defaults; `build/_local/values.dev.yaml` (shaped by the `values.dev.tpl.yaml` template) shows the local overrides used by `tk-dev` if you need a concrete reference.
 - CLI update-check toggle: set `TESTKUBE_DISABLE_UPDATE_CHECK=1` to suppress both the per-command hint and the `testkube version` status block. The CLI persists `lastUpdateCheckAt` and `latestKnownVersion` in `~/.testkube/config.json` to throttle the per-command hint to once per day.
+- A narrowed step's selection is exported to the test tool as `TK_SELECTED_TESTS` (the entries, one per line — newlines because a parameterized test name contains spaces and commas), `TK_SELECTED_TESTS_COUNT`, and `TK_SELECTED_TESTS_FILE` (the path `select.write` produced, empty otherwise). `TESTKUBE_TW_INTERNAL_PATH` relocates the internal volume and must agree between the init and toolkit binaries, since the verdict handoff is exchanged through it.
 
 ## Architecture reference
 

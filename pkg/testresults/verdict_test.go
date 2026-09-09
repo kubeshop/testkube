@@ -415,3 +415,59 @@ func TestEvaluate_AnEmptyReportIsNotAnUnreadableOne(t *testing.T) {
 	assert.True(t, verdict.NothingSelectedRan)
 	assert.False(t, verdict.Success)
 }
+
+// A report that names no test cases is believed on its counters. The pass
+// requirement has to be evaluated against those counters, which means the
+// passes have to be derived from them - otherwise a report declaring ten
+// thousand tests and no failures reads as zero passes, misses every minPassed
+// bar, and fails the step under enforce: always.
+func TestEvaluate_ToleratesAnUnnamedReportThatMeetsTheRequirement(t *testing.T) {
+	report, err := Parse(strings.NewReader(
+		`<testsuite name="s" tests="10000" failures="0" errors="0" skipped="0"></testsuite>`))
+	require.NoError(t, err)
+
+	verdict, err := Evaluate(report, Policy{
+		Tolerate: &Tolerance{MinPassed: ptr(9000)},
+		Enforce:  EnforceAlways,
+	}, Input{ExitCode: 0})
+	require.NoError(t, err)
+
+	require.True(t, verdict.IdentitiesIncomplete)
+	assert.Equal(t, int32(10000), verdict.Summary.Passed)
+	assert.True(t, verdict.Tolerated)
+	assert.True(t, verdict.Success)
+}
+
+// The percentage form reads the same counters, so it has to work too.
+func TestEvaluate_UnnamedReportMeetsAPercentageRequirement(t *testing.T) {
+	report, err := Parse(strings.NewReader(
+		`<testsuite name="s" tests="100" failures="5"></testsuite>`))
+	require.NoError(t, err)
+
+	verdict, err := Evaluate(report, Policy{
+		Tolerate: &Tolerance{MinPassedPercent: ptr(90)},
+		Enforce:  EnforceAlways,
+	}, Input{ExitCode: 1})
+	require.NoError(t, err)
+
+	assert.Equal(t, int32(95), verdict.Summary.Passed)
+	assert.True(t, verdict.Tolerated, "95 of 100 clears a 90% bar")
+	assert.True(t, verdict.Success, "and the failing exit code is rescued")
+}
+
+// The bar still has to be able to fail: deriving passes must not make every
+// requirement pass.
+func TestEvaluate_UnnamedReportShortOfTheRequirementStillFails(t *testing.T) {
+	report, err := Parse(strings.NewReader(
+		`<testsuite name="s" tests="100" failures="40"></testsuite>`))
+	require.NoError(t, err)
+
+	verdict, err := Evaluate(report, Policy{
+		Tolerate: &Tolerance{MinPassed: ptr(90)},
+	}, Input{ExitCode: 1})
+	require.NoError(t, err)
+
+	assert.Equal(t, int32(60), verdict.Summary.Passed)
+	assert.False(t, verdict.Tolerated)
+	assert.False(t, verdict.Success)
+}

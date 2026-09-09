@@ -79,6 +79,39 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 - TestWorkflow processing and step execution
 - Result aggregation and status management
 
+**Test Case Results**: [`pkg/testresults/`](pkg/testresults/)
+
+- Streaming JUnit parser, addressing each test case as `<suite>/<classname>/<name>`
+- Glob selectors, the pass requirement, and the step verdict (`verdict.go`)
+- Selection of the test cases a run should be narrowed to (`selection.go`)
+- The report digest stored with the execution record (`digest.go`)
+
+**Test Case Verdict Path**
+
+A step declaring a `testCases` policy no longer takes its status from the test
+tool's exit code. The init process reads the step's report immediately after the
+command exits, applies the policy, and decides the status, because that is the
+last moment anything can still change it — the report is uploaded later, from a
+different container.
+
+That split is why the verdict is written to the internal volume
+(`/.tktw/testcases/<ref>.json`, see `pkg/testresults/handoff.go`): the toolkit
+uploading the report cannot know which failures the workflow declared acceptable,
+and the two are joined by report file path rather than by step reference, since
+the artifacts stage carries a reference of its own.
+
+Narrowing a run reverses the order. The selection is resolved *before* the
+command, so a retry re-runs only what the previous attempt failed with no
+attempt bookkeeping: the report on disk holds the previous results when the
+selection reads it and this attempt's by the time the verdict does. A selection
+may also come from another execution — resolved through
+[`pkg/executiondata/`](pkg/executiondata/), preferring the failures stored on
+that execution's record and falling back to streaming its report artifact.
+
+Available in connected mode only: the open source processor preset registers a
+stub that rejects the workflow, so the policy can never reach the init process
+there.
+
 ### 4. Storage Layer
 
 **PostgreSQL** (Future Primary Database, currently in Preview)
@@ -220,6 +253,7 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
   - **Purpose**: Defines a TestWorkflow with setup, steps, and after phases
   - **Features**: Template inclusion, parallel execution, service dependencies, PVCs
   - **Status**: Tracks latest execution and health metrics
+  - **Test case policy**: A step may carry `testCases` ([`api/testworkflows/v1/testcase_types.go`](api/testworkflows/v1/testcase_types.go)) to mute expected failures, set a pass requirement, and narrow the run to specific test cases. Read by `run` and `shell`, so a policy on a group or a `parallel` block is refused at processing time. Connected mode only.
 
 - **`TestWorkflowTemplate`** (`testworkflows.testkube.io/v1`)
   - **Definition**: [`api/testworkflows/v1/testworkflowtemplate_types.go`](api/testworkflows/v1/testworkflowtemplate_types.go)
@@ -231,6 +265,7 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
   - **Purpose**: Represents an execution of a TestWorkflow
   - **Controller**: Watched by `TestWorkflowExecutionController` (see [Kubernetes Controllers](#2-kubernetes-controllers))
   - **Status**: Tracks execution state, results, logs, and artifacts
+  - **Rerun state**: `rerun` records the test cases an execution was narrowed to. It lives on the record rather than being handed to the runner, because the runner rebuilds the pod's configuration from the record when it picks the execution up — so every path that starts an execution reads it back from there. Reports also carry the non-passing test cases they named, which outlive the report artifacts and are what a later narrowed rerun resolves against.
 
 #### Webhook CRDs
 
