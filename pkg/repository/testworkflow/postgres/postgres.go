@@ -143,7 +143,7 @@ func toJSONB(v interface{}) ([]byte, error) {
 func isNilPointer(v interface{}) bool {
 	value := reflect.ValueOf(v)
 	switch value.Kind() {
-	case reflect.Ptr, reflect.Map, reflect.Slice, reflect.Interface:
+	case reflect.Pointer, reflect.Map, reflect.Slice, reflect.Interface:
 		return value.IsNil()
 	default:
 		return false
