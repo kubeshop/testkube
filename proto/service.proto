@@ -408,6 +408,15 @@ message ScheduleRequest {
 
   // Silent mode settings
   optional SilentMode silent_mode = 12;
+
+  // The execution this one is a rerun of. The Control Plane derives the chain
+  // root and attempt number from it and records them as lineage; a caller able
+  // to assert either could forge a chain, so only the base travels.
+  //
+  // The Control Plane must confirm it belongs to the caller's environment
+  // before honouring it, or this becomes a way to read another environment's
+  // executions.
+  optional string base_execution_id = 13;
 }
 
 message ScheduleResponse {

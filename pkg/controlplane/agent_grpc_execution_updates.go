@@ -117,5 +117,24 @@ func createExecutionStart(exe testkube.TestWorkflowExecution, info scheduling.Ru
 		WorkflowName:         common.Ptr(workflowName),
 		VariableOverrides:    variableOverrides,
 		Tags:                 exe.Tags,
+		Lineage:              lineageProtoOf(exe.Lineage),
+	}
+}
+
+// lineageProtoOf carries the execution's lineage across to the runner.
+//
+// The scheduler records this on the execution rather than handing it to the
+// runner, so every ExecutionStart writer has to read it back off the record.
+// Omitting it here does not fail: the pod just cannot resolve
+// execution("rerun"), and a workflow written against its own previous run
+// silently loses the reference.
+func lineageProtoOf(lineage *testkube.TestWorkflowExecutionLineage) *executionv1.ExecutionLineage {
+	if lineage == nil {
+		return nil
+	}
+	return &executionv1.ExecutionLineage{
+		BaseExecutionId: common.Ptr(lineage.BaseId),
+		RootExecutionId: common.Ptr(lineage.RootId),
+		Attempt:         common.Ptr(lineage.Attempt),
 	}
 }

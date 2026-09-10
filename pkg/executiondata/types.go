@@ -32,6 +32,14 @@ const (
 	// the current one.
 	ParentRef = "parent"
 
+	// RerunRef is the reserved reference pointing at the execution this one is a
+	// rerun of - the one whose results a rerun draws from.
+	//
+	// It is a reference rather than an id the workflow has to be handed, because
+	// the workflow is written once and rerun many times: the author says "the
+	// execution I am a rerun of" and the scheduler decides which that is.
+	RerunRef = "rerun"
+
 	// OutputsInstructionName is the name of the output instruction a step emits to
 	// publish the values it left in the outputs directory. It makes them part of the
 	// execution record, so a parent workflow can read them back with execution().

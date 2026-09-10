@@ -66,3 +66,36 @@ func TestCreateExecutionMachine_RunningContextMissing(t *testing.T) {
 
 	require.Equal(t, "", result.Template())
 }
+
+// resolveString compiles and resolves one expression against a machine.
+func resolveString(t *testing.T, machine expressions.Machine, expr string) string {
+	t.Helper()
+	compiled, err := expressions.Compile(expr)
+	require.NoError(t, err)
+	resolved, err := compiled.Resolve(machine)
+	require.NoError(t, err)
+	value, err := resolved.Static().StringValue()
+	require.NoError(t, err)
+	return value
+}
+
+func TestCreateExecutionMachine_LineageVariables(t *testing.T) {
+	machine := CreateExecutionMachine(&ExecutionConfig{
+		Id:      "exec-3",
+		Lineage: &LineageConfig{BaseId: "exec-2", RootId: "exec-1", Attempt: 3},
+	})
+
+	require.Equal(t, "exec-2", resolveString(t, machine, "execution.lineage.baseId"))
+	require.Equal(t, "exec-1", resolveString(t, machine, "execution.lineage.rootId"))
+	require.Equal(t, "3", resolveString(t, machine, "execution.lineage.attempt"))
+}
+
+// Most executions are not reruns, and the expression has to stay usable in a
+// workflow that is run both ways. Resolving to an error, or to an empty string
+// that reads as attempt zero, would force every author to guard the accessor.
+func TestCreateExecutionMachine_LineageDefaultsToAnOriginalRun(t *testing.T) {
+	machine := CreateExecutionMachine(&ExecutionConfig{Id: "exec-1"})
+
+	require.Equal(t, "", resolveString(t, machine, "execution.lineage.baseId"))
+	require.Equal(t, "1", resolveString(t, machine, "execution.lineage.attempt"))
+}

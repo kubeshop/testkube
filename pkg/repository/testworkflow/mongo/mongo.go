@@ -397,6 +397,7 @@ func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter testw
 			"reports":                      1,
 			"resourceaggregations":         1,
 			"silentmode":                   1,
+			"lineage":                      1,
 		}},
 		{"$addFields": bson.M{
 			"workflow.health": "$workflow.status.health",

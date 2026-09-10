@@ -72,6 +72,20 @@ func executionConfigFromStart(start *executionv1.ExecutionStart, organizationId 
 		EnvironmentId:   start.GetEnvironmentId(),
 		ParentIds:       strings.Join(start.AncestorExecutionIds, "/"),
 		RunningContext:  runningContextFromProto(rc),
+		Lineage:         lineageConfigFromProto(start.GetLineage()),
+	}
+}
+
+// lineageConfigFromProto carries the execution's lineage across to the pod, so
+// that the reserved execution("rerun") reference resolves inside it.
+func lineageConfigFromProto(lineage *executionv1.ExecutionLineage) *testworkflowconfig.LineageConfig {
+	if lineage == nil {
+		return nil
+	}
+	return &testworkflowconfig.LineageConfig{
+		BaseId:  lineage.GetBaseExecutionId(),
+		RootId:  lineage.GetRootExecutionId(),
+		Attempt: lineage.GetAttempt(),
 	}
 }
 
