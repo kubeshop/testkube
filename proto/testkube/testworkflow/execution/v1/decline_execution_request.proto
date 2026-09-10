@@ -7,4 +7,13 @@ package testkube.testworkflow.execution.v1;
 message DeclineExecutionRequest {
   // execution_id is the unique identifier of the execution that has failed.
   string execution_id = 1;
+  // reason is a short fixed token that names why the runner could not start
+  // the execution, for example "image-pull-failed" or "job-create-failed".
+  // The Control Plane stores it on the execution result so a user can read
+  // the cause without the runner log.
+  string reason = 2;
+  // message is the human-readable error from the runner. It can contain image
+  // names and registry hosts, so the Control Plane must not send it outside
+  // the deployment.
+  string message = 3;
 }
