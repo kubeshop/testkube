@@ -36,6 +36,59 @@ func call[Request any, Response any](ctx context.Context, md metadata.MD, fn fun
 	return fn(metadata.NewOutgoingContext(ctx, md), req, grpcOpts...)
 }
 
+// callRetryCount and callRetryBaseDelay bound the retry loop that wraps
+// transient-error-prone gRPC calls (see callWithRetry). The window is small
+// on purpose: the caller of a periodic poll (e.g. the trigger watcher) will
+// re-invoke on the next tick, so absorbing a short blip here beats logging
+// an error and waiting for the next tick. Exported to var so tests can shrink
+// the sleep.
+var (
+	callRetryCount     = 3
+	callRetryBaseDelay = 250 * time.Millisecond
+)
+
+// callWithRetry wraps call with a bounded retry loop that reacts only to
+// transient gRPC codes (Unavailable, DeadlineExceeded, ResourceExhausted).
+// Any other error short-circuits so the caller sees, for example, a
+// PermissionDenied without the retry loop swallowing time. Respects context
+// cancellation during backoff.
+func callWithRetry[Request any, Response any](
+	ctx context.Context,
+	md metadata.MD,
+	fn func(context.Context, Request, ...grpc.CallOption) (Response, error),
+	req Request,
+) (Response, error) {
+	var (
+		v       Response
+		lastErr error
+	)
+	for attempt := 0; attempt < callRetryCount; attempt++ {
+		if attempt > 0 {
+			select {
+			case <-ctx.Done():
+				return v, ctx.Err()
+			case <-time.After(time.Duration(attempt) * callRetryBaseDelay):
+			}
+		}
+		v, lastErr = call(ctx, md, fn, req)
+		if lastErr == nil {
+			return v, nil
+		}
+		if !isRetryableGrpcCode(getGrpcErrorCode(lastErr)) {
+			return v, lastErr
+		}
+	}
+	return v, lastErr
+}
+
+func isRetryableGrpcCode(code codes.Code) bool {
+	switch code {
+	case codes.Unavailable, codes.DeadlineExceeded, codes.ResourceExhausted:
+		return true
+	}
+	return false
+}
+
 // TODO: add timeout?
 func watch[Response any](ctx context.Context, md metadata.MD, fn func(context.Context, ...grpc.CallOption) (Response, error)) (Response, error) {
 	if ctx.Err() != nil {
