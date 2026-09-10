@@ -74,3 +74,74 @@ func TestProcessMasterFlags_UiUri(t *testing.T) {
 		})
 	}
 }
+
+func TestControlPlaneAPIURI(t *testing.T) {
+	const (
+		contextURI = "https://api.onprem.example.com"
+		saasURI    = "https://api.testkube.io"
+	)
+
+	onPrem := &config.Data{
+		CloudContext: config.CloudContext{ApiUri: contextURI},
+	}
+
+	tests := []struct {
+		name     string
+		args     []string
+		cfg      *config.Data
+		expected string
+	}{
+		{
+			name:     "the saved control plane wins when nothing is configured",
+			cfg:      onPrem,
+			expected: contextURI,
+		},
+		{
+			name:     "an explicit api uri override wins over the saved one",
+			args:     []string{"--api-uri-override", "https://api.other.example.com"},
+			cfg:      onPrem,
+			expected: "https://api.other.example.com",
+		},
+		{
+			name:     "an explicit root domain wins over the saved one",
+			args:     []string{"--root-domain", "other.example.com"},
+			cfg:      onPrem,
+			expected: "https://api.other.example.com",
+		},
+		{
+			name:     "a deprecated root domain flag counts as explicit",
+			args:     []string{"--cloud-root-domain", "other.example.com"},
+			cfg:      onPrem,
+			expected: "https://api.other.example.com",
+		},
+		{
+			name:     "an api prefix counts as explicit",
+			args:     []string{"--api-prefix", "gateway"},
+			cfg:      onPrem,
+			expected: "https://gateway.testkube.io",
+		},
+		{
+			name:     "the composed default is used with no saved control plane",
+			cfg:      &config.Data{},
+			expected: saasURI,
+		},
+		{
+			name:     "a nil config falls back to the composed default",
+			cfg:      nil,
+			expected: saasURI,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var opts HelmOptions
+			cmd := &cobra.Command{Use: "test"}
+			PopulateMasterFlags(cmd, &opts, false)
+			require.NoError(t, cmd.Flags().Parse(tt.args))
+
+			ProcessMasterFlags(cmd, &opts, tt.cfg)
+
+			assert.Equal(t, tt.expected, ControlPlaneAPIURI(cmd, opts.Master.URIs.Api, tt.cfg))
+		})
+	}
+}

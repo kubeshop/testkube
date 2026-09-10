@@ -1,10 +1,12 @@
 package common
 
 import (
+	"io"
 	"testing"
 
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 )
@@ -352,5 +354,71 @@ func TestMasterCmds(t *testing.T) {
 		err := cmd.Execute()
 		assert.NoError(t, err)
 		assert.Equal(t, "pro-test-domain", opts.Master.RootDomain)
+	})
+}
+
+func TestMasterOrgEnvNameFlags(t *testing.T) {
+	// A local HelmOptions, so these cases do not inherit the package-level opts
+	// that the older subtests above share.
+	newCmd := func(o *HelmOptions) *cobra.Command {
+		cmd := &cobra.Command{Use: "test", Run: func(cmd *cobra.Command, args []string) {}}
+		PopulateMasterFlags(cmd, o, false)
+		cmd.SetOut(io.Discard)
+		cmd.SetErr(io.Discard)
+		return cmd
+	}
+
+	t.Run("name flags bind to master options", func(t *testing.T) {
+		var o HelmOptions
+		cmd := newCmd(&o)
+		cmd.SetArgs([]string{"--org-name", "platform", "--env-name", "staging"})
+
+		require.NoError(t, cmd.Execute())
+		assert.Equal(t, "platform", o.Master.OrgName)
+		assert.Equal(t, "staging", o.Master.EnvName)
+	})
+
+	t.Run("name flags default to empty", func(t *testing.T) {
+		var o HelmOptions
+		cmd := newCmd(&o)
+		cmd.SetArgs([]string{})
+
+		require.NoError(t, cmd.Execute())
+		assert.Empty(t, o.Master.OrgName)
+		assert.Empty(t, o.Master.EnvName)
+	})
+
+	t.Run("an id and a name for the same level conflict", func(t *testing.T) {
+		var o HelmOptions
+		cmd := newCmd(&o)
+		cmd.SetArgs([]string{"--org-id", "tkcorg_1111111111111111", "--org-name", "platform"})
+
+		err := cmd.Execute()
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "org-id")
+		assert.Contains(t, err.Error(), "org-name")
+	})
+
+	t.Run("an env id and an env name conflict", func(t *testing.T) {
+		var o HelmOptions
+		cmd := newCmd(&o)
+		cmd.SetArgs([]string{"--env-id", "tkcenv_1111111111111111", "--env-name", "staging"})
+
+		err := cmd.Execute()
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "env-id")
+		assert.Contains(t, err.Error(), "env-name")
+	})
+
+	t.Run("an org id pairs with an env name across levels", func(t *testing.T) {
+		var o HelmOptions
+		cmd := newCmd(&o)
+		cmd.SetArgs([]string{"--org-id", "tkcorg_1111111111111111", "--env-name", "staging"})
+
+		require.NoError(t, cmd.Execute())
+		assert.Equal(t, "tkcorg_1111111111111111", o.Master.OrgId)
+		assert.Equal(t, "staging", o.Master.EnvName)
 	})
 }

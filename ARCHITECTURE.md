@@ -305,6 +305,8 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 - Common utilities: [`cmd/kubectl-testkube/commands/common/`](cmd/kubectl-testkube/commands/common/)
 - Client abstraction: Works with both standalone API and control plane APIs
 
+**Context Resolution**: Commands that act on a Control Plane environment resolve their target through [`cmd/kubectl-testkube/commands/common/orgenv.go`](cmd/kubectl-testkube/commands/common/orgenv.go). The precedence is an explicit `--org-id`/`--env-id`, then `--org-name`/`--env-name` resolved against the Control Plane's organization and environment listings, then an interactive selector when the terminal allows one. Name matching is exact, with a slug fallback for environments, and an ambiguous name is an error rather than an arbitrary pick. The resolved ids are persisted to `~/.testkube/config.json`, which is the context every later command reads.
+
 **Client Layer**:
 
 - [`pkg/newclients/`](pkg/newclients/) - API clients for tests, testworkflows, webhooks

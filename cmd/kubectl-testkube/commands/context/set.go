@@ -44,8 +44,41 @@ func NewSetContextCmd() *cobra.Command {
 
 			switch cfg.ContextType {
 			case config.ContextTypeCloud:
-				if opts.Master.OrgId == "" && opts.Master.EnvId == "" && apiKey == "" && opts.Master.RootDomain == "" {
-					ui.Errf("Please provide at least one of the following flags: --org-id, --env-id, --api-key, --root-domain")
+				if opts.Master.OrgId == "" && opts.Master.EnvId == "" && opts.Master.OrgName == "" &&
+					opts.Master.EnvName == "" && apiKey == "" && opts.Master.RootDomain == "" {
+					ui.Errf("Please provide at least one of the following flags: --org-id, --org-name, --env-id, --env-name, --api-key, --root-domain")
+				}
+
+				// Everything below — the name lookups, the display names fetched
+				// afterwards, and the URI persisted by PopulateCloudConfig — has
+				// to point at the Control Plane the user is actually on. Without
+				// an explicit flag ProcessMasterFlags composes the SaaS host from
+				// prefixes, which for a custom Control Plane is both the wrong
+				// place to look and the wrong thing to save.
+				opts.Master.URIs.Api = common.ControlPlaneAPIURI(cmd, opts.Master.URIs.Api, &cfg)
+
+				// Names have to become ids before anything is written, and the
+				// lookup needs a token: the one being set if there is one,
+				// otherwise whatever the context already holds.
+				if opts.Master.OrgName != "" || opts.Master.EnvName != "" {
+					lookupToken := apiKey
+					if lookupToken == "" {
+						lookupToken = cfg.CloudContext.ApiKey
+					}
+					if lookupToken == "" {
+						ui.Failf("Resolving --org-name or --env-name requires an API key, pass --api-key or log in first")
+					}
+
+					lookupSkipTLS := cfg.SkipTLS || cfg.CloudContext.SkipTLS
+
+					// The organization has to resolve first: the environment
+					// lookup is scoped to it.
+					err := common.ResolveNamedOrg(opts.Master.URIs.Api, lookupToken, &opts.Master, lookupSkipTLS)
+					ui.ExitOnError("resolving organization", err)
+
+					err = common.ResolveNamedEnv(opts.Master.URIs.Api, lookupToken, &opts.Master,
+						cfg.CloudContext.OrganizationId, lookupSkipTLS)
+					ui.ExitOnError("resolving environment", err)
 				}
 
 				var dcName *string
@@ -106,5 +139,11 @@ func NewSetContextCmd() *cobra.Command {
 	cmd.Flags().StringVar(&dockerContainerName, "docker-container", "testkube-agent", "Docker container name for Testkube Docker Agent")
 
 	common.PopulateMasterFlags(cmd, &opts, false)
+
+	// The deprecated aliases carry ids, so they conflict with the name flags in
+	// the same way --org-id and --env-id do.
+	cmd.MarkFlagsMutuallyExclusive("org", "org-name")
+	cmd.MarkFlagsMutuallyExclusive("env", "env-name")
+
 	return cmd
 }
