@@ -162,7 +162,7 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 		Runtime:                runtimeOptions,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to process test workflow")
+		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to process test workflow"), executionworkertypes.StartReasonDefinitionInvalid)
 	}
 
 	// Annotate the group ID
@@ -181,7 +181,7 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	// Deploy required resources
 	err = bundle.Deploy(ctx, w.clientSet, cfg.Worker.Namespace)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to deploy test workflow")
+		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to deploy test workflow"), executionworkertypes.StartReasonJobCreateFailed)
 	}
 
 	return &executionworkertypes.ExecuteResult{
@@ -228,7 +228,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 		Runtime:                runtimeOptions,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to process test workflow")
+		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to process test workflow"), executionworkertypes.StartReasonDefinitionInvalid)
 	}
 
 	// Apply the service setup
@@ -256,7 +256,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 	// Deploy required resources
 	err = bundle.Deploy(ctx, w.clientSet, cfg.Worker.Namespace)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to deploy test workflow")
+		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to deploy test workflow"), executionworkertypes.StartReasonJobCreateFailed)
 	}
 
 	return &executionworkertypes.ServiceResult{

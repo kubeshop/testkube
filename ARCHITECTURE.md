@@ -79,7 +79,7 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 - TestWorkflow processing and step execution
 - Result aggregation and status management
 - Execution worker (`executionworker/`): applies the workflow to Kubernetes, watches the job and pod, and stops executions. When a caller aborts or cancels an execution, it passes an actor and an optional cause in `DestroyOptions`, and the worker writes them into the job annotations `testkube.io/termination-actor` and `testkube.io/termination-reason`. The result reader renders them as one sentence, so the stored error message names the component that stopped the execution and, when there is one, the cause.
-- Runner gRPC client (`pkg/runner/grpc/`): receives execution starts from the control plane. When the runner cannot start an execution, the client maps the error to a reason token in `start_reason.go` and declines the execution with the token and the error text, so the control plane stores the cause on the execution.
+- Runner gRPC client (`pkg/runner/grpc/`): receives execution starts from the control plane. When the runner cannot start an execution, the client reads the reason token from the `StartError` in the error chain and declines the execution with the token and the error text, so the control plane stores the cause on the execution.
 
 ### 4. Storage Layer
 

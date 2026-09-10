@@ -278,7 +278,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 				ControlPlane: c.ControlPlaneConfig,
 			})
 			if err != nil {
-				reason := startErrorReason(err)
+				reason := executionworkertypes.StartReasonOf(err)
 				c.logger.Errorw("Failed to start execution.",
 					"executionId", start.GetExecutionId(),
 					"organizationId", c.OrganizationId,
@@ -297,7 +297,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 				// cause on the execution, so the user does not need the runner log.
 				_, callErr := c.client.DeclineExecution(callCtx, &executionv1.DeclineExecutionRequest{
 					ExecutionId: start.ExecutionId,
-					Reason:      proto.String(reason),
+					Reason:      proto.String(string(reason)),
 					Message:     proto.String(err.Error()),
 				}, c.callOpts...)
 				cancel()
