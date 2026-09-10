@@ -9,7 +9,7 @@
  */
 package testkube
 
-// records where a rerun came from, so that a workflow can read the run it descends from and a reader can follow the chain back to its origin.  Separate from `rerun`, which is a narrowing policy carried to the runner and is absent unless the caller asked to re-run specific test cases. This is recorded on every execution, so `execution(\"rerun\")` resolves on any rerun and not only a narrowed one.  Derived by the scheduler from the base execution: a caller supplies the base and nothing else, because a client able to assert a root or an attempt number could forge a chain.
+// records where a rerun came from, so that a workflow can read the run it descends from and a reader can follow the chain back to its origin.  Recorded on every execution, which is what makes the reserved `execution(\"rerun\")` reference resolve inside the pod after any rerun.  Derived by the scheduler from the base execution: a caller supplies the base and nothing else, because a client able to assert a root or an attempt number could forge a chain.
 type TestWorkflowExecutionLineage struct {
 	// the execution this one is a rerun of; empty for an original run
 	BaseId string `json:"baseId,omitempty"`
