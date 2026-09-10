@@ -718,9 +718,9 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			ExecutionReference: &executionID,
 			// Unconditional, unlike Rerun above: every rerun records where it came
 			// from, not just one narrowed to specific test cases.
-			BaseExecutionId:    &executionID,
-			ResolvedWorkflow:   resolvedWorkflow,
-			SilentMode:         silentMode,
+			BaseExecutionId:  &executionID,
+			ResolvedWorkflow: resolvedWorkflow,
+			SilentMode:       silentMode,
 		})
 
 		if err != nil {
