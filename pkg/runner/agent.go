@@ -298,7 +298,7 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 				}
 			case cloud.RunnerRequestType_CANCEL:
 				a.logger.Infow("received cancel request for execution", "environmentId", req.EnvironmentID(), "executionId", req.ExecutionID())
-				originalError := a.runner.Cancel(req.ExecutionID())
+				originalError := a.runner.Cancel(req.ExecutionID(), "")
 				if originalError != nil {
 					err := req.SendError(originalError)
 					if err != nil {
@@ -312,7 +312,7 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 				}
 			case cloud.RunnerRequestType_ABORT:
 				a.logger.Infow("received abort request for execution", "environmentId", req.EnvironmentID(), "executionId", req.ExecutionID())
-				originalError := a.runner.Abort(req.ExecutionID())
+				originalError := a.runner.Abort(req.ExecutionID(), "")
 				if originalError != nil {
 					err := req.SendError(originalError)
 					if err != nil {
