@@ -78,8 +78,8 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 - Core TestWorkflow executor (`testworkflowexecutor/`)
 - TestWorkflow processing and step execution
 - Result aggregation and status management
-- Execution worker (`executionworker/`): applies the workflow to Kubernetes, watches the job and pod, and stops executions. When a caller aborts or cancels an execution, it passes an actor, a reason token, and an optional detail in `DestroyOptions`, and the worker writes them into the job annotations `testkube.io/termination-actor`, `testkube.io/termination-reason`, and `testkube.io/termination-detail`. The result reader renders the words for the actor and the token, so the stored error message names the component that stopped the execution and, when there is one, the cause.
-- Runner gRPC client (`pkg/runner/grpc/`): receives execution starts from the control plane. When the runner cannot start an execution, the client reads the reason token from the `StartError` in the error chain and declines the execution with the token and the error text, so the control plane stores the cause on the execution.
+- Execution worker (`executionworker/`): applies the workflow to Kubernetes, watches the job and pod, and stops executions. When a caller aborts or cancels an execution, it passes an actor code, a reason code, and an optional detail in `DestroyOptions`, and the worker writes them into the job annotations `testkube.io/termination-actor`, `testkube.io/termination-reason`, and `testkube.io/termination-detail`. The result reader renders the words for both codes, so the stored error message names the component that stopped the execution and, when there is one, the cause.
+- Runner gRPC client (`pkg/runner/grpc/`): receives execution starts from the control plane. When the runner cannot start an execution, the client reads the reason code from the `StartError` in the error chain and declines the execution with the code and the error text, so the control plane stores the cause on the execution.
 
 ### 4. Storage Layer
 
@@ -126,7 +126,7 @@ Testkube exposes REST APIs for interacting with core resources and functionality
 - Defines the complete REST API contract
 - Used for client code generation and documentation
 - Generated models: [`pkg/api/v1/testkube/`](pkg/api/v1/testkube/)
-- The stop actor and the reason tokens, with their words, live in the same package as hand-written files, so the worker, the runner, and the control plane share one definition
+- The actor codes and the reason codes, with their words, live in the same package as hand-written files, so the worker, the runner, and the control plane share one definition
 
 **Framework**: Uses [Fiber](https://gofiber.io/) web framework for HTTP routing and middleware
 
