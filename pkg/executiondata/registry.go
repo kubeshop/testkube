@@ -205,6 +205,8 @@ func UnknownRefError(ref string, index int64, known []string) error {
 // to the reserved one silently makes the executed one unreachable by name. So
 // this asks the author to say which they meant.
 func ShadowedReservedRefError(ref string, shadow Execution) error {
-	return fmt.Errorf("%q is a reserved execution reference addressing %s, but this workflow also executed %s under that name - give that one a different 'as' alias",
-		ref, reservedRefMeaning(ref), describeExecution(shadow))
+if shadow.Workflow == ref {
+		return fmt.Errorf("%q is a reserved execution reference addressing %s, but this workflow also executed %s under that name - rename that workflow", ref, reservedRefMeaning(ref), describeExecution(shadow))
+	}
+	return fmt.Errorf("%q is a reserved execution reference addressing %s, but this workflow also executed %s under that name - give that one a different 'as' alias", ref, reservedRefMeaning(ref), describeExecution(shadow))
 }
