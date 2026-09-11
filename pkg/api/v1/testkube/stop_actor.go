@@ -15,6 +15,9 @@ const (
 	StopActorFailFast StopActor = "fail-fast"
 	// StopActorRunner is the runner itself, for example the check for stuck executions.
 	StopActorRunner StopActor = "runner"
+	// StopActorQualityLoop is the quality loop in the control plane, which cancels a run
+	// that a newer commit superseded.
+	StopActorQualityLoop StopActor = "quality-loop"
 	// StopActorAPI is the standalone agent API abort endpoint.
 	StopActorAPI StopActor = "api"
 	// StopActorSystem is the fallback when the caller does not identify itself.
@@ -35,6 +38,8 @@ func (a StopActor) Sentence() string {
 		return "because another parallel worker failed"
 	case StopActorRunner:
 		return "by the runner"
+	case StopActorQualityLoop:
+		return "by the quality loop"
 	case StopActorAPI:
 		return "through the API"
 	default:

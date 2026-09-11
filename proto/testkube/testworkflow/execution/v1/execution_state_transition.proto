@@ -16,4 +16,10 @@ message ExecutionStateTransition {
   // the execution and why. Empty when the Control Plane has no cause to give,
   // and for every other transition.
   string reason = 3;
+  // actor is the token for the component that decided an abort or a cancel, for
+  // example "quality-loop". The runner writes it into the job annotation and renders
+  // its words in front of the reason. Empty when the Control Plane does not name the
+  // actor, and the runner then names the user for a cancel and the Control Plane for
+  // an abort.
+  string actor = 4;
 }
