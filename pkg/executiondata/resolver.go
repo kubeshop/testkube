@@ -40,7 +40,16 @@ func (r Resolver) Resolve(ctx context.Context, ref string, index int64) (Executi
 		// preferring the reserved meaning would instead make that child
 		// unreachable by name, which is the same failure pointing the other way.
 		if r.Registry != nil {
-			if shadow, ok, err := r.Registry.Lookup(ref, index); err == nil && ok {
+			shadow, ok, err := r.Registry.Lookup(ref, index)
+			if err != nil {
+				// An ambiguous match is still something answering to the reserved
+				// name, so the lookup error stands rather than being stepped over.
+				// Swallowing it would resolve the reserved meaning and hand the step
+				// a different execution than it asked for - the very thing refusing
+				// the collision exists to prevent.
+				return Execution{}, err
+			}
+			if ok {
 				return Execution{}, ShadowedReservedRefError(ref, shadow)
 			}
 		}

@@ -110,3 +110,26 @@ func TestIsReservedRef(t *testing.T) {
 	assert.False(t, IsReservedRef("p"))
 	assert.False(t, IsReservedRef(""))
 }
+
+// Two children both answering to a reserved name make Registry.Lookup report an
+// ambiguity. That error has to stand: stepping over it and resolving the
+// reserved meaning hands the step a different execution than it asked for,
+// which is the very thing refusing a collision exists to prevent.
+func TestResolverReservedRefRefusesAnAmbiguousCollision(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	// No EXPECT: the collision is refused before anything is fetched.
+	repository := NewMockExecutionRepository(ctrl)
+
+	registry := NewRegistry()
+	// Two entries with distinct keys that both answer to "rerun": one runs a
+	// workflow of that name under a different alias, the other is aliased "rerun".
+	registry.Add(Execution{Id: "child-1", Workflow: RerunRef, Alias: "a"})
+	registry.Add(Execution{Id: "child-2", Workflow: "producer", Alias: RerunRef})
+
+	resolver := Resolver{Registry: registry, Repository: repository, RerunId: "base-1"}
+	execution, err := resolver.Resolve(context.Background(), RerunRef, 0)
+
+	require.Error(t, err)
+	assert.Empty(t, execution.Id, "must not fall through to the reserved execution")
+	assert.Contains(t, err.Error(), "ambiguous execution")
+}
