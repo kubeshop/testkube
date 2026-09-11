@@ -1,7 +1,7 @@
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: web-unit
+  name: cloud-web-unit
   labels:
     category: unit-component-testing
     quality-loop: "true"
@@ -58,7 +58,7 @@ spec:
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: backoffice-unit
+  name: cloud-backoffice-unit
   labels:
     category: unit-component-testing
     quality-loop: "true"
@@ -115,7 +115,7 @@ spec:
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: runspace-controller-unit
+  name: cloud-runspace-controller-unit
   labels:
     category: unit-component-testing
     quality-loop: "true"
@@ -172,7 +172,7 @@ spec:
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: lint-go
+  name: cloud-lint-go
   labels:
     category: static-analysis
     quality-loop: "true"
@@ -221,7 +221,7 @@ spec:
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: lint-js
+  name: cloud-lint-js
   labels:
     category: static-analysis
     quality-loop: "true"
@@ -286,7 +286,7 @@ spec:
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: lint-helm
+  name: cloud-lint-helm
   labels:
     category: static-analysis
     quality-loop: "true"
@@ -330,7 +330,7 @@ spec:
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: gomod-codegen
+  name: cloud-gomod-codegen
   labels:
     category: build-integration
     quality-loop: "true"
@@ -390,7 +390,7 @@ spec:
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: test-app
+  name: cloud-test-app
   labels:
     category: api-testing
     quality-loop: "true"
