@@ -13,11 +13,16 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 )
 
-// stopRecorder records the reason each stop request carries.
+// stopRecorder records the actor and the reason each stop request carries.
 type stopRecorder struct {
 	mu       sync.Mutex
-	aborted  map[string]string
-	canceled map[string]string
+	aborted  map[string]stop
+	canceled map[string]stop
+}
+
+type stop struct {
+	actor  string
+	reason string
 }
 
 func (r *stopRecorder) Execute(executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error) {
@@ -25,58 +30,60 @@ func (r *stopRecorder) Execute(executionworkertypes.ExecuteRequest) (*executionw
 }
 func (r *stopRecorder) Pause(string) error  { return nil }
 func (r *stopRecorder) Resume(string) error { return nil }
-func (r *stopRecorder) Abort(id, reason string) error {
+func (r *stopRecorder) Abort(id, actor, reason string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.aborted[id] = reason
+	r.aborted[id] = stop{actor: actor, reason: reason}
 	return nil
 }
-func (r *stopRecorder) Cancel(id, reason string) error {
+func (r *stopRecorder) Cancel(id, actor, reason string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.canceled[id] = reason
+	r.canceled[id] = stop{actor: actor, reason: reason}
 	return nil
 }
 
-func TestClient_executeResponse_PassesStopReason(t *testing.T) {
+func TestClient_executeResponse_PassesStopActorAndReason(t *testing.T) {
 	tests := []struct {
 		name         string
 		to           executionv1.ExecutionState
+		actor        *string
 		reason       *string
-		wantAborted  map[string]string
-		wantCanceled map[string]string
+		wantAborted  map[string]stop
+		wantCanceled map[string]stop
 	}{
 		{
 			name:         "abort with a cause",
 			to:           executionv1.ExecutionState_EXECUTION_STATE_ABORTED,
-			reason:       proto.String("the execution ran for too long"),
-			wantAborted:  map[string]string{"exec-1": "the execution ran for too long"},
-			wantCanceled: map[string]string{},
+			reason:       proto.String("execution-timeout"),
+			wantAborted:  map[string]stop{"exec-1": {reason: "execution-timeout"}},
+			wantCanceled: map[string]stop{},
 		},
 		{
-			name:         "cancel with a cause",
+			name:         "cancel with an actor and a cause",
 			to:           executionv1.ExecutionState_EXECUTION_STATE_CANCELLED,
-			reason:       proto.String("all executions of the workflow were canceled"),
-			wantAborted:  map[string]string{},
-			wantCanceled: map[string]string{"exec-1": "all executions of the workflow were canceled"},
+			actor:        proto.String("quality-loop"),
+			reason:       proto.String("superseded"),
+			wantAborted:  map[string]stop{},
+			wantCanceled: map[string]stop{"exec-1": {actor: "quality-loop", reason: "superseded"}},
 		},
 		{
-			name:         "cancel from a control plane that sends no reason",
+			name:         "cancel from a control plane that sends no actor and no reason",
 			to:           executionv1.ExecutionState_EXECUTION_STATE_CANCELLED,
-			reason:       nil,
-			wantAborted:  map[string]string{},
-			wantCanceled: map[string]string{"exec-1": ""},
+			wantAborted:  map[string]stop{},
+			wantCanceled: map[string]stop{"exec-1": {}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			recorder := &stopRecorder{aborted: map[string]string{}, canceled: map[string]string{}}
+			recorder := &stopRecorder{aborted: map[string]stop{}, canceled: map[string]stop{}}
 			c := Client{runner: recorder, logger: zap.NewNop().Sugar()}
 
 			c.executeResponse(context.Background(), &executionv1.GetExecutionUpdatesResponse{
 				Update: []*executionv1.ExecutionStateTransition{{
 					ExecutionId:  proto.String("exec-1"),
 					TransitionTo: tt.to.Enum(),
+					Actor:        tt.actor,
 					Reason:       tt.reason,
 				}},
 			})
