@@ -108,12 +108,26 @@ Embed expressions in strings using `{{}}` syntax:
 | `date(format?)`  | Current date (default: RFC3339 with millis) |
 | `eval(expr)`     | Evaluate expression string                  |
 | `any(values...)` | Return first non-null value                 |
+| `hash(values...)` | SHA-256 of the arguments, as lowercase hex |
+
+`hash` digests a string argument's own bytes and any other argument's canonical
+JSON, separating arguments so that `hash("a", "b") != hash("ab")`. To key a cache on
+what is *in* a set of files, use `hash_files` below — `hash(glob(...))` digests the
+list of matched **paths**, so it does not change when a file's contents change.
 
 ### Filesystem (via libs.NewFsMachine)
-| Function            | Description                 |
-|---------------------|-----------------------------|
-| `file(path)`        | Read file contents          |
-| `glob(patterns...)` | Find files by glob patterns |
+| Function                  | Description                                       |
+|---------------------------|---------------------------------------------------|
+| `file(path)`              | Read file contents                                |
+| `glob(patterns...)`       | Find files by glob patterns                       |
+| `hash_files(patterns...)` | SHA-256 of the *contents* of every matched file    |
+
+`hash_files` sorts the matches before hashing, so the result does not depend on the
+order the patterns matched in, and folds each path into the digest so that moving a
+file changes it. It accepts `glob`'s `!`-prefixed ignore patterns
+(`hash_files("**/*.lock", "!vendor/**")`). No match yields `""` rather than an
+error, since a lockfile that does not exist yet is a normal state while a workflow is
+being written; callers that need a real key should treat `""` as "do not cache".
 
 ## Machine System
 

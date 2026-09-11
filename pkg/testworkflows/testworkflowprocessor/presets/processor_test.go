@@ -9,11 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/apimachinery/pkg/api/resource"
-
 	"github.com/stretchr/testify/assert"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"

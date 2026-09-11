@@ -5,9 +5,12 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -175,4 +178,155 @@ func (t *rewritingTransport) RoundTrip(r *http.Request) (*http.Response, error) 
 		}, nil
 	}
 	return resp, nil
+}
+
+func TestBuildLifecycleRules(t *testing.T) {
+	t.Run("no policy leaves the bucket alone", func(t *testing.T) {
+		// An empty rule set means SetExpirationPolicies makes no call at all, so a
+		// lifecycle an operator configured by hand is not cleared.
+		assert.Empty(t, buildLifecycleRules(ExpirationPolicy{}))
+		assert.Empty(t, buildLifecycleRules(ExpirationPolicy{CachePrefix: ".tkcache/v1"}))
+	})
+
+	t.Run("bucket expiration only", func(t *testing.T) {
+		rules := buildLifecycleRules(ExpirationPolicy{Days: 30})
+
+		require.Len(t, rules, 1)
+		assert.Equal(t, "expiration_policy", rules[0].ID)
+		assert.Equal(t, "Enabled", rules[0].Status)
+		assert.Equal(t, 30, int(rules[0].Expiration.Days))
+		// Unfiltered, so it still covers the whole bucket as it always did.
+		assert.Empty(t, rules[0].RuleFilter.Prefix)
+	})
+
+	t.Run("cache expiration only", func(t *testing.T) {
+		rules := buildLifecycleRules(ExpirationPolicy{CachePrefix: ".tkcache/v1", CacheDays: 7})
+
+		require.Len(t, rules, 1)
+		assert.Equal(t, "cache_expiration_policy", rules[0].ID)
+		assert.Equal(t, ".tkcache/v1", rules[0].RuleFilter.Prefix)
+		assert.Equal(t, 7, int(rules[0].Expiration.Days))
+	})
+
+	t.Run("cache expiration needs a prefix", func(t *testing.T) {
+		// Without one the rule would expire the entire bucket on the cache schedule.
+		assert.Empty(t, buildLifecycleRules(ExpirationPolicy{CacheDays: 7}))
+	})
+
+	t.Run("both rules travel together", func(t *testing.T) {
+		// SetBucketLifecycle replaces the configuration wholesale, so the bucket-wide
+		// rule has to be present in the same call or setting a cache TTL would drop it.
+		rules := buildLifecycleRules(ExpirationPolicy{Days: 30, CachePrefix: ".tkcache/v1", CacheDays: 7})
+
+		require.Len(t, rules, 2)
+		assert.Equal(t, "expiration_policy", rules[0].ID)
+		assert.Equal(t, "cache_expiration_policy", rules[1].ID)
+	})
+}
+
+// TestMergeLifecycleRules covers what makes a default cache expiration safe to ship.
+//
+// SetBucketLifecycle replaces a bucket's configuration wholesale. Testkube writes one
+// on startup, so without this merge every installation that manages its bucket
+// lifecycle elsewhere would lose those rules on upgrade - a change in how long their
+// objects live, caused by nothing they did.
+func TestMergeLifecycleRules(t *testing.T) {
+	foreign := lifecycle.Rule{
+		ID:     "customer-glacier-transition",
+		Status: "Enabled",
+		Expiration: lifecycle.Expiration{
+			Days: lifecycle.ExpirationDays(365),
+		},
+	}
+
+	t.Run("a rule Testkube does not own is carried through", func(t *testing.T) {
+		owned := buildLifecycleRules(ExpirationPolicy{CachePrefix: ".tkcache/v1", CacheDays: 1})
+		require.Len(t, owned, 1)
+
+		merged := mergeLifecycleRules([]lifecycle.Rule{foreign}, owned)
+
+		require.Len(t, merged, 2)
+		assert.Equal(t, foreign.ID, merged[0].ID, "the foreign rule has to survive, and keep its place")
+		assert.Equal(t, cacheExpirationPolicyRuleID, merged[1].ID)
+	})
+
+	t.Run("a rule Testkube owns is replaced, not duplicated", func(t *testing.T) {
+		stale := lifecycle.Rule{
+			ID:         cacheExpirationPolicyRuleID,
+			Status:     "Enabled",
+			Expiration: lifecycle.Expiration{Days: lifecycle.ExpirationDays(30)},
+		}
+		owned := buildLifecycleRules(ExpirationPolicy{CachePrefix: ".tkcache/v1", CacheDays: 1})
+
+		merged := mergeLifecycleRules([]lifecycle.Rule{foreign, stale}, owned)
+
+		require.Len(t, merged, 2)
+		assert.Equal(t, foreign.ID, merged[0].ID)
+		assert.Equal(t, cacheExpirationPolicyRuleID, merged[1].ID)
+		assert.Equal(t, 1, int(merged[1].Expiration.Days), "the new value has to win over the stored one")
+	})
+
+	t.Run("turning an expiration off withdraws its rule", func(t *testing.T) {
+		stale := lifecycle.Rule{
+			ID:         cacheExpirationPolicyRuleID,
+			Status:     "Enabled",
+			Expiration: lifecycle.Expiration{Days: lifecycle.ExpirationDays(30)},
+		}
+
+		// Nothing configured, so nothing is owned - and the rule from a previous run
+		// has to go, or setting the expiration to 0 would leave it deleting caches.
+		merged := mergeLifecycleRules([]lifecycle.Rule{foreign, stale}, buildLifecycleRules(ExpirationPolicy{}))
+
+		require.Len(t, merged, 1)
+		assert.Equal(t, foreign.ID, merged[0].ID)
+	})
+
+	t.Run("both owned rules are recognised", func(t *testing.T) {
+		assert.True(t, isOwnedLifecycleRule(expirationPolicyRuleID))
+		assert.True(t, isOwnedLifecycleRule(cacheExpirationPolicyRuleID))
+		assert.False(t, isOwnedLifecycleRule("customer-glacier-transition"))
+		assert.False(t, isOwnedLifecycleRule(""), "an unnamed rule belongs to whoever wrote it, not to us")
+	})
+}
+
+// TestPresignCreateFileToBucketReturnsExactlyTheSignedHeaders pins the invariant that
+// keeps a conditional grant usable: the headers handed back are the headers the
+// signature covers, no more and no less.
+//
+// Both directions matter. A header that is signed but not returned leaves the caller
+// building an upload the store refuses with a 403 - which reads as a permissions problem
+// rather than a missing header, and is exactly how the commercial plane's two sets
+// drifted apart. A header returned but not signed is dead weight the caller sends for
+// nothing.
+//
+// V4 records the names it signed in the URL, so this needs no object store: signing is
+// local, and the comparison is against X-Amz-SignedHeaders.
+func TestPresignCreateFileToBucketReturnsExactlyTheSignedHeaders(t *testing.T) {
+	client := NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "bucket")
+	require.NoError(t, client.Connect())
+
+	signed, required, err := client.PresignCreateFileToBucket(
+		context.Background(), "bucket", "", "caches/entry.tar.gz", 15*time.Minute)
+	require.NoError(t, err)
+	require.NotEmpty(t, required, "a conditional grant has to carry at least its condition")
+
+	parsed, err := url.Parse(signed)
+	require.NoError(t, err)
+
+	got := strings.Split(parsed.Query().Get("X-Amz-SignedHeaders"), ";")
+
+	// "host" is always signed and is not something a caller supplies, so it is the one
+	// name expected on top of the returned set.
+	want := []string{"host"}
+	for name := range required {
+		want = append(want, strings.ToLower(name))
+	}
+
+	assert.ElementsMatch(t, want, got,
+		"the signed headers and the returned headers have to be the same set")
+
+	// And the condition itself is among them, so the grant is actually conditional
+	// rather than merely symmetric.
+	assert.Equal(t, "*", required[ifNoneMatchHeader])
+	assert.Contains(t, got, strings.ToLower(ifNoneMatchHeader))
 }

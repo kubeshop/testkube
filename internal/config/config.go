@@ -36,9 +36,24 @@ type OSSControlPlaneConfig struct {
 	APIPostgresDSN string `envconfig:"API_POSTGRES_DSN" default:""`
 
 	// Minio
-	StorageEndpoint              string `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
-	StorageBucket                string `envconfig:"STORAGE_BUCKET" default:"testkube-logs"`
-	StorageExpiration            int    `envconfig:"STORAGE_EXPIRATION"`
+	StorageEndpoint   string `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
+	StorageBucket     string `envconfig:"STORAGE_BUCKET" default:"testkube-logs"`
+	StorageExpiration int    `envconfig:"STORAGE_EXPIRATION"`
+	// StorageCacheExpiration expires step dependency caches, in days. 0 disables it.
+	//
+	// One day, because a cache entry is disposable by construction: it is keyed on the
+	// contents of a lockfile, so an entry that is still wanted is rewritten by the next
+	// run that misses it, and one that is not wanted is dead weight in the bucket. Days
+	// are the finest granularity an object store's lifecycle offers, so 1 is the
+	// shortest expiry that can be expressed - it is 24 hours, not a rounding of one.
+	//
+	// A default is only safe because SetExpirationPolicies merges rather than replaces.
+	// Applying a lifecycle rewrites the bucket's configuration wholesale, so before that
+	// merge existed, defaulting this would have dropped the rules of any installation
+	// managing its bucket lifecycle elsewhere, by nothing but an upgrade. Do not give
+	// StorageExpiration a default on this reasoning: that rule is unfiltered and governs
+	// every object in the bucket, where this one is confined to the cache prefix.
+	StorageCacheExpiration       int    `envconfig:"STORAGE_CACHE_EXPIRATION" default:"1"`
 	StorageAccessKeyID           string `envconfig:"STORAGE_ACCESSKEYID" default:""`
 	StorageSecretAccessKey       string `envconfig:"STORAGE_SECRETACCESSKEY" default:""`
 	StorageRegion                string `envconfig:"STORAGE_REGION" default:""`
