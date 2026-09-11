@@ -8,7 +8,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
@@ -22,7 +22,7 @@ func TestGetJobError(t *testing.T) {
 		{
 			name: "actor and cause",
 			job: &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{
-				constants.AnnotationTerminationActor:  string(executionworkertypes.AbortActorRunner),
+				constants.AnnotationTerminationActor:  string(testkube.StopActorRunner),
 				constants.AnnotationTerminationReason: "execution is stuck in running state",
 			}}},
 			want: "by the runner: execution is stuck in running state",
@@ -30,7 +30,7 @@ func TestGetJobError(t *testing.T) {
 		{
 			name: "actor without a cause",
 			job: &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{
-				constants.AnnotationTerminationActor: string(executionworkertypes.AbortActorUser),
+				constants.AnnotationTerminationActor: string(testkube.StopActorUser),
 			}}},
 			want: "by the user",
 		},

@@ -570,7 +570,7 @@ func (s *TestkubeAPI) abortTestWorkflowExecutionHandlerPro() fiber.Handler {
 		// Abort the Test Workflow
 		err = s.ExecutionWorkerClient.Abort(ctx, execution.Id, executionworkertypes.DestroyOptions{
 			Namespace: execution.Namespace,
-			Actor:     executionworkertypes.AbortActorAPI,
+			Actor:     testkube.StopActorAPI,
 		})
 		if err != nil {
 			return s.ClientError(c, "aborting test workflow execution", err)
@@ -801,7 +801,7 @@ func (s *TestkubeAPI) abortAllTestWorkflowExecutionsHandlerPro() fiber.Handler {
 		for _, execution := range executions {
 			err = s.ExecutionWorkerClient.Abort(ctx, execution.Id, executionworkertypes.DestroyOptions{
 				Namespace: execution.Namespace,
-				Actor:     executionworkertypes.AbortActorAPI,
+				Actor:     testkube.StopActorAPI,
 				Reason:    "all executions of the workflow were aborted",
 			})
 			if err != nil {

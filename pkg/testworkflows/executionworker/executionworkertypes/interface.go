@@ -176,64 +176,23 @@ type ControlOptions struct {
 	Namespace string
 }
 
-// AbortActor identifies the component that requested an abort or a cancel.
-type AbortActor string
-
-const (
-	// AbortActorUser is a person who cancels through the API, the CLI, or the dashboard.
-	AbortActorUser AbortActor = "user"
-	// AbortActorControlPlane is the control plane, for example a queue or execution timeout.
-	AbortActorControlPlane AbortActor = "control-plane"
-	// AbortActorTrigger is the trigger cleanup that stops executions of a deleted trigger.
-	AbortActorTrigger AbortActor = "trigger"
-	// AbortActorFailFast is a parallel step that stops its workers after the first failure.
-	AbortActorFailFast AbortActor = "fail-fast"
-	// AbortActorRunner is the runner itself, for example the check for stuck executions.
-	AbortActorRunner AbortActor = "runner"
-	// AbortActorAPI is the standalone agent API abort endpoint.
-	AbortActorAPI AbortActor = "api"
-	// AbortActorSystem is the fallback when the caller does not identify itself.
-	AbortActorSystem AbortActor = "system"
-)
-
 type DestroyOptions struct {
 	// Namespace where it has been deployed.
 	Namespace string
 	// Actor identifies the component that requested the stop. The worker writes it
 	// and the reason into the job annotations, so the result names who stopped it.
-	Actor AbortActor
+	Actor testkube.StopActor
 	// Reason is a short human-readable cause for the stop.
 	Reason string
 }
 
 // TerminationActor returns the actor for the job annotation, or the default when the
 // caller did not set one.
-func (o DestroyOptions) TerminationActor(defaultActor AbortActor) AbortActor {
+func (o DestroyOptions) TerminationActor(defaultActor testkube.StopActor) testkube.StopActor {
 	if o.Actor == "" {
 		return defaultActor
 	}
 	return o.Actor
-}
-
-// Sentence returns the words the result reader uses for the actor after
-// "The execution has been aborted". The reason, when set, follows them.
-func (a AbortActor) Sentence() string {
-	switch a {
-	case AbortActorUser:
-		return "by the user"
-	case AbortActorControlPlane:
-		return "by the control plane"
-	case AbortActorTrigger:
-		return "because its trigger was deleted"
-	case AbortActorFailFast:
-		return "because another parallel worker failed"
-	case AbortActorRunner:
-		return "by the runner"
-	case AbortActorAPI:
-		return "through the API"
-	default:
-		return "by the system"
-	}
 }
 
 type StatusNotification struct {
