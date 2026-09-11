@@ -7719,7 +7719,9 @@ spec:
                       description: unique execution identifier
                       type: string
                     lineage:
-                      description: where this execution came from, when it is a rerun of another one
+                      description: |-
+                        where this execution sits in its chain of reruns. Recorded on every
+                        execution: an original run is its own root at attempt 1, with no base.
                       properties:
                         attempt:
                           description: 1 for an original run, one more than the base for a rerun

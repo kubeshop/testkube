@@ -94,7 +94,8 @@ type TestWorkflowExecutionDetails struct {
 	Tags map[string]string `json:"tags,omitempty"`
 	// running context for the test workflow execution (Pro edition only)
 	RunningContext *TestWorkflowRunningContext `json:"runningContext,omitempty"`
-	// where this execution came from, when it is a rerun of another one
+	// where this execution sits in its chain of reruns. Recorded on every
+	// execution: an original run is its own root at attempt 1, with no base.
 	Lineage *TestWorkflowExecutionLineage `json:"lineage,omitempty"`
 }
 

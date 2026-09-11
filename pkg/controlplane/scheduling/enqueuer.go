@@ -228,6 +228,12 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 		if err != nil {
 			return nil, fmt.Errorf("cannot rerun execution %q: %w", baseID, err)
 		}
+		// Get resolves by id or name, and this field is defined as an id. A name
+		// that happens to match would derive the chain from whichever execution
+		// answered to it, so anything but an exact id match is refused.
+		if base.Id != baseID {
+			return nil, fmt.Errorf("cannot rerun execution %q: it is not an execution id", baseID)
+		}
 		baseLineage = deriveLineage(&base)
 	}
 
