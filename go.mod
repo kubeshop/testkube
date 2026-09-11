@@ -37,7 +37,7 @@ require (
 	github.com/h2non/filetype v1.1.3
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/itchyny/gojq v0.12.19
-	github.com/jackc/pgx/v5 v5.10.0
+	github.com/jackc/pgx/v5 v5.11.0
 	github.com/jellydator/ttlcache/v3 v3.4.1
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -53,7 +53,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.32.2
 	github.com/onsi/gomega v1.43.0
 	github.com/otiai10/copy v1.14.1
-	github.com/pashagolub/pgxmock/v5 v5.1.0
+	github.com/pashagolub/pgxmock/v5 v5.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/pressly/goose/v3 v3.28.0
 	github.com/prometheus/client_golang v1.24.1
