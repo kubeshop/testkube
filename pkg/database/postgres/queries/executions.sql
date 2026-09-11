@@ -1,6 +1,6 @@
 -- name: GetTestWorkflowExecution :one
 SELECT
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.lineage_base_id, e.lineage_root_id, e.lineage_attempt, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -61,7 +61,7 @@ WHERE (e.id = @id OR e.name = @id) AND (e.organization_id = @organization_id AND
 
 -- name: GetTestWorkflowExecutionByNameAndTestWorkflow :one
 SELECT
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.lineage_base_id, e.lineage_root_id, e.lineage_attempt, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -152,7 +152,7 @@ WITH latest AS (
      LIMIT 1)
 )
 SELECT
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.lineage_base_id, e.lineage_root_id, e.lineage_attempt, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -213,7 +213,7 @@ WHERE e.id = (SELECT id FROM latest LIMIT 1);
 
 -- name: GetLatestTestWorkflowExecutionsByTestWorkflows :many
 SELECT DISTINCT ON (e.workflow_name)
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.lineage_base_id, e.lineage_root_id, e.lineage_attempt, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -275,7 +275,7 @@ ORDER BY e.workflow_name, e.status_at DESC;
 
 -- name: GetRunningTestWorkflowExecutions :many
 SELECT
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.lineage_base_id, e.lineage_root_id, e.lineage_attempt, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -337,7 +337,7 @@ ORDER BY e.id DESC;
 
 -- name: GetFinishedTestWorkflowExecutions :many
 SELECT
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.lineage_base_id, e.lineage_root_id, e.lineage_attempt, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -488,7 +488,7 @@ LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 -- generic plan cause a pathological seq-scan.
 -- Backed by idx_twe_org_env_wfname_sched (organization_id, environment_id, workflow_name, scheduled_at DESC).
 SELECT
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.lineage_base_id, e.lineage_root_id, e.lineage_attempt, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -659,7 +659,7 @@ GROUP BY e.status;
 
 -- name: GetTestWorkflowExecutions :many
 SELECT
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.lineage_base_id, e.lineage_root_id, e.lineage_attempt, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -806,11 +806,11 @@ LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 INSERT INTO test_workflow_executions (
     id, group_id, runner_id, runner_target, runner_original_target, name, namespace, number,
     scheduled_at, assigned_at, status_at, test_workflow_execution_name, disable_webhooks,
-    tags, running_context, config_params, organization_id, environment_id, runtime, silent_mode
+    tags, running_context, config_params, organization_id, environment_id, runtime, lineage_base_id, lineage_root_id, lineage_attempt, silent_mode
 ) VALUES (
     @id, @group_id, @runner_id, @runner_target, @runner_original_target, @name, @namespace, @number,
     @scheduled_at, @assigned_at, @status_at, @test_workflow_execution_name, @disable_webhooks,
-    @tags, @running_context, @config_params, @organization_id, @environment_id, @runtime, @silent_mode
+    @tags, @running_context, @config_params, @organization_id, @environment_id, @runtime, @lineage_base_id, @lineage_root_id, @lineage_attempt, @silent_mode
 );
 
 -- name: InsertTestWorkflowSignature :one
@@ -1029,7 +1029,7 @@ RETURNING test_workflow_executions.id;
 
 -- name: GetUnassignedTestWorkflowExecutions :many
 SELECT
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.lineage_base_id, e.lineage_root_id, e.lineage_attempt, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -1140,7 +1140,7 @@ WHERE id = @id AND (organization_id = @organization_id AND environment_id = @env
 
 -- name: GetTestWorkflowExecutionsSummary :many
 SELECT
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.lineage_base_id, e.lineage_root_id, e.lineage_attempt, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -1296,7 +1296,7 @@ ORDER BY e.scheduled_at DESC;
 -- generic plan cause a pathological seq-scan.
 -- Backed by idx_twe_env_workflow_scheduled (organization_id, environment_id, workflow_name, scheduled_at DESC).
 SELECT
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.lineage_base_id, e.lineage_root_id, e.lineage_attempt, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -1452,7 +1452,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
 
 -- name: GetTestWorkflowExecutionWithRunner :one
 SELECT
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.lineage_base_id, e.lineage_root_id, e.lineage_attempt, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,

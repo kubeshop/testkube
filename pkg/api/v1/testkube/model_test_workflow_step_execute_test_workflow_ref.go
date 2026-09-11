@@ -20,11 +20,12 @@ type TestWorkflowStepExecuteTestWorkflowRef struct {
 	ExecutionName string                                `json:"executionName,omitempty"`
 	Tarball       map[string]TestWorkflowTarballRequest `json:"tarball,omitempty"`
 	Config        map[string]string                     `json:"config,omitempty"`
-	Fetch         []TestWorkflowStepExecuteFetch        `json:"fetch,omitempty"`
-	Selector      *LabelSelector                        `json:"selector,omitempty"`
-	Target        *ExecutionTarget                      `json:"target,omitempty"`
-	Count         *BoxedString                          `json:"count,omitempty"`
-	MaxCount      *BoxedString                          `json:"maxCount,omitempty"`
+	// instructions for downloading artifacts produced by executed test workflows
+	Fetch    []TestWorkflowStepExecuteFetch `json:"fetch,omitempty"`
+	Selector *LabelSelector                 `json:"selector,omitempty"`
+	Target   *ExecutionTarget               `json:"target,omitempty"`
+	Count    *BoxedString                   `json:"count,omitempty"`
+	MaxCount *BoxedString                   `json:"maxCount,omitempty"`
 	// matrix of parameters to spawn instances
 	Matrix map[string]interface{} `json:"matrix,omitempty"`
 	// parameters that should be distributed across sharded instances

@@ -39,6 +39,22 @@ type ExecutionConfig struct {
 	GlobalEnv        []testworkflowsv1.EnvVar             `json:"G,omitempty"`
 	SecretMountPaths map[string][]string                  `json:"S,omitempty"`
 	RunningContext   *testkube.TestWorkflowRunningContext `json:"R,omitempty"`
+	Lineage          *LineageConfig                       `json:"L,omitempty"`
+}
+
+// LineageConfig is the pod's copy of where this execution sits in its chain.
+//
+// Recorded on every execution, not only reruns: an original run carries its own
+// id as RootId at Attempt 1 and an empty BaseId. It is what makes the reserved
+// execution("rerun") reference resolve inside the pod, which an empty BaseId
+// correctly refuses to do.
+type LineageConfig struct {
+	// BaseId is the execution this one is a rerun of; empty for an original run.
+	BaseId string `json:"i,omitempty"`
+	// RootId is the first execution in the chain; its own id for an original run.
+	RootId string `json:"r,omitempty"`
+	// Attempt is 1 for an original run, one more than the base for a rerun.
+	Attempt int32 `json:"a,omitempty"`
 }
 
 type WorkflowConfig struct {

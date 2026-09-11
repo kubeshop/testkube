@@ -167,3 +167,30 @@ func (e *TestWorkflowExecution) Clone() *TestWorkflowExecution {
 	_ = json.Unmarshal(v, &result)
 	return &result
 }
+
+// EffectiveLineage is the execution's lineage, synthesized when the record
+// carries none.
+//
+// Lineage is written for every execution from the moment it exists, but rows
+// written before it did have none, and backfilling them would rewrite the whole
+// table. Those rows mean exactly what an original run means - no base, itself as
+// the chain root, attempt one - so the default is computed here rather than
+// stored. Deriving it in one place keeps the two repositories from disagreeing.
+func (e *TestWorkflowExecution) EffectiveLineage() TestWorkflowExecutionLineage {
+	if e == nil {
+		return TestWorkflowExecutionLineage{}
+	}
+	if e.Lineage != nil {
+		lineage := *e.Lineage
+		// An old row read through a path that filled in a partial record still
+		// has to come back coherent, so the same defaults apply field by field.
+		if lineage.RootId == "" {
+			lineage.RootId = e.Id
+		}
+		if lineage.Attempt == 0 {
+			lineage.Attempt = 1
+		}
+		return lineage
+	}
+	return TestWorkflowExecutionLineage{RootId: e.Id, Attempt: 1}
+}

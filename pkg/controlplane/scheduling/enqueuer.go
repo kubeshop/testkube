@@ -218,6 +218,25 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 		})
 	}
 
+	// Derive the lineage once for the whole request. Loading the base is also the
+	// environment check the wire contract asks for: the repository is scoped to
+	// this organization and environment, so a base belonging to another one comes
+	// back not-found and the request is refused rather than silently honoured.
+	var baseLineage *testkube.TestWorkflowExecutionLineage
+	if baseID := req.GetBaseExecutionId(); baseID != "" {
+		base, err := e.executionRepository.Get(ctx, baseID)
+		if err != nil {
+			return nil, fmt.Errorf("cannot rerun execution %q: %w", baseID, err)
+		}
+		// Get resolves by id or name, and this field is defined as an id. A name
+		// that happens to match would derive the chain from whichever execution
+		// answered to it, so anything but an exact id match is refused.
+		if base.Id != baseID {
+			return nil, fmt.Errorf("cannot rerun execution %q: it is not an execution id", baseID)
+		}
+		baseLineage = deriveLineage(&base)
+	}
+
 	hasResolvedWorkflow := len(req.ResolvedWorkflow) != 0
 	if hasResolvedWorkflow {
 		var workflow testkube.TestWorkflow
@@ -249,6 +268,14 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 			AppendTags(exec.Tags).
 			SetTarget(target).
 			SetOriginalTarget(originalTarget)
+
+		// The root is per-execution: a label-selector request fans out, and each
+		// original run starts a chain of its own.
+		if baseLineage != nil {
+			current.SetLineage(baseLineage)
+		} else {
+			current.SetLineage(&testkube.TestWorkflowExecutionLineage{RootId: current.ID(), Attempt: 1})
+		}
 
 		if !hasResolvedWorkflow {
 			current.SetWorkflow(testworkflows2.MapAPIToKube(workflow))
@@ -407,4 +434,20 @@ func countMapBytes(m map[string]string) int {
 		totalBytes += len(k) + len(v)
 	}
 	return totalBytes
+}
+
+// deriveLineage works out the lineage of a rerun of base.
+//
+// The root is carried down from the base rather than set to it, so that every
+// execution of a chain shares one root however deep the chain gets - a rerun of
+// a rerun still points at the original. EffectiveLineage supplies the defaults
+// for a base recorded before lineage existed, which is why a nil Lineage on the
+// base yields attempt 2 rather than attempt 1.
+func deriveLineage(base *testkube.TestWorkflowExecution) *testkube.TestWorkflowExecutionLineage {
+	parent := base.EffectiveLineage()
+	return &testkube.TestWorkflowExecutionLineage{
+		BaseId:  base.Id,
+		RootId:  parent.RootId,
+		Attempt: parent.Attempt + 1,
+	}
 }

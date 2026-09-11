@@ -18,6 +18,7 @@ func CreateExecutionMachine(cfg *ExecutionConfig) expressions.Machine {
 		"tags":            cfg.Tags,
 	}
 	execution["runningContext"] = buildRunningContext(cfg.RunningContext)
+	execution["lineage"] = buildLineage(cfg.Lineage, cfg.Id)
 
 	return expressions.NewMachine().
 		Register("execution", execution).
@@ -27,6 +28,34 @@ func CreateExecutionMachine(cfg *ExecutionConfig) expressions.Machine {
 		RegisterStringMap("environment", map[string]string{
 			"id": cfg.EnvironmentId,
 		})
+}
+
+// buildLineage exposes execution.lineage.* to the workflow spec.
+//
+// An execution with no lineage recorded resolves to the original-run defaults
+// rather than to nothing, so that {{ execution.lineage.attempt }} is usable in
+// every workflow instead of only in reruns.
+func buildLineage(cfg *LineageConfig, executionId string) map[string]interface{} {
+	// The defaults have to match TestWorkflowExecution.EffectiveLineage() field
+	// by field, or an execution recorded before lineage existed reports one
+	// lineage through the API and a different one to its own expressions. An
+	// original run is its own root, so rootId falls back to this execution id
+	// rather than to the empty string.
+	var lineage LineageConfig
+	if cfg != nil {
+		lineage = *cfg
+	}
+	if lineage.RootId == "" {
+		lineage.RootId = executionId
+	}
+	if lineage.Attempt == 0 {
+		lineage.Attempt = 1
+	}
+	return map[string]interface{}{
+		"baseId":  lineage.BaseId,
+		"rootId":  lineage.RootId,
+		"attempt": lineage.Attempt,
+	}
 }
 
 func buildRunningContext(rc *testkube.TestWorkflowRunningContext) map[string]interface{} {

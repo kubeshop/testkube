@@ -58,7 +58,10 @@ type ExecutionStart struct {
 	VariableOverrides map[string]string `protobuf:"bytes,11,rep,name=variable_overrides,json=variableOverrides" json:"variable_overrides,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// tags contains execution-level metadata tags forwarded to the runner so
 	// expressions like execution.tags.<key> can be resolved in all start paths.
-	Tags          map[string]string `protobuf:"bytes,12,rep,name=tags" json:"tags,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Tags map[string]string `protobuf:"bytes,12,rep,name=tags" json:"tags,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// lineage records the execution this one is a rerun of, along with the chain
+	// root and attempt number. Present on every execution.
+	Lineage       *ExecutionLineage `protobuf:"bytes,13,opt,name=lineage" json:"lineage,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -177,11 +180,18 @@ func (x *ExecutionStart) GetTags() map[string]string {
 	return nil
 }
 
+func (x *ExecutionStart) GetLineage() *ExecutionLineage {
+	if x != nil {
+		return x.Lineage
+	}
+	return nil
+}
+
 var File_testkube_testworkflow_execution_v1_execution_start_proto protoreflect.FileDescriptor
 
 const file_testkube_testworkflow_execution_v1_execution_start_proto_rawDesc = "" +
 	"\n" +
-	"8testkube/testworkflow/execution/v1/execution_start.proto\x12\"testkube.testworkflow.execution.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd4\x05\n" +
+	"8testkube/testworkflow/execution/v1/execution_start.proto\x12\"testkube.testworkflow.execution.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a:testkube/testworkflow/execution/v1/execution_lineage.proto\"\xa4\x06\n" +
 	"\x0eExecutionStart\x12!\n" +
 	"\fexecution_id\x18\x01 \x01(\tR\vexecutionId\x12\x19\n" +
 	"\bgroup_id\x18\x02 \x01(\tR\agroupId\x12\x12\n" +
@@ -195,7 +205,8 @@ const file_testkube_testworkflow_execution_v1_execution_start_proto_rawDesc = ""
 	"\rworkflow_name\x18\n" +
 	" \x01(\tR\fworkflowName\x12x\n" +
 	"\x12variable_overrides\x18\v \x03(\v2I.testkube.testworkflow.execution.v1.ExecutionStart.VariableOverridesEntryR\x11variableOverrides\x12P\n" +
-	"\x04tags\x18\f \x03(\v2<.testkube.testworkflow.execution.v1.ExecutionStart.TagsEntryR\x04tags\x1aD\n" +
+	"\x04tags\x18\f \x03(\v2<.testkube.testworkflow.execution.v1.ExecutionStart.TagsEntryR\x04tags\x12N\n" +
+	"\alineage\x18\r \x01(\v24.testkube.testworkflow.execution.v1.ExecutionLineageR\alineage\x1aD\n" +
 	"\x16VariableOverridesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a7\n" +
@@ -222,16 +233,18 @@ var file_testkube_testworkflow_execution_v1_execution_start_proto_goTypes = []an
 	nil,                           // 1: testkube.testworkflow.execution.v1.ExecutionStart.VariableOverridesEntry
 	nil,                           // 2: testkube.testworkflow.execution.v1.ExecutionStart.TagsEntry
 	(*timestamppb.Timestamp)(nil), // 3: google.protobuf.Timestamp
+	(*ExecutionLineage)(nil),      // 4: testkube.testworkflow.execution.v1.ExecutionLineage
 }
 var file_testkube_testworkflow_execution_v1_execution_start_proto_depIdxs = []int32{
 	3, // 0: testkube.testworkflow.execution.v1.ExecutionStart.queued_at:type_name -> google.protobuf.Timestamp
 	1, // 1: testkube.testworkflow.execution.v1.ExecutionStart.variable_overrides:type_name -> testkube.testworkflow.execution.v1.ExecutionStart.VariableOverridesEntry
 	2, // 2: testkube.testworkflow.execution.v1.ExecutionStart.tags:type_name -> testkube.testworkflow.execution.v1.ExecutionStart.TagsEntry
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	4, // 3: testkube.testworkflow.execution.v1.ExecutionStart.lineage:type_name -> testkube.testworkflow.execution.v1.ExecutionLineage
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_testkube_testworkflow_execution_v1_execution_start_proto_init() }
@@ -239,6 +252,7 @@ func file_testkube_testworkflow_execution_v1_execution_start_proto_init() {
 	if File_testkube_testworkflow_execution_v1_execution_start_proto != nil {
 		return
 	}
+	file_testkube_testworkflow_execution_v1_execution_lineage_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

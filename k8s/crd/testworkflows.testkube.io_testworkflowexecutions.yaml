@@ -186,6 +186,24 @@ spec:
                     id:
                       description: unique execution identifier
                       type: string
+                    lineage:
+                      description: |-
+                        where this execution sits in its chain of reruns. Recorded on every
+                        execution: an original run is its own root at attempt 1, with no base.
+                      properties:
+                        attempt:
+                          description: 1 for an original run, one more than the base for a rerun
+                          format: int32
+                          type: integer
+                        baseId:
+                          description: the execution this one is a rerun of; empty for an original run
+                          type: string
+                        rootId:
+                          description: |-
+                            the first execution in the chain. An original run is its own root, so
+                            that every execution of a chain shares one rootId.
+                          type: string
+                      type: object
                     name:
                       description: execution name
                       type: string

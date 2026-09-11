@@ -163,6 +163,21 @@ func (e *IntermediateExecution) SetSilentMode(silentMode *testkube.SilentMode) *
 	return e
 }
 
+// SetLineage records where this execution came from.
+//
+// Copied rather than aliased: a fan-out shares one derived triple across every
+// execution in the request, and Clone() would otherwise hand them all the same
+// struct for a later caller to mutate underneath each other.
+func (e *IntermediateExecution) SetLineage(lineage *testkube.TestWorkflowExecutionLineage) *IntermediateExecution {
+	if lineage == nil {
+		e.execution.Lineage = nil
+		return e
+	}
+	copied := *lineage
+	e.execution.Lineage = &copied
+	return e
+}
+
 // IsSilent checks if the workflow has silent set to true in its execution schema
 func (e *IntermediateExecution) IsSilent() bool {
 	if e.cr == nil {
@@ -332,6 +347,7 @@ func (e *IntermediateExecution) Resolve(organizationId, organizationSlug, enviro
 		EnvironmentSlug:  environmentSlug,
 		ParentIds:        strings.Join(parentExecutionIds, "/"),
 		RunningContext:   e.execution.RunningContext,
+		Lineage:          lineageConfigOf(e.execution.Lineage),
 	})
 	resourceMachine := testworkflowconfig.CreateResourceMachine(&testworkflowconfig.ResourceConfig{
 		Id:     e.execution.Id,
@@ -435,5 +451,21 @@ func (e *IntermediateExecution) Clone() *IntermediateExecution {
 		prepended:     e.prepended,
 		sensitiveData: e.sensitiveData.Clone(),
 		variables:     maps.Clone(e.variables),
+	}
+}
+
+// lineageConfigOf projects the recorded lineage onto the pod's config shape.
+//
+// Nil stays nil: the expression machine turns that into the original-run
+// defaults, and inventing a record here would make every execution look like a
+// rerun of itself.
+func lineageConfigOf(lineage *testkube.TestWorkflowExecutionLineage) *testworkflowconfig.LineageConfig {
+	if lineage == nil {
+		return nil
+	}
+	return &testworkflowconfig.LineageConfig{
+		BaseId:  lineage.BaseId,
+		RootId:  lineage.RootId,
+		Attempt: lineage.Attempt,
 	}
 }
