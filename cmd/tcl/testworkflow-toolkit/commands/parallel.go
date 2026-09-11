@@ -822,7 +822,8 @@ func (o *ResumeOrchestrator) resumeAllWorkers(ctx context.Context) {
 				_ = spawn.ParallelExecutionWorker(o.cfg).Abort(ctx, err.Id, executionworkertypes.DestroyOptions{
 					Namespace: o.namespaces[index],
 					Actor:     testkube.StopActorRunner,
-					Reason:    "the parallel worker could not be resumed: " + err.Error.Error(),
+					Reason:    testkube.StopReasonWorkerResumeFailed,
+					Detail:    err.Error.Error(),
 				})
 			}
 		}

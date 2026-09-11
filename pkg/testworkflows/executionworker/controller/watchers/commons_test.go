@@ -20,22 +20,39 @@ func TestGetJobError(t *testing.T) {
 		want string
 	}{
 		{
-			name: "actor and cause",
+			name: "actor and reason token",
 			job: &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{
 				constants.AnnotationTerminationActor:  string(testkube.StopActorRunner),
-				constants.AnnotationTerminationReason: "execution is stuck in running state",
+				constants.AnnotationTerminationReason: string(testkube.StopReasonExecutionStuck),
 			}}},
-			want: "by the runner: execution is stuck in running state",
+			want: "by the runner: the execution is stuck in the running state",
 		},
 		{
-			name: "actor without a cause",
+			name: "actor, reason token, and detail",
+			job: &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{
+				constants.AnnotationTerminationActor:  string(testkube.StopActorRunner),
+				constants.AnnotationTerminationReason: string(testkube.StopReasonWorkerResumeFailed),
+				constants.AnnotationTerminationDetail: "pod not found",
+			}}},
+			want: "by the runner: the parallel worker could not be resumed: pod not found",
+		},
+		{
+			name: "actor without a reason",
 			job: &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{
 				constants.AnnotationTerminationActor: string(testkube.StopActorUser),
 			}}},
 			want: "by the user",
 		},
 		{
-			name: "cause without an actor, as an older worker writes it",
+			name: "token without words yet keeps its raw text",
+			job: &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{
+				constants.AnnotationTerminationActor:  string(testkube.StopActorControlPlane),
+				constants.AnnotationTerminationReason: "later-added",
+			}}},
+			want: "by the control plane: later-added",
+		},
+		{
+			name: "free text without an actor, as an older worker writes it",
 			job: &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{
 				constants.AnnotationTerminationReason: "Job has been aborted by the system",
 			}}},
