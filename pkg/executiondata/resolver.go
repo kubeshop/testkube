@@ -7,11 +7,12 @@ import (
 
 // Resolver turns a reference into the execution it addresses.
 //
-// It looks in the registry first, so the common case - an execution this workflow
-// scheduled itself - costs no network call and keeps the data only the registry holds,
-// such as the entry's alias and its position within a fan-out. Anything the registry does
-// not know is asked of the control plane, which is what serves a raw execution id handed
-// down as configuration, and the reserved "parent" reference.
+// The reserved references are resolved first, so nothing a workflow executes can
+// shadow them. Everything else is looked up in the registry, so the common case -
+// an execution this workflow scheduled itself - costs no network call and keeps
+// the data only the registry holds, such as the entry's alias and its position
+// within a fan-out. Anything the registry does not know is asked of the control
+// plane, which is what serves a raw execution id handed down as configuration.
 type Resolver struct {
 	// Registry holds the executions the current workflow scheduled. May be nil.
 	Registry *Registry
@@ -26,7 +27,29 @@ type Resolver struct {
 
 // Resolve finds the execution a reference addresses, or explains why it cannot.
 func (r Resolver) Resolve(ctx context.Context, ref string, index int64) (Execution, error) {
-	if r.Registry != nil {
+	id := ref
+
+	if IsReservedRef(ref) {
+		// A reserved reference wins over the registry. Looking in the registry
+		// first would let a workflow that executed a child aliased "parent" or
+		// "rerun" - or simply ran a workflow of that name - shadow the reserved
+		// meaning, and the step would read a different execution than it asked
+		// for with nothing to say so.
+		//
+		// The collision is reported rather than resolved either way: silently
+		// preferring the reserved meaning would instead make that child
+		// unreachable by name, which is the same failure pointing the other way.
+		if r.Registry != nil {
+			if shadow, ok, err := r.Registry.Lookup(ref, index); err == nil && ok {
+				return Execution{}, ShadowedReservedRefError(ref, shadow)
+			}
+		}
+
+		var err error
+		if id, err = r.reservedId(ref); err != nil {
+			return Execution{}, err
+		}
+	} else if r.Registry != nil {
 		execution, ok, err := r.Registry.Lookup(ref, index)
 		if err != nil {
 			return Execution{}, err
@@ -34,20 +57,6 @@ func (r Resolver) Resolve(ctx context.Context, ref string, index int64) (Executi
 		if ok {
 			return execution, nil
 		}
-	}
-
-	id := ref
-	switch ref {
-	case ParentRef:
-		if len(r.ParentIds) == 0 {
-			return Execution{}, fmt.Errorf("cannot resolve execution(%q): this execution has no parent", ParentRef)
-		}
-		id = r.ParentIds[len(r.ParentIds)-1]
-	case RerunRef:
-		if r.RerunId == "" {
-			return Execution{}, fmt.Errorf("cannot resolve execution(%q): this execution is not a rerun of another one", RerunRef)
-		}
-		id = r.RerunId
 	}
 
 	// Fan-out indexes only exist within the local registry - anything resolved
@@ -70,10 +79,28 @@ func (r Resolver) Resolve(ctx context.Context, ref string, index int64) (Executi
 	if execution.Id == "" {
 		return Execution{}, UnknownRefError(ref, index, r.knownRefs())
 	}
-	if ref == ParentRef || ref == RerunRef {
+	if IsReservedRef(ref) {
 		execution.Alias = ref
 	}
 	return execution, nil
+}
+
+// reservedId is the execution a reserved reference points at, or an explanation
+// of why this execution has none.
+func (r Resolver) reservedId(ref string) (string, error) {
+	switch ref {
+	case ParentRef:
+		if len(r.ParentIds) == 0 {
+			return "", fmt.Errorf("cannot resolve execution(%q): this execution has no parent", ParentRef)
+		}
+		return r.ParentIds[len(r.ParentIds)-1], nil
+	case RerunRef:
+		if r.RerunId == "" {
+			return "", fmt.Errorf("cannot resolve execution(%q): this execution is not a rerun of another one", RerunRef)
+		}
+		return r.RerunId, nil
+	}
+	return ref, nil
 }
 
 func (r Resolver) knownRefs() []string {

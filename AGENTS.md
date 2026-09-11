@@ -58,6 +58,14 @@ Still to come: Control Plane persistence and enforcement of the owner, and the `
 - Regenerate SQL code when query files change via `make generate-sqlc`.
 - Refresh mocks for new or updated interfaces using `make generate-mocks`.
 
+## Execution lineage and reruns
+
+- `TestWorkflowExecutionLineage` (`baseId`, `rootId`, `attempt`) records what an execution is a rerun of. It is written for **every** execution, not only reruns: an original run is its own root at attempt 1, so "every execution of chain R" is the single predicate `lineage_root_id = R` and includes the original. `TestWorkflowExecution.EffectiveLineage()` synthesizes that default for rows written before the columns existed, which is why nothing has to be backfilled - derive it there and nowhere else, or the two repositories will disagree.
+- It travels `ScheduleRequest.base_execution_id` -> `Enqueuer.deriveLineage` -> the execution record -> `ExecutionStart.lineage` -> `ExecutionConfig.Lineage` -> `RerunExecutionId()` in the pod, which is what makes the reserved `execution("rerun")` reference resolve. **Every path that builds an `ExecutionStart` must set it from the execution record**, in this repo and in `testkube-cloud-api`: a writer that forgets sends the pod no lineage, `execution("rerun")` silently stops resolving, and nothing reports it. That has already happened once - `go build` cannot catch it, because an unused helper function is not a compile error; the `unused` linter is the guard.
+- Only the base id travels on the wire. The Control Plane derives the root and attempt by loading the base through the environment-scoped results repository, which is also where it confirms the base belongs to the caller's environment - `proto/service.proto` requires that, and the load is what enforces it. A caller able to assert a root or an attempt could forge a chain.
+- **An original run has an empty `baseId` and must resolve to no rerun.** Returning `rootId` there would make every execution a rerun of itself.
+- **Reserved references win over the registry.** `execution("parent")` and `execution("rerun")` are resolved before the executions the workflow scheduled, so a child aliased - or a workflow named - `parent`/`rerun` cannot shadow them. A collision is refused rather than resolved either way, because preferring the reserved meaning would instead make that child unreachable by name. `IsReservedRef` is the list.
+
 ## Transient-failure retries
 
 - `pkg/runner/runner.go` runs `worker.Destroy` (cleanup of the execution's Secrets/Pods after the workflow ends) through the shared `retry()` helper via `destroyResources`. Bounded by `CleanupResourcesRetryCount` and `CleanupResourcesRetryDelay`; a brief `kube-apiserver` blip during teardown should not leave orphan resources in the customer namespace.

@@ -196,3 +196,15 @@ func UnknownRefError(ref string, index int64, known []string) error {
 	}
 	return fmt.Errorf("unknown execution %q%s: available executions are %s (anything else must be addressed by execution id)", ref, position, strings.Join(known, ", "))
 }
+
+// ShadowedReservedRefError explains that a reference Testkube reserves also names
+// something this workflow executed.
+//
+// Neither reading is safe to pick: resolving to the executed one silently hands
+// the step a different execution than the reserved word promises, and resolving
+// to the reserved one silently makes the executed one unreachable by name. So
+// this asks the author to say which they meant.
+func ShadowedReservedRefError(ref string, shadow Execution) error {
+	return fmt.Errorf("%q is a reserved execution reference addressing %s, but this workflow also executed %s under that name - give that one a different 'as' alias",
+		ref, reservedRefMeaning(ref), describeExecution(shadow))
+}

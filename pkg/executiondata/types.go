@@ -168,3 +168,24 @@ func OutputsOf(execution *testkube.TestWorkflowExecution) map[string]string {
 	}
 	return values
 }
+
+// IsReservedRef reports whether a reference has a meaning Testkube assigns,
+// rather than naming something the workflow executed.
+//
+// Reserved references are resolved before the registry, so this is also the
+// list of names an `as` alias cannot usefully take.
+func IsReservedRef(ref string) bool {
+	return ref == ParentRef || ref == RerunRef
+}
+
+// reservedRefMeaning describes what a reserved reference addresses, for an error
+// that has to explain the collision to a workflow author.
+func reservedRefMeaning(ref string) string {
+	switch ref {
+	case ParentRef:
+		return "the execution that scheduled this one"
+	case RerunRef:
+		return "the execution this one is a rerun of"
+	}
+	return ref
+}
