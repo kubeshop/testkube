@@ -10,9 +10,9 @@ message ExecutionStateTransition {
   string execution_id = 1;
   // transition_to is the state the execution should be transitioned into.
   ExecutionState transition_to = 2;
-  // reason is the cause of an abort or a cancel, as free text, for example
-  // "the execution ran for too long". The runner writes it into the job
-  // annotation next to the actor, so the execution result names who stopped
+  // reason is the token for the cause of an abort or a cancel, for example
+  // "execution-timeout". The runner writes it into the job annotation next to
+  // the actor and renders its words, so the execution result names who stopped
   // the execution and why. Empty when the Control Plane has no cause to give,
   // and for every other transition.
   string reason = 3;

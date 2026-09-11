@@ -802,7 +802,7 @@ func (s *TestkubeAPI) abortAllTestWorkflowExecutionsHandlerPro() fiber.Handler {
 			err = s.ExecutionWorkerClient.Abort(ctx, execution.Id, executionworkertypes.DestroyOptions{
 				Namespace: execution.Namespace,
 				Actor:     testkube.StopActorAPI,
-				Reason:    "all executions of the workflow were aborted",
+				Reason:    testkube.StopReasonAbortAll,
 			})
 			if err != nil {
 				return s.ClientError(c, errPrefix, err)

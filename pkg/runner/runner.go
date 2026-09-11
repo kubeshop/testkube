@@ -617,8 +617,7 @@ func (r *runner) abortExecution(ctx context.Context, environmentID, executionID 
 	if execution.Result == nil {
 		return errors.New("execution result is nil")
 	}
-	const stuckReason = "execution is stuck in running state"
-	execution.Result.Fatal(errors.New(stuckReason), true, time.Now())
+	execution.Result.Fatal(errors.New(testkube.StopReasonExecutionStuck.Sentence()), true, time.Now())
 	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
 		return r.client.UpdateExecutionResult(ctx, environmentID, executionID, execution.Result)
 	})
@@ -636,7 +635,7 @@ func (r *runner) abortExecution(ctx context.Context, environmentID, executionID 
 	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
 		return r.worker.Abort(context.Background(), executionID, executionworkertypes.DestroyOptions{
 			Actor:  testkube.StopActorRunner,
-			Reason: stuckReason,
+			Reason: testkube.StopReasonExecutionStuck,
 		})
 	})
 	if err != nil {
@@ -658,7 +657,7 @@ func (r *runner) Resume(id string) error {
 func (r *runner) Abort(id string, reason string) error {
 	return r.worker.Abort(context.Background(), id, executionworkertypes.DestroyOptions{
 		Actor:  testkube.StopActorControlPlane,
-		Reason: reason,
+		Reason: testkube.StopReason(reason),
 	})
 }
 
@@ -666,6 +665,6 @@ func (r *runner) Abort(id string, reason string) error {
 func (r *runner) Cancel(id string, reason string) error {
 	return r.worker.Cancel(context.Background(), id, executionworkertypes.DestroyOptions{
 		Actor:  testkube.StopActorUser,
-		Reason: reason,
+		Reason: testkube.StopReason(reason),
 	})
 }
