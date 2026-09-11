@@ -1,6 +1,6 @@
 package testkube
 
-// StartReason is the token the runner sends to the control plane when it declines
+// StartReason is the code the runner sends to the control plane when it declines
 // an execution. The values are stable, because filters and telemetry use them.
 type StartReason string
 
@@ -14,7 +14,7 @@ const (
 
 // Sentence returns the words for the reason in a message for people, as the tail of
 // "Failed to run execution: ...". It returns an empty string for a value it does not
-// know, so a reader can keep the raw token.
+// know, so a reader can keep the raw code.
 func (r StartReason) Sentence() string {
 	switch r {
 	case StartReasonImagePullFailed:

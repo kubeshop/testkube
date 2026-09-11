@@ -1,6 +1,6 @@
 package testkube
 
-// StopReason is the token for the cause of an abort or a cancel. The control plane
+// StopReason is the code for the cause of an abort or a cancel. The control plane
 // stores it, sends it with the stop transition, and the runner writes it into the
 // job annotations. The values are stable, because filters and telemetry use them.
 type StopReason string
@@ -18,7 +18,7 @@ const (
 )
 
 // Sentence returns the words for the reason in a message for people. It returns an
-// empty string for a value it does not know, so a reader can keep the raw token.
+// empty string for a value it does not know, so a reader can keep the raw code.
 func (r StopReason) Sentence() string {
 	switch r {
 	case StopReasonAbortAll:
