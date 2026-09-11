@@ -98,4 +98,21 @@ func TestCreateExecutionMachine_LineageDefaultsToAnOriginalRun(t *testing.T) {
 
 	require.Equal(t, "", resolveString(t, machine, "execution.lineage.baseId"))
 	require.Equal(t, "1", resolveString(t, machine, "execution.lineage.attempt"))
+	// An original run is its own root, matching EffectiveLineage(). Reporting an
+	// empty rootId here would contradict what the API says about the same
+	// execution, and break any workflow grouping a chain by it.
+	require.Equal(t, "exec-1", resolveString(t, machine, "execution.lineage.rootId"))
+}
+
+// A record that carries a base but no root - a partially filled row - still has
+// to come back coherent, field by field, the way EffectiveLineage() does.
+func TestCreateExecutionMachine_LineagePartialRecordFallsBack(t *testing.T) {
+	machine := CreateExecutionMachine(&ExecutionConfig{
+		Id:      "exec-2",
+		Lineage: &LineageConfig{BaseId: "exec-1"},
+	})
+
+	require.Equal(t, "exec-1", resolveString(t, machine, "execution.lineage.baseId"))
+	require.Equal(t, "exec-2", resolveString(t, machine, "execution.lineage.rootId"))
+	require.Equal(t, "1", resolveString(t, machine, "execution.lineage.attempt"))
 }

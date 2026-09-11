@@ -15,12 +15,13 @@ You can read more about the differences between the two deployment modes in the 
   - [1. API Server](#1-api-server)
   - [2. Kubernetes Controllers](#2-kubernetes-controllers)
   - [3. TestWorkflow Execution Runtime](#3-testworkflow-execution-runtime)
-  - [4. Storage Layer](#4-storage-layer)
-  - [5. Event System](#5-event-system)
-  - [6. REST API](#6-rest-api)
-  - [7. Prometheus Metrics Endpoint](#7-prometheus-metrics-endpoint)
-  - [8. Logging and Telemetry](#8-logging-and-telemetry)
-  - [9. Kubernetes Custom Resource Definitions (CRDs)](#9-kubernetes-custom-resource-definitions-crds)
+  - [4. Execution Lineage and Reruns](#4-execution-lineage-and-reruns)
+  - [5. Storage Layer](#5-storage-layer)
+  - [6. Event System](#6-event-system)
+  - [7. REST API](#7-rest-api)
+  - [8. Prometheus Metrics Endpoint](#8-prometheus-metrics-endpoint)
+  - [9. Logging and Telemetry](#9-logging-and-telemetry)
+  - [10. Kubernetes Custom Resource Definitions (CRDs)](#10-kubernetes-custom-resource-definitions-crds)
 - [Kubernetes Deployment](#kubernetes-deployment)
 - [CLI](#cli)
 - [Related Documentation](#related-documentation)
@@ -81,7 +82,32 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 - Execution worker (`executionworker/`): applies the workflow to Kubernetes, watches the job and pod, and stops executions. When a caller aborts or cancels an execution, it passes an actor and an optional cause in `DestroyOptions`, and the worker writes them into the job annotations `testkube.io/termination-actor` and `testkube.io/termination-reason`. The result reader renders them as one sentence, so the stored error message names the component that stopped the execution and, when there is one, the cause.
 - Runner gRPC client (`pkg/runner/grpc/`): receives execution starts from the control plane. When the runner cannot start an execution, the client reads the reason token from the `StartError` in the error chain and declines the execution with the token and the error text, so the control plane stores the cause on the execution.
 
-### 4. Storage Layer
+### 4. Execution Lineage and Reruns
+
+A rerun descends from a specific earlier execution, and `TestWorkflowExecutionLineage` (`baseId`, `rootId`, `attempt`) is what records that. It is written for **every** execution, not only reruns: an original run is its own root at attempt 1, so "every execution of chain R" is the single predicate `rootId = R` and includes the original.
+
+**Propagation**: only the base execution id travels on the wire, as `ScheduleRequest.base_execution_id` - a caller able to assert a root or an attempt could forge a chain. The scheduler derives the rest:
+
+```
+ScheduleRequest.base_execution_id
+  -> Enqueuer.deriveLineage         (loads the base; root carried down, attempt + 1)
+  -> execution record               (lineage_base_id / lineage_root_id / lineage_attempt)
+  -> ExecutionStart.lineage         (every writer must read it back off the record)
+  -> ExecutionConfig.Lineage        (the pod's internal config)
+  -> RerunExecutionId()             (resolves the reserved execution("rerun") reference)
+```
+
+Loading the base is also where the Control Plane confirms it belongs to the caller's environment, as `proto/service.proto` requires: the results repository is scoped to the organization and environment, so a base outside them comes back not-found and the request is refused.
+
+The same path exists in the connected-mode scheduler in `testkube-cloud-api`, which keeps its own copy of the `test_workflow_executions` schema and reads executions through its own queries. Both halves have to carry lineage; a writer that omits it sends the pod nothing, `execution("rerun")` stops resolving, and nothing reports it.
+
+**Storage**: three scalar columns rather than JSONB, because they are queried - an ordered range scan behind the organization/environment prefix, which a GIN containment index could neither order nor compose with. Indexed partially, on the rows that carry a chain.
+
+**Legacy rows**: executions written before the columns existed carry NULL, and are never backfilled. They mean exactly what an original run means, and `TestWorkflowExecution.EffectiveLineage()` synthesizes that - no base, itself as the root, attempt 1. That accessor is the single source of the default: the expression machine behind `{{ execution.lineage.* }}` applies the same field-by-field fallbacks, so an old execution cannot report one lineage through the API and a different one to its own workflow.
+
+**Reserved references**: `execution("parent")` and `execution("rerun")` resolve before the registry of executions a workflow scheduled, so a child aliased - or a workflow named - `parent`/`rerun` cannot shadow them. A collision is refused rather than resolved either way, since preferring the reserved meaning would instead make that child unreachable by name.
+
+### 5. Storage Layer
 
 **PostgreSQL** (Future Primary Database, currently in Preview)
 
@@ -108,7 +134,7 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 - Async job processing and event publishing
 - Event bus: [`pkg/event/bus/`](pkg/event/bus/)
 
-### 5. Event System
+### 6. Event System
 
 **Location**: [`pkg/event/`](pkg/event/)
 
@@ -117,7 +143,7 @@ The event system publishes and listens to TestWorkflow execution events:
 - **Event Listeners**: [`pkg/event/kind/`](pkg/event/kind/) - Webhooks, K8s events, CD events, WebSockets
 - **Event Emitter**: [`pkg/event/emitter.go`](pkg/event/emitter.go) - Publishes execution lifecycle events
 
-### 6. REST API
+### 7. REST API
 
 Testkube exposes REST APIs for interacting with core resources and functionality - [Read More](https://docs.testkube.io/openapi/overview).
 
@@ -144,7 +170,7 @@ Testkube exposes REST APIs for interacting with core resources and functionality
 
 **Port**: HTTP API listens on port 8088 (configurable via environment variables)
 
-### 7. Prometheus Metrics Endpoint
+### 8. Prometheus Metrics Endpoint
 
 **Endpoint**: `GET /metrics`
 
@@ -156,7 +182,7 @@ The API server exposes Prometheus metrics at `/metrics` for monitoring and obser
 
 **Access**: Metrics are accessible at `http://localhost:8088/metrics` (or the configured API server port).
 
-### 8. Logging and Telemetry
+### 9. Logging and Telemetry
 
 #### Logging
 
@@ -204,7 +230,7 @@ Telemetry collects usage analytics to help improve the product. It can be disabl
 - Both events include the detected cluster type and agent capabilities
 - Capability tags come from [`cmd/api-server/services/capabilities.go`](cmd/api-server/services/capabilities.go) and cover the agent persona, connection mode, enabled features, and whether this is a Testkube-provisioned hosted runner (`hosted-runner`) rather than a user-deployed one
 
-### 9. Kubernetes Custom Resource Definitions (CRDs)
+### 10. Kubernetes Custom Resource Definitions (CRDs)
 
 **Definition Location**: [`api/`](api/)
 **Generated CRDs**: [`k8s/crd/`](k8s/crd/)
