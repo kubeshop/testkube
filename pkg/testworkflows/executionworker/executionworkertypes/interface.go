@@ -182,7 +182,7 @@ type DestroyOptions struct {
 	// Actor identifies the component that requested the stop. The worker writes it
 	// and the reason into the job annotations, so the result names who stopped it.
 	Actor testkube.StopActor
-	// Reason is the token for the cause of the stop. The result shows its sentence.
+	// Reason is the code for the cause of the stop. The result shows its sentence.
 	Reason testkube.StopReason
 	// Detail is free text that follows the reason, for example the error of a failed step.
 	Detail string

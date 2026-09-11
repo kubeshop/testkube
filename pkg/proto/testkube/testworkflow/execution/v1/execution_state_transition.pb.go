@@ -28,13 +28,13 @@ type ExecutionStateTransition struct {
 	ExecutionId *string `protobuf:"bytes,1,opt,name=execution_id,json=executionId" json:"execution_id,omitempty"`
 	// transition_to is the state the execution should be transitioned into.
 	TransitionTo *ExecutionState `protobuf:"varint,2,opt,name=transition_to,json=transitionTo,enum=testkube.testworkflow.execution.v1.ExecutionState" json:"transition_to,omitempty"`
-	// reason is the token for the cause of an abort or a cancel, for example
+	// reason is the code for the cause of an abort or a cancel, for example
 	// "execution-timeout". The runner writes it into the job annotation next to
 	// the actor and renders its words, so the execution result names who stopped
 	// the execution and why. Empty when the Control Plane has no cause to give,
 	// and for every other transition.
 	Reason *string `protobuf:"bytes,3,opt,name=reason" json:"reason,omitempty"`
-	// actor is the token for the component that decided an abort or a cancel, for
+	// actor is the code for the component that decided an abort or a cancel, for
 	// example "quality-loop". The runner writes it into the job annotation and renders
 	// its words in front of the reason. Empty when the Control Plane does not name the
 	// actor, and the runner then names the user for a cancel and the Control Plane for

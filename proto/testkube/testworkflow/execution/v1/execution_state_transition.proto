@@ -10,13 +10,13 @@ message ExecutionStateTransition {
   string execution_id = 1;
   // transition_to is the state the execution should be transitioned into.
   ExecutionState transition_to = 2;
-  // reason is the token for the cause of an abort or a cancel, for example
+  // reason is the code for the cause of an abort or a cancel, for example
   // "execution-timeout". The runner writes it into the job annotation next to
   // the actor and renders its words, so the execution result names who stopped
   // the execution and why. Empty when the Control Plane has no cause to give,
   // and for every other transition.
   string reason = 3;
-  // actor is the token for the component that decided an abort or a cancel, for
+  // actor is the code for the component that decided an abort or a cancel, for
   // example "quality-loop". The runner writes it into the job annotation and renders
   // its words in front of the reason. Empty when the Control Plane does not name the
   // actor, and the runner then names the user for a cancel and the Control Plane for

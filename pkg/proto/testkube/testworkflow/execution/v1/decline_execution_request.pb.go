@@ -27,7 +27,7 @@ type DeclineExecutionRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// execution_id is the unique identifier of the execution that has failed.
 	ExecutionId *string `protobuf:"bytes,1,opt,name=execution_id,json=executionId" json:"execution_id,omitempty"`
-	// reason is a short fixed token that names why the runner could not start
+	// reason is a short fixed code that names why the runner could not start
 	// the execution, for example "image-pull-failed" or "job-create-failed".
 	// The Control Plane stores it on the execution result so a user can read
 	// the cause without the runner log.
