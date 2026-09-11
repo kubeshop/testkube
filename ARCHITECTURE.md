@@ -126,6 +126,7 @@ Testkube exposes REST APIs for interacting with core resources and functionality
 - Defines the complete REST API contract
 - Used for client code generation and documentation
 - Generated models: [`pkg/api/v1/testkube/`](pkg/api/v1/testkube/)
+- The stop actor and the reason tokens, with their words, live in the same package as hand-written files, so the worker, the runner, and the control plane share one definition
 
 **Framework**: Uses [Fiber](https://gofiber.io/) web framework for HTTP routing and middleware
 

@@ -635,7 +635,7 @@ func (r *runner) abortExecution(ctx context.Context, environmentID, executionID 
 
 	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
 		return r.worker.Abort(context.Background(), executionID, executionworkertypes.DestroyOptions{
-			Actor:  executionworkertypes.AbortActorRunner,
+			Actor:  testkube.StopActorRunner,
 			Reason: stuckReason,
 		})
 	})
@@ -657,7 +657,7 @@ func (r *runner) Resume(id string) error {
 // Abort stops the execution on a request from the control plane.
 func (r *runner) Abort(id string, reason string) error {
 	return r.worker.Abort(context.Background(), id, executionworkertypes.DestroyOptions{
-		Actor:  executionworkertypes.AbortActorControlPlane,
+		Actor:  testkube.StopActorControlPlane,
 		Reason: reason,
 	})
 }
@@ -665,7 +665,7 @@ func (r *runner) Abort(id string, reason string) error {
 // Cancel stops the execution on a request from a user. The control plane relays the request.
 func (r *runner) Cancel(id string, reason string) error {
 	return r.worker.Cancel(context.Background(), id, executionworkertypes.DestroyOptions{
-		Actor:  executionworkertypes.AbortActorUser,
+		Actor:  testkube.StopActorUser,
 		Reason: reason,
 	})
 }
