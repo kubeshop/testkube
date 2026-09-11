@@ -1,0 +1,93 @@
+{{- if .Values.convert.enabled }}
+{{/*
+One-shot Job that migrates control-plane data from MongoDB to PostgreSQL.
+
+Deliberately NOT a helm.sh/hook: this is an operator-triggered cutover step, not
+something that should run on every upgrade. Enable it, let it finish, then set
+convert.enabled back to false.
+
+The Job is safe to restart. Progress is checkpointed in the same transaction as
+the data it describes, so a restarted pod resumes from the last committed batch
+rather than starting over or double-writing -- which is why backoffLimit is
+greater than zero.
+*/}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "testkube.convert.name" . }}
+  labels:
+    {{- include "testkube.convert.labels" . | nindent 4 }}
+  {{- with .Values.convert.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.convert.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ . }}
+  {{- end }}
+  backoffLimit: {{ .Values.convert.backoffLimit }}
+  template:
+    metadata:
+      {{- with .Values.convert.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "testkube.convert.labels" . | nindent 8 }}
+    spec:
+      {{- with (include "global.images.renderPullSecrets" (dict "global" .Values.global "secretPath" .Values.convert.image.pullSecrets)) }}
+      {{- . | trim | nindent 6 }}
+      {{- end }}
+      restartPolicy: Never
+      serviceAccountName: {{ default "default" .Values.convert.serviceAccountName }}
+      {{- with .Values.convert.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.convert.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.convert.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.convert.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: convert
+          image: {{ include "testkube.convert.image" . | quote }}
+          imagePullPolicy: {{ .Values.convert.image.pullPolicy }}
+          {{- with .Values.convert.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            {{- include "testkube.convert.mongoEnv" . | nindent 12 }}
+            {{- include "testkube.convert.postgresEnv" . | nindent 12 }}
+            - name: API_MONGO_DB
+              value: {{ .Values.convert.mongoDatabase | quote }}
+            - name: CONVERT_BATCH_SIZE
+              value: {{ .Values.convert.batchSize | quote }}
+            - name: CONVERT_READ_BATCH_SIZE
+              value: {{ .Values.convert.readBatchSize | quote }}
+            - name: CONVERT_DRY_RUN
+              value: {{ .Values.convert.dryRun | quote }}
+            - name: CONVERT_SKIP_ERRORS
+              value: {{ .Values.convert.skipErrors | quote }}
+            - name: CONVERT_VERIFY
+              value: {{ .Values.convert.verify | quote }}
+            {{- with .Values.convert.skip }}
+            - name: CONVERT_SKIP
+              value: {{ join "," . | quote }}
+            {{- end }}
+            {{- with .Values.convert.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.convert.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

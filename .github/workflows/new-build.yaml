@@ -94,6 +94,17 @@ jobs:
             type=ref,event=branch
             type=semver,pattern={{version}}
 
+      - name: Create Docker tags and metadata for convert
+        id: convert-meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          bake-target: "convert-meta"
+          images: |
+            kubeshop/testkube-convert
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
       - uses: benjlevesque/short-sha@dbe07338b37c456ce06d23409b35a56a7815eef4 # v4.0
         id: short-sha
         with:
@@ -110,13 +121,15 @@ jobs:
             ${{ steps.tw-init-meta.outputs.bake-file }}
             ${{ steps.tw-toolkit-meta.outputs.bake-file }}
             ${{ steps.mcp-server-meta.outputs.bake-file }}
-          targets: api,cli,tw-init,tw-toolkit,mcp-server
+            ${{ steps.convert-meta.outputs.bake-file }}
+          targets: api,cli,tw-init,tw-toolkit,mcp-server,convert
           set: |
             api.platform=linux/amd64
             cli.platform=linux/amd64
             tw-init.platform=linux/amd64
             tw-toolkit.platform=linux/amd64
             mcp-server.platform=linux/amd64
+            convert.platform=linux/amd64
           provenance: mode=max
           sbom: true
           # Only tags are pushed, pushes to branches test whether app can be built.
@@ -135,7 +148,8 @@ jobs:
             ${{ steps.tw-init-meta.outputs.bake-file }}
             ${{ steps.tw-toolkit-meta.outputs.bake-file }}
             ${{ steps.mcp-server-meta.outputs.bake-file }}
-          targets: api,cli,tw-init,tw-toolkit,mcp-server
+            ${{ steps.convert-meta.outputs.bake-file }}
+          targets: api,cli,tw-init,tw-toolkit,mcp-server,convert
           provenance: mode=max
           sbom: true
           push: true
