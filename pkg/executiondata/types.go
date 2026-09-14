@@ -71,6 +71,10 @@ type Execution struct {
 	// An output the execution produced but could not publish - its value holds a
 	// sensitive word - is present here as a WithheldMarker rather than as its value.
 	Outputs map[string]string `json:"outputs,omitempty"`
+	// ErrorMessage is the message of the initialization step, empty when it has none.
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	// StepErrors are the messages of the steps that have one, keyed by step ref.
+	StepErrors map[string]string `json:"stepErrors,omitempty"`
 }
 
 // Key is the primary reference of the execution - its alias when the parent gave
@@ -104,14 +108,20 @@ func (e Execution) AsMap() map[string]interface{} {
 	for k, v := range e.Outputs {
 		outputs[k] = v
 	}
+	stepErrors := make(map[string]interface{}, len(e.StepErrors))
+	for k, v := range e.StepErrors {
+		stepErrors[k] = v
+	}
 	return map[string]interface{}{
-		"id":       e.Id,
-		"name":     e.Name,
-		"workflow": e.Workflow,
-		"alias":    e.Alias,
-		"index":    e.Index,
-		"status":   e.Status,
-		"outputs":  outputs,
+		"id":           e.Id,
+		"name":         e.Name,
+		"workflow":     e.Workflow,
+		"alias":        e.Alias,
+		"index":        e.Index,
+		"status":       e.Status,
+		"outputs":      outputs,
+		"errorMessage": e.ErrorMessage,
+		"stepErrors":   stepErrors,
 	}
 }
 
@@ -131,7 +141,31 @@ func FromExecution(execution *testkube.TestWorkflowExecution) Execution {
 	if execution.Result != nil && execution.Result.Status != nil {
 		result.Status = string(*execution.Result.Status)
 	}
+	result.ErrorMessage, result.StepErrors = ErrorsOf(execution)
 	return result
+}
+
+// ErrorsOf collects the message of the initialization step and the messages of the
+// steps, so a workflow can assert why another execution failed.
+func ErrorsOf(execution *testkube.TestWorkflowExecution) (string, map[string]string) {
+	if execution == nil || execution.Result == nil {
+		return "", nil
+	}
+	errorMessage := ""
+	if execution.Result.Initialization != nil {
+		errorMessage = execution.Result.Initialization.ErrorMessage
+	}
+	var stepErrors map[string]string
+	for ref, step := range execution.Result.Steps {
+		if step.ErrorMessage == "" {
+			continue
+		}
+		if stepErrors == nil {
+			stepErrors = make(map[string]string)
+		}
+		stepErrors[ref] = step.ErrorMessage
+	}
+	return errorMessage, stepErrors
 }
 
 // OutputsOf collects the values an execution published through its steps.

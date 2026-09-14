@@ -106,12 +106,13 @@ func (r *executionRecorder) schedule(alias, workflowName string, exec testkube.T
 	return entry
 }
 
-// complete refreshes an entry once its execution finished, adding the outputs it published.
+// complete refreshes an entry from the finished execution.
 func (r *executionRecorder) complete(entry executiondata.Execution, exec testkube.TestWorkflowExecution) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	entry.Outputs = executiondata.OutputsOf(&exec)
+	entry.ErrorMessage, entry.StepErrors = executiondata.ErrorsOf(&exec)
 	if exec.Result != nil && exec.Result.Status != nil {
 		entry.Status = string(*exec.Result.Status)
 	}
