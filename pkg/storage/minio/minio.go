@@ -3,9 +3,12 @@ package minio
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"fmt"
 	"hash/fnv"
 	"io"
+	"math/big"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -22,6 +25,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/archive"
+	"github.com/kubeshop/testkube/pkg/executioncache"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/storage"
@@ -65,22 +69,149 @@ func (c *Client) Connect() error {
 	return err
 }
 
+const (
+	// expirationPolicyRuleID is unchanged from when this was the only rule, so that an
+	// existing lifecycle is updated in place rather than gaining a second copy.
+	expirationPolicyRuleID = "expiration_policy"
+	// cacheExpirationPolicyRuleID expires dependency caches on their own schedule.
+	cacheExpirationPolicyRuleID = "cache_expiration_policy"
+)
+
+// ExpirationPolicy is the whole bucket lifecycle that Testkube manages.
+//
+// It is one struct rather than a call per rule because SetBucketLifecycle replaces the
+// configuration wholesale: setting a cache rule in a second call would silently drop the
+// bucket-wide one.
+type ExpirationPolicy struct {
+	// Days expires everything in the bucket. 0 disables the rule.
+	Days int
+	// CachePrefix is the object prefix dependency caches live under.
+	CachePrefix string
+	// CacheDays expires dependency caches. 0 disables the rule.
+	CacheDays int
+}
+
+// SetExpirationPolicy expires everything in the bucket after the given number of days.
+//
+// Deprecated: use SetExpirationPolicies, which can also expire dependency caches on
+// their own schedule.
 func (c *Client) SetExpirationPolicy(expirationDays int) error {
-	if expirationDays != 0 && c.minioClient != nil {
-		lifecycleConfig := &lifecycle.Configuration{
-			Rules: []lifecycle.Rule{
-				{
-					ID:     "expiration_policy",
-					Status: "Enabled",
-					Expiration: lifecycle.Expiration{
-						Days: lifecycle.ExpirationDays(expirationDays),
-					},
-				},
-			},
-		}
-		return c.minioClient.SetBucketLifecycle(context.TODO(), c.bucket, lifecycleConfig)
+	return c.SetExpirationPolicies(ExpirationPolicy{Days: expirationDays})
+}
+
+// SetExpirationPolicies applies the bucket lifecycle.
+//
+// Note that the bucket-wide rule is deliberately left unfiltered, so it still covers
+// cache objects too. Where two rules match one object, the earliest expiration applies,
+// so a cache TTL can only ever bring eviction forward relative to the bucket-wide one,
+// never postpone it. Callers that let an operator configure both should say so.
+// noSuchLifecycleConfiguration is how an object store says the bucket has no lifecycle
+// at all, which is the ordinary starting state rather than a fault.
+const noSuchLifecycleConfiguration = "NoSuchLifecycleConfiguration"
+
+// SetExpirationPolicies applies Testkube's expiration rules without disturbing anyone
+// else's.
+//
+// SetBucketLifecycle replaces the bucket's configuration wholesale, so writing only the
+// rules Testkube knows about would drop the transition and expiration rules of any
+// installation that manages its bucket lifecycle elsewhere. The existing configuration
+// is therefore read first and everything Testkube does not own is carried through. That
+// is what allows an expiration to carry a default at all: without it, a default would
+// change object retention on every such installation by nothing but an upgrade.
+func (c *Client) SetExpirationPolicies(policy ExpirationPolicy) error {
+	if c.minioClient == nil {
+		return nil
 	}
-	return nil
+
+	owned := buildLifecycleRules(policy)
+
+	existing, err := c.currentLifecycleRules()
+	if err != nil {
+		// Fail closed. Writing without knowing what is already there would replace
+		// exactly the rules this exists to protect, and an expiration schedule is not
+		// worth that: a bucket that cleans up late is recoverable, one whose retention
+		// silently changed is not. The caller logs this and carries on.
+		return errors.Wrap(err, "reading the bucket lifecycle before applying expiration policies")
+	}
+
+	var hadOwned bool
+	for _, rule := range existing {
+		if isOwnedLifecycleRule(rule.ID) {
+			hadOwned = true
+			break
+		}
+	}
+
+	// Nothing to add and nothing of ours to withdraw, so there is no reason to write -
+	// including to a bucket that never had a lifecycle and should not gain an empty one.
+	if len(owned) == 0 && !hadOwned {
+		return nil
+	}
+
+	merged := mergeLifecycleRules(existing, owned)
+	return c.minioClient.SetBucketLifecycle(context.TODO(), c.bucket, &lifecycle.Configuration{Rules: merged})
+}
+
+// currentLifecycleRules reads what the bucket already has, treating "no lifecycle" as
+// an empty set rather than an error.
+func (c *Client) currentLifecycleRules() ([]lifecycle.Rule, error) {
+	config, err := c.minioClient.GetBucketLifecycle(context.TODO(), c.bucket)
+	if err != nil {
+		if minio.ToErrorResponse(err).Code == noSuchLifecycleConfiguration {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if config == nil {
+		return nil, nil
+	}
+	return config.Rules, nil
+}
+
+// isOwnedLifecycleRule reports whether a rule is one Testkube writes. Ownership is by
+// ID, which is why both IDs are constants rather than spelled out at each use.
+func isOwnedLifecycleRule(id string) bool {
+	return id == expirationPolicyRuleID || id == cacheExpirationPolicyRuleID
+}
+
+// mergeLifecycleRules keeps every rule Testkube does not own and replaces the ones it
+// does. Rules are matched by ID, so a rule Testkube no longer configures is dropped
+// rather than left behind - turning an expiration off has to actually turn it off.
+func mergeLifecycleRules(existing, owned []lifecycle.Rule) []lifecycle.Rule {
+	merged := make([]lifecycle.Rule, 0, len(existing)+len(owned))
+	for _, rule := range existing {
+		if isOwnedLifecycleRule(rule.ID) {
+			continue
+		}
+		merged = append(merged, rule)
+	}
+	return append(merged, owned...)
+}
+
+// buildLifecycleRules turns the policy into the rules it implies, kept separate from the
+// call so the layout can be asserted without a live object store.
+func buildLifecycleRules(policy ExpirationPolicy) []lifecycle.Rule {
+	rules := make([]lifecycle.Rule, 0, 2)
+	if policy.Days != 0 {
+		rules = append(rules, lifecycle.Rule{
+			ID:     expirationPolicyRuleID,
+			Status: "Enabled",
+			Expiration: lifecycle.Expiration{
+				Days: lifecycle.ExpirationDays(policy.Days),
+			},
+		})
+	}
+	if policy.CacheDays != 0 && policy.CachePrefix != "" {
+		rules = append(rules, lifecycle.Rule{
+			ID:         cacheExpirationPolicyRuleID,
+			Status:     "Enabled",
+			RuleFilter: lifecycle.Filter{Prefix: policy.CachePrefix},
+			Expiration: lifecycle.Expiration{
+				Days: lifecycle.ExpirationDays(policy.CacheDays),
+			},
+		})
+	}
+	return rules
 }
 
 // CreateBucket creates new S3 like bucket
@@ -172,6 +303,47 @@ func (c *Client) listFiles(ctx context.Context, bucket, bucketFolder string) ([]
 func (c *Client) ListFilesFromBucket(ctx context.Context, bucket, bucketFolder string) ([]testkube.Artifact, error) {
 	c.Log.Infow("listing files", "bucket", bucket, "bucketFolder", bucketFolder)
 	return c.listFiles(ctx, bucket, bucketFolder)
+}
+
+// ListObjectsFromBucket lists objects under a prefix, with their sizes and modification
+// times, stopping after limit entries. A limit of 0 means unlimited.
+//
+// Unlike listFiles, the returned keys are the full object names rather than names made
+// relative to the prefix, because a caller that picks one still has to address it.
+func (c *Client) ListObjectsFromBucket(ctx context.Context, bucket, prefix string, limit int) ([]storage.ObjectInfo, error) {
+	if err := c.Connect(); err != nil {
+		return nil, err
+	}
+
+	exists, err := c.minioClient.BucketExists(ctx, bucket)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		c.Log.Debugw("bucket doesn't exist", "bucket", bucket)
+		return nil, ErrArtifactsNotFound
+	}
+
+	listCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	var objects []storage.ObjectInfo
+	for obj := range c.minioClient.ListObjects(listCtx, bucket, minio.ListObjectsOptions{Prefix: prefix, Recursive: true}) {
+		if obj.Err != nil {
+			return nil, obj.Err
+		}
+		objects = append(objects, storage.ObjectInfo{
+			Key:          obj.Key,
+			Size:         obj.Size,
+			LastModified: obj.LastModified,
+		})
+		if limit > 0 && len(objects) >= limit {
+			cancel()
+			break
+		}
+	}
+
+	return objects, nil
 }
 
 // ListFiles lists available files in the bucket from the config
@@ -704,4 +876,155 @@ func (c *Client) PresignUploadFileToBucket(ctx context.Context, bucket, bucketFo
 		return "", err
 	}
 	return url.String(), nil
+}
+
+// ifNoneMatchHeader is how S3 and MinIO spell "only if this object does not exist".
+const (
+	ifNoneMatchHeader = "If-None-Match"
+
+	// conditionalProbeExpiry and conditionalProbeTimeout bound ProbeConditionalWrite.
+	// It runs at startup and answers a yes-or-no question against a bucket that is
+	// already reachable, so it should finish quickly or not hold anything up.
+	conditionalProbeExpiry  = 2 * time.Minute
+	conditionalProbeTimeout = 15 * time.Second
+)
+
+// PresignCreateFileToBucket returns a presigned PUT that fails if the object is already
+// there, along with the header carrying that condition.
+//
+// PresignHeader signs the header in, so the upload is rejected unless the caller sends
+// it: the condition cannot be dropped to turn the request back into a plain overwrite.
+// A store that honours it answers a losing upload with 412 Precondition Failed.
+// ConditionalWriteSupport is what a store did when asked to apply a condition.
+type ConditionalWriteSupport string
+
+const (
+	// ConditionalWriteUnknown means the probe could not reach a verdict. It is not a
+	// synonym for unsupported: an unreachable bucket looks exactly like this, and
+	// reporting "not supported" on that basis would be a worse lie than saying nothing.
+	ConditionalWriteUnknown ConditionalWriteSupport = "unknown"
+	// ConditionalWriteEnforced means a second upload to an existing key was refused.
+	ConditionalWriteEnforced ConditionalWriteSupport = "enforced"
+	// ConditionalWriteIgnored means the store accepted it and overwrote.
+	ConditionalWriteIgnored ConditionalWriteSupport = "ignored"
+)
+
+// ProbeConditionalWrite reports whether the configured store actually applies the
+// condition that makes a stored cache entry immutable.
+//
+// It exists because nothing else can tell you. The four stores this client can be
+// pointed at do not agree: MinIO honours If-None-Match on PUT only from a recent
+// release, S3 only since 2024, GCS wants a generation precondition instead and ignores
+// this one, and an S3-compatible proxy does whatever it does. A store that ignores the
+// header answers 200 and overwrites - there is no error, no 412, and nothing in a log to
+// distinguish "no races happened" from "the condition was never applied". A deployment
+// can run for months believing a guarantee it does not have.
+//
+// So this asks the question directly, through the same presigned path a cache save uses,
+// because a probe that tested some other path would prove something about that path
+// instead. It writes a small object under the cache's own prefix, writes it again, and
+// reads the answer from what the second write returns.
+//
+// The caller decides what to do about the verdict. Nothing here fails: a control plane
+// that cannot probe its bucket has bigger problems to report than this one, and a cache
+// is an optimization in any case.
+func (c *Client) ProbeConditionalWrite(ctx context.Context, bucket, keyPrefix string) (ConditionalWriteSupport, error) {
+	if err := c.Connect(); err != nil {
+		return ConditionalWriteUnknown, err
+	}
+
+	// Under the cache's own prefix, so whatever expiry covers cache entries covers a
+	// probe object that outlives its cleanup, and no other listing can trip over it.
+	suffix, err := rand.Int(rand.Reader, big.NewInt(1<<62))
+	if err != nil {
+		return ConditionalWriteUnknown, err
+	}
+	object := fmt.Sprintf("%s/.probe/%d", strings.TrimRight(keyPrefix, "/"), suffix)
+	defer func() {
+		if err := c.DeleteFileFromBucket(context.TODO(), bucket, "", object); err != nil {
+			c.Log.Debugw("could not remove the conditional-write probe object", "object", object, "error", err)
+		}
+	}()
+
+	put := func() (int, error) {
+		url, headers, err := c.PresignCreateFileToBucket(ctx, bucket, "", object, conditionalProbeExpiry)
+		if err != nil {
+			return 0, err
+		}
+		req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, strings.NewReader("probe"))
+		if err != nil {
+			return 0, err
+		}
+		for name, value := range headers {
+			req.Header.Set(name, value)
+		}
+		resp, err := (&http.Client{Timeout: conditionalProbeTimeout}).Do(req)
+		if err != nil {
+			return 0, err
+		}
+		defer resp.Body.Close()
+		return resp.StatusCode, nil
+	}
+
+	// The first write establishes the key. A store that refuses this one is not telling
+	// us about conditions, it is telling us the bucket is not writable.
+	status, err := put()
+	if err != nil {
+		return ConditionalWriteUnknown, err
+	}
+	if status < 200 || status > 299 {
+		return ConditionalWriteUnknown, fmt.Errorf("probe upload returned %d", status)
+	}
+
+	// The second is the question. Refused means the condition is applied; accepted means
+	// it was ignored and the object was just overwritten.
+	status, err = put()
+	if err != nil {
+		return ConditionalWriteUnknown, err
+	}
+	switch {
+	case status >= 200 && status <= 299:
+		return ConditionalWriteIgnored, nil
+	case executioncache.UploadRefused(status):
+		return ConditionalWriteEnforced, nil
+	default:
+		// Something else refused it - a permission, a policy. That says nothing about
+		// conditions either way.
+		return ConditionalWriteUnknown, fmt.Errorf("second probe upload returned %d", status)
+	}
+}
+
+func (c *Client) PresignCreateFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, expires time.Duration) (string, map[string]string, error) {
+	if err := c.Connect(); err != nil {
+		return "", nil, err
+	}
+	if bucketFolder != "" {
+		filePath = strings.Trim(bucketFolder, "/") + "/" + filePath
+	}
+	c.Log.Debugw("presigning conditional put object in minio", "file", filePath, "bucket", bucket)
+
+	// One source for both the signature and the answer, so a header can never be signed
+	// without being reported. Writing each value twice - once into what gets signed, once
+	// into what gets returned - is how the commercial plane's two sets drifted apart, and
+	// a signed header the caller is never told about is refused with a 403 that reads as
+	// a permissions problem rather than a missing header.
+	//
+	// Only the condition is signed here, deliberately. The agent also sends a
+	// Content-Type, and leaving it out of the signature is what keeps a divergence in
+	// that value harmless - nothing in the cache reads it, so there is nothing to gain
+	// by making the upload depend on it.
+	//
+	// Map order does not matter: V4 signing sorts the signed headers itself.
+	required := map[string]string{ifNoneMatchHeader: "*"}
+
+	headers := http.Header{}
+	for name, value := range required {
+		headers.Set(name, value)
+	}
+
+	url, err := c.minioClient.PresignHeader(ctx, http.MethodPut, bucket, filePath, expires, nil, headers)
+	if err != nil {
+		return "", nil, err
+	}
+	return url.String(), required, nil
 }
