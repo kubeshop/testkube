@@ -1,0 +1,483 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: docs-prettier
+  labels:
+    category: static-analysis
+    quality-loop: "true"
+    core-tests: docs
+    tool: prettier
+  annotations:
+    testkube.io/git-integration-managed: "false"
+description: Prettier check (replaces prettier.yml). Runs on all PRs and on push to
+  main.
+spec:
+  config:
+    revision:
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube-docs.git
+      revision: '{{config.revision}}'
+  container:
+    workingDir: /data/repo
+    image: node:20-bookworm
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Check formatting
+    timeout: 10m
+    run:
+      env:
+      - name: HUSKY
+        value: "0"
+      shell: |
+        npm ci
+        npm run format:check
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: oss-lint-go
+  labels:
+    category: static-analysis
+    quality-loop: "true"
+    core-tests: testkube-oss
+    tool: golangci-lint
+  annotations:
+    testkube.io/git-integration-managed: "false"
+description: golangci-lint (replaces lint.yaml Go step). Runs on PRs to main (all
+  files) and on feature-branch pushes (skip main/renovate/dependabot).
+spec:
+  config:
+    revision:
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube.git
+      revision: '{{config.revision}}'
+  container:
+    workingDir: /data/repo
+    image: golangci/golangci-lint:v2.13.1
+    resources:
+      limits:
+        cpu: 4500m
+        memory: 6Gi
+      requests:
+        cpu: 3500m
+        memory: 4Gi
+  job:
+    activeDeadlineSeconds: 900
+  steps:
+  - name: Verify golangci-lint config
+    shell: golangci-lint config verify
+  - name: Lint Go
+    timeout: 10m
+    shell: golangci-lint run ./... --timeout=10m
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: oss-lint-proto
+  labels:
+    category: static-analysis
+    quality-loop: "true"
+    core-tests: testkube-oss
+    tool: buf
+  annotations:
+    testkube.io/git-integration-managed: "false"
+description: Buf lint / format / breaking (replaces lint.yaml protobuf step). Runs
+  on PRs to main (all files) and on feature-branch pushes (skip main/renovate/dependabot).
+spec:
+  config:
+    revision:
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube.git
+      revision: '{{config.revision}}'
+  container:
+    workingDir: /data/repo/proto
+    image: bufbuild/buf:1.68.1
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Buf lint, format, breaking
+    shell: |
+      buf lint
+      buf format --diff --exit-code --exclude-path logs.proto --exclude-path service.proto
+      buf breaking --against "https://github.com/kubeshop/testkube.git#branch=main,subdir=proto" --exclude-imports
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: oss-integration-tests
+  labels:
+    category: api-testing
+    quality-loop: "true"
+    core-tests: testkube-oss
+    artifacts: "true"
+    junit: "true"
+    coverage: "true"
+    tool: go
+  annotations:
+    testkube.io/git-integration-managed: "false"
+description: make integration-tests with Mongo/NATS/MinIO/Postgres (replaces test.yaml
+  integration-tests, without Kind). Runs on push to main and PRs targeting main (opened/synchronize/reopened/ready_for_review).
+  Listens to all paths except docs/**.
+spec:
+  config:
+    revision:
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube.git
+      revision: '{{config.revision}}'
+  container:
+    workingDir: /data/repo
+    image: golang:1.27.0-bookworm
+    resources:
+      limits:
+        cpu: 4500m
+        memory: 6Gi
+      requests:
+        cpu: 3500m
+        memory: 4Gi
+  job:
+    activeDeadlineSeconds: 1800
+  services:
+    minio:
+      logs: always
+      timeout: 5m
+      image: bitnamilegacy/minio:2025
+      env:
+      - name: MINIO_ROOT_USER
+        value: minio99
+      - name: MINIO_ROOT_PASSWORD
+        value: minio123
+      readinessProbe:
+        tcpSocket:
+          port: 9000
+        periodSeconds: 1
+    mongo:
+      logs: always
+      timeout: 5m
+      image: mongo:8.0
+      readinessProbe:
+        tcpSocket:
+          port: 27017
+        periodSeconds: 1
+    nats:
+      logs: always
+      timeout: 5m
+      image: nats:2
+      readinessProbe:
+        tcpSocket:
+          port: 4222
+        periodSeconds: 1
+    postgres:
+      logs: always
+      timeout: 5m
+      image: postgres:16.15
+      env:
+      - name: POSTGRES_USER
+        value: postgres
+      - name: POSTGRES_PASSWORD
+        value: postgres
+      - name: POSTGRES_DB
+        value: postgres
+      readinessProbe:
+        tcpSocket:
+          port: 5432
+        periodSeconds: 1
+  steps:
+  - name: Integration tests
+    timeout: 30m
+    run:
+      env:
+      - name: GOPROXY
+        value: https://proxy.golang.org,direct
+      - name: INTEGRATION
+        value: "true"
+      - name: STORAGE_ACCESSKEYID
+        value: minio99
+      - name: STORAGE_SECRETACCESSKEY
+        value: minio123
+      - name: STORAGE_ENDPOINT
+        value: 127.0.0.1:9000
+      - name: MONGO_URL
+        value: mongodb://127.0.0.1:27017
+      - name: NATS_URI
+        value: nats://127.0.0.1:4222
+      - name: API_POSTGRES_URL
+        value: postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
+      shell: |
+        apt-get update && apt-get install -y --no-install-recommends make socat git ca-certificates
+        git config --global --add safe.directory /data/repo
+        # GH Actions maps service ports to localhost; Testkube services are other pods.
+        # Tests hardcode mongodb://localhost:27017, so we must forward rather than
+        # pointing env vars at the service IPs.
+        socat TCP-LISTEN:27017,fork,reuseaddr TCP:{{services.mongo.0.ip}}:27017 &
+        mongo_fwd=$!
+        socat TCP-LISTEN:4222,fork,reuseaddr TCP:{{services.nats.0.ip}}:4222 &
+        nats_fwd=$!
+        socat TCP-LISTEN:9000,fork,reuseaddr TCP:{{services.minio.0.ip}}:9000 &
+        minio_fwd=$!
+        socat TCP-LISTEN:5432,fork,reuseaddr TCP:{{services.postgres.0.ip}}:5432 &
+        postgres_fwd=$!
+        sleep 1
+        # Toolkit k8s tests (test/integration/components/toolkit) spawn namespaces/pods.
+        # GH uses Kind for that; skip them here — we are already on a cluster but
+        # creating cluster-scoped namespaces needs extra RBAC we should not assume.
+        make build-init build-toolkit
+        # Testkube prepends `set -e`. Background socat children get SIGHUP when the
+        # shell exits and ash/busybox then wait()s them; a 143 from socat would
+        # overwrite gotestsum's 0. Capture the test status and ignore teardown.
+        set +e
+        INTEGRATION=true TESTKUBE_PROJECT_ROOT="$PWD" \
+          go run gotest.tools/gotestsum@v1.12.3 --format short-verbose \
+            --junitfile integration-tests.xml --jsonfile integration-tests.json -- \
+            -coverprofile=integration-coverage.out -covermode=atomic \
+            -run '_Integration$' ./internal/... ./pkg/... ./test/integration/components/init/...
+        code=$?
+        kill "$mongo_fwd" "$nats_fwd" "$minio_fwd" "$postgres_fwd" 2>/dev/null
+        wait "$mongo_fwd" "$nats_fwd" "$minio_fwd" "$postgres_fwd" 2>/dev/null
+        exit "$code"
+    artifacts:
+      paths:
+      - integration-tests.xml
+      - integration-coverage.out
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: oss-unit-tests
+  labels:
+    category: unit-component-testing
+    quality-loop: "true"
+    core-tests: testkube-oss
+    artifacts: "true"
+    junit: "true"
+    coverage: "true"
+    tool: go
+  annotations:
+    testkube.io/git-integration-managed: "false"
+description: make unit-tests (replaces test.yaml unit-tests). Runs on push to main
+  and PRs targeting main (opened/synchronize/reopened/ready_for_review). Listens to
+  all paths except docs/**.
+spec:
+  config:
+    revision:
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube.git
+      revision: '{{config.revision}}'
+  container:
+    workingDir: /data/repo
+    image: golang:1.27.0-bookworm
+    resources:
+      limits:
+        cpu: 8000m
+        memory: 8Gi
+      requests:
+        cpu: 3500m
+        memory: 6Gi
+  job:
+    activeDeadlineSeconds: 1200
+  steps:
+  - name: Unit tests
+    run:
+      env:
+      - name: GOPROXY
+        value: https://proxy.golang.org,direct
+      - name: GOMAXPROCS
+        value: "8"
+      shell: |
+        git config --global --add safe.directory /data/repo
+        make unit-tests
+    artifacts:
+      paths:
+      - unit-tests.xml
+      - coverage.out
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: oss-verify-crds
+  labels:
+    category: build-integration
+    quality-loop: "true"
+    core-tests: testkube-oss
+    tool: go
+  annotations:
+    testkube.io/git-integration-managed: "false"
+description: make verify-crds-generated (replaces test.yaml verify-generated-crds).
+  Runs on push to main and PRs targeting main (opened/synchronize/reopened/ready_for_review).
+  Listens to all paths except docs/**.
+spec:
+  config:
+    revision:
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube.git
+      revision: '{{config.revision}}'
+  container:
+    workingDir: /data/repo
+    image: golang:1.27.0-bookworm
+    resources:
+      requests:
+        cpu: 1
+        memory: 2Gi
+  job:
+    activeDeadlineSeconds: 900
+  steps:
+  - name: Verify generated CRDs
+    run:
+      env:
+      - name: GOPROXY
+        value: https://proxy.golang.org,direct
+      shell: |
+        apt-get update && apt-get install -y --no-install-recommends make curl ca-certificates nodejs
+        git config --global --add safe.directory /data/repo
+        make verify-crds-generated
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: oss-verify-protobuf
+  labels:
+    category: build-integration
+    quality-loop: "true"
+    core-tests: testkube-oss
+    tool: buf
+  annotations:
+    testkube.io/git-integration-managed: "false"
+description: make verify-protobuf-generated (replaces test.yaml verify-generated-protobuf).
+  Runs on push to main and PRs targeting main (opened/synchronize/reopened/ready_for_review).
+  Listens to all paths except docs/**.
+spec:
+  config:
+    revision:
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube.git
+      revision: '{{config.revision}}'
+  container:
+    workingDir: /data/repo
+    image: golang:1.27.0-bookworm
+    resources:
+      requests:
+        cpu: 1
+        memory: 2Gi
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Verify generated protobuf
+    run:
+      env:
+      - name: GOPROXY
+        value: https://proxy.golang.org,direct
+      shell: |
+        apt-get update && apt-get install -y --no-install-recommends make curl ca-certificates
+        git config --global --add safe.directory /data/repo
+        make verify-protobuf-generated
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: oss-lint-pr
+  labels:
+    category: static-analysis
+    quality-loop: "true"
+    core-tests: testkube-oss
+    tool: conventional-commits
+  annotations:
+    testkube.io/git-integration-managed: "false"
+description: Conventional Commits PR title (replaces lint_pr.yaml / amannn/action-semantic-pull-request).
+  Wire on pull_request only (opened/synchronize/reopened/ready_for_review). GitHub
+  Integration does not fire on title-only edits.
+spec:
+  config:
+    PR_NUMBER:
+      type: string
+      default: ""
+    revision:
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube.git
+      revision: '{{config.revision}}'
+  container:
+    image: alpine:3.21
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 120
+  steps:
+  - name: Lint PR title
+    shell: |
+      set -eu
+      apk add --no-cache curl jq >/dev/null
+
+      PR_NUMBER='{{config.PR_NUMBER}}'
+      if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "0" ]; then
+        echo "PR_NUMBER is empty — lint-pr is PR-only. Do not wire this workflow on push."
+        exit 1
+      fi
+
+      TITLE=$(curl -fsSL \
+        -H "Accept: application/vnd.github+json" \
+        -H "User-Agent: testkube-lint-pr" \
+        "https://api.github.com/repos/kubeshop/testkube/pulls/${{"{"}}PR_NUMBER}" \
+        | jq -r '.title // empty')
+
+      if [ -z "$TITLE" ] || [ "$TITLE" = "null" ]; then
+        echo "Could not read title for PR #${{"{"}}PR_NUMBER}"
+        exit 1
+      fi
+
+      echo "PR #${{"{"}}PR_NUMBER} title: ${{"{"}}TITLE}"
+
+      TYPES='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
+      if echo "$TITLE" | grep -Eq "^(${{"{"}}TYPES})(\([^)]+\))?(!)?: .+"; then
+        echo "OK: conventional commit title"
+        exit 0
+      fi
+
+      printf '%s\n' \
+        "No release type found in pull request title \"${{"{"}}TITLE}\". Add a prefix to indicate what kind of release this pull request corresponds to. For reference, see https://www.conventionalcommits.org/" \
+        "" \
+        "Available types:" \
+        " - feat: A new feature" \
+        " - fix: A bug fix" \
+        " - docs: Documentation only changes" \
+        " - style: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)" \
+        " - refactor: A code change that neither fixes a bug nor adds a feature" \
+        " - perf: A code change that improves performance" \
+        " - test: Adding missing tests or correcting existing tests" \
+        " - build: Changes that affect the build system or external dependencies (example scopes: gulp, broccoli, npm)" \
+        " - ci: Changes to our CI configuration files and scripts (example scopes: Travis, Circle, BrowserStack, SauceLabs)" \
+        " - chore: Other changes that don't modify src or test files" \
+        " - revert: Reverts a previous commit"
+      exit 1

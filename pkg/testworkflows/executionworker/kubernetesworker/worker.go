@@ -162,7 +162,7 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 		Runtime:                runtimeOptions,
 	})
 	if err != nil {
-		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to process test workflow"), executionworkertypes.StartReasonDefinitionInvalid)
+		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to process test workflow"), testkube.StartReasonDefinitionInvalid)
 	}
 
 	// Annotate the group ID
@@ -181,7 +181,7 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	// Deploy required resources
 	err = bundle.Deploy(ctx, w.clientSet, cfg.Worker.Namespace)
 	if err != nil {
-		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to deploy test workflow"), executionworkertypes.StartReasonJobCreateFailed)
+		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to deploy test workflow"), testkube.StartReasonJobCreateFailed)
 	}
 
 	return &executionworkertypes.ExecuteResult{
@@ -228,7 +228,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 		Runtime:                runtimeOptions,
 	})
 	if err != nil {
-		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to process test workflow"), executionworkertypes.StartReasonDefinitionInvalid)
+		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to process test workflow"), testkube.StartReasonDefinitionInvalid)
 	}
 
 	// Apply the service setup
@@ -256,7 +256,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 	// Deploy required resources
 	err = bundle.Deploy(ctx, w.clientSet, cfg.Worker.Namespace)
 	if err != nil {
-		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to deploy test workflow"), executionworkertypes.StartReasonJobCreateFailed)
+		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to deploy test workflow"), testkube.StartReasonJobCreateFailed)
 	}
 
 	return &executionworkertypes.ServiceResult{
@@ -554,7 +554,7 @@ func (w *worker) Abort(ctx context.Context, id string, options executionworkerty
 			return err
 		}
 	}
-	if err := w.patchTerminationAnnotations(ctx, id, options.Namespace, testkube.ABORTED_TestWorkflowStatus, options.TerminationActor(executionworkertypes.AbortActorSystem), options.Reason); err != nil {
+	if err := w.patchTerminationAnnotations(ctx, id, options.Namespace, testkube.ABORTED_TestWorkflowStatus, options.TerminationActor(testkube.StopActorSystem), options.Reason, options.Detail); err != nil {
 		return errors.Wrapf(err, "failed to patch job %s/%s with termination code & reason", options.Namespace, id)
 	}
 	// It may safely destroy all the resources - the trace should be still readable.
@@ -568,19 +568,20 @@ func (w *worker) Cancel(ctx context.Context, id string, options executionworkert
 			return err
 		}
 	}
-	if err := w.patchTerminationAnnotations(ctx, id, options.Namespace, testkube.CANCELED_TestWorkflowStatus, options.TerminationActor(executionworkertypes.AbortActorUser), options.Reason); err != nil {
+	if err := w.patchTerminationAnnotations(ctx, id, options.Namespace, testkube.CANCELED_TestWorkflowStatus, options.TerminationActor(testkube.StopActorUser), options.Reason, options.Detail); err != nil {
 		return errors.Wrapf(err, "failed to patch job %s/%s with termination code & reason", options.Namespace, id)
 	}
 	return w.Destroy(ctx, id, options)
 }
 
-func (w *worker) patchTerminationAnnotations(ctx context.Context, id string, namespace string, status testkube.TestWorkflowStatus, actor executionworkertypes.AbortActor, reason string) error {
+func (w *worker) patchTerminationAnnotations(ctx context.Context, id string, namespace string, status testkube.TestWorkflowStatus, actor testkube.StopActor, reason testkube.StopReason, detail string) error {
 	patch := map[string]interface{}{
 		"metadata": map[string]any{
 			"annotations": map[string]string{
 				constants.AnnotationTerminationCode:   string(status),
 				constants.AnnotationTerminationActor:  string(actor),
-				constants.AnnotationTerminationReason: reason,
+				constants.AnnotationTerminationReason: string(reason),
+				constants.AnnotationTerminationDetail: detail,
 			},
 		},
 	}

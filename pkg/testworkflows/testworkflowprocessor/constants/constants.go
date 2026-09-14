@@ -37,6 +37,7 @@ const (
 	AnnotationTerminationCode       = "testkube.io/termination-code"
 	AnnotationTerminationReason     = "testkube.io/termination-reason"
 	AnnotationTerminationActor      = "testkube.io/termination-actor"
+	AnnotationTerminationDetail     = "testkube.io/termination-detail"
 )
 
 var (

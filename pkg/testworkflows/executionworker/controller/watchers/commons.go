@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	constants2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -303,23 +302,34 @@ func GetJobError(job *batchv1.Job) string {
 			}
 		}
 	}
-	// The worker annotates a stop with the actor and an optional cause. A deleted
-	// job without the annotation is a stop by an unknown party.
+	// The worker annotates a stop with the actor, a reason token, and an optional
+	// detail. A reason without words, from an older worker or a newer control plane,
+	// shows as its raw text. A deleted job without the annotation is a stop by an
+	// unknown party.
 	if job.Annotations != nil {
-		actor := executionworkertypes.AbortActor(job.Annotations[constants2.AnnotationTerminationActor])
-		reason := job.Annotations[constants2.AnnotationTerminationReason]
+		actor := testkube.StopActor(job.Annotations[constants2.AnnotationTerminationActor])
+		reason := testkube.StopReason(job.Annotations[constants2.AnnotationTerminationReason])
+		detail := job.Annotations[constants2.AnnotationTerminationDetail]
 		if actor != "" || reason != "" {
-			if reason == "" {
-				return actor.Sentence()
+			var parts []string
+			if actor != "" {
+				parts = append(parts, actor.Sentence())
 			}
-			if actor == "" {
-				return reason
+			if reason != "" {
+				words := reason.Sentence()
+				if words == "" {
+					words = string(reason)
+				}
+				parts = append(parts, words)
 			}
-			return actor.Sentence() + ": " + reason
+			if detail != "" {
+				parts = append(parts, detail)
+			}
+			return strings.Join(parts, ": ")
 		}
 	}
 	if job.DeletionTimestamp != nil {
-		return executionworkertypes.AbortActorSystem.Sentence()
+		return testkube.StopActorSystem.Sentence()
 	}
 	return ""
 }
