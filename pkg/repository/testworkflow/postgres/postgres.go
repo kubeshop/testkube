@@ -283,6 +283,7 @@ func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.G
 	// Lineage is stored as scalar columns rather than JSONB, so it is read here
 	// rather than through parseExecutionJSONFields.
 	execution.Lineage = lineageFromRow(row.LineageBaseID, row.LineageRootID, row.LineageAttempt)
+	execution.ApplyEffectiveLineage()
 
 	// Build result if exists
 	if row.Status.Valid {
@@ -504,7 +505,7 @@ func getBoolFromMap(m map[string]interface{}, key string) bool {
 }
 
 func (r *PostgresRepository) executionToSummary(row testkube.TestWorkflowExecution) testkube.TestWorkflowExecutionSummary {
-	return testkube.TestWorkflowExecutionSummary{
+	summary := testkube.TestWorkflowExecutionSummary{
 		Id:                   row.Id,
 		GroupId:              row.GroupId,
 		RunnerId:             row.RunnerId,
@@ -523,6 +524,9 @@ func (r *PostgresRepository) executionToSummary(row testkube.TestWorkflowExecuti
 		SilentMode:           row.SilentMode,
 		Lineage:              row.Lineage,
 	}
+	// Legacy rows carry none; the reader is promised one on every execution.
+	summary.ApplyEffectiveLineage()
+	return summary
 }
 
 func (r *PostgresRepository) resultToSummary(row *testkube.TestWorkflowResult) *testkube.TestWorkflowResultSummary {

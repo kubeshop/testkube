@@ -77,9 +77,14 @@ func testInsertAndGetWithoutLineage(t *testing.T, repo testworkflow.Repository) 
 	got, err := repo.Get(ctx, execution.Id)
 	require.NoError(t, err)
 
-	assert.Nil(t, got.Lineage)
-	assert.Equal(t, execution.Id, got.EffectiveLineage().RootId)
-	assert.Equal(t, int32(1), got.EffectiveLineage().Attempt)
+	// Stored sparsely - the row carries three NULLs - but read back as the
+	// original run it is, because every consumer is promised a lineage on every
+	// execution and the API would otherwise omit it for legacy rows while the
+	// pod synthesized one.
+	require.NotNil(t, got.Lineage)
+	assert.Empty(t, got.Lineage.BaseId)
+	assert.Equal(t, execution.Id, got.Lineage.RootId)
+	assert.Equal(t, int32(1), got.Lineage.Attempt)
 }
 
 // The summary is what list views render, and the two backends project it

@@ -43,3 +43,25 @@ func (e *TestWorkflowExecutionSummary) EscapeDots() *TestWorkflowExecutionSummar
 func (e *TestWorkflowExecutionSummary) UnscapeDots() *TestWorkflowExecutionSummary {
 	return e.ConvertDots(utils.UnescapeDots)
 }
+
+// ApplyEffectiveLineage fills in the lineage a reader should see, matching
+// TestWorkflowExecution.ApplyEffectiveLineage: a summary for an execution
+// recorded before the columns existed still reports it as its own root at
+// attempt 1, so a list view can group a chain without special-casing them.
+func (e *TestWorkflowExecutionSummary) ApplyEffectiveLineage() {
+	if e == nil {
+		return
+	}
+	if e.Lineage != nil {
+		lineage := *e.Lineage
+		if lineage.RootId == "" {
+			lineage.RootId = e.Id
+		}
+		if lineage.Attempt == 0 {
+			lineage.Attempt = 1
+		}
+		e.Lineage = &lineage
+		return
+	}
+	e.Lineage = &TestWorkflowExecutionLineage{RootId: e.Id, Attempt: 1}
+}

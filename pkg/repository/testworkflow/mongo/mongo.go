@@ -69,6 +69,8 @@ type MongoRepositoryOpt func(*MongoRepository)
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.TestWorkflowExecution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
 
+	result.ApplyEffectiveLineage()
+
 	if result.ResolvedWorkflow != nil && result.ResolvedWorkflow.Spec != nil {
 		result.ConfigParams = populateConfigParams(result.ResolvedWorkflow, result.ConfigParams)
 	}
@@ -81,6 +83,8 @@ func (r *MongoRepository) GetWithRunner(ctx context.Context, id, runner string) 
 		bson.M{"id": id, "runnerid": runner},
 		bson.M{"name": id, "runnerid": runner},
 	}}).Decode(&result)
+
+	result.ApplyEffectiveLineage()
 
 	if result.ResolvedWorkflow != nil && result.ResolvedWorkflow.Spec != nil {
 		result.ConfigParams = populateConfigParams(result.ResolvedWorkflow, result.ConfigParams)
@@ -211,6 +215,7 @@ func (r *MongoRepository) GetLatestByTestWorkflows(ctx context.Context, workflow
 
 	for i := range executions {
 		executions[i].UnscapeDots()
+		executions[i].ApplyEffectiveLineage()
 	}
 	return executions, nil
 }
@@ -425,10 +430,14 @@ func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter testw
 	for i := range executions {
 		executions[i].UnscapeDots()
 
+		executions[i].ApplyEffectiveLineage()
+
 		if executions[i].ResolvedWorkflow != nil && executions[i].ResolvedWorkflow.Spec != nil {
 			executions[i].ConfigParams = populateConfigParams(executions[i].ResolvedWorkflow, executions[i].ConfigParams)
 		}
 		result[i] = executions[i].TestWorkflowExecutionSummary
+		// Legacy rows carry none; the reader is promised one on every execution.
+		result[i].ApplyEffectiveLineage()
 	}
 	return
 }

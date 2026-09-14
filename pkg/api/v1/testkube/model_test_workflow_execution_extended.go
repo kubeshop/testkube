@@ -194,3 +194,20 @@ func (e *TestWorkflowExecution) EffectiveLineage() TestWorkflowExecutionLineage 
 	}
 	return TestWorkflowExecutionLineage{RootId: e.Id, Attempt: 1}
 }
+
+// ApplyEffectiveLineage fills in the lineage a reader should see, so that an
+// execution recorded before the columns existed does not come back without one.
+//
+// Storage keeps those rows sparse - NULL means "written before lineage" and is
+// never backfilled - but the contract every consumer is given is that lineage
+// is present on every execution, an original run being its own root at attempt
+// 1. Without this the API omits it for legacy rows while the pod synthesizes
+// it, so the same execution answers differently depending on who asks, and a
+// client cannot group a legacy original with the reruns that descend from it.
+func (e *TestWorkflowExecution) ApplyEffectiveLineage() {
+	if e == nil {
+		return
+	}
+	lineage := e.EffectiveLineage()
+	e.Lineage = &lineage
+}
