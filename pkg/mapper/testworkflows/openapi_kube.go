@@ -1573,6 +1573,7 @@ func MapTestWorkflowReportAPIToKube(v testkube.TestWorkflowReport) testworkflows
 func MapTestWorkflowStepResultAPIToKube(v testkube.TestWorkflowStepResult) testworkflowsv1.TestWorkflowStepResult {
 	return testworkflowsv1.TestWorkflowStepResult{
 		ErrorMessage: v.ErrorMessage,
+		ErrorReason:  v.ErrorReason,
 		Status: common.MapPtr(v.Status, func(status testkube.TestWorkflowStepStatus) testworkflowsv1.TestWorkflowStepStatus {
 			return (testworkflowsv1.TestWorkflowStepStatus)(status)
 		}),

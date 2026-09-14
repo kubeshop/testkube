@@ -176,3 +176,27 @@ spec:
     execute:
       workflows:
       - name: expected-fail-parallel-step-fail-fast
+  - name: expected-fail-unschedulable
+    negative: true
+    execute:
+      workflows:
+      - name: expected-fail-unschedulable
+        as: unschedulable
+  - name: assert-unschedulable-message
+    shell: |
+      msg={{ shellquote(execution("unschedulable").errorMessage) }}
+      echo "$msg"
+      echo "$msg" | grep -q "no node can run the pod" || { echo "unexpected message: $msg"; exit 1; }
+      [ {{ shellquote(execution("unschedulable").status) }} = "aborted" ] || { echo "unexpected status"; exit 1; }
+  - name: expected-fail-env-secret-required
+    negative: true
+    execute:
+      workflows:
+      - name: expected-fail-env-secret-required
+        as: env-secret-required
+  - name: assert-env-secret-required-message
+    shell: |
+      msg={{ shellquote(execution("env-secret-required").errorMessage) }}
+      echo "$msg"
+      echo "$msg" | grep -q "a secret or a config map that a container needs is not available" || { echo "unexpected message: $msg"; exit 1; }
+      [ {{ shellquote(execution("env-secret-required").status) }} = "aborted" ] || { echo "unexpected status"; exit 1; }

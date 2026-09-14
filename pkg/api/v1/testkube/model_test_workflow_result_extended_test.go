@@ -75,6 +75,7 @@ func TestTestWorkflowResult_Fatal(t *testing.T) {
 		wantStatus       TestWorkflowStatus
 		wantInitStatus   TestWorkflowStepStatus
 		wantErrorMessage string
+		wantErrorReason  string
 	}{
 		{
 			name:             "handles nil error and nil initialization without panicking",
@@ -97,6 +98,16 @@ func TestTestWorkflowResult_Fatal(t *testing.T) {
 			wantErrorMessage: "original failure",
 		},
 		{
+			name: "clears the reason code of the message that the error replaces",
+			result: &TestWorkflowResult{
+				Initialization: &TestWorkflowStepResult{ErrorMessage: "no node can run the pod", ErrorReason: "unschedulable"},
+			},
+			err:              assert.AnError,
+			wantStatus:       FAILED_TestWorkflowStatus,
+			wantInitStatus:   FAILED_TestWorkflowStepStatus,
+			wantErrorMessage: assert.AnError.Error(),
+		},
+		{
 			name: "stores error message and marks result failed",
 			result: &TestWorkflowResult{
 				Initialization: &TestWorkflowStepResult{},
@@ -116,6 +127,7 @@ func TestTestWorkflowResult_Fatal(t *testing.T) {
 			assert.Equal(t, tt.wantStatus, *tt.result.Status)
 			assert.Equal(t, tt.wantInitStatus, *tt.result.Initialization.Status)
 			assert.Equal(t, tt.wantErrorMessage, tt.result.Initialization.ErrorMessage)
+			assert.Equal(t, tt.wantErrorReason, tt.result.Initialization.ErrorReason)
 			assert.Equal(t, ts, tt.result.QueuedAt)
 			assert.Equal(t, ts, tt.result.StartedAt)
 			assert.Equal(t, ts, tt.result.FinishedAt)

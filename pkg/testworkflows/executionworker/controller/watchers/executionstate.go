@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -59,6 +60,7 @@ type ExecutionState interface {
 	ScheduledAt() time.Time
 
 	ExecutionError() string
+	CurrentCause() *testkube.Cause
 	JobExecutionError() string
 	PodExecutionError() string
 	Debug() map[string]string
@@ -431,6 +433,28 @@ func (e *executionState) PodExecutionError() string {
 	}
 
 	return errorStr
+}
+
+// imagePullWaitingReasons are the waiting reasons of a container whose image Kubernetes cannot pull.
+var imagePullWaitingReasons = []string{"ErrImagePull", "ImagePullBackOff", "InvalidImageName"}
+
+// CurrentCause returns the cause that keeps the pod from running, or nil when there is none.
+// Kubernetes retries these causes, so the cause does not stop the execution.
+// It does not use PodStarted, because Kubernetes sets the pod start time before it pulls the images.
+func (e *executionState) CurrentCause() *testkube.Cause {
+	if e.pod == nil || e.pod.Finished() {
+		return nil
+	}
+	if message, ok := e.pod.Unschedulable(); ok {
+		return &testkube.Cause{Reason: string(testkube.StopReasonUnschedulable), Message: message}
+	}
+	if reason, message := e.pod.WaitingReason(imagePullWaitingReasons...); reason != "" {
+		return &testkube.Cause{Reason: string(testkube.StartReasonImagePullFailed), Message: message}
+	}
+	if reason, message := e.pod.WaitingReason("CreateContainerConfigError"); reason != "" {
+		return &testkube.Cause{Reason: string(testkube.StopReasonConfigMissing), Message: message}
+	}
+	return nil
 }
 
 func (e *executionState) ExecutionError() string {
