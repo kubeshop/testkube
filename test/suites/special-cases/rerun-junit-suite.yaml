@@ -61,9 +61,7 @@ spec:
       # reserved "rerun" reference resolves to the execution being rerun, so the
       # workflow is never told which one that is - it is written once and rerun
       # many times.
-      cat > /data/previous.xml <<'PREVIOUS_REPORT'
-      {{ read_artifact("rerun", "junit/report.xml") }}
-      PREVIOUS_REPORT
+      printf '%s' {{ shellquote(read_artifact("rerun", "junit/report.xml")) }} > /data/previous.xml
 
       # Every <testcase> holding a <failure> or an <error>, as "classname.name".
       # tr joins the document onto one line first, because a failing case spans
@@ -191,9 +189,7 @@ spec:
       # The same call the rerun makes, addressed by alias instead of by the
       # reserved "rerun" reference - a failed run's artifacts are kept for
       # exactly this.
-      cat > /data/previous.xml <<'PREVIOUS_REPORT'
-      {{ read_artifact("r", "junit/report.xml") }}
-      PREVIOUS_REPORT
+      printf '%s' {{ shellquote(read_artifact("r", "junit/report.xml")) }} > /data/previous.xml
 
       grep -q 'name="ShouldFail"' /data/previous.xml \
         || { echo "the failed case is missing from the report"; exit 1; }
