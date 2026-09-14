@@ -7863,6 +7863,9 @@ spec:
                               type: integer
                             errorMessage:
                               type: string
+                            errorReason:
+                              description: code of the cause in the error message, for example unschedulable; empty when the message has no known cause
+                              type: string
                             exitCode:
                               format: int64
                               type: integer
@@ -7943,6 +7946,9 @@ spec:
                                 format: int32
                                 type: integer
                               errorMessage:
+                                type: string
+                              errorReason:
+                                description: code of the cause in the error message, for example unschedulable; empty when the message has no known cause
                                 type: string
                               exitCode:
                                 format: int64

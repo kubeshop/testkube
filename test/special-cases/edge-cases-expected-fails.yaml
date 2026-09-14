@@ -768,3 +768,52 @@ spec:
         shell: |
           if [ "{{ index }}" = "1" ]; then sleep 2 && echo "worker 1 failing" && exit 1; fi
           sleep 30 && echo "worker {{ index }} completed"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-unschedulable
+  labels:
+    core-tests: expected-fail
+description: "no node has the label that the pod selects"
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  pod:
+    nodeSelector:
+      testkube.io/expected-fail: no-node-has-this-label
+  job:
+    activeDeadlineSeconds: 60
+  steps:
+  - name: Run test
+    shell: echo "This should not be printed, because no node can run the pod"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-env-secret-required
+  labels:
+    core-tests: expected-fail
+description: "a required env value comes from a secret that does not exist"
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  job:
+    activeDeadlineSeconds: 60
+  steps:
+  - name: Run test
+    container:
+      env:
+      - name: REQUIRED_VALUE
+        valueFrom:
+          secretKeyRef:
+            name: expected-fail-secret-that-does-not-exist
+            key: value
+            optional: false
+    shell: echo "This should not be printed, because the container cannot start"
