@@ -113,6 +113,7 @@ func (r *executionRecorder) complete(entry executiondata.Execution, exec testkub
 
 	entry.Outputs = executiondata.OutputsOf(&exec)
 	entry.ErrorMessage, entry.StepErrors = executiondata.ErrorsOf(&exec)
+	entry.StepAttempts = executiondata.AttemptsOf(&exec)
 	if exec.Result != nil && exec.Result.Status != nil {
 		entry.Status = string(*exec.Result.Status)
 	}

@@ -7857,6 +7857,10 @@ spec:
                         initialization:
                           description: TestWorkflowStepResult contains step result of TestWorkflow
                           properties:
+                            attempts:
+                              description: number of attempts that the step started, empty when the init process reported none
+                              format: int32
+                              type: integer
                             errorMessage:
                               type: string
                             exitCode:
@@ -7934,6 +7938,10 @@ spec:
                           additionalProperties:
                             description: TestWorkflowStepResult contains step result of TestWorkflow
                             properties:
+                              attempts:
+                                description: number of attempts that the step started, empty when the init process reported none
+                                format: int32
+                                type: integer
                               errorMessage:
                                 type: string
                               exitCode:

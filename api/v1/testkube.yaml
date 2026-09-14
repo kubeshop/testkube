@@ -9469,6 +9469,9 @@ components:
           $ref: "#/components/schemas/TestWorkflowStepStatus"
         exitCode:
           type: number
+        attempts:
+          type: integer
+          description: number of attempts that the step started, empty when the init process reported none
         queuedAt:
           type: string
           format: date-time
