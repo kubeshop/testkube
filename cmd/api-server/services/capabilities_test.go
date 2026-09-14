@@ -60,6 +60,7 @@ func TestAgentCapabilities_Features(t *testing.T) {
 		cfg.FloatingRunner = true
 
 		caps := AgentCapabilities(cfg)
+		assert.Contains(t, caps, "execution")
 		assert.Contains(t, caps, "runner")
 		assert.Contains(t, caps, "floating-runner")
 		assert.Contains(t, caps, "k8s-controllers")
@@ -79,6 +80,7 @@ func TestAgentCapabilities_Features(t *testing.T) {
 		cfg.EnableCronJobs = "false"
 
 		caps := AgentCapabilities(cfg)
+		assert.NotContains(t, caps, "execution")
 		assert.NotContains(t, caps, "runner")
 		assert.NotContains(t, caps, "webhooks")
 		assert.NotContains(t, caps, "cron-jobs")

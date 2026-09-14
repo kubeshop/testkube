@@ -23,7 +23,7 @@ func TestFormatListAgents(t *testing.T) {
 				"floating": true,
 				"labels": {"env": "prod", "team": "platform"},
 				"environments": [{"id": "env-1", "name": "prod", "slug": "prod"}],
-				"capabilities": ["runner", "listener"],
+				"capabilities": ["execution", "runner", "listener"],
 				"accessedAt": "2025-01-20T15:00:00Z",
 				"createdAt": "2025-01-01T10:00:00Z",
 				"runnerPolicy": {"requiredMatch": ["label=value"]},
@@ -45,7 +45,7 @@ func TestFormatListAgents(t *testing.T) {
 		assert.Equal(t, "1.2.3", agent.Version)
 		assert.Equal(t, "testkube", agent.Namespace)
 		assert.False(t, agent.Disabled)
-		assert.Equal(t, []string{"runner", "listener"}, agent.Capabilities)
+		assert.Equal(t, []string{"execution", "runner", "listener"}, agent.Capabilities)
 		assert.True(t, agent.IsSuperAgent)
 
 		// Verify stripped fields are not in output
@@ -96,7 +96,7 @@ func TestFormatListAgents(t *testing.T) {
 	t.Run("handles multiple agents", func(t *testing.T) {
 		input := `{
 			"elements": [
-				{"id": "agent-1", "name": "runner-1", "capabilities": ["runner"]},
+				{"id": "agent-1", "name": "runner-1", "capabilities": ["execution", "runner"]},
 				{"id": "agent-2", "name": "runner-2", "disabled": true},
 				{"id": "agent-3", "name": "super-agent", "isSuperAgent": true}
 			]
@@ -111,7 +111,7 @@ func TestFormatListAgents(t *testing.T) {
 
 		require.Len(t, output.Elements, 3)
 		assert.Equal(t, "runner-1", output.Elements[0].Name)
-		assert.Equal(t, []string{"runner"}, output.Elements[0].Capabilities)
+		assert.Equal(t, []string{"execution", "runner"}, output.Elements[0].Capabilities)
 		assert.Equal(t, "runner-2", output.Elements[1].Name)
 		assert.True(t, output.Elements[1].Disabled)
 		assert.Equal(t, "super-agent", output.Elements[2].Name)
