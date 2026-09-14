@@ -27,6 +27,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
+	toolkitcommon "github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
@@ -135,12 +136,12 @@ func NewParallelCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg, err := config.LoadConfigV2()
 			if err != nil {
-				ui.ExitOnError("loading configuration", err)
+				toolkitcommon.ExitOnError("loading configuration", err)
 			}
 
 			err = RunParallel(cmd.Context(), args[0], cfg, base64Encoded)
 			if err != nil {
-				ui.ExitOnError("parallel execution", err)
+				toolkitcommon.ExitOnError("parallel execution", err)
 			}
 			os.Exit(0)
 		},

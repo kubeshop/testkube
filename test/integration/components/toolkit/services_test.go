@@ -90,7 +90,7 @@ func TestServiceFailureDetection_Integration(t *testing.T) {
 	}
 
 	err := executeServices(t, services, "test-group")
-	assert.Error(t, err, "should detect service failure")
+	assert.EqualError(t, err, "1 services failed to start: failing-service: service failed")
 }
 
 func executeServices(t *testing.T, services map[string]testworkflowsv1.ServiceSpec, groupRef string) error {

@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/pkg/mapper/cdevents"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -46,10 +47,10 @@ func NewArtifactsCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, paths []string) {
 			root, _ := os.Getwd()
 			walker, err := artifacts.CreateWalker(paths, mounts, root)
-			ui.ExitOnError("building a walker", err)
+			common.ExitOnError("building a walker", err)
 
 			if len(walker.Patterns()) == 0 || len(walker.SearchPaths()) == 0 {
-				ui.Failf("error: did not found any valid path pattern in the mounted directories")
+				common.Failf("error: did not found any valid path pattern in the mounted directories")
 			}
 
 			fmt.Printf("Root: %s\nPatterns:\n", ui.LightCyan(walker.Root()))
@@ -78,7 +79,7 @@ func NewArtifactsCmd() *cobra.Command {
 			cfg := config.Config()
 			client, err := env.Cloud()
 			if err != nil {
-				ui.Failf("could not create cloud client: %v", err)
+				common.Failf("could not create cloud client: %v", err)
 			}
 
 			postProcessors := make([]artifacts.PostProcessor, 0, 5)
@@ -140,7 +141,7 @@ func NewArtifactsCmd() *cobra.Command {
 
 func run(handler artifacts.Handler, walker artifacts.Walker, dirFS fs.FS) {
 	err := handler.Start()
-	ui.ExitOnError("initializing uploader", err)
+	common.ExitOnError("initializing uploader", err)
 
 	started := time.Now()
 	err = walker.Walk(dirFS, func(path string, file fs.File, _ fs.FileInfo, err error) error {
@@ -156,10 +157,10 @@ func run(handler artifacts.Handler, walker artifacts.Walker, dirFS fs.FS) {
 		}
 		return handler.Add(path, file, stat)
 	})
-	ui.ExitOnError("reading the file system", err)
+	common.ExitOnError("reading the file system", err)
 	err = handler.End()
 
 	// TODO: Emit information about artifacts
-	ui.ExitOnError("finishing upload", err)
+	common.ExitOnError("finishing upload", err)
 	fmt.Printf("Took %s.\n", time.Since(started).Truncate(time.Millisecond))
 }

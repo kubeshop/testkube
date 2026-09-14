@@ -24,40 +24,35 @@ func TestInitProcessStepDetails_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 
 	// run returns the actions that start, execute, and end a declared step.
-	run := func(ref, script string) []map[string]any {
+	run := func(ref, script string, toolkit, negative bool) []map[string]any {
 		return []map[string]any{
 			{"S": ref},
 			{"c": map[string]any{"r": ref, "c": map[string]any{"command": []string{script}}}},
-			{"e": map[string]any{"r": ref}},
+			{"e": map[string]any{"r": ref, "t": toolkit, "n": negative}},
 			{"E": ref},
 		}
 	}
 
 	// step returns the actions that run one script as a step, with an optional timeout.
-	step := func(ref, script, timeout string, parents ...string) []map[string]any {
+	step := func(ref, script, timeout string, toolkit, negative bool, parents ...string) []map[string]any {
 		actions := []map[string]any{{"d": map[string]any{"c": "true", "r": ref, "p": parents}}}
 		if timeout != "" {
 			actions = append(actions, map[string]any{"t": map[string]any{"r": ref, "t": timeout}})
 		}
-		return append(actions, run(ref, script)...)
+		return append(actions, run(ref, script, toolkit, negative)...)
 	}
 
 	tests := []struct {
 		name string
 		// groups returns the action groups after the setup group. The test reads the result of the step "step".
-		groups       func(script string) [][]map[string]any
-		script       string
-		pause        time.Duration
+		groups func(script string) [][]map[string]any
+		script string
+		pause  time.Duration
+		// staleError is the content of a step message file that exists before the step starts.
+		staleError   string
 		wantDetails  string
 		wantExitCode uint8
 	}{
-		{
-			name:         "a step killed by SIGKILL reports the process-killed message",
-			script:       "#!/bin/sh\nkill -9 $$\n",
-			groups:       func(script string) [][]map[string]any { return [][]map[string]any{step("step", script, "")} },
-			wantDetails:  "the test process was killed, possibly by an out-of-memory kill (signal: killed)",
-			wantExitCode: constants.CodeAborted,
-		},
 		{
 			name:   "a step with a retry that SIGKILL stops keeps the process-killed message and does not retry",
 			script: "#!/bin/sh\nkill -9 $$\n",
@@ -66,15 +61,17 @@ func TestInitProcessStepDetails_Integration(t *testing.T) {
 					{"d": map[string]any{"c": "true", "r": "step"}},
 					{"R": map[string]any{"r": "step", "c": 2}},
 				}
-				return [][]map[string]any{append(declare, run("step", script)...)}
+				return [][]map[string]any{append(declare, run("step", script, false, false)...)}
 			},
 			wantDetails:  "the test process was killed, possibly by an out-of-memory kill (signal: killed)",
 			wantExitCode: constants.CodeAborted,
 		},
 		{
-			name:         "a step that runs longer than its timeout reports the step-timeout message",
-			script:       "#!/bin/sh\nsleep 5\n",
-			groups:       func(script string) [][]map[string]any { return [][]map[string]any{step("step", script, "1s")} },
+			name:   "a step that runs longer than its timeout reports the step-timeout message",
+			script: "#!/bin/sh\nsleep 5\n",
+			groups: func(script string) [][]map[string]any {
+				return [][]map[string]any{step("step", script, "1s", false, false)}
+			},
 			wantDetails:  "the step did not finish within its timeout",
 			wantExitCode: constants.CodeAborted,
 		},
@@ -86,14 +83,60 @@ func TestInitProcessStepDetails_Integration(t *testing.T) {
 					{"d": map[string]any{"c": "true", "r": "group"}},
 					{"t": map[string]any{"r": "group", "t": "1s"}},
 					{"S": "group"},
-				}, step("first", script, "", "group")...)
-				second := append(step("step", script, "", "group"), map[string]any{"E": "group"})
+				}, step("first", script, "", false, false, "group")...)
+				second := append(step("step", script, "", false, false, "group"), map[string]any{"E": "group"})
 				return [][]map[string]any{first, second}
 			},
 			// The second container group starts after the group timeout ended.
 			pause:        1500 * time.Millisecond,
 			wantDetails:  "the step did not finish within its timeout",
 			wantExitCode: constants.CodeAborted,
+		},
+		{
+			name:   "a failed toolkit step reports the message of the file",
+			script: "#!/bin/sh\nprintf 'toolkit cause' > \"$TK_ERR_FILE\"\nexit 1\n",
+			groups: func(script string) [][]map[string]any {
+				return [][]map[string]any{step("step", script, "", true, false)}
+			},
+			wantDetails:  "toolkit cause",
+			wantExitCode: 1,
+		},
+		{
+			name:   "a toolkit step killed by SIGKILL reports the process-killed message instead of the file",
+			script: "#!/bin/sh\nprintf 'toolkit cause' > \"$TK_ERR_FILE\"\nkill -9 $$\n",
+			groups: func(script string) [][]map[string]any {
+				return [][]map[string]any{step("step", script, "", true, false)}
+			},
+			wantDetails:  "the test process was killed, possibly by an out-of-memory kill (signal: killed)",
+			wantExitCode: constants.CodeAborted,
+		},
+		{
+			name:   "a negative toolkit step that passes reports no message",
+			script: "#!/bin/sh\nprintf 'toolkit cause' > \"$TK_ERR_FILE\"\nexit 1\n",
+			groups: func(script string) [][]map[string]any {
+				return [][]map[string]any{step("step", script, "", true, true)}
+			},
+			wantDetails:  "",
+			wantExitCode: 1,
+		},
+		{
+			name:   "a failed step that is not a toolkit step does not report the file",
+			script: "#!/bin/sh\nprintf 'user cause' > \"$TESTKUBE_TW_INTERNAL_PATH/error\"\nexit 1\n",
+			groups: func(script string) [][]map[string]any {
+				return [][]map[string]any{step("step", script, "", false, false)}
+			},
+			wantDetails:  "",
+			wantExitCode: 1,
+		},
+		{
+			name:   "a failed toolkit step does not report the message of an earlier step",
+			script: "#!/bin/sh\nexit 1\n",
+			groups: func(script string) [][]map[string]any {
+				return [][]map[string]any{step("step", script, "", true, false)}
+			},
+			staleError:   "earlier cause",
+			wantDetails:  "",
+			wantExitCode: 1,
 		},
 	}
 
@@ -104,6 +147,9 @@ func TestInitProcessStepDetails_Integration(t *testing.T) {
 			require.NoError(t, os.WriteFile(filepath.Join(testDir, "termination.log"), []byte{}, 0666))
 			script := filepath.Join(testDir, "step.sh")
 			require.NoError(t, os.WriteFile(script, []byte(tt.script), 0755))
+			if tt.staleError != "" {
+				require.NoError(t, os.WriteFile(filepath.Join(testDir, ".tktw", "error"), []byte(tt.staleError), 0666))
+			}
 
 			groups := tt.groups(script)
 			actions := append([][]map[string]any{{{"_": map[string]bool{"i": true, "t": true, "b": true}}}}, groups...)
