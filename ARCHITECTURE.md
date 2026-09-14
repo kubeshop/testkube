@@ -84,7 +84,7 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 
 ### 4. Execution Lineage and Reruns
 
-A rerun descends from a specific earlier execution, and `TestWorkflowExecutionLineage` (`baseId`, `rootId`, `attempt`) is what records that. It is written for **every** execution, not only reruns: an original run is its own root at attempt 1, so "every execution of chain R" is the single predicate `rootId = R` and includes the original.
+A rerun descends from a specific earlier execution, and `TestWorkflowExecutionLineage` (`baseId`, `rootId`, `attempt`) is what records that. It is written for **every** execution, not only reruns: an original run is its own root at attempt 1, so "every execution of chain R" is one predicate and includes the original. In SQL that predicate is `COALESCE(lineage_root_id, id) = R`, not the bare column: a row written before lineage existed carries NULL there and is its own root, so a bare-column query would find a rerun of a legacy execution but not the original it descends from. The chain index is built on the same expression.
 
 **Propagation**: only the base execution id travels on the wire, as `ScheduleRequest.base_execution_id` - a caller able to assert a root or an attempt could forge a chain. The scheduler derives the rest:
 

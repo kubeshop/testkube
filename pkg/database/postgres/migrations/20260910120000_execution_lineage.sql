@@ -25,16 +25,25 @@ ALTER TABLE test_workflow_executions ADD COLUMN IF NOT EXISTS lineage_attempt IN
 
 -- Backs "every execution of chain R, in attempt order": an ordered range scan
 -- over the tenancy prefix, so the planner can walk the index and stop rather
--- than sorting a match set. Partial because only a rerun chain is worth
--- indexing - rows predating lineage carry NULL and should not grow it.
+-- than sorting a match set.
+--
+-- Indexed on COALESCE(lineage_root_id, id) rather than the column, and not
+-- partial, because a row written before lineage existed carries NULL there and
+-- is the root of its own chain. A predicate on the bare column would miss it,
+-- so a rerun of a legacy execution would be findable while the original it
+-- descends from would not. Chain queries must use the same COALESCE expression
+-- for the index to apply.
+--
+-- The alternative is backfilling every legacy row to its own root, which
+-- rewrites this whole table; the expression costs an index over all rows
+-- instead, which is the cheaper of the two.
 --
 -- Drop first to heal an INVALID index left behind by an interrupted
 -- CREATE INDEX CONCURRENTLY run; IF NOT EXISTS would otherwise skip it and
 -- leave the retry stuck on an index that can never become valid.
 DROP INDEX CONCURRENTLY IF EXISTS idx_twe_lineage_root;
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_twe_lineage_root
-    ON test_workflow_executions (organization_id, environment_id, lineage_root_id, lineage_attempt)
-    WHERE lineage_root_id IS NOT NULL;
+    ON test_workflow_executions (organization_id, environment_id, COALESCE(lineage_root_id, id), lineage_attempt);
 
 -- +goose Down
 DROP INDEX CONCURRENTLY IF EXISTS idx_twe_lineage_root;
