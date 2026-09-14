@@ -101,7 +101,7 @@ Loading the base is also where the Control Plane confirms it belongs to the call
 
 The same path exists in the connected-mode scheduler in `testkube-cloud-api`, which keeps its own copy of the `test_workflow_executions` schema and reads executions through its own queries. Both halves have to carry lineage; a writer that omits it sends the pod nothing, `execution("rerun")` stops resolving, and nothing reports it.
 
-**Storage**: three scalar columns rather than JSONB, because they are queried - an ordered range scan behind the organization/environment prefix, which a GIN containment index could neither order nor compose with. Indexed partially, on the rows that carry a chain.
+**Storage**: three scalar columns rather than JSONB, because they are queried - an ordered range scan behind the organization/environment prefix, which a GIN containment index could neither order nor compose with. Indexed with a non-partial expression index on `COALESCE(lineage_root_id, id)`, so both chained rows and legacy/original rows participate in the same ordered scan.
 
 **Legacy rows**: executions written before the columns existed carry NULL, and are never backfilled. They mean exactly what an original run means, and `TestWorkflowExecution.EffectiveLineage()` synthesizes that - no base, itself as the root, attempt 1. That accessor is the single source of the default: the expression machine behind `{{ execution.lineage.* }}` applies the same field-by-field fallbacks, so an old execution cannot report one lineage through the API and a different one to its own workflow.
 
