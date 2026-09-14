@@ -141,6 +141,7 @@ func TestTestWorkflowResult_HealAbortedOrCanceled(t *testing.T) {
 		message string
 	}
 	const defaultErrorStr = "Job has been aborted"
+	const killed = "the test process was killed, possibly by an out-of-memory kill (signal: killed)"
 	aborted := string(ABORTED_TestWorkflowStatus)
 	canceled := string(CANCELED_TestWorkflowStatus)
 	step := func(status TestWorkflowStepStatus, message string) TestWorkflowStepResult {
@@ -280,6 +281,84 @@ func TestTestWorkflowResult_HealAbortedOrCanceled(t *testing.T) {
 			wantInit:        stepWant{PASSED_TestWorkflowStepStatus, ""},
 			wantSteps: map[string]stepWant{
 				"unknown": {CANCELED_TestWorkflowStepStatus, "The execution was canceled, but we could not determine steps order: by the user"},
+			},
+		},
+		{
+			name:            "keeps the message of a step that the init process aborted with a cause",
+			initialization:  step(PASSED_TestWorkflowStepStatus, ""),
+			steps:           map[string]TestWorkflowStepResult{"step": step(ABORTED_TestWorkflowStepStatus, killed), "next": step(QUEUED_TestWorkflowStepStatus, "")},
+			sigSequence:     []TestWorkflowSignature{{Ref: "step"}, {Ref: "next"}},
+			errorStr:        "Fatal Error",
+			terminationCode: aborted,
+			wantInit:        stepWant{PASSED_TestWorkflowStepStatus, ""},
+			wantSteps: map[string]stepWant{
+				"step": {ABORTED_TestWorkflowStepStatus, killed},
+				"next": {SKIPPED_TestWorkflowStepStatus, "The execution was aborted before. (Fatal Error)"},
+			},
+		},
+		{
+			name:            "writes the abort message on an aborted step with the default message",
+			initialization:  step(PASSED_TestWorkflowStepStatus, ""),
+			steps:           map[string]TestWorkflowStepResult{"step": step(ABORTED_TestWorkflowStepStatus, defaultErrorStr), "next": step(QUEUED_TestWorkflowStepStatus, "")},
+			sigSequence:     []TestWorkflowSignature{{Ref: "step"}, {Ref: "next"}},
+			errorStr:        "Fatal Error",
+			terminationCode: aborted,
+			wantInit:        stepWant{PASSED_TestWorkflowStepStatus, ""},
+			wantSteps: map[string]stepWant{
+				"step": {ABORTED_TestWorkflowStepStatus, "The execution has been aborted. (Fatal Error)"},
+				"next": {SKIPPED_TestWorkflowStepStatus, "The execution was aborted before. (Fatal Error)"},
+			},
+		},
+		{
+			name:            "writes the abort message on an aborted step without a message",
+			initialization:  step(PASSED_TestWorkflowStepStatus, ""),
+			steps:           map[string]TestWorkflowStepResult{"step": step(ABORTED_TestWorkflowStepStatus, ""), "next": step(QUEUED_TestWorkflowStepStatus, "")},
+			sigSequence:     []TestWorkflowSignature{{Ref: "step"}, {Ref: "next"}},
+			errorStr:        "Fatal Error",
+			terminationCode: aborted,
+			wantInit:        stepWant{PASSED_TestWorkflowStepStatus, ""},
+			wantSteps: map[string]stepWant{
+				"step": {ABORTED_TestWorkflowStepStatus, "The execution has been aborted. (Fatal Error)"},
+				"next": {SKIPPED_TestWorkflowStepStatus, "The execution was aborted before. (Fatal Error)"},
+			},
+		},
+		{
+			name:            "keeps only the first own cause when a later step also stopped with its own cause",
+			initialization:  step(PASSED_TestWorkflowStepStatus, ""),
+			steps:           map[string]TestWorkflowStepResult{"step": step(ABORTED_TestWorkflowStepStatus, killed), "next": step(ABORTED_TestWorkflowStepStatus, "the step did not finish within its timeout")},
+			sigSequence:     []TestWorkflowSignature{{Ref: "step"}, {Ref: "next"}},
+			errorStr:        "Fatal Error",
+			terminationCode: aborted,
+			wantInit:        stepWant{PASSED_TestWorkflowStepStatus, ""},
+			wantSteps: map[string]stepWant{
+				"step": {ABORTED_TestWorkflowStepStatus, killed},
+				"next": {SKIPPED_TestWorkflowStepStatus, "The execution was aborted before. (Fatal Error)"},
+			},
+		},
+		{
+			name:            "keeps the own cause of a step when the initialization step did not finish, for example after a lost end hint",
+			initialization:  step(RUNNING_TestWorkflowStepStatus, ""),
+			steps:           map[string]TestWorkflowStepResult{"step": step(ABORTED_TestWorkflowStepStatus, killed), "next": step(QUEUED_TestWorkflowStepStatus, "")},
+			sigSequence:     []TestWorkflowSignature{{Ref: "step"}, {Ref: "next"}},
+			errorStr:        "Fatal Error",
+			terminationCode: aborted,
+			wantInit:        stepWant{ABORTED_TestWorkflowStepStatus, "The execution has been aborted. (Fatal Error)"},
+			wantSteps: map[string]stepWant{
+				"step": {ABORTED_TestWorkflowStepStatus, killed},
+				"next": {SKIPPED_TestWorkflowStepStatus, "The execution was aborted before. (Fatal Error)"},
+			},
+		},
+		{
+			name:            "keeps the message of a canceled step and skips the next step as canceled",
+			initialization:  step(PASSED_TestWorkflowStepStatus, ""),
+			steps:           map[string]TestWorkflowStepResult{"step": step(CANCELED_TestWorkflowStepStatus, killed), "next": step(QUEUED_TestWorkflowStepStatus, "")},
+			sigSequence:     []TestWorkflowSignature{{Ref: "step"}, {Ref: "next"}},
+			errorStr:        "Fatal Error",
+			terminationCode: canceled,
+			wantInit:        stepWant{PASSED_TestWorkflowStepStatus, ""},
+			wantSteps: map[string]stepWant{
+				"step": {CANCELED_TestWorkflowStepStatus, killed},
+				"next": {SKIPPED_TestWorkflowStepStatus, "The execution was canceled before. (Fatal Error)"},
 			},
 		},
 	}

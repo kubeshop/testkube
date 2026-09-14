@@ -16,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 var (
@@ -25,6 +26,8 @@ var (
 type executionResult struct {
 	ExitCode uint8
 	Aborted  bool
+	// Details names the cause when a signal from outside the init process killed the process.
+	Details string
 }
 
 type executionGroup struct {
@@ -251,8 +254,10 @@ func (e *execution) Run() (*executionResult, error) {
 
 	// Mark the execution group as aborted when this process was aborted.
 	// In Kubernetes, when that child process is killed, it may mean OOM Kill.
+	// Set the details only for SIGKILL from outside. When the init process aborts the group, it already knows the cause.
 	if aborted && !e.group.aborted.Load() && !e.group.softKillProgress.Load() {
 		e.group.Abort()
+		return &executionResult{Aborted: true, ExitCode: constants.CodeAborted, Details: processKilledDetails(exitDetails)}, nil
 	}
 
 	// Fail when aborted
@@ -261,6 +266,16 @@ func (e *execution) Run() (*executionResult, error) {
 	}
 
 	return &executionResult{ExitCode: uint8(exitCode)}, nil
+}
+
+// processKilledDetails is the step message for a process that SIGKILL stopped. The kernel sends SIGKILL for an
+// out-of-memory kill, but the init process cannot see the reason, so the message only names the likely cause.
+// Another signal gets no message. SIGTERM usually comes from a stop of the pod, which has its own cause.
+func processKilledDetails(exitDetails string) string {
+	if exitDetails != "signal: killed" {
+		return ""
+	}
+	return fmt.Sprintf("%s (%s)", testkube.StopReasonProcessKilled.Sentence(), exitDetails)
 }
 
 func getProcessStatus(err error) (bool, string, int) {

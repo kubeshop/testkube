@@ -336,6 +336,8 @@ func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction, exec
 		var iteration int32
 		_ = json.Unmarshal(serialized, &iteration)
 		step.Attempts = max(step.Attempts, iteration+1)
+		// A retry starts a new attempt, so the message of the previous attempt does not describe the step anymore.
+		step.ErrorMessage, step.ErrorReason = "", ""
 	case constants.InstructionPause:
 		pauseTsStr := hint.Value.(string)
 		pauseTs, err := time.Parse(time.RFC3339Nano, pauseTsStr)
