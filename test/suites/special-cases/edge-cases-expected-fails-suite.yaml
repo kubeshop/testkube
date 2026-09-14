@@ -200,3 +200,15 @@ spec:
       echo "$msg"
       echo "$msg" | grep -q "a secret or a config map that a container needs is not available" || { echo "unexpected message: $msg"; exit 1; }
       [ {{ shellquote(execution("env-secret-required").status) }} = "aborted" ] || { echo "unexpected status"; exit 1; }
+  - name: expected-fail-missing-volume-secret
+    negative: true
+    execute:
+      workflows:
+      - name: expected-fail-missing-volume-secret
+        as: missing-volume-secret
+  - name: assert-missing-volume-secret-message
+    shell: |
+      msg={{ shellquote(execution("missing-volume-secret").errorMessage) }}
+      echo "$msg"
+      echo "$msg" | grep -q "Kubernetes cannot mount a volume of the pod" || { echo "unexpected message: $msg"; exit 1; }
+      [ {{ shellquote(execution("missing-volume-secret").status) }} = "aborted" ] || { echo "unexpected status"; exit 1; }

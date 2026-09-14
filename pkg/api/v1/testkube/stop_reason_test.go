@@ -23,6 +23,8 @@ func TestStopReason_Sentence(t *testing.T) {
 		{name: "worker resume failed", reason: StopReasonWorkerResumeFailed, want: "the parallel worker could not be resumed"},
 		{name: "unschedulable", reason: StopReasonUnschedulable, want: "no node can run the pod"},
 		{name: "config missing", reason: StopReasonConfigMissing, want: "a secret or a config map that a container needs is not available"},
+		{name: "volume mount failed", reason: StopReasonVolumeMountFailed, want: "Kubernetes cannot mount a volume of the pod"},
+		{name: "admission denied", reason: StopReasonAdmissionDenied, want: "the cluster did not accept the pod"},
 		{name: "token from a newer control plane has no words yet", reason: StopReason("later-added"), want: ""},
 	}
 	for _, tt := range tests {
