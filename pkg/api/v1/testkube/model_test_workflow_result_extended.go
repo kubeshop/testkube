@@ -543,6 +543,8 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 	// Create marker to know if there is any step marked as aborted or canceled already
 	aborted := false
 	canceled := false
+	// stepStopped is true when a leaf step before the current one stopped
+	stepStopped := false
 
 	// Check the initialization step
 	if !r.Initialization.Status.Finished() || r.Initialization.Status.Aborted() || r.Initialization.Status.Canceled() {
@@ -566,14 +568,25 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 		if step.Status.Finished() && !step.Status.Aborted() && !step.Status.Canceled() && (!step.Status.Skipped() || step.ErrorMessage == "") {
 			continue
 		}
-		if aborted || canceled {
+		// A step that stopped with its own cause, for example a process that a signal killed, keeps that message.
+		// A stop of the initialization step alone does not skip it, because the step ran.
+		ownCause := (step.Status.Aborted() || step.Status.Canceled()) && step.ErrorMessage != "" && step.ErrorMessage != defaultErrorStr
+		if stepStopped || ((aborted || canceled) && !ownCause) {
 			step.Status = common.Ptr(SKIPPED_TestWorkflowStepStatus)
 			if canceled {
 				step.ErrorMessage = fmt.Sprintf("The execution was canceled before. (%s)", errorStr)
 			} else {
 				step.ErrorMessage = fmt.Sprintf("The execution was aborted before. (%s)", errorStr)
 			}
+		} else if ownCause {
+			stepStopped = true
+			if step.Status.Canceled() {
+				canceled = true
+			} else {
+				aborted = true
+			}
 		} else {
+			stepStopped = true
 			if terminationCode == string(CANCELED_TestWorkflowStatus) {
 				canceled = true
 				step.Status = common.Ptr(CANCELED_TestWorkflowStepStatus)

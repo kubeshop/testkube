@@ -227,8 +227,9 @@ func countLogs(n *notifier, text string) int {
 
 func TestNotifier_Instruction(t *testing.T) {
 	const ref = "rstep1"
-	execution := func(iteration int) instructions.Instruction {
-		return instructions.Instruction{Ref: ref, Name: initconstants.InstructionExecution, Value: initconstants.ExecutionResult{ExitCode: 1, Iteration: iteration}}
+	const timeout = "the step did not finish within its timeout"
+	execution := func(iteration int, details string) instructions.Instruction {
+		return instructions.Instruction{Ref: ref, Name: initconstants.InstructionExecution, Value: initconstants.ExecutionResult{ExitCode: 1, Iteration: iteration, Details: details}}
 	}
 	retry := func(iteration int) instructions.Instruction {
 		return instructions.Instruction{Ref: ref, Name: initconstants.InstructionIteration, Value: iteration}
@@ -237,22 +238,34 @@ func TestNotifier_Instruction(t *testing.T) {
 	tests := []struct {
 		name         string
 		hints        []instructions.Instruction
+		wantMessage  string
 		wantAttempts int32
 	}{
 		{
 			name:         "reports 1 attempt for a step without retry",
-			hints:        []instructions.Instruction{execution(0)},
+			hints:        []instructions.Instruction{execution(0, "")},
 			wantAttempts: 1,
 		},
 		{
 			name:         "sets the attempts from the iteration of the last execution result",
-			hints:        []instructions.Instruction{execution(0), retry(1), execution(1), retry(2), execution(2)},
+			hints:        []instructions.Instruction{execution(0, ""), retry(1), execution(1, ""), retry(2), execution(2, "")},
 			wantAttempts: 3,
 		},
 		{
 			name:         "counts the attempts that time out and send no execution result",
 			hints:        []instructions.Instruction{retry(1), retry(2)},
 			wantAttempts: 3,
+		},
+		{
+			name:         "keeps the step message when the execution result has no details",
+			hints:        []instructions.Instruction{execution(0, timeout), execution(0, "")},
+			wantMessage:  timeout,
+			wantAttempts: 1,
+		},
+		{
+			name:         "clears the message of the previous attempt when the step retries",
+			hints:        []instructions.Instruction{execution(0, timeout), retry(1)},
+			wantAttempts: 2,
 		},
 	}
 
@@ -276,6 +289,7 @@ func TestNotifier_Instruction(t *testing.T) {
 				n.Instruction(time.Now(), hint, "exec-1")
 			}
 
+			assert.Equal(t, tt.wantMessage, n.result.Steps[ref].ErrorMessage)
 			// Read the sent result, because the notifier sends a copy of its state.
 			var last *testkube.TestWorkflowResult
 			for len(ch) > 0 {

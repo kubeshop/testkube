@@ -521,6 +521,27 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
+  name: expected-fail-step-retry-timeout
+  labels:
+    core-tests: expected-fail
+description: "step retry where every attempt ends with the step timeout"
+spec:
+  use:
+    - name: special-cases-template-default-resources
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 60
+  steps:
+  - name: Time out three times
+    timeout: 2s
+    retry:
+      count: 2
+    shell: sleep 30
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
   name: expected-fail-negative-step
   labels:
     core-tests: expected-fail

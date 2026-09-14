@@ -177,6 +177,10 @@ func handleExecuteAction(action *lite.ActionExecute, ctx *ExecutionContext) Acti
 	finalizeTimeout()
 
 	if step.IsFinished() {
+		// The timeout of the step or of a parent group can end before the step starts. The run command does not run then.
+		if *step.Status == constants.StepStatusTimeout {
+			orchestration.FinishTimedOutExecution(step)
+		}
 		return ActionResult{ContinueExecution: true}
 	}
 
@@ -229,6 +233,12 @@ func handleExecuteAction(action *lite.ActionExecute, ctx *ExecutionContext) Acti
 		}
 
 		_ = orchestration.Executions.Kill()
+
+		// A signal from outside aborted the execution group, so the next attempt cannot run.
+		// Stop before the iteration hint, because that hint starts a new attempt and clears the message of this attempt.
+		if orchestration.Executions.IsAborted() {
+			break
+		}
 
 		if !shouldRetry(step, hasTimeout.Load(), hasOwnTimeout.Load(), ctx.Stdout) {
 			break

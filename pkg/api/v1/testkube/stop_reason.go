@@ -20,6 +20,8 @@ const (
 	StopReasonVolumeMountFailed  StopReason = "volume-mount-failed"
 	StopReasonAdmissionDenied    StopReason = "admission-denied"
 	StopReasonInitTimeout        StopReason = "initialization-timeout"
+	StopReasonProcessKilled      StopReason = "process-killed"
+	StopReasonStepTimeout        StopReason = "step-timeout"
 )
 
 // Sentence returns the words for the reason in a message for people. It returns an
@@ -54,6 +56,10 @@ func (r StopReason) Sentence() string {
 		return "the cluster did not accept the pod"
 	case StopReasonInitTimeout:
 		return "the first step did not start before the initialization timeout of the workflow"
+	case StopReasonProcessKilled:
+		return "the test process was killed, possibly by an out-of-memory kill"
+	case StopReasonStepTimeout:
+		return "the step did not finish within its timeout"
 	default:
 		return ""
 	}
