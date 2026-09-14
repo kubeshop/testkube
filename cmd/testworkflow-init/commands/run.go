@@ -1,11 +1,18 @@
 package commands
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"io"
+	"os"
+	"regexp"
 	"slices"
+	"strings"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/obfuscator"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/runtime"
@@ -13,6 +20,19 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
+
+const (
+	// maxStepErrorSize is the limit for the step message that a toolkit step writes. The message is one line, not a log.
+	maxStepErrorSize = 1024
+	// maxStepErrorReadSize limits the read of the step message file. It is larger than maxStepErrorSize,
+	// so the masking also finds a sensitive value that crosses the limit of the message.
+	maxStepErrorReadSize = 64 * 1024
+	// stepErrorMask replaces a sensitive value in the step message.
+	stepErrorMask = "*****"
+)
+
+// ansiEscapeRe matches an ANSI escape sequence, also a sequence that the size limit cuts.
+var ansiEscapeRe = regexp.MustCompile(`\x1b(\[[0-9;]*[A-Za-z]?)?`)
 
 func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionContainer) {
 	machine := runtime.GetInternalTestWorkflowMachine()
@@ -84,6 +104,9 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 		output.ExitErrorf(constants.CodeInputError, "%s", executiondata.WithheldError("the command of this step", markers).Error())
 	}
 
+	// Remove the message of an earlier step or attempt. When the file stays, its message can be old, so the step does not read it.
+	stepErrorFresh := removeStepError(constants.StepErrorPath)
+
 	// Run the operation with context
 	execution := orchestration.Executions.CreateWithContext(ctx, command[0], command[1:])
 	result, err := execution.Run()
@@ -117,7 +140,58 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 		return
 	}
 
+	// An aborted step keeps the cause of the abort, so only a failed step reads the file.
+	details := result.Details
+	if run.Toolkit && status == constants.StepStatusFailed && stepErrorFresh {
+		var sensitiveValues []string
+		if orchestration.Setup != nil {
+			sensitiveValues = orchestration.Setup.GetSensitiveValues()
+		}
+		details = readStepError(constants.StepErrorPath, sensitiveValues)
+	}
+
 	// Notify about the status
 	step.SetStatus(status).SetExitCode(result.ExitCode)
-	orchestration.FinishExecution(step, constants.ExecutionResult{ExitCode: result.ExitCode, Details: result.Details, Iteration: int(step.Iteration)})
+	orchestration.FinishExecution(step, constants.ExecutionResult{ExitCode: result.ExitCode, Details: details, Iteration: int(step.Iteration)})
+}
+
+// removeStepError removes the step message file. It returns false when the file is still there.
+func removeStepError(path string) bool {
+	err := os.Remove(path)
+	return err == nil || errors.Is(err, os.ErrNotExist)
+}
+
+// readStepError returns the first line of the step message file as plain text, with a size limit.
+// It masks the sensitive values before it cuts the text, because a part of a sensitive value does not match the masking.
+func readStepError(path string, sensitiveValues []string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	content, err := io.ReadAll(io.LimitReader(f, maxStepErrorReadSize))
+	if err != nil {
+		return ""
+	}
+	message := maskSensitiveValues(ansiEscapeRe.ReplaceAllString(string(content), ""), sensitiveValues)
+	if i := strings.IndexAny(message, "\r\n"); i >= 0 {
+		message = message[:i]
+	}
+	if len(message) > maxStepErrorSize {
+		message = message[:maxStepErrorSize]
+	}
+	// The limit can cut a multibyte character, so remove an incomplete character at the end.
+	return strings.TrimSpace(strings.ToValidUTF8(message, ""))
+}
+
+// maskSensitiveValues replaces each sensitive value in the text.
+func maskSensitiveValues(text string, sensitiveValues []string) string {
+	if text == "" || len(sensitiveValues) == 0 {
+		return text
+	}
+	var buf bytes.Buffer
+	o := obfuscator.New(&buf, obfuscator.FullReplace(stepErrorMask), sensitiveValues)
+	_, _ = o.Write([]byte(text))
+	_ = o.Flush()
+	return buf.String()
 }

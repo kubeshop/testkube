@@ -120,9 +120,11 @@ func handleExecuteAction(action *lite.ActionExecute, ctx *ExecutionContext) Acti
 	if action.Toolkit {
 		serialized, _ := json.Marshal(ctx.InternalConfig)
 		_ = os.Setenv("TK_CFG", string(serialized))
+		_ = os.Setenv(constants.EnvStepErrorFile, constants.StepErrorPath)
 	} else {
 		_ = os.Unsetenv("TK_REF")
 		_ = os.Unsetenv("TK_CFG")
+		_ = os.Unsetenv(constants.EnvStepErrorFile)
 	}
 
 	leaf := []*data.StepData{step}

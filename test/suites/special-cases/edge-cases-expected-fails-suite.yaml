@@ -99,6 +99,13 @@ spec:
     execute:
       workflows:
       - name: expected-fail-private-repo-auth
+        as: private-repo-auth
+  # The obfuscator can mask a secret in the message, so assert only a neutral substring.
+  - name: assert-private-repo-auth-message
+    shell: |
+      msg={{ shellquote(execution("private-repo-auth").errorMessage + " " + tojson(execution("private-repo-auth").stepErrors)) }}
+      echo "$msg"
+      echo "$msg" | grep -q "error cloning repository" || { echo "unexpected message: $msg"; exit 1; }
   - name: expected-fail-missing-git-secret
     negative: true
     execute:
@@ -170,6 +177,12 @@ spec:
     execute:
       workflows:
       - name: expected-fail-service-readiness-probe
+        as: service-readiness-probe
+  - name: assert-service-readiness-probe-message
+    shell: |
+      msg={{ shellquote(execution("service-readiness-probe").errorMessage + " " + tojson(execution("service-readiness-probe").stepErrors)) }}
+      echo "$msg"
+      echo "$msg" | grep -q "services failed to start: broken-service" || { echo "unexpected message: $msg"; exit 1; }
   - name: expected-fail-conditional-step-failed
     negative: true
     execute:
@@ -244,3 +257,15 @@ spec:
       echo "$msg" | grep -q "no node can run the pod" || { echo "unexpected message: $msg"; exit 1; }
       echo "$msg" | grep -q "the first step did not start before the initialization timeout of the workflow" || { echo "unexpected message: $msg"; exit 1; }
       [ {{ shellquote(execution("init-timeout").status) }} = "aborted" ] || { echo "unexpected status"; exit 1; }
+  - name: expected-fail-nested-execute
+    negative: true
+    execute:
+      workflows:
+      - name: expected-fail-nested-execute
+        as: nested-execute
+  - name: assert-nested-execute-message
+    shell: |
+      msg={{ shellquote(execution("nested-execute").errorMessage + " " + tojson(execution("nested-execute").stepErrors)) }}
+      echo "$msg"
+      echo "$msg" | grep -q "1 of 1 executions failed: expected-fail-conditional-step-failed" || { echo "unexpected message: $msg"; exit 1; }
+      [ {{ shellquote(execution("nested-execute").status) }} = "failed" ] || { echo "unexpected status"; exit 1; }

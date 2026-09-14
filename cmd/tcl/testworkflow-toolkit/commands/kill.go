@@ -23,12 +23,12 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
+	toolkitcommon "github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/credentials"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
-	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func NewKillCmd() *cobra.Command {
@@ -63,7 +63,7 @@ func NewKillCmd() *cobra.Command {
 			namespace := config.Namespace()
 
 			err := RunKill(cmd.Context(), worker, namespace, config.Ref(), groupRef, conditions, machine)
-			ui.ExitOnError("stopping services", err)
+			toolkitcommon.ExitOnError("stopping services", err)
 		},
 	}
 
