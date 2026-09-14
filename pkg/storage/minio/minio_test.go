@@ -330,3 +330,61 @@ func TestPresignCreateFileToBucketReturnsExactlyTheSignedHeaders(t *testing.T) {
 	assert.Equal(t, "*", required[ifNoneMatchHeader])
 	assert.Contains(t, got, strings.ToLower(ifNoneMatchHeader))
 }
+
+// TestProbeConditionalWrite covers the three answers the probe can give, and why the
+// third exists.
+//
+// A store that ignores the condition returns 200 and overwrites - no error, no 412, and
+// nothing in a log to tell "no races happened" apart from "the condition was never
+// applied". That is the whole reason to ask directly. But an unreachable or unwritable
+// bucket looks nothing like a verdict, and reporting "not supported" on that basis would
+// be a worse lie than saying nothing, so it is a third outcome rather than folded into
+// the second.
+//
+// Driven against an HTTP server rather than a store: the presigned URL points at
+// whatever endpoint the client was built with, so the probe can be answered by hand.
+func TestProbeConditionalWrite(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		second     int
+		want       ConditionalWriteSupport
+		wantErr    bool
+		firstFails bool
+	}{
+		{name: "refused with 412 is enforced", second: http.StatusPreconditionFailed, want: ConditionalWriteEnforced},
+		{name: "refused with 409 is enforced", second: http.StatusConflict, want: ConditionalWriteEnforced},
+		{name: "accepted means the condition was ignored", second: http.StatusOK, want: ConditionalWriteIgnored},
+		{name: "a refusal for some other reason is not a verdict", second: http.StatusForbidden, want: ConditionalWriteUnknown, wantErr: true},
+		{name: "an unwritable bucket is not a verdict", firstFails: true, want: ConditionalWriteUnknown, wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var puts int
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method == http.MethodDelete {
+					w.WriteHeader(http.StatusNoContent)
+					return
+				}
+				puts++
+				switch {
+				case tc.firstFails:
+					w.WriteHeader(http.StatusForbidden)
+				case puts == 1:
+					w.WriteHeader(http.StatusOK)
+				default:
+					w.WriteHeader(tc.second)
+				}
+			}))
+			defer server.Close()
+
+			client := NewClient(strings.TrimPrefix(server.URL, "http://"), "minio99", "minio123", "us-east-1", "", "bucket")
+			got, err := client.ProbeConditionalWrite(context.Background(), "bucket", ".tkcache/v1")
+
+			assert.Equal(t, tc.want, got)
+			if tc.wantErr {
+				assert.Error(t, err, "a non-verdict has to carry the reason it could not decide")
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

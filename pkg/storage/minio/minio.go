@@ -3,9 +3,11 @@ package minio
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"fmt"
 	"hash/fnv"
 	"io"
+	"math/big"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -23,6 +25,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/archive"
+	"github.com/kubeshop/testkube/pkg/executioncache"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/storage"
@@ -876,7 +879,15 @@ func (c *Client) PresignUploadFileToBucket(ctx context.Context, bucket, bucketFo
 }
 
 // ifNoneMatchHeader is how S3 and MinIO spell "only if this object does not exist".
-const ifNoneMatchHeader = "If-None-Match"
+const (
+	ifNoneMatchHeader = "If-None-Match"
+
+	// conditionalProbeExpiry and conditionalProbeTimeout bound ProbeConditionalWrite.
+	// It runs at startup and answers a yes-or-no question against a bucket that is
+	// already reachable, so it should finish quickly or not hold anything up.
+	conditionalProbeExpiry  = 2 * time.Minute
+	conditionalProbeTimeout = 15 * time.Second
+)
 
 // PresignCreateFileToBucket returns a presigned PUT that fails if the object is already
 // there, along with the header carrying that condition.
@@ -884,6 +895,105 @@ const ifNoneMatchHeader = "If-None-Match"
 // PresignHeader signs the header in, so the upload is rejected unless the caller sends
 // it: the condition cannot be dropped to turn the request back into a plain overwrite.
 // A store that honours it answers a losing upload with 412 Precondition Failed.
+// ConditionalWriteSupport is what a store did when asked to apply a condition.
+type ConditionalWriteSupport string
+
+const (
+	// ConditionalWriteUnknown means the probe could not reach a verdict. It is not a
+	// synonym for unsupported: an unreachable bucket looks exactly like this, and
+	// reporting "not supported" on that basis would be a worse lie than saying nothing.
+	ConditionalWriteUnknown ConditionalWriteSupport = "unknown"
+	// ConditionalWriteEnforced means a second upload to an existing key was refused.
+	ConditionalWriteEnforced ConditionalWriteSupport = "enforced"
+	// ConditionalWriteIgnored means the store accepted it and overwrote.
+	ConditionalWriteIgnored ConditionalWriteSupport = "ignored"
+)
+
+// ProbeConditionalWrite reports whether the configured store actually applies the
+// condition that makes a stored cache entry immutable.
+//
+// It exists because nothing else can tell you. The four stores this client can be
+// pointed at do not agree: MinIO honours If-None-Match on PUT only from a recent
+// release, S3 only since 2024, GCS wants a generation precondition instead and ignores
+// this one, and an S3-compatible proxy does whatever it does. A store that ignores the
+// header answers 200 and overwrites - there is no error, no 412, and nothing in a log to
+// distinguish "no races happened" from "the condition was never applied". A deployment
+// can run for months believing a guarantee it does not have.
+//
+// So this asks the question directly, through the same presigned path a cache save uses,
+// because a probe that tested some other path would prove something about that path
+// instead. It writes a small object under the cache's own prefix, writes it again, and
+// reads the answer from what the second write returns.
+//
+// The caller decides what to do about the verdict. Nothing here fails: a control plane
+// that cannot probe its bucket has bigger problems to report than this one, and a cache
+// is an optimization in any case.
+func (c *Client) ProbeConditionalWrite(ctx context.Context, bucket, keyPrefix string) (ConditionalWriteSupport, error) {
+	if err := c.Connect(); err != nil {
+		return ConditionalWriteUnknown, err
+	}
+
+	// Under the cache's own prefix, so whatever expiry covers cache entries covers a
+	// probe object that outlives its cleanup, and no other listing can trip over it.
+	suffix, err := rand.Int(rand.Reader, big.NewInt(1<<62))
+	if err != nil {
+		return ConditionalWriteUnknown, err
+	}
+	object := fmt.Sprintf("%s/.probe/%d", strings.TrimRight(keyPrefix, "/"), suffix)
+	defer func() {
+		if err := c.DeleteFileFromBucket(context.TODO(), bucket, "", object); err != nil {
+			c.Log.Debugw("could not remove the conditional-write probe object", "object", object, "error", err)
+		}
+	}()
+
+	put := func() (int, error) {
+		url, headers, err := c.PresignCreateFileToBucket(ctx, bucket, "", object, conditionalProbeExpiry)
+		if err != nil {
+			return 0, err
+		}
+		req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, strings.NewReader("probe"))
+		if err != nil {
+			return 0, err
+		}
+		for name, value := range headers {
+			req.Header.Set(name, value)
+		}
+		resp, err := (&http.Client{Timeout: conditionalProbeTimeout}).Do(req)
+		if err != nil {
+			return 0, err
+		}
+		defer resp.Body.Close()
+		return resp.StatusCode, nil
+	}
+
+	// The first write establishes the key. A store that refuses this one is not telling
+	// us about conditions, it is telling us the bucket is not writable.
+	status, err := put()
+	if err != nil {
+		return ConditionalWriteUnknown, err
+	}
+	if status < 200 || status > 299 {
+		return ConditionalWriteUnknown, fmt.Errorf("probe upload returned %d", status)
+	}
+
+	// The second is the question. Refused means the condition is applied; accepted means
+	// it was ignored and the object was just overwritten.
+	status, err = put()
+	if err != nil {
+		return ConditionalWriteUnknown, err
+	}
+	switch {
+	case status >= 200 && status <= 299:
+		return ConditionalWriteIgnored, nil
+	case executioncache.UploadRefused(status):
+		return ConditionalWriteEnforced, nil
+	default:
+		// Something else refused it - a permission, a policy. That says nothing about
+		// conditions either way.
+		return ConditionalWriteUnknown, fmt.Errorf("second probe upload returned %d", status)
+	}
+}
+
 func (c *Client) PresignCreateFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, expires time.Duration) (string, map[string]string, error) {
 	if err := c.Connect(); err != nil {
 		return "", nil, err
