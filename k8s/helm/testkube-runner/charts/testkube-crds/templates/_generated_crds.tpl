@@ -20840,7 +20840,9 @@ spec:
                   description: per-workflow timeout configuration
                   properties:
                     initialization:
-                      description: maximum time for initialization/transitioning before steps run
+                      description: |-
+                        maximum time from the job creation until the first step container starts, as a Go duration (for example 2m).
+                        When it ends, the runner aborts the execution and keeps the cause that Kubernetes reported.
                       type: string
                     queue:
                       description: maximum time the execution may spend in queue before starting
@@ -33422,7 +33424,9 @@ spec:
                   description: per-workflow timeout configuration
                   properties:
                     initialization:
-                      description: maximum time for initialization/transitioning before steps run
+                      description: |-
+                        maximum time from the job creation until the first step container starts, as a Go duration (for example 2m).
+                        When it ends, the runner aborts the execution and keeps the cause that Kubernetes reported.
                       type: string
                     queue:
                       description: maximum time the execution may spend in queue before starting

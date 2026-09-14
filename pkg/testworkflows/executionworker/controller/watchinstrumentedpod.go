@@ -69,10 +69,14 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		// Mark Job as started
 		notifier.Align(watcher.State())
 
+		// The initialization timeout covers the wait for the pod and for the first step container
+		initializationDeadline, stopInitializationDeadline := newInitializationDeadline(watcher.State())
+		defer stopInitializationDeadline()
+
 		// Wait until the Pod is scheduled
 		currentJobEventsIndex := 0
 		currentPodEventsIndex := 0
-		for ok := true; ok; _, ok = <-updatesCh {
+		for ok := true; ok; ok = waitForUpdate(updatesCh, &initializationDeadline, notifier) {
 			for _, ev := range watcher.State().JobEvents().Original()[currentJobEventsIndex:] {
 				currentJobEventsIndex++
 
@@ -157,7 +161,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 			// Wait until the Container is started
 			currentPodEventsIndex = 0
-			for ok := true; ok; _, ok = <-updatesCh {
+			for ok := true; ok; ok = waitForUpdate(updatesCh, &initializationDeadline, notifier) {
 				// Read the Pod Events for the Container Events
 				for _, ev := range watcher.State().PodEvents().Original()[currentPodEventsIndex:] {
 					currentPodEventsIndex++
@@ -179,6 +183,11 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			// Stop immediately after the operation is canceled
 			if ctx.Err() != nil {
 				return
+			}
+
+			// The initialization ends when a container with a step starts. With a custom image, a container can hold only the setup.
+			if containsLeafStep(refs[containerIndex], signatureSeq) {
+				endInitializationDeadline(&initializationDeadline, watcher.State().ContainerStartTimestamp(container), notifier)
 			}
 
 			// Start the initial one
@@ -306,4 +315,71 @@ func alignChangedCause(n *notifier, state watchers2.ExecutionState) {
 	if n.alignCause(state) {
 		n.sendResult()
 	}
+}
+
+// initializationDeadline is the end of the initialization timeout, with a timer that receives at that time.
+// The timer is nil when the workflow has no initialization timeout, or when the watch does not need it anymore.
+// Expired is true after the timer received, until the watch decides about the abort.
+type initializationDeadline struct {
+	timer   <-chan time.Time
+	at      time.Time
+	expired bool
+}
+
+// newInitializationDeadline returns the deadline of the initialization timeout of the workflow.
+// The timeout counts from the job creation, because the queue time has its own timeout.
+func newInitializationDeadline(state watchers2.ExecutionState) (initializationDeadline, func()) {
+	timeout := state.InitializationTimeout()
+	if timeout <= 0 {
+		return initializationDeadline{}, func() {}
+	}
+	start := state.EstimatedJobCreationTimestamp()
+	if start.IsZero() {
+		start = time.Now()
+	}
+	at := start.Add(timeout)
+	timer := time.NewTimer(time.Until(at))
+	return initializationDeadline{timer: timer.C, at: at}, func() { timer.Stop() }
+}
+
+// waitForUpdate waits for the next update of the watcher. It returns false when the updates end.
+// When the deadline ends first, it returns true without an update, so the caller reads the state one more time.
+// An update that shows a started step container can arrive together with the timer. When the caller waits again
+// after the deadline ended, it asks one time for the abort.
+func waitForUpdate(updatesCh <-chan struct{}, deadline *initializationDeadline, n *notifier) bool {
+	if deadline.expired {
+		deadline.expired = false
+		n.requestAbort(testkube.StopReasonInitTimeout)
+	}
+	select {
+	case _, ok := <-updatesCh:
+		return ok
+	case <-deadline.timer:
+		deadline.timer = nil
+		deadline.expired = true
+		return true
+	}
+}
+
+// containsLeafStep reports whether the references contain a step that has no children.
+func containsLeafStep(refs []string, signatureSeq []stage.Signature) bool {
+	for _, ref := range refs {
+		if ref == "" || ref == constants.InitStepName {
+			continue
+		}
+		if slices.ContainsFunc(signatureSeq, func(sig stage.Signature) bool { return sig.Ref() == ref && len(sig.Children()) == 0 }) {
+			return true
+		}
+	}
+	return false
+}
+
+// endInitializationDeadline stops the initialization deadline when a step container started or the execution completed.
+// The start time of the container decides and not the timer, because a watch that connects late finds a timer that
+// already fired. A container without a start time did not start, so it does not end the initialization in time.
+func endInitializationDeadline(deadline *initializationDeadline, startedAt time.Time, n *notifier) {
+	if (deadline.timer != nil || deadline.expired) && !startedAt.IsZero() && startedAt.After(deadline.at) {
+		n.requestAbort(testkube.StopReasonInitTimeout)
+	}
+	deadline.timer, deadline.expired = nil, false
 }

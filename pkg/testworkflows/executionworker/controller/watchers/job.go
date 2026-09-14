@@ -31,6 +31,7 @@ type Job interface {
 	Signature() ([]stage.Signature, error)
 	InternalConfig() (testworkflowconfig.InternalConfig, error)
 	ScheduledAt() (time.Time, error)
+	InitializationTimeout() time.Duration
 	ExecutionError() string
 	Debug() string
 }
@@ -94,6 +95,10 @@ func (j *job) Signature() ([]stage.Signature, error) {
 
 func (j *job) ScheduledAt() (time.Time, error) {
 	return time.Parse(time.RFC3339Nano, j.original.Spec.Template.Annotations[constants.ScheduledAtAnnotationName])
+}
+
+func (j *job) InitializationTimeout() time.Duration {
+	return parseInitializationTimeout(j.original.Spec.Template.Annotations)
 }
 
 func (j *job) ExecutionError() string {

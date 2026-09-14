@@ -212,3 +212,16 @@ spec:
       echo "$msg"
       echo "$msg" | grep -q "Kubernetes cannot mount a volume of the pod" || { echo "unexpected message: $msg"; exit 1; }
       [ {{ shellquote(execution("missing-volume-secret").status) }} = "aborted" ] || { echo "unexpected status"; exit 1; }
+  - name: expected-fail-init-timeout
+    negative: true
+    execute:
+      workflows:
+      - name: expected-fail-init-timeout
+        as: init-timeout
+  - name: assert-init-timeout-message
+    shell: |
+      msg={{ shellquote(execution("init-timeout").errorMessage) }}
+      echo "$msg"
+      echo "$msg" | grep -q "no node can run the pod" || { echo "unexpected message: $msg"; exit 1; }
+      echo "$msg" | grep -q "the first step did not start before the initialization timeout of the workflow" || { echo "unexpected message: $msg"; exit 1; }
+      [ {{ shellquote(execution("init-timeout").status) }} = "aborted" ] || { echo "unexpected status"; exit 1; }

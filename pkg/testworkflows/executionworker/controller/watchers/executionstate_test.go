@@ -5,10 +5,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
 func TestExecutionState_CurrentCause(t *testing.T) {
@@ -140,6 +142,50 @@ func TestExecutionState_CurrentCause(t *testing.T) {
 			state := NewExecutionState(nil, pod, NewJobEvents(tt.jobEvents), NewPodEvents(tt.podEvents), nil)
 
 			assert.Equal(t, tt.want, state.CurrentCause())
+		})
+	}
+}
+
+func TestExecutionState_InitializationTimeout(t *testing.T) {
+	annotated := func(value string) map[string]string {
+		return map[string]string{constants.InitializationTimeoutAnnotation: value}
+	}
+
+	tests := []struct {
+		name           string
+		jobAnnotations map[string]string
+		podAnnotations map[string]string
+		want           time.Duration
+	}{
+		{
+			name:           "reads the job first",
+			jobAnnotations: annotated("2m0s"),
+			podAnnotations: annotated("3m0s"),
+			want:           2 * time.Minute,
+		},
+		{
+			name:           "reads the pod when the job has no value",
+			podAnnotations: annotated("3m0s"),
+			want:           3 * time.Minute,
+		},
+		{
+			name: "returns zero without an annotation",
+			want: 0,
+		},
+		{
+			name:           "returns zero for a value that is not a duration",
+			jobAnnotations: annotated("soon"),
+			want:           0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			job := &batchv1.Job{Spec: batchv1.JobSpec{Template: corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Annotations: tt.jobAnnotations}}}}
+			pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Annotations: tt.podAnnotations}}
+			state := NewExecutionState(NewJob(job), NewPod(pod), NewJobEvents(nil), NewPodEvents(nil), nil)
+
+			assert.Equal(t, tt.want, state.InitializationTimeout())
 		})
 	}
 }

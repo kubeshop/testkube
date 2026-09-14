@@ -25,6 +25,7 @@ func TestStopReason_Sentence(t *testing.T) {
 		{name: "config missing", reason: StopReasonConfigMissing, want: "a secret or a config map that a container needs is not available"},
 		{name: "volume mount failed", reason: StopReasonVolumeMountFailed, want: "Kubernetes cannot mount a volume of the pod"},
 		{name: "admission denied", reason: StopReasonAdmissionDenied, want: "the cluster did not accept the pod"},
+		{name: "initialization timeout", reason: StopReasonInitTimeout, want: "the first step did not start before the initialization timeout of the workflow"},
 		{name: "token from a newer control plane has no words yet", reason: StopReason("later-added"), want: ""},
 	}
 	for _, tt := range tests {

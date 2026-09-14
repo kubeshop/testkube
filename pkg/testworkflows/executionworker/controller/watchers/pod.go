@@ -36,6 +36,7 @@ type Pod interface {
 	Signature() ([]stage.Signature, error)
 	InternalConfig() (testworkflowconfig.InternalConfig, error)
 	ScheduledAt() (time.Time, error)
+	InitializationTimeout() time.Duration
 	ContainerStarted(name string) bool
 	ContainerFinished(name string) bool
 	ContainerFailed(name string) bool
@@ -136,6 +137,10 @@ func (p *pod) InternalConfig() (cfg testworkflowconfig.InternalConfig, err error
 
 func (p *pod) ScheduledAt() (time.Time, error) {
 	return time.Parse(time.RFC3339Nano, p.original.Annotations[constants.ScheduledAtAnnotationName])
+}
+
+func (p *pod) InitializationTimeout() time.Duration {
+	return parseInitializationTimeout(p.original.Annotations)
 }
 
 func (p *pod) ContainerStarted(name string) bool {

@@ -452,3 +452,12 @@ func latestWaitingCause(events []*corev1.Event, causes map[string]testkube.StopR
 	}
 	return &testkube.Cause{Reason: string(causes[cause.Reason]), Message: cause.Message}
 }
+
+// parseInitializationTimeout reads the initialization timeout annotation. It returns zero when the value is absent or invalid.
+func parseInitializationTimeout(annotations map[string]string) time.Duration {
+	timeout, err := time.ParseDuration(annotations[constants2.InitializationTimeoutAnnotation])
+	if err != nil || timeout < 0 {
+		return 0
+	}
+	return timeout
+}

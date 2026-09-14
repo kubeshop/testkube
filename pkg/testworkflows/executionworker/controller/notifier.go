@@ -101,6 +101,10 @@ func (n *notifier) Log(ref string, ts time.Time, message string) {
 	}
 }
 
+func (n *notifier) requestAbort(reason testkube.StopReason) {
+	n.send(Notification{Timestamp: time.Now().UTC(), AbortReason: reason})
+}
+
 func (n *notifier) Error(err error) {
 	n.error(err)
 }
