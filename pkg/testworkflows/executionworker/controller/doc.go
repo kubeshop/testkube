@@ -17,4 +17,11 @@
 // the watch asks one time for an abort and continues to read the execution. The abort sends no detail, because the
 // initialization message already holds the cause. When a step container started, its start time decides and not the
 // timer. A watch that connects late, for example to read the logs, finds a timer that already fired.
+//
+// # Completion
+//
+// The execution is complete when the pod finishes or when every step container terminates. Another container, for
+// example a sidecar that a webhook adds, can keep the pod running after the last step. Without this rule, the watch
+// does not end, and the execution stays running although every step has a result. The pod watcher keeps its own
+// rule, because it must watch the pod until the runner deletes it.
 package controller

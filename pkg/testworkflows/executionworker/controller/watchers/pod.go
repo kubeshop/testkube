@@ -111,14 +111,42 @@ func (p *pod) StartTimestamp() time.Time {
 }
 
 func (p *pod) FinishTimestamp() time.Time {
-	if !p.Finished() {
-		return time.Time{}
+	if IsPodFinished(p.original) {
+		return GetPodCompletionTimestamp(p.original)
 	}
-	return GetPodCompletionTimestamp(p.original)
+	ts, _ := p.stepContainersFinished()
+	return ts
 }
 
+// Finished reports whether the pod finished or every step container of the pod terminated.
 func (p *pod) Finished() bool {
-	return IsPodFinished(p.original)
+	if IsPodFinished(p.original) {
+		return true
+	}
+	_, terminated := p.stepContainersFinished()
+	return terminated
+}
+
+// stepContainersFinished returns the latest finish time and true when the pod has step containers in spec.containers
+// and all of them terminated. The processor puts the earlier step containers in the init containers. Init containers
+// run in order, and IsPodFinished reports a failed init container, so the check reads only spec.containers.
+func (p *pod) stepContainersFinished() (time.Time, bool) {
+	var latest time.Time
+	hasSteps := false
+	for _, c := range p.original.Spec.Containers {
+		if !isStepContainer(c.Name) {
+			continue
+		}
+		status := GetContainerStatus(p.original, c.Name)
+		if status == nil || status.State.Terminated == nil {
+			return time.Time{}, false
+		}
+		hasSteps = true
+		if finishedAt := status.State.Terminated.FinishedAt.Time; finishedAt.After(latest) {
+			latest = finishedAt
+		}
+	}
+	return latest, hasSteps
 }
 
 func (p *pod) ActionGroups() (actions actiontypes.ActionGroups, err error) {
