@@ -286,6 +286,89 @@ func TestProcessCache_Rejects(t *testing.T) {
 	}), "should be mounted")
 }
 
+// TestProcessCache_WrapsNestedSteps covers a cache declared on a step that has children
+// rather than a command of its own.
+//
+// The shape works, and it works for a reason rather than by luck: ProcessCacheRestore is
+// registered before every operation that produces execution - ProcessNestedSteps
+// included - and ProcessCacheSave after all of them, so the children land between a
+// restore and a save that were already positioned to wrap whatever executes. None of
+// that is stated anywhere it would be checked, though. An operation inserted between the
+// restore and ProcessNestedSteps, or a reordering of that list, would silently move the
+// children outside the cache, and every other test here uses a leaf step.
+//
+// This is also the most useful shape in practice: one cache around an install and the
+// build that consumes it, rather than one per step.
+func TestProcessCache_WrapsNestedSteps(t *testing.T) {
+	res, err := bundleWithCache(t, testworkflowsv1.Step{
+		StepOperations: testworkflowsv1.StepOperations{
+			Cache: &testworkflowsv1.StepCache{Key: "m2-abc", Paths: []string{"/root/.m2"}},
+		},
+		Steps: []testworkflowsv1.Step{
+			{StepOperations: testworkflowsv1.StepOperations{Shell: "mvn verify"}},
+			{StepOperations: testworkflowsv1.StepOperations{Shell: "mvn test"}},
+		},
+	})
+	require.NoError(t, err)
+
+	var restore, save stageCommand
+	var children []stageCommand
+	for _, stage := range stageCommands(res) {
+		switch {
+		case strings.Contains(stage.Line, "cache restore"):
+			restore = stage
+		case strings.Contains(stage.Line, "cache save"):
+			save = stage
+		case strings.Contains(stage.Line, "mvn "):
+			children = append(children, stage)
+		}
+	}
+	require.NotEmpty(t, restore.Ref, "there should be a restore stage")
+	require.NotEmpty(t, save.Ref, "there should be a save stage")
+	require.Len(t, children, 2, "both children should be present")
+
+	// Order: the restore has to precede every child and the save has to follow them, or
+	// the children run against a tree that was not restored yet, or was packed too early.
+	order := make(map[string]int)
+	for i, stage := range stageCommands(res) {
+		order[stage.Ref] = i
+	}
+	for _, child := range children {
+		assert.Less(t, order[restore.Ref], order[child.Ref], "the restore must precede every child")
+		assert.Less(t, order[child.Ref], order[save.Ref], "the save must follow every child")
+	}
+
+	// A failing child must not publish a cache. The save carries no condition of its own,
+	// so it inherits the group's, which conjoins every stage before it - and that is what
+	// makes the guarantee stated for a leaf step hold for this shape too: an entry is
+	// immutable, so a tree published by a failed build could never be corrected.
+	conditions := make(map[string]string)
+	for _, group := range res.Actions() {
+		for _, action := range group {
+			if action.Declare != nil {
+				conditions[action.Declare.Ref] = action.Declare.Condition
+			}
+		}
+	}
+	require.Contains(t, conditions, save.Ref)
+	for _, child := range children {
+		assert.Contains(t, conditions[save.Ref], child.Ref,
+			"the save has to depend on every child, or a failed one still publishes an entry")
+	}
+
+	// And the children have to be able to see what was restored. The volume goes on the
+	// parent container precisely so every stage of the step inherits it.
+	var mounted bool
+	for _, container := range res.Job.Spec.Template.Spec.Containers {
+		for _, mount := range container.VolumeMounts {
+			if mount.MountPath == "/root/.m2" {
+				mounted = true
+			}
+		}
+	}
+	assert.True(t, mounted, "the cached path has to be mounted where the children run")
+}
+
 // TestProcessCache_StagesTheArchiveOnItsOwnVolume covers the volume the save stage
 // writes its archive to before uploading it.
 //
