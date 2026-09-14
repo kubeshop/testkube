@@ -76,7 +76,12 @@ spec:
             match($0, /[[:space:]]classname="[^"]*"/) { c = substr($0, RSTART+12, RLENGTH-13) }
             { if (n != "") print (c == "" ? n : c "." n); n = ""; c = "" }
           ' \
+        | sed -e 's/&lt;/</g' -e 's/&gt;/>/g' -e 's/&quot;/"/g' -e "s/&apos;/'/g" -e 's/&amp;/\&/g' \
         | sort -u > /data/selected.txt
+      # The entities are decoded after the attributes are picked out, not
+      # before: a &quot; turned back into a " while still inside name="..."
+      # would end the attribute early and truncate the name. &amp; goes last,
+      # so that an escaped entity like &amp;amp; decodes exactly once.
 
       echo "selected:"
       cat /data/selected.txt
