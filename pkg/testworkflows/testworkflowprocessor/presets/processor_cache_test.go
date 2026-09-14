@@ -369,6 +369,63 @@ func TestProcessCache_WrapsNestedSteps(t *testing.T) {
 	assert.True(t, mounted, "the cached path has to be mounted where the children run")
 }
 
+// TestProcessCache_OnAParallelStepTravelsToTheWorkers covers where a cache has to be
+// declared when parallel workers are involved, which is not where a reader expects.
+//
+// A cache works by mounting volumes that the restore writes into and the save reads
+// back. Workers run in pods of their own, and ProcessParallel nils out VolumeMounts when
+// a worker inherits the container config - so a cache on an ancestor of a parallel step
+// restores into the pod that launches the workers and saves from it, doing nothing for
+// the pods that do the work. It looks like it is caching.
+//
+// Declared on the parallel step itself it does reach them: the whole StepParallel is
+// encoded into the toolkit's argument, StepOperations included, and the toolkit moves
+// those operations into each worker's first step. Both halves are asserted from that one
+// payload, because both are properties of what gets encoded.
+func TestProcessCache_OnAParallelStepTravelsToTheWorkers(t *testing.T) {
+	res, err := bundleWithCache(t, testworkflowsv1.Step{
+		StepOperations: testworkflowsv1.StepOperations{
+			Shell: "echo before",
+		},
+		Parallel: &testworkflowsv1.StepParallel{
+			StepOperations: testworkflowsv1.StepOperations{
+				Shell: "npm test",
+				Cache: &testworkflowsv1.StepCache{
+					Key:   "npm-abc",
+					Paths: []string{"/root/.npm/_cacache"},
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	var encoded string
+	for _, stage := range stageCommands(res) {
+		if strings.Contains(stage.Line, "toolkit parallel") {
+			_, rest, found := strings.Cut(stage.Line, "--base64 ")
+			require.True(t, found, "the parallel stage should carry a base64 spec: %s", stage.Line)
+			encoded = strings.Fields(rest)[0]
+		}
+	}
+	require.NotEmpty(t, encoded, "there should be a parallel stage")
+
+	var parallel testworkflowsv1.StepParallel
+	require.NoError(t, expressions.DecodeBase64JSON(encoded, &parallel))
+
+	// The cache reaches the workers, because it is part of what gets encoded.
+	require.NotNil(t, parallel.Cache, "a cache on the parallel step has to travel to the workers")
+	assert.Equal(t, "npm-abc", parallel.Cache.Key)
+	assert.Equal(t, []string{"/root/.npm/_cacache"}, parallel.Cache.Paths)
+
+	// And the pod's volumes do not. This is the half that makes a cache on an ancestor
+	// ineffective rather than merely redundant: a worker inherits the container config
+	// without its mounts, so there is nothing for a restore in the parent pod to reach.
+	require.NotNil(t, parallel.Container,
+		"the worker inherits a container config, so a nil one means this assertion is not being made")
+	assert.Empty(t, parallel.Container.VolumeMounts,
+		"a worker must not inherit the parent pod's mounts, or a cache on an ancestor would appear to reach it")
+}
+
 // TestProcessCache_StagesTheArchiveOnItsOwnVolume covers the volume the save stage
 // writes its archive to before uploading it.
 //
