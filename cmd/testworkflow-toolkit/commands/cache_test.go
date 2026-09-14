@@ -745,3 +745,65 @@ func TestUploadRefused(t *testing.T) {
 	assert.False(t, executioncache.UploadRefused(http.StatusForbidden))
 	assert.False(t, executioncache.UploadRefused(http.StatusInternalServerError))
 }
+
+// TestRunCacheRestore_RefusesAKeyWithAnEmptyComponent covers the shape ValidateKey does
+// not catch.
+//
+// npm-v3-{{ hash_files("package-lock.json") }} with the lockfile absent resolves to
+// "npm-v3-", which is a perfectly valid key and identifies nothing. Every step in that
+// state would share one entry - and because that key sits exactly where its own
+// restoreKeys prefix points, the entry becomes a candidate for lookups that did have a
+// lockfile.
+func TestRunCacheRestore_RefusesAKeyWithAnEmptyComponent(t *testing.T) {
+	repository := &fakeCacheRepository{}
+	out := &bytes.Buffer{}
+
+	// No lockfile exists here, so hash_files() matches nothing and yields "".
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   `npm-v3-{{ hash_files("no-such-lockfile-*.json") }}`,
+		Paths: []string{"/root/.npm"},
+	}), repository, out)
+
+	// A refusal, not a failure: the caller prints it and the step installs from the
+	// network exactly as it would with no cache configured.
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "evaluated to nothing")
+	assert.Zero(t, repository.restoreCalls, "a key that identifies nothing must not be looked up")
+}
+
+// TestRunCacheSave_RefusesAKeyWithAnEmptyComponent is the half that matters most: the
+// restore only wastes a lookup, where the save is what publishes the shared entry - and
+// entries are immutable, so the first one to do it fixes that content for the key's
+// lifetime.
+func TestRunCacheSave_RefusesAKeyWithAnEmptyComponent(t *testing.T) {
+	repository := &fakeCacheRepository{}
+	out := &bytes.Buffer{}
+
+	err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   `npm-v3-{{ hash_files("no-such-lockfile-*.json") }}`,
+		Paths: []string{"/root/.npm"},
+	}), nil, "", cacheDefaultMaxSize, repository, out)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "evaluated to nothing")
+	assert.Zero(t, repository.saveCalls, "a key that identifies nothing must not be granted an upload")
+}
+
+// TestRunCacheRestore_AcceptsAKeyWhoseComponentsResolve is the other side, so the check
+// cannot pass by refusing everything. A key with no expressions at all is fine too -
+// a static key identifies exactly one thing, which is the point.
+func TestRunCacheRestore_AcceptsAKeyWhoseComponentsResolve(t *testing.T) {
+	for _, key := range []string{
+		"npm-v3-static",
+		`npm-v3-{{ "abc" }}`,
+	} {
+		repository := &fakeCacheRepository{}
+		out := &bytes.Buffer{}
+
+		require.NoError(t, runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+			Key:   key,
+			Paths: []string{"/root/.npm"},
+		}), repository, out), "%s", key)
+		assert.Equal(t, 1, repository.restoreCalls, "%s should have been looked up", key)
+	}
+}

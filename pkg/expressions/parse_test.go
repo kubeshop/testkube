@@ -519,3 +519,44 @@ abc
 def
 '`).String())
 }
+
+// TestTemplateExpressions pins that the parts a caller judges are the parts the template
+// actually resolves, including where a naive split would get it wrong.
+func TestTemplateExpressions(t *testing.T) {
+	for _, tc := range []struct {
+		tpl  string
+		want []string
+	}{
+		{tpl: "", want: nil},
+		{tpl: "no expressions here", want: nil},
+		{tpl: "{{ env.HOME }}", want: []string{"env.HOME"}},
+		{tpl: `npm-{{ hash_files("package-lock.json") }}`, want: []string{`hash_files("package-lock.json")`}},
+		{
+			tpl:  `{{ a }}-and-{{ b }}`,
+			want: []string{"a", "b"},
+		},
+		// The case a regex over "{{...}}" gets wrong: the first "}}" is inside a string
+		// literal and does not end the expression.
+		{tpl: `x-{{ trim("a}}b") }}-y`, want: []string{`trim("a}}b")`}},
+		// An empty pair contributes nothing to the result, so there is nothing to judge.
+		{tpl: "a{{}}b", want: nil},
+	} {
+		got, err := TemplateExpressions(tc.tpl)
+		assert.NoError(t, err, "%q", tc.tpl)
+		assert.Equal(t, tc.want, got, "%q", tc.tpl)
+	}
+}
+
+// TestTemplateExpressionsAgreesWithTheCompiler is the property that makes the accessor
+// safe to judge by: it finds an expression exactly when compiling finds one, so a caller
+// cannot end up inspecting a different set of parts than the template resolves.
+func TestTemplateExpressionsAgreesWithTheCompiler(t *testing.T) {
+	for _, tpl := range []string{
+		"", "plain", "{{ 1 + 2 }}", "a{{ 1 }}b{{ 2 }}c", `{{ trim("a}}b") }}`, "a{{}}b",
+	} {
+		_, compileErr := CompileTemplate(tpl)
+		_, extractErr := TemplateExpressions(tpl)
+		assert.Equal(t, compileErr == nil, extractErr == nil,
+			"%q: the two have to agree on whether the template parses", tpl)
+	}
+}

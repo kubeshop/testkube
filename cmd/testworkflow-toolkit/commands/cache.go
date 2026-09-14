@@ -132,6 +132,10 @@ func resolveCacheSpec(encoded string) (spec executioncache.Args, resolved execut
 	}
 	resolved.Key, _ = key.Static().StringValue()
 
+	if err := checkKeyComponents(spec.Key, machine); err != nil {
+		return spec, resolved, err
+	}
+
 	for _, restoreKey := range spec.RestoreKeys {
 		value, err := expressions.CompileAndResolveTemplate(restoreKey, machine, expressions.FinalizerFail)
 		if err != nil {
@@ -156,6 +160,58 @@ func resolveCacheSpec(encoded string) (spec executioncache.Args, resolved execut
 	}
 
 	return spec, resolved, nil
+}
+
+// checkKeyComponents refuses a key in which some part of the template evaluated to
+// nothing.
+//
+// ValidateKey catches a key that is empty outright, which is what an unmatched
+// hash_files() produces on its own. It does not catch the far commoner shape: a key of
+// npm-v3-{{ hash_files("package-lock.json") }} with the lockfile absent resolves to the
+// perfectly valid-looking "npm-v3-", and every step in that state then shares one entry.
+//
+// That is worse than the empty key it slips past, not better, because it looks like a
+// working cache. Three things compound it. The degenerate key sits exactly where its own
+// restoreKeys prefix points, so the entry is a candidate for every lookup under that
+// prefix and not only for the runs that produced it - and the most recently saved match
+// wins, so one such save can become the preferred fallback for runs that do have a
+// lockfile. Entries are immutable, so whatever the first such run stored is what the key
+// holds for its lifetime. And under scope: environment it crosses workflows.
+//
+// The rule is any empty component, not specifically an empty hash_files(), because what
+// matters is that every part of a key distinguishes something: npm-{{ hash_files("a")
+// }}-{{ hash_files("b") }} with b absent silently stops distinguishing b's state, and an
+// empty config value does the same. It applies to the key alone and deliberately not to
+// restoreKeys - a restore key is a prefix, and the whole defect here is a key that has
+// become indistinguishable from one.
+//
+// Refusing is a miss, not a failure: the caller reports it and the step installs from the
+// network exactly as it would with no cache configured. hash_files() returns "" rather
+// than an error precisely so the caller can make this decision, which until now it only
+// half made.
+func checkKeyComponents(template string, machine expressions.Machine) error {
+	parts, err := expressions.TemplateExpressions(template)
+	if err != nil {
+		// The key already resolved, so this cannot be a syntax error the caller has not
+		// seen. Nothing to add.
+		return nil
+	}
+
+	for _, part := range parts {
+		value, err := expressions.CompileAndResolve(part, machine, expressions.FinalizerFail)
+		if err != nil {
+			// Same reasoning: resolving the whole key succeeded, so a part that will not
+			// resolve on its own is this check's problem and not the key's.
+			continue
+		}
+		if str, _ := value.Static().StringValue(); str == "" {
+			return fmt.Errorf(
+				"cache key %q: %s evaluated to nothing, so the key no longer identifies what it was derived from - every run in this state would share one entry",
+				template, part)
+		}
+	}
+
+	return nil
 }
 
 // absoluteCachePath resolves a path against the step's working directory, matching how
