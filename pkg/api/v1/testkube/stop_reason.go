@@ -19,6 +19,7 @@ const (
 	StopReasonConfigMissing      StopReason = "config-missing"
 	StopReasonVolumeMountFailed  StopReason = "volume-mount-failed"
 	StopReasonAdmissionDenied    StopReason = "admission-denied"
+	StopReasonInitTimeout        StopReason = "initialization-timeout"
 )
 
 // Sentence returns the words for the reason in a message for people. It returns an
@@ -51,6 +52,8 @@ func (r StopReason) Sentence() string {
 		return "Kubernetes cannot mount a volume of the pod"
 	case StopReasonAdmissionDenied:
 		return "the cluster did not accept the pod"
+	case StopReasonInitTimeout:
+		return "the first step did not start before the initialization timeout of the workflow"
 	default:
 		return ""
 	}

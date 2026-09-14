@@ -58,6 +58,7 @@ type ExecutionState interface {
 	ActionGroups() (actiontypes.ActionGroups, error)
 	InternalConfig() (testworkflowconfig.InternalConfig, error)
 	ScheduledAt() time.Time
+	InitializationTimeout() time.Duration
 
 	ExecutionError() string
 	CurrentCause() *testkube.Cause
@@ -293,6 +294,19 @@ func (e *executionState) ScheduledAt() time.Time {
 		}
 	}
 	return e.options.ScheduledAt
+}
+
+// InitializationTimeout returns the initialization timeout from the job, then from the pod, or zero.
+func (e *executionState) InitializationTimeout() time.Duration {
+	if e.job != nil {
+		if timeout := e.job.InitializationTimeout(); timeout > 0 {
+			return timeout
+		}
+	}
+	if e.pod != nil {
+		return e.pod.InitializationTimeout()
+	}
+	return 0
 }
 
 func (e *executionState) ActionGroups() (actiontypes.ActionGroups, error) {

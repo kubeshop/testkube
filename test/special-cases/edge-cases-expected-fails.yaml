@@ -844,3 +844,25 @@ spec:
   steps:
   - name: Run test
     shell: echo "This should not be printed, because the volume cannot be mounted"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-init-timeout
+  labels:
+    core-tests: expected-fail
+description: "the initialization timeout ends a pod that no node can run"
+spec:
+  timeouts:
+    initialization: 30s
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  pod:
+    nodeSelector:
+      testkube.io/expected-fail: no-node-has-this-label
+  steps:
+  - name: Run test
+    shell: echo "This should not be printed, because no node can run the pod"
