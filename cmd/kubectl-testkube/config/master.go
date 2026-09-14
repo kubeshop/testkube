@@ -4,7 +4,9 @@ type Master struct {
 	AgentToken     string `json:"agentToken,omitempty"`
 	IdToken        string `json:"idToken,omitempty"`
 	OrgId          string `json:"orgId,omitempty"`
+	OrgName        string `json:"orgName,omitempty"`
 	EnvId          string `json:"envId,omitempty"`
+	EnvName        string `json:"envName,omitempty"`
 	Insecure       bool   `json:"insecure,omitempty"`
 	UiUrlPrefix    string `json:"uiUrlPrefix,omitempty"`
 	AgentUrlPrefix string `json:"agentUrlPrefix,omitempty"`

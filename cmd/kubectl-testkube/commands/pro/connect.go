@@ -120,17 +120,64 @@ func NewConnectCmd() *cobra.Command {
 			// os.Exit) cannot leak a temp directory created by the export block.
 			common.ProcessMasterFlags(cmd, &masterOpts, &cfg)
 
-			if masterOpts.Master.EnvId == "" {
-				ui.Failf("You need pass valid environment id to connect to Pro")
-			}
-			if masterOpts.Master.OrgId == "" {
-				ui.Failf("You need pass valid organization id to connect to Pro")
-			}
+			// The api key and api uri are checked first because resolving a name
+			// into an id needs both; without them the lookup would fail with a
+			// transport error instead of saying which flag is missing.
 			if apiKey == "" {
 				ui.Failf("You need pass valid api key to connect to Pro")
 			}
 			if masterOpts.Master.URIs.Api == "" {
 				ui.Failf("You need pass valid uri api to connect to Pro")
+			}
+
+			// Resolve any name flags into ids, so the checks below and everything
+			// downstream keep working purely in ids.
+			//
+			// The lookup queries the same Control Plane the connection will, and
+			// deliberately not whatever is saved in the context: the ids it
+			// returns are only meaningful on the host that issued them, and
+			// --api-key belongs to the host the flags name.
+			//
+			// No organization is inherited from the current context either. This
+			// migrates an installation to Pro and is largely one-way, so the
+			// organization is required explicitly rather than picked up from
+			// whatever context happens to be saved; --env-id has no fallback
+			// either.
+			if masterOpts.Master.OrgName != "" || masterOpts.Master.EnvName != "" {
+				lookupSkipTLS := cfg.SkipTLS || cfg.CloudContext.SkipTLS
+
+				// The organization has to resolve first: the environment lookup
+				// is scoped to it.
+				if err := common.ResolveNamedOrg(masterOpts.Master.URIs.Api, apiKey, &masterOpts.Master, lookupSkipTLS); err != nil {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrInvalidRuntimeParameter,
+						"Failed to resolve the organization",
+						"Check the name given to --org-name, or pass --org-id with the organization id instead.",
+						err,
+					))
+				}
+
+				if err := common.ResolveNamedEnv(masterOpts.Master.URIs.Api, apiKey, &masterOpts.Master,
+					"", lookupSkipTLS); err != nil {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrInvalidRuntimeParameter,
+						"Failed to resolve the environment",
+						"Check the name given to --env-name, or pass --env-id with the environment id instead.",
+						err,
+					))
+				}
+			}
+
+			if masterOpts.Master.EnvId == "" {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrInvalidRuntimeParameter,
+					"Missing environment",
+					"Pass --env-id with the environment id, or --env-name to resolve one by name.",
+					errors.New("no environment given to connect to Pro"),
+				))
+			}
+			if masterOpts.Master.OrgId == "" {
+				ui.Failf("You need pass valid organization id to connect to Pro")
 			}
 			if masterOpts.Master.URIs.Agent == "" {
 				ui.Failf("You need pass valid uri agent to connect to Pro")

@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/internal/common"
 )
 
 func TestHealDuration(t *testing.T) {
@@ -117,6 +119,49 @@ func TestTestWorkflowResult_Fatal(t *testing.T) {
 			assert.Equal(t, ts, tt.result.QueuedAt)
 			assert.Equal(t, ts, tt.result.StartedAt)
 			assert.Equal(t, ts, tt.result.FinishedAt)
+		})
+	}
+}
+
+func TestTestWorkflowResult_HealAbortedOrCanceled(t *testing.T) {
+	tests := []struct {
+		name                   string
+		terminationCode        string
+		errorStr               string
+		wantRunningStepMessage string
+		wantQueuedStepMessage  string
+	}{
+		{
+			name:                   "stores plain text messages for an aborted execution",
+			terminationCode:        string(ABORTED_TestWorkflowStatus),
+			errorStr:               "trigger: deleted",
+			wantRunningStepMessage: "The execution has been aborted. (trigger: deleted)",
+			wantQueuedStepMessage:  "The execution was aborted before. (trigger: deleted)",
+		},
+		{
+			name:                   "stores plain text messages for a canceled execution",
+			terminationCode:        string(CANCELED_TestWorkflowStatus),
+			errorStr:               "user: stopped",
+			wantRunningStepMessage: "The execution has been canceled. (user: stopped)",
+			wantQueuedStepMessage:  "The execution was canceled before. (user: stopped)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &TestWorkflowResult{
+				Initialization: &TestWorkflowStepResult{Status: common.Ptr(PASSED_TestWorkflowStepStatus)},
+				Steps: map[string]TestWorkflowStepResult{
+					"running": {Status: common.Ptr(RUNNING_TestWorkflowStepStatus), StartedAt: time.Now()},
+					"queued":  {Status: common.Ptr(QUEUED_TestWorkflowStepStatus)},
+				},
+			}
+			sigSequence := []TestWorkflowSignature{{Ref: "running"}, {Ref: "queued"}}
+
+			r.HealAbortedOrCanceled(sigSequence, tt.errorStr, "Job has been aborted", tt.terminationCode)
+
+			assert.Equal(t, tt.wantRunningStepMessage, r.Steps["running"].ErrorMessage)
+			assert.Equal(t, tt.wantQueuedStepMessage, r.Steps["queued"].ErrorMessage)
 		})
 	}
 }

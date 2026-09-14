@@ -107,6 +107,13 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, isDockerCmd bool
 
 	cmd.Flags().StringVar(&opts.Master.OrgId, "org-id", "", "Testkube Pro organization id [required for centralized mode]"+neededForLogin)
 	cmd.Flags().StringVar(&opts.Master.EnvId, "env-id", "", "Testkube Pro environment id [required for centralized mode]"+neededForLogin)
+
+	// Name-based alternatives to the id flags, so that non-interactive logins can
+	// pass the same friendly names the interactive selector displays.
+	cmd.Flags().StringVar(&opts.Master.OrgName, "org-name", "", "Testkube Pro organization name, alternative to --org-id"+neededForLogin)
+	cmd.Flags().StringVar(&opts.Master.EnvName, "env-name", "", "Testkube Pro environment name or slug, alternative to --env-id"+neededForLogin)
+	cmd.MarkFlagsMutuallyExclusive("org-id", "org-name")
+	cmd.MarkFlagsMutuallyExclusive("env-id", "env-name")
 }
 
 func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data) {
@@ -204,6 +211,34 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 
 	opts.Master.URIs = uris
 
+}
+
+// ControlPlaneAPIURI returns the URI to reach the Control Plane with.
+//
+// An explicitly configured location wins. Otherwise the URI already stored in
+// the context does, because ProcessMasterFlags composes its URI from prefixes
+// and a root domain and so falls back to the SaaS host, which is the wrong
+// place to look for the organizations of someone logged into a custom Control
+// Plane. `composed` is the URI ProcessMasterFlags produced.
+func ControlPlaneAPIURI(cmd *cobra.Command, composed string, cfg *config.Data) string {
+	for _, name := range []string{
+		"api-uri-override",
+		"api-prefix",
+		"cloud-api-prefix",
+		"root-domain",
+		"pro-root-domain",
+		"cloud-root-domain",
+	} {
+		if flagChanged(cmd, name) {
+			return composed
+		}
+	}
+
+	if cfg != nil && cfg.CloudContext.ApiUri != "" {
+		return cfg.CloudContext.ApiUri
+	}
+
+	return composed
 }
 
 // uiConfigured reports whether any input defines the dashboard location.

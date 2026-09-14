@@ -42,31 +42,31 @@ func (m *MockRunner) EXPECT() *MockRunnerMockRecorder {
 }
 
 // Abort mocks base method.
-func (m *MockRunner) Abort(id string) error {
+func (m *MockRunner) Abort(id, actor, reason string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Abort", id)
+	ret := m.ctrl.Call(m, "Abort", id, actor, reason)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Abort indicates an expected call of Abort.
-func (mr *MockRunnerMockRecorder) Abort(id any) *gomock.Call {
+func (mr *MockRunnerMockRecorder) Abort(id, actor, reason any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Abort", reflect.TypeOf((*MockRunner)(nil).Abort), id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Abort", reflect.TypeOf((*MockRunner)(nil).Abort), id, actor, reason)
 }
 
 // Cancel mocks base method.
-func (m *MockRunner) Cancel(id string) error {
+func (m *MockRunner) Cancel(id, actor, reason string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Cancel", id)
+	ret := m.ctrl.Call(m, "Cancel", id, actor, reason)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Cancel indicates an expected call of Cancel.
-func (mr *MockRunnerMockRecorder) Cancel(id any) *gomock.Call {
+func (mr *MockRunnerMockRecorder) Cancel(id, actor, reason any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cancel", reflect.TypeOf((*MockRunner)(nil).Cancel), id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cancel", reflect.TypeOf((*MockRunner)(nil).Cancel), id, actor, reason)
 }
 
 // Execute mocks base method.

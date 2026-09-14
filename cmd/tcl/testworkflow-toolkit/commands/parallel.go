@@ -713,6 +713,7 @@ func (e *WorkerExecutor) handleWorkerCleanup(ctx context.Context, worker WorkerS
 	if cancelled {
 		err = spawn.ParallelExecutionWorker(e.cfg).Abort(cleanupCtx, cfg.Resource.Id, executionworkertypes.DestroyOptions{
 			Namespace: worker.Namespace,
+			Actor:     testkube.StopActorFailFast,
 		})
 		if err == nil {
 			log("aborted")
@@ -820,6 +821,9 @@ func (o *ResumeOrchestrator) resumeAllWorkers(ctx context.Context) {
 			default:
 				_ = spawn.ParallelExecutionWorker(o.cfg).Abort(ctx, err.Id, executionworkertypes.DestroyOptions{
 					Namespace: o.namespaces[index],
+					Actor:     testkube.StopActorRunner,
+					Reason:    testkube.StopReasonWorkerResumeFailed,
+					Detail:    err.Error.Error(),
 				})
 			}
 		}

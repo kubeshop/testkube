@@ -17,8 +17,10 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
@@ -350,7 +352,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		}
 		imageNameResolutions[image] = p.inspector.ResolveName("", image)
 		if err != nil {
-			return nil, fmt.Errorf("resolving image error: %s: %s", image, err.Error())
+			return nil, executionworkertypes.WithStartReason(fmt.Errorf("resolving image error: %s: %w", image, err), testkube.StartReasonImagePullFailed)
 		}
 	}
 	err = root.ApplyImages(images, imageNameResolutions)

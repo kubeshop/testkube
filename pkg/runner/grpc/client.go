@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/oauth"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/proto"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -36,8 +37,8 @@ type runner interface {
 	Execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error)
 	Pause(executionId string) error
 	Resume(executionId string) error
-	Abort(executionId string) error
-	Cancel(executionId string) error
+	Abort(executionId string, actor string, reason string) error
+	Cancel(executionId string, actor string, reason string) error
 }
 
 type workflowStore interface {
@@ -204,7 +205,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 			})
 		case executionv1.ExecutionState_EXECUTION_STATE_CANCELLED:
 			wg.Go(func() {
-				err := c.runner.Cancel(transition.GetExecutionId())
+				err := c.runner.Cancel(transition.GetExecutionId(), transition.GetActor(), transition.GetReason())
 				switch {
 				case errors.Is(err, registry.ErrResourceNotFound):
 					// Mission failed successfully!
@@ -218,7 +219,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 			})
 		case executionv1.ExecutionState_EXECUTION_STATE_ABORTED:
 			wg.Go(func() {
-				err := c.runner.Abort(transition.GetExecutionId())
+				err := c.runner.Abort(transition.GetExecutionId(), transition.GetActor(), transition.GetReason())
 				switch {
 				case errors.Is(err, registry.ErrResourceNotFound):
 					// Mission failed successfully!
@@ -277,8 +278,13 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 				ControlPlane: c.ControlPlaneConfig,
 			})
 			if err != nil {
+				reason := executionworkertypes.StartReasonOf(err)
 				c.logger.Errorw("Failed to start execution.",
 					"executionId", start.GetExecutionId(),
+					"organizationId", c.OrganizationId,
+					"environmentId", start.GetEnvironmentId(),
+					"workflowName", start.GetWorkflowName(),
+					"reason", reason,
 					"error", err)
 				// Execute with our own call timeout context to prevent stalling out.
 				callCtx, cancel := context.WithTimeout(ctx, c.callTimeout)
@@ -287,9 +293,12 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 					"organization-id", c.OrganizationId,
 					"environment-id", start.GetEnvironmentId())
 				// Report the error to the control plane to prevent getting the execution on
-				// subsequent calls.
+				// subsequent calls. The reason and message let the control plane store the
+				// cause on the execution, so the user does not need the runner log.
 				_, callErr := c.client.DeclineExecution(callCtx, &executionv1.DeclineExecutionRequest{
 					ExecutionId: start.ExecutionId,
+					Reason:      proto.String(string(reason)),
+					Message:     proto.String(err.Error()),
 				}, c.callOpts...)
 				cancel()
 				if callErr != nil {

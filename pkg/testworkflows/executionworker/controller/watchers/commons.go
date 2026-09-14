@@ -302,16 +302,36 @@ func GetJobError(job *batchv1.Job) string {
 			}
 		}
 	}
-	var msg string
-	if job.DeletionTimestamp != nil {
-		msg = "Job has been aborted"
-	}
+	// The worker annotates a stop with the actor, a reason token, and an optional
+	// detail. A reason without words, from an older worker or a newer control plane,
+	// shows as its raw text. A deleted job without the annotation is a stop by an
+	// unknown party.
 	if job.Annotations != nil {
-		if terminationReason, ok := job.Annotations["testkube.io/termination-reason"]; ok && terminationReason != "" {
-			msg = terminationReason
+		actor := testkube.StopActor(job.Annotations[constants2.AnnotationTerminationActor])
+		reason := testkube.StopReason(job.Annotations[constants2.AnnotationTerminationReason])
+		detail := job.Annotations[constants2.AnnotationTerminationDetail]
+		if actor != "" || reason != "" {
+			var parts []string
+			if actor != "" {
+				parts = append(parts, actor.Sentence())
+			}
+			if reason != "" {
+				words := reason.Sentence()
+				if words == "" {
+					words = string(reason)
+				}
+				parts = append(parts, words)
+			}
+			if detail != "" {
+				parts = append(parts, detail)
+			}
+			return strings.Join(parts, ": ")
 		}
 	}
-	return msg
+	if job.DeletionTimestamp != nil {
+		return testkube.StopActorSystem.Sentence()
+	}
+	return ""
 }
 
 func GetTerminationCode(job *batchv1.Job) string {
