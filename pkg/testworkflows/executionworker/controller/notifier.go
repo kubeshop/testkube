@@ -203,9 +203,17 @@ func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction, exec
 		var executionResult constants.ExecutionResult
 		_ = json.Unmarshal(serialized, &executionResult)
 		step.ExitCode = float64(executionResult.ExitCode)
+		step.Attempts = max(step.Attempts, int32(executionResult.Iteration)+1)
 		if executionResult.Details != "" {
 			step.ErrorMessage = executionResult.Details
 		}
+	case constants.InstructionIteration:
+		// The init process sends the iteration before each retry, and the iteration starts at 0.
+		// An attempt that times out sends no execution result, so the iteration also counts the attempts.
+		serialized, _ := json.Marshal(hint.Value)
+		var iteration int32
+		_ = json.Unmarshal(serialized, &iteration)
+		step.Attempts = max(step.Attempts, iteration+1)
 	case constants.InstructionPause:
 		pauseTsStr := hint.Value.(string)
 		pauseTs, err := time.Parse(time.RFC3339Nano, pauseTsStr)

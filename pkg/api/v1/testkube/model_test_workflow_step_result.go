@@ -17,6 +17,8 @@ type TestWorkflowStepResult struct {
 	ErrorMessage string                  `json:"errorMessage,omitempty"`
 	Status       *TestWorkflowStepStatus `json:"status,omitempty"`
 	ExitCode     float64                 `json:"exitCode,omitempty"`
+	// number of attempts that the step started, empty when the init process reported none
+	Attempts int32 `json:"attempts,omitempty"`
 	// when the container was created
 	QueuedAt time.Time `json:"queuedAt,omitempty"`
 	// when the container was started

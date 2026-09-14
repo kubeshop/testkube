@@ -163,22 +163,24 @@ func TestExecutionRecorder_Complete(t *testing.T) {
 	t.Setenv("TK_REF", "rparent")
 
 	tests := []struct {
-		name           string
-		result         *testkube.TestWorkflowResult
-		wantStatus     string
-		wantMessage    string
-		wantStepErrors map[string]string
+		name             string
+		result           *testkube.TestWorkflowResult
+		wantStatus       string
+		wantMessage      string
+		wantStepErrors   map[string]string
+		wantStepAttempts map[string]int64
 	}{
 		{
 			name: "records the messages of a failed execution",
 			result: &testkube.TestWorkflowResult{
 				Status:         common.Ptr(testkube.FAILED_TestWorkflowStatus),
 				Initialization: &testkube.TestWorkflowStepResult{ErrorMessage: "the pod cannot be scheduled"},
-				Steps:          map[string]testkube.TestWorkflowStepResult{"rstep1": {ErrorMessage: "the step timed out"}},
+				Steps:          map[string]testkube.TestWorkflowStepResult{"rstep1": {ErrorMessage: "the step timed out", Attempts: 3}},
 			},
-			wantStatus:     "failed",
-			wantMessage:    "the pod cannot be scheduled",
-			wantStepErrors: map[string]string{"rstep1": "the step timed out"},
+			wantStatus:       "failed",
+			wantMessage:      "the pod cannot be scheduled",
+			wantStepErrors:   map[string]string{"rstep1": "the step timed out"},
+			wantStepAttempts: map[string]int64{"rstep1": 3},
 		},
 		{
 			name: "records no messages for an execution that passed",
@@ -213,6 +215,7 @@ func TestExecutionRecorder_Complete(t *testing.T) {
 				Outputs:      map[string]string{},
 				ErrorMessage: tt.wantMessage,
 				StepErrors:   tt.wantStepErrors,
+				StepAttempts: tt.wantStepAttempts,
 			}, got)
 
 			// Later steps rebuild the registry from the JSON of the published group.
@@ -223,6 +226,7 @@ func TestExecutionRecorder_Complete(t *testing.T) {
 			require.Len(t, decoded, 1)
 			assert.Equal(t, got.ErrorMessage, decoded[0].ErrorMessage)
 			assert.Equal(t, got.StepErrors, decoded[0].StepErrors)
+			assert.Equal(t, got.StepAttempts, decoded[0].StepAttempts)
 		})
 	}
 }

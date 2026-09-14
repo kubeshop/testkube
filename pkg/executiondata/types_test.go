@@ -21,7 +21,7 @@ func TestFromExecution(t *testing.T) {
 			want:      Execution{Id: "exec-1", Name: "wf-1", Outputs: map[string]string{}},
 		},
 		{
-			name: "fills the initialization message and the step messages keyed by ref",
+			name: "fills the initialization message, the step messages, and the step attempts keyed by ref",
 			execution: &testkube.TestWorkflowExecution{
 				Id:       "exec-1",
 				Name:     "wf-1",
@@ -30,7 +30,7 @@ func TestFromExecution(t *testing.T) {
 					Status:         common.Ptr(testkube.ABORTED_TestWorkflowStatus),
 					Initialization: &testkube.TestWorkflowStepResult{ErrorMessage: "the pod cannot be scheduled"},
 					Steps: map[string]testkube.TestWorkflowStepResult{
-						"rstep1": {ErrorMessage: "the step timed out"},
+						"rstep1": {ErrorMessage: "the step timed out", Attempts: 3},
 						"rstep2": {ErrorMessage: ""},
 					},
 				},
@@ -43,6 +43,7 @@ func TestFromExecution(t *testing.T) {
 				Outputs:      map[string]string{},
 				ErrorMessage: "the pod cannot be scheduled",
 				StepErrors:   map[string]string{"rstep1": "the step timed out"},
+				StepAttempts: map[string]int64{"rstep1": 3},
 			},
 		},
 	}
@@ -60,21 +61,25 @@ func TestExecution_AsMap(t *testing.T) {
 		execution      Execution
 		wantMessage    interface{}
 		wantStepErrors interface{}
+		wantAttempts   interface{}
 	}{
 		{
-			name: "exposes the error message and the step errors",
+			name: "exposes the error message, the step errors, and the step attempts",
 			execution: Execution{
 				ErrorMessage: "the pod cannot be scheduled",
 				StepErrors:   map[string]string{"rstep1": "the step timed out"},
+				StepAttempts: map[string]int64{"rstep1": 3},
 			},
 			wantMessage:    "the pod cannot be scheduled",
 			wantStepErrors: map[string]interface{}{"rstep1": "the step timed out"},
+			wantAttempts:   map[string]interface{}{"rstep1": int64(3)},
 		},
 		{
-			name:           "exposes empty values when the execution has no errors",
+			name:           "exposes empty values when the execution has no errors and no attempts",
 			execution:      Execution{},
 			wantMessage:    "",
 			wantStepErrors: map[string]interface{}{},
+			wantAttempts:   map[string]interface{}{},
 		},
 	}
 
@@ -83,6 +88,7 @@ func TestExecution_AsMap(t *testing.T) {
 			got := tt.execution.AsMap()
 			assert.Equal(t, tt.wantMessage, got["errorMessage"])
 			assert.Equal(t, tt.wantStepErrors, got["stepErrors"])
+			assert.Equal(t, tt.wantAttempts, got["stepAttempts"])
 		})
 	}
 }

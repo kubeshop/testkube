@@ -119,6 +119,13 @@ spec:
     execute:
       workflows:
       - name: expected-fail-step-retry
+        as: step-retry
+  - name: assert-step-retry-attempts
+    shell: |
+      # The child step fails on the third attempt. Testkube generates the step ref, so the check accepts any ref.
+      attempts={{ shellquote(tojson(execution("step-retry").stepAttempts)) }}
+      echo "$attempts"
+      echo "$attempts" | grep -Eq '^\{"r[a-z0-9]+":3\}$' || { echo "unexpected attempts: $attempts"; exit 1; }
   - name: expected-fail-negative-step
     negative: true
     execute:
