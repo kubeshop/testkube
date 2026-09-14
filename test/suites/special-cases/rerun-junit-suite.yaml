@@ -119,7 +119,7 @@ spec:
     shell: |
       set -e
       RAN=$(grep -c '<testcase' /data/junit/report.xml)
-      FAILED=$(grep -c '<failure' /data/junit/report.xml || true)
+      FAILED=$(grep -cE '<failure|<error' /data/junit/report.xml || true)
 
       if [ -z '{{ execution.lineage.baseId }}' ]; then
         # An original run has no base and is its own chain root, at attempt 1.
@@ -193,6 +193,6 @@ spec:
 
       grep -q 'name="ShouldFail"' /data/previous.xml \
         || { echo "the failed case is missing from the report"; exit 1; }
-      grep -q '<failure' /data/previous.xml \
+      grep -qE '<failure|<error' /data/previous.xml \
         || { echo "the report records no failure to rerun"; exit 1; }
       echo "the rerun has a report with a failure to narrow down to"
