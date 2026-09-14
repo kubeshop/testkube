@@ -67,10 +67,15 @@ spec:
       # tr joins the document onto one line first, because a failing case spans
       # several lines; the two attributes are then matched one at a time, since
       # real reports do not agree on their order.
+      #
+      # The trim cuts at the child element, not at the first ">": a raw ">" is
+      # legal inside an attribute value, so cutting at ">" truncates
+      # name="a > b" mid-value and drops that case silently. "<" cannot appear
+      # there unescaped, so <failure and <error are always the child element.
       tr -d '\n' < /data/previous.xml \
         | sed 's|<testcase|\n<testcase|g' \
         | grep -E '<failure|<error' \
-        | sed 's|>.*||' \
+        | sed -E 's#<(failure|error).*##' \
         | awk '
             match($0, /[[:space:]]name="[^"]*"/)      { n = substr($0, RSTART+7,  RLENGTH-8)  }
             match($0, /[[:space:]]classname="[^"]*"/) { c = substr($0, RSTART+12, RLENGTH-13) }
