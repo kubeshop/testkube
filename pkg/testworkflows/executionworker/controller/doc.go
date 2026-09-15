@@ -10,4 +10,11 @@
 // initialization step until it finishes, then the first step that did not start. The notifier changes only a message
 // that is empty or that it wrote. It keeps the cause after the execution completes, because Kubernetes deletes the pod.
 // While the pod waits, the notifier sends the result without an alignment, so the execution stays scheduling.
+//
+// # Initialization timeout
+//
+// The initialization timeout counts from the job creation and ends when the first step container starts. When it ends,
+// the watch asks one time for an abort and continues to read the execution. The abort sends no detail, because the
+// initialization message already holds the cause. When a step container started, its start time decides and not the
+// timer. A watch that connects late, for example to read the logs, finds a timer that already fired.
 package controller
