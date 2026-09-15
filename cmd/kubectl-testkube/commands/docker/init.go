@@ -2,7 +2,6 @@ package docker
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/pterm/pterm"
@@ -10,14 +9,11 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 const (
 	StableReleasePlaceholder = "<latest-stable-release>"
-
-	configFileHint = "Check is the Testkube config file (~/.testkube/config.json) accessible and has right permissions"
 )
 
 func NewInitCmd() *cobra.Command {
@@ -39,7 +35,7 @@ func NewInitCmd() *cobra.Command {
 				common.HandleCLIError(common.NewCLIError(
 					common.TKErrConfigInitFailed,
 					"Error loading testkube config file",
-					configFileHint,
+					common.ConfigFileHint,
 					err,
 				))
 			}
@@ -48,12 +44,12 @@ func NewInitCmd() *cobra.Command {
 
 			common.ProcessMasterFlags(cmd, &options, &cfg)
 
-			sendAttemptTelemetry(cmd, cfg)
+			common.SendAttemptTelemetry(cmd, cfg)
 
 			if strings.Contains(dockerImage, StableReleasePlaceholder) {
 				latestVersion, err := common.GetLatestVersion()
 				if err != nil {
-					exitOnCLIError(cmd, cfg, "latest_version", common.NewCLIError(
+					common.ExitOnCLIError(cmd, cfg, "latest_version", common.NewCLIError(
 						common.TKErrLatestVersionFetchFailed,
 						"Error getting the latest Testkube version",
 						"Check your internet connection and access to github.com, or pin the version with the '--docker-image' flag",
@@ -69,14 +65,14 @@ func NewInitCmd() *cobra.Command {
 				ui.NL()
 
 				dockerInfo, cliErr := common.RunDockerCommand([]string{"info"})
-				exitOnCLIError(cmd, cfg, "docker_info", cliErr)
+				common.ExitOnCLIError(cmd, cfg, "docker_info", cliErr)
 				ui.Alert("Current docker info:", dockerInfo)
 				ui.NL()
 
 				ok := ui.Confirm("Do you want to continue?")
 				if !ok {
 					ui.Errf("Testkube Docker Agent running cancelled")
-					sendErrTelemetry(cmd, cfg, "user_cancel", errors.New("user cancelled agent running"))
+					common.SendErrTelemetry(cmd, cfg, "user_cancel", errors.New("user cancelled agent running"))
 					return
 				}
 			}
@@ -92,14 +88,14 @@ func NewInitCmd() *cobra.Command {
 				if spinner != nil {
 					spinner.Fail()
 				}
-				exitOnCLIError(cmd, cfg, "docker_run", cliErr)
+				common.ExitOnCLIError(cmd, cfg, "docker_run", cliErr)
 			}
 
 			if cliErr := common.StreamDockerLogs(dockerContainerName); cliErr != nil {
 				if spinner != nil {
 					spinner.Fail()
 				}
-				exitOnCLIError(cmd, cfg, "docker_logs", cliErr)
+				common.ExitOnCLIError(cmd, cfg, "docker_logs", cliErr)
 			}
 
 			ui.NL()
@@ -114,10 +110,10 @@ func NewInitCmd() *cobra.Command {
 				cfg = common.PopulateCloudConfig(cfg, "", &dockerContainerName, &options)
 
 				if err = config.Save(cfg); err != nil {
-					exitOnCLIError(cmd, cfg, "saving_config", common.NewCLIError(
+					common.ExitOnCLIError(cmd, cfg, "saving_config", common.NewCLIError(
 						common.TKErrConfigSaveFailed,
 						"Error saving testkube config file",
-						configFileHint,
+						common.ConfigFileHint,
 						err,
 					))
 				}
@@ -138,7 +134,7 @@ func NewInitCmd() *cobra.Command {
 			if !common.IsUserLoggedIn(cfg, options) {
 				tokenType, token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth, options.Master.URIs.Api, options.Master.CustomAuth, options.Master.CallbackPort, skipTLS)
 				if err != nil {
-					exitOnCLIError(cmd, cfg, "login", common.NewCLIError(
+					common.ExitOnCLIError(cmd, cfg, "login", common.NewCLIError(
 						common.TKErrLoginFailed,
 						"Error logging in to Testkube Pro",
 						"Check is the browser able to reach the Testkube Pro auth endpoint, or skip the login with the '--no-login' flag and set the context later by `testkube set context`",
@@ -156,7 +152,7 @@ func NewInitCmd() *cobra.Command {
 			// scoped to it.
 			orgID, err := common.ResolveOrgOrPrompt(options.Master.URIs.Api, lookupToken, options.Master, skipTLS)
 			if err != nil {
-				exitOnCLIError(cmd, cfg, "setting_context", common.NewCLIError(
+				common.ExitOnCLIError(cmd, cfg, "setting_context", common.NewCLIError(
 					common.TKErrOrgResolutionFailed,
 					"Error resolving Testkube Pro organization",
 					"Check does your account have access to the organization, or select it explicitly with the '--org-id' flag",
@@ -166,7 +162,7 @@ func NewInitCmd() *cobra.Command {
 
 			envID, err := common.ResolveEnvOrPrompt(options.Master.URIs.Api, lookupToken, orgID, options.Master, skipTLS)
 			if err != nil {
-				exitOnCLIError(cmd, cfg, "setting_context", common.NewCLIError(
+				common.ExitOnCLIError(cmd, cfg, "setting_context", common.NewCLIError(
 					common.TKErrEnvResolutionFailed,
 					"Error resolving Testkube Pro environment",
 					"Check does the environment exist in the selected organization, or select it explicitly with the '--env-id' flag",
@@ -175,10 +171,10 @@ func NewInitCmd() *cobra.Command {
 			}
 
 			if err = common.PopulateLoginDataToContext(orgID, envID, tokenType, token, refreshToken, dockerContainerName, options, cfg); err != nil {
-				exitOnCLIError(cmd, cfg, "setting_context", common.NewCLIError(
+				common.ExitOnCLIError(cmd, cfg, "setting_context", common.NewCLIError(
 					common.TKErrContextSaveFailed,
 					"Error setting Testkube Pro environment context",
-					configFileHint,
+					common.ConfigFileHint,
 					err,
 				))
 			}
@@ -194,49 +190,4 @@ func NewInitCmd() *cobra.Command {
 	cmd.Flags().StringVar(&dockerImage, "docker-image", "kubeshop/testkube-agent:"+StableReleasePlaceholder, "Docker image for Testkube Docker Agent")
 
 	return cmd
-}
-
-// exitOnCLIError reports the failure to telemetry and then prints the rich
-// error details and terminates the command. It is a no-op for a nil error.
-func exitOnCLIError(cmd *cobra.Command, clientCfg config.Data, errType string, cliErr *common.CLIError) {
-	if cliErr == nil {
-		return
-	}
-
-	sendErrTelemetry(cmd, clientCfg, errType, cliErr)
-	common.HandleCLIError(cliErr)
-}
-
-func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType string, errorLogs error) {
-	if !clientCfg.TelemetryEnabled {
-		return
-	}
-
-	var errorStackTrace = fmt.Sprintf("%+v", errorLogs)
-	// Carry the TKERR code over when we know it, so the failure is groupable.
-	var errCode string
-	var cliErr *common.CLIError
-	if errors.As(errorLogs, &cliErr) {
-		errCode = string(cliErr.Code)
-		errorStackTrace = cliErr.StackTrace
-	}
-
-	ui.Debug("collecting anonymous telemetry data, you can disable it by calling `testkube disable telemetry`")
-	out, err := telemetry.SendCmdErrorEventWithLicense(cmd, common.Version, errType, errorStackTrace, "", "", errCode)
-	if ui.Verbose && err != nil {
-		ui.Err(err)
-	}
-
-	ui.Debug("telemetry send event response", out)
-}
-
-func sendAttemptTelemetry(cmd *cobra.Command, clientCfg config.Data) {
-	if clientCfg.TelemetryEnabled {
-		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `testkube disable telemetry`")
-		out, err := telemetry.SendCmdAttemptEvent(cmd, common.Version, common.TelemetryUserID(cmd, &clientCfg))
-		if ui.Verbose && err != nil {
-			ui.Err(err)
-		}
-		ui.Debug("telemetry send event response", out)
-	}
 }

@@ -20,7 +20,7 @@ func NewGetContextCmd() *cobra.Command {
 				common.HandleCLIError(common.NewCLIError(
 					common.TKErrConfigInitFailed,
 					"Error loading testkube config file",
-					configFileHint,
+					common.ConfigFileHint,
 					err,
 				))
 			}

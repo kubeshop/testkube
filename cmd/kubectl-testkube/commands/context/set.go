@@ -12,8 +12,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-const configFileHint = "Check is the Testkube config file (~/.testkube/config.json) accessible and has right permissions"
-
 func NewSetContextCmd() *cobra.Command {
 	var (
 		org, env, apiKey    string
@@ -33,7 +31,7 @@ func NewSetContextCmd() *cobra.Command {
 				common.HandleCLIError(common.NewCLIError(
 					common.TKErrConfigInitFailed,
 					"Error loading testkube config file",
-					configFileHint,
+					common.ConfigFileHint,
 					err,
 				))
 			}
@@ -161,7 +159,7 @@ func NewSetContextCmd() *cobra.Command {
 				common.HandleCLIError(common.NewCLIError(
 					common.TKErrConfigSaveFailed,
 					"Error saving testkube config file",
-					configFileHint,
+					common.ConfigFileHint,
 					err,
 				))
 			}

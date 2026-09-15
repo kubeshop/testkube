@@ -99,6 +99,10 @@ const (
 
 const helpUrl = "https://testkubeworkspace.slack.com"
 
+// ConfigFileHint is the recovery hint for any failure to read or write
+// the CLI config file.
+const ConfigFileHint = "Check is the Testkube config file (~/.testkube/config.json) accessible and has right permissions"
+
 type CLIError struct {
 	Code            ErrorCode
 	Title           string
