@@ -139,13 +139,19 @@ func (e *CLIError) Error() string {
 }
 
 func (e *CLIError) Print() {
-	pterm.DefaultHeader.Println("Testkube Error")
+	// Errors belong on stderr. The ui.ExitOnError and ui.Failf calls these
+	// CLIErrors replace both write there, while pterm's default writer is
+	// stdout - so every printer below has to be pointed at stderr explicitly,
+	// or converting a call site silently moves its output between streams.
+	w := os.Stderr
 
-	pterm.DefaultSection.Println("Error Details")
+	pterm.DefaultHeader.WithWriter(w).Println("Testkube Error")
+
+	pterm.DefaultSection.WithWriter(w).Println("Error Details")
 
 	cmd := ""
 	if e.ExecutedCommand != "" {
-		pterm.FgDarkGray.Printfln("Executed command: %s", e.ExecutedCommand)
+		pterm.Fprintln(w, pterm.FgDarkGray.Sprintf("Executed command: %s", e.ExecutedCommand))
 		params := strings.Split(e.ExecutedCommand, " ")
 		if len(params) > 0 {
 			cmd = params[0]
@@ -159,14 +165,14 @@ func (e *CLIError) Print() {
 	if e.MoreInfo != "" {
 		items = append(items, pterm.BulletListItem{Level: 0, Text: pterm.Sprintf("%s", e.MoreInfo), TextStyle: pterm.NewStyle(pterm.FgGray)})
 	}
-	pterm.DefaultBulletList.WithItems(items).Render()
+	pterm.DefaultBulletList.WithWriter(w).WithItems(items).Render()
 	if cmd != "" {
-		pterm.DefaultBox.Printfln("Error description is provided in context of binary execution %s", cmd)
+		pterm.DefaultBox.WithWriter(w).Printfln("Error description is provided in context of binary execution %s", cmd)
 	}
 
-	pterm.Println()
-	pterm.Println("Let us help you!")
-	pterm.Printfln("Come say hi on Slack: %s", helpUrl)
+	pterm.Fprintln(w)
+	pterm.Fprintln(w, "Let us help you!")
+	pterm.Fprintln(w, pterm.Sprintf("Come say hi on Slack: %s", helpUrl))
 }
 
 func NewCLIError(code ErrorCode, title, moreInfoURL string, err error) *CLIError {
