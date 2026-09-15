@@ -70,8 +70,15 @@ spec:
       #
       # The trim cuts at the child element, not at the first ">": a raw ">" is
       # legal inside an attribute value, so cutting at ">" truncates
-      # name="a > b" mid-value and drops that case silently. "<" cannot appear
-      # there unescaped, so <failure and <error are always the child element.
+      # name="a > b" mid-value and drops that case silently. Cutting at
+      # <failure cannot land inside the attributes, because "<" is the one
+      # character an attribute value may never hold unescaped.
+      #
+      # The grep is a text match rather than an XML query, so a passing case
+      # whose own log holds the literal text "<failure" - inside a CDATA
+      # section or a comment, where it is just characters - is selected too.
+      # The stand-in runner below logs nothing, so it cannot happen here; a
+      # suite whose tests log XML should select with an XML parser instead.
       tr -d '\n' < /data/previous.xml \
         | sed 's|<testcase|\n<testcase|g' \
         | grep -E '<failure|<error' \
