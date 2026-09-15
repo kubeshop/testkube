@@ -67,6 +67,10 @@ const (
 	TKErrAgentRotateKeyFailed ErrorCode = "TKERR-1502"
 	// TKErrAgentRotateRegistrationTokenFailed is returned when rotating an environment registration token fails.
 	TKErrAgentRotateRegistrationTokenFailed ErrorCode = "TKERR-1503"
+	// TKErrAgentWriteFailed is returned when creating, updating or deleting an agent on the control plane fails.
+	// Reads use TKErrAgentGetFailed: the control plane helpers share one preamble and differ only in the final
+	// call, so a read and a write fail for the same reasons and the code only has to say which was attempted.
+	TKErrAgentWriteFailed ErrorCode = "TKERR-1504"
 
 	// TKERR-16xx errors are related to marketplace operations.
 
@@ -84,6 +88,10 @@ const (
 
 	// TKErrResourceNotFound is returned when a requested resource does not exist on the API server.
 	TKErrResourceNotFound ErrorCode = "TKERR-1701"
+	// TKErrResourceLookupFailed is returned when listing or reading resources from the Kubernetes cluster fails.
+	// The lookup itself did not complete, so the caller cannot tell whether the resource exists: a resource that
+	// answered and is absent uses TKErrResourceNotFound.
+	TKErrResourceLookupFailed ErrorCode = "TKERR-1702"
 
 	// TKERR-18xx errors are related to authentication and Pro context setup.
 
@@ -106,6 +114,22 @@ const helpUrl = "https://testkubeworkspace.slack.com"
 // ConfigFileHint is the recovery hint for any failure to read or write
 // the CLI config file.
 const ConfigFileHint = "Check is the Testkube config file (~/.testkube/config.json) accessible and has right permissions"
+
+// AgentLookupHint is the recovery hint for a failure to read an agent from the
+// control plane. The read fails on the name, on the credentials, or on the
+// connection, so the hint names the first two and a command that lists what
+// exists.
+const AgentLookupHint = "Check the agent name or ID and that your credentials are valid, or list the agents with `testkube get agents`"
+
+// AgentWriteHint is the recovery hint for a failure to create, update or delete
+// an agent on the control plane. The preamble is the same as a read, so what is
+// left to check is the permission to change it.
+const AgentWriteHint = "Check that your credentials are valid and that your user can manage the agents of this organization"
+
+// ClusterLookupHint is the recovery hint for a failure to read namespaces, pods
+// or CRDs from the cluster. It names the kubeconfig, because the CLI reads the
+// cluster with the same context kubectl uses.
+const ClusterLookupHint = "Check that your kubeconfig points at the right cluster and that you can read it, for example with `kubectl get namespaces`"
 
 type CLIError struct {
 	Code            ErrorCode
