@@ -1577,6 +1577,7 @@ func MapTestWorkflowStepResultAPIToKube(v testkube.TestWorkflowStepResult) testw
 			return (testworkflowsv1.TestWorkflowStepStatus)(status)
 		}),
 		ExitCode:   int64(v.ExitCode),
+		Attempts:   v.Attempts,
 		QueuedAt:   metav1.Time{Time: v.QueuedAt},
 		StartedAt:  metav1.Time{Time: v.StartedAt},
 		FinishedAt: metav1.Time{Time: v.FinishedAt},

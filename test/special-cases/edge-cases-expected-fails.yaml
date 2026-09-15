@@ -507,14 +507,16 @@ spec:
   job:
     activeDeadlineSeconds: 30
   steps:
-  - name: Random pass/fail
+  - name: Pass twice, then fail
     retry:
       count: 20
       until: self.failed
     shell: |
-      code=$((RANDOM % 2))
-      [[ $code -eq 0 ]] && echo "random - passed" || echo "random - failed"
-      exit $code
+      # All attempts run in the same container, so the file keeps the count.
+      attempt=$(( $(cat /tmp/attempt 2>/dev/null || echo 0) + 1 ))
+      echo "$attempt" > /tmp/attempt
+      echo "attempt $attempt"
+      [ "$attempt" -lt 3 ]
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow

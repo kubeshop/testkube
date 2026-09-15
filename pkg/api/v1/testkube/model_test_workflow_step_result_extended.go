@@ -8,6 +8,7 @@ func (r *TestWorkflowStepResult) Clone() *TestWorkflowStepResult {
 		ErrorMessage: r.ErrorMessage,
 		Status:       r.Status,
 		ExitCode:     r.ExitCode,
+		Attempts:     r.Attempts,
 		QueuedAt:     r.QueuedAt,
 		StartedAt:    r.StartedAt,
 		FinishedAt:   r.FinishedAt,
