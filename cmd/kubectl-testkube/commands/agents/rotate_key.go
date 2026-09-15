@@ -25,7 +25,14 @@ func NewRotateKeyCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			cfg, err := config.Load()
-			ui.ExitOnError("loading config", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrConfigInitFailed,
+					"Error loading testkube config file",
+					common.ConfigFileHint,
+					err,
+				))
+			}
 			common.UiContextHeader(cmd, cfg)
 			validator.PersistentPreRunVersionCheck(cmd, common.Version)
 		},
@@ -38,7 +45,7 @@ func NewRotateKeyCommand() *cobra.Command {
 				common.HandleCLIError(common.NewCLIError(
 					common.TKErrAgentGetFailed,
 					"Error getting the agent",
-					"Verify the agent name or ID is correct and your credentials are valid",
+					"Check the agent name or ID and that your credentials are valid, or list the agents with `testkube get agents`",
 					err,
 				))
 				return
@@ -58,7 +65,7 @@ func NewRotateKeyCommand() *cobra.Command {
 				common.HandleCLIError(common.NewCLIError(
 					common.TKErrAgentRotateKeyFailed,
 					"Error rotating the agent secret key",
-					"Verify the agent exists and your credentials are valid",
+					"Check that your credentials are valid and that the '--grace-period' value is one the control plane accepts, for example 24h or 0s",
 					err,
 				))
 				return

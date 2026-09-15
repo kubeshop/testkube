@@ -1,6 +1,7 @@
 package agents
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -23,17 +24,39 @@ func NewRotateRegistrationTokenCommand() *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			cfg, err := config.Load()
-			ui.ExitOnError("loading config", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrConfigInitFailed,
+					"Error loading testkube config file",
+					common.ConfigFileHint,
+					err,
+				))
+			}
 			common.UiContextHeader(cmd, cfg)
 			validator.PersistentPreRunVersionCheck(cmd, common.Version)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg, err := config.Load()
-			ui.ExitOnError("loading config", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrConfigInitFailed,
+					"Error loading testkube config file",
+					common.ConfigFileHint,
+					err,
+				))
+			}
 
 			envID := cfg.CloudContext.EnvironmentId
 			if len(args) == 1 {
 				envID = args[0]
+			}
+			if envID == "" {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrInvalidRuntimeParameter,
+					"No environment selected",
+					"Pass the environment id as an argument, or select one with `testkube set context --env-id <id>`",
+					errors.New("no environment id given and none set in the current context"),
+				))
 			}
 
 			if !yes && !ui.Confirm(fmt.Sprintf("Rotate registration token for environment ID '%s'?", envID)) {
