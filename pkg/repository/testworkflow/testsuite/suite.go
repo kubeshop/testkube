@@ -12,6 +12,7 @@ func RunRepositoryTests(t *testing.T, repo testworkflow.Repository) {
 	t.Run("InsertAndGetLineageForAnOriginalRun", func(t *testing.T) { testInsertAndGetLineageForAnOriginalRun(t, repo) })
 	t.Run("InsertAndGetWithoutLineage", func(t *testing.T) { testInsertAndGetWithoutLineage(t, repo) })
 	t.Run("ExecutionsSummaryCarriesLineage", func(t *testing.T) { testExecutionsSummaryCarriesLineage(t, repo) })
+	t.Run("EveryReaderAppliesTheLineageDefault", func(t *testing.T) { testEveryReaderAppliesTheLineageDefault(t, repo) })
 	t.Run("GetByNameAndTestWorkflow", func(t *testing.T) { testGetByNameAndTestWorkflow(t, repo) })
 	t.Run("GetWithRunner", func(t *testing.T) { testGetWithRunner(t, repo) })
 	t.Run("Update", func(t *testing.T) { testUpdate(t, repo) })
