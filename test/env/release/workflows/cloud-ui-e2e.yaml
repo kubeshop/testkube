@@ -30,7 +30,7 @@ spec:
   config:
     GIT_REVISION:
       type: string
-      default: 'release/{{ at(split(at(split(dashboard.url, "app-"), 1), "."), 0) }}' # transforms URL (app-2-14.testkube.xyz) to release/2-14 branch
+      default: 'release/{{ at(split(at(split(dashboard.url, "app-"), 1), "."), 0) }}' # transforms URL (app-X-Y) to release/X-Y branch
   container:
     resources:
       requests:
