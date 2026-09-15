@@ -1651,6 +1651,15 @@ func MapTestWorkflowExecutionAPIToKube(v *testkube.TestWorkflowExecution) *testw
 		Tags:                      v.Tags,
 		// Pro edition only (tcl protected code)
 		RunningContext: common.MapPtr(v.RunningContext, mappertcl.MapTestWorkflowRunningContextAPIToKube),
+		Lineage:        common.MapPtr(v.Lineage, MapTestWorkflowExecutionLineageAPIToKube),
+	}
+}
+
+func MapTestWorkflowExecutionLineageAPIToKube(v testkube.TestWorkflowExecutionLineage) testworkflowsv1.TestWorkflowExecutionLineage {
+	return testworkflowsv1.TestWorkflowExecutionLineage{
+		BaseId:  v.BaseId,
+		RootId:  v.RootId,
+		Attempt: v.Attempt,
 	}
 }
 

@@ -32,6 +32,14 @@ const (
 	// the current one.
 	ParentRef = "parent"
 
+	// RerunRef is the reserved reference pointing at the execution this one is a
+	// rerun of - the one whose results a rerun draws from.
+	//
+	// It is a reference rather than an id the workflow has to be handed, because
+	// the workflow is written once and rerun many times: the author says "the
+	// execution I am a rerun of" and the scheduler decides which that is.
+	RerunRef = "rerun"
+
 	// OutputsInstructionName is the name of the output instruction a step emits to
 	// publish the values it left in the outputs directory. It makes them part of the
 	// execution record, so a parent workflow can read them back with execution().
@@ -159,4 +167,25 @@ func OutputsOf(execution *testkube.TestWorkflowExecution) map[string]string {
 		}
 	}
 	return values
+}
+
+// IsReservedRef reports whether a reference has a meaning Testkube assigns,
+// rather than naming something the workflow executed.
+//
+// Reserved references are resolved before the registry, so this is also the
+// list of names an `as` alias cannot usefully take.
+func IsReservedRef(ref string) bool {
+	return ref == ParentRef || ref == RerunRef
+}
+
+// reservedRefMeaning describes what a reserved reference addresses, for an error
+// that has to explain the collision to a workflow author.
+func reservedRefMeaning(ref string) string {
+	switch ref {
+	case ParentRef:
+		return "the execution that scheduled this one"
+	case RerunRef:
+		return "the execution this one is a rerun of"
+	}
+	return ref
 }

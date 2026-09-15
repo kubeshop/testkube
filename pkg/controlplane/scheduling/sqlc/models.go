@@ -70,6 +70,9 @@ type TestWorkflowExecution struct {
 	SilentMode                *testkube.SilentMode                                 `db:"silent_mode" json:"silent_mode"`
 	WorkflowName              pgtype.Text                                          `db:"workflow_name" json:"workflow_name"`
 	Status                    pgtype.Text                                          `db:"status" json:"status"`
+	LineageBaseID             pgtype.Text                                          `db:"lineage_base_id" json:"lineage_base_id"`
+	LineageRootID             pgtype.Text                                          `db:"lineage_root_id" json:"lineage_root_id"`
+	LineageAttempt            pgtype.Int4                                          `db:"lineage_attempt" json:"lineage_attempt"`
 }
 
 type TestWorkflowOutput struct {

@@ -9083,10 +9083,38 @@ components:
           $ref: "#/components/schemas/TestWorkflowExecutionConfig"
         runtime:
           $ref: "#/components/schemas/TestWorkflowExecutionRuntime"
+        lineage:
+          $ref: "#/components/schemas/TestWorkflowExecutionLineage"
       required:
         - id
         - name
         - workflow
+
+    TestWorkflowExecutionLineage:
+      type: object
+      description: |
+        records where a rerun came from, so that a workflow can read the run it
+        descends from and a reader can follow the chain back to its origin.
+
+        Recorded on every execution, which is what makes the reserved
+        `execution("rerun")` reference resolve inside the pod after any rerun.
+
+        Derived by the scheduler from the base execution: a caller supplies the
+        base and nothing else, because a client able to assert a root or an
+        attempt number could forge a chain.
+      properties:
+        baseId:
+          type: string
+          description: the execution this one is a rerun of; empty for an original run
+        rootId:
+          type: string
+          description: |
+            the first execution in the chain. An original run is its own root,
+            so that every execution of a chain shares one rootId.
+        attempt:
+          type: integer
+          format: int32
+          description: 1 for an original run, one more than the base for a rerun
 
     TestWorkflowExecutionSummary:
       type: object
@@ -9142,6 +9170,8 @@ components:
         silentMode:
           description: execution mode to determine which events to skip
           $ref: "#/components/schemas/SilentMode"
+        lineage:
+          $ref: "#/components/schemas/TestWorkflowExecutionLineage"
       required:
         - id
         - name

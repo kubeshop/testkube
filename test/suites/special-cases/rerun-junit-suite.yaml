@@ -1,0 +1,225 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-rerun-junit
+  labels:
+    core-tests: rerun-junit
+spec:
+  # Rerunning only the test cases that failed, built from the two pieces every
+  # rerun already has: the reserved "rerun" reference, and the JUnit report the
+  # referenced execution left behind as an artifact.
+  #
+  # The first run executes the whole suite and fails. Rerun that execution by id:
+  #
+  #   testkube run testworkflowexecution <id> -f
+  #
+  # and the rerun executes only the cases the first run failed, and passes.
+  # tw-rerun-junit-suite below covers the first half automatically; the rerun
+  # itself goes through the rerun API, so it has no step equivalent.
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+    workingDir: /data
+  steps:
+  # execution.lineage tells a run where it sits in its chain without asking the
+  # control plane: baseId is empty on an original run and names the execution
+  # this one is a rerun of otherwise; rootId is the first run of the chain, which
+  # for an original is itself; attempt counts from 1.
+  #
+  # It is resolved in the pod rather than while the workflow is being built, so
+  # that a rerun replaying the stored snapshot sees its own lineage and not the
+  # original's. Step conditions are resolved there too, which is what lets one
+  # drive the branch below.
+  - name: Publish where this run sits in its chain
+    id: chain
+    shell: |
+      echo -n '{{ execution.lineage.attempt }}' > /testkube/outputs/attempt
+      echo -n '{{ execution.lineage.rootId }}' > /testkube/outputs/rootId
+      echo -n '{{ execution.lineage.baseId == "" ? "no" : "yes" }}' > /testkube/outputs/isRerun
+
+  - name: Select the whole suite
+    condition: 'execution.lineage.baseId == ""'
+    shell: |
+      set -e
+      echo "original run, attempt {{ execution.lineage.attempt }}"
+      cat > /data/selected.txt <<'ALL'
+      suite.ShouldPass
+      suite.ShouldAlsoPass
+      suite.ShouldFail
+      ALL
+
+  - name: Select only the cases the previous run failed
+    condition: 'execution.lineage.baseId != ""'
+    # Kept in its own step rather than behind a shell "if": a step's script has
+    # its expressions resolved when the step runs, and read_artifact("rerun", ...)
+    # has nothing to resolve to on an original run. A skipped step never resolves
+    # its script, so the condition is what keeps this out of the original's way.
+    shell: |
+      set -e
+      echo "rerun of {{ execution.lineage.baseId }}, attempt {{ execution.lineage.attempt }}"
+
+      # read_artifact() reads a file out of another execution's artifacts. The
+      # reserved "rerun" reference resolves to the execution being rerun, so the
+      # workflow is never told which one that is - it is written once and rerun
+      # many times.
+      printf '%s' {{ shellquote(read_artifact("rerun", "junit/report.xml")) }} > /data/previous.xml
+
+      # Every <testcase> holding a <failure> or an <error>, as "classname.name".
+      # tr joins the document onto one line first, because a failing case spans
+      # several lines; the two attributes are then matched one at a time, since
+      # real reports do not agree on their order, and each is tried with both
+      # quote characters, since XML allows name='x' as readily as name="x".
+      #
+      # The trim cuts at the child element, not at the first ">": a raw ">" is
+      # legal inside an attribute value, so cutting at ">" truncates
+      # name="a > b" mid-value and drops that case silently. Cutting at
+      # <failure cannot land inside the attributes, because "<" is the one
+      # character an attribute value may never hold unescaped.
+      #
+      # The grep is a text match rather than an XML query, so a passing case
+      # whose own log holds the literal text "<failure" - inside a CDATA
+      # section or a comment, where it is just characters - is selected too.
+      # The stand-in runner below logs nothing, so it cannot happen here; a
+      # suite whose tests log XML should select with an XML parser instead.
+      tr -d '\n' < /data/previous.xml \
+        | sed 's|<testcase|\n<testcase|g' \
+        | grep -E '<failure|<error' \
+        | sed -E 's#<(failure|error).*##' \
+        | awk -v SQ="'" '
+            function val(s, k,   r) {
+              r = "[[:space:]]" k "=\"[^\"]*\""
+              if (match(s, r)) return substr(s, RSTART + length(k) + 3, RLENGTH - length(k) - 4)
+              r = "[[:space:]]" k "=" SQ "[^" SQ "]*" SQ
+              if (match(s, r)) return substr(s, RSTART + length(k) + 3, RLENGTH - length(k) - 4)
+              return ""
+            }
+            { n = val($0, "name"); c = val($0, "classname")
+              if (n != "") print (c == "" ? n : c "." n) }
+          ' \
+        | sed -e 's/&lt;/</g' -e 's/&gt;/>/g' -e 's/&quot;/"/g' -e "s/&apos;/'/g" -e 's/&amp;/\&/g' \
+        | sort -u > /data/selected.txt
+      # The entities are decoded after the attributes are picked out, not
+      # before: a &quot; turned back into a " while still inside name="..."
+      # would end the attribute early and truncate the name. &amp; goes last,
+      # so that an escaped entity like &amp;amp; decodes exactly once.
+
+      echo "selected:"
+      cat /data/selected.txt
+      [ -s /data/selected.txt ] || { echo "a rerun found no failed cases to repeat"; exit 1; }
+
+  - name: Run the selected cases
+    # A real runner takes the selection as a filter - --tests-file for Maven,
+    # -run for Go, --grep for Playwright. This stand-in writes the report a
+    # runner would write, so the example stays about the rerun rather than about
+    # any one tool.
+    shell: |
+      set -e
+      mkdir -p /data/junit
+      {
+        echo '<testsuites>'
+        echo '  <testsuite name="suite">'
+        while read -r id; do
+          [ -n "$id" ] || continue
+          CLASS=${id%.*}
+          NAME=${id##*.}
+          # ShouldFail fails on the original run and passes on a rerun, which is
+          # what makes the chain converge and the rerun observably narrower.
+          if [ "$NAME" = "ShouldFail" ] && [ -z '{{ execution.lineage.baseId }}' ]; then
+            echo "    <testcase name=\"$NAME\" classname=\"$CLASS\"><failure message=\"not fixed yet\">boom</failure></testcase>"
+          else
+            echo "    <testcase name=\"$NAME\" classname=\"$CLASS\"/>"
+          fi
+        done < /data/selected.txt
+        echo '  </testsuite>'
+        echo '</testsuites>'
+      } > /data/junit/report.xml
+
+      cat /data/junit/report.xml
+    artifacts:
+      workingDir: /data
+      paths:
+      - 'junit/**'
+
+  - name: Check the run matches what the chain says it should be
+    shell: |
+      set -e
+      RAN=$(grep -c '<testcase' /data/junit/report.xml)
+      FAILED=$(grep -cE '<failure|<error' /data/junit/report.xml || true)
+
+      if [ -z '{{ execution.lineage.baseId }}' ]; then
+        # An original run has no base and is its own chain root, at attempt 1.
+        [ '{{ execution.lineage.rootId }}' = '{{ execution.id }}' ] \
+          || { echo "an original run must be its own chain root"; exit 1; }
+        [ '{{ execution.lineage.attempt }}' = '1' ] || { echo "expected attempt 1"; exit 1; }
+        [ "$RAN" = "3" ] || { echo "expected the whole suite, ran $RAN"; exit 1; }
+        [ "$FAILED" = "1" ] || { echo "expected one failed case to rerun, got $FAILED"; exit 1; }
+        echo "original run: 3 cases, 1 failure, root is itself"
+        # Fails on purpose, so the rerun has something to narrow down to.
+        exit 1
+      fi
+
+      # A rerun keeps the chain's root and counts up from its base.
+      [ '{{ execution.lineage.attempt }}' != '1' ] || { echo "a rerun cannot be attempt 1"; exit 1; }
+      [ '{{ execution.lineage.rootId }}' = '{{ execution("rerun").id }}' ] \
+        || { echo "a rerun must keep the base's chain root"; exit 1; }
+      [ "$RAN" = "1" ] || { echo "expected only the failed case repeated, ran $RAN"; exit 1; }
+      [ "$FAILED" = "0" ] || { echo "expected the repeated case to pass, got $FAILED failures"; exit 1; }
+      echo "rerun: 1 case, 0 failures, chain root {{ execution.lineage.rootId }}"
+
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-rerun-junit-suite
+  labels:
+    core-tests: rerun-junit
+    type: suite
+spec:
+  # Covers the half of the rerun story a workflow can reach on its own: that an
+  # original run records its lineage, and that the report a rerun narrows down to
+  # is really there to be read.
+  #
+  # Rerunning goes through the rerun API rather than through a step, so the
+  # second half is the manual command documented in tw-rerun-junit above.
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+    workingDir: /data
+  steps:
+  - name: Run the suite once, expecting it to fail
+    negative: true
+    execute:
+      workflows:
+      - name: tw-rerun-junit
+        as: r
+
+  - name: Check the original run recorded itself as the root of a new chain
+    shell: |
+      set -e
+      echo "attempt: {{ execution("r").outputs.attempt }}"
+      [ '{{ execution("r").outputs.attempt }}' = '1' ] \
+        || { echo "an original run must be attempt 1"; exit 1; }
+      [ '{{ execution("r").outputs.isRerun }}' = 'no' ] \
+        || { echo "an original run must not report a base"; exit 1; }
+      # An original is its own chain root, which is what makes "everything in
+      # this chain" a single predicate that includes the original.
+      [ '{{ execution("r").outputs.rootId }}' = '{{ execution("r").id }}' ] \
+        || { echo "an original run must be its own chain root"; exit 1; }
+
+  - name: Check the report a rerun would narrow down to is readable
+    shell: |
+      set -e
+      # The same call the rerun makes, addressed by alias instead of by the
+      # reserved "rerun" reference - a failed run's artifacts are kept for
+      # exactly this.
+      printf '%s' {{ shellquote(read_artifact("r", "junit/report.xml")) }} > /data/previous.xml
+
+      grep -q 'name="ShouldFail"' /data/previous.xml \
+        || { echo "the failed case is missing from the report"; exit 1; }
+      grep -qE '<failure|<error' /data/previous.xml \
+        || { echo "the report records no failure to rerun"; exit 1; }
+      echo "the rerun has a report with a failure to narrow down to"
