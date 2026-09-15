@@ -17,6 +17,8 @@ const (
 	StopReasonWorkerResumeFailed StopReason = "worker-resume-failed"
 	StopReasonUnschedulable      StopReason = "unschedulable"
 	StopReasonConfigMissing      StopReason = "config-missing"
+	StopReasonVolumeMountFailed  StopReason = "volume-mount-failed"
+	StopReasonAdmissionDenied    StopReason = "admission-denied"
 )
 
 // Sentence returns the words for the reason in a message for people. It returns an
@@ -45,6 +47,10 @@ func (r StopReason) Sentence() string {
 		return "no node can run the pod"
 	case StopReasonConfigMissing:
 		return "a secret or a config map that a container needs is not available"
+	case StopReasonVolumeMountFailed:
+		return "Kubernetes cannot mount a volume of the pod"
+	case StopReasonAdmissionDenied:
+		return "the cluster did not accept the pod"
 	default:
 		return ""
 	}

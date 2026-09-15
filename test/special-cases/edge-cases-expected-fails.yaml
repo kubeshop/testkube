@@ -817,3 +817,30 @@ spec:
             key: value
             optional: false
     shell: echo "This should not be printed, because the container cannot start"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-missing-volume-secret
+  labels:
+    core-tests: expected-fail
+description: "a volume comes from a secret that does not exist"
+spec:
+  pod:
+    volumes:
+    - name: missing-secret
+      secret:
+        secretName: expected-fail-secret-that-does-not-exist
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+    volumeMounts:
+    - name: missing-secret
+      mountPath: /missing-secret
+  job:
+    activeDeadlineSeconds: 60
+  steps:
+  - name: Run test
+    shell: echo "This should not be printed, because the volume cannot be mounted"
