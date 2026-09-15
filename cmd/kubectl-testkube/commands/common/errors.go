@@ -53,6 +53,8 @@ const (
 	TKErrDockerInstallationFailed ErrorCode = "TKERR-1306"
 	// TKErrLatestVersionFetchFailed is returned when the latest Testkube release version can't be resolved.
 	TKErrLatestVersionFetchFailed ErrorCode = "TKERR-1307"
+	// TKErrValuesExportFailed is returned when the installation values file can't be fetched or written out.
+	TKErrValuesExportFailed ErrorCode = "TKERR-1308"
 
 	// TKErrCleanOldMigrationJobFailed is returned in case of issues with old migration jobs.
 	TKErrCleanOldMigrationJobFailed ErrorCode = "TKERR-1401"
