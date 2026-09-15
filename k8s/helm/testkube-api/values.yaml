@@ -699,8 +699,8 @@ minio:
   ## Minio image from DockerHub
   image:
     registry: docker.io
-    repository: minio/minio
-    tag: RELEASE.2025-07-18T21-56-31Z
+    repository: kubeshop/testkube-minio
+    tag: "2025.10"
     pullPolicy: IfNotPresent
     pullSecrets: []
   ## ServiceAccount name to use for Minio

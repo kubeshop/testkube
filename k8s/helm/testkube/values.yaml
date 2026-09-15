@@ -910,8 +910,8 @@ testkube-api:
     # -- Minio image from DockerHub
     image:
       registry: docker.io
-      repository: minio/minio
-      tag: RELEASE.2025-06-13T11-33-47Z
+      repository: kubeshop/testkube-minio
+      tag: "2025.10"
       pullSecrets: []
     # -- ServiceAccount name to use for Minio
     serviceAccountName: ""
