@@ -3,6 +3,7 @@ package testworkflowconfig
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -115,4 +116,54 @@ func TestCreateExecutionMachine_LineagePartialRecordFallsBack(t *testing.T) {
 	require.Equal(t, "exec-1", resolveString(t, machine, "execution.lineage.baseId"))
 	require.Equal(t, "exec-2", resolveString(t, machine, "execution.lineage.rootId"))
 	require.Equal(t, "1", resolveString(t, machine, "execution.lineage.attempt"))
+}
+
+// The scheduling machine must leave execution.lineage.* as an expression, not
+// resolve it to the original run's values and not quietly answer empty. Empty
+// would be the worse failure of the two: a workflow branching on
+// execution.lineage.baseId would take the original branch on every rerun with
+// nothing to show why.
+func TestCreateSchedulingExecutionMachine_LeavesLineageUnresolved(t *testing.T) {
+	machine := CreateSchedulingExecutionMachine(&ExecutionConfig{
+		Id:      "exec-2",
+		Lineage: &LineageConfig{BaseId: "exec-1", RootId: "exec-1", Attempt: 2},
+	})
+
+	for _, src := range []string{
+		"execution.lineage.baseId",
+		"execution.lineage.rootId",
+		"execution.lineage.attempt",
+		`execution.lineage.baseId != ""`,
+	} {
+		expr, err := expressions.Compile(src)
+		require.NoError(t, err)
+
+		resolved, err := expr.Resolve(machine)
+		require.NoError(t, err, "%s must not error", src)
+		assert.Nil(t, resolved.Static(), "%s must stay dynamic for the pod to resolve, got %q", src, resolved.String())
+	}
+}
+
+// Everything else about the execution still resolves while scheduling: only
+// lineage is deferred, because only lineage differs between a snapshot and a
+// rerun replaying it.
+func TestCreateSchedulingExecutionMachine_StillResolvesTheRest(t *testing.T) {
+	machine := CreateSchedulingExecutionMachine(&ExecutionConfig{Id: "exec-2", Name: "wf-2", Number: 7})
+
+	for src, want := range map[string]string{
+		"execution.id":     "exec-2",
+		"execution.name":   "wf-2",
+		"execution.number": "7",
+	} {
+		expr, err := expressions.Compile(src)
+		require.NoError(t, err)
+
+		resolved, err := expr.Resolve(machine)
+		require.NoError(t, err)
+		require.NotNil(t, resolved.Static(), "%s should resolve while scheduling", src)
+
+		value, err := resolved.Static().StringValue()
+		require.NoError(t, err)
+		assert.Equal(t, want, value, src)
+	}
 }

@@ -332,7 +332,12 @@ func (e *IntermediateExecution) Resolve(organizationId, organizationSlug, enviro
 	}
 	maps.Copy(executionTags, e.tags)
 
-	executionMachine := testworkflowconfig.CreateExecutionMachine(&testworkflowconfig.ExecutionConfig{
+	// Scheduling, not runtime: what this resolves is stored as ResolvedWorkflow
+	// and replayed by a rerun, so lineage is deliberately left for the pod to
+	// resolve against the execution actually running. See
+	// CreateSchedulingExecutionMachine. Lineage is not passed here at all, so
+	// that a future reader does not take it for something this machine uses.
+	executionMachine := testworkflowconfig.CreateSchedulingExecutionMachine(&testworkflowconfig.ExecutionConfig{
 		Id:               e.execution.Id,
 		GroupId:          e.execution.GroupId,
 		Name:             e.execution.Name,
@@ -347,7 +352,6 @@ func (e *IntermediateExecution) Resolve(organizationId, organizationSlug, enviro
 		EnvironmentSlug:  environmentSlug,
 		ParentIds:        strings.Join(parentExecutionIds, "/"),
 		RunningContext:   e.execution.RunningContext,
-		Lineage:          lineageConfigOf(e.execution.Lineage),
 	})
 	resourceMachine := testworkflowconfig.CreateResourceMachine(&testworkflowconfig.ResourceConfig{
 		Id:     e.execution.Id,
@@ -454,18 +458,7 @@ func (e *IntermediateExecution) Clone() *IntermediateExecution {
 	}
 }
 
-// lineageConfigOf projects the recorded lineage onto the pod's config shape.
-//
-// Nil stays nil: the expression machine turns that into the original-run
-// defaults, and inventing a record here would make every execution look like a
-// rerun of itself.
-func lineageConfigOf(lineage *testkube.TestWorkflowExecutionLineage) *testworkflowconfig.LineageConfig {
-	if lineage == nil {
-		return nil
-	}
-	return &testworkflowconfig.LineageConfig{
-		BaseId:  lineage.BaseId,
-		RootId:  lineage.RootId,
-		Attempt: lineage.Attempt,
-	}
-}
+// Lineage no longer has a projection here: this file only builds the scheduling
+// machine, which leaves execution.lineage for the pod to resolve. The pod's copy
+// is built where the pod's config is assembled - lineageConfigFromExecution in
+// pkg/runner and lineageConfigFromProto in pkg/runner/grpc.

@@ -28,7 +28,10 @@ spec:
   # this one is a rerun of otherwise; rootId is the first run of the chain, which
   # for an original is itself; attempt counts from 1.
   #
-  # It resolves while the workflow is being built, so it can drive a condition.
+  # It is resolved in the pod rather than while the workflow is being built, so
+  # that a rerun replaying the stored snapshot sees its own lineage and not the
+  # original's. Step conditions are resolved there too, which is what lets one
+  # drive the branch below.
   - name: Publish where this run sits in its chain
     id: chain
     shell: |
