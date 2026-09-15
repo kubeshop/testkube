@@ -110,10 +110,14 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 
 	// Abandon saving execution data if the step has been finished before
 	if step.IsFinished() {
+		// The timeout handler sets the status before it kills the process, so the step sends the timeout cause here, not after the exit.
+		if *step.Status == constants.StepStatusTimeout {
+			orchestration.FinishTimedOutExecution(step)
+		}
 		return
 	}
 
 	// Notify about the status
 	step.SetStatus(status).SetExitCode(result.ExitCode)
-	orchestration.FinishExecution(step, constants.ExecutionResult{ExitCode: result.ExitCode, Iteration: int(step.Iteration)})
+	orchestration.FinishExecution(step, constants.ExecutionResult{ExitCode: result.ExitCode, Details: result.Details, Iteration: int(step.Iteration)})
 }

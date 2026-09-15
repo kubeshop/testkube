@@ -26,6 +26,8 @@ func TestStopReason_Sentence(t *testing.T) {
 		{name: "volume mount failed", reason: StopReasonVolumeMountFailed, want: "Kubernetes cannot mount a volume of the pod"},
 		{name: "admission denied", reason: StopReasonAdmissionDenied, want: "the cluster did not accept the pod"},
 		{name: "initialization timeout", reason: StopReasonInitTimeout, want: "the first step did not start before the initialization timeout of the workflow"},
+		{name: "process killed", reason: StopReasonProcessKilled, want: "the test process was killed, possibly by an out-of-memory kill"},
+		{name: "step timeout", reason: StopReasonStepTimeout, want: "the step did not finish within its timeout"},
 		{name: "token from a newer control plane has no words yet", reason: StopReason("later-added"), want: ""},
 	}
 	for _, tt := range tests {
