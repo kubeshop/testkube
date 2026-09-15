@@ -16,7 +16,14 @@ func NewGetContextCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 
 			cfg, err := config.Load()
-			ui.ExitOnError("loading config file", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrConfigInitFailed,
+					"Error loading testkube config file",
+					configFileHint,
+					err,
+				))
+			}
 
 			ui.NL()
 			common.UiPrintContext(cfg)
