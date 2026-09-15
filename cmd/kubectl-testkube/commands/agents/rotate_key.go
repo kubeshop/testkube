@@ -37,7 +37,7 @@ func NewRotateKeyCommand() *cobra.Command {
 			if err != nil {
 				common.HandleCLIError(common.NewCLIError(
 					common.TKErrAgentGetFailed,
-					"Failed to get agent",
+					"Error getting the agent",
 					"Verify the agent name or ID is correct and your credentials are valid",
 					err,
 				))
@@ -57,7 +57,7 @@ func NewRotateKeyCommand() *cobra.Command {
 			if err != nil {
 				common.HandleCLIError(common.NewCLIError(
 					common.TKErrAgentRotateKeyFailed,
-					"Failed to rotate agent secret key",
+					"Error rotating the agent secret key",
 					"Verify the agent exists and your credentials are valid",
 					err,
 				))
