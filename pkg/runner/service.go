@@ -2,7 +2,6 @@ package runner
 
 import (
 	"context"
-	"time"
 
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -104,24 +103,9 @@ func (s *service) reattach(ctx context.Context) (err error) {
 				return
 			}
 
-			// Check if there is error message acknowledged
-			sigSequence := stage.MapSignatureListToInternal(stage.MapSignatureToSequence(stage.MapSignatureList(execution.Signature)))
-			errorMessage := execution.Result.Initialization.ErrorMessage
-			if errorMessage == "" {
-				for _, sig := range sigSequence {
-					if execution.Result.Steps[sig.Ref].ErrorMessage != "" {
-						errorMessage = execution.Result.Steps[sig.Ref].ErrorMessage
-						break
-					}
-				}
-			}
-
 			// Finalize and save the result
-			execution.Result.HealAbortedOrCanceled(sigSequence, errorMessage, controller.DefaultErrorMessage, "aborted")
-			execution.Result.HealTimestamps(sigSequence, execution.ScheduledAt, time.Time{}, time.Time{}, true)
-			execution.Result.HealDuration(execution.ScheduledAt)
-			execution.Result.HealMissingPauseStatuses()
-			execution.Result.HealStatus(sigSequence)
+			sigSequence := stage.MapSignatureListToInternal(stage.MapSignatureToSequence(stage.MapSignatureList(execution.Signature)))
+			healRecoveredResult(execution.Result, sigSequence, execution.ScheduledAt, recordedCause(execution.Result, sigSequence))
 			if err = s.client.FinishExecutionResult(ctx, environmentId, executionId, execution.Result); err != nil {
 				logger.Errorw("failed to recover execution: saving execution", "error", err)
 			} else {

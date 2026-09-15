@@ -124,44 +124,172 @@ func TestTestWorkflowResult_Fatal(t *testing.T) {
 }
 
 func TestTestWorkflowResult_HealAbortedOrCanceled(t *testing.T) {
+	type stepWant struct {
+		status  TestWorkflowStepStatus
+		message string
+	}
+	const defaultErrorStr = "Job has been aborted"
+	aborted := string(ABORTED_TestWorkflowStatus)
+	canceled := string(CANCELED_TestWorkflowStatus)
+	step := func(status TestWorkflowStepStatus, message string) TestWorkflowStepResult {
+		return TestWorkflowStepResult{Status: common.Ptr(status), ErrorMessage: message}
+	}
+
 	tests := []struct {
-		name                   string
-		terminationCode        string
-		errorStr               string
-		wantRunningStepMessage string
-		wantQueuedStepMessage  string
+		name            string
+		initialization  TestWorkflowStepResult
+		steps           map[string]TestWorkflowStepResult
+		sigSequence     []TestWorkflowSignature
+		errorStr        string
+		terminationCode string
+		wantInit        stepWant
+		wantSteps       map[string]stepWant
 	}{
 		{
-			name:                   "stores plain text messages for an aborted execution",
-			terminationCode:        string(ABORTED_TestWorkflowStatus),
-			errorStr:               "trigger: deleted",
-			wantRunningStepMessage: "The execution has been aborted. (trigger: deleted)",
-			wantQueuedStepMessage:  "The execution was aborted before. (trigger: deleted)",
+			name:            "puts a recorded initialization cause after the reason of the cancel",
+			initialization:  step(RUNNING_TestWorkflowStepStatus, "the pod cannot be scheduled: 0/1 nodes are available"),
+			steps:           map[string]TestWorkflowStepResult{},
+			errorStr:        "by the user",
+			terminationCode: canceled,
+			wantInit:        stepWant{CANCELED_TestWorkflowStepStatus, "The execution has been canceled. (by the user: the pod cannot be scheduled: 0/1 nodes are available)"},
+			wantSteps:       map[string]stepWant{},
 		},
 		{
-			name:                   "stores plain text messages for a canceled execution",
-			terminationCode:        string(CANCELED_TestWorkflowStatus),
-			errorStr:               "user: stopped",
-			wantRunningStepMessage: "The execution has been canceled. (user: stopped)",
-			wantQueuedStepMessage:  "The execution was canceled before. (user: stopped)",
+			name:            "replaces the default message on the initialization step",
+			initialization:  step(RUNNING_TestWorkflowStepStatus, defaultErrorStr),
+			steps:           map[string]TestWorkflowStepResult{},
+			errorStr:        "by the runner",
+			terminationCode: aborted,
+			wantInit:        stepWant{ABORTED_TestWorkflowStepStatus, "The execution has been aborted. (by the runner)"},
+			wantSteps:       map[string]stepWant{},
+		},
+		{
+			name:            "writes the abort message when the initialization message is empty",
+			initialization:  step(QUEUED_TestWorkflowStepStatus, ""),
+			steps:           map[string]TestWorkflowStepResult{},
+			terminationCode: aborted,
+			wantInit:        stepWant{ABORTED_TestWorkflowStepStatus, "The execution has been aborted."},
+			wantSteps:       map[string]stepWant{},
+		},
+		{
+			name:            "does not repeat a recorded cause that the caller passes as the reason",
+			initialization:  step(RUNNING_TestWorkflowStepStatus, "the image could not be pulled"),
+			steps:           map[string]TestWorkflowStepResult{},
+			errorStr:        "the image could not be pulled",
+			terminationCode: aborted,
+			wantInit:        stepWant{ABORTED_TestWorkflowStepStatus, "The execution has been aborted. (the image could not be pulled)"},
+			wantSteps:       map[string]stepWant{},
+		},
+		{
+			name:            "removes the end period of the cause and does not add the default reason",
+			initialization:  step(RUNNING_TestWorkflowStepStatus, "no node can run the pod: 1 Insufficient cpu."),
+			steps:           map[string]TestWorkflowStepResult{},
+			errorStr:        defaultErrorStr,
+			terminationCode: aborted,
+			wantInit:        stepWant{ABORTED_TestWorkflowStepStatus, "The execution has been aborted. (no node can run the pod: 1 Insufficient cpu)"},
+			wantSteps:       map[string]stepWant{},
+		},
+		{
+			name:            "keeps the message of an initialization step that an earlier heal canceled",
+			initialization:  step(CANCELED_TestWorkflowStepStatus, "The execution has been canceled. (by the user: the image could not be pulled)"),
+			steps:           map[string]TestWorkflowStepResult{},
+			errorStr:        "by the runner",
+			terminationCode: aborted,
+			wantInit:        stepWant{ABORTED_TestWorkflowStepStatus, "The execution has been canceled. (by the user: the image could not be pulled)"},
+			wantSteps:       map[string]stepWant{},
+		},
+		{
+			name:            "keeps the message of an initialization step that an earlier heal aborted",
+			initialization:  step(ABORTED_TestWorkflowStepStatus, "The execution has been aborted. (by the user: the image could not be pulled)"),
+			steps:           map[string]TestWorkflowStepResult{},
+			errorStr:        "The execution has been aborted. (by the user: the image could not be pulled)",
+			terminationCode: aborted,
+			wantInit:        stepWant{ABORTED_TestWorkflowStepStatus, "The execution has been aborted. (by the user: the image could not be pulled)"},
+			wantSteps:       map[string]stepWant{},
+		},
+		{
+			name:           "keeps finished steps, aborts the first running step and skips later queued steps",
+			initialization: step(FAILED_TestWorkflowStepStatus, "init failed"),
+			steps: map[string]TestWorkflowStepResult{
+				"passed":  step(PASSED_TestWorkflowStepStatus, ""),
+				"running": step(RUNNING_TestWorkflowStepStatus, ""),
+				"queued":  step(QUEUED_TestWorkflowStepStatus, ""),
+			},
+			sigSequence:     []TestWorkflowSignature{{Ref: "passed"}, {Ref: "running"}, {Ref: "queued"}},
+			errorStr:        "trigger: deleted",
+			terminationCode: aborted,
+			wantInit:        stepWant{FAILED_TestWorkflowStepStatus, "init failed"},
+			wantSteps: map[string]stepWant{
+				"passed":  {PASSED_TestWorkflowStepStatus, ""},
+				"running": {ABORTED_TestWorkflowStepStatus, "The execution has been aborted. (trigger: deleted)"},
+				"queued":  {SKIPPED_TestWorkflowStepStatus, "The execution was aborted before. (trigger: deleted)"},
+			},
+		},
+		{
+			name:           "marks the first running step canceled when the code is canceled",
+			initialization: step(PASSED_TestWorkflowStepStatus, ""),
+			steps: map[string]TestWorkflowStepResult{
+				"running": step(RUNNING_TestWorkflowStepStatus, ""),
+				"queued":  step(QUEUED_TestWorkflowStepStatus, ""),
+			},
+			sigSequence:     []TestWorkflowSignature{{Ref: "running"}, {Ref: "queued"}},
+			errorStr:        "user: stopped",
+			terminationCode: canceled,
+			wantInit:        stepWant{PASSED_TestWorkflowStepStatus, ""},
+			wantSteps: map[string]stepWant{
+				"running": {CANCELED_TestWorkflowStepStatus, "The execution has been canceled. (user: stopped)"},
+				"queued":  {SKIPPED_TestWorkflowStepStatus, "The execution was canceled before. (user: stopped)"},
+			},
+		},
+		{
+			name:           "keeps a recorded cause of the first step that did not start",
+			initialization: step(PASSED_TestWorkflowStepStatus, ""),
+			steps: map[string]TestWorkflowStepResult{
+				"passed":  step(PASSED_TestWorkflowStepStatus, ""),
+				"waiting": step(QUEUED_TestWorkflowStepStatus, "the image could not be pulled"),
+				"queued":  step(QUEUED_TestWorkflowStepStatus, ""),
+			},
+			sigSequence:     []TestWorkflowSignature{{Ref: "passed"}, {Ref: "waiting"}, {Ref: "queued"}},
+			errorStr:        "by the runner",
+			terminationCode: aborted,
+			wantInit:        stepWant{PASSED_TestWorkflowStepStatus, ""},
+			wantSteps: map[string]stepWant{
+				"passed":  {PASSED_TestWorkflowStepStatus, ""},
+				"waiting": {ABORTED_TestWorkflowStepStatus, "The execution has been aborted. (by the runner: the image could not be pulled)"},
+				"queued":  {SKIPPED_TestWorkflowStepStatus, "The execution was aborted before. (by the runner)"},
+			},
+		},
+		{
+			name:            "cancels a step that is not in the signature from the termination code, not from the result status",
+			initialization:  step(PASSED_TestWorkflowStepStatus, ""),
+			steps:           map[string]TestWorkflowStepResult{"unknown": step(RUNNING_TestWorkflowStepStatus, "")},
+			errorStr:        "by the user",
+			terminationCode: canceled,
+			wantInit:        stepWant{PASSED_TestWorkflowStepStatus, ""},
+			wantSteps: map[string]stepWant{
+				"unknown": {CANCELED_TestWorkflowStepStatus, "The execution was canceled, but we could not determine steps order: by the user"},
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			initialization := tt.initialization
 			r := &TestWorkflowResult{
-				Initialization: &TestWorkflowStepResult{Status: common.Ptr(PASSED_TestWorkflowStepStatus)},
-				Steps: map[string]TestWorkflowStepResult{
-					"running": {Status: common.Ptr(RUNNING_TestWorkflowStepStatus), StartedAt: time.Now()},
-					"queued":  {Status: common.Ptr(QUEUED_TestWorkflowStepStatus)},
-				},
+				// The result status differs from the termination code, so a case fails if the heal reads the status.
+				Status:         common.Ptr(RUNNING_TestWorkflowStatus),
+				Initialization: &initialization,
+				Steps:          tt.steps,
 			}
-			sigSequence := []TestWorkflowSignature{{Ref: "running"}, {Ref: "queued"}}
 
-			r.HealAbortedOrCanceled(sigSequence, tt.errorStr, "Job has been aborted", tt.terminationCode)
+			r.HealAbortedOrCanceled(tt.sigSequence, tt.errorStr, defaultErrorStr, tt.terminationCode)
 
-			assert.Equal(t, tt.wantRunningStepMessage, r.Steps["running"].ErrorMessage)
-			assert.Equal(t, tt.wantQueuedStepMessage, r.Steps["queued"].ErrorMessage)
+			assert.Equal(t, tt.wantInit, stepWant{*r.Initialization.Status, r.Initialization.ErrorMessage})
+			gotSteps := make(map[string]stepWant, len(r.Steps))
+			for ref, s := range r.Steps {
+				gotSteps[ref] = stepWant{*s.Status, s.ErrorMessage}
+			}
+			assert.Equal(t, tt.wantSteps, gotSteps)
 		})
 	}
 }
