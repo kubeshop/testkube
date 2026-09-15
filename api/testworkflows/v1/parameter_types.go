@@ -1,9 +1,5 @@
 package v1
 
-import (
-	"k8s.io/apimachinery/pkg/util/intstr"
-)
-
 // +kubebuilder:validation:Enum=string;integer;number;boolean
 type ParameterType string
 
@@ -47,10 +43,10 @@ type ParameterSchema struct {
 	// the list of allowed values, when limited
 	Enum []string `json:"enum,omitempty"`
 	// exemplary value
-	Example *intstr.IntOrString `json:"example,omitempty"`
+	Example *ConfigValue `json:"example,omitempty"`
 	// default value - if not provided, the parameter is required
 	// +kubebuilder:validation:XIntOrString
-	Default *intstr.IntOrString `json:"default,omitempty" expr:"template"`
+	Default *ConfigValue `json:"default,omitempty" expr:"template"`
 	// whether this value should be stored in the secret
 	Sensitive bool `json:"sensitive,omitempty"`
 

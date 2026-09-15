@@ -179,27 +179,31 @@ func (q *Queries) ForceCancelExecution(ctx context.Context, arg ForceCancelExecu
 }
 
 const forceCancelExecutionInitialization = `-- name: ForceCancelExecutionInitialization :exec
-UPDATE test_workflow_results 
+UPDATE test_workflow_results
 SET initialization = (
-    CASE 
+    CASE
         -- If initialization is already passed or failed, keep it as is
         WHEN initialization->>'status' IN ('passed', 'failed') THEN initialization
-        -- Otherwise, cancel it and update timestamps
-        ELSE jsonb_build_object(
+        -- Otherwise, cancel it and update timestamps.
+        -- Both COALESCE branches must be jsonb; a text branch makes
+        -- Postgres reject the query with SQLSTATE 42804.
+        -- The new values go on the right side of || so they override
+        -- the old ones.
+        ELSE initialization || jsonb_build_object(
             'status', 'canceled',
             'queuedAt', COALESCE(
-                NULLIF(initialization->>'queuedAt', '0001-01-01T00:00:00Z'),
+                to_jsonb(NULLIF(initialization->>'queuedAt', '0001-01-01T00:00:00Z')),
                 to_jsonb($1::timestamptz)
             ),
             'startedAt', COALESCE(
-                NULLIF(initialization->>'startedAt', '0001-01-01T00:00:00Z'),
+                to_jsonb(NULLIF(initialization->>'startedAt', '0001-01-01T00:00:00Z')),
                 to_jsonb($1::timestamptz)
             ),
-            'finishedaAt', COALESCE(
-                NULLIF(initialization->>'finishedAt', '0001-01-01T00:00:00Z'),
+            'finishedAt', COALESCE(
+                to_jsonb(NULLIF(initialization->>'finishedAt', '0001-01-01T00:00:00Z')),
                 to_jsonb($1::timestamptz)
             )
-        ) || (initialization - ARRAY['status', 'queuedat', 'startedat', 'finishedat'])
+        )
     END
 )
 WHERE execution_id = $2
@@ -244,33 +248,37 @@ func (q *Queries) ForceCancelExecutionResult(ctx context.Context, arg ForceCance
 }
 
 const forceCancelExecutionSteps = `-- name: ForceCancelExecutionSteps :exec
-UPDATE test_workflow_results 
-SET steps = (
+UPDATE test_workflow_results
+SET steps = COALESCE((
     SELECT jsonb_object_agg(
         key,
-        CASE 
+        CASE
             -- If step is already passed or failed, keep it as is
             WHEN value->>'status' IN ('passed', 'failed') THEN value
-            -- Otherwise, cancel it and update timestamps
-            ELSE jsonb_build_object(
+            -- Otherwise, cancel it and update timestamps.
+            -- Both COALESCE branches must be jsonb; a text branch makes
+            -- Postgres reject the query with SQLSTATE 42804.
+            -- The new values go on the right side of || so they override
+            -- the old ones.
+            ELSE value || jsonb_build_object(
                 'status', 'canceled',
                 'queuedAt', COALESCE(
-                    NULLIF(value->>'queuedAt', '0001-01-01T00:00:00Z'),
+                    to_jsonb(NULLIF(value->>'queuedAt', '0001-01-01T00:00:00Z')),
                     to_jsonb($1::timestamptz)
                 ),
                 'startedAt', COALESCE(
-                    NULLIF(value->>'startedAt', '0001-01-01T00:00:00Z'),
+                    to_jsonb(NULLIF(value->>'startedAt', '0001-01-01T00:00:00Z')),
                     to_jsonb($1::timestamptz)
                 ),
                 'finishedAt', COALESCE(
-                    NULLIF(value->>'finishedAt', '0001-01-01T00:00:00Z'),
+                    to_jsonb(NULLIF(value->>'finishedAt', '0001-01-01T00:00:00Z')),
                     to_jsonb($1::timestamptz)
                 )
-            ) || (value - ARRAY['status', 'queuedat', 'startedat', 'finishedat'])
+            )
         END
     )
     FROM jsonb_each(COALESCE(steps, '{}'::jsonb))
-)
+), '{}'::jsonb)
 WHERE execution_id = $2
   AND steps IS NOT NULL
   AND jsonb_typeof(steps) = 'object'
@@ -283,6 +291,8 @@ type ForceCancelExecutionStepsParams struct {
 
 // Cancels all steps that are not already terminated (passed/failed)
 // Sets missing timestamps (queuedat, startedat, finishedat) to the provided time
+// jsonb_object_agg returns NULL over zero rows, so a result that holds an
+// empty steps object would lose the object. The COALESCE keeps it.
 func (q *Queries) ForceCancelExecutionSteps(ctx context.Context, arg ForceCancelExecutionStepsParams) error {
 	_, err := q.db.Exec(ctx, forceCancelExecutionSteps, arg.FinishedAt, arg.ExecutionID)
 	return err

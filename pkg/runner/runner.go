@@ -68,8 +68,12 @@ type Runner interface {
 	Notifications(ctx context.Context, id string) executionworkertypes.NotificationsWatcher
 	Pause(id string) error
 	Resume(id string) error
-	Abort(id string) error
-	Cancel(id string) error
+	// Abort stops the execution and records the actor and the cause the control plane
+	// sent. Both can be empty. An empty actor names the control plane.
+	Abort(id string, actor string, reason string) error
+	// Cancel stops the execution and records the actor and the cause the control plane
+	// sent. Both can be empty. An empty actor names the user.
+	Cancel(id string, actor string, reason string) error
 }
 
 type runner struct {
@@ -615,7 +619,7 @@ func (r *runner) abortExecution(ctx context.Context, environmentID, executionID 
 	if execution.Result == nil {
 		return errors.New("execution result is nil")
 	}
-	execution.Result.Fatal(errors.New("execution is stuck in running state"), true, time.Now())
+	execution.Result.Fatal(errors.New(testkube.StopReasonExecutionStuck.Sentence()), true, time.Now())
 	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
 		return r.client.UpdateExecutionResult(ctx, environmentID, executionID, execution.Result)
 	})
@@ -631,7 +635,10 @@ func (r *runner) abortExecution(ctx context.Context, environmentID, executionID 
 	}
 
 	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
-		return r.Abort(executionID)
+		return r.worker.Abort(context.Background(), executionID, executionworkertypes.DestroyOptions{
+			Actor:  testkube.StopActorRunner,
+			Reason: testkube.StopReasonExecutionStuck,
+		})
 	})
 	if err != nil {
 		return errors.Wrapf(err, "failed to destroy execution '%s'", executionID)
@@ -648,10 +655,28 @@ func (r *runner) Resume(id string) error {
 	return r.worker.Resume(context.Background(), id, executionworkertypes.ControlOptions{})
 }
 
-func (r *runner) Abort(id string) error {
-	return r.worker.Abort(context.Background(), id, executionworkertypes.DestroyOptions{})
+// Abort stops the execution on a request from the control plane.
+func (r *runner) Abort(id string, actor string, reason string) error {
+	return r.worker.Abort(context.Background(), id, executionworkertypes.DestroyOptions{
+		Actor:  stopActor(actor, testkube.StopActorControlPlane),
+		Reason: testkube.StopReason(reason),
+	})
 }
 
-func (r *runner) Cancel(id string) error {
-	return r.worker.Cancel(context.Background(), id, executionworkertypes.DestroyOptions{})
+// Cancel stops the execution on a request that the control plane relays, from a user
+// or from one of its own components.
+func (r *runner) Cancel(id string, actor string, reason string) error {
+	return r.worker.Cancel(context.Background(), id, executionworkertypes.DestroyOptions{
+		Actor:  stopActor(actor, testkube.StopActorUser),
+		Reason: testkube.StopReason(reason),
+	})
+}
+
+// stopActor returns the actor the control plane named, or the default of the
+// transition when the control plane sent none.
+func stopActor(actor string, defaultActor testkube.StopActor) testkube.StopActor {
+	if actor == "" {
+		return defaultActor
+	}
+	return testkube.StopActor(actor)
 }

@@ -107,6 +107,13 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, isDockerCmd bool
 
 	cmd.Flags().StringVar(&opts.Master.OrgId, "org-id", "", "Testkube Pro organization id [required for centralized mode]"+neededForLogin)
 	cmd.Flags().StringVar(&opts.Master.EnvId, "env-id", "", "Testkube Pro environment id [required for centralized mode]"+neededForLogin)
+
+	// Name-based alternatives to the id flags, so that non-interactive logins can
+	// pass the same friendly names the interactive selector displays.
+	cmd.Flags().StringVar(&opts.Master.OrgName, "org-name", "", "Testkube Pro organization name, alternative to --org-id"+neededForLogin)
+	cmd.Flags().StringVar(&opts.Master.EnvName, "env-name", "", "Testkube Pro environment name or slug, alternative to --env-id"+neededForLogin)
+	cmd.MarkFlagsMutuallyExclusive("org-id", "org-name")
+	cmd.MarkFlagsMutuallyExclusive("env-id", "env-name")
 }
 
 func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data) {
@@ -204,6 +211,34 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 
 	opts.Master.URIs = uris
 
+}
+
+// ControlPlaneAPIURI returns the URI to reach the Control Plane with.
+//
+// An explicitly configured location wins. Otherwise the URI already stored in
+// the context does, because ProcessMasterFlags composes its URI from prefixes
+// and a root domain and so falls back to the SaaS host, which is the wrong
+// place to look for the organizations of someone logged into a custom Control
+// Plane. `composed` is the URI ProcessMasterFlags produced.
+func ControlPlaneAPIURI(cmd *cobra.Command, composed string, cfg *config.Data) string {
+	for _, name := range []string{
+		"api-uri-override",
+		"api-prefix",
+		"cloud-api-prefix",
+		"root-domain",
+		"pro-root-domain",
+		"cloud-root-domain",
+	} {
+		if flagChanged(cmd, name) {
+			return composed
+		}
+	}
+
+	if cfg != nil && cfg.CloudContext.ApiUri != "" {
+		return cfg.CloudContext.ApiUri
+	}
+
+	return composed
 }
 
 // uiConfigured reports whether any input defines the dashboard location.
@@ -322,7 +357,7 @@ func (s *CommaList) Enabled(value string) bool {
 	return false
 }
 
-func PopulateRunnerFlags(cmd *cobra.Command, forUpdate bool) {
+func PopulateRunnerFlags(cmd *cobra.Command) {
 	// Installation > General
 	cmd.Flags().StringP("execution-namespace", "N", "", "namespace to run executions (defaults to installation namespace)")
 	cmd.Flags().String("version", "", "agent version to use (defaults to latest)")
@@ -343,18 +378,33 @@ func PopulateRunnerFlags(cmd *cobra.Command, forUpdate bool) {
 	cmd.Flags().Bool("floating", false, "(with --create) create as a floating agent")
 
 	// Components selection
-	if forUpdate {
-		// only runner; keep flag hidden and force it on
-		cmd.Flags().Bool("runner", true, "enable runner component")
-		_ = cmd.Flags().MarkHidden("runner")
-	} else {
-		cmd.Flags().Bool("runner", false, "enable runner component (default: enabled when no component flags are set)")
-		cmd.Flags().Bool("listener", false, "enable listener component (default: enabled when no component flags are set)")
-		cmd.Flags().Bool("gitops", false, "enable gitops capability")
-		cmd.Flags().Bool("webhooks", false, "enable webhooks capability")
-	}
+	AddExecutionCapabilityFlags(cmd)
+	cmd.Flags().Bool("listener", false, "enable listener component (default: enabled when no component flags are set)")
+	cmd.Flags().Bool("gitops", false, "enable gitops capability")
+	cmd.Flags().Bool("webhooks", false, "enable webhooks capability")
 
 	// Deprecated flag
 	cmd.Flags().StringP("type", "t", "", "[DEPRECATED] agent type - use capability flags instead")
-	cmd.Flags().MarkDeprecated("type", "use --runner, --listener, --gitops, and/or --webhooks instead")
+	cmd.Flags().MarkDeprecated("type", "use --execution, --listener, --gitops, and/or --webhooks instead")
+}
+
+// AddExecutionCapabilityFlags registers --execution and the deprecated --runner alias.
+func AddExecutionCapabilityFlags(cmd *cobra.Command) {
+	cmd.Flags().Bool("execution", false, "enable execution capability (default: enabled when no component flags are set)")
+	cmd.Flags().Bool("runner", false, "enable execution capability")
+	_ = cmd.Flags().MarkDeprecated("runner", "use --execution instead")
+}
+
+// ExecutionCapabilityFromFlags reads --execution, falling back to deprecated --runner.
+// --execution wins when both are set.
+func ExecutionCapabilityFromFlags(cmd *cobra.Command) (changed, enabled bool) {
+	if cmd.Flags().Changed("execution") {
+		enabled, _ = cmd.Flags().GetBool("execution")
+		return true, enabled
+	}
+	if cmd.Flags().Changed("runner") {
+		enabled, _ = cmd.Flags().GetBool("runner")
+		return true, enabled
+	}
+	return false, false
 }

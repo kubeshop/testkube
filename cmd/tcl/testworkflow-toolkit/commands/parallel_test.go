@@ -21,13 +21,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
-	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
@@ -219,8 +217,8 @@ func TestParallelSpecParsing(t *testing.T) {
 				input: func() *testworkflowsv1.StepParallel {
 					return &testworkflowsv1.StepParallel{
 						StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-							Count:    common.Ptr(intstr.FromInt(5)),
-							MaxCount: common.Ptr(intstr.FromInt(10)),
+							Count:    testworkflowsv1.NewConfigValue("5"),
+							MaxCount: testworkflowsv1.NewConfigValue("10"),
 							Matrix: map[string]testworkflowsv1.DynamicList{
 								"version": {Static: []any{"1", "2"}},
 							},
@@ -228,8 +226,10 @@ func TestParallelSpecParsing(t *testing.T) {
 					}
 				},
 				validate: func(t *testing.T, spec *testworkflowsv1.StepParallel) {
-					assert.Equal(t, 5, spec.Count.IntValue())
-					assert.Equal(t, 10, spec.MaxCount.IntValue())
+					require.NotNil(t, spec.Count)
+					require.NotNil(t, spec.MaxCount)
+					assert.Equal(t, "5", spec.Count.String())
+					assert.Equal(t, "10", spec.MaxCount.String())
 					assert.Contains(t, spec.Matrix, "version")
 				},
 			},
@@ -436,7 +436,7 @@ func TestParallelExecution(t *testing.T) {
 				args: func() []string {
 					spec := &testworkflowsv1.StepParallel{
 						StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-							Count: common.Ptr(intstr.FromInt(0)),
+							Count: testworkflowsv1.NewConfigValue("0"),
 						},
 					}
 					jsonBytes, _ := json.Marshal(spec)
@@ -473,7 +473,7 @@ func TestParallelExecution(t *testing.T) {
 		// Test both raw JSON and base64 work
 		spec := &testworkflowsv1.StepParallel{
 			StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-				Count: common.Ptr(intstr.FromInt(0)),
+				Count: testworkflowsv1.NewConfigValue("0"),
 			},
 		}
 		jsonBytes, _ := json.Marshal(spec)
@@ -504,7 +504,7 @@ func TestFailFastSpecParsing(t *testing.T) {
 		"failFast defaults to false": {
 			spec: &testworkflowsv1.StepParallel{
 				StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-					Count: common.Ptr(intstr.FromInt(3)),
+					Count: testworkflowsv1.NewConfigValue("3"),
 				},
 			},
 			expected: false,
@@ -513,7 +513,7 @@ func TestFailFastSpecParsing(t *testing.T) {
 			spec: &testworkflowsv1.StepParallel{
 				FailFast: true,
 				StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-					Count: common.Ptr(intstr.FromInt(3)),
+					Count: testworkflowsv1.NewConfigValue("3"),
 				},
 			},
 			expected: true,
@@ -522,7 +522,7 @@ func TestFailFastSpecParsing(t *testing.T) {
 			spec: &testworkflowsv1.StepParallel{
 				FailFast: true,
 				StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-					Count: common.Ptr(intstr.FromInt(3)),
+					Count: testworkflowsv1.NewConfigValue("3"),
 				},
 			},
 			base64:   true,
@@ -542,7 +542,7 @@ func TestFailFastSpecParsing(t *testing.T) {
 			spec: &testworkflowsv1.StepParallel{
 				FailFast: true,
 				StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-					Count: common.Ptr(intstr.FromInt(0)),
+					Count: testworkflowsv1.NewConfigValue("0"),
 				},
 			},
 			execute:  true,

@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gookit/color"
-
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
@@ -103,7 +101,8 @@ func (e *TestWorkflowExecution) InitializationError(header string, err error) {
 	e.Result.Initialization.FinishedAt = e.ScheduledAt
 	e.Result.Initialization.ErrorMessage = err.Error()
 	if header != "" {
-		e.Result.Initialization.ErrorMessage = fmt.Sprintf("%s\n%s", color.Bold.Render(header), e.Result.Initialization.ErrorMessage)
+		// The stored message must stay plain text. The API and telemetry read it without a terminal renderer.
+		e.Result.Initialization.ErrorMessage = fmt.Sprintf("%s\n%s", header, e.Result.Initialization.ErrorMessage)
 	}
 	for ref, step := range e.Result.Steps {
 		step.Status = common.Ptr(SKIPPED_TestWorkflowStepStatus)

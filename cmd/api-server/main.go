@@ -366,9 +366,15 @@ func main() {
 	)
 
 	// Keep startup-time capabilities in sync with runtime flags.
-	// The control plane enforces that runner capability cannot be changed via this path.
+	// The control plane enforces that the execution entitlement (runner/execution)
+	// cannot be changed via this path.
 	if proContext.APIKey != "" {
 		startupCapabilities := buildStartupCapabilities(cfg)
+		// The agent's own flags decide every capability except execution, which
+		// the Control Plane owns. Start from that list so the gates below have
+		// an answer even when the Control Plane cannot be asked, and replace it
+		// with the stored set once the update succeeds.
+		proContext.Agent.Capabilities = startupCapabilities
 		updateCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		updateCtx = metadata.NewOutgoingContext(updateCtx, metadata.New(map[string]string{
 			controlplaneclient.AgentSecretKeyMetadataName: proContext.APIKey,
@@ -435,6 +441,7 @@ func main() {
 				)
 			}
 		} else {
+			proContext.Agent.Capabilities = resp.Capabilities
 			log.DefaultLogger.Infow("updated startup capabilities in control plane",
 				"capabilities", stringifyCapabilities(resp.Capabilities),
 			)
@@ -784,10 +791,10 @@ func main() {
 	api.ClusterDiscoverer = clusterdiscovery.New(clientset, cfg.TestkubeNamespace).WithSchemas(apiextClient)
 	api.Init(httpServer)
 
-	// Push watchable cluster-resources snapshot to CP on startup, on CRD
-	// informer events, and as an hourly safety net. CP caches the result to
-	// render the TestTrigger resourceRef picker (see AgentInventoryService).
-	if proContext.APIKey != "" {
+	// Push a cluster-resources snapshot to the CP on startup, on CRD informer
+	// events, and as an hourly safety net. The CP caches it to render the
+	// TestTrigger resourceRef picker (see AgentInventoryService).
+	if intconfig.ShouldPushClusterInventory(proContext) {
 		crdNotifier := inventorycontroller.StartCRDChangeNotifier(ctx, apiextClient, log.DefaultLogger)
 		clusterResourcesController := &inventorycontroller.ClusterResourcesController{
 			Discoverer: api.ClusterDiscoverer,
@@ -1093,6 +1100,7 @@ func buildStartupCapabilities(cfg *intconfig.Config) []cloud.AgentCapability {
 	caps := make([]cloud.AgentCapability, 0, 4)
 	if !cfg.DisableRunner {
 		caps = append(caps, cloud.AgentCapability_AGENT_CAPABILITY_RUNNER)
+		caps = append(caps, cloud.AgentCapability_AGENT_CAPABILITY_EXECUTION)
 	}
 	if !cfg.DisableTestTriggers {
 		caps = append(caps, cloud.AgentCapability_AGENT_CAPABILITY_LISTENER)

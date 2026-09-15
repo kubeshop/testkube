@@ -10,7 +10,7 @@ spec:
   selector: core-tests=installation
   payloadTemplate: |-
     {
-      "text": ":alert: Testkube Installation test \n *Name*: {{.TestWorkflowExecution.Name}} \n *Status*: {{ .Type_ }} \n *Logs*: {{ .ExecutionURL }}"
+      "text": ":alert: *Installation test {{ .TestWorkflowExecution.Workflow.Name }} failed*\n*Execution*: {{.TestWorkflowExecution.Name}}\n*Status*: {{ .Type_ }}\n*Possible Severity*: High\n*Possible Impact*: A released version may fail to install or upgrade.\n*Logs*: {{ .ExecutionURL }}"
     }
 
 ---
@@ -25,5 +25,5 @@ spec:
   selector: core-tests=installation
   payloadTemplate: |-
     {
-      "text": ":large_green_circle: Testkube Installation test - *back to normal* \n *Name*: {{.TestWorkflowExecution.Name}} \n *Status*: {{ .Type_ }} \n *Logs*: {{ .ExecutionURL }}"
+      "text": ":large_green_circle: *Installation test {{ .TestWorkflowExecution.Workflow.Name }} recovered*\n*Logs*: {{ .ExecutionURL }}"
     }

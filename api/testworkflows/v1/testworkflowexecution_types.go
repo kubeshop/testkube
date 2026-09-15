@@ -16,7 +16,6 @@ package v1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 )
@@ -33,8 +32,8 @@ type TestWorkflowExecutionSpec struct {
 // TestWorkflowExecutionRequest contains TestWorkflow execution parameters
 type TestWorkflowExecutionRequest struct {
 	// custom execution name
-	Name   string                        `json:"name,omitempty" expr:"template"`
-	Config map[string]intstr.IntOrString `json:"config,omitempty" expr:"template"`
+	Name   string                 `json:"name,omitempty" expr:"template"`
+	Config map[string]ConfigValue `json:"config,omitempty" expr:"template"`
 	// test workflow execution name started the test workflow execution
 	TestWorkflowExecutionName string `json:"testWorkflowExecutionName,omitempty" expr:"template"`
 	// whether webhooks should be disabled for this execution

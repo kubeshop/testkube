@@ -27,7 +27,19 @@ type ExecutionStateTransition struct {
 	// execution_id is the unique identifier of the execution to be transitioned.
 	ExecutionId *string `protobuf:"bytes,1,opt,name=execution_id,json=executionId" json:"execution_id,omitempty"`
 	// transition_to is the state the execution should be transitioned into.
-	TransitionTo  *ExecutionState `protobuf:"varint,2,opt,name=transition_to,json=transitionTo,enum=testkube.testworkflow.execution.v1.ExecutionState" json:"transition_to,omitempty"`
+	TransitionTo *ExecutionState `protobuf:"varint,2,opt,name=transition_to,json=transitionTo,enum=testkube.testworkflow.execution.v1.ExecutionState" json:"transition_to,omitempty"`
+	// reason is the code for the cause of an abort or a cancel, for example
+	// "execution-timeout". The runner writes it into the job annotation next to
+	// the actor and renders its words, so the execution result names who stopped
+	// the execution and why. Empty when the Control Plane has no cause to give,
+	// and for every other transition.
+	Reason *string `protobuf:"bytes,3,opt,name=reason" json:"reason,omitempty"`
+	// actor is the code for the component that decided an abort or a cancel, for
+	// example "quality-loop". The runner writes it into the job annotation and renders
+	// its words in front of the reason. Empty when the Control Plane does not name the
+	// actor, and the runner then names the user for a cancel and the Control Plane for
+	// an abort.
+	Actor         *string `protobuf:"bytes,4,opt,name=actor" json:"actor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -76,14 +88,30 @@ func (x *ExecutionStateTransition) GetTransitionTo() ExecutionState {
 	return ExecutionState_EXECUTION_STATE_UNSPECIFIED
 }
 
+func (x *ExecutionStateTransition) GetReason() string {
+	if x != nil && x.Reason != nil {
+		return *x.Reason
+	}
+	return ""
+}
+
+func (x *ExecutionStateTransition) GetActor() string {
+	if x != nil && x.Actor != nil {
+		return *x.Actor
+	}
+	return ""
+}
+
 var File_testkube_testworkflow_execution_v1_execution_state_transition_proto protoreflect.FileDescriptor
 
 const file_testkube_testworkflow_execution_v1_execution_state_transition_proto_rawDesc = "" +
 	"\n" +
-	"Ctestkube/testworkflow/execution/v1/execution_state_transition.proto\x12\"testkube.testworkflow.execution.v1\x1a8testkube/testworkflow/execution/v1/execution_state.proto\"\x96\x01\n" +
+	"Ctestkube/testworkflow/execution/v1/execution_state_transition.proto\x12\"testkube.testworkflow.execution.v1\x1a8testkube/testworkflow/execution/v1/execution_state.proto\"\xc4\x01\n" +
 	"\x18ExecutionStateTransition\x12!\n" +
 	"\fexecution_id\x18\x01 \x01(\tR\vexecutionId\x12W\n" +
-	"\rtransition_to\x18\x02 \x01(\x0e22.testkube.testworkflow.execution.v1.ExecutionStateR\ftransitionToB\xc9\x02\n" +
+	"\rtransition_to\x18\x02 \x01(\x0e22.testkube.testworkflow.execution.v1.ExecutionStateR\ftransitionTo\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\x12\x14\n" +
+	"\x05actor\x18\x04 \x01(\tR\x05actorB\xc9\x02\n" +
 	"&com.testkube.testworkflow.execution.v1B\x1dExecutionStateTransitionProtoP\x01ZUgithub.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1;executionv1\xa2\x02\x03TTE\xaa\x02\"Testkube.Testworkflow.Execution.V1\xca\x02\"Testkube\\Testworkflow\\Execution\\V1\xe2\x02.Testkube\\Testworkflow\\Execution\\V1\\GPBMetadata\xea\x02%Testkube::Testworkflow::Execution::V1b\beditionsp\xe8\a"
 
 var (
