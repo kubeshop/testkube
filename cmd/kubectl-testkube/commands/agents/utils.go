@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"maps"
-	"os"
 	"strings"
 	"time"
 
@@ -835,13 +834,23 @@ func UiCreateAgent(
 	if name == "" {
 		name = ui.TextInput("agent name")
 		if name == "" {
-			ui.Failf("agent name is required")
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrInvalidRuntimeParameter,
+				"No agent name provided",
+				"Pass the agent name as an argument, for example `testkube create agent my-agent`",
+				errors.New("agent name is required"),
+			))
 		}
 	}
 
 	// Get existing agent of that name
 	if existing, err := GetControlPlaneAgent(cmd, name); err == nil {
-		ui.Failf("agent '%s' already exists", existing.Name)
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrInvalidRuntimeParameter,
+			"Agent already exists",
+			"Choose a name that is free, or change the existing agent with `testkube update agent`",
+			errors.Errorf("agent '%s' already exists", existing.Name),
+		))
 	}
 
 	input := cloudclient.AgentInput{
@@ -883,11 +892,25 @@ func UiCreateAgent(
 	}
 
 	envs, err := GetControlPlaneEnvironments(cmd)
-	ui.ExitOnError("getting environments", err)
+	if err != nil {
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrEnvResolutionFailed,
+			"Error getting the environments",
+			"Check that your credentials are valid and that your user can read the environments of this organization",
+			err,
+		))
+	}
 
 	if len(input.Environments) == 0 {
 		cfg, err := config.Load()
-		ui.ExitOnError("loading config", err)
+		if err != nil {
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrConfigInitFailed,
+				"Error loading testkube config file",
+				common2.ConfigFileHint,
+				err,
+			))
+		}
 		envOpts := []string{envs[cfg.CloudContext.EnvironmentId].Slug}
 		for id := range envs {
 			if id != cfg.CloudContext.EnvironmentId {
@@ -913,16 +936,32 @@ func UiCreateAgent(
 	for _, envId := range input.Environments {
 		env, ok := envs[envId]
 		if !ok {
-			ui.Failf("unknown environment: %s", envId)
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrInvalidRuntimeParameter,
+				"Unknown environment",
+				"Pass an environment id or slug of the current organization with '--env', or select one with `testkube set context --env-id <id>`",
+				errors.Errorf("unknown environment: %s", envId),
+			))
 		}
 		if !env.NewArchitecture {
-			ui.Warn(fmt.Sprintf("Environment '%s' (%s) does not support new architecture. Please upgrade your control plane.", env.Name, env.Id))
-			os.Exit(1)
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrInvalidRuntimeParameter,
+				"Environment does not support the new architecture",
+				"Upgrade the control plane of this environment, or pass an environment that runs the new architecture with '--env'",
+				errors.Errorf("environment '%s' (%s) does not support the new architecture", env.Name, env.Id),
+			))
 		}
 	}
 
 	agent, err := CreateAgent(cmd, input)
-	ui.ExitOnError("creating agent", err)
+	if err != nil {
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrAgentWriteFailed,
+			"Error creating the agent",
+			common2.AgentWriteHint,
+			err,
+		))
+	}
 
 	PrintControlPlaneAgent(*agent)
 
