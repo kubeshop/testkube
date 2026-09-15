@@ -67,6 +67,10 @@ const (
 	TKErrAgentRotateKeyFailed ErrorCode = "TKERR-1502"
 	// TKErrAgentRotateRegistrationTokenFailed is returned when rotating an environment registration token fails.
 	TKErrAgentRotateRegistrationTokenFailed ErrorCode = "TKERR-1503"
+	// TKErrAgentWriteFailed is returned when creating, updating or deleting an agent on the control plane fails.
+	// Reads use TKErrAgentGetFailed: the control plane helpers share one preamble and differ only in the final
+	// call, so a read and a write fail for the same reasons and the code only has to say which was attempted.
+	TKErrAgentWriteFailed ErrorCode = "TKERR-1504"
 
 	// TKERR-16xx errors are related to marketplace operations.
 

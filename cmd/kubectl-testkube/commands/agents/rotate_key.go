@@ -37,7 +37,7 @@ func NewRotateKeyCommand() *cobra.Command {
 			if err != nil {
 				common.HandleCLIError(common.NewCLIError(
 					common.TKErrAgentGetFailed,
-					"Failed to get runner",
+					"Error getting the runner",
 					"Verify the runner name or ID is correct and your credentials are valid",
 					err,
 				))
@@ -57,7 +57,7 @@ func NewRotateKeyCommand() *cobra.Command {
 			if err != nil {
 				common.HandleCLIError(common.NewCLIError(
 					common.TKErrAgentRotateKeyFailed,
-					"Failed to rotate runner secret key",
+					"Error rotating the runner secret key",
 					"Verify the runner exists and your credentials are valid",
 					err,
 				))
