@@ -39,6 +39,13 @@ spec:
     execute:
       workflows:
       - name: expected-fail-step-oomkilled
+        as: step-oomkilled
+  - name: assert-step-oomkilled-message
+    shell: |
+      # The message is on the initialization step or on the step, because the pod can stop at different times.
+      msg={{ shellquote(execution("step-oomkilled").errorMessage + " " + tojson(execution("step-oomkilled").stepErrors)) }}
+      echo "$msg"
+      echo "$msg" | grep -q "OOMKilled" || { echo "unexpected message: $msg"; exit 1; }
   - name: expected-fail-service-oomkilled
     negative: true
     execute:
@@ -64,6 +71,13 @@ spec:
     execute:
       workflows:
       - name: expected-fail-timeout-activedeadlineseconds
+        as: timeout-activedeadlineseconds
+  - name: assert-timeout-activedeadlineseconds-message
+    shell: |
+      # The message is on the initialization step or on the step, because the pod can stop at different times.
+      msg={{ shellquote(execution("timeout-activedeadlineseconds").errorMessage + " " + tojson(execution("timeout-activedeadlineseconds").stepErrors)) }}
+      echo "$msg"
+      echo "$msg" | grep -q "has been aborted" || { echo "unexpected message: $msg"; exit 1; }
   - name: expected-fail-timeout-step
     negative: true
     execute:
@@ -89,6 +103,12 @@ spec:
     execute:
       workflows:
       - name: expected-fail-missing-template
+        as: missing-template
+  - name: assert-missing-template-message
+    shell: |
+      msg={{ shellquote(execution("missing-template").errorMessage) }}
+      echo "$msg"
+      echo "$msg" | grep -qF "cannot fetch Test Workflow Template by name: some-non-existant-template-name" || { echo "unexpected message: $msg"; exit 1; }
   - name: expected-fail-service-exit-code
     negative: true
     execute:
