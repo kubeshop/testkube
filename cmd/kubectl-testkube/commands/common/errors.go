@@ -97,6 +97,8 @@ const (
 	TKErrContextSaveFailed ErrorCode = "TKERR-1804"
 	// TKErrOrgEnvNamesFetchFailed is returned when the display names of the context's organization and environment can't be fetched.
 	TKErrOrgEnvNamesFetchFailed ErrorCode = "TKERR-1805"
+	// TKErrControlPlaneDiscoveryFailed is returned when the Control Plane can't be reached or does not answer with its public info.
+	TKErrControlPlaneDiscoveryFailed ErrorCode = "TKERR-1806"
 )
 
 const helpUrl = "https://testkubeworkspace.slack.com"

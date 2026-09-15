@@ -38,7 +38,14 @@ func NewLoginCmd() *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg, err := config.Load()
-			ui.ExitOnError("loading config file", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrConfigInitFailed,
+					"Error loading testkube config file",
+					common.ConfigFileHint,
+					err,
+				))
+			}
 			skipTLS := common.SyncSkipTLSFromFlags(cmd, &cfg)
 			discoveryClient := tkhttp.NewClient(skipTLS)
 
@@ -47,26 +54,51 @@ func NewLoginCmd() *cobra.Command {
 				if !strings.Contains(args[0], "://") {
 					args[0] = fmt.Sprintf("https://%s", args[0])
 				}
+				// A bad address and an unreachable Control Plane need different
+				// things from the user, so they are reported apart.
+				exitOnInvalidURL := func(err error) {
+					if err != nil {
+						common.HandleCLIError(common.NewCLIError(
+							common.TKErrInvalidRuntimeParameter,
+							"Invalid Control Plane URL",
+							"Pass the Control Plane address as a URL, for example `testkube pro login https://cp.example.com`",
+							err,
+						))
+					}
+				}
 				u, err := url.Parse(args[0])
-				ui.ExitOnError("invalid instance url", err)
+				exitOnInvalidURL(err)
 				u.Path, err = url.JoinPath(u.Path, "public-info")
-				ui.ExitOnError("invalid instance url", err)
+				exitOnInvalidURL(err)
+
+				// u is rewritten as the http/https and "api." fallbacks are
+				// tried, so the hint names whichever address failed last.
+				exitOnDiscoveryError := func(err error) {
+					if err != nil {
+						common.HandleCLIError(common.NewCLIError(
+							common.TKErrControlPlaneDiscoveryFailed,
+							"Error reading the Control Plane information",
+							"Check does "+u.String()+" point at a Testkube Control Plane and is it reachable from here",
+							err,
+						))
+					}
+				}
 
 				// Call the Control Plane
 				httpReq, reqErr := http.NewRequestWithContext(context.Background(), http.MethodGet, u.String(), nil)
-				ui.ExitOnError("creating request", reqErr)
+				exitOnInvalidURL(reqErr)
 				req, err := discoveryClient.Do(httpReq)
 				if err != nil && strings.Contains(err.Error(), "response to HTTPS client") {
 					// Automatically handle http/https discovery
 					u.Scheme = "http"
 					httpReq, reqErr = http.NewRequestWithContext(context.Background(), http.MethodGet, u.String(), nil)
-					ui.ExitOnError("creating request", reqErr)
+					exitOnInvalidURL(reqErr)
 					req, err = discoveryClient.Do(httpReq)
 				}
-				ui.ExitOnError("requesting control plane info", err)
+				exitOnDiscoveryError(err)
 
 				v, err := io.ReadAll(req.Body)
-				ui.ExitOnError("reading control plane info", err)
+				exitOnDiscoveryError(err)
 				_ = req.Body.Close()
 				var result CloudConfig
 				err = json.Unmarshal(v, &result)
@@ -75,21 +107,21 @@ func NewLoginCmd() *cobra.Command {
 				if err != nil {
 					u.Host = fmt.Sprintf("api.%s", u.Host)
 					httpReq, reqErr = http.NewRequestWithContext(context.Background(), http.MethodGet, u.String(), nil)
-					ui.ExitOnError("creating request", reqErr)
+					exitOnInvalidURL(reqErr)
 					req, err = discoveryClient.Do(httpReq)
-					ui.ExitOnError("requesting control plane info", err)
+					exitOnDiscoveryError(err)
 					v, err = io.ReadAll(req.Body)
-					ui.ExitOnError("reading control plane info", err)
+					exitOnDiscoveryError(err)
 					_ = req.Body.Close()
 					err = json.Unmarshal(v, &result)
 				}
-				ui.ExitOnError("reading control plane info", err)
+				exitOnDiscoveryError(err)
 
 				if req.StatusCode != http.StatusOK {
-					ui.Fail(fmt.Errorf("unexpected error while getting control plane info: %d: %s", req.StatusCode, string(v)))
+					exitOnDiscoveryError(fmt.Errorf("the Control Plane answered %d: %s", req.StatusCode, string(v)))
 				}
 				if result.APIURL == "" && result.RootDomain == "" {
-					ui.Fail(errors.New("unexpected error while getting control plane info missing URLs"))
+					exitOnDiscoveryError(errors.New("the response carries neither an API URL nor a root domain"))
 				}
 
 				// Try to fill the data
@@ -155,18 +187,45 @@ func NewLoginCmd() *cobra.Command {
 				// Interactive selector: GitHub / GitLab / Google / Email magic-link
 				tokenType, token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth, opts.Master.URIs.Api, opts.Master.CustomAuth, opts.Master.CallbackPort, skipTLS)
 			}
-			ui.ExitOnError("getting token", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrLoginFailed,
+					"Error logging in to Testkube Pro",
+					"Check is the browser able to reach the Testkube Pro auth endpoint, and that the email or link you passed is still valid",
+					err,
+				))
+			}
 
 			// The organization has to resolve first: the environment lookup is
 			// scoped to it.
 			orgID, err := common.ResolveOrgOrPrompt(opts.Master.URIs.Api, token, opts.Master, skipTLS)
-			ui.ExitOnError("resolving organization", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrOrgResolutionFailed,
+					"Error resolving Testkube Pro organization",
+					"Check does your account have access to the organization, or select it explicitly with the '--org-id' flag",
+					err,
+				))
+			}
 
 			envID, err := common.ResolveEnvOrPrompt(opts.Master.URIs.Api, token, orgID, opts.Master, skipTLS)
-			ui.ExitOnError("resolving environment", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrEnvResolutionFailed,
+					"Error resolving Testkube Pro environment",
+					"Check does the environment exist in the selected organization, or select it explicitly with the '--env-id' flag",
+					err,
+				))
+			}
 
-			err = common.PopulateLoginDataToContext(orgID, envID, tokenType, token, refreshToken, "", opts, cfg)
-			ui.ExitOnError("saving config file", err)
+			if err = common.PopulateLoginDataToContext(orgID, envID, tokenType, token, refreshToken, "", opts, cfg); err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrContextSaveFailed,
+					"Error saving the Testkube Pro context",
+					common.ConfigFileHint,
+					err,
+				))
+			}
 
 			ui.Success("Your config was updated with new values")
 			ui.NL()
