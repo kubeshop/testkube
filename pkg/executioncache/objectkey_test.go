@@ -12,7 +12,10 @@ import (
 // safeObject is the shape every derived object name must have: the fixed prefix, one
 // environment segment, the scope discriminator, an optional workflow segment, then a
 // single encoded key segment. Nothing else may introduce a '/' or a '.'.
-var safeObject = regexp.MustCompile(`^\.tkcache/v1/[A-Za-z0-9_-]+/(e|w/[A-Za-z0-9_-]+)/[A-Za-z0-9_%-]+\.tar\.gz$`)
+// A name segment may now carry a dot, because a Kubernetes name may and is used as it
+// stands. The key segment is still percent-encoded, so it can only ever be the
+// unreserved set plus the escapes.
+var safeObject = regexp.MustCompile(`^\.tkcache/v1/(_[0-9a-f]{64}|[A-Za-z0-9._-]+)/(shared|testworkflows/(_[0-9a-f]{64}|[A-Za-z0-9._-]+))/[A-Za-z0-9_%-]+\.tar\.gz$`)
 
 // TestObjectNameConfinesHostileKeys is the load-bearing test of the whole layout.
 //
@@ -123,7 +126,7 @@ func TestSanitizeSegmentDisambiguates(t *testing.T) {
 		sanitizeSegment(strings.Repeat("x", 60)+"one"),
 		sanitizeSegment(strings.Repeat("x", 60)+"two"))
 	assert.Equal(t, sanitizeSegment("stable"), sanitizeSegment("stable"))
-	assert.Regexp(t, `^[A-Za-z0-9_-]+$`, sanitizeSegment("../../etc/passwd"))
+	assert.Regexp(t, `^[A-Za-z0-9._-]+$`, sanitizeSegment("../../etc/passwd"))
 }
 
 // TestParseScopeDefaultsToNarrowest: an unknown value must never widen sharing.
@@ -203,34 +206,69 @@ func TestEncodeKeyIsSafeAndPrefixPreserving(t *testing.T) {
 	assert.Equal(t, "../../e/shared", KeyFromObjectName("", EncodeKey("../../e/shared")))
 }
 
-// TestSanitizeSegmentSeparatesNamesThatSlugAlike pins the part of a scope prefix that
-// actually does the separating.
+// TestSanitizeSegmentKeepsNamesReadable pins what a scope prefix looks like, because the
+// reason to keep it readable is that somebody is reading it - a bucket listing is where
+// you go to work out why a cache does not hit.
 //
-// Two names longer than maxSegmentChars that agree on their first maxSegmentChars
-// characters produce the same slug, which is an ordinary way for generated workflow
-// names to look. From there the appended digest is the only thing keeping their scopes
-// apart, so it is sized as an isolation boundary rather than as a tie-breaker: the
-// consequence of a collision is one workflow restoring a dependency tree another wrote,
-// and a restored dependency tree is code that then runs.
-func TestSanitizeSegmentSeparatesNamesThatSlugAlike(t *testing.T) {
-	shared := "nightly-integration-suite-for-payments-service-eu"
-	require.Greater(t, len(shared), maxSegmentChars-4,
-		"the fixture has to be long enough that the two names below share a slug")
+// A Kubernetes name is already one safe path segment, so it is used as it stands. Two
+// distinct names therefore produce two distinct segments by virtue of being distinct,
+// which is a stronger separation than the digest this replaced: that one slugged the
+// name and cut it at 48 characters, so names agreeing on their first 48 collided and
+// needed the digest to tell them apart again.
+func TestSanitizeSegmentKeepsNamesReadable(t *testing.T) {
+	// Long, and sharing far more than a digest-free scheme could have tolerated before.
+	first := "nightly-integration-suite-for-payments-service-eu-west-1"
+	second := "nightly-integration-suite-for-payments-service-eu-west-2"
 
-	first := shared + "-west-1"
-	second := shared + "-west-2"
+	assert.Equal(t, first, sanitizeSegment(first), "a Kubernetes name is used as it stands")
+	assert.NotEqual(t, sanitizeSegment(first), sanitizeSegment(second))
+	assert.Contains(t, ScopePrefix("env-1", first, ScopeWorkflow), first,
+		"the name has to be legible in the object path")
+}
 
-	// The premise: the slugs really are identical, so the digest is doing all the work.
-	assert.Equal(t, first[:maxSegmentChars], second[:maxSegmentChars])
+// TestSanitizeSegmentContainsUnsafeNames covers the input that is not a Kubernetes name,
+// which in practice means a misconfigured environment id rather than a workflow.
+//
+// It has to stay one segment whatever it contains, or a scope could be escaped. The
+// fallback is a full digest behind an underscore - a character no Kubernetes name may
+// begin with - so a real name can neither be mistaken for a fallback nor collide with one.
+func TestSanitizeSegmentContainsUnsafeNames(t *testing.T) {
+	for _, unsafe := range []string{
+		"../../etc/passwd",
+		"a/b",
+		"..",
+		".",
+		"",
+		"has\\backslash",
+		"_starts-with-underscore",
+		strings.Repeat("x", maxSegmentChars+1),
+	} {
+		got := sanitizeSegment(unsafe)
+		assert.Regexp(t, `^_[0-9a-f]{64}$`, got, "%q has to fall back to a digest", unsafe)
+		assert.NotContains(t, got, "/", "%q must not stay able to express a path", unsafe)
+	}
 
-	a := ScopePrefix("env-1", first, ScopeWorkflow)
-	b := ScopePrefix("env-1", second, ScopeWorkflow)
-	assert.NotEqual(t, a, b, "two workflows must not share a cache scope")
+	// Distinct unsafe names stay distinct, and none of them can reach a scope that a
+	// real name occupies.
+	assert.NotEqual(t, sanitizeSegment("a/b"), sanitizeSegment("a\\b"))
+	assert.NotEqual(t, sanitizeSegment(".."), sanitizeSegment("."))
+}
 
-	// And the digest is wide enough to be relied on for that. Four bytes is 32 bits,
-	// where a birthday collision among a few thousand such names stops being remote.
-	assert.GreaterOrEqual(t, segmentHashBytes, 8,
-		"a scope boundary should not rest on fewer than 64 bits")
-	assert.Regexp(t, `-[0-9a-f]{16}$`, sanitizeSegment(first),
-		"the digest has to actually reach the segment at its declared width")
+// TestValidateKeyBoundsTheEncodedLength covers the limit that belongs to the store.
+//
+// A key is percent-encoded into one segment of the object name, and encoding can triple
+// a byte, so a cap on the key before encoding does not bound what reaches S3 - the
+// earlier 512-byte raw cap admitted keys that encode to 1536.
+func TestValidateKeyBoundsTheEncodedLength(t *testing.T) {
+	// Encodes one-to-one, so the raw length is the encoded length.
+	assert.NoError(t, ValidateKey(strings.Repeat("a", MaxEncodedKeyBytes)))
+
+	// Triples, so it is well under the raw cap and well over the encoded one - which is
+	// exactly the case the old check let through.
+	punctuation := strings.Repeat("/", 200)
+	require.LessOrEqual(t, len(punctuation), MaxKeyBytes,
+		"the fixture has to pass the raw cap, or it is not testing the encoded one")
+	err := ValidateKey(punctuation)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "encodes to")
 }

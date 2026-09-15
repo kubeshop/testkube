@@ -28,33 +28,40 @@ const (
 	// query for a restore key cannot accidentally match it.
 	ObjectSuffix = ".tar.gz"
 
-	// MaxKeyBytes caps a cache key before encoding.
+	// MaxEncodedKeyBytes caps what a key becomes rather than what it started as.
 	//
-	// S3 object keys are limited to 1024 bytes and encoding can triple a byte, so the
-	// cap has to leave room for the prefix, the scope segments and the suffix. It is
-	// also a correctness limit rather than only a storage one: two keys that differ
-	// beyond a silent truncation point would share an entry.
-	MaxKeyBytes = 512
+	// The limit belongs to the store: an S3 object key may be 1024 bytes. A cache key is
+	// percent-encoded into one segment of that name, and encoding can triple a byte, so
+	// a cap on the key before encoding does not bound the result - 512 raw bytes of
+	// punctuation encode to 1536, which no prefix can make fit. Measuring the encoded
+	// form is exact where measuring the input was a guess.
+	//
+	// The budget is what remains of 1024 after the longest layout this plane produces:
+	// ".tkcache/v1/" and "/testworkflows/" and a separator and ".tar.gz" come to 35, and
+	// two name segments can be 253 each, leaving 483. Rounded down to leave the
+	// commercial plane, which nests deeper, a little room to share this constant.
+	MaxEncodedKeyBytes = 480
 
-	// maxSegmentChars bounds a sanitized name segment before its disambiguating hash.
-	maxSegmentChars = 48
+	// MaxKeyBytes caps the key before encoding as well, so an absurd input is refused
+	// before any work is done on it. It is the same number because a key of unreserved
+	// characters encodes one to one: that is the case where the raw length is the
+	// encoded length, and no raw key shorter than this can be under the encoded cap by
+	// virtue of its length alone.
+	MaxKeyBytes = MaxEncodedKeyBytes
 
-	// segmentHashBytes is how much of the name's digest disambiguates a segment.
+	// maxSegmentChars bounds a name used verbatim as a path segment. A Kubernetes name
+	// cannot exceed 253 characters, so this only ever rejects something that was not one.
+	maxSegmentChars = 253
+
+	// workflowScopeSegment and sharedScopeSegment name the two scopes in an object name.
 	//
-	// Eight, not four, because this is what separates one workflow's cache from
-	// another's and the slug in front of it cannot be relied on to differ. Two names
-	// longer than maxSegmentChars that agree on their first maxSegmentChars characters
-	// slug identically - "nightly-suite-for-payments-eu-west-1" and "...-eu-west-2"
-	// past the cut, which is an ordinary way to name generated workflows - and from
-	// there the hash is the only thing keeping their scopes apart.
-	//
-	// Four bytes is 32 bits, so a birthday collision among names sharing a slug is
-	// likelier than it looks for a tenant with thousands of them. The consequence is
-	// not a wrong cache key but two workflows sharing a scope: one restores a
-	// dependency tree the other wrote, and a restored dependency tree is code that then
-	// runs. Eight bytes costs eight characters in an object name that has a thousand to
-	// spend, so there is no reason to price an isolation boundary at 32 bits.
-	segmentHashBytes = 8
+	// Spelled out rather than abbreviated, and spelled the same way the commercial
+	// control plane spells them, so that an operator looking into either bucket meets
+	// one vocabulary instead of two. The layouts around them stay different on purpose -
+	// that plane is multi-tenant and keys by organization - but there is no reason for
+	// the words to differ as well.
+	workflowScopeSegment = "testworkflows"
+	sharedScopeSegment   = "shared"
 )
 
 // Scope is how widely a cache entry is shared.
@@ -97,6 +104,11 @@ func ValidateKey(key string) error {
 			return fmt.Errorf("cache key contains a control character")
 		}
 	}
+	// Checked on the encoded form, because that is what has to fit inside an object
+	// name. The raw cap above does not bound it: a key of punctuation triples.
+	if encoded := len(EncodeKey(key)); encoded > MaxEncodedKeyBytes {
+		return fmt.Errorf("cache key encodes to %d bytes, over the %d byte limit", encoded, MaxEncodedKeyBytes)
+	}
 	return nil
 }
 
@@ -132,27 +144,49 @@ func EncodeKey(key string) string {
 	return out.String()
 }
 
-// sanitizeSegment turns a name into one path segment.
+// sanitizeSegment turns a name into one path segment, using the name itself wherever it
+// already is one - which is always, for the names this actually receives.
 //
-// The disambiguating hash is appended always, not only when the name was truncated:
-// two names that sanitize to the same slug must not end up sharing a cache scope.
+// A workflow name is a Kubernetes object name: lowercase alphanumeric with '-' and '.',
+// at most 253 characters. It contains no separator, cannot be "." or "..", and is unique
+// within its environment. Transforming it bought nothing and cost the one thing these
+// names are for, which is an operator reading a bucket listing to work out why a cache
+// does not hit.
+//
+// This used to slug the name, cut it at 48 characters and append a digest. The digest
+// existed because the cut created collisions - two names agreeing on their first 48
+// characters became one segment, and two workflows sharing a scope is one restoring a
+// dependency tree the other wrote. Removing the cut removes the reason for the digest
+// rather than weakening anything: distinct names now produce distinct segments because
+// they are distinct.
+//
+// The fallback stays for input that is not a name of that kind, which in practice means
+// a misconfigured environment id rather than a workflow. It is a full digest rather than
+// a partial one, and it is prefixed with an underscore - which no Kubernetes name may
+// begin with - so a real name can neither be mistaken for a fallback nor collide with one.
 func sanitizeSegment(name string) string {
-	var slug strings.Builder
-	for i := 0; i < len(name); i++ {
-		c := name[i]
-		switch {
-		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9', c == '-', c == '_':
-			slug.WriteByte(c)
-		default:
-			slug.WriteByte('_')
-		}
-	}
-	trimmed := slug.String()
-	if len(trimmed) > maxSegmentChars {
-		trimmed = trimmed[:maxSegmentChars]
+	if isSafeSegment(name) {
+		return name
 	}
 	sum := sha256.Sum256([]byte(name))
-	return trimmed + "-" + hex.EncodeToString(sum[:segmentHashBytes])
+	return "_" + hex.EncodeToString(sum[:])
+}
+
+// isSafeSegment reports whether a name can be used as a path segment as it stands.
+func isSafeSegment(name string) bool {
+	if name == "" || name == "." || name == ".." || len(name) > maxSegmentChars {
+		return false
+	}
+	if strings.HasPrefix(name, "_") {
+		// Reserved for the fallback, so the two can never be confused.
+		return false
+	}
+	for _, r := range name {
+		if r == '/' || r == '\\' || r < 0x20 || r == 0x7f {
+			return false
+		}
+	}
+	return true
 }
 
 // ScopePrefix is the folder holding every entry a given scope can see.
@@ -163,9 +197,9 @@ func sanitizeSegment(name string) string {
 func ScopePrefix(environmentID, workflowName string, scope Scope) string {
 	env := sanitizeSegment(environmentID)
 	if scope == ScopeEnvironment {
-		return fmt.Sprintf("%s/%s/e", ObjectPrefix, env)
+		return fmt.Sprintf("%s/%s/%s", ObjectPrefix, env, sharedScopeSegment)
 	}
-	return fmt.Sprintf("%s/%s/w/%s", ObjectPrefix, env, sanitizeSegment(workflowName))
+	return fmt.Sprintf("%s/%s/%s/%s", ObjectPrefix, env, workflowScopeSegment, sanitizeSegment(workflowName))
 }
 
 // ObjectName is the object holding the entry for an exact key.
