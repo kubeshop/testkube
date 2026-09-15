@@ -162,8 +162,8 @@ spec:
 
       # A rerun keeps the chain's root and counts up from its base.
       [ '{{ execution.lineage.attempt }}' != '1' ] || { echo "a rerun cannot be attempt 1"; exit 1; }
-      [ '{{ execution.lineage.rootId }}' != '{{ execution.id }}' ] \
-        || { echo "a rerun must not be its own chain root"; exit 1; }
+      [ '{{ execution.lineage.rootId }}' = '{{ execution("rerun").id }}' ] \
+        || { echo "a rerun must keep the base's chain root"; exit 1; }
       [ "$RAN" = "1" ] || { echo "expected only the failed case repeated, ran $RAN"; exit 1; }
       [ "$FAILED" = "0" ] || { echo "expected the repeated case to pass, got $FAILED failures"; exit 1; }
       echo "rerun: 1 case, 0 failures, chain root {{ execution.lineage.rootId }}"
