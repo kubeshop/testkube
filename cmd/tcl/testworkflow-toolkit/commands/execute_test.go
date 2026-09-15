@@ -9,12 +9,15 @@
 package commands
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executiondata"
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
@@ -152,4 +155,74 @@ func TestClaimExecutionRefs(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), `duplicated execution reference "b"`)
 	})
+}
+
+func TestExecutionRecorder_Complete(t *testing.T) {
+	// complete prints an output instruction, and that instruction needs a toolkit configuration.
+	t.Setenv("TK_CFG", "{}")
+	t.Setenv("TK_REF", "rparent")
+
+	tests := []struct {
+		name           string
+		result         *testkube.TestWorkflowResult
+		wantStatus     string
+		wantMessage    string
+		wantStepErrors map[string]string
+	}{
+		{
+			name: "records the messages of a failed execution",
+			result: &testkube.TestWorkflowResult{
+				Status:         common.Ptr(testkube.FAILED_TestWorkflowStatus),
+				Initialization: &testkube.TestWorkflowStepResult{ErrorMessage: "the pod cannot be scheduled"},
+				Steps:          map[string]testkube.TestWorkflowStepResult{"rstep1": {ErrorMessage: "the step timed out"}},
+			},
+			wantStatus:     "failed",
+			wantMessage:    "the pod cannot be scheduled",
+			wantStepErrors: map[string]string{"rstep1": "the step timed out"},
+		},
+		{
+			name: "records no messages for an execution that passed",
+			result: &testkube.TestWorkflowResult{
+				Status:         common.Ptr(testkube.PASSED_TestWorkflowStatus),
+				Initialization: &testkube.TestWorkflowStepResult{},
+				Steps:          map[string]testkube.TestWorkflowStepResult{"rstep1": {}},
+			},
+			wantStatus: "passed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			registry := executiondata.NewRegistry()
+			recorder := newExecutionRecorder(registry)
+			exec := testkube.TestWorkflowExecution{Id: "exec-1", Name: "child-1"}
+			entry := recorder.schedule("child", "child-workflow", exec)
+
+			exec.Result = tt.result
+			recorder.complete(entry, exec)
+
+			got, ok, err := registry.Lookup("child", 0)
+			require.NoError(t, err)
+			require.True(t, ok)
+			assert.Equal(t, executiondata.Execution{
+				Id:           "exec-1",
+				Name:         "child-1",
+				Workflow:     "child-workflow",
+				Alias:        "child",
+				Status:       tt.wantStatus,
+				Outputs:      map[string]string{},
+				ErrorMessage: tt.wantMessage,
+				StepErrors:   tt.wantStepErrors,
+			}, got)
+
+			// Later steps rebuild the registry from the JSON of the published group.
+			raw, err := json.Marshal(registry.Group("child"))
+			require.NoError(t, err)
+			var decoded []executiondata.Execution
+			require.NoError(t, json.Unmarshal(raw, &decoded))
+			require.Len(t, decoded, 1)
+			assert.Equal(t, got.ErrorMessage, decoded[0].ErrorMessage)
+			assert.Equal(t, got.StepErrors, decoded[0].StepErrors)
+		})
+	}
 }
