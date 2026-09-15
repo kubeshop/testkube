@@ -649,6 +649,22 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
+  name: expected-fail-nested-execute
+  labels:
+    core-tests: expected-fail
+description: "execute step with a child execution that fails"
+spec:
+  use:
+    - name: special-cases-template-default-resources
+  steps:
+  - name: Execute a failing workflow
+    execute:
+      workflows:
+      - name: expected-fail-conditional-step-failed
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
   name: expected-fail-conditional-step-failed
   labels:
     core-tests: expected-fail

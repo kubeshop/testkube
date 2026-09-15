@@ -10,6 +10,7 @@ package commands
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -227,6 +228,54 @@ func TestExecutionRecorder_Complete(t *testing.T) {
 			assert.Equal(t, got.ErrorMessage, decoded[0].ErrorMessage)
 			assert.Equal(t, got.StepErrors, decoded[0].StepErrors)
 			assert.Equal(t, got.StepAttempts, decoded[0].StepAttempts)
+		})
+	}
+}
+
+func TestFailureSummary(t *testing.T) {
+	passed := func(name string) executionOutcome { return executionOutcome{name: name} }
+	tests := []struct {
+		name    string
+		results []operationResult
+		want    string
+	}{
+		{
+			name: "returns an empty summary when every execution passed",
+			results: []operationResult{
+				{outcomes: []executionOutcome{passed("a-1")}},
+				{outcomes: []executionOutcome{passed("b-1")}},
+			},
+			want: "",
+		},
+		{
+			name: "names the failed executions of all entries with their status",
+			results: []operationResult{
+				{outcomes: []executionOutcome{passed("a-1"), {name: "a-2", err: errors.New("failed")}}},
+				{outcomes: []executionOutcome{passed("b-1"), passed("b-2")}},
+				{outcomes: []executionOutcome{{name: "c-1", err: errors.New("aborted")}}},
+				notScheduled("consumer", errors.New("computing execution: unknown execution \"p\"")),
+			},
+			want: "3 of 6 executions failed: a-2 (failed), c-1 (aborted), consumer (computing execution: unknown execution \"p\")",
+		},
+		{
+			name: "adds a failure that is not about one execution after the executions",
+			results: []operationResult{
+				{outcomes: []executionOutcome{{name: "a-1", err: errors.New("failed")}}, err: errors.New("fetching artifacts: fetch.0: not found")},
+			},
+			want: "1 of 1 executions failed: a-1 (failed); fetching artifacts: fetch.0: not found",
+		},
+		{
+			name: "returns only the other failure when every execution passed",
+			results: []operationResult{
+				{outcomes: []executionOutcome{passed("a-1")}, err: errors.New("fetching artifacts: fetch.0: not found")},
+			},
+			want: "fetching artifacts: fetch.0: not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, failureSummary(tt.results))
 		})
 	}
 }

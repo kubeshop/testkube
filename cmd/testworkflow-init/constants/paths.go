@@ -17,6 +17,8 @@ var (
 	InitPath           = filepath.Join(InternalPath, "init")
 	ToolkitPath        = filepath.Join(InternalPath, "toolkit")
 	StatePath          = getEnvOrDefault("TESTKUBE_TW_STATE_PATH", filepath.Join(InternalPath, "state"))
+	// StepErrorPath is the file where a toolkit step writes the cause of its failure.
+	StepErrorPath = getEnvOrDefault("TESTKUBE_TW_STEP_ERROR_PATH", filepath.Join(InternalPath, "error"))
 )
 
 func getEnvOrDefault(key, defaultValue string) string {
