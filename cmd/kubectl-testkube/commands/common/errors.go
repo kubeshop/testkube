@@ -34,6 +34,8 @@ const (
 	TKErrInvalidDockerConfig ErrorCode = "TKERR-1203"
 	// TKErrInvalidRuntimeParameter is returned when invalid runtime parameters are provided.
 	TKErrInvalidRuntimeParameter ErrorCode = "TKERR-1204"
+	// TKErrConfigSaveFailed is returned when writing the testkube config file back to disk fails.
+	TKErrConfigSaveFailed ErrorCode = "TKERR-1205"
 
 	// TKERR-13xx errors are related to install operations.
 
@@ -49,6 +51,8 @@ const (
 	TKErrDockerLogReadingFailed ErrorCode = "TKERR-1305"
 	// TKErrDockerInstallationFailed is returned when a docker installation fails.
 	TKErrDockerInstallationFailed ErrorCode = "TKERR-1306"
+	// TKErrLatestVersionFetchFailed is returned when the latest Testkube release version can't be resolved.
+	TKErrLatestVersionFetchFailed ErrorCode = "TKERR-1307"
 
 	// TKErrCleanOldMigrationJobFailed is returned in case of issues with old migration jobs.
 	TKErrCleanOldMigrationJobFailed ErrorCode = "TKERR-1401"
@@ -78,6 +82,17 @@ const (
 
 	// TKErrResourceNotFound is returned when a requested resource does not exist on the API server.
 	TKErrResourceNotFound ErrorCode = "TKERR-1701"
+
+	// TKERR-18xx errors are related to authentication and Pro context setup.
+
+	// TKErrLoginFailed is returned when the interactive user login does not complete.
+	TKErrLoginFailed ErrorCode = "TKERR-1801"
+	// TKErrOrgResolutionFailed is returned when the Pro organization can't be resolved.
+	TKErrOrgResolutionFailed ErrorCode = "TKERR-1802"
+	// TKErrEnvResolutionFailed is returned when the Pro environment can't be resolved.
+	TKErrEnvResolutionFailed ErrorCode = "TKERR-1803"
+	// TKErrContextSaveFailed is returned when the resolved Pro context can't be stored in the config file.
+	TKErrContextSaveFailed ErrorCode = "TKERR-1804"
 )
 
 const helpUrl = "https://testkubeworkspace.slack.com"
