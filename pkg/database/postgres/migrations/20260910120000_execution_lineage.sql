@@ -38,12 +38,23 @@ ALTER TABLE test_workflow_executions ADD COLUMN IF NOT EXISTS lineage_attempt IN
 -- rewrites this whole table; the expression costs an index over all rows
 -- instead, which is the cheaper of the two.
 --
+-- The attempt is wrapped in COALESCE for the same reason as the root, and it
+-- has to be: a legacy row carries NULL there but means attempt 1, which is
+-- what EffectiveLineage() reports for it. Indexing the bare column would order
+-- that row by a NULL - last in an ASC scan, so the chain's original would sort
+-- after every rerun of it - and an ORDER BY that corrected for it with
+-- COALESCE would no longer match the index, giving up the ordered scan this
+-- index exists for. Both expressions have to agree, so both use COALESCE, and
+-- a chain query must spell them the same way to get the index.
+--
 -- Drop first to heal an INVALID index left behind by an interrupted
 -- CREATE INDEX CONCURRENTLY run; IF NOT EXISTS would otherwise skip it and
--- leave the retry stuck on an index that can never become valid.
+-- leave the retry stuck on an index that can never become valid. It also
+-- rebuilds the index for a database that already ran an earlier version of
+-- this migration, whose index had the bare column.
 DROP INDEX CONCURRENTLY IF EXISTS idx_twe_lineage_root;
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_twe_lineage_root
-    ON test_workflow_executions (organization_id, environment_id, COALESCE(lineage_root_id, id), lineage_attempt);
+    ON test_workflow_executions (organization_id, environment_id, COALESCE(lineage_root_id, id), COALESCE(lineage_attempt, 1));
 
 -- +goose Down
 DROP INDEX CONCURRENTLY IF EXISTS idx_twe_lineage_root;

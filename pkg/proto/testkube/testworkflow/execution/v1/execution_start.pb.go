@@ -60,7 +60,13 @@ type ExecutionStart struct {
 	// expressions like execution.tags.<key> can be resolved in all start paths.
 	Tags map[string]string `protobuf:"bytes,12,rep,name=tags" json:"tags,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// lineage records the execution this one is a rerun of, along with the chain
-	// root and attempt number. Present on every execution.
+	// root and attempt number.
+	//
+	// May be absent: an execution recorded before lineage existed carries none,
+	// and nothing backfills it. A consumer treats that as the original-run
+	// defaults - no base, this execution as its own chain root, attempt 1 - which
+	// is what TestWorkflowExecution.EffectiveLineage() reports for the same row,
+	// so the runner and the API agree about such an execution.
 	Lineage       *ExecutionLineage `protobuf:"bytes,13,opt,name=lineage" json:"lineage,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

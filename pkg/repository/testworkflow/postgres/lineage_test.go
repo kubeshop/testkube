@@ -47,9 +47,13 @@ func TestLineageFromRowForAnOriginalRun(t *testing.T) {
 }
 
 // An original run's empty base must reach the column as SQL NULL rather than as
-// an empty string: the partial index covers "has a lineage", and an empty string
-// would make every original run a row the index has to carry. It is also the
-// scalar analogue of the JSONB "null"-versus-NULL trap toJSONB exists to avoid.
+// an empty string. NULL is what "no base" is queried as - `lineage_base_id IS
+// NOT NULL` is the predicate for "this is a rerun", and an empty string would
+// make every original run answer it. The same holds for the root, more sharply:
+// the chain index is an expression index on COALESCE(lineage_root_id, id), and
+// COALESCE only substitutes for NULL, so an empty string there would survive it
+// and drop the row out of its own chain. It is also the scalar analogue of the
+// JSONB "null"-versus-NULL trap toJSONB exists to avoid.
 func TestLineageColumnsForAnOriginalRun(t *testing.T) {
 	lineage := &testkube.TestWorkflowExecutionLineage{RootId: "exec-1", Attempt: 1}
 
