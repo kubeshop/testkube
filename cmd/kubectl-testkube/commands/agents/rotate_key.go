@@ -45,7 +45,7 @@ func NewRotateKeyCommand() *cobra.Command {
 				common.HandleCLIError(common.NewCLIError(
 					common.TKErrAgentGetFailed,
 					"Error getting the runner",
-					"Check the runner name or ID and that your credentials are valid, or list the runners with `testkube get runners`",
+					common.AgentLookupHint,
 					err,
 				))
 				return
