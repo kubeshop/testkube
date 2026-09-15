@@ -3,7 +3,7 @@ package watchers
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
+	"slices"
 	"strings"
 	"time"
 
@@ -44,6 +44,8 @@ type Pod interface {
 	ContainerResult(name string, executionError string) ContainerResult
 	ContainersReady() bool
 	ContainerError() string
+	WaitingReason(reasons ...string) (reason, message string)
+	Unschedulable() (message string, ok bool)
 	ExecutionError() string
 	Debug() string
 }
@@ -191,8 +193,7 @@ func (p *pod) ContainerError() string {
 
 	// Check only for the last Test Workflow's container, as this is the one we are interested in
 	for _, c := range p.original.Status.ContainerStatuses {
-		// Check for the container that has number in it, as it's likely TestWorkflow's one
-		if _, err := strconv.ParseInt(c.Name, 10, 64); err != nil {
+		if !isStepContainer(c.Name) {
 			continue
 		}
 		if c.State.Terminated != nil && c.State.Terminated.Reason != "" && c.State.Terminated.Reason != "Completed" {
@@ -201,6 +202,38 @@ func (p *pod) ContainerError() string {
 	}
 
 	return ""
+}
+
+// WaitingReason returns the reason and the message of the first container that waits for one of the reasons.
+// It reads the init containers first, then the step containers.
+func (p *pod) WaitingReason(reasons ...string) (string, string) {
+	matches := func(c corev1.ContainerStatus) bool {
+		return c.State.Waiting != nil && slices.Contains(reasons, c.State.Waiting.Reason)
+	}
+	for _, c := range p.original.Status.InitContainerStatuses {
+		if matches(c) {
+			return c.State.Waiting.Reason, c.State.Waiting.Message
+		}
+	}
+	for _, c := range p.original.Status.ContainerStatuses {
+		if !isStepContainer(c.Name) {
+			continue
+		}
+		if matches(c) {
+			return c.State.Waiting.Reason, c.State.Waiting.Message
+		}
+	}
+	return "", ""
+}
+
+// Unschedulable returns the message of the scheduler when no node can run the pod.
+func (p *pod) Unschedulable() (string, bool) {
+	for _, c := range p.original.Status.Conditions {
+		if c.Type == corev1.PodScheduled && c.Status == corev1.ConditionFalse && c.Reason == corev1.PodReasonUnschedulable {
+			return c.Message, true
+		}
+	}
+	return "", false
 }
 
 func (p *pod) ContainersReady() bool {

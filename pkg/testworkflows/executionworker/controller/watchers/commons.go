@@ -423,3 +423,9 @@ func GetEventContainerName(event *corev1.Event) string {
 	}
 	return ""
 }
+
+// isStepContainer reports whether the container runs Test Workflow steps. The processor gives these containers numeric names.
+func isStepContainer(name string) bool {
+	_, err := strconv.ParseInt(name, 10, 64)
+	return err == nil
+}

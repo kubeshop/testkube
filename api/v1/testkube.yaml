@@ -9465,6 +9465,9 @@ components:
       properties:
         errorMessage:
           type: string
+        errorReason:
+          type: string
+          description: code of the cause in the error message, for example unschedulable; empty when the message has no known cause
         status:
           $ref: "#/components/schemas/TestWorkflowStepStatus"
         exitCode:

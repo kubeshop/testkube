@@ -6,6 +6,7 @@ func (r *TestWorkflowStepResult) Clone() *TestWorkflowStepResult {
 	}
 	return &TestWorkflowStepResult{
 		ErrorMessage: r.ErrorMessage,
+		ErrorReason:  r.ErrorReason,
 		Status:       r.Status,
 		ExitCode:     r.ExitCode,
 		Attempts:     r.Attempts,

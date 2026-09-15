@@ -21,6 +21,8 @@ func TestStopReason_Sentence(t *testing.T) {
 		{name: "execution timeout", reason: StopReasonExecutionTimeout, want: "the execution ran for too long"},
 		{name: "execution stuck", reason: StopReasonExecutionStuck, want: "the execution is stuck in the running state"},
 		{name: "worker resume failed", reason: StopReasonWorkerResumeFailed, want: "the parallel worker could not be resumed"},
+		{name: "unschedulable", reason: StopReasonUnschedulable, want: "no node can run the pod"},
+		{name: "config missing", reason: StopReasonConfigMissing, want: "a secret or a config map that a container needs is not available"},
 		{name: "token from a newer control plane has no words yet", reason: StopReason("later-added"), want: ""},
 	}
 	for _, tt := range tests {

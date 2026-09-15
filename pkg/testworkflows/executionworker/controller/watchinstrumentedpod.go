@@ -94,6 +94,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			if watcher.State().PodStarted() || watcher.State().Completed() || opts.DisableFollow {
 				break
 			}
+			alignChangedCause(notifier, watcher.State())
 		}
 
 		// Stop immediately after the operation is canceled
@@ -172,6 +173,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				if watcher.State().ContainerStarted(container) || watcher.State().Completed() || opts.DisableFollow {
 					break
 				}
+				alignChangedCause(notifier, watcher.State())
 			}
 
 			// Stop immediately after the operation is canceled
@@ -296,4 +298,12 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 	}()
 
 	return notifier.ch, nil
+}
+
+// alignChangedCause sends the result only when the cause changes, because a result on each update is too many.
+// It does not align the result. An alignment marks a created pod as running, and a waiting pod must stay scheduling.
+func alignChangedCause(n *notifier, state watchers2.ExecutionState) {
+	if n.alignCause(state) {
+		n.sendResult()
+	}
 }

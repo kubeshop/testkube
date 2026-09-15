@@ -233,6 +233,8 @@ func (r *TestWorkflowResult) Fatal(err error, aborted bool, ts time.Time) {
 	}
 	if err != nil {
 		r.Initialization.ErrorMessage = err.Error()
+		// The reason code belongs to the message that the error replaces.
+		r.Initialization.ErrorReason = ""
 	} else if r.Initialization.ErrorMessage == "" {
 		r.Initialization.ErrorMessage = "fatal error without details"
 	}

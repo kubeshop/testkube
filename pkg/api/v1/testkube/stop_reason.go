@@ -15,6 +15,8 @@ const (
 	StopReasonExecutionTimeout   StopReason = "execution-timeout"
 	StopReasonExecutionStuck     StopReason = "execution-stuck"
 	StopReasonWorkerResumeFailed StopReason = "worker-resume-failed"
+	StopReasonUnschedulable      StopReason = "unschedulable"
+	StopReasonConfigMissing      StopReason = "config-missing"
 )
 
 // Sentence returns the words for the reason in a message for people. It returns an
@@ -39,6 +41,10 @@ func (r StopReason) Sentence() string {
 		return "the execution is stuck in the running state"
 	case StopReasonWorkerResumeFailed:
 		return "the parallel worker could not be resumed"
+	case StopReasonUnschedulable:
+		return "no node can run the pod"
+	case StopReasonConfigMissing:
+		return "a secret or a config map that a container needs is not available"
 	default:
 		return ""
 	}
