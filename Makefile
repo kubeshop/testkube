@@ -115,6 +115,7 @@ CLI_BIN := $(LOCALBIN_APP)/testkube
 KUBECTL_TESTKUBE_CLI_BIN := $(LOCALBIN_APP)/kubectl-testkube
 TOOLKIT_BIN := $(LOCALBIN_APP)/testworkflow-toolkit
 INIT_BIN := $(LOCALBIN_APP)/testworkflow-init
+CONVERT_BIN := $(LOCALBIN_APP)/convert
 
 # Docker configuration
 DOCKER := docker
@@ -231,7 +232,7 @@ version-bump-dev:
 ##@ Build
 
 .PHONY: build
-build: build-api-server build-testkube-cli build-toolkit build-init ## Build all binaries
+build: build-api-server build-testkube-cli build-toolkit build-init build-convert ## Build all binaries
 
 .PHONY: build-api-server
 build-api-server: ## Build API server binary
@@ -290,6 +291,16 @@ build-init: ## Build testworkflow init
 		-o $(INIT_BIN) \
 		cmd/testworkflow-init/main.go
 	@echo "Init built: $(INIT_BIN)"
+
+.PHONY: build-convert
+build-convert: ## Build the Mongo -> Postgres convert tool
+	@echo "Building convert tool ($(GOOS)/$(GOARCH))..."
+	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build \
+		$(GOFLAGS) \
+		-ldflags='-s -w -X main.commit=$(COMMIT) -X main.date=$(DATE) -X main.builtBy=$(USER) -X github.com/kubeshop/testkube/pkg/version.Version=$(VERSION) -X github.com/kubeshop/testkube/pkg/version.Commit=$(COMMIT)' \
+		-o $(CONVERT_BIN) \
+		./cmd/convert/
+	@echo "Convert tool built: $(CONVERT_BIN)"
 
 .PHONY: build-all-platforms
 build-all-platforms: ## Build binaries for all supported platforms
