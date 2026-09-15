@@ -93,6 +93,8 @@ const (
 	TKErrEnvResolutionFailed ErrorCode = "TKERR-1803"
 	// TKErrContextSaveFailed is returned when the resolved Pro context can't be stored in the config file.
 	TKErrContextSaveFailed ErrorCode = "TKERR-1804"
+	// TKErrOrgEnvNamesFetchFailed is returned when the display names of the context's organization and environment can't be fetched.
+	TKErrOrgEnvNamesFetchFailed ErrorCode = "TKERR-1805"
 )
 
 const helpUrl = "https://testkubeworkspace.slack.com"

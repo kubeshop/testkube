@@ -1,6 +1,9 @@
 package context
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -8,6 +11,8 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
+
+const configFileHint = "Check is the Testkube config file (~/.testkube/config.json) accessible and has right permissions"
 
 func NewSetContextCmd() *cobra.Command {
 	var (
@@ -24,7 +29,14 @@ func NewSetContextCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 
 			cfg, err := config.Load()
-			ui.ExitOnError("loading config file", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrConfigInitFailed,
+					"Error loading testkube config file",
+					configFileHint,
+					err,
+				))
+			}
 			common.SyncSkipTLSFromFlags(cmd, &cfg)
 			common.ProcessMasterFlags(cmd, &opts, &cfg)
 
@@ -46,7 +58,12 @@ func NewSetContextCmd() *cobra.Command {
 			case config.ContextTypeCloud:
 				if opts.Master.OrgId == "" && opts.Master.EnvId == "" && opts.Master.OrgName == "" &&
 					opts.Master.EnvName == "" && apiKey == "" && opts.Master.RootDomain == "" {
-					ui.Errf("Please provide at least one of the following flags: --org-id, --org-name, --env-id, --env-name, --api-key, --root-domain")
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrInvalidRuntimeParameter,
+						"No context value provided",
+						"Provide at least one of the following flags: --org-id, --org-name, --env-id, --env-name, --api-key, --root-domain",
+						errors.New("nothing to set on the Testkube Pro context"),
+					))
 				}
 
 				// Everything below — the name lookups, the display names fetched
@@ -66,19 +83,36 @@ func NewSetContextCmd() *cobra.Command {
 						lookupToken = cfg.CloudContext.ApiKey
 					}
 					if lookupToken == "" {
-						ui.Failf("Resolving --org-name or --env-name requires an API key, pass --api-key or log in first")
+						common.HandleCLIError(common.NewCLIError(
+							common.TKErrInvalidRuntimeParameter,
+							"Missing API key for the name lookup",
+							"Pass the key with the '--api-key' flag or log in first, or select the organization and environment by id with '--org-id' and '--env-id'",
+							errors.New("resolving --org-name or --env-name requires an API key"),
+						))
 					}
 
 					lookupSkipTLS := cfg.SkipTLS || cfg.CloudContext.SkipTLS
 
 					// The organization has to resolve first: the environment
 					// lookup is scoped to it.
-					err := common.ResolveNamedOrg(opts.Master.URIs.Api, lookupToken, &opts.Master, lookupSkipTLS)
-					ui.ExitOnError("resolving organization", err)
+					if err := common.ResolveNamedOrg(opts.Master.URIs.Api, lookupToken, &opts.Master, lookupSkipTLS); err != nil {
+						common.HandleCLIError(common.NewCLIError(
+							common.TKErrOrgResolutionFailed,
+							"Error resolving Testkube Pro organization",
+							"Check does the organization name exist and is the API key allowed to see it, or select it by id with the '--org-id' flag",
+							err,
+						))
+					}
 
-					err = common.ResolveNamedEnv(opts.Master.URIs.Api, lookupToken, &opts.Master,
-						cfg.CloudContext.OrganizationId, lookupSkipTLS)
-					ui.ExitOnError("resolving environment", err)
+					if err := common.ResolveNamedEnv(opts.Master.URIs.Api, lookupToken, &opts.Master,
+						cfg.CloudContext.OrganizationId, lookupSkipTLS); err != nil {
+						common.HandleCLIError(common.NewCLIError(
+							common.TKErrEnvResolutionFailed,
+							"Error resolving Testkube Pro environment",
+							"Check does the environment name exist in the selected organization, or select it by id with the '--env-id' flag",
+							err,
+						))
+					}
 				}
 
 				var dcName *string
@@ -92,7 +126,12 @@ func NewSetContextCmd() *cobra.Command {
 					var err error
 					cfg, err = common.PopulateOrgAndEnvNames(cfg, opts.Master.OrgId, opts.Master.EnvId, opts.Master.URIs.Api)
 					if err != nil {
-						ui.Failf("Error populating org and env names: %s", err)
+						common.HandleCLIError(common.NewCLIError(
+							common.TKErrOrgEnvNamesFetchFailed,
+							"Error populating organization and environment names",
+							"Check is the API key valid and the Control Plane reachable under the configured API URI",
+							err,
+						))
 					}
 				} else {
 					ui.Warn("No API key provided, you need to login to Testkube Cloud")
@@ -102,7 +141,12 @@ func NewSetContextCmd() *cobra.Command {
 				// kubeconfig special use cases
 
 			default:
-				ui.Errf("Unknown context type: %s", cfg.ContextType)
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrInvalidRuntimeParameter,
+					"Unknown context type",
+					"Use the '--kubeconfig' flag for a kubeconfig based context, or set the Testkube Pro context values",
+					fmt.Errorf("unknown context type: %s", cfg.ContextType),
+				))
 			}
 
 			if namespace != "" {
@@ -113,8 +157,14 @@ func NewSetContextCmd() *cobra.Command {
 				cfg.CloudContext.SkipTLS = cfg.SkipTLS
 			}
 
-			err = config.Save(cfg)
-			ui.ExitOnError("saving config file", err)
+			if err = config.Save(cfg); err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrConfigSaveFailed,
+					"Error saving testkube config file",
+					configFileHint,
+					err,
+				))
+			}
 
 			if err = validator.ValidateCloudContext(cfg); err != nil {
 				common.UiCloudContextValidationError(err)
