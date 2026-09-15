@@ -131,7 +131,16 @@ func (c *Client) SetExpirationPolicies(policy ExpirationPolicy) error {
 		// exactly the rules this exists to protect, and an expiration schedule is not
 		// worth that: a bucket that cleans up late is recoverable, one whose retention
 		// silently changed is not. The caller logs this and carries on.
-		return errors.Wrap(err, "reading the bucket lifecycle before applying expiration policies")
+		//
+		// The message names the permission because this is the only line an operator
+		// sees, and the likeliest cause is a credential that could always write the
+		// lifecycle and was never asked to read it. Earlier versions wrote without
+		// reading, so an installation can be upgraded into this without changing
+		// anything about its own configuration.
+		return errors.Wrap(err, "reading the bucket lifecycle before applying expiration policies "+
+			"(needs permission to read it: s3:GetLifecycleConfiguration on S3 and MinIO, "+
+			"storage.buckets.get on GCS - versions before the dependency cache did not need this, "+
+			"because they replaced the lifecycle instead of preserving rules they did not write)")
 	}
 
 	var hadOwned bool
