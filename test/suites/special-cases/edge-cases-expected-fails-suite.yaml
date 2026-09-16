@@ -87,8 +87,10 @@ spec:
   - name: assert-timeout-step-message
     shell: |
       msg={{ shellquote(tojson(execution("timeout-step").stepErrors)) }}
+      reasons={{ shellquote(tojson(execution("timeout-step").stepReasons)) }}
       echo "$msg"
       echo "$msg" | grep -q "the step did not finish within its timeout" || { echo "unexpected message: $msg"; exit 1; }
+      echo "$reasons" | grep -q "step-timeout" || { echo "unexpected reasons: $reasons"; exit 1; }
   - name: expected-fail-private-registry-auth
     negative: true
     execute:
