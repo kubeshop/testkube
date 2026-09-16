@@ -149,6 +149,50 @@ func fromPgInt4(i pgtype.Int4) int32 {
 	return i.Int32
 }
 
+// lineageFromRow rebuilds the lineage a row carries, or nil when it carries
+// none.
+//
+// A row written before lineage existed has all three columns NULL, and must come
+// back as nil rather than as a zero-valued record: the caller distinguishes the
+// two through EffectiveLineage(), which is where the default lives. Returning a
+// present-but-empty struct here would report an original run as attempt zero.
+func lineageFromRow(baseID, rootID pgtype.Text, attempt pgtype.Int4) *testkube.TestWorkflowExecutionLineage {
+	if !baseID.Valid && !rootID.Valid && !attempt.Valid {
+		return nil
+	}
+	return &testkube.TestWorkflowExecutionLineage{
+		BaseId:  fromPgText(baseID),
+		RootId:  fromPgText(rootID),
+		Attempt: fromPgInt4(attempt),
+	}
+}
+
+// lineageBaseID, lineageRootID and lineageAttempt project a lineage onto the
+// three columns that hold it, storing SQL NULL when there is none.
+//
+// An original run has an empty BaseId, which toPgText already stores as NULL -
+// the column means "no base" rather than "a base named the empty string".
+func lineageBaseID(l *testkube.TestWorkflowExecutionLineage) string {
+	if l == nil {
+		return ""
+	}
+	return l.BaseId
+}
+
+func lineageRootID(l *testkube.TestWorkflowExecutionLineage) string {
+	if l == nil {
+		return ""
+	}
+	return l.RootId
+}
+
+func lineageAttempt(l *testkube.TestWorkflowExecutionLineage) pgtype.Int4 {
+	if l == nil {
+		return pgtype.Int4{Valid: false}
+	}
+	return toPgInt4(l.Attempt)
+}
+
 func fromPgTimestamp(t pgtype.Timestamptz) time.Time {
 	if !t.Valid {
 		return time.Time{}
@@ -235,6 +279,11 @@ func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.G
 	if err := r.parseExecutionJSONFields(execution, row.RunnerTarget, row.RunnerOriginalTarget, row.Tags, row.RunningContext, row.ConfigParams, row.Runtime, row.SilentMode); err != nil {
 		return nil, fmt.Errorf("failed to parse execution JSON fields: %w", err)
 	}
+
+	// Lineage is stored as scalar columns rather than JSONB, so it is read here
+	// rather than through parseExecutionJSONFields.
+	execution.Lineage = lineageFromRow(row.LineageBaseID, row.LineageRootID, row.LineageAttempt)
+	execution.ApplyEffectiveLineage()
 
 	// Build result if exists
 	if row.Status.Valid {
@@ -456,7 +505,7 @@ func getBoolFromMap(m map[string]interface{}, key string) bool {
 }
 
 func (r *PostgresRepository) executionToSummary(row testkube.TestWorkflowExecution) testkube.TestWorkflowExecutionSummary {
-	return testkube.TestWorkflowExecutionSummary{
+	summary := testkube.TestWorkflowExecutionSummary{
 		Id:                   row.Id,
 		GroupId:              row.GroupId,
 		RunnerId:             row.RunnerId,
@@ -473,7 +522,11 @@ func (r *PostgresRepository) executionToSummary(row testkube.TestWorkflowExecuti
 		Reports:              row.Reports,
 		ResourceAggregations: row.ResourceAggregations,
 		SilentMode:           row.SilentMode,
+		Lineage:              row.Lineage,
 	}
+	// Legacy rows carry none; the reader is promised one on every execution.
+	summary.ApplyEffectiveLineage()
+	return summary
 }
 
 func (r *PostgresRepository) resultToSummary(row *testkube.TestWorkflowResult) *testkube.TestWorkflowResultSummary {
@@ -1016,6 +1069,9 @@ func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx sqlc.T
 		OrganizationID:            r.organizationID,
 		EnvironmentID:             r.environmentID,
 		Runtime:                   runtime,
+		LineageBaseID:             toPgText(lineageBaseID(execution.Lineage)),
+		LineageRootID:             toPgText(lineageRootID(execution.Lineage)),
+		LineageAttempt:            lineageAttempt(execution.Lineage),
 		SilentMode:                silentMode,
 	})
 }
