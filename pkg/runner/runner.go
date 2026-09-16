@@ -15,7 +15,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/commands"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
@@ -23,7 +22,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -428,22 +426,10 @@ func (r *runner) recoverParallelStepLogs(ctx context.Context, saver ExecutionSav
 	})
 	if err == nil {
 		sigSequence := stage.MapSignatureListToInternal(stage.MapSignatureToSequence(stage.MapSignatureList(summary.Signature)))
-		errorMessage := execution.Result.Initialization.ErrorMessage
-		if errorMessage == "" {
-			for _, sig := range sigSequence {
-				if execution.Result.Steps[sig.Ref].ErrorMessage != "" {
-					errorMessage = execution.Result.Steps[sig.Ref].ErrorMessage
-					break
-				}
-			}
-		}
 		status.Result = &summary.Result
-		status.Result.Status = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
-		status.Result.HealAbortedOrCanceled(sigSequence, errorMessage, controller.DefaultErrorMessage, "aborted")
-		status.Result.HealTimestamps(sigSequence, summary.Execution.ScheduledAt, time.Time{}, time.Time{}, true)
-		status.Result.HealDuration(summary.Execution.ScheduledAt)
-		status.Result.HealMissingPauseStatuses()
-		status.Result.HealStatus(sigSequence)
+		// The heal keeps a cause that the worker result already holds. The reason comes from the parent execution and its signature.
+		parentSigSequence := stage.MapSignatureListToInternal(stage.MapSignatureToSequence(stage.MapSignatureList(execution.Signature)))
+		healRecoveredResult(status.Result, sigSequence, summary.Execution.ScheduledAt, recordedCause(execution.Result, parentSigSequence))
 	}
 
 	// Add information in the execution about the logs

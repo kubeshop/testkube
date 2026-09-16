@@ -7875,7 +7875,14 @@ spec:
                         initialization:
                           description: TestWorkflowStepResult contains step result of TestWorkflow
                           properties:
+                            attempts:
+                              description: number of attempts that the step started, empty when the init process reported none
+                              format: int32
+                              type: integer
                             errorMessage:
+                              type: string
+                            errorReason:
+                              description: code of the cause in the error message, for example unschedulable; empty when the message has no known cause
                               type: string
                             exitCode:
                               format: int64
@@ -7952,7 +7959,14 @@ spec:
                           additionalProperties:
                             description: TestWorkflowStepResult contains step result of TestWorkflow
                             properties:
+                              attempts:
+                                description: number of attempts that the step started, empty when the init process reported none
+                                format: int32
+                                type: integer
                               errorMessage:
+                                type: string
+                              errorReason:
+                                description: code of the cause in the error message, for example unschedulable; empty when the message has no known cause
                                 type: string
                               exitCode:
                                 format: int64
@@ -20880,7 +20894,9 @@ spec:
                   description: per-workflow timeout configuration
                   properties:
                     initialization:
-                      description: maximum time for initialization/transitioning before steps run
+                      description: |-
+                        maximum time from the job creation until the first step container starts, as a Go duration (for example 2m).
+                        When it ends, the runner aborts the execution and keeps the cause that Kubernetes reported.
                       type: string
                     queue:
                       description: maximum time the execution may spend in queue before starting
@@ -33498,7 +33514,9 @@ spec:
                   description: per-workflow timeout configuration
                   properties:
                     initialization:
-                      description: maximum time for initialization/transitioning before steps run
+                      description: |-
+                        maximum time from the job creation until the first step container starts, as a Go duration (for example 2m).
+                        When it ends, the runner aborts the execution and keeps the cause that Kubernetes reported.
                       type: string
                     queue:
                       description: maximum time the execution may spend in queue before starting

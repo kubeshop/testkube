@@ -209,9 +209,8 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 		}
 	}()
 
-	// Create helper to read the latest data
-	podEventsCh := podEvents.Channel(ctx)
-	jobEventsCh := jobEvents.Channel(ctx)
+	// Create helper to read the latest data.
+	// It copies all the events that each list holds. Many events can arrive in one update, and the next update can come much later.
 	readLatestData := func() {
 		time.Sleep(ReadLatestBufferingTimeframe)
 
@@ -221,21 +220,8 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 		if pod.Latest() != nil {
 			watcher.uncommitted.pod = NewPod(pod.Latest())
 		}
-		for ok := true; ok; {
-			var event *corev1.Event
-			select {
-			case event, ok = <-podEventsCh:
-				if ok {
-					watcher.uncommitted.podEvents = NewPodEvents(append(watcher.uncommitted.podEvents.Original(), event))
-				}
-			case event, ok = <-jobEventsCh:
-				if ok {
-					watcher.uncommitted.jobEvents = NewJobEvents(append(watcher.uncommitted.jobEvents.Original(), event))
-				}
-			default:
-				ok = false
-			}
-		}
+		watcher.uncommitted.podEvents = NewPodEvents(podEvents.Latest())
+		watcher.uncommitted.jobEvents = NewJobEvents(jobEvents.Latest())
 		watcher.initializePodEventsWatcher()
 	}
 
