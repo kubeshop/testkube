@@ -77,6 +77,17 @@ func NewSetContextCmd() *cobra.Command {
 				// place to look and the wrong thing to save.
 				opts.Master.URIs.Api = common.ControlPlaneAPIURI(cmd, opts.Master.URIs.Api, &cfg)
 
+				// Every other command refreshes an expired login token inside
+				// GetClient. This one builds its cloud clients directly, so a
+				// token that would have been renewed silently anywhere else used
+				// to fail here and send the user off to log in again. A failure
+				// is not fatal: the lookups below report it in context.
+				if apiKey == "" {
+					if err := common.RefreshContextToken(&cfg, cfg.SkipTLS || cfg.CloudContext.SkipTLS); err != nil {
+						ui.Debug("could not refresh the stored login token", err.Error())
+					}
+				}
+
 				// Names have to become ids before anything is written, and the
 				// lookup needs a token: the one being set if there is one,
 				// otherwise whatever the context already holds.
