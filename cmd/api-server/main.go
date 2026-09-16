@@ -218,15 +218,7 @@ func main() {
 	} else {
 		log.DefaultLogger.Infow("connecting to remote control plane...", "url", cfg.TestkubeProURL)
 		var err error
-		grpcConn, err = agentclient.NewGRPCConnectionWithTracing(
-			ctx,
-			cfg.TestkubeProTLSInsecure,
-			cfg.TestkubeProSkipVerify,
-			cfg.TestkubeProURL,
-			cfg.TestkubeProCAFile, //nolint
-			log.DefaultLogger,
-			cfg.TracingEnabled,
-		)
+		grpcConn, err = connectToRemoteControlPlane(ctx, cfg)
 		commons.ExitOnError("connecting to remote Control Plane", err)
 		log.DefaultLogger.Infow("connected to remote control plane successfully", "url", cfg.TestkubeProURL)
 	}
@@ -329,8 +321,21 @@ func main() {
 	envs := commons.GetEnvironmentVariables()
 
 	inspector := commons.CreateImageInspector(&cfg.ImageInspectorConfig, configmap.NewClientFor(clientset, cfg.TestkubeNamespace), secret.NewClientFor(clientset, cfg.TestkubeNamespace))
-	proContext, err := commons.ReadProContext(ctx, cfg, grpcClient)
-	commons.ExitOnError("cannot connect to control plane", err)
+	var proContext intconfig.ProContext
+	for {
+		proContext, err = commons.ReadProContext(ctx, cfg, grpcClient)
+		if err == nil {
+			break
+		}
+		log.DefaultLogger.Errorw("cannot fetch pro-context from Control Plane, retrying", "error", err)
+		timer := time.NewTimer(5 * time.Second)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			commons.ExitOnError("cannot connect to control plane", ctx.Err())
+		case <-timer.C:
+		}
+	}
 
 	// Scope the emitter lease to the AgentID so that agents for different
 	// environments sharing the same namespace each get their own emitter leader.
@@ -1051,6 +1056,36 @@ func main() {
 }
 
 const defaultLeaseCheckInterval = 5 * time.Second
+const remoteControlPlaneRetryDelay = 5 * time.Second
+
+func connectToRemoteControlPlane(ctx context.Context, cfg *intconfig.Config) (*grpc.ClientConn, error) {
+	for {
+		conn, err := agentclient.NewGRPCConnectionWithTracing(
+			ctx,
+			cfg.TestkubeProTLSInsecure,
+			cfg.TestkubeProSkipVerify,
+			cfg.TestkubeProURL,
+			cfg.TestkubeProCAFile, //nolint
+			log.DefaultLogger,
+			cfg.TracingEnabled,
+		)
+		if err == nil {
+			return conn, nil
+		}
+		log.DefaultLogger.Errorw("connecting to remote Control Plane failed, retrying",
+			"url", cfg.TestkubeProURL,
+			"error", err,
+			"retryIn", remoteControlPlaneRetryDelay,
+		)
+		timer := time.NewTimer(remoteControlPlaneRetryDelay)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil, ctx.Err()
+		case <-timer.C:
+		}
+	}
+}
 
 // resolveLeaseCheckInterval validates the configured lease check interval. The lease
 // expires after leasebackend.DefaultMaxLeaseDuration, so checking/renewing less often

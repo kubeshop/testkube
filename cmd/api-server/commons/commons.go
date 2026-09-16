@@ -272,7 +272,7 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	}
 	proContext.DashboardURI = strings.TrimRight(proContext.DashboardURI, "/")
 
-	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 
 	if proContext.APIKey != "" {
 		ctx = metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
