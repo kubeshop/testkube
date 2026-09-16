@@ -141,18 +141,19 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 	}
 
 	// An aborted step keeps the cause of the abort, so only a failed step reads the file.
-	details := result.Details
+	details, reason := result.Details, result.Reason
 	if run.Toolkit && status == constants.StepStatusFailed && stepErrorFresh {
 		var sensitiveValues []string
 		if orchestration.Setup != nil {
 			sensitiveValues = orchestration.Setup.GetSensitiveValues()
 		}
-		details = readStepError(constants.StepErrorPath, sensitiveValues)
+		// A command writes the words of its failure, and it has no reason code.
+		details, reason = readStepError(constants.StepErrorPath, sensitiveValues), ""
 	}
 
 	// Notify about the status
 	step.SetStatus(status).SetExitCode(result.ExitCode)
-	orchestration.FinishExecution(step, constants.ExecutionResult{ExitCode: result.ExitCode, Details: details, Iteration: int(step.Iteration)})
+	orchestration.FinishExecution(step, constants.ExecutionResult{ExitCode: result.ExitCode, Details: details, Reason: reason, Iteration: int(step.Iteration)})
 }
 
 // removeStepError removes the step message file. It returns false when the file is still there.

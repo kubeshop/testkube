@@ -326,8 +326,8 @@ func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction, exec
 		step.ExitCode = float64(executionResult.ExitCode)
 		step.Attempts = max(step.Attempts, int32(executionResult.Iteration)+1)
 		if executionResult.Details != "" {
-			// The reason code belongs to the message that the details replace.
-			step.ErrorMessage, step.ErrorReason = executionResult.Details, ""
+			// The init process sends the code of its own causes, and an empty code for a message from a command.
+			step.ErrorMessage, step.ErrorReason = executionResult.Details, executionResult.Reason
 		}
 	case constants.InstructionIteration:
 		// The init process sends the iteration before each retry, and the iteration starts at 0.

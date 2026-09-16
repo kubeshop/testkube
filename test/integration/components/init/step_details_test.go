@@ -49,8 +49,10 @@ func TestInitProcessStepDetails_Integration(t *testing.T) {
 		script string
 		pause  time.Duration
 		// staleError is the content of a step message file that exists before the step starts.
-		staleError   string
-		wantDetails  string
+		staleError  string
+		wantDetails string
+		// wantReason is the code of the cause, empty when the message comes from a command.
+		wantReason   string
 		wantExitCode uint8
 	}{
 		{
@@ -64,6 +66,7 @@ func TestInitProcessStepDetails_Integration(t *testing.T) {
 				return [][]map[string]any{append(declare, run("step", script, false, false)...)}
 			},
 			wantDetails:  "the test process was killed, possibly by an out-of-memory kill (signal: killed)",
+			wantReason:   "process-killed",
 			wantExitCode: constants.CodeAborted,
 		},
 		{
@@ -73,6 +76,7 @@ func TestInitProcessStepDetails_Integration(t *testing.T) {
 				return [][]map[string]any{step("step", script, "1s", false, false)}
 			},
 			wantDetails:  "the step did not finish within its timeout",
+			wantReason:   "step-timeout",
 			wantExitCode: constants.CodeAborted,
 		},
 		{
@@ -90,6 +94,7 @@ func TestInitProcessStepDetails_Integration(t *testing.T) {
 			// The second container group starts after the group timeout ended.
 			pause:        1500 * time.Millisecond,
 			wantDetails:  "the step did not finish within its timeout",
+			wantReason:   "step-timeout",
 			wantExitCode: constants.CodeAborted,
 		},
 		{
@@ -108,6 +113,7 @@ func TestInitProcessStepDetails_Integration(t *testing.T) {
 				return [][]map[string]any{step("step", script, "", true, false)}
 			},
 			wantDetails:  "the test process was killed, possibly by an out-of-memory kill (signal: killed)",
+			wantReason:   "process-killed",
 			wantExitCode: constants.CodeAborted,
 		},
 		{
@@ -177,6 +183,7 @@ func TestInitProcessStepDetails_Integration(t *testing.T) {
 			result, ok := findExecutionResult(t, out, "step")
 			require.True(t, ok, "the init process did not send the execution result of the step:\n%s", out)
 			assert.Equal(t, tt.wantDetails, result.Details)
+			assert.Equal(t, tt.wantReason, result.Reason)
 			assert.Equal(t, tt.wantExitCode, result.ExitCode)
 			assert.Zero(t, data.GetState().GetStep("step").Iteration, "the step started another attempt")
 		})
