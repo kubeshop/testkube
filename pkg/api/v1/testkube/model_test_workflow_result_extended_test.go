@@ -384,3 +384,42 @@ func TestTestWorkflowResult_HealAbortedOrCanceled(t *testing.T) {
 		})
 	}
 }
+
+func TestTestWorkflowResult_Clone(t *testing.T) {
+	tests := []struct {
+		name    string
+		details *TestWorkflowStatusDetails
+	}{
+		{
+			name: "a result without status details keeps none",
+		},
+		{
+			name: "a result with status details gets its own copy",
+			details: &TestWorkflowStatusDetails{
+				Type_:  string(StatusDetailsTypeUserCancel),
+				Reason: string(StopReasonUserCancel),
+				Actor:  string(StopActorUser),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := &TestWorkflowResult{
+				Status:        common.Ptr(ABORTED_TestWorkflowStatus),
+				StatusDetails: tt.details,
+			}
+
+			clone := result.Clone()
+			if tt.details == nil {
+				assert.Nil(t, clone.StatusDetails)
+				return
+			}
+			assert.Equal(t, *tt.details, *clone.StatusDetails)
+
+			// The copy is independent, so a caller that edits it does not change the result.
+			clone.StatusDetails.Reason = string(StopReasonForceCancel)
+			assert.Equal(t, string(StopReasonUserCancel), result.StatusDetails.Reason)
+		})
+	}
+}
