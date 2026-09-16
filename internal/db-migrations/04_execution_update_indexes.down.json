@@ -1,9 +1,10 @@
 [
   {
     "dropIndexes": "workflowresults",
-    "index": [
-      "result.status_1_statusat_1_id_1",
-      "result.status_1_scheduledat_1_id_1"
-    ]
+    "index": "result.status_1_statusat_1_id_1"
+  },
+  {
+    "dropIndexes": "workflowresults",
+    "index": "result.status_1_scheduledat_1_id_1"
   }
 ]
