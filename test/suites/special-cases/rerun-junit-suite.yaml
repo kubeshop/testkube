@@ -161,9 +161,16 @@ spec:
       fi
 
       # A rerun keeps the chain's root and counts up from its base.
+      #
+      # Deliberately no execution("rerun") here: this step runs on an original run
+      # too, and a step that runs resolves every expression in its script whichever
+      # branch the shell takes - so the reference would fail the original before it
+      # reached the comparison. Comparing the root against the base would also be
+      # wrong from attempt 3 on, where the base is the previous rerun rather than
+      # the chain root.
       [ '{{ execution.lineage.attempt }}' != '1' ] || { echo "a rerun cannot be attempt 1"; exit 1; }
-      [ '{{ execution.lineage.rootId }}' = '{{ execution("rerun").id }}' ] \
-        || { echo "a rerun must keep the base's chain root"; exit 1; }
+      [ '{{ execution.lineage.rootId }}' != '{{ execution.id }}' ] \
+        || { echo "a rerun must not be its own chain root"; exit 1; }
       [ "$RAN" = "1" ] || { echo "expected only the failed case repeated, ran $RAN"; exit 1; }
       [ "$FAILED" = "0" ] || { echo "expected the repeated case to pass, got $FAILED failures"; exit 1; }
       echo "rerun: 1 case, 0 failures, chain root {{ execution.lineage.rootId }}"
