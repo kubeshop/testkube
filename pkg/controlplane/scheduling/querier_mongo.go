@@ -3,6 +3,7 @@ package scheduling
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -20,7 +21,7 @@ import (
 type MongoExecutionQuerier struct {
 	executionsCollection *mongo.Collection
 	allowDiskUse         bool
-	byStatusPager        executionBatchPager[testkube.TestWorkflowExecution]
+	byStatusPager        mongoExecutionBatchPager
 }
 
 func NewMongoExecutionQuerier(col *mongo.Collection, allowDiskUse bool) *MongoExecutionQuerier {
@@ -74,23 +75,10 @@ func (a *MongoExecutionQuerier) ByStatus(ctx context.Context, statuses []testkub
 	return func(yield func(testkube.TestWorkflowExecution, error) bool) {
 		executions, err := a.byStatusPager.Next(
 			func(snapshotBefore time.Time, after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error) {
-				withStatusAt, err := a.findPendingExecutions(ctx, statuses, snapshotBefore, after, "statusat", true)
-				if err != nil {
-					return nil, err
-				}
-
-				withScheduledAt, err := a.findPendingExecutions(ctx, statuses, snapshotBefore, after, "scheduledat", false)
-				if err != nil {
-					return nil, err
-				}
-
-				return mergePendingExecutions(withStatusAt, withScheduledAt, executionUpdatesBatchSize), nil
+				return a.findPendingExecutions(ctx, statuses, snapshotBefore, after, "statusat", true)
 			},
-			func(exe testkube.TestWorkflowExecution) *executionBatchCursor {
-				return &executionBatchCursor{
-					pendingAt:   pendingExecutionTime(exe),
-					executionID: exe.Id,
-				}
+			func(snapshotBefore time.Time, after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error) {
+				return a.findPendingExecutions(ctx, statuses, snapshotBefore, after, "scheduledat", false)
 			},
 		)
 		if err != nil {
@@ -174,28 +162,6 @@ func pendingExecutionFilter(
 	return bson.M{"$and": clauses}
 }
 
-func mergePendingExecutions(withStatusAt, withScheduledAt []testkube.TestWorkflowExecution, limit int) []testkube.TestWorkflowExecution {
-	executions := make([]testkube.TestWorkflowExecution, 0, limit)
-	i, j := 0, 0
-	for len(executions) < limit && (i < len(withStatusAt) || j < len(withScheduledAt)) {
-		switch {
-		case j >= len(withScheduledAt):
-			executions = append(executions, withStatusAt[i])
-			i++
-		case i >= len(withStatusAt):
-			executions = append(executions, withScheduledAt[j])
-			j++
-		case pendingExecutionLess(withStatusAt[i], withScheduledAt[j]):
-			executions = append(executions, withStatusAt[i])
-			i++
-		default:
-			executions = append(executions, withScheduledAt[j])
-			j++
-		}
-	}
-	return executions
-}
-
 func pendingExecutionLess(left, right testkube.TestWorkflowExecution) bool {
 	leftPendingAt := pendingExecutionTime(left)
 	rightPendingAt := pendingExecutionTime(right)
@@ -210,6 +176,171 @@ func pendingExecutionTime(exe testkube.TestWorkflowExecution) time.Time {
 		return exe.StatusAt
 	}
 	return exe.ScheduledAt
+}
+
+type mongoExecutionBatchPager struct {
+	mu                 sync.Mutex
+	snapshotBefore     time.Time
+	statusAtCursor     *executionBatchCursor
+	scheduledAtCursor  *executionBatchCursor
+	statusAtBuffer     []testkube.TestWorkflowExecution
+	scheduledAtBuffer  []testkube.TestWorkflowExecution
+	statusAtExhausted  bool
+	scheduledExhausted bool
+	now                func() time.Time
+}
+
+func (p *mongoExecutionBatchPager) Next(
+	fetchStatusAt func(snapshotBefore time.Time, after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error),
+	fetchScheduledAt func(snapshotBefore time.Time, after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error),
+) ([]testkube.TestWorkflowExecution, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if !p.active() {
+		p.resetSnapshot()
+	}
+
+	hadProgress := p.hasProgress()
+	items, err := p.fetchPage(fetchStatusAt, fetchScheduledAt)
+	if err != nil {
+		return nil, err
+	}
+	if len(items) > 0 {
+		return items, nil
+	}
+	if !hadProgress {
+		p.clear()
+		return nil, nil
+	}
+
+	p.resetSnapshot()
+	items, err = p.fetchPage(fetchStatusAt, fetchScheduledAt)
+	if err != nil {
+		return nil, err
+	}
+	if len(items) == 0 {
+		p.clear()
+	}
+	return items, nil
+}
+
+func (p *mongoExecutionBatchPager) fetchPage(
+	fetchStatusAt func(snapshotBefore time.Time, after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error),
+	fetchScheduledAt func(snapshotBefore time.Time, after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error),
+) ([]testkube.TestWorkflowExecution, error) {
+	items := make([]testkube.TestWorkflowExecution, 0, executionUpdatesBatchSize)
+	for len(items) < executionUpdatesBatchSize {
+		if err := p.fillBuffer(&p.statusAtBuffer, &p.statusAtExhausted, p.statusAtCursor, fetchStatusAt); err != nil {
+			return nil, err
+		}
+		if err := p.fillBuffer(&p.scheduledAtBuffer, &p.scheduledExhausted, p.scheduledAtCursor, fetchScheduledAt); err != nil {
+			return nil, err
+		}
+
+		next, source := p.nextExecution()
+		if source == "" {
+			break
+		}
+		items = append(items, next)
+		p.advance(source)
+	}
+
+	if len(items) == 0 {
+		return nil, nil
+	}
+	return items, nil
+}
+
+func (p *mongoExecutionBatchPager) fillBuffer(
+	buffer *[]testkube.TestWorkflowExecution,
+	exhausted *bool,
+	after *executionBatchCursor,
+	fetch func(snapshotBefore time.Time, after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error),
+) error {
+	if *exhausted || len(*buffer) > 0 {
+		return nil
+	}
+
+	items, err := fetch(p.snapshotBefore, after)
+	if err != nil {
+		return err
+	}
+	*buffer = items
+	if len(items) < executionUpdatesBatchSize {
+		*exhausted = true
+	}
+	return nil
+}
+
+func (p *mongoExecutionBatchPager) nextExecution() (testkube.TestWorkflowExecution, string) {
+	switch {
+	case len(p.statusAtBuffer) == 0 && len(p.scheduledAtBuffer) == 0:
+		return testkube.TestWorkflowExecution{}, ""
+	case len(p.scheduledAtBuffer) == 0:
+		return p.statusAtBuffer[0], "status"
+	case len(p.statusAtBuffer) == 0:
+		return p.scheduledAtBuffer[0], "scheduled"
+	case pendingExecutionLess(p.statusAtBuffer[0], p.scheduledAtBuffer[0]):
+		return p.statusAtBuffer[0], "status"
+	default:
+		return p.scheduledAtBuffer[0], "scheduled"
+	}
+}
+
+func (p *mongoExecutionBatchPager) advance(source string) {
+	switch source {
+	case "status":
+		p.statusAtCursor = executionCursorOf(p.statusAtBuffer[0])
+		p.statusAtBuffer = p.statusAtBuffer[1:]
+	case "scheduled":
+		p.scheduledAtCursor = executionCursorOf(p.scheduledAtBuffer[0])
+		p.scheduledAtBuffer = p.scheduledAtBuffer[1:]
+	}
+}
+
+func (p *mongoExecutionBatchPager) active() bool {
+	return !p.snapshotBefore.IsZero()
+}
+
+func (p *mongoExecutionBatchPager) hasProgress() bool {
+	return p.statusAtCursor != nil ||
+		p.scheduledAtCursor != nil ||
+		len(p.statusAtBuffer) > 0 ||
+		len(p.scheduledAtBuffer) > 0
+}
+
+func (p *mongoExecutionBatchPager) resetSnapshot() {
+	p.snapshotBefore = p.currentTime()
+	p.clearProgress()
+}
+
+func (p *mongoExecutionBatchPager) clear() {
+	p.snapshotBefore = time.Time{}
+	p.clearProgress()
+}
+
+func (p *mongoExecutionBatchPager) clearProgress() {
+	p.statusAtCursor = nil
+	p.scheduledAtCursor = nil
+	p.statusAtBuffer = nil
+	p.scheduledAtBuffer = nil
+	p.statusAtExhausted = false
+	p.scheduledExhausted = false
+}
+
+func (p *mongoExecutionBatchPager) currentTime() time.Time {
+	if p.now != nil {
+		return p.now().UTC()
+	}
+	return time.Now().UTC()
+}
+
+func executionCursorOf(exe testkube.TestWorkflowExecution) *executionBatchCursor {
+	return &executionBatchCursor{
+		pendingAt:   pendingExecutionTime(exe),
+		executionID: exe.Id,
+	}
 }
 
 func (a *MongoExecutionQuerier) executionIterator(ctx context.Context, filter any) func(yield func(testkube.TestWorkflowExecution, error) bool) {

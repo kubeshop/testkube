@@ -1,6 +1,6 @@
 [
   {
-    "createIndexes": "workflowresults",
+    "createIndexes": "testworkflowresults",
     "indexes": [
       {
         "key": {"result.status": 1, "statusat": 1, "id": 1},
