@@ -149,6 +149,9 @@ type SecretManagementConfig struct {
 	EnableSecretsEndpoint   bool   `envconfig:"ENABLE_SECRETS_ENDPOINT" default:"false"`
 	EnableListingAllSecrets bool   `envconfig:"ENABLE_LISTING_ALL_SECRETS" default:"false"`
 	SecretCreationPrefix    string `envconfig:"SECRET_CREATION_PREFIX" default:"testkube-"`
+	// SecretCacheTTL is how long a resolved secret is reused, 0 disables the cache
+	// and every lookup hits the Kubernetes API.
+	SecretCacheTTL time.Duration `envconfig:"TESTKUBE_SECRET_CACHE_TTL" default:"30s"`
 }
 
 type ImageInspectorConfig struct {

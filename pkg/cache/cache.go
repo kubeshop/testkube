@@ -19,6 +19,12 @@ type Cache[T any] interface {
 	// Set stores the value in the cache with the given key.
 	// If ttl is 0, the item should not be cached and this method should return no error.
 	Set(ctx context.Context, key string, value T, ttl time.Duration) error
+	// Delete drops the cached value for the given key. Deleting a key that is not cached
+	// is not an error, since the caller wants it gone either way.
+	Delete(ctx context.Context, key string) error
+	// Clear drops every cached value. It is for callers that changed something they cannot
+	// map back to individual keys.
+	Clear(ctx context.Context) error
 }
 
 // IsCacheMiss returns true if the error is a cache miss error.
