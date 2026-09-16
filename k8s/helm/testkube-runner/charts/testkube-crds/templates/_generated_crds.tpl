@@ -9159,6 +9159,12 @@ spec:
                                 as:
                                   description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                   type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -9683,6 +9689,12 @@ spec:
                                   properties:
                                     as:
                                       description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
                                       type: string
                                     config:
                                       additionalProperties:
@@ -14909,6 +14921,12 @@ spec:
                                 as:
                                   description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                   type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -15433,6 +15451,12 @@ spec:
                                   properties:
                                     as:
                                       description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
                                       type: string
                                     config:
                                       additionalProperties:
@@ -18377,6 +18401,12 @@ spec:
                                 as:
                                   description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                   type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -18901,6 +18931,12 @@ spec:
                                   properties:
                                     as:
                                       description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
                                       type: string
                                     config:
                                       additionalProperties:
@@ -22127,6 +22163,12 @@ spec:
                                 as:
                                   description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                   type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -22636,6 +22678,12 @@ spec:
                                   properties:
                                     as:
                                       description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
                                       type: string
                                     config:
                                       additionalProperties:
@@ -27735,6 +27783,12 @@ spec:
                                 as:
                                   description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                   type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -28244,6 +28298,12 @@ spec:
                                   properties:
                                     as:
                                       description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
                                       type: string
                                     config:
                                       additionalProperties:
@@ -31081,6 +31141,12 @@ spec:
                                 as:
                                   description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                   type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -31590,6 +31656,12 @@ spec:
                                   properties:
                                     as:
                                       description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
                                       type: string
                                     config:
                                       additionalProperties:
