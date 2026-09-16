@@ -101,7 +101,7 @@ SELECT
 FROM
     test_workflow_executions e
         JOIN test_workflow_results r ON e.id = r.execution_id
-WHERE r.status = ANY($1::text[])
+WHERE e.status = ANY($1::text[])
   AND (
     COALESCE(e.status_at, e.scheduled_at) <= $2::timestamptz
     )

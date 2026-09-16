@@ -16,7 +16,7 @@ SELECT
 FROM
     test_workflow_executions e
         JOIN test_workflow_results r ON e.id = r.execution_id
-WHERE r.status = ANY(@statuses::text[])
+WHERE e.status = ANY(@statuses::text[])
   AND (
     COALESCE(e.status_at, e.scheduled_at) <= @snapshot_before::timestamptz
     )

@@ -19,7 +19,7 @@ func TestGetExecutionsByStatuses_UsesLimit(t *testing.T) {
 	queries := New(mock)
 	rows := mock.NewRows([]string{"id"})
 
-	mock.ExpectQuery(`SELECT[\s\S]*WHERE r.status = ANY\(\$1::text\[\]\)[\s\S]*COALESCE\(e.status_at, e.scheduled_at\) <= \$2::timestamptz[\s\S]*\$3::timestamptz IS NULL[\s\S]*ORDER BY COALESCE\(e.status_at, e.scheduled_at\), e.id[\s\S]*LIMIT \$5::int`).
+	mock.ExpectQuery(`SELECT[\s\S]*WHERE e.status = ANY\(\$1::text\[\]\)[\s\S]*COALESCE\(e.status_at, e.scheduled_at\) <= \$2::timestamptz[\s\S]*\$3::timestamptz IS NULL[\s\S]*ORDER BY COALESCE\(e.status_at, e.scheduled_at\), e.id[\s\S]*LIMIT \$5::int`).
 		WithArgs([]string{"assigned", "starting"}, pgtype.Timestamptz{Time: time.Unix(1, 0), Valid: true}, pgtype.Timestamptz{}, "", int32(100)).
 		WillReturnRows(rows)
 

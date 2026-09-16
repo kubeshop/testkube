@@ -24,16 +24,20 @@ func (p *executionBatchPager[T]) Next(
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	if p.snapshotBefore.IsZero() {
+	if p.cursor == nil {
 		p.snapshotBefore = p.currentTime()
 	}
 
+	hadCursor := p.cursor != nil
 	items, err := p.fetchPage(fetch, cursorOf)
 	if err != nil {
 		return nil, err
 	}
 	if len(items) > 0 {
 		return items, nil
+	}
+	if !hadCursor {
+		return nil, nil
 	}
 
 	p.snapshotBefore = p.currentTime()
