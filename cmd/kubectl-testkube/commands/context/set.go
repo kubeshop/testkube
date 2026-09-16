@@ -3,14 +3,37 @@ package context
 import (
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
+
+// orgEnvLookupHint turns a failed organization or environment lookup into
+// advice. The status code is the only thing separating an id that does not
+// exist from a credential that was refused - the response body is often empty -
+// so without it the hint can do no better than list both causes.
+func orgEnvLookupHint(err error) string {
+	var statusErr *cloudclient.StatusError
+	if errors.As(err, &statusErr) {
+		switch statusErr.StatusCode {
+		case http.StatusUnauthorized, http.StatusForbidden:
+			return "The Control Plane refused the stored credential: log in again with 'testkube login', " +
+				"or pass a current key with the '--api-key' flag"
+		case http.StatusNotFound:
+			return "Check that '--org-id' and '--env-id' name an organization and an environment " +
+				"that exist on this Control Plane"
+		}
+	}
+
+	return "Check that '--org-id' and '--env-id' are set and correct for this Control Plane, " +
+		"or log in again with 'testkube login' if the stored API key or login token stopped working"
+}
 
 func NewSetContextCmd() *cobra.Command {
 	var (
@@ -142,8 +165,8 @@ func NewSetContextCmd() *cobra.Command {
 					if err != nil {
 						common.HandleCLIError(common.NewCLIError(
 							common.TKErrOrgEnvNamesFetchFailed,
-							"Error populating organization and environment names",
-							"Check is the API key valid and the Control Plane reachable under the configured API URI",
+							"Could not look up your organization or environment",
+							orgEnvLookupHint(err),
 							err,
 						))
 					}
