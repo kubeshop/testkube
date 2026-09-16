@@ -420,7 +420,7 @@ func expectPullRequestExecution(repository *testworkflow.MockRepository, prNumbe
 		Id:       "exec-1",
 		Workflow: &testkube.TestWorkflow{Name: cacheTestWorkflow},
 		ConfigParams: map[string]testkube.TestWorkflowExecutionConfigValue{
-			configKeyPRNumber: {Value: prNumber},
+			executioncache.ConfigKeyPRNumber: {Value: prNumber},
 		},
 	}, nil).AnyTimes()
 }
@@ -439,13 +439,13 @@ func TestResolveNamespaces(t *testing.T) {
 	base := executioncache.BaseNamespace
 
 	t.Run("a run with no git metadata is trusted", func(t *testing.T) {
-		namespace, readOnly := resolveNamespaces(nil)
+		namespace, readOnly := executioncache.ResolveNamespaces(nil)
 		assert.Equal(t, base, namespace)
 		assert.Empty(t, readOnly, "a trusted run already writes the namespace it would fall back to")
 	})
 
 	t.Run("a push is trusted", func(t *testing.T) {
-		namespace, readOnly := resolveNamespaces(map[string]testkube.TestWorkflowExecutionConfigValue{
+		namespace, readOnly := executioncache.ResolveNamespaces(map[string]testkube.TestWorkflowExecutionConfigValue{
 			"TESTKUBE_GIT_BRANCH": {Value: "main"},
 			"TESTKUBE_GIT_COMMIT": {Value: "abc123"},
 		})
@@ -454,24 +454,24 @@ func TestResolveNamespaces(t *testing.T) {
 	})
 
 	t.Run("a pull request writes its own namespace and reads the base one", func(t *testing.T) {
-		namespace, readOnly := resolveNamespaces(map[string]testkube.TestWorkflowExecutionConfigValue{
-			configKeyPRNumber: {Value: "42"},
+		namespace, readOnly := executioncache.ResolveNamespaces(map[string]testkube.TestWorkflowExecutionConfigValue{
+			executioncache.ConfigKeyPRNumber: {Value: "42"},
 		})
 		assert.Equal(t, executioncache.PullRequestNamespace("42"), namespace)
 		assert.Equal(t, base, readOnly)
 	})
 
 	t.Run("the head ref identifies it when no number was reported", func(t *testing.T) {
-		namespace, _ := resolveNamespaces(map[string]testkube.TestWorkflowExecutionConfigValue{
-			configKeyPRHeadRef: {Value: "feature/login"},
+		namespace, _ := executioncache.ResolveNamespaces(map[string]testkube.TestWorkflowExecutionConfigValue{
+			executioncache.ConfigKeyPRHeadRef: {Value: "feature/login"},
 		})
 		assert.Equal(t, executioncache.PullRequestNamespace("feature/login"), namespace)
 	})
 
 	t.Run("an empty value is not a pull request", func(t *testing.T) {
-		namespace, readOnly := resolveNamespaces(map[string]testkube.TestWorkflowExecutionConfigValue{
-			configKeyPRNumber:  {Value: ""},
-			configKeyPRHeadRef: {Value: ""},
+		namespace, readOnly := executioncache.ResolveNamespaces(map[string]testkube.TestWorkflowExecutionConfigValue{
+			executioncache.ConfigKeyPRNumber:  {Value: ""},
+			executioncache.ConfigKeyPRHeadRef: {Value: ""},
 		})
 		assert.Equal(t, base, namespace)
 		assert.Empty(t, readOnly)

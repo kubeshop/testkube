@@ -8,7 +8,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/executioncache"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
@@ -64,39 +63,6 @@ func (c cacheScope) readOnly() (cacheScope, bool) {
 	return fallback, true
 }
 
-// Config keys the trigger records on an execution when the event carried git metadata.
-// They are written server-side at schedule time, which is what makes them usable here:
-// the author of a pull request controls the code its run executes, so anything that
-// travelled with the request would let them choose the namespace they write into.
-const (
-	configKeyPRNumber  = "TESTKUBE_GIT_PR_NUMBER"
-	configKeyPRHeadRef = "TESTKUBE_GIT_PR_HEAD_REF"
-)
-
-// resolveNamespaces decides which namespace an execution writes and which, if any, it may
-// additionally read.
-//
-// A run is a pull request's when the trigger said so. Everything else - a push to any
-// branch, a tag, a schedule, a manual run - is trusted and shares the base namespace, so
-// the ordinary case keeps one cache rather than one per branch.
-//
-// The pull request number identifies the namespace where it exists, because it survives a
-// force-push and a rename of the head branch. The head ref is the fallback for a trigger
-// that reported one without the other.
-func resolveNamespaces(config map[string]testkube.TestWorkflowExecutionConfigValue) (namespace, readOnly string) {
-	identifier := ""
-	for _, key := range []string{configKeyPRNumber, configKeyPRHeadRef} {
-		if value, ok := config[key]; ok && value.Value != "" {
-			identifier = value.Value
-			break
-		}
-	}
-	if identifier == "" {
-		return executioncache.BaseNamespace, ""
-	}
-	return executioncache.PullRequestNamespace(identifier), executioncache.BaseNamespace
-}
-
 // resolveCacheScope decides where a request is allowed to read and write.
 //
 // Only the scope *kind* comes from the request. Which workflow it belongs to is read
@@ -123,7 +89,7 @@ func (s *Server) resolveCacheScope(ctx context.Context, executionID string, requ
 		scope = executioncache.ScopeEnvironment
 	}
 
-	namespace, readOnly := resolveNamespaces(execution.ConfigParams)
+	namespace, readOnly := executioncache.ResolveNamespaces(execution.ConfigParams)
 
 	return cacheScope{
 		environmentID:     s.envID,

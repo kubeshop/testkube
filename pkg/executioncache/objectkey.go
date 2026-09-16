@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 const (
@@ -227,6 +229,50 @@ func isSafeSegment(name string) bool {
 // base one, which is the whole thing this separates them from.
 func PullRequestNamespace(identifier string) string {
 	return pullRequestNamespacePrefix + sanitizeSegment(identifier)
+}
+
+// Config keys a trigger records on an execution when the event carried git metadata. The
+// names belong to pkg/git/informer; they are restated rather than imported because that
+// package pulls in go-git and a Kubernetes client, and because the commercial control
+// plane has to read the same two keys without taking on either.
+const (
+	ConfigKeyPRNumber  = "TESTKUBE_GIT_PR_NUMBER"
+	ConfigKeyPRHeadRef = "TESTKUBE_GIT_PR_HEAD_REF"
+)
+
+// ResolveNamespaces decides which namespace an execution writes and which, if any, it may
+// additionally read.
+//
+// A run belongs to a pull request when the trigger said so. Everything else - a push to
+// any branch, a tag, a schedule, a manual run - is trusted and shares the base namespace,
+// so the ordinary case keeps one cache rather than fragmenting into one per branch, which
+// is what would quietly destroy the hit rate.
+//
+// The config must be the one stored on the execution, written server-side when it was
+// scheduled. The author of a pull request controls the code its run executes, so anything
+// travelling with the agent's request would let them choose the namespace they write into.
+// Note which way the default falls: no marker means the base namespace, so a forged marker
+// can only move a run into a weaker namespace, never into the trusted one.
+//
+// The pull request number identifies the namespace where there is one, because it survives
+// a force-push and a rename of the head branch. The head ref is the fallback for a trigger
+// that reported one without the other.
+//
+// Shared with the commercial control plane rather than restated there: the two planes keep
+// different object layouts on purpose, but a disagreement about which runs are trusted
+// would be a security difference, not a cosmetic one.
+func ResolveNamespaces(config map[string]testkube.TestWorkflowExecutionConfigValue) (namespace, readOnly string) {
+	identifier := ""
+	for _, key := range []string{ConfigKeyPRNumber, ConfigKeyPRHeadRef} {
+		if value, ok := config[key]; ok && value.Value != "" {
+			identifier = value.Value
+			break
+		}
+	}
+	if identifier == "" {
+		return BaseNamespace, ""
+	}
+	return PullRequestNamespace(identifier), BaseNamespace
 }
 
 // ScopePrefix is the folder holding every entry a given scope and namespace can see.
