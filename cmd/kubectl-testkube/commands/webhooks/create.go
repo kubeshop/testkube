@@ -72,8 +72,19 @@ func NewCreateWebhookCmd() *cobra.Command {
 					))
 				}
 
-				webhook, _ := client.GetWebhook(name)
-				if name == webhook.Name {
+				// A 404 means there is nothing to overwrite and creation carries on below. Any other
+				// failure means the lookup never answered, so stop instead of silently creating.
+				webhook, err := client.GetWebhook(name)
+				if err != nil && !apiv1.IsNotFound(err) {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrAPIReadFailed,
+						"Error checking whether the webhook already exists",
+						common.APIReadHint,
+						err,
+					))
+				}
+
+				if err == nil && name == webhook.Name {
 					if cmd.Flag("update").Changed {
 						if !update {
 							common.HandleCLIError(common.NewCLIError(

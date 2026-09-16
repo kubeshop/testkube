@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -51,13 +52,23 @@ func UpdateWebhookCmd() *cobra.Command {
 				))
 			}
 
-			webhook, _ := client.GetWebhook(name)
-			if name != webhook.Name {
+			_, err = client.GetWebhook(name)
+			if err != nil {
+				// The API answered that the webhook is absent, which is a different thing to tell the
+				// user than a read that did not complete.
+				if apiclient.IsNotFound(err) {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrResourceNotFound,
+						"Webhook not found",
+						"Check the '--name' and '--namespace' values, or create the webhook with `testkube create webhook`",
+						fmt.Errorf("webhook '%s' not found in namespace '%s': %w", name, namespace, err),
+					))
+				}
 				common.HandleCLIError(common.NewCLIError(
-					common.TKErrResourceNotFound,
-					"Webhook not found",
-					"Check the '--name' and '--namespace' values, or create the webhook with `testkube create webhook`",
-					fmt.Errorf("webhook '%s' not found in namespace '%s'", name, namespace),
+					common.TKErrAPIReadFailed,
+					"Error getting the webhook",
+					common.APIReadHint,
+					err,
 				))
 			}
 
