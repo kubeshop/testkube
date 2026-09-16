@@ -54,14 +54,15 @@ func (w *fakeWatcher) State() watchers.ExecutionState {
 	defer w.mu.Unlock()
 	return w.state
 }
-func (w *fakeWatcher) Commit()                    {}
-func (w *fakeWatcher) JobEventsErr() error        { return nil }
-func (w *fakeWatcher) PodEventsErr() error        { return nil }
-func (w *fakeWatcher) JobErr() error              { return nil }
-func (w *fakeWatcher) PodErr() error              { return nil }
-func (w *fakeWatcher) RefreshPod(context.Context) {}
-func (w *fakeWatcher) RefreshJob(context.Context) {}
-func (w *fakeWatcher) Started() <-chan struct{}   { return nil }
+func (w *fakeWatcher) Commit()                          {}
+func (w *fakeWatcher) JobEventsErr() error              { return nil }
+func (w *fakeWatcher) PodEventsErr() error              { return nil }
+func (w *fakeWatcher) JobErr() error                    { return nil }
+func (w *fakeWatcher) PodErr() error                    { return nil }
+func (w *fakeWatcher) RefreshPod(context.Context)       {}
+func (w *fakeWatcher) RefreshJob(context.Context)       {}
+func (w *fakeWatcher) RefreshPodEvents(context.Context) {}
+func (w *fakeWatcher) Started() <-chan struct{}         { return nil }
 
 // Updated forwards the updates of the test and closes the channel when the context ends, like the real watcher.
 func (w *fakeWatcher) Updated(ctx context.Context) <-chan struct{} {
@@ -375,6 +376,82 @@ func TestNewInitializationDeadline(t *testing.T) {
 				assert.True(t, tt.wantFired, "the deadline fired before the timeout ended")
 			case <-time.After(100 * time.Millisecond):
 				assert.False(t, tt.wantFired, "the deadline did not fire although the timeout ended")
+			}
+		})
+	}
+}
+
+func TestEventsSince(t *testing.T) {
+	events := []*corev1.Event{{Reason: "Killing"}, {Reason: "FailedPreStopHook"}}
+
+	tests := []struct {
+		name string
+		from int
+		want []*corev1.Event
+	}{
+		{name: "returns every event from the start", from: 0, want: events},
+		{name: "returns the events after the index that the watch reached", from: 1, want: events[1:]},
+		{name: "returns no event when the index is at the end", from: 2},
+		{name: "returns no event when the index is past the end", from: 5},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, eventsSince(events, tt.from))
+		})
+	}
+}
+
+func TestNotifyTeardownEvents(t *testing.T) {
+	event := func(reason, message string) *corev1.Event {
+		return &corev1.Event{
+			Reason:        reason,
+			Message:       message,
+			Type:          corev1.EventTypeNormal,
+			LastTimestamp: metav1.NewTime(time.Now()),
+		}
+	}
+
+	tests := []struct {
+		name   string
+		events []*corev1.Event
+		want   []string
+	}{
+		{
+			name:   "sends the stop of a step container",
+			events: []*corev1.Event{event("Killing", "Stopping container 1")},
+			want:   []string{"(Killing) Stopping container 1"},
+		},
+		{
+			name:   "sends the failure of a pre stop hook",
+			events: []*corev1.Event{event("FailedPreStopHook", "PreStopHook failed")},
+			want:   []string{"(FailedPreStopHook) PreStopHook failed"},
+		},
+		{
+			name:   "sends every event that reports a stop",
+			events: []*corev1.Event{event("Killing", "Stopping container 1"), event("Killing", "Stopping container 2")},
+			want:   []string{"(Killing) Stopping container 1", "(Killing) Stopping container 2"},
+		},
+		{
+			name:   "skips the events that report no stop",
+			events: []*corev1.Event{event("Pulled", "Container image already present on machine"), event("Started", "Started container 1")},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := newTestNotifier(t, testkube.RUNNING_TestWorkflowStepStatus, "")
+
+			notifyTeardownEvents(n, tt.events, "exec-1")
+
+			var got []Notification
+			for len(n.ch) > 0 {
+				got = append(got, (<-n.ch).Value)
+			}
+			require.Len(t, got, len(tt.want))
+			for i := range tt.want {
+				assert.Contains(t, got[i].Log, tt.want[i])
+				assert.False(t, got[i].Temporary, "a warning stays in the log of the execution")
 			}
 		})
 	}

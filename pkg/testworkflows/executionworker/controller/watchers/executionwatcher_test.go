@@ -58,3 +58,25 @@ func TestExecutionWatcher_State(t *testing.T) {
 		})
 	}
 }
+
+func TestExecutionWatcher_RefreshPodEvents(t *testing.T) {
+	const id = "exec-1"
+	start := time.Now().Add(-time.Minute)
+	job := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: id, Namespace: "ns", ResourceVersion: "1", CreationTimestamp: metav1.NewTime(start)}}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	watcher := NewExecutionWatcher(ctx, fake.NewSimpleClientset(job), "ns", id, nil, start)
+
+	done := make(chan struct{})
+	go func() {
+		watcher.RefreshPodEvents(ctx)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("the refresh waits for the events of a pod that does not exist")
+	}
+}
