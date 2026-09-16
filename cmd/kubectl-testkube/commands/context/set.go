@@ -83,9 +83,9 @@ func NewSetContextCmd() *cobra.Command {
 					if lookupToken == "" {
 						common.HandleCLIError(common.NewCLIError(
 							common.TKErrInvalidRuntimeParameter,
-							"Missing API key for the name lookup",
-							"Pass the key with the '--api-key' flag or log in first, or select the organization and environment by id with '--org-id' and '--env-id'",
-							errors.New("resolving --org-name or --env-name requires an API key"),
+							"Missing credentials for the name lookup",
+							"Pass an API key with the '--api-key' flag or run 'testkube pro login' first, or select the organization and environment by id with '--org-id' and '--env-id'",
+							errors.New("resolving --org-name or --env-name requires an API key or a login token"),
 						))
 					}
 
@@ -97,7 +97,7 @@ func NewSetContextCmd() *cobra.Command {
 						common.HandleCLIError(common.NewCLIError(
 							common.TKErrOrgResolutionFailed,
 							"Error resolving Testkube Pro organization",
-							"Check does the organization name exist and is the API key allowed to see it, or select it by id with the '--org-id' flag",
+							"Check does the organization name exist and is your API key or login token allowed to see it, or select it by id with the '--org-id' flag",
 							err,
 						))
 					}
