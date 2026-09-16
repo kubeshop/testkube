@@ -7,6 +7,8 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const getExecutionsByStatus = `-- name: GetExecutionsByStatus :many
@@ -100,13 +102,20 @@ FROM
     test_workflow_executions e
         JOIN test_workflow_results r ON e.id = r.execution_id
 WHERE r.status = ANY($1::text[])
-ORDER BY e.scheduled_at
-LIMIT $2::int
+  AND (
+    $2::timestamptz IS NULL
+        OR e.scheduled_at > $2::timestamptz
+        OR (e.scheduled_at = $2::timestamptz AND e.id > $3::text)
+    )
+ORDER BY e.scheduled_at, e.id
+LIMIT $4::int
 `
 
 type GetExecutionsByStatusesParams struct {
-	Statuses []string `db:"statuses" json:"statuses"`
-	RowLimit int32    `db:"row_limit" json:"row_limit"`
+	Statuses         []string           `db:"statuses" json:"statuses"`
+	AfterScheduledAt pgtype.Timestamptz `db:"after_scheduled_at" json:"after_scheduled_at"`
+	AfterExecutionID string             `db:"after_execution_id" json:"after_execution_id"`
+	RowLimit         int32              `db:"row_limit" json:"row_limit"`
 }
 
 type GetExecutionsByStatusesRow struct {
@@ -115,7 +124,12 @@ type GetExecutionsByStatusesRow struct {
 }
 
 func (q *Queries) GetExecutionsByStatuses(ctx context.Context, arg GetExecutionsByStatusesParams) ([]GetExecutionsByStatusesRow, error) {
-	rows, err := q.db.Query(ctx, getExecutionsByStatuses, arg.Statuses, arg.RowLimit)
+	rows, err := q.db.Query(ctx, getExecutionsByStatuses,
+		arg.Statuses,
+		arg.AfterScheduledAt,
+		arg.AfterExecutionID,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -18,6 +18,7 @@ import (
 // will ever be yielded by the iterator functions.
 type MongoExecutionQuerier struct {
 	executionsCollection *mongo.Collection
+	byStatusPager        executionBatchPager[testkube.TestWorkflowExecution]
 }
 
 func NewMongoExecutionQuerier(col *mongo.Collection) *MongoExecutionQuerier {
@@ -67,15 +68,69 @@ func (a MongoExecutionQuerier) Starting(ctx context.Context) func(yield func(tes
 }
 
 // ByStatus yields an iterator returning all executions that match one of the given statuses.
-func (a MongoExecutionQuerier) ByStatus(ctx context.Context, statuses []testkube.TestWorkflowStatus) func(yield func(testkube.TestWorkflowExecution, error) bool) {
-	return a.executionIterator(ctx, bson.M{"result.status": bson.M{"$in": statuses}})
+func (a *MongoExecutionQuerier) ByStatus(ctx context.Context, statuses []testkube.TestWorkflowStatus) func(yield func(testkube.TestWorkflowExecution, error) bool) {
+	return func(yield func(testkube.TestWorkflowExecution, error) bool) {
+		executions, err := a.byStatusPager.Next(
+			func(after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error) {
+				filter := bson.M{"result.status": bson.M{"$in": statuses}}
+				if after != nil {
+					filter = bson.M{"$and": bson.A{
+						filter,
+						bson.M{"$or": bson.A{
+							bson.M{"scheduledat": bson.M{"$gt": after.scheduledAt}},
+							bson.M{
+								"scheduledat": after.scheduledAt,
+								"id":          bson.M{"$gt": after.executionID},
+							},
+						}},
+					}}
+				}
+
+				cur, err := a.executionsCollection.Find(ctx, filter, options.Find().
+					SetSort(bson.D{
+						{Key: "scheduledat", Value: 1},
+						{Key: "id", Value: 1},
+					}).
+					SetLimit(int64(executionUpdatesBatchSize)))
+				if err != nil {
+					return nil, err
+				}
+				defer func() {
+					_ = cur.Close(ctx)
+				}()
+
+				var executions []testkube.TestWorkflowExecution
+				for cur.Next(ctx) {
+					var exe testkube.TestWorkflowExecution
+					if err := cur.Decode(&exe); err != nil {
+						return nil, err
+					}
+					executions = append(executions, exe)
+				}
+				return executions, cur.Err()
+			},
+			func(exe testkube.TestWorkflowExecution) *executionBatchCursor {
+				return &executionBatchCursor{
+					scheduledAt: exe.ScheduledAt,
+					executionID: exe.Id,
+				}
+			},
+		)
+		if err != nil {
+			yield(testkube.TestWorkflowExecution{}, fmt.Errorf("find executions with ExecutionQuerier statuses: %w", err))
+			return
+		}
+		for _, exe := range executions {
+			if !yield(exe, nil) {
+				return
+			}
+		}
+	}
 }
 
 func (a MongoExecutionQuerier) executionIterator(ctx context.Context, filter any) func(yield func(testkube.TestWorkflowExecution, error) bool) {
 	return func(yield func(testkube.TestWorkflowExecution, error) bool) {
-		cur, err := a.executionsCollection.Find(ctx, filter, options.Find().
-			SetSort(bson.M{"scheduledat": 1}).
-			SetLimit(int64(executionUpdatesBatchSize)))
+		cur, err := a.executionsCollection.Find(ctx, filter)
 		if err != nil {
 			yield(testkube.TestWorkflowExecution{}, fmt.Errorf("find executions with ExecutionQuerier statuses: %w", err))
 			return

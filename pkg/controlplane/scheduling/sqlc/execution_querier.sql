@@ -17,5 +17,10 @@ FROM
     test_workflow_executions e
         JOIN test_workflow_results r ON e.id = r.execution_id
 WHERE r.status = ANY(@statuses::text[])
-ORDER BY e.scheduled_at
+  AND (
+    @after_scheduled_at::timestamptz IS NULL
+        OR e.scheduled_at > @after_scheduled_at::timestamptz
+        OR (e.scheduled_at = @after_scheduled_at::timestamptz AND e.id > @after_execution_id::text)
+    )
+ORDER BY e.scheduled_at, e.id
 LIMIT @row_limit::int;

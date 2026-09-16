@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling/sqlc"
@@ -13,7 +14,8 @@ import (
 )
 
 type PostgresExecutionQuerier struct {
-	db *database.DB
+	db            *database.DB
+	byStatusPager executionBatchPager[sqlc.GetExecutionsByStatusesRow]
 }
 
 func NewPostgresExecutionQuerier(db *database.DB) *PostgresExecutionQuerier {
@@ -87,7 +89,7 @@ func (a *PostgresExecutionQuerier) convertRowToObj(row sqlc.GetExecutionsByStatu
 }
 
 // ByStatus yields an iterator returning all executions that match one of the given statuses.
-func (a PostgresExecutionQuerier) ByStatus(ctx context.Context, statuses []testkube.TestWorkflowStatus) func(yield func(testkube.TestWorkflowExecution, error) bool) {
+func (a *PostgresExecutionQuerier) ByStatus(ctx context.Context, statuses []testkube.TestWorkflowStatus) func(yield func(testkube.TestWorkflowExecution, error) bool) {
 	return a.executionIteratorByStatus(ctx, statuses)
 }
 
@@ -98,10 +100,26 @@ func (a *PostgresExecutionQuerier) executionIteratorByStatus(ctx context.Context
 			status = append(status, string(s))
 		}
 
-		executions, err := a.db.GetExecutionsByStatuses(ctx, sqlc.GetExecutionsByStatusesParams{
-			Statuses: status,
-			RowLimit: int32(executionUpdatesBatchSize),
-		})
+		executions, err := a.byStatusPager.Next(
+			func(after *executionBatchCursor) ([]sqlc.GetExecutionsByStatusesRow, error) {
+				params := sqlc.GetExecutionsByStatusesParams{
+					Statuses:         status,
+					AfterExecutionID: "",
+					RowLimit:         int32(executionUpdatesBatchSize),
+				}
+				if after != nil {
+					params.AfterScheduledAt = pgtype.Timestamptz{Time: after.scheduledAt, Valid: true}
+					params.AfterExecutionID = after.executionID
+				}
+				return a.db.GetExecutionsByStatuses(ctx, params)
+			},
+			func(row sqlc.GetExecutionsByStatusesRow) *executionBatchCursor {
+				return &executionBatchCursor{
+					scheduledAt: row.TestWorkflowExecution.ScheduledAt.Time,
+					executionID: row.TestWorkflowExecution.ID,
+				}
+			},
+		)
 		if err != nil {
 			yield(testkube.TestWorkflowExecution{}, fmt.Errorf("find executions with ExecutionQuerier statuses: %w", err))
 			return

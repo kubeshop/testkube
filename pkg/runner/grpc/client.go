@@ -328,11 +328,6 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 				return
 			}
 
-			if result.Redundant {
-				// Execution already existed.
-				return
-			}
-
 			// Execute with our own call timeout context to prevent stalling out.
 			callCtx, cancel := context.WithTimeout(ctx, c.callTimeout)
 			// Add required metadata to the call.

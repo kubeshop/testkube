@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -14,11 +15,14 @@ import (
 	"google.golang.org/grpc/status"
 
 	executionv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1"
+	testworkflowv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/v1"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 )
 
 type fakeExecutionUpdatesClient struct {
-	getExecutionUpdates func(context.Context, *executionv1.GetExecutionUpdatesRequest, ...grpc.CallOption) (*executionv1.GetExecutionUpdatesResponse, error)
+	getExecutionUpdates  func(context.Context, *executionv1.GetExecutionUpdatesRequest, ...grpc.CallOption) (*executionv1.GetExecutionUpdatesResponse, error)
+	getExecutionWorkflow func(context.Context, *executionv1.GetExecutionWorkflowRequest, ...grpc.CallOption) (*executionv1.GetExecutionWorkflowResponse, error)
+	acceptExecution      func(context.Context, *executionv1.AcceptExecutionRequest, ...grpc.CallOption) (*executionv1.AcceptExecutionResponse, error)
 }
 
 func (f fakeExecutionUpdatesClient) GetExecutionUpdates(ctx context.Context, in *executionv1.GetExecutionUpdatesRequest, opts ...grpc.CallOption) (*executionv1.GetExecutionUpdatesResponse, error) {
@@ -29,16 +33,22 @@ func (fakeExecutionUpdatesClient) SetExecutionScheduling(context.Context, *execu
 	return nil, nil
 }
 
-func (fakeExecutionUpdatesClient) AcceptExecution(context.Context, *executionv1.AcceptExecutionRequest, ...grpc.CallOption) (*executionv1.AcceptExecutionResponse, error) {
-	return nil, nil
+func (f fakeExecutionUpdatesClient) AcceptExecution(ctx context.Context, req *executionv1.AcceptExecutionRequest, opts ...grpc.CallOption) (*executionv1.AcceptExecutionResponse, error) {
+	if f.acceptExecution == nil {
+		return &executionv1.AcceptExecutionResponse{}, nil
+	}
+	return f.acceptExecution(ctx, req, opts...)
 }
 
 func (fakeExecutionUpdatesClient) DeclineExecution(context.Context, *executionv1.DeclineExecutionRequest, ...grpc.CallOption) (*executionv1.DeclineExecutionResponse, error) {
 	return nil, nil
 }
 
-func (fakeExecutionUpdatesClient) GetExecutionWorkflow(context.Context, *executionv1.GetExecutionWorkflowRequest, ...grpc.CallOption) (*executionv1.GetExecutionWorkflowResponse, error) {
-	return nil, nil
+func (f fakeExecutionUpdatesClient) GetExecutionWorkflow(ctx context.Context, req *executionv1.GetExecutionWorkflowRequest, opts ...grpc.CallOption) (*executionv1.GetExecutionWorkflowResponse, error) {
+	if f.getExecutionWorkflow == nil {
+		return nil, nil
+	}
+	return f.getExecutionWorkflow(ctx, req, opts...)
 }
 
 type noopRunner struct{}
@@ -177,4 +187,56 @@ func TestClientStart_ResetsBackoffAfterSuccessfulPoll(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
 	require.Equal(t, []time.Duration{time.Millisecond, 2 * time.Millisecond, time.Millisecond, 2 * time.Millisecond}, delays)
+}
+
+func TestClientExecuteResponse_RetriesAcceptAfterRedundantStart(t *testing.T) {
+	var accepts atomic.Int32
+	client := Client{
+		client: fakeExecutionUpdatesClient{
+			getExecutionWorkflow: func(context.Context, *executionv1.GetExecutionWorkflowRequest, ...grpc.CallOption) (*executionv1.GetExecutionWorkflowResponse, error) {
+				return &executionv1.GetExecutionWorkflowResponse{
+					Workflow: &testworkflowv1.TestWorkflow{Json: []byte(`{}`)},
+				}, nil
+			},
+			acceptExecution: func(_ context.Context, req *executionv1.AcceptExecutionRequest, _ ...grpc.CallOption) (*executionv1.AcceptExecutionResponse, error) {
+				accepts.Add(1)
+				require.Equal(t, "exec-1", req.GetExecutionId())
+				require.Equal(t, "ns-1", req.GetNamespace())
+				return &executionv1.AcceptExecutionResponse{}, nil
+			},
+		},
+		logger: zap.NewNop().Sugar(),
+		runner: acceptingRunner{result: &executionworkertypes.ExecuteResult{
+			Redundant: true,
+			Namespace: "ns-1",
+		}},
+		callTimeout: time.Second,
+	}
+
+	client.executeResponse(context.Background(), &executionv1.GetExecutionUpdatesResponse{
+		Start: []*executionv1.ExecutionStart{{
+			ExecutionId:   ptr("exec-1"),
+			EnvironmentId: ptr("env-1"),
+		}},
+	})
+
+	require.EqualValues(t, 1, accepts.Load())
+}
+
+type acceptingRunner struct {
+	result *executionworkertypes.ExecuteResult
+	err    error
+}
+
+func (r acceptingRunner) Execute(executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error) {
+	return r.result, r.err
+}
+
+func (acceptingRunner) Pause(string) error  { return nil }
+func (acceptingRunner) Resume(string) error { return nil }
+func (acceptingRunner) Abort(string, string, string) error {
+	return nil
+}
+func (acceptingRunner) Cancel(string, string, string) error {
+	return nil
 }
