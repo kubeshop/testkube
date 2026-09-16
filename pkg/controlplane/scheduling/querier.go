@@ -6,6 +6,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
+const executionUpdatesBatchSize = 100
+
 type ExecutionQuerier interface {
 	ByStatus(ctx context.Context, statuses []testkube.TestWorkflowStatus) func(yield func(testkube.TestWorkflowExecution, error) bool)
 

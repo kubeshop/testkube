@@ -101,15 +101,21 @@ FROM
         JOIN test_workflow_results r ON e.id = r.execution_id
 WHERE r.status = ANY($1::text[])
 ORDER BY e.scheduled_at
+LIMIT $2::int
 `
+
+type GetExecutionsByStatusesParams struct {
+	Statuses []string `db:"statuses" json:"statuses"`
+	RowLimit int32    `db:"row_limit" json:"row_limit"`
+}
 
 type GetExecutionsByStatusesRow struct {
 	TestWorkflowExecution TestWorkflowExecution `db:"test_workflow_execution" json:"test_workflow_execution"`
 	TestWorkflowResult    TestWorkflowResult    `db:"test_workflow_result" json:"test_workflow_result"`
 }
 
-func (q *Queries) GetExecutionsByStatuses(ctx context.Context, statuses []string) ([]GetExecutionsByStatusesRow, error) {
-	rows, err := q.db.Query(ctx, getExecutionsByStatuses, statuses)
+func (q *Queries) GetExecutionsByStatuses(ctx context.Context, arg GetExecutionsByStatusesParams) ([]GetExecutionsByStatusesRow, error) {
+	rows, err := q.db.Query(ctx, getExecutionsByStatuses, arg.Statuses, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}

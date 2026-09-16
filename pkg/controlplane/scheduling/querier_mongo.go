@@ -6,6 +6,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -72,7 +73,9 @@ func (a MongoExecutionQuerier) ByStatus(ctx context.Context, statuses []testkube
 
 func (a MongoExecutionQuerier) executionIterator(ctx context.Context, filter any) func(yield func(testkube.TestWorkflowExecution, error) bool) {
 	return func(yield func(testkube.TestWorkflowExecution, error) bool) {
-		cur, err := a.executionsCollection.Find(ctx, filter)
+		cur, err := a.executionsCollection.Find(ctx, filter, options.Find().
+			SetSort(bson.M{"scheduledat": 1}).
+			SetLimit(int64(executionUpdatesBatchSize)))
 		if err != nil {
 			yield(testkube.TestWorkflowExecution{}, fmt.Errorf("find executions with ExecutionQuerier statuses: %w", err))
 			return

@@ -29,9 +29,21 @@ import (
 
 // TODO: are these the correct values?
 const (
-	defaultCallTimeout  = time.Second * 30
-	defaultPollInterval = time.Second
+	defaultCallTimeout    = time.Second * 30
+	defaultPollInterval   = time.Second
+	defaultMaxPollBackoff = time.Second * 30
 )
+
+type pollBackoff interface {
+	Duration() time.Duration
+	Reset()
+}
+
+var newPollBackoff = func(interval time.Duration) pollBackoff {
+	return backoff.New(defaultMaxPollBackoff, interval)
+}
+
+var after = time.After
 
 type runner interface {
 	Execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error)
@@ -144,14 +156,15 @@ func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, r runne
 // to be received. Whilst this is not a severe issue it could cause executions to become "stuck"
 // in a queue at the Control Plane awaiting them going live on the runner.
 func (c Client) Start(ctx context.Context, environmentId string) error {
-	b := backoff.New(backoff.DefaultMaxDuration, c.pollInterval)
-	ticker := time.Tick(c.pollInterval)
+	b := newPollBackoff(c.pollInterval)
+	ticker := time.NewTicker(c.pollInterval)
+	defer ticker.Stop()
 	req := &executionv1.GetExecutionUpdatesRequest{}
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-ticker:
+		case <-ticker.C:
 			// Execute with our own call timeout context to prevent stalling out.
 			callCtx, cancel := context.WithTimeout(ctx, c.callTimeout)
 			// Add metadata to the call.
@@ -164,11 +177,16 @@ func (c Client) Start(ctx context.Context, environmentId string) error {
 			response, err := c.client.GetExecutionUpdates(callCtx, req, c.callOpts...)
 			cancel()
 			if err != nil {
+				delay := b.Duration()
 				c.logger.Warnw("Failed to get execution updates, backing off before retrying.",
-					"backoff", b.Duration(),
+					"backoff", delay,
 					"error", err)
 				// In the event of an error wait for backoff before trying again.
-				<-time.After(b.Duration())
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-after(delay):
+				}
 				continue
 			}
 			// If request succeeds then backoffs can be reset.

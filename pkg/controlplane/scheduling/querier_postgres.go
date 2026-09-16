@@ -98,7 +98,10 @@ func (a *PostgresExecutionQuerier) executionIteratorByStatus(ctx context.Context
 			status = append(status, string(s))
 		}
 
-		executions, err := a.db.GetExecutionsByStatuses(ctx, status)
+		executions, err := a.db.GetExecutionsByStatuses(ctx, sqlc.GetExecutionsByStatusesParams{
+			Statuses: status,
+			RowLimit: int32(executionUpdatesBatchSize),
+		})
 		if err != nil {
 			yield(testkube.TestWorkflowExecution{}, fmt.Errorf("find executions with ExecutionQuerier statuses: %w", err))
 			return
