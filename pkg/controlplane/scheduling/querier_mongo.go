@@ -27,19 +27,19 @@ func NewMongoExecutionQuerier(col *mongo.Collection) *MongoExecutionQuerier {
 
 // Pausing yields an iterator returning all executions assigned to the runner indicated
 // by the passed runner, that should be paused by the runner.
-func (a MongoExecutionQuerier) Pausing(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
+func (a *MongoExecutionQuerier) Pausing(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
 	return a.executionIterator(ctx, bson.M{"result.status": testkube.PAUSING_TestWorkflowStatus})
 }
 
 // Resuming yields an iterator returning all executions assigned to the runner indicated
 // by the passed runner, that should be resumed by the runner.
-func (a MongoExecutionQuerier) Resuming(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
+func (a *MongoExecutionQuerier) Resuming(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
 	return a.executionIterator(ctx, bson.M{"result.status": testkube.RESUMING_TestWorkflowStatus})
 }
 
 // Aborting yields an iterator returning all executions assigned to the runner indicated
 // by the passed runner, that should be aborted by the runner.
-func (a MongoExecutionQuerier) Aborting(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
+func (a *MongoExecutionQuerier) Aborting(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
 	return a.executionIterator(ctx, bson.M{"$and": bson.A{
 		bson.M{"result.status": testkube.STOPPING_TestWorkflowStatus},
 		bson.M{"result.predictedstatus": bson.M{"$ne": testkube.CANCELED_TestWorkflowStatus}},
@@ -48,7 +48,7 @@ func (a MongoExecutionQuerier) Aborting(ctx context.Context) func(yield func(tes
 
 // Cancelling yields an iterator returning all executions assigned to the runner indicated
 // by the passed runner, that should be cancelled by the runner.
-func (a MongoExecutionQuerier) Cancelling(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
+func (a *MongoExecutionQuerier) Cancelling(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
 	return a.executionIterator(ctx, bson.M{"$and": bson.A{
 		bson.M{"result.status": testkube.STOPPING_TestWorkflowStatus},
 		bson.M{"result.predictedstatus": testkube.CANCELED_TestWorkflowStatus},
@@ -57,13 +57,13 @@ func (a MongoExecutionQuerier) Cancelling(ctx context.Context) func(yield func(t
 
 // Assigned yields an iterator returning all executions assigned to the runner indicated
 // by the passed runner, that should be started by the runner.
-func (a MongoExecutionQuerier) Assigned(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
+func (a *MongoExecutionQuerier) Assigned(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
 	return a.executionIterator(ctx, bson.M{"result.status": testkube.ASSIGNED_TestWorkflowStatus})
 }
 
 // Starting yields an iterator returning all executions assigned to the runner indicated
 // by the passed runner, that should be started by the runner.
-func (a MongoExecutionQuerier) Starting(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
+func (a *MongoExecutionQuerier) Starting(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
 	return a.executionIterator(ctx, bson.M{"result.status": testkube.STARTING_TestWorkflowStatus})
 }
 
@@ -138,7 +138,7 @@ func (a *MongoExecutionQuerier) ByStatus(ctx context.Context, statuses []testkub
 	}
 }
 
-func (a MongoExecutionQuerier) executionIterator(ctx context.Context, filter any) func(yield func(testkube.TestWorkflowExecution, error) bool) {
+func (a *MongoExecutionQuerier) executionIterator(ctx context.Context, filter any) func(yield func(testkube.TestWorkflowExecution, error) bool) {
 	return func(yield func(testkube.TestWorkflowExecution, error) bool) {
 		cur, err := a.executionsCollection.Find(ctx, filter)
 		if err != nil {

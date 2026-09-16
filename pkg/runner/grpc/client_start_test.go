@@ -29,7 +29,7 @@ func (f fakeExecutionUpdatesClient) GetExecutionUpdates(ctx context.Context, in 
 	return f.getExecutionUpdates(ctx, in, opts...)
 }
 
-func (fakeExecutionUpdatesClient) SetExecutionScheduling(context.Context, *executionv1.SetExecutionSchedulingRequest, ...grpc.CallOption) (*executionv1.SetExecutionSchedulingResponse, error) {
+func (fakeExecutionUpdatesClient) SetExecutionScheduling(context.Context, *executionv1.SetExecutionSchedulingRequest, ...grpc.CallOption) (*executionv1.SetExecutionSchedulingResponse, error) { //nolint:staticcheck // Required to satisfy the generated gRPC client interface.
 	return nil, nil
 }
 
