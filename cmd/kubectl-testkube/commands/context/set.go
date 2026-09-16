@@ -54,8 +54,13 @@ func NewSetContextCmd() *cobra.Command {
 
 			switch cfg.ContextType {
 			case config.ContextTypeCloud:
+				// --root-domain is registered with a default, so it is never empty
+				// and testing the value let every flagless invocation through.
+				rootDomainSet := cmd.Flags().Changed("root-domain") ||
+					cmd.Flags().Changed("pro-root-domain") || cmd.Flags().Changed("cloud-root-domain")
+
 				if opts.Master.OrgId == "" && opts.Master.EnvId == "" && opts.Master.OrgName == "" &&
-					opts.Master.EnvName == "" && apiKey == "" && opts.Master.RootDomain == "" {
+					opts.Master.EnvName == "" && apiKey == "" && !rootDomainSet {
 					common.HandleCLIError(common.NewCLIError(
 						common.TKErrInvalidRuntimeParameter,
 						"No context value provided",
