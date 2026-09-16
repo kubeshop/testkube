@@ -1620,6 +1620,25 @@ func MapTestWorkflowResultAPIToKube(v testkube.TestWorkflowResult) testworkflows
 		Pauses:          common.MapSlice(v.Pauses, MapTestWorkflowPauseAPIToKube),
 		Initialization:  common.MapPtr(v.Initialization, MapTestWorkflowStepResultAPIToKube),
 		Steps:           common.MapMap(v.Steps, MapTestWorkflowStepResultAPIToKube),
+		StatusDetails:   common.MapPtr(v.StatusDetails, MapTestWorkflowStatusDetailsAPIToKube),
+	}
+}
+
+func MapTestWorkflowStatusDetailsAPIToKube(v testkube.TestWorkflowStatusDetails) testworkflowsv1.TestWorkflowStatusDetails {
+	return testworkflowsv1.TestWorkflowStatusDetails{
+		Type_:   v.Type_,
+		Reason:  v.Reason,
+		Message: v.Message,
+		Step:    v.Step,
+		Actor:   v.Actor,
+		User:    common.MapPtr(v.User, MapTestWorkflowStatusDetailsUserAPIToKube),
+	}
+}
+
+func MapTestWorkflowStatusDetailsUserAPIToKube(v testkube.TestWorkflowStatusDetailsUser) testworkflowsv1.TestWorkflowStatusDetailsUser {
+	return testworkflowsv1.TestWorkflowStatusDetailsUser{
+		Name:  v.Name,
+		Email: v.Email,
 	}
 }
 
@@ -1676,6 +1695,7 @@ func MapTestWorkflowResultAPIToKubeTestWorkflowResultSummary(v testkube.TestWork
 		DurationMs:      v.DurationMs,
 		TotalDurationMs: v.TotalDurationMs,
 		PausedMs:        v.PausedMs,
+		StatusDetails:   common.MapPtr(v.StatusDetails, MapTestWorkflowStatusDetailsAPIToKube),
 	}
 }
 

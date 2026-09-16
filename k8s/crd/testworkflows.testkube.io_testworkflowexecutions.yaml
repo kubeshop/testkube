@@ -405,6 +405,44 @@ spec:
                             - failed
                             - aborted
                           type: string
+                        statusDetails:
+                          description: |-
+                            TestWorkflowStatusDetails gives the reason why an execution did not pass. It is
+                            present on every terminal status except passed.
+                          properties:
+                            actor:
+                              description: code of the component that decided the stop, for example user or control-plane
+                              type: string
+                            message:
+                              description: the message of the step that holds the cause, verbatim
+                              type: string
+                            reason:
+                              description: code of the cause, for example unschedulable or oom-killed
+                              type: string
+                            step:
+                              description: reference of the step that holds the cause; empty when the initialization step holds it
+                              type: string
+                            type:
+                              description: the layer that failed
+                              enum:
+                                - init-failure
+                                - execution-failure
+                                - step-failure
+                                - user-cancel
+                                - unknown
+                              type: string
+                            user:
+                              description: the person who canceled the execution; the control plane fills it
+                              properties:
+                                email:
+                                  type: string
+                                name:
+                                  type: string
+                              type: object
+                          required:
+                            - reason
+                            - type
+                          type: object
                         steps:
                           additionalProperties:
                             description: TestWorkflowStepResult contains step result of TestWorkflow

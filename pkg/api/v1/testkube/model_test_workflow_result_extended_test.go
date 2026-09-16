@@ -384,3 +384,27 @@ func TestTestWorkflowResult_HealAbortedOrCanceled(t *testing.T) {
 		})
 	}
 }
+
+func TestTestWorkflowResult_Clone(t *testing.T) {
+	t.Run("the copy does not share the status details", func(t *testing.T) {
+		result := &TestWorkflowResult{
+			Status: common.Ptr(ABORTED_TestWorkflowStatus),
+			StatusDetails: &TestWorkflowStatusDetails{
+				Type_:  string(StatusDetailsTypeUserCancel),
+				Reason: string(StopReasonUserCancel),
+				Actor:  string(StopActorUser),
+			},
+		}
+
+		clone := result.Clone()
+		assert.Equal(t, *result.StatusDetails, *clone.StatusDetails)
+
+		clone.StatusDetails.Reason = string(StopReasonForceCancel)
+		assert.Equal(t, string(StopReasonUserCancel), result.StatusDetails.Reason)
+	})
+
+	t.Run("a result without the object keeps none", func(t *testing.T) {
+		result := &TestWorkflowResult{Status: common.Ptr(PASSED_TestWorkflowStatus)}
+		assert.Nil(t, result.Clone().StatusDetails)
+	})
+}
