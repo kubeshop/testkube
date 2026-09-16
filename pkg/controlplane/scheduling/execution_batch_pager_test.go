@@ -12,7 +12,7 @@ type pagedExecution struct {
 	executionID string
 }
 
-func TestExecutionBatchPagerNext_AdvancesAndWraps(t *testing.T) {
+func TestExecutionBatchPagerNext_AlternatesAdvanceAndRetryPasses(t *testing.T) {
 	base := time.Date(2026, 9, 16, 12, 0, 0, 0, time.UTC)
 	items := []pagedExecution{
 		{scheduledAt: base.Add(1 * time.Second), executionID: "001"},
@@ -58,13 +58,21 @@ func TestExecutionBatchPagerNext_AdvancesAndWraps(t *testing.T) {
 
 	page2, err := pager.Next(fetch, cursorOf)
 	require.NoError(t, err)
-	require.Equal(t, []pagedExecution{items[2], items[3]}, page2)
+	require.Equal(t, []pagedExecution{items[0], items[1]}, page2)
 
 	page3, err := pager.Next(fetch, cursorOf)
 	require.NoError(t, err)
-	require.Equal(t, []pagedExecution{items[4]}, page3)
+	require.Equal(t, []pagedExecution{items[2], items[3]}, page3)
 
 	page4, err := pager.Next(fetch, cursorOf)
 	require.NoError(t, err)
-	require.Equal(t, []pagedExecution{items[0], items[1]}, page4)
+	require.Equal(t, []pagedExecution{items[2], items[3]}, page4)
+
+	page5, err := pager.Next(fetch, cursorOf)
+	require.NoError(t, err)
+	require.Equal(t, []pagedExecution{items[4]}, page5)
+
+	page6, err := pager.Next(fetch, cursorOf)
+	require.NoError(t, err)
+	require.Equal(t, []pagedExecution{items[4]}, page6)
 }

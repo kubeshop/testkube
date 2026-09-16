@@ -11,8 +11,10 @@ type executionBatchCursor struct {
 }
 
 type executionBatchPager[T any] struct {
-	mu     sync.Mutex
-	cursor *executionBatchCursor
+	mu            sync.Mutex
+	advanceCursor *executionBatchCursor
+	retryCursor   *executionBatchCursor
+	nextRetry     bool
 }
 
 func (p *executionBatchPager[T]) Next(
@@ -22,13 +24,48 @@ func (p *executionBatchPager[T]) Next(
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	items, err := fetch(p.cursor)
+	if p.nextRetry {
+		items, err := p.fetchPage(&p.retryCursor, fetch, cursorOf)
+		if err != nil {
+			return nil, err
+		}
+		if len(items) > 0 {
+			p.nextRetry = false
+			return items, nil
+		}
+	}
+
+	items, err := p.fetchPage(&p.advanceCursor, fetch, cursorOf)
+	if err != nil {
+		return nil, err
+	}
+	if len(items) > 0 {
+		p.nextRetry = true
+		return items, nil
+	}
+
+	items, err = p.fetchPage(&p.retryCursor, fetch, cursorOf)
+	if err != nil {
+		return nil, err
+	}
+	if len(items) > 0 {
+		p.nextRetry = false
+	}
+	return items, nil
+}
+
+func (p *executionBatchPager[T]) fetchPage(
+	cursor **executionBatchCursor,
+	fetch func(after *executionBatchCursor) ([]T, error),
+	cursorOf func(T) *executionBatchCursor,
+) ([]T, error) {
+	items, err := fetch(*cursor)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(items) == 0 && p.cursor != nil {
-		p.cursor = nil
+	if len(items) == 0 && *cursor != nil {
+		*cursor = nil
 		items, err = fetch(nil)
 		if err != nil {
 			return nil, err
@@ -39,6 +76,6 @@ func (p *executionBatchPager[T]) Next(
 		return nil, nil
 	}
 
-	p.cursor = cursorOf(items[len(items)-1])
+	*cursor = cursorOf(items[len(items)-1])
 	return items, nil
 }
