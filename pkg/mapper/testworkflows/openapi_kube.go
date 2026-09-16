@@ -1074,6 +1074,10 @@ func MapStepExecuteTestWorkflowAPIToKube(v testkube.TestWorkflowStepExecuteTestW
 		Tarball:       common.MapMap(v.Tarball, MapTarballRequestAPIToKube),
 		Config:        MapConfigValueAPIToKube(v.Config),
 		Fetch:         common.MapSlice(v.Fetch, MapStepExecuteFetchAPIToKube),
+		// Both directions map field by field, so a field missing from either is
+		// dropped in silence - which for this one would turn a rerun back into a
+		// first run for every workflow stored through the API.
+		BaseExecutionId: v.BaseExecutionId,
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
 			Count:    MapBoxedStringToConfigValue(v.Count),
 			MaxCount: MapBoxedStringToConfigValue(v.MaxCount),
@@ -1573,10 +1577,12 @@ func MapTestWorkflowReportAPIToKube(v testkube.TestWorkflowReport) testworkflows
 func MapTestWorkflowStepResultAPIToKube(v testkube.TestWorkflowStepResult) testworkflowsv1.TestWorkflowStepResult {
 	return testworkflowsv1.TestWorkflowStepResult{
 		ErrorMessage: v.ErrorMessage,
+		ErrorReason:  v.ErrorReason,
 		Status: common.MapPtr(v.Status, func(status testkube.TestWorkflowStepStatus) testworkflowsv1.TestWorkflowStepStatus {
 			return (testworkflowsv1.TestWorkflowStepStatus)(status)
 		}),
 		ExitCode:   int64(v.ExitCode),
+		Attempts:   v.Attempts,
 		QueuedAt:   metav1.Time{Time: v.QueuedAt},
 		StartedAt:  metav1.Time{Time: v.StartedAt},
 		FinishedAt: metav1.Time{Time: v.FinishedAt},

@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
+	toolkitcommon "github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
@@ -106,12 +108,14 @@ func (r *executionRecorder) schedule(alias, workflowName string, exec testkube.T
 	return entry
 }
 
-// complete refreshes an entry once its execution finished, adding the outputs it published.
+// complete refreshes an entry from the finished execution.
 func (r *executionRecorder) complete(entry executiondata.Execution, exec testkube.TestWorkflowExecution) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	entry.Outputs = executiondata.OutputsOf(&exec)
+	entry.ErrorMessage, entry.StepErrors = executiondata.ErrorsOf(&exec)
+	entry.StepAttempts = executiondata.AttemptsOf(&exec)
 	if exec.Result != nil && exec.Result.Status != nil {
 		entry.Status = string(*exec.Result.Status)
 	}
@@ -135,21 +139,60 @@ type workflowExecutionRequest struct {
 	recorder *executionRecorder
 }
 
-func buildWorkflowExecution(req workflowExecutionRequest) func() error {
-	return func() (err error) {
+// executionOutcome is the result of one execution that the step started or tried to start.
+type executionOutcome struct {
+	// name is the execution name, or the workflow name when the step did not schedule an execution.
+	name string
+	// err is nil when the execution passed.
+	err error
+}
+
+// operationResult is the result of one entry of the step.
+type operationResult struct {
+	outcomes []executionOutcome
+	// err is a failure that is not about one execution, for example a failure to fetch the artifacts.
+	err error
+}
+
+// failureSummary returns one line that names the failed executions and then the other failures.
+// It returns an empty string when there is no failure.
+func failureSummary(results []operationResult) string {
+	total := 0
+	var failed, others []string
+	for _, r := range results {
+		for _, o := range r.outcomes {
+			total++
+			if o.err != nil {
+				failed = append(failed, fmt.Sprintf("%s (%s)", o.name, o.err.Error()))
+			}
+		}
+		if r.err != nil {
+			others = append(others, r.err.Error())
+		}
+	}
+
+	var parts []string
+	if len(failed) > 0 {
+		parts = append(parts, fmt.Sprintf("%d of %d executions failed: %s", len(failed), total, strings.Join(failed, ", ")))
+	}
+	return strings.Join(append(parts, others...), "; ")
+}
+
+func buildWorkflowExecution(req workflowExecutionRequest) func() operationResult {
+	return func() operationResult {
 		workflow := *req.spec.DeepCopy()
-		if err = expressions.Finalize(&workflow, req.machines...); err != nil {
+		if err := expressions.Finalize(&workflow, req.machines...); err != nil {
 			ui.Errf("failed to compute execution: %s: %s", req.spec.Name, err.Error())
-			return errors.Wrapf(err, "'%s' workflow: computing execution", req.spec.Name)
+			return notScheduled(req.spec.Name, errors.Wrap(err, "computing execution"))
 		}
 
 		// An output another workflow withheld resolves to a marker instead of the value
 		// it was meant to carry. Scheduling this execution would configure it with the
 		// marker, so stop while the cause is still visible.
 		if markers := executiondata.WithheldMarkersIn(&workflow); len(markers) > 0 {
-			err = executiondata.WithheldError("this execution", markers)
+			err := executiondata.WithheldError("this execution", markers)
 			ui.Errf("failed to compute execution: %s: %s", req.spec.Name, err.Error())
-			return errors.Wrapf(err, "'%s' workflow: computing execution", req.spec.Name)
+			return notScheduled(req.spec.Name, errors.Wrap(err, "computing execution"))
 		}
 
 		async := req.async
@@ -158,6 +201,7 @@ func buildWorkflowExecution(req workflowExecutionRequest) func() error {
 
 		// Schedule execution
 		var execs []testkube.TestWorkflowExecution
+		var err error
 		for i := 0; i < CreateExecutionRetryOnFailureMaxAttempts; i++ {
 			execs, err = execute.ExecuteTestWorkflow(workflow.Name, testkube.TestWorkflowExecutionRequest{
 				Name:            workflow.ExecutionName,
@@ -165,7 +209,7 @@ func buildWorkflowExecution(req workflowExecutionRequest) func() error {
 				DisableWebhooks: config.ExecutionDisableWebhooks(),
 				Tags:            tags,
 				Target:          target,
-			})
+			}, workflow.BaseExecutionId)
 			if err == nil {
 				break
 			}
@@ -177,11 +221,12 @@ func buildWorkflowExecution(req workflowExecutionRequest) func() error {
 		}
 		if err != nil {
 			ui.Errf("failed to execute test workflow: %s: %s", workflow.Name, err.Error())
-			return
+			return notScheduled(workflow.Name, errors.Wrap(err, "scheduling"))
 		}
 
 		// Print information about scheduled execution
 		entries := make([]executiondata.Execution, len(execs))
+		outcomes := make([]executionOutcome, len(execs))
 		for i, exec := range execs {
 			instructions.PrintOutput(config.Ref(), "testworkflow-start", &testWorkflowExecutionDetails{
 				Id:               exec.Id,
@@ -192,6 +237,7 @@ func buildWorkflowExecution(req workflowExecutionRequest) func() error {
 
 			// Register it, so the following executions and steps may read its data
 			entries[i] = req.recorder.schedule(req.alias, exec.Workflow.Name, exec)
+			outcomes[i] = executionOutcome{name: exec.Name}
 
 			description := ""
 			if workflow.Description != "" {
@@ -204,17 +250,14 @@ func buildWorkflowExecution(req workflowExecutionRequest) func() error {
 			if len(workflow.Fetch) > 0 {
 				ui.Warn("skipping 'fetch': artifacts are only available after an execution finishes, and this step is asynchronous")
 			}
-			return
+			return operationResult{outcomes: outcomes}
 		}
 
-		// Monitor
+		// Monitor. Each goroutine writes only its own item of outcomes.
 		var wg sync.WaitGroup
-		var mu sync.Mutex
-		var errs []error // Collect errors safely
-
 		wg.Add(len(execs))
 		for i := range execs {
-			go func(entry executiondata.Execution, exec testkube.TestWorkflowExecution) {
+			go func(index int, entry executiondata.Execution, exec testkube.TestWorkflowExecution) {
 				defer wg.Done()
 				prevStatus := testkube.QUEUED_TestWorkflowStatus
 				var gErr error
@@ -241,9 +284,7 @@ func buildWorkflowExecution(req workflowExecutionRequest) func() error {
 					// Check go routine error
 					if gErr != nil {
 						ui.Errf("error while getting execution result: %s: %s", ui.LightCyan(exec.Name), gErr.Error())
-						mu.Lock()
-						errs = append(errs, gErr)
-						mu.Unlock()
+						outcomes[index].err = errors.Wrap(gErr, "getting the execution result")
 						return
 					}
 
@@ -272,47 +313,45 @@ func buildWorkflowExecution(req workflowExecutionRequest) func() error {
 
 				// Safe status access after loop
 				if exec.Result == nil || exec.Result.Status == nil {
-					mu.Lock()
-					errs = append(errs, fmt.Errorf("execution %s completed but status unavailable", exec.Name))
-					mu.Unlock()
+					outcomes[index].err = errors.New("completed but status unavailable")
 					return
 				}
 
 				status := *exec.Result.Status
 				color := ui.Green
 				if status != testkube.PASSED_TestWorkflowStatus {
-					mu.Lock()
-					errs = append(errs, fmt.Errorf("execution %s failed", exec.Name))
-					mu.Unlock()
+					outcomes[index].err = errors.New(string(status))
 					color = ui.Red
 				}
 
 				instructions.PrintOutput(config.Ref(), "testworkflow-end", &executionResult{Id: exec.Id, Status: string(status)})
 				fmt.Printf("%s • %s\n", color(exec.Name), string(status))
-			}(entries[i], execs[i])
+			}(i, entries[i], execs[i])
 		}
 		wg.Wait()
+
+		result := operationResult{outcomes: outcomes}
 
 		// Download the artifacts the executions produced, even when they failed -
 		// a failed run's artifacts are usually the interesting ones.
 		if fetchErr := fetchArtifacts(workflow.Fetch, entries, req.recorder.registry); fetchErr != nil {
 			ui.Errf("failed to fetch artifacts: %s", fetchErr.Error())
-			mu.Lock()
-			errs = append(errs, fetchErr)
-			mu.Unlock()
+			result.err = errors.Wrap(fetchErr, "fetching artifacts")
 		}
 
-		// Handle collected errors
-		if len(errs) > 0 {
-			for _, lErr := range errs {
-				ui.Errf("Execution error: %s", lErr.Error())
+		for _, o := range outcomes {
+			if o.err != nil {
+				ui.Errf("Execution error: execution %s failed: %s", o.name, o.err.Error())
 			}
-
-			return fmt.Errorf("one or more executions failed")
 		}
 
-		return
+		return result
 	}
+}
+
+// notScheduled is the result of an entry that failed before the step scheduled an execution.
+func notScheduled(workflowName string, err error) operationResult {
+	return operationResult{outcomes: []executionOutcome{{name: workflowName, err: err}}}
 }
 
 // claimExecutionRefs reserves the references an entry will be addressed by. Two
@@ -446,7 +485,7 @@ func NewExecuteCmd() *cobra.Command {
 				var executeData ExecuteData
 				err := expressionstcl.DecodeBase64JSON(args[0], &executeData)
 				if err != nil {
-					ui.Fail(errors.Wrap(err, "parsing execute data"))
+					toolkitcommon.Fail(errors.Wrap(err, "parsing execute data"))
 				}
 
 				workflows = make([]string, len(executeData.Workflows))
@@ -477,18 +516,18 @@ func NewExecuteCmd() *cobra.Command {
 			transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, config.IP(), constants.DefaultTransferPort)
 
 			// Build operations to run
-			operations := make([]func() error, 0)
+			operations := make([]func() operationResult, 0)
 			// aliases guards against two entries claiming the same execution() reference
 			aliases := make(map[string]string)
 			for _, s := range workflows {
 				var w testworkflowsv1.StepExecuteWorkflow
 				err := json.Unmarshal([]byte(s), &w)
 				if err != nil {
-					ui.Fail(errors.Wrap(err, "unmarshal workflow definition"))
+					toolkitcommon.Fail(errors.Wrap(err, "unmarshal workflow definition"))
 				}
 
 				if w.Name == "" && w.Selector == nil {
-					ui.Fail(errors.New("either workflow name or selector should be specified"))
+					toolkitcommon.Fail(errors.New("either workflow name or selector should be specified"))
 				}
 
 				var testWorkflowNames []string
@@ -498,11 +537,11 @@ func NewExecuteCmd() *cobra.Command {
 
 				if w.Selector != nil {
 					if len(w.Selector.MatchExpressions) > 0 {
-						ui.Fail(errors.New("error creating selector from test workflow selector: matchExpressions is not supported"))
+						toolkitcommon.Fail(errors.New("error creating selector from test workflow selector: matchExpressions is not supported"))
 					}
 					testWorkflowsList, err := execute.ListTestWorkflows(w.Selector.MatchLabels)
 					if err != nil {
-						ui.Fail(errors.Wrap(err, "error listing test workflows using selector"))
+						toolkitcommon.Fail(errors.Wrap(err, "error listing test workflows using selector"))
 					}
 
 					if len(testWorkflowsList) > 0 {
@@ -518,24 +557,24 @@ func NewExecuteCmd() *cobra.Command {
 				}
 
 				if len((testWorkflowNames)) == 0 {
-					ui.Fail(errors.New("no test workflows to run"))
+					toolkitcommon.Fail(errors.New("no test workflows to run"))
 				}
 
 				// Resolve the params
 				params, err := commontcl.GetParamsSpec(w.Matrix, w.Shards, w.Count, w.MaxCount, baseMachine)
 				if err != nil {
-					ui.Fail(errors.Wrap(err, "matrix and sharding"))
+					toolkitcommon.Fail(errors.Wrap(err, "matrix and sharding"))
 				}
 
 				// Resolve the reference this entry will be addressed by. It cannot depend
 				// on any sibling execution, so it is safe to compute it up-front.
 				alias, err := expressions.EvalTemplate(w.As, baseMachine)
 				if err != nil {
-					ui.Fail(errors.Wrapf(err, "'%s' workflow: computing the 'as' reference", w.Name))
+					toolkitcommon.Fail(errors.Wrapf(err, "'%s' workflow: computing the 'as' reference", w.Name))
 				}
 
 				if err := claimExecutionRefs(aliases, alias, testWorkflowNames); err != nil {
-					ui.Fail(err)
+					toolkitcommon.Fail(err)
 				}
 
 				for _, testWorkflowName := range testWorkflowNames {
@@ -551,7 +590,7 @@ func NewExecuteCmd() *cobra.Command {
 						// Build files for transfer
 						tarballMachine, err := registerTransfer(transferSrv, spec.Tarball, baseMachine, params.MachineAt(i))
 						if err != nil {
-							ui.Fail(errors.Wrapf(err, "'%s' workflow", spec.Name))
+							toolkitcommon.Fail(errors.Wrapf(err, "'%s' workflow", spec.Name))
 						}
 						spec.Tarball = nil
 
@@ -579,7 +618,7 @@ func NewExecuteCmd() *cobra.Command {
 			if transferSrv.Count() > 0 {
 				fmt.Printf("Starting transfer server for %d tarballs...\n", transferSrv.Count())
 				if _, err := transferSrv.Listen(); err != nil {
-					ui.Fail(errors.Wrap(err, "failed to start transfer server"))
+					toolkitcommon.Fail(errors.Wrap(err, "failed to start transfer server"))
 				}
 				fmt.Printf("Transfer server started.\n")
 			}
@@ -598,23 +637,23 @@ func NewExecuteCmd() *cobra.Command {
 			var wg sync.WaitGroup
 			wg.Add(len(operations))
 			ch := make(chan struct{}, parallelism)
-			success := true
+			// Each goroutine writes only its own item of results.
+			results := make([]operationResult, len(operations))
 
 			// Execute all operations
-			for _, op := range operations {
+			for i, op := range operations {
 				ch <- struct{}{}
-				go func(op func() error) {
-					if op() != nil {
-						success = false
-					}
+				go func(i int, op func() operationResult) {
+					results[i] = op()
 					<-ch
 					wg.Done()
-				}(op)
+				}(i, op)
 			}
 			wg.Wait()
 
-			if !success {
-				os.Exit(1)
+			// The summary becomes the step message, so it names the failed executions.
+			if summary := failureSummary(results); summary != "" {
+				toolkitcommon.Fail(errors.New(summary))
 			}
 		},
 	}

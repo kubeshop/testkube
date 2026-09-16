@@ -572,6 +572,7 @@ func updateConstants(testDir string) {
 	constants.InternalBinPath = filepath.Join(constants.InternalPath, "bin")
 	constants.InitPath = filepath.Join(constants.InternalPath, "init")
 	constants.ToolkitPath = filepath.Join(constants.InternalPath, "toolkit")
+	constants.StepErrorPath = filepath.Join(constants.InternalPath, "error")
 }
 
 type TestState struct {

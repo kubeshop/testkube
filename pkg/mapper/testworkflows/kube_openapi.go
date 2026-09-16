@@ -1011,19 +1011,20 @@ func MapStepExecuteFetchKubeToAPI(v testworkflowsv1.StepExecuteFetch) testkube.T
 
 func MapStepExecuteTestWorkflowKubeToAPI(v testworkflowsv1.StepExecuteWorkflow) testkube.TestWorkflowStepExecuteTestWorkflowRef {
 	return testkube.TestWorkflowStepExecuteTestWorkflowRef{
-		Name:          v.Name,
-		As:            v.As,
-		Description:   v.Description,
-		ExecutionName: v.ExecutionName,
-		Tarball:       common.MapMap(v.Tarball, MapTarballRequestKubeToAPI),
-		Config:        MapConfigValueKubeToAPI(v.Config),
-		Fetch:         common.MapSlice(v.Fetch, MapStepExecuteFetchKubeToAPI),
-		Count:         MapStringTypeToBoxedString(v.Count),
-		MaxCount:      MapStringTypeToBoxedString(v.MaxCount),
-		Matrix:        MapDynamicListMapKubeToAPI(v.Matrix),
-		Shards:        MapDynamicListMapKubeToAPI(v.Shards),
-		Selector:      common.MapPtr(v.Selector, MapSelectorToAPI),
-		Target:        common.MapPtr(v.Target, commonmapper.MapTargetKubeToAPI),
+		Name:            v.Name,
+		As:              v.As,
+		Description:     v.Description,
+		ExecutionName:   v.ExecutionName,
+		Tarball:         common.MapMap(v.Tarball, MapTarballRequestKubeToAPI),
+		Config:          MapConfigValueKubeToAPI(v.Config),
+		Fetch:           common.MapSlice(v.Fetch, MapStepExecuteFetchKubeToAPI),
+		BaseExecutionId: v.BaseExecutionId,
+		Count:           MapStringTypeToBoxedString(v.Count),
+		MaxCount:        MapStringTypeToBoxedString(v.MaxCount),
+		Matrix:          MapDynamicListMapKubeToAPI(v.Matrix),
+		Shards:          MapDynamicListMapKubeToAPI(v.Shards),
+		Selector:        common.MapPtr(v.Selector, MapSelectorToAPI),
+		Target:          common.MapPtr(v.Target, commonmapper.MapTargetKubeToAPI),
 	}
 }
 

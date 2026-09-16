@@ -15,6 +15,13 @@ const (
 	StopReasonExecutionTimeout   StopReason = "execution-timeout"
 	StopReasonExecutionStuck     StopReason = "execution-stuck"
 	StopReasonWorkerResumeFailed StopReason = "worker-resume-failed"
+	StopReasonUnschedulable      StopReason = "unschedulable"
+	StopReasonConfigMissing      StopReason = "config-missing"
+	StopReasonVolumeMountFailed  StopReason = "volume-mount-failed"
+	StopReasonAdmissionDenied    StopReason = "admission-denied"
+	StopReasonInitTimeout        StopReason = "initialization-timeout"
+	StopReasonProcessKilled      StopReason = "process-killed"
+	StopReasonStepTimeout        StopReason = "step-timeout"
 )
 
 // Sentence returns the words for the reason in a message for people. It returns an
@@ -39,6 +46,20 @@ func (r StopReason) Sentence() string {
 		return "the execution is stuck in the running state"
 	case StopReasonWorkerResumeFailed:
 		return "the parallel worker could not be resumed"
+	case StopReasonUnschedulable:
+		return "no node can run the pod"
+	case StopReasonConfigMissing:
+		return "a secret or a config map that a container needs is not available"
+	case StopReasonVolumeMountFailed:
+		return "Kubernetes cannot mount a volume of the pod"
+	case StopReasonAdmissionDenied:
+		return "the cluster did not accept the pod"
+	case StopReasonInitTimeout:
+		return "the first step did not start before the initialization timeout of the workflow"
+	case StopReasonProcessKilled:
+		return "the test process was killed, possibly by an out-of-memory kill"
+	case StopReasonStepTimeout:
+		return "the step did not finish within its timeout"
 	default:
 		return ""
 	}

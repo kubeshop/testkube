@@ -21,6 +21,13 @@ func TestStopReason_Sentence(t *testing.T) {
 		{name: "execution timeout", reason: StopReasonExecutionTimeout, want: "the execution ran for too long"},
 		{name: "execution stuck", reason: StopReasonExecutionStuck, want: "the execution is stuck in the running state"},
 		{name: "worker resume failed", reason: StopReasonWorkerResumeFailed, want: "the parallel worker could not be resumed"},
+		{name: "unschedulable", reason: StopReasonUnschedulable, want: "no node can run the pod"},
+		{name: "config missing", reason: StopReasonConfigMissing, want: "a secret or a config map that a container needs is not available"},
+		{name: "volume mount failed", reason: StopReasonVolumeMountFailed, want: "Kubernetes cannot mount a volume of the pod"},
+		{name: "admission denied", reason: StopReasonAdmissionDenied, want: "the cluster did not accept the pod"},
+		{name: "initialization timeout", reason: StopReasonInitTimeout, want: "the first step did not start before the initialization timeout of the workflow"},
+		{name: "process killed", reason: StopReasonProcessKilled, want: "the test process was killed, possibly by an out-of-memory kill"},
+		{name: "step timeout", reason: StopReasonStepTimeout, want: "the step did not finish within its timeout"},
 		{name: "token from a newer control plane has no words yet", reason: StopReason("later-added"), want: ""},
 	}
 	for _, tt := range tests {

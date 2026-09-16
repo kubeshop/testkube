@@ -79,6 +79,12 @@ type Execution struct {
 	// An output the execution produced but could not publish - its value holds a
 	// sensitive word - is present here as a WithheldMarker rather than as its value.
 	Outputs map[string]string `json:"outputs,omitempty"`
+	// ErrorMessage is the message of the initialization step, empty when it has none.
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	// StepErrors are the messages of the steps that have one, keyed by step ref.
+	StepErrors map[string]string `json:"stepErrors,omitempty"`
+	// StepAttempts are the numbers of attempts of the steps that report one, keyed by step ref.
+	StepAttempts map[string]int64 `json:"stepAttempts,omitempty"`
 }
 
 // Key is the primary reference of the execution - its alias when the parent gave
@@ -108,19 +114,28 @@ func (e Execution) Refs() []string {
 
 // AsMap converts the execution into the shape the expression language sees.
 func (e Execution) AsMap() map[string]interface{} {
-	outputs := make(map[string]interface{}, len(e.Outputs))
-	for k, v := range e.Outputs {
-		outputs[k] = v
-	}
 	return map[string]interface{}{
-		"id":       e.Id,
-		"name":     e.Name,
-		"workflow": e.Workflow,
-		"alias":    e.Alias,
-		"index":    e.Index,
-		"status":   e.Status,
-		"outputs":  outputs,
+		"id":           e.Id,
+		"name":         e.Name,
+		"workflow":     e.Workflow,
+		"alias":        e.Alias,
+		"index":        e.Index,
+		"status":       e.Status,
+		"outputs":      toInterfaceMap(e.Outputs),
+		"errorMessage": e.ErrorMessage,
+		"stepErrors":   toInterfaceMap(e.StepErrors),
+		"stepAttempts": toInterfaceMap(e.StepAttempts),
 	}
+}
+
+// toInterfaceMap copies the map into the shape the expression language reads.
+// It returns an empty map for a nil map.
+func toInterfaceMap[V any](values map[string]V) map[string]interface{} {
+	result := make(map[string]interface{}, len(values))
+	for k, v := range values {
+		result[k] = v
+	}
+	return result
 }
 
 // FromExecution converts a full execution record into the data workflows may read.
@@ -139,7 +154,52 @@ func FromExecution(execution *testkube.TestWorkflowExecution) Execution {
 	if execution.Result != nil && execution.Result.Status != nil {
 		result.Status = string(*execution.Result.Status)
 	}
+	result.ErrorMessage, result.StepErrors = ErrorsOf(execution)
+	result.StepAttempts = AttemptsOf(execution)
 	return result
+}
+
+// ErrorsOf collects the message of the initialization step and the messages of the
+// steps, so a workflow can assert why another execution failed.
+func ErrorsOf(execution *testkube.TestWorkflowExecution) (string, map[string]string) {
+	if execution == nil || execution.Result == nil {
+		return "", nil
+	}
+	errorMessage := ""
+	if execution.Result.Initialization != nil {
+		errorMessage = execution.Result.Initialization.ErrorMessage
+	}
+	var stepErrors map[string]string
+	for ref, step := range execution.Result.Steps {
+		if step.ErrorMessage == "" {
+			continue
+		}
+		if stepErrors == nil {
+			stepErrors = make(map[string]string)
+		}
+		stepErrors[ref] = step.ErrorMessage
+	}
+	return errorMessage, stepErrors
+}
+
+// AttemptsOf collects the number of attempts of each step, so a workflow can assert
+// how many times another execution ran a step. It skips the steps without a number,
+// because the init process sent no execution result for them.
+func AttemptsOf(execution *testkube.TestWorkflowExecution) map[string]int64 {
+	if execution == nil || execution.Result == nil {
+		return nil
+	}
+	var stepAttempts map[string]int64
+	for ref, step := range execution.Result.Steps {
+		if step.Attempts == 0 {
+			continue
+		}
+		if stepAttempts == nil {
+			stepAttempts = make(map[string]int64)
+		}
+		stepAttempts[ref] = int64(step.Attempts)
+	}
+	return stepAttempts
 }
 
 // OutputsOf collects the values an execution published through its steps.

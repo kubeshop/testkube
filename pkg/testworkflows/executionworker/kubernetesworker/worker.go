@@ -16,6 +16,7 @@ import (
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -42,12 +43,22 @@ const (
 	ResumeRetryOnFailureDelay = 300 * time.Millisecond
 )
 
+var (
+	// abortTimeout limits an abort that a watch asks for, with its retries.
+	abortTimeout = 2 * time.Minute
+	// abortRetryDelay is the wait between two attempts of that abort.
+	abortRetryDelay = 3 * time.Second
+)
+
 type worker struct {
 	clientSet        kubernetes.Interface
 	processor        testworkflowprocessor.Processor
 	baseWorkerConfig testworkflowconfig.WorkerConfig
 	config           Config
 	registry         registry.ControllersRegistry
+
+	// aborts holds the ids of the executions with an abort that runs in the background
+	aborts sync.Map
 }
 
 func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.Processor, config Config) *worker {
@@ -288,6 +299,10 @@ func (w *worker) Notifications(ctx context.Context, id string, opts executionwor
 			recycle()
 		}()
 		for n := range ch {
+			if n.Error == nil && n.Value.AbortReason != "" {
+				w.abortRequested(id, opts.Hints.Namespace, n.Value.AbortReason)
+				continue
+			}
 			if n.Error != nil {
 				watcher.Close(n.Error)
 				return
@@ -330,6 +345,10 @@ func (w *worker) StatusNotifications(ctx context.Context, id string, opts execut
 		prevStepStatus := testkube.QUEUED_TestWorkflowStepStatus
 		prevReady := false
 		for n := range ch {
+			if n.Error == nil && n.Value.AbortReason != "" {
+				w.abortRequested(id, opts.Hints.Namespace, n.Value.AbortReason)
+				continue
+			}
 			if n.Error != nil {
 				watcher.Close(n.Error)
 				return
@@ -545,6 +564,46 @@ func (w *worker) List(ctx context.Context, options executionworkertypes.ListOpti
 		}
 	}
 	return list, nil
+}
+
+// abortRequested aborts the execution in the background with the runner actor, because the watch asked for it.
+func (w *worker) abortRequested(id, namespace string, reason testkube.StopReason) {
+	w.abortInBackground(id, func(ctx context.Context) error {
+		return w.Abort(ctx, id, executionworkertypes.DestroyOptions{
+			Namespace: namespace,
+			Actor:     testkube.StopActorRunner,
+			Reason:    reason,
+		})
+	})
+}
+
+// abortInBackground runs one abort for each execution, also when several watches ask for it.
+// The watch asks one time, so the abort retries a failure until its time limit ends. A job that is already gone
+// means that the abort is done. It returns a channel that closes when the abort ends, or nil when an abort already runs.
+func (w *worker) abortInBackground(id string, abort func(ctx context.Context) error) <-chan struct{} {
+	if _, running := w.aborts.LoadOrStore(id, struct{}{}); running {
+		return nil
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer w.aborts.Delete(id)
+		ctx, cancel := context.WithTimeout(context.Background(), abortTimeout)
+		defer cancel()
+		for {
+			err := abort(ctx)
+			if err == nil || apierrors.IsNotFound(err) || errors.Is(err, registry.ErrResourceNotFound) {
+				return
+			}
+			select {
+			case <-ctx.Done():
+				log.DefaultLogger.Errorw("failed to abort the execution that the watch asked to abort", "id", id, "error", err)
+				return
+			case <-time.After(abortRetryDelay):
+			}
+		}
+	}()
+	return done
 }
 
 func (w *worker) Abort(ctx context.Context, id string, options executionworkertypes.DestroyOptions) (err error) {

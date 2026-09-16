@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1751,4 +1752,62 @@ func TestProcess_ConditionWithArtifacts(t *testing.T) {
 	assert.True(t, foundGroupStart, "should find group Start")
 	assert.True(t, foundContainer, "should find Container transition")
 	assert.True(t, foundChildStart, "should find child Start")
+}
+
+func TestProcessor_Bundle(t *testing.T) {
+	tests := []struct {
+		name           string
+		timeouts       *testworkflowsv1.TestWorkflowTimeouts
+		wantAnnotation string
+		wantErr        string
+	}{
+		{
+			name:           "writes the initialization timeout into the pod annotations",
+			timeouts:       &testworkflowsv1.TestWorkflowTimeouts{Initialization: "90s"},
+			wantAnnotation: "1m30s",
+		},
+		{
+			name:           "resolves an expression before the validation",
+			timeouts:       &testworkflowsv1.TestWorkflowTimeouts{Initialization: `{{ "1m" + "30s" }}`},
+			wantAnnotation: "1m30s",
+		},
+		{
+			name:     "writes no annotation without an initialization timeout",
+			timeouts: &testworkflowsv1.TestWorkflowTimeouts{Queue: "5m"},
+		},
+		{
+			name:     "rejects a value that is not a duration",
+			timeouts: &testworkflowsv1.TestWorkflowTimeouts{Initialization: "soon"},
+			wantErr:  `timeouts.initialization: "soon" is not a positive duration`,
+		},
+		{
+			name:     "rejects a zero duration",
+			timeouts: &testworkflowsv1.TestWorkflowTimeouts{Initialization: "0s"},
+			wantErr:  `timeouts.initialization: "0s" is not a positive duration`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wf := &testworkflowsv1.TestWorkflow{
+				Spec: testworkflowsv1.TestWorkflowSpec{
+					TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{Timeouts: tt.timeouts},
+					Steps: []testworkflowsv1.Step{
+						{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"}},
+					},
+				},
+			}
+
+			res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig, ScheduledAt: dummyTime})
+
+			if tt.wantErr != "" {
+				assert.EqualError(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			annotation, ok := res.Job.Spec.Template.Annotations[constants.InitializationTimeoutAnnotation]
+			assert.Equal(t, tt.wantAnnotation != "", ok)
+			assert.Equal(t, tt.wantAnnotation, annotation)
+		})
+	}
 }
