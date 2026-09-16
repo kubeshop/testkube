@@ -62,6 +62,13 @@ Still to come: Control Plane persistence and enforcement of the owner, and the `
 
 - `pkg/runner/runner.go` runs `worker.Destroy` (cleanup of the execution's Secrets/Pods after the workflow ends) through the shared `retry()` helper via `destroyResources`. Bounded by `CleanupResourcesRetryCount` and `CleanupResourcesRetryDelay`; a brief `kube-apiserver` blip during teardown should not leave orphan resources in the customer namespace.
 - `pkg/event/kind/webhook/listener.go` retries the outbound `HttpClient.Do` for `sendRetryCount` attempts with a linear `sendRetryBaseDelay`. Retryable outcomes: network errors, `5xx`, and `429`. Other `4xx` short-circuit so a bad URL / auth failure is not spammed at the subscriber. Delivery is intentionally at-least-once (subscribers own dedupe, matching Stripe/GitHub/Slack convention).
+- `pkg/runner/grpc/client.go` polls `GetExecutionUpdates` once per second with a 30s client deadline and a capped 30s backoff between failed polls. The loop must compute one backoff duration per failure and reuse it for logging and sleeping; calling the backoff helper twice advances the retry state twice.
+
+## Standalone execution update paging
+
+- `pkg/controlplane/agent_grpc_execution_updates.go` serves standalone runner polls by reading pending executions through `scheduling.ExecutionQuerier.ByStatus`.
+- `pkg/controlplane/scheduling/execution_batch_pager.go` keeps a per-querier snapshot cursor for that path. Each poll page is bounded to `executionUpdatesBatchSize`, but the pager freezes a `status_at`/`scheduled_at` watermark for the current sweep so new backlog cannot extend it forever.
+- Postgres and Mongo `ByStatus` implementations page by pending-transition time (`status_at`, falling back to `scheduled_at`) plus execution id. When an execution newly enters `ASSIGNED`, `STARTING`, `PAUSING`, `RESUMING`, or `STOPPING`, the controller updates `status_at`, so a transition behind the previous cursor lands in the next sweep instead of being skipped permanently.
 
 ## Telemetry and cluster detection
 

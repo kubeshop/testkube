@@ -3,10 +3,10 @@ package scheduling
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -71,27 +71,33 @@ func (a MongoExecutionQuerier) Starting(ctx context.Context) func(yield func(tes
 func (a *MongoExecutionQuerier) ByStatus(ctx context.Context, statuses []testkube.TestWorkflowStatus) func(yield func(testkube.TestWorkflowExecution, error) bool) {
 	return func(yield func(testkube.TestWorkflowExecution, error) bool) {
 		executions, err := a.byStatusPager.Next(
-			func(after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error) {
-				filter := bson.M{"result.status": bson.M{"$in": statuses}}
+			func(snapshotBefore time.Time, after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error) {
+				match := bson.M{
+					"result.status": bson.M{"$in": statuses},
+					"pendingAt":     bson.M{"$lte": snapshotBefore},
+				}
 				if after != nil {
-					filter = bson.M{"$and": bson.A{
-						filter,
-						bson.M{"$or": bson.A{
-							bson.M{"scheduledat": bson.M{"$gt": after.scheduledAt}},
-							bson.M{
-								"scheduledat": after.scheduledAt,
-								"id":          bson.M{"$gt": after.executionID},
-							},
-						}},
-					}}
+					match["$or"] = bson.A{
+						bson.M{"pendingAt": bson.M{"$gt": after.pendingAt}},
+						bson.M{
+							"pendingAt": after.pendingAt,
+							"id":        bson.M{"$gt": after.executionID},
+						},
+					}
 				}
 
-				cur, err := a.executionsCollection.Find(ctx, filter, options.Find().
-					SetSort(bson.D{
-						{Key: "scheduledat", Value: 1},
+				cur, err := a.executionsCollection.Aggregate(ctx, mongo.Pipeline{
+					{{Key: "$match", Value: bson.M{"result.status": bson.M{"$in": statuses}}}},
+					{{Key: "$addFields", Value: bson.M{
+						"pendingAt": bson.M{"$ifNull": bson.A{"$statusat", "$scheduledat"}},
+					}}},
+					{{Key: "$match", Value: match}},
+					{{Key: "$sort", Value: bson.D{
+						{Key: "pendingAt", Value: 1},
 						{Key: "id", Value: 1},
-					}).
-					SetLimit(int64(executionUpdatesBatchSize)))
+					}}},
+					{{Key: "$limit", Value: int64(executionUpdatesBatchSize)}},
+				})
 				if err != nil {
 					return nil, err
 				}
@@ -110,8 +116,12 @@ func (a *MongoExecutionQuerier) ByStatus(ctx context.Context, statuses []testkub
 				return executions, cur.Err()
 			},
 			func(exe testkube.TestWorkflowExecution) *executionBatchCursor {
+				pendingAt := exe.StatusAt
+				if pendingAt.IsZero() {
+					pendingAt = exe.ScheduledAt
+				}
 				return &executionBatchCursor{
-					scheduledAt: exe.ScheduledAt,
+					pendingAt:   pendingAt,
 					executionID: exe.Id,
 				}
 			},

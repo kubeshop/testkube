@@ -291,6 +291,15 @@ The Helm chart deploys:
 
 **Configuration**: See [`k8s/helm/testkube/values.yaml`](k8s/helm/testkube/values.yaml) for deployment configuration.
 
+## Standalone execution update polling
+
+In standalone / OSS mode, the in-cluster runner does not subscribe to a push queue. Instead it polls the built-in control plane over gRPC through [`pkg/runner/grpc/client.go`](pkg/runner/grpc/client.go) and [`pkg/controlplane/agent_grpc_execution_updates.go`](pkg/controlplane/agent_grpc_execution_updates.go).
+
+- The runner polls `GetExecutionUpdates` every second with a 30 second call deadline.
+- Failed polls use exponential backoff capped at 30 seconds, and the poll loop reuses the same computed delay for logging and sleeping so one failure advances the backoff state only once.
+- The control plane bounds each `ByStatus` read to a fixed batch (`executionUpdatesBatchSize`) using the helper in [`pkg/controlplane/scheduling/execution_batch_pager.go`](pkg/controlplane/scheduling/execution_batch_pager.go).
+- The pager is snapshot-based rather than open-ended: each sweep freezes a watermark on the pending transition time (`status_at`, with `scheduled_at` as fallback) and seeks forward by `(pending_at, execution_id)`. New executions or newly pending older executions are excluded from the current sweep and picked up on the next one, which prevents a continuous backlog from starving later pages while still revisiting older rows.
+
 ## CLI
 
 **Entry Point**: [`cmd/kubectl-testkube/main.go`](cmd/kubectl-testkube/main.go)

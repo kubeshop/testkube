@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -101,21 +102,26 @@ func (a *PostgresExecutionQuerier) executionIteratorByStatus(ctx context.Context
 		}
 
 		executions, err := a.byStatusPager.Next(
-			func(after *executionBatchCursor) ([]sqlc.GetExecutionsByStatusesRow, error) {
+			func(snapshotBefore time.Time, after *executionBatchCursor) ([]sqlc.GetExecutionsByStatusesRow, error) {
 				params := sqlc.GetExecutionsByStatusesParams{
 					Statuses:         status,
+					SnapshotBefore:   pgtype.Timestamptz{Time: snapshotBefore, Valid: true},
 					AfterExecutionID: "",
 					RowLimit:         int32(executionUpdatesBatchSize),
 				}
 				if after != nil {
-					params.AfterScheduledAt = pgtype.Timestamptz{Time: after.scheduledAt, Valid: true}
+					params.AfterPendingAt = pgtype.Timestamptz{Time: after.pendingAt, Valid: true}
 					params.AfterExecutionID = after.executionID
 				}
 				return a.db.GetExecutionsByStatuses(ctx, params)
 			},
 			func(row sqlc.GetExecutionsByStatusesRow) *executionBatchCursor {
+				pendingAt := row.TestWorkflowExecution.StatusAt.Time
+				if pendingAt.IsZero() {
+					pendingAt = row.TestWorkflowExecution.ScheduledAt.Time
+				}
 				return &executionBatchCursor{
-					scheduledAt: row.TestWorkflowExecution.ScheduledAt.Time,
+					pendingAt:   pendingAt,
 					executionID: row.TestWorkflowExecution.ID,
 				}
 			},

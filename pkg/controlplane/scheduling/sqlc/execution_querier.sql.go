@@ -103,17 +103,21 @@ FROM
         JOIN test_workflow_results r ON e.id = r.execution_id
 WHERE r.status = ANY($1::text[])
   AND (
-    $2::timestamptz IS NULL
-        OR e.scheduled_at > $2::timestamptz
-        OR (e.scheduled_at = $2::timestamptz AND e.id > $3::text)
+    COALESCE(e.status_at, e.scheduled_at) <= $2::timestamptz
     )
-ORDER BY e.scheduled_at, e.id
-LIMIT $4::int
+  AND (
+    $3::timestamptz IS NULL
+        OR COALESCE(e.status_at, e.scheduled_at) > $3::timestamptz
+        OR (COALESCE(e.status_at, e.scheduled_at) = $3::timestamptz AND e.id > $4::text)
+    )
+ORDER BY COALESCE(e.status_at, e.scheduled_at), e.id
+LIMIT $5::int
 `
 
 type GetExecutionsByStatusesParams struct {
 	Statuses         []string           `db:"statuses" json:"statuses"`
-	AfterScheduledAt pgtype.Timestamptz `db:"after_scheduled_at" json:"after_scheduled_at"`
+	SnapshotBefore   pgtype.Timestamptz `db:"snapshot_before" json:"snapshot_before"`
+	AfterPendingAt   pgtype.Timestamptz `db:"after_pending_at" json:"after_pending_at"`
 	AfterExecutionID string             `db:"after_execution_id" json:"after_execution_id"`
 	RowLimit         int32              `db:"row_limit" json:"row_limit"`
 }
@@ -126,7 +130,8 @@ type GetExecutionsByStatusesRow struct {
 func (q *Queries) GetExecutionsByStatuses(ctx context.Context, arg GetExecutionsByStatusesParams) ([]GetExecutionsByStatusesRow, error) {
 	rows, err := q.db.Query(ctx, getExecutionsByStatuses,
 		arg.Statuses,
-		arg.AfterScheduledAt,
+		arg.SnapshotBefore,
+		arg.AfterPendingAt,
 		arg.AfterExecutionID,
 		arg.RowLimit,
 	)

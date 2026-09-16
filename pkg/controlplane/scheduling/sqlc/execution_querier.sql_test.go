@@ -3,6 +3,7 @@ package sqlc
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/pashagolub/pgxmock/v5"
@@ -18,13 +19,14 @@ func TestGetExecutionsByStatuses_UsesLimit(t *testing.T) {
 	queries := New(mock)
 	rows := mock.NewRows([]string{"id"})
 
-	mock.ExpectQuery(`SELECT[\s\S]*WHERE r.status = ANY\(\$1::text\[\]\)[\s\S]*\$2::timestamptz IS NULL[\s\S]*ORDER BY e.scheduled_at, e.id[\s\S]*LIMIT \$4::int`).
-		WithArgs([]string{"assigned", "starting"}, pgtype.Timestamptz{}, "", int32(100)).
+	mock.ExpectQuery(`SELECT[\s\S]*WHERE r.status = ANY\(\$1::text\[\]\)[\s\S]*COALESCE\(e.status_at, e.scheduled_at\) <= \$2::timestamptz[\s\S]*\$3::timestamptz IS NULL[\s\S]*ORDER BY COALESCE\(e.status_at, e.scheduled_at\), e.id[\s\S]*LIMIT \$5::int`).
+		WithArgs([]string{"assigned", "starting"}, pgtype.Timestamptz{Time: time.Unix(1, 0), Valid: true}, pgtype.Timestamptz{}, "", int32(100)).
 		WillReturnRows(rows)
 
 	result, err := queries.GetExecutionsByStatuses(context.Background(), GetExecutionsByStatusesParams{
 		Statuses:         []string{"assigned", "starting"},
-		AfterScheduledAt: pgtype.Timestamptz{},
+		SnapshotBefore:   pgtype.Timestamptz{Time: time.Unix(1, 0), Valid: true},
+		AfterPendingAt:   pgtype.Timestamptz{},
 		AfterExecutionID: "",
 		RowLimit:         100,
 	})
