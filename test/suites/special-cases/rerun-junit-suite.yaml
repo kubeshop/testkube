@@ -162,15 +162,30 @@ spec:
 
       # A rerun keeps the chain's root and counts up from its base.
       #
-      # Deliberately no execution("rerun") here: this step runs on an original run
-      # too, and a step that runs resolves every expression in its script whichever
-      # branch the shell takes - so the reference would fail the original before it
-      # reached the comparison. Comparing the root against the base would also be
-      # wrong from attempt 3 on, where the base is the previous rerun rather than
-      # the chain root.
+      # Only lineage is asserted here, and that is the point. Two other things
+      # cannot be used in this step:
+      #
+      #   execution("rerun") - the step has no condition, so it runs on an
+      #   original too, and a step that runs resolves every expression in its
+      #   script whichever branch the shell takes.
+      #
+      #   execution.id - it is substituted while the workflow is prepared, and a
+      #   rerun replays the base's prepared spec, so on a rerun it still holds the
+      #   id of the run the snapshot came from. Comparing the chain root against
+      #   it therefore compares the original's id with the original's id and always
+      #   reports a rerun as its own root. Lineage is the only one of the two that
+      #   is resolved per execution, in the pod.
       [ '{{ execution.lineage.attempt }}' != '1' ] || { echo "a rerun cannot be attempt 1"; exit 1; }
-      [ '{{ execution.lineage.rootId }}' != '{{ execution.id }}' ] \
-        || { echo "a rerun must not be its own chain root"; exit 1; }
+      [ -n '{{ execution.lineage.rootId }}' ] || { echo "a rerun must name its chain root"; exit 1; }
+
+      # The base is non-empty by the branch above, so asserting that would prove
+      # nothing. What is worth proving is how the two relate: the first rerun's
+      # base IS the chain root, and from attempt 3 on it is the previous rerun
+      # instead - so this only holds at attempt 2 and is checked only there.
+      if [ '{{ execution.lineage.attempt }}' = '2' ]; then
+        [ '{{ execution.lineage.rootId }}' = '{{ execution.lineage.baseId }}' ] \
+          || { echo "the first rerun's base must be the chain root"; exit 1; }
+      fi
       [ "$RAN" = "1" ] || { echo "expected only the failed case repeated, ran $RAN"; exit 1; }
       [ "$FAILED" = "0" ] || { echo "expected the repeated case to pass, got $FAILED failures"; exit 1; }
       echo "rerun: 1 case, 0 failures, chain root {{ execution.lineage.rootId }}"
