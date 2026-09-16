@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/bson"
 
@@ -183,6 +184,94 @@ func TestMongoExecutionBatchPagerStartsFreshSnapshotAfterDrainAndIdlePoll(t *tes
 	)
 	require.NoError(t, err)
 	require.Equal(t, []string{"002"}, executionIDs(page))
+}
+
+func TestMongoExecutionBatchPagerDoesNotAdvanceOnRefillError(t *testing.T) {
+	base := time.Date(2026, 9, 16, 12, 0, 0, 0, time.UTC)
+	pager := mongoExecutionBatchPager{
+		snapshotBefore: base,
+		statusAtCursor: &executionBatchCursor{
+			pendingAt:   base.Add(-2 * time.Second),
+			executionID: "000",
+		},
+		statusAtBuffer: []testkube.TestWorkflowExecution{
+			{Id: "002", StatusAt: base.Add(2 * time.Second)},
+		},
+		scheduledAtBuffer: []testkube.TestWorkflowExecution{
+			{Id: "001", ScheduledAt: base.Add(1 * time.Second)},
+		},
+		scheduledExhausted: true,
+		now:                func() time.Time { return base },
+	}
+
+	statusRefillCalls := 0
+	fetchStatusAt := func(_ time.Time, after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error) {
+		statusRefillCalls++
+		require.Equal(t, "002", after.executionID)
+		if statusRefillCalls == 1 {
+			return nil, assert.AnError
+		}
+		return []testkube.TestWorkflowExecution{
+			{Id: "003", StatusAt: base.Add(3 * time.Second)},
+		}, nil
+	}
+	fetchScheduledAt := func(_ time.Time, _ *executionBatchCursor) ([]testkube.TestWorkflowExecution, error) {
+		return nil, nil
+	}
+
+	page, err := pager.Next(fetchStatusAt, fetchScheduledAt)
+	require.ErrorIs(t, err, assert.AnError)
+	require.Nil(t, page)
+	require.Equal(t, []string{"002"}, executionIDs(pager.statusAtBuffer))
+	require.Equal(t, []string{"001"}, executionIDs(pager.scheduledAtBuffer))
+	require.Equal(t, "000", pager.statusAtCursor.executionID)
+
+	page, err = pager.Next(fetchStatusAt, fetchScheduledAt)
+	require.NoError(t, err)
+	require.Equal(t, []string{"001", "002", "003"}, executionIDs(page))
+}
+
+func TestMongoExecutionBatchPagerPreservesSuccessfulRefillWhenSiblingRefillFails(t *testing.T) {
+	base := time.Date(2026, 9, 16, 12, 0, 0, 0, time.UTC)
+	pager := mongoExecutionBatchPager{
+		snapshotBefore: base,
+		statusAtBuffer: []testkube.TestWorkflowExecution{
+			{Id: "001", StatusAt: base},
+		},
+		scheduledAtBuffer: []testkube.TestWorkflowExecution{
+			{Id: "002", ScheduledAt: base.Add(2 * time.Second)},
+		},
+		now: func() time.Time { return base },
+	}
+
+	statusRefillCalls := 0
+	fetchStatusAt := func(_ time.Time, after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error) {
+		statusRefillCalls++
+		require.Equal(t, "001", after.executionID)
+		return []testkube.TestWorkflowExecution{
+			{Id: "003", StatusAt: base.Add(3 * time.Second)},
+		}, nil
+	}
+
+	scheduledRefillCalls := 0
+	fetchScheduledAt := func(_ time.Time, after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error) {
+		scheduledRefillCalls++
+		require.Equal(t, "002", after.executionID)
+		if scheduledRefillCalls == 1 {
+			return nil, assert.AnError
+		}
+		return nil, nil
+	}
+
+	page, err := pager.Next(fetchStatusAt, fetchScheduledAt)
+	require.ErrorIs(t, err, assert.AnError)
+	require.Nil(t, page)
+	require.Equal(t, []string{"001", "003"}, executionIDs(pager.statusAtBuffer))
+	require.Equal(t, []string{"002"}, executionIDs(pager.scheduledAtBuffer))
+
+	page, err = pager.Next(fetchStatusAt, fetchScheduledAt)
+	require.NoError(t, err)
+	require.Equal(t, []string{"001", "002", "003"}, executionIDs(page))
 }
 
 func filterAfter(executions []testkube.TestWorkflowExecution, after *executionBatchCursor, limit int) []testkube.TestWorkflowExecution {

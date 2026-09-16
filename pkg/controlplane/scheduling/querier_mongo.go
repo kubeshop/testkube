@@ -190,6 +190,17 @@ type mongoExecutionBatchPager struct {
 	now                func() time.Time
 }
 
+type mongoExecutionBatchPagerState struct {
+	statusAtCursor     *executionBatchCursor
+	scheduledAtCursor  *executionBatchCursor
+	statusAtBuffer     []testkube.TestWorkflowExecution
+	scheduledAtBuffer  []testkube.TestWorkflowExecution
+	statusAtOffset     int
+	scheduledAtOffset  int
+	statusAtExhausted  bool
+	scheduledExhausted bool
+}
+
 func (p *mongoExecutionBatchPager) Next(
 	fetchStatusAt func(snapshotBefore time.Time, after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error),
 	fetchScheduledAt func(snapshotBefore time.Time, after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error),
@@ -229,73 +240,91 @@ func (p *mongoExecutionBatchPager) fetchPage(
 	fetchStatusAt func(snapshotBefore time.Time, after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error),
 	fetchScheduledAt func(snapshotBefore time.Time, after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error),
 ) ([]testkube.TestWorkflowExecution, error) {
+	base := p.state()
+	state := base
 	items := make([]testkube.TestWorkflowExecution, 0, executionUpdatesBatchSize)
 	for len(items) < executionUpdatesBatchSize {
-		if err := p.fillBuffer(&p.statusAtBuffer, &p.statusAtExhausted, p.statusAtCursor, fetchStatusAt); err != nil {
+		if err := state.fillBuffer(p.snapshotBefore, &state.statusAtBuffer, &state.statusAtExhausted, state.statusAtCursor, fetchStatusAt); err != nil {
+			p.restoreFetchedState(base, state)
 			return nil, err
 		}
-		if err := p.fillBuffer(&p.scheduledAtBuffer, &p.scheduledExhausted, p.scheduledAtCursor, fetchScheduledAt); err != nil {
+		if err := state.fillBuffer(p.snapshotBefore, &state.scheduledAtBuffer, &state.scheduledExhausted, state.scheduledAtCursor, fetchScheduledAt); err != nil {
+			p.restoreFetchedState(base, state)
 			return nil, err
 		}
 
-		next, source := p.nextExecution()
+		next, source := state.nextExecution()
 		if source == "" {
 			break
 		}
 		items = append(items, next)
-		p.advance(source)
+		state.advance(source)
 	}
 
 	if len(items) == 0 {
+		p.restoreState(state)
 		return nil, nil
 	}
+	p.restoreState(state)
 	return items, nil
 }
 
-func (p *mongoExecutionBatchPager) fillBuffer(
+func (s *mongoExecutionBatchPagerState) fillBuffer(
+	snapshotBefore time.Time,
 	buffer *[]testkube.TestWorkflowExecution,
 	exhausted *bool,
 	after *executionBatchCursor,
 	fetch func(snapshotBefore time.Time, after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error),
 ) error {
-	if *exhausted || len(*buffer) > 0 {
+	if *exhausted || s.bufferHasItems(buffer) {
 		return nil
 	}
 
-	items, err := fetch(p.snapshotBefore, after)
+	items, err := fetch(snapshotBefore, after)
 	if err != nil {
 		return err
 	}
-	*buffer = items
+	*buffer = append(*buffer, items...)
 	if len(items) < executionUpdatesBatchSize {
 		*exhausted = true
 	}
 	return nil
 }
 
-func (p *mongoExecutionBatchPager) nextExecution() (testkube.TestWorkflowExecution, string) {
+func (s *mongoExecutionBatchPagerState) nextExecution() (testkube.TestWorkflowExecution, string) {
 	switch {
-	case len(p.statusAtBuffer) == 0 && len(p.scheduledAtBuffer) == 0:
+	case s.statusAtOffset >= len(s.statusAtBuffer) && s.scheduledAtOffset >= len(s.scheduledAtBuffer):
 		return testkube.TestWorkflowExecution{}, ""
-	case len(p.scheduledAtBuffer) == 0:
-		return p.statusAtBuffer[0], "status"
-	case len(p.statusAtBuffer) == 0:
-		return p.scheduledAtBuffer[0], "scheduled"
-	case pendingExecutionLess(p.statusAtBuffer[0], p.scheduledAtBuffer[0]):
-		return p.statusAtBuffer[0], "status"
+	case s.scheduledAtOffset >= len(s.scheduledAtBuffer):
+		return s.statusAtBuffer[s.statusAtOffset], "status"
+	case s.statusAtOffset >= len(s.statusAtBuffer):
+		return s.scheduledAtBuffer[s.scheduledAtOffset], "scheduled"
+	case pendingExecutionLess(s.statusAtBuffer[s.statusAtOffset], s.scheduledAtBuffer[s.scheduledAtOffset]):
+		return s.statusAtBuffer[s.statusAtOffset], "status"
 	default:
-		return p.scheduledAtBuffer[0], "scheduled"
+		return s.scheduledAtBuffer[s.scheduledAtOffset], "scheduled"
 	}
 }
 
-func (p *mongoExecutionBatchPager) advance(source string) {
+func (s *mongoExecutionBatchPagerState) advance(source string) {
 	switch source {
 	case "status":
-		p.statusAtCursor = executionCursorOf(p.statusAtBuffer[0])
-		p.statusAtBuffer = p.statusAtBuffer[1:]
+		s.statusAtCursor = executionCursorOf(s.statusAtBuffer[s.statusAtOffset])
+		s.statusAtOffset++
 	case "scheduled":
-		p.scheduledAtCursor = executionCursorOf(p.scheduledAtBuffer[0])
-		p.scheduledAtBuffer = p.scheduledAtBuffer[1:]
+		s.scheduledAtCursor = executionCursorOf(s.scheduledAtBuffer[s.scheduledAtOffset])
+		s.scheduledAtOffset++
+	}
+}
+
+func (s *mongoExecutionBatchPagerState) bufferHasItems(buffer *[]testkube.TestWorkflowExecution) bool {
+	switch {
+	case buffer == &s.statusAtBuffer:
+		return s.statusAtOffset < len(s.statusAtBuffer)
+	case buffer == &s.scheduledAtBuffer:
+		return s.scheduledAtOffset < len(s.scheduledAtBuffer)
+	default:
+		return len(*buffer) > 0
 	}
 }
 
@@ -327,6 +356,43 @@ func (p *mongoExecutionBatchPager) clearProgress() {
 	p.scheduledAtBuffer = nil
 	p.statusAtExhausted = false
 	p.scheduledExhausted = false
+}
+
+func (p *mongoExecutionBatchPager) state() mongoExecutionBatchPagerState {
+	return mongoExecutionBatchPagerState{
+		statusAtCursor:     cloneExecutionBatchCursor(p.statusAtCursor),
+		scheduledAtCursor:  cloneExecutionBatchCursor(p.scheduledAtCursor),
+		statusAtBuffer:     append([]testkube.TestWorkflowExecution(nil), p.statusAtBuffer...),
+		scheduledAtBuffer:  append([]testkube.TestWorkflowExecution(nil), p.scheduledAtBuffer...),
+		statusAtExhausted:  p.statusAtExhausted,
+		scheduledExhausted: p.scheduledExhausted,
+	}
+}
+
+func (p *mongoExecutionBatchPager) restoreState(state mongoExecutionBatchPagerState) {
+	p.statusAtCursor = cloneExecutionBatchCursor(state.statusAtCursor)
+	p.scheduledAtCursor = cloneExecutionBatchCursor(state.scheduledAtCursor)
+	p.statusAtBuffer = append([]testkube.TestWorkflowExecution(nil), state.statusAtBuffer[state.statusAtOffset:]...)
+	p.scheduledAtBuffer = append([]testkube.TestWorkflowExecution(nil), state.scheduledAtBuffer[state.scheduledAtOffset:]...)
+	p.statusAtExhausted = state.statusAtExhausted
+	p.scheduledExhausted = state.scheduledExhausted
+}
+
+func (p *mongoExecutionBatchPager) restoreFetchedState(base, working mongoExecutionBatchPagerState) {
+	p.statusAtCursor = cloneExecutionBatchCursor(base.statusAtCursor)
+	p.scheduledAtCursor = cloneExecutionBatchCursor(base.scheduledAtCursor)
+	p.statusAtBuffer = append([]testkube.TestWorkflowExecution(nil), working.statusAtBuffer...)
+	p.scheduledAtBuffer = append([]testkube.TestWorkflowExecution(nil), working.scheduledAtBuffer...)
+	p.statusAtExhausted = working.statusAtExhausted
+	p.scheduledExhausted = working.scheduledExhausted
+}
+
+func cloneExecutionBatchCursor(cursor *executionBatchCursor) *executionBatchCursor {
+	if cursor == nil {
+		return nil
+	}
+	cloned := *cursor
+	return &cloned
 }
 
 func (p *mongoExecutionBatchPager) currentTime() time.Time {
