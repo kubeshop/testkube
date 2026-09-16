@@ -258,6 +258,14 @@ spec:
     #
     # This runs the workflow's current definition rather than replaying the
     # base's snapshot, which is the same thing `--latest` does on the CLI.
+    #
+    # optional so that the step after this one gets to speak. If the base never
+    # arrives - pruned from the stored workflow because the cluster's CRD or the
+    # API server does not know the field yet - the child runs as an original,
+    # fails on purpose, and this step reports nothing but "1 of 1 executions
+    # failed", which looks the same as a broken rerun. Letting it through means
+    # the assertions below name what actually happened: attempt 1 instead of 2.
+    optional: true
     execute:
       workflows:
       - name: tw-rerun-junit
@@ -268,6 +276,14 @@ spec:
     shell: |
       set -e
       echo "attempt: {{ execution("repeat").outputs.attempt }}"
+      # Attempt 1 means the execution was scheduled without a base at all, so it
+      # was never a rerun. That is not this suite failing its own assertion - it
+      # means baseExecutionId did not survive being stored: the cluster's
+      # TestWorkflow CRD or the API server does not carry the field yet, and it
+      # was dropped in silence on the way in. Check with
+      #   kubectl get testworkflow tw-rerun-junit-suite -o yaml | grep baseExecutionId
+      [ '{{ execution("repeat").outputs.attempt }}' != '1' ] \
+        || { echo "scheduled as an original: baseExecutionId never reached the scheduler"; exit 1; }
       [ '{{ execution("repeat").outputs.attempt }}' = '2' ] \
         || { echo "a rerun of the original must be attempt 2"; exit 1; }
       [ '{{ execution("repeat").outputs.isRerun }}' = 'yes' ] \
