@@ -1,0 +1,15 @@
+[
+  {
+    "createIndexes": "workflowresults",
+    "indexes": [
+      {
+        "key": {"result.status": 1, "statusat": 1, "id": 1},
+        "name": "result.status_1_statusat_1_id_1"
+      },
+      {
+        "key": {"result.status": 1, "scheduledat": 1, "id": 1},
+        "name": "result.status_1_scheduledat_1_id_1"
+      }
+    ]
+  }
+]

@@ -7,6 +7,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -18,11 +19,12 @@ import (
 // will ever be yielded by the iterator functions.
 type MongoExecutionQuerier struct {
 	executionsCollection *mongo.Collection
+	allowDiskUse         bool
 	byStatusPager        executionBatchPager[testkube.TestWorkflowExecution]
 }
 
-func NewMongoExecutionQuerier(col *mongo.Collection) *MongoExecutionQuerier {
-	return &MongoExecutionQuerier{executionsCollection: col}
+func NewMongoExecutionQuerier(col *mongo.Collection, allowDiskUse bool) *MongoExecutionQuerier {
+	return &MongoExecutionQuerier{executionsCollection: col, allowDiskUse: allowDiskUse}
 }
 
 // Pausing yields an iterator returning all executions assigned to the runner indicated
@@ -72,56 +74,21 @@ func (a *MongoExecutionQuerier) ByStatus(ctx context.Context, statuses []testkub
 	return func(yield func(testkube.TestWorkflowExecution, error) bool) {
 		executions, err := a.byStatusPager.Next(
 			func(snapshotBefore time.Time, after *executionBatchCursor) ([]testkube.TestWorkflowExecution, error) {
-				match := bson.M{
-					"result.status": bson.M{"$in": statuses},
-					"pendingAt":     bson.M{"$lte": snapshotBefore},
-				}
-				if after != nil {
-					match["$or"] = bson.A{
-						bson.M{"pendingAt": bson.M{"$gt": after.pendingAt}},
-						bson.M{
-							"pendingAt": after.pendingAt,
-							"id":        bson.M{"$gt": after.executionID},
-						},
-					}
-				}
-
-				cur, err := a.executionsCollection.Aggregate(ctx, mongo.Pipeline{
-					{{Key: "$match", Value: bson.M{"result.status": bson.M{"$in": statuses}}}},
-					{{Key: "$addFields", Value: bson.M{
-						"pendingAt": bson.M{"$ifNull": bson.A{"$statusat", "$scheduledat"}},
-					}}},
-					{{Key: "$match", Value: match}},
-					{{Key: "$sort", Value: bson.D{
-						{Key: "pendingAt", Value: 1},
-						{Key: "id", Value: 1},
-					}}},
-					{{Key: "$limit", Value: int64(executionUpdatesBatchSize)}},
-				})
+				withStatusAt, err := a.findPendingExecutions(ctx, statuses, snapshotBefore, after, "statusat", true)
 				if err != nil {
 					return nil, err
 				}
-				defer func() {
-					_ = cur.Close(ctx)
-				}()
 
-				var executions []testkube.TestWorkflowExecution
-				for cur.Next(ctx) {
-					var exe testkube.TestWorkflowExecution
-					if err := cur.Decode(&exe); err != nil {
-						return nil, err
-					}
-					executions = append(executions, exe)
+				withScheduledAt, err := a.findPendingExecutions(ctx, statuses, snapshotBefore, after, "scheduledat", false)
+				if err != nil {
+					return nil, err
 				}
-				return executions, cur.Err()
+
+				return mergePendingExecutions(withStatusAt, withScheduledAt, executionUpdatesBatchSize), nil
 			},
 			func(exe testkube.TestWorkflowExecution) *executionBatchCursor {
-				pendingAt := exe.StatusAt
-				if pendingAt.IsZero() {
-					pendingAt = exe.ScheduledAt
-				}
 				return &executionBatchCursor{
-					pendingAt:   pendingAt,
+					pendingAt:   pendingExecutionTime(exe),
 					executionID: exe.Id,
 				}
 			},
@@ -136,6 +103,113 @@ func (a *MongoExecutionQuerier) ByStatus(ctx context.Context, statuses []testkub
 			}
 		}
 	}
+}
+
+func (a *MongoExecutionQuerier) findPendingExecutions(
+	ctx context.Context,
+	statuses []testkube.TestWorkflowStatus,
+	snapshotBefore time.Time,
+	after *executionBatchCursor,
+	pendingField string,
+	hasStatusAt bool,
+) ([]testkube.TestWorkflowExecution, error) {
+	opts := options.Find().
+		SetSort(bson.D{{Key: pendingField, Value: 1}, {Key: "id", Value: 1}}).
+		SetLimit(int64(executionUpdatesBatchSize))
+	if a.allowDiskUse {
+		opts.SetAllowDiskUse(true)
+	}
+
+	cur, err := a.executionsCollection.Find(ctx, pendingExecutionFilter(statuses, snapshotBefore, after, pendingField, hasStatusAt), opts)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = cur.Close(ctx)
+	}()
+
+	var executions []testkube.TestWorkflowExecution
+	for cur.Next(ctx) {
+		var exe testkube.TestWorkflowExecution
+		if err := cur.Decode(&exe); err != nil {
+			return nil, err
+		}
+		executions = append(executions, exe)
+	}
+	return executions, cur.Err()
+}
+
+func pendingExecutionFilter(
+	statuses []testkube.TestWorkflowStatus,
+	snapshotBefore time.Time,
+	after *executionBatchCursor,
+	pendingField string,
+	hasStatusAt bool,
+) bson.M {
+	clauses := bson.A{
+		bson.M{"result.status": bson.M{"$in": statuses}},
+		bson.M{pendingField: bson.M{"$lte": snapshotBefore}},
+	}
+
+	if hasStatusAt {
+		clauses = append(clauses, bson.M{"statusat": bson.M{"$gt": time.Time{}}})
+	} else {
+		clauses = append(clauses, bson.M{"$or": bson.A{
+			bson.M{"statusat": bson.M{"$exists": false}},
+			bson.M{"statusat": nil},
+			bson.M{"statusat": time.Time{}},
+		}})
+	}
+
+	if after != nil {
+		clauses = append(clauses, bson.M{"$or": bson.A{
+			bson.M{pendingField: bson.M{"$gt": after.pendingAt}},
+			bson.M{
+				pendingField: after.pendingAt,
+				"id":         bson.M{"$gt": after.executionID},
+			},
+		}})
+	}
+
+	return bson.M{"$and": clauses}
+}
+
+func mergePendingExecutions(withStatusAt, withScheduledAt []testkube.TestWorkflowExecution, limit int) []testkube.TestWorkflowExecution {
+	executions := make([]testkube.TestWorkflowExecution, 0, limit)
+	i, j := 0, 0
+	for len(executions) < limit && (i < len(withStatusAt) || j < len(withScheduledAt)) {
+		switch {
+		case j >= len(withScheduledAt):
+			executions = append(executions, withStatusAt[i])
+			i++
+		case i >= len(withStatusAt):
+			executions = append(executions, withScheduledAt[j])
+			j++
+		case pendingExecutionLess(withStatusAt[i], withScheduledAt[j]):
+			executions = append(executions, withStatusAt[i])
+			i++
+		default:
+			executions = append(executions, withScheduledAt[j])
+			j++
+		}
+	}
+	return executions
+}
+
+func pendingExecutionLess(left, right testkube.TestWorkflowExecution) bool {
+	leftPendingAt := pendingExecutionTime(left)
+	rightPendingAt := pendingExecutionTime(right)
+	if leftPendingAt.Equal(rightPendingAt) {
+		return left.Id < right.Id
+	}
+	return leftPendingAt.Before(rightPendingAt)
+}
+
+func pendingExecutionTime(exe testkube.TestWorkflowExecution) time.Time {
+	if !exe.StatusAt.IsZero() {
+		return exe.StatusAt
+	}
+	return exe.ScheduledAt
 }
 
 func (a *MongoExecutionQuerier) executionIterator(ctx context.Context, filter any) func(yield func(testkube.TestWorkflowExecution, error) bool) {

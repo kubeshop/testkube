@@ -70,7 +70,7 @@ func (f *MongoDBFactory) NewExecutionController() scheduling.Controller {
 }
 
 func (f *MongoDBFactory) NewExecutionQuerier() scheduling.ExecutionQuerier {
-	return scheduling.NewMongoExecutionQuerier(f.db.Collection(testworkflowmongo.CollectionName))
+	return scheduling.NewMongoExecutionQuerier(f.db.Collection(testworkflowmongo.CollectionName), f.allowDiskUse)
 }
 
 func (f *MongoDBFactory) NewSequenceRepository() sequence.Repository {
