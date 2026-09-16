@@ -165,7 +165,7 @@ func buildWorkflowExecution(req workflowExecutionRequest) func() error {
 				DisableWebhooks: config.ExecutionDisableWebhooks(),
 				Tags:            tags,
 				Target:          target,
-			})
+			}, workflow.BaseExecutionId)
 			if err == nil {
 				break
 			}

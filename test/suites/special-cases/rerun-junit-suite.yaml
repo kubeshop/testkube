@@ -199,12 +199,13 @@ metadata:
     core-tests: rerun-junit
     type: suite
 spec:
-  # Covers the half of the rerun story a workflow can reach on its own: that an
-  # original run records its lineage, and that the report a rerun narrows down to
-  # is really there to be read.
+  # Drives the whole loop: run the suite once and let it fail, check what the
+  # original recorded, then rerun that execution with execute's baseExecutionId
+  # and check the rerun narrowed itself to the one case that failed and passed.
   #
-  # Rerunning goes through the rerun API rather than through a step, so the
-  # second half is the manual command documented in tw-rerun-junit above.
+  # The manual command in tw-rerun-junit above goes through the rerun API and
+  # replays the base's snapshot; this goes through the scheduler with the current
+  # definition. Both end up with the same lineage, which is what the child reads.
   container:
     resources:
       requests:
@@ -245,3 +246,43 @@ spec:
       grep -qE '<failure|<error' /data/previous.xml \
         || { echo "the report records no failure to rerun"; exit 1; }
       echo "the rerun has a report with a failure to narrow down to"
+
+  - name: Rerun it, narrowing to the case that failed
+    # baseExecutionId is what makes this a rerun rather than another first run:
+    # the control plane derives the lineage from it, so the scheduled execution
+    # resolves execution("rerun") back to the run above. Without it, execute
+    # always schedules an original and the child can only ever take its
+    # whole-suite branch.
+    #
+    # The base has to be one this suite may read, and it is - the suite ran it.
+    #
+    # This runs the workflow's current definition rather than replaying the
+    # base's snapshot, which is the same thing `--latest` does on the CLI.
+    execute:
+      workflows:
+      - name: tw-rerun-junit
+        as: repeat
+        baseExecutionId: '{{ execution("r").id }}'
+
+  - name: Check the rerun narrowed itself and passed
+    shell: |
+      set -e
+      echo "attempt: {{ execution("repeat").outputs.attempt }}"
+      [ '{{ execution("repeat").outputs.attempt }}' = '2' ] \
+        || { echo "a rerun of the original must be attempt 2"; exit 1; }
+      [ '{{ execution("repeat").outputs.isRerun }}' = 'yes' ] \
+        || { echo "a rerun must report a base"; exit 1; }
+      # The chain root stays the original, which is the whole point of rootId.
+      [ '{{ execution("repeat").outputs.rootId }}' = '{{ execution("r").id }}' ] \
+        || { echo "a rerun must keep the original as its chain root"; exit 1; }
+      # It passed, unlike the run it descends from - the narrowing worked and the
+      # one failing case was the only thing repeated.
+      [ '{{ execution("repeat").status }}' = 'passed' ] \
+        || { echo "the rerun should pass, got {{ execution("repeat").status }}"; exit 1; }
+
+      printf '%s' {{ shellquote(read_artifact("repeat", "junit/report.xml")) }} > /data/rerun.xml
+      RAN=$(grep -c '<testcase' /data/rerun.xml)
+      [ "$RAN" = "1" ] || { echo "expected the rerun to repeat one case, ran $RAN"; exit 1; }
+      grep -q 'name="ShouldFail"' /data/rerun.xml \
+        || { echo "the rerun repeated the wrong case"; exit 1; }
+      echo "rerun: attempt 2, 1 case, passed, chain root {{ execution("r").id }}"
