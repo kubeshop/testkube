@@ -9229,6 +9229,8 @@ components:
         pausedMs:
           type: integer
           description: Pause duration in milliseconds
+        statusDetails:
+          $ref: "#/components/schemas/TestWorkflowStatusDetails"
       required:
         - status
         - predictedStatus
@@ -9465,12 +9467,56 @@ components:
           type: object
           additionalProperties:
             $ref: "#/components/schemas/TestWorkflowStepResult"
+        statusDetails:
+          $ref: "#/components/schemas/TestWorkflowStatusDetails"
       required:
         - status
         - predictedStatus
         - durationMs
         - pausedMs
         - totalDurationMs
+
+    TestWorkflowStatusDetails:
+      type: object
+      description: |
+        Why an execution did not pass. Present on every terminal status except passed.
+        The type names the layer that failed and the reason names the cause.
+      properties:
+        type:
+          type: string
+          enum:
+            - init-failure
+            - execution-failure
+            - step-failure
+            - user-cancel
+            - unknown
+          description: the layer that failed
+        reason:
+          type: string
+          description: code of the cause, for example unschedulable or oom-killed
+        message:
+          type: string
+          description: the message of the step that holds the cause, verbatim
+        step:
+          type: string
+          description: reference of the step that holds the cause; empty when the initialization step holds it
+        actor:
+          type: string
+          description: code of the component that decided the stop, for example user or control-plane
+        user:
+          $ref: "#/components/schemas/TestWorkflowStatusDetailsUser"
+      required:
+        - type
+        - reason
+
+    TestWorkflowStatusDetailsUser:
+      type: object
+      description: the person who canceled the execution; the control plane fills it
+      properties:
+        name:
+          type: string
+        email:
+          type: string
 
     TestWorkflowPause:
       type: object

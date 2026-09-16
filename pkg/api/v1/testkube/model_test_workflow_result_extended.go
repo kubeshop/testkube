@@ -298,6 +298,7 @@ func (r *TestWorkflowResult) Clone() *TestWorkflowResult {
 		TotalDurationMs: r.DurationMs + r.PausedMs,
 		Initialization:  r.Initialization.Clone(),
 		Steps:           steps,
+		StatusDetails:   r.StatusDetails.Clone(),
 	}
 }
 
