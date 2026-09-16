@@ -6,6 +6,7 @@ import (
 	"slices"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
@@ -302,11 +303,39 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			return
 		}
 
+		// Kubernetes can stop the pod after the last step ended, for example when it removes a sidecar.
+		// The watch can end before the events of that stop arrive, so it reads the events one more time.
+		watcher.RefreshPodEvents(ctx)
+		notifyTeardownEvents(notifier, eventsSince(watcher.State().PodEvents().Original(), currentPodEventsIndex), executionId)
+
 		// Mark as finished
 		notifier.Align(watcher.State())
 	}()
 
 	return notifier.ch, nil
+}
+
+// teardownEventReasons are the pod events that report a stop of the pod, after the step containers ran.
+var teardownEventReasons = []string{"Killing", "FailedPreStopHook"}
+
+// eventsSince returns the events after the index that the watch reached, and no event when the
+// index is at the end. The caller then needs no bound check of its own.
+func eventsSince(events []*corev1.Event, from int) []*corev1.Event {
+	if from >= len(events) {
+		return nil
+	}
+	return events[from:]
+}
+
+// notifyTeardownEvents sends the events that report a stop of the pod.
+// The result of the steps stands, so these events are warnings that explain the stop, and not a cause.
+// Kubernetes marks the Killing event as normal, and a normal event only reaches the log while the watch runs.
+func notifyTeardownEvents(n *notifier, events []*corev1.Event, executionId string) {
+	for _, ev := range events {
+		if slices.Contains(teardownEventReasons, ev.Reason) {
+			n.Event("", watchers2.GetEventTimestamp(ev), corev1.EventTypeWarning, ev.Reason, ev.Message, executionId)
+		}
+	}
 }
 
 // alignChangedCause sends the result only when the cause changes, because a result on each update is too many.
