@@ -10102,6 +10102,9 @@ components:
             description: instructions for downloading artifacts produced by executed test workflows
             items:
               $ref: "#/components/schemas/TestWorkflowStepExecuteFetch"
+          baseExecutionId:
+            type: string
+            description: id of the execution to record this one as a rerun of, so that it resolves execution("rerun"). Runs the current definition, not the base's snapshot. The base must be one the scheduling execution may itself read.
           selector:
             $ref: "#/components/schemas/LabelSelector"
             description: label selector for test workflow

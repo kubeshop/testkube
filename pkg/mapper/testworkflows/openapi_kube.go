@@ -1074,6 +1074,10 @@ func MapStepExecuteTestWorkflowAPIToKube(v testkube.TestWorkflowStepExecuteTestW
 		Tarball:       common.MapMap(v.Tarball, MapTarballRequestAPIToKube),
 		Config:        MapConfigValueAPIToKube(v.Config),
 		Fetch:         common.MapSlice(v.Fetch, MapStepExecuteFetchAPIToKube),
+		// Both directions map field by field, so a field missing from either is
+		// dropped in silence - which for this one would turn a rerun back into a
+		// first run for every workflow stored through the API.
+		BaseExecutionId: v.BaseExecutionId,
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
 			Count:    MapBoxedStringToConfigValue(v.Count),
 			MaxCount: MapBoxedStringToConfigValue(v.MaxCount),
