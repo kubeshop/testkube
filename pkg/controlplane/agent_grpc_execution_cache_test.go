@@ -52,7 +52,7 @@ func expectExecution(repository *testworkflow.MockRepository, workflowName strin
 // cacheObject is where an entry for the given key belongs, computed the same way the
 // agent and the commercial control plane compute it.
 func cacheObject(scope executioncache.Scope, key string) string {
-	return executioncache.ObjectName(cacheTestEnv, cacheTestWorkflow, scope, key)
+	return executioncache.ObjectName(cacheTestEnv, cacheTestWorkflow, scope, executioncache.BaseNamespace, key)
 }
 
 // expectExactProbe mirrors the handler's direct lookup of the exact key.
@@ -322,7 +322,7 @@ func TestCacheObjectNamesAreConfined(t *testing.T) {
 		server, storageClient, repository := newCacheServer(t)
 		expectExecution(repository, cacheTestWorkflow)
 
-		scopePrefix := executioncache.ScopePrefix(cacheTestEnv, cacheTestWorkflow, executioncache.ScopeWorkflow)
+		scopePrefix := executioncache.ScopePrefix(cacheTestEnv, cacheTestWorkflow, executioncache.ScopeWorkflow, executioncache.BaseNamespace)
 		storageClient.EXPECT().
 			ListObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), 1).
 			DoAndReturn(func(_ context.Context, _, objectName string, _ int) ([]storage.ObjectInfo, error) {
@@ -406,4 +406,188 @@ func TestSaveExecutionCachePresignedReturnsTheCondition(t *testing.T) {
 	assert.Equal(t, "https://storage/put", res.Url)
 	assert.Equal(t, map[string]string{"If-None-Match": "*"}, res.RequiredHeaders,
 		"the agent cannot satisfy a signed condition it was not told about")
+}
+
+// expectPullRequestExecution makes the repository answer with a running execution that
+// the trigger recorded git metadata on, which is how a pull request's run is recognised.
+//
+// The config is written server-side when the execution is scheduled. That is the whole
+// reason it can be trusted for this: the author of a pull request controls the code its
+// run executes, so anything that travelled with the agent's request would let them pick
+// the namespace they write into.
+func expectPullRequestExecution(repository *testworkflow.MockRepository, prNumber string) {
+	repository.EXPECT().Get(gomock.Any(), "exec-1").Return(testkube.TestWorkflowExecution{
+		Id:       "exec-1",
+		Workflow: &testkube.TestWorkflow{Name: cacheTestWorkflow},
+		ConfigParams: map[string]testkube.TestWorkflowExecutionConfigValue{
+			configKeyPRNumber: {Value: prNumber},
+		},
+	}, nil).AnyTimes()
+}
+
+func prCacheObject(prNumber string, scope executioncache.Scope, key string) string {
+	return executioncache.ObjectName(cacheTestEnv, cacheTestWorkflow, scope,
+		executioncache.PullRequestNamespace(prNumber), key)
+}
+
+// TestResolveNamespaces pins which runs are treated as a pull request's.
+//
+// Everything that is not one shares the base namespace - a push to any branch, a tag, a
+// schedule, a manual run - so the ordinary case keeps a single cache rather than
+// fragmenting into one per branch, which is what would quietly destroy the hit rate.
+func TestResolveNamespaces(t *testing.T) {
+	base := executioncache.BaseNamespace
+
+	t.Run("a run with no git metadata is trusted", func(t *testing.T) {
+		namespace, readOnly := resolveNamespaces(nil)
+		assert.Equal(t, base, namespace)
+		assert.Empty(t, readOnly, "a trusted run already writes the namespace it would fall back to")
+	})
+
+	t.Run("a push is trusted", func(t *testing.T) {
+		namespace, readOnly := resolveNamespaces(map[string]testkube.TestWorkflowExecutionConfigValue{
+			"TESTKUBE_GIT_BRANCH": {Value: "main"},
+			"TESTKUBE_GIT_COMMIT": {Value: "abc123"},
+		})
+		assert.Equal(t, base, namespace)
+		assert.Empty(t, readOnly)
+	})
+
+	t.Run("a pull request writes its own namespace and reads the base one", func(t *testing.T) {
+		namespace, readOnly := resolveNamespaces(map[string]testkube.TestWorkflowExecutionConfigValue{
+			configKeyPRNumber: {Value: "42"},
+		})
+		assert.Equal(t, executioncache.PullRequestNamespace("42"), namespace)
+		assert.Equal(t, base, readOnly)
+	})
+
+	t.Run("the head ref identifies it when no number was reported", func(t *testing.T) {
+		namespace, _ := resolveNamespaces(map[string]testkube.TestWorkflowExecutionConfigValue{
+			configKeyPRHeadRef: {Value: "feature/login"},
+		})
+		assert.Equal(t, executioncache.PullRequestNamespace("feature/login"), namespace)
+	})
+
+	t.Run("an empty value is not a pull request", func(t *testing.T) {
+		namespace, readOnly := resolveNamespaces(map[string]testkube.TestWorkflowExecutionConfigValue{
+			configKeyPRNumber:  {Value: ""},
+			configKeyPRHeadRef: {Value: ""},
+		})
+		assert.Equal(t, base, namespace)
+		assert.Empty(t, readOnly)
+	})
+}
+
+// TestPullRequestCannotWriteWhereATrustedRunReads is the property the namespaces exist
+// for, and the only one worth breaking the layout over.
+//
+// A pull request's run executes code its author wrote. Before this, everything a workflow
+// had ever stored sat in one namespace, so that run could store an entry which a later
+// run for the default branch restored through a restoreKeys prefix - and for a build
+// cache, whose contents are trusted on a key match rather than verified, that is code
+// that then runs.
+func TestPullRequestCannotWriteWhereATrustedRunReads(t *testing.T) {
+	t.Run("a pull request's save is granted in its own namespace", func(t *testing.T) {
+		server, storageClient, repository := newCacheServer(t)
+		expectPullRequestExecution(repository, "42")
+
+		wanted := prCacheObject("42", executioncache.ScopeWorkflow, "npm-abc")
+		require.NotEqual(t, wanted, cacheObject(executioncache.ScopeWorkflow, "npm-abc"),
+			"the fixture has to differ from the base namespace or this asserts nothing")
+
+		expectExactProbe(storageClient, wanted)
+		storageClient.EXPECT().
+			PresignCreateFileToBucket(gomock.Any(), cacheTestBucket, "", wanted, CachePresignedURLExpiration).
+			Return("https://storage/put", map[string]string{"If-None-Match": "*"}, nil)
+
+		res, err := server.SaveExecutionCachePresigned(context.Background(), &cloud.SaveExecutionCachePresignedRequest{
+			Id: "exec-1", Key: "npm-abc", Size: 1024,
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, "https://storage/put", res.Url)
+	})
+
+	t.Run("a trusted run never lists a pull request's namespace", func(t *testing.T) {
+		server, storageClient, repository := newCacheServer(t)
+		expectExecution(repository, cacheTestWorkflow)
+
+		basePrefix := executioncache.ScopePrefix(cacheTestEnv, cacheTestWorkflow,
+			executioncache.ScopeWorkflow, executioncache.BaseNamespace) + "/"
+
+		expectExactProbe(storageClient, cacheObject(executioncache.ScopeWorkflow, "npm-abc"))
+		// The listing is rooted at the base namespace, so a restore key however broad
+		// cannot reach an entry a pull request stored.
+		storageClient.EXPECT().
+			ListObjectsFromBucket(gomock.Any(), cacheTestBucket, basePrefix, MaxCacheRestoreCandidates).
+			Return(nil, nil)
+
+		res, err := server.GetExecutionCachePresigned(context.Background(), &cloud.GetExecutionCachePresignedRequest{
+			Id: "exec-1", Key: "npm-abc", RestoreKeys: []string{"npm-", ""},
+		})
+
+		require.NoError(t, err)
+		assert.False(t, res.Hit)
+	})
+}
+
+// TestPullRequestFallsBackToTheBaseNamespace covers the half that keeps the feature worth
+// having: a pull request starts from what the default branch already built, rather than
+// from nothing, and still cannot change what the default branch will later restore.
+func TestPullRequestFallsBackToTheBaseNamespace(t *testing.T) {
+	t.Run("its own namespace is consulted first", func(t *testing.T) {
+		server, storageClient, repository := newCacheServer(t)
+		expectPullRequestExecution(repository, "42")
+
+		own := prCacheObject("42", executioncache.ScopeWorkflow, "npm-abc")
+		expectExactProbe(storageClient, own, storage.ObjectInfo{Key: own, Size: 7, LastModified: time.Now()})
+		storageClient.EXPECT().
+			PresignDownloadFileFromBucket(gomock.Any(), cacheTestBucket, "", own, CachePresignedURLExpiration).
+			Return("https://storage/own", nil)
+
+		res, err := server.GetExecutionCachePresigned(context.Background(), &cloud.GetExecutionCachePresignedRequest{
+			Id: "exec-1", Key: "npm-abc",
+		})
+
+		require.NoError(t, err)
+		assert.True(t, res.Hit)
+		assert.Equal(t, "https://storage/own", res.Url, "its own entry wins over the base one, being fresher")
+	})
+
+	t.Run("the base namespace answers when its own holds nothing", func(t *testing.T) {
+		server, storageClient, repository := newCacheServer(t)
+		expectPullRequestExecution(repository, "42")
+
+		own := prCacheObject("42", executioncache.ScopeWorkflow, "npm-abc")
+		base := cacheObject(executioncache.ScopeWorkflow, "npm-abc")
+
+		ownPrefix := executioncache.ScopePrefix(cacheTestEnv, cacheTestWorkflow,
+			executioncache.ScopeWorkflow, executioncache.PullRequestNamespace("42")) + "/"
+
+		// Its own namespace: nothing, either exactly or by prefix.
+		expectExactProbe(storageClient, own)
+		storageClient.EXPECT().
+			ListObjectsFromBucket(gomock.Any(), cacheTestBucket, ownPrefix, MaxCacheRestoreCandidates).
+			Return(nil, nil)
+
+		// Then the base one, which has it.
+		expectExactProbe(storageClient, base, storage.ObjectInfo{Key: base, Size: 9, LastModified: time.Now()})
+		storageClient.EXPECT().
+			PresignDownloadFileFromBucket(gomock.Any(), cacheTestBucket, "", base, CachePresignedURLExpiration).
+			Return("https://storage/base", nil)
+
+		res, err := server.GetExecutionCachePresigned(context.Background(), &cloud.GetExecutionCachePresignedRequest{
+			Id: "exec-1", Key: "npm-abc",
+		})
+
+		require.NoError(t, err)
+		assert.True(t, res.Hit)
+		assert.Equal(t, "https://storage/base", res.Url)
+	})
+
+	t.Run("a trusted run has nothing to fall back to", func(t *testing.T) {
+		scope := cacheScope{namespace: executioncache.BaseNamespace}
+		_, ok := scope.readOnly()
+		assert.False(t, ok, "a trusted run already writes the namespace it would read")
+	})
 }

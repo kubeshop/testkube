@@ -10,12 +10,19 @@ import (
 )
 
 // safeObject is the shape every derived object name must have: the fixed prefix, one
-// environment segment, the scope discriminator, an optional workflow segment, then a
-// single encoded key segment. Nothing else may introduce a '/' or a '.'.
+// environment segment, the scope discriminator, an optional workflow segment, the
+// namespace, then a single encoded key segment. Nothing else may introduce a '/' or a '.'.
 // A name segment may now carry a dot, because a Kubernetes name may and is used as it
 // stands. The key segment is still percent-encoded, so it can only ever be the
 // unreserved set plus the escapes.
-var safeObject = regexp.MustCompile(`^\.tkcache/v1/(_[0-9a-f]{64}|[A-Za-z0-9._-]+)/(shared|testworkflows/(_[0-9a-f]{64}|[A-Za-z0-9._-]+))/[A-Za-z0-9_%-]+\.tar\.gz$`)
+//
+// The namespace is pinned to the two forms that exist - the base one, and a pull
+// request's - so a third one cannot appear here unnoticed.
+var safeSegment = `(_[0-9a-f]{64}|[A-Za-z0-9._-]+)`
+var safeObject = regexp.MustCompile(`^\.tkcache/v1/` + safeSegment +
+	`/(shared|testworkflows/` + safeSegment + `)` +
+	`/(base|pr-` + safeSegment + `)` +
+	`/[A-Za-z0-9_%-]+\.tar\.gz$`)
 
 // TestObjectNameConfinesHostileKeys is the load-bearing test of the whole layout.
 //
@@ -42,18 +49,61 @@ func TestObjectNameConfinesHostileKeys(t *testing.T) {
 	for _, key := range hostile {
 		t.Run(key, func(t *testing.T) {
 			for _, scope := range []Scope{ScopeWorkflow, ScopeEnvironment} {
-				name := ObjectName("env-1", "wf-1", scope, key)
+				name := ObjectName("env-1", "wf-1", scope, BaseNamespace, key)
 
 				assert.Regexp(t, safeObject, name)
 				assert.NotContains(t, strings.TrimSuffix(name, ObjectSuffix), "..")
 				assert.LessOrEqual(t, len(name), 1024, "object name must fit an S3 key")
 
 				// Beyond the fixed structure, the key contributes no separators at all.
-				body := strings.TrimPrefix(name, ScopePrefix("env-1", "wf-1", scope)+"/")
+				body := strings.TrimPrefix(name, ScopePrefix("env-1", "wf-1", scope, BaseNamespace)+"/")
 				assert.NotContains(t, body, "/")
 			}
 		})
 	}
+}
+
+// TestPullRequestNamespaceConfinesHostileIdentifiers covers the other arbitrary text that
+// now reaches an object name.
+//
+// The identifier is a pull request number or, failing that, its head ref - and a head ref
+// is a branch name the pull request's author chose. A branch called `../base` must not be
+// able to name the namespace a trusted run writes, which is the one thing the split exists
+// to prevent.
+func TestPullRequestNamespaceConfinesHostileIdentifiers(t *testing.T) {
+	hostile := []string{
+		"../base",
+		"../../../base",
+		"base",
+		"a/b",
+		"..",
+		".",
+		"",
+		"pr-1",
+		"_underscored",
+		"ref with spaces",
+		strings.Repeat("b", 300),
+	}
+
+	for _, identifier := range hostile {
+		t.Run(identifier, func(t *testing.T) {
+			namespace := PullRequestNamespace(identifier)
+
+			assert.NotEqual(t, BaseNamespace, namespace, "a pull request must never land in the base namespace")
+			assert.NotContains(t, namespace, "/")
+			assert.NotContains(t, namespace, "..")
+
+			// And the whole object name still holds its shape.
+			assert.Regexp(t, safeObject, ObjectName("env-1", "wf-1", ScopeWorkflow, namespace, "npm-abc"))
+		})
+	}
+
+	// Distinct identifiers stay distinct, or two pull requests would share a namespace.
+	assert.NotEqual(t, PullRequestNamespace("../base"), PullRequestNamespace("../../base"))
+	assert.NotEqual(t, PullRequestNamespace("42"), PullRequestNamespace("43"))
+
+	// A plain number reads as itself, which is the whole point of keeping names readable.
+	assert.Equal(t, "pr-42", PullRequestNamespace("42"))
 }
 
 func TestValidateKey(t *testing.T) {
@@ -85,23 +135,23 @@ func TestEncodeKeyPreservesPrefixes(t *testing.T) {
 		prefix, full := pair[0], pair[1]
 		require.True(t, strings.HasPrefix(full, prefix), "test data must itself be a prefix")
 
-		queried := ObjectNamePrefix("env-1", "wf-1", ScopeWorkflow, prefix)
-		stored := ObjectName("env-1", "wf-1", ScopeWorkflow, full)
+		queried := ObjectNamePrefix("env-1", "wf-1", ScopeWorkflow, BaseNamespace, prefix)
+		stored := ObjectName("env-1", "wf-1", ScopeWorkflow, BaseNamespace, full)
 		assert.True(t, strings.HasPrefix(stored, queried),
 			"%q should be found by a query for %q", full, prefix)
 	}
 
 	// And a key that merely looks similar must not be matched.
-	stored := ObjectName("env-1", "wf-1", ScopeWorkflow, "pip-abc")
-	queried := ObjectNamePrefix("env-1", "wf-1", ScopeWorkflow, "npm-")
+	stored := ObjectName("env-1", "wf-1", ScopeWorkflow, BaseNamespace, "pip-abc")
+	queried := ObjectNamePrefix("env-1", "wf-1", ScopeWorkflow, BaseNamespace, "npm-")
 	assert.False(t, strings.HasPrefix(stored, queried))
 }
 
 // TestScopeIsolation is the executable form of the promise that scope: workflow makes.
 func TestScopeIsolation(t *testing.T) {
-	a := ScopePrefix("env-1", "workflow-a", ScopeWorkflow)
-	b := ScopePrefix("env-1", "workflow-b", ScopeWorkflow)
-	shared := ScopePrefix("env-1", "workflow-a", ScopeEnvironment)
+	a := ScopePrefix("env-1", "workflow-a", ScopeWorkflow, BaseNamespace)
+	b := ScopePrefix("env-1", "workflow-b", ScopeWorkflow, BaseNamespace)
+	shared := ScopePrefix("env-1", "workflow-a", ScopeEnvironment, BaseNamespace)
 
 	assert.NotEqual(t, a, b)
 	// Neither may contain the other, or a prefix query in one would reach into the other.
@@ -111,10 +161,10 @@ func TestScopeIsolation(t *testing.T) {
 	assert.False(t, strings.HasPrefix(shared, a))
 
 	// The environment scope ignores the workflow entirely, so two workflows share it.
-	assert.Equal(t, shared, ScopePrefix("env-1", "workflow-b", ScopeEnvironment))
+	assert.Equal(t, shared, ScopePrefix("env-1", "workflow-b", ScopeEnvironment, BaseNamespace))
 
 	// A different environment is a different scope even for the same workflow.
-	assert.NotEqual(t, a, ScopePrefix("env-2", "workflow-a", ScopeWorkflow))
+	assert.NotEqual(t, a, ScopePrefix("env-2", "workflow-a", ScopeWorkflow, BaseNamespace))
 }
 
 // TestSanitizeSegmentDisambiguates covers names that reduce to the same slug: without
@@ -155,8 +205,8 @@ func TestKeyFromObjectNameRoundTrips(t *testing.T) {
 	for _, key := range keys {
 		t.Run(key, func(t *testing.T) {
 			for _, scope := range []Scope{ScopeWorkflow, ScopeEnvironment} {
-				prefix := ScopePrefix("env-1", "wf-1", scope)
-				name := ObjectName("env-1", "wf-1", scope, key)
+				prefix := ScopePrefix("env-1", "wf-1", scope, BaseNamespace)
+				name := ObjectName("env-1", "wf-1", scope, BaseNamespace, key)
 				assert.Equal(t, key, KeyFromObjectName(prefix, name))
 			}
 		})
@@ -166,7 +216,7 @@ func TestKeyFromObjectNameRoundTrips(t *testing.T) {
 // TestKeyFromObjectNameToleratesForeignNames: the reporting path must not panic or lie
 // loudly on an object some other writer put in the bucket.
 func TestKeyFromObjectNameToleratesForeignNames(t *testing.T) {
-	prefix := ScopePrefix("env-1", "wf-1", ScopeWorkflow)
+	prefix := ScopePrefix("env-1", "wf-1", ScopeWorkflow, BaseNamespace)
 
 	// Truncated escape, invalid hex, and a name outside the prefix entirely.
 	assert.Equal(t, "abc%", KeyFromObjectName(prefix, prefix+"/abc%"+ObjectSuffix))
@@ -222,7 +272,7 @@ func TestSanitizeSegmentKeepsNamesReadable(t *testing.T) {
 
 	assert.Equal(t, first, sanitizeSegment(first), "a Kubernetes name is used as it stands")
 	assert.NotEqual(t, sanitizeSegment(first), sanitizeSegment(second))
-	assert.Contains(t, ScopePrefix("env-1", first, ScopeWorkflow), first,
+	assert.Contains(t, ScopePrefix("env-1", first, ScopeWorkflow, BaseNamespace), first,
 		"the name has to be legible in the object path")
 }
 

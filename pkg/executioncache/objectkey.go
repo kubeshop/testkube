@@ -1,6 +1,14 @@
 // Package executioncache derives where a step's dependency cache lives in object
 // storage, and picks which stored entry a restore should use.
 //
+// Entries are separated by namespace as well as by scope. A run for a pull request writes
+// only into its own namespace and may read the base one; every trusted run - a push, a
+// tag, a schedule, a manual run - reads and writes the base namespace. Without that, a
+// pull request could store an entry that a later run for the default branch restored by
+// way of a restoreKeys prefix, and for a build cache that is code that then runs. The
+// author of a pull request controls what executes in its run, so the identity of the
+// namespace has to be derived from what the trigger recorded, never from the request.
+//
 // Both halves live here, away from any transport, for one reason: the control plane in
 // this repository and the commercial one must agree on them exactly. A disagreement
 // would not fail loudly - it would produce entries that the other plane can never find,
@@ -62,6 +70,20 @@ const (
 	// the words to differ as well.
 	workflowScopeSegment = "testworkflows"
 	sharedScopeSegment   = "shared"
+
+	// BaseNamespace holds the entries every trusted run shares - a push to any branch, a
+	// tag, a schedule, a manual run. It is the only namespace that is written by a run
+	// whose code was not proposed by someone outside the repository.
+	BaseNamespace = "base"
+
+	// pullRequestNamespacePrefix marks a namespace belonging to one pull request.
+	//
+	// It is a distinct segment rather than a bare identifier so that a restore key in the
+	// base namespace cannot reach into a pull request's: the query is confined to
+	// ".../base/<encoded prefix>", and a pull request's entries are not under it. Before
+	// the namespaces existed, one prefix query covered every entry the workflow had ever
+	// stored, whoever ran it.
+	pullRequestNamespacePrefix = "pr-"
 )
 
 // Scope is how widely a cache entry is shared.
@@ -173,6 +195,11 @@ func sanitizeSegment(name string) string {
 }
 
 // isSafeSegment reports whether a name can be used as a path segment as it stands.
+//
+// An allowlist, rather than a list of forbidden characters. A Kubernetes name is already
+// within it, so the readable case is unaffected; anything else - a branch name, which may
+// carry spaces, slashes or any other UTF-8 - is hashed instead of being copied into an
+// object name whose shape the rest of the layout relies on.
 func isSafeSegment(name string) bool {
 	if name == "" || name == "." || name == ".." || len(name) > maxSegmentChars {
 		return false
@@ -182,37 +209,55 @@ func isSafeSegment(name string) bool {
 		return false
 	}
 	for _, r := range name {
-		if r == '/' || r == '\\' || r < 0x20 || r == 0x7f {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+		case r == '.' || r == '-':
+		default:
 			return false
 		}
 	}
 	return true
 }
 
-// ScopePrefix is the folder holding every entry a given scope can see.
+// PullRequestNamespace is the namespace belonging to one pull request.
 //
-// Both arguments must come from the execution the caller has already authenticated,
+// The identifier must come from what the trigger recorded on the execution, never from
+// the request. A pull request's author controls the code that runs, so anything they
+// could choose here would let them pick the namespace they write into - including the
+// base one, which is the whole thing this separates them from.
+func PullRequestNamespace(identifier string) string {
+	return pullRequestNamespacePrefix + sanitizeSegment(identifier)
+}
+
+// ScopePrefix is the folder holding every entry a given scope and namespace can see.
+//
+// Every argument must come from the execution the caller has already authenticated,
 // never from the request: deriving the workflow segment server-side is the whole reason
-// a workflow-scoped entry cannot be read or written by another workflow.
-func ScopePrefix(environmentID, workflowName string, scope Scope) string {
+// a workflow-scoped entry cannot be read or written by another workflow, and deriving the
+// namespace server-side is the reason a pull request cannot write one a trusted run reads.
+func ScopePrefix(environmentID, workflowName string, scope Scope, namespace string) string {
 	env := sanitizeSegment(environmentID)
-	if scope == ScopeEnvironment {
-		return fmt.Sprintf("%s/%s/%s", ObjectPrefix, env, sharedScopeSegment)
+	if namespace == "" {
+		namespace = BaseNamespace
 	}
-	return fmt.Sprintf("%s/%s/%s/%s", ObjectPrefix, env, workflowScopeSegment, sanitizeSegment(workflowName))
+	if scope == ScopeEnvironment {
+		return fmt.Sprintf("%s/%s/%s/%s", ObjectPrefix, env, sharedScopeSegment, namespace)
+	}
+	return fmt.Sprintf("%s/%s/%s/%s/%s",
+		ObjectPrefix, env, workflowScopeSegment, sanitizeSegment(workflowName), namespace)
 }
 
 // ObjectName is the object holding the entry for an exact key.
-func ObjectName(environmentID, workflowName string, scope Scope, key string) string {
-	return ScopePrefix(environmentID, workflowName, scope) + "/" + EncodeKey(key) + ObjectSuffix
+func ObjectName(environmentID, workflowName string, scope Scope, namespace, key string) string {
+	return ScopePrefix(environmentID, workflowName, scope, namespace) + "/" + EncodeKey(key) + ObjectSuffix
 }
 
 // ObjectNamePrefix is the prefix matching every entry whose key starts with keyPrefix.
 //
 // Deliberately has no ObjectSuffix: a restore key matches on the start of a key, so the
 // query has to stay open-ended.
-func ObjectNamePrefix(environmentID, workflowName string, scope Scope, keyPrefix string) string {
-	return ScopePrefix(environmentID, workflowName, scope) + "/" + EncodeKey(keyPrefix)
+func ObjectNamePrefix(environmentID, workflowName string, scope Scope, namespace, keyPrefix string) string {
+	return ScopePrefix(environmentID, workflowName, scope, namespace) + "/" + EncodeKey(keyPrefix)
 }
 
 // KeyFromObjectName recovers the key a workflow wrote from a stored object's name, so
