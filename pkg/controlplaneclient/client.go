@@ -63,6 +63,7 @@ type Client interface {
 
 	ExecutionClient
 	ExecutionSelfClient
+	ExecutionCacheClient
 	RunnerClient
 	TestWorkflowsClient
 	TestWorkflowTemplatesClient
