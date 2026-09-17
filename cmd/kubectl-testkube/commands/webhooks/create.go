@@ -1,6 +1,7 @@
 package webhooks
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -37,23 +38,61 @@ func NewCreateWebhookCmd() *cobra.Command {
 		Long:    `Create new Webhook Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
 			crdOnly, err := strconv.ParseBool(cmd.Flag("crd-only").Value.String())
-			ui.ExitOnError("parsing flag value", err)
-
-			if name == "" {
-				ui.Failf("pass valid name (in '--name' flag)")
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrInvalidRuntimeParameter,
+					"Error reading the crd-only flag",
+					common.BoolFlagValueHint,
+					err,
+				))
 			}
 
-			namespace := cmd.Flag("namespace").Value.String()
-			var client apiv1.Client
+			if name == "" {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrInvalidRuntimeParameter,
+					"No webhook name provided",
+					common.NameFlagHint,
+					errors.New("no webhook name provided"),
+				))
+			}
+
+			// The namespace comes back from GetClient; the flag is read there, not here.
+			var (
+				client    apiv1.Client
+				namespace string
+			)
 			if !crdOnly {
 				client, namespace, err = common.GetClient(cmd)
-				ui.ExitOnError("getting client", err)
+				if err != nil {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrAPIClientInitFailed,
+						"Error creating the Testkube API client",
+						common.APIClientHint,
+						err,
+					))
+				}
 
-				webhook, _ := client.GetWebhook(name)
-				if name == webhook.Name {
+				// A 404 means there is nothing to overwrite and creation carries on below. Any other
+				// failure means the lookup never answered, so stop instead of silently creating.
+				webhook, err := client.GetWebhook(name)
+				if err != nil && !apiv1.IsNotFound(err) {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrAPIReadFailed,
+						"Error checking whether the webhook already exists",
+						common.APIReadHint,
+						err,
+					))
+				}
+
+				if err == nil && name == webhook.Name {
 					if cmd.Flag("update").Changed {
 						if !update {
-							ui.Failf("Webhook with name '%s' already exists in namespace %s, ", webhook.Name, namespace)
+							common.HandleCLIError(common.NewCLIError(
+								common.TKErrInvalidRuntimeParameter,
+								"Webhook already exists",
+								common.NameConflictHint,
+								fmt.Errorf("webhook '%s' already exists in namespace '%s'", webhook.Name, namespace),
+							))
 						}
 					} else {
 						ok := ui.Confirm(fmt.Sprintf("Webhook with name '%s' already exists in namespace %s, ", webhook.Name, namespace) +
@@ -64,28 +103,63 @@ func NewCreateWebhookCmd() *cobra.Command {
 					}
 
 					options, err := NewUpdateWebhookOptionsFromFlags(cmd)
-					ui.ExitOnError("getting webhook options", err)
+					if err != nil {
+						common.HandleCLIError(common.NewCLIError(
+							common.TKErrInvalidRuntimeParameter,
+							"Error reading the webhook flags",
+							common.WebhookFlagsHint,
+							err,
+						))
+					}
 
 					_, err = client.UpdateWebhook(options)
-					ui.ExitOnError("updating webhook "+name+" in namespace "+namespace, err)
+					if err != nil {
+						common.HandleCLIError(common.NewCLIError(
+							common.TKErrAPIWriteFailed,
+							"Error updating the webhook",
+							common.APIWriteHint,
+							err,
+						))
+					}
 
 					ui.SuccessAndExit("Webhook updated", name)
 				}
 			}
 
 			options, err := NewCreateWebhookOptionsFromFlags(cmd)
-			ui.ExitOnError("getting webhook options", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrInvalidRuntimeParameter,
+					"Error reading the webhook flags",
+					common.WebhookFlagsHint,
+					err,
+				))
+			}
 
 			if !crdOnly {
 				_, err := client.CreateWebhook(options)
-				ui.ExitOnError("creating webhook "+name+" in namespace "+namespace, err)
+				if err != nil {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrAPIWriteFailed,
+						"Error creating the webhook",
+						common.APIWriteHint,
+						err,
+					))
+				}
 
 				ui.Success("Webhook created", name)
 			} else {
 				(*testkube.WebhookCreateRequest)(&options).QuoteTextFields()
 
 				data, err := crd.ExecuteTemplate(crd.TemplateWebhook, options)
-				ui.ExitOnError("executing crd template", err)
+				if err != nil {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrOutputRenderFailed,
+						"Error rendering the webhook CRD",
+						"Check the flag values that go into the CRD, or drop '--crd-only' to create the webhook through the Testkube API",
+						err,
+					))
+				}
 
 				fmt.Print(data)
 			}

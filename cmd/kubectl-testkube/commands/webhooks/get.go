@@ -8,8 +8,8 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
+	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/crd"
-	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func NewGetWebhookCmd() *cobra.Command {
@@ -24,13 +24,37 @@ func NewGetWebhookCmd() *cobra.Command {
 		Long:    `Get webhook, you can change output format, to get single details pass name as first arg`,
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _, err := common.GetClient(cmd)
-			ui.ExitOnError("getting client", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrAPIClientInitFailed,
+					"Error creating the Testkube API client",
+					common.APIClientHint,
+					err,
+				))
+			}
 
 			firstEntry := true
 			if len(args) > 0 {
 				name := args[0]
 				webhook, err := client.GetWebhook(name)
-				ui.ExitOnError("getting webhook: "+name, err)
+				if err != nil {
+					// The API answered that the webhook is absent, which is a different thing to tell the
+					// user than a read that did not complete.
+					if apiclient.IsNotFound(err) {
+						common.HandleCLIError(common.NewCLIError(
+							common.TKErrResourceNotFound,
+							"Webhook not found",
+							"Check the webhook name, or list the webhooks with `testkube get webhooks`",
+							err,
+						))
+					}
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrAPIReadFailed,
+						"Error getting the webhook",
+						common.APIReadHint,
+						err,
+					))
+				}
 
 				if crdOnly {
 					webhook.QuoteTextFields()
@@ -39,10 +63,24 @@ func NewGetWebhookCmd() *cobra.Command {
 				}
 
 				err = render.Obj(cmd, webhook, os.Stdout)
-				ui.ExitOnError("rendering obj", err)
+				if err != nil {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrOutputRenderFailed,
+						"Error rendering the webhook",
+						common.OutputRenderHint,
+						err,
+					))
+				}
 			} else {
 				webhooks, err := client.ListWebhooks(strings.Join(selectors, ","))
-				ui.ExitOnError("getting webhooks", err)
+				if err != nil {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrAPIReadFailed,
+						"Error getting the webhooks",
+						common.APIReadHint,
+						err,
+					))
+				}
 
 				if crdOnly {
 					for _, webhook := range webhooks {
@@ -54,7 +92,14 @@ func NewGetWebhookCmd() *cobra.Command {
 				}
 
 				err = render.List(cmd, webhooks, os.Stdout)
-				ui.ExitOnError("rendering list", err)
+				if err != nil {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrOutputRenderFailed,
+						"Error rendering the webhooks",
+						common.OutputRenderHint,
+						err,
+					))
+				}
 			}
 		},
 	}

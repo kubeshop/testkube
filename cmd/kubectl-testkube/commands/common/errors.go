@@ -107,6 +107,29 @@ const (
 	TKErrOrgEnvNamesFetchFailed ErrorCode = "TKERR-1805"
 	// TKErrControlPlaneDiscoveryFailed is returned when the Control Plane can't be reached or does not answer with its public info.
 	TKErrControlPlaneDiscoveryFailed ErrorCode = "TKERR-1806"
+	// TKErrAPIClientInitFailed is returned when the Testkube API client can't be built for a command.
+	// GetClient fails on the '--header' flag, on the config file, on building the client for the '--client'
+	// type, and for a cloud context also on refreshing the stored token, on the re-login it falls back to,
+	// and on writing the new token back. On the default proxy client the kubeconfig is the likely cause and
+	// the token paths are unreachable, so the hint names the cluster before the credentials.
+	TKErrAPIClientInitFailed ErrorCode = "TKERR-1807"
+
+	// TKERR-19xx errors are related to the resource commands that talk to the Testkube API.
+
+	// TKErrAPIReadFailed is returned when reading one resource, or listing resources, through the Testkube
+	// API fails. One code covers get and list for the reason TKErrAgentWriteFailed gives: the client
+	// helpers share one preamble and differ only in the final call, so the code says a read was attempted
+	// and the title says which. A resource the API answered about and that is absent uses
+	// TKErrResourceNotFound.
+	TKErrAPIReadFailed ErrorCode = "TKERR-1901"
+	// TKErrAPIWriteFailed is returned when creating, updating or deleting a resource through the Testkube
+	// API fails. Reads use TKErrAPIReadFailed.
+	TKErrAPIWriteFailed ErrorCode = "TKERR-1902"
+	// TKErrOutputRenderFailed is returned when a command got its result but could not print it: an unusable
+	// '--output' type or '--go-template' expression, a value that will not marshal, or the CRD template
+	// behind '--crd-only'. The data is good and only the presentation failed, so the hint points at the
+	// output flags rather than at the fetch.
+	TKErrOutputRenderFailed ErrorCode = "TKERR-1903"
 )
 
 const helpUrl = "https://testkubeworkspace.slack.com"
@@ -130,6 +153,51 @@ const AgentWriteHint = "Check that your credentials are valid and that your user
 // or CRDs from the cluster. It names the kubeconfig, because the CLI reads the
 // cluster with the same context kubectl uses.
 const ClusterLookupHint = "Check that your kubeconfig points at the right cluster and that you can read it, for example with `kubectl get namespaces`"
+
+// APIClientHint is the recovery hint for a failure to build the Testkube API
+// client. The client is built from the current context and the stored token, so
+// those are the two things to look at.
+const APIClientHint = "Check that your kubeconfig points at the right cluster, or sign in again with `testkube pro login` if you use a cloud context and your token has expired"
+
+// APIReadHint is the recovery hint for a failed read of resources through the
+// Testkube API. It does not name a command that lists them: the listing is
+// usually the command that just failed.
+const APIReadHint = "Check that your credentials are valid and that the current context points at the organization and environment you expect"
+
+// APIWriteHint is the recovery hint for a failed create, update or delete
+// through the Testkube API. A write fails on the same things a read does, so
+// what is left to check is the permission to change the resource.
+const APIWriteHint = "Check that your credentials are valid and that your user can manage the resources of this environment or namespace"
+
+// APIDeleteHint is the recovery hint for a failed delete. A delete is the one
+// write where the resource being gone already is a normal outcome, which is what
+// '--ignore-not-found' is for.
+const APIDeleteHint = "Check the name or the '--label' selector, or pass '--ignore-not-found' to succeed when the resource is already gone"
+
+// OutputRenderHint is the recovery hint for a command that fetched its result
+// and could not print it. The fetch worked, so the flags that shape the output
+// are what is left.
+const OutputRenderHint = "Check the '--output' value (pretty, json, yaml or go) and the '--go-template' expression"
+
+// NameFlagHint is the recovery hint for a command that needs '--name' and did
+// not get one.
+const NameFlagHint = "Pass the name with the '--name' flag"
+
+// NameOrSelectorHint is the recovery hint for a command that accepts either a
+// name or a label selector and got neither.
+const NameOrSelectorHint = "Pass the name as an argument, or select by labels with '--label', for example '--label app=backend'"
+
+// NameConflictHint is the recovery hint for a create that found the name taken.
+const NameConflictHint = "Choose a name that is free, or pass '--update' to overwrite the existing one"
+
+// BoolFlagValueHint is the recovery hint for a boolean flag that could not be
+// parsed.
+const BoolFlagValueHint = "Check the flag value; a boolean flag takes true or false, or drop the flag to use its default"
+
+// WebhookFlagsHint is the recovery hint for a failure to turn the webhook flags
+// into API options. Each of these flags carries structured text the CLI parses,
+// which is where such a failure comes from.
+const WebhookFlagsHint = "Check the '--events', '--header', '--config' and '--parameter' values, or that '--payload-template' points at a readable file"
 
 type CLIError struct {
 	Code            ErrorCode
