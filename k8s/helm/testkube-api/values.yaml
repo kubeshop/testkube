@@ -154,6 +154,15 @@ jobPodAnnotations: {}
 # prebuilt and container executors, when using the default job templates.
 jobAnnotations: {}
 
+# jobTolerations/jobAffinity/jobNodeSelector are applied to the pods spawned to
+# execute tests (both the legacy job-template and the test-workflow slave-pod
+# template), when using the default templates. Unset by default - deliberately
+# does NOT fall back to global.tolerations/global.affinity/global.nodeSelector,
+# so setting those globally does not silently change job/slave pod scheduling.
+jobTolerations: []
+jobAffinity: {}
+jobNodeSelector: {}
+
 ## Custom job-container-template.yml that will be passed to Testkube API
 jobContainerTemplate: ""
 
