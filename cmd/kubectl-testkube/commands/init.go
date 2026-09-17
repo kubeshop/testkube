@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -135,6 +137,8 @@ func NewInitCmdDemo() *cobra.Command {
 				ui.ExitOnError("cannot print values", err)
 				return
 			}
+
+			defer waitLicenseEvents()
 
 			ui.Logo()
 			ui.Info("Welcome to the installer for " + demoInstallationName + ".")
@@ -367,15 +371,31 @@ func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType, licens
 	}
 }
 
+var licenseEventsWG sync.WaitGroup
+
 func reportLicenseEvent(clientCfg config.Data, license, event string) {
 	if !clientCfg.TelemetryEnabled {
 		return
 	}
+	licenseEventsWG.Add(1)
 	go func() {
+		defer licenseEventsWG.Done()
 		if err := licensevalidator.NewClient().ReportEvent(license, event); err != nil {
 			ui.Debug("license event report failed, continuing", err.Error())
 		}
 	}()
+}
+
+func waitLicenseEvents() {
+	done := make(chan struct{})
+	go func() {
+		licenseEventsWG.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(6 * time.Second):
+	}
 }
 
 func sendTelemetry(cmd *cobra.Command, clientCfg config.Data, license, step string, userIDOverride ...string) {
