@@ -265,6 +265,11 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 			current.StoreConfig(exec.Config)
 		}
 
+		// Git provenance is recorded whether or not the workflow declares it, and whatever
+		// the configuration weighs, because its absence is meaningful: the dependency cache
+		// reads it to tell a pull request's run from a trusted one.
+		current.StoreGitMetadata(exec.Config)
+
 		// Apply the configuration
 		if err := current.ApplyConfig(exec.Config); err != nil {
 			current.SetError("Cannot inline Test Workflow configuration", err)
