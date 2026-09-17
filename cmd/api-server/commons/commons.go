@@ -35,6 +35,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
+	"github.com/kubeshop/testkube/pkg/executioncache"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
@@ -129,9 +130,59 @@ func MustGetMinioClient(cfg *config.Config) domainstorage.Client {
 	)
 	err := minioClient.Connect()
 	ExitOnError("Connecting to minio", err)
-	if expErr := minioClient.SetExpirationPolicy(cfg.StorageExpiration); expErr != nil {
+	// Ensure the bucket exists before applying lifecycle rules. The controlplane service
+	// creates buckets after this client is constructed, but expiration policies need the
+	// bucket to exist to be set successfully.
+	exists, err := minioClient.BucketExists(context.Background(), cfg.StorageBucket)
+	if err == nil && !exists {
+		if err := minioClient.CreateBucket(context.Background(), cfg.StorageBucket); err != nil && !strings.Contains(err.Error(), "already exists") {
+			log.DefaultLogger.Warnw("failed to create bucket before applying expiration policies", "bucket", cfg.StorageBucket, "error", err)
+		}
+	}
+
+	// The bucket-wide rule is unfiltered, so it covers cache objects too and the
+	// earlier of the two expirations wins. Warn rather than silently applying a cache
+	// TTL that the bucket-wide one overrides.
+	if cfg.StorageExpiration > 0 && cfg.StorageCacheExpiration > cfg.StorageExpiration {
+		log.DefaultLogger.Warnw("cache expiration is longer than the bucket expiration, so caches expire with the bucket",
+			"cacheExpirationDays", cfg.StorageCacheExpiration, "storageExpirationDays", cfg.StorageExpiration)
+	}
+	if expErr := minioClient.SetExpirationPolicies(minio.ExpirationPolicy{
+		Days:        cfg.StorageExpiration,
+		CachePrefix: executioncache.ObjectPrefix,
+		CacheDays:   cfg.StorageCacheExpiration,
+	}); expErr != nil {
 		log.DefaultLogger.Errorw("Error setting expiration policy", "error", expErr)
 	}
+
+	// A stored cache entry is immutable only if the store applies the condition the
+	// upload is signed with, and the stores this client can be pointed at do not agree
+	// about that. One that ignores it answers 200 and overwrites, so there is nothing in
+	// a log to tell "no races happened" apart from "the guarantee never held" - which is
+	// why this asks once, out loud, instead of leaving an operator to assume.
+	//
+	// Never fatal. A cache is an optimization, and a control plane that cannot probe its
+	// own bucket has something louder to report than this.
+	switch support, probeErr := minioClient.ProbeConditionalWrite(
+		context.Background(), cfg.StorageBucket, executioncache.ObjectPrefix,
+	); support {
+	case minio.ConditionalWriteEnforced:
+		log.DefaultLogger.Infow("object store applies conditional writes, so cache entries are immutable",
+			"bucket", cfg.StorageBucket)
+	case minio.ConditionalWriteIgnored:
+		log.DefaultLogger.Warnw(
+			"object store ignores conditional writes, so a cache entry is NOT immutable: "+
+				"two executions saving one key concurrently will both be stored and the later one wins. "+
+				"Prefer scope: workflow over scope: environment on this store, because a workflow that "+
+				"can write a shared scope can then replace what another workflow restores rather than "+
+				"only seeding it",
+			"bucket", cfg.StorageBucket)
+	default:
+		log.DefaultLogger.Warnw("could not determine whether the object store applies conditional writes, "+
+			"so whether cache entries are immutable on it is unknown",
+			"bucket", cfg.StorageBucket, "error", probeErr)
+	}
+
 	return minioClient
 }
 
