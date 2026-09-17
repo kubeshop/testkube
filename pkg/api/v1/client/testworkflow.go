@@ -264,6 +264,8 @@ func (c TestWorkflowClient) ListTestWorkflowExecutions(id string, limit int, opt
 		"actorName":   options.ActorName,
 		"actorType":   string(options.ActorType),
 		"status":      options.Status,
+		// The server reads this as the layer that failed, for example init-failure.
+		"statusDetailsType": options.StatusDetailsType,
 	}
 	return c.testWorkflowExecutionsResultTransport.Execute(http.MethodGet, uri, nil, params)
 }
