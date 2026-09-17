@@ -713,10 +713,29 @@ func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, apiUrl string) (confi
 		cfg.CloudContext.EnvironmentId = envId
 	}
 
+	// A name lookup needs an id. Get("") would request the collection endpoint
+	// instead, which either 404s or decodes the list into an empty record, so
+	// an id that is not set has no name to fetch and no stale name to keep.
+	// The context is saved incomplete and ValidateCloudContext reports that at
+	// the end of the command - reaching the Control Plane adds nothing here.
+	if cfg.CloudContext.OrganizationId == "" {
+		cfg.CloudContext.OrganizationName = ""
+		cfg.CloudContext.EnvironmentName = ""
+		return cfg, nil
+	}
+
 	orgClient := cloudclient.NewOrganizationsClient(apiUrl, cfg.CloudContext.ApiKey, cfg.SkipTLS || cfg.CloudContext.SkipTLS)
 	org, err := orgClient.Get(cfg.CloudContext.OrganizationId)
 	if err != nil {
 		return cfg, errors.Wrap(err, "error getting organization")
+	}
+	cfg.CloudContext.OrganizationName = org.Name
+
+	// Changing the organization above resets the environment, so this is the
+	// common case of "switch org now, pick the environment later".
+	if cfg.CloudContext.EnvironmentId == "" {
+		cfg.CloudContext.EnvironmentName = ""
+		return cfg, nil
 	}
 
 	envsClient := cloudclient.NewEnvironmentsClient(apiUrl, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, cfg.SkipTLS || cfg.CloudContext.SkipTLS)
@@ -724,8 +743,6 @@ func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, apiUrl string) (confi
 	if err != nil {
 		return cfg, errors.Wrap(err, "error getting environment")
 	}
-
-	cfg.CloudContext.OrganizationName = org.Name
 	cfg.CloudContext.EnvironmentName = env.Name
 
 	return cfg, nil

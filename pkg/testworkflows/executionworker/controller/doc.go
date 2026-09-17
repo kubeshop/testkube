@@ -24,4 +24,7 @@
 // example a sidecar that a webhook adds, can keep the pod running after the last step. Without this rule, the watch
 // does not end, and the execution stays running although every step has a result. The pod watcher keeps its own
 // rule, because it must watch the pod until the runner deletes it.
+//
+// The pod can also stop after the last step ends, for example when Kubernetes removes a sidecar. The events that
+// report the stop reach the log as warnings, because the result of the steps stands and the stop is not a cause.
 package controller

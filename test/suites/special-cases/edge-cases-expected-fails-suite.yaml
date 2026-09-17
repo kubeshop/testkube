@@ -213,13 +213,16 @@ spec:
     execute:
       workflows:
       - name: expected-fail-unschedulable
-        as: unschedulable
-  - name: assert-unschedulable-message
+        as: no-node
+  - name: assert-no-node-message
     shell: |
-      msg={{ shellquote(execution("unschedulable").errorMessage) }}
+      msg={{ shellquote(execution("no-node").errorMessage) }}
+      reason={{ shellquote(execution("no-node").errorReason) }}
+      status={{ shellquote(execution("no-node").status) }}
       echo "$msg"
       echo "$msg" | grep -q "no node can run the pod" || { echo "unexpected message: $msg"; exit 1; }
-      [ {{ shellquote(execution("unschedulable").status) }} = "aborted" ] || { echo "unexpected status"; exit 1; }
+      [ "$reason" = "unschedulable" ] || { echo "unexpected reason: $reason"; exit 1; }
+      [ "$status" = "aborted" ] || { echo "unexpected status: $status"; exit 1; }
   - name: expected-fail-env-secret-required
     negative: true
     execute:
