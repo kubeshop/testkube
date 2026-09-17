@@ -13,3 +13,15 @@ func (d *TestWorkflowStatusDetails) Clone() *TestWorkflowStatusDetails {
 	}
 	return &details
 }
+
+// Label returns the layer and the code for a table, and an empty string for an execution that
+// passed. A reader of the table sees the kind of failure without the words of the message.
+func (d *TestWorkflowStatusDetails) Label() string {
+	if d == nil {
+		return ""
+	}
+	if d.Reason == "" {
+		return d.Type_
+	}
+	return d.Type_ + ": " + d.Reason
+}
