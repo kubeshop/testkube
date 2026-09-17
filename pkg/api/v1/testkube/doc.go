@@ -20,6 +20,11 @@
 // StatusDetailsTypeOf maps a reason code to its layer. An actor that is a person always gives
 // user-cancel, because a cancel is not a failure. NewStatusDetails builds the object for a stop.
 //
-// No code in this package writes the object yet. The runner and the control plane fill it, and
-// each of them records where it does so.
+// # The stop
+//
+// Stop carries what the component that ended an execution knows, and its own documentation holds
+// the fields and where they come from. Stop.Sentence renders the words that the result stores.
+//
+// HealAbortedOrCanceled writes the code of a stop into the step that it stops, unless that step
+// already holds a code of its own.
 package testkube
