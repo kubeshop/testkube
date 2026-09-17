@@ -105,7 +105,8 @@ func (s *service) reattach(ctx context.Context) (err error) {
 
 			// Finalize and save the result
 			sigSequence := stage.MapSignatureListToInternal(stage.MapSignatureToSequence(stage.MapSignatureList(execution.Signature)))
-			healRecoveredResult(execution.Result, sigSequence, execution.ScheduledAt, recordedCause(execution.Result, sigSequence))
+			cause, causeReason := recordedCause(execution.Result, sigSequence)
+			healRecoveredResult(execution.Result, sigSequence, execution.ScheduledAt, cause, causeReason)
 			if err = s.client.FinishExecutionResult(ctx, environmentId, executionId, execution.Result); err != nil {
 				logger.Errorw("failed to recover execution: saving execution", "error", err)
 			} else {

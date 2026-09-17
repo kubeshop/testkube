@@ -71,6 +71,7 @@ func TestTestWorkflowResult_Fatal(t *testing.T) {
 		name             string
 		result           *TestWorkflowResult
 		err              error
+		reason           StopReason
 		aborted          bool
 		wantStatus       TestWorkflowStatus
 		wantInitStatus   TestWorkflowStepStatus
@@ -98,14 +99,16 @@ func TestTestWorkflowResult_Fatal(t *testing.T) {
 			wantErrorMessage: "original failure",
 		},
 		{
-			name: "clears the reason code of the message that the error replaces",
+			name: "replaces the reason code together with the message",
 			result: &TestWorkflowResult{
 				Initialization: &TestWorkflowStepResult{ErrorMessage: "no node can run the pod", ErrorReason: "unschedulable"},
 			},
 			err:              assert.AnError,
+			reason:           StopReasonExecutionStuck,
 			wantStatus:       FAILED_TestWorkflowStatus,
 			wantInitStatus:   FAILED_TestWorkflowStepStatus,
 			wantErrorMessage: assert.AnError.Error(),
+			wantErrorReason:  string(StopReasonExecutionStuck),
 		},
 		{
 			name: "stores error message and marks result failed",
@@ -122,7 +125,7 @@ func TestTestWorkflowResult_Fatal(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.result.Fatal(tt.err, tt.aborted, ts)
+			tt.result.Fatal(tt.err, tt.reason, tt.aborted, ts)
 
 			assert.Equal(t, tt.wantStatus, *tt.result.Status)
 			assert.Equal(t, tt.wantInitStatus, *tt.result.Initialization.Status)
@@ -155,8 +158,12 @@ func TestTestWorkflowResult_HealAbortedOrCanceled(t *testing.T) {
 		sigSequence     []TestWorkflowSignature
 		errorStr        string
 		terminationCode string
+		reasonCode      string
 		wantInit        stepWant
 		wantSteps       map[string]stepWant
+		wantInitReason  string
+		// wantStepReasons holds the code per step ref. A missing entry means that the step holds no code.
+		wantStepReasons map[string]string
 	}{
 		{
 			name:            "puts a recorded initialization cause after the reason of the cancel",
@@ -361,6 +368,65 @@ func TestTestWorkflowResult_HealAbortedOrCanceled(t *testing.T) {
 				"next": {SKIPPED_TestWorkflowStepStatus, "The execution was canceled before. (Fatal Error)"},
 			},
 		},
+		{
+			name:            "writes the reason code into the step that gets the termination status",
+			initialization:  step(PASSED_TestWorkflowStepStatus, ""),
+			steps:           map[string]TestWorkflowStepResult{"step": step(RUNNING_TestWorkflowStepStatus, ""), "next": step(QUEUED_TestWorkflowStepStatus, "")},
+			sigSequence:     []TestWorkflowSignature{{Ref: "step"}, {Ref: "next"}},
+			errorStr:        "Fatal Error",
+			terminationCode: aborted,
+			reasonCode:      string(StopReasonOOMKilled),
+			wantInit:        stepWant{PASSED_TestWorkflowStepStatus, ""},
+			wantSteps: map[string]stepWant{
+				"step": {ABORTED_TestWorkflowStepStatus, "The execution has been aborted. (Fatal Error)"},
+				"next": {SKIPPED_TestWorkflowStepStatus, "The execution was aborted before. (Fatal Error)"},
+			},
+			// The skipped step gets no code, because it did not run.
+			wantStepReasons: map[string]string{"step": string(StopReasonOOMKilled)},
+		},
+		{
+			name:            "writes the reason code into the initialization step when no step started",
+			initialization:  step(RUNNING_TestWorkflowStepStatus, ""),
+			steps:           map[string]TestWorkflowStepResult{"step": step(QUEUED_TestWorkflowStepStatus, "")},
+			sigSequence:     []TestWorkflowSignature{{Ref: "step"}},
+			errorStr:        "no node can run the pod",
+			terminationCode: aborted,
+			reasonCode:      string(StopReasonUnschedulable),
+			wantInit:        stepWant{ABORTED_TestWorkflowStepStatus, "The execution has been aborted. (no node can run the pod)"},
+			wantSteps: map[string]stepWant{
+				"step": {SKIPPED_TestWorkflowStepStatus, "The execution was aborted before. (no node can run the pod)"},
+			},
+			wantInitReason: string(StopReasonUnschedulable),
+		},
+		{
+			name:           "keeps the code that a step already holds",
+			initialization: step(PASSED_TestWorkflowStepStatus, ""),
+			steps: map[string]TestWorkflowStepResult{
+				"step": {Status: common.Ptr(RUNNING_TestWorkflowStepStatus), ErrorReason: string(StopReasonStepTimeout)},
+			},
+			sigSequence:     []TestWorkflowSignature{{Ref: "step"}},
+			errorStr:        "Fatal Error",
+			terminationCode: aborted,
+			reasonCode:      string(StopReasonJobDeleted),
+			wantInit:        stepWant{PASSED_TestWorkflowStepStatus, ""},
+			wantSteps: map[string]stepWant{
+				"step": {ABORTED_TestWorkflowStepStatus, "The execution has been aborted. (Fatal Error)"},
+			},
+			// The code of the cause wins over the code of the stop, as the message does.
+			wantStepReasons: map[string]string{"step": string(StopReasonStepTimeout)},
+		},
+		{
+			name:            "writes no code when the caller has none",
+			initialization:  step(RUNNING_TestWorkflowStepStatus, ""),
+			steps:           map[string]TestWorkflowStepResult{"step": step(QUEUED_TestWorkflowStepStatus, "")},
+			sigSequence:     []TestWorkflowSignature{{Ref: "step"}},
+			errorStr:        "Fatal Error",
+			terminationCode: aborted,
+			wantInit:        stepWant{ABORTED_TestWorkflowStepStatus, "The execution has been aborted. (Fatal Error)"},
+			wantSteps: map[string]stepWant{
+				"step": {SKIPPED_TestWorkflowStepStatus, "The execution was aborted before. (Fatal Error)"},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -373,14 +439,16 @@ func TestTestWorkflowResult_HealAbortedOrCanceled(t *testing.T) {
 				Steps:          tt.steps,
 			}
 
-			r.HealAbortedOrCanceled(tt.sigSequence, tt.errorStr, defaultErrorStr, tt.terminationCode)
+			r.HealAbortedOrCanceled(tt.sigSequence, tt.errorStr, defaultErrorStr, tt.terminationCode, tt.reasonCode)
 
 			assert.Equal(t, tt.wantInit, stepWant{*r.Initialization.Status, r.Initialization.ErrorMessage})
 			gotSteps := make(map[string]stepWant, len(r.Steps))
 			for ref, s := range r.Steps {
 				gotSteps[ref] = stepWant{*s.Status, s.ErrorMessage}
+				assert.Equal(t, tt.wantStepReasons[ref], s.ErrorReason, "reason code of step %s", ref)
 			}
 			assert.Equal(t, tt.wantSteps, gotSteps)
+			assert.Equal(t, tt.wantInitReason, r.Initialization.ErrorReason)
 		})
 	}
 }

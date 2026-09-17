@@ -93,13 +93,16 @@ func (e *TestWorkflowExecution) GetTemplateRefs() []TestWorkflowTemplateRef {
 	return templateRefs
 }
 
-func (e *TestWorkflowExecution) InitializationError(header string, err error) {
+// InitializationError ends an execution that never started. The reason is the code for the error.
+// A reader gets the cause from the code and does not read the words of the message.
+func (e *TestWorkflowExecution) InitializationError(header, reason string, err error) {
 	e.Result.Status = common.Ptr(ABORTED_TestWorkflowStatus)
 	e.Result.PredictedStatus = e.Result.Status
 	e.Result.FinishedAt = e.ScheduledAt
 	e.Result.Initialization.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
 	e.Result.Initialization.FinishedAt = e.ScheduledAt
 	e.Result.Initialization.ErrorMessage = err.Error()
+	e.Result.Initialization.ErrorReason = reason
 	if header != "" {
 		// The stored message must stay plain text. The API and telemetry read it without a terminal renderer.
 		e.Result.Initialization.ErrorMessage = fmt.Sprintf("%s\n%s", header, e.Result.Initialization.ErrorMessage)

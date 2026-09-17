@@ -128,7 +128,7 @@ func (e *Enqueuer) Execute(ctx context.Context, req *cloud.ScheduleRequest) ([]t
 		exec := intermediateExecutions[i]
 		err = exec.Resolve(common.StandaloneOrganization, common.StandaloneOrganizationSlug, common.StandaloneEnvironment, common.StandaloneEnvironmentSlug, req.ParentExecutionIds, false)
 		if err != nil {
-			exec.SetError("Cannot process Test Workflow specification", err)
+			exec.SetError("Cannot process Test Workflow specification", string(testkube.StartReasonDefinitionInvalid), err)
 			continue
 		}
 	}
@@ -267,7 +267,7 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 
 		// Apply the configuration
 		if err := current.ApplyConfig(exec.Config); err != nil {
-			current.SetError("Cannot inline Test Workflow configuration", err)
+			current.SetError("Cannot inline Test Workflow configuration", string(testkube.StartReasonDefinitionInvalid), err)
 			continue
 		}
 
@@ -275,13 +275,13 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 			// Load the required Test Workflow Templates
 			templates, err := e.fetchTemplates(ctx, current.TemplateNames())
 			if err != nil {
-				current.SetError("Cannot fetch required Test Workflow Templates", err)
+				current.SetError("Cannot fetch required Test Workflow Templates", string(testkube.StopReasonTemplateMissing), err)
 				continue
 			}
 
 			// Apply the Test Workflow Templates
 			if err = current.ApplyTemplates(templates); err != nil {
-				current.SetError("Cannot inline Test Workflow Templates", err)
+				current.SetError("Cannot inline Test Workflow Templates", string(testkube.StartReasonDefinitionInvalid), err)
 				continue
 			}
 		}

@@ -445,7 +445,7 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 	})
 	// TODO: define "revoke" error by runner (?)
 	if err != nil {
-		execution.InitializationError("Failed to run execution", err)
+		execution.InitializationError("Failed to run execution", string(executionworkertypes.StartReasonOf(err)), err)
 		_ = a.saveEmptyLogs(context.Background(), environmentId, execution)
 		err2 := a.finishExecution(context.Background(), environmentId, execution)
 		err = errors.Join(err, err2)

@@ -274,65 +274,83 @@ type ContainerResult struct {
 	ErrorDetails string
 }
 
+// ReasonDeadlineExceeded is the reason that the pod and the job report when they pass
+// activeDeadlineSeconds.
+const ReasonDeadlineExceeded = "DeadlineExceeded"
+
+// GetPodDisruption returns the reason and the message of the disruption condition of the pod, and
+// empty strings when the pod has none. Kubernetes sets this condition when it takes the pod away,
+// for example on an eviction, a preemption, or a shutdown of the node.
+func GetPodDisruption(pod *corev1.Pod) (reason, message string) {
+	if pod == nil {
+		return "", ""
+	}
+	for _, c := range pod.Status.Conditions {
+		if c.Type == corev1.DisruptionTarget && c.Status == corev1.ConditionTrue {
+			return c.Reason, c.Message
+		}
+	}
+	return "", ""
+}
+
 func GetPodError(pod *corev1.Pod) string {
 	if pod == nil {
 		return ""
 	}
-	if pod.Status.Reason == "DeadlineExceeded" && pod.Spec.ActiveDeadlineSeconds != nil {
+	if pod.Status.Reason == ReasonDeadlineExceeded && pod.Spec.ActiveDeadlineSeconds != nil {
 		return fmt.Sprintf("Pod timed out after %d seconds", *pod.Spec.ActiveDeadlineSeconds)
 	}
-	for _, c := range pod.Status.Conditions {
-		if c.Type == corev1.DisruptionTarget && c.Status == corev1.ConditionTrue {
-			if c.Message == "" {
-				return c.Reason
-			}
-			return fmt.Sprintf("%s: %s", c.Reason, c.Message)
+	if reason, message := GetPodDisruption(pod); reason != "" {
+		if message == "" {
+			return reason
 		}
+		return fmt.Sprintf("%s: %s", reason, message)
 	}
 	return ""
+}
+
+// GetJobStop returns what the job says about the stop of the execution. The worker annotates a
+// stop with the actor, a reason token, and an optional detail.
+func GetJobStop(job *batchv1.Job) testkube.Stop {
+	stop := testkube.Stop{Code: GetTerminationCode(job)}
+	if job == nil {
+		return stop
+	}
+	stop.Actor = testkube.StopActor(job.Annotations[constants2.AnnotationTerminationActor])
+	stop.Reason = testkube.StopReason(job.Annotations[constants2.AnnotationTerminationReason])
+	stop.Detail = job.Annotations[constants2.AnnotationTerminationDetail]
+	if stop.Actor == "" && stop.Reason == "" && job.DeletionTimestamp != nil {
+		// A deleted job without the annotations is a stop by an unknown party.
+		stop.Actor = testkube.StopActorSystem
+	}
+	return stop
+}
+
+// GetJobError returns the words for the stop that GetJobStop reports, so the message and the
+// codes read one source. The deadline of the job wins, because it names the limit that ended it.
+// IsJobDeadlineExceeded reports whether the job failed because it passed activeDeadlineSeconds.
+// The condition of the job carries this signal, and the event stream of the job carries it too. The
+// watch can read the condition before the event arrives, so the reader of the code reads both.
+func IsJobDeadlineExceeded(job *batchv1.Job) bool {
+	if job == nil || job.Spec.ActiveDeadlineSeconds == nil {
+		return false
+	}
+	for _, c := range job.Status.Conditions {
+		if c.Type == batchv1.JobFailed && c.Status == corev1.ConditionTrue && c.Reason == ReasonDeadlineExceeded {
+			return true
+		}
+	}
+	return false
 }
 
 func GetJobError(job *batchv1.Job) string {
 	if job == nil {
 		return ""
 	}
-	if job.Spec.ActiveDeadlineSeconds != nil {
-		for _, c := range job.Status.Conditions {
-			if c.Type == batchv1.JobFailed && c.Status == corev1.ConditionTrue && c.Reason == "DeadlineExceeded" {
-				return fmt.Sprintf("Job timed out after %d seconds", *job.Spec.ActiveDeadlineSeconds)
-			}
-		}
+	if IsJobDeadlineExceeded(job) {
+		return fmt.Sprintf("Job timed out after %d seconds", *job.Spec.ActiveDeadlineSeconds)
 	}
-	// The worker annotates a stop with the actor, a reason token, and an optional
-	// detail. A reason without words, from an older worker or a newer control plane,
-	// shows as its raw text. A deleted job without the annotation is a stop by an
-	// unknown party.
-	if job.Annotations != nil {
-		actor := testkube.StopActor(job.Annotations[constants2.AnnotationTerminationActor])
-		reason := testkube.StopReason(job.Annotations[constants2.AnnotationTerminationReason])
-		detail := job.Annotations[constants2.AnnotationTerminationDetail]
-		if actor != "" || reason != "" {
-			var parts []string
-			if actor != "" {
-				parts = append(parts, actor.Sentence())
-			}
-			if reason != "" {
-				words := reason.Sentence()
-				if words == "" {
-					words = string(reason)
-				}
-				parts = append(parts, words)
-			}
-			if detail != "" {
-				parts = append(parts, detail)
-			}
-			return strings.Join(parts, ": ")
-		}
-	}
-	if job.DeletionTimestamp != nil {
-		return testkube.StopActorSystem.Sentence()
-	}
-	return ""
+	return GetJobStop(job).Sentence()
 }
 
 func GetTerminationCode(job *batchv1.Job) string {
