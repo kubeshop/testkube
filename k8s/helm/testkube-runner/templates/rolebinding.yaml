@@ -29,6 +29,34 @@ roleRef:
 
 ---
 
+# Apply CRD discovery role (cluster-scoped)
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: "crd-reader-rb-{{ .Release.Name }}"
+  labels:
+    {{- if .Values.global.labels }}
+    {{- toYaml .Values.global.labels | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- if .Values.global.annotations }}
+    {{- toYaml .Values.global.annotations | nindent 4 }}
+    {{- end }}
+subjects:
+- kind: ServiceAccount
+  namespace: "{{ .Release.Namespace }}"
+  {{- if .Values.pod.serviceAccount.name }}
+  name: "{{ .Values.pod.serviceAccount.name }}"
+  {{- else }}
+  name: "agent-sa-{{ .Release.Name }}"
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: "crd-reader-{{ .Release.Name }}"
+
+---
+
 # Apply agent lease access role
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: RoleBinding

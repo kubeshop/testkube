@@ -5,10 +5,10 @@ release:
   name: tk
   namespace: testkube-dev
 tests:
-  - it: renders the 4 base RoleBindings by default
+  - it: renders the 5 base RoleBindings by default
     asserts:
       - hasDocuments:
-          count: 4
+          count: 5
 
   - it: agent-rb binds agent-sa to agent-role
     documentSelector:
@@ -30,6 +30,24 @@ tests:
       - equal:
           path: subjects[0].namespace
           value: testkube-dev
+
+  - it: crd-reader-rb binds agent-sa to crd-reader ClusterRole
+    documentSelector:
+      path: metadata.name
+      value: crd-reader-rb-tk
+    asserts:
+      - equal:
+          path: kind
+          value: ClusterRoleBinding
+      - equal:
+          path: roleRef.kind
+          value: ClusterRole
+      - equal:
+          path: roleRef.name
+          value: crd-reader-tk
+      - equal:
+          path: subjects[0].name
+          value: agent-sa-tk
 
   - it: agent-lease-access-rb binds agent-sa to agent-lease-access role
     documentSelector:
