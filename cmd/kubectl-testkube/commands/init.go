@@ -229,6 +229,7 @@ func NewInitCmdDemo() *cobra.Command {
 
 			spinner := ui.NewSpinner("Running Kubectl command...")
 			sendTelemetry(cmd, cfg, license, "installing started", licenseName)
+			reportLicenseEvent(cfg, license, licensevalidator.EventCLIInstallStarted)
 			options := common.HelmOptions{
 				Namespace:     namespace,
 				LicenseKey:    license,
@@ -285,6 +286,8 @@ func NewInitCmdDemo() *cobra.Command {
 			spinner.Success()
 
 			sendTelemetry(cmd, cfg, license, "installing finished", licenseName)
+
+			reportLicenseEvent(cfg, license, licensevalidator.EventCLIInstallFinished)
 
 			cfg.Namespace = namespace
 			err = config.Save(cfg)
@@ -361,6 +364,16 @@ func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType, licens
 		}
 
 		ui.Debug("telemetry send event response", out)
+	}
+}
+
+// reportLicenseEvent tells the license service an install step happened; best-effort and telemetry-gated.
+func reportLicenseEvent(clientCfg config.Data, license, event string) {
+	if !clientCfg.TelemetryEnabled {
+		return
+	}
+	if err := licensevalidator.NewClient().ReportEvent(license, event); err != nil {
+		ui.Debug("license event report failed, continuing", err.Error())
 	}
 }
 
