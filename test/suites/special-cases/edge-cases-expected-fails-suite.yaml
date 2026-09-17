@@ -39,6 +39,13 @@ spec:
     execute:
       workflows:
       - name: expected-fail-step-oomkilled
+        as: step-oomkilled
+  - name: assert-step-oomkilled-message
+    shell: |
+      # The message is on the initialization step or on the step, because the pod can stop at different times.
+      msg={{ shellquote(execution("step-oomkilled").errorMessage + " " + tojson(execution("step-oomkilled").stepErrors)) }}
+      echo "$msg"
+      echo "$msg" | grep -q "OOMKilled" || { echo "unexpected message: $msg"; exit 1; }
   - name: expected-fail-service-oomkilled
     negative: true
     execute:
@@ -64,11 +71,24 @@ spec:
     execute:
       workflows:
       - name: expected-fail-timeout-activedeadlineseconds
+        as: timeout-activedeadlineseconds
+  - name: assert-timeout-activedeadlineseconds-message
+    shell: |
+      # The message is on the initialization step or on the step, because the pod can stop at different times.
+      msg={{ shellquote(execution("timeout-activedeadlineseconds").errorMessage + " " + tojson(execution("timeout-activedeadlineseconds").stepErrors)) }}
+      echo "$msg"
+      echo "$msg" | grep -q "has been aborted" || { echo "unexpected message: $msg"; exit 1; }
   - name: expected-fail-timeout-step
     negative: true
     execute:
       workflows:
       - name: expected-fail-timeout-step
+        as: timeout-step
+  - name: assert-timeout-step-message
+    shell: |
+      msg={{ shellquote(tojson(execution("timeout-step").stepErrors)) }}
+      echo "$msg"
+      echo "$msg" | grep -q "the step did not finish within its timeout" || { echo "unexpected message: $msg"; exit 1; }
   - name: expected-fail-private-registry-auth
     negative: true
     execute:
@@ -79,6 +99,13 @@ spec:
     execute:
       workflows:
       - name: expected-fail-private-repo-auth
+        as: private-repo-auth
+  # The obfuscator can mask a secret in the message, so assert only a neutral substring.
+  - name: assert-private-repo-auth-message
+    shell: |
+      msg={{ shellquote(execution("private-repo-auth").errorMessage + " " + tojson(execution("private-repo-auth").stepErrors)) }}
+      echo "$msg"
+      echo "$msg" | grep -q "error cloning repository" || { echo "unexpected message: $msg"; exit 1; }
   - name: expected-fail-missing-git-secret
     negative: true
     execute:
@@ -89,6 +116,12 @@ spec:
     execute:
       workflows:
       - name: expected-fail-missing-template
+        as: missing-template
+  - name: assert-missing-template-message
+    shell: |
+      msg={{ shellquote(execution("missing-template").errorMessage) }}
+      echo "$msg"
+      echo "$msg" | grep -qF "cannot fetch Test Workflow Template by name: some-non-existant-template-name" || { echo "unexpected message: $msg"; exit 1; }
   - name: expected-fail-service-exit-code
     negative: true
     execute:
@@ -99,6 +132,26 @@ spec:
     execute:
       workflows:
       - name: expected-fail-step-retry
+        as: step-retry
+  - name: assert-step-retry-attempts
+    shell: |
+      # The child step fails on the third attempt. Testkube generates the step ref, so the check accepts any ref.
+      attempts={{ shellquote(tojson(execution("step-retry").stepAttempts)) }}
+      echo "$attempts"
+      echo "$attempts" | grep -Eq '^\{"r[a-z0-9]+":3\}$' || { echo "unexpected attempts: $attempts"; exit 1; }
+  - name: expected-fail-step-retry-timeout
+    negative: true
+    execute:
+      workflows:
+      - name: expected-fail-step-retry-timeout
+        as: step-retry-timeout
+  - name: assert-step-retry-timeout-attempts
+    shell: |
+      # Every attempt ends with the step timeout, so the last attempt also reports its number.
+      attempts={{ shellquote(tojson(execution("step-retry-timeout").stepAttempts)) }}
+      echo "$attempts"
+      echo "$attempts" | grep -Eq '^\{"r[a-z0-9]+":3\}$' || { echo "unexpected attempts: $attempts"; exit 1; }
+      [ {{ shellquote(execution("step-retry-timeout").status) }} = "aborted" ] || { echo "unexpected status"; exit 1; }
   - name: expected-fail-negative-step
     negative: true
     execute:
@@ -124,6 +177,12 @@ spec:
     execute:
       workflows:
       - name: expected-fail-service-readiness-probe
+        as: service-readiness-probe
+  - name: assert-service-readiness-probe-message
+    shell: |
+      msg={{ shellquote(execution("service-readiness-probe").errorMessage + " " + tojson(execution("service-readiness-probe").stepErrors)) }}
+      echo "$msg"
+      echo "$msg" | grep -q "services failed to start: broken-service" || { echo "unexpected message: $msg"; exit 1; }
   - name: expected-fail-conditional-step-failed
     negative: true
     execute:
@@ -149,3 +208,67 @@ spec:
     execute:
       workflows:
       - name: expected-fail-parallel-step-fail-fast
+  - name: expected-fail-unschedulable
+    negative: true
+    execute:
+      workflows:
+      - name: expected-fail-unschedulable
+        as: no-node
+  - name: assert-no-node-message
+    shell: |
+      msg={{ shellquote(execution("no-node").errorMessage) }}
+      reason={{ shellquote(execution("no-node").errorReason) }}
+      status={{ shellquote(execution("no-node").status) }}
+      echo "$msg"
+      echo "$msg" | grep -q "no node can run the pod" || { echo "unexpected message: $msg"; exit 1; }
+      [ "$reason" = "unschedulable" ] || { echo "unexpected reason: $reason"; exit 1; }
+      [ "$status" = "aborted" ] || { echo "unexpected status: $status"; exit 1; }
+  - name: expected-fail-env-secret-required
+    negative: true
+    execute:
+      workflows:
+      - name: expected-fail-env-secret-required
+        as: env-secret-required
+  - name: assert-env-secret-required-message
+    shell: |
+      msg={{ shellquote(execution("env-secret-required").errorMessage) }}
+      echo "$msg"
+      echo "$msg" | grep -q "a secret or a config map that a container needs is not available" || { echo "unexpected message: $msg"; exit 1; }
+      [ {{ shellquote(execution("env-secret-required").status) }} = "aborted" ] || { echo "unexpected status"; exit 1; }
+  - name: expected-fail-missing-volume-secret
+    negative: true
+    execute:
+      workflows:
+      - name: expected-fail-missing-volume-secret
+        as: missing-volume-secret
+  - name: assert-missing-volume-secret-message
+    shell: |
+      msg={{ shellquote(execution("missing-volume-secret").errorMessage) }}
+      echo "$msg"
+      echo "$msg" | grep -q "Kubernetes cannot mount a volume of the pod" || { echo "unexpected message: $msg"; exit 1; }
+      [ {{ shellquote(execution("missing-volume-secret").status) }} = "aborted" ] || { echo "unexpected status"; exit 1; }
+  - name: expected-fail-init-timeout
+    negative: true
+    execute:
+      workflows:
+      - name: expected-fail-init-timeout
+        as: init-timeout
+  - name: assert-init-timeout-message
+    shell: |
+      msg={{ shellquote(execution("init-timeout").errorMessage) }}
+      echo "$msg"
+      echo "$msg" | grep -q "no node can run the pod" || { echo "unexpected message: $msg"; exit 1; }
+      echo "$msg" | grep -q "the first step did not start before the initialization timeout of the workflow" || { echo "unexpected message: $msg"; exit 1; }
+      [ {{ shellquote(execution("init-timeout").status) }} = "aborted" ] || { echo "unexpected status"; exit 1; }
+  - name: expected-fail-nested-execute
+    negative: true
+    execute:
+      workflows:
+      - name: expected-fail-nested-execute
+        as: nested-execute
+  - name: assert-nested-execute-message
+    shell: |
+      msg={{ shellquote(execution("nested-execute").errorMessage + " " + tojson(execution("nested-execute").stepErrors)) }}
+      echo "$msg"
+      echo "$msg" | grep -q "1 of 1 executions failed: expected-fail-conditional-step-failed" || { echo "unexpected message: $msg"; exit 1; }
+      [ {{ shellquote(execution("nested-execute").status) }} = "failed" ] || { echo "unexpected status"; exit 1; }

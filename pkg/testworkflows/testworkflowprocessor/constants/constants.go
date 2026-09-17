@@ -28,6 +28,7 @@ const (
 	SignatureAnnotationName         = "testkube.io/signature"
 	SignatureAnnotationFieldPath    = "metadata.annotations['" + SignatureAnnotationName + "']"
 	ScheduledAtAnnotationName       = "testkube.io/at"
+	InitializationTimeoutAnnotation = "testkube.io/timeouts.init"
 	SpecAnnotationName              = "testkube.io/spec"
 	SpecAnnotationFieldPath         = "metadata.annotations['" + SpecAnnotationName + "']"
 	InternalAnnotationName          = "testkube.io/config"

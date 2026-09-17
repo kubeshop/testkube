@@ -220,9 +220,13 @@ type TestWorkflowPause struct {
 
 // TestWorkflowStepResult contains step result of TestWorkflow
 type TestWorkflowStepResult struct {
-	ErrorMessage string                  `json:"errorMessage,omitempty"`
-	Status       *TestWorkflowStepStatus `json:"status,omitempty"`
-	ExitCode     int64                   `json:"exitCode,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	// code of the cause in the error message, for example unschedulable; empty when the message has no known cause
+	ErrorReason string                  `json:"errorReason,omitempty"`
+	Status      *TestWorkflowStepStatus `json:"status,omitempty"`
+	ExitCode    int64                   `json:"exitCode,omitempty"`
+	// number of attempts that the step started, empty when the init process reported none
+	Attempts int32 `json:"attempts,omitempty"`
 	// when the container was created
 	QueuedAt metav1.Time `json:"queuedAt,omitempty"`
 	// when the container was started

@@ -32,6 +32,34 @@ func setBearerAuth(req *nethttp.Request, token string) {
 	req.Header.Set("Authorization", "Bearer "+token)
 }
 
+// StatusError is returned for any response the Control Plane rejects. It keeps
+// the status code so callers can tell apart the reasons a lookup fails - a 404
+// for an id that does not exist, a 401 or 403 for a credential that is not
+// accepted - which the response body alone does not reveal, as it is often
+// empty.
+type StatusError struct {
+	URL        string
+	StatusCode int
+	Body       string
+}
+
+func (e *StatusError) Error() string {
+	if e.Body == "" {
+		return fmt.Sprintf("%s returned HTTP %d", e.URL, e.StatusCode)
+	}
+	return fmt.Sprintf("%s returned HTTP %d: %s", e.URL, e.StatusCode, e.Body)
+}
+
+// newStatusError drains the error response, capping it so a control plane that
+// answers with a full HTML page does not dump it all into the terminal.
+func newStatusError(url string, resp *nethttp.Response) error {
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxErrorResponseBytes))
+	if err != nil {
+		return fmt.Errorf("%s returned HTTP %d, and the response could not be read: %s", url, resp.StatusCode, err)
+	}
+	return &StatusError{URL: url, StatusCode: resp.StatusCode, Body: strings.TrimSpace(string(body))}
+}
+
 func (c RESTClient[I, O]) List() ([]O, error) {
 	path := c.Path
 	r, err := nethttp.NewRequestWithContext(context.Background(), nethttp.MethodGet, c.BaseUrl+path, nil)
@@ -46,11 +74,7 @@ func (c RESTClient[I, O]) List() ([]O, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		d, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("error getting %s: can't read response: %s", c.Path, err)
-		}
-		return nil, fmt.Errorf("error getting %s: %s", path, d)
+		return nil, newStatusError(c.BaseUrl+path, resp)
 	}
 
 	var orgsResponse ListResponse[O]
@@ -79,11 +103,7 @@ func (c RESTClient[I, O]) ListWithQuery(query map[string]string) ([]O, error) {
 	}
 
 	if resp.StatusCode >= 400 {
-		d, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("error getting %s: can't read response: %s", c.Path, err)
-		}
-		return nil, fmt.Errorf("error getting %s: %s", path, d)
+		return nil, newStatusError(c.BaseUrl+path+qs, resp)
 	}
 
 	var orgsResponse ListResponse[O]
@@ -105,11 +125,7 @@ func (c RESTClient[I, O]) Get(id string) (e O, err error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
-		d, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return e, fmt.Errorf("error getting %s: can't read response: %s", c.Path, err)
-		}
-		return e, fmt.Errorf("error getting %s: %s", path, d)
+		return e, newStatusError(path, resp)
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&e)

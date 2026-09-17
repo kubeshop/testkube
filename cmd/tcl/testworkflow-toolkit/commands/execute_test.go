@@ -9,12 +9,16 @@
 package commands
 
 import (
+	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executiondata"
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
@@ -152,4 +156,126 @@ func TestClaimExecutionRefs(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), `duplicated execution reference "b"`)
 	})
+}
+
+func TestExecutionRecorder_Complete(t *testing.T) {
+	// complete prints an output instruction, and that instruction needs a toolkit configuration.
+	t.Setenv("TK_CFG", "{}")
+	t.Setenv("TK_REF", "rparent")
+
+	tests := []struct {
+		name             string
+		result           *testkube.TestWorkflowResult
+		wantStatus       string
+		wantMessage      string
+		wantStepErrors   map[string]string
+		wantStepAttempts map[string]int64
+	}{
+		{
+			name: "records the messages of a failed execution",
+			result: &testkube.TestWorkflowResult{
+				Status:         common.Ptr(testkube.FAILED_TestWorkflowStatus),
+				Initialization: &testkube.TestWorkflowStepResult{ErrorMessage: "the pod cannot be scheduled"},
+				Steps:          map[string]testkube.TestWorkflowStepResult{"rstep1": {ErrorMessage: "the step timed out", Attempts: 3}},
+			},
+			wantStatus:       "failed",
+			wantMessage:      "the pod cannot be scheduled",
+			wantStepErrors:   map[string]string{"rstep1": "the step timed out"},
+			wantStepAttempts: map[string]int64{"rstep1": 3},
+		},
+		{
+			name: "records no messages for an execution that passed",
+			result: &testkube.TestWorkflowResult{
+				Status:         common.Ptr(testkube.PASSED_TestWorkflowStatus),
+				Initialization: &testkube.TestWorkflowStepResult{},
+				Steps:          map[string]testkube.TestWorkflowStepResult{"rstep1": {}},
+			},
+			wantStatus: "passed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			registry := executiondata.NewRegistry()
+			recorder := newExecutionRecorder(registry)
+			exec := testkube.TestWorkflowExecution{Id: "exec-1", Name: "child-1"}
+			entry := recorder.schedule("child", "child-workflow", exec)
+
+			exec.Result = tt.result
+			recorder.complete(entry, exec)
+
+			got, ok, err := registry.Lookup("child", 0)
+			require.NoError(t, err)
+			require.True(t, ok)
+			assert.Equal(t, executiondata.Execution{
+				Id:           "exec-1",
+				Name:         "child-1",
+				Workflow:     "child-workflow",
+				Alias:        "child",
+				Status:       tt.wantStatus,
+				Outputs:      map[string]string{},
+				ErrorMessage: tt.wantMessage,
+				StepErrors:   tt.wantStepErrors,
+				StepAttempts: tt.wantStepAttempts,
+			}, got)
+
+			// Later steps rebuild the registry from the JSON of the published group.
+			raw, err := json.Marshal(registry.Group("child"))
+			require.NoError(t, err)
+			var decoded []executiondata.Execution
+			require.NoError(t, json.Unmarshal(raw, &decoded))
+			require.Len(t, decoded, 1)
+			assert.Equal(t, got.ErrorMessage, decoded[0].ErrorMessage)
+			assert.Equal(t, got.StepErrors, decoded[0].StepErrors)
+			assert.Equal(t, got.StepAttempts, decoded[0].StepAttempts)
+		})
+	}
+}
+
+func TestFailureSummary(t *testing.T) {
+	passed := func(name string) executionOutcome { return executionOutcome{name: name} }
+	tests := []struct {
+		name    string
+		results []operationResult
+		want    string
+	}{
+		{
+			name: "returns an empty summary when every execution passed",
+			results: []operationResult{
+				{outcomes: []executionOutcome{passed("a-1")}},
+				{outcomes: []executionOutcome{passed("b-1")}},
+			},
+			want: "",
+		},
+		{
+			name: "names the failed executions of all entries with their status",
+			results: []operationResult{
+				{outcomes: []executionOutcome{passed("a-1"), {name: "a-2", err: errors.New("failed")}}},
+				{outcomes: []executionOutcome{passed("b-1"), passed("b-2")}},
+				{outcomes: []executionOutcome{{name: "c-1", err: errors.New("aborted")}}},
+				notScheduled("consumer", errors.New("computing execution: unknown execution \"p\"")),
+			},
+			want: "3 of 6 executions failed: a-2 (failed), c-1 (aborted), consumer (computing execution: unknown execution \"p\")",
+		},
+		{
+			name: "adds a failure that is not about one execution after the executions",
+			results: []operationResult{
+				{outcomes: []executionOutcome{{name: "a-1", err: errors.New("failed")}}, err: errors.New("fetching artifacts: fetch.0: not found")},
+			},
+			want: "1 of 1 executions failed: a-1 (failed); fetching artifacts: fetch.0: not found",
+		},
+		{
+			name: "returns only the other failure when every execution passed",
+			results: []operationResult{
+				{outcomes: []executionOutcome{passed("a-1")}, err: errors.New("fetching artifacts: fetch.0: not found")},
+			},
+			want: "fetching artifacts: fetch.0: not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, failureSummary(tt.results))
+		})
+	}
 }

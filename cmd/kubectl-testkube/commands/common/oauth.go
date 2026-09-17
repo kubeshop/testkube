@@ -79,6 +79,31 @@ func RefreshOAuthToken() (accessToken string, err error) {
 	return newAccessToken, nil
 }
 
+// RefreshContextToken renews an expired user login token in place, so a command
+// that talks to the Control Plane without going through GetClient - which does
+// this for every other command - is not left using a token that expired.
+//
+// A stored API key has nothing to refresh, and neither has a login that never
+// produced a refresh token, so both are left untouched and reported as no-ops.
+func RefreshContextToken(cfg *config.Data, skipTLS bool) error {
+	if !isUserTokenType(cfg.CloudContext.TokenType) {
+		return nil
+	}
+	if cfg.CloudContext.ApiKey == "" || cfg.CloudContext.RefreshToken == "" {
+		return nil
+	}
+
+	token, refreshToken, err := refreshUserToken(context.Background(), *cfg, skipTLS)
+	if err != nil {
+		return err
+	}
+
+	cfg.CloudContext.ApiKey = token
+	cfg.CloudContext.RefreshToken = refreshToken
+
+	return nil
+}
+
 // refreshUserToken dispatches the refresh path based on the stored TokenType.
 // Returns a fresh (idToken, refreshToken); does not persist to config.
 // The email-link path skips the network when the current idToken is still valid

@@ -133,8 +133,8 @@ func (list internalAgents) TableWithEnvironments(showEnvironments bool) (header 
 				agentLabels = strings.Join(agentLabelsEntries, " ")
 			}
 
-			// Runner Mode and License (only for runner capability)
-			if hasCapability(e.Registered, cloudclient.AgentCapabilityRunner) {
+			// Runner Mode and License (only for execution-capable agents)
+			if hasExecutionCapability(e.Registered) {
 				agentRunnerMode = getAgentRunnerMode(e.Registered)
 				agentLicense = getAgentLicenseType(e.Registered)
 			}
@@ -254,6 +254,11 @@ func hasCapability(agent *cloudclient.Agent, capability cloudclient.AgentCapabil
 		}
 	}
 	return false
+}
+
+func hasExecutionCapability(agent *cloudclient.Agent) bool {
+	return hasCapability(agent, cloudclient.AgentCapabilityExecution) ||
+		hasCapability(agent, cloudclient.AgentCapabilityRunner)
 }
 
 // getAgentRunnerMode returns the runner mode based on runnerPolicy
@@ -613,6 +618,7 @@ func normalizeLegacySuperAgent(agent *cloudclient.Agent) {
 	}
 	if len(agent.Capabilities) == 0 {
 		agent.Capabilities = []cloudclient.AgentCapability{
+			cloudclient.AgentCapabilityExecution,
 			cloudclient.AgentCapabilityRunner,
 			cloudclient.AgentCapabilityListener,
 			cloudclient.AgentCapabilityGitops,
@@ -821,7 +827,7 @@ func UiCreateAgent(
 	isGlobalRunner bool,
 	runnerGroup string,
 	floating bool,
-	enableRunner bool,
+	enableExecution bool,
 	enableListener bool,
 	enableGitops bool,
 	enableWebhooks bool,
@@ -847,8 +853,8 @@ func UiCreateAgent(
 	}
 
 	// Set capabilities based on resolved flags
-	if enableRunner {
-		input.Capabilities = append(input.Capabilities, cloudclient.AgentCapabilityRunner)
+	if enableExecution {
+		input.Capabilities = append(input.Capabilities, cloudclient.AgentCapabilityExecution, cloudclient.AgentCapabilityRunner)
 	}
 	if enableListener {
 		input.Capabilities = append(input.Capabilities, cloudclient.AgentCapabilityListener)

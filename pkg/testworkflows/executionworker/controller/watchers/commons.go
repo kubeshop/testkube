@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -422,4 +423,41 @@ func GetEventContainerName(event *corev1.Event) string {
 		return name
 	}
 	return ""
+}
+
+// isStepContainer reports whether the container runs Test Workflow steps. The processor gives these containers numeric names.
+func isStepContainer(name string) bool {
+	_, err := strconv.ParseInt(name, 10, 64)
+	return err == nil
+}
+
+// latestWaitingCause returns the cause of the latest warning event with a reason in causes.
+// It returns nil when an event with a reason in progress is not older than that event.
+// The watcher does not sort the events, so the event time decides the order, and the list position only breaks a tie.
+func latestWaitingCause(events []*corev1.Event, causes map[string]testkube.StopReason, progress []string) *testkube.Cause {
+	var cause *corev1.Event
+	var causeTs, progressTs time.Time
+	causeIndex, progressIndex := -1, -1
+	for i, event := range events {
+		ts := GetEventTimestamp(event)
+		if slices.Contains(progress, event.Reason) && !ts.Before(progressTs) {
+			progressTs, progressIndex = ts, i
+		}
+		if _, ok := causes[event.Reason]; ok && event.Type == corev1.EventTypeWarning && !ts.Before(causeTs) {
+			cause, causeTs, causeIndex = event, ts, i
+		}
+	}
+	if cause == nil || progressTs.After(causeTs) || (progressTs.Equal(causeTs) && progressIndex > causeIndex) {
+		return nil
+	}
+	return &testkube.Cause{Reason: string(causes[cause.Reason]), Message: cause.Message}
+}
+
+// parseInitializationTimeout reads the initialization timeout annotation. It returns zero when the value is absent or invalid.
+func parseInitializationTimeout(annotations map[string]string) time.Duration {
+	timeout, err := time.ParseDuration(annotations[constants2.InitializationTimeoutAnnotation])
+	if err != nil || timeout < 0 {
+		return 0
+	}
+	return timeout
 }

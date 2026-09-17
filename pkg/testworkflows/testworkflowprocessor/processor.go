@@ -655,6 +655,13 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		constants.InternalAnnotationName:    string(internalConfigSerialized),
 		constants.ScheduledAtAnnotationName: options.ScheduledAt.UTC().Format(time.RFC3339Nano),
 	})
+	if workflow.Spec.Timeouts != nil && workflow.Spec.Timeouts.Initialization != "" {
+		initializationTimeout, err := time.ParseDuration(workflow.Spec.Timeouts.Initialization)
+		if err != nil || initializationTimeout <= 0 {
+			return nil, fmt.Errorf("timeouts.initialization: %q is not a positive duration", workflow.Spec.Timeouts.Initialization)
+		}
+		podAnnotations[constants.InitializationTimeoutAnnotation] = initializationTimeout.String()
+	}
 	jobSpec.Spec.Template.Annotations = podAnnotations
 
 	// Build bundle
