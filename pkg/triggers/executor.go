@@ -147,6 +147,11 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *internalTrigg
 
 			for _, parameter := range parameters {
 				for key, value := range parameter.s {
+					if parameter.name == "config" && isReservedProvenanceKey(key) {
+						s.logger.Warnf("trigger service: executor component: trigger %s/%s ignoring config key %s: %s* is reserved for git provenance",
+							t.Namespace, t.Name, key, testworkflowexecutor.GitMetadataKeyPrefix)
+						continue
+					}
 					if t.Source == triggerSourceV2 {
 						// v2: use expression engine
 						resolved, err := resolveExpressionWithMachine(exprMachine, value)
@@ -574,4 +579,19 @@ func (s *Service) getTestWorkflowsFromInternal(t *internalTrigger) ([]testworkfl
 		}
 	}
 	return testWorkflows, nil
+}
+
+// isReservedProvenanceKey reports whether a trigger's configuration may set this key.
+//
+// The git keys are provenance, not configuration: they are written from what the informer
+// observed about the event, and the control plane reads them to decide whether a run
+// belongs to a pull request. A trigger that set TESTKUBE_GIT_PR_NUMBER to an empty string
+// would erase that marker, and the run would be classified as trusted - free to write the
+// cache namespace that default-branch executions restore from.
+//
+// Authoring a trigger is already a privileged act, but it is not the same privilege as
+// deciding which runs are trusted, and the override would be silent either way: nothing
+// downstream can tell a blanked marker from an event that never carried one.
+func isReservedProvenanceKey(key string) bool {
+	return strings.HasPrefix(key, testworkflowexecutor.GitMetadataKeyPrefix)
 }
