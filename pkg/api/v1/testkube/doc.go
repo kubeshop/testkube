@@ -27,4 +27,15 @@
 //
 // HealAbortedOrCanceled writes the code of a stop into the step that it stops, unless that step
 // already holds a code of its own.
+//
+// # The classifier
+//
+// ClassifyStatus builds the object from the final result and from the stop. The caller runs it
+// after the heal functions, because the object reads the statuses that they settle. Its own
+// documentation holds the order of the rules and the reason for that order.
+//
+// The runner classifies when a watch ends, after a lost watch, and after the check for stuck
+// executions. The standalone agent classifies when it declines an execution. The control plane
+// writes the object for the stops that only it decides, and it never writes one for a running
+// execution, because the next save of the runner replaces every result field.
 package testkube

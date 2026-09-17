@@ -266,6 +266,14 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		if !lastResult.IsFinished() {
 			logger.Errorw("failed to recover TestWorkflow result, marking as fatal error...")
 			lastResult.Fatal(errors.New("failed to recover TestWorkflow result"), testkube.StopReasonUnknown, true, time.Now())
+			// The saver stores this result as the final one, so it needs the object like every
+			// other terminal result. The runner knows only that it could not read the execution.
+			sigSequence := stage.MapSignatureListToInternal(stage.MapSignatureToSequence(stage.MapSignatureList(execution.Signature)))
+			lastResult.StatusDetails = lastResult.ClassifyStatus(sigSequence, testkube.Stop{
+				Code:   string(testkube.ABORTED_TestWorkflowStatus),
+				Actor:  testkube.StopActorRunner,
+				Reason: testkube.StopReasonUnknown,
+			})
 		}
 	}
 
@@ -607,6 +615,13 @@ func (r *runner) abortExecution(ctx context.Context, environmentID, executionID 
 		return errors.New("execution result is nil")
 	}
 	execution.Result.Fatal(errors.New(testkube.StopReasonExecutionStuck.Sentence()), testkube.StopReasonExecutionStuck, true, time.Now())
+	// The runner gave up on a stuck execution, so it is the actor of the stop.
+	sigSequence := stage.MapSignatureListToInternal(stage.MapSignatureToSequence(stage.MapSignatureList(execution.Signature)))
+	execution.Result.StatusDetails = execution.Result.ClassifyStatus(sigSequence, testkube.Stop{
+		Code:   string(testkube.ABORTED_TestWorkflowStatus),
+		Actor:  testkube.StopActorRunner,
+		Reason: testkube.StopReasonExecutionStuck,
+	})
 	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
 		return r.client.UpdateExecutionResult(ctx, environmentID, executionID, execution.Result)
 	})
