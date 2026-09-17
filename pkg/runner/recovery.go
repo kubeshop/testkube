@@ -20,6 +20,8 @@ func healRecoveredResult(result *testkube.TestWorkflowResult, sigSequence []test
 	result.HealDuration(scheduledAt)
 	result.HealMissingPauseStatuses()
 	result.HealStatus(sigSequence)
+	// The runner lost the watch, so it knows only that the execution stopped.
+	result.StatusDetails = result.ClassifyStatus(sigSequence, testkube.Stop{Code: string(testkube.ABORTED_TestWorkflowStatus)})
 }
 
 // recordedCause returns the message and the reason code of the initialization step, or of the first step in the

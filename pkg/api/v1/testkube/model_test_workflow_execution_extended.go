@@ -116,6 +116,12 @@ func (e *TestWorkflowExecution) InitializationError(header, reason string, err e
 		e.Result.Steps[ref] = step
 	}
 	e.Result.HealDuration(e.ScheduledAt)
+	// The execution never reached a runner, so the control plane is the actor of the stop.
+	e.Result.StatusDetails = e.Result.ClassifyStatus(nil, Stop{
+		Code:   string(ABORTED_TestWorkflowStatus),
+		Actor:  StopActorControlPlane,
+		Reason: StopReason(reason),
+	})
 }
 
 func (e *TestWorkflowExecution) FailedToInitialize() bool {
