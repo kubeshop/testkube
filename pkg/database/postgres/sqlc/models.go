@@ -117,6 +117,8 @@ type TestWorkflowResult struct {
 	FinishedAt      pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
 	CreatedAt       pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	// Why the execution did not pass: type, reason, message, step, actor, and user. Null for an execution that passed, and for an execution that ended before this column existed.
+	StatusDetails []byte `db:"status_details" json:"status_details"`
 }
 
 type TestWorkflowSignature struct {

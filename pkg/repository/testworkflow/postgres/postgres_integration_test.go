@@ -3,11 +3,14 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/database/postgres/sqlc"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	testpostgres "github.com/kubeshop/testkube/pkg/test/postgres"
@@ -793,4 +796,108 @@ func TestPostgresGetLatestTestWorkflowExecutionByTestWorkflow_AmbiguousFlags_Int
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "ambig-sched", row.ID, "(false, false) must use scheduled_at")
+}
+
+func TestPostgresRepositoryStatusDetails_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "repo_status_details")
+	t.Cleanup(cleanup)
+
+	ctx := context.Background()
+	orgID := "test-org"
+	envID := "test-env"
+	repo := NewPostgresRepository(testDB.Pool, WithOrganizationID(orgID), WithEnvironmentID(envID))
+
+	details := func(detailsType testkube.StatusDetailsType, reason testkube.StopReason) *testkube.TestWorkflowStatusDetails {
+		return &testkube.TestWorkflowStatusDetails{
+			Type_:   string(detailsType),
+			Reason:  string(reason),
+			Message: "no node can run the pod: 0/2 nodes are available",
+			Step:    "rstep1",
+			Actor:   string(testkube.StopActorRunner),
+			User:    &testkube.TestWorkflowStatusDetailsUser{Name: "Ada", Email: "ada@example.com"},
+		}
+	}
+
+	executions := []struct {
+		id      string
+		number  int32
+		details *testkube.TestWorkflowStatusDetails
+	}{
+		{id: "init-1", number: 1, details: details(testkube.StatusDetailsTypeInitFailure, testkube.StopReasonUnschedulable)},
+		{id: "exec-1", number: 2, details: details(testkube.StatusDetailsTypeExecutionFailure, testkube.StopReasonOOMKilled)},
+		{id: "step-1", number: 3, details: details(testkube.StatusDetailsTypeStepFailure, testkube.StopReasonExitCode)},
+		{id: "passed-1", number: 4, details: nil},
+	}
+	for _, e := range executions {
+		require.NoError(t, repo.Insert(ctx, testkube.TestWorkflowExecution{
+			Id:        e.id,
+			Name:      e.id,
+			Namespace: "default",
+			Number:    e.number,
+			Workflow:  &testkube.TestWorkflow{Name: e.id, Spec: &testkube.TestWorkflowSpec{}},
+			Result: &testkube.TestWorkflowResult{
+				Status:        common.Ptr(testkube.ABORTED_TestWorkflowStatus),
+				StatusDetails: e.details,
+			},
+		}))
+	}
+
+	t.Run("the insert stores every field of the status details", func(t *testing.T) {
+		got, err := repo.Get(ctx, "init-1")
+		require.NoError(t, err)
+		require.NotNil(t, got.Result.StatusDetails)
+		assert.Equal(t, *details(testkube.StatusDetailsTypeInitFailure, testkube.StopReasonUnschedulable), *got.Result.StatusDetails)
+	})
+
+	t.Run("an execution without status details reads none", func(t *testing.T) {
+		got, err := repo.Get(ctx, "passed-1")
+		require.NoError(t, err)
+		assert.Nil(t, got.Result.StatusDetails)
+	})
+
+	t.Run("an update replaces the status details", func(t *testing.T) {
+		replaced := details(testkube.StatusDetailsTypeUserCancel, testkube.StopReasonForceCancel)
+		require.NoError(t, repo.UpdateResult(ctx, "exec-1", &testkube.TestWorkflowResult{
+			Status:        common.Ptr(testkube.CANCELED_TestWorkflowStatus),
+			StatusDetails: replaced,
+		}))
+
+		got, err := repo.Get(ctx, "exec-1")
+		require.NoError(t, err)
+		require.NotNil(t, got.Result.StatusDetails)
+		assert.Equal(t, *replaced, *got.Result.StatusDetails)
+	})
+
+	t.Run("the summary carries the status details", func(t *testing.T) {
+		summaries, err := repo.GetExecutionsSummary(ctx, testworkflow.NewExecutionsFilter().WithName("init-1"))
+		require.NoError(t, err)
+		require.Len(t, summaries, 1)
+		require.NotNil(t, summaries[0].Result.StatusDetails)
+		assert.Equal(t, string(testkube.StatusDetailsTypeInitFailure), summaries[0].Result.StatusDetails.Type_)
+	})
+
+	filterTests := []struct {
+		name    string
+		types   string
+		wantIDs []string
+	}{
+		{name: "one type", types: "init-failure", wantIDs: []string{"init-1"}},
+		{name: "two types", types: "init-failure,step-failure", wantIDs: []string{"init-1", "step-1"}},
+		{name: "the type of the updated execution", types: "user-cancel", wantIDs: []string{"exec-1"}},
+		{name: "a type that no execution carries", types: "unknown", wantIDs: []string{}},
+	}
+	for _, tt := range filterTests {
+		t.Run("filters by "+tt.name, func(t *testing.T) {
+			got, err := repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithStatusDetailsTypes(tt.types))
+			require.NoError(t, err)
+
+			ids := make([]string, 0, len(got))
+			for _, e := range got {
+				ids = append(ids, e.Id)
+			}
+			sort.Strings(ids)
+			assert.Equal(t, tt.wantIDs, ids)
+		})
+	}
 }

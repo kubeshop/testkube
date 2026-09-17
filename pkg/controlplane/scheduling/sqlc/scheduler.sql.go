@@ -16,7 +16,7 @@ UPDATE test_workflow_results
 SET
     status = 'assigned',
     updated_at = $1::timestamptz
-WHERE execution_id = $2::text RETURNING execution_id, status, predicted_status, duration, total_duration, duration_ms, paused_ms, total_duration_ms, pauses, initialization, steps, queued_at, started_at, finished_at, created_at, updated_at
+WHERE execution_id = $2::text RETURNING execution_id, status, predicted_status, duration, total_duration, duration_ms, paused_ms, total_duration_ms, pauses, initialization, steps, queued_at, started_at, finished_at, created_at, updated_at, status_details
 `
 
 type AssignExecutionResultParams struct {
@@ -44,6 +44,7 @@ func (q *Queries) AssignExecutionResult(ctx context.Context, arg AssignExecution
 		&i.FinishedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.StatusDetails,
 	)
 	return i, err
 }
@@ -278,7 +279,7 @@ func (q *Queries) GetExecutionWorkflow(ctx context.Context, executionID string) 
 const getNextExecution = `-- name: GetNextExecution :one
 SELECT
     e.id, e.name, e.namespace, e.number, e.test_workflow_execution_name, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.scheduled_at, e.assigned_at, e.status_at, e.created_at, e.updated_at, e.organization_id, e.environment_id, e.runtime, e.silent_mode, e.workflow_name, e.status,
-    r.execution_id, r.status, r.predicted_status, r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms, r.pauses, r.initialization, r.steps, r.queued_at, r.started_at, r.finished_at, r.created_at, r.updated_at
+    r.execution_id, r.status, r.predicted_status, r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms, r.pauses, r.initialization, r.steps, r.queued_at, r.started_at, r.finished_at, r.created_at, r.updated_at, r.status_details
 FROM
     test_workflow_executions e
         JOIN test_workflow_results r ON e.id = r.execution_id
@@ -341,6 +342,7 @@ func (q *Queries) GetNextExecution(ctx context.Context) (GetNextExecutionRow, er
 		&i.TestWorkflowResult.FinishedAt,
 		&i.TestWorkflowResult.CreatedAt,
 		&i.TestWorkflowResult.UpdatedAt,
+		&i.TestWorkflowResult.StatusDetails,
 	)
 	return i, err
 }

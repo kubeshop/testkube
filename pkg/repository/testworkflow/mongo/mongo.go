@@ -609,6 +609,12 @@ func composeQueryAndOpts(filter testworkflow.Filter) (bson.M, *options.FindOptio
 		query["result.status"] = bson.M{"$in": statuses}
 	}
 
+	if filter.StatusDetailsTypesDefined() {
+		// Mongo stores each field under the lowercase name of the Go field. The name of the type
+		// field ends with an underscore, because type is a keyword of the language.
+		query["result.statusdetails.type_"] = bson.M{"$in": filter.StatusDetailsTypes()}
+	}
+
 	if filter.Selector() != "" {
 		items := strings.Split(filter.Selector(), ",")
 		for _, item := range items {

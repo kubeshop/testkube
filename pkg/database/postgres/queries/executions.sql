@@ -3,7 +3,7 @@ SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
-    r.pauses, r.initialization, r.steps,
+    r.pauses, r.initialization, r.steps, r.status_details,
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
@@ -64,7 +64,7 @@ SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
-    r.pauses, r.initialization, r.steps,
+    r.pauses, r.initialization, r.steps, r.status_details,
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
@@ -155,7 +155,7 @@ SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
-    r.pauses, r.initialization, r.steps,
+    r.pauses, r.initialization, r.steps, r.status_details,
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
@@ -216,7 +216,7 @@ SELECT DISTINCT ON (e.workflow_name)
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
-    r.pauses, r.initialization, r.steps,
+    r.pauses, r.initialization, r.steps, r.status_details,
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
@@ -278,7 +278,7 @@ SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
-    r.pauses, r.initialization, r.steps,
+    r.pauses, r.initialization, r.steps, r.status_details,
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
@@ -340,7 +340,7 @@ SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
-    r.pauses, r.initialization, r.steps,
+    r.pauses, r.initialization, r.steps, r.status_details,
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
@@ -403,6 +403,7 @@ WHERE e.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
     AND (COALESCE(@end_date::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= @end_date::timestamptz)
     AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
     AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.status = ANY(@statuses::text[]))
+    AND (COALESCE(@status_details_types::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status_details->>'type' = ANY(@status_details_types::text[]))
     AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
     AND (COALESCE(@assigned, NULL) IS NULL OR
          (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
@@ -491,7 +492,7 @@ SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
-    r.pauses, r.initialization, r.steps,
+    r.pauses, r.initialization, r.steps, r.status_details,
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
@@ -570,6 +571,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@end_date::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= @end_date::timestamptz)
     AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
     AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.status = ANY(@statuses::text[]))
+    AND (COALESCE(@status_details_types::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status_details->>'type' = ANY(@status_details_types::text[]))
     AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
     AND (COALESCE(@assigned, NULL) IS NULL OR
          (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
@@ -662,7 +664,7 @@ SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
-    r.pauses, r.initialization, r.steps,
+    r.pauses, r.initialization, r.steps, r.status_details,
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
@@ -724,6 +726,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@end_date::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= @end_date::timestamptz)
     AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
     AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.status = ANY(@statuses::text[]))
+    AND (COALESCE(@status_details_types::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status_details->>'type' = ANY(@status_details_types::text[]))
     AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
     AND (COALESCE(@assigned, NULL) IS NULL OR
          (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
@@ -825,11 +828,11 @@ RETURNING test_workflow_signatures.id;
 INSERT INTO test_workflow_results (
     execution_id, status, predicted_status, queued_at, started_at, finished_at,
     duration, total_duration, duration_ms, paused_ms, total_duration_ms,
-    pauses, initialization, steps
+    pauses, initialization, steps, status_details
 ) VALUES (
     @execution_id, @status, @predicted_status, @queued_at, @started_at, @finished_at,
     @duration, @total_duration, @duration_ms, @paused_ms, @total_duration_ms,
-    @pauses, @initialization, @steps
+    @pauses, @initialization, @steps, @status_details
 )
 ON CONFLICT (execution_id) DO UPDATE SET
     status = EXCLUDED.status,
@@ -844,7 +847,8 @@ ON CONFLICT (execution_id) DO UPDATE SET
     total_duration_ms = EXCLUDED.total_duration_ms,
     pauses = EXCLUDED.pauses,
     initialization = EXCLUDED.initialization,
-    steps = EXCLUDED.steps;
+    steps = EXCLUDED.steps,
+    status_details = EXCLUDED.status_details;
 
 -- name: InsertTestWorkflowOutput :exec
 INSERT INTO test_workflow_outputs (execution_id, ref, name, value, out_order)
@@ -899,7 +903,8 @@ SET
     total_duration_ms = @total_duration_ms,
     pauses = @pauses,
     initialization = @initialization,
-    steps = @steps
+    steps = @steps,
+    status_details = @status_details
 WHERE execution_id = @execution_id;
 
 -- name: UpdateExecutionStatus :exec
@@ -1032,7 +1037,7 @@ SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
-    r.pauses, r.initialization, r.steps,
+    r.pauses, r.initialization, r.steps, r.status_details,
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
@@ -1112,6 +1117,13 @@ SET
             '{errormessage}', '"Aborted before initialization."'
         ),
         '{finishedat}', to_jsonb(@abort_time::timestamptz)
+    ),
+    -- A person calls this route, so the stop is a cancel and never a failure.
+    status_details = jsonb_build_object(
+        'type', 'user-cancel',
+        'reason', 'user-cancel',
+        'actor', 'api',
+        'message', 'Aborted before initialization.'
     )
 WHERE execution_id = @id
     AND status IN ('queued', 'running', 'paused');
@@ -1143,7 +1155,7 @@ SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
-    r.pauses, r.initialization, r.steps,
+    r.pauses, r.initialization, r.steps, r.status_details,
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
@@ -1205,6 +1217,7 @@ FROM (
         AND (COALESCE(@end_date::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= @end_date::timestamptz)
         AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
         AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.status = ANY(@statuses::text[]))
+        AND (COALESCE(@status_details_types::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status_details->>'type' = ANY(@status_details_types::text[]))
         AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
         AND (COALESCE(@assigned, NULL) IS NULL OR
              (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
@@ -1299,7 +1312,7 @@ SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
-    r.pauses, r.initialization, r.steps,
+    r.pauses, r.initialization, r.steps, r.status_details,
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
@@ -1374,6 +1387,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@end_date::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= @end_date::timestamptz)
     AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
     AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.status = ANY(@statuses::text[]))
+    AND (COALESCE(@status_details_types::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status_details->>'type' = ANY(@status_details_types::text[]))
     AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
     AND (COALESCE(@assigned, NULL) IS NULL OR
          (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
@@ -1455,7 +1469,7 @@ SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
-    r.pauses, r.initialization, r.steps,
+    r.pauses, r.initialization, r.steps, r.status_details,
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
