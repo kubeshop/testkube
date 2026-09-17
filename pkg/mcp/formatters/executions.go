@@ -117,15 +117,40 @@ type formattedExecutionInfo struct {
 	Workers      []formattedWorker         `json:"workers,omitempty"`
 }
 
+// formattedStatusDetails says why an execution did not pass. It holds no user, because the name of
+// a person must not leave the deployment through a tool response.
+type formattedStatusDetails struct {
+	Type    string `json:"type"`
+	Reason  string `json:"reason"`
+	Step    string `json:"step,omitempty"`
+	Actor   string `json:"actor,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
+// newFormattedStatusDetails returns the compact shape, and nil for an execution that passed.
+func newFormattedStatusDetails(details *testkube.TestWorkflowStatusDetails) *formattedStatusDetails {
+	if details == nil {
+		return nil
+	}
+	return &formattedStatusDetails{
+		Type:    details.Type_,
+		Reason:  details.Reason,
+		Step:    details.Step,
+		Actor:   details.Actor,
+		Message: details.Message,
+	}
+}
+
 // formattedExecutionResult is a compact representation of execution result.
 type formattedExecutionResult struct {
-	Status          string    `json:"status,omitempty"`
-	PredictedStatus string    `json:"predictedStatus,omitempty"`
-	Duration        string    `json:"duration,omitempty"`
-	TotalDuration   string    `json:"totalDuration,omitempty"`
-	QueuedAt        time.Time `json:"queuedAt,omitempty"`
-	StartedAt       time.Time `json:"startedAt,omitempty"`
-	FinishedAt      time.Time `json:"finishedAt,omitempty"`
+	Status          string                  `json:"status,omitempty"`
+	PredictedStatus string                  `json:"predictedStatus,omitempty"`
+	Duration        string                  `json:"duration,omitempty"`
+	TotalDuration   string                  `json:"totalDuration,omitempty"`
+	QueuedAt        time.Time               `json:"queuedAt,omitempty"`
+	StartedAt       time.Time               `json:"startedAt,omitempty"`
+	FinishedAt      time.Time               `json:"finishedAt,omitempty"`
+	StatusDetails   *formattedStatusDetails `json:"statusDetails,omitempty"`
 }
 
 // formattedSignature is a compact representation of workflow step signature.
@@ -170,6 +195,7 @@ func FormatExecutionInfo(raw string) (string, error) {
 			QueuedAt:      exec.Result.QueuedAt,
 			StartedAt:     exec.Result.StartedAt,
 			FinishedAt:    exec.Result.FinishedAt,
+			StatusDetails: newFormattedStatusDetails(exec.Result.StatusDetails),
 		}
 		if exec.Result.Status != nil {
 			formatted.Result.Status = string(*exec.Result.Status)
@@ -293,10 +319,11 @@ type formattedWaitResult struct {
 
 // formattedWaitExecution is a compact representation of execution status after waiting.
 type formattedWaitExecution struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Status   string `json:"status,omitempty"`
-	Duration string `json:"duration,omitempty"`
+	ID            string                  `json:"id"`
+	Name          string                  `json:"name"`
+	Status        string                  `json:"status,omitempty"`
+	Duration      string                  `json:"duration,omitempty"`
+	StatusDetails *formattedStatusDetails `json:"statusDetails,omitempty"`
 }
 
 // FormatWaitForExecutions parses the wait for executions response.
@@ -326,6 +353,7 @@ func FormatWaitForExecutions(raw string) (string, error) {
 				f.Status = string(*exec.Result.Status)
 			}
 			f.Duration = exec.Result.Duration
+			f.StatusDetails = newFormattedStatusDetails(exec.Result.StatusDetails)
 		}
 
 		formatted.Executions = append(formatted.Executions, f)
