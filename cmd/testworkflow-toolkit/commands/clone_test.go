@@ -2,11 +2,14 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -553,4 +556,53 @@ func TestSetupCredentialStore(t *testing.T) {
 		_, err := os.Stat(filepath.Join(tmpDir, ".gitconfig"))
 		assert.True(t, os.IsNotExist(err), "git config should not be created without credentials")
 	})
+}
+
+func TestCloneReason(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want testkube.StopReason
+	}{
+		{
+			name: "a repository without a credential",
+			err:  errors.New("error cloning repository: fatal: could not read Username for 'https://github.com': terminal prompts disabled"),
+			want: testkube.StopReasonGitAuthFailed,
+		},
+		{
+			name: "a credential that the server refused",
+			err:  errors.New("fatal: Authentication failed for 'https://github.com/org/private.git/'"),
+			want: testkube.StopReasonGitAuthFailed,
+		},
+		{
+			name: "an SSH key that the server refused",
+			err:  errors.New("git@github.com: Permission denied (publickey). fatal: Could not read from remote repository."),
+			want: testkube.StopReasonGitAuthFailed,
+		},
+		{
+			name: "a token without access to the repository",
+			err:  errors.New("fatal: unable to access 'https://github.com/org/private.git/': The requested URL returned error: HTTP 403"),
+			want: testkube.StopReasonGitAuthFailed,
+		},
+		{
+			name: "a repository that does not exist",
+			err:  errors.New("fatal: repository 'https://github.com/org/absent.git/' not found"),
+			want: testkube.StopReasonGitCloneFailed,
+		},
+		{
+			name: "a revision that does not exist",
+			err:  errors.New("fatal: couldn't find remote ref refs/heads/absent"),
+			want: testkube.StopReasonGitCloneFailed,
+		},
+		{
+			name: "a host that does not resolve",
+			err:  errors.New("fatal: unable to access 'https://git.invalid/': Could not resolve host: git.invalid"),
+			want: testkube.StopReasonGitCloneFailed,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, cloneReason(tt.err))
+		})
+	}
 }

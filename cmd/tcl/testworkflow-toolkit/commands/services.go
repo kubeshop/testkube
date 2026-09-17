@@ -151,7 +151,9 @@ func NewServicesCmd() *cobra.Command {
 
 			executor := NewServicesExecutor(groupRef, base64Encoded, deps)
 			if err := executor.Execute(cmd.Context(), args); err != nil {
-				toolkitcommon.Fail(err)
+				// A service that does not start or does not become ready is an infrastructure
+				// failure, so the step reports it apart from a failure of the test.
+				toolkitcommon.FailWithReason(testkube.StopReasonServiceNotReady, err)
 			}
 		},
 	}
