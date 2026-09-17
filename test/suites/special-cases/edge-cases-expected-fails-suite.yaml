@@ -108,6 +108,10 @@ spec:
       msg={{ shellquote(execution("private-repo-auth").errorMessage + " " + tojson(execution("private-repo-auth").stepErrors)) }}
       echo "$msg"
       echo "$msg" | grep -q "error cloning repository" || { echo "unexpected message: $msg"; exit 1; }
+      statusType={{ shellquote(execution("private-repo-auth").statusType) }}
+      statusReason={{ shellquote(execution("private-repo-auth").statusReason) }}
+      [ "$statusType" = "init-failure" ] || { echo "unexpected status type: $statusType"; exit 1; }
+      [ "$statusReason" = "git-auth-failed" ] || { echo "unexpected status reason: $statusReason"; exit 1; }
   - name: expected-fail-missing-git-secret
     negative: true
     execute:
@@ -185,6 +189,10 @@ spec:
       msg={{ shellquote(execution("service-readiness-probe").errorMessage + " " + tojson(execution("service-readiness-probe").stepErrors)) }}
       echo "$msg"
       echo "$msg" | grep -q "services failed to start: broken-service" || { echo "unexpected message: $msg"; exit 1; }
+      statusType={{ shellquote(execution("service-readiness-probe").statusType) }}
+      statusReason={{ shellquote(execution("service-readiness-probe").statusReason) }}
+      [ "$statusType" = "execution-failure" ] || { echo "unexpected status type: $statusType"; exit 1; }
+      [ "$statusReason" = "service-not-ready" ] || { echo "unexpected status reason: $statusReason"; exit 1; }
   - name: expected-fail-conditional-step-failed
     negative: true
     execute:
@@ -291,3 +299,8 @@ spec:
       echo "$msg"
       echo "$msg" | grep -q "1 of 1 executions failed: expected-fail-conditional-step-failed" || { echo "unexpected message: $msg"; exit 1; }
       [ {{ shellquote(execution("nested-execute").status) }} = "failed" ] || { echo "unexpected status"; exit 1; }
+      statusType={{ shellquote(execution("nested-execute").statusType) }}
+      statusReason={{ shellquote(execution("nested-execute").statusReason) }}
+      # A workflow that this step ran did not pass, which is not a failure of the step itself.
+      [ "$statusType" = "step-failure" ] || { echo "unexpected status type: $statusType"; exit 1; }
+      [ "$statusReason" = "child-workflow-failed" ] || { echo "unexpected status reason: $statusReason"; exit 1; }
