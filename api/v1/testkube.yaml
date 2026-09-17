@@ -4183,6 +4183,7 @@ paths:
         - $ref: "#/components/parameters/TagSelector"
         - $ref: "#/components/parameters/ActorName"
         - $ref: "#/components/parameters/ActorType"
+        - $ref: "#/components/parameters/StatusDetailsTypeFilter"
       summary: List test workflow executions
       description: List test workflow executions
       operationId: listTestWorkflowExecutionsByTestWorkflow
@@ -4547,6 +4548,7 @@ paths:
         - $ref: "#/components/parameters/TagSelector"
         - $ref: "#/components/parameters/ActorName"
         - $ref: "#/components/parameters/ActorType"
+        - $ref: "#/components/parameters/StatusDetailsTypeFilter"
       summary: List test workflow executions
       description: List test workflow executions
       operationId: listTestWorkflowExecutions
@@ -12460,6 +12462,13 @@ components:
       schema:
         $ref: "#/components/schemas/ExecutionStatus"
       description: optional status filter containing multiple values separated by comma
+      required: false
+    StatusDetailsTypeFilter:
+      in: query
+      name: statusDetailsType
+      schema:
+        type: string
+      description: optional filter for the layer that failed, containing multiple values separated by comma
       required: false
     Selector:
       in: query
