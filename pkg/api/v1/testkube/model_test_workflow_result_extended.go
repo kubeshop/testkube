@@ -227,14 +227,15 @@ func (r *TestWorkflowResult) Equal(r2 *TestWorkflowResult) bool {
 	return bytes.Equal(v1, v2)
 }
 
-func (r *TestWorkflowResult) Fatal(err error, aborted bool, ts time.Time) {
+// Fatal ends a result that the runner cannot follow any more. The error replaces the message of the
+// initialization step, so the reason replaces the code that belongs to that message.
+func (r *TestWorkflowResult) Fatal(err error, reason StopReason, aborted bool, ts time.Time) {
 	if r.Initialization == nil {
 		r.Initialization = &TestWorkflowStepResult{}
 	}
 	if err != nil {
 		r.Initialization.ErrorMessage = err.Error()
-		// The reason code belongs to the message that the error replaces.
-		r.Initialization.ErrorReason = ""
+		r.Initialization.ErrorReason = string(reason)
 	} else if r.Initialization.ErrorMessage == "" {
 		r.Initialization.ErrorMessage = "fatal error without details"
 	}
@@ -537,9 +538,12 @@ func (r *TestWorkflowResult) HealTimestamps(sigSequence []TestWorkflowSignature,
 // A step that gets the termination message keeps a cause that it already holds, for example a pod that cannot start.
 // The cause goes into the brackets of the termination message, after the reason.
 // The function treats an aborted or canceled step as not finished, so a second call can change the steps again.
-func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSignature, errorStr, defaultErrorStr string, terminationCode string) {
+//
+// The reasonCode is the code for the stop. The step that gets the termination status also gets the code, unless it
+// already holds one. A step that the stop skipped gets no code, because it did not run and has no cause of its own.
+func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSignature, errorStr, defaultErrorStr, terminationCode, reasonCode string) {
 	// The stored message must stay plain text. The API and telemetry read it without a terminal renderer.
-	stop := termination{code: terminationCode, reason: errorStr, defaultReason: defaultErrorStr}
+	stop := termination{code: terminationCode, reason: errorStr, defaultReason: defaultErrorStr, reasonCode: reasonCode}
 
 	// Create marker to know if there is any step marked as aborted or canceled already
 	aborted := false
@@ -557,6 +561,7 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 			r.Initialization.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
 		}
 		r.Initialization.ErrorMessage = stop.messageWithCause(r.Initialization.ErrorMessage)
+		r.Initialization.ErrorReason = stop.reasonWithCause(r.Initialization.ErrorReason)
 	}
 
 	// Check all the executable steps in the sequence
@@ -596,6 +601,7 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 				step.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
 			}
 			step.ErrorMessage = stop.messageWithCause(step.ErrorMessage)
+			step.ErrorReason = stop.reasonWithCause(step.ErrorReason)
 		}
 		r.Steps[ref] = step
 	}
@@ -660,6 +666,7 @@ type termination struct {
 	code          string
 	reason        string
 	defaultReason string
+	reasonCode    string
 }
 
 // terminationPrefix starts every termination sentence, for all termination codes.
@@ -692,6 +699,15 @@ func (t termination) messageWithCause(existing string) string {
 		return fmt.Sprintf("%s (%s)", t.sentence(), cause)
 	}
 	return fmt.Sprintf("%s (%s: %s)", t.sentence(), t.reason, cause)
+}
+
+// reasonWithCause keeps the code of a cause that the step already holds, as messageWithCause keeps
+// its message. The cause is what the user fixes, and the stop only ended the execution.
+func (t termination) reasonWithCause(existing string) string {
+	if existing != "" {
+		return existing
+	}
+	return t.reasonCode
 }
 
 func walkSteps(sig []TestWorkflowSignature, fn func(signature TestWorkflowSignature)) {
