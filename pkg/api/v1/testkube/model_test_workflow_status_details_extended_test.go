@@ -48,3 +48,31 @@ func TestTestWorkflowStatusDetails_Clone(t *testing.T) {
 		})
 	}
 }
+
+func TestTestWorkflowStatusDetails_Label(t *testing.T) {
+	tests := []struct {
+		name    string
+		details *TestWorkflowStatusDetails
+		want    string
+	}{
+		{
+			name:    "the layer and the code",
+			details: &TestWorkflowStatusDetails{Type_: string(StatusDetailsTypeInitFailure), Reason: string(StopReasonUnschedulable)},
+			want:    "init-failure: unschedulable",
+		},
+		{
+			name:    "the layer alone when the code is empty",
+			details: &TestWorkflowStatusDetails{Type_: string(StatusDetailsTypeUnknown)},
+			want:    "unknown",
+		},
+		{
+			name: "an execution that passed reads empty",
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.details.Label())
+		})
+	}
+}
