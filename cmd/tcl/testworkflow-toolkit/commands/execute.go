@@ -653,9 +653,10 @@ func NewExecuteCmd() *cobra.Command {
 			}
 			wg.Wait()
 
-			// The summary becomes the step message, so it names the failed executions.
+			// The summary becomes the step message, so it names the failed executions. The code says
+			// that a workflow this step ran did not pass, which is not a failure of this step.
 			if summary := failureSummary(results); summary != "" {
-				toolkitcommon.Fail(errors.New(summary))
+				toolkitcommon.FailWithReason(testkube.StopReasonChildWorkflowFailed, errors.New(summary))
 			}
 		},
 	}

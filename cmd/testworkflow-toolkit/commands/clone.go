@@ -17,6 +17,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -52,6 +53,27 @@ type CloneOptions struct {
 }
 
 // NewCloneCmd creates a new clone command
+// gitAuthErrors are the texts that git writes when it refuses a credential. Git reports every
+// clone failure with the exit code 128, so the text is the only signal that tells them apart.
+var gitAuthErrors = []string{
+	"could not read Username",
+	"Authentication failed",
+	"Permission denied (publickey)",
+	"HTTP 403",
+}
+
+// cloneReason returns the code for a clone failure. A credential that git refuses is a different
+// problem from a repository or a revision that does not exist, and the user fixes each one apart.
+func cloneReason(err error) testkube.StopReason {
+	text := err.Error()
+	for _, authError := range gitAuthErrors {
+		if strings.Contains(text, authError) {
+			return testkube.StopReasonGitAuthFailed
+		}
+	}
+	return testkube.StopReasonGitCloneFailed
+}
+
 func NewCloneCmd() *cobra.Command {
 	opts := &CloneOptions{}
 
@@ -61,7 +83,7 @@ func NewCloneCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := RunClone(cmd.Context(), args[0], args[1], opts); err != nil {
-				common.Fail(err)
+				common.FailWithReason(cloneReason(err), err)
 			}
 		},
 	}
