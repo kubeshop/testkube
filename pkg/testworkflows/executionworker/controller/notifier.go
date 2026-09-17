@@ -392,15 +392,42 @@ func (n *notifier) End() {
 	// Ensure that the steps without the information are fulfilled and marked as aborted
 	n.fillGaps(true)
 
-	terminationCode := watchers2.GetTerminationCode(n.state.Job().Original())
+	// One read of the job, so the termination code and the reason code describe the same stop.
+	stop := watchers2.GetJobStop(n.state.Job().Original())
 	errorMessage := DefaultErrorMessage
 	if n.state != nil && n.state.ExecutionError() != "" {
 		errorMessage = n.state.ExecutionError()
 	}
-	n.result.HealAbortedOrCanceled(n.sigSequence, errorMessage, DefaultErrorMessage, terminationCode)
+	n.result.HealAbortedOrCanceled(n.sigSequence, errorMessage, DefaultErrorMessage, stop.Code, n.terminationReason(stop))
 
 	// Finalize the status
 	n.reconcile()
+}
+
+// terminationReason returns the code for the stop of the execution, and an empty string when no
+// signal names one. A cause that Kubernetes reported wins over the reason of the stop, because the
+// cause is what the user fixes and the stop is only the mechanism that ended the execution.
+func (n *notifier) terminationReason(stop testkube.Stop) string {
+	if n.state == nil {
+		return ""
+	}
+	if cause := n.state.TerminationCause(); cause != nil {
+		return cause.Reason
+	}
+	if stop.Reason != "" {
+		return string(stop.Reason)
+	}
+	// These actors stop an execution without a reason, so the actor names the cause.
+	switch stop.Actor {
+	case testkube.StopActorFailFast:
+		return string(testkube.StopReasonFailFast)
+	case testkube.StopActorTrigger:
+		return string(testkube.StopReasonTriggerAbort)
+	case testkube.StopActorSystem:
+		return string(testkube.StopReasonJobDeleted)
+	default:
+		return ""
+	}
 }
 
 func (n *notifier) fillGaps(force bool) {

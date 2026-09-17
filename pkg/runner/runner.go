@@ -265,7 +265,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		}
 		if !lastResult.IsFinished() {
 			logger.Errorw("failed to recover TestWorkflow result, marking as fatal error...")
-			lastResult.Fatal(errors.New("failed to recover TestWorkflow result"), true, time.Now())
+			lastResult.Fatal(errors.New("failed to recover TestWorkflow result"), testkube.StopReasonUnknown, true, time.Now())
 		}
 	}
 
@@ -429,7 +429,8 @@ func (r *runner) recoverParallelStepLogs(ctx context.Context, saver ExecutionSav
 		status.Result = &summary.Result
 		// The heal keeps a cause that the worker result already holds. The reason comes from the parent execution and its signature.
 		parentSigSequence := stage.MapSignatureListToInternal(stage.MapSignatureToSequence(stage.MapSignatureList(execution.Signature)))
-		healRecoveredResult(status.Result, sigSequence, summary.Execution.ScheduledAt, recordedCause(execution.Result, parentSigSequence))
+		cause, causeReason := recordedCause(execution.Result, parentSigSequence)
+		healRecoveredResult(status.Result, sigSequence, summary.Execution.ScheduledAt, cause, causeReason)
 	}
 
 	// Add information in the execution about the logs
@@ -605,7 +606,7 @@ func (r *runner) abortExecution(ctx context.Context, environmentID, executionID 
 	if execution.Result == nil {
 		return errors.New("execution result is nil")
 	}
-	execution.Result.Fatal(errors.New(testkube.StopReasonExecutionStuck.Sentence()), true, time.Now())
+	execution.Result.Fatal(errors.New(testkube.StopReasonExecutionStuck.Sentence()), testkube.StopReasonExecutionStuck, true, time.Now())
 	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
 		return r.client.UpdateExecutionResult(ctx, environmentID, executionID, execution.Result)
 	})
