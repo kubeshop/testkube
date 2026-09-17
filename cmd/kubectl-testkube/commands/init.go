@@ -367,14 +367,15 @@ func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType, licens
 	}
 }
 
-// reportLicenseEvent tells the license service an install step happened; best-effort and telemetry-gated.
 func reportLicenseEvent(clientCfg config.Data, license, event string) {
 	if !clientCfg.TelemetryEnabled {
 		return
 	}
-	if err := licensevalidator.NewClient().ReportEvent(license, event); err != nil {
-		ui.Debug("license event report failed, continuing", err.Error())
-	}
+	go func() {
+		if err := licensevalidator.NewClient().ReportEvent(license, event); err != nil {
+			ui.Debug("license event report failed, continuing", err.Error())
+		}
+	}()
 }
 
 func sendTelemetry(cmd *cobra.Command, clientCfg config.Data, license, step string, userIDOverride ...string) {

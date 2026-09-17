@@ -94,15 +94,13 @@ func (c *Client) ValidateLicense(licenseRequest LicenseRequest) (*LicenseRespons
 	return &licenseResponse, nil
 }
 
-// ReportEvent is a best-effort notification of a product lifecycle event.
-// Failures are non-fatal to the caller.
 func (c *Client) ReportEvent(license, event string) error {
 	reqBody, err := json.Marshal(EventRequest{License: license, Event: event})
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, LicenseEventsURL, bytes.NewBuffer(reqBody))
