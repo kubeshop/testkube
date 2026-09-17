@@ -228,6 +228,45 @@ func CompileTemplate(tpl string) (Expression, error) {
 	return e.Resolve()
 }
 
+// TemplateExpressions returns the source of each expression embedded in a template, in
+// the order they appear, and nothing for a template that carries none.
+//
+// It walks the template the same way CompileTemplate does, with the same tokenizer, so a
+// "}}" inside a string literal ends the expression in neither and the two can never
+// disagree about where one stops.
+//
+// It exists so a caller can judge the parts rather than only the result. The dependency
+// cache is the case in point: a key of npm-{{ hash_files("package-lock.json") }} becomes
+// the perfectly valid-looking "npm-" when the lockfile is absent, and nothing about the
+// resolved string says a component of it evaluated to nothing.
+func TemplateExpressions(tpl string) ([]string, error) {
+	var expressions []string
+
+	offset := 0
+	for index := strings.Index(tpl[offset:], "{{"); index != -1; index = strings.Index(tpl[offset:], "{{") {
+		offset += index + 2
+		start := offset
+
+		tokens, i, err := tokenize(tpl, offset)
+		offset = i
+		if err == nil {
+			return nil, errors.New("template error: expression not closed")
+		}
+		if !endExprRe.MatchString(tpl[offset:]) || !strings.Contains(err.Error(), "unknown character") {
+			return nil, fmt.Errorf("tokenizer error: %v", err)
+		}
+		end := offset
+		offset += len(endExprRe.FindString(tpl[offset:]))
+		if len(tokens) == 0 {
+			// "{{ }}" contributes nothing and is not an expression to judge.
+			continue
+		}
+		expressions = append(expressions, strings.TrimSpace(tpl[start:end]))
+	}
+
+	return expressions, nil
+}
+
 func MustCompileTemplate(tpl string) Expression {
 	v, err := CompileTemplate(tpl)
 	if err != nil {

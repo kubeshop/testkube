@@ -2,6 +2,8 @@ package expressions
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	math2 "math"
@@ -297,6 +299,34 @@ var stdFunctions = map[string]StdFunction{
 			v, _ := value[0].StringValue()
 			words, err := shellquote.Split(v)
 			return NewValue(words), err
+		}),
+	},
+	"hash": {
+		ReturnType: TypeString,
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
+			if len(value) == 0 {
+				return nil, fmt.Errorf(`"hash" function expects at least 1 argument, 0 provided`)
+			}
+			h := sha256.New()
+			for i := range value {
+				// A string contributes its own bytes, so hash(file("x")) is the hash of
+				// the file's contents. Anything else contributes its canonical JSON,
+				// which sorts map keys and so stays stable between runs - the
+				// expression serialiser makes no such guarantee.
+				if value[i].IsString() {
+					str, _ := value[i].StringValue()
+					_, _ = h.Write([]byte(str))
+				} else {
+					encoded, err := json.Marshal(value[i].Value())
+					if err != nil {
+						return nil, fmt.Errorf(`"hash" function: argument %d: %w`, i+1, err)
+					}
+					_, _ = h.Write(encoded)
+				}
+				// Separate the arguments, so that hash("a", "b") != hash("ab").
+				_, _ = h.Write([]byte{0})
+			}
+			return NewValue(hex.EncodeToString(h.Sum(nil))), nil
 		}),
 	},
 	"trim": {
