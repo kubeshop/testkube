@@ -402,6 +402,9 @@ func (n *notifier) End() {
 
 	// Finalize the status
 	n.reconcile()
+
+	// The classifier reads the final result, so it runs after the reconcile settles the statuses.
+	n.result.StatusDetails = n.result.ClassifyStatus(n.sigSequence, stop)
 }
 
 // terminationReason returns the code for the stop of the execution, and an empty string when no

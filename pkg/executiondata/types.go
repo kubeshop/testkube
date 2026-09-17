@@ -81,6 +81,12 @@ type Execution struct {
 	ErrorReason string `json:"errorReason,omitempty"`
 	// StepReasons are the reason codes of the steps that have one, keyed by step ref.
 	StepReasons map[string]string `json:"stepReasons,omitempty"`
+	// StatusType is the layer that made the execution fail, empty when it passed.
+	StatusType string `json:"statusType,omitempty"`
+	// StatusReason is the code of the cause that made the execution fail.
+	StatusReason string `json:"statusReason,omitempty"`
+	// StatusStep is the ref of the step that holds the cause, empty when no step holds it.
+	StatusStep string `json:"statusStep,omitempty"`
 }
 
 // Key is the primary reference of the execution - its alias when the parent gave
@@ -123,6 +129,9 @@ func (e Execution) AsMap() map[string]interface{} {
 		"stepAttempts": toInterfaceMap(e.StepAttempts),
 		"errorReason":  e.ErrorReason,
 		"stepReasons":  toInterfaceMap(e.StepReasons),
+		"statusType":   e.StatusType,
+		"statusReason": e.StatusReason,
+		"statusStep":   e.StatusStep,
 	}
 }
 
@@ -155,7 +164,23 @@ func FromExecution(execution *testkube.TestWorkflowExecution) Execution {
 	result.ErrorMessage, result.StepErrors = ErrorsOf(execution)
 	result.StepAttempts = AttemptsOf(execution)
 	result.ErrorReason, result.StepReasons = ReasonsOf(execution)
+	result.SetStatusDetails(execution)
 	return result
+}
+
+// SetStatusDetails copies the codes of the status details of the execution into the record. Every
+// caller that builds a record from a finished execution needs it, because a workflow reads the codes
+// of a child through the record and not through the stored execution.
+//
+// The message and the user of the object stay out of the record. A workflow asserts the codes, and
+// the words are already available through ErrorMessage and StepErrors.
+func (e *Execution) SetStatusDetails(execution *testkube.TestWorkflowExecution) {
+	if execution == nil || execution.Result == nil || execution.Result.StatusDetails == nil {
+		return
+	}
+	e.StatusType = execution.Result.StatusDetails.Type_
+	e.StatusReason = execution.Result.StatusDetails.Reason
+	e.StatusStep = execution.Result.StatusDetails.Step
 }
 
 // ErrorsOf collects the message of the initialization step and the messages of the
