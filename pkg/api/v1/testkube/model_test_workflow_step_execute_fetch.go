@@ -14,6 +14,6 @@ type TestWorkflowStepExecuteFetch struct {
 	From string `json:"from,omitempty"`
 	// artifact paths to download, relative to the artifact root of the execution
 	Paths []string `json:"paths,omitempty"`
-	// directory to download the artifacts to
+	// directory to download the artifacts to; when the entry fans out over a matrix or shards, include {{ index }} to keep each instance's artifacts apart
 	To string `json:"to"`
 }

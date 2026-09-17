@@ -3,7 +3,7 @@ package stage
 import (
 	"fmt"
 	"maps"
-	"path/filepath"
+	"path"
 	"slices"
 	"strings"
 
@@ -218,15 +218,24 @@ func (c *container) SecurityContext() *testworkflowsv1.WorkflowSecurityContext {
 	)
 }
 
-func (c *container) HasVolumeAt(path string) bool {
-	absPath := path
-	if !filepath.IsAbs(path) {
-		absPath = filepath.Join(c.WorkingDir(), path)
+// HasVolumeAt reports whether the given path is inside one of the container's volumes.
+//
+// Resolved with `path` rather than `filepath`, because every path involved - the
+// argument, the working directory and the mount paths - is a path inside a Linux
+// container, not a path on whatever host the processor happens to run on. The two agree
+// on Linux, so this only matters elsewhere: on Windows filepath.IsAbs("/root/.m2") is
+// false, so an absolute container path would be treated as relative and joined onto the
+// working directory, and filepath.Clean would then compare backslash-separated paths
+// against the forward-slash mount paths - which decides whether a caller mounts a volume
+// at all.
+func (c *container) HasVolumeAt(containerPath string) bool {
+	absPath := containerPath
+	if !strings.HasPrefix(absPath, "/") {
+		absPath = path.Join(c.WorkingDir(), absPath)
 	}
-	mounts := c.VolumeMounts()
-	absPath = filepath.Clean(absPath)
-	for _, mount := range mounts {
-		mountPath := filepath.Clean(mount.MountPath)
+	absPath = path.Clean(absPath)
+	for _, mount := range c.VolumeMounts() {
+		mountPath := path.Clean(mount.MountPath)
 		if absPath == mountPath || strings.HasPrefix(absPath, mountPath+"/") {
 			return true
 		}
