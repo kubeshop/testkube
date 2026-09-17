@@ -323,6 +323,14 @@ func TestCompileStandardLib(t *testing.T) {
 	assert.Equal(t, `"''"`, MustCompile(`shellquote(null)`).String())
 	assert.Equal(t, `["a","b","c","a b c"]`, MustCompile(`shellparse("a b c 'a b c'")`).String())
 	assert.Equal(t, `"abc  d"`, MustCompile(`trim("   abc  d  \n  ")`).String())
+	// sha256("abc"+NUL), i.e. the argument separator is part of the digest.
+	assert.Equal(t, `"dc1114cd074914bd872cc1f9a23ec910ea2203bc79779ab2e17da25782a624fc"`,
+		MustCompile(`hash("abc")`).String())
+	assert.Len(t, MustCompile(`hash("abc")`).String(), 66) // 64 hex chars plus the quotes
+	// The separator is what keeps these apart.
+	assert.NotEqual(t, MustCompile(`hash("ab")`).String(), MustCompile(`hash("a","b")`).String())
+	// Non-strings hash their canonical JSON, so map key order cannot shift the digest.
+	assert.Equal(t, MustCompile(`hash({"a":1,"b":2})`).String(), MustCompile(`hash({"b":2,"a":1})`).String())
 	assert.Equal(t, `"abc"`, MustCompile(`yaml("\"abc\"")`).String())
 	assert.Equal(t, `{"foo":{"bar":"baz"}}`, MustCompile(`yaml("foo:\n  bar: 'baz'")`).String())
 	assert.Equal(t, `"foo:\n    bar: baz\n"`, MustCompile(`toyaml({"foo":{"bar":"baz"}})`).String())
@@ -401,6 +409,25 @@ a:
 	assert.Equal(t, `null`, MustCompile(`any()`).String())
 	assert.InDelta(t, time.Now().UnixMilli(), must(time.Parse(RFC3339Millis, must(MustCompile(`date()`).Static().StringValue()))).UnixMilli(), 5)
 	assert.Equal(t, time.Now().Truncate(24*time.Hour).UnixMilli(), must(time.Parse("2006-01-02", must(MustCompile(`date("2006-01-02")`).Static().StringValue()))).UnixMilli())
+}
+
+// TestCompileHashDefersFileArgument pins the property the step cache depends on.
+//
+// A cache key such as 'npm-{{ hash(file("package-lock.json")) }}' is compiled on the
+// control plane, where no filesystem machine is registered and the repository has not
+// been cloned. hash() is a stdlib function, and StdLibMachine is consulted before any
+// other, so the only thing stopping it from folding to a digest of nothing is that
+// ToStdFunctionHandler declines while an argument is still an unresolved call. If that
+// ever changes, every cache key in every workflow silently collapses onto one value,
+// so assert it directly rather than by inference.
+func TestCompileHashDefersFileArgument(t *testing.T) {
+	assert.Equal(t, `hash(file("package-lock.json"))`, MustCompile(`hash(file("package-lock.json"))`).String())
+	assert.Equal(t, `hash(hash_files("*.lock"))`, MustCompile(`hash(hash_files("*.lock"))`).String())
+	// Still deferred when only one of several arguments is unresolved.
+	assert.Equal(t, `hash("npm",file("go.sum"))`, MustCompile(`hash("npm", file("go.sum"))`).String())
+	// A fully literal argument folds, which is both harmless and wanted.
+	assert.Equal(t, `"dc1114cd074914bd872cc1f9a23ec910ea2203bc79779ab2e17da25782a624fc"`,
+		MustCompile(`hash("abc")`).String())
 }
 
 func TestCompileWildcard_Unknown(t *testing.T) {
@@ -491,4 +518,45 @@ func TestCompileSingleQuoteString(t *testing.T) {
 abc
 def
 '`).String())
+}
+
+// TestTemplateExpressions pins that the parts a caller judges are the parts the template
+// actually resolves, including where a naive split would get it wrong.
+func TestTemplateExpressions(t *testing.T) {
+	for _, tc := range []struct {
+		tpl  string
+		want []string
+	}{
+		{tpl: "", want: nil},
+		{tpl: "no expressions here", want: nil},
+		{tpl: "{{ env.HOME }}", want: []string{"env.HOME"}},
+		{tpl: `npm-{{ hash_files("package-lock.json") }}`, want: []string{`hash_files("package-lock.json")`}},
+		{
+			tpl:  `{{ a }}-and-{{ b }}`,
+			want: []string{"a", "b"},
+		},
+		// The case a regex over "{{...}}" gets wrong: the first "}}" is inside a string
+		// literal and does not end the expression.
+		{tpl: `x-{{ trim("a}}b") }}-y`, want: []string{`trim("a}}b")`}},
+		// An empty pair contributes nothing to the result, so there is nothing to judge.
+		{tpl: "a{{}}b", want: nil},
+	} {
+		got, err := TemplateExpressions(tc.tpl)
+		assert.NoError(t, err, "%q", tc.tpl)
+		assert.Equal(t, tc.want, got, "%q", tc.tpl)
+	}
+}
+
+// TestTemplateExpressionsAgreesWithTheCompiler is the property that makes the accessor
+// safe to judge by: it finds an expression exactly when compiling finds one, so a caller
+// cannot end up inspecting a different set of parts than the template resolves.
+func TestTemplateExpressionsAgreesWithTheCompiler(t *testing.T) {
+	for _, tpl := range []string{
+		"", "plain", "{{ 1 + 2 }}", "a{{ 1 }}b{{ 2 }}c", `{{ trim("a}}b") }}`, "a{{}}b",
+	} {
+		_, compileErr := CompileTemplate(tpl)
+		_, extractErr := TemplateExpressions(tpl)
+		assert.Equal(t, compileErr == nil, extractErr == nil,
+			"%q: the two have to agree on whether the template parses", tpl)
+	}
 }
