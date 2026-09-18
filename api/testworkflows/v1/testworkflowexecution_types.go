@@ -94,6 +94,29 @@ type TestWorkflowExecutionDetails struct {
 	Tags map[string]string `json:"tags,omitempty"`
 	// running context for the test workflow execution (Pro edition only)
 	RunningContext *TestWorkflowRunningContext `json:"runningContext,omitempty"`
+	// where this execution sits in its chain of reruns. Recorded on every
+	// execution: an original run is its own root at attempt 1, with no base.
+	Lineage *TestWorkflowExecutionLineage `json:"lineage,omitempty"`
+}
+
+// TestWorkflowExecutionLineage records where a rerun came from, so that a
+// workflow can read the run it descends from and a reader can follow the chain
+// back to its origin.
+//
+// Recorded on every execution, which is what makes the reserved
+// execution("rerun") reference resolve inside the pod after any rerun.
+//
+// Derived by the scheduler from the base execution: a caller supplies the base
+// and nothing else, because a client able to assert a root or an attempt number
+// could forge a chain.
+type TestWorkflowExecutionLineage struct {
+	// the execution this one is a rerun of; empty for an original run
+	BaseId string `json:"baseId,omitempty"`
+	// the first execution in the chain. An original run is its own root, so
+	// that every execution of a chain shares one rootId.
+	RootId string `json:"rootId,omitempty"`
+	// 1 for an original run, one more than the base for a rerun
+	Attempt int32 `json:"attempt,omitempty"`
 }
 
 // running context for test workflow execution
