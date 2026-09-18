@@ -42,6 +42,7 @@ func FinishTimedOutExecution(step *data.StepData) {
 	FinishExecution(step, constants.ExecutionResult{
 		ExitCode:  step.ExitCode,
 		Details:   testkube.StopReasonStepTimeout.Sentence(),
+		Reason:    string(testkube.StopReasonStepTimeout),
 		Iteration: int(step.Iteration),
 	})
 }

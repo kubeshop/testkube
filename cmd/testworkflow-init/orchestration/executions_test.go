@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 func TestExecution_Run(t *testing.T) {
@@ -25,12 +26,13 @@ func TestExecution_Run(t *testing.T) {
 			want:   executionResult{ExitCode: 3},
 		},
 		{
-			name:   "reports the process-killed message for a process that a signal from outside killed",
+			name:   "reports the process-killed message and its code for a process that a signal from outside killed",
 			script: "kill -9 $$",
 			want: executionResult{
 				Aborted:  true,
 				ExitCode: constants.CodeAborted,
 				Details:  "the test process was killed, possibly by an out-of-memory kill (signal: killed)",
+				Reason:   string(testkube.StopReasonProcessKilled),
 			},
 		},
 		{
