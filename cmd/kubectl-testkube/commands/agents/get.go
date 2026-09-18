@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -49,13 +50,34 @@ func NewGetAgentCommand() *cobra.Command {
 
 func UiGetAgent(cmd *cobra.Command, agentId string, decryptSecretKey bool) {
 	registeredAgents, err := GetControlPlaneAgents(cmd, true)
-	ui.ExitOnError("getting agents", err)
+	if err != nil {
+		common.HandleCLIError(common.NewCLIError(
+			common.TKErrAgentGetFailed,
+			"Error getting the agents",
+			common.AgentLookupHint,
+			err,
+		))
+	}
 
 	namespaces, err := GetKubernetesNamespaces()
-	ui.ExitOnError("listing namespaces", err)
+	if err != nil {
+		common.HandleCLIError(common.NewCLIError(
+			common.TKErrResourceLookupFailed,
+			"Error listing the Kubernetes namespaces",
+			common.ClusterLookupHint,
+			err,
+		))
+	}
 
 	agents, err := GetKubernetesAgents(namespaces)
-	ui.ExitOnError("listing pods", err)
+	if err != nil {
+		common.HandleCLIError(common.NewCLIError(
+			common.TKErrResourceLookupFailed,
+			"Error getting the agents running in the cluster",
+			common.ClusterLookupHint,
+			err,
+		))
+	}
 
 	agents = CombineAgents(agents, registeredAgents)
 
@@ -67,12 +89,24 @@ func UiGetAgent(cmd *cobra.Command, agentId string, decryptSecretKey bool) {
 		}
 	}
 	if agent == nil {
-		ui.Fail(fmt.Errorf("agent '%s' not found", agentId))
+		common.HandleCLIError(common.NewCLIError(
+			common.TKErrResourceNotFound,
+			"Agent not found",
+			"Check the agent name or ID, or list the agents with `testkube get agents`. Add --show-unknown to include cluster agents that are not registered, and --show-deleted to include deleted ones",
+			fmt.Errorf("agent '%s' not found", agentId),
+		))
 	}
 
 	if decryptSecretKey {
 		secretKey, err := GetControlPlaneAgentSecretKey(cmd, agent.Registered.ID)
-		ui.ExitOnError("failed to decrypt secret key", err)
+		if err != nil {
+			common.HandleCLIError(common.NewCLIError(
+				common.TKErrAgentGetFailed,
+				"Error getting the decrypted agent secret key",
+				"Check that your credentials are valid and that your user can read the secret key of this agent",
+				err,
+			))
+		}
 		agent.Registered.SecretKey = secretKey
 	}
 
@@ -81,17 +115,39 @@ func UiGetAgent(cmd *cobra.Command, agentId string, decryptSecretKey bool) {
 
 func UiListAgents(cmd *cobra.Command, showUnknown bool, showDeleted bool, allEnvironments bool) {
 	registeredAgents, err := GetControlPlaneAgents(cmd, showDeleted)
-	ui.ExitOnError("getting agents", err)
+	if err != nil {
+		// The hint of a lookup by name points at `testkube get agents`, which is this command.
+		common.HandleCLIError(common.NewCLIError(
+			common.TKErrAgentGetFailed,
+			"Error getting the agents",
+			"Check that your credentials are valid and that the current context points at the organization and environment you expect",
+			err,
+		))
+	}
 
 	// Filter agents by current environment (matching dashboard behavior) unless --all-environments is set
 	if !allEnvironments {
 		cfg, err := config.Load()
-		ui.ExitOnError("loading config", err)
+		if err != nil {
+			common.HandleCLIError(common.NewCLIError(
+				common.TKErrConfigInitFailed,
+				"Error loading testkube config file",
+				common.ConfigFileHint,
+				err,
+			))
+		}
 		registeredAgents = FilterAgentsByEnvironment(registeredAgents, cfg.CloudContext.EnvironmentId)
 	}
 
 	agents, err := GetKubernetesAgents([]string{""})
-	ui.ExitOnError("listing pods", err)
+	if err != nil {
+		common.HandleCLIError(common.NewCLIError(
+			common.TKErrResourceLookupFailed,
+			"Error getting the agents running in the cluster",
+			common.ClusterLookupHint,
+			err,
+		))
+	}
 
 	agents = CombineAgents(agents, registeredAgents)
 

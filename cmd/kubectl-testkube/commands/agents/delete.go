@@ -1,6 +1,7 @@
 package agents
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -64,13 +65,23 @@ func UiUninstallCRD(cmd *cobra.Command) {
 	spinner := ui.NewSpinner("Fetching current CRDs")
 	currentNamespace, currentReleaseName, installed, err := GetCRDInstallation()
 	if err != nil {
-		spinner.Fail(err)
-		os.Exit(1)
+		spinner.Fail()
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrResourceLookupFailed,
+			"Error getting the installed CRDs",
+			common2.ClusterLookupHint,
+			err,
+		))
 	}
 
 	if installed && currentReleaseName == "" {
-		spinner.Fail("The CRDs are installed, but they are not managed by our Helm Chart")
-		os.Exit(1)
+		spinner.Fail()
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrInvalidInstallConfig,
+			"The CRDs are not managed by the Testkube Helm Chart",
+			"Delete the Testkube CRDs by hand, or install them with `testkube install crd` so that Helm owns them",
+			errors.New("the CRDs are installed, but they carry no Helm release annotation"),
+		))
 	}
 
 	if installed {
@@ -81,17 +92,20 @@ func UiUninstallCRD(cmd *cobra.Command) {
 	}
 
 	spinner = ui.NewSpinner("Uninstalling CRDs")
-	cliErr := common2.HelmUninstall(currentNamespace, currentReleaseName)
-	if cliErr != nil {
-		cliErr.Print()
-		os.Exit(1)
-	}
+	common2.HandleCLIError(common2.HelmUninstall(currentNamespace, currentReleaseName))
 	spinner.Success()
 }
 
 func UiDeleteAgent(cmd *cobra.Command, name string, uninstall, deleteAgent bool) {
 	agent, err := GetControlPlaneAgent(cmd, name)
-	ui.ExitOnError("getting agent", err)
+	if err != nil {
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrAgentGetFailed,
+			"Error getting the agent",
+			common2.AgentLookupHint,
+			err,
+		))
+	}
 
 	// Uninstall the Agent
 	if uninstall {
@@ -100,11 +114,25 @@ func UiDeleteAgent(cmd *cobra.Command, name string, uninstall, deleteAgent bool)
 			nses = append(nses, agent.Namespace)
 		} else {
 			nses, err = GetKubernetesNamespaces()
-			ui.ExitOnError("getting namespaces", err)
+			if err != nil {
+				common2.HandleCLIError(common2.NewCLIError(
+					common2.TKErrResourceLookupFailed,
+					"Error listing the Kubernetes namespaces",
+					common2.ClusterLookupHint,
+					err,
+				))
+			}
 		}
 
 		agents, err := GetKubernetesAgents(nses)
-		ui.ExitOnError("getting agents", err)
+		if err != nil {
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrResourceLookupFailed,
+				"Error getting the agents running in the cluster",
+				common2.ClusterLookupHint,
+				err,
+			))
+		}
 
 		var kubernetesAgent *internalAgent
 		for i := range agents {
@@ -114,16 +142,17 @@ func UiDeleteAgent(cmd *cobra.Command, name string, uninstall, deleteAgent bool)
 			}
 		}
 		if kubernetesAgent == nil {
-			ui.Failf("kubernetes agent not found: namespaces: %s", strings.Join(nses, ", "))
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrResourceNotFound,
+				"Agent not installed in the cluster",
+				"Pass '--no-uninstall' to delete the agent in the Control Plane only, or check that your kubeconfig points at the cluster the agent runs in",
+				fmt.Errorf("kubernetes agent not found: namespaces: %s", strings.Join(nses, ", ")),
+			))
 			return
 		}
 
 		spinner := ui.NewSpinner("Running Helm command...")
-		cliErr := common2.HelmUninstall(kubernetesAgent.Pod.Namespace, fmt.Sprintf("testkube-%s", agent.Name))
-		if cliErr != nil {
-			cliErr.Print()
-			os.Exit(1)
-		}
+		common2.HandleCLIError(common2.HelmUninstall(kubernetesAgent.Pod.Namespace, fmt.Sprintf("testkube-%s", agent.Name)))
 		spinner.Success()
 	}
 
@@ -131,7 +160,14 @@ func UiDeleteAgent(cmd *cobra.Command, name string, uninstall, deleteAgent bool)
 	if deleteAgent {
 		spinner := ui.NewSpinner("Deleting agent in the Control Plane...")
 		err := DeleteControlPlaneAgent(cmd, agent.ID)
-		ui.ExitOnError("deleting agent", err)
+		if err != nil {
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrAgentWriteFailed,
+				"Error deleting the agent",
+				common2.AgentWriteHint,
+				err,
+			))
+		}
 		spinner.Success()
 	}
 }
