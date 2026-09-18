@@ -6,6 +6,7 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: testkube
+    team-support: "true"
 spec:
   container:
     resources:
