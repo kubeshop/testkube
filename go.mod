@@ -7,7 +7,7 @@ toolchain go1.27.1
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
-	github.com/adhocore/gronx v1.20.3
+	github.com/adhocore/gronx v1.20.4
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.12.0
 	github.com/bmatcuk/doublestar/v4 v4.10.0
@@ -18,7 +18,7 @@ require (
 	github.com/coreos/go-oidc v2.5.0+incompatible
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/dustin/go-humanize v1.0.1
+	github.com/dustin/go-humanize v1.1.0
 	github.com/fasthttp/websocket v1.5.12
 	github.com/fluxcd/pkg/apis/event v0.28.0
 	github.com/fsnotify/fsnotify v1.10.1
@@ -46,12 +46,12 @@ require (
 	github.com/mark3labs/mcp-go v1.1.0
 	github.com/mattn/go-isatty v0.0.24
 	github.com/minio/minio-go/v7 v7.3.0
-	github.com/nats-io/nats-server/v2 v2.14.7
+	github.com/nats-io/nats-server/v2 v2.15.0
 	github.com/nats-io/nats.go v1.53.1
 	github.com/ohler55/ojg v1.28.6
 	github.com/olekukonko/tablewriter v1.1.5
-	github.com/onsi/ginkgo/v2 v2.32.2
-	github.com/onsi/gomega v1.43.0
+	github.com/onsi/ginkgo/v2 v2.33.0
+	github.com/onsi/gomega v1.43.1
 	github.com/otiai10/copy v1.14.1
 	github.com/pashagolub/pgxmock/v5 v5.2.0
 	github.com/pkg/errors v0.9.1
@@ -80,7 +80,7 @@ require (
 	golang.org/x/oauth2 v0.37.0
 	golang.org/x/sync v0.23.0
 	golang.org/x/text v0.42.0
-	google.golang.org/grpc v1.83.2
+	google.golang.org/grpc v1.84.0
 	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.36.4

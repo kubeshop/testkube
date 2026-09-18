@@ -49,6 +49,7 @@ type ExecutionWatcher interface {
 
 	RefreshPod(ctx context.Context)
 	RefreshJob(ctx context.Context)
+	RefreshPodEvents(ctx context.Context)
 
 	Started() <-chan struct{}
 	Updated(ctx context.Context) <-chan struct{}
@@ -107,6 +108,24 @@ func (e *executionWatcher) RefreshPod(ctx context.Context) {
 
 func (e *executionWatcher) RefreshJob(ctx context.Context) {
 	e.jobWatcher.Update(ctx)
+}
+
+// RefreshPodEvents lists the events of the pod again, so the state gets the events that the
+// watch has not received yet. It does nothing before the pod exists, because the events
+// watcher starts with the name of the pod.
+func (e *executionWatcher) RefreshPodEvents(ctx context.Context) {
+	if !e.podEventsInitialized.Load() {
+		return
+	}
+	if _, err := e.podEventsWatcher.Update(0); err != nil {
+		return
+	}
+	// The update loop needs one cycle to put the events into the state.
+	select {
+	case <-e.Next():
+	case <-time.After(10 * ReadLatestBufferingTimeframe):
+	case <-ctx.Done():
+	}
 }
 
 func (e *executionWatcher) baseStarted() <-chan struct{} {
