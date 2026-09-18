@@ -66,6 +66,35 @@ func WithMongoRepositorySequence(sequenceRepository sequence.Repository) MongoRe
 
 type MongoRepositoryOpt func(*MongoRepository)
 
+// normalized applies what a reader owes its caller before an execution leaves
+// this repository. Mongo returns exactly what was written, so a row written
+// before lineage existed carries none - and the API promises one on every
+// execution, which the Postgres side supplies inside its row converter and so
+// gets on every read it performs. A reader here that skipped it would make the
+// same execution answer differently depending on the backend.
+//
+// Readers go through this rather than each remembering two calls: the shape it
+// replaces - UnscapeDots() in every reader, ApplyEffectiveLineage() only in the
+// ones that had been thought about - is how most of them came to disagree.
+func normalized(execution *testkube.TestWorkflowExecution) *testkube.TestWorkflowExecution {
+	execution.ApplyEffectiveLineage()
+	return execution.UnscapeDots()
+}
+
+// normalizeAll is normalized over a slice, in place.
+func normalizeAll(executions []testkube.TestWorkflowExecution) {
+	for i := range executions {
+		normalized(&executions[i])
+	}
+}
+
+// normalizedSummary is normalized for the summary projection, which carries its
+// own copy of both methods.
+func normalizedSummary(summary *testkube.TestWorkflowExecutionSummary) *testkube.TestWorkflowExecutionSummary {
+	summary.ApplyEffectiveLineage()
+	return summary.UnscapeDots()
+}
+
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.TestWorkflowExecution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
 
@@ -73,7 +102,7 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.T
 		result.ConfigParams = populateConfigParams(result.ResolvedWorkflow, result.ConfigParams)
 	}
 
-	return *result.UnscapeDots(), err
+	return *normalized(&result), err
 }
 
 func (r *MongoRepository) GetWithRunner(ctx context.Context, id, runner string) (result testkube.TestWorkflowExecution, err error) {
@@ -86,7 +115,7 @@ func (r *MongoRepository) GetWithRunner(ctx context.Context, id, runner string) 
 		result.ConfigParams = populateConfigParams(result.ResolvedWorkflow, result.ConfigParams)
 	}
 
-	return *result.UnscapeDots(), err
+	return *normalized(&result), err
 }
 
 func populateConfigParams(resolvedWorkflow *testkube.TestWorkflow, configParams map[string]testkube.TestWorkflowExecutionConfigValue) map[string]testkube.TestWorkflowExecutionConfigValue {
@@ -131,7 +160,7 @@ func populateConfigParams(resolvedWorkflow *testkube.TestWorkflow, configParams 
 
 func (r *MongoRepository) GetByNameAndTestWorkflow(ctx context.Context, name, workflowName string) (result testkube.TestWorkflowExecution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": name}, bson.M{"name": name}}, "workflow.name": workflowName}).Decode(&result)
-	return *result.UnscapeDots(), err
+	return *normalized(&result), err
 }
 
 // GetLatestByTestWorkflow retrieves the latest test workflow execution for a given workflow name with configurable sorting
@@ -162,7 +191,7 @@ func (r *MongoRepository) GetLatestByTestWorkflow(ctx context.Context, workflowN
 	if len(items) == 0 {
 		return nil, mongo.ErrNoDocuments
 	}
-	return items[0].UnscapeDots(), err
+	return normalized(&items[0]), err
 }
 
 func (r *MongoRepository) GetLatestByTestWorkflows(ctx context.Context, workflowNames []string) (executions []testkube.TestWorkflowExecutionSummary, err error) {
@@ -210,7 +239,7 @@ func (r *MongoRepository) GetLatestByTestWorkflows(ctx context.Context, workflow
 	}
 
 	for i := range executions {
-		executions[i].UnscapeDots()
+		normalizedSummary(&executions[i])
 	}
 	return executions, nil
 }
@@ -234,9 +263,7 @@ func (r *MongoRepository) GetRunning(ctx context.Context) (result []testkube.Tes
 	}
 	err = cursor.All(ctx, &result)
 
-	for i := range result {
-		result[i].UnscapeDots()
-	}
+	normalizeAll(result)
 	return
 }
 
@@ -273,9 +300,7 @@ func (r *MongoRepository) GetFinished(ctx context.Context, filter testworkflow.F
 	}
 	err = cursor.All(ctx, &result)
 
-	for i := range result {
-		result[i].UnscapeDots()
-	}
+	normalizeAll(result)
 	return
 }
 
@@ -358,9 +383,7 @@ func (r *MongoRepository) GetExecutions(ctx context.Context, filter testworkflow
 	}
 	err = cursor.All(ctx, &result)
 
-	for i := range result {
-		result[i].UnscapeDots()
-	}
+	normalizeAll(result)
 	return
 }
 
@@ -397,6 +420,7 @@ func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter testw
 			"reports":                      1,
 			"resourceaggregations":         1,
 			"silentmode":                   1,
+			"lineage":                      1,
 		}},
 		{"$addFields": bson.M{
 			"workflow.health": "$workflow.status.health",
@@ -428,6 +452,8 @@ func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter testw
 			executions[i].ConfigParams = populateConfigParams(executions[i].ResolvedWorkflow, executions[i].ConfigParams)
 		}
 		result[i] = executions[i].TestWorkflowExecutionSummary
+		// Legacy rows carry none; the reader is promised one on every execution.
+		result[i].ApplyEffectiveLineage()
 	}
 	return
 }
@@ -1000,9 +1026,7 @@ func (r *MongoRepository) GetUnassigned(ctx context.Context) (result []testkube.
 	}
 	err = cursor.All(ctx, &result)
 
-	for i := range result {
-		result[i].UnscapeDots()
-	}
+	normalizeAll(result)
 	return
 }
 
