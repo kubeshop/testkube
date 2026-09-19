@@ -217,3 +217,30 @@ WHERE e.id = @execution_id
     'queued', 'assigned', 'starting', 'scheduling', 'running', 
     'pausing', 'paused', 'resuming', 'stopping'
   );
+
+-- name: StartExecutions :exec
+-- Batched form of StartExecution. The dispatch handler claims a whole page at
+-- once, so doing this per row cost two round trips per execution per poll.
+UPDATE test_workflow_executions
+SET status_at = @status_at
+FROM test_workflow_results r
+WHERE test_workflow_executions.id = ANY(@execution_ids::text[])
+  AND test_workflow_executions.id = r.execution_id
+  AND r.status = 'assigned';
+
+-- name: StartExecutionsResult :exec
+UPDATE test_workflow_results
+SET status = 'starting'
+WHERE execution_id = ANY(@execution_ids::text[])
+  AND status = 'assigned';
+
+-- name: RefreshStartingExecutions :exec
+-- Renews the dispatch lease on rows that were re-offered to the runner, so a row
+-- being retried is not offered again on the very next poll. Without this the
+-- retry interval collapses to the poll interval the moment the lease expires.
+UPDATE test_workflow_executions
+SET status_at = @status_at
+FROM test_workflow_results r
+WHERE test_workflow_executions.id = ANY(@execution_ids::text[])
+  AND test_workflow_executions.id = r.execution_id
+  AND r.status = 'starting';

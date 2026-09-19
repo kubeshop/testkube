@@ -21,11 +21,14 @@ func NewPostgresExecutionController(db *database.DB) *PostgresExecutionControlle
 	return &PostgresExecutionController{db: db}
 }
 
-// StartExecution marks an execution that is currently assigned that it should be started.
-// If no execution can be found that matches the passed ID, and is assigned to the passed
-// runner ID, then no error will be emitted and no action will have been taken.
-func (a PostgresExecutionController) StartExecution(ctx context.Context, executionId string) error {
-	// Start a transaction for atomic operations
+// StartExecutions moves a dispatched batch from ASSIGNED to STARTING, stamping
+// status_at so the dispatch lease starts running. Ids that are no longer assigned
+// are skipped by the queries themselves, so a racing update is not an error.
+func (a PostgresExecutionController) StartExecutions(ctx context.Context, executionIds []string) error {
+	if len(executionIds) == 0 {
+		return nil
+	}
+
 	tx, err := a.db.Pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -35,22 +38,40 @@ func (a PostgresExecutionController) StartExecution(ctx context.Context, executi
 	qtx := a.db.WithTx(tx)
 	now := time.Now()
 
-	// Update execution status_at
-	err = qtx.StartExecution(ctx, sqlc.StartExecutionParams{
-		ExecutionID: executionId,
-		StatusAt:    pgtype.Timestamptz{Time: now, Valid: true},
+	err = qtx.StartExecutions(ctx, sqlc.StartExecutionsParams{
+		ExecutionIds: executionIds,
+		StatusAt:     pgtype.Timestamptz{Time: now, Valid: true},
 	})
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("failed to update execution status_at: %w", err)
 	}
 
-	// Update result status
-	err = qtx.StartExecutionResult(ctx, executionId)
+	err = qtx.StartExecutionsResult(ctx, executionIds)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("failed to update execution result status: %w", err)
 	}
 
 	return tx.Commit(ctx)
+}
+
+// RefreshStartingExecutions renews the dispatch lease on rows already in STARTING.
+//
+// Without this the retry interval collapses to the poll interval: once a lease
+// expires the row is re-offered on every subsequent poll, so one wedged execution
+// occupies a batch slot forever and starves the work behind it.
+func (a PostgresExecutionController) RefreshStartingExecutions(ctx context.Context, executionIds []string) error {
+	if len(executionIds) == 0 {
+		return nil
+	}
+
+	err := a.db.RefreshStartingExecutions(ctx, sqlc.RefreshStartingExecutionsParams{
+		ExecutionIds: executionIds,
+		StatusAt:     pgtype.Timestamptz{Time: time.Now(), Valid: true},
+	})
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("failed to renew dispatch lease: %w", err)
+	}
+	return nil
 }
 
 // PauseExecution marks an execution that is currently running that it should be paused.

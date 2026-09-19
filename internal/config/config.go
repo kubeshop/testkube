@@ -53,6 +53,22 @@ type OSSControlPlaneConfig struct {
 	LogsBucket       string `envconfig:"LOGS_BUCKET" default:""`
 	LogsStorage      string `envconfig:"LOGS_STORAGE" default:""`
 	ArtifactsStorage string `envconfig:"ARTIFACTS_STORAGE" default:""`
+
+	// Execution dispatch
+	//
+	// The batch size bounds what one GetExecutionUpdates poll returns. Unbounded,
+	// a burst of workflows sharing a cron minute made a single poll exceed the
+	// runner's call deadline, and the resulting backoff stopped the backlog ever
+	// draining.
+	ExecutionDispatchBatchSize int `envconfig:"EXECUTION_DISPATCH_BATCH_SIZE" default:"25"`
+	// How long a dispatched execution may sit in STARTING before it is offered to
+	// a runner again. Must be shorter than ExecutionStartTimeout.
+	ExecutionRedispatchAfter time.Duration `envconfig:"EXECUTION_REDISPATCH_AFTER" default:"60s"`
+	// How long a dispatched execution may sit in STARTING before it is failed
+	// explicitly rather than left stuck while the control plane reports healthy.
+	ExecutionStartTimeout time.Duration `envconfig:"EXECUTION_START_TIMEOUT" default:"10m"`
+	// How often the reaper looks for executions that were never acknowledged.
+	ExecutionReaperInterval time.Duration `envconfig:"EXECUTION_REAPER_INTERVAL" default:"1m"`
 }
 
 type LegacyExecutorConfig struct {
@@ -173,6 +189,22 @@ type RunnerConfig struct {
 	IsGlobal                  bool              `envconfig:"RUNNER_IS_GLOBAL" default:"false"`
 	RunnerGroup               string            `envconfig:"RUNNER_GROUP" default:""`
 	RunnerLabelsPrefix        string            `envconfig:"RUNNER_LABELS_PREFIX" default:"runner.testkube.io/"`
+
+	// Execution update polling
+	//
+	// PollInterval is a latency floor, not a throughput cap: one poll returns a
+	// whole batch. PollMaxBackoff is the ceiling on the retry delay after a failed
+	// poll - unbounded, it reached hours and stopped the runner consuming work at
+	// all.
+	RunnerPollInterval   time.Duration `envconfig:"RUNNER_POLL_INTERVAL" default:"1s"`
+	RunnerCallTimeout    time.Duration `envconfig:"RUNNER_CALL_TIMEOUT" default:"30s"`
+	RunnerPollMaxBackoff time.Duration `envconfig:"RUNNER_POLL_MAX_BACKOFF" default:"30s"`
+	// RunnerStartConcurrency bounds how many executions from one batch start at once.
+	RunnerStartConcurrency int `envconfig:"RUNNER_START_CONCURRENCY" default:"4"`
+	// RunnerPollStaleAfter is how long without a successful poll before the
+	// readiness check reports the runner as not ready. It must exceed
+	// RunnerCallTimeout + RunnerPollMaxBackoff so one slow poll cannot flap it.
+	RunnerPollStaleAfter time.Duration `envconfig:"RUNNER_POLL_STALE_AFTER" default:"2m"`
 }
 
 type GitOpsSyncConfig struct {

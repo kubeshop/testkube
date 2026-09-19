@@ -3,7 +3,18 @@ package scheduling
 import "context"
 
 type Controller interface {
-	StartExecution(ctx context.Context, executionId string) error
+	// StartExecutions moves a dispatched batch from ASSIGNED to STARTING.
+	//
+	// Batched because the dispatch handler claims a whole page at once: doing it
+	// per row cost two round trips per execution on every poll, inside the
+	// request the runner is waiting on.
+	StartExecutions(ctx context.Context, executionIds []string) error
+
+	// RefreshStartingExecutions renews the dispatch lease on rows that were
+	// re-offered to the runner, so a row being retried is not offered again on
+	// the next poll.
+	RefreshStartingExecutions(ctx context.Context, executionIds []string) error
+
 	PauseExecution(ctx context.Context, executionId string) error
 	ResumeExecution(ctx context.Context, executionId string) error
 	AbortExecution(ctx context.Context, executionId string) error

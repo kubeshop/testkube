@@ -51,9 +51,6 @@ func (f *PostgreSQLFactory) NewTestWorkflowRepository() testworkflow.Repository 
 	return f.testWorkflowRepo
 }
 
-func (f *PostgreSQLFactory) NewScheduler() scheduling.Scheduler {
-	return scheduling.NewPostgresScheduler(f.schedulerDb)
-}
 
 func (f *PostgreSQLFactory) NewExecutionController() scheduling.Controller {
 	return scheduling.NewPostgresExecutionController(f.schedulerDb)
