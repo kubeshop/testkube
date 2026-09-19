@@ -990,6 +990,11 @@ func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow2.Filter {
 		filter = filter.WithStatus(status)
 	}
 
+	statusDetailsType := c.Query("statusDetailsType", "")
+	if statusDetailsType != "" {
+		filter = filter.WithStatusDetailsTypes(statusDetailsType)
+	}
+
 	last, err := strconv.Atoi(c.Query("last", "0"))
 	if err == nil && last != 0 {
 		filter = filter.WithLastNDays(last)
