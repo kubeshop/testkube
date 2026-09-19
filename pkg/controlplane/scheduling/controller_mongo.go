@@ -21,24 +21,46 @@ func NewMongoExecutionController(col *mongo.Collection) Controller {
 	return &MongoExecutionController{executionsCollection: col}
 }
 
-// StartExecution marks an execution that is currently assigned that it should be started.
-// If no execution can be found that matches the passed ID, and is assigned to the passed
-// runner ID, then no error will be emitted and no action will have been taken.
-func (a MongoExecutionController) StartExecution(ctx context.Context, executionId string) error {
-	res := a.executionsCollection.FindOneAndUpdate(ctx,
-		bson.M{"$and": bson.A{
-			bson.M{"id": executionId},
-			bson.M{"result.status": testkube.ASSIGNED_TestWorkflowStatus},
-		}},
+// StartExecutions moves a dispatched batch from ASSIGNED to STARTING, stamping
+// statusat so the dispatch lease starts running. Documents no longer assigned are
+// left alone by the filter, so a racing update is not an error.
+func (a MongoExecutionController) StartExecutions(ctx context.Context, executionIds []string) error {
+	if len(executionIds) == 0 {
+		return nil
+	}
+
+	_, err := a.executionsCollection.UpdateMany(ctx,
+		bson.M{
+			"id":            bson.M{"$in": executionIds},
+			"result.status": testkube.ASSIGNED_TestWorkflowStatus,
+		},
 		bson.M{"$set": bson.M{
 			"statusat":      time.Now(),
 			"result.status": testkube.STARTING_TestWorkflowStatus,
 		}},
 	)
-	switch {
-	case errors.Is(res.Err(), mongo.ErrNoDocuments):
-	case res.Err() != nil:
-		return fmt.Errorf("unable to update test workflow status: %s", res.Err())
+	if err != nil {
+		return fmt.Errorf("unable to update test workflow status: %w", err)
+	}
+	return nil
+}
+
+// RefreshStartingExecutions renews the dispatch lease on documents already in
+// STARTING, so a row being retried is not re-offered on the very next poll.
+func (a MongoExecutionController) RefreshStartingExecutions(ctx context.Context, executionIds []string) error {
+	if len(executionIds) == 0 {
+		return nil
+	}
+
+	_, err := a.executionsCollection.UpdateMany(ctx,
+		bson.M{
+			"id":            bson.M{"$in": executionIds},
+			"result.status": testkube.STARTING_TestWorkflowStatus,
+		},
+		bson.M{"$set": bson.M{"statusat": time.Now()}},
+	)
+	if err != nil {
+		return fmt.Errorf("unable to renew dispatch lease: %w", err)
 	}
 	return nil
 }
