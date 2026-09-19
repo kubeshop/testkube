@@ -22,6 +22,38 @@ const (
 	StopReasonInitTimeout        StopReason = "initialization-timeout"
 	StopReasonProcessKilled      StopReason = "process-killed"
 	StopReasonStepTimeout        StopReason = "step-timeout"
+
+	// A person stopped the execution.
+	StopReasonUserCancel  StopReason = "user-cancel"
+	StopReasonForceCancel StopReason = "force-cancel"
+
+	// The control plane refused the execution at scheduling time.
+	StopReasonTemplateMissing    StopReason = "template-missing"
+	StopReasonQueueLimitExceeded StopReason = "queue-limit-exceeded"
+
+	// A toolkit step reported the cause.
+	StopReasonGitAuthFailed        StopReason = "git-auth-failed"
+	StopReasonGitCloneFailed       StopReason = "git-clone-failed"
+	StopReasonServiceNotReady      StopReason = "service-not-ready"
+	StopReasonArtifactUploadFailed StopReason = "artifact-upload-failed"
+	StopReasonChildWorkflowFailed  StopReason = "child-workflow-failed"
+
+	// Kubernetes stopped the pod.
+	StopReasonOOMKilled        StopReason = "oom-killed"
+	StopReasonEvicted          StopReason = "evicted"
+	StopReasonPreempted        StopReason = "preempted"
+	StopReasonNodeShutdown     StopReason = "node-shutdown"
+	StopReasonContainerError   StopReason = "container-error"
+	StopReasonDeadlineExceeded StopReason = "deadline-exceeded"
+	StopReasonJobDeleted       StopReason = "job-deleted"
+
+	// Another component of the execution decided the stop.
+	StopReasonFailFast     StopReason = "fail-fast"
+	StopReasonTriggerAbort StopReason = "trigger-abort"
+
+	// The test itself failed, and no other signal explains the result.
+	StopReasonExitCode StopReason = "exit-code"
+	StopReasonUnknown  StopReason = "unknown"
 )
 
 // Sentence returns the words for the reason in a message for people. It returns an
@@ -60,6 +92,46 @@ func (r StopReason) Sentence() string {
 		return "the test process was killed, possibly by an out-of-memory kill"
 	case StopReasonStepTimeout:
 		return "the step did not finish within its timeout"
+	case StopReasonUserCancel:
+		return "a person canceled the execution"
+	case StopReasonForceCancel:
+		return "a person canceled the execution by force"
+	case StopReasonTemplateMissing:
+		return "a template that the workflow uses does not exist"
+	case StopReasonQueueLimitExceeded:
+		return "the environment reached its queue limit"
+	case StopReasonGitAuthFailed:
+		return "the credential for the repository was refused"
+	case StopReasonGitCloneFailed:
+		return "the repository could not be cloned"
+	case StopReasonServiceNotReady:
+		return "a service of the step did not become ready"
+	case StopReasonArtifactUploadFailed:
+		return "the artifacts could not be uploaded"
+	case StopReasonChildWorkflowFailed:
+		return "a workflow that this step ran did not pass"
+	case StopReasonOOMKilled:
+		return "the container exceeded its memory limit"
+	case StopReasonEvicted:
+		return "Kubernetes evicted the pod"
+	case StopReasonPreempted:
+		return "the scheduler preempted the pod to run a pod with a higher priority"
+	case StopReasonNodeShutdown:
+		return "the node that ran the pod shut down"
+	case StopReasonContainerError:
+		return "a container of the pod could not run"
+	case StopReasonDeadlineExceeded:
+		return "the pod exceeded the deadline of the job"
+	case StopReasonJobDeleted:
+		return "the job of the execution was deleted"
+	case StopReasonFailFast:
+		return "another parallel worker failed"
+	case StopReasonTriggerAbort:
+		return "the trigger of the execution was deleted"
+	case StopReasonExitCode:
+		return "a step of the test failed"
+	case StopReasonUnknown:
+		return "the cause is not known"
 	default:
 		return ""
 	}

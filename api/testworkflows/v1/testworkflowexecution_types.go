@@ -215,6 +215,31 @@ type TestWorkflowResult struct {
 	Pauses          []TestWorkflowPause               `json:"pauses,omitempty"`
 	Initialization  *TestWorkflowStepResult           `json:"initialization,omitempty"`
 	Steps           map[string]TestWorkflowStepResult `json:"steps,omitempty"`
+	StatusDetails   *TestWorkflowStatusDetails        `json:"statusDetails,omitempty"`
+}
+
+// TestWorkflowStatusDetails gives the reason why an execution did not pass. It is
+// present on every terminal status except passed.
+type TestWorkflowStatusDetails struct {
+	// the layer that failed
+	// +kubebuilder:validation:Enum=init-failure;execution-failure;step-failure;user-cancel;unknown
+	Type_ string `json:"type"`
+	// code of the cause, for example unschedulable or oom-killed
+	Reason string `json:"reason"`
+	// the message of the step that holds the cause, verbatim
+	Message string `json:"message,omitempty"`
+	// reference of the step that holds the cause; empty when the initialization step holds it
+	Step string `json:"step,omitempty"`
+	// code of the component that decided the stop, for example user or control-plane
+	Actor string `json:"actor,omitempty"`
+	// the person who canceled the execution; the control plane fills it
+	User *TestWorkflowStatusDetailsUser `json:"user,omitempty"`
+}
+
+// TestWorkflowStatusDetailsUser is the person who canceled the execution.
+type TestWorkflowStatusDetailsUser struct {
+	Name  string `json:"name,omitempty"`
+	Email string `json:"email,omitempty"`
 }
 
 // TestWorkflowStatus has status of TestWorkflow
