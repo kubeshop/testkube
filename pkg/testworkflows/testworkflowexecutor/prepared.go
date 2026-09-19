@@ -411,10 +411,10 @@ func (e *IntermediateExecution) SequenceNumber() int32 {
 	return e.execution.Number
 }
 
-func (e *IntermediateExecution) SetError(header string, err error) *IntermediateExecution {
-	// Keep only the 1st error
+// SetError ends the execution with the error and its reason code. It keeps the first error only.
+func (e *IntermediateExecution) SetError(header, reason string, err error) *IntermediateExecution {
 	if !e.execution.Result.IsFinished() {
-		e.execution.InitializationError(header, err)
+		e.execution.InitializationError(header, reason, err)
 	}
 	return e
 }
