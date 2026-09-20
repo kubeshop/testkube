@@ -19,7 +19,7 @@ func newReadinessServer(t *testing.T) HTTPServer {
 
 func get(t *testing.T, s HTTPServer, path string) (int, []byte) {
 	t.Helper()
-	resp, err := s.Mux.Test(httptest.NewRequest(http.MethodGet, path, nil))
+	resp, err := s.Mux.Test(httptest.NewRequestWithContext(t.Context(), http.MethodGet, path, nil))
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
