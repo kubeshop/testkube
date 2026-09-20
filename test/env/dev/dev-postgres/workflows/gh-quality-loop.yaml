@@ -529,6 +529,13 @@ spec:
       logs: always
       timeout: 180s
       image: postgres:18.4
+      args:
+      - -c
+      - fsync=off
+      - -c
+      - synchronous_commit=off
+      - -c
+      - full_page_writes=off
       resources:
         requests:
           cpu: 2
