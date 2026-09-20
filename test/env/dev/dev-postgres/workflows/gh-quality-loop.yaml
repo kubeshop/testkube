@@ -198,6 +198,29 @@ spec:
       requests:
         cpu: 2
         memory: 4Gi
+    env:
+    - name: GOCACHE
+      value: /go-build-cache
+    - name: GOMODCACHE
+      value: /go-mod-cache
+    volumeMounts:
+    - name: go-build-cache
+      mountPath: /go-build-cache
+    - name: go-mod-cache
+      mountPath: /go-mod-cache
+  pod:
+    volumes:
+    # Both caches hold content-addressed data, so all workflows on the node
+    # share one copy. Keep the path out of /tmp: /tmp is a tmpfs on
+    # Container-Optimized OS, and the cache would then use node memory.
+    - name: go-build-cache
+      hostPath:
+        path: /var/lib/testkube-go-cache/build
+        type: DirectoryOrCreate
+    - name: go-mod-cache
+      hostPath:
+        path: /var/lib/testkube-go-cache/mod
+        type: DirectoryOrCreate
   job:
     activeDeadlineSeconds: 1200
   steps:
@@ -353,6 +376,10 @@ spec:
     env:
     - name: GOPROXY
       value: https://proxy.golang.org,direct
+    - name: GOCACHE
+      value: /go-build-cache
+    - name: GOMODCACHE
+      value: /go-mod-cache
     resources:
       limits:
         cpu: 4
@@ -360,6 +387,24 @@ spec:
       requests:
         cpu: 2
         memory: 4Gi
+    volumeMounts:
+    - name: go-build-cache
+      mountPath: /go-build-cache
+    - name: go-mod-cache
+      mountPath: /go-mod-cache
+  pod:
+    volumes:
+    # Both caches hold content-addressed data, so all workflows on the node
+    # share one copy. Keep the path out of /tmp: /tmp is a tmpfs on
+    # Container-Optimized OS, and the cache would then use node memory.
+    - name: go-build-cache
+      hostPath:
+        path: /var/lib/testkube-go-cache/build
+        type: DirectoryOrCreate
+    - name: go-mod-cache
+      hostPath:
+        path: /var/lib/testkube-go-cache/mod
+        type: DirectoryOrCreate
   job:
     activeDeadlineSeconds: 600
   steps:
@@ -436,6 +481,10 @@ spec:
       value: http://127.0.0.1:4443
     - name: GOOGLE_CLOUD_PROJECT
       value: test
+    - name: GOCACHE
+      value: /go-build-cache
+    - name: GOMODCACHE
+      value: /go-mod-cache
     resources:
       limits:
         cpu: 8
@@ -443,6 +492,24 @@ spec:
       requests:
         cpu: 4
         memory: 8Gi
+    volumeMounts:
+    - name: go-build-cache
+      mountPath: /go-build-cache
+    - name: go-mod-cache
+      mountPath: /go-mod-cache
+  pod:
+    volumes:
+    # Both caches hold content-addressed data, so all workflows on the node
+    # share one copy. Keep the path out of /tmp: /tmp is a tmpfs on
+    # Container-Optimized OS, and the cache would then use node memory.
+    - name: go-build-cache
+      hostPath:
+        path: /var/lib/testkube-go-cache/build
+        type: DirectoryOrCreate
+    - name: go-mod-cache
+      hostPath:
+        path: /var/lib/testkube-go-cache/mod
+        type: DirectoryOrCreate
   job:
     activeDeadlineSeconds: 1800
   services:
