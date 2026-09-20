@@ -155,6 +155,40 @@ func (q *Queries) CancelExecutionRunningResult(ctx context.Context, executionID 
 	return err
 }
 
+const claimExecutionsToStart = `-- name: ClaimExecutionsToStart :many
+UPDATE test_workflow_results
+SET status = 'starting'
+WHERE execution_id = ANY($1::text[])
+  AND status = 'assigned'
+RETURNING execution_id
+`
+
+// Claims a dispatched batch, moving it from ASSIGNED to STARTING.
+//
+// Returns the ids it actually claimed. The guard on status is what makes this
+// safe: an execution aborted between the dispatch read and this write is left
+// alone, and because the caller dispatches only what comes back here, the runner
+// is never handed a row that is no longer startable.
+func (q *Queries) ClaimExecutionsToStart(ctx context.Context, executionIds []string) ([]string, error) {
+	rows, err := q.db.Query(ctx, claimExecutionsToStart, executionIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var execution_id string
+		if err := rows.Scan(&execution_id); err != nil {
+			return nil, err
+		}
+		items = append(items, execution_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const forceCancelExecution = `-- name: ForceCancelExecution :exec
 UPDATE test_workflow_executions 
 SET status_at = $1
@@ -355,13 +389,14 @@ func (q *Queries) PauseExecutionResult(ctx context.Context, executionID string) 
 	return err
 }
 
-const refreshStartingExecutions = `-- name: RefreshStartingExecutions :exec
+const refreshStartingExecutions = `-- name: RefreshStartingExecutions :many
 UPDATE test_workflow_executions
 SET status_at = $1
 FROM test_workflow_results r
 WHERE test_workflow_executions.id = ANY($2::text[])
   AND test_workflow_executions.id = r.execution_id
   AND r.status = 'starting'
+RETURNING test_workflow_executions.id
 `
 
 type RefreshStartingExecutionsParams struct {
@@ -372,9 +407,27 @@ type RefreshStartingExecutionsParams struct {
 // Renews the dispatch lease on rows that were re-offered to the runner, so a row
 // being retried is not offered again on the very next poll. Without this the
 // retry interval collapses to the poll interval the moment the lease expires.
-func (q *Queries) RefreshStartingExecutions(ctx context.Context, arg RefreshStartingExecutionsParams) error {
-	_, err := q.db.Exec(ctx, refreshStartingExecutions, arg.StatusAt, arg.ExecutionIds)
-	return err
+//
+// Returns the ids it renewed, for the same reason the claim does: a row that
+// left STARTING in the meantime must not be dispatched.
+func (q *Queries) RefreshStartingExecutions(ctx context.Context, arg RefreshStartingExecutionsParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, refreshStartingExecutions, arg.StatusAt, arg.ExecutionIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const resumeExecution = `-- name: ResumeExecution :exec
@@ -408,6 +461,23 @@ func (q *Queries) ResumeExecutionResult(ctx context.Context, executionID string)
 	return err
 }
 
+const stampExecutionsDispatched = `-- name: StampExecutionsDispatched :exec
+UPDATE test_workflow_executions
+SET status_at = $1
+WHERE id = ANY($2::text[])
+`
+
+type StampExecutionsDispatchedParams struct {
+	StatusAt     pgtype.Timestamptz `db:"status_at" json:"status_at"`
+	ExecutionIds []string           `db:"execution_ids" json:"execution_ids"`
+}
+
+// Starts the dispatch lease on rows the claim above accepted.
+func (q *Queries) StampExecutionsDispatched(ctx context.Context, arg StampExecutionsDispatchedParams) error {
+	_, err := q.db.Exec(ctx, stampExecutionsDispatched, arg.StatusAt, arg.ExecutionIds)
+	return err
+}
+
 const startExecution = `-- name: StartExecution :exec
 UPDATE test_workflow_executions 
 SET status_at = $1
@@ -436,38 +506,5 @@ WHERE execution_id = $1
 
 func (q *Queries) StartExecutionResult(ctx context.Context, executionID string) error {
 	_, err := q.db.Exec(ctx, startExecutionResult, executionID)
-	return err
-}
-
-const startExecutions = `-- name: StartExecutions :exec
-UPDATE test_workflow_executions
-SET status_at = $1
-FROM test_workflow_results r
-WHERE test_workflow_executions.id = ANY($2::text[])
-  AND test_workflow_executions.id = r.execution_id
-  AND r.status = 'assigned'
-`
-
-type StartExecutionsParams struct {
-	StatusAt     pgtype.Timestamptz `db:"status_at" json:"status_at"`
-	ExecutionIds []string           `db:"execution_ids" json:"execution_ids"`
-}
-
-// Batched form of StartExecution. The dispatch handler claims a whole page at
-// once, so doing this per row cost two round trips per execution per poll.
-func (q *Queries) StartExecutions(ctx context.Context, arg StartExecutionsParams) error {
-	_, err := q.db.Exec(ctx, startExecutions, arg.StatusAt, arg.ExecutionIds)
-	return err
-}
-
-const startExecutionsResult = `-- name: StartExecutionsResult :exec
-UPDATE test_workflow_results
-SET status = 'starting'
-WHERE execution_id = ANY($1::text[])
-  AND status = 'assigned'
-`
-
-func (q *Queries) StartExecutionsResult(ctx context.Context, executionIds []string) error {
-	_, err := q.db.Exec(ctx, startExecutionsResult, executionIds)
 	return err
 }

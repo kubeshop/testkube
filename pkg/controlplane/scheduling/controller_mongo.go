@@ -9,6 +9,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -21,48 +22,86 @@ func NewMongoExecutionController(col *mongo.Collection) Controller {
 	return &MongoExecutionController{executionsCollection: col}
 }
 
-// StartExecutions moves a dispatched batch from ASSIGNED to STARTING, stamping
-// statusat so the dispatch lease starts running. Documents no longer assigned are
-// left alone by the filter, so a racing update is not an error.
-func (a MongoExecutionController) StartExecutions(ctx context.Context, executionIds []string) error {
+// StartExecutions moves a dispatched batch from ASSIGNED to STARTING and returns
+// the ids it actually claimed.
+//
+// Mongo has no RETURNING, so the claimed set is read back by the same guard that
+// performed the update. Documents that left ASSIGNED in the meantime are absent
+// from both, which is the point: only what was claimed may be dispatched.
+func (a MongoExecutionController) StartExecutions(ctx context.Context, executionIds []string) ([]string, error) {
 	if len(executionIds) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	_, err := a.executionsCollection.UpdateMany(ctx,
+	now := time.Now()
+	if _, err := a.executionsCollection.UpdateMany(ctx,
 		bson.M{
 			"id":            bson.M{"$in": executionIds},
 			"result.status": testkube.ASSIGNED_TestWorkflowStatus,
 		},
 		bson.M{"$set": bson.M{
-			"statusat":      time.Now(),
+			"statusat":      now,
 			"result.status": testkube.STARTING_TestWorkflowStatus,
 		}},
-	)
-	if err != nil {
-		return fmt.Errorf("unable to update test workflow status: %w", err)
+	); err != nil {
+		return nil, fmt.Errorf("unable to update test workflow status: %w", err)
 	}
-	return nil
+
+	return a.idsMatching(ctx, bson.M{
+		"id":            bson.M{"$in": executionIds},
+		"result.status": testkube.STARTING_TestWorkflowStatus,
+		"statusat":      bson.M{"$gte": now},
+	})
 }
 
 // RefreshStartingExecutions renews the dispatch lease on documents already in
-// STARTING, so a row being retried is not re-offered on the very next poll.
-func (a MongoExecutionController) RefreshStartingExecutions(ctx context.Context, executionIds []string) error {
+// STARTING and returns the ids it renewed.
+func (a MongoExecutionController) RefreshStartingExecutions(ctx context.Context, executionIds []string) ([]string, error) {
 	if len(executionIds) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	_, err := a.executionsCollection.UpdateMany(ctx,
+	now := time.Now()
+	if _, err := a.executionsCollection.UpdateMany(ctx,
 		bson.M{
 			"id":            bson.M{"$in": executionIds},
 			"result.status": testkube.STARTING_TestWorkflowStatus,
 		},
-		bson.M{"$set": bson.M{"statusat": time.Now()}},
-	)
-	if err != nil {
-		return fmt.Errorf("unable to renew dispatch lease: %w", err)
+		bson.M{"$set": bson.M{"statusat": now}},
+	); err != nil {
+		return nil, fmt.Errorf("unable to renew dispatch lease: %w", err)
 	}
-	return nil
+
+	return a.idsMatching(ctx, bson.M{
+		"id":            bson.M{"$in": executionIds},
+		"result.status": testkube.STARTING_TestWorkflowStatus,
+		"statusat":      bson.M{"$gte": now},
+	})
+}
+
+// idsMatching reads back the ids of documents the preceding guarded update left
+// in the expected state.
+func (a MongoExecutionController) idsMatching(ctx context.Context, filter bson.M) ([]string, error) {
+	cur, err := a.executionsCollection.Find(ctx, filter, options.Find().SetProjection(bson.M{"id": 1}))
+	if err != nil {
+		return nil, fmt.Errorf("unable to read back dispatched executions: %w", err)
+	}
+	defer cur.Close(ctx)
+
+	var ids []string
+	for cur.Next(ctx) {
+		var doc struct {
+			Id string `bson:"id"`
+		}
+		if err := cur.Decode(&doc); err != nil {
+			continue
+		}
+		ids = append(ids, doc.Id)
+	}
+	if err := cur.Err(); err != nil {
+		return nil, fmt.Errorf("unable to read back dispatched executions: %w", err)
+	}
+	return ids, nil
 }
 
 // PauseExecution marks an execution that is currently running that it should be paused.

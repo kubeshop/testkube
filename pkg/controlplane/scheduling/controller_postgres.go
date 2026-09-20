@@ -21,57 +21,65 @@ func NewPostgresExecutionController(db *database.DB) *PostgresExecutionControlle
 	return &PostgresExecutionController{db: db}
 }
 
-// StartExecutions moves a dispatched batch from ASSIGNED to STARTING, stamping
-// status_at so the dispatch lease starts running. Ids that are no longer assigned
-// are skipped by the queries themselves, so a racing update is not an error.
-func (a PostgresExecutionController) StartExecutions(ctx context.Context, executionIds []string) error {
+// StartExecutions moves a dispatched batch from ASSIGNED to STARTING and returns
+// the ids it actually claimed.
+//
+// Claim first, stamp second: the claim is the guarded write, so only what it
+// accepted gets a dispatch lease and only what it accepted is handed out.
+func (a PostgresExecutionController) StartExecutions(ctx context.Context, executionIds []string) ([]string, error) {
 	if len(executionIds) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	tx, err := a.db.Pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
 	qtx := a.db.WithTx(tx)
-	now := time.Now()
 
-	err = qtx.StartExecutions(ctx, sqlc.StartExecutionsParams{
-		ExecutionIds: executionIds,
-		StatusAt:     pgtype.Timestamptz{Time: now, Valid: true},
+	claimed, err := qtx.ClaimExecutionsToStart(ctx, executionIds)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("failed to claim executions: %w", err)
+	}
+	if len(claimed) == 0 {
+		return nil, tx.Commit(ctx)
+	}
+
+	err = qtx.StampExecutionsDispatched(ctx, sqlc.StampExecutionsDispatchedParams{
+		ExecutionIds: claimed,
+		StatusAt:     pgtype.Timestamptz{Time: time.Now(), Valid: true},
 	})
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("failed to update execution status_at: %w", err)
+		return nil, fmt.Errorf("failed to update execution status_at: %w", err)
 	}
 
-	err = qtx.StartExecutionsResult(ctx, executionIds)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("failed to update execution result status: %w", err)
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
 	}
-
-	return tx.Commit(ctx)
+	return claimed, nil
 }
 
-// RefreshStartingExecutions renews the dispatch lease on rows already in STARTING.
+// RefreshStartingExecutions renews the dispatch lease on rows already in STARTING
+// and returns the ids it renewed.
 //
 // Without this the retry interval collapses to the poll interval: once a lease
 // expires the row is re-offered on every subsequent poll, so one wedged execution
 // occupies a batch slot forever and starves the work behind it.
-func (a PostgresExecutionController) RefreshStartingExecutions(ctx context.Context, executionIds []string) error {
+func (a PostgresExecutionController) RefreshStartingExecutions(ctx context.Context, executionIds []string) ([]string, error) {
 	if len(executionIds) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	err := a.db.RefreshStartingExecutions(ctx, sqlc.RefreshStartingExecutionsParams{
+	renewed, err := a.db.RefreshStartingExecutions(ctx, sqlc.RefreshStartingExecutionsParams{
 		ExecutionIds: executionIds,
 		StatusAt:     pgtype.Timestamptz{Time: time.Now(), Valid: true},
 	})
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("failed to renew dispatch lease: %w", err)
+		return nil, fmt.Errorf("failed to renew dispatch lease: %w", err)
 	}
-	return nil
+	return renewed, nil
 }
 
 // PauseExecution marks an execution that is currently running that it should be paused.

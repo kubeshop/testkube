@@ -56,22 +56,49 @@ func (f *fakeExecutionQuerier) StaleStarting(context.Context, time.Time, int) ([
 }
 
 // fakeController records the dispatch bookkeeping.
+//
+// skip stands in for rows the guarded write declines - an execution aborted
+// between the dispatch read and the claim. startErr and refreshErr make the
+// writes fail outright.
 type fakeController struct {
 	started   []string
 	refreshed []string
 	calls     int
+
+	skip       map[string]bool
+	startErr   error
+	refreshErr error
 }
 
-func (f *fakeController) StartExecutions(_ context.Context, ids []string) error {
-	f.calls++
-	f.started = append(f.started, ids...)
-	return nil
+func (f *fakeController) accept(ids []string) []string {
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if f.skip[id] {
+			continue
+		}
+		out = append(out, id)
+	}
+	return out
 }
 
-func (f *fakeController) RefreshStartingExecutions(_ context.Context, ids []string) error {
+func (f *fakeController) StartExecutions(_ context.Context, ids []string) ([]string, error) {
 	f.calls++
-	f.refreshed = append(f.refreshed, ids...)
-	return nil
+	if f.startErr != nil {
+		return nil, f.startErr
+	}
+	claimed := f.accept(ids)
+	f.started = append(f.started, claimed...)
+	return claimed, nil
+}
+
+func (f *fakeController) RefreshStartingExecutions(_ context.Context, ids []string) ([]string, error) {
+	f.calls++
+	if f.refreshErr != nil {
+		return nil, f.refreshErr
+	}
+	renewed := f.accept(ids)
+	f.refreshed = append(f.refreshed, renewed...)
+	return renewed, nil
 }
 
 func (f *fakeController) PauseExecution(context.Context, string) error       { return nil }
@@ -206,6 +233,95 @@ func TestGetExecutionUpdates_ClaimsAssignedAndRenewsRedispatched(t *testing.T) {
 	assert.Len(t, response.GetStart(), 4, "every row in the batch is offered to the runner")
 	assert.Equal(t, []string{"new-1", "new-2"}, controller.started)
 	assert.Equal(t, []string{"retry-1", "retry-2"}, controller.refreshed)
+}
+
+// An execution aborted between the dispatch read and the claim must not be
+// handed to the runner. The guarded write skips it; returning it anyway would
+// have the runner create Kubernetes resources for an execution already over.
+func TestGetExecutionUpdates_DoesNotDispatchUnclaimedExecutions(t *testing.T) {
+	querier := &fakeExecutionQuerier{toStart: []testkube.TestWorkflowExecution{
+		assignedExecution("keep-1"),
+		assignedExecution("aborted-meanwhile"),
+		assignedExecution("keep-2"),
+	}}
+	controller := &fakeController{skip: map[string]bool{"aborted-meanwhile": true}}
+	server := newDispatchServer(t, querier, controller, Config{})
+
+	response, err := server.GetExecutionUpdates(context.Background(), &executionv1.GetExecutionUpdatesRequest{})
+
+	require.NoError(t, err)
+	var dispatched []string
+	for _, start := range response.GetStart() {
+		dispatched = append(dispatched, start.GetExecutionId())
+	}
+	assert.Equal(t, []string{"keep-1", "keep-2"}, dispatched,
+		"only what the claim accepted may be dispatched")
+}
+
+// The same rule applies to a re-offered STARTING row whose lease could not be
+// renewed because it left STARTING in the meantime.
+func TestGetExecutionUpdates_DoesNotDispatchUnrenewedExecutions(t *testing.T) {
+	querier := &fakeExecutionQuerier{toStart: []testkube.TestWorkflowExecution{
+		startingExecution("retry-keep"),
+		startingExecution("retry-gone"),
+	}}
+	controller := &fakeController{skip: map[string]bool{"retry-gone": true}}
+	server := newDispatchServer(t, querier, controller, Config{})
+
+	response, err := server.GetExecutionUpdates(context.Background(), &executionv1.GetExecutionUpdatesRequest{})
+
+	require.NoError(t, err)
+	require.Len(t, response.GetStart(), 1)
+	assert.Equal(t, "retry-keep", response.GetStart()[0].GetExecutionId())
+}
+
+// A claim that fails outright dispatches nothing. The rows are still ASSIGNED,
+// so the next poll retries them; dispatching them now would start executions
+// the control plane does not believe it handed out.
+func TestGetExecutionUpdates_DispatchesNothingWhenTheClaimFails(t *testing.T) {
+	querier := &fakeExecutionQuerier{toStart: []testkube.TestWorkflowExecution{
+		assignedExecution("exec-1"),
+		assignedExecution("exec-2"),
+	}}
+	controller := &fakeController{startErr: errors.New("write failed")}
+	server := newDispatchServer(t, querier, controller, Config{})
+
+	response, err := server.GetExecutionUpdates(context.Background(), &executionv1.GetExecutionUpdatesRequest{})
+
+	require.NoError(t, err, "the RPC still must not fail")
+	assert.Empty(t, response.GetStart(),
+		"a failed claim must not leave rows eligible for redispatch and started at once")
+}
+
+func TestGetExecutionUpdates_DispatchesNothingWhenTheLeaseRenewalFails(t *testing.T) {
+	querier := &fakeExecutionQuerier{toStart: []testkube.TestWorkflowExecution{
+		startingExecution("retry-1"),
+	}}
+	controller := &fakeController{refreshErr: errors.New("write failed")}
+	server := newDispatchServer(t, querier, controller, Config{})
+
+	response, err := server.GetExecutionUpdates(context.Background(), &executionv1.GetExecutionUpdatesRequest{})
+
+	require.NoError(t, err)
+	assert.Empty(t, response.GetStart())
+}
+
+// A claim that accepted nothing must not publish start events either.
+func TestGetExecutionUpdates_DispatchAndClaimAgreeOnTheSameSet(t *testing.T) {
+	querier := &fakeExecutionQuerier{toStart: []testkube.TestWorkflowExecution{
+		assignedExecution("keep"),
+		assignedExecution("skip"),
+	}}
+	controller := &fakeController{skip: map[string]bool{"skip": true}}
+	server := newDispatchServer(t, querier, controller, Config{})
+
+	response, err := server.GetExecutionUpdates(context.Background(), &executionv1.GetExecutionUpdatesRequest{})
+
+	require.NoError(t, err)
+	require.Len(t, response.GetStart(), 1)
+	assert.Equal(t, []string{"keep"}, controller.started,
+		"what was claimed and what was dispatched have to be the same set")
+	assert.Equal(t, "keep", response.GetStart()[0].GetExecutionId())
 }
 
 // The lean projection has to be enough to build a complete ExecutionStart, or

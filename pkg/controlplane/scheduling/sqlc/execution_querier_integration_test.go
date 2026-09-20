@@ -134,16 +134,22 @@ func TestStartExecutions_Integration(t *testing.T) {
 	running := seedExecution(t, db, ctx, "running", now, now.Add(-time.Hour))
 
 	ids := []string{assignedA, assignedB, running}
-	require.NoError(t, queries.StartExecutions(ctx, sqlc.StartExecutionsParams{
-		ExecutionIds: ids,
+	claimed, err := queries.ClaimExecutionsToStart(ctx, ids)
+	require.NoError(t, err)
+	require.NoError(t, queries.StampExecutionsDispatched(ctx, sqlc.StampExecutionsDispatchedParams{
+		ExecutionIds: claimed,
 		StatusAt:     ts(now),
 	}))
-	require.NoError(t, queries.StartExecutionsResult(ctx, ids))
+
+	// The claim reports exactly what it took, and the caller dispatches only
+	// that: a row that is no longer assigned must not reach the runner.
+	assert.ElementsMatch(t, []string{assignedA, assignedB}, claimed)
+	assert.NotContains(t, claimed, running)
 
 	statuses := map[string]string{}
-	rows, err := db.Pool.Query(ctx,
+	rows, err2 := db.Pool.Query(ctx,
 		`SELECT execution_id, status FROM test_workflow_results WHERE execution_id = ANY($1)`, ids)
-	require.NoError(t, err)
+	require.NoError(t, err2)
 	defer rows.Close()
 	for rows.Next() {
 		var id, status string
@@ -172,10 +178,15 @@ func TestRefreshStartingExecutions_Integration(t *testing.T) {
 	starting := seedExecution(t, db, ctx, "starting", now, old)
 	assigned := seedExecution(t, db, ctx, "assigned", now, old)
 
-	require.NoError(t, queries.RefreshStartingExecutions(ctx, sqlc.RefreshStartingExecutionsParams{
+	renewed, err := queries.RefreshStartingExecutions(ctx, sqlc.RefreshStartingExecutionsParams{
 		ExecutionIds: []string{starting, assigned},
 		StatusAt:     ts(now),
-	}))
+	})
+	require.NoError(t, err)
+
+	// Only the row that still holds a lease comes back, and only that row may be
+	// re-offered to the runner.
+	assert.Equal(t, []string{starting}, renewed)
 
 	var startingAt, assignedAt time.Time
 	require.NoError(t, db.Pool.QueryRow(ctx,

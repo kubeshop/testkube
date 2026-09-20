@@ -31,6 +31,8 @@ type stubStartsClient struct {
 	workflowErr error
 	// workflowJSON overrides the workflow payload.
 	workflowJSON []byte
+	// acceptErr, when set, is returned by AcceptExecution.
+	acceptErr error
 	// fetchDelay is applied inside GetExecutionWorkflow.
 	fetchDelay time.Duration
 
@@ -83,6 +85,9 @@ func (s *stubStartsClient) AcceptExecution(_ context.Context, req *executionv1.A
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.accepted = append(s.accepted, req.GetExecutionId())
+	if s.acceptErr != nil {
+		return nil, s.acceptErr
+	}
 	return &executionv1.AcceptExecutionResponse{}, nil
 }
 
@@ -296,4 +301,54 @@ func BenchmarkExecuteResponse(b *testing.B) {
 			})
 		}
 	}
+}
+
+// abortingRunner records local aborts so the rejection path can be observed.
+type abortingRunner struct {
+	countingRunner
+	mu      sync.Mutex
+	aborted []string
+}
+
+func (r *abortingRunner) Abort(id, _, _ string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.aborted = append(r.aborted, id)
+	return nil
+}
+
+func (r *abortingRunner) abortedIds() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]string(nil), r.aborted...)
+}
+
+// The control plane refuses to accept an execution it has already finished -
+// typically one the reaper failed while this setup was still in flight. The
+// Kubernetes resources exist by then, so the runner has to tear them down
+// rather than leave a Job running for an execution recorded as aborted.
+func TestExecuteResponse_AbortsLocallyWhenAcceptIsRejected(t *testing.T) {
+	stub := newStubStartsClient()
+	stub.acceptErr = status.Error(codes.FailedPrecondition, "execution already finished as aborted")
+	runner := &abortingRunner{}
+	c := newStartsClient(stub, runner, 4)
+
+	c.executeResponse(context.Background(), startsResponse(2))
+
+	assert.ElementsMatch(t, []string{"exec-0", "exec-1"}, runner.abortedIds(),
+		"a rejected start has to be cleaned up locally")
+}
+
+// Any other acceptance failure is transient as far as the runner knows, so the
+// execution is left alone rather than being torn down.
+func TestExecuteResponse_DoesNotAbortOnATransientAcceptFailure(t *testing.T) {
+	stub := newStubStartsClient()
+	stub.acceptErr = status.Error(codes.Unavailable, "try again")
+	runner := &abortingRunner{}
+	c := newStartsClient(stub, runner, 4)
+
+	c.executeResponse(context.Background(), startsResponse(1))
+
+	assert.Empty(t, runner.abortedIds(),
+		"a transient acceptance failure must not destroy a running execution")
 }

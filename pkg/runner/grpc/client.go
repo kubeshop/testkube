@@ -16,6 +16,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/oauth"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
@@ -476,6 +477,23 @@ func (c *Client) startExecution(ctx context.Context, start *executionv1.Executio
 	}, c.callOpts...)
 	acceptCancel()
 	if err != nil {
+		// The control plane refuses to accept an execution it has already
+		// finished - typically one whose dispatch lease expired and was reaped
+		// while this setup was still in flight. The resources exist now, so tear
+		// them down rather than leaving a Job running for an execution that is
+		// recorded as aborted.
+		if grpcutils.ErrorCode(err) == codes.FailedPrecondition {
+			c.logger.Warnw("Control plane rejected the started execution, aborting it locally.",
+				"executionId", start.GetExecutionId(),
+				"error", err)
+			if abortErr := c.runner.Abort(start.GetExecutionId(), "", "execution already finished in the control plane"); abortErr != nil &&
+				!errors.Is(abortErr, registry.ErrResourceNotFound) {
+				c.logger.Errorw("Failed to abort a rejected execution",
+					"executionId", start.GetExecutionId(),
+					"error", abortErr)
+			}
+			return
+		}
 		c.logger.Errorw("Failed to set execution scheduling",
 			"executionId", start.GetExecutionId(),
 			"error", err)

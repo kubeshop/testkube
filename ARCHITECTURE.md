@@ -20,8 +20,9 @@ You can read more about the differences between the two deployment modes in the 
   - [6. Event System](#6-event-system)
   - [7. REST API](#7-rest-api)
   - [8. Prometheus Metrics Endpoint](#8-prometheus-metrics-endpoint)
-  - [9. Logging and Telemetry](#9-logging-and-telemetry)
-  - [10. Kubernetes Custom Resource Definitions (CRDs)](#10-kubernetes-custom-resource-definitions-crds)
+  - [9. Health and Readiness Endpoints](#9-health-and-readiness-endpoints)
+  - [10. Logging and Telemetry](#10-logging-and-telemetry)
+  - [11. Kubernetes Custom Resource Definitions (CRDs)](#11-kubernetes-custom-resource-definitions-crds)
 - [Kubernetes Deployment](#kubernetes-deployment)
 - [CLI](#cli)
 - [Related Documentation](#related-documentation)
@@ -185,7 +186,20 @@ The API server exposes Prometheus metrics at `/metrics` for monitoring and obser
 
 **Access**: Metrics are accessible at `http://localhost:8088/metrics` (or the configured API server port).
 
-### 9. Logging and Telemetry
+
+### 9. Health and Readiness Endpoints
+
+**Endpoints**: `GET /health`, `GET /ready`
+
+`/health` answers `OK 👋!` unconditionally and is what the startup and liveness probes use. It reports that the process is serving HTTP, nothing more.
+
+`/ready` evaluates the readiness checks registered on the server and returns 503 with the failing check names when any fails. The api-server registers one check, `runner-execution-updates`, which reports the time since the runner's last successful `GetExecutionUpdates` poll, so a runner whose poll loop has stalled stops being Ready instead of looking healthy while it consumes no work.
+
+**Implementation**: [`pkg/server/readiness.go`](pkg/server/readiness.go); both endpoints are registered in [`pkg/server/httpserver.go`](pkg/server/httpserver.go).
+
+**Probes**: the `testkube-api` and `testkube-runner` charts point their readiness probes at `/ready`. Liveness stays on `/health` deliberately — a stalled poll loop usually means the control plane is unreachable, and restarting every runner in the fleet over that is worse than the stall.
+
+### 10. Logging and Telemetry
 
 #### Logging
 
@@ -233,7 +247,7 @@ Telemetry collects usage analytics to help improve the product. It can be disabl
 - Both events include the detected cluster type and agent capabilities
 - Capability tags come from [`cmd/api-server/services/capabilities.go`](cmd/api-server/services/capabilities.go) and cover the agent persona, connection mode, enabled features, and whether this is a Testkube-provisioned hosted runner (`hosted-runner`) rather than a user-deployed one
 
-### 10. Kubernetes Custom Resource Definitions (CRDs)
+### 11. Kubernetes Custom Resource Definitions (CRDs)
 
 **Definition Location**: [`api/`](api/)
 **Generated CRDs**: [`k8s/crd/`](k8s/crd/)

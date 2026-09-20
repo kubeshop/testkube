@@ -221,6 +221,9 @@ func (s *Server) Start(ctx context.Context, ln net.Listener) error {
 	// unacknowledged executions can delay the poll the runner is blocked on.
 	if s.startEvents != nil {
 		s.startEvents.run(ctx)
+		// Queued events would otherwise be lost on a restart, and nothing records
+		// that a start event was published, so there is no way to notice.
+		defer s.startEvents.drain()
 	}
 	go s.reapStaleDispatches(ctx)
 

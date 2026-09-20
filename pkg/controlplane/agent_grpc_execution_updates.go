@@ -41,13 +41,9 @@ func (s *Server) GetExecutionUpdates(ctx context.Context, _ *executionv1.GetExec
 		return &executionv1.GetExecutionUpdatesResponse{Update: updates}, nil
 	}
 
-	start := make([]*executionv1.ExecutionStart, 0, len(batch))
 	assigned := make([]string, 0, len(batch))
 	redispatched := make([]string, 0, len(batch))
 	for _, exe := range batch {
-		executionStart := createExecutionStart(exe, info)
-		start = append(start, &executionStart)
-
 		if exe.Result != nil && exe.Result.Status != nil && *exe.Result.Status == testkube.ASSIGNED_TestWorkflowStatus {
 			assigned = append(assigned, exe.Id)
 			continue
@@ -55,41 +51,80 @@ func (s *Server) GetExecutionUpdates(ctx context.Context, _ *executionv1.GetExec
 		redispatched = append(redispatched, exe.Id)
 	}
 
-	s.claimBatch(ctx, log, assigned, redispatched)
+	// Claim before dispatching, and dispatch only what the claim accepted.
+	//
+	// The read and the claim are separate statements, so an execution can be
+	// aborted in between; the guarded write then skips it. Returning the row
+	// anyway would have the runner create Kubernetes resources for an execution
+	// that is already over. A claim that fails outright drops its rows from this
+	// response too - they are still ASSIGNED, so the next poll picks them up.
+	claimed, renewed := s.claimBatch(ctx, log, assigned, redispatched)
 
-	// Hand the newly started executions to the dispatcher. Hydrating each one and
+	dispatchable := make(map[string]struct{}, len(claimed)+len(renewed))
+	for _, id := range claimed {
+		dispatchable[id] = struct{}{}
+	}
+	for _, id := range renewed {
+		dispatchable[id] = struct{}{}
+	}
+
+	start := make([]*executionv1.ExecutionStart, 0, len(dispatchable))
+	for _, exe := range batch {
+		if _, ok := dispatchable[exe.Id]; !ok {
+			continue
+		}
+		executionStart := createExecutionStart(exe, info)
+		start = append(start, &executionStart)
+	}
+
+	if dropped := len(batch) - len(start); dropped > 0 {
+		log.Infow("dropped executions from the dispatch batch, they were no longer startable",
+			"dropped", dropped, "dispatched", len(start))
+	}
+
+	// Hand the newly claimed executions to the dispatcher. Hydrating each one and
 	// publishing its event inline cost a full execution read plus up to three
 	// publish attempts with sleeps between them, per row, inside the request the
 	// runner is blocked on.
-	s.enqueueStartEvents(assigned)
+	s.enqueueStartEvents(ctx, claimed)
 
 	return &executionv1.GetExecutionUpdatesResponse{Update: updates, Start: start}, nil
 }
 
-// claimBatch records that the batch was handed out.
+// claimBatch records that the batch was handed out, and reports what it actually
+// claimed and renewed.
 //
 // Detached from the request context on purpose: if the runner has already given
 // up on this call, dropping the claim would offer the same rows again on the next
 // poll as ASSIGNED and publish their start events a second time.
-func (s *Server) claimBatch(ctx context.Context, log *zap.SugaredLogger, assigned, redispatched []string) {
+func (s *Server) claimBatch(ctx context.Context, log *zap.SugaredLogger, assigned, redispatched []string) (claimed, renewed []string) {
 	if len(assigned) == 0 && len(redispatched) == 0 {
-		return
+		return nil, nil
 	}
 
 	claimCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), claimTimeout)
 	defer cancel()
 
 	if len(assigned) > 0 {
-		if err := s.ExecutionController.StartExecutions(claimCtx, assigned); err != nil {
+		var err error
+		claimed, err = s.ExecutionController.StartExecutions(claimCtx, assigned)
+		if err != nil {
+			// Nothing is dispatched from a failed claim. The rows stay ASSIGNED,
+			// so the next poll retries them.
 			log.Warnw("error marking executions as starting", "err", err, "count", len(assigned))
+			claimed = nil
 		}
 	}
 	if len(redispatched) > 0 {
 		// Renew the lease so a retried row is not offered again on the next poll.
-		if err := s.ExecutionController.RefreshStartingExecutions(claimCtx, redispatched); err != nil {
+		var err error
+		renewed, err = s.ExecutionController.RefreshStartingExecutions(claimCtx, redispatched)
+		if err != nil {
 			log.Warnw("error renewing dispatch lease", "err", err, "count", len(redispatched))
+			renewed = nil
 		}
 	}
+	return claimed, renewed
 }
 
 // collectTransitions turns pending pause/resume/stop records into runner
