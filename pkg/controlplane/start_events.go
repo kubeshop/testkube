@@ -22,6 +22,9 @@ const (
 	startEventBufferBatches = 8
 	// startEventDrainTimeout bounds how long shutdown waits for the queue.
 	startEventDrainTimeout = 10 * time.Second
+	// startEventPublishTimeout bounds one inline publish, which runs detached
+	// from the caller's context.
+	startEventPublishTimeout = 30 * time.Second
 )
 
 // startEventDispatcher hydrates executions and publishes their start events off
@@ -107,15 +110,29 @@ func (d *startEventDispatcher) publish(ctx context.Context, id string) {
 // The inline path costs the caller a hydration and a publish, which is exactly
 // what the whole dispatch loop used to do for every row. It is the degraded
 // case, not the normal one, so it is logged.
+//
+// It publishes on a context detached from the caller's. The execution claim
+// deliberately outlives cancellation of the polling RPC, so by the time this
+// runs the runner's deadline may already have expired; hydrating on that
+// context would fail with "context canceled" and lose the event for good,
+// because publishing is the only consumer action and there is no replay path.
 func (d *startEventDispatcher) enqueue(ctx context.Context, ids []string) {
 	for _, id := range ids {
 		select {
 		case d.ids <- id:
 		default:
 			d.log.Warnw("start event queue is full, publishing inline", "id", id)
-			d.publish(ctx, id)
+			d.publishDetached(ctx, id)
 		}
 	}
+}
+
+// publishDetached publishes one event on its own bounded context, independent of
+// whether the caller's has been cancelled.
+func (d *startEventDispatcher) publishDetached(ctx context.Context, id string) {
+	publishCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), startEventPublishTimeout)
+	defer cancel()
+	d.publish(publishCtx, id)
 }
 
 // drain publishes whatever is still queued at shutdown.

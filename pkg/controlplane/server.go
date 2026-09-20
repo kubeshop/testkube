@@ -37,10 +37,10 @@ const (
 type Server struct {
 	cloud.UnimplementedTestKubeCloudAPIServer
 	executionv1.UnimplementedTestWorkflowExecutionServiceServer
-	cfg       Config
-	server    *grpc.Server
-	commands  map[cloudexecutor.Command]CommandHandler
-	enqueuer  scheduling.Enqueuer
+	cfg      Config
+	server   *grpc.Server
+	commands map[cloudexecutor.Command]CommandHandler
+	enqueuer scheduling.Enqueuer
 
 	// note: encapsulation is broken here because the HTTP Server cannot yet be pulled into the build-in control plane
 	//       until the commercial control plane becomes its own source of truth.

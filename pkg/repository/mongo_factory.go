@@ -61,7 +61,6 @@ func (f *MongoDBFactory) NewTestWorkflowRepository() testworkflow.Repository {
 	return f.testWorkflowRepo
 }
 
-
 func (f *MongoDBFactory) NewExecutionController() scheduling.Controller {
 	return scheduling.NewMongoExecutionController(f.db.Collection(testworkflowmongo.CollectionName))
 }
