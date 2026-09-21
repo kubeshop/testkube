@@ -316,6 +316,39 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 - Authentication tokens
 - Contexts (for multi-environment setups)
 
+### External Integration: License Event Reporting
+
+The CLI reports installation lifecycle events to the Testkube license service so the
+install funnel can be tracked as telemetry.
+
+**Endpoint**: `POST https://license.testkube.io/events` (the license worker's `/events`
+handler). The URL is defined as `LicenseEventsURL` in
+[`pkg/diagnostics/validators/license/client.go`](pkg/diagnostics/validators/license/client.go).
+
+**Client**: `Client.ReportEvent(license, event)` in the same file marshals
+`{ "license": <key>, "event": <name> }` and POSTs it with a short (5s) request timeout.
+
+**Events** (constants in `client.go`):
+
+- `cli_install_started` — emitted right before the Helm install begins.
+- `cli_install_finished` — emitted right after the install succeeds.
+
+**Flow**: During `testkube init demo`
+([`cmd/kubectl-testkube/commands/init.go`](cmd/kubectl-testkube/commands/init.go)), the
+`reportLicenseEvent` helper wraps `ReportEvent`. It is:
+
+- **Telemetry-gated** — it is a no-op when the user has disabled telemetry
+  (`config.Data.TelemetryEnabled == false`).
+- **Non-blocking** — each call runs in a background goroutine so a slow or unreachable
+  endpoint never stalls the install path.
+- **Best-effort / non-fatal** — failures are logged at debug level only and never abort
+  the installation.
+
+**Authentication**: the license key sent in the request body is itself the credential —
+the license worker validates the key (against Keygen) before recording anything, so no
+separate shared secret ships in the public CLI. Recording is scoped to that license's own
+plan on the worker side.
+
 ## Related Documentation
 
 - [`README.md`](README.md) - project overview and contributor entry points
