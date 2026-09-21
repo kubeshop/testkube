@@ -7,39 +7,97 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const getExecutionsByStatus = `-- name: GetExecutionsByStatus :many
+const getExecutionTransitions = `-- name: GetExecutionTransitions :many
 SELECT
-    e.id, e.name, e.namespace, e.number, e.test_workflow_execution_name, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.scheduled_at, e.assigned_at, e.status_at, e.created_at, e.updated_at, e.organization_id, e.environment_id, e.runtime, e.silent_mode, e.workflow_name, e.status, e.lineage_base_id, e.lineage_root_id, e.lineage_attempt,
-    r.execution_id, r.status, r.predicted_status, r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms, r.pauses, r.initialization, r.steps, r.queued_at, r.started_at, r.finished_at, r.created_at, r.updated_at
+    r.execution_id,
+    r.status,
+    r.predicted_status
 FROM
-    test_workflow_executions e
-        JOIN test_workflow_results r ON e.id = r.execution_id
-WHERE r.status = $1::text
-  AND (COALESCE($2::text, '') = '' OR predicted_status = $2::text)
-ORDER BY e.scheduled_at
+    test_workflow_results r
+WHERE r.status = ANY($1::text[])
 `
 
-type GetExecutionsByStatusParams struct {
-	Status          string `db:"status" json:"status"`
-	PredictedStatus string `db:"predicted_status" json:"predicted_status"`
+type GetExecutionTransitionsRow struct {
+	ExecutionID     string      `db:"execution_id" json:"execution_id"`
+	Status          pgtype.Text `db:"status" json:"status"`
+	PredictedStatus pgtype.Text `db:"predicted_status" json:"predicted_status"`
 }
 
-type GetExecutionsByStatusRow struct {
-	TestWorkflowExecution TestWorkflowExecution `db:"test_workflow_execution" json:"test_workflow_execution"`
-	TestWorkflowResult    TestWorkflowResult    `db:"test_workflow_result" json:"test_workflow_result"`
-}
-
-func (q *Queries) GetExecutionsByStatus(ctx context.Context, arg GetExecutionsByStatusParams) ([]GetExecutionsByStatusRow, error) {
-	rows, err := q.db.Query(ctx, getExecutionsByStatus, arg.Status, arg.PredictedStatus)
+// Control instructions the runner must act on: pause, resume, abort, cancel.
+//
+// Cheap by construction, which is why it needs no bound: three columns from one
+// table, no join and no hydration. The number of executions mid-transition is
+// bounded by what a user can click, not by the dispatch backlog.
+func (q *Queries) GetExecutionTransitions(ctx context.Context, statuses []string) ([]GetExecutionTransitionsRow, error) {
+	rows, err := q.db.Query(ctx, getExecutionTransitions, statuses)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetExecutionsByStatusRow
+	var items []GetExecutionTransitionsRow
 	for rows.Next() {
-		var i GetExecutionsByStatusRow
+		var i GetExecutionTransitionsRow
+		if err := rows.Scan(&i.ExecutionID, &i.Status, &i.PredictedStatus); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getExecutionsToStart = `-- name: GetExecutionsToStart :many
+SELECT
+    e.id, e.name, e.namespace, e.number, e.test_workflow_execution_name, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.scheduled_at, e.assigned_at, e.status_at, e.created_at, e.updated_at, e.organization_id, e.environment_id, e.runtime, e.silent_mode, e.workflow_name, e.status, e.lineage_base_id, e.lineage_root_id, e.lineage_attempt
+FROM
+    test_workflow_executions e
+WHERE e.status = 'assigned'
+   OR (e.status = 'starting' AND e.status_at < $1::timestamptz)
+ORDER BY e.scheduled_at
+LIMIT $2::int
+`
+
+type GetExecutionsToStartParams struct {
+	RedispatchBefore pgtype.Timestamptz `db:"redispatch_before" json:"redispatch_before"`
+	BatchSize        int32              `db:"batch_size" json:"batch_size"`
+}
+
+type GetExecutionsToStartRow struct {
+	TestWorkflowExecution TestWorkflowExecution `db:"test_workflow_execution" json:"test_workflow_execution"`
+}
+
+// One bounded page of executions to hand to the runner, oldest scheduled first.
+//
+// The bound is the point. This query's ancestor returned every pending row and
+// joined each one to six more tables, so a burst of workflows sharing a cron
+// minute made a single poll exceed the runner's call deadline; the runner then
+// backed off, the backlog stopped draining, and the query only got slower.
+//
+// Reads test_workflow_executions alone: status and workflow_name are
+// denormalised onto it by trigger (see the denormalize_execution_status_name
+// migration), and every field the runner is sent lives on this row. The
+// workflow spec deliberately is not fetched - the runner asks for it separately
+// with GetExecutionWorkflow.
+//
+// STARTING rows come back only once their dispatch lease has expired. The
+// handler stamps status_at when it hands a row out, so a row the runner never
+// acknowledged is retried after @redispatch_before rather than occupying a slot
+// in every poll.
+func (q *Queries) GetExecutionsToStart(ctx context.Context, arg GetExecutionsToStartParams) ([]GetExecutionsToStartRow, error) {
+	rows, err := q.db.Query(ctx, getExecutionsToStart, arg.RedispatchBefore, arg.BatchSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetExecutionsToStartRow
+	for rows.Next() {
+		var i GetExecutionsToStartRow
 		if err := rows.Scan(
 			&i.TestWorkflowExecution.ID,
 			&i.TestWorkflowExecution.Name,
@@ -68,22 +126,6 @@ func (q *Queries) GetExecutionsByStatus(ctx context.Context, arg GetExecutionsBy
 			&i.TestWorkflowExecution.LineageBaseID,
 			&i.TestWorkflowExecution.LineageRootID,
 			&i.TestWorkflowExecution.LineageAttempt,
-			&i.TestWorkflowResult.ExecutionID,
-			&i.TestWorkflowResult.Status,
-			&i.TestWorkflowResult.PredictedStatus,
-			&i.TestWorkflowResult.Duration,
-			&i.TestWorkflowResult.TotalDuration,
-			&i.TestWorkflowResult.DurationMs,
-			&i.TestWorkflowResult.PausedMs,
-			&i.TestWorkflowResult.TotalDurationMs,
-			&i.TestWorkflowResult.Pauses,
-			&i.TestWorkflowResult.Initialization,
-			&i.TestWorkflowResult.Steps,
-			&i.TestWorkflowResult.QueuedAt,
-			&i.TestWorkflowResult.StartedAt,
-			&i.TestWorkflowResult.FinishedAt,
-			&i.TestWorkflowResult.CreatedAt,
-			&i.TestWorkflowResult.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -95,79 +137,40 @@ func (q *Queries) GetExecutionsByStatus(ctx context.Context, arg GetExecutionsBy
 	return items, nil
 }
 
-const getExecutionsByStatuses = `-- name: GetExecutionsByStatuses :many
+const getStaleStartingExecutions = `-- name: GetStaleStartingExecutions :many
 SELECT
-    e.id, e.name, e.namespace, e.number, e.test_workflow_execution_name, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.scheduled_at, e.assigned_at, e.status_at, e.created_at, e.updated_at, e.organization_id, e.environment_id, e.runtime, e.silent_mode, e.workflow_name, e.status, e.lineage_base_id, e.lineage_root_id, e.lineage_attempt,
-    r.execution_id, r.status, r.predicted_status, r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms, r.pauses, r.initialization, r.steps, r.queued_at, r.started_at, r.finished_at, r.created_at, r.updated_at
+    e.id
 FROM
     test_workflow_executions e
-        JOIN test_workflow_results r ON e.id = r.execution_id
-WHERE r.status = ANY($1::text[])
+WHERE e.status = 'starting'
+  AND e.status_at < $1::timestamptz
 ORDER BY e.scheduled_at
+LIMIT $2::int
 `
 
-type GetExecutionsByStatusesRow struct {
-	TestWorkflowExecution TestWorkflowExecution `db:"test_workflow_execution" json:"test_workflow_execution"`
-	TestWorkflowResult    TestWorkflowResult    `db:"test_workflow_result" json:"test_workflow_result"`
+type GetStaleStartingExecutionsParams struct {
+	StaleBefore pgtype.Timestamptz `db:"stale_before" json:"stale_before"`
+	BatchSize   int32              `db:"batch_size" json:"batch_size"`
 }
 
-func (q *Queries) GetExecutionsByStatuses(ctx context.Context, statuses []string) ([]GetExecutionsByStatusesRow, error) {
-	rows, err := q.db.Query(ctx, getExecutionsByStatuses, statuses)
+// Executions handed to a runner that never reported back, neither accepting nor
+// declining them. They are failed explicitly rather than left to sit in STARTING
+// forever while the control plane reports healthy.
+//
+// Bounded so one reaper tick cannot stall on a large backlog.
+func (q *Queries) GetStaleStartingExecutions(ctx context.Context, arg GetStaleStartingExecutionsParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, getStaleStartingExecutions, arg.StaleBefore, arg.BatchSize)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetExecutionsByStatusesRow
+	var items []string
 	for rows.Next() {
-		var i GetExecutionsByStatusesRow
-		if err := rows.Scan(
-			&i.TestWorkflowExecution.ID,
-			&i.TestWorkflowExecution.Name,
-			&i.TestWorkflowExecution.Namespace,
-			&i.TestWorkflowExecution.Number,
-			&i.TestWorkflowExecution.TestWorkflowExecutionName,
-			&i.TestWorkflowExecution.GroupID,
-			&i.TestWorkflowExecution.RunnerID,
-			&i.TestWorkflowExecution.RunnerTarget,
-			&i.TestWorkflowExecution.RunnerOriginalTarget,
-			&i.TestWorkflowExecution.DisableWebhooks,
-			&i.TestWorkflowExecution.Tags,
-			&i.TestWorkflowExecution.RunningContext,
-			&i.TestWorkflowExecution.ConfigParams,
-			&i.TestWorkflowExecution.ScheduledAt,
-			&i.TestWorkflowExecution.AssignedAt,
-			&i.TestWorkflowExecution.StatusAt,
-			&i.TestWorkflowExecution.CreatedAt,
-			&i.TestWorkflowExecution.UpdatedAt,
-			&i.TestWorkflowExecution.OrganizationID,
-			&i.TestWorkflowExecution.EnvironmentID,
-			&i.TestWorkflowExecution.Runtime,
-			&i.TestWorkflowExecution.SilentMode,
-			&i.TestWorkflowExecution.WorkflowName,
-			&i.TestWorkflowExecution.Status,
-			&i.TestWorkflowExecution.LineageBaseID,
-			&i.TestWorkflowExecution.LineageRootID,
-			&i.TestWorkflowExecution.LineageAttempt,
-			&i.TestWorkflowResult.ExecutionID,
-			&i.TestWorkflowResult.Status,
-			&i.TestWorkflowResult.PredictedStatus,
-			&i.TestWorkflowResult.Duration,
-			&i.TestWorkflowResult.TotalDuration,
-			&i.TestWorkflowResult.DurationMs,
-			&i.TestWorkflowResult.PausedMs,
-			&i.TestWorkflowResult.TotalDurationMs,
-			&i.TestWorkflowResult.Pauses,
-			&i.TestWorkflowResult.Initialization,
-			&i.TestWorkflowResult.Steps,
-			&i.TestWorkflowResult.QueuedAt,
-			&i.TestWorkflowResult.StartedAt,
-			&i.TestWorkflowResult.FinishedAt,
-			&i.TestWorkflowResult.CreatedAt,
-			&i.TestWorkflowResult.UpdatedAt,
-		); err != nil {
+		var id string
+		if err := rows.Scan(&id); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

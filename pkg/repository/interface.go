@@ -25,7 +25,6 @@ type RepositoryFactory interface {
 	NewTestWorkflowRepository() testworkflow.Repository
 
 	// TestWorkflow Execution Scheduler
-	NewScheduler() scheduling.Scheduler
 
 	// TestWorkflow Execution Querier & Controller (Pausing, Aborting, etc)
 	NewExecutionController() scheduling.Controller

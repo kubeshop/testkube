@@ -41,6 +41,24 @@ func (s *Server) AcceptExecution(ctx context.Context, req *executionv1.AcceptExe
 			fmt.Errorf("retrieve execution to set scheduling: %w", err),
 		)
 	}
+
+	// Refuse to resurrect an execution that is already over.
+	//
+	// Init sets SCHEDULING unconditionally, so without this guard a late
+	// acceptance turns a terminal execution back into a running one. That is
+	// reachable: the reaper fails a dispatch whose lease expired, while the
+	// runner's Kubernetes setup is still in flight, and the runner acknowledges
+	// only once deployment returns. The result would be an aborted event followed
+	// by a live execution and a contradictory final result.
+	//
+	// FailedPrecondition rather than a silent success, because the runner has
+	// created resources by this point and has to tear them down.
+	if execution.Result.IsFinished() {
+		return nil, status.Errorf(codes.FailedPrecondition,
+			"execution %q already finished as %s and cannot be started",
+			req.GetExecutionId(), *execution.Result.Status)
+	}
+
 	if err := s.resultsRepository.Init(ctx, req.GetExecutionId(), testworkflow.InitData{
 		RunnerID:   execution.RunnerId,
 		Namespace:  req.GetNamespace(),
@@ -57,10 +75,24 @@ func (s *Server) AcceptExecution(ctx context.Context, req *executionv1.AcceptExe
 }
 
 func (s *Server) DeclineExecution(ctx context.Context, req *executionv1.DeclineExecutionRequest) (*executionv1.DeclineExecutionResponse, error) {
-	// Running in Standalone mode so the only option here is to immediately enter an ABORTED state without passing through other transitional states.
-	execution, err := s.resultsRepository.GetWithRunner(ctx, req.GetExecutionId(), common.StandaloneRunner)
+	if err := s.abortExecution(ctx, req.GetExecutionId()); err != nil {
+		return nil, err
+	}
+	return &executionv1.DeclineExecutionResponse{}, nil
+}
+
+// abortExecution records an execution as aborted and tells the listeners.
+//
+// Shared with the stale-dispatch reaper, so a runner that reports it cannot start
+// an execution and one that never reports at all land in the same state rather
+// than the latter sitting in STARTING forever.
+//
+// Running in Standalone mode, so the only option is to enter ABORTED immediately
+// without passing through the transitional states.
+func (s *Server) abortExecution(ctx context.Context, executionId string) error {
+	execution, err := s.resultsRepository.GetWithRunner(ctx, executionId, common.StandaloneRunner)
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, "execution %q could not be retrieved: %v", req.GetExecutionId(), err)
+		return status.Errorf(codes.FailedPrecondition, "execution %q could not be retrieved: %v", executionId, err)
 	}
 
 	result := execution.Result
@@ -73,9 +105,9 @@ func (s *Server) DeclineExecution(ctx context.Context, req *executionv1.DeclineE
 	result.FinishedAt = time.Now().UTC()
 	result.Status = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
 
-	updated, err := s.resultsRepository.FinishResultStrict(ctx, req.GetExecutionId(), common.StandaloneRunner, result)
+	updated, err := s.resultsRepository.FinishResultStrict(ctx, executionId, common.StandaloneRunner, result)
 	if err != nil || !updated {
-		return nil, status.Errorf(codes.Unknown, "cannot update execution %q result: %v", req.GetExecutionId(), err)
+		return status.Errorf(codes.Unknown, "cannot update execution %q result: %v", executionId, err)
 	}
 
 	// Update in-memory properties which we know has been updated by the query.
@@ -84,7 +116,7 @@ func (s *Server) DeclineExecution(ctx context.Context, req *executionv1.DeclineE
 	// Emit the aborted event.
 	s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution, s.envID))
 
-	return &executionv1.DeclineExecutionResponse{}, nil
+	return nil
 }
 
 func translateSignature(sigs []*signaturev1.Signature) []testkube.TestWorkflowSignature {

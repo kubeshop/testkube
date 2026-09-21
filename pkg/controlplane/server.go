@@ -37,11 +37,10 @@ const (
 type Server struct {
 	cloud.UnimplementedTestKubeCloudAPIServer
 	executionv1.UnimplementedTestWorkflowExecutionServiceServer
-	cfg       Config
-	server    *grpc.Server
-	commands  map[cloudexecutor.Command]CommandHandler
-	enqueuer  scheduling.Enqueuer
-	scheduler scheduling.Scheduler
+	cfg      Config
+	server   *grpc.Server
+	commands map[cloudexecutor.Command]CommandHandler
+	enqueuer scheduling.Enqueuer
 
 	// note: encapsulation is broken here because the HTTP Server cannot yet be pulled into the build-in control plane
 	//       until the commercial control plane becomes its own source of truth.
@@ -54,6 +53,7 @@ type Server struct {
 	outputRepository            testworkflow.OutputRepository
 	repositoryManager           repository.DatabaseRepository
 	emitter                     *event.Emitter
+	startEvents                 *startEventDispatcher
 	envID                       string // Environment ID for event grouping
 }
 
@@ -63,12 +63,70 @@ type Config struct {
 	Logger                           *zap.SugaredLogger
 	StorageBucket                    string
 	FeatureTestWorkflowsCloudStorage bool
+
+	// DispatchBatchSize bounds how many executions one GetExecutionUpdates poll
+	// hands to the runner.
+	DispatchBatchSize int
+	// RedispatchAfter is how long a dispatched execution may sit in STARTING
+	// before it is offered again.
+	RedispatchAfter time.Duration
+	// StartTimeout is how long a dispatched execution may sit in STARTING before
+	// the reaper fails it explicitly.
+	StartTimeout time.Duration
+	// ReaperInterval is how often the reaper runs.
+	ReaperInterval time.Duration
+}
+
+// Defaults for the dispatch knobs.
+//
+// They are applied by the accessors below rather than in New, because tests
+// construct &Server{} directly and a zero Config has to behave.
+const (
+	DefaultDispatchBatchSize = 25
+	DefaultRedispatchAfter   = time.Minute
+	DefaultStartTimeout      = 10 * time.Minute
+	DefaultReaperInterval    = time.Minute
+)
+
+func (s *Server) dispatchBatchSize() int {
+	if s.cfg.DispatchBatchSize <= 0 {
+		return DefaultDispatchBatchSize
+	}
+	return s.cfg.DispatchBatchSize
+}
+
+func (s *Server) redispatchAfter() time.Duration {
+	if s.cfg.RedispatchAfter <= 0 {
+		return DefaultRedispatchAfter
+	}
+	return s.cfg.RedispatchAfter
+}
+
+// startTimeout is how long a row may stay in STARTING before it is failed.
+//
+// Clamped to stay above redispatchAfter: if it were the shorter of the two the
+// reaper would fail executions that had not yet been offered a second time.
+func (s *Server) startTimeout() time.Duration {
+	timeout := s.cfg.StartTimeout
+	if timeout <= 0 {
+		timeout = DefaultStartTimeout
+	}
+	if redispatch := s.redispatchAfter(); timeout <= redispatch {
+		return redispatch * 2
+	}
+	return timeout
+}
+
+func (s *Server) reaperInterval() time.Duration {
+	if s.cfg.ReaperInterval <= 0 {
+		return DefaultReaperInterval
+	}
+	return s.cfg.ReaperInterval
 }
 
 func New(
 	cfg Config,
 	enqueuer scheduling.Enqueuer,
-	scheduler scheduling.Scheduler,
 	executionController scheduling.Controller,
 	executionQuerier scheduling.ExecutionQuerier,
 	eventEmitter *event.Emitter,
@@ -87,10 +145,9 @@ func New(
 			commands[cmd] = handler
 		}
 	}
-	return &Server{
+	srv := &Server{
 		cfg:                         cfg,
 		enqueuer:                    enqueuer,
-		scheduler:                   scheduler,
 		ExecutionController:         executionController,
 		executionQuerier:            executionQuerier,
 		commands:                    commands,
@@ -103,6 +160,14 @@ func New(
 		emitter:                     eventEmitter,
 		envID:                       envID,
 	}
+	srv.startEvents = newStartEventDispatcher(
+		resultsRepository,
+		eventEmitter,
+		envID,
+		cfg.Logger,
+		srv.dispatchBatchSize()*startEventBufferBatches,
+	)
+	return srv
 }
 
 func (s *Server) GetRepositoryManager() repository.DatabaseRepository {
@@ -150,6 +215,18 @@ func (s *Server) Start(ctx context.Context, ln net.Listener) error {
 		<-ctx.Done()
 		s.Shutdown()
 	}()
+
+	// Publishing start events and reaping stale dispatches both run off the
+	// request path, so that neither a slow webhook subscriber nor a backlog of
+	// unacknowledged executions can delay the poll the runner is blocked on.
+	if s.startEvents != nil {
+		s.startEvents.run(ctx)
+		// Queued events would otherwise be lost on a restart, and nothing records
+		// that a start event was published, so there is no way to notice.
+		defer s.startEvents.drain()
+	}
+	go s.reapStaleDispatches(ctx)
+
 	err := grpcServer.Serve(ln)
 	if err != nil {
 		return errors.Wrap(err, "grpc server error")
