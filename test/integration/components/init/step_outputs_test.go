@@ -177,3 +177,54 @@ func TestStepResultExpressions_Integration(t *testing.T) {
 	require.NoError(t, err, "the second step did not run")
 	assert.Equal(t, "3 failed", strings.TrimSpace(string(result)))
 }
+
+func TestStepConditionReadsTimedOutStatus_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
+	testDir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(testDir, ".tktw"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(testDir, "termination.log"), []byte{}, 0666))
+
+	sleepScript := filepath.Join(testDir, "sleep.sh")
+	require.NoError(t, os.WriteFile(sleepScript, []byte("#!/bin/sh\nsleep 30\n"), 0755))
+
+	ranPath := filepath.Join(testDir, "ran.txt")
+	markScript := filepath.Join(testDir, "mark.sh")
+	require.NoError(t, os.WriteFile(markScript, []byte("#!/bin/sh\necho ran > "+ranPath+"\n"), 0755))
+
+	actions := [][]map[string]any{
+		{
+			{"_": map[string]bool{"i": true, "t": true, "b": true}},
+		},
+		{
+			{"d": map[string]any{"c": "true", "r": "step1", "i": "slow", "o": true}},
+			{"S": "step1"},
+			{"t": map[string]any{"r": "step1", "t": "1s"}},
+			{"c": map[string]any{"r": "step1", "c": map[string]any{"command": []string{sleepScript}}}},
+			{"e": map[string]any{"r": "step1"}},
+			{"E": "step1"},
+		},
+		{
+			{"d": map[string]any{"c": `step.slow.status == "timeout"`, "r": "step2", "i": "after_timeout", "p": []string{"step1"}}},
+			{"S": "step2"},
+			{"c": map[string]any{"r": "step2", "c": map[string]any{"command": []string{markScript}}}},
+			{"e": map[string]any{"r": "step2"}},
+			{"E": "step2"},
+		},
+	}
+
+	setupEnvWithActions(t, testDir, actions)
+	updateConstants(testDir)
+	data.SetOutputsDir(filepath.Join(testDir, "testkube", "outputs"))
+	data.SetStepResultsBase(filepath.Join(testDir, "data", ".steps"))
+
+	for i := range actions {
+		initializeOrchestration(t)
+		_, err := runner.RunInit(i)
+		cleanupOrchestration(t)
+		require.NoError(t, err, "the condition must resolve against the step that timed out")
+	}
+
+	_, err := os.Stat(ranPath)
+	assert.NoError(t, err, "the step whose condition read the timed out status did not run")
+}
