@@ -6,9 +6,10 @@ import (
 
 func NewMigrateAgentCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "agent",
-		Short: "manual migrate agent command",
-		Long:  `migrate agent command will run agent migrations greater or equals current version`,
+		Use:     "runner",
+		Aliases: []string{"agent"},
+		Short:   "manual migrate runner command",
+		Long:    `migrate runner command will run runner migrations greater or equals current version`,
 		Run: func(cmd *cobra.Command, args []string) {
 			// TODO: Delete, as we don't have any migrations
 		},

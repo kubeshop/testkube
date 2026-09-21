@@ -17,24 +17,24 @@ func NewDeleteAgentCommand() *cobra.Command {
 		deleteAgent, noDeleteAgent bool
 	)
 	cmd := &cobra.Command{
-		Use:     "agent",
-		Aliases: []string{"runner"},
+		Use:     "runner",
+		Aliases: []string{"agent"},
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			if !uninstall && !noUninstall {
-				uninstall = ui.Confirm("should it uninstall agent?")
+				uninstall = ui.Confirm("should it uninstall runner?")
 			}
 			if !deleteAgent && !noDeleteAgent {
-				deleteAgent = ui.Confirm("should it delete agent in the Control Plane?")
+				deleteAgent = ui.Confirm("should it delete runner in the Control Plane?")
 			}
 			UiDeleteAgent(cmd, args[0], uninstall, deleteAgent)
 		},
 	}
 
-	cmd.Flags().BoolVarP(&uninstall, "uninstall", "u", false, "should it uninstall the agent too")
-	cmd.Flags().BoolVarP(&noUninstall, "no-uninstall", "U", false, "should it keep the agent installed")
-	cmd.Flags().BoolVarP(&deleteAgent, "delete", "d", false, "should it delete agent in the Control Plane")
-	cmd.Flags().BoolVarP(&noDeleteAgent, "no-delete", "D", false, "should it keep the agent definition in the Control Plane")
+	cmd.Flags().BoolVarP(&uninstall, "uninstall", "u", false, "should it uninstall the runner too")
+	cmd.Flags().BoolVarP(&noUninstall, "no-uninstall", "U", false, "should it keep the runner installed")
+	cmd.Flags().BoolVarP(&deleteAgent, "delete", "d", false, "should it delete runner in the Control Plane")
+	cmd.Flags().BoolVarP(&noDeleteAgent, "no-delete", "D", false, "should it keep the runner definition in the Control Plane")
 
 	return cmd
 }
@@ -91,9 +91,9 @@ func UiUninstallCRD(cmd *cobra.Command) {
 
 func UiDeleteAgent(cmd *cobra.Command, name string, uninstall, deleteAgent bool) {
 	agent, err := GetControlPlaneAgent(cmd, name)
-	ui.ExitOnError("getting agent", err)
+	ui.ExitOnError("getting runner", err)
 
-	// Uninstall the Agent
+	// Uninstall the Runner
 	if uninstall {
 		var nses []string
 		if agent.Namespace != "" {
@@ -104,7 +104,7 @@ func UiDeleteAgent(cmd *cobra.Command, name string, uninstall, deleteAgent bool)
 		}
 
 		agents, err := GetKubernetesAgents(nses)
-		ui.ExitOnError("getting agents", err)
+		ui.ExitOnError("getting runners", err)
 
 		var kubernetesAgent *internalAgent
 		for i := range agents {
@@ -114,7 +114,7 @@ func UiDeleteAgent(cmd *cobra.Command, name string, uninstall, deleteAgent bool)
 			}
 		}
 		if kubernetesAgent == nil {
-			ui.Failf("kubernetes agent not found: namespaces: %s", strings.Join(nses, ", "))
+			ui.Failf("kubernetes runner not found: namespaces: %s", strings.Join(nses, ", "))
 			return
 		}
 
@@ -129,9 +129,9 @@ func UiDeleteAgent(cmd *cobra.Command, name string, uninstall, deleteAgent bool)
 
 	// Delete the Agent
 	if deleteAgent {
-		spinner := ui.NewSpinner("Deleting agent in the Control Plane...")
+		spinner := ui.NewSpinner("Deleting runner in the Control Plane...")
 		err := DeleteControlPlaneAgent(cmd, agent.ID)
-		ui.ExitOnError("deleting agent", err)
+		ui.ExitOnError("deleting runner", err)
 		spinner.Success()
 	}
 }

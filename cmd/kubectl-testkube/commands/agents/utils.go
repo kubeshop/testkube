@@ -88,9 +88,9 @@ func (list internalAgents) Table() (header []string, output [][]string) {
 
 func (list internalAgents) TableWithEnvironments(showEnvironments bool) (header []string, output [][]string) {
 	if showEnvironments {
-		header = []string{"Name", "Environment", "Capabilities", "Labels", "Runner Mode", "License", "Agent ID", "Version", "Last Seen"}
+		header = []string{"Name", "Environment", "Capabilities", "Labels", "Runner Mode", "License", "Runner ID", "Version", "Last Seen"}
 	} else {
-		header = []string{"Name", "Capabilities", "Labels", "Runner Mode", "License", "Agent ID", "Version", "Last Seen"}
+		header = []string{"Name", "Capabilities", "Labels", "Runner Mode", "License", "Runner ID", "Version", "Last Seen"}
 	}
 
 	for _, e := range list {
@@ -195,7 +195,7 @@ type unknownAgentsTable struct {
 
 // Table implements ui.TableData interface for unknown agents with simplified columns
 func (t unknownAgentsTable) Table() (header []string, output [][]string) {
-	header = []string{"Pod Name", "Namespace", "Agent ID", "Org ID", "Env ID", "Ready"}
+	header = []string{"Pod Name", "Namespace", "Runner ID", "Org ID", "Env ID", "Ready"}
 	for _, e := range t.agents {
 		podName := e.Pod.Name
 		namespace := e.Pod.Namespace
@@ -833,15 +833,15 @@ func UiCreateAgent(
 	enableWebhooks bool,
 ) *cloudclient.Agent {
 	if name == "" {
-		name = ui.TextInput("agent name")
+		name = ui.TextInput("runner name")
 		if name == "" {
-			ui.Failf("agent name is required")
+			ui.Failf("runner name is required")
 		}
 	}
 
 	// Get existing agent of that name
 	if existing, err := GetControlPlaneAgent(cmd, name); err == nil {
-		ui.Failf("agent '%s' already exists", existing.Name)
+		ui.Failf("runner '%s' already exists", existing.Name)
 	}
 
 	input := cloudclient.AgentInput{
@@ -922,7 +922,7 @@ func UiCreateAgent(
 	}
 
 	agent, err := CreateAgent(cmd, input)
-	ui.ExitOnError("creating agent", err)
+	ui.ExitOnError("creating runner", err)
 
 	PrintControlPlaneAgent(*agent)
 

@@ -67,8 +67,8 @@ func NewUpgradeCmd() *cobra.Command {
 				if ui.IsVerbose() && cfg.ContextType == config.ContextTypeCloud {
 					ui.Info("Your Testkube is in 'cloud' mode with following context")
 					ui.InfoGrid(map[string]string{
-						"Agent Key": text.Obfuscate(cfg.CloudContext.AgentKey),
-						"Agent URI": cfg.CloudContext.AgentUri,
+						"Runner Key": text.Obfuscate(cfg.CloudContext.AgentKey),
+						"Runner URI": cfg.CloudContext.AgentUri,
 					})
 					ui.NL()
 				}
@@ -81,7 +81,7 @@ func NewUpgradeCmd() *cobra.Command {
 			}
 
 			if cfg.ContextType == config.ContextTypeCloud {
-				ui.Info("Testkube Pro agent upgrade started")
+				ui.Info("Testkube Pro runner upgrade started")
 				// Both upgrade helpers return *CLIError, so the result has to stay
 				// typed: assigning a nil *CLIError to an error turns it into a
 				// non-nil interface and reports a successful upgrade as a failure.
@@ -105,7 +105,7 @@ func NewUpgradeCmd() *cobra.Command {
 				if err = common.PopulateAgentDataToContext(options, cfg); err != nil {
 					common.HandleCLIError(common.NewCLIError(
 						common.TKErrContextSaveFailed,
-						"Error storing agent data in context",
+						"Error storing runner data in context",
 						common.ConfigFileHint,
 						err,
 					))
@@ -122,7 +122,7 @@ func NewUpgradeCmd() *cobra.Command {
 	common.PopulateHelmFlags(cmd, &options)
 	common.PopulateMasterFlags(cmd, &options, false)
 
-	cmd.Flags().StringVar(&dockerContainerName, "docker-container", "testkube-agent", "Docker container name for Testkube Docker Agent")
+	cmd.Flags().StringVar(&dockerContainerName, "docker-container", "testkube-agent", "Docker container name for Testkube Docker Runner")
 
 	return cmd
 }

@@ -22,8 +22,9 @@ func NewInstallAgentCommand() *cobra.Command {
 	var namespace string
 
 	cmd := &cobra.Command{
-		Use:  "agent <name>",
-		Args: cobra.MaximumNArgs(1),
+		Use:     "runner <name>",
+		Aliases: []string{"agent"},
+		Args:    cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			// Check for deprecated --type flag usage
 			if cmd.Flags().Changed("type") {
@@ -41,7 +42,7 @@ func NewInstallAgentCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the agent")
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the runner")
 	common2.PopulateRunnerFlags(cmd)
 	return cmd
 }
@@ -147,7 +148,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 		var err error
 		agent, err = GetControlPlaneAgent(cmd, name)
 		if !autoCreate {
-			ui.ExitOnError("getting agent", err)
+			ui.ExitOnError("getting runner", err)
 		}
 		if agent != nil {
 			PrintControlPlaneAgent(*agent)
@@ -178,14 +179,14 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 	// Load agents from the Control Plane and select one
 	if agent == nil {
 		agents, err := GetControlPlaneAgents(cmd, false)
-		ui.ExitOnError("listing agents", err)
+		ui.ExitOnError("listing runners", err)
 
 		if name == "" {
-			name = ui.Select("select agent", common.MapSlice(agents, func(t cloudclient.Agent) string {
+			name = ui.Select("select runner", common.MapSlice(agents, func(t cloudclient.Agent) string {
 				return t.Name
 			}))
 			if name == "" {
-				ui.Failf("agent name not provided")
+				ui.Failf("runner name not provided")
 			}
 		}
 
@@ -199,7 +200,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 
 	// Fail if there is no matching agent available
 	if agent == nil {
-		ui.Failf("agent %s not found", name)
+		ui.Failf("runner %s not found", name)
 		return
 	}
 
@@ -310,7 +311,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 	spinner.Success()
 
 	agents, err := GetKubernetesAgents([]string{ns})
-	ui.ExitOnError("getting agents in kubernetes", err)
+	ui.ExitOnError("getting runners in kubernetes", err)
 
 	var foundAgent *internalAgent
 	for i := range agents {
@@ -321,7 +322,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 	}
 
 	if foundAgent == nil {
-		ui.Failf("not found the agent installed in namespace '%s'", ns)
+		ui.Failf("not found the runner installed in namespace '%s'", ns)
 		return
 	}
 

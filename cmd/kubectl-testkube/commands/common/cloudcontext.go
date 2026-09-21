@@ -28,8 +28,8 @@ func UiPrintContext(cfg config.Data) {
 
 		// add agent information only when need to change agent data, it's usually not needed in usual workflow
 		if ui.IsVerbose() {
-			contextData["Agent Key"] = text.Obfuscate(cfg.CloudContext.AgentKey)
-			contextData["Agent URI"] = cfg.CloudContext.AgentUri
+			contextData["Runner Key"] = text.Obfuscate(cfg.CloudContext.AgentKey)
+			contextData["Runner URI"] = cfg.CloudContext.AgentUri
 		}
 
 		ui.InfoGrid(contextData)
