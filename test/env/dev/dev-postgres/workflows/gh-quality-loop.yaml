@@ -532,10 +532,10 @@ spec:
       resources:
         requests:
           cpu: 2
-          memory: 2Gi
+          memory: 512Mi
         limits:
           cpu: 4
-          memory: 4Gi
+          memory: 2Gi
       env:
       - name: POSTGRES_USER
         value: postgres
