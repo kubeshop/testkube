@@ -502,3 +502,23 @@ func TestMapSecurityContextNil(t *testing.T) {
 	assert.Nil(t, MapSecurityContextKubeToAPI(nil))
 	assert.Nil(t, MapSecurityContextAPIToKube(nil))
 }
+
+// Both directions of this mapper name every field, so one left out is dropped in
+// silence rather than failing to compile. For baseExecutionId that failure is
+// invisible and total: a workflow stored through the API comes back without it,
+// so what the author wrote as a rerun is scheduled as a first run and the child
+// can only ever take its original branch.
+func TestStepExecuteWorkflowRoundTripsBaseExecutionId(t *testing.T) {
+	kube := testworkflowsv1.StepExecuteWorkflow{
+		Name:            "my-tests",
+		As:              "repeat",
+		BaseExecutionId: "exec-base",
+	}
+
+	api := MapStepExecuteTestWorkflowKubeToAPI(kube)
+	assert.Equal(t, "exec-base", api.BaseExecutionId, "kube -> API dropped the base execution id")
+
+	back := MapStepExecuteTestWorkflowAPIToKube(api)
+	assert.Equal(t, "exec-base", back.BaseExecutionId, "API -> kube dropped the base execution id")
+	assert.Equal(t, kube.BaseExecutionId, back.BaseExecutionId)
+}

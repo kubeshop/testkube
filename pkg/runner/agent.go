@@ -439,13 +439,14 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 			EnvironmentSlug:  a.proContext.GetEnvSlug(environmentId),
 			ParentIds:        parentIds,
 			RunningContext:   execution.RunningContext,
+			Lineage:          lineageConfigFromExecution(execution.Lineage),
 		},
 		Workflow:     testworkflowmappers.MapTestWorkflowAPIToKube(*execution.ResolvedWorkflow),
 		ControlPlane: a.controlPlaneConfig, // TODO: fetch it from the control plane?
 	})
 	// TODO: define "revoke" error by runner (?)
 	if err != nil {
-		execution.InitializationError("Failed to run execution", err)
+		execution.InitializationError("Failed to run execution", string(executionworkertypes.StartReasonOf(err)), err)
 		_ = a.saveEmptyLogs(context.Background(), environmentId, execution)
 		err2 := a.finishExecution(context.Background(), environmentId, execution)
 		err = errors.Join(err, err2)
@@ -470,4 +471,22 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 	}
 
 	return nil
+}
+
+// lineageConfigFromExecution carries the execution's lineage from the record
+// across to the pod, so that execution("rerun") resolves inside it.
+//
+// The scheduler records it on the execution rather than handing it straight to
+// the runner, because this path reconstructs the pod's config from the record
+// when it picks the execution up. The typed runner path does the same from its
+// own proto - see lineageConfigFromProto in pkg/runner/grpc.
+func lineageConfigFromExecution(lineage *testkube.TestWorkflowExecutionLineage) *testworkflowconfig.LineageConfig {
+	if lineage == nil {
+		return nil
+	}
+	return &testworkflowconfig.LineageConfig{
+		BaseId:  lineage.BaseId,
+		RootId:  lineage.RootId,
+		Attempt: lineage.Attempt,
+	}
 }

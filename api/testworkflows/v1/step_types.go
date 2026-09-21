@@ -231,6 +231,15 @@ type StepExecuteWorkflow struct {
 	// instructions for downloading artifacts produced by executed test workflows
 	Fetch []StepExecuteFetch `json:"fetch,omitempty" expr:"include"`
 
+	// id of the execution to record this one as a rerun of, so that it resolves
+	// execution("rerun"). Runs the current definition, not the base's snapshot.
+	// The base must be one the scheduling execution may itself read.
+	BaseExecutionId string `json:"baseExecutionId,omitempty" expr:"template"`
+	// NOTE: keep the description above short. It is copied into the generated CRDs
+	// once per level of step nesting, and those are already trimmed to fit the
+	// last-applied annotation limit. The full explanation belongs in the docs and
+	// in execute.ExecuteTestWorkflow.
+
 	// Targets helps decide on which runner the execution is scheduled.
 	Target *commonv1.Target `json:"target,omitempty" expr:"include"`
 }

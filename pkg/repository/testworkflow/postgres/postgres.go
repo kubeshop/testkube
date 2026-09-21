@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -121,11 +122,24 @@ func toPgTimestamp(t time.Time) pgtype.Timestamptz {
 	return pgtype.Timestamptz{Time: t, Valid: true}
 }
 
+// jsonNull is the JSON null literal, which a JSONB column can hold next to SQL NULL.
+var jsonNull = []byte("null")
+
 func toJSONB(v interface{}) ([]byte, error) {
 	if v == nil {
 		return nil, nil
 	}
 	return json.Marshal(v)
+}
+
+// statusDetailsToJSONB returns SQL NULL for a result without status details. toJSONB cannot do
+// this, because a nil pointer inside an interface is not nil and marshals to the JSON null literal.
+// The column must stay NULL for an execution that passed, as the comment of the column says.
+func statusDetailsToJSONB(details *testkube.TestWorkflowStatusDetails) ([]byte, error) {
+	if details == nil {
+		return nil, nil
+	}
+	return json.Marshal(details)
 }
 
 func fromPgText(t pgtype.Text) string {
@@ -147,6 +161,50 @@ func fromPgInt4(i pgtype.Int4) int32 {
 		return 0
 	}
 	return i.Int32
+}
+
+// lineageFromRow rebuilds the lineage a row carries, or nil when it carries
+// none.
+//
+// A row written before lineage existed has all three columns NULL, and must come
+// back as nil rather than as a zero-valued record: the caller distinguishes the
+// two through EffectiveLineage(), which is where the default lives. Returning a
+// present-but-empty struct here would report an original run as attempt zero.
+func lineageFromRow(baseID, rootID pgtype.Text, attempt pgtype.Int4) *testkube.TestWorkflowExecutionLineage {
+	if !baseID.Valid && !rootID.Valid && !attempt.Valid {
+		return nil
+	}
+	return &testkube.TestWorkflowExecutionLineage{
+		BaseId:  fromPgText(baseID),
+		RootId:  fromPgText(rootID),
+		Attempt: fromPgInt4(attempt),
+	}
+}
+
+// lineageBaseID, lineageRootID and lineageAttempt project a lineage onto the
+// three columns that hold it, storing SQL NULL when there is none.
+//
+// An original run has an empty BaseId, which toPgText already stores as NULL -
+// the column means "no base" rather than "a base named the empty string".
+func lineageBaseID(l *testkube.TestWorkflowExecutionLineage) string {
+	if l == nil {
+		return ""
+	}
+	return l.BaseId
+}
+
+func lineageRootID(l *testkube.TestWorkflowExecutionLineage) string {
+	if l == nil {
+		return ""
+	}
+	return l.RootId
+}
+
+func lineageAttempt(l *testkube.TestWorkflowExecutionLineage) pgtype.Int4 {
+	if l == nil {
+		return pgtype.Int4{Valid: false}
+	}
+	return toPgInt4(l.Attempt)
 }
 
 func fromPgTimestamp(t pgtype.Timestamptz) time.Time {
@@ -236,12 +294,17 @@ func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.G
 		return nil, fmt.Errorf("failed to parse execution JSON fields: %w", err)
 	}
 
+	// Lineage is stored as scalar columns rather than JSONB, so it is read here
+	// rather than through parseExecutionJSONFields.
+	execution.Lineage = lineageFromRow(row.LineageBaseID, row.LineageRootID, row.LineageAttempt)
+	execution.ApplyEffectiveLineage()
+
 	// Build result if exists
 	if row.Status.Valid {
 		execution.Result, err = r.buildResultFromRow(
 			row.Status, row.PredictedStatus, row.QueuedAt, row.StartedAt, row.FinishedAt,
 			row.Duration, row.TotalDuration, row.DurationMs, row.PausedMs, row.TotalDurationMs,
-			row.Pauses, row.Initialization, row.Steps,
+			row.Pauses, row.Initialization, row.Steps, row.StatusDetails,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build result from row: %w", err)
@@ -456,7 +519,7 @@ func getBoolFromMap(m map[string]interface{}, key string) bool {
 }
 
 func (r *PostgresRepository) executionToSummary(row testkube.TestWorkflowExecution) testkube.TestWorkflowExecutionSummary {
-	return testkube.TestWorkflowExecutionSummary{
+	summary := testkube.TestWorkflowExecutionSummary{
 		Id:                   row.Id,
 		GroupId:              row.GroupId,
 		RunnerId:             row.RunnerId,
@@ -473,13 +536,19 @@ func (r *PostgresRepository) executionToSummary(row testkube.TestWorkflowExecuti
 		Reports:              row.Reports,
 		ResourceAggregations: row.ResourceAggregations,
 		SilentMode:           row.SilentMode,
+		Lineage:              row.Lineage,
 	}
+	// Legacy rows carry none; the reader is promised one on every execution.
+	summary.ApplyEffectiveLineage()
+	return summary
 }
 
 func (r *PostgresRepository) resultToSummary(row *testkube.TestWorkflowResult) *testkube.TestWorkflowResultSummary {
 	if row == nil {
 		return nil
 	}
+	// The list reads the summary, so the summary carries the status details and needs no second
+	// query. Clone keeps the copy of the caller independent of the result.
 	return &testkube.TestWorkflowResultSummary{
 		Status:          row.Status,
 		PredictedStatus: row.PredictedStatus,
@@ -491,6 +560,7 @@ func (r *PostgresRepository) resultToSummary(row *testkube.TestWorkflowResult) *
 		DurationMs:      row.DurationMs,
 		TotalDurationMs: row.TotalDurationMs,
 		PausedMs:        row.PausedMs,
+		StatusDetails:   row.StatusDetails.Clone(),
 	}
 }
 
@@ -675,6 +745,7 @@ func isFinishedByWorkflowFastPathFilter(f testworkflow.Filter) bool {
 		!f.StartDateDefined() &&
 		!f.LastNDaysDefined() &&
 		!f.StatusesDefined() &&
+		!f.StatusDetailsTypesDefined() &&
 		!f.RunnerIDDefined() &&
 		!f.AssignedDefined() &&
 		!f.ActorNameDefined() &&
@@ -733,6 +804,7 @@ func isNameOnlyFilter(f testworkflow.Filter) bool {
 		!f.EndDateDefined() &&
 		!f.LastNDaysDefined() &&
 		!f.StatusesDefined() &&
+		!f.StatusDetailsTypesDefined() &&
 		!f.RunnerIDDefined() &&
 		!f.AssignedDefined() &&
 		!f.ActorNameDefined() &&
@@ -1016,6 +1088,9 @@ func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx sqlc.T
 		OrganizationID:            r.organizationID,
 		EnvironmentID:             r.environmentID,
 		Runtime:                   runtime,
+		LineageBaseID:             toPgText(lineageBaseID(execution.Lineage)),
+		LineageRootID:             toPgText(lineageRootID(execution.Lineage)),
+		LineageAttempt:            lineageAttempt(execution.Lineage),
 		SilentMode:                silentMode,
 	})
 }
@@ -1066,6 +1141,11 @@ func (r *PostgresRepository) insertResult(ctx context.Context, qtx sqlc.TestWork
 		return err
 	}
 
+	statusDetails, err := statusDetailsToJSONB(result.StatusDetails)
+	if err != nil {
+		return err
+	}
+
 	var status, predictedStatus pgtype.Text
 	if result.Status != nil {
 		status = toPgText(string(*result.Status))
@@ -1089,6 +1169,7 @@ func (r *PostgresRepository) insertResult(ctx context.Context, qtx sqlc.TestWork
 		Pauses:          pauses,
 		Initialization:  initialization,
 		Steps:           steps,
+		StatusDetails:   statusDetails,
 	})
 }
 
@@ -1417,6 +1498,12 @@ func (r *PostgresRepository) UpdateResultStrict(ctx context.Context, id, runnerI
 		params.Steps = stepsData
 	}
 
+	// A nil object must write SQL NULL, so the writer uses the same guard as the other two writers.
+	params.StatusDetails, err = statusDetailsToJSONB(result.StatusDetails)
+	if err != nil {
+		return false, err
+	}
+
 	// Update the result
 	updatedID, err := qtx.UpdateTestWorkflowExecutionResultStrict(ctx, params)
 	if err != nil {
@@ -1515,6 +1602,12 @@ func (r *PostgresRepository) FinishResultStrict(ctx context.Context, id, runnerI
 		params.Steps = stepsData
 	}
 
+	// A nil object must write SQL NULL, so the writer uses the same guard as the other two writers.
+	params.StatusDetails, err = statusDetailsToJSONB(result.StatusDetails)
+	if err != nil {
+		return false, err
+	}
+
 	// Update the result
 	updatedID, err := qtx.FinishTestWorkflowExecutionResultStrict(ctx, params)
 	if err != nil {
@@ -1562,6 +1655,11 @@ func (r *PostgresRepository) UpdateResult(ctx context.Context, id string, result
 		return err
 	}
 
+	statusDetails, err := statusDetailsToJSONB(result.StatusDetails)
+	if err != nil {
+		return err
+	}
+
 	var status, predictedStatus pgtype.Text
 	if result.Status != nil {
 		status = toPgText(string(*result.Status))
@@ -1585,6 +1683,7 @@ func (r *PostgresRepository) UpdateResult(ctx context.Context, id string, result
 		Pauses:          pauses,
 		Initialization:  initialization,
 		Steps:           steps,
+		StatusDetails:   statusDetails,
 	})
 	if err != nil {
 		return err
@@ -1986,6 +2085,7 @@ func (r *PostgresRepository) Count(ctx context.Context, filter testworkflow.Filt
 		EndDate:            params.EndDate,
 		LastNDays:          params.LastNDays,
 		Statuses:           params.Statuses,
+		StatusDetailsTypes: params.StatusDetailsTypes,
 		RunnerID:           params.RunnerID,
 		Assigned:           params.Assigned,
 		ActorName:          params.ActorName,
@@ -2047,6 +2147,10 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 			pgStatuses = append(pgStatuses, string(status))
 		}
 		params.Statuses = pgStatuses
+	}
+
+	if filter.StatusDetailsTypesDefined() {
+		params.StatusDetailsTypes = filter.StatusDetailsTypes()
 	}
 
 	// Runner filters
@@ -2225,6 +2329,10 @@ func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testwo
 		params.Statuses = pgStatuses
 	}
 
+	if filter.StatusDetailsTypesDefined() {
+		params.StatusDetailsTypes = filter.StatusDetailsTypes()
+	}
+
 	// Runner filters
 	if filter.RunnerIDDefined() {
 		params.RunnerID = filter.RunnerID()
@@ -2331,7 +2439,7 @@ func (r *PostgresRepository) buildResultFromRow(
 	queuedAt, startedAt, finishedAt pgtype.Timestamptz,
 	duration, totalDuration pgtype.Text,
 	durationMs, pausedMs, totalDurationMs pgtype.Int4,
-	pauses, initialization, steps []byte,
+	pauses, initialization, steps, statusDetails []byte,
 ) (*testkube.TestWorkflowResult, error) {
 	var err error
 	result := &testkube.TestWorkflowResult{
@@ -2368,6 +2476,15 @@ func (r *PostgresRepository) buildResultFromRow(
 
 	if len(steps) > 0 {
 		json.Unmarshal(steps, &result.Steps)
+	}
+
+	// Skip the JSON null literal, because fromJSONB turns it into an empty object. An execution
+	// that passed carries no status details at all.
+	if len(statusDetails) > 0 && !bytes.Equal(statusDetails, jsonNull) {
+		result.StatusDetails, err = fromJSONB[testkube.TestWorkflowStatusDetails](statusDetails)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return result, nil

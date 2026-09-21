@@ -94,6 +94,29 @@ type TestWorkflowExecutionDetails struct {
 	Tags map[string]string `json:"tags,omitempty"`
 	// running context for the test workflow execution (Pro edition only)
 	RunningContext *TestWorkflowRunningContext `json:"runningContext,omitempty"`
+	// where this execution sits in its chain of reruns. Recorded on every
+	// execution: an original run is its own root at attempt 1, with no base.
+	Lineage *TestWorkflowExecutionLineage `json:"lineage,omitempty"`
+}
+
+// TestWorkflowExecutionLineage records where a rerun came from, so that a
+// workflow can read the run it descends from and a reader can follow the chain
+// back to its origin.
+//
+// Recorded on every execution, which is what makes the reserved
+// execution("rerun") reference resolve inside the pod after any rerun.
+//
+// Derived by the scheduler from the base execution: a caller supplies the base
+// and nothing else, because a client able to assert a root or an attempt number
+// could forge a chain.
+type TestWorkflowExecutionLineage struct {
+	// the execution this one is a rerun of; empty for an original run
+	BaseId string `json:"baseId,omitempty"`
+	// the first execution in the chain. An original run is its own root, so
+	// that every execution of a chain shares one rootId.
+	RootId string `json:"rootId,omitempty"`
+	// 1 for an original run, one more than the base for a rerun
+	Attempt int32 `json:"attempt,omitempty"`
 }
 
 // running context for test workflow execution
@@ -192,6 +215,31 @@ type TestWorkflowResult struct {
 	Pauses          []TestWorkflowPause               `json:"pauses,omitempty"`
 	Initialization  *TestWorkflowStepResult           `json:"initialization,omitempty"`
 	Steps           map[string]TestWorkflowStepResult `json:"steps,omitempty"`
+	StatusDetails   *TestWorkflowStatusDetails        `json:"statusDetails,omitempty"`
+}
+
+// TestWorkflowStatusDetails gives the reason why an execution did not pass. It is
+// present on every terminal status except passed.
+type TestWorkflowStatusDetails struct {
+	// the layer that failed
+	// +kubebuilder:validation:Enum=init-failure;execution-failure;step-failure;user-cancel;unknown
+	Type_ string `json:"type"`
+	// code of the cause, for example unschedulable or oom-killed
+	Reason string `json:"reason"`
+	// the message of the step that holds the cause, verbatim
+	Message string `json:"message,omitempty"`
+	// reference of the step that holds the cause; empty when the initialization step holds it
+	Step string `json:"step,omitempty"`
+	// code of the component that decided the stop, for example user or control-plane
+	Actor string `json:"actor,omitempty"`
+	// the person who canceled the execution; the control plane fills it
+	User *TestWorkflowStatusDetailsUser `json:"user,omitempty"`
+}
+
+// TestWorkflowStatusDetailsUser is the person who canceled the execution.
+type TestWorkflowStatusDetailsUser struct {
+	Name  string `json:"name,omitempty"`
+	Email string `json:"email,omitempty"`
 }
 
 // TestWorkflowStatus has status of TestWorkflow

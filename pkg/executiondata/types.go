@@ -32,6 +32,14 @@ const (
 	// the current one.
 	ParentRef = "parent"
 
+	// RerunRef is the reserved reference pointing at the execution this one is a
+	// rerun of - the one whose results a rerun draws from.
+	//
+	// It is a reference rather than an id the workflow has to be handed, because
+	// the workflow is written once and rerun many times: the author says "the
+	// execution I am a rerun of" and the scheduler decides which that is.
+	RerunRef = "rerun"
+
 	// OutputsInstructionName is the name of the output instruction a step emits to
 	// publish the values it left in the outputs directory. It makes them part of the
 	// execution record, so a parent workflow can read them back with execution().
@@ -81,6 +89,12 @@ type Execution struct {
 	ErrorReason string `json:"errorReason,omitempty"`
 	// StepReasons are the reason codes of the steps that have one, keyed by step ref.
 	StepReasons map[string]string `json:"stepReasons,omitempty"`
+	// StatusType is the layer that made the execution fail, empty when it passed.
+	StatusType string `json:"statusType,omitempty"`
+	// StatusReason is the code of the cause that made the execution fail.
+	StatusReason string `json:"statusReason,omitempty"`
+	// StatusStep is the ref of the step that holds the cause, empty when no step holds it.
+	StatusStep string `json:"statusStep,omitempty"`
 }
 
 // Key is the primary reference of the execution - its alias when the parent gave
@@ -123,6 +137,9 @@ func (e Execution) AsMap() map[string]interface{} {
 		"stepAttempts": toInterfaceMap(e.StepAttempts),
 		"errorReason":  e.ErrorReason,
 		"stepReasons":  toInterfaceMap(e.StepReasons),
+		"statusType":   e.StatusType,
+		"statusReason": e.StatusReason,
+		"statusStep":   e.StatusStep,
 	}
 }
 
@@ -155,7 +172,23 @@ func FromExecution(execution *testkube.TestWorkflowExecution) Execution {
 	result.ErrorMessage, result.StepErrors = ErrorsOf(execution)
 	result.StepAttempts = AttemptsOf(execution)
 	result.ErrorReason, result.StepReasons = ReasonsOf(execution)
+	result.SetStatusDetails(execution)
 	return result
+}
+
+// SetStatusDetails copies the codes of the status details of the execution into the record. Every
+// caller that builds a record from a finished execution needs it, because a workflow reads the codes
+// of a child through the record and not through the stored execution.
+//
+// The message and the user of the object stay out of the record. A workflow asserts the codes, and
+// the words are already available through ErrorMessage and StepErrors.
+func (e *Execution) SetStatusDetails(execution *testkube.TestWorkflowExecution) {
+	if execution == nil || execution.Result == nil || execution.Result.StatusDetails == nil {
+		return
+	}
+	e.StatusType = execution.Result.StatusDetails.Type_
+	e.StatusReason = execution.Result.StatusDetails.Reason
+	e.StatusStep = execution.Result.StatusDetails.Step
 }
 
 // ErrorsOf collects the message of the initialization step and the messages of the
@@ -239,4 +272,25 @@ func OutputsOf(execution *testkube.TestWorkflowExecution) map[string]string {
 		}
 	}
 	return values
+}
+
+// IsReservedRef reports whether a reference has a meaning Testkube assigns,
+// rather than naming something the workflow executed.
+//
+// Reserved references are resolved before the registry, so this is also the
+// list of names an `as` alias cannot usefully take.
+func IsReservedRef(ref string) bool {
+	return ref == ParentRef || ref == RerunRef
+}
+
+// reservedRefMeaning describes what a reserved reference addresses, for an error
+// that has to explain the collision to a workflow author.
+func reservedRefMeaning(ref string) string {
+	switch ref {
+	case ParentRef:
+		return "the execution that scheduled this one"
+	case RerunRef:
+		return "the execution this one is a rerun of"
+	}
+	return ref
 }

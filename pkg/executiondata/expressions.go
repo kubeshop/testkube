@@ -24,6 +24,8 @@ type MachineOptions struct {
 	Repository ExecutionRepository
 	// ParentIds is the chain of executions that led to this one, oldest first.
 	ParentIds []string
+	// RerunId is the execution this one is a rerun of, empty when it is not one.
+	RerunId string
 	// ArtifactClient downloads from object storage, which read_artifact() talks to
 	// directly rather than through the control plane. May be nil, in which case storage
 	// certificates are verified - see NewArtifactClient.
@@ -80,7 +82,7 @@ func NewMachine(opts MachineOptions) expressions.Machine {
 // a step which address executions outside an expression - the `fetch` block - resolve a
 // reference exactly as an expression does.
 func (o MachineOptions) Resolver() Resolver {
-	return Resolver{Registry: o.Registry, Repository: o.Repository, ParentIds: o.ParentIds}
+	return Resolver{Registry: o.Registry, Repository: o.Repository, ParentIds: o.ParentIds, RerunId: o.RerunId}
 }
 
 // resolve finds an execution by reference. An expression function has no context of its

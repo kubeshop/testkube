@@ -7718,6 +7718,24 @@ spec:
                     id:
                       description: unique execution identifier
                       type: string
+                    lineage:
+                      description: |-
+                        where this execution sits in its chain of reruns. Recorded on every
+                        execution: an original run is its own root at attempt 1, with no base.
+                      properties:
+                        attempt:
+                          description: 1 for an original run, one more than the base for a rerun
+                          format: int32
+                          type: integer
+                        baseId:
+                          description: the execution this one is a rerun of; empty for an original run
+                          type: string
+                        rootId:
+                          description: |-
+                            the first execution in the chain. An original run is its own root, so
+                            that every execution of a chain shares one rootId.
+                          type: string
+                      type: object
                     name:
                       description: execution name
                       type: string
@@ -7937,6 +7955,44 @@ spec:
                             - failed
                             - aborted
                           type: string
+                        statusDetails:
+                          description: |-
+                            TestWorkflowStatusDetails gives the reason why an execution did not pass. It is
+                            present on every terminal status except passed.
+                          properties:
+                            actor:
+                              description: code of the component that decided the stop, for example user or control-plane
+                              type: string
+                            message:
+                              description: the message of the step that holds the cause, verbatim
+                              type: string
+                            reason:
+                              description: code of the cause, for example unschedulable or oom-killed
+                              type: string
+                            step:
+                              description: reference of the step that holds the cause; empty when the initialization step holds it
+                              type: string
+                            type:
+                              description: the layer that failed
+                              enum:
+                                - init-failure
+                                - execution-failure
+                                - step-failure
+                                - user-cancel
+                                - unknown
+                              type: string
+                            user:
+                              description: the person who canceled the execution; the control plane fills it
+                              properties:
+                                email:
+                                  type: string
+                                name:
+                                  type: string
+                              type: object
+                          required:
+                            - reason
+                            - type
+                          type: object
                         steps:
                           additionalProperties:
                             description: TestWorkflowStepResult contains step result of TestWorkflow
@@ -9198,6 +9254,12 @@ spec:
                                 as:
                                   description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                   type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -9765,6 +9827,12 @@ spec:
                                   properties:
                                     as:
                                       description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
                                       type: string
                                     config:
                                       additionalProperties:
@@ -15034,6 +15102,12 @@ spec:
                                 as:
                                   description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                   type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -15601,6 +15675,12 @@ spec:
                                   properties:
                                     as:
                                       description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
                                       type: string
                                     config:
                                       additionalProperties:
@@ -18588,6 +18668,12 @@ spec:
                                 as:
                                   description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                   type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -19155,6 +19241,12 @@ spec:
                                   properties:
                                     as:
                                       description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
                                       type: string
                                     config:
                                       additionalProperties:
@@ -21208,6 +21300,44 @@ spec:
                             - failed
                             - aborted
                           type: string
+                        statusDetails:
+                          description: |-
+                            TestWorkflowStatusDetails gives the reason why an execution did not pass. It is
+                            present on every terminal status except passed.
+                          properties:
+                            actor:
+                              description: code of the component that decided the stop, for example user or control-plane
+                              type: string
+                            message:
+                              description: the message of the step that holds the cause, verbatim
+                              type: string
+                            reason:
+                              description: code of the cause, for example unschedulable or oom-killed
+                              type: string
+                            step:
+                              description: reference of the step that holds the cause; empty when the initialization step holds it
+                              type: string
+                            type:
+                              description: the layer that failed
+                              enum:
+                                - init-failure
+                                - execution-failure
+                                - step-failure
+                                - user-cancel
+                                - unknown
+                              type: string
+                            user:
+                              description: the person who canceled the execution; the control plane fills it
+                              properties:
+                                email:
+                                  type: string
+                                name:
+                                  type: string
+                              type: object
+                          required:
+                            - reason
+                            - type
+                          type: object
                         totalDuration:
                           description: Go-formatted (human-readable) duration (incl. pause)
                           type: string
@@ -22426,6 +22556,12 @@ spec:
                                 as:
                                   description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                   type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -22978,6 +23114,12 @@ spec:
                                   properties:
                                     as:
                                       description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
                                       type: string
                                     config:
                                       additionalProperties:
@@ -28120,6 +28262,12 @@ spec:
                                 as:
                                   description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                   type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -28672,6 +28820,12 @@ spec:
                                   properties:
                                     as:
                                       description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
                                       type: string
                                     config:
                                       additionalProperties:
@@ -31552,6 +31706,12 @@ spec:
                                 as:
                                   description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                   type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -32104,6 +32264,12 @@ spec:
                                   properties:
                                     as:
                                       description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
                                       type: string
                                     config:
                                       additionalProperties:

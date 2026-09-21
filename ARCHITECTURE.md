@@ -15,12 +15,13 @@ You can read more about the differences between the two deployment modes in the 
   - [1. API Server](#1-api-server)
   - [2. Kubernetes Controllers](#2-kubernetes-controllers)
   - [3. TestWorkflow Execution Runtime](#3-testworkflow-execution-runtime)
-  - [4. Storage Layer](#4-storage-layer)
-  - [5. Event System](#5-event-system)
-  - [6. REST API](#6-rest-api)
-  - [7. Prometheus Metrics Endpoint](#7-prometheus-metrics-endpoint)
-  - [8. Logging and Telemetry](#8-logging-and-telemetry)
-  - [9. Kubernetes Custom Resource Definitions (CRDs)](#9-kubernetes-custom-resource-definitions-crds)
+  - [4. Execution Lineage and Reruns](#4-execution-lineage-and-reruns)
+  - [5. Storage Layer](#5-storage-layer)
+  - [6. Event System](#6-event-system)
+  - [7. REST API](#7-rest-api)
+  - [8. Prometheus Metrics Endpoint](#8-prometheus-metrics-endpoint)
+  - [9. Logging and Telemetry](#9-logging-and-telemetry)
+  - [10. Kubernetes Custom Resource Definitions (CRDs)](#10-kubernetes-custom-resource-definitions-crds)
 - [Kubernetes Deployment](#kubernetes-deployment)
 - [CLI](#cli)
 - [Related Documentation](#related-documentation)
@@ -81,7 +82,34 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 - Execution worker (`executionworker/`): applies the workflow to Kubernetes, watches the job and pod, and stops executions. When a caller aborts or cancels an execution, it passes an actor code, a reason code, and an optional detail in `DestroyOptions`, and the worker writes them into the job annotations `testkube.io/termination-actor`, `testkube.io/termination-reason`, and `testkube.io/termination-detail`. The result reader renders the words for both codes, so the stored error message names the component that stopped the execution and, when there is one, the cause.
 - Runner gRPC client (`pkg/runner/grpc/`): receives execution starts from the control plane. When the runner cannot start an execution, the client reads the reason code from the `StartError` in the error chain and declines the execution with the code and the error text, so the control plane stores the cause on the execution.
 
-### 4. Storage Layer
+### 4. Execution Lineage and Reruns
+
+A rerun descends from a specific earlier execution, and `TestWorkflowExecutionLineage` (`baseId`, `rootId`, `attempt`) is what records that. It is written for **every** execution, not only reruns: an original run is its own root at attempt 1, so "every execution of chain R" is one predicate and includes the original. In SQL that predicate is `COALESCE(lineage_root_id, id) = R`, not the bare column: a row written before lineage existed carries NULL there and is its own root, so a bare-column query would find a rerun of a legacy execution but not the original it descends from. The chain index is built on the same expression.
+
+**Propagation**: only the base execution id travels on the wire, as `ScheduleRequest.base_execution_id` - a caller able to assert a root or an attempt could forge a chain. The scheduler derives the rest:
+
+```
+ScheduleRequest.base_execution_id
+  -> Enqueuer.deriveLineage         (loads the base; root carried down, attempt + 1)
+  -> execution record               (lineage_base_id / lineage_root_id / lineage_attempt)
+  -> ExecutionStart.lineage         (every writer must read it back off the record)
+  -> ExecutionConfig.Lineage        (the pod's internal config)
+  -> RerunExecutionId()             (resolves the reserved execution("rerun") reference)
+```
+
+Loading the base is also where the Control Plane confirms it belongs to the caller's environment, as `proto/service.proto` requires: the results repository is scoped to the organization and environment, so a base outside them comes back not-found and the request is refused.
+
+The same path exists in the connected-mode scheduler in `testkube-cloud-api`, which keeps its own copy of the `test_workflow_executions` schema and reads executions through its own queries. Both halves have to carry lineage; a writer that omits it sends the pod nothing, `execution("rerun")` stops resolving, and nothing reports it.
+
+**Storage**: three scalar columns rather than JSONB, because they are queried - an ordered range scan behind the organization/environment prefix, which a GIN containment index could neither order nor compose with. Indexed with a non-partial expression index on `COALESCE(lineage_root_id, id)`, so both chained rows and legacy/original rows participate in the same ordered scan, and on `COALESCE(lineage_attempt, 1)` rather than the bare attempt, so a legacy row - NULL attempt, meaning 1 - orders as the chain root it is instead of sorting last. A chain query has to spell both expressions the same way to get the index.
+
+**Legacy rows**: executions written before the columns existed carry NULL, and are never backfilled. They mean exactly what an original run means, and `TestWorkflowExecution.EffectiveLineage()` synthesizes that - no base, itself as the root, attempt 1. That accessor is the single source of the default: the expression machine behind `{{ execution.lineage.* }}` applies the same field-by-field fallbacks, so an old execution cannot report one lineage through the API and a different one to its own workflow.
+
+**Resolved in the pod, not while scheduling**: `IntermediateExecution.Resolve` substitutes `execution.*` into the spec and the result is stored as `ResolvedWorkflow`, which a rerun replays verbatim unless it is asked for the latest definition. So anything resolved there is frozen at the values of the run that produced the snapshot. For an id or a number that is correct - the snapshot is a record of that run - but for lineage it is fatal: the original's "no base, attempt 1" would be baked in, every rerun of that snapshot would take the original branch, and `execution("rerun")` would never be reached. `CreateSchedulingExecutionMachine` therefore omits the accessor, which leaves `{{ execution.lineage.* }}` dynamic rather than empty (an accessor nothing matches resolves to itself), and the pod resolves it against the execution actually running - including in step conditions, which `ResolveCondition` evaluates through `data.Expression`. Do not add lineage back to that machine to make it usable in a pod-spec field; that is the trade-off, not an oversight. `TestResolveLeavesLineageForThePod` is the regression.
+
+**Reserved references**: `execution("parent")` and `execution("rerun")` resolve before the registry of executions a workflow scheduled, so a child aliased - or a workflow named - `parent`/`rerun` cannot shadow them. A collision is refused rather than resolved either way, since preferring the reserved meaning would instead make that child unreachable by name.
+
+### 5. Storage Layer
 
 **PostgreSQL** (Future Primary Database, currently in Preview)
 
@@ -110,7 +138,7 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 - Async job processing and event publishing
 - Event bus: [`pkg/event/bus/`](pkg/event/bus/)
 
-### 5. Event System
+### 6. Event System
 
 **Location**: [`pkg/event/`](pkg/event/)
 
@@ -119,7 +147,7 @@ The event system publishes and listens to TestWorkflow execution events:
 - **Event Listeners**: [`pkg/event/kind/`](pkg/event/kind/) - Webhooks, K8s events, CD events, WebSockets
 - **Event Emitter**: [`pkg/event/emitter.go`](pkg/event/emitter.go) - Publishes execution lifecycle events
 
-### 6. REST API
+### 7. REST API
 
 Testkube exposes REST APIs for interacting with core resources and functionality - [Read More](https://docs.testkube.io/openapi/overview).
 
@@ -147,7 +175,7 @@ Testkube exposes REST APIs for interacting with core resources and functionality
 
 **Port**: HTTP API listens on port 8088 (configurable via environment variables)
 
-### 7. Prometheus Metrics Endpoint
+### 8. Prometheus Metrics Endpoint
 
 **Endpoint**: `GET /metrics`
 
@@ -159,7 +187,7 @@ The API server exposes Prometheus metrics at `/metrics` for monitoring and obser
 
 **Access**: Metrics are accessible at `http://localhost:8088/metrics` (or the configured API server port).
 
-### 8. Logging and Telemetry
+### 9. Logging and Telemetry
 
 #### Logging
 
@@ -207,7 +235,7 @@ Telemetry collects usage analytics to help improve the product. It can be disabl
 - Both events include the detected cluster type and agent capabilities
 - Capability tags come from [`cmd/api-server/services/capabilities.go`](cmd/api-server/services/capabilities.go) and cover the agent persona, connection mode, enabled features, and whether this is a Testkube-provisioned hosted runner (`hosted-runner`) rather than a user-deployed one
 
-### 9. Kubernetes Custom Resource Definitions (CRDs)
+### 10. Kubernetes Custom Resource Definitions (CRDs)
 
 **Definition Location**: [`api/`](api/)
 **Generated CRDs**: [`k8s/crd/`](k8s/crd/)
@@ -323,6 +351,39 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 - API server endpoints (standalone or control plane)
 - Authentication tokens
 - Contexts (for multi-environment setups)
+
+### External Integration: License Event Reporting
+
+The CLI reports installation lifecycle events to the Testkube license service so the
+install funnel can be tracked as telemetry.
+
+**Endpoint**: `POST https://license.testkube.io/events` (the license worker's `/events`
+handler). The URL is defined as `LicenseEventsURL` in
+[`pkg/diagnostics/validators/license/client.go`](pkg/diagnostics/validators/license/client.go).
+
+**Client**: `Client.ReportEvent(license, event)` in the same file marshals
+`{ "license": <key>, "event": <name> }` and POSTs it with a short (5s) request timeout.
+
+**Events** (constants in `client.go`):
+
+- `cli_install_started` — emitted right before the Helm install begins.
+- `cli_install_finished` — emitted right after the install succeeds.
+
+**Flow**: During `testkube init demo`
+([`cmd/kubectl-testkube/commands/init.go`](cmd/kubectl-testkube/commands/init.go)), the
+`reportLicenseEvent` helper wraps `ReportEvent`. It is:
+
+- **Telemetry-gated** — it is a no-op when the user has disabled telemetry
+  (`config.Data.TelemetryEnabled == false`).
+- **Non-blocking** — each call runs in a background goroutine so a slow or unreachable
+  endpoint never stalls the install path.
+- **Best-effort / non-fatal** — failures are logged at debug level only and never abort
+  the installation.
+
+**Authentication**: the license key sent in the request body is itself the credential —
+the license worker validates the key (against Keygen) before recording anything, so no
+separate shared secret ships in the public CLI. Recording is scoped to that license's own
+plan on the worker side.
 
 ## Related Documentation
 

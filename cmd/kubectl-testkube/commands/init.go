@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -155,6 +157,8 @@ func NewInitCmdDemo() *cobra.Command {
 				return
 			}
 
+			defer waitLicenseEvents()
+
 			ui.Logo()
 			ui.Info("Welcome to the installer for " + demoInstallationName + ".")
 			ui.NL()
@@ -239,6 +243,7 @@ func NewInitCmdDemo() *cobra.Command {
 
 			spinner := ui.NewSpinner("Running Kubectl command...")
 			sendTelemetry(cmd, cfg, license, "installing started", licenseName)
+			reportLicenseEvent(cfg, license, licensevalidator.EventCLIInstallStarted)
 			options := common.HelmOptions{
 				Namespace:     namespace,
 				LicenseKey:    license,
@@ -279,6 +284,8 @@ func NewInitCmdDemo() *cobra.Command {
 			spinner.Success()
 
 			sendTelemetry(cmd, cfg, license, "installing finished", licenseName)
+
+			reportLicenseEvent(cfg, license, licensevalidator.EventCLIInstallFinished)
 
 			cfg.Namespace = namespace
 			err = config.Save(cfg)
@@ -379,6 +386,33 @@ func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType, licens
 		}
 
 		ui.Debug("telemetry send event response", out)
+	}
+}
+
+var licenseEventsWG sync.WaitGroup
+
+func reportLicenseEvent(clientCfg config.Data, license, event string) {
+	if !clientCfg.TelemetryEnabled {
+		return
+	}
+	licenseEventsWG.Add(1)
+	go func() {
+		defer licenseEventsWG.Done()
+		if err := licensevalidator.NewClient().ReportEvent(license, event); err != nil {
+			ui.Debug("license event report failed, continuing", err.Error())
+		}
+	}()
+}
+
+func waitLicenseEvents() {
+	done := make(chan struct{})
+	go func() {
+		licenseEventsWG.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(6 * time.Second):
 	}
 }
 

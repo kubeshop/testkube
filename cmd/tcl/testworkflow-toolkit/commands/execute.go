@@ -117,6 +117,7 @@ func (r *executionRecorder) complete(entry executiondata.Execution, exec testkub
 	entry.ErrorMessage, entry.StepErrors = executiondata.ErrorsOf(&exec)
 	entry.StepAttempts = executiondata.AttemptsOf(&exec)
 	entry.ErrorReason, entry.StepReasons = executiondata.ReasonsOf(&exec)
+	entry.SetStatusDetails(&exec)
 	if exec.Result != nil && exec.Result.Status != nil {
 		entry.Status = string(*exec.Result.Status)
 	}
@@ -196,6 +197,22 @@ func buildWorkflowExecution(req workflowExecutionRequest) func() operationResult
 			return notScheduled(req.spec.Name, errors.Wrap(err, "computing execution"))
 		}
 
+		// A base that was configured but came out empty must not quietly become a
+		// first run. The scheduled execution would resolve no "rerun" reference, so
+		// a workflow branching on lineage takes its original branch and the run
+		// looks like a working configuration instead of a broken one - which is
+		// exactly how this is hard to notice from the outside.
+		if req.spec.BaseExecutionId != "" && workflow.BaseExecutionId == "" {
+			err := errors.Errorf("baseExecutionId %q resolved to nothing", req.spec.BaseExecutionId)
+			ui.Errf("failed to compute execution: %s: %s", req.spec.Name, err.Error())
+			return notScheduled(req.spec.Name, errors.Wrap(err, "computing execution"))
+		}
+		// Say it out loud, so a run that silently schedules a first run is
+		// distinguishable from one that never carried a base at all.
+		if workflow.BaseExecutionId != "" {
+			fmt.Printf("%s • rerun of %s\n", ui.LightCyan(workflow.Name), workflow.BaseExecutionId)
+		}
+
 		async := req.async
 		tags := config.ExecutionTags()
 		target := common.MapPtr(workflow.Target, commonmapper.MapTargetKubeToAPI)
@@ -210,7 +227,7 @@ func buildWorkflowExecution(req workflowExecutionRequest) func() operationResult
 				DisableWebhooks: config.ExecutionDisableWebhooks(),
 				Tags:            tags,
 				Target:          target,
-			})
+			}, workflow.BaseExecutionId)
 			if err == nil {
 				break
 			}

@@ -1074,6 +1074,10 @@ func MapStepExecuteTestWorkflowAPIToKube(v testkube.TestWorkflowStepExecuteTestW
 		Tarball:       common.MapMap(v.Tarball, MapTarballRequestAPIToKube),
 		Config:        MapConfigValueAPIToKube(v.Config),
 		Fetch:         common.MapSlice(v.Fetch, MapStepExecuteFetchAPIToKube),
+		// Both directions map field by field, so a field missing from either is
+		// dropped in silence - which for this one would turn a rerun back into a
+		// first run for every workflow stored through the API.
+		BaseExecutionId: v.BaseExecutionId,
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
 			Count:    MapBoxedStringToConfigValue(v.Count),
 			MaxCount: MapBoxedStringToConfigValue(v.MaxCount),
@@ -1635,6 +1639,25 @@ func MapTestWorkflowResultAPIToKube(v testkube.TestWorkflowResult) testworkflows
 		Pauses:          common.MapSlice(v.Pauses, MapTestWorkflowPauseAPIToKube),
 		Initialization:  common.MapPtr(v.Initialization, MapTestWorkflowStepResultAPIToKube),
 		Steps:           common.MapMap(v.Steps, MapTestWorkflowStepResultAPIToKube),
+		StatusDetails:   common.MapPtr(v.StatusDetails, MapTestWorkflowStatusDetailsAPIToKube),
+	}
+}
+
+func MapTestWorkflowStatusDetailsAPIToKube(v testkube.TestWorkflowStatusDetails) testworkflowsv1.TestWorkflowStatusDetails {
+	return testworkflowsv1.TestWorkflowStatusDetails{
+		Type_:   v.Type_,
+		Reason:  v.Reason,
+		Message: v.Message,
+		Step:    v.Step,
+		Actor:   v.Actor,
+		User:    common.MapPtr(v.User, MapTestWorkflowStatusDetailsUserAPIToKube),
+	}
+}
+
+func MapTestWorkflowStatusDetailsUserAPIToKube(v testkube.TestWorkflowStatusDetailsUser) testworkflowsv1.TestWorkflowStatusDetailsUser {
+	return testworkflowsv1.TestWorkflowStatusDetailsUser{
+		Name:  v.Name,
+		Email: v.Email,
 	}
 }
 
@@ -1668,6 +1691,15 @@ func MapTestWorkflowExecutionAPIToKube(v *testkube.TestWorkflowExecution) *testw
 		Tags:                      v.Tags,
 		// Pro edition only (tcl protected code)
 		RunningContext: common.MapPtr(v.RunningContext, mappertcl.MapTestWorkflowRunningContextAPIToKube),
+		Lineage:        common.MapPtr(v.Lineage, MapTestWorkflowExecutionLineageAPIToKube),
+	}
+}
+
+func MapTestWorkflowExecutionLineageAPIToKube(v testkube.TestWorkflowExecutionLineage) testworkflowsv1.TestWorkflowExecutionLineage {
+	return testworkflowsv1.TestWorkflowExecutionLineage{
+		BaseId:  v.BaseId,
+		RootId:  v.RootId,
+		Attempt: v.Attempt,
 	}
 }
 
@@ -1691,6 +1723,7 @@ func MapTestWorkflowResultAPIToKubeTestWorkflowResultSummary(v testkube.TestWork
 		DurationMs:      v.DurationMs,
 		TotalDurationMs: v.TotalDurationMs,
 		PausedMs:        v.PausedMs,
+		StatusDetails:   common.MapPtr(v.StatusDetails, MapTestWorkflowStatusDetailsAPIToKube),
 	}
 }
 

@@ -231,6 +231,9 @@ func TestNotifier_Instruction(t *testing.T) {
 	execution := func(iteration int, details string) instructions.Instruction {
 		return instructions.Instruction{Ref: ref, Name: initconstants.InstructionExecution, Value: initconstants.ExecutionResult{ExitCode: 1, Iteration: iteration, Details: details}}
 	}
+	executionWithReason := func(details, reason string) instructions.Instruction {
+		return instructions.Instruction{Ref: ref, Name: initconstants.InstructionExecution, Value: initconstants.ExecutionResult{ExitCode: 1, Details: details, Reason: reason}}
+	}
 	retry := func(iteration int) instructions.Instruction {
 		return instructions.Instruction{Ref: ref, Name: initconstants.InstructionIteration, Value: iteration}
 	}
@@ -239,6 +242,7 @@ func TestNotifier_Instruction(t *testing.T) {
 		name         string
 		hints        []instructions.Instruction
 		wantMessage  string
+		wantReason   string
 		wantAttempts int32
 	}{
 		{
@@ -260,6 +264,19 @@ func TestNotifier_Instruction(t *testing.T) {
 			name:         "keeps the step message when the execution result has no details",
 			hints:        []instructions.Instruction{execution(0, timeout), execution(0, "")},
 			wantMessage:  timeout,
+			wantAttempts: 1,
+		},
+		{
+			name:         "writes the reason code that the init process sends with its message",
+			hints:        []instructions.Instruction{executionWithReason(timeout, "step-timeout")},
+			wantMessage:  timeout,
+			wantReason:   "step-timeout",
+			wantAttempts: 1,
+		},
+		{
+			name:         "writes no reason code for a message that a command wrote",
+			hints:        []instructions.Instruction{execution(0, "error cloning repository")},
+			wantMessage:  "error cloning repository",
 			wantAttempts: 1,
 		},
 		{
@@ -290,6 +307,7 @@ func TestNotifier_Instruction(t *testing.T) {
 			}
 
 			assert.Equal(t, tt.wantMessage, n.result.Steps[ref].ErrorMessage)
+			assert.Equal(t, tt.wantReason, n.result.Steps[ref].ErrorReason)
 			// Read the sent result, because the notifier sends a copy of its state.
 			var last *testkube.TestWorkflowResult
 			for len(ch) > 0 {
