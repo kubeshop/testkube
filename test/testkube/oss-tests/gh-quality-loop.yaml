@@ -214,7 +214,7 @@ spec:
       image: postgres:16.15
       resources:
         requests:
-          cpu: 1
+          cpu: 2
           memory: 2Gi
         limits:
           cpu: 4
