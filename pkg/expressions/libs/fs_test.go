@@ -56,6 +56,26 @@ func TestFsLibHashFiles(t *testing.T) {
 	// No match is empty, not an error: a lockfile that does not exist yet is normal
 	// while a workflow is being written. Callers treat "" as "do not cache".
 	assert.Equal(t, "", expressions.MustCall(machine, "hash_files", "*.nope"))
+
+	// The same has to hold for a literal path, which is the form the documentation
+	// shows and the form a real key uses - hash_files("package-lock.json"), not a
+	// wildcard. The two reach the empty answer by different routes: a wildcard's search
+	// root is a directory that exists, so the walk runs and matches nothing, while a
+	// literal's root is the missing path itself, so the walk fails before it can match
+	// anything. What makes the answers agree is the walk callback discarding that error
+	// - one `err != nil` whose loss nothing else would notice, and which would turn the
+	// documented "do not cache" into a failed step.
+	assert.Equal(t, "", expressions.MustCall(machine, "hash_files", "package-lock.json"))
+	assert.Equal(t, "", expressions.MustCall(machine, "hash_files", "./package-lock.json"))
+	assert.Equal(t, "", expressions.MustCall(machine, "hash_files", "/etc/package-lock.json"))
+	// And when whole directories along the way are absent, not only the file.
+	assert.Equal(t, "", expressions.MustCall(machine, "hash_files", "nested/deep/package-lock.json"))
+
+	// A missing literal beside a present one is not fatal either: the key still derives
+	// from what is there, rather than the step losing its cache outright.
+	assert.Equal(t,
+		expressions.MustCall(machine, "hash_files", "a.lock"),
+		expressions.MustCall(machine, "hash_files", "a.lock", "package-lock.json"))
 }
 
 // TestFsLibHashFilesDiffersFromGlob documents the footgun hash_files exists to avoid:
