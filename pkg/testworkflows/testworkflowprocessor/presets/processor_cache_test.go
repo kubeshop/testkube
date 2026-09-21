@@ -699,3 +699,142 @@ const (
 	cacheTempDirPath     = "/.tktw-cache"
 	cacheTempDirHeadroom = 64 << 20
 )
+
+// TestProcessCache_RejectsTheRootHoweverItIsReached covers the gap between the two places
+// a path is judged.
+//
+// validateCache sees only what the author declared, while mountCachePaths sees what that
+// resolves to against the working directory - and a relative path reaches the root
+// without ever looking like it. "." under a workingDir of "/" cleans to "." in the first
+// and to "/" in the second, so the declared-path check passed it through and an empty
+// volume was mounted over the container root, hiding the image's own filesystem from the
+// step it was supposed to be caching for.
+func TestProcessCache_RejectsTheRootHoweverItIsReached(t *testing.T) {
+	build := func(workingDir string, paths ...string) error {
+		cache := &testworkflowsv1.StepCache{Key: "k", Paths: paths}
+		if workingDir != "" {
+			cache.WorkingDir = common.Ptr(workingDir)
+		}
+		_, err := bundleWithCache(t, testworkflowsv1.Step{
+			StepOperations: testworkflowsv1.StepOperations{Shell: "true", Cache: cache},
+		})
+		return err
+	}
+
+	t.Run("declared as the root", func(t *testing.T) {
+		// The case that was already caught, kept so the two routes stay covered together.
+		assert.ErrorContains(t, build("", "/"), "container root")
+	})
+
+	t.Run("resolved to the root through the working directory", func(t *testing.T) {
+		for _, declared := range []string{".", "./", "./."} {
+			assert.ErrorContains(t, build("/", declared), "container root",
+				"%q under a workingDir of / resolves to the root", declared)
+		}
+	})
+
+	t.Run("a path that merely sits near the root is still fine", func(t *testing.T) {
+		assert.NoError(t, build("/", "root/.npm"))
+		assert.NoError(t, build("/root", "."),
+			"a relative path is only the root when the working directory is")
+	})
+}
+
+// TestProcessCache_RejectsGlobPaths closes the gap between how the two halves of the
+// feature read a cached path.
+//
+// mountCachePaths mounts a volume at the literal string; the toolkit hands the same
+// string to the walker, which reads it as a glob and derives a search root from it. So
+// "/data/c*" mounted a directory actually named "c*" while packing everything else under
+// /data that happened to match - putting files nobody declared into the archive, and
+// under `scope: environment` into a cache other workflows restore from.
+func TestProcessCache_RejectsGlobPaths(t *testing.T) {
+	build := func(paths ...string) error {
+		_, err := bundleWithCache(t, testworkflowsv1.Step{
+			StepOperations: testworkflowsv1.StepOperations{
+				Shell: "true",
+				Cache: &testworkflowsv1.StepCache{Key: "k", Paths: paths},
+			},
+		})
+		return err
+	}
+
+	for _, declared := range []string{
+		"/data/c*",
+		"/data/?ache",
+		"/data/[abc]ache",
+		"/data/{a,b}",
+		`/data/c\*`,
+		"/data/**/node_modules",
+	} {
+		assert.ErrorContains(t, build(declared), "not a pattern",
+			"%q is read as a glob when the archive is packed", declared)
+	}
+
+	// Ordinary paths, including the punctuation a real cache directory carries.
+	for _, declared := range []string{
+		"/root/.npm/_cacache",
+		"/root/go/pkg/mod/cache/download",
+		"node_modules",
+		"/data/my-cache_dir.v2",
+	} {
+		assert.NoError(t, build(declared), "%q is a plain directory", declared)
+	}
+}
+
+// TestProcessCache_SaveWaitsOnSuccessUnderAnExplicitCondition is the same guarantee for
+// the shape that used to lose it.
+//
+// A step with no condition gets a group condition of "passed", and the save inherits that.
+// A step that declares one gets a group of "true" instead, with the declared condition
+// pushed down onto every child - so the save's condition became the author's alone. Under
+// `condition: always` the save would then run after a failed command and publish whatever
+// it left behind, under a key that can never be rewritten and that every later run
+// restores.
+func TestProcessCache_SaveWaitsOnSuccessUnderAnExplicitCondition(t *testing.T) {
+	res, err := bundleWithCache(t, testworkflowsv1.Step{
+		StepMeta: testworkflowsv1.StepMeta{Condition: "always"},
+		StepOperations: testworkflowsv1.StepOperations{
+			Shell: "npm ci",
+			Cache: &testworkflowsv1.StepCache{Key: "npm-abc", Paths: []string{"node_modules"}},
+		},
+	})
+	require.NoError(t, err)
+
+	conditions := map[string]string{}
+	for _, group := range res.Actions() {
+		for _, action := range group {
+			if action.Declare != nil {
+				conditions[action.Declare.Ref] = action.Declare.Condition
+			}
+		}
+	}
+
+	refsByCategory := map[string]string{}
+	var walk func(signatures []stage.Signature)
+	walk = func(signatures []stage.Signature) {
+		for _, signature := range signatures {
+			if category := signature.Category(); category != "" {
+				refsByCategory[category] = signature.Ref()
+			}
+			walk(signature.Children())
+		}
+	}
+	walk(res.FullSignature)
+
+	saveRef, ok := refsByCategory["Save cache"]
+	require.True(t, ok, "the save stage should appear in the signature")
+	saveCondition, ok := conditions[saveRef]
+	require.True(t, ok, "the save stage should be declared")
+
+	assert.NotEqual(t, "always", saveCondition,
+		"the author's condition must not be the only thing gating the save")
+	shellRef, ok := refsByCategory["Run shell command"]
+	require.True(t, ok, "the shell stage should appear in the signature")
+	assert.Contains(t, saveCondition, shellRef,
+		"saving has to depend on the command having succeeded, whatever the step's own condition says")
+
+	// The declared condition is compiled into stage references rather than kept as the
+	// word, so there is nothing literal to look for - what matters is that the save is
+	// gated on a stage result at all, rather than on the author.s condition alone.
+}

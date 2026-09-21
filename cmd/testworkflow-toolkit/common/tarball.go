@@ -69,8 +69,12 @@ func WriteTarballFrom(stream io.Writer, dirPath string, files []string, mounts [
 	// 2.2 GiB went from tens of seconds to a few.
 	gzipStream := gzip.NewWriter(stream)
 	tarStream := tar.NewWriter(gzipStream)
-	defer gzipStream.Close()
-	defer tarStream.Close()
+	// Closed explicitly at the end rather than deferred, because both writers do real
+	// work there - tar writes the end-of-archive marker, gzip the CRC and length - and
+	// a deferred Close discards whatever it reports. A bounded writer that reaches its
+	// limit during finalization, or a disk that fills at that moment, would then be
+	// invisible: the caller would be handed a truncated archive with no error, store it
+	// under a key that can never be rewritten, and serve it to every later hit.
 
 	// Append all the files
 	walker, err := artifacts.CreateWalker(files, mounts, dirPath)
@@ -129,7 +133,20 @@ func WriteTarballFrom(stream io.Writer, dirPath string, files []string, mounts [
 		entries++
 		return nil
 	})
-	return entries, err
+
+	// Both are closed whatever the walk did, so the encoder's buffers are released even
+	// on the failing path; only the walk's own error outranks what they report.
+	tarErr := tarStream.Close()
+	gzipErr := gzipStream.Close()
+	switch {
+	case err != nil:
+		return entries, err
+	case tarErr != nil:
+		return entries, errors.Wrap(tarErr, "finalizing the archive")
+	case gzipErr != nil:
+		return entries, errors.Wrap(gzipErr, "finalizing the compressed stream")
+	}
+	return entries, nil
 }
 
 // UnpackOptions bounds what an archive may expand into.
@@ -147,9 +164,21 @@ type UnpackOptions struct {
 	// AllowedRoots restricts extraction to entries landing inside one of these
 	// container paths. Empty means the whole destination is writable.
 	AllowedRoots []string
+	// OnWrite is called once, immediately before the first entry is created.
+	//
+	// It tells a caller that a failure from this point on may have left something
+	// behind, which is not the same as the extraction having been attempted: an archive
+	// can be rejected after the transfer succeeded, by a body that is not gzip at all or
+	// a first entry that lands outside AllowedRoots, having written nothing.
+	OnWrite func()
 }
 
 type UnpackOption func(*UnpackOptions)
+
+// WithWriteObserver reports the moment extraction starts creating entries.
+func WithWriteObserver(fn func()) UnpackOption {
+	return func(o *UnpackOptions) { o.OnWrite = fn }
+}
 
 func WithMaxTotalBytes(n int64) UnpackOption {
 	return func(o *UnpackOptions) { o.MaxTotalBytes = n }
@@ -360,6 +389,16 @@ func UnpackTarball(dirPath string, stream io.Reader, opts ...UnpackOption) error
 		// an archive from another execution, and nothing in a dependency tree needs
 		// setuid, setgid or sticky.
 		mode := os.FileMode(header.Mode).Perm() & 0o777
+
+		// Announced before the first entry is created, not when extraction was merely
+		// entered. A caller that has to undo a partial extraction needs to know whether
+		// there is anything to undo, and an archive can be rejected after the transfer
+		// succeeded - a body that is not gzip at all, or a first entry that lands
+		// outside the allowed roots - having written nothing.
+		if options.OnWrite != nil {
+			options.OnWrite()
+			options.OnWrite = nil
+		}
 
 		switch header.Typeflag {
 		case tar.TypeDir:

@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"os"
 	"path"
 	"path/filepath"
@@ -555,4 +556,90 @@ func TestUnpackTarball_RejectsDriveQualifiedNames(t *testing.T) {
 			assert.ErrorContains(t, err, "unsafe file path")
 		})
 	}
+}
+
+// failingWriter accepts a fixed number of bytes and then refuses everything, which is how
+// a bounded archive behaves when it reaches its size limit.
+type failingWriter struct {
+	remaining int
+	err       error
+}
+
+func (w *failingWriter) Write(p []byte) (int, error) {
+	if len(p) <= w.remaining {
+		w.remaining -= len(p)
+		return len(p), nil
+	}
+	n := w.remaining
+	w.remaining = 0
+	return n, w.err
+}
+
+// TestWriteTarballFromReportsFinalizationFailures covers the window that closing in a
+// defer hid entirely.
+//
+// tar writes its end-of-archive marker and gzip its CRC and length during Close, so a
+// writer can fail after the last entry has been handed over and everything looks done.
+// Discarding those errors meant the caller was told the archive was complete, stored it
+// under a key that can never be rewritten, and served the truncated result to every later
+// hit for it.
+func TestWriteTarballFromReportsFinalizationFailures(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "a.txt"), []byte("hello"), 0o644))
+
+	boom := errors.New("archive is over the size limit")
+
+	// Enough room for the entries, not enough for what Close still has to write. The
+	// exact figure does not matter: any writer that fails only at the end reproduces it.
+	for _, budget := range []int{600, 800, 1024} {
+		w := &failingWriter{remaining: budget, err: boom}
+		_, err := WriteTarballFrom(w, dir, []string{"**"}, nil)
+		if err != nil {
+			assert.ErrorIs(t, err, boom, "budget %d: the writer's failure has to reach the caller", budget)
+		}
+	}
+
+	// And a writer that fails immediately is still reported, so the test above is not
+	// simply never failing.
+	immediate := &failingWriter{remaining: 0, err: boom}
+	_, err := WriteTarballFrom(immediate, dir, []string{"**"}, nil)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, boom)
+}
+
+// TestUnpackTarballReportsWhenItStartsWriting pins the difference between "extraction was
+// attempted" and "extraction created something".
+//
+// A restore that fails has to undo what it wrote, and must not touch anything when it
+// wrote nothing: the declared cache paths can hold a repository checkout or a volume
+// another step populated, so clearing them on a failure that created nothing deletes the
+// step's own inputs. A transfer can succeed and the archive still be refused before the
+// first entry - a body that is not gzip, or an entry outside the allowed roots.
+func TestUnpackTarballReportsWhenItStartsWriting(t *testing.T) {
+	t.Run("a body that is not gzip never writes", func(t *testing.T) {
+		wrote := false
+		err := UnpackTarball(t.TempDir(), strings.NewReader("this is not a gzip stream"),
+			WithWriteObserver(func() { wrote = true }))
+		require.Error(t, err)
+		assert.False(t, wrote, "the archive was rejected before any entry was created")
+	})
+
+	t.Run("an entry outside the allowed roots never writes", func(t *testing.T) {
+		dir := t.TempDir()
+		wrote := false
+		err := UnpackTarball(dir, tarballOf(t, tar.Header{Name: "elsewhere/x.txt", Typeflag: tar.TypeReg, Size: 2, Mode: 0o644}),
+			WithAllowedRoots(filepath.Join(dir, "allowed")),
+			WithWriteObserver(func() { wrote = true }))
+		require.Error(t, err)
+		assert.False(t, wrote, "the first entry was refused, so nothing was created")
+	})
+
+	t.Run("a good archive does write", func(t *testing.T) {
+		// Without this the observer could simply never fire and the assertions above
+		// would hold for the wrong reason.
+		wrote := false
+		require.NoError(t, UnpackTarball(t.TempDir(), buildMixedTarball(t, "hello"),
+			WithWriteObserver(func() { wrote = true })))
+		assert.True(t, wrote)
+	})
 }

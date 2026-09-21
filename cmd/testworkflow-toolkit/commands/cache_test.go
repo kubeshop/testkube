@@ -73,6 +73,26 @@ func cacheTarball(t *testing.T, name, contents string) []byte {
 	return buf.Bytes()
 }
 
+// cacheTarballOf builds an archive of several entries, in order.
+func cacheTarballOf(t *testing.T, entries ...[2]string) []byte {
+	t.Helper()
+
+	buf := &bytes.Buffer{}
+	gz := gzip.NewWriter(buf)
+	tw := tar.NewWriter(gz)
+	for _, entry := range entries {
+		name, contents := entry[0], entry[1]
+		require.NoError(t, tw.WriteHeader(&tar.Header{
+			Name: name, Typeflag: tar.TypeReg, Mode: 0o644, Size: int64(len(contents)),
+		}))
+		_, err := tw.Write([]byte(contents))
+		require.NoError(t, err)
+	}
+	require.NoError(t, tw.Close())
+	require.NoError(t, gz.Close())
+	return buf.Bytes()
+}
+
 // TestRunCacheRestore_DegradesToMiss is the contract that matters most: nothing the
 // control plane or the network does may turn into a failed step.
 func TestRunCacheRestore_DegradesToMiss(t *testing.T) {
@@ -219,10 +239,18 @@ func TestRunCacheRestore_PartialHitIsRecordedSoSaveStillRuns(t *testing.T) {
 
 // TestRunCacheRestore_CorruptArchiveClearsPartialState: a half-restored tree fed to an
 // installer is worse than an empty one, because the install would skip what is present.
-func TestRunCacheRestore_CorruptArchiveClearsPartialState(t *testing.T) {
+// TestRunCacheRestore_CorruptArchiveLeavesTheInputsAlone covers the other half of the
+// cleanup rule: a restore that created nothing has nothing to undo.
+//
+// A body that is not gzip at all fails before the first entry, so the declared paths hold
+// exactly what the steps before this one put there. Clearing them here would delete a
+// checkout, or a tree an earlier step built, because a cache lookup missed.
+// TestRunCacheRestore_PartialExtractionClearsTheDeclaredPaths is the case that does clear.
+func TestRunCacheRestore_CorruptArchiveLeavesTheInputsAlone(t *testing.T) {
 	root := t.TempDir()
 	// Container paths, as the code now resolves them: see TestRunCacheRestore_Hit.
 	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	// Produced by an earlier step, not by this restore.
 	require.NoError(t, os.WriteFile(filepath.Join(root, "stale.txt"), []byte("x"), 0o644))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -244,9 +272,9 @@ func TestRunCacheRestore_CorruptArchiveClearsPartialState(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Contains(t, out.String(), "cache: miss")
 
-	entries, readErr := os.ReadDir(root)
-	require.NoError(t, readErr)
-	assert.Empty(t, entries, "a failed restore must not leave a partial tree behind")
+	survived, readErr := os.ReadFile(filepath.Join(root, "stale.txt"))
+	require.NoError(t, readErr, "a restore that wrote nothing must leave the declared paths alone")
+	assert.Equal(t, "x", string(survived))
 	assert.Equal(t, executioncache.HitMiss, readState(t, statePath).Hit)
 }
 
@@ -564,7 +592,8 @@ func TestRunCacheRestore_RejectsAnArchiveReachingOutsideTheDeclaredPaths(t *test
 	declaredPosix := posix + "/deps"
 	declared := filepath.Join(root, "deps")
 	require.NoError(t, os.MkdirAll(declared, 0o755))
-	// Something the previous step left behind, which the failed restore must clear.
+	// Something the previous step left behind. The archive is refused at its first entry,
+	// so this restore creates nothing and the file is not this restore's to delete.
 	require.NoError(t, os.WriteFile(filepath.Join(declared, "stale.txt"), []byte("x"), 0o644))
 
 	elsewhere := filepath.Join(root, "elsewhere")
@@ -596,9 +625,65 @@ func TestRunCacheRestore_RejectsAnArchiveReachingOutsideTheDeclaredPaths(t *test
 	_, statErr := os.Stat(filepath.Join(elsewhere, "planted.txt"))
 	assert.True(t, os.IsNotExist(statErr), "the archive wrote outside the declared paths")
 
+	survived, readErr := os.ReadFile(filepath.Join(declared, "stale.txt"))
+	require.NoError(t, readErr, "a refusal before the first entry must not clear the declared paths")
+	assert.Equal(t, "x", string(survived))
+
+	assert.Equal(t, executioncache.HitMiss, readState(t, statePath).Hit)
+}
+
+// TestRunCacheRestore_PartialExtractionClearsTheDeclaredPaths is why the cleanup exists.
+//
+// The archive is admitted long enough to write one entry inside a declared path and is
+// then refused, so the step is left holding half a dependency tree that the restore has
+// already reported as a miss. That half tree has to go: the step would otherwise build
+// against a set of dependencies no cache entry ever held.
+func TestRunCacheRestore_PartialExtractionClearsTheDeclaredPaths(t *testing.T) {
+	root := t.TempDir()
+	// Container paths, as the code now resolves them: see TestRunCacheRestore_Hit.
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	declaredPosix := posix + "/deps"
+	declared := filepath.Join(root, "deps")
+	require.NoError(t, os.MkdirAll(declared, 0o755))
+
+	elsewhere := filepath.Join(root, "elsewhere")
+	require.NoError(t, os.MkdirAll(elsewhere, 0o755))
+
+	// Names are relative to "/", which is where a cache archive is unpacked. The first
+	// entry lands inside the declared path and is written; the second does not, and stops
+	// the extraction after the tree has been touched.
+	inside := strings.TrimPrefix(declaredPosix+"/half.txt", "/")
+	outside := strings.TrimPrefix(filepath.ToSlash(filepath.Join(elsewhere, "planted.txt")), "/")
+	archive := cacheTarballOf(t,
+		[2]string{inside, "half-a-tree"},
+		[2]string{outside, "planted-by-another-workflow"},
+	)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(archive)
+	}))
+	defer server.Close()
+
+	statePath := filepath.Join(t.TempDir(), "state.json")
+	out := &bytes.Buffer{}
+
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{declaredPosix},
+		State: statePath,
+	}), &fakeCacheRepository{
+		restore: executioncache.RestoreResult{Hit: true, Exact: true, MatchedKey: "npm-abc", URL: server.URL},
+	}, out)
+
+	assert.NoError(t, err, "a hostile archive is a miss, not a failed step")
+	assert.Contains(t, out.String(), "cache: miss")
+
+	_, statErr := os.Stat(filepath.Join(elsewhere, "planted.txt"))
+	assert.True(t, os.IsNotExist(statErr), "the archive wrote outside the declared paths")
+
 	entries, readErr := os.ReadDir(declared)
 	require.NoError(t, readErr)
-	assert.Empty(t, entries, "the declared paths must be cleared after a refused restore")
+	assert.Empty(t, entries, "a restore that wrote part of a tree must clear what it wrote")
 
 	assert.Equal(t, executioncache.HitMiss, readState(t, statePath).Hit)
 }

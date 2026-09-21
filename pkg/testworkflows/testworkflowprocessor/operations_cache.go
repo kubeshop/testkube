@@ -84,6 +84,24 @@ func validateCache(cache *testworkflowsv1.StepCache) error {
 		if !expressions.IsTemplateStringWithoutExpressions(declared) {
 			return fmt.Errorf("cache.paths[%d]: %q: a cache path cannot contain an expression that is only resolvable inside the pod, because the volume to mount has to be decided before it starts; use a config value, or write the path out", i, declared)
 		}
+
+		// A cached path is a directory, not a pattern, and the two halves of this
+		// feature already disagree about that: mountCachePaths mounts a volume at the
+		// literal path, while the toolkit hands the same string to the walker, which
+		// reads it as a glob and derives a search root from it. "/data/c*" therefore
+		// mounts a directory actually named "c*" and packs whatever else under /data
+		// happens to match - publishing files nobody asked to cache, into a scope that
+		// under `environment` other workflows read.
+		//
+		// Checked after the expression rule, not before it: "{" and "}" are both glob
+		// syntax and the delimiters of a template, so a path carrying an unresolved
+		// expression would otherwise be turned away for being a pattern, which is true
+		// but not the useful thing to say about it.
+		if idx := strings.IndexAny(declared, `*?[]{}\`); idx >= 0 {
+			return fmt.Errorf("cache.paths[%d]: %q: cache path must name a directory, not a pattern: "+
+				"%q is matched as a glob when the archive is packed, which would cache paths that were never declared",
+				i, declared, declared[idx:idx+1])
+		}
 	}
 
 	// The working directory is the base a relative cached path is resolved against, so
@@ -138,6 +156,17 @@ func mountCachePaths(layer Intermediate, container stage.Container, selfContaine
 			}
 		}
 		cachePath = path.Clean(cachePath)
+
+		// Checked again here, on the resolved path, because validateCache only ever sees
+		// the declared one. A relative path reaches the root through the working
+		// directory without ever looking like it: "." under a workingDir of "/" cleans
+		// to "." there and to "/" here. Mounting an empty volume at "/" would hide the
+		// image's own filesystem from the step, which is the thing that prohibition
+		// exists to prevent, so it has to be caught wherever the root is arrived at.
+		if cachePath == "/" {
+			return fmt.Errorf("cache.paths[%d]: %q resolves to the container root, which cannot be cached: "+
+				"an empty volume mounted there would hide the image's own filesystem from the step", i, declared)
+		}
 
 		if wanted && selfContainer.HasVolumeAt(cachePath) {
 			// Already inside a volume - the repository clone, or the default /data -
@@ -244,6 +273,19 @@ func ProcessCacheSave(_ InternalProcessor, layer Intermediate, container stage.C
 	self := stage.NewContainerStage(layer.NextRef(), selfContainer)
 	self.SetCategory("Save cache")
 	self.SetPure(true)
+
+	// Saved only when everything before it in the step passed, stated here rather than
+	// left to the group.
+	//
+	// A step with no condition of its own gets a group condition of "passed", which
+	// already means this. A step that declares one gets a group of "true" instead, with
+	// the declared condition pushed down onto every child - so a cached step written
+	// with `condition: always` would publish whatever the failed command left behind,
+	// under a key that can never be rewritten, and every later run would restore it.
+	//
+	// AppendConditions joins with &&, so where the processor pushes the step's own
+	// condition down this becomes "<declared>&&passed" rather than replacing either.
+	self.SetCondition("passed")
 
 	// The cached paths' volumes already exist: the restore stage added them to the
 	// shared parent, and mounting them again here would allocate a second, empty

@@ -171,7 +171,22 @@ func globFs(fsys fs.FS, workingDir string, values ...expressions.StaticValue) (i
 	result := make([]string, 0)
 	for _, root := range roots {
 		err := fs.WalkDir(fsys, root, func(path string, d fs.DirEntry, err error) error {
-			if path == "." || err != nil || d.IsDir() {
+			if err != nil {
+				// A path that is simply not there is the documented empty match: a
+				// literal pattern names the missing path as its own search root, so
+				// hash_files("package-lock.json") arrives here when the lockfile does
+				// not exist, and the caller is meant to read that as "do not cache".
+				if errors.Is(err, fs.ErrNotExist) {
+					return nil
+				}
+				// Anything else - a directory that cannot be read, an I/O failure part
+				// way through - must not be swallowed. Discarding it narrowed the match
+				// set silently, and a digest over the files that happened to be readable
+				// is indistinguishable from a digest over all of them: the key looks
+				// valid and names a different dependency set than the one it claims.
+				return err
+			}
+			if path == "." || d.IsDir() {
 				return nil
 			}
 			path = "/" + path

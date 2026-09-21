@@ -1,10 +1,15 @@
 package libs
 
 import (
+	"errors"
+	"io/fs"
+	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
@@ -103,4 +108,66 @@ func TestFsLibRead(t *testing.T) {
 	assert.Equal(t, "foo", expressions.MustCall(machine, "file", "/etc/file1.txt"))
 	assert.Equal(t, "bar", expressions.MustCall(machine, "file", "../another-file.txt"))
 	assert.Equal(t, "bar", expressions.MustCall(machine, "file", "/another-file.txt"))
+}
+
+// erroringFS answers one subtree with an I/O failure and serves the rest normally.
+type erroringFS struct {
+	fs.FS
+	failAt string
+	err    error
+}
+
+func (f erroringFS) Open(name string) (fs.File, error) {
+	if name == f.failAt {
+		return nil, f.err
+	}
+	return f.FS.Open(name)
+}
+
+func (f erroringFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	if name == f.failAt {
+		return nil, f.err
+	}
+	return fs.ReadDir(f.FS, name)
+}
+
+// TestFsLibSurfacesTraversalErrors separates the two things a walk failure can mean.
+//
+// The callback discarded every error it was handed, which made "this path is not there"
+// and "this directory cannot be read" indistinguishable. The first is the documented
+// empty match that tells a caller not to cache. The second silently narrowed the match
+// set, so hash_files returned a digest over the files it happened to manage to read - a
+// key that looks entirely valid while naming a different dependency set than it claims,
+// and that every later run then restores from.
+func TestFsLibSurfacesTraversalErrors(t *testing.T) {
+	// Keyed under whatever absPath resolves the working directory to, so the walk
+	// reaches the fixture on every OS: on Windows filepath.Abs prefixes the drive,
+	// which is why the rest of this package cannot match anything here.
+	root := strings.TrimPrefix(absPath("", "/work"), "/")
+	base := fstest.MapFS{
+		root + "/a.lock":        &fstest.MapFile{Data: []byte("one")},
+		root + "/deep/b.lock":   &fstest.MapFile{Data: []byte("two")},
+		root + "/deep/c/d.lock": &fstest.MapFile{Data: []byte("three")},
+	}
+
+	call := func(machine expressions.Machine, name, arg string) error {
+		_, _, err := machine.Call(name, []expressions.CallArgument{{Expression: expressions.NewValue(arg)}})
+		return err
+	}
+
+	denied := errors.New("permission denied reading the directory")
+	failing := erroringFS{FS: base, failAt: root + "/deep", err: denied}
+	machine := NewFsMachine(failing, "/work")
+
+	err := call(machine, "glob", "**")
+	require.Error(t, err, "a directory that cannot be read must not pass for an empty one")
+	assert.ErrorContains(t, err, "permission denied")
+
+	err = call(machine, "hash_files", "**")
+	require.Error(t, err, "a partial digest is worse than none: it looks like a valid key")
+	assert.ErrorContains(t, err, "permission denied")
+
+	// The readable filesystem still answers, so the test is not simply erroring on
+	// everything.
+	require.NoError(t, call(NewFsMachine(base, "/work"), "hash_files", "**"))
 }

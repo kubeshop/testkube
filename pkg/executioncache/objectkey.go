@@ -46,11 +46,25 @@ const (
 	// punctuation encode to 1536, which no prefix can make fit. Measuring the encoded
 	// form is exact where measuring the input was a guess.
 	//
-	// The budget is what remains of 1024 after the longest layout this plane produces:
-	// ".tkcache/v1/" and "/testworkflows/" and a separator and ".tar.gz" come to 35, and
-	// two name segments can be 253 each, leaving 483. Rounded down to leave the
-	// commercial plane, which nests deeper, a little room to share this constant.
-	MaxEncodedKeyBytes = 480
+	// The budget is what remains of 1024 after the longest layout this plane produces.
+	// Counted rather than estimated, because getting it wrong produces keys that
+	// validate and then fail to store:
+	//
+	//	.tkcache/v1   11      the fixed prefix
+	//	/<env>        1 + 253 a Kubernetes name
+	//	/testworkflows 1 + 13  the wider of the two scope segments
+	//	/<workflow>   1 + 253 a Kubernetes name
+	//	/<namespace>  1 + 68  see maxNamespaceChars
+	//	/<key>        1 + ?
+	//	.tar.gz       7
+	//
+	// That fixed part is 610, leaving 414. Rounded down to leave the commercial plane,
+	// which nests deeper, a little room to share this constant.
+	//
+	// TestObjectNameFitsTheStore holds this to the arithmetic. It exists because the
+	// namespace segment was added after this budget was first written and the budget was
+	// not revisited, which put the worst case 254 bytes over the limit.
+	MaxEncodedKeyBytes = 400
 
 	// MaxKeyBytes caps the key before encoding as well, so an absurd input is refused
 	// before any work is done on it. It is the same number because a key of unreserved
@@ -62,6 +76,33 @@ const (
 	// maxSegmentChars bounds a name used verbatim as a path segment. A Kubernetes name
 	// cannot exceed 253 characters, so this only ever rejects something that was not one.
 	maxSegmentChars = 253
+
+	// maxNamespaceIdentifierChars bounds what a namespace may carry verbatim, beyond
+	// which it is hashed instead.
+	//
+	// Tighter than maxSegmentChars because the identifier is not a Kubernetes name: it is
+	// a pull request number, or failing that a head ref, which is a branch name of
+	// whatever length its author chose. Every byte of it is a byte the cache key cannot
+	// use, and a branch name long enough to matter is one nobody reads in a bucket
+	// listing anyway - which is the only thing keeping it verbatim buys.
+	maxNamespaceIdentifierChars = 64
+
+	// maxReadableIdentifierChars is how much of an identifier survives verbatim when it
+	// is paired with a repository digest. A pull request number is far inside it; a head
+	// ref this long is hashed along with the repository instead.
+	maxReadableIdentifierChars = 32
+
+	// shortDigestChars is how much of a digest stands in for a repository. 64 bits, on a
+	// value that is not attacker-chosen in any useful way: forging a collision would buy
+	// a share of another repository's pull request namespace, which is another untrusted
+	// namespace, and the trusted one is not reachable this way at all.
+	shortDigestChars = 16
+
+	// maxNamespaceChars is what the segment can then come to, over both forms:
+	//
+	//	"pr-" + 32 + "-" + 16          = 52
+	//	"pr-" + "_" + 64 hex           = 68
+	maxNamespaceChars = len(pullRequestNamespacePrefix) + 1 + 64
 
 	// workflowScopeSegment and sharedScopeSegment name the two scopes in an object name.
 	//
@@ -192,8 +233,23 @@ func sanitizeSegment(name string) string {
 	if isSafeSegment(name) {
 		return name
 	}
+	return digestSegment(name)
+}
+
+// digestSegment is the fallback form: an underscore, which no Kubernetes name may begin
+// with, and a full digest. That prefix is what keeps a real name from being mistaken for
+// a fallback, or colliding with one.
+func digestSegment(name string) string {
 	sum := sha256.Sum256([]byte(name))
 	return "_" + hex.EncodeToString(sum[:])
+}
+
+// shortDigest identifies a value in a segment that stays readable beside it. It carries
+// no underscore, so it cannot turn a readable namespace into something a digested one
+// could also spell.
+func shortDigest(value string) string {
+	sum := sha256.Sum256([]byte(value))
+	return hex.EncodeToString(sum[:])[:shortDigestChars]
 }
 
 // isSafeSegment reports whether a name can be used as a path segment as it stands.
@@ -227,8 +283,38 @@ func isSafeSegment(name string) bool {
 // the request. A pull request's author controls the code that runs, so anything they
 // could choose here would let them pick the namespace they write into - including the
 // base one, which is the whole thing this separates them from.
-func PullRequestNamespace(identifier string) string {
-	return pullRequestNamespacePrefix + sanitizeSegment(identifier)
+// The repository has to be part of it. A pull request number is unique only within the
+// repository that issued it, and one workflow can be the target of triggers watching
+// different repositories - so without this, #42 over there and #42 over here share a
+// namespace, and each can read and seed what the other restores. That is the isolation
+// this whole split exists to provide, so it cannot rest on a number alone.
+//
+// A long identifier is hashed rather than carried, so that the segment stays inside
+// maxNamespaceChars and the key budget above holds whatever a branch is called. The two
+// forms are:
+//
+//	pr-42-1b833a2f4c9d5e60          a short, legible identifier and the repository digest
+//	pr-_<64 hex of repository+id>   anything else, in one digest
+//
+// Both are bounded by maxNamespaceChars, and neither can be produced by the other's
+// input: the first has no underscore after the prefix, which the second always does.
+func PullRequestNamespace(repository, identifier string) string {
+	if repository == "" {
+		// Nothing to distinguish repositories by, so this is the older, ambiguous shape.
+		// It is reachable only from a trigger that reported a pull request without its
+		// URL; the collision above is then unavoidable rather than overlooked.
+		if len(identifier) > maxNamespaceIdentifierChars {
+			return pullRequestNamespacePrefix + digestSegment(identifier)
+		}
+		return pullRequestNamespacePrefix + sanitizeSegment(identifier)
+	}
+
+	if len(identifier) <= maxReadableIdentifierChars && isSafeSegment(identifier) {
+		return pullRequestNamespacePrefix + identifier + "-" + shortDigest(repository)
+	}
+	// The separator keeps the pair unambiguous: no repository and identifier can be
+	// rearranged into another pair with the same digest.
+	return pullRequestNamespacePrefix + digestSegment(repository+"\n"+identifier)
 }
 
 // Config keys a trigger records on an execution when the event carried git metadata. The
@@ -238,6 +324,9 @@ func PullRequestNamespace(identifier string) string {
 const (
 	ConfigKeyPRNumber  = "TESTKUBE_GIT_PR_NUMBER"
 	ConfigKeyPRHeadRef = "TESTKUBE_GIT_PR_HEAD_REF"
+	// ConfigKeyPRURL is the only one of these that says which repository the pull
+	// request belongs to, which is why the namespace is derived from it as well.
+	ConfigKeyPRURL = "TESTKUBE_GIT_PR_URL"
 )
 
 // ResolveNamespaces decides which namespace an execution writes and which, if any, it may
@@ -262,17 +351,26 @@ const (
 // different object layouts on purpose, but a disagreement about which runs are trusted
 // would be a security difference, not a cosmetic one.
 func ResolveNamespaces(config map[string]testkube.TestWorkflowExecutionConfigValue) (namespace, readOnly string) {
-	identifier := ""
-	for _, key := range []string{ConfigKeyPRNumber, ConfigKeyPRHeadRef} {
-		if value, ok := config[key]; ok && value.Value != "" {
-			identifier = value.Value
-			break
+	valueOf := func(key string) string {
+		if v, ok := config[key]; ok {
+			return v.Value
 		}
+		return ""
 	}
+
+	identifier := valueOf(ConfigKeyPRNumber)
 	if identifier == "" {
+		identifier = valueOf(ConfigKeyPRHeadRef)
+	}
+	// Which repository it belongs to, without which a number means nothing.
+	repository := valueOf(ConfigKeyPRURL)
+
+	// The URL alone is enough to mark a run as a pull request's, for a trigger that
+	// reported it without either of the others.
+	if identifier == "" && repository == "" {
 		return BaseNamespace, ""
 	}
-	return PullRequestNamespace(identifier), BaseNamespace
+	return PullRequestNamespace(repository, identifier), BaseNamespace
 }
 
 // ScopePrefix is the folder holding every entry a given scope and namespace can see.

@@ -45,6 +45,12 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
+// storageStartupTimeout bounds the object-store calls made while the API server is coming
+// up. Generous, because a cold store can be slow to answer first time and none of this is
+// worth refusing to start over - but finite, because the alternative is a process that
+// never finishes starting and never says why.
+const storageStartupTimeout = 60 * time.Second
+
 func ExitOnError(title string, err error) {
 	if err != nil {
 		log.DefaultLogger.Errorw(title, "error", err)
@@ -130,12 +136,21 @@ func MustGetMinioClient(cfg *config.Config) domainstorage.Client {
 	)
 	err := minioClient.Connect()
 	ExitOnError("Connecting to minio", err)
+	// Every call below carries a deadline, because all of them run here, synchronously,
+	// on the path that brings the API server up - and the object store's transport has
+	// no overall timeout of its own. An endpoint that accepts the connection and then
+	// stops answering would otherwise hold the process short of starting, with nothing
+	// logged to say why. None of this is worth not starting for: a bucket that cannot be
+	// prepared costs an expiration rule, not the server.
+	storageCtx, cancelStorage := context.WithTimeout(context.Background(), storageStartupTimeout)
+	defer cancelStorage()
+
 	// Ensure the bucket exists before applying lifecycle rules. The controlplane service
 	// creates buckets after this client is constructed, but expiration policies need the
 	// bucket to exist to be set successfully.
-	exists, err := minioClient.BucketExists(context.Background(), cfg.StorageBucket)
+	exists, err := minioClient.BucketExists(storageCtx, cfg.StorageBucket)
 	if err == nil && !exists {
-		if err := minioClient.CreateBucket(context.Background(), cfg.StorageBucket); err != nil && !strings.Contains(err.Error(), "already exists") {
+		if err := minioClient.CreateBucket(storageCtx, cfg.StorageBucket); err != nil && !strings.Contains(err.Error(), "already exists") {
 			log.DefaultLogger.Warnw("failed to create bucket before applying expiration policies", "bucket", cfg.StorageBucket, "error", err)
 		}
 	}
@@ -164,7 +179,7 @@ func MustGetMinioClient(cfg *config.Config) domainstorage.Client {
 	// Never fatal. A cache is an optimization, and a control plane that cannot probe its
 	// own bucket has something louder to report than this.
 	switch support, probeErr := minioClient.ProbeConditionalWrite(
-		context.Background(), cfg.StorageBucket, executioncache.ObjectPrefix,
+		storageCtx, cfg.StorageBucket, executioncache.ObjectPrefix,
 	); support {
 	case minio.ConditionalWriteEnforced:
 		log.DefaultLogger.Infow("object store applies conditional writes, so cache entries are immutable",

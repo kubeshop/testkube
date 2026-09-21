@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // safeObject is the shape every derived object name must have: the fixed prefix, one
@@ -87,7 +89,7 @@ func TestPullRequestNamespaceConfinesHostileIdentifiers(t *testing.T) {
 
 	for _, identifier := range hostile {
 		t.Run(identifier, func(t *testing.T) {
-			namespace := PullRequestNamespace(identifier)
+			namespace := PullRequestNamespace("", identifier)
 
 			assert.NotEqual(t, BaseNamespace, namespace, "a pull request must never land in the base namespace")
 			assert.NotContains(t, namespace, "/")
@@ -99,11 +101,11 @@ func TestPullRequestNamespaceConfinesHostileIdentifiers(t *testing.T) {
 	}
 
 	// Distinct identifiers stay distinct, or two pull requests would share a namespace.
-	assert.NotEqual(t, PullRequestNamespace("../base"), PullRequestNamespace("../../base"))
-	assert.NotEqual(t, PullRequestNamespace("42"), PullRequestNamespace("43"))
+	assert.NotEqual(t, PullRequestNamespace("", "../base"), PullRequestNamespace("", "../../base"))
+	assert.NotEqual(t, PullRequestNamespace("", "42"), PullRequestNamespace("", "43"))
 
 	// A plain number reads as itself, which is the whole point of keeping names readable.
-	assert.Equal(t, "pr-42", PullRequestNamespace("42"))
+	assert.Equal(t, "pr-42", PullRequestNamespace("", "42"))
 }
 
 func TestValidateKey(t *testing.T) {
@@ -321,4 +323,145 @@ func TestValidateKeyBoundsTheEncodedLength(t *testing.T) {
 	err := ValidateKey(punctuation)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "encodes to")
+}
+
+// TestObjectNameFitsTheStore is the arithmetic behind MaxEncodedKeyBytes, asserted
+// rather than described.
+//
+// It exists because the prose was once right and then quietly stopped being: the
+// namespace segment was added to the layout without revisiting the budget, which left
+// the worst case 254 bytes past the 1024 an S3 key may be. Nothing failed, because
+// nothing checked - the keys validated, and only the upload would have been refused,
+// long after the step had decided it had a cache.
+//
+// Every segment is at its own maximum here. That combination is unlikely, which is
+// exactly why it needs a test rather than a reviewer.
+func TestObjectNameFitsTheStore(t *testing.T) {
+	const s3MaxKeyBytes = 1024
+
+	name := strings.Repeat("a", maxSegmentChars)
+	// Unreserved characters encode one to one, so this is both the longest key that
+	// validates and the longest one that survives encoding.
+	key := strings.Repeat("k", MaxEncodedKeyBytes)
+	require.NoError(t, ValidateKey(key), "the longest accepted key has to be accepted")
+
+	namespaces := map[string]string{
+		"base":                   BaseNamespace,
+		"pull request, short id": PullRequestNamespace("https://github.com/org/repo/pull/4294967295", "4294967295"),
+		"pull request, hostile":  PullRequestNamespace("https://github.com/org/repo/pull/1", strings.Repeat("../", 1000)),
+		"pull request, huge ref": PullRequestNamespace("https://github.com/org/repo/pull/2", strings.Repeat("b", 4096)),
+		// The case that actually exercises maxNamespaceIdentifierChars. The two above
+		// are hashed by the older segment rules whatever this cap says - one is not a
+		// legal segment, the other is past maxSegmentChars - so neither would notice if
+		// the cap went. A branch name of this length is an ordinary one.
+		"pull request, long but legal ref": PullRequestNamespace("https://github.com/org/repo/pull/3", strings.Repeat("b", 200)),
+	}
+
+	for label, namespace := range namespaces {
+		assert.LessOrEqual(t, len(namespace), maxNamespaceChars,
+			"%s: the namespace has to stay inside the budget the key was sized against", label)
+
+		for _, scope := range []Scope{ScopeWorkflow, ScopeEnvironment} {
+			object := ObjectName(name, name, scope, namespace, key)
+			assert.LessOrEqual(t, len(object), s3MaxKeyBytes,
+				"%s / %s: an accepted key must produce a storable object name", label, scope)
+
+			// The prefix a restore lists under has to fit too, or the lookup fails
+			// where the save would have succeeded.
+			assert.LessOrEqual(t, len(ObjectNamePrefix(name, name, scope, namespace, key)), s3MaxKeyBytes,
+				"%s / %s: the restore prefix has to fit as well", label, scope)
+		}
+	}
+}
+
+// TestPullRequestNamespaceSeparatesRepositories is the property a pull request number
+// cannot carry on its own.
+//
+// One workflow can be the target of triggers watching different repositories, and pull
+// request numbers restart at 1 in each of them. Keying the namespace on the number alone
+// put #42 over there and #42 over here in the same folder, where each could read what the
+// other stored and seed what the other restores - which is the isolation the namespaces
+// exist to provide, lost between two untrusted runs instead of between one and a trusted
+// run.
+func TestPullRequestNamespaceSeparatesRepositories(t *testing.T) {
+	const (
+		repoA = "https://github.com/acme/api/pull/42"
+		repoB = "https://github.com/acme/web/pull/42"
+		// A different host entirely, in case identity were taken from the path alone.
+		repoC = "https://git.example.com/acme/api/pull/42"
+	)
+
+	a := PullRequestNamespace(repoA, "42")
+	b := PullRequestNamespace(repoB, "42")
+	c := PullRequestNamespace(repoC, "42")
+
+	assert.NotEqual(t, a, b, "the same number in two repositories must not share a namespace")
+	assert.NotEqual(t, a, c, "nor across hosts")
+	assert.NotEqual(t, b, c)
+
+	// The same pull request resolves the same way every run, or it would never hit its
+	// own cache.
+	assert.Equal(t, a, PullRequestNamespace(repoA, "42"))
+
+	// The number stays legible, which is the whole reason it is not simply hashed away.
+	assert.True(t, strings.HasPrefix(a, "pr-42-"), "got %q", a)
+
+	t.Run("a long head ref still carries the repository", func(t *testing.T) {
+		ref := strings.Repeat("feature/", 40)
+		x := PullRequestNamespace(repoA, ref)
+		y := PullRequestNamespace(repoB, ref)
+		assert.NotEqual(t, x, y, "the digested form has to include the repository too")
+		assert.LessOrEqual(t, len(x), maxNamespaceChars)
+	})
+
+	t.Run("the two forms cannot be confused", func(t *testing.T) {
+		// A readable namespace and a digested one are told apart by the underscore, so
+		// no identifier can be chosen to spell a namespace of the other shape.
+		readable := PullRequestNamespace(repoA, "42")
+		digested := PullRequestNamespace(repoA, strings.Repeat("z", 200))
+		assert.False(t, strings.HasPrefix(readable, pullRequestNamespacePrefix+"_"))
+		assert.True(t, strings.HasPrefix(digested, pullRequestNamespacePrefix+"_"))
+	})
+
+	t.Run("a trigger that reported no URL keeps the older shape", func(t *testing.T) {
+		// Ambiguous, and unavoidably so - there is nothing to distinguish repositories
+		// by. Pinned so that it is a decision rather than a regression.
+		assert.Equal(t, "pr-42", PullRequestNamespace("", "42"))
+	})
+}
+
+// TestResolveNamespacesUsesTheRepository covers the same property through the decision
+// the control planes actually call.
+func TestResolveNamespacesUsesTheRepository(t *testing.T) {
+	config := func(pairs map[string]string) map[string]testkube.TestWorkflowExecutionConfigValue {
+		out := make(map[string]testkube.TestWorkflowExecutionConfigValue, len(pairs))
+		for k, v := range pairs {
+			out[k] = testkube.TestWorkflowExecutionConfigValue{Value: v}
+		}
+		return out
+	}
+
+	a, readOnlyA := ResolveNamespaces(config(map[string]string{
+		ConfigKeyPRNumber: "42",
+		ConfigKeyPRURL:    "https://github.com/acme/api/pull/42",
+	}))
+	b, _ := ResolveNamespaces(config(map[string]string{
+		ConfigKeyPRNumber: "42",
+		ConfigKeyPRURL:    "https://github.com/acme/web/pull/42",
+	}))
+
+	assert.NotEqual(t, a, b, "two repositories, one number, two namespaces")
+	assert.Equal(t, BaseNamespace, readOnlyA, "both still read the base namespace")
+
+	// A URL on its own still marks the run as a pull request's.
+	only, readOnly := ResolveNamespaces(config(map[string]string{
+		ConfigKeyPRURL: "https://github.com/acme/api/pull/42",
+	}))
+	assert.NotEqual(t, BaseNamespace, only)
+	assert.Equal(t, BaseNamespace, readOnly)
+
+	// And a run with no git metadata at all is still trusted.
+	trusted, none := ResolveNamespaces(nil)
+	assert.Equal(t, BaseNamespace, trusted)
+	assert.Empty(t, none)
 }

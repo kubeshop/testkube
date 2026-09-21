@@ -158,13 +158,19 @@ func (c *Client) SetExpirationPolicies(policy ExpirationPolicy) error {
 	}
 
 	merged := mergeLifecycleRules(existing, owned)
-	return c.minioClient.SetBucketLifecycle(context.TODO(), c.bucket, &lifecycle.Configuration{Rules: merged})
+
+	ctx, cancel := context.WithTimeout(context.Background(), lifecycleCallTimeout)
+	defer cancel()
+	return c.minioClient.SetBucketLifecycle(ctx, c.bucket, &lifecycle.Configuration{Rules: merged})
 }
 
 // currentLifecycleRules reads what the bucket already has, treating "no lifecycle" as
 // an empty set rather than an error.
 func (c *Client) currentLifecycleRules() ([]lifecycle.Rule, error) {
-	config, err := c.minioClient.GetBucketLifecycle(context.TODO(), c.bucket)
+	ctx, cancel := context.WithTimeout(context.Background(), lifecycleCallTimeout)
+	defer cancel()
+
+	config, err := c.minioClient.GetBucketLifecycle(ctx, c.bucket)
 	if err != nil {
 		if minio.ToErrorResponse(err).Code == noSuchLifecycleConfiguration {
 			return nil, nil
@@ -353,6 +359,47 @@ func (c *Client) ListObjectsFromBucket(ctx context.Context, bucket, prefix strin
 	}
 
 	return objects, nil
+}
+
+// StreamObjectsFromBucket hands every object under a prefix to visit, one at a time.
+//
+// The listing is already a stream underneath; this exposes it rather than collecting it,
+// so a caller that only needs to keep the best candidate holds one object instead of the
+// whole prefix. A missing bucket is an empty stream rather than an error, matching
+// ListObjectsFromBucket: a cold cache is the normal first state.
+func (c *Client) StreamObjectsFromBucket(ctx context.Context, bucket, prefix string, visit func(storage.ObjectInfo) error) error {
+	if err := c.Connect(); err != nil {
+		return err
+	}
+
+	exists, err := c.minioClient.BucketExists(ctx, bucket)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		c.Log.Debugw("bucket doesn't exist", "bucket", bucket)
+		return ErrArtifactsNotFound
+	}
+
+	// Cancelled as soon as visit is done with the stream, so a caller that stops early
+	// does not leave the listing goroutine producing into a channel nobody reads.
+	listCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	for obj := range c.minioClient.ListObjects(listCtx, bucket, minio.ListObjectsOptions{Prefix: prefix, Recursive: true}) {
+		if obj.Err != nil {
+			return obj.Err
+		}
+		if err := visit(storage.ObjectInfo{
+			Key:          obj.Key,
+			Size:         obj.Size,
+			LastModified: obj.LastModified,
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // ListFiles lists available files in the bucket from the config
@@ -896,6 +943,12 @@ const (
 	// already reachable, so it should finish quickly or not hold anything up.
 	conditionalProbeExpiry  = 2 * time.Minute
 	conditionalProbeTimeout = 15 * time.Second
+
+	// lifecycleCallTimeout bounds the two lifecycle calls. They run at startup, on the
+	// shared transport, which carries no overall deadline of its own - so without this
+	// a store that accepts the connection and then stalls holds up the boot rather
+	// than failing it, and the log line that would say why never arrives.
+	lifecycleCallTimeout = 30 * time.Second
 )
 
 // PresignCreateFileToBucket returns a presigned PUT that fails if the object is already
@@ -950,7 +1003,15 @@ func (c *Client) ProbeConditionalWrite(ctx context.Context, bucket, keyPrefix st
 	}
 	object := fmt.Sprintf("%s/.probe/%d", strings.TrimRight(keyPrefix, "/"), suffix)
 	defer func() {
-		if err := c.DeleteFileFromBucket(context.TODO(), bucket, "", object); err != nil {
+		// Its own deadline, and deliberately not the caller's. Not the caller's,
+		// because the probe may be returning precisely because that context was
+		// cancelled and the object still wants removing; its own, because this runs in
+		// a defer and the delete goes through the shared transport, which has no
+		// overall deadline - a stalled store would otherwise keep this function from
+		// returning at all, long after whoever called it had given up on it.
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), conditionalProbeTimeout)
+		defer cancel()
+		if err := c.DeleteFileFromBucket(cleanupCtx, bucket, "", object); err != nil {
 			c.Log.Debugw("could not remove the conditional-write probe object", "object", object, "error", err)
 		}
 	}()

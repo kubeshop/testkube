@@ -1,6 +1,7 @@
 package expressions
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -323,11 +324,14 @@ func TestCompileStandardLib(t *testing.T) {
 	assert.Equal(t, `"''"`, MustCompile(`shellquote(null)`).String())
 	assert.Equal(t, `["a","b","c","a b c"]`, MustCompile(`shellparse("a b c 'a b c'")`).String())
 	assert.Equal(t, `"abc  d"`, MustCompile(`trim("   abc  d  \n  ")`).String())
-	// sha256("abc"+NUL), i.e. the argument separator is part of the digest.
-	assert.Equal(t, `"dc1114cd074914bd872cc1f9a23ec910ea2203bc79779ab2e17da25782a624fc"`,
+	// sha256 over the framed argument: the kind byte, the length, then the bytes. The
+	// framing is part of the digest, so this value changed when it replaced the NUL
+	// separator - deliberately, because that separator let two different argument
+	// lists hash the same.
+	assert.Equal(t, `"4c0e77880c912423baf4c28c3ae0acbd03fd673aa879267ccea5256bf5aa9a2d"`,
 		MustCompile(`hash("abc")`).String())
 	assert.Len(t, MustCompile(`hash("abc")`).String(), 66) // 64 hex chars plus the quotes
-	// The separator is what keeps these apart.
+	// The framing is what keeps these apart.
 	assert.NotEqual(t, MustCompile(`hash("ab")`).String(), MustCompile(`hash("a","b")`).String())
 	// Non-strings hash their canonical JSON, so map key order cannot shift the digest.
 	assert.Equal(t, MustCompile(`hash({"a":1,"b":2})`).String(), MustCompile(`hash({"b":2,"a":1})`).String())
@@ -426,7 +430,7 @@ func TestCompileHashDefersFileArgument(t *testing.T) {
 	// Still deferred when only one of several arguments is unresolved.
 	assert.Equal(t, `hash("npm",file("go.sum"))`, MustCompile(`hash("npm", file("go.sum"))`).String())
 	// A fully literal argument folds, which is both harmless and wanted.
-	assert.Equal(t, `"dc1114cd074914bd872cc1f9a23ec910ea2203bc79779ab2e17da25782a624fc"`,
+	assert.Equal(t, `"4c0e77880c912423baf4c28c3ae0acbd03fd673aa879267ccea5256bf5aa9a2d"`,
 		MustCompile(`hash("abc")`).String())
 }
 
@@ -559,4 +563,41 @@ func TestTemplateExpressionsAgreesWithTheCompiler(t *testing.T) {
 		assert.Equal(t, compileErr == nil, extractErr == nil,
 			"%q: the two have to agree on whether the template parses", tpl)
 	}
+}
+
+// TestHashFramesArgumentsUnambiguously covers the collision a separator cannot avoid.
+//
+// The arguments were joined with a NUL byte, which only separates if a NUL cannot occur
+// inside one. It can: file() hands the bytes of a file through as a string, so any binary
+// input carries them. hash("a", "b") and hash("a\x00b") both came to a\x00b\x00, so two
+// different dependency sets produced one cache key - and the second run restored what the
+// first had stored.
+func TestHashFramesArgumentsUnambiguously(t *testing.T) {
+	hash := func(args ...string) string {
+		quoted := make([]string, len(args))
+		for i, a := range args {
+			b, err := json.Marshal(a)
+			require.NoError(t, err)
+			quoted[i] = string(b)
+		}
+		out, err := EvalTemplate("{{ hash(" + strings.Join(quoted, ",") + ") }}")
+		require.NoError(t, err)
+		return out
+	}
+
+	// The case that collided.
+	assert.NotEqual(t, hash("a", "b"), hash("a\x00b"))
+
+	// And the family it belongs to: where the split falls has to matter, wherever the
+	// NUL bytes are.
+	assert.NotEqual(t, hash("a\x00", "b"), hash("a", "\x00b"))
+	assert.NotEqual(t, hash("", "ab"), hash("ab", ""))
+	assert.NotEqual(t, hash("a", "b", "c"), hash("a\x00b", "c"))
+
+	// The original property still holds.
+	assert.NotEqual(t, hash("a", "b"), hash("ab"))
+
+	// And the same input still hashes the same way, or no cache would ever hit.
+	assert.Equal(t, hash("a", "b"), hash("a", "b"))
+	assert.Len(t, hash("a"), 64)
 }

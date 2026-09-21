@@ -339,6 +339,20 @@ func (mr *MockClientMockRecorder) SaveFile(ctx, bucketFolder, filePath any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveFile", reflect.TypeOf((*MockClient)(nil).SaveFile), ctx, bucketFolder, filePath)
 }
 
+// StreamObjectsFromBucket mocks base method.
+func (m *MockClient) StreamObjectsFromBucket(ctx context.Context, bucket, prefix string, visit func(ObjectInfo) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StreamObjectsFromBucket", ctx, bucket, prefix, visit)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StreamObjectsFromBucket indicates an expected call of StreamObjectsFromBucket.
+func (mr *MockClientMockRecorder) StreamObjectsFromBucket(ctx, bucket, prefix, visit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamObjectsFromBucket", reflect.TypeOf((*MockClient)(nil).StreamObjectsFromBucket), ctx, bucket, prefix, visit)
+}
+
 // UploadFile mocks base method.
 func (m *MockClient) UploadFile(ctx context.Context, bucketFolder, filePath string, reader io.Reader, objectSize int64) error {
 	m.ctrl.T.Helper()

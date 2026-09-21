@@ -54,6 +54,15 @@ type ClientBucket interface {
 	// ListObjectsFromBucket lists objects under a prefix, stopping after limit entries.
 	// limit of 0 means unlimited.
 	ListObjectsFromBucket(ctx context.Context, bucket, prefix string, limit int) ([]ObjectInfo, error)
+	// StreamObjectsFromBucket calls visit for every object under a prefix, in whatever
+	// order the store produces them, and stops early when visit returns an error.
+	//
+	// It exists for callers that select rather than collect. Taking a bounded page and
+	// choosing from it only works when the store's order and the caller's criterion
+	// agree - and a store orders lexically, so a caller choosing by recency has to see
+	// every candidate. Holding them all is not an option either, for a prefix with no
+	// cardinality bound, which leaves streaming.
+	StreamObjectsFromBucket(ctx context.Context, bucket, prefix string, visit func(ObjectInfo) error) error
 	DeleteBucket(ctx context.Context, bucket string, force bool) error
 	BucketExists(ctx context.Context, bucket string) (bool, error)
 	ListBuckets(ctx context.Context) ([]string, error)

@@ -3,6 +3,7 @@ package controlplane
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/executioncache"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
@@ -35,7 +37,7 @@ func newCacheServer(t *testing.T) (*Server, *storage.MockClient, *testworkflow.M
 	return &Server{
 		storageClient:     storageClient,
 		resultsRepository: repository,
-		cfg:               Config{StorageBucket: cacheTestBucket},
+		cfg:               Config{StorageBucket: cacheTestBucket, Logger: log.DefaultLogger},
 		envID:             cacheTestEnv,
 	}, storageClient, repository
 }
@@ -57,22 +59,35 @@ func cacheObject(scope executioncache.Scope, key string) string {
 
 // expectExactProbe mirrors the handler's direct lookup of the exact key.
 //
-// It runs before the scope listing on purpose: a scope holding more entries than
-// MaxCacheRestoreCandidates could otherwise hide an exact hit behind the limit, so the
-// key a workflow actually asked for is never left to chance. Passing no entries makes
-// the probe a miss and the scope listing below is then what answers.
+// It asks for the one object directly rather than looking for it among the restore
+// keys' candidates, so the key a workflow actually asked for is answered by a single
+// lookup and never depends on a search. Passing no entries makes the probe a miss, and
+// the restore keys below are then what answer.
 func expectExactProbe(storageClient *storage.MockClient, objectName string, entries ...storage.ObjectInfo) {
 	storageClient.EXPECT().
 		ListObjectsFromBucket(gomock.Any(), cacheTestBucket, objectName, 1).
 		Return(entries, nil)
 }
 
-// expectScopeListing mirrors the bounded listing of everything a scope can see, which
-// is what the restore keys are matched against.
+// expectScopeListing mirrors the stream of everything under a restore key's prefix, which
+// is what that key's candidate is chosen from.
+//
+// Unbounded on purpose: a store lists lexically while the choice is made on recency, so
+// any cap could hide the newest entry behind ones that merely sort earlier.
 func expectScopeListing(storageClient *storage.MockClient, entries []storage.ObjectInfo, err error) *gomock.Call {
 	return storageClient.EXPECT().
-		ListObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), MaxCacheRestoreCandidates).
-		Return(entries, err)
+		StreamObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, _ string, visit func(storage.ObjectInfo) error) error {
+			if err != nil {
+				return err
+			}
+			for _, entry := range entries {
+				if visitErr := visit(entry); visitErr != nil {
+					return visitErr
+				}
+			}
+			return nil
+		})
 }
 
 func TestGetExecutionCachePresigned(t *testing.T) {
@@ -84,7 +99,7 @@ func TestGetExecutionCachePresigned(t *testing.T) {
 		// The probe answers, so the scope is never listed at all.
 		expectExactProbe(storageClient, wanted, storage.ObjectInfo{Key: wanted, Size: 42, LastModified: time.Now()})
 		storageClient.EXPECT().
-			ListObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), MaxCacheRestoreCandidates).
+			StreamObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), gomock.Any()).
 			Times(0)
 		storageClient.EXPECT().
 			PresignDownloadFileFromBucket(gomock.Any(), cacheTestBucket, "", wanted, CachePresignedURLExpiration).
@@ -132,9 +147,11 @@ func TestGetExecutionCachePresigned(t *testing.T) {
 		expectExecution(repository, cacheTestWorkflow)
 
 		expectExactProbe(storageClient, cacheObject(executioncache.ScopeWorkflow, "npm-absent"))
-		expectScopeListing(storageClient, []storage.ObjectInfo{
-			{Key: cacheObject(executioncache.ScopeWorkflow, "unrelated"), LastModified: time.Now()},
-		}, nil)
+		// With the only restore key dropped there is no prefix left to search, so
+		// nothing is listed at all - which is a stronger statement of the same claim.
+		storageClient.EXPECT().
+			StreamObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), gomock.Any()).
+			Times(0)
 
 		res, err := server.GetExecutionCachePresigned(context.Background(), &cloud.GetExecutionCachePresignedRequest{
 			Id: "exec-1", Key: "npm-absent", RestoreKeys: []string{""},
@@ -149,7 +166,6 @@ func TestGetExecutionCachePresigned(t *testing.T) {
 		expectExecution(repository, cacheTestWorkflow)
 
 		expectExactProbe(storageClient, cacheObject(executioncache.ScopeWorkflow, "npm-abc"))
-		expectScopeListing(storageClient, nil, nil)
 
 		res, err := server.GetExecutionCachePresigned(context.Background(), &cloud.GetExecutionCachePresignedRequest{
 			Id: "exec-1", Key: "npm-abc",
@@ -172,7 +188,9 @@ func TestGetExecutionCachePresigned(t *testing.T) {
 		expectScopeListing(storageClient, nil, minio.ErrArtifactsNotFound)
 
 		res, err := server.GetExecutionCachePresigned(context.Background(), &cloud.GetExecutionCachePresignedRequest{
-			Id: "exec-1", Key: "npm-abc",
+			// A restore key, so that the prefix listing is reached at all - without one
+			// the exact probe is the only lookup there is.
+			Id: "exec-1", Key: "npm-abc", RestoreKeys: []string{"npm-"},
 		})
 
 		require.NoError(t, err)
@@ -187,16 +205,18 @@ func TestGetExecutionCachePresigned(t *testing.T) {
 
 		var listed string
 		expectExactProbe(storageClient, cacheObject(executioncache.ScopeEnvironment, "npm-abc"))
-		expectScopeListing(storageClient, nil, nil).
-			DoAndReturn(func(_ context.Context, _, prefix string, _ int) ([]storage.ObjectInfo, error) {
+		storageClient.EXPECT().
+			StreamObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, _, prefix string, _ func(storage.ObjectInfo) error) error {
 				listed = prefix
-				return nil, nil
+				return nil
 			})
 
 		_, err := server.GetExecutionCachePresigned(context.Background(), &cloud.GetExecutionCachePresignedRequest{
-			Id:    "exec-1",
-			Key:   "npm-abc",
-			Scope: cloud.ExecutionCacheScope_EXECUTION_CACHE_SCOPE_ENVIRONMENT,
+			Id:          "exec-1",
+			Key:         "npm-abc",
+			RestoreKeys: []string{"npm-"},
+			Scope:       cloud.ExecutionCacheScope_EXECUTION_CACHE_SCOPE_ENVIRONMENT,
 		})
 
 		require.NoError(t, err)
@@ -421,13 +441,19 @@ func expectPullRequestExecution(repository *testworkflow.MockRepository, prNumbe
 		Workflow: &testkube.TestWorkflow{Name: cacheTestWorkflow},
 		ConfigParams: map[string]testkube.TestWorkflowExecutionConfigValue{
 			executioncache.ConfigKeyPRNumber: {Value: prNumber},
+			executioncache.ConfigKeyPRURL:    {Value: cacheTestPRRepository + prNumber},
 		},
 	}, nil).AnyTimes()
 }
 
+// cacheTestPRRepository is where the pull request URL the trigger records points. The
+// namespace is derived from it as well as from the number, because a number is unique
+// only within the repository that issued it.
+const cacheTestPRRepository = "https://github.com/acme/api/pull/"
+
 func prCacheObject(prNumber string, scope executioncache.Scope, key string) string {
 	return executioncache.ObjectName(cacheTestEnv, cacheTestWorkflow, scope,
-		executioncache.PullRequestNamespace(prNumber), key)
+		executioncache.PullRequestNamespace(cacheTestPRRepository+prNumber, prNumber), key)
 }
 
 // TestResolveNamespaces pins which runs are treated as a pull request's.
@@ -456,8 +482,10 @@ func TestResolveNamespaces(t *testing.T) {
 	t.Run("a pull request writes its own namespace and reads the base one", func(t *testing.T) {
 		namespace, readOnly := executioncache.ResolveNamespaces(map[string]testkube.TestWorkflowExecutionConfigValue{
 			executioncache.ConfigKeyPRNumber: {Value: "42"},
+			// The repository too, because a number is unique only within one.
+			executioncache.ConfigKeyPRURL: {Value: cacheTestPRRepository + "42"},
 		})
-		assert.Equal(t, executioncache.PullRequestNamespace("42"), namespace)
+		assert.Equal(t, executioncache.PullRequestNamespace(cacheTestPRRepository+"42", "42"), namespace)
 		assert.Equal(t, base, readOnly)
 	})
 
@@ -465,7 +493,7 @@ func TestResolveNamespaces(t *testing.T) {
 		namespace, _ := executioncache.ResolveNamespaces(map[string]testkube.TestWorkflowExecutionConfigValue{
 			executioncache.ConfigKeyPRHeadRef: {Value: "feature/login"},
 		})
-		assert.Equal(t, executioncache.PullRequestNamespace("feature/login"), namespace)
+		assert.Equal(t, executioncache.PullRequestNamespace("", "feature/login"), namespace)
 	})
 
 	t.Run("an empty value is not a pull request", func(t *testing.T) {
@@ -512,15 +540,17 @@ func TestPullRequestCannotWriteWhereATrustedRunReads(t *testing.T) {
 		server, storageClient, repository := newCacheServer(t)
 		expectExecution(repository, cacheTestWorkflow)
 
-		basePrefix := executioncache.ScopePrefix(cacheTestEnv, cacheTestWorkflow,
-			executioncache.ScopeWorkflow, executioncache.BaseNamespace) + "/"
+		basePrefix := executioncache.ObjectNamePrefix(cacheTestEnv, cacheTestWorkflow,
+			executioncache.ScopeWorkflow, executioncache.BaseNamespace, "npm-")
+		require.Contains(t, basePrefix, "/"+executioncache.BaseNamespace+"/",
+			"the restore key is searched under the base namespace, not across the scope")
 
 		expectExactProbe(storageClient, cacheObject(executioncache.ScopeWorkflow, "npm-abc"))
-		// The listing is rooted at the base namespace, so a restore key however broad
-		// cannot reach an entry a pull request stored.
+		// The listing is rooted inside the base namespace, so a restore key however
+		// broad cannot reach an entry a pull request stored.
 		storageClient.EXPECT().
-			ListObjectsFromBucket(gomock.Any(), cacheTestBucket, basePrefix, MaxCacheRestoreCandidates).
-			Return(nil, nil)
+			StreamObjectsFromBucket(gomock.Any(), cacheTestBucket, basePrefix, gomock.Any()).
+			Return(nil)
 
 		res, err := server.GetExecutionCachePresigned(context.Background(), &cloud.GetExecutionCachePresignedRequest{
 			Id: "exec-1", Key: "npm-abc", RestoreKeys: []string{"npm-", ""},
@@ -561,14 +591,15 @@ func TestPullRequestFallsBackToTheBaseNamespace(t *testing.T) {
 		own := prCacheObject("42", executioncache.ScopeWorkflow, "npm-abc")
 		base := cacheObject(executioncache.ScopeWorkflow, "npm-abc")
 
-		ownPrefix := executioncache.ScopePrefix(cacheTestEnv, cacheTestWorkflow,
-			executioncache.ScopeWorkflow, executioncache.PullRequestNamespace("42")) + "/"
+		ownPrefix := executioncache.ObjectNamePrefix(cacheTestEnv, cacheTestWorkflow,
+			executioncache.ScopeWorkflow,
+			executioncache.PullRequestNamespace(cacheTestPRRepository+"42", "42"), "npm-")
 
 		// Its own namespace: nothing, either exactly or by prefix.
 		expectExactProbe(storageClient, own)
 		storageClient.EXPECT().
-			ListObjectsFromBucket(gomock.Any(), cacheTestBucket, ownPrefix, MaxCacheRestoreCandidates).
-			Return(nil, nil)
+			StreamObjectsFromBucket(gomock.Any(), cacheTestBucket, ownPrefix, gomock.Any()).
+			Return(nil)
 
 		// Then the base one, which has it.
 		expectExactProbe(storageClient, base, storage.ObjectInfo{Key: base, Size: 9, LastModified: time.Now()})
@@ -577,7 +608,7 @@ func TestPullRequestFallsBackToTheBaseNamespace(t *testing.T) {
 			Return("https://storage/base", nil)
 
 		res, err := server.GetExecutionCachePresigned(context.Background(), &cloud.GetExecutionCachePresignedRequest{
-			Id: "exec-1", Key: "npm-abc",
+			Id: "exec-1", Key: "npm-abc", RestoreKeys: []string{"npm-"},
 		})
 
 		require.NoError(t, err)
@@ -590,4 +621,224 @@ func TestPullRequestFallsBackToTheBaseNamespace(t *testing.T) {
 		_, ok := scope.readOnly()
 		assert.False(t, ok, "a trusted run already writes the namespace it would read")
 	})
+}
+
+// TestRestoreListsUnderEachKeyRatherThanTheScope pins where a restore looks.
+//
+// The candidate limit applies to each listing, and a store returns that page in lexical
+// order. Listing the whole scope and filtering afterwards therefore spent the entire
+// budget on keys that could not match, and in a scope with many entries the matches sat
+// past the end of the page - surfacing as a miss, or as an older entry winning over a
+// newer one that was never listed at all. Entries are immutable and leave only on expiry,
+// so a busy scope reaches that size as a matter of course.
+func TestRestoreListsUnderEachKeyRatherThanTheScope(t *testing.T) {
+	t.Run("one listing per restore key, rooted at that key", func(t *testing.T) {
+		server, storageClient, repository := newCacheServer(t)
+		expectExecution(repository, cacheTestWorkflow)
+
+		scopePrefix := executioncache.ScopePrefix(cacheTestEnv, cacheTestWorkflow,
+			executioncache.ScopeWorkflow, executioncache.BaseNamespace) + "/"
+		npm := executioncache.ObjectNamePrefix(cacheTestEnv, cacheTestWorkflow,
+			executioncache.ScopeWorkflow, executioncache.BaseNamespace, "npm-")
+		yarn := executioncache.ObjectNamePrefix(cacheTestEnv, cacheTestWorkflow,
+			executioncache.ScopeWorkflow, executioncache.BaseNamespace, "yarn-")
+		require.NotEqual(t, scopePrefix, npm, "the fixture asserts nothing if these are the same")
+
+		var listed []string
+		expectExactProbe(storageClient, cacheObject(executioncache.ScopeWorkflow, "npm-abc"))
+		storageClient.EXPECT().
+			StreamObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, _, prefix string, _ func(storage.ObjectInfo) error) error {
+				listed = append(listed, prefix)
+				return nil
+			}).Times(2)
+
+		_, err := server.GetExecutionCachePresigned(context.Background(), &cloud.GetExecutionCachePresignedRequest{
+			Id: "exec-1", Key: "npm-abc", RestoreKeys: []string{"npm-", "yarn-"},
+		})
+
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []string{npm, yarn}, listed)
+		assert.NotContains(t, listed, scopePrefix,
+			"listing the scope spends the candidate limit on keys that cannot match")
+	})
+
+	t.Run("a later restore key is never read once an earlier one matches", func(t *testing.T) {
+		// The declared order is the author saying which fallback they prefer, so the
+		// first key with any match wins even when a later one holds something newer.
+		// Streaming each key separately is what makes that observable: the second
+		// prefix is not merely ignored, it is never asked for - which also means the
+		// same object arriving under two nested keys can no longer compete with itself.
+		server, storageClient, repository := newCacheServer(t)
+		expectExecution(repository, cacheTestWorkflow)
+
+		shared := cacheObject(executioncache.ScopeWorkflow, "npm-v3-abc")
+		narrow := executioncache.ObjectNamePrefix(cacheTestEnv, cacheTestWorkflow,
+			executioncache.ScopeWorkflow, executioncache.BaseNamespace, "npm-v3-")
+
+		expectExactProbe(storageClient, cacheObject(executioncache.ScopeWorkflow, "npm-absent"))
+		storageClient.EXPECT().
+			StreamObjectsFromBucket(gomock.Any(), cacheTestBucket, narrow, gomock.Any()).
+			DoAndReturn(func(_ context.Context, _, _ string, visit func(storage.ObjectInfo) error) error {
+				return visit(storage.ObjectInfo{Key: shared, LastModified: time.Now()})
+			}).Times(1)
+		storageClient.EXPECT().
+			PresignDownloadFileFromBucket(gomock.Any(), cacheTestBucket, "", shared, CachePresignedURLExpiration).
+			Return("https://storage/shared", nil)
+
+		res, err := server.GetExecutionCachePresigned(context.Background(), &cloud.GetExecutionCachePresignedRequest{
+			Id: "exec-1", Key: "npm-absent", RestoreKeys: []string{"npm-v3-", "npm-"},
+		})
+
+		require.NoError(t, err)
+		assert.True(t, res.Hit)
+		assert.Equal(t, "npm-v3-abc", res.MatchedKey)
+	})
+}
+
+// TestRestoreIsNotBoundedByAPage is the property the streaming lookup exists for.
+//
+// A store lists lexically; this policy selects on recency. Any cap on the listing could
+// therefore hide the newest entry behind entries that merely sort before it, and the
+// restore would resolve to an older dependency set rather than miss - silently, and for
+// every run until the entry expired. Cache entries are immutable and have no cardinality
+// limit, so a prefix reaches any fixed cap in the ordinary course of things.
+func TestRestoreIsNotBoundedByAPage(t *testing.T) {
+	server, storageClient, repository := newCacheServer(t)
+	expectExecution(repository, cacheTestWorkflow)
+
+	// Far more than any page the old lookup would have taken, with the newest entry
+	// sorting last so that a cap of any size would miss it.
+	const count = 5000
+	newest := cacheObject(executioncache.ScopeWorkflow, "npm-zzzz-newest")
+
+	expectExactProbe(storageClient, cacheObject(executioncache.ScopeWorkflow, "npm-absent"))
+	storageClient.EXPECT().
+		StreamObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, _ string, visit func(storage.ObjectInfo) error) error {
+			base := time.Now().Add(-24 * time.Hour)
+			for i := 0; i < count; i++ {
+				// Older, and sorting before the newest one.
+				if err := visit(storage.ObjectInfo{
+					Key:          cacheObject(executioncache.ScopeWorkflow, "npm-aaaa-"+strconv.Itoa(i)),
+					LastModified: base.Add(time.Duration(i) * time.Second),
+				}); err != nil {
+					return err
+				}
+			}
+			return visit(storage.ObjectInfo{Key: newest, LastModified: time.Now()})
+		})
+	storageClient.EXPECT().
+		PresignDownloadFileFromBucket(gomock.Any(), cacheTestBucket, "", newest, CachePresignedURLExpiration).
+		Return("https://storage/newest", nil)
+
+	res, err := server.GetExecutionCachePresigned(context.Background(), &cloud.GetExecutionCachePresignedRequest{
+		Id: "exec-1", Key: "npm-absent", RestoreKeys: []string{"npm-"},
+	})
+
+	require.NoError(t, err)
+	require.True(t, res.Hit)
+	assert.Equal(t, "npm-zzzz-newest", res.MatchedKey,
+		"the newest entry has to win however far into the listing it appears")
+}
+
+// TestRestoreRefusesAnOverlyBroadKey covers the bound on the reading.
+//
+// A restore must not be able to scan an unbounded number of objects, so the stream stops
+// at MaxRestoreCandidates. It must not answer from what it managed to read either: the
+// store lists lexically and the choice is on recency, so the best of a truncated run is
+// not the best of the prefix. A miss costs a reinstall; a wrong hit costs a build against
+// dependencies nobody asked for, and it lasts until that entry expires.
+func TestRestoreRefusesAnOverlyBroadKey(t *testing.T) {
+	server, storageClient, repository := newCacheServer(t)
+	expectExecution(repository, cacheTestWorkflow)
+
+	// The newest entry sorts last, so a truncated read would answer with an older one.
+	newest := cacheObject(executioncache.ScopeWorkflow, "npm-zzzz")
+
+	var offered int
+	expectExactProbe(storageClient, cacheObject(executioncache.ScopeWorkflow, "npm-absent"))
+	storageClient.EXPECT().
+		StreamObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, _ string, visit func(storage.ObjectInfo) error) error {
+			base := time.Now().Add(-24 * time.Hour)
+			for i := 0; i < executioncache.MaxRestoreCandidates+1000; i++ {
+				offered++
+				if err := visit(storage.ObjectInfo{
+					Key:          cacheObject(executioncache.ScopeWorkflow, "npm-aaaa-"+strconv.Itoa(i)),
+					LastModified: base,
+				}); err != nil {
+					return err
+				}
+			}
+			return visit(storage.ObjectInfo{Key: newest, LastModified: time.Now()})
+		})
+	// Nothing is signed: there is no answer to sign.
+	storageClient.EXPECT().
+		PresignDownloadFileFromBucket(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Times(0)
+
+	res, err := server.GetExecutionCachePresigned(context.Background(), &cloud.GetExecutionCachePresignedRequest{
+		Id: "exec-1", Key: "npm-absent", RestoreKeys: []string{"npm-"},
+	})
+
+	require.NoError(t, err, "an over-broad key is a miss, not a failed restore")
+	assert.False(t, res.Hit, "a truncated read must not be answered from")
+	assert.LessOrEqual(t, offered, executioncache.MaxRestoreCandidates+1,
+		"the listing has to stop at the cap rather than run to the end")
+}
+
+// TestRestoreRefusesTooManyRestoreKeys keeps one request from becoming any number of
+// listings.
+//
+// Each restore key is listed separately, and a pull request repeats the whole lookup in
+// the base namespace, so the work this request costs the store is set by a field the
+// agent fills in. The schema already bounds it at ten; without this the bound applies
+// only to workflows a cluster validated, not to what actually arrives over the wire.
+//
+// The mocks carry no expectations on purpose: the refusal has to come before the
+// execution is read and before any listing, so any call at all fails this test.
+func TestRestoreRefusesTooManyRestoreKeys(t *testing.T) {
+	server, _, _ := newCacheServer(t)
+
+	restoreKeys := make([]string, executioncache.MaxRestoreKeys+1)
+	for i := range restoreKeys {
+		restoreKeys[i] = "npm-" + strconv.Itoa(i)
+	}
+
+	res, err := server.GetExecutionCachePresigned(context.Background(), &cloud.GetExecutionCachePresignedRequest{
+		Id: "exec-1", Key: "npm-absent", RestoreKeys: restoreKeys,
+	})
+
+	require.Error(t, err)
+	assert.Equal(t, codes.InvalidArgument, status.Code(err))
+	assert.Nil(t, res)
+}
+
+// TestRestoreAcceptsTheFullAllowanceOfRestoreKeys is the other half of the bound: the
+// limit is the schema's, so a workflow declaring the most it may must still be served.
+func TestRestoreAcceptsTheFullAllowanceOfRestoreKeys(t *testing.T) {
+	server, storageClient, repository := newCacheServer(t)
+	expectExecution(repository, cacheTestWorkflow)
+
+	restoreKeys := make([]string, executioncache.MaxRestoreKeys)
+	for i := range restoreKeys {
+		restoreKeys[i] = "npm-" + strconv.Itoa(i)
+	}
+
+	expectExactProbe(storageClient, cacheObject(executioncache.ScopeWorkflow, "npm-absent"))
+	// One listing per key, all of them empty.
+	storageClient.EXPECT().
+		StreamObjectsFromBucket(gomock.Any(), cacheTestBucket, gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, _ string, _ func(storage.ObjectInfo) error) error {
+			return nil
+		}).
+		Times(executioncache.MaxRestoreKeys)
+
+	res, err := server.GetExecutionCachePresigned(context.Background(), &cloud.GetExecutionCachePresignedRequest{
+		Id: "exec-1", Key: "npm-absent", RestoreKeys: restoreKeys,
+	})
+
+	require.NoError(t, err, "the largest list the schema admits is not too large to answer")
+	assert.False(t, res.Hit)
 }

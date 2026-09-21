@@ -272,10 +272,22 @@ func runCacheRestore(ctx context.Context, encoded string, repository executionca
 	}
 
 	started := time.Now()
-	if err := downloadCache(ctx, entry.URL, spec.Paths); err != nil {
+	if wrote, err := downloadCache(ctx, entry.URL, spec.Paths); err != nil {
 		// A half-unpacked node_modules is worse than none: an install would find some
 		// of what it needs and skip the rest. Clear what was written and report a miss.
-		clearCachePaths(spec.Paths, out)
+		//
+		// Only when something actually was written, though. A failure that wrote
+		// nothing - an unreachable store, an expired grant, a 404 for an entry that
+		// expired between the grant and the fetch, a body that is not a gzip stream at
+		// all, a first entry rejected for landing outside the declared paths - has
+		// nothing to undo. And the declared paths are not necessarily empty to begin
+		// with: one under `mount: false` lives in a volume somebody else populated, and
+		// one inside the repository checkout holds the checkout. Clearing on those
+		// turned a cache miss, which is meant to leave the step exactly as it would have
+		// been with no cache configured, into deleting the step's own inputs.
+		if wrote {
+			clearCachePaths(spec.Paths, out)
+		}
 		fmt.Fprintf(out, "cache: miss for %q: could not restore the entry: %s\n", spec.Key, err.Error())
 		return nil
 	}
@@ -493,14 +505,19 @@ func cacheTempDir() string {
 // step has, including the repository checkout - so the declared cache paths are used
 // instead. A rejection is treated like any other failed restore: the paths are cleared
 // and the step reports a miss, rather than running against a tree that was filtered.
-func downloadCache(ctx context.Context, url string, allowedPaths []string) error {
+// wrote reports whether extraction created anything, which is what tells the caller
+// whether a failure left something to clean up. It is not "extraction was attempted": a
+// transfer can succeed and the archive still be rejected before the first entry is
+// created. It is sticky across retries, because an attempt that wrote part of a tree
+// leaves that tree behind even if a later attempt fails earlier.
+func downloadCache(ctx context.Context, url string, allowedPaths []string) (wrote bool, err error) {
 	client := &http.Client{Timeout: cacheTransferTimeout}
 
 	var lastErr error
 	for attempt := 1; attempt <= cacheRetryMaxAttempts; attempt++ {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
-			return err
+			return wrote, err
 		}
 		resp, err := client.Do(req)
 		if err == nil && resp.StatusCode != http.StatusOK {
@@ -509,24 +526,25 @@ func downloadCache(ctx context.Context, url string, allowedPaths []string) error
 			// grant may have expired. Neither is worth retrying.
 			if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusForbidden {
 				resp.Body.Close()
-				return err
+				return wrote, err
 			}
 		}
 		if err == nil {
 			err = common.UnpackTarball("/", resp.Body,
 				common.WithMaxTotalBytes(cacheMaxUnpackedSize),
 				common.WithMaxEntries(cacheMaxEntries),
-				common.WithAllowedRoots(allowedPaths...))
+				common.WithAllowedRoots(allowedPaths...),
+				common.WithWriteObserver(func() { wrote = true }))
 			resp.Body.Close()
 			if err == nil {
-				return nil
+				return wrote, nil
 			}
 		} else if resp != nil {
 			resp.Body.Close()
 		}
 		lastErr = err
 	}
-	return lastErr
+	return wrote, lastErr
 }
 
 // errCacheEntryWon reports that another execution stored this key first.
@@ -601,10 +619,32 @@ func uploadCache(ctx context.Context, url string, headers map[string]string, arc
 
 // clearCachePaths empties the cached directories without removing them, because an
 // auto-mounted path is a mount point and cannot be unlinked.
+//
+// A cached path that is a plain file is removed outright instead. Nothing stops a
+// workflow naming one, and it is the case that matters most here: os.ReadDir answers
+// ENOTDIR for it, so treating a read failure as "nothing to clean" left the restored
+// file in place. The step would then have gone on to consume cache content after the
+// restore had already reported a miss - the one outcome the cleanup exists to prevent,
+// reached by the one path that never looked like a failure.
 func clearCachePaths(paths []string, out io.Writer) {
 	for _, path := range paths {
+		info, err := os.Lstat(path)
+		if err != nil {
+			// Absent, which is nothing to clean rather than a problem: a restore that
+			// failed before creating anything is the ordinary case.
+			continue
+		}
+
+		if !info.IsDir() {
+			if err := os.Remove(path); err != nil {
+				fmt.Fprintf(out, "cache: could not remove %s after a failed restore: %s\n", path, err.Error())
+			}
+			continue
+		}
+
 		entries, err := os.ReadDir(path)
 		if err != nil {
+			fmt.Fprintf(out, "cache: could not read %s to clean it after a failed restore: %s\n", path, err.Error())
 			continue
 		}
 		for _, entry := range entries {

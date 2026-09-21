@@ -10,6 +10,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/executioncache"
+	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
@@ -18,10 +19,6 @@ const (
 	// dependency cache can be gigabytes, and the agent already allows 30 minutes per
 	// transfer attempt across several attempts.
 	CachePresignedURLExpiration = 60 * time.Minute
-
-	// MaxCacheRestoreCandidates bounds the listing behind a restore key, so a scope that
-	// has accumulated many entries cannot turn one lookup into an unbounded scan.
-	MaxCacheRestoreCandidates = 1000
 )
 
 // cacheScope is a resolved sharing scope: which environment and workflow an execution's
@@ -125,6 +122,31 @@ func (s *Server) listCacheEntries(ctx context.Context, prefix string, limit int)
 	return entries, nil
 }
 
+// streamCacheEntries hands every entry under a prefix to visit, without holding them.
+//
+// The same treatment of a missing bucket as listCacheEntries, and for the same reason: a
+// cold cache is the normal first state, not a fault.
+func (s *Server) streamCacheEntries(ctx context.Context, prefix string, visit func(executioncache.Entry) bool) error {
+	// Returned by visit to end the listing, and swallowed here: stopping early is the
+	// caller having read enough, not a failure of the store.
+	errEnough := errors.New("enough")
+
+	err := s.storageClient.StreamObjectsFromBucket(ctx, s.cfg.StorageBucket, prefix, func(object storage.ObjectInfo) error {
+		if !visit(executioncache.Entry{
+			Key:          object.Key,
+			Size:         object.Size,
+			LastModified: object.LastModified,
+		}) {
+			return errEnough
+		}
+		return nil
+	})
+	if errors.Is(err, errEnough) || errors.Is(err, minio.ErrArtifactsNotFound) {
+		return nil
+	}
+	return err
+}
+
 // GetExecutionCachePresigned grants read access to a step's dependency cache.
 func (s *Server) GetExecutionCachePresigned(ctx context.Context, req *cloud.GetExecutionCachePresignedRequest) (*cloud.GetExecutionCachePresignedResponse, error) {
 	if req.Id == "" {
@@ -132,6 +154,14 @@ func (s *Server) GetExecutionCachePresigned(ctx context.Context, req *cloud.GetE
 	}
 	if err := executioncache.ValidateKey(req.Key); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	// Every restore key costs a listing of the store, and the two lookups below double
+	// that, so the request cannot be allowed to name as many as it likes. The bound is
+	// the one the schema already sets on the workflow; refused here, before the
+	// execution is even loaded, so an over-long list costs nothing to turn away.
+	if len(req.RestoreKeys) > executioncache.MaxRestoreKeys {
+		return nil, status.Errorf(codes.InvalidArgument, "at most %d restore keys are allowed, got %d",
+			executioncache.MaxRestoreKeys, len(req.RestoreKeys))
 	}
 
 	scope, err := s.resolveCacheScope(ctx, req.Id, req.Scope)
@@ -197,11 +227,6 @@ func (s *Server) lookupCacheEntry(ctx context.Context, scope cacheScope, key str
 		}, nil
 	}
 
-	entries, err := s.listCacheEntries(ctx, scope.prefix()+"/", MaxCacheRestoreCandidates)
-	if err != nil {
-		return nil, err
-	}
-
 	prefixes := make([]string, 0, len(restoreKeys))
 	for _, restoreKey := range restoreKeys {
 		if restoreKey == "" {
@@ -211,11 +236,50 @@ func (s *Server) lookupCacheEntry(ctx context.Context, scope cacheScope, key str
 		}
 		prefixes = append(prefixes, scope.objectNamePrefix(restoreKey))
 	}
-
-	match, exact, found := executioncache.MatchRestore(entries, exactObject, prefixes)
-	if !found {
+	if len(prefixes) == 0 {
+		// Nothing left to try, so there is no reason to list anything at all.
 		return nil, nil
 	}
+
+	// Streamed under each restore key, in the order the workflow declared them, keeping
+	// only the best candidate for each.
+	//
+	// No page decides the answer. A store lists lexically while this policy selects on
+	// recency, so a page could hide the newest entry behind entries that merely sort
+	// before it, and the restore would resolve to an older dependency set rather than
+	// miss. Entries are immutable, leave only on expiry, and have no cardinality limit.
+	//
+	// The reading is still bounded, by MaxRestoreCandidates - one lookup must not be
+	// able to scan everything under a prefix. Reaching that bound produces a miss rather
+	// than the best of what was read, because the best of a truncated run is not the
+	// best of the prefix: a miss costs a reinstall, a wrong hit costs a build against
+	// dependencies nobody asked for, repeated until the entry expires.
+	//
+	// The first restore key with a match wins even if a later one holds a newer entry,
+	// because the order is the author stating which fallback they prefer. That is why
+	// each is streamed separately rather than all at once: the loop stops at the first
+	// one that matched, and never reads the rest.
+	var match executioncache.Entry
+	for _, prefix := range prefixes {
+		candidate := executioncache.NewRestoreCandidate(prefix)
+		if err := s.streamCacheEntries(ctx, prefix, candidate.Consider); err != nil {
+			return nil, err
+		}
+		if candidate.Overflowed() {
+			// Said out loud, because it is not an empty prefix and the workflow's author
+			// is the only one who can narrow the key.
+			s.cfg.Logger.Warnw("cache restore key matches more entries than can be chosen from, treating it as a miss",
+				"prefix", prefix, "limit", executioncache.MaxRestoreCandidates)
+		}
+		if best, ok := candidate.Best(); ok {
+			match = best
+			break
+		}
+	}
+	if match.Key == "" {
+		return nil, nil
+	}
+	exact := match.Key == exactObject
 
 	// The folder is left empty and the whole object name passed as the file, so the key
 	// that was matched is exactly the key that gets signed.
