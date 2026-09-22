@@ -85,7 +85,7 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 					// login methods: an unattended run cannot answer the method selector,
 					// so say what to re-run instead of asking a question nobody will see.
 					return nil, "", fmt.Errorf("token refresh failed and there is no terminal to log in from; "+
-						"re-run `testkube pro login` in an interactive shell, or set a non-expiring API key: %w", err)
+						"re-run `testkube pro login` in an interactive shell: %w", err)
 				}
 				authURI := cfg.CloudContext.AuthUri
 				if authURI == "" {

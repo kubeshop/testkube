@@ -1,9 +1,11 @@
 package ui
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 )
 
 // TestPromptsRefuseNonInteractiveStdin runs the guard in a subprocess because it exits the
@@ -16,7 +18,10 @@ func TestPromptsRefuseNonInteractiveStdin(t *testing.T) {
 		t.Run(prompt, func(t *testing.T) {
 			t.Parallel()
 
-			cmd := exec.Command(testBinary(t), "-test.run=TestPromptHelperUnderGuard", "-test.timeout=20s")
+			ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
+			defer cancel()
+
+			cmd := exec.CommandContext(ctx, testBinary(t), "-test.run=TestPromptHelperUnderGuard")
 			cmd.Env = append(cmd.Environ(), "TESTKUBE_UI_PROMPT="+prompt)
 			out, err := cmd.CombinedOutput()
 

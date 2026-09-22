@@ -338,6 +338,8 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 
 **Context Resolution**: Commands that act on a Control Plane environment resolve their target through [`cmd/kubectl-testkube/commands/common/orgenv.go`](cmd/kubectl-testkube/commands/common/orgenv.go). The precedence is an explicit `--org-id`/`--env-id`, then `--org-name`/`--env-name` resolved against the Control Plane's organization and environment listings, then an interactive selector when the terminal allows one. Name matching is exact, with a slug fallback for environments, and an ambiguous name is an error rather than an arbitrary pick. The resolved ids are persisted to `~/.testkube/config.json`, which is the context every later command reads.
 
+**Prompts**: Interactive prompts live in [`pkg/ui`](pkg/ui/) and all pass through the terminal check in [`pkg/ui/interactive.go`](pkg/ui/interactive.go). When stdin is not a terminal the prompt is refused with an actionable message instead of being drawn, which keeps unattended runs (CI, coding agents, containers without a TTY) from blocking on input nobody can supply. `ui.StdinIsInteractive()` exposes the same check so a command can choose a non-interactive path; `GetClient` uses it to refuse an automatic login when a token refresh fails without a terminal.
+
 **Client Layer**:
 
 - [`pkg/newclients/`](pkg/newclients/) - API clients for tests, testworkflows, webhooks
