@@ -28,6 +28,6 @@ func (ui *UI) requireInteractive(prompt string) {
 	if stdinIsInteractive() {
 		return
 	}
-	ui.Failf("%q needs a terminal to answer it, and stdin is not one. "+
-		"Run the command in an interactive shell, or authenticate ahead of time so it is not asked.", prompt)
+	ui.Failf("this command stopped to ask %q, but stdin is not a terminal so the question cannot be answered.\n"+
+		"  Run it from a terminal, or supply the value as a command flag and it will not be asked.", prompt)
 }

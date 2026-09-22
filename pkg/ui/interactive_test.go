@@ -28,8 +28,8 @@ func TestPromptsRefuseNonInteractiveStdin(t *testing.T) {
 			if err == nil {
 				t.Fatalf("%s prompt was answered without a terminal, output: %s", prompt, out)
 			}
-			if !strings.Contains(string(out), "needs a terminal") {
-				t.Fatalf("expected the guard message, got: %s", out)
+			if !strings.Contains(string(out), "stdin is not a terminal") {
+				t.Fatalf("expected the guard to say why it refused, got: %s", out)
 			}
 		})
 	}
