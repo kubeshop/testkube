@@ -162,6 +162,13 @@ spec:
       logs: always
       timeout: 5m
       image: bitnamilegacy/minio:2025
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+        limits:
+          cpu: 1
+          memory: 1Gi
       env:
       - name: MINIO_ROOT_USER
         value: minio99
@@ -175,6 +182,13 @@ spec:
       logs: always
       timeout: 5m
       image: mongo:8.0
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 2
+          memory: 2Gi
       readinessProbe:
         tcpSocket:
           port: 27017
@@ -183,6 +197,13 @@ spec:
       logs: always
       timeout: 5m
       image: nats:2
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
       readinessProbe:
         tcpSocket:
           port: 4222
@@ -191,6 +212,20 @@ spec:
       logs: always
       timeout: 5m
       image: postgres:16.15
+      args:
+      - -c
+      - fsync=off
+      - -c
+      - synchronous_commit=off
+      - -c
+      - full_page_writes=off
+      resources:
+        requests:
+          cpu: 2
+          memory: 512Mi
+        limits:
+          cpu: 4
+          memory: 2Gi
       env:
       - name: POSTGRES_USER
         value: postgres
