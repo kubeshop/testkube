@@ -3,6 +3,7 @@ package watchers
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -62,6 +63,7 @@ type ExecutionState interface {
 
 	ExecutionError() string
 	CurrentCause() *testkube.Cause
+	TerminationCause() *testkube.Cause
 	JobExecutionError() string
 	PodExecutionError() string
 	Debug() map[string]string
@@ -474,6 +476,77 @@ func (e *executionState) CurrentCause() *testkube.Cause {
 	}
 	// A pod exists, so the job created it. An earlier FailedCreate event of the job does not apply.
 	return e.podEvents.WaitingCause()
+}
+
+const (
+	// containerReasonOOMKilled is the container reason for a kill on the memory limit.
+	containerReasonOOMKilled = "OOMKilled"
+	// The event reasons of a pod and a job that report the end of the pod.
+	eventReasonEvicted             = "Evicted"
+	eventReasonExceededGracePeriod = "ExceededGracePeriod"
+	eventReasonBackoffLimit        = "BackoffLimitExceeded"
+)
+
+var (
+	// containerErrorReasons are the container reasons that report a container that could not run.
+	containerErrorReasons = []string{"Error", "StartError", "ContainerCannotRun"}
+	// disruptionCauses maps the reason of the disruption condition of a pod to a reason code.
+	disruptionCauses = map[string]testkube.StopReason{
+		"EvictionByEvictionAPI":  testkube.StopReasonEvicted,
+		"PreemptionByScheduler":  testkube.StopReasonPreempted,
+		"TerminationByKubelet":   testkube.StopReasonNodeShutdown,
+		"DeletionByTaintManager": testkube.StopReasonNodeShutdown,
+		"DeletionByPodGC":        testkube.StopReasonNodeShutdown,
+	}
+)
+
+// TerminationCause returns the cause that Kubernetes reported when it ended the pod, and nil when
+// it reported none. It is the twin of CurrentCause, which reads a pod that still waits.
+// The message is the text that ExecutionError returns, so the words of the result do not change.
+func (e *executionState) TerminationCause() *testkube.Cause {
+	reason := e.terminationReason()
+	if reason == "" {
+		return nil
+	}
+	return &testkube.Cause{Reason: string(reason), Message: e.ExecutionError()}
+}
+
+// terminationReason returns the code for the signal that ended the pod. The order of the checks
+// decides which signal wins when Kubernetes reports more than one.
+func (e *executionState) terminationReason() testkube.StopReason {
+	var containerReason, disruption string
+	// The condition of the job and the event of the job both report the deadline, and the watch can
+	// read one before the other. The message reads the condition, so the code reads it too.
+	deadline := e.job != nil && IsJobDeadlineExceeded(e.job.Original())
+	if e.pod != nil {
+		original := e.pod.Original()
+		containerReason = e.pod.ContainerError()
+		disruption, _ = GetPodDisruption(original)
+		deadline = deadline || (original != nil && original.Status.Reason == ReasonDeadlineExceeded)
+	}
+	podEventReason := e.podEvents.ErrorReason()
+	jobEventReason := e.jobEvents.ErrorReason()
+
+	// A kill on the memory limit wins over a disruption of the pod, because the limit is what the
+	// user raises. Kubernetes reports both when it takes a node away from a container that grew.
+	if containerReason == containerReasonOOMKilled {
+		return testkube.StopReasonOOMKilled
+	}
+	if cause, ok := disruptionCauses[disruption]; ok {
+		return cause
+	}
+	if podEventReason == eventReasonEvicted {
+		return testkube.StopReasonEvicted
+	}
+	// The deadline wins over a container error, because the container fails as a result of it.
+	if deadline || jobEventReason == ReasonDeadlineExceeded {
+		return testkube.StopReasonDeadlineExceeded
+	}
+	if slices.Contains(containerErrorReasons, containerReason) ||
+		jobEventReason == eventReasonBackoffLimit || podEventReason == eventReasonExceededGracePeriod {
+		return testkube.StopReasonContainerError
+	}
+	return ""
 }
 
 func (e *executionState) ExecutionError() string {

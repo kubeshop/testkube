@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.uber.org/mock/gomock"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/git/informer"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
@@ -250,5 +252,38 @@ func TestGetTestWorkflowsFromInternal_LabelSelectorMatchExpressions(t *testing.T
 			}
 			assert.ElementsMatch(t, tt.expectedName, actualNames)
 		})
+	}
+}
+
+// TestReservedProvenanceKeys pins which configuration keys a trigger may not set.
+func TestReservedProvenanceKeys(t *testing.T) {
+	// Every key the informer records has to be covered, or the one it misses is the one
+	// a trigger can blank.
+	for _, key := range []string{
+		informer.GitMetaKeyCommit,
+		informer.GitMetaKeyRef,
+		informer.GitMetaKeyBranch,
+		informer.GitMetaKeyTag,
+		informer.GitMetaKeyPRNumber,
+		informer.GitMetaKeyPRAction,
+		informer.GitMetaKeyPRBaseRef,
+		informer.GitMetaKeyPRHeadRef,
+		informer.GitMetaKeyPRHeadSHA,
+		informer.GitMetaKeyPRURL,
+		informer.GitMetaKeyPRTitle,
+		informer.GitMetaKeyPRAuthor,
+	} {
+		assert.True(t, isReservedProvenanceKey(key), "%s is provenance and must not be settable", key)
+	}
+
+	// The keys the cache actually decides on, named directly so that a rename of either
+	// constant does not quietly unprotect them.
+	assert.True(t, isReservedProvenanceKey("TESTKUBE_GIT_PR_NUMBER"))
+	assert.True(t, isReservedProvenanceKey("TESTKUBE_GIT_PR_HEAD_REF"))
+	assert.True(t, isReservedProvenanceKey("TESTKUBE_GIT_PR_URL"))
+
+	// Ordinary configuration is untouched - a trigger's whole purpose is to set it.
+	for _, key := range []string{"SUITE", "TESTKUBE_SUITE", "GIT_BRANCH", "", "testkube_git_pr_number"} {
+		assert.False(t, isReservedProvenanceKey(key), "%q is ordinary configuration", key)
 	}
 }

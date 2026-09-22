@@ -85,6 +85,16 @@ type Execution struct {
 	StepErrors map[string]string `json:"stepErrors,omitempty"`
 	// StepAttempts are the numbers of attempts of the steps that report one, keyed by step ref.
 	StepAttempts map[string]int64 `json:"stepAttempts,omitempty"`
+	// ErrorReason is the reason code of the initialization step, empty when it has none.
+	ErrorReason string `json:"errorReason,omitempty"`
+	// StepReasons are the reason codes of the steps that have one, keyed by step ref.
+	StepReasons map[string]string `json:"stepReasons,omitempty"`
+	// StatusType is the layer that made the execution fail, empty when it passed.
+	StatusType string `json:"statusType,omitempty"`
+	// StatusReason is the code of the cause that made the execution fail.
+	StatusReason string `json:"statusReason,omitempty"`
+	// StatusStep is the ref of the step that holds the cause, empty when no step holds it.
+	StatusStep string `json:"statusStep,omitempty"`
 }
 
 // Key is the primary reference of the execution - its alias when the parent gave
@@ -125,6 +135,11 @@ func (e Execution) AsMap() map[string]interface{} {
 		"errorMessage": e.ErrorMessage,
 		"stepErrors":   toInterfaceMap(e.StepErrors),
 		"stepAttempts": toInterfaceMap(e.StepAttempts),
+		"errorReason":  e.ErrorReason,
+		"stepReasons":  toInterfaceMap(e.StepReasons),
+		"statusType":   e.StatusType,
+		"statusReason": e.StatusReason,
+		"statusStep":   e.StatusStep,
 	}
 }
 
@@ -156,30 +171,60 @@ func FromExecution(execution *testkube.TestWorkflowExecution) Execution {
 	}
 	result.ErrorMessage, result.StepErrors = ErrorsOf(execution)
 	result.StepAttempts = AttemptsOf(execution)
+	result.ErrorReason, result.StepReasons = ReasonsOf(execution)
+	result.SetStatusDetails(execution)
 	return result
+}
+
+// SetStatusDetails copies the codes of the status details of the execution into the record. Every
+// caller that builds a record from a finished execution needs it, because a workflow reads the codes
+// of a child through the record and not through the stored execution.
+//
+// The message and the user of the object stay out of the record. A workflow asserts the codes, and
+// the words are already available through ErrorMessage and StepErrors.
+func (e *Execution) SetStatusDetails(execution *testkube.TestWorkflowExecution) {
+	if execution == nil || execution.Result == nil || execution.Result.StatusDetails == nil {
+		return
+	}
+	e.StatusType = execution.Result.StatusDetails.Type_
+	e.StatusReason = execution.Result.StatusDetails.Reason
+	e.StatusStep = execution.Result.StatusDetails.Step
 }
 
 // ErrorsOf collects the message of the initialization step and the messages of the
 // steps, so a workflow can assert why another execution failed.
 func ErrorsOf(execution *testkube.TestWorkflowExecution) (string, map[string]string) {
+	return stepStrings(execution, func(step testkube.TestWorkflowStepResult) string { return step.ErrorMessage })
+}
+
+// ReasonsOf collects the reason code of the initialization step and the reason codes of the
+// steps, so a workflow can assert the cause of a failure without the words of a message.
+func ReasonsOf(execution *testkube.TestWorkflowExecution) (string, map[string]string) {
+	return stepStrings(execution, func(step testkube.TestWorkflowStepResult) string { return step.ErrorReason })
+}
+
+// stepStrings returns the field of the initialization step and the same field of every step that
+// holds a value, keyed by step ref. It returns a nil map when no step holds one.
+func stepStrings(execution *testkube.TestWorkflowExecution, field func(step testkube.TestWorkflowStepResult) string) (string, map[string]string) {
 	if execution == nil || execution.Result == nil {
 		return "", nil
 	}
-	errorMessage := ""
+	initialization := ""
 	if execution.Result.Initialization != nil {
-		errorMessage = execution.Result.Initialization.ErrorMessage
+		initialization = field(*execution.Result.Initialization)
 	}
-	var stepErrors map[string]string
+	var steps map[string]string
 	for ref, step := range execution.Result.Steps {
-		if step.ErrorMessage == "" {
+		value := field(step)
+		if value == "" {
 			continue
 		}
-		if stepErrors == nil {
-			stepErrors = make(map[string]string)
+		if steps == nil {
+			steps = make(map[string]string)
 		}
-		stepErrors[ref] = step.ErrorMessage
+		steps[ref] = value
 	}
-	return errorMessage, stepErrors
+	return initialization, steps
 }
 
 // AttemptsOf collects the number of attempts of each step, so a workflow can assert
