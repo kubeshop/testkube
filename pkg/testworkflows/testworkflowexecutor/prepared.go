@@ -442,6 +442,35 @@ func (e *IntermediateExecution) StoreConfig(config map[string]string) *Intermedi
 	return e
 }
 
+// GitMetadataKeyPrefix marks the execution config entries a trigger records about the git
+// event that caused a run. The individual keys live in pkg/git/informer, which drags in
+// go-git and a Kubernetes client and so is not worth importing for a string.
+const GitMetadataKeyPrefix = "TESTKUBE_GIT_"
+
+// StoreGitMetadata records the git provenance a trigger reported, whether or not the
+// workflow declared it.
+//
+// StoreConfig keeps only declared parameters, which is right for values a workflow asked
+// for. Git metadata is not one of those: the dependency cache reads it to decide which
+// namespace a run is allowed to write, and the absence of a pull request marker means
+// "trusted". Filtering it out would therefore fail open - a workflow that never declared
+// TESTKUBE_GIT_PR_NUMBER would let a pull request's run, which executes code its author
+// wrote, write the namespace the default branch later restores from.
+//
+// Called outside the configuration size limit for the same reason.
+func (e *IntermediateExecution) StoreGitMetadata(config map[string]string) *IntermediateExecution {
+	for k, v := range config {
+		if v == "" || !strings.HasPrefix(k, GitMetadataKeyPrefix) {
+			continue
+		}
+		if e.execution.ConfigParams == nil {
+			e.execution.ConfigParams = make(map[string]testkube.TestWorkflowExecutionConfigValue)
+		}
+		e.execution.ConfigParams[k] = testkube.TestWorkflowExecutionConfigValue{Value: v}
+	}
+	return e
+}
+
 func (e *IntermediateExecution) Finished() bool {
 	return e.execution.Result.IsFinished()
 }
