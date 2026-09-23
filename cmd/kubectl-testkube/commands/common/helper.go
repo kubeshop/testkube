@@ -773,6 +773,16 @@ func LoginUser(authUri, apiUri string, customConnector bool, port int, skipTLS .
 	allowInsecureTLS := len(skipTLS) == 1 && skipTLS[0]
 	connectorID := ""
 	if !customConnector {
+		if !ui.StdinIsInteractive() {
+			// Logging in means choosing a method and then following a browser flow, neither
+			// of which an unattended run can do. Fail here rather than returning, so the
+			// caller's generic "is the browser reachable" hint does not bury this one.
+			ui.Failf("cannot log in without a terminal.\n\n" +
+				"  For CI or an agent, authenticate with an API key instead of logging in:\n" +
+				"    testkube set context --api-key <key> --org-id <org-id> --env-id <env-id>\n\n" +
+				"  Create the key in the dashboard, under Organization Management, API Tokens.\n" +
+				"  To log in as yourself, run this from a terminal.")
+		}
 		connectorID = ui.Select("Choose your login method", []string{github, gitlab, google, emailLink})
 	}
 
