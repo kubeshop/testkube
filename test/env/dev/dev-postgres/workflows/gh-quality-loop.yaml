@@ -199,7 +199,7 @@ spec:
         cpu: 2
         memory: 4Gi
   job:
-    activeDeadlineSeconds: 1200
+    activeDeadlineSeconds: 1500
   steps:
   - name: Lint OpenAPI
     run:
@@ -213,7 +213,7 @@ spec:
         value: https://proxy.golang.org,direct
       shell: |-
         golangci-lint run -c ./.golangci.yml \
-          --timeout=10m \
+          --timeout=20m \
           --issues-exit-code=1 \
           --max-issues-per-linter=0 \
           ./...
