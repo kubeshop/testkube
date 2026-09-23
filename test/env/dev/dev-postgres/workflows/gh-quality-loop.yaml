@@ -538,7 +538,7 @@ spec:
       - full_page_writes=off
       resources:
         requests:
-          cpu: 2
+          cpu: 1
           memory: 512Mi
         limits:
           cpu: 4
