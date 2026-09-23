@@ -44,7 +44,7 @@ require (
 	github.com/keygen-sh/jsonapi-go v1.2.1
 	github.com/keygen-sh/keygen-go/v3 v3.3.0
 	github.com/klauspost/compress v1.20.0
-	github.com/mark3labs/mcp-go v1.1.0
+	github.com/mark3labs/mcp-go v1.1.1
 	github.com/mattn/go-isatty v0.0.24
 	github.com/minio/minio-go/v7 v7.3.0
 	github.com/nats-io/nats-server/v2 v2.15.0
