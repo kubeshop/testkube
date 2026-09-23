@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/mcp/boards"
 	"github.com/kubeshop/testkube/pkg/mcp/tools"
 )
 
@@ -1119,5 +1120,136 @@ func (c *APIClient) ListInsightExecutions(ctx context.Context, params tools.Insi
 		Path:        "/insights/series/executions",
 		Scope:       ApiScopeOrg,
 		QueryParams: queryParams,
+	})
+}
+
+// Insights board methods
+//
+// Boards are organization-scoped: they live under /organizations/{id}/boards,
+// with no environment in the path or query. The Control Plane refuses API
+// tokens on every board endpoint, and older versions answer them with a bare
+// 500, so these methods refuse an API token themselves before sending anything.
+
+// apiTokenPrefix marks a Testkube API token, as opposed to a user access token.
+const apiTokenPrefix = "tkcapi_"
+
+func (c *APIClient) requireUserSession() error {
+	if strings.HasPrefix(c.config.AccessToken, apiTokenPrefix) {
+		return tools.ErrBoardsRequireUser
+	}
+	return nil
+}
+
+func (c *APIClient) ListBoards(ctx context.Context, params tools.ListBoardsParams) (string, error) {
+	if err := c.requireUserSession(); err != nil {
+		return "", err
+	}
+	queryParams := map[string]string{
+		"name":     params.Name,
+		"page":     strconv.Itoa(params.Page),
+		"pageSize": strconv.Itoa(params.PageSize),
+	}
+	for key, set := range map[string]bool{
+		"private":      params.Private,
+		"shared":       params.Shared,
+		"userFavorite": params.UserFavorite,
+		"orgFavorite":  params.OrgFavorite,
+	} {
+		if set {
+			queryParams[key] = "true"
+		}
+	}
+
+	return c.makeRequest(ctx, APIRequest{
+		Method:      http.MethodGet,
+		Path:        "/boards",
+		Scope:       ApiScopeOrg,
+		QueryParams: queryParams,
+	})
+}
+
+func (c *APIClient) GetBoard(ctx context.Context, board string) (string, error) {
+	if err := c.requireUserSession(); err != nil {
+		return "", err
+	}
+	return c.makeRequest(ctx, APIRequest{
+		Method:     http.MethodGet,
+		Path:       "/boards/{boardID}",
+		Scope:      ApiScopeOrg,
+		PathParams: map[string]string{"boardID": url.PathEscape(board)},
+	})
+}
+
+func (c *APIClient) CheckBoardSlug(ctx context.Context, slug string) (bool, error) {
+	if err := c.requireUserSession(); err != nil {
+		return false, err
+	}
+	result, err := c.makeRequest(ctx, APIRequest{
+		Method:      http.MethodGet,
+		Path:        "/board-slug",
+		Scope:       ApiScopeOrg,
+		QueryParams: map[string]string{"slug": slug},
+	})
+	if err != nil {
+		return false, err
+	}
+	var availability struct {
+		Available bool `json:"available"`
+	}
+	if err := json.Unmarshal([]byte(result), &availability); err != nil {
+		return false, fmt.Errorf("failed to parse slug availability: %w", err)
+	}
+	return availability.Available, nil
+}
+
+func (c *APIClient) CreateBoard(ctx context.Context, params tools.CreateBoardParams) (string, error) {
+	if err := c.requireUserSession(); err != nil {
+		return "", err
+	}
+	return c.makeRequest(ctx, APIRequest{
+		Method: http.MethodPost,
+		Path:   "/boards",
+		Scope:  ApiScopeOrg,
+		Body:   params,
+	})
+}
+
+func (c *APIClient) UpdateBoard(ctx context.Context, board string, request tools.UpdateBoardRequest) (string, error) {
+	if err := c.requireUserSession(); err != nil {
+		return "", err
+	}
+	return c.makeRequest(ctx, APIRequest{
+		Method:     http.MethodPatch,
+		Path:       "/boards/{boardID}",
+		Scope:      ApiScopeOrg,
+		PathParams: map[string]string{"boardID": url.PathEscape(board)},
+		Body:       request,
+	})
+}
+
+func (c *APIClient) DeleteBoard(ctx context.Context, board string) error {
+	if err := c.requireUserSession(); err != nil {
+		return err
+	}
+	_, err := c.makeRequest(ctx, APIRequest{
+		Method:     http.MethodDelete,
+		Path:       "/boards/{boardID}",
+		Scope:      ApiScopeOrg,
+		PathParams: map[string]string{"boardID": url.PathEscape(board)},
+	})
+	return err
+}
+
+// QueryBoardInsights runs the org-scoped insight query that renders a board
+// report. Unlike the other insight methods it does not add the session's
+// environment: a report carries its own environment filter, unless the query
+// asks for the current environment.
+func (c *APIClient) QueryBoardInsights(ctx context.Context, query boards.InsightQuery) (string, error) {
+	query = query.WithEnvironment(c.config.EnvId)
+	return c.makeRequest(ctx, APIRequest{
+		Method:      http.MethodGet,
+		Path:        string(query.Endpoint),
+		Scope:       ApiScopeOrg,
+		QueryParams: query.QueryParams(),
 	})
 }
