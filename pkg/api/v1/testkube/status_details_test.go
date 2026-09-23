@@ -120,12 +120,46 @@ func TestNewStatusDetails(t *testing.T) {
 			},
 		},
 		{
-			name:   "a cancel by a person carries no reason",
-			actor:  StopActorUser,
-			reason: "",
+			name:  "a cancel by a person without a reason",
+			actor: StopActorUser,
 			want: TestWorkflowStatusDetails{
 				Type_:  string(StatusDetailsTypeUserCancel),
+				Reason: string(StopReasonUserCancel),
+				Actor:  string(StopActorUser),
+			},
+		},
+		{
+			name:  "a cancel through the API without a reason",
+			actor: StopActorAPI,
+			want: TestWorkflowStatusDetails{
+				Type_:  string(StatusDetailsTypeUserCancel),
+				Reason: string(StopReasonUserCancel),
+				Actor:  string(StopActorAPI),
+			},
+		},
+		{
+			name:  "a control plane stop without a reason",
+			actor: StopActorControlPlane,
+			want: TestWorkflowStatusDetails{
+				Type_:  string(StatusDetailsTypeUnknown),
 				Reason: string(StopReasonUnknown),
+				Actor:  string(StopActorControlPlane),
+			},
+		},
+		{
+			name: "a stop without an actor and without a reason",
+			want: TestWorkflowStatusDetails{
+				Type_:  string(StatusDetailsTypeUnknown),
+				Reason: string(StopReasonUnknown),
+			},
+		},
+		{
+			name:   "a cancel by a person keeps the reason it carries",
+			actor:  StopActorUser,
+			reason: string(StopReasonAbortAll),
+			want: TestWorkflowStatusDetails{
+				Type_:  string(StatusDetailsTypeUserCancel),
+				Reason: string(StopReasonAbortAll),
 				Actor:  string(StopActorUser),
 			},
 		},
