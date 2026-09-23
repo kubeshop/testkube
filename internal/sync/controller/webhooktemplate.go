@@ -36,7 +36,7 @@ func webhookTemplateSyncReconciler(client client.Reader, store WebhookTemplateSt
 			// Passing the name here rather than the namespaced name as generally we refer to objects
 			// purely by their name.
 			if err := store.DeleteWebhookTemplate(ctx, req.Name); err != nil {
-				return ctrl.Result{}, terminalOnOwnershipConflict(fmt.Errorf("delete WebhookTemplate %q from store: %w", req.Name, err))
+				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete WebhookTemplate %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		case err != nil:
@@ -54,14 +54,14 @@ func webhookTemplateSyncReconciler(client client.Reader, store WebhookTemplateSt
 			// Passing the name here rather than the namespaced name as generally we refer to objects
 			// purely by their name.
 			if err := store.DeleteWebhookTemplate(ctx, req.Name); err != nil {
-				return ctrl.Result{}, terminalOnOwnershipConflict(fmt.Errorf("delete WebhookTemplate %q from store: %w", req.Name, err))
+				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete WebhookTemplate %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		}
 
 		// Regular update so send the new object into the store.
 		if err := store.UpdateOrCreateWebhookTemplate(ctx, template); err != nil {
-			return ctrl.Result{}, terminalOnOwnershipConflict(fmt.Errorf("update WebhookTemplate %q in store: %w", template.Name, err))
+			return ctrl.Result{}, terminalOnRejection(fmt.Errorf("update WebhookTemplate %q in store: %w", template.Name, err))
 		}
 
 		return ctrl.Result{}, nil
