@@ -22,12 +22,8 @@ func (r *TestWorkflowResult) ClassifyStatus(sigSequence []TestWorkflowSignature,
 		return nil
 	}
 
-	if stop.Actor == StopActorUser || stop.Actor == StopActorAPI {
-		reason := stop.Reason
-		if reason == "" {
-			reason = StopReasonUserCancel
-		}
-		return r.stopDetails(sigSequence, stop.Actor, reason)
+	if stop.Actor.IsPerson() {
+		return r.stopDetails(sigSequence, stop.Actor, stop.Reason)
 	}
 
 	reason := stop.Reason

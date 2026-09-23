@@ -24,6 +24,12 @@ const (
 	StopActorSystem StopActor = "system"
 )
 
+// IsPerson reports whether a person decided the stop. The abort endpoint of the
+// standalone agent acts for the person who calls it, so it counts as a person too.
+func (a StopActor) IsPerson() bool {
+	return a == StopActorUser || a == StopActorAPI
+}
+
 // Sentence returns the words the result reader uses for the actor after
 // "The execution has been aborted". The reason, when set, follows them.
 func (a StopActor) Sentence() string {
