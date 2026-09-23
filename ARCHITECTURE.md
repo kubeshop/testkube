@@ -304,6 +304,8 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 - Common utilities: [`cmd/kubectl-testkube/commands/common/`](cmd/kubectl-testkube/commands/common/)
 - Client abstraction: Works with both standalone API and control plane APIs
 
+**Prompts**: Interactive prompts live in [`pkg/ui`](pkg/ui/) and all pass through the terminal check in [`pkg/ui/interactive.go`](pkg/ui/interactive.go). When stdin is not a terminal the prompt is refused with an actionable message instead of being drawn, which keeps unattended runs (CI, coding agents, containers without a TTY) from blocking on input nobody can supply. `ui.StdinIsInteractive()` exposes the same check so a command can choose a non-interactive path; `GetClient` uses it to refuse an automatic login when a token refresh fails without a terminal.
+
 **Client Layer**:
 
 - [`pkg/newclients/`](pkg/newclients/) - API clients for tests, testworkflows, webhooks
