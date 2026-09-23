@@ -794,7 +794,7 @@ func main() {
 	// Push a cluster-resources snapshot to the CP on startup, on CRD informer
 	// events, and as an hourly safety net. The CP caches it to render the
 	// TestTrigger resourceRef picker (see AgentInventoryService).
-	if intconfig.ShouldPushClusterInventory(proContext) {
+	if intconfig.ShouldPushClusterInventory(proContext, cfg.DisableTestTriggers) {
 		crdNotifier := inventorycontroller.StartCRDChangeNotifier(ctx, apiextClient, log.DefaultLogger)
 		clusterResourcesController := &inventorycontroller.ClusterResourcesController{
 			Discoverer: api.ClusterDiscoverer,
