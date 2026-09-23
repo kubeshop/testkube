@@ -93,7 +93,9 @@ func (a *ProContextAgent) HasCapability(capability cloud.AgentCapability) bool {
 // watcher and push the cluster-resources inventory. Only listener-capable
 // agents should: the Control Plane rejects everyone else's push, and a
 // runner-only deployment has no CRD RBAC to watch with. Standalone serves
-// discovery from its own API, so it never pushes.
-func ShouldPushClusterInventory(proContext ProContext) bool {
-	return proContext.APIKey != "" && proContext.Agent.HasCapability(cloud.AgentCapability_AGENT_CAPABILITY_LISTENER)
+// discovery from its own API, so it never pushes. The inventory only feeds the
+// TestTrigger resourceRef picker, so an agent with test triggers disabled
+// neither watches nor pushes.
+func ShouldPushClusterInventory(proContext ProContext, testTriggersDisabled bool) bool {
+	return !testTriggersDisabled && proContext.APIKey != "" && proContext.Agent.HasCapability(cloud.AgentCapability_AGENT_CAPABILITY_LISTENER)
 }

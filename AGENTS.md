@@ -135,6 +135,14 @@ contents do.
 - Adding a new CI/runtime detection: extend `pkg/cliruntime/context.go` so both telemetry and the update-check feature stay in sync.
 - Adding a new AI-tool detection: extend `DetectAITool` in `pkg/cliruntime/context.go` (add the env-var check and a `TestDetectAITool` case in `context_test.go`); no telemetry wiring changes are needed since payloads already read the `AITool` field.
 
+## CLI prompts and non-interactive runs
+
+- `pkg/ui/interactive.go` holds the terminal check every prompt goes through. `ui.Select`, `ui.Confirm` and `ui.TextInput` call `requireInteractive` first and exit with an actionable message when stdin is not a terminal, so no call site has to guard itself. `ui.StdinIsInteractive()` exposes the same check for callers that want to take a different path instead of failing.
+- The guard exists because a prompt with nobody to answer it used to spin: `atomicgo.dev/keyboard` cannot open a non-terminal stdin, reports every failed read as an empty keypress with a nil error, and pterm has no case for an empty keypress, so its listener loops forever and burns more than a core.
+- `GetClient` (`cmd/kubectl-testkube/commands/common/client.go`) uses `ui.StdinIsInteractive()` to refuse starting a login when a token refresh fails with no terminal present, the same way the email-link branch beside it already does.
+- Adding a new prompt: use the `ui` helpers rather than pterm directly, and it inherits the guard. Adding a command that must not prompt at all: branch on `ui.StdinIsInteractive()`.
+- Tests flip the unexported `stdinIsInteractive` seam rather than allocating a pseudo terminal.
+
 ## On-prem demo install
 
 - `testkube init demo` (`cmd/kubectl-testkube/commands/init.go`) installs the On-Prem demo on the new architecture: the Control Plane (enterprise chart + `values.demo.v2.yaml`) plus a **separate** listener-enabled runner (`kubeshop/testkube-runner`). The bundled agent is gone.
@@ -147,6 +155,7 @@ contents do.
 
 - Agent behavior is driven by env vars defined in `internal/config/config.go` (scan for `envconfig:"..."` tags when researching a toggle).
 - GitOps sync of Kubernetes resources into the Control Plane is gated by `GITOPS_KUBERNETES_TO_CLOUD_ENABLED` (default `false`), and additionally requires the Control Plane to report cloud storage support.
+- `DISABLE_TEST_TRIGGERS` also turns off the cluster-inventory CRD watcher and push (`internal/inventory/`, gated by `ShouldPushClusterInventory` in `internal/config/procontext.go`): the inventory only feeds the Control Plane's TestTrigger resourceRef picker, and watching CRDs without the RBAC for it logs a watch error on every retry.
 - TestTriggers accept `spec.event` or a `spec.events` list (mutually exclusive, validated service-side); always consume them via `EffectiveEvents()` so both forms are honored — classification gates that read the single `event` field directly will silently skip list-form triggers.
 - Git trigger informer behavior is tuned via `TEST_TRIGGER_GIT_INFORMER_RECONCILE_INTERVAL`, `TEST_TRIGGER_GIT_INFORMER_REPO_DEPTH`, `TEST_TRIGGER_GIT_INFORMER_LIST_TIMEOUT`, `TEST_TRIGGER_GIT_INFORMER_MAX_COMMITS_SCAN`, `TEST_TRIGGER_GIT_INFORMER_PULL_RETRIES`, and `TEST_TRIGGER_GIT_INFORMER_PULL_RETRY_DELAY`.
 - Git trigger informer execution is leader-gated in `cmd/api-server/main.go` through the shared `leader` coordinator tasks, so only the active leader performs periodic git pulls/reconciliation.

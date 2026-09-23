@@ -199,7 +199,7 @@ spec:
         cpu: 2
         memory: 4Gi
   job:
-    activeDeadlineSeconds: 1200
+    activeDeadlineSeconds: 1500
   steps:
   - name: Lint OpenAPI
     run:
@@ -213,7 +213,7 @@ spec:
         value: https://proxy.golang.org,direct
       shell: |-
         golangci-lint run -c ./.golangci.yml \
-          --timeout=10m \
+          --timeout=20m \
           --issues-exit-code=1 \
           --max-issues-per-linter=0 \
           ./...
@@ -450,6 +450,13 @@ spec:
       logs: always
       timeout: 180s
       image: fsouza/fake-gcs-server:1.52.2
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+        limits:
+          cpu: 1
+          memory: 1Gi
       args:
       - -scheme
       - http
@@ -467,6 +474,13 @@ spec:
       logs: always
       timeout: 180s
       image: bitnamilegacy/minio:2025.5.24@sha256:451fe6858cb770cc9d0e77ba811ce287420f781c7c1b806a386f6896471a349c
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+        limits:
+          cpu: 1
+          memory: 1Gi
       env:
       - name: MINIO_ROOT_USER
         value: minio99
@@ -485,6 +499,13 @@ spec:
       logs: always
       timeout: 180s
       image: mongo:6.0.27
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 2
+          memory: 2Gi
       readinessProbe:
         tcpSocket:
           port: 27017
@@ -493,6 +514,13 @@ spec:
       logs: always
       timeout: 180s
       image: nats:2.9.11
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
       readinessProbe:
         tcpSocket:
           port: 4222
@@ -501,6 +529,20 @@ spec:
       logs: always
       timeout: 180s
       image: postgres:18.4
+      args:
+      - -c
+      - fsync=off
+      - -c
+      - synchronous_commit=off
+      - -c
+      - full_page_writes=off
+      resources:
+        requests:
+          cpu: 2
+          memory: 512Mi
+        limits:
+          cpu: 4
+          memory: 2Gi
       env:
       - name: POSTGRES_USER
         value: postgres
@@ -516,6 +558,13 @@ spec:
       logs: always
       timeout: 180s
       image: rnwood/smtp4dev:v3
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
       readinessProbe:
         tcpSocket:
           port: 25
@@ -524,6 +573,13 @@ spec:
       logs: always
       timeout: 180s
       image: hashicorp/vault:2.0.1
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
       env:
       - name: VAULT_DEV_ROOT_TOKEN_ID
         value: root
