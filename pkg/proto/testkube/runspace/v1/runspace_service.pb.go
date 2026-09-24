@@ -24,6 +24,8 @@ const (
 // BridgeMessage is an envelope sent from the Bridge up to AI Service.
 type BridgeMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// payload is the Bridge-to-AI-Service frame body.
+	//
 	// Types that are valid to be assigned to Payload:
 	//
 	//	*BridgeMessage_Hello
@@ -145,6 +147,8 @@ type ControlMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// seq is a monotonically increasing sequence number, used for BridgeAck.
 	Seq *uint64 `protobuf:"varint,1,opt,name=seq" json:"seq,omitempty"`
+	// payload is the AI-Service-to-Bridge frame body.
+	//
 	// Types that are valid to be assigned to Payload:
 	//
 	//	*ControlMessage_Send
@@ -253,10 +257,13 @@ func (*ControlMessage_HeartbeatAck) isControlMessage_Payload() {}
 
 // BridgeHello carries session identity for the Bridge's first frame.
 type BridgeHello struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	RunspaceId *string                `protobuf:"bytes,1,opt,name=runspace_id,json=runspaceId" json:"runspace_id,omitempty"`
-	OrgId      *string                `protobuf:"bytes,2,opt,name=org_id,json=orgId" json:"org_id,omitempty"`
-	EnvId      *string                `protobuf:"bytes,3,opt,name=env_id,json=envId" json:"env_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// runspace_id is the runspace this Bridge session belongs to.
+	RunspaceId *string `protobuf:"bytes,1,opt,name=runspace_id,json=runspaceId" json:"runspace_id,omitempty"`
+	// org_id is the organization that owns the runspace.
+	OrgId *string `protobuf:"bytes,2,opt,name=org_id,json=orgId" json:"org_id,omitempty"`
+	// env_id is the environment that owns the runspace.
+	EnvId *string `protobuf:"bytes,3,opt,name=env_id,json=envId" json:"env_id,omitempty"`
 	// bridge_version is the semver of the Bridge binary, for compatibility checks.
 	BridgeVersion *string `protobuf:"bytes,4,opt,name=bridge_version,json=bridgeVersion" json:"bridge_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -323,8 +330,9 @@ func (x *BridgeHello) GetBridgeVersion() string {
 
 // BridgeAck acknowledges a ControlMessage sequence number.
 type BridgeAck struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Seq           *uint64                `protobuf:"varint,1,opt,name=seq" json:"seq,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// seq is the ControlMessage sequence number being acknowledged.
+	Seq           *uint64 `protobuf:"varint,1,opt,name=seq" json:"seq,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -424,8 +432,9 @@ func (x *ControllerEvent) GetPayload() []byte {
 
 // SendToController is a JSON payload to be written to the Controller's stdin.
 type SendToController struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Payload       []byte                 `protobuf:"bytes,1,opt,name=payload" json:"payload,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// payload is the raw JSON body to write to the Controller's stdin.
+	Payload       []byte `protobuf:"bytes,1,opt,name=payload" json:"payload,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

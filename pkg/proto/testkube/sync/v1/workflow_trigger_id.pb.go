@@ -24,8 +24,9 @@ const (
 // WorkflowTriggerId is the information required to
 // uniquely identify a WorkflowTrigger object.
 type WorkflowTriggerId struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            *string                `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Id is the unique ID string for a WorkflowTrigger.
+	Id            *string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
