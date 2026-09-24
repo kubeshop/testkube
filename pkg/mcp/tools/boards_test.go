@@ -8,8 +8,10 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -46,6 +48,11 @@ type fakeBoardClient struct {
 	queries       []boards.InsightQuery
 	queryResult   map[boards.Endpoint]string
 	queryErr      map[boards.Endpoint]error
+
+	// boardReads are the boards later reads return, in order.
+	boardReads []string
+	// updateErrs are the errors successive updates return, in order.
+	updateErrs []error
 }
 
 func (f *fakeBoardClient) ListBoards(_ context.Context, p ListBoardsParams) (string, error) {
@@ -54,6 +61,11 @@ func (f *fakeBoardClient) ListBoards(_ context.Context, p ListBoardsParams) (str
 }
 
 func (f *fakeBoardClient) GetBoard(context.Context, string) (string, error) {
+	// Each read after the first returns the next board of boardReads, as if
+	// someone edited the board in between.
+	if len(f.boardReads) > 0 {
+		f.board, f.boardReads = f.boardReads[0], f.boardReads[1:]
+	}
 	return f.board, f.getErr
 }
 
@@ -69,6 +81,13 @@ func (f *fakeBoardClient) CreateBoard(_ context.Context, p CreateBoardParams) (s
 func (f *fakeBoardClient) UpdateBoard(_ context.Context, ref string, r UpdateBoardRequest) (string, error) {
 	f.updatedRef = ref
 	f.updates = append(f.updates, r)
+	if len(f.updateErrs) > 0 {
+		err := f.updateErrs[0]
+		f.updateErrs = f.updateErrs[1:]
+		if err != nil {
+			return "", err
+		}
+	}
 	if f.updated != "" {
 		return f.updated, f.updateErr
 	}
@@ -391,5 +410,146 @@ func TestRenderBoard(t *testing.T) {
 		require.Len(t, f.queries, 1)
 		assert.True(t, f.queries[0].CurrentEnvironment)
 		assert.Contains(t, getResultText(result), "(current environment)")
+	})
+}
+
+func TestRenderBoard_TimeZone(t *testing.T) {
+	f := &fakeBoardClient{
+		board:       testBoard,
+		queryResult: map[boards.Endpoint]string{boards.EndpointStats: `{"ratioStats":{"total":1,"values":[]},"totalStats":{"total":0,"values":[]},"failedStats":{"total":0,"values":[]}}`},
+		queryErr:    map[boards.Endpoint]error{},
+	}
+	_, handler := RenderBoard(f)
+
+	result := callTool(t, handler, map[string]any{"board": "quality", "reportId": "aa", "timeZone": "Asia/Tokyo"})
+	require.False(t, result.IsError, getResultText(result))
+	assert.Contains(t, getResultText(result), `"timeZone":"Asia/Tokyo"`)
+	require.Len(t, f.queries, 1)
+	// A relative range ends at the start of tomorrow in Tokyo, which is 15:00 UTC.
+	end := f.queries[0].EndDate.In(time.FixedZone("JST", 9*60*60))
+	assert.Equal(t, 0, end.Hour())
+	assert.Equal(t, 15, end.UTC().Hour())
+
+	result = callTool(t, handler, map[string]any{"board": "quality", "timeZone": "Nowhere/Land"})
+	assert.True(t, result.IsError)
+	assert.Contains(t, getResultText(result), "IANA time zone")
+}
+
+// boardAt returns the test board as read at updatedAt, with a description.
+func boardAt(updatedAt, description string) string {
+	b := strings.Replace(testBoard, `"shared": true,`, `"shared": true, "updatedAt": "`+updatedAt+`",`, 1)
+	return strings.Replace(b, `"description": "Keep me"`, `"description": "`+description+`"`, 1)
+}
+
+func TestBoardWrites_SendTheUpdatedAtTheyRead(t *testing.T) {
+	const at = "2026-09-24T10:00:00.123Z"
+	tests := []struct {
+		name string
+		tool func(BoardEditor) (mcp.Tool, server.ToolHandlerFunc)
+		args map[string]any
+	}{
+		{"update_board", UpdateBoard, map[string]any{"board": "quality", "name": "Renamed"}},
+		{"add_board_report", AddBoardReport, map[string]any{"board": "quality", "kind": "workflows", "name": "W"}},
+		{"update_board_report", UpdateBoardReport, map[string]any{"board": "quality", "reportId": "bb", "name": "Renamed"}},
+		{"remove_board_report", RemoveBoardReport, map[string]any{"board": "quality", "reportId": "cc"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := &fakeBoardClient{board: boardAt(at, "Keep me")}
+			_, handler := tt.tool(f)
+			result := callTool(t, handler, tt.args)
+			require.False(t, result.IsError, getResultText(result))
+			assert.Equal(t, at, f.lastUpdate(t).ExpectedUpdatedAt)
+		})
+	}
+}
+
+func TestBoardWrites_RebuildFromTheNewerBoardAfterAConflict(t *testing.T) {
+	const first, second = "2026-09-24T10:00:00Z", "2026-09-24T10:00:05Z"
+	changed := fmt.Errorf("%w: API returned status 409", ErrBoardChanged)
+
+	t.Run("a concurrent description edit is kept", func(t *testing.T) {
+		f := &fakeBoardClient{
+			boardReads: []string{boardAt(first, "old"), boardAt(second, "edited meanwhile")},
+			updateErrs: []error{changed, nil},
+		}
+		_, handler := UpdateBoard(f)
+		result := callTool(t, handler, map[string]any{"board": "quality", "name": "Renamed"})
+		require.False(t, result.IsError, getResultText(result))
+
+		require.Len(t, f.updates, 2)
+		retry := f.updates[1]
+		assert.Equal(t, second, retry.ExpectedUpdatedAt)
+		assert.Equal(t, "edited meanwhile", *retry.Description, "the stale description must not be written back")
+		assert.Equal(t, "Renamed", *retry.Name)
+	})
+
+	t.Run("a report removal is recomputed from the newer layout", func(t *testing.T) {
+		newer := strings.Replace(boardAt(second, "Keep me"),
+			`{"id": "r2", "cells": [{"id": "cc"}]}`,
+			`{"id": "r2", "cells": [{"id": "cc"}, {"id": "bb"}]}`, 1)
+		newer = strings.Replace(newer, `[{"id": "aa"}, {"id": "bb"}]`, `[{"id": "aa"}]`, 1)
+		f := &fakeBoardClient{
+			boardReads: []string{boardAt(first, "Keep me"), newer},
+			updateErrs: []error{changed, nil},
+		}
+		_, handler := RemoveBoardReport(f)
+		result := callTool(t, handler, map[string]any{"board": "quality", "reportId": "cc"})
+		require.False(t, result.IsError, getResultText(result))
+
+		var layout boards.Layout
+		require.NoError(t, json.Unmarshal(f.lastUpdate(t).Layout, &layout))
+		assert.Equal(t, [][]string{{"aa"}, {"bb"}}, layout.RowIDs(), "the move of bb made meanwhile must survive the removal")
+	})
+
+	t.Run("a report edit merges into the newer params", func(t *testing.T) {
+		newer := strings.Replace(boardAt(second, "Keep me"), `"groupBy": "workflow"`, `"groupBy": "status"`, 1)
+		f := &fakeBoardClient{
+			boardReads: []string{boardAt(first, "Keep me"), newer},
+			updateErrs: []error{changed, nil},
+		}
+		_, handler := UpdateBoardReport(f)
+		result := callTool(t, handler, map[string]any{"board": "quality", "reportId": "bb", "params": map[string]any{"measure": "duration"}})
+		require.False(t, result.IsError, getResultText(result))
+
+		params := f.lastUpdate(t).Content.ContentData.Params
+		assert.Equal(t, "duration", params["measure"])
+		assert.Equal(t, "status", params["groupBy"], "a param changed meanwhile and not named by the caller must be kept")
+	})
+
+	t.Run("a report removed meanwhile is reported, not recreated", func(t *testing.T) {
+		gone := strings.Replace(boardAt(second, "Keep me"), `{"id": "bb", "kind": "executions"`, `{"id": "zz", "kind": "executions"`, 1)
+		f := &fakeBoardClient{
+			boardReads: []string{boardAt(first, "Keep me"), gone},
+			updateErrs: []error{changed},
+		}
+		_, handler := UpdateBoardReport(f)
+		result := callTool(t, handler, map[string]any{"board": "quality", "reportId": "bb", "name": "x"})
+		assert.True(t, result.IsError)
+		assert.Contains(t, getResultText(result), `report "bb" not found`)
+		assert.Len(t, f.updates, 1)
+	})
+
+	t.Run("gives up after a bounded number of attempts", func(t *testing.T) {
+		f := &fakeBoardClient{
+			board:      boardAt(first, "Keep me"),
+			updateErrs: []error{changed, changed, changed, nil},
+		}
+		_, handler := UpdateBoard(f)
+		result := callTool(t, handler, map[string]any{"board": "quality", "name": "Renamed"})
+		assert.True(t, result.IsError)
+		assert.Contains(t, getResultText(result), "kept changing")
+		assert.Len(t, f.updates, boardWriteAttempts)
+	})
+
+	t.Run("other errors are not retried", func(t *testing.T) {
+		f := &fakeBoardClient{
+			board:      boardAt(first, "Keep me"),
+			updateErrs: []error{errors.New("API returned status 403: forbidden")},
+		}
+		_, handler := UpdateBoard(f)
+		result := callTool(t, handler, map[string]any{"board": "quality", "name": "Renamed"})
+		assert.True(t, result.IsError)
+		assert.Len(t, f.updates, 1)
 	})
 }

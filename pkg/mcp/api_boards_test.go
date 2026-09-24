@@ -129,3 +129,24 @@ func TestAPIClient_Boards_RefuseAPITokenWithoutRequest(t *testing.T) {
 	assert.True(t, errors.Is(client.DeleteBoard(ctx, "b"), tools.ErrBoardsRequireUser))
 	assert.Zero(t, requests.Load(), "an API token must be refused before any request is sent")
 }
+
+func TestAPIClient_UpdateBoard_ConflictIsErrBoardChanged(t *testing.T) {
+	var body map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		data, _ := io.ReadAll(r.Body)
+		require.NoError(t, json.Unmarshal(data, &body))
+		w.Header().Set("Content-Type", "application/problem+json")
+		w.WriteHeader(http.StatusConflict)
+		_, _ = io.WriteString(w, `{"title":"board changed","status":409,"detail":"the board changed after expectedUpdatedAt"}`)
+	}))
+	defer server.Close()
+
+	client := NewAPIClient(&MCPServerConfig{ControlPlaneUrl: server.URL, AccessToken: "user-token", OrgId: "o", EnvId: "e"}, server.Client())
+	name := "Renamed"
+	_, err := client.UpdateBoard(context.Background(), "tkcbrd_1", tools.UpdateBoardRequest{Name: &name, ExpectedUpdatedAt: "2026-09-24T10:00:00.123Z"})
+
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, tools.ErrBoardChanged))
+	assert.Contains(t, err.Error(), "status 409", "the Control Plane's message is kept")
+	assert.Equal(t, "2026-09-24T10:00:00.123Z", body["expectedUpdatedAt"])
+}

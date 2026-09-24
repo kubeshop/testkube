@@ -165,7 +165,7 @@ The report keeps its place on the board.` + boardSessionNote
 Only call it when the user explicitly asked to delete this board. Deleting a shared board requires an organization admin; a private board can be deleted by its owner.` + boardSessionNote
 
 	RenderBoardDescription = `Render an Insights board: run each report's query and return the numbers it shows, together with the query and date range used.
-A report that fails is returned with an error without failing the others. Relative durations end at the start of tomorrow (UTC).` + boardSessionNote
+A report that fails is returned with an error without failing the others. Relative durations end at the start of tomorrow in timeZone, as the dashboard ends them at the viewer's local midnight - pass the user's time zone to get the numbers they see.` + boardSessionNote
 
 	// Board tool parameter descriptions
 	BoardIdDescription = "The board's ID or slug (from list_boards)."
@@ -193,6 +193,8 @@ Example: {"workflow": ["api-tests"], "status": ["failed"], "environment": ["tkce
 
 	BoardLayoutDescription = `Advanced: the board layout, to reorder reports or put several on one row. Format: {"version": 1, "rows": [{"cells": [{"id": "<reportId>"}, ...]}, ...]}.
 Every report on the board must appear exactly once. Get the current layout and report IDs with get_board.`
+
+	BoardRenderTimeZoneDescription = `IANA time zone of the person viewing the board, e.g. 'Europe/Berlin' or 'America/New_York'. The dashboard ends a relative range (day, week, month, quarter) at the viewer's local midnight, so use the user's zone to match what they see. Default: UTC.`
 
 	BoardRenderScopeDescription = `'board' (default) renders what the dashboard shows: each report's own environment filter, or every environment when it has none.
 'environment' limits every report to the current environment instead.`

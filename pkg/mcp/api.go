@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -183,10 +184,7 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 				debugInfo.Data["responseBody"] = string(errBody)
 			}
 		}
-		if detail := extractErrorDetail(errBody); detail != "" {
-			return "", fmt.Errorf("API returned status %d: %s", resp.StatusCode, detail)
-		}
-		return "", fmt.Errorf("API returned status %d", resp.StatusCode)
+		return "", &apiStatusError{status: resp.StatusCode, detail: extractErrorDetail(errBody)}
 	}
 
 	// Read response body as string
@@ -203,6 +201,21 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 	}
 
 	return string(bodyBytes), nil
+}
+
+// apiStatusError is a non-2xx response. Its message is what callers have
+// always seen; the status lets a method recognize one outcome, such as a 409
+// from a conditional board update, without matching on the text.
+type apiStatusError struct {
+	status int
+	detail string
+}
+
+func (e *apiStatusError) Error() string {
+	if e.detail != "" {
+		return fmt.Sprintf("API returned status %d: %s", e.status, e.detail)
+	}
+	return fmt.Sprintf("API returned status %d", e.status)
 }
 
 // maxErrorDetailLen bounds how much of an error response body is surfaced to the
@@ -1218,13 +1231,18 @@ func (c *APIClient) UpdateBoard(ctx context.Context, board string, request tools
 	if err := c.requireUserSession(); err != nil {
 		return "", err
 	}
-	return c.makeRequest(ctx, APIRequest{
+	result, err := c.makeRequest(ctx, APIRequest{
 		Method:     http.MethodPatch,
 		Path:       "/boards/{boardID}",
 		Scope:      ApiScopeOrg,
 		PathParams: map[string]string{"boardID": url.PathEscape(board)},
 		Body:       request,
 	})
+	var statusErr *apiStatusError
+	if errors.As(err, &statusErr) && statusErr.status == http.StatusConflict {
+		return "", fmt.Errorf("%w: %v", tools.ErrBoardChanged, err)
+	}
+	return result, err
 }
 
 func (c *APIClient) DeleteBoard(ctx context.Context, board string) error {

@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -32,7 +33,15 @@ var ErrBoardsRequireUser = errors.New("insights boards require a signed-in user 
 	"Sign in with `testkube login` and restart the MCP server, or connect to the hosted MCP endpoint with your user account. " +
 	"In Docker or environment-variable mode, TK_ACCESS_TOKEN must be a user access token, not an API token (tkcapi_...)")
 
+// ErrBoardChanged is returned by a client when a conditional board update is
+// refused because the board changed after the updatedAt the update carries.
+var ErrBoardChanged = errors.New("the board changed since it was read")
+
 const renderConcurrency = 4
+
+// boardWriteAttempts bounds how many times a board write is rebuilt from a
+// fresh read after losing a race with a concurrent edit.
+const boardWriteAttempts = 3
 
 // ListBoardsParams filters the board list.
 type ListBoardsParams struct {
@@ -64,13 +73,20 @@ type BoardContentPatch struct {
 // UpdateBoardRequest is the body of a board update. Nil fields are left
 // unchanged - except Description: the Control Plane clears the description of
 // any update that omits it, so the board tools always send the current one.
+//
+// Resending a value read earlier would overwrite a concurrent edit of it, so
+// every board write also sends ExpectedUpdatedAt, the updatedAt of the board
+// it read. The Control Plane then refuses the write with 409 if the board has
+// changed since, and the tools read it again and rebuild the write. A Control
+// Plane that predates the field ignores it.
 type UpdateBoardRequest struct {
-	Name        *string            `json:"name,omitempty"`
-	Description *string            `json:"description,omitempty"`
-	Slug        *string            `json:"slug,omitempty"`
-	IsPrivate   *bool              `json:"isPrivate,omitempty"`
-	Layout      json.RawMessage    `json:"layout,omitempty"`
-	Content     *BoardContentPatch `json:"content,omitempty"`
+	Name              *string            `json:"name,omitempty"`
+	Description       *string            `json:"description,omitempty"`
+	Slug              *string            `json:"slug,omitempty"`
+	IsPrivate         *bool              `json:"isPrivate,omitempty"`
+	Layout            json.RawMessage    `json:"layout,omitempty"`
+	Content           *BoardContentPatch `json:"content,omitempty"`
+	ExpectedUpdatedAt string             `json:"expectedUpdatedAt,omitempty"`
 }
 
 // BoardLister lists the boards visible to the user.
@@ -304,56 +320,58 @@ func UpdateBoard(client BoardEditor) (tool mcp.Tool, handler server.ToolHandlerF
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
-		board, errResult := fetchBoard(ctx, client, boardRef)
-		if errResult != nil {
-			return errResult, nil
-		}
-
-		req := UpdateBoardRequest{Description: &board.Description}
-		changed := false
+		// The arguments: every field the caller did not name keeps its value.
+		var change UpdateBoardRequest
+		var layout *boards.Layout
 		if name, ok, err := OptionalParamOK[string](request, "name"); err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		} else if ok && strings.TrimSpace(name) != "" {
-			req.Name = &name
-			changed = true
+			change.Name = &name
 		}
 		if description, ok, err := OptionalParamOK[string](request, "description"); err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		} else if ok {
-			req.Description = &description
-			changed = true
+			change.Description = &description
 		}
 		if slug, ok, err := OptionalParamOK[string](request, "slug"); err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		} else if ok && strings.TrimSpace(slug) != "" {
 			slug = strings.TrimSpace(slug)
-			req.Slug = &slug
-			changed = true
+			change.Slug = &slug
 		}
 		if private, ok, err := OptionalParamOK[bool](request, "private"); err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		} else if ok {
-			req.IsPrivate = &private
-			changed = true
+			change.IsPrivate = &private
 		}
 		if raw, ok := request.GetArguments()["layout"]; ok && raw != nil {
-			layout, err := parseLayoutParam(raw)
+			parsed, err := parseLayoutParam(raw)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			if err := layout.Validate(board.ReportIDs()); err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
-			}
-			req.Layout, _ = json.Marshal(layout)
-			changed = true
+			layout = &parsed
 		}
-		if !changed {
+		if change.Name == nil && change.Description == nil && change.Slug == nil && change.IsPrivate == nil && layout == nil {
 			return mcp.NewToolResultError("nothing to update: pass at least one of name, description, slug, private, layout"), nil
 		}
 
-		result, err := client.UpdateBoard(ctx, board.ID, req)
-		if err != nil {
-			return boardError("update board", err), nil
+		result, _, errResult := writeBoard(ctx, client, boardRef, "update board", func(board *boards.Board) (UpdateBoardRequest, *mcp.CallToolResult) {
+			req := change
+			if req.Description == nil {
+				req.Description = &board.Description
+			}
+			if layout != nil {
+				// Checked against the board as it is now, so a report added
+				// since the caller read the board is not silently unplaced.
+				if err := layout.Validate(board.ReportIDs()); err != nil {
+					return req, mcp.NewToolResultError(err.Error())
+				}
+				req.Layout, _ = json.Marshal(layout)
+			}
+			return req, nil
+		})
+		if errResult != nil {
+			return errResult, nil
 		}
 		formatted, err := formatters.FormatBoard(result)
 		if err != nil {
@@ -409,23 +427,20 @@ func AddBoardReport(client BoardEditor) (tool mcp.Tool, handler server.ToolHandl
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		board, errResult := fetchBoard(ctx, client, boardRef)
+		result, board, errResult := writeBoard(ctx, client, boardRef, "add report", func(board *boards.Board) (UpdateBoardRequest, *mcp.CallToolResult) {
+			return UpdateBoardRequest{
+				Description: &board.Description,
+				Content: &BoardContentPatch{
+					Action:      "create",
+					ContentKind: "report",
+					ContentData: &boards.ReportDraft{Kind: kind, Name: name, Description: description, Params: normalized},
+				},
+			}, nil
+		})
 		if errResult != nil {
 			return errResult, nil
 		}
 		before := board.ReportIDs()
-
-		result, err := client.UpdateBoard(ctx, board.ID, UpdateBoardRequest{
-			Description: &board.Description,
-			Content: &BoardContentPatch{
-				Action:      "create",
-				ContentKind: "report",
-				ContentData: &boards.ReportDraft{Kind: kind, Name: name, Description: description, Params: normalized},
-			},
-		})
-		if err != nil {
-			return boardError("add report", err), nil
-		}
 		return boardChangeResult(result, func(updated *boards.Board) string {
 			for _, id := range updated.ReportIDs() {
 				if !slices.Contains(before, id) {
@@ -467,61 +482,69 @@ func UpdateBoardReport(client BoardEditor) (tool mcp.Tool, handler server.ToolHa
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		board, errResult := fetchBoard(ctx, client, boardRef)
+		newKind, err := OptionalParam[string](request, "kind")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		newName, err := OptionalParam[string](request, "name")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		newDescription, hasDescription, err := OptionalParamOK[string](request, "description")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+
+		result, _, errResult := writeBoard(ctx, client, boardRef, "update report", func(board *boards.Board) (UpdateBoardRequest, *mcp.CallToolResult) {
+			// The Control Plane silently ignores an update of an unknown report.
+			existing, ok := board.FindReport(reportID)
+			if !ok {
+				return UpdateBoardRequest{}, reportNotFound(board, reportID)
+			}
+
+			// The merge starts from the report as it is now, so a concurrent
+			// edit of params the caller did not name is kept.
+			draft := boards.ReportDraft{Kind: existing.Kind, Name: existing.Name, Description: existing.Description}
+			replaceParams := replace
+			if newKind != "" && newKind != existing.Kind {
+				draft.Kind = newKind
+				replaceParams = true
+			}
+			if strings.TrimSpace(newName) != "" {
+				draft.Name = newName
+			}
+			if hasDescription {
+				draft.Description = newDescription
+			}
+
+			patch, filters, err := reportInput(request, draft.Kind)
+			if err != nil {
+				return UpdateBoardRequest{}, mcp.NewToolResultError(err.Error())
+			}
+			base := existing.Params
+			if replaceParams {
+				base = nil
+			}
+			params := boards.MergeParams(base, patch)
+			if err := boards.ApplyFilters(params, filters); err != nil {
+				return UpdateBoardRequest{}, mcp.NewToolResultError(err.Error())
+			}
+			if draft.Params, err = boards.NormalizeReport(draft.Kind, params); err != nil {
+				return UpdateBoardRequest{}, mcp.NewToolResultError(err.Error())
+			}
+
+			return UpdateBoardRequest{
+				Description: &board.Description,
+				Content: &BoardContentPatch{
+					Action:      "update",
+					ContentKind: "report",
+					ContentID:   reportID,
+					ContentData: &draft,
+				},
+			}, nil
+		})
 		if errResult != nil {
 			return errResult, nil
-		}
-		// The Control Plane silently ignores an update of an unknown report.
-		existing, ok := board.FindReport(reportID)
-		if !ok {
-			return mcp.NewToolResultError(fmt.Sprintf("report %q not found on board %q (reports: %s)", reportID, board.Name, strings.Join(board.ReportIDs(), ", "))), nil
-		}
-
-		draft := boards.ReportDraft{Kind: existing.Kind, Name: existing.Name, Description: existing.Description}
-		if kind, ok, err := OptionalParamOK[string](request, "kind"); err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		} else if ok && kind != "" && kind != existing.Kind {
-			draft.Kind = kind
-			replace = true
-		}
-		if name, ok, err := OptionalParamOK[string](request, "name"); err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		} else if ok && strings.TrimSpace(name) != "" {
-			draft.Name = name
-		}
-		if description, ok, err := OptionalParamOK[string](request, "description"); err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		} else if ok {
-			draft.Description = description
-		}
-
-		patch, filters, err := reportInput(request, draft.Kind)
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-		base := existing.Params
-		if replace {
-			base = nil
-		}
-		params := boards.MergeParams(base, patch)
-		if err := boards.ApplyFilters(params, filters); err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-		if draft.Params, err = boards.NormalizeReport(draft.Kind, params); err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-
-		result, err := client.UpdateBoard(ctx, board.ID, UpdateBoardRequest{
-			Description: &board.Description,
-			Content: &BoardContentPatch{
-				Action:      "update",
-				ContentKind: "report",
-				ContentID:   reportID,
-				ContentData: &draft,
-			},
-		})
-		if err != nil {
-			return boardError("update report", err), nil
 		}
 		return boardChangeResult(result, func(*boards.Board) string { return reportID })
 	}
@@ -548,28 +571,26 @@ func RemoveBoardReport(client BoardEditor) (tool mcp.Tool, handler server.ToolHa
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		board, errResult := fetchBoard(ctx, client, boardRef)
+		result, _, errResult := writeBoard(ctx, client, boardRef, "remove report", func(board *boards.Board) (UpdateBoardRequest, *mcp.CallToolResult) {
+			if _, ok := board.FindReport(reportID); !ok {
+				return UpdateBoardRequest{}, reportNotFound(board, reportID)
+			}
+			// The Control Plane leaves the layout alone when a report is
+			// deleted, so send the layout without the report's cell alongside
+			// the delete - derived from the board as it is now.
+			layout, err := boards.ParseLayout(board.Layout)
+			if err != nil {
+				return UpdateBoardRequest{}, mcp.NewToolResultError(err.Error())
+			}
+			layoutJSON, _ := json.Marshal(layout.Without(reportID))
+			return UpdateBoardRequest{
+				Description: &board.Description,
+				Layout:      layoutJSON,
+				Content:     &BoardContentPatch{Action: "delete", ContentKind: "report", ContentID: reportID},
+			}, nil
+		})
 		if errResult != nil {
 			return errResult, nil
-		}
-		if _, ok := board.FindReport(reportID); !ok {
-			return mcp.NewToolResultError(fmt.Sprintf("report %q not found on board %q (reports: %s)", reportID, board.Name, strings.Join(board.ReportIDs(), ", "))), nil
-		}
-		// The Control Plane leaves the layout alone when a report is deleted,
-		// so send the layout without the report's cell alongside the delete.
-		layout, err := boards.ParseLayout(board.Layout)
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-		layoutJSON, _ := json.Marshal(layout.Without(reportID))
-
-		result, err := client.UpdateBoard(ctx, board.ID, UpdateBoardRequest{
-			Description: &board.Description,
-			Layout:      layoutJSON,
-			Content:     &BoardContentPatch{Action: "delete", ContentKind: "report", ContentID: reportID},
-		})
-		if err != nil {
-			return boardError("remove report", err), nil
 		}
 		formatted, err := formatters.FormatBoard(result)
 		if err != nil {
@@ -625,6 +646,7 @@ func RenderBoard(client BoardRenderer) (tool mcp.Tool, handler server.ToolHandle
 		mcp.WithString("board", mcp.Required(), mcp.Description(BoardIdDescription)),
 		mcp.WithString("reportId", mcp.Description("Render only this report (from get_board). Renders every report when omitted.")),
 		mcp.WithString("scope", mcp.Description(BoardRenderScopeDescription), mcp.Enum("board", "environment")),
+		mcp.WithString("timeZone", mcp.Description(BoardRenderTimeZoneDescription)),
 		mcp.WithNumber("maxSamples", mcp.Description(InsightMaxSamplesDescription)),
 	)
 
@@ -652,6 +674,16 @@ func RenderBoard(client BoardRenderer) (tool mcp.Tool, handler server.ToolHandle
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 		maxSamples = min(max(maxSamples, 0), 500)
+		timeZone, err := OptionalParam[string](request, "timeZone")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		loc, err := boards.ParseTimeZone(timeZone)
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		// One instant for every report, so they all cover the same range.
+		opts := boards.QueryOptions{Now: time.Now(), CurrentEnvironment: scope == "environment", Location: loc}
 
 		board, errResult := fetchBoard(ctx, client, boardRef)
 		if errResult != nil {
@@ -678,7 +710,7 @@ func RenderBoard(client BoardRenderer) (tool mcp.Tool, handler server.ToolHandle
 				defer wg.Done()
 				sem <- struct{}{}
 				defer func() { <-sem }()
-				results[i] = renderReport(ctx, client, r, scope == "environment", maxSamples)
+				results[i] = renderReport(ctx, client, r, opts, maxSamples)
 			}()
 		}
 		wg.Wait()
@@ -687,9 +719,10 @@ func RenderBoard(client BoardRenderer) (tool mcp.Tool, handler server.ToolHandle
 			Board    string           `json:"board"`
 			Name     string           `json:"name"`
 			Scope    string           `json:"scope"`
+			TimeZone string           `json:"timeZone"`
 			Reports  []renderedReport `json:"reports"`
 			Unplaced []string         `json:"unplaced,omitempty"`
-		}{Board: board.ID, Name: board.Name, Scope: scope, Reports: results}
+		}{Board: board.ID, Name: board.Name, Scope: scope, TimeZone: loc.String(), Reports: results}
 		if reportID == "" {
 			out.Unplaced = unplaced
 		}
@@ -703,9 +736,9 @@ func RenderBoard(client BoardRenderer) (tool mcp.Tool, handler server.ToolHandle
 	return tool, handler
 }
 
-func renderReport(ctx context.Context, client BoardInsightQuerier, r boards.Report, currentEnv bool, maxSamples int) renderedReport {
+func renderReport(ctx context.Context, client BoardInsightQuerier, r boards.Report, opts boards.QueryOptions, maxSamples int) renderedReport {
 	out := renderedReport{ID: r.ID, Name: r.Name, Kind: r.Kind}
-	q, err := boards.BuildQuery(r.Kind, r.Params, boards.QueryOptions{CurrentEnvironment: currentEnv})
+	q, err := boards.BuildQuery(r.Kind, r.Params, opts)
 	if err != nil {
 		out.Error = err.Error()
 		return out
@@ -748,6 +781,39 @@ func fetchBoard(ctx context.Context, client BoardGetter, ref string) (*boards.Bo
 		return nil, mcp.NewToolResultError(err.Error())
 	}
 	return board, nil
+}
+
+// writeBoard reads the board, builds an update from it, and sends it
+// conditioned on the updatedAt it read. build must derive everything it takes
+// from the board it is given. When a concurrent edit wins the race, the board
+// is read again and the update rebuilt from it, so the caller's change is
+// reapplied on top of the newer board instead of overwriting it. It returns
+// the updated board and the board the update was built from.
+func writeBoard(ctx context.Context, client BoardEditor, ref, action string,
+	build func(*boards.Board) (UpdateBoardRequest, *mcp.CallToolResult)) (string, *boards.Board, *mcp.CallToolResult) {
+	for attempt := 1; ; attempt++ {
+		board, errResult := fetchBoard(ctx, client, ref)
+		if errResult != nil {
+			return "", nil, errResult
+		}
+		req, errResult := build(board)
+		if errResult != nil {
+			return "", nil, errResult
+		}
+		req.ExpectedUpdatedAt = board.UpdatedAt
+
+		result, err := client.UpdateBoard(ctx, board.ID, req)
+		if err == nil {
+			return result, board, nil
+		}
+		if !errors.Is(err, ErrBoardChanged) || attempt == boardWriteAttempts {
+			return "", nil, boardError(action, err)
+		}
+	}
+}
+
+func reportNotFound(board *boards.Board, reportID string) *mcp.CallToolResult {
+	return mcp.NewToolResultError(fmt.Sprintf("report %q not found on board %q (reports: %s)", reportID, board.Name, strings.Join(board.ReportIDs(), ", ")))
 }
 
 // boardChangeResult formats a board returned by an update, together with the
@@ -850,6 +916,8 @@ func boardError(action string, err error) *mcp.CallToolResult {
 	switch {
 	case errors.Is(err, ErrBoardsRequireUser), strings.Contains(msg, "API tokens are not supported"):
 		return mcp.NewToolResultError(ErrBoardsRequireUser.Error())
+	case errors.Is(err, ErrBoardChanged):
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to %s: the board kept changing while the change was applied (%d attempts), so nothing was written. Someone may be editing it; try again.", action, boardWriteAttempts))
 	case strings.Contains(msg, "status 404"):
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to %s: board not found (it may be private to another user). Use list_boards to find it. (%v)", action, err))
 	case strings.Contains(msg, "status 500"):

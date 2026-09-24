@@ -98,6 +98,10 @@ type QueryOptions struct {
 	// CurrentEnvironment replaces the report's own environment filter with the
 	// MCP session's environment (see InsightQuery.CurrentEnvironment).
 	CurrentEnvironment bool
+	// Location is the time zone relative durations are anchored in. The
+	// dashboard anchors them to the viewer's local midnight, so this must be
+	// the viewer's zone for the numbers to match. Nil means UTC.
+	Location *time.Location
 }
 
 // BuildQuery translates a report into the insight query the dashboard issues
@@ -116,7 +120,7 @@ func BuildQuery(kind string, params map[string]any, opts QueryOptions) (InsightQ
 	if err != nil {
 		return InsightQuery{}, err
 	}
-	start, end, err := DateRange(stringParam(params, "duration"), stringParam(params, "from"), stringParam(params, "to"), now)
+	start, end, err := DateRange(stringParam(params, "duration"), stringParam(params, "from"), stringParam(params, "to"), now, opts.Location)
 	if err != nil {
 		return InsightQuery{}, err
 	}
@@ -178,9 +182,12 @@ func BuildQuery(kind string, params map[string]any, opts QueryOptions) (InsightQ
 //   - only to: [to - duration, to];
 //   - neither: the duration ending at the start of tomorrow.
 //
-// A missing or "custom" duration means a week. The dashboard computes
-// "tomorrow" in the browser's time zone; this port uses UTC.
-func DateRange(duration, from, to string, now time.Time) (time.Time, time.Time, error) {
+// A missing or "custom" duration means a week. "Tomorrow" is taken in loc,
+// as the dashboard takes it in the browser's time zone; nil means UTC. The
+// duration is then subtracted as a fixed number of minutes, as the dashboard
+// does, so a range that crosses a daylight-saving change starts an hour off
+// local midnight there too.
+func DateRange(duration, from, to string, now time.Time, loc *time.Location) (time.Time, time.Time, error) {
 	var fromT, toT time.Time
 	var err error
 	if from != "" {
@@ -208,8 +215,11 @@ func DateRange(duration, from, to string, now time.Time) (time.Time, time.Time, 
 	case to != "":
 		return toT.Add(-d), toT, nil
 	}
-	y, m, day := now.UTC().Date()
-	eod := time.Date(y, m, day+1, 0, 0, 0, 0, time.UTC)
+	if loc == nil {
+		loc = time.UTC
+	}
+	y, m, day := now.In(loc).Date()
+	eod := time.Date(y, m, day+1, 0, 0, 0, 0, loc)
 	return eod.Add(-d), eod, nil
 }
 

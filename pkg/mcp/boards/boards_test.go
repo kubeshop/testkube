@@ -16,6 +16,7 @@ type translationCase struct {
 	Name     string            `json:"name"`
 	Kind     string            `json:"kind"`
 	Now      time.Time         `json:"now"`
+	TimeZone string            `json:"timeZone"`
 	Params   map[string]any    `json:"params"`
 	Endpoint string            `json:"endpoint"`
 	Query    map[string]string `json:"query"`
@@ -30,7 +31,9 @@ func TestBuildQuery_TranslationCases(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			q, err := BuildQuery(tc.Kind, tc.Params, QueryOptions{Now: tc.Now})
+			loc, err := ParseTimeZone(tc.TimeZone)
+			require.NoError(t, err)
+			q, err := BuildQuery(tc.Kind, tc.Params, QueryOptions{Now: tc.Now, Location: loc})
 			require.NoError(t, err)
 			assert.Equal(t, tc.Endpoint, string(q.Endpoint))
 			assert.Equal(t, tc.Query, q.QueryParams())
@@ -215,4 +218,17 @@ func TestBoardOrderedReports(t *testing.T) {
 	assert.Equal(t, "y", ordered[0].ID)
 	assert.Equal(t, "x", ordered[1].ID)
 	assert.Equal(t, []string{"x"}, unplaced)
+}
+
+func TestParseTimeZone(t *testing.T) {
+	loc, err := ParseTimeZone("")
+	require.NoError(t, err)
+	assert.Equal(t, time.UTC, loc)
+
+	loc, err = ParseTimeZone(" Asia/Kolkata ")
+	require.NoError(t, err)
+	assert.Equal(t, "Asia/Kolkata", loc.String())
+
+	_, err = ParseTimeZone("Mars/Olympus")
+	assert.ErrorContains(t, err, "IANA time zone")
 }
