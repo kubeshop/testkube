@@ -75,7 +75,7 @@ type Report struct {
 type ReportDraft struct {
 	Kind        string         `json:"kind"`
 	Name        string         `json:"name"`
-	Description string         `json:"description,omitempty"`
+	Description string         `json:"description"`
 	Params      map[string]any `json:"params"`
 }
 
