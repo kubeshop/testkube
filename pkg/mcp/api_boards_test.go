@@ -85,7 +85,8 @@ func TestAPIClient_Boards_RequestShapes(t *testing.T) {
 		"description": "kept",
 		"content": map[string]any{
 			"action": "create", "content_kind": "report",
-			"content_data": map[string]any{"kind": "workflows", "name": "W", "params": map[string]any{"duration": "month"}},
+			// The description is always sent, so an empty one clears a report's.
+			"content_data": map[string]any{"kind": "workflows", "name": "W", "description": "", "params": map[string]any{"duration": "month"}},
 		},
 	}, got.body, "no layout key is sent when the layout is not changed")
 
