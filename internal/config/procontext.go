@@ -90,12 +90,17 @@ func (a *ProContextAgent) HasCapability(capability cloud.AgentCapability) bool {
 }
 
 // ShouldPushClusterInventory reports whether this agent should run the CRD
-// watcher and push the cluster-resources inventory. Only listener-capable
-// agents should: the Control Plane rejects everyone else's push, and a
-// runner-only deployment has no CRD RBAC to watch with. Standalone serves
-// discovery from its own API, so it never pushes. The inventory only feeds the
-// TestTrigger resourceRef picker, so an agent with test triggers disabled
-// neither watches nor pushes.
+// watcher and push the cluster-resources inventory. See internal/inventory.
 func ShouldPushClusterInventory(proContext ProContext, testTriggersDisabled bool) bool {
-	return !testTriggersDisabled && proContext.APIKey != "" && proContext.Agent.HasCapability(cloud.AgentCapability_AGENT_CAPABILITY_LISTENER)
+	// The inventory only feeds the TestTrigger resourceRef picker.
+	if testTriggersDisabled {
+		return false
+	}
+	// Standalone serves discovery from its own API, so it never pushes.
+	if proContext.APIKey == "" {
+		return false
+	}
+	// The Control Plane rejects a push from anyone but a listener, and a
+	// runner-only deployment has no CRD RBAC to watch with.
+	return proContext.Agent.HasCapability(cloud.AgentCapability_AGENT_CAPABILITY_LISTENER)
 }
