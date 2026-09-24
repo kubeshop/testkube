@@ -21,3 +21,7 @@ breaking:
   ignore:
     - logs.proto
     - service.proto
+    - testkube/testworkflow/execution/v1/decline_execution_request.proto
+    - testkube/testworkflow/execution/v1/execution_lineage.proto
+    - testkube/testworkflow/execution/v1/execution_start.proto
+    - testkube/testworkflow/execution/v1/execution_state_transition.proto
