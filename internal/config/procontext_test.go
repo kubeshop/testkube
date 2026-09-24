@@ -19,9 +19,10 @@ func TestShouldPushClusterInventory(t *testing.T) {
 		cloud.AgentCapability_AGENT_CAPABILITY_EXECUTION,
 	}
 	tests := []struct {
-		name       string
-		proContext ProContext
-		want       bool
+		name                 string
+		proContext           ProContext
+		testTriggersDisabled bool
+		want                 bool
 	}{
 		{
 			name:       "standalone mode never pushes",
@@ -32,6 +33,12 @@ func TestShouldPushClusterInventory(t *testing.T) {
 			name:       "connected listener-capable agent pushes",
 			proContext: ProContext{APIKey: "key", Agent: ProContextAgent{Capabilities: listener}},
 			want:       true,
+		},
+		{
+			name:                 "connected listener-capable agent with test triggers disabled does not push",
+			proContext:           ProContext{APIKey: "key", Agent: ProContextAgent{Capabilities: listener}},
+			testTriggersDisabled: true,
+			want:                 false,
 		},
 		{
 			name:       "connected execution-only agent does not push",
@@ -46,7 +53,7 @@ func TestShouldPushClusterInventory(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, ShouldPushClusterInventory(tt.proContext))
+			assert.Equal(t, tt.want, ShouldPushClusterInventory(tt.proContext, tt.testTriggersDisabled))
 		})
 	}
 }
