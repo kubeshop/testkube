@@ -14,6 +14,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/kubeshop/testkube/pkg/mcp/boards"
+	mcpcontext "github.com/kubeshop/testkube/pkg/mcp/context"
 	"github.com/kubeshop/testkube/pkg/mcp/formatters"
 )
 
@@ -702,18 +703,34 @@ func RenderBoard(client BoardRenderer) (tool mcp.Tool, handler server.ToolHandle
 		}
 
 		results := make([]renderedReport, len(reports))
+		// The clients record each call in the context's DebugInfo, which is
+		// not safe for concurrent use. When debugging is on, every report
+		// query gets its own, merged into the call's once all are done.
+		debug := mcpcontext.GetDebugInfo(ctx)
+		reportDebug := make([]*mcpcontext.DebugInfo, len(reports))
 		sem := make(chan struct{}, renderConcurrency)
 		var wg sync.WaitGroup
 		for i, r := range reports {
+			reportCtx := ctx
+			if debug != nil {
+				reportCtx, reportDebug[i] = mcpcontext.WithDebugInfo(ctx)
+			}
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
 				sem <- struct{}{}
 				defer func() { <-sem }()
-				results[i] = renderReport(ctx, client, r, opts, maxSamples)
+				results[i] = renderReport(reportCtx, client, r, opts, maxSamples)
 			}()
 		}
 		wg.Wait()
+		if debug != nil {
+			perReport := make(map[string]*mcpcontext.DebugInfo, len(reports))
+			for i, r := range reports {
+				perReport[r.ID] = reportDebug[i]
+			}
+			debug.Data["reports"] = perReport
+		}
 
 		out := struct {
 			Board    string           `json:"board"`

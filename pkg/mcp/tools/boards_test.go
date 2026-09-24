@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kubeshop/testkube/pkg/mcp/boards"
+	mcpcontext "github.com/kubeshop/testkube/pkg/mcp/context"
 )
 
 const testBoard = `{
@@ -57,6 +58,8 @@ type fakeBoardClient struct {
 	boardsByRef map[string]string
 	// readRefs records the ID or slug of every read.
 	readRefs []string
+	// queryDebug records the DebugInfo each insight query saw.
+	queryDebug []*mcpcontext.DebugInfo
 	// onUpdate, when set, runs as each update arrives, to change the board under it.
 	onUpdate func()
 }
@@ -115,10 +118,20 @@ func (f *fakeBoardClient) DeleteBoard(_ context.Context, ref string) error {
 	return nil
 }
 
-func (f *fakeBoardClient) QueryBoardInsights(_ context.Context, q boards.InsightQuery) (string, error) {
+func (f *fakeBoardClient) QueryBoardInsights(ctx context.Context, q boards.InsightQuery) (string, error) {
 	f.mu.Lock()
 	f.queries = append(f.queries, q)
+	f.queryDebug = append(f.queryDebug, mcpcontext.GetDebugInfo(ctx))
 	f.mu.Unlock()
+	// Record the call in the context's DebugInfo without a lock, as the real
+	// clients do.
+	if d := mcpcontext.GetDebugInfo(ctx); d != nil {
+		d.Source = "fake"
+		for i := 0; i < 50; i++ {
+			d.Data[fmt.Sprintf("k%d", i)] = i
+		}
+		d.Data["url"] = string(q.Endpoint)
+	}
 	if err := f.queryErr[q.Endpoint]; err != nil {
 		return "", err
 	}
@@ -610,4 +623,46 @@ func TestBoardWrites_RetryReadsTheSameBoardByID(t *testing.T) {
 	assert.Equal(t, "tkcbrd_1", f.updatedRef)
 	require.Len(t, f.updates, 2)
 	assert.Equal(t, int64(4), *f.updates[1].ExpectedVersion, "the retry is built from the renamed board, not the one now holding the slug")
+}
+
+func TestRenderBoard_GivesEachReportItsOwnDebugInfo(t *testing.T) {
+	// testBoard has three reports; aa and bb query in parallel (cc has no
+	// measure and is not queried). Rendering repeatedly makes a shared,
+	// unsynchronized DebugInfo likely to fail on concurrent map writes.
+	for run := 0; run < 20; run++ {
+		f := &fakeBoardClient{
+			board: testBoard,
+			queryResult: map[boards.Endpoint]string{
+				boards.EndpointStats:      `{"ratioStats":{"total":1,"values":[]},"totalStats":{"total":0,"values":[]},"failedStats":{"total":0,"values":[]}}`,
+				boards.EndpointExecutions: `{"count":{"total":0,"values":[]},"duration":{"total":0,"values":[]}}`,
+			},
+			queryErr: map[boards.Endpoint]error{},
+		}
+		_, handler := RenderBoard(f)
+		ctx, debug := mcpcontext.WithDebugInfo(context.Background())
+		request := mcp.CallToolRequest{}
+		request.Params.Arguments = map[string]any{"board": "quality"}
+		result, err := handler(ctx, request)
+		require.NoError(t, err)
+		require.False(t, result.IsError, getResultText(result))
+
+		require.Len(t, f.queryDebug, 2)
+		assert.NotSame(t, debug, f.queryDebug[0], "a report query must not write the call's shared DebugInfo")
+		assert.NotSame(t, f.queryDebug[0], f.queryDebug[1], "each report query gets its own DebugInfo")
+
+		perReport, ok := debug.Data["reports"].(map[string]*mcpcontext.DebugInfo)
+		require.True(t, ok, "the per-report debug info is merged into the call's")
+		assert.Equal(t, string(boards.EndpointStats), perReport["aa"].Data["url"])
+		assert.Equal(t, string(boards.EndpointExecutions), perReport["bb"].Data["url"])
+		assert.Empty(t, perReport["cc"].Data, "a report that is not queried records nothing")
+	}
+}
+
+func TestRenderBoard_WithoutDebugAddsNothing(t *testing.T) {
+	f := &fakeBoardClient{board: testBoard, queryResult: map[boards.Endpoint]string{}, queryErr: map[boards.Endpoint]error{}}
+	_, handler := RenderBoard(f)
+	callTool(t, handler, map[string]any{"board": "quality"})
+	for _, d := range f.queryDebug {
+		assert.Nil(t, d, "no DebugInfo is created when debugging is off")
+	}
 }
