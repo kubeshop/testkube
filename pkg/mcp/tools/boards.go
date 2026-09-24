@@ -811,6 +811,10 @@ func writeBoard(ctx context.Context, client BoardEditor, ref, action string,
 		if !errors.Is(err, ErrBoardChanged) || attempt == boardWriteAttempts {
 			return "", nil, boardError(action, err)
 		}
+		// Read the same board again by the ID the first read resolved, not by
+		// what the caller passed: the concurrent change may have been to the
+		// slug, which could now be missing or belong to another board.
+		ref = board.ID
 	}
 }
 

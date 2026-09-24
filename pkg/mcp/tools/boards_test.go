@@ -53,6 +53,12 @@ type fakeBoardClient struct {
 	boardReads []string
 	// updateErrs are the errors successive updates return, in order.
 	updateErrs []error
+	// boardsByRef, when set, serves boards by the ID or slug they are read by.
+	boardsByRef map[string]string
+	// readRefs records the ID or slug of every read.
+	readRefs []string
+	// onUpdate, when set, runs as each update arrives, to change the board under it.
+	onUpdate func()
 }
 
 func (f *fakeBoardClient) ListBoards(_ context.Context, p ListBoardsParams) (string, error) {
@@ -60,7 +66,14 @@ func (f *fakeBoardClient) ListBoards(_ context.Context, p ListBoardsParams) (str
 	return `[{"id":"tkcbrd_1","slug":"quality","name":"Quality","shared":true,"analysisCount":3}]`, nil
 }
 
-func (f *fakeBoardClient) GetBoard(context.Context, string) (string, error) {
+func (f *fakeBoardClient) GetBoard(_ context.Context, ref string) (string, error) {
+	f.readRefs = append(f.readRefs, ref)
+	if f.boardsByRef != nil {
+		if b, ok := f.boardsByRef[ref]; ok {
+			return b, nil
+		}
+		return "", errors.New("API returned status 404: board not found")
+	}
 	// Each read after the first returns the next board of boardReads, as if
 	// someone edited the board in between.
 	if len(f.boardReads) > 0 {
@@ -79,6 +92,9 @@ func (f *fakeBoardClient) CreateBoard(_ context.Context, p CreateBoardParams) (s
 }
 
 func (f *fakeBoardClient) UpdateBoard(_ context.Context, ref string, r UpdateBoardRequest) (string, error) {
+	if f.onUpdate != nil {
+		f.onUpdate()
+	}
 	f.updatedRef = ref
 	f.updates = append(f.updates, r)
 	if len(f.updateErrs) > 0 {
@@ -563,4 +579,35 @@ func TestBoardWrites_AreUnconditionalWithoutAVersion(t *testing.T) {
 	result := callTool(t, handler, map[string]any{"board": "quality", "name": "Renamed"})
 	require.False(t, result.IsError, getResultText(result))
 	assert.Nil(t, f.lastUpdate(t).ExpectedVersion)
+}
+
+func TestBoardWrites_RetryReadsTheSameBoardByID(t *testing.T) {
+	// The caller names the board by slug. Before the write lands, someone
+	// renames its slug and another board takes the old one over.
+	original := boardAt(3, "Keep me")
+	renamed := strings.Replace(boardAt(4, "Keep me"), `"slug": "quality"`, `"slug": "quality-renamed"`, 1)
+	impostor := strings.Replace(strings.Replace(boardAt(9, "Someone else's"), `"id": "tkcbrd_1"`, `"id": "tkcbrd_2"`, 1), `"name": "Quality"`, `"name": "Other"`, 1)
+
+	f := &fakeBoardClient{
+		boardsByRef: map[string]string{"quality": original},
+		updateErrs:  []error{fmt.Errorf("%w: API returned status 409", ErrBoardChanged), nil},
+		updated:     renamed,
+	}
+	_, handler := UpdateBoard(f)
+	// While the first update is in flight, the slug moves to the other board.
+	first := true
+	f.onUpdate = func() {
+		if first {
+			f.boardsByRef = map[string]string{"quality": impostor, "tkcbrd_1": renamed, "quality-renamed": renamed}
+			first = false
+		}
+	}
+
+	result := callTool(t, handler, map[string]any{"board": "quality", "name": "Renamed"})
+	require.False(t, result.IsError, getResultText(result))
+
+	assert.Equal(t, []string{"quality", "tkcbrd_1"}, f.readRefs, "the retry must read the board the first read resolved, by ID")
+	assert.Equal(t, "tkcbrd_1", f.updatedRef)
+	require.Len(t, f.updates, 2)
+	assert.Equal(t, int64(4), *f.updates[1].ExpectedVersion, "the retry is built from the renamed board, not the one now holding the slug")
 }
