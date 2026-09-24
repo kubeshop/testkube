@@ -128,6 +128,8 @@ func TestAPIClient_Boards_RefuseAPITokenWithoutRequest(t *testing.T) {
 	_, err = client.UpdateBoard(ctx, "b", tools.UpdateBoardRequest{})
 	assert.True(t, errors.Is(err, tools.ErrBoardsRequireUser))
 	assert.True(t, errors.Is(client.DeleteBoard(ctx, "b"), tools.ErrBoardsRequireUser))
+	_, err = client.QueryBoardInsights(ctx, boards.InsightQuery{Endpoint: boards.EndpointWorkflows})
+	assert.True(t, errors.Is(err, tools.ErrBoardsRequireUser))
 	assert.Zero(t, requests.Load(), "an API token must be refused before any request is sent")
 }
 

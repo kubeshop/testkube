@@ -1261,8 +1261,13 @@ func (c *APIClient) DeleteBoard(ctx context.Context, board string) error {
 // QueryBoardInsights runs the org-scoped insight query that renders a board
 // report. Unlike the other insight methods it does not add the session's
 // environment: a report carries its own environment filter, unless the query
-// asks for the current environment.
+// asks for the current environment. The insight endpoints themselves accept
+// API tokens, but this is a board method and refuses them like the rest, as
+// the Control Plane's client does.
 func (c *APIClient) QueryBoardInsights(ctx context.Context, query boards.InsightQuery) (string, error) {
+	if err := c.requireUserSession(); err != nil {
+		return "", err
+	}
 	query = query.WithEnvironment(c.config.EnvId)
 	return c.makeRequest(ctx, APIRequest{
 		Method:      http.MethodGet,
