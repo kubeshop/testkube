@@ -73,8 +73,8 @@ type BoardContentPatch struct {
 }
 
 // UpdateBoardRequest is the body of a board update. Nil fields are left
-// unchanged - except Description: the Control Plane clears the description of
-// any update that omits it, so the board tools always send the current one.
+// unchanged. The board tools always send Description too: current Control
+// Planes keep a description an update omits, but older ones clear it.
 //
 // Resending a value read earlier would overwrite a concurrent edit of it, so
 // every board write also sends ExpectedVersion, the version of the board it
