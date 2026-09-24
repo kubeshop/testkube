@@ -137,16 +137,16 @@ func TestAPIClient_UpdateBoard_ConflictIsErrBoardChanged(t *testing.T) {
 		require.NoError(t, json.Unmarshal(data, &body))
 		w.Header().Set("Content-Type", "application/problem+json")
 		w.WriteHeader(http.StatusConflict)
-		_, _ = io.WriteString(w, `{"title":"board changed","status":409,"detail":"the board changed after expectedUpdatedAt"}`)
+		_, _ = io.WriteString(w, `{"title":"board changed","status":409,"detail":"the board changed after expectedVersion"}`)
 	}))
 	defer server.Close()
 
 	client := NewAPIClient(&MCPServerConfig{ControlPlaneUrl: server.URL, AccessToken: "user-token", OrgId: "o", EnvId: "e"}, server.Client())
-	name := "Renamed"
-	_, err := client.UpdateBoard(context.Background(), "tkcbrd_1", tools.UpdateBoardRequest{Name: &name, ExpectedUpdatedAt: "2026-09-24T10:00:00.123Z"})
+	name, version := "Renamed", int64(7)
+	_, err := client.UpdateBoard(context.Background(), "tkcbrd_1", tools.UpdateBoardRequest{Name: &name, ExpectedVersion: &version})
 
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, tools.ErrBoardChanged))
 	assert.Contains(t, err.Error(), "status 409", "the Control Plane's message is kept")
-	assert.Equal(t, "2026-09-24T10:00:00.123Z", body["expectedUpdatedAt"])
+	assert.Equal(t, float64(7), body["expectedVersion"])
 }

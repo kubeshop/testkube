@@ -436,13 +436,13 @@ func TestRenderBoard_TimeZone(t *testing.T) {
 }
 
 // boardAt returns the test board as read at updatedAt, with a description.
-func boardAt(updatedAt, description string) string {
-	b := strings.Replace(testBoard, `"shared": true,`, `"shared": true, "updatedAt": "`+updatedAt+`",`, 1)
+func boardAt(version int64, description string) string {
+	b := strings.Replace(testBoard, `"shared": true,`, fmt.Sprintf(`"shared": true, "version": %d,`, version), 1)
 	return strings.Replace(b, `"description": "Keep me"`, `"description": "`+description+`"`, 1)
 }
 
-func TestBoardWrites_SendTheUpdatedAtTheyRead(t *testing.T) {
-	const at = "2026-09-24T10:00:00.123Z"
+func TestBoardWrites_SendTheVersionTheyRead(t *testing.T) {
+	const at = int64(7)
 	tests := []struct {
 		name string
 		tool func(BoardEditor) (mcp.Tool, server.ToolHandlerFunc)
@@ -459,13 +459,14 @@ func TestBoardWrites_SendTheUpdatedAtTheyRead(t *testing.T) {
 			_, handler := tt.tool(f)
 			result := callTool(t, handler, tt.args)
 			require.False(t, result.IsError, getResultText(result))
-			assert.Equal(t, at, f.lastUpdate(t).ExpectedUpdatedAt)
+			require.NotNil(t, f.lastUpdate(t).ExpectedVersion)
+			assert.Equal(t, at, *f.lastUpdate(t).ExpectedVersion)
 		})
 	}
 }
 
 func TestBoardWrites_RebuildFromTheNewerBoardAfterAConflict(t *testing.T) {
-	const first, second = "2026-09-24T10:00:00Z", "2026-09-24T10:00:05Z"
+	const first, second = int64(3), int64(4)
 	changed := fmt.Errorf("%w: API returned status 409", ErrBoardChanged)
 
 	t.Run("a concurrent description edit is kept", func(t *testing.T) {
@@ -479,7 +480,7 @@ func TestBoardWrites_RebuildFromTheNewerBoardAfterAConflict(t *testing.T) {
 
 		require.Len(t, f.updates, 2)
 		retry := f.updates[1]
-		assert.Equal(t, second, retry.ExpectedUpdatedAt)
+		assert.Equal(t, second, *retry.ExpectedVersion)
 		assert.Equal(t, "edited meanwhile", *retry.Description, "the stale description must not be written back")
 		assert.Equal(t, "Renamed", *retry.Name)
 	})
@@ -552,4 +553,14 @@ func TestBoardWrites_RebuildFromTheNewerBoardAfterAConflict(t *testing.T) {
 		assert.True(t, result.IsError)
 		assert.Len(t, f.updates, 1)
 	})
+}
+
+func TestBoardWrites_AreUnconditionalWithoutAVersion(t *testing.T) {
+	// A Control Plane that predates versions returns none, and would ignore
+	// an expectation anyway, so none is sent.
+	f := &fakeBoardClient{board: testBoard}
+	_, handler := UpdateBoard(f)
+	result := callTool(t, handler, map[string]any{"board": "quality", "name": "Renamed"})
+	require.False(t, result.IsError, getResultText(result))
+	assert.Nil(t, f.lastUpdate(t).ExpectedVersion)
 }

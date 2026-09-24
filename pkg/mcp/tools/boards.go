@@ -75,18 +75,18 @@ type BoardContentPatch struct {
 // any update that omits it, so the board tools always send the current one.
 //
 // Resending a value read earlier would overwrite a concurrent edit of it, so
-// every board write also sends ExpectedUpdatedAt, the updatedAt of the board
-// it read. The Control Plane then refuses the write with 409 if the board has
+// every board write also sends ExpectedVersion, the version of the board it
+// read. The Control Plane then refuses the write with 409 if the board has
 // changed since, and the tools read it again and rebuild the write. A Control
 // Plane that predates the field ignores it.
 type UpdateBoardRequest struct {
-	Name              *string            `json:"name,omitempty"`
-	Description       *string            `json:"description,omitempty"`
-	Slug              *string            `json:"slug,omitempty"`
-	IsPrivate         *bool              `json:"isPrivate,omitempty"`
-	Layout            json.RawMessage    `json:"layout,omitempty"`
-	Content           *BoardContentPatch `json:"content,omitempty"`
-	ExpectedUpdatedAt string             `json:"expectedUpdatedAt,omitempty"`
+	Name            *string            `json:"name,omitempty"`
+	Description     *string            `json:"description,omitempty"`
+	Slug            *string            `json:"slug,omitempty"`
+	IsPrivate       *bool              `json:"isPrivate,omitempty"`
+	Layout          json.RawMessage    `json:"layout,omitempty"`
+	Content         *BoardContentPatch `json:"content,omitempty"`
+	ExpectedVersion *int64             `json:"expectedVersion,omitempty"`
 }
 
 // BoardLister lists the boards visible to the user.
@@ -784,7 +784,7 @@ func fetchBoard(ctx context.Context, client BoardGetter, ref string) (*boards.Bo
 }
 
 // writeBoard reads the board, builds an update from it, and sends it
-// conditioned on the updatedAt it read. build must derive everything it takes
+// conditioned on the version it read. build must derive everything it takes
 // from the board it is given. When a concurrent edit wins the race, the board
 // is read again and the update rebuilt from it, so the caller's change is
 // reapplied on top of the newer board instead of overwriting it. It returns
@@ -800,7 +800,9 @@ func writeBoard(ctx context.Context, client BoardEditor, ref, action string,
 		if errResult != nil {
 			return "", nil, errResult
 		}
-		req.ExpectedUpdatedAt = board.UpdatedAt
+		// A Control Plane that predates versions returns none; then the write
+		// is unconditional, as before.
+		req.ExpectedVersion = board.Version
 
 		result, err := client.UpdateBoard(ctx, board.ID, req)
 		if err == nil {

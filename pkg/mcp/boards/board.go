@@ -9,12 +9,15 @@ import (
 // Board is a board as the Control Plane returns it from get, create and
 // update.
 type Board struct {
-	ID             string          `json:"id"`
-	Slug           string          `json:"slug"`
-	Name           string          `json:"name"`
-	Description    string          `json:"description,omitempty"`
-	CreatedAt      string          `json:"createdAt,omitempty"`
-	UpdatedAt      string          `json:"updatedAt,omitempty"`
+	ID          string `json:"id"`
+	Slug        string `json:"slug"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	CreatedAt   string `json:"createdAt,omitempty"`
+	UpdatedAt   string `json:"updatedAt,omitempty"`
+	// Version is incremented by every change to the board. Nil when the
+	// Control Plane predates it.
+	Version        *int64          `json:"version,omitempty"`
 	Creator        string          `json:"creator,omitempty"`
 	Shared         bool            `json:"shared"`
 	IsUserFavorite bool            `json:"isUserFavorite,omitempty"`
