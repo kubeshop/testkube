@@ -35,7 +35,8 @@ var ErrBoardsRequireUser = errors.New("insights boards require a signed-in user 
 	"In Docker or environment-variable mode, TK_ACCESS_TOKEN must be a user access token, not an API token (tkcapi_...)")
 
 // ErrBoardChanged is returned by a client when a conditional board update is
-// refused because the board changed after the updatedAt the update carries.
+// refused because the board no longer has the version the update carries in
+// ExpectedVersion.
 var ErrBoardChanged = errors.New("the board changed since it was read")
 
 const renderConcurrency = 4
@@ -695,11 +696,17 @@ func RenderBoard(client BoardRenderer) (tool mcp.Tool, handler server.ToolHandle
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 		if reportID != "" {
+			// A report asked for by ID is rendered even if the layout leaves
+			// it out.
 			r, ok := board.FindReport(reportID)
 			if !ok {
 				return mcp.NewToolResultError(fmt.Sprintf("report %q not found on board %q (reports: %s)", reportID, board.Name, strings.Join(board.ReportIDs(), ", "))), nil
 			}
 			reports = []boards.Report{*r}
+		} else {
+			// Render what the dashboard shows. Reports the layout leaves out
+			// are listed under unplaced, not queried.
+			reports = reports[:len(reports)-len(unplaced)]
 		}
 
 		results := make([]renderedReport, len(reports))

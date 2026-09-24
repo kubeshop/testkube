@@ -164,7 +164,7 @@ The report keeps its place on the board.` + boardSessionNote
 	DeleteBoardDescription = `Permanently delete an Insights board and all of its reports. This cannot be undone.
 Only call it when the user explicitly asked to delete this board. Deleting a shared board requires an organization admin; a private board can be deleted by its owner.` + boardSessionNote
 
-	RenderBoardDescription = `Render an Insights board: run each report's query and return the numbers it shows, together with the query and date range used.
+	RenderBoardDescription = `Render an Insights board: run the query of each report the dashboard shows and return its numbers, together with the query and date range used. Reports the board's layout leaves out are listed under 'unplaced' and not rendered, unless one is asked for with reportId.
 A report that fails is returned with an error without failing the others. Relative durations end at the start of tomorrow in timeZone, as the dashboard ends them at the viewer's local midnight - pass the user's time zone to get the numbers they see.` + boardSessionNote
 
 	// Board tool parameter descriptions

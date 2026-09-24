@@ -666,3 +666,56 @@ func TestRenderBoard_WithoutDebugAddsNothing(t *testing.T) {
 		assert.Nil(t, d, "no DebugInfo is created when debugging is off")
 	}
 }
+
+func TestRenderBoard_SkipsReportsTheLayoutLeavesOut(t *testing.T) {
+	// cc is on the board but not in the layout, so the dashboard does not show it.
+	unplaced := strings.Replace(testBoard, `, {"id": "r2", "cells": [{"id": "cc"}]}`, ``, 1)
+	unplaced = strings.Replace(unplaced, `"measure": "", "aggregate": "sum"`, `"measure": "execution-count", "aggregate": "sum"`, 1)
+	newClient := func() *fakeBoardClient {
+		return &fakeBoardClient{
+			board: unplaced,
+			queryResult: map[boards.Endpoint]string{
+				boards.EndpointStats:      `{"ratioStats":{"total":1,"values":[]},"totalStats":{"total":0,"values":[]},"failedStats":{"total":0,"values":[]}}`,
+				boards.EndpointExecutions: `{"count":{"total":0,"values":[]},"duration":{"total":0,"values":[]}}`,
+				boards.EndpointSeries:     `[]`,
+			},
+			queryErr: map[boards.Endpoint]error{},
+		}
+	}
+	var out struct {
+		Reports []struct {
+			ID string `json:"id"`
+		} `json:"reports"`
+		Unplaced []string `json:"unplaced"`
+	}
+
+	t.Run("the default render covers what the dashboard shows", func(t *testing.T) {
+		f := newClient()
+		_, handler := RenderBoard(f)
+		result := callTool(t, handler, map[string]any{"board": "quality"})
+		require.False(t, result.IsError, getResultText(result))
+		require.NoError(t, json.Unmarshal([]byte(getResultText(result)), &out))
+
+		ids := []string{}
+		for _, r := range out.Reports {
+			ids = append(ids, r.ID)
+		}
+		assert.Equal(t, []string{"aa", "bb"}, ids)
+		assert.Equal(t, []string{"cc"}, out.Unplaced, "the left-out report is still named")
+		for _, q := range f.queries {
+			assert.NotEqual(t, boards.EndpointSeries, q.Endpoint, "the left-out report must not be queried")
+		}
+	})
+
+	t.Run("a left-out report asked for by ID is rendered", func(t *testing.T) {
+		f := newClient()
+		_, handler := RenderBoard(f)
+		result := callTool(t, handler, map[string]any{"board": "quality", "reportId": "cc"})
+		require.False(t, result.IsError, getResultText(result))
+		require.NoError(t, json.Unmarshal([]byte(getResultText(result)), &out))
+		require.Len(t, out.Reports, 1)
+		assert.Equal(t, "cc", out.Reports[0].ID)
+		require.Len(t, f.queries, 1)
+		assert.Equal(t, boards.EndpointSeries, f.queries[0].Endpoint)
+	})
+}
