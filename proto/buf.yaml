@@ -9,9 +9,19 @@ lint:
   ignore:
     - logs.proto
     - service.proto
+  # Bidirectional stream envelopes; ConnectRequest/ConnectResponse would be misleading.
+  ignore_only:
+    RPC_REQUEST_STANDARD_NAME:
+      - testkube/runspace/v1/runspace_service.proto
+    RPC_RESPONSE_STANDARD_NAME:
+      - testkube/runspace/v1/runspace_service.proto
 breaking:
   use:
     - FILE
   ignore:
     - logs.proto
     - service.proto
+    - testkube/testworkflow/execution/v1/decline_execution_request.proto
+    - testkube/testworkflow/execution/v1/execution_lineage.proto
+    - testkube/testworkflow/execution/v1/execution_start.proto
+    - testkube/testworkflow/execution/v1/execution_state_transition.proto

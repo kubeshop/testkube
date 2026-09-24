@@ -15,6 +15,7 @@ service RunspaceBridgeService {
 
 // BridgeMessage is an envelope sent from the Bridge up to AI Service.
 message BridgeMessage {
+  // payload is the Bridge-to-AI-Service frame body.
   oneof payload {
     // hello is the first frame, sent on stream open.
     BridgeHello hello = 1;
@@ -31,6 +32,7 @@ message BridgeMessage {
 message ControlMessage {
   // seq is a monotonically increasing sequence number, used for BridgeAck.
   uint64 seq = 1;
+  // payload is the AI-Service-to-Bridge frame body.
   oneof payload {
     // send passes a JSON payload to the Controller's stdin.
     SendToController send = 2;
@@ -43,15 +45,19 @@ message ControlMessage {
 
 // BridgeHello carries session identity for the Bridge's first frame.
 message BridgeHello {
-  string runspace_id  = 1;
-  string org_id       = 2;
-  string env_id       = 3;
+  // runspace_id is the runspace this Bridge session belongs to.
+  string runspace_id = 1;
+  // org_id is the organization that owns the runspace.
+  string org_id = 2;
+  // env_id is the environment that owns the runspace.
+  string env_id = 3;
   // bridge_version is the semver of the Bridge binary, for compatibility checks.
   string bridge_version = 4;
 }
 
 // BridgeAck acknowledges a ControlMessage sequence number.
 message BridgeAck {
+  // seq is the ControlMessage sequence number being acknowledged.
   uint64 seq = 1;
 }
 
@@ -59,13 +65,14 @@ message BridgeAck {
 // on its stdout channel.
 message ControllerEvent {
   // type is the event type identifier (e.g. "file.changed", "step.complete").
-  string type    = 1;
+  string type = 1;
   // payload is the raw JSON body of the event.
-  bytes  payload = 2;
+  bytes payload = 2;
 }
 
 // SendToController is a JSON payload to be written to the Controller's stdin.
 message SendToController {
+  // payload is the raw JSON body to write to the Controller's stdin.
   bytes payload = 1;
 }
 

@@ -62,17 +62,17 @@ func NewFilteredWebhookInformer(
 ) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
-			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
+			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ExecutorV1().Webhook(namespace).List(context.TODO(), options)
+				return client.ExecutorV1().Webhook(namespace).List(ctx, options)
 			},
-			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
+			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ExecutorV1().Webhook(namespace).Watch(context.TODO(), options)
+				return client.ExecutorV1().Webhook(namespace).Watch(ctx, options)
 			},
 		}, client),
 		&executorv1.Webhook{},
