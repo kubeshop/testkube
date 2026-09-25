@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -8,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/filesystem"
@@ -47,10 +50,10 @@ func NewArtifactsCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, paths []string) {
 			root, _ := os.Getwd()
 			walker, err := artifacts.CreateWalker(paths, mounts, root)
-			common.ExitOnError("building a walker", err)
+			common.ExitOnErrorWithReason(testkube.StopReasonArtifactUploadFailed, "building a walker", err)
 
 			if len(walker.Patterns()) == 0 || len(walker.SearchPaths()) == 0 {
-				common.Failf("error: did not found any valid path pattern in the mounted directories")
+				common.FailWithReason(testkube.StopReasonArtifactUploadFailed, errors.New("did not found any valid path pattern in the mounted directories"))
 			}
 
 			fmt.Printf("Root: %s\nPatterns:\n", ui.LightCyan(walker.Root()))
@@ -141,7 +144,7 @@ func NewArtifactsCmd() *cobra.Command {
 
 func run(handler artifacts.Handler, walker artifacts.Walker, dirFS fs.FS) {
 	err := handler.Start()
-	common.ExitOnError("initializing uploader", err)
+	common.ExitOnErrorWithReason(testkube.StopReasonArtifactUploadFailed, "initializing uploader", err)
 
 	started := time.Now()
 	err = walker.Walk(dirFS, func(path string, file fs.File, _ fs.FileInfo, err error) error {
@@ -157,10 +160,10 @@ func run(handler artifacts.Handler, walker artifacts.Walker, dirFS fs.FS) {
 		}
 		return handler.Add(path, file, stat)
 	})
-	common.ExitOnError("reading the file system", err)
+	common.ExitOnErrorWithReason(testkube.StopReasonArtifactUploadFailed, "reading the file system", err)
 	err = handler.End()
 
 	// TODO: Emit information about artifacts
-	common.ExitOnError("finishing upload", err)
+	common.ExitOnErrorWithReason(testkube.StopReasonArtifactUploadFailed, "finishing upload", err)
 	fmt.Printf("Took %s.\n", time.Since(started).Truncate(time.Millisecond))
 }
