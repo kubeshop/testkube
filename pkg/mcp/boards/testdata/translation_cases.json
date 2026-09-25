@@ -1,0 +1,156 @@
+[
+  {
+    "name": "pass-fail default duration is a week ending at the start of tomorrow, and status is dropped",
+    "kind": "pass-fail",
+    "now": "2026-09-23T15:04:05Z",
+    "params": {
+      "measure": "ratio",
+      "filter": [
+        {"filterConfigurationKey": "workflow", "id": "a", "operator": "is", "value": ["api", ""]},
+        {"filterConfigurationKey": "status", "id": "b", "operator": "is", "value": ["failed"]}
+      ]
+    },
+    "endpoint": "/insights/stats",
+    "query": {"startDate": "2026-09-17T00:00:00Z", "endDate": "2026-09-24T00:00:00Z", "workflow": "api"}
+  },
+  {
+    "name": "quarter is 120 days",
+    "kind": "workflows",
+    "now": "2026-09-23T15:04:05Z",
+    "params": {"duration": "quarter"},
+    "endpoint": "/insights/workflows",
+    "query": {"startDate": "2026-05-27T00:00:00Z", "endDate": "2026-09-24T00:00:00Z"}
+  },
+  {
+    "name": "custom duration without a range falls back to a week",
+    "kind": "workflows",
+    "now": "2026-09-23T15:04:05Z",
+    "params": {"duration": "custom"},
+    "endpoint": "/insights/workflows",
+    "query": {"startDate": "2026-09-17T00:00:00Z", "endDate": "2026-09-24T00:00:00Z"}
+  },
+  {
+    "name": "from and to are used as given",
+    "kind": "executions",
+    "now": "2026-09-23T15:04:05Z",
+    "params": {"from": "2026-01-01T00:00:00Z", "to": "2026-02-01T00:00:00Z", "duration": "day", "groupBy": "workflow", "measure": "duration"},
+    "endpoint": "/insights/executions",
+    "query": {"startDate": "2026-01-01T00:00:00Z", "endDate": "2026-02-01T00:00:00Z", "groupBy": "workflow"}
+  },
+  {
+    "name": "only from spans the duration forward",
+    "kind": "executions",
+    "now": "2026-09-23T15:04:05Z",
+    "params": {"from": "2026-01-01T00:00:00Z", "duration": "day"},
+    "endpoint": "/insights/executions",
+    "query": {"startDate": "2026-01-01T00:00:00Z", "endDate": "2026-01-02T00:00:00Z", "groupBy": "status"}
+  },
+  {
+    "name": "only to spans the duration backward",
+    "kind": "pass-fail",
+    "now": "2026-09-23T15:04:05Z",
+    "params": {"to": "2026-03-31T00:00:00Z", "duration": "month"},
+    "endpoint": "/insights/stats",
+    "query": {"startDate": "2026-03-01T00:00:00Z", "endDate": "2026-03-31T00:00:00Z"}
+  },
+  {
+    "name": "environment, labels, tags and status filters",
+    "kind": "workflows",
+    "now": "2026-09-23T15:04:05Z",
+    "params": {
+      "duration": "day",
+      "filter": [
+        {"filterConfigurationKey": "environment", "id": "1", "operator": "is", "value": ["tkcenv_a", "tkcenv_b"]},
+        {"filterConfigurationKey": "status", "id": "2", "operator": "is", "value": ["passed", "failed"]},
+        {"filterConfigurationKey": "labels-v2", "id": "3", "operator": "is", "value": ["team=core"]},
+        {"filterConfigurationKey": "labels-v2", "id": "4", "operator": "where", "value": {"labelKey": "tier", "labelOperator": "contains", "labelValue": "gold"}},
+        {"filterConfigurationKey": "labels-v2", "id": "5", "operator": "where", "value": {"labelKey": "owner", "labelOperator": "exists"}},
+        {"filterConfigurationKey": "tags", "id": "6", "operator": "is", "value": ["release=1.2,hotfix"]}
+      ]
+    },
+    "endpoint": "/insights/workflows",
+    "query": {
+      "startDate": "2026-09-23T00:00:00Z",
+      "endDate": "2026-09-24T00:00:00Z",
+      "env": "tkcenv_a,tkcenv_b",
+      "status": "passed,failed",
+      "selector": "team=core,tier=~gold,owner",
+      "tagFilter": "[\"release=1.2,hotfix\"]"
+    }
+  },
+  {
+    "name": "a contains string filter becomes a regex",
+    "kind": "workflows",
+    "now": "2026-09-23T15:04:05Z",
+    "params": {
+      "duration": "day",
+      "filter": [{"filterConfigurationKey": "workflow", "id": "1", "operator": "contains", "value": "api-"}]
+    },
+    "endpoint": "/insights/workflows",
+    "query": {"startDate": "2026-09-23T00:00:00Z", "endDate": "2026-09-24T00:00:00Z", "workflow": "~api-"}
+  },
+  {
+    "name": "time-series sends measure, aggregate, segment and identity filters",
+    "kind": "time-series",
+    "now": "2026-09-23T15:04:05Z",
+    "params": {
+      "duration": "day",
+      "measure": "http_req_duration_p95_ms",
+      "aggregate": "avg",
+      "segment": "workflow",
+      "chartType": "line",
+      "filter": [
+        {"filterConfigurationKey": "workflow", "id": "1", "operator": "is", "value": ["k6"]},
+        {"filterConfigurationKey": "scenario", "id": "2", "operator": "is", "value": ["checkout", "~^login"]}
+      ]
+    },
+    "endpoint": "/insights/series",
+    "query": {
+      "startDate": "2026-09-23T00:00:00Z",
+      "endDate": "2026-09-24T00:00:00Z",
+      "workflow": "k6",
+      "measure": "http_req_duration_p95_ms",
+      "aggregate": "avg",
+      "segment": "workflow",
+      "identityFilters": "{\"scenario\":[\"checkout\",\"~^login\"]}"
+    }
+  },
+  {
+    "name": "non-base filters are ignored outside time-series",
+    "kind": "executions",
+    "now": "2026-09-23T15:04:05Z",
+    "params": {
+      "duration": "day",
+      "filter": [{"filterConfigurationKey": "scenario", "id": "1", "operator": "is", "value": ["checkout"]}]
+    },
+    "endpoint": "/insights/executions",
+    "query": {"startDate": "2026-09-23T00:00:00Z", "endDate": "2026-09-24T00:00:00Z", "groupBy": "status"}
+  },
+  {
+    "name": "a zone ahead of UTC ends the range at its own midnight, already the next UTC day",
+    "kind": "workflows",
+    "now": "2026-09-23T23:30:00Z",
+    "timeZone": "Europe/Berlin",
+    "params": {"duration": "week"},
+    "endpoint": "/insights/workflows",
+    "query": {"startDate": "2026-09-17T22:00:00Z", "endDate": "2026-09-24T22:00:00Z"}
+  },
+  {
+    "name": "a zone behind UTC ends the range at its own midnight, still the previous UTC day",
+    "kind": "pass-fail",
+    "now": "2026-09-24T02:00:00Z",
+    "timeZone": "America/New_York",
+    "params": {"duration": "day"},
+    "endpoint": "/insights/stats",
+    "query": {"startDate": "2026-09-23T04:00:00Z", "endDate": "2026-09-24T04:00:00Z"}
+  },
+  {
+    "name": "a range across a daylight-saving change subtracts fixed minutes, as the dashboard does",
+    "kind": "workflows",
+    "now": "2026-11-02T12:00:00Z",
+    "timeZone": "America/New_York",
+    "params": {"duration": "week"},
+    "endpoint": "/insights/workflows",
+    "query": {"startDate": "2026-10-27T05:00:00Z", "endDate": "2026-11-03T05:00:00Z"}
+  }
+]
