@@ -7,7 +7,7 @@
     "tk-release": "main.js"
   },
   "dependencies": {
-    "boxen": "8.0.1",
+    "boxen": "9.0.0",
     "cac": "7.0.0",
     "chalk": "6.0.0",
     "execa": "10.0.1",
