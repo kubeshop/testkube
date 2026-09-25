@@ -47,7 +47,7 @@ This flexibility allows the same MCP tools to work in different deployment scena
 
 ### Available Tools
 
-The MCP server exposes up to 34 tools organized into the categories below. The two
+The MCP server exposes up to 43 tools organized into the categories below. The two
 Query tools register conditionally: with the default `APIClient`, they are added only
 when the control plane advertises the required endpoints (unless `SkipEndpointChecks`
 is set); other client implementations register them unconditionally. The Insight
@@ -117,6 +117,22 @@ Expose the ingested granular insight series (performance/test metrics parsed fro
 - `list_insight_metric_keys` - List the distinct insight metric keys available (lightweight vocabulary for discovery)
 - `get_insight_metric_series` - Query a granular insight metric as a time series (values and trends over time)
 - `list_insight_executions` - List the workflow executions that produced a given insight metric
+
+#### Insights Board Tools (9 tools)
+
+Manage Insights boards: saved, organization-wide dashboards made of reports (charts). Boards are organization-scoped, not environment-scoped; a report narrows itself to environments through its own `environment` filter. The Control Plane serves boards only to signed-in users, so these tools require a user session (`testkube login`, or the hosted endpoint with a user account) and return an actionable error for API tokens — the `APIClient` refuses a `tkcapi_` token before sending anything. They register unconditionally: the board routes do not answer HEAD, so they cannot be probed.
+
+- `list_boards` - List the boards visible to you (shared and private), with name, visibility and pinned filters
+- `get_board` - Get a board with its reports in dashboard order and its layout
+- `create_board` - Create an empty board (shared by default)
+- `update_board` - Change a board's name, description, slug, visibility or layout
+- `add_board_report` - Add a `pass-fail`, `executions`, `workflows` or `time-series` report
+- `update_board_report` - Change a report's name, description, kind or params (merged by default)
+- `remove_board_report` - Remove a report (destructive)
+- `delete_board` - Delete a board and its reports (destructive)
+- `render_board` - Run each report's query and return its numbers; `scope=environment` limits every report to the current environment, and `timeZone` (IANA, default UTC) anchors relative ranges at that zone's midnight, as the dashboard anchors them at the viewer's local midnight.
+
+Report params have no backend schema: the Control Plane stores them opaquely and only the dashboard interprets them. `pkg/mcp/boards` holds the port of the dashboard's rules — param validation and defaults, the report-to-query translation, and the layout — and both the `APIClient` and the Control Plane's `HandlerClient` must use it rather than reimplement it. The translation is pinned by `pkg/mcp/boards/testdata/translation_cases.json`. Two Control Plane behaviors the tools work around: older Control Planes clear the description of any update that omits it (current ones keep it), so each write reads the board and resends it; and deleting a report leaves its layout cell behind, so `remove_board_report` sends the recomputed layout with the delete. Because those values come from a read, every update also sends `expectedVersion`, the board's version as read: the Control Plane refuses the write with 409 if the board changed in between, and the tool reads the board again and rebuilds the write from it (up to three attempts) instead of overwriting the newer edit. `delete_board` resends nothing it read, so it is not conditional: it deletes by the ID it resolved, and the Control Plane checks delete rights against the board as it is then.
 
 **Note for maintainers:** When adding new tools to `pkg/mcp/tools/`, ensure that:
 

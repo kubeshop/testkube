@@ -43,4 +43,13 @@ type Client interface {
 	tools.InsightMetricKeysLister
 	tools.InsightMetricSeriesGetter
 	tools.InsightExecutionsLister
+
+	// Insights board interfaces
+	tools.BoardLister
+	tools.BoardGetter
+	tools.BoardSlugChecker
+	tools.BoardCreator
+	tools.BoardUpdater
+	tools.BoardDeleter
+	tools.BoardInsightQuerier
 }
