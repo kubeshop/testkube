@@ -7,8 +7,8 @@ import (
 func NewDebugAgentCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:        "debug",
-		Short:      "Debug Agent info",
-		Deprecated: "use `testkube debug agent` instead",
+		Short:      "Debug Runner info",
+		Deprecated: "use `testkube debug runner` instead",
 	}
 
 	return cmd

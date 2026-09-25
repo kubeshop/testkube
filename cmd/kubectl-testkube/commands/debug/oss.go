@@ -18,7 +18,7 @@ func NewDebugOssCmd() *cobra.Command {
 			ui.ExitOnError("loading config file", err)
 
 			if cfg.ContextType != config.ContextTypeKubeconfig {
-				ui.Errf("OSS debug is only available for kubeconfig context, use `testkube set context` to set kubeconfig context, or `testkube debug agent|controlplane` to debug other variants of Testkube")
+				ui.Errf("OSS debug is only available for kubeconfig context, use `testkube set context` to set kubeconfig context, or `testkube debug runner|controlplane` to debug other variants of Testkube")
 				return
 			}
 

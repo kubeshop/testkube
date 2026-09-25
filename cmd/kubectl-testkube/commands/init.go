@@ -23,14 +23,14 @@ import (
 
 const (
 	defaultNamespace       = "testkube"
-	standaloneAgentProfile = "standalone-agent"
+	standaloneAgentProfile = "standalone-runner"
 	demoProfile            = "demo"
 	demoValuesUrl          = "https://raw.githubusercontent.com/kubeshop/testkube-cloud-charts/main/charts/testkube-enterprise/profiles/values.demo.v2.yaml"
-	agentProfile           = "agent"
+	agentProfile           = "runner"
 
 	standaloneInstallationName = "Testkube OSS"
 	demoInstallationName       = "Testkube On-Prem demo"
-	agentInstallationName      = "Testkube Agent"
+	agentInstallationName      = "Testkube Runner"
 )
 
 func NewInitCmd() *cobra.Command {
@@ -74,7 +74,7 @@ func NewInitCmdStandalone() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     standaloneAgentProfile,
 		Short:   "Install " + standaloneInstallationName + " in your current context",
-		Aliases: []string{"oss", "standalone"},
+		Aliases: []string{"oss", "standalone", "standalone-agent"},
 		Run: func(cmd *cobra.Command, args []string) {
 			if export {
 				common.HandleCLIError(common.NewCLIError(
@@ -265,7 +265,7 @@ func NewInitCmdDemo() *cobra.Command {
 			runnerSecretKey, cliErr := common.ResolveDemoAgentSecretKey(options.Namespace, options.DryRun)
 			if cliErr != nil {
 				spinner.Fail("Failed to install Testkube On-Prem Demo")
-				exitOnInstallError(cmd, cfg, "resolving agent key", "install_failed", license, cliErr)
+				exitOnInstallError(cmd, cfg, "resolving runner key", "install_failed", license, cliErr)
 			}
 
 			cliErr = common.HelmUpgradeOrInstallTestkubeOnPremDemo(options, runnerSecretKey)

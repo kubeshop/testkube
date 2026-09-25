@@ -20,8 +20,8 @@ func NewUpdateAgentCommand() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "agent <name>",
-		Aliases: []string{"runner"},
+		Use:     "runner <name>",
+		Aliases: []string{"agent"},
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			UiUpdateAgent(cmd, strings.Join(args, ""), setLabels, deleteLabels, runnerMode, groupName)
@@ -38,13 +38,13 @@ func NewUpdateAgentCommand() *cobra.Command {
 
 func UiUpdateAgent(cmd *cobra.Command, name string, setLabels, deleteLabels []string, runnerMode string, groupName string) {
 	agent, err := GetControlPlaneAgent(cmd, name)
-	ui.ExitOnError("getting agent", err)
+	ui.ExitOnError("getting runner", err)
 
 	input, err := buildUpdateAgentInput(agent, setLabels, deleteLabels, runnerMode, groupName)
-	ui.ExitOnError("preparing agent update", err)
+	ui.ExitOnError("preparing runner update", err)
 
 	agent, err = UpdateAgent(cmd, agent.ID, input)
-	ui.ExitOnError("updating agent", err)
+	ui.ExitOnError("updating runner", err)
 
 	PrintControlPlaneAgent(*agent)
 }

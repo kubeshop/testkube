@@ -36,7 +36,7 @@ func NewConnectCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "connect [agent-name]",
+		Use:     "connect [runner-name]",
 		Aliases: []string{"c"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Testkube Pro connect ",
@@ -180,10 +180,10 @@ func NewConnectCmd() *cobra.Command {
 				ui.Failf("You need pass valid organization id to connect to Pro")
 			}
 			if masterOpts.Master.URIs.Agent == "" {
-				ui.Failf("You need pass valid uri agent to connect to Pro")
+				ui.Failf("You need pass valid runner uri to connect to Pro")
 			}
 
-			// Export execution data before switching to agent mode
+			// Export execution data before switching to runner mode
 			var exportPath string
 			var exportDir string
 			if !skipExport {
@@ -237,7 +237,7 @@ func NewConnectCmd() *cobra.Command {
 			err = config.Save(cfg)
 			ui.ExitOnError("saving cloud context configuration", err)
 
-			// Install agent using same mechanism as "install agent" command
+			// Install runner using same mechanism as "install runner" command
 			agentName := "default-oss"
 			if len(args) > 0 && args[0] != "" {
 				agentName = args[0]
@@ -253,7 +253,7 @@ func NewConnectCmd() *cobra.Command {
 				_ = cmd.Flags().Set("execution", "true")
 			}
 
-			ui.H2("Switching OSS Standalone Agent to Cloud Runner mode")
+			ui.H2("Switching OSS Standalone Runner to Cloud mode")
 
 			agents.UiInstallAgent(cmd, agentName, []string{"testkube.io/source=oss"}, map[string]interface{}{
 				// Disable CRD installation in the runner chart — the OSS chart already
@@ -370,7 +370,7 @@ func NewConnectCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&skipExport, "skip-export", false, "Skip exporting execution data before connecting")
 	cmd.Flags().StringVar(&exportSince, "since", "", "Export only executions created after this date (e.g. 2025-01-01 or 2025-01-01T00:00:00Z)")
 
-	// Cloud/master flags (--org-id, --env-id, --root-domain, --agent-token, etc.)
+	// Cloud/master flags (--org-id, --env-id, --root-domain, --runner-token, etc.)
 	cmd.Flags().StringVarP(&apiKey, "api-key", "k", "", "API Key for Testkube Pro")
 	common.PopulateMasterFlags(cmd, &masterOpts, false)
 

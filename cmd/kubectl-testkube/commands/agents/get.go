@@ -20,13 +20,13 @@ func NewGetAgentCommand() *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Args:    cobra.MaximumNArgs(1),
-		Use:     "agent [name]",
-		Short:   "Get agents registered in the current environment",
-		Long:    `Get details of a specific agent or list all agents. By default only active agents in the current environment are shown. Use --all-environments to list across environments, --show-deleted to view deleted agents, or --show-unknown to find cluster agents not registered in the control plane.`,
-		Aliases: []string{"agents", "a"},
+		Use:     "runner [name]",
+		Short:   "Get runners registered in the current environment",
+		Long:    `Get details of a specific runner or list all runners. By default only active runners in the current environment are shown. Use --all-environments to list across environments, --show-deleted to view deleted runners, or --show-unknown to find cluster runners not registered in the control plane.`,
+		Aliases: []string{"runners", "agent", "agents", "a"},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			if allEnvironments && showUnknown {
-				ui.Warn("Note: --all-environments is ignored when using --show-unknown (unknown agents have no environment registration)")
+				ui.Warn("Note: --all-environments is ignored when using --show-unknown (unknown runners have no environment registration)")
 				allEnvironments = false
 			}
 		},
@@ -40,16 +40,16 @@ func NewGetAgentCommand() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&decryptSecretKey, "decrypted-secret", false, "should it fetch decrypted secret key")
-	cmd.Flags().BoolVar(&showUnknown, "show-unknown", false, "show only unknown agents (agents in cluster not registered in control plane)")
-	cmd.Flags().BoolVar(&showDeleted, "show-deleted", false, "show only deleted agents")
-	cmd.Flags().BoolVar(&allEnvironments, "all-environments", false, "show agents from all environments (not just current environment)")
+	cmd.Flags().BoolVar(&showUnknown, "show-unknown", false, "show only unknown runners (runners in cluster not registered in control plane)")
+	cmd.Flags().BoolVar(&showDeleted, "show-deleted", false, "show only deleted runners")
+	cmd.Flags().BoolVar(&allEnvironments, "all-environments", false, "show runners from all environments (not just current environment)")
 
 	return cmd
 }
 
 func UiGetAgent(cmd *cobra.Command, agentId string, decryptSecretKey bool) {
 	registeredAgents, err := GetControlPlaneAgents(cmd, true)
-	ui.ExitOnError("getting agents", err)
+	ui.ExitOnError("getting runners", err)
 
 	namespaces, err := GetKubernetesNamespaces()
 	ui.ExitOnError("listing namespaces", err)
@@ -67,7 +67,7 @@ func UiGetAgent(cmd *cobra.Command, agentId string, decryptSecretKey bool) {
 		}
 	}
 	if agent == nil {
-		ui.Fail(fmt.Errorf("agent '%s' not found", agentId))
+		ui.Fail(fmt.Errorf("runner '%s' not found", agentId))
 	}
 
 	if decryptSecretKey {
@@ -81,7 +81,7 @@ func UiGetAgent(cmd *cobra.Command, agentId string, decryptSecretKey bool) {
 
 func UiListAgents(cmd *cobra.Command, showUnknown bool, showDeleted bool, allEnvironments bool) {
 	registeredAgents, err := GetControlPlaneAgents(cmd, showDeleted)
-	ui.ExitOnError("getting agents", err)
+	ui.ExitOnError("getting runners", err)
 
 	// Filter agents by current environment (matching dashboard behavior) unless --all-environments is set
 	if !allEnvironments {
@@ -130,7 +130,7 @@ func UiListAgents(cmd *cobra.Command, showUnknown bool, showDeleted bool, allEnv
 	agents = filteredAgents
 
 	if len(agents) == 0 {
-		ui.Print(ui.LightGray("\nNo agents found"))
+		ui.Print(ui.LightGray("\nNo runners found"))
 		return
 	}
 
