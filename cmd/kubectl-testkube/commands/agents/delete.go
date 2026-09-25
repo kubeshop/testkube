@@ -100,9 +100,9 @@ func UiDeleteAgent(cmd *cobra.Command, name string, uninstall, deleteAgent bool)
 	agent, err := GetControlPlaneAgent(cmd, name)
 	if err != nil {
 		common2.HandleCLIError(common2.NewCLIError(
-			common2.TKErrAgentGetFailed,
+			common2.TKErrRunnerGetFailed,
 			"Error getting the runner",
-			common2.AgentLookupHint,
+			common2.RunnerLookupHint,
 			err,
 		))
 	}
@@ -162,9 +162,9 @@ func UiDeleteAgent(cmd *cobra.Command, name string, uninstall, deleteAgent bool)
 		err := DeleteControlPlaneAgent(cmd, agent.ID)
 		if err != nil {
 			common2.HandleCLIError(common2.NewCLIError(
-				common2.TKErrAgentWriteFailed,
+				common2.TKErrRunnerWriteFailed,
 				"Error deleting the runner",
-				common2.AgentWriteHint,
+				common2.RunnerWriteHint,
 				err,
 			))
 		}

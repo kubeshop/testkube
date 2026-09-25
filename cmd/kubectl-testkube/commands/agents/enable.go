@@ -41,9 +41,9 @@ func UiEnableAgent(cmd *cobra.Command, name string) {
 	agent, err := GetControlPlaneAgent(cmd, name)
 	if err != nil {
 		common2.HandleCLIError(common2.NewCLIError(
-			common2.TKErrAgentGetFailed,
+			common2.TKErrRunnerGetFailed,
 			"Error getting the runner",
-			common2.AgentLookupHint,
+			common2.RunnerLookupHint,
 			err,
 		))
 	}
@@ -54,9 +54,9 @@ func UiEnableAgent(cmd *cobra.Command, name string) {
 		})
 		if err != nil {
 			common2.HandleCLIError(common2.NewCLIError(
-				common2.TKErrAgentWriteFailed,
+				common2.TKErrRunnerWriteFailed,
 				"Error enabling the runner",
-				common2.AgentWriteHint,
+				common2.RunnerWriteHint,
 				err,
 			))
 		}
@@ -71,9 +71,9 @@ func UiDisableAgent(cmd *cobra.Command, name string) {
 	agent, err := GetControlPlaneAgent(cmd, name)
 	if err != nil {
 		common2.HandleCLIError(common2.NewCLIError(
-			common2.TKErrAgentGetFailed,
+			common2.TKErrRunnerGetFailed,
 			"Error getting the runner",
-			common2.AgentLookupHint,
+			common2.RunnerLookupHint,
 			err,
 		))
 	}
@@ -84,9 +84,9 @@ func UiDisableAgent(cmd *cobra.Command, name string) {
 		})
 		if err != nil {
 			common2.HandleCLIError(common2.NewCLIError(
-				common2.TKErrAgentWriteFailed,
+				common2.TKErrRunnerWriteFailed,
 				"Error disabling the runner",
-				common2.AgentWriteHint,
+				common2.RunnerWriteHint,
 				err,
 			))
 		}

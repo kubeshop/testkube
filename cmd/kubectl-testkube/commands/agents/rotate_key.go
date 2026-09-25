@@ -43,9 +43,9 @@ func NewRotateKeyCommand() *cobra.Command {
 			agent, err := GetControlPlaneAgent(cmd, nameOrID)
 			if err != nil {
 				common.HandleCLIError(common.NewCLIError(
-					common.TKErrAgentGetFailed,
+					common.TKErrRunnerGetFailed,
 					"Error getting the runner",
-					common.AgentLookupHint,
+					common.RunnerLookupHint,
 					err,
 				))
 				return
@@ -63,7 +63,7 @@ func NewRotateKeyCommand() *cobra.Command {
 			result, err := RotateControlPlaneAgentKey(cmd, agent.ID, gracePeriod)
 			if err != nil {
 				common.HandleCLIError(common.NewCLIError(
-					common.TKErrAgentRotateKeyFailed,
+					common.TKErrRunnerRotateKeyFailed,
 					"Error rotating the runner secret key",
 					"Check that your credentials are valid and that the '--grace-period' value is one the control plane accepts, for example 24h or 0s",
 					err,

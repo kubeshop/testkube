@@ -175,7 +175,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 		agent, err = GetControlPlaneAgent(cmd, name)
 		if err != nil && !autoCreate {
 			common2.HandleCLIError(common2.NewCLIError(
-				common2.TKErrAgentGetFailed,
+				common2.TKErrRunnerGetFailed,
 				"Error getting the runner",
 				"Check the runner name or ID and that your credentials are valid, or pass '--create' to create the runner",
 				err,
@@ -212,9 +212,9 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 		agents, err := GetControlPlaneAgents(cmd, false)
 		if err != nil {
 			common2.HandleCLIError(common2.NewCLIError(
-				common2.TKErrAgentGetFailed,
+				common2.TKErrRunnerGetFailed,
 				"Error getting the runners",
-				common2.AgentLookupHint,
+				common2.RunnerLookupHint,
 				err,
 			))
 		}
@@ -260,7 +260,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 		secretKey, err := GetControlPlaneAgentSecretKey(cmd, agent.ID)
 		if err != nil {
 			common2.HandleCLIError(common2.NewCLIError(
-				common2.TKErrAgentGetFailed,
+				common2.TKErrRunnerGetFailed,
 				"Error getting the runner secret key",
 				"Check that your credentials are valid and that your user can read the secret key of this runner, or pass it with '--secret'",
 				err,

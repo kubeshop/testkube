@@ -52,9 +52,9 @@ func UiGetAgent(cmd *cobra.Command, agentId string, decryptSecretKey bool) {
 	registeredAgents, err := GetControlPlaneAgents(cmd, true)
 	if err != nil {
 		common.HandleCLIError(common.NewCLIError(
-			common.TKErrAgentGetFailed,
+			common.TKErrRunnerGetFailed,
 			"Error getting the runners",
-			common.AgentLookupHint,
+			common.RunnerLookupHint,
 			err,
 		))
 	}
@@ -101,7 +101,7 @@ func UiGetAgent(cmd *cobra.Command, agentId string, decryptSecretKey bool) {
 		secretKey, err := GetControlPlaneAgentSecretKey(cmd, agent.Registered.ID)
 		if err != nil {
 			common.HandleCLIError(common.NewCLIError(
-				common.TKErrAgentGetFailed,
+				common.TKErrRunnerGetFailed,
 				"Error getting the decrypted runner secret key",
 				"Check that your credentials are valid and that your user can read the secret key of this runner",
 				err,
@@ -118,7 +118,7 @@ func UiListAgents(cmd *cobra.Command, showUnknown bool, showDeleted bool, allEnv
 	if err != nil {
 		// The hint of a lookup by name points at `testkube get runners`, which is this command.
 		common.HandleCLIError(common.NewCLIError(
-			common.TKErrAgentGetFailed,
+			common.TKErrRunnerGetFailed,
 			"Error getting the runners",
 			"Check that your credentials are valid and that the current context points at the organization and environment you expect",
 			err,

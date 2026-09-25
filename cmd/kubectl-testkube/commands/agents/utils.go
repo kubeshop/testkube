@@ -956,9 +956,9 @@ func UiCreateAgent(
 	agent, err := CreateAgent(cmd, input)
 	if err != nil {
 		common2.HandleCLIError(common2.NewCLIError(
-			common2.TKErrAgentWriteFailed,
+			common2.TKErrRunnerWriteFailed,
 			"Error creating the runner",
-			common2.AgentWriteHint,
+			common2.RunnerWriteHint,
 			err,
 		))
 	}

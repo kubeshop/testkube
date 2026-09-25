@@ -40,9 +40,9 @@ func UiUpdateAgent(cmd *cobra.Command, name string, setLabels, deleteLabels []st
 	agent, err := GetControlPlaneAgent(cmd, name)
 	if err != nil {
 		common2.HandleCLIError(common2.NewCLIError(
-			common2.TKErrAgentGetFailed,
+			common2.TKErrRunnerGetFailed,
 			"Error getting the runner",
-			common2.AgentLookupHint,
+			common2.RunnerLookupHint,
 			err,
 		))
 	}
@@ -60,9 +60,9 @@ func UiUpdateAgent(cmd *cobra.Command, name string, setLabels, deleteLabels []st
 	agent, err = UpdateAgent(cmd, agent.ID, input)
 	if err != nil {
 		common2.HandleCLIError(common2.NewCLIError(
-			common2.TKErrAgentWriteFailed,
+			common2.TKErrRunnerWriteFailed,
 			"Error updating the runner",
-			common2.AgentWriteHint,
+			common2.RunnerWriteHint,
 			err,
 		))
 	}

@@ -59,18 +59,18 @@ const (
 	// TKErrCleanOldMigrationJobFailed is returned in case of issues with old migration jobs.
 	TKErrCleanOldMigrationJobFailed ErrorCode = "TKERR-1401"
 
-	// TKERR-15xx errors are related to agent operations.
+	// TKERR-15xx errors are related to runner operations.
 
-	// TKErrAgentGetFailed is returned when fetching an agent from the control plane fails.
-	TKErrAgentGetFailed ErrorCode = "TKERR-1501"
-	// TKErrAgentRotateKeyFailed is returned when rotating an agent's secret key fails.
-	TKErrAgentRotateKeyFailed ErrorCode = "TKERR-1502"
-	// TKErrAgentRotateRegistrationTokenFailed is returned when rotating an environment registration token fails.
-	TKErrAgentRotateRegistrationTokenFailed ErrorCode = "TKERR-1503"
-	// TKErrAgentWriteFailed is returned when creating, updating or deleting an agent on the control plane fails.
-	// Reads use TKErrAgentGetFailed: the control plane helpers share one preamble and differ only in the final
+	// TKErrRunnerGetFailed is returned when fetching a runner from the control plane fails.
+	TKErrRunnerGetFailed ErrorCode = "TKERR-1501"
+	// TKErrRunnerRotateKeyFailed is returned when rotating a runner's secret key fails.
+	TKErrRunnerRotateKeyFailed ErrorCode = "TKERR-1502"
+	// TKErrRunnerRotateRegistrationTokenFailed is returned when rotating an environment registration token fails.
+	TKErrRunnerRotateRegistrationTokenFailed ErrorCode = "TKERR-1503"
+	// TKErrRunnerWriteFailed is returned when creating, updating or deleting a runner on the control plane fails.
+	// Reads use TKErrRunnerGetFailed: the control plane helpers share one preamble and differ only in the final
 	// call, so a read and a write fail for the same reasons and the code only has to say which was attempted.
-	TKErrAgentWriteFailed ErrorCode = "TKERR-1504"
+	TKErrRunnerWriteFailed ErrorCode = "TKERR-1504"
 
 	// TKERR-16xx errors are related to marketplace operations.
 
@@ -117,7 +117,7 @@ const (
 	// TKERR-19xx errors are related to the resource commands that talk to the Testkube API.
 
 	// TKErrAPIReadFailed is returned when reading one resource, or listing resources, through the Testkube
-	// API fails. One code covers get and list for the reason TKErrAgentWriteFailed gives: the client
+	// API fails. One code covers get and list for the reason TKErrRunnerWriteFailed gives: the client
 	// helpers share one preamble and differ only in the final call, so the code says a read was attempted
 	// and the title says which. A resource the API answered about and that is absent uses
 	// TKErrResourceNotFound.
@@ -138,16 +138,16 @@ const helpUrl = "https://testkubeworkspace.slack.com"
 // the CLI config file.
 const ConfigFileHint = "Check is the Testkube config file (~/.testkube/config.json) accessible and has right permissions"
 
-// AgentLookupHint is the recovery hint for a failure to read an agent from the
+// RunnerLookupHint is the recovery hint for a failure to read a runner from the
 // control plane. The read fails on the name, on the credentials, or on the
 // connection, so the hint names the first two and a command that lists what
 // exists.
-const AgentLookupHint = "Check the runner name or ID and that your credentials are valid, or list the runners with `testkube get runners`"
+const RunnerLookupHint = "Check the runner name or ID and that your credentials are valid, or list the runners with `testkube get runners`"
 
-// AgentWriteHint is the recovery hint for a failure to create, update or delete
-// an agent on the control plane. The preamble is the same as a read, so what is
+// RunnerWriteHint is the recovery hint for a failure to create, update or delete
+// a runner on the control plane. The preamble is the same as a read, so what is
 // left to check is the permission to change it.
-const AgentWriteHint = "Check that your credentials are valid and that your user can manage the runners of this organization"
+const RunnerWriteHint = "Check that your credentials are valid and that your user can manage the runners of this organization"
 
 // ClusterLookupHint is the recovery hint for a failure to read namespaces, pods
 // or CRDs from the cluster. It names the kubeconfig, because the CLI reads the

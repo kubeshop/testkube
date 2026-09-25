@@ -67,7 +67,7 @@ func NewRotateRegistrationTokenCommand() *cobra.Command {
 			result, err := client.RotateRegistrationToken(cmd.Context(), envID, gracePeriod)
 			if err != nil {
 				common.HandleCLIError(common.NewCLIError(
-					common.TKErrAgentRotateRegistrationTokenFailed,
+					common.TKErrRunnerRotateRegistrationTokenFailed,
 					"Error rotating the environment registration token",
 					"Verify the environment ID is correct, your credentials are valid, and your user is an organization admin or owner",
 					err,
