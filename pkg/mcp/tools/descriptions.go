@@ -134,3 +134,68 @@ Filter with the same 'measure'/identity/workflow/status/tag/date filters as get_
 	InsightTagFilterDescription = `Filter executions by tag. Tag values may contain commas, so multiple predicates must be passed as a JSON array, e.g. ["release=2026.07,hotfix","bug"]. ` +
 		`A plain (non-JSON) string is treated as a single predicate verbatim. Each predicate supports key=value (exact), key=~pattern (regex), or a bare key (existence).`
 )
+
+// Insights board tool descriptions
+const (
+	boardSessionNote = ` Boards belong to the organization, not to one environment. Requires a signed-in user session: API tokens cannot use boards.`
+
+	ListBoardsDescription = `List the Insights boards visible to you: boards shared with the organization and your private boards.
+A board is a saved dashboard of reports (charts) over execution data. Use get_board to see a board's reports and render_board to get their numbers.` + boardSessionNote
+
+	GetBoardDescription = `Get an Insights board: its details, its reports (id, kind, name, params) in the order the dashboard shows them, and its layout as rows of report IDs.
+Reports listed under 'unplaced' are on the board but not in its layout, so the dashboard does not show them.` + boardSessionNote
+
+	CreateBoardDescription = `Create an empty Insights board. Shared with the organization by default; set private to keep it to yourself.
+Add reports to it with add_board_report.` + boardSessionNote
+
+	UpdateBoardDescription = `Change an Insights board's name, description, slug, visibility or layout. Fields you omit keep their current values.
+To change the reports on a board, use add_board_report, update_board_report and remove_board_report instead.` + boardSessionNote
+
+	AddBoardReportDescription = `Add a report (chart) to an Insights board. The report is placed on a new row at the bottom of the board, and its ID is returned.
+Kinds: 'pass-fail' (pass/fail ratio or counts over time), 'executions' (execution count or average duration grouped by status, workflow, label or tag),
+'workflows' (per-workflow execution, failure and duration summary), 'time-series' (any measure over time, optionally segmented - including performance and resource metrics).
+Params you omit get the same defaults the dashboard gives a new report.` + boardSessionNote
+
+	UpdateBoardReportDescription = `Change a report on an Insights board: its name, description, kind or params. Params are merged into the current ones unless replaceParams is true.
+The report keeps its place on the board.` + boardSessionNote
+
+	RemoveBoardReportDescription = `Remove a report from an Insights board. This cannot be undone. Only call it when the user asked to remove this report.` + boardSessionNote
+
+	DeleteBoardDescription = `Permanently delete an Insights board and all of its reports. This cannot be undone.
+Only call it when the user explicitly asked to delete this board. Deleting a shared board requires an organization admin; a private board can be deleted by its owner.` + boardSessionNote
+
+	RenderBoardDescription = `Render an Insights board: run the query of each report the dashboard shows and return its numbers, together with the query and date range used. Reports the board's layout leaves out are listed under 'unplaced' and not rendered, unless one is asked for with reportId.
+A report that fails is returned with an error without failing the others. Relative durations end at the start of tomorrow in timeZone, as the dashboard ends them at the viewer's local midnight - pass the user's time zone to get the numbers they see.` + boardSessionNote
+
+	// Board tool parameter descriptions
+	BoardIdDescription = "The board's ID or slug (from list_boards)."
+
+	BoardReportKindDescription = "Report kind: 'pass-fail', 'executions', 'workflows' or 'time-series'."
+
+	BoardReportParamsDescription = `Report params (a JSON object). Common to every kind:
+- duration: 'day', 'week', 'month' or 'quarter' (120 days) ending at the start of tomorrow; or set from/to (RFC3339) for a fixed range.
+- filter: dashboard filter list; prefer the 'filters' argument instead.
+Per kind:
+- pass-fail: measure 'ratio' (default), 'failed-count' or 'total-count'. Default duration: month.
+- executions: groupBy 'status' (default), 'workflow', a label key, or 'tag:<key>'; measure 'count' (default) or 'duration' (average, ms).
+- workflows: no extra params. Default duration: month.
+- time-series: measure (default 'execution-count') - 'execution-count', 'execution-duration', 'case-count',
+  a resource measure '<cpu-millicores|memory-used|network-in|network-out|disk-read|disk-write>-<min|max|avg|total>',
+  or a granular metric key from list_insight_metric_keys; aggregate 'sum' (default), 'avg', 'min', 'max' or 'count';
+  segment (break down by 'status', 'workflow', a label key, 'tag:<key>' or an identity field; defaults to 'status' for execution-count, '' for none);
+  chartType 'bar' (default), 'bar-grouped', 'bar-normalized', 'line-stacked', 'line', 'area-normalized', 'heatmap' or 'horizon'; overlaySuccessRate (boolean).
+Example: {"measure": "execution-duration", "aggregate": "avg", "segment": "workflow", "duration": "month", "chartType": "line"}`
+
+	BoardReportFiltersDescription = `Filters narrowing the report, as {key: [values]}. Keys: 'environment' (environment IDs; omit for every environment),
+'workflow' (workflow names), 'status' (e.g. 'passed', 'failed'), 'labels' (label selectors 'key=value'), 'tags' (tag predicates 'key=value').
+For time-series reports any other key is a granular identity filter (e.g. 'testcase'). Values prefixed with '~' match as a regex.
+Example: {"workflow": ["api-tests"], "status": ["failed"], "environment": ["tkcenv_..."]}`
+
+	BoardLayoutDescription = `Advanced: the board layout, to reorder reports or put several on one row. Format: {"version": 1, "rows": [{"cells": [{"id": "<reportId>"}, ...]}, ...]}.
+Every report on the board must appear exactly once. Get the current layout and report IDs with get_board.`
+
+	BoardRenderTimeZoneDescription = `IANA time zone of the person viewing the board, e.g. 'Europe/Berlin' or 'America/New_York'. The dashboard ends a relative range (day, week, month, quarter) at the viewer's local midnight, so use the user's zone to match what they see. Default: UTC.`
+
+	BoardRenderScopeDescription = `'board' (default) renders what the dashboard shows: each report's own environment filter, or every environment when it has none.
+'environment' limits every report to the current environment instead.`
+)
