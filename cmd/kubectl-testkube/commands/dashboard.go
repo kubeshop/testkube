@@ -100,6 +100,11 @@ func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrows
 		sendErrTelemetry(cmd, cfg, "port_forward", license, "port forwarding minio", err)
 	}
 	ui.ExitOnError("port forwarding minio", err)
+	ui.Debug("Port forwarding for ai-service", config.EnterpriseAiServiceName)
+	if err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseAiServiceName, config.EnterpriseAiServicePort, config.EnterpriseAiServiceForwardingPort, verbose); err != nil {
+		sendErrTelemetry(cmd, cfg, "port_forward", license, "port forwarding ai-service", err)
+		ui.Debug("Skipping ai-service port forward, AI copilot may be unavailable", err.Error())
+	}
 
 	if !skipBrowser {
 		ui.Debug("Opening dashboard in browser", uri)
