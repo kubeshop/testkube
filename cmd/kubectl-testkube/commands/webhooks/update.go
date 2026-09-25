@@ -1,9 +1,13 @@
 package webhooks
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -30,22 +34,63 @@ func UpdateWebhookCmd() *cobra.Command {
 		Long:    `Update Webhook Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if name == "" {
-				ui.Failf("pass valid name (in '--name' flag)")
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrInvalidRuntimeParameter,
+					"No webhook name provided",
+					common.NameFlagHint,
+					errors.New("no webhook name provided"),
+				))
 			}
 
 			client, namespace, err := common.GetClient(cmd)
-			ui.ExitOnError("getting client", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrAPIClientInitFailed,
+					"Error creating the Testkube API client",
+					common.APIClientHint,
+					err,
+				))
+			}
 
-			webhook, _ := client.GetWebhook(name)
-			if name != webhook.Name {
-				ui.Failf("Webhook with name '%s' not exists in namespace %s", name, namespace)
+			_, err = client.GetWebhook(name)
+			if err != nil {
+				// The API answered that the webhook is absent, which is a different thing to tell the
+				// user than a read that did not complete.
+				if apiclient.IsNotFound(err) {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrResourceNotFound,
+						"Webhook not found",
+						"Check the '--name' and '--namespace' values, or create the webhook with `testkube create webhook`",
+						fmt.Errorf("webhook '%s' not found in namespace '%s': %w", name, namespace, err),
+					))
+				}
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrAPIReadFailed,
+					"Error getting the webhook",
+					common.APIReadHint,
+					err,
+				))
 			}
 
 			options, err := NewUpdateWebhookOptionsFromFlags(cmd)
-			ui.ExitOnError("getting webhook options", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrInvalidRuntimeParameter,
+					"Error reading the webhook flags",
+					common.WebhookFlagsHint,
+					err,
+				))
+			}
 
 			_, err = client.UpdateWebhook(options)
-			ui.ExitOnError("updating webhook "+name+" in namespace "+namespace, err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrAPIWriteFailed,
+					"Error updating the webhook",
+					common.APIWriteHint,
+					err,
+				))
+			}
 
 			ui.Success("Webhook updated", name)
 		},
