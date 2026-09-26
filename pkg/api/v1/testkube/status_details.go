@@ -19,6 +19,24 @@ const (
 	StatusDetailsTypeUnknown StatusDetailsType = "unknown"
 )
 
+// statusDetailsTypeNames holds the words that the dashboard shows for each type, so that every
+// place that shows a type to people uses the same words.
+var statusDetailsTypeNames = map[StatusDetailsType]string{
+	StatusDetailsTypeInitFailure:      "Configuration error",
+	StatusDetailsTypeExecutionFailure: "Infrastructure failure",
+	StatusDetailsTypeStepFailure:      "Test failure",
+	StatusDetailsTypeUserCancel:       "Canceled by the user",
+	StatusDetailsTypeUnknown:          "Unknown cause",
+}
+
+// DisplayName returns the words for the type, and the type itself for a type without words.
+func (t StatusDetailsType) DisplayName() string {
+	if name, ok := statusDetailsTypeNames[t]; ok {
+		return name
+	}
+	return string(t)
+}
+
 // statusDetailsTypes maps each reason code to the layer that it belongs to. A reason that
 // is not in the table gives StatusDetailsTypeUnknown.
 var statusDetailsTypes = map[string]StatusDetailsType{

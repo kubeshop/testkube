@@ -76,3 +76,22 @@ func TestTestWorkflowStatusDetails_Label(t *testing.T) {
 		})
 	}
 }
+
+func TestTestWorkflowStatusDetails_DisplayLabel(t *testing.T) {
+	tests := []struct {
+		name    string
+		details *TestWorkflowStatusDetails
+		want    string
+	}{
+		{name: "no object gives no label", want: ""},
+		{name: "the words of the type and the reason", details: &TestWorkflowStatusDetails{Type_: "execution-failure", Reason: "oom-killed", Message: "OOMKilled"}, want: "Infrastructure failure, oom-killed"},
+		{name: "a type without a reason", details: &TestWorkflowStatusDetails{Type_: "step-failure"}, want: "Test failure"},
+		{name: "a reason without a type", details: &TestWorkflowStatusDetails{Reason: "exit-code"}, want: "exit-code"},
+		{name: "a type without words keeps the type", details: &TestWorkflowStatusDetails{Type_: "a-newer-type", Reason: "x"}, want: "a-newer-type, x"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.details.DisplayLabel())
+		})
+	}
+}
