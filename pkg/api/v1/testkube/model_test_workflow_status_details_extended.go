@@ -25,3 +25,23 @@ func (d *TestWorkflowStatusDetails) Label() string {
 	}
 	return d.Type_ + ": " + d.Reason
 }
+
+// DisplayLabel returns the words for the type and the reason code, for example
+// "Infrastructure failure, oom-killed", for text that people read outside the dashboard. Label
+// gives the raw codes instead. The reason stays the code, because the code is the stable key. The
+// message and the user are never part of it, because the text can leave the product, for example
+// to GitHub.
+func (d *TestWorkflowStatusDetails) DisplayLabel() string {
+	if d == nil {
+		return ""
+	}
+	name := StatusDetailsType(d.Type_).DisplayName()
+	switch {
+	case name == "":
+		return d.Reason
+	case d.Reason == "":
+		return name
+	default:
+		return name + ", " + d.Reason
+	}
+}
