@@ -115,11 +115,15 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           command:
-            - kubectl
+            - sh
+            - -ec
           args:
-            - apply
-            - -f
-            - /etc/testkube-builtins/templates.yaml
+            - |
+              kubectl get crd testworkflowtemplates.testworkflows.testkube.io >/dev/null 2>&1 || {
+                echo "TestWorkflowTemplate CRD not installed yet, skipping builtin templates"
+                exit 0
+              }
+              kubectl apply -f /etc/testkube-builtins/templates.yaml
           volumeMounts:
             - name: builtin-templates
               mountPath: /etc/testkube-builtins
