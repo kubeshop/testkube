@@ -1205,7 +1205,7 @@ testkube-api:
   # -- docker image versionof Testkube Agent
   dockerImageVersion: ""
 
-  # -- allow to use low securiy fields for test workflow pod and container configurations
+  # -- allow to use low security fields for test workflow pod and container configurations
   allowLowSecurityFields: false
 
   # Testkube log server parameters
