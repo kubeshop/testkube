@@ -419,7 +419,7 @@ func validFilterValue(f Filter) bool {
 			if json.Unmarshal(f.Value, &v) != nil || v.LabelKey == "" {
 				return false
 			}
-			return v.LabelOperator == "exists" || v.LabelOperator == "contains"
+			return v.LabelOperator == "exists" || (v.LabelOperator == "contains" && v.LabelValue != "")
 		}
 		return false
 	}
