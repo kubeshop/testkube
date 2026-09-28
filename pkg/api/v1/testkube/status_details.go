@@ -73,10 +73,9 @@ var statusDetailsTypes = map[string]StatusDetailsType{
 
 // StatusDetailsTypeOf returns the layer for a stop. A person as the actor gives
 // user-cancel for every reason, because a cancel is never a failure. A person who stops
-// all executions of a workflow makes the same decision as a person who cancels one. The
-// abort endpoint of the standalone agent acts for the person who calls it.
+// all executions of a workflow makes the same decision as a person who cancels one.
 func StatusDetailsTypeOf(actor StopActor, reason string) StatusDetailsType {
-	if actor == StopActorUser || actor == StopActorAPI {
+	if actor.IsPerson() {
 		return StatusDetailsTypeUserCancel
 	}
 	if detailsType, ok := statusDetailsTypes[reason]; ok {
@@ -86,11 +85,14 @@ func StatusDetailsTypeOf(actor StopActor, reason string) StatusDetailsType {
 }
 
 // NewStatusDetails builds the object for a stop. The step and the message identify the
-// step that holds the cause, and both stay empty when no step holds one. An empty reason
-// becomes unknown, because the field is required and a reader must always get a code.
+// step that holds the cause, and both stay empty when no step holds one. The reason is
+// required, so an empty reason becomes user-cancel for a person and unknown for other actors.
 func NewStatusDetails(actor StopActor, reason, step, message string) *TestWorkflowStatusDetails {
 	if reason == "" {
 		reason = string(StopReasonUnknown)
+		if actor.IsPerson() {
+			reason = string(StopReasonUserCancel)
+		}
 	}
 	return &TestWorkflowStatusDetails{
 		Type_:   string(StatusDetailsTypeOf(actor, reason)),

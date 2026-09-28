@@ -232,3 +232,79 @@ func TestParseTimeZone(t *testing.T) {
 	_, err = ParseTimeZone("Mars/Olympus")
 	assert.ErrorContains(t, err, "IANA time zone")
 }
+
+func TestValidateReport_AddsNoDefaults(t *testing.T) {
+	// A stored report the dashboard renders from its missing params: an edit
+	// must not fill in creation defaults that render differently.
+	tests := []struct {
+		kind   string
+		params map[string]any
+		absent []string
+	}{
+		{KindPassFail, map[string]any{"measure": "failed-count"}, []string{"duration"}},
+		{KindWorkflows, map[string]any{}, []string{"duration"}},
+		{KindTimeSeries, map[string]any{"measure": DefaultTimeSeriesMeasure}, []string{"segment", "duration", "chartType", "aggregate"}},
+		{KindExecutions, map[string]any{}, []string{"groupBy", "measure"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.kind, func(t *testing.T) {
+			got, err := ValidateReport(tt.kind, tt.params)
+			require.NoError(t, err)
+			for _, key := range tt.absent {
+				assert.NotContains(t, got, key)
+			}
+		})
+	}
+
+	t.Run("the rendered window is the one the report had", func(t *testing.T) {
+		now := time.Date(2026, 9, 28, 12, 0, 0, 0, time.UTC)
+		stored := map[string]any{"measure": "ratio"}
+		before, err := BuildQuery(KindPassFail, stored, QueryOptions{Now: now})
+		require.NoError(t, err)
+		edited, err := ValidateReport(KindPassFail, MergeParams(stored, map[string]any{"measure": "failed-count"}))
+		require.NoError(t, err)
+		after, err := BuildQuery(KindPassFail, edited, QueryOptions{Now: now})
+		require.NoError(t, err)
+		assert.Equal(t, before.StartDate, after.StartDate, "an unrelated edit must not change the date window")
+	})
+
+	t.Run("it still refuses bad values", func(t *testing.T) {
+		_, err := ValidateReport(KindPassFail, map[string]any{"duration": "year"})
+		assert.ErrorContains(t, err, "param duration must be one of")
+		_, err = ValidateReport(KindTimeSeries, map[string]any{"segment": 3})
+		assert.ErrorContains(t, err, "param segment must be a string")
+	})
+}
+
+func TestParseFilters_LabelShapes(t *testing.T) {
+	label := func(operator string, value any) []any {
+		return []any{map[string]any{"filterConfigurationKey": FilterLabels, "id": "l", "operator": operator, "value": value}}
+	}
+	valid := [][]any{
+		label("is", []any{"team=core"}),
+		label("where", map[string]any{"labelKey": "tier", "labelOperator": "contains", "labelValue": "gold"}),
+		label("where", map[string]any{"labelKey": "owner", "labelOperator": "exists"}),
+	}
+	for _, f := range valid {
+		_, err := ParseFilters(f)
+		assert.NoError(t, err)
+	}
+	invalid := map[string][]any{
+		"a string with is":        label("is", "team=core"),
+		"an array with where":     label("where", []any{"team=core"}),
+		"where without a key":     label("where", map[string]any{"labelOperator": "exists"}),
+		"where with a bad op":     label("where", map[string]any{"labelKey": "tier", "labelOperator": "equals"}),
+		"an unsupported operator": label("contains", []any{"team=core"}),
+	}
+	for name, f := range invalid {
+		t.Run(name, func(t *testing.T) {
+			_, err := ParseFilters(f)
+			assert.ErrorContains(t, err, "labels-v2")
+		})
+	}
+
+	t.Run("a stored report with a bad label filter fails to render rather than dropping it", func(t *testing.T) {
+		_, err := BuildQuery(KindWorkflows, map[string]any{"filter": label("is", "team=core")}, QueryOptions{})
+		assert.ErrorContains(t, err, "invalid value")
+	})
+}

@@ -531,7 +531,14 @@ func UpdateBoardReport(client BoardEditor) (tool mcp.Tool, handler server.ToolHa
 			if err := boards.ApplyFilters(params, filters); err != nil {
 				return UpdateBoardRequest{}, mcp.NewToolResultError(err.Error())
 			}
-			if draft.Params, err = boards.NormalizeReport(draft.Kind, params); err != nil {
+			// A new kind or replaced params start from the kind's defaults, as a
+			// new report does. An edit only validates: filling defaults into the
+			// stored params could change what the report shows, e.g. its window.
+			normalize := boards.ValidateReport
+			if replaceParams {
+				normalize = boards.NormalizeReport
+			}
+			if draft.Params, err = normalize(draft.Kind, params); err != nil {
 				return UpdateBoardRequest{}, mcp.NewToolResultError(err.Error())
 			}
 

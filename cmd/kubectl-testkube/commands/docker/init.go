@@ -23,8 +23,8 @@ func NewInitCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "init",
-		Short:   "Run Testkube Docker Agent and connect to Testkube Pro environment",
-		Aliases: []string{"install", "agent"},
+		Short:   "Run Testkube Docker Runner and connect to Testkube Pro environment",
+		Aliases: []string{"install", "agent", "runner"},
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Info("WELCOME TO")
 			ui.Logo()
@@ -60,7 +60,7 @@ func NewInitCmd() *cobra.Command {
 			}
 
 			if !options.NoConfirm {
-				ui.Warn("This will run Testkube Docker Agent latest version. This will take a few minutes.")
+				ui.Warn("This will run Testkube Docker Runner latest version. This will take a few minutes.")
 				ui.Warn("Please be sure you have Docker service running before continuing and can run containers in privileged mode!")
 				ui.NL()
 
@@ -71,7 +71,7 @@ func NewInitCmd() *cobra.Command {
 
 				ok := ui.Confirm("Do you want to continue?")
 				if !ok {
-					ui.Errf("Testkube Docker Agent running cancelled")
+					ui.Errf("Testkube Docker Runner running cancelled")
 					common.SendErrTelemetry(cmd, cfg, "user_cancel", errors.New("user cancelled agent running"))
 					return
 				}
@@ -79,9 +79,9 @@ func NewInitCmd() *cobra.Command {
 
 			var spinner *pterm.SpinnerPrinter
 			if ui.IsVerbose() {
-				ui.H2("Running Testkube Docker Agent")
+				ui.H2("Running Testkube Docker Runner")
 			} else {
-				spinner = ui.NewSpinner("Running Testkube Docker Agent")
+				spinner = ui.NewSpinner("Running Testkube Docker Runner")
 			}
 
 			if cliErr := common.DockerRunTestkubeAgent(options, cfg, dockerContainerName, dockerImage); cliErr != nil {
@@ -102,7 +102,7 @@ func NewInitCmd() *cobra.Command {
 			if spinner != nil {
 				spinner.Success()
 			} else {
-				ui.Success("Testkube Docker Agent is up and running")
+				ui.Success("Testkube Docker Runner is up and running")
 			}
 
 			if noLogin {
@@ -186,8 +186,8 @@ func NewInitCmd() *cobra.Command {
 	common.PopulateMasterFlags(cmd, &options, true)
 
 	cmd.Flags().BoolVarP(&noLogin, "no-login", "", false, "Ignore login prompt, set existing token later by `testkube set context`")
-	cmd.Flags().StringVar(&dockerContainerName, "docker-container", "testkube-agent", "Docker container name for Testkube Docker Agent")
-	cmd.Flags().StringVar(&dockerImage, "docker-image", "kubeshop/testkube-agent:"+StableReleasePlaceholder, "Docker image for Testkube Docker Agent")
+	cmd.Flags().StringVar(&dockerContainerName, "docker-container", "testkube-agent", "Docker container name for Testkube Docker Runner")
+	cmd.Flags().StringVar(&dockerImage, "docker-image", "kubeshop/testkube-agent:"+StableReleasePlaceholder, "Docker image for Testkube Docker Runner")
 
 	return cmd
 }

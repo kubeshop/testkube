@@ -175,21 +175,79 @@ func ApplyFilters(params map[string]any, filters map[string][]string) error {
 	return nil
 }
 
-// NormalizeReport validates a report's params and fills in the defaults the
-// dashboard gives a new report of that kind, returning a new params map.
-// Unknown keys are preserved (see CheckParamKeys).
+// NormalizeReport validates the params of a new report and fills in the
+// defaults the dashboard gives a new report of that kind, returning a new
+// params map. Unknown keys are preserved (see CheckParamKeys).
+//
+// It is for creating a report, or replacing its params wholesale. To edit an
+// existing report use ValidateReport: some creation defaults differ from how
+// the dashboard renders a param that is missing (a pass-fail report without a
+// duration renders a week but is created with a month), so applying them to
+// a stored report would change what it shows.
 func NormalizeReport(kind string, params map[string]any) (map[string]any, error) {
 	if !IsKind(kind) {
 		return nil, unknownKindError(kind)
 	}
-	out := make(map[string]any, len(params)+4)
-	for k, v := range params {
-		out[k] = v
+	out := copyParams(params)
+	switch kind {
+	case KindPassFail:
+		setDefault(out, "duration", "month")
+		setDefault(out, "measure", "ratio")
+	case KindExecutions:
+		setDefault(out, "groupBy", "status")
+		setDefault(out, "measure", "count")
+	case KindWorkflows:
+		setDefault(out, "duration", "month")
+	case KindTimeSeries:
+		setDefault(out, "duration", "week")
+		setDefault(out, "measure", DefaultTimeSeriesMeasure)
+		setDefault(out, "aggregate", "sum")
+		// A new report is segmented by status only for the measure whose
+		// segments are execution statuses; an explicit "" means "no segment".
+		if _, ok := out["segment"]; !ok && out["measure"] == DefaultTimeSeriesMeasure {
+			out["segment"] = "status"
+		}
+		setDefault(out, "chartType", "bar")
 	}
+	if err := validateReport(kind, out); err != nil {
+		return nil, err
+	}
+	// A new report must name what it groups or measures.
+	switch kind {
+	case KindExecutions:
+		if err := checkNonEmptyString(out, "groupBy"); err != nil {
+			return nil, err
+		}
+	case KindTimeSeries:
+		if err := checkNonEmptyString(out, "measure"); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
 
+// ValidateReport validates the params of an existing report after an edit,
+// returning a new params map. It checks every param that is set and gives
+// filters their IDs, but adds no defaults, so an edit changes only what the
+// caller named. Unknown keys are preserved (see CheckParamKeys).
+func ValidateReport(kind string, params map[string]any) (map[string]any, error) {
+	if !IsKind(kind) {
+		return nil, unknownKindError(kind)
+	}
+	out := copyParams(params)
+	if err := validateReport(kind, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// validateReport checks the params that are set, in place: it gives filters
+// their IDs and operators, drops empty from/to and an empty segment, and adds
+// nothing else.
+func validateReport(kind string, out map[string]any) error {
 	filters, err := ParseFilters(out["filter"])
 	if err != nil {
-		return nil, err
+		return err
 	}
 	for i := range filters {
 		if filters[i].ID == "" {
@@ -202,64 +260,53 @@ func NormalizeReport(kind string, params map[string]any) (map[string]any, error)
 	out["filter"] = filtersToAny(filters)
 
 	if err := checkEnum(out, "duration", append(slices.Clone(durations), "custom")); err != nil {
-		return nil, err
+		return err
 	}
 	for _, key := range []string{"from", "to"} {
 		if err := checkTime(out, key); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	switch kind {
 	case KindPassFail:
-		setDefault(out, "duration", "month")
-		setDefault(out, "measure", "ratio")
-		if err := checkEnum(out, "measure", passFailMeasures); err != nil {
-			return nil, err
-		}
+		return checkEnum(out, "measure", passFailMeasures)
 	case KindExecutions:
-		setDefault(out, "groupBy", "status")
-		setDefault(out, "measure", "count")
 		if err := checkEnum(out, "measure", executionsMeasures); err != nil {
-			return nil, err
+			return err
 		}
-		if err := checkNonEmptyString(out, "groupBy"); err != nil {
-			return nil, err
-		}
-	case KindWorkflows:
-		setDefault(out, "duration", "month")
+		return checkString(out, "groupBy")
 	case KindTimeSeries:
-		setDefault(out, "duration", "week")
-		setDefault(out, "measure", DefaultTimeSeriesMeasure)
-		if err := checkNonEmptyString(out, "measure"); err != nil {
-			return nil, err
+		if err := checkString(out, "measure"); err != nil {
+			return err
 		}
-		setDefault(out, "aggregate", "sum")
 		if err := checkEnum(out, "aggregate", timeSeriesAggregates); err != nil {
-			return nil, err
+			return err
 		}
-		// A new report is segmented by status only for the measure whose
-		// segments are execution statuses; an explicit "" means "no segment".
-		if seg, ok := out["segment"]; ok {
-			if s, isString := seg.(string); !isString {
-				return nil, fmt.Errorf("param segment must be a string, got %T", seg)
-			} else if s == "" {
-				delete(out, "segment")
-			}
-		} else if out["measure"] == DefaultTimeSeriesMeasure {
-			out["segment"] = "status"
+		if err := checkString(out, "segment"); err != nil {
+			return err
 		}
-		setDefault(out, "chartType", "bar")
+		if out["segment"] == "" {
+			delete(out, "segment")
+		}
 		if err := checkEnum(out, "chartType", timeSeriesChartTypes); err != nil {
-			return nil, err
+			return err
 		}
 		if v, ok := out["overlaySuccessRate"]; ok {
 			if _, isBool := v.(bool); !isBool {
-				return nil, fmt.Errorf("param overlaySuccessRate must be a boolean, got %T", v)
+				return fmt.Errorf("param overlaySuccessRate must be a boolean, got %T", v)
 			}
 		}
 	}
-	return out, nil
+	return nil
+}
+
+func copyParams(params map[string]any) map[string]any {
+	out := make(map[string]any, len(params)+4)
+	for k, v := range params {
+		out[k] = v
+	}
+	return out
 }
 
 // MergeParams returns existing params with patch applied on top: keys in patch
@@ -297,7 +344,7 @@ func ParseFilters(raw any) ([]Filter, error) {
 			return nil, fmt.Errorf("param filter[%d] is missing filterConfigurationKey", i)
 		}
 		if !validFilterValue(f) {
-			return nil, fmt.Errorf("param filter[%d] (%s) has an invalid value: expected a string, an array of strings, or for a 'where' label filter {labelKey, labelOperator, labelValue}", i, f.FilterConfigurationKey)
+			return nil, fmt.Errorf("param filter[%d] (%s) has an invalid value: expected a string or an array of strings; a labels-v2 filter takes an array of selectors with operator 'is', or {labelKey, labelOperator: exists|contains, labelValue} with operator 'where'", i, f.FilterConfigurationKey)
 		}
 	}
 	return filters, nil
@@ -359,19 +406,29 @@ func FilterValues(filters []Filter, key string) []string {
 }
 
 func validFilterValue(f Filter) bool {
+	if f.FilterConfigurationKey == FilterLabels {
+		// Only the two shapes the dashboard writes, which FilterValues reads:
+		// any other value would pass here and then be silently ignored, and
+		// the report would query without its label restriction.
+		switch f.Operator {
+		case "is", "":
+			var values []string
+			return json.Unmarshal(f.Value, &values) == nil
+		case "where":
+			var v LabelFilterValue
+			if json.Unmarshal(f.Value, &v) != nil || v.LabelKey == "" {
+				return false
+			}
+			return v.LabelOperator == "exists" || v.LabelOperator == "contains"
+		}
+		return false
+	}
 	var s string
 	if json.Unmarshal(f.Value, &s) == nil {
 		return true
 	}
 	var values []string
-	if json.Unmarshal(f.Value, &values) == nil {
-		return true
-	}
-	if f.FilterConfigurationKey == FilterLabels && f.Operator == "where" {
-		var v LabelFilterValue
-		return json.Unmarshal(f.Value, &v) == nil
-	}
-	return false
+	return json.Unmarshal(f.Value, &values) == nil
 }
 
 func filtersToAny(filters []Filter) []any {
@@ -414,12 +471,22 @@ func setDefault(params map[string]any, key string, value any) {
 
 func checkEnum(params map[string]any, key string, allowed []string) error {
 	v, ok := params[key]
-	if !ok {
+	if !ok || v == "" {
 		return nil
 	}
 	s, isString := v.(string)
 	if !isString || !slices.Contains(allowed, s) {
 		return fmt.Errorf("param %s must be one of %s, got %v", key, strings.Join(allowed, ", "), v)
+	}
+	return nil
+}
+
+// checkString requires a param, when set, to be a string.
+func checkString(params map[string]any, key string) error {
+	if v, ok := params[key]; ok {
+		if _, isString := v.(string); !isString {
+			return fmt.Errorf("param %s must be a string, got %T", key, v)
+		}
 	}
 	return nil
 }

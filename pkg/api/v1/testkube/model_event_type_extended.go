@@ -33,6 +33,23 @@ var (
 	EventUpdated                  = EventTypePtr(UPDATED_EventType)
 )
 
+// causeEventStatusDetailsTypes maps each event for the cause of a failure to its status
+// details type. Nothing emits these events. Each one matches the not-passed end event of an
+// execution with that type. An execution that does not pass emits exactly one not-passed
+// event, so each cause event gives at most one call per execution.
+var causeEventStatusDetailsTypes = map[EventType]StatusDetailsType{
+	END_TESTWORKFLOW_TEST_FAILURE_EventType:           StatusDetailsTypeStepFailure,
+	END_TESTWORKFLOW_INFRASTRUCTURE_FAILURE_EventType: StatusDetailsTypeExecutionFailure,
+	END_TESTWORKFLOW_CONFIGURATION_ERROR_EventType:    StatusDetailsTypeInitFailure,
+}
+
+// causeStatusDetailsType returns the status details type of an event for the cause of a
+// failure, and false for every other event type.
+func (t EventType) causeStatusDetailsType() (StatusDetailsType, bool) {
+	detailsType, ok := causeEventStatusDetailsTypes[t]
+	return detailsType, ok
+}
+
 func (t EventType) IsBecome() bool {
 	types := []EventType{
 		BECOME_TESTWORKFLOW_UP_EventType,

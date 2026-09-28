@@ -719,3 +719,38 @@ func TestRenderBoard_SkipsReportsTheLayoutLeavesOut(t *testing.T) {
 		assert.Equal(t, boards.EndpointSeries, f.queries[0].Endpoint)
 	})
 }
+
+func TestUpdateBoardReport_KeepsWhatTheReportShows(t *testing.T) {
+	// aa is a pass-fail report stored without a duration, so the dashboard
+	// renders a week. A new pass-fail report defaults to a month.
+	noDuration := strings.Replace(testBoard, `"measure": "ratio", "duration": "month", "filter": []`, `"measure": "ratio", "filter": []`, 1)
+
+	t.Run("an unrelated edit adds no creation defaults", func(t *testing.T) {
+		f := &fakeBoardClient{board: noDuration}
+		_, handler := UpdateBoardReport(f)
+		result := callTool(t, handler, map[string]any{"board": "quality", "reportId": "aa", "params": map[string]any{"measure": "failed-count"}})
+		require.False(t, result.IsError, getResultText(result))
+		params := f.lastUpdate(t).Content.ContentData.Params
+		assert.Equal(t, "failed-count", params["measure"])
+		assert.NotContains(t, params, "duration", "the report's window must not change")
+	})
+
+	t.Run("changing the kind starts from that kind's defaults", func(t *testing.T) {
+		f := &fakeBoardClient{board: noDuration}
+		_, handler := UpdateBoardReport(f)
+		result := callTool(t, handler, map[string]any{"board": "quality", "reportId": "aa", "kind": "workflows"})
+		require.False(t, result.IsError, getResultText(result))
+		assert.Equal(t, "month", f.lastUpdate(t).Content.ContentData.Params["duration"])
+	})
+
+	t.Run("a bad label filter is refused, not stored", func(t *testing.T) {
+		f := &fakeBoardClient{board: noDuration}
+		_, handler := UpdateBoardReport(f)
+		result := callTool(t, handler, map[string]any{"board": "quality", "reportId": "aa", "params": map[string]any{
+			"filter": []any{map[string]any{"filterConfigurationKey": "labels-v2", "operator": "is", "value": "team=core"}},
+		}})
+		assert.True(t, result.IsError)
+		assert.Contains(t, getResultText(result), "labels-v2")
+		assert.Empty(t, f.updates)
+	})
+}

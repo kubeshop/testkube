@@ -193,7 +193,7 @@ spec:
     workingDir: /data/repo
     resources:
       limits:
-        cpu: 4
+        cpu: 8
         memory: 8Gi
       requests:
         cpu: 2
@@ -213,6 +213,7 @@ spec:
         value: https://proxy.golang.org,direct
       shell: |-
         golangci-lint run -c ./.golangci.yml \
+          --verbose \
           --timeout=20m \
           --issues-exit-code=1 \
           --max-issues-per-linter=0 \

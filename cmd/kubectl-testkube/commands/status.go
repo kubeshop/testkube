@@ -74,7 +74,7 @@ func printContextStatus(cmd *cobra.Command, cfg config.Data) {
 			{"Namespace   ", cfg.Namespace},
 		})
 	} else {
-		ui.PrintEnabled("Context", "connected to a local standalone agent")
+		ui.PrintEnabled("Context", "connected to a local standalone runner")
 
 		namespace := cfg.Namespace
 		if flag := cmd.Flag("namespace"); flag != nil && flag.Changed {
