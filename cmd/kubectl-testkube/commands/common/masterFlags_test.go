@@ -37,14 +37,14 @@ func TestMasterCmds(t *testing.T) {
 	t.Run("Test all master flags set and isnecure", func(t *testing.T) {
 		cmd := NewTestCmd()
 		cmd.SetArgs([]string{"--master-insecure", "true",
-			"--agent-prefix", "dummy-agent-prefix",
+			"--runner-prefix", "dummy-agent-prefix",
 			"--api-prefix", "dummy-api-prefix",
 			"--ui-prefix", "dummy-ui-prefix",
 			"--root-domain", "dummy-root-domain",
 			"--dry-run", "true",
 			"--no-confirm", "true",
-			"--agent-token", "dummy-token",
-			"--agent-uri", "dummy-uri",
+			"--runner-token", "dummy-token",
+			"--runner-uri", "dummy-uri",
 			"--ui-prefix", "dummy-ui-prefix",
 		})
 		err := cmd.Execute()
@@ -63,14 +63,14 @@ func TestMasterCmds(t *testing.T) {
 	})
 	t.Run("Test all master flags set and secure", func(t *testing.T) {
 		cmd := NewTestCmd()
-		cmd.SetArgs([]string{"--agent-prefix", "dummy-agent-prefix",
+		cmd.SetArgs([]string{"--runner-prefix", "dummy-agent-prefix",
 			"--api-prefix", "dummy-api-prefix",
 			"--ui-prefix", "dummy-ui-prefix",
 			"--root-domain", "dummy-root-domain",
 			"--dry-run", "true",
 			"--no-confirm", "true",
-			"--agent-token", "dummy-token",
-			"--agent-uri", "dummy-uri",
+			"--runner-token", "dummy-token",
+			"--runner-uri", "dummy-uri",
 			"--ui-prefix", "dummy-ui-prefix",
 		})
 		err := cmd.Execute()
@@ -288,9 +288,9 @@ func TestMasterCmds(t *testing.T) {
 		assert.Equal(t, "agent.dummy-root-domain:443", opts.Master.URIs.Agent)
 	})
 
-	t.Run("Test defaults for master flags secure with agent uri modified", func(t *testing.T) {
+	t.Run("Test defaults for master flags secure with runner uri modified", func(t *testing.T) {
 		cmd := NewTestCmd()
-		cmd.SetArgs([]string{"--agent-uri", "dummy-agent-uri"})
+		cmd.SetArgs([]string{"--runner-uri", "dummy-agent-uri"})
 		err := cmd.Execute()
 		assert.NoError(t, err)
 		assert.Equal(t, false, opts.Master.Insecure)
@@ -306,9 +306,9 @@ func TestMasterCmds(t *testing.T) {
 		assert.Equal(t, "dummy-agent-uri", opts.Master.URIs.Agent)
 	})
 
-	t.Run("Test defaults for master flags insecure with agent uri modified", func(t *testing.T) {
+	t.Run("Test defaults for master flags insecure with runner uri modified", func(t *testing.T) {
 		cmd := NewTestCmd()
-		cmd.SetArgs([]string{"--master-insecure", "true", "--agent-uri", "dummy-agent-uri"})
+		cmd.SetArgs([]string{"--master-insecure", "true", "--runner-uri", "dummy-agent-uri"})
 		err := cmd.Execute()
 		assert.NoError(t, err)
 		assert.Equal(t, true, opts.Master.Insecure)
@@ -354,6 +354,36 @@ func TestMasterCmds(t *testing.T) {
 		err := cmd.Execute()
 		assert.NoError(t, err)
 		assert.Equal(t, "pro-test-domain", opts.Master.RootDomain)
+	})
+
+	t.Run("deprecated --agent-prefix --agent-token --agent-uri still apply", func(t *testing.T) {
+		cmd := NewTestCmd()
+		cmd.SetArgs([]string{
+			"--agent-prefix", "legacy-agent-prefix",
+			"--agent-token", "legacy-token",
+			"--agent-uri", "legacy-uri",
+		})
+		err := cmd.Execute()
+		assert.NoError(t, err)
+		assert.Equal(t, "legacy-token", opts.Master.AgentToken)
+		assert.Equal(t, "legacy-uri", opts.Master.URIs.Agent)
+		assert.Equal(t, "legacy-agent-prefix", opts.Master.AgentUrlPrefix)
+	})
+
+	t.Run("deprecated --agent-uri-override still applies", func(t *testing.T) {
+		cmd := NewTestCmd()
+		cmd.SetArgs([]string{"--agent-uri-override", "https://legacy.example.com:443"})
+		err := cmd.Execute()
+		assert.NoError(t, err)
+		assert.Equal(t, "https://legacy.example.com:443", opts.Master.URIs.Agent)
+	})
+
+	t.Run("--runner-uri-override applies", func(t *testing.T) {
+		cmd := NewTestCmd()
+		cmd.SetArgs([]string{"--runner-uri-override", "https://runner.example.com:443"})
+		err := cmd.Execute()
+		assert.NoError(t, err)
+		assert.Equal(t, "https://runner.example.com:443", opts.Master.URIs.Agent)
 	})
 }
 

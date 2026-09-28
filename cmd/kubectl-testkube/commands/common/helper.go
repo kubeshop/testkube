@@ -197,8 +197,8 @@ func decideDemoAgentSecretKey(runnerExists bool, runnerKey string, cpExists bool
 		}
 		return "", false, NewCLIError(
 			TKErrInvalidInstallConfig,
-			"Existing Testkube demo runner has no readable agent key",
-			fmt.Sprintf("To fix: recreate the cluster, or delete the %q namespace, then run 'testkube init demo' once. (A demo runner already exists but its agent key can't be read, so this install can't reuse it and a fresh key would not match the Control Plane.)", namespace),
+			"Existing Testkube demo runner has no readable runner key",
+			fmt.Sprintf("To fix: recreate the cluster, or delete the %q namespace, then run 'testkube init demo' once. (A demo runner already exists but its runner key can't be read, so this install can't reuse it and a fresh key would not match the Control Plane.)", namespace),
 			fmt.Errorf("demo runner %q found but %s env is empty", demoRunnerDeploymentName, demoRunnerAPIKeyEnvVar),
 		)
 	}
@@ -275,8 +275,8 @@ func HelmUpgradeOrInstallTestkubeAgent(options HelmOptions, cfg config.Data, isM
 		return NewCLIError(
 			TKErrInvalidInstallConfig,
 			"Invalid install config",
-			"Provide the agent token by setting the '--agent-token' flag",
-			errors.New("agent key is required"))
+			"Provide the runner token by setting the '--runner-token' flag",
+			errors.New("runner key is required"))
 	}
 
 	if cliErr := updateHelmRepo(helmPath, options.DryRun, false); cliErr != nil {
@@ -773,6 +773,16 @@ func LoginUser(authUri, apiUri string, customConnector bool, port int, skipTLS .
 	allowInsecureTLS := len(skipTLS) == 1 && skipTLS[0]
 	connectorID := ""
 	if !customConnector {
+		if !ui.StdinIsInteractive() {
+			// Logging in means choosing a method and then following a browser flow, neither
+			// of which an unattended run can do. Fail here rather than returning, so the
+			// caller's generic "is the browser reachable" hint does not bury this one.
+			ui.Failf("cannot log in without a terminal.\n\n" +
+				"  For CI or an agent, authenticate with an API key instead of logging in:\n" +
+				"    testkube set context --api-key <key> --org-id <org-id> --env-id <env-id>\n\n" +
+				"  Create the key in the dashboard, under Organization Management, API Tokens.\n" +
+				"  To log in as yourself, run this from a terminal.")
+		}
 		connectorID = ui.Select("Choose your login method", []string{github, gitlab, google, emailLink})
 	}
 
@@ -1449,8 +1459,8 @@ func DockerRunTestkubeAgent(options HelmOptions, cfg config.Data, dockerContaine
 		return NewCLIError(
 			TKErrInvalidInstallConfig,
 			"Invalid install config",
-			"Provide the agent token by setting the '--agent-token' flag",
-			errors.New("agent key is required"))
+			"Provide the runner token by setting the '--runner-token' flag",
+			errors.New("runner key is required"))
 	}
 
 	args := prepareTestkubeProDockerArgs(options, dockerContainerName, dockerImage)
@@ -1535,7 +1545,7 @@ func StreamDockerLogs(dockerContainerName string) *CLIError {
 		return NewCLIError(
 			TKErrDockerLogStreamingFailed,
 			"Docker log streaming failed",
-			"Check that your Testkube Docker Agent container is up and runnning",
+			"Check that your Testkube Docker Runner container is up and runnning",
 			err)
 	}
 	defer logs.Close()
@@ -1560,7 +1570,7 @@ func StreamDockerLogs(dockerContainerName string) *CLIError {
 			return NewCLIError(
 				TKErrDockerInstallationFailed,
 				"Docker installation failed",
-				"Check logs of your Testkube Docker Agent container",
+				"Check logs of your Testkube Docker Runner container",
 				errors.New(string(line)))
 		}
 	}
@@ -1569,7 +1579,7 @@ func StreamDockerLogs(dockerContainerName string) *CLIError {
 		return NewCLIError(
 			TKErrDockerLogReadingFailed,
 			"Docker log reading failed",
-			"Check logs of your Testkube Docker Agent container",
+			"Check logs of your Testkube Docker Runner container",
 			err)
 	}
 
@@ -1586,8 +1596,8 @@ func DockerUpgradeTestkubeAgent(options HelmOptions, latestVersion string, cfg c
 		return NewCLIError(
 			TKErrInvalidInstallConfig,
 			"Invalid install config",
-			"Provide the agent token by setting the '--agent-token' flag",
-			errors.New("agent key is required"))
+			"Provide the runner token by setting the '--runner-token' flag",
+			errors.New("runner key is required"))
 	}
 
 	args := prepareTestkubeUpgradeDockerArgs(options, cfg.CloudContext.DockerContainerName, latestVersion)

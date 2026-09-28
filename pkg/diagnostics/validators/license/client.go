@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -23,11 +24,24 @@ type LicenseRequest struct {
 	License string `json:"license"`
 }
 
+// EventRequest reports a product lifecycle event against a license.
+type EventRequest struct {
+	License string `json:"license"`
+	Event   string `json:"event"`
+}
+
+const (
+	EventCLIInstallStarted  = "cli_install_started"
+	EventCLIInstallFinished = "cli_install_finished"
+)
+
 type Client struct {
 	url string
 }
 
 const LicenseValidationURL = "https://license.testkube.io/validate"
+
+const LicenseEventsURL = "https://license.testkube.io/events"
 
 func NewClient() *Client {
 	return &Client{url: LicenseValidationURL}
@@ -78,4 +92,33 @@ func (c *Client) ValidateLicense(licenseRequest LicenseRequest) (*LicenseRespons
 	}
 
 	return &licenseResponse, nil
+}
+
+func (c *Client) ReportEvent(license, event string) error {
+	reqBody, err := json.Marshal(EventRequest{License: license, Event: event})
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, LicenseEventsURL, bytes.NewBuffer(reqBody))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	_, _ = io.ReadAll(resp.Body)
+
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("license event report failed with status %d", resp.StatusCode)
+	}
+
+	return nil
 }

@@ -131,6 +131,8 @@ The same path exists in the connected-mode scheduler in `testkube-cloud-api`, wh
 - Stores TestWorkflow execution artifacts (logs, reports, files)
 - Buckets: `testkube-artifacts`, `testkube-logs`
 - Storage interface: [`pkg/storage/`](pkg/storage/)
+- Also stores step dependency caches under the `.tkcache/v1` prefix, keyed and scoped by [`pkg/executioncache/`](pkg/executioncache/) so that a workflow-scoped entry cannot be addressed by another workflow. Retention is a prefix-filtered bucket lifecycle rule; see "Configuration references" in [`AGENTS.md`](AGENTS.md) for why `STORAGE_EXPIRATION` stays opt-in while `STORAGE_CACHE_EXPIRATION` defaults to 1 day.
+- Pods never use the MinIO SDK. The toolkit asks the Control Plane for a presigned URL over gRPC and performs a plain HTTP PUT/GET, so object-store credentials stay out of workflow containers. Dependency caches use their own presign RPCs (`GetExecutionCachePresigned`, `SaveExecutionCachePresigned`), which resolve the cache scope from the execution rather than from the request.
 
 **NATS** (Message Queue)
 
@@ -352,6 +354,8 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 
 **Context Resolution**: Commands that act on a Control Plane environment resolve their target through [`cmd/kubectl-testkube/commands/common/orgenv.go`](cmd/kubectl-testkube/commands/common/orgenv.go). The precedence is an explicit `--org-id`/`--env-id`, then `--org-name`/`--env-name` resolved against the Control Plane's organization and environment listings, then an interactive selector when the terminal allows one. Name matching is exact, with a slug fallback for environments, and an ambiguous name is an error rather than an arbitrary pick. The resolved ids are persisted to `~/.testkube/config.json`, which is the context every later command reads.
 
+**Prompts**: Interactive prompts live in [`pkg/ui`](pkg/ui/) and all pass through the terminal check in [`pkg/ui/interactive.go`](pkg/ui/interactive.go). When stdin is not a terminal the prompt is refused with an actionable message instead of being drawn, which keeps unattended runs (CI, coding agents, containers without a TTY) from blocking on input nobody can supply. `ui.StdinIsInteractive()` exposes the same check so a command can choose a non-interactive path; `GetClient` uses it to refuse an automatic login when a token refresh fails without a terminal.
+
 **Client Layer**:
 
 - [`pkg/newclients/`](pkg/newclients/) - API clients for tests, testworkflows, webhooks
@@ -363,6 +367,39 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 - API server endpoints (standalone or control plane)
 - Authentication tokens
 - Contexts (for multi-environment setups)
+
+### External Integration: License Event Reporting
+
+The CLI reports installation lifecycle events to the Testkube license service so the
+install funnel can be tracked as telemetry.
+
+**Endpoint**: `POST https://license.testkube.io/events` (the license worker's `/events`
+handler). The URL is defined as `LicenseEventsURL` in
+[`pkg/diagnostics/validators/license/client.go`](pkg/diagnostics/validators/license/client.go).
+
+**Client**: `Client.ReportEvent(license, event)` in the same file marshals
+`{ "license": <key>, "event": <name> }` and POSTs it with a short (5s) request timeout.
+
+**Events** (constants in `client.go`):
+
+- `cli_install_started` — emitted right before the Helm install begins.
+- `cli_install_finished` — emitted right after the install succeeds.
+
+**Flow**: During `testkube init demo`
+([`cmd/kubectl-testkube/commands/init.go`](cmd/kubectl-testkube/commands/init.go)), the
+`reportLicenseEvent` helper wraps `ReportEvent`. It is:
+
+- **Telemetry-gated** — it is a no-op when the user has disabled telemetry
+  (`config.Data.TelemetryEnabled == false`).
+- **Non-blocking** — each call runs in a background goroutine so a slow or unreachable
+  endpoint never stalls the install path.
+- **Best-effort / non-fatal** — failures are logged at debug level only and never abort
+  the installation.
+
+**Authentication**: the license key sent in the request body is itself the credential —
+the license worker validates the key (against Keygen) before recording anything, so no
+separate shared secret ships in the public CLI. Recording is scoped to that license's own
+plan on the worker side.
 
 ## Related Documentation
 

@@ -26,7 +26,7 @@ for multiple tags use comma-separated format 'key1=value1,key2=value2' (e.g., 't
 Note: filters execution-level tags (set via update_execution_tags), not workflow labels — use selector for workflow labels.`
 
 	StatusDescription = `Filter by execution status. Available statuses: 'queued', 'running', 'passed', 
-'failed', 'skipped', 'aborted', 'timeout', 'paused'`
+'failed', 'skipped', 'aborted', 'canceled', 'timeout', 'paused'`
 
 	ResourceGroupDescription = "Filter by resource group using the group slug (e.g., 'demo-resource-group', 'accounting-tests'). Use the list_resource_groups tool to discover available groups"
 
@@ -54,7 +54,7 @@ or an RFC 3339 timestamp (e.g., '2024-01-31T16:00:00Z'). Combine with startDate 
 	// Execution tool descriptions
 	FetchExecutionLogsDescription           = "Retrieve logs from a test workflow execution. Default returns last 100 lines. Use grep to search the full log (capped at 100 matches). Always paginate in 100-line chunks. For parallel workflows with workers, call get_execution_info first to get valid worker refs (do not use step refs)."
 	ListExecutionsDescription               = "List test workflow executions with filtering by workflow, status, date range, labels, tags, or text search. Returns execution summaries including status, duration, and metadata. Use to discover recent runs or find specific executions."
-	GetExecutionInfoDescription             = "Get detailed information about a specific workflow execution: status, timing, results, configuration, and worker instances. Requires executionId. workflowName is optional for disambiguation."
+	GetExecutionInfoDescription             = "Get detailed information about a specific workflow execution: status, timing, results, configuration, and worker instances. An execution that did not pass also carries statusDetails, which names the layer that failed, a reason code for the cause, and the step that holds it. Requires executionId. workflowName is optional for disambiguation."
 	GetExecutionInfoWorkflowNameDescription = "Optional workflow name for scoping an execution name lookup. Safe to omit when you have an execution ID."
 	LookupExecutionIdDescription            = "Resolve an execution name (e.g., 'my-workflow-123') to its execution ID. Use when you have an execution name but need the ID for other tools."
 	WaitForExecutionsDescription            = "Wait for a list of workflow executions to complete. Returns the final status of all executions. Use for synchronizing dependent workflows."

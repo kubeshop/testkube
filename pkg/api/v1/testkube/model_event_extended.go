@@ -179,6 +179,14 @@ func (e Event) Valid(groupId, selector string, types []EventType) (matchedTypes 
 
 	typesMatch := false
 	for _, t := range types {
+		if detailsType, ok := t.causeStatusDetailsType(); ok {
+			if e.hasFailureCause(detailsType) {
+				typesMatch = true
+				matchedTypes = append(matchedTypes, t)
+			}
+			continue
+		}
+
 		ts := []EventType{t}
 		if t.IsBecome() {
 			ts = t.MapBecomeToRegular()
@@ -208,6 +216,16 @@ func (e Event) Valid(groupId, selector string, types []EventType) (matchedTypes 
 	}
 
 	return
+}
+
+// hasFailureCause reports whether the event is the not-passed end event of an execution whose
+// status details carry the type.
+func (e Event) hasFailureCause(detailsType StatusDetailsType) bool {
+	if e.Type() != END_TESTWORKFLOW_NOT_PASSED_EventType || e.TestWorkflowExecution == nil {
+		return false
+	}
+	result := e.TestWorkflowExecution.Result
+	return result != nil && result.StatusDetails != nil && StatusDetailsType(result.StatusDetails.Type_) == detailsType
 }
 
 // GetResourceId implmenents generic event trigger

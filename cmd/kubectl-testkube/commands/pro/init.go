@@ -22,15 +22,15 @@ func NewInitCmd() *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "agent",
-		Short:   "Install Testkube Pro Agent and connect to Testkube Pro environment",
+		Use:     "runner",
+		Short:   "Install Testkube Pro Runner and connect to Testkube Pro environment",
 		Aliases: []string{"install", "agent", "init"},
 		Run: func(cmd *cobra.Command, args []string) {
 			if export {
 				common.HandleCLIError(common.NewCLIError(
 					common.TKErrInvalidRuntimeParameter,
 					"Export is unavailable for this profile",
-					"Drop the '--export' flag, it is only supported when installing the standalone agent",
+					"Drop the '--export' flag, it is only supported when installing the standalone runner",
 					errors.New("export is unavailable for this profile"),
 				))
 			}
@@ -52,7 +52,7 @@ func NewInitCmd() *cobra.Command {
 			skipTLS := common.SyncSkipTLSFromFlags(cmd, &cfg)
 
 			common.ProcessMasterFlags(cmd, &options, &cfg)
-			common.ShowOperatorDeprecationWarning("Testkube Agent", options.NoCRDs)
+			common.ShowOperatorDeprecationWarning("Testkube Runner", options.NoCRDs)
 
 			common.SendAttemptTelemetry(cmd, cfg)
 

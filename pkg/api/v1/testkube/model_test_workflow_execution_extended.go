@@ -11,12 +11,14 @@ import (
 type TestWorkflowExecutions []TestWorkflowExecution
 
 func (executions TestWorkflowExecutions) Table() (header []string, output [][]string) {
-	header = []string{"Id", "Name", "Test Workflow Name", "Status", "Labels", "Tags"}
+	header = []string{"Id", "Name", "Test Workflow Name", "Status", "Reason", "Labels", "Tags"}
 
 	for _, e := range executions {
 		status := "unknown"
+		reason := ""
 		if e.Result != nil && e.Result.Status != nil {
 			status = string(*e.Result.Status)
+			reason = e.Result.StatusDetails.Label()
 		}
 
 		output = append(output, []string{
@@ -24,6 +26,7 @@ func (executions TestWorkflowExecutions) Table() (header []string, output [][]st
 			e.Name,
 			e.Workflow.Name,
 			status,
+			reason,
 			MapToString(e.Workflow.Labels),
 			MapToString(e.Tags),
 		})
@@ -93,13 +96,16 @@ func (e *TestWorkflowExecution) GetTemplateRefs() []TestWorkflowTemplateRef {
 	return templateRefs
 }
 
-func (e *TestWorkflowExecution) InitializationError(header string, err error) {
+// InitializationError ends an execution that never started. The reason is the code for the error.
+// A reader gets the cause from the code and does not read the words of the message.
+func (e *TestWorkflowExecution) InitializationError(header, reason string, err error) {
 	e.Result.Status = common.Ptr(ABORTED_TestWorkflowStatus)
 	e.Result.PredictedStatus = e.Result.Status
 	e.Result.FinishedAt = e.ScheduledAt
 	e.Result.Initialization.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
 	e.Result.Initialization.FinishedAt = e.ScheduledAt
 	e.Result.Initialization.ErrorMessage = err.Error()
+	e.Result.Initialization.ErrorReason = reason
 	if header != "" {
 		// The stored message must stay plain text. The API and telemetry read it without a terminal renderer.
 		e.Result.Initialization.ErrorMessage = fmt.Sprintf("%s\n%s", header, e.Result.Initialization.ErrorMessage)
@@ -110,6 +116,12 @@ func (e *TestWorkflowExecution) InitializationError(header string, err error) {
 		e.Result.Steps[ref] = step
 	}
 	e.Result.HealDuration(e.ScheduledAt)
+	// The execution never reached a runner, so the control plane is the actor of the stop.
+	e.Result.StatusDetails = e.Result.ClassifyStatus(nil, Stop{
+		Code:   string(ABORTED_TestWorkflowStatus),
+		Actor:  StopActorControlPlane,
+		Reason: StopReason(reason),
+	})
 }
 
 func (e *TestWorkflowExecution) FailedToInitialize() bool {

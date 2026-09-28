@@ -2,7 +2,10 @@ package controlplane
 
 import (
 	"context"
+	"fmt"
 	"time"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // reapStaleDispatches fails executions that were handed to a runner which never
@@ -42,11 +45,17 @@ func (s *Server) reapOnce(ctx context.Context) {
 	}
 
 	for _, id := range ids {
-		// A late AcceptExecution would resurrect one of these, because Init sets
-		// SCHEDULING unconditionally. The start timeout is orders of magnitude
-		// longer than a healthy start, so that race is not reachable in practice -
-		// do not shorten it without guarding Init on the current status.
-		if err := s.abortExecution(ctx, id); err != nil {
+		// AcceptExecution refuses a finished execution, so a runner that surfaces
+		// late is told to tear down rather than resurrecting this one.
+		//
+		// The control plane is the actor here, not the runner: nothing was
+		// declined, the dispatch was simply never acknowledged.
+		cause := abortCause{
+			reason:  testkube.StartReasonUnknown,
+			message: fmt.Sprintf("The runner did not acknowledge this execution within %s.", s.startTimeout()),
+			actor:   testkube.StopActorControlPlane,
+		}
+		if err := s.abortExecution(ctx, id, cause); err != nil {
 			log.Warnw("failed to fail a stale dispatched execution", "id", id, "err", err)
 			continue
 		}

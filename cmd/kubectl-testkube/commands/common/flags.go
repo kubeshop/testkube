@@ -68,7 +68,7 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, isDockerCmd bool
 	cmd.Flags().BoolVar(&insecure, "cloud-insecure", false, "deprecated: use --skip-tls")
 	cmd.Flags().MarkDeprecated("cloud-insecure", "use --skip-tls")
 	cmd.Flags().StringVar(&agentURIPrefix, "cloud-agent-prefix", defaultAgentPrefix, "usually don't need to be changed [required for custom cloud mode]")
-	cmd.Flags().MarkDeprecated("cloud-agent-prefix", "use --agent-prefix instead")
+	cmd.Flags().MarkDeprecated("cloud-agent-prefix", "use --runner-prefix instead")
 	cmd.Flags().StringVar(&apiURIPrefix, "cloud-api-prefix", defaultApiPrefix, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().MarkDeprecated("cloud-api-prefix", "use --api-prefix instead")
 	cmd.Flags().StringVar(&uiURIPrefix, "cloud-ui-prefix", defaultUiPrefix, "usually don't need to be changed [required for custom cloud mode]")
@@ -80,7 +80,9 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, isDockerCmd bool
 
 	cmd.Flags().BoolVar(&opts.Master.Insecure, "master-insecure", false, "deprecated: use --skip-tls")
 	cmd.Flags().MarkDeprecated("master-insecure", "use --skip-tls")
-	cmd.Flags().StringVar(&opts.Master.AgentUrlPrefix, "agent-prefix", defaultAgentPrefix, "usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().StringVar(&opts.Master.AgentUrlPrefix, "runner-prefix", defaultAgentPrefix, "usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().String("agent-prefix", defaultAgentPrefix, "usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().MarkDeprecated("agent-prefix", "use --runner-prefix instead")
 	cmd.Flags().StringVar(&opts.Master.ApiUrlPrefix, "api-prefix", defaultApiPrefix, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().StringVar(&opts.Master.UiUrlPrefix, "ui-prefix", defaultUiPrefix, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().StringVar(&opts.Master.RootDomain, "root-domain", defaultRootDomain, "usually don't need to be changed [required for custom cloud mode]")
@@ -91,15 +93,21 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, isDockerCmd bool
 	cmd.Flags().String("api-uri-override", "", "api uri override")
 	cmd.Flags().String("ui-uri-override", "", "ui uri override")
 	cmd.Flags().String("auth-uri-override", "", "auth uri override")
+	cmd.Flags().String("runner-uri-override", "", "runner uri override")
 	cmd.Flags().String("agent-uri-override", "", "agent uri override")
+	cmd.Flags().MarkDeprecated("agent-uri-override", "use --runner-uri-override instead")
 
 	agentURI := ""
 	if isDockerCmd {
 		agentURI = "agent.testkube.io:443"
 	}
 
-	cmd.Flags().StringVar(&opts.Master.URIs.Agent, "agent-uri", agentURI, "Testkube Pro agent URI [required for centralized mode]")
-	cmd.Flags().StringVar(&opts.Master.AgentToken, "agent-token", "", "Testkube Pro agent key [required for centralized mode]")
+	cmd.Flags().StringVar(&opts.Master.URIs.Agent, "runner-uri", agentURI, "Testkube Pro runner URI [required for centralized mode]")
+	cmd.Flags().String("agent-uri", agentURI, "Testkube Pro agent URI [required for centralized mode]")
+	cmd.Flags().MarkDeprecated("agent-uri", "use --runner-uri instead")
+	cmd.Flags().StringVar(&opts.Master.AgentToken, "runner-token", "", "Testkube Pro runner key [required for centralized mode]")
+	cmd.Flags().String("agent-token", "", "Testkube Pro agent key [required for centralized mode]")
+	cmd.Flags().MarkDeprecated("agent-token", "use --runner-token instead")
 	neededForLogin := ""
 	if isDockerCmd {
 		neededForLogin = ". It can be skipped for no login mode"
@@ -130,12 +138,18 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 		}
 	}
 
-	if !cmd.Flags().Changed("agent-prefix") {
-		if cmd.Flags().Changed("cloud-agent-prefix") {
-			opts.Master.AgentUrlPrefix = cmd.Flag("cloud-agent-prefix").Value.String()
-		} else if configured && cfg.Master.AgentUrlPrefix != "" {
-			opts.Master.AgentUrlPrefix = cfg.Master.AgentUrlPrefix
-		}
+	if v, ok := firstChangedString(cmd, "runner-prefix", "agent-prefix", "cloud-agent-prefix"); ok {
+		opts.Master.AgentUrlPrefix = v
+	} else if configured && cfg.Master.AgentUrlPrefix != "" {
+		opts.Master.AgentUrlPrefix = cfg.Master.AgentUrlPrefix
+	}
+
+	if v, ok := firstChangedString(cmd, "runner-uri", "agent-uri"); ok {
+		opts.Master.URIs.Agent = v
+	}
+
+	if v, ok := firstChangedString(cmd, "runner-token", "agent-token"); ok {
+		opts.Master.AgentToken = v
 	}
 
 	if !cmd.Flags().Changed("api-prefix") {
@@ -185,8 +199,8 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 		opts.Master.Insecure)
 
 	// override whole URIs usually composed from prefix - host parts
-	if flagChanged(cmd, "agent-uri-override") {
-		uris.WithAgentURI(cmd.Flag("agent-uri-override").Value.String())
+	if v, ok := firstChangedString(cmd, "runner-uri-override", "agent-uri-override"); ok {
+		uris.WithAgentURI(v)
 	}
 
 	if flagChanged(cmd, "api-uri-override") {
@@ -262,6 +276,16 @@ func uiConfigured(cmd *cobra.Command, cfg *config.Data) bool {
 
 func flagChanged(cmd *cobra.Command, name string) bool {
 	return cmd != nil && cmd.Flag(name) != nil && cmd.Flags().Changed(name)
+}
+
+// firstChangedString returns the value of the first named flag that was set.
+func firstChangedString(cmd *cobra.Command, names ...string) (string, bool) {
+	for _, name := range names {
+		if flagChanged(cmd, name) {
+			return cmd.Flag(name).Value.String(), true
+		}
+	}
+	return "", false
 }
 
 // ResolveSkipTLS returns the effective skip-TLS value with precedence:
@@ -360,22 +384,22 @@ func (s *CommaList) Enabled(value string) bool {
 func PopulateRunnerFlags(cmd *cobra.Command) {
 	// Installation > General
 	cmd.Flags().StringP("execution-namespace", "N", "", "namespace to run executions (defaults to installation namespace)")
-	cmd.Flags().String("version", "", "agent version to use (defaults to latest)")
+	cmd.Flags().String("version", "", "runner version to use (defaults to latest)")
 	cmd.Flags().Bool("dry-run", false, "display helm commands only")
 
 	// Installation > Runner
 	cmd.Flags().StringP("global-template-path", "g", "", "include global template")
-	cmd.Flags().Bool("global", false, "make it global agent")
-	cmd.Flags().String("group", "", "make it grouped agent")
+	cmd.Flags().Bool("global", false, "make it global runner")
+	cmd.Flags().String("group", "", "make it grouped runner")
 
 	// Install existing
-	cmd.Flags().StringP("secret", "s", "", "secret key for the selected agent")
+	cmd.Flags().StringP("secret", "s", "", "secret key for the selected runner")
 
 	// Create and install
-	cmd.Flags().Bool("create", false, "auto create that agent")
-	cmd.Flags().StringSliceP("env", "e", nil, "(with --create) environment ID or slug that the agent have access to")
+	cmd.Flags().Bool("create", false, "auto create that runner")
+	cmd.Flags().StringSliceP("env", "e", nil, "(with --create) environment ID or slug that the runner have access to")
 	cmd.Flags().StringSliceP("label", "l", nil, "(with --create) label key value pair: --label key1=value1")
-	cmd.Flags().Bool("floating", false, "(with --create) create as a floating agent")
+	cmd.Flags().Bool("floating", false, "(with --create) create as a floating runner")
 
 	// Components selection
 	AddExecutionCapabilityFlags(cmd)
@@ -384,7 +408,7 @@ func PopulateRunnerFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool("webhooks", false, "enable webhooks capability")
 
 	// Deprecated flag
-	cmd.Flags().StringP("type", "t", "", "[DEPRECATED] agent type - use capability flags instead")
+	cmd.Flags().StringP("type", "t", "", "[DEPRECATED] runner type - use capability flags instead")
 	cmd.Flags().MarkDeprecated("type", "use --execution, --listener, --gitops, and/or --webhooks instead")
 }
 

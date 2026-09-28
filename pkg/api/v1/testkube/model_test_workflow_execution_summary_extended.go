@@ -7,12 +7,14 @@ import (
 type TestWorkflowExecutionSummaries []TestWorkflowExecutionSummary
 
 func (executions TestWorkflowExecutionSummaries) Table() (header []string, output [][]string) {
-	header = []string{"Id", "Name", "Test Workflow Name", "Status", "Labels", "Tags"}
+	header = []string{"Id", "Name", "Test Workflow Name", "Status", "Reason", "Labels", "Tags"}
 
 	for _, e := range executions {
 		status := "unknown"
+		reason := ""
 		if e.Result != nil && e.Result.Status != nil {
 			status = string(*e.Result.Status)
+			reason = e.Result.StatusDetails.Label()
 		}
 
 		output = append(output, []string{
@@ -20,6 +22,7 @@ func (executions TestWorkflowExecutionSummaries) Table() (header []string, outpu
 			e.Name,
 			e.Workflow.Name,
 			status,
+			reason,
 			MapToString(e.Workflow.Labels),
 			MapToString(e.Tags),
 		})

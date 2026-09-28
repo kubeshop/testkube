@@ -76,6 +76,25 @@ func printPrettyOutput(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 		tclcmd.PrintRunningContext(ui, execution)
 		if execution.Result != nil && execution.Result.Status != nil {
 			ui.Warn("Status:              ", string(*execution.Result.Status))
+			// The object says which layer ended the execution, so the reader learns the kind of
+			// outcome before the words of the message. The words stay neutral, because a cancel by
+			// a person is an outcome and not a failure.
+			if details := execution.Result.StatusDetails; details != nil {
+				ui.Warn("Status type:         ", details.Type_)
+				ui.Warn("Reason:              ", details.Reason)
+				if details.Step != "" {
+					ui.Warn("Step:                ", details.Step)
+				}
+				if details.Message != "" {
+					ui.Warn("Message:             ", details.Message)
+				}
+				if details.Actor != "" {
+					ui.Warn("Stopped by:          ", details.Actor)
+				}
+				if details.User != nil && details.User.Name != "" {
+					ui.Warn("Canceled by:         ", details.User.Name)
+				}
+			}
 			if !execution.Result.QueuedAt.IsZero() {
 				ui.Warn("Queued at:           ", execution.Result.QueuedAt.String())
 			}

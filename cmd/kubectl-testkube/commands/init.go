@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -21,14 +23,14 @@ import (
 
 const (
 	defaultNamespace       = "testkube"
-	standaloneAgentProfile = "standalone-agent"
+	standaloneAgentProfile = "standalone-runner"
 	demoProfile            = "demo"
 	demoValuesUrl          = "https://raw.githubusercontent.com/kubeshop/testkube-cloud-charts/main/charts/testkube-enterprise/profiles/values.demo.v2.yaml"
-	agentProfile           = "agent"
+	agentProfile           = "runner"
 
 	standaloneInstallationName = "Testkube OSS"
 	demoInstallationName       = "Testkube On-Prem demo"
-	agentInstallationName      = "Testkube Agent"
+	agentInstallationName      = "Testkube Runner"
 )
 
 func NewInitCmd() *cobra.Command {
@@ -72,7 +74,7 @@ func NewInitCmdStandalone() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     standaloneAgentProfile,
 		Short:   "Install " + standaloneInstallationName + " in your current context",
-		Aliases: []string{"oss", "standalone"},
+		Aliases: []string{"oss", "standalone", "standalone-agent"},
 		Run: func(cmd *cobra.Command, args []string) {
 			if export {
 				common.HandleCLIError(common.NewCLIError(
@@ -154,6 +156,8 @@ func NewInitCmdDemo() *cobra.Command {
 				exitOnExportError(err)
 				return
 			}
+
+			defer waitLicenseEvents()
 
 			ui.Logo()
 			ui.Info("Welcome to the installer for " + demoInstallationName + ".")
@@ -239,6 +243,7 @@ func NewInitCmdDemo() *cobra.Command {
 
 			spinner := ui.NewSpinner("Running Kubectl command...")
 			sendTelemetry(cmd, cfg, license, "installing started", licenseName)
+			reportLicenseEvent(cfg, license, licensevalidator.EventCLIInstallStarted)
 			options := common.HelmOptions{
 				Namespace:     namespace,
 				LicenseKey:    license,
@@ -260,7 +265,7 @@ func NewInitCmdDemo() *cobra.Command {
 			runnerSecretKey, cliErr := common.ResolveDemoAgentSecretKey(options.Namespace, options.DryRun)
 			if cliErr != nil {
 				spinner.Fail("Failed to install Testkube On-Prem Demo")
-				exitOnInstallError(cmd, cfg, "resolving agent key", "install_failed", license, cliErr)
+				exitOnInstallError(cmd, cfg, "resolving runner key", "install_failed", license, cliErr)
 			}
 
 			cliErr = common.HelmUpgradeOrInstallTestkubeOnPremDemo(options, runnerSecretKey)
@@ -279,6 +284,8 @@ func NewInitCmdDemo() *cobra.Command {
 			spinner.Success()
 
 			sendTelemetry(cmd, cfg, license, "installing finished", licenseName)
+
+			reportLicenseEvent(cfg, license, licensevalidator.EventCLIInstallFinished)
 
 			cfg.Namespace = namespace
 			err = config.Save(cfg)
@@ -317,7 +324,7 @@ func NewInitCmdDemo() *cobra.Command {
 			ui.NL()
 			ui.H2("Launching web browser...")
 			ui.NL()
-			openOnPremDashboard(cmd, cfg, false, false, license)
+			openOnPremDashboard(cmd, cfg, false, false, license, licenseName)
 		},
 	}
 
@@ -379,6 +386,33 @@ func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType, licens
 		}
 
 		ui.Debug("telemetry send event response", out)
+	}
+}
+
+var licenseEventsWG sync.WaitGroup
+
+func reportLicenseEvent(clientCfg config.Data, license, event string) {
+	if !clientCfg.TelemetryEnabled {
+		return
+	}
+	licenseEventsWG.Add(1)
+	go func() {
+		defer licenseEventsWG.Done()
+		if err := licensevalidator.NewClient().ReportEvent(license, event); err != nil {
+			ui.Debug("license event report failed, continuing", err.Error())
+		}
+	}()
+}
+
+func waitLicenseEvents() {
+	done := make(chan struct{})
+	go func() {
+		licenseEventsWG.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(6 * time.Second):
 	}
 }
 

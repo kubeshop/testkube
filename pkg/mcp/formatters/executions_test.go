@@ -493,3 +493,51 @@ func TestFormatWaitForExecutions(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+// TestFormatters_StatusDetailsWithholdsTheUser guards the contract of the status details object in a
+// tool response: the codes and the message reach the caller, and the person who canceled does not.
+// The formatters hold their own shape, so a field added to that shape would else leak the name.
+func TestFormatters_StatusDetailsWithholdsTheUser(t *testing.T) {
+	const statusDetails = `"statusDetails": {
+		"type": "user-cancel",
+		"reason": "force-cancel",
+		"step": "rstep1",
+		"actor": "user",
+		"message": "The execution has been canceled. (by the user)",
+		"user": {"name": "Ada Lovelace", "email": "ada@example.com"}
+	}`
+
+	tests := []struct {
+		name      string
+		formatter func(string) (string, error)
+		input     string
+	}{
+		{
+			name:      "the execution response",
+			formatter: FormatExecutionInfo,
+			input: `{"id": "exec-1", "name": "wf-1", "workflow": {"name": "wf", "spec": {}},
+				"result": {"status": "canceled", ` + statusDetails + `}}`,
+		},
+		{
+			name:      "the wait response",
+			formatter: FormatWaitForExecutions,
+			input: `[{"id": "exec-1", "name": "wf-1", "workflow": {"name": "wf", "spec": {}}, "output": [],
+				"result": {"status": "canceled", ` + statusDetails + `}}]`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.formatter(tt.input)
+			require.NoError(t, err)
+
+			assert.Contains(t, got, "user-cancel", "the layer must reach the caller")
+			assert.Contains(t, got, "force-cancel", "the code must reach the caller")
+			assert.NotContains(t, got, "Ada Lovelace", "the name of the person must stay in the deployment")
+			assert.NotContains(t, got, "ada@example.com", "the address of the person must stay in the deployment")
+			// The actor code is also the word user, so the check names the object and not the word.
+			assert.NotContains(t, got, `"user":{`, "the response must hold no user object")
+			assert.Contains(t, got, `"actor":"user"`, "the actor code still names who decided the stop")
+		})
+	}
+}

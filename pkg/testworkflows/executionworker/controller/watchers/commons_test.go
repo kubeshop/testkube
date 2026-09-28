@@ -75,3 +75,56 @@ func TestGetJobError(t *testing.T) {
 		})
 	}
 }
+
+func TestGetJobStop(t *testing.T) {
+	deleted := metav1.NewTime(time.Now())
+	aborted := string(testkube.ABORTED_TestWorkflowStatus)
+	tests := []struct {
+		name string
+		job  *batchv1.Job
+		want testkube.Stop
+	}{
+		{
+			name: "reads the four annotations",
+			job: &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{
+				constants.AnnotationTerminationCode:   string(testkube.CANCELED_TestWorkflowStatus),
+				constants.AnnotationTerminationActor:  string(testkube.StopActorUser),
+				constants.AnnotationTerminationReason: string(testkube.StopReasonAbortAll),
+				constants.AnnotationTerminationDetail: "the whole workflow",
+			}}},
+			want: testkube.Stop{
+				Code:   string(testkube.CANCELED_TestWorkflowStatus),
+				Actor:  testkube.StopActorUser,
+				Reason: testkube.StopReasonAbortAll,
+				Detail: "the whole workflow",
+			},
+		},
+		{
+			name: "names the system for a deleted job without annotations",
+			job:  &batchv1.Job{ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &deleted}},
+			want: testkube.Stop{Code: aborted, Actor: testkube.StopActorSystem},
+		},
+		{
+			name: "keeps the annotated actor of a deleted job",
+			job: &batchv1.Job{ObjectMeta: metav1.ObjectMeta{
+				DeletionTimestamp: &deleted,
+				Annotations:       map[string]string{constants.AnnotationTerminationActor: string(testkube.StopActorTrigger)},
+			}},
+			want: testkube.Stop{Code: aborted, Actor: testkube.StopActorTrigger},
+		},
+		{
+			name: "reports the code only for a job that still runs",
+			job:  &batchv1.Job{},
+			want: testkube.Stop{Code: aborted},
+		},
+		{
+			name: "reports the default code without a job",
+			want: testkube.Stop{Code: aborted},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, GetJobStop(tt.job))
+		})
+	}
+}
