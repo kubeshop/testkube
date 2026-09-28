@@ -20,6 +20,14 @@
 // StatusDetailsTypeOf maps a reason code to its layer. An actor that is a person always gives
 // user-cancel, because a cancel is not a failure. NewStatusDetails builds the object for a stop.
 //
+// # Display labels
+//
+// Label gives the raw type and reason, for tables such as the CLI. StatusDetailsType.DisplayName
+// gives the display name that the dashboard shows for a type, and DisplayLabel adds the reason code
+// to it, for text outside the product, such as a GitHub check. Neither one carries the message or
+// the user. A new type needs a display name in statusDetailsTypeNames and in the dashboard
+// constants, else it shows as its code.
+//
 // # The stop
 //
 // Stop carries what the component that ended an execution knows, and its own documentation holds

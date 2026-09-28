@@ -280,6 +280,11 @@ func validateReport(kind string, out map[string]any) error {
 		if err := checkString(out, "measure"); err != nil {
 			return err
 		}
+		if _, ok := out["measure"]; ok {
+			if err := checkNonEmptyString(out, "measure"); err != nil {
+				return err
+			}
+		}
 		if err := checkEnum(out, "aggregate", timeSeriesAggregates); err != nil {
 			return err
 		}
@@ -419,7 +424,7 @@ func validFilterValue(f Filter) bool {
 			if json.Unmarshal(f.Value, &v) != nil || v.LabelKey == "" {
 				return false
 			}
-			return v.LabelOperator == "exists" || v.LabelOperator == "contains"
+			return v.LabelOperator == "exists" || (v.LabelOperator == "contains" && v.LabelValue != "")
 		}
 		return false
 	}
