@@ -34,9 +34,35 @@ type ClientImplicitBucket interface {
 	DeleteFile(ctx context.Context, bucketFolder, file string) error
 }
 
+// ObjectInfo is an object in a bucket, carrying the metadata needed to choose between
+// several that share a prefix.
+//
+// testkube.Artifact cannot serve here: it has no modification time, so there would be
+// no way to prefer the most recent of several matches, and its Size is an int32, which
+// silently truncates above 2 GiB - an ordinary size for a dependency cache.
+type ObjectInfo struct {
+	// Key is the full object name, not relative to the queried prefix, because the
+	// caller needs it back to address the object.
+	Key          string
+	Size         int64
+	LastModified time.Time
+}
+
 // ClientBucket is storage client abstraction where you have to specify bucket name
 type ClientBucket interface {
 	CreateBucket(ctx context.Context, bucket string) error
+	// ListObjectsFromBucket lists objects under a prefix, stopping after limit entries.
+	// limit of 0 means unlimited.
+	ListObjectsFromBucket(ctx context.Context, bucket, prefix string, limit int) ([]ObjectInfo, error)
+	// StreamObjectsFromBucket calls visit for every object under a prefix, in whatever
+	// order the store produces them, and stops early when visit returns an error.
+	//
+	// It exists for callers that select rather than collect. Taking a bounded page and
+	// choosing from it only works when the store's order and the caller's criterion
+	// agree - and a store orders lexically, so a caller choosing by recency has to see
+	// every candidate. Holding them all is not an option either, for a prefix with no
+	// cardinality bound, which leaves streaming.
+	StreamObjectsFromBucket(ctx context.Context, bucket, prefix string, visit func(ObjectInfo) error) error
 	DeleteBucket(ctx context.Context, bucket string, force bool) error
 	BucketExists(ctx context.Context, bucket string) (bool, error)
 	ListBuckets(ctx context.Context) ([]string, error)
@@ -48,4 +74,12 @@ type ClientBucket interface {
 	DeleteFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) error
 	PresignDownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string, expires time.Duration) (string, error)
 	PresignUploadFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, expires time.Duration) (string, error)
+	// PresignCreateFileToBucket returns a presigned PUT that succeeds only while the
+	// object does not exist, together with the headers the caller has to send.
+	//
+	// The headers carry the condition and are covered by the signature, so an upload
+	// that omits them is rejected rather than quietly becoming an overwrite. They are
+	// returned rather than assumed because the condition is spelled differently by
+	// different object stores.
+	PresignCreateFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, expires time.Duration) (string, map[string]string, error)
 }

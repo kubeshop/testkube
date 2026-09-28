@@ -1,32 +1,34 @@
 package testworkflow
 
 import (
+	"strings"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 type FilterImpl struct {
-	FName          string
-	FNames         []string
-	FLastNDays     int
-	FStartDate     *time.Time
-	FEndDate       *time.Time
-	FStatuses      []testkube.TestWorkflowStatus
-	FPage          int
-	FPageSize      int
-	FSkip          *int
-	FTextSearch    string
-	FSelector      string
-	FTagSelector   string
-	FLabelSelector *LabelSelector
-	FActorName     string
-	FActorType     testkube.TestWorkflowRunningContextActorType
-	FGroupID       string
-	FRunnerID      string
-	FInitialized   *bool
-	FAssigned      *bool
-	FHealthRanges  [][2]float64
+	FName               string
+	FNames              []string
+	FLastNDays          int
+	FStartDate          *time.Time
+	FEndDate            *time.Time
+	FStatuses           []testkube.TestWorkflowStatus
+	FStatusDetailsTypes []string
+	FPage               int
+	FPageSize           int
+	FSkip               *int
+	FTextSearch         string
+	FSelector           string
+	FTagSelector        string
+	FLabelSelector      *LabelSelector
+	FActorName          string
+	FActorType          testkube.TestWorkflowRunningContextActorType
+	FGroupID            string
+	FRunnerID           string
+	FInitialized        *bool
+	FAssigned           *bool
+	FHealthRanges       [][2]float64
 }
 
 func NewExecutionsFilter() *FilterImpl {
@@ -63,6 +65,18 @@ func (f *FilterImpl) WithStatus(status string) *FilterImpl {
 	statuses, err := testkube.ParseTestWorkflowStatusList(status, ",")
 	if err == nil {
 		f.FStatuses = statuses
+	}
+	return f
+}
+
+// WithStatusDetailsTypes selects the executions whose status details name one of the types. The
+// value is a comma separated list, because the query parameter holds a single value.
+func (f *FilterImpl) WithStatusDetailsTypes(types string) *FilterImpl {
+	for _, t := range strings.Split(types, ",") {
+		t = strings.TrimSpace(t)
+		if t != "" {
+			f.FStatusDetailsTypes = append(f.FStatusDetailsTypes, t)
+		}
 	}
 	return f
 }
@@ -183,6 +197,14 @@ func (f FilterImpl) StatusesDefined() bool {
 
 func (f FilterImpl) Statuses() []testkube.TestWorkflowStatus {
 	return f.FStatuses
+}
+
+func (f FilterImpl) StatusDetailsTypesDefined() bool {
+	return len(f.FStatusDetailsTypes) != 0
+}
+
+func (f FilterImpl) StatusDetailsTypes() []string {
+	return f.FStatusDetailsTypes
 }
 
 func (f FilterImpl) Page() int {

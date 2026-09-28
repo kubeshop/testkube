@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"context"
+	"sort"
 	"testing"
 	"time"
 
@@ -748,4 +749,85 @@ func TestNewMongoRepository_Get_Integration(t *testing.T) {
 	assert.Equal(t, execution3.Id, result.Id)
 	assert.Equal(t, execution3.Name, result.Name)
 	assert.Equal(t, true, result.ConfigParams["param1"].Sensitive)
+}
+
+func TestNewMongoRepository_GetExecutions_StatusDetailsType_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
+	ctx := context.Background()
+
+	client, err := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017"))
+	if err != nil {
+		t.Fatalf("error connecting to mongo: %v", err)
+	}
+	db := client.Database("testworkflow-executions-status-details-mongo-repository-test")
+	t.Cleanup(func() {
+		db.Drop(ctx)
+	})
+
+	repo := NewMongoRepository(db, false)
+
+	// Mongo stores the result as one document, so the status details need no column and no mapper.
+	insert := func(id string, detailsType testkube.StatusDetailsType, reason testkube.StopReason) {
+		execution := testkube.TestWorkflowExecution{
+			Id:   id,
+			Name: id,
+			Workflow: &testkube.TestWorkflow{
+				Name: id,
+				Spec: &testkube.TestWorkflowSpec{},
+			},
+			Result: &testkube.TestWorkflowResult{
+				Status: common.Ptr(testkube.ABORTED_TestWorkflowStatus),
+				StatusDetails: &testkube.TestWorkflowStatusDetails{
+					Type_:  string(detailsType),
+					Reason: string(reason),
+				},
+			},
+		}
+		if err := repo.Insert(ctx, execution); err != nil {
+			t.Fatalf("error inserting execution: %v", err)
+		}
+	}
+	insert("init-1", testkube.StatusDetailsTypeInitFailure, testkube.StopReasonUnschedulable)
+	insert("exec-1", testkube.StatusDetailsTypeExecutionFailure, testkube.StopReasonOOMKilled)
+	insert("step-1", testkube.StatusDetailsTypeStepFailure, testkube.StopReasonExitCode)
+
+	tests := []struct {
+		name    string
+		types   string
+		wantIDs []string
+	}{
+		{name: "one type", types: "init-failure", wantIDs: []string{"init-1"}},
+		{name: "two types", types: "init-failure,step-failure", wantIDs: []string{"init-1", "step-1"}},
+		{name: "a type that no execution carries", types: "user-cancel", wantIDs: []string{}},
+		{name: "an empty value keeps every execution", types: "", wantIDs: []string{"exec-1", "init-1", "step-1"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filter := testworkflow.NewExecutionsFilter().WithStatusDetailsTypes(tt.types)
+
+			res, err := repo.GetExecutions(ctx, filter)
+			if err != nil {
+				t.Fatalf("error getting executions: %v", err)
+			}
+
+			ids := make([]string, 0, len(res))
+			for _, e := range res {
+				ids = append(ids, e.Id)
+			}
+			sort.Strings(ids)
+			assert.Equal(t, tt.wantIDs, ids)
+		})
+	}
+
+	t.Run("the stored status details survive the round trip", func(t *testing.T) {
+		got, err := repo.Get(ctx, "exec-1")
+		if err != nil {
+			t.Fatalf("error getting execution: %v", err)
+		}
+		if assert.NotNil(t, got.Result.StatusDetails) {
+			assert.Equal(t, string(testkube.StatusDetailsTypeExecutionFailure), got.Result.StatusDetails.Type_)
+			assert.Equal(t, string(testkube.StopReasonOOMKilled), got.Result.StatusDetails.Reason)
+		}
+	})
 }

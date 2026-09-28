@@ -17,6 +17,14 @@ const CapabilityCloudStorage Capability = "tw-storage"
 // instruction of the `execute` step rely on.
 const CapabilityArtifactRead Capability = "tw-artifact-read"
 
+// CapabilityDependencyCache is whether the control plane can store and serve the
+// dependency cache a step's `cache` block asks for.
+//
+// A control plane without it makes every restore a miss and every save a no-op, rather
+// than failing the step: a cache is an optimization, so a workflow that ran before the
+// capability existed has to keep running after.
+const CapabilityDependencyCache Capability = "tw-cache"
+
 // CapabilitySourceOfTruth is whether the control plane is ready to act as source of truth.
 // When this capability is present, newer versions of the agent MUST migrate which entails
 // pushing data to the control plane and handing over control to let the control plane be the new source of truth.

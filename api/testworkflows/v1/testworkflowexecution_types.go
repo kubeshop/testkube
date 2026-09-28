@@ -16,7 +16,6 @@ package v1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 )
@@ -33,8 +32,8 @@ type TestWorkflowExecutionSpec struct {
 // TestWorkflowExecutionRequest contains TestWorkflow execution parameters
 type TestWorkflowExecutionRequest struct {
 	// custom execution name
-	Name   string                        `json:"name,omitempty" expr:"template"`
-	Config map[string]intstr.IntOrString `json:"config,omitempty" expr:"template"`
+	Name   string                 `json:"name,omitempty" expr:"template"`
+	Config map[string]ConfigValue `json:"config,omitempty" expr:"template"`
 	// test workflow execution name started the test workflow execution
 	TestWorkflowExecutionName string `json:"testWorkflowExecutionName,omitempty" expr:"template"`
 	// whether webhooks should be disabled for this execution
@@ -95,6 +94,29 @@ type TestWorkflowExecutionDetails struct {
 	Tags map[string]string `json:"tags,omitempty"`
 	// running context for the test workflow execution (Pro edition only)
 	RunningContext *TestWorkflowRunningContext `json:"runningContext,omitempty"`
+	// where this execution sits in its chain of reruns. Recorded on every
+	// execution: an original run is its own root at attempt 1, with no base.
+	Lineage *TestWorkflowExecutionLineage `json:"lineage,omitempty"`
+}
+
+// TestWorkflowExecutionLineage records where a rerun came from, so that a
+// workflow can read the run it descends from and a reader can follow the chain
+// back to its origin.
+//
+// Recorded on every execution, which is what makes the reserved
+// execution("rerun") reference resolve inside the pod after any rerun.
+//
+// Derived by the scheduler from the base execution: a caller supplies the base
+// and nothing else, because a client able to assert a root or an attempt number
+// could forge a chain.
+type TestWorkflowExecutionLineage struct {
+	// the execution this one is a rerun of; empty for an original run
+	BaseId string `json:"baseId,omitempty"`
+	// the first execution in the chain. An original run is its own root, so
+	// that every execution of a chain shares one rootId.
+	RootId string `json:"rootId,omitempty"`
+	// 1 for an original run, one more than the base for a rerun
+	Attempt int32 `json:"attempt,omitempty"`
 }
 
 // running context for test workflow execution
@@ -193,6 +215,31 @@ type TestWorkflowResult struct {
 	Pauses          []TestWorkflowPause               `json:"pauses,omitempty"`
 	Initialization  *TestWorkflowStepResult           `json:"initialization,omitempty"`
 	Steps           map[string]TestWorkflowStepResult `json:"steps,omitempty"`
+	StatusDetails   *TestWorkflowStatusDetails        `json:"statusDetails,omitempty"`
+}
+
+// TestWorkflowStatusDetails gives the reason why an execution did not pass. It is
+// present on every terminal status except passed.
+type TestWorkflowStatusDetails struct {
+	// the layer that failed
+	// +kubebuilder:validation:Enum=init-failure;execution-failure;step-failure;user-cancel;unknown
+	Type_ string `json:"type"`
+	// code of the cause, for example unschedulable or oom-killed
+	Reason string `json:"reason"`
+	// the message of the step that holds the cause, verbatim
+	Message string `json:"message,omitempty"`
+	// reference of the step that holds the cause; empty when the initialization step holds it
+	Step string `json:"step,omitempty"`
+	// code of the component that decided the stop, for example user or control-plane
+	Actor string `json:"actor,omitempty"`
+	// the person who canceled the execution; the control plane fills it
+	User *TestWorkflowStatusDetailsUser `json:"user,omitempty"`
+}
+
+// TestWorkflowStatusDetailsUser is the person who canceled the execution.
+type TestWorkflowStatusDetailsUser struct {
+	Name  string `json:"name,omitempty"`
+	Email string `json:"email,omitempty"`
 }
 
 // TestWorkflowStatus has status of TestWorkflow
@@ -221,9 +268,13 @@ type TestWorkflowPause struct {
 
 // TestWorkflowStepResult contains step result of TestWorkflow
 type TestWorkflowStepResult struct {
-	ErrorMessage string                  `json:"errorMessage,omitempty"`
-	Status       *TestWorkflowStepStatus `json:"status,omitempty"`
-	ExitCode     int64                   `json:"exitCode,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	// code of the cause in the error message, for example unschedulable; empty when the message has no known cause
+	ErrorReason string                  `json:"errorReason,omitempty"`
+	Status      *TestWorkflowStepStatus `json:"status,omitempty"`
+	ExitCode    int64                   `json:"exitCode,omitempty"`
+	// number of attempts that the step started, empty when the init process reported none
+	Attempts int32 `json:"attempts,omitempty"`
 	// when the container was created
 	QueuedAt metav1.Time `json:"queuedAt,omitempty"`
 	// when the container was started

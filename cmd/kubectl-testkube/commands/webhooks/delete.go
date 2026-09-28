@@ -1,6 +1,7 @@
 package webhooks
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -21,10 +22,24 @@ func NewDeleteWebhookCmd() *cobra.Command {
 		Long:    `Delete webhook, pass webhook name which should be deleted`,
 		Run: func(cmd *cobra.Command, args []string) {
 			ignoreNotFound, err := cmd.Flags().GetBool("ignore-not-found")
-			ui.ExitOnError("reading flag ignore-not-found", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrInvalidRuntimeParameter,
+					"Error reading the ignore-not-found flag",
+					common.BoolFlagValueHint,
+					err,
+				))
+			}
 
 			client, _, err := common.GetClient(cmd)
-			ui.ExitOnError("getting client", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrAPIClientInitFailed,
+					"Error creating the Testkube API client",
+					common.APIClientHint,
+					err,
+				))
+			}
 
 			if len(args) > 0 {
 				name = args[0]
@@ -33,7 +48,14 @@ func NewDeleteWebhookCmd() *cobra.Command {
 					ui.Info("Webhook '" + name + "' not found, but ignoring since --ignore-not-found was passed")
 					ui.SuccessAndExit("Operation completed")
 				}
-				ui.ExitOnError("deleting webhook: "+name, err)
+				if err != nil {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrAPIWriteFailed,
+						"Error deleting the webhook",
+						common.APIDeleteHint,
+						err,
+					))
+				}
 				ui.SuccessAndExit("Successfully deleted webhook", name)
 			}
 
@@ -44,11 +66,23 @@ func NewDeleteWebhookCmd() *cobra.Command {
 					ui.Info("Webhook not found for matching selector '" + selector + "', but ignoring since --ignore-not-found was passed")
 					ui.SuccessAndExit("Operation completed")
 				}
-				ui.ExitOnError("deleting webhooks by labels: "+selector, err)
+				if err != nil {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrAPIWriteFailed,
+						"Error deleting the webhooks",
+						common.APIDeleteHint,
+						err,
+					))
+				}
 				ui.SuccessAndExit("Successfully deleted webhooks by labels", selector)
 			}
 
-			ui.Failf("Pass Webhook name or labels to delete by labels")
+			common.HandleCLIError(common.NewCLIError(
+				common.TKErrInvalidRuntimeParameter,
+				"No webhook name or label selector provided",
+				common.NameOrSelectorHint,
+				errors.New("no webhook name or label selector provided"),
+			))
 		},
 	}
 

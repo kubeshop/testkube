@@ -241,6 +241,18 @@ spec:
   {{- toYaml . | nindent 2 -}}
   {{- end }}
   restartPolicy: Always
+  {{- if .Values.jobAffinity }}
+  affinity:
+  {{- toYaml .Values.jobAffinity | nindent 4 }}
+  {{- end }}
+  {{- if .Values.jobTolerations }}
+  tolerations:
+  {{- toYaml .Values.jobTolerations | nindent 2 }}
+  {{- end }}
+  {{- if .Values.jobNodeSelector }}
+  nodeSelector:
+  {{- toYaml .Values.jobNodeSelector | nindent 4 }}
+  {{- end }}
   {{`{{- if .ServiceAccountName }}`}}
   serviceAccountName: {{`{{ .ServiceAccountName }}`}}
   {{`{{- end }}`}}

@@ -72,6 +72,8 @@ type Filter interface {
 	EndDateDefined() bool
 	Statuses() []testkube.TestWorkflowStatus
 	StatusesDefined() bool
+	StatusDetailsTypes() []string
+	StatusDetailsTypesDefined() bool
 	Page() int
 	PageSize() int
 	Skip() int

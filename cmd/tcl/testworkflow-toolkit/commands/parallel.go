@@ -27,6 +27,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
+	toolkitcommon "github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
@@ -135,12 +136,12 @@ func NewParallelCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg, err := config.LoadConfigV2()
 			if err != nil {
-				ui.ExitOnError("loading configuration", err)
+				toolkitcommon.ExitOnError("loading configuration", err)
 			}
 
 			err = RunParallel(cmd.Context(), args[0], cfg, base64Encoded)
 			if err != nil {
-				ui.ExitOnError("parallel execution", err)
+				toolkitcommon.ExitOnError("parallel execution", err)
 			}
 			os.Exit(0)
 		},
@@ -713,6 +714,7 @@ func (e *WorkerExecutor) handleWorkerCleanup(ctx context.Context, worker WorkerS
 	if cancelled {
 		err = spawn.ParallelExecutionWorker(e.cfg).Abort(cleanupCtx, cfg.Resource.Id, executionworkertypes.DestroyOptions{
 			Namespace: worker.Namespace,
+			Actor:     testkube.StopActorFailFast,
 		})
 		if err == nil {
 			log("aborted")
@@ -820,6 +822,9 @@ func (o *ResumeOrchestrator) resumeAllWorkers(ctx context.Context) {
 			default:
 				_ = spawn.ParallelExecutionWorker(o.cfg).Abort(ctx, err.Id, executionworkertypes.DestroyOptions{
 					Namespace: o.namespaces[index],
+					Actor:     testkube.StopActorRunner,
+					Reason:    testkube.StopReasonWorkerResumeFailed,
+					Detail:    err.Error.Error(),
 				})
 			}
 		}

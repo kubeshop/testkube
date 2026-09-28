@@ -17,4 +17,5 @@ type TestWorkflowStepOperations struct {
 	Run       *TestWorkflowStepRun       `json:"run,omitempty"`
 	Execute   *TestWorkflowStepExecute   `json:"execute,omitempty"`
 	Artifacts *TestWorkflowStepArtifacts `json:"artifacts,omitempty"`
+	Cache     *TestWorkflowStepCache     `json:"cache,omitempty"`
 }

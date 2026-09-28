@@ -3,7 +3,6 @@ package v1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
@@ -82,6 +81,9 @@ type StepOperations struct {
 
 	// scrape artifacts from the volumes
 	Artifacts *StepArtifacts `json:"artifacts,omitempty" expr:"include"`
+
+	// dependency cache to restore before and save after this step's operations
+	Cache *StepCache `json:"cache,omitempty" expr:"include"`
 }
 
 type IndependentStep struct {
@@ -177,10 +179,10 @@ type StepExecuteStrategy struct {
 	Matrix map[string]DynamicList `json:"matrix,omitempty" expr:"force"`
 
 	// static number of sharded instances to spawn
-	Count *intstr.IntOrString `json:"count,omitempty" expr:"expression"`
+	Count *ConfigValue `json:"count,omitempty" expr:"expression"`
 
 	// dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
-	MaxCount *intstr.IntOrString `json:"maxCount,omitempty" expr:"expression"`
+	MaxCount *ConfigValue `json:"maxCount,omitempty" expr:"expression"`
 
 	// parameters that should be distributed across sharded instances
 	Shards map[string]DynamicList `json:"shards,omitempty" expr:"force"`
@@ -224,10 +226,19 @@ type StepExecuteWorkflow struct {
 	Tarball map[string]TarballRequest `json:"tarball,omitempty" expr:"template,include"`
 
 	// configuration to pass for the workflow
-	Config map[string]intstr.IntOrString `json:"config,omitempty" expr:"template"`
+	Config map[string]ConfigValue `json:"config,omitempty" expr:"template"`
 
 	// instructions for downloading artifacts produced by executed test workflows
 	Fetch []StepExecuteFetch `json:"fetch,omitempty" expr:"include"`
+
+	// id of the execution to record this one as a rerun of, so that it resolves
+	// execution("rerun"). Runs the current definition, not the base's snapshot.
+	// The base must be one the scheduling execution may itself read.
+	BaseExecutionId string `json:"baseExecutionId,omitempty" expr:"template"`
+	// NOTE: keep the description above short. It is copied into the generated CRDs
+	// once per level of step nesting, and those are already trimmed to fit the
+	// last-applied annotation limit. The full explanation belongs in the docs and
+	// in execute.ExecuteTestWorkflow.
 
 	// Targets helps decide on which runner the execution is scheduled.
 	Target *commonv1.Target `json:"target,omitempty" expr:"include"`
@@ -446,6 +457,56 @@ type ArtifactCompression struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name" expr:"template"`
+}
+
+// CacheScope declares how widely a cache entry is shared.
+type CacheScope string
+
+const (
+	// CacheScopeWorkflow shares an entry only with other executions of the same workflow.
+	CacheScopeWorkflow CacheScope = "workflow"
+	// CacheScopeEnvironment shares an entry with every workflow in the environment.
+	// Any workflow that may write such an entry can influence what every other
+	// workflow restores, so this widens a trust boundary, not just a cache.
+	CacheScopeEnvironment CacheScope = "environment"
+)
+
+// StepCache restores directories from object storage before the step's operations run
+// and saves them back once the step has passed, so that dependency installs survive
+// between executions.
+//
+// A cache is only ever an optimization: a miss, a corrupt entry, storage that cannot be
+// reached, or a control plane too old to serve caches all degrade the step to an
+// uncached run rather than failing it.
+type StepCache struct {
+	// key to store the entry under, usually derived from a lockfile,
+	// e.g. 'npm-{{ hash_files("package-lock.json") }}'
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=512
+	Key string `json:"key" expr:"template"`
+
+	// key prefixes to fall back to when there is no entry for the exact key,
+	// tried in order, where the most recently saved match wins
+	// +kubebuilder:validation:MaxItems=10
+	RestoreKeys []string `json:"restoreKeys,omitempty" expr:"template"`
+
+	// paths to store in the cache, relative to the working directory
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	Paths []string `json:"paths" expr:"template"`
+
+	// working directory to override, so it will be used as a base dir
+	WorkingDir *string `json:"workingDir,omitempty" expr:"template"`
+
+	// how widely the entry is shared (defaults to workflow)
+	// +kubebuilder:validation:Enum=workflow;environment
+	Scope CacheScope `json:"scope,omitempty" expr:"ignore"`
+
+	// should a volume be mounted at every cached path that is not part of one already
+	// (true if not specified); a path outside any volume would otherwise be restored
+	// into a container's own filesystem, where the step that needs it cannot see it
+	Mount *bool `json:"mount,omitempty" expr:"ignore"`
 }
 
 type TestExecutionRequest struct {

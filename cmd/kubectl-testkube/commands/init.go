@@ -2,10 +2,13 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -13,21 +16,21 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/pro"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	licensevalidator "github.com/kubeshop/testkube/pkg/diagnostics/validators/license"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 const (
 	defaultNamespace       = "testkube"
-	standaloneAgentProfile = "standalone-agent"
+	standaloneAgentProfile = "standalone-runner"
 	demoProfile            = "demo"
 	demoValuesUrl          = "https://raw.githubusercontent.com/kubeshop/testkube-cloud-charts/main/charts/testkube-enterprise/profiles/values.demo.v2.yaml"
-	agentProfile           = "agent"
+	agentProfile           = "runner"
 
 	standaloneInstallationName = "Testkube OSS"
 	demoInstallationName       = "Testkube On-Prem demo"
-	agentInstallationName      = "Testkube Agent"
-	licenseFormat              = "XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-V3"
+	agentInstallationName      = "Testkube Runner"
 )
 
 func NewInitCmd() *cobra.Command {
@@ -44,8 +47,12 @@ func NewInitCmd() *cobra.Command {
 			"\t" + agentProfile + " -> " + agentInstallationName,
 		Run: func(cmd *cobra.Command, args []string) {
 			if export {
-				ui.Failf("export is unavailable for this profile")
-				return
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrInvalidRuntimeParameter,
+					"Export is unavailable for this profile",
+					"Drop the '--export' flag, it is only supported by the "+demoProfile+" profile",
+					errors.New("export is unavailable for this profile"),
+				))
 			}
 			standaloneCmd.Run(cmd, args)
 		},
@@ -67,11 +74,15 @@ func NewInitCmdStandalone() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     standaloneAgentProfile,
 		Short:   "Install " + standaloneInstallationName + " in your current context",
-		Aliases: []string{"oss", "standalone"},
+		Aliases: []string{"oss", "standalone", "standalone-agent"},
 		Run: func(cmd *cobra.Command, args []string) {
 			if export {
-				ui.Failf("export is unavailable for this profile")
-				return
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrInvalidRuntimeParameter,
+					"Export is unavailable for this profile",
+					"Drop the '--export' flag, it is only supported by the "+demoProfile+" profile",
+					errors.New("export is unavailable for this profile"),
+				))
 			}
 
 			ui.Logo()
@@ -123,25 +134,44 @@ func NewInitCmdDemo() *cobra.Command {
 		Aliases: []string{"on-premise-demo", "on-prem-demo", "enterprise-demo"},
 		Run: func(cmd *cobra.Command, args []string) {
 			if export {
+				exitOnExportError := func(err error) {
+					if err != nil {
+						common.HandleCLIError(common.NewCLIError(
+							common.TKErrValuesExportFailed,
+							"Error exporting the installation values",
+							"Check your internet connection and access to "+demoValuesUrl,
+							err,
+						))
+					}
+				}
+
 				req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, demoValuesUrl, nil)
-				ui.ExitOnError("cannot create values request", err)
+				exitOnExportError(err)
 				valuesResp, err := http.DefaultClient.Do(req)
-				ui.ExitOnError("cannot fetch values", err)
+				exitOnExportError(err)
 				defer valuesResp.Body.Close()
 				valuesBytes, err := io.ReadAll(valuesResp.Body)
-				ui.ExitOnError("cannot fetch values", err)
-				values := string(valuesBytes)
-				_, err = fmt.Println(values)
-				ui.ExitOnError("cannot print values", err)
+				exitOnExportError(err)
+				_, err = fmt.Println(string(valuesBytes))
+				exitOnExportError(err)
 				return
 			}
+
+			defer waitLicenseEvents()
 
 			ui.Logo()
 			ui.Info("Welcome to the installer for " + demoInstallationName + ".")
 			ui.NL()
 
 			cfg, err := config.Load()
-			ui.ExitOnError("loading config file", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrConfigInitFailed,
+					"Error loading testkube config file",
+					common.ConfigFileHint,
+					err,
+				))
+			}
 
 			sendTelemetry(cmd, cfg, license, "installation launched")
 
@@ -149,13 +179,7 @@ func NewInitCmdDemo() *cobra.Command {
 			ui.H2("Running Kubectl command...")
 			ui.NL()
 			kubecontext, cliErr := common.GetCurrentKubernetesContext()
-			if cliErr != nil {
-				if cfg.TelemetryEnabled {
-					cliErr.AddTelemetry(cmd, "kubeconfig not found", "kubeconfig_not_found", license)
-					_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
-				}
-				common.HandleCLIError(cliErr)
-			}
+			exitOnInstallError(cmd, cfg, "kubeconfig not found", "kubeconfig_not_found", license, cliErr)
 			sendTelemetry(cmd, cfg, license, "kubeconfig found")
 
 			if namespace == "" {
@@ -164,12 +188,9 @@ func NewInitCmdDemo() *cobra.Command {
 				} else {
 					response, err := pterm.DefaultInteractiveTextInput.WithDefaultValue("testkube").Show("Enter namespace for this installation")
 					if err != nil {
-						cliErr = common.NewCLIError(common.TKErrConfigInitFailed, "Error reading namespace from console", "Check does the current system have a console.", err)
-						if cfg.TelemetryEnabled {
-							cliErr.AddTelemetry(cmd, "input namespace", "reading_namespace_failed", license)
-							_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
-						}
-						common.HandleCLIError(cliErr)
+						exitOnInstallError(cmd, cfg, "input namespace", "reading_namespace_failed", license,
+							common.NewCLIError(common.TKErrConfigInitFailed, "Error reading namespace from console",
+								"Check does the current system have a console, or pass the namespace with the '--namespace' flag", err))
 					}
 					namespace = response
 				}
@@ -178,34 +199,30 @@ func NewInitCmdDemo() *cobra.Command {
 			if license == "" {
 				response, err := pterm.DefaultInteractiveTextInput.Show("Enter license key")
 				if err != nil {
-					cliErr = common.NewCLIError(common.TKErrConfigInitFailed, "Error reading namespace from console", "Check does the current system have a console.", err)
-					if cfg.TelemetryEnabled {
-						cliErr.AddTelemetry(cmd, "input license", "reading_license_failed", license)
-						_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
-					}
-					common.HandleCLIError(cliErr)
+					exitOnInstallError(cmd, cfg, "input license", "reading_license_failed", license,
+						common.NewCLIError(common.TKErrConfigInitFailed, "Error reading license key from console",
+							"Check does the current system have a console, or pass the key with the '--license' flag", err))
 				}
 				license = strings.TrimSpace(response)
 			}
 			sendTelemetry(cmd, cfg, license, "license found")
 
-			hasExpectedLength := len(license) == len(licenseFormat)
-			hasExpectedPrefix := strings.HasPrefix(license, "key/")
-			valid := hasExpectedLength || hasExpectedPrefix
-			if !valid {
-				cliErr = common.NewCLIError(
+			licenseName := ""
+			resp, validateErr := licensevalidator.NewClient().ValidateLicense(licensevalidator.LicenseRequest{License: license})
+			switch {
+			case validateErr != nil:
+				ui.Debug("license validation request failed, continuing", validateErr.Error())
+			case resp != nil && !resp.Valid:
+				exitOnInstallError(cmd, cfg, "license validation", "install_license_invalid", license, common.NewCLIError(
 					common.TKErrConfigInitFailed,
 					"Invalid license key",
-					"Check have you correctly inputted your license key or request a trial license at https://testkube.io/download",
-					fmt.Errorf("license key is missing or has invalid format"),
-				)
-				if cfg.TelemetryEnabled {
-					cliErr.AddTelemetry(cmd, "license validation", "install_license_invalid", license)
-					_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
-				}
-				common.HandleCLIError(cliErr)
+					"Check that your license key is correct and active, or request a trial license at https://testkube.io/download",
+					fmt.Errorf("license validation failed: code=%q %s", resp.Code, resp.Message),
+				))
+			case resp != nil:
+				licenseName = resp.License.Name
 			}
-			sendTelemetry(cmd, cfg, license, "license validated")
+			sendTelemetry(cmd, cfg, license, "license validated", licenseName)
 
 			ui.NL()
 			ui.Warn("Installation is about to start and may take a several minutes:")
@@ -218,13 +235,15 @@ func NewInitCmdDemo() *cobra.Command {
 
 			if !noConfirm {
 				if ok := ui.Confirm("Do you want to continue"); !ok {
-					sendErrTelemetry(cmd, cfg, "install_cancelled", license, "user install confirmation", err)
+					sendErrTelemetry(cmd, cfg, "install_cancelled", license, "user install confirmation",
+						errors.New("user cancelled installation"))
 					return
 				}
 			}
 
 			spinner := ui.NewSpinner("Running Kubectl command...")
-			sendTelemetry(cmd, cfg, license, "installing started")
+			sendTelemetry(cmd, cfg, license, "installing started", licenseName)
+			reportLicenseEvent(cfg, license, licensevalidator.EventCLIInstallStarted)
 			options := common.HelmOptions{
 				Namespace:     namespace,
 				LicenseKey:    license,
@@ -235,11 +254,7 @@ func NewInitCmdDemo() *cobra.Command {
 			cliErr = common.CleanExistingCompletedMigrationJobs(options.Namespace)
 			if cliErr != nil {
 				spinner.Fail("Failed to install Testkube On-Prem Demo")
-				if cfg.TelemetryEnabled {
-					cliErr.AddTelemetry(cmd, "installing", "install_failed", license)
-					_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
-				}
-				common.HandleCLIError(cliErr)
+				exitOnInstallError(cmd, cfg, "installing", "install_failed", license, cliErr)
 			}
 
 			spinner.Success()
@@ -250,21 +265,13 @@ func NewInitCmdDemo() *cobra.Command {
 			runnerSecretKey, cliErr := common.ResolveDemoAgentSecretKey(options.Namespace, options.DryRun)
 			if cliErr != nil {
 				spinner.Fail("Failed to install Testkube On-Prem Demo")
-				if cfg.TelemetryEnabled {
-					cliErr.AddTelemetry(cmd, "resolving agent key", "install_failed", license)
-					_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
-				}
-				common.HandleCLIError(cliErr)
+				exitOnInstallError(cmd, cfg, "resolving runner key", "install_failed", license, cliErr)
 			}
 
 			cliErr = common.HelmUpgradeOrInstallTestkubeOnPremDemo(options, runnerSecretKey)
 			if cliErr != nil {
 				spinner.Fail("Failed to install Testkube On-Prem Demo")
-				if cfg.TelemetryEnabled {
-					cliErr.AddTelemetry(cmd, "installing", "install_failed", license)
-					_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
-				}
-				common.HandleCLIError(cliErr)
+				exitOnInstallError(cmd, cfg, "installing", "install_failed", license, cliErr)
 			}
 			spinner.Success()
 
@@ -272,15 +279,13 @@ func NewInitCmdDemo() *cobra.Command {
 			cliErr = common.HelmUpgradeOrInstallTestkubeOnPremDemoRunner(options, runnerSecretKey)
 			if cliErr != nil {
 				spinner.Fail("Failed to install Testkube Runner")
-				if cfg.TelemetryEnabled {
-					cliErr.AddTelemetry(cmd, "installing runner", "install_runner_failed", license)
-					_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
-				}
-				common.HandleCLIError(cliErr)
+				exitOnInstallError(cmd, cfg, "installing runner", "install_runner_failed", license, cliErr)
 			}
 			spinner.Success()
 
-			sendTelemetry(cmd, cfg, license, "installing finished")
+			sendTelemetry(cmd, cfg, license, "installing finished", licenseName)
+
+			reportLicenseEvent(cfg, license, licensevalidator.EventCLIInstallFinished)
 
 			cfg.Namespace = namespace
 			err = config.Save(cfg)
@@ -296,18 +301,25 @@ func NewInitCmdDemo() *cobra.Command {
 				return
 			}
 
-			sendTelemetry(cmd, cfg, license, "user confirmed proceeding")
+			sendTelemetry(cmd, cfg, license, "user confirmed proceeding", licenseName)
 
 			ui.Info("You can use `testkube dashboard` to access Testkube without exposing services.")
 			ui.NL()
 
 			if ok := ui.Confirm("Do you want to open the dashboard?"); !ok {
-				sendTelemetry(cmd, cfg, license, "skipping dashboard")
+				sendTelemetry(cmd, cfg, license, "skipping dashboard", licenseName)
 				return
 			}
-			sendTelemetry(cmd, cfg, license, "opening dashboard")
+			sendTelemetry(cmd, cfg, license, "opening dashboard", licenseName)
 			cfg, err = config.Load()
-			ui.ExitOnError("Cannot open dashboard", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrConfigInitFailed,
+					"Error loading testkube config file",
+					common.ConfigFileHint,
+					err,
+				))
+			}
 
 			ui.NL()
 			ui.H2("Launching web browser...")
@@ -348,6 +360,23 @@ func isContextApproved(isNoConfirm bool, installedComponent string) bool {
 	return true
 }
 
+// exitOnInstallError reports the failure with the license aware telemetry this
+// installer collects, then prints the error details and terminates the command.
+// It is a no-op for a nil error, so it can be called directly on a helper's
+// returned *CLIError.
+func exitOnInstallError(cmd *cobra.Command, clientCfg config.Data, step, errType, license string, cliErr *common.CLIError) {
+	if cliErr == nil {
+		return
+	}
+
+	if clientCfg.TelemetryEnabled {
+		cliErr.AddTelemetry(cmd, step, errType, license)
+		_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
+	}
+
+	common.HandleCLIError(cliErr)
+}
+
 func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType, license, step string, errorLogs error) {
 	errorStackTrace := fmt.Sprintf("%+v", errorLogs)
 	if clientCfg.TelemetryEnabled {
@@ -360,9 +389,40 @@ func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType, licens
 	}
 }
 
-func sendTelemetry(cmd *cobra.Command, clientCfg config.Data, license, step string) {
+var licenseEventsWG sync.WaitGroup
+
+func reportLicenseEvent(clientCfg config.Data, license, event string) {
+	if !clientCfg.TelemetryEnabled {
+		return
+	}
+	licenseEventsWG.Add(1)
+	go func() {
+		defer licenseEventsWG.Done()
+		if err := licensevalidator.NewClient().ReportEvent(license, event); err != nil {
+			ui.Debug("license event report failed, continuing", err.Error())
+		}
+	}()
+}
+
+func waitLicenseEvents() {
+	done := make(chan struct{})
+	go func() {
+		licenseEventsWG.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(6 * time.Second):
+	}
+}
+
+func sendTelemetry(cmd *cobra.Command, clientCfg config.Data, license, step string, userIDOverride ...string) {
 	if clientCfg.TelemetryEnabled {
-		out, err := telemetry.SendCmdWithLicenseEvent(cmd, common.Version, common.TelemetryUserID(cmd, &clientCfg), license, step)
+		userID := common.TelemetryUserID(cmd, &clientCfg)
+		if len(userIDOverride) > 0 && userIDOverride[0] != "" {
+			userID = userIDOverride[0]
+		}
+		out, err := telemetry.SendCmdWithLicenseEvent(cmd, common.Version, userID, license, step)
 		if ui.Verbose && err != nil {
 			ui.Err(err)
 		}

@@ -72,6 +72,16 @@ func (s *Server) DeclineExecution(ctx context.Context, req *executionv1.DeclineE
 	// Update the result to be aborted immediately.
 	result.FinishedAt = time.Now().UTC()
 	result.Status = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
+	// The code of the decline is the cause of the stop, so the message and the object read the same code.
+	reason := req.GetReason()
+	writeDeclineCause(result, testkube.StartReason(reason), req.GetMessage())
+	// The runner declined the execution, so it is the actor of the stop. The classifier needs no
+	// signature, because no step of a declined execution ran and the cause is on the initialization step.
+	result.StatusDetails = result.ClassifyStatus(nil, testkube.Stop{
+		Code:   string(testkube.ABORTED_TestWorkflowStatus),
+		Actor:  testkube.StopActorRunner,
+		Reason: testkube.StopReason(reason),
+	})
 
 	updated, err := s.resultsRepository.FinishResultStrict(ctx, req.GetExecutionId(), common.StandaloneRunner, result)
 	if err != nil || !updated {
@@ -85,6 +95,31 @@ func (s *Server) DeclineExecution(ctx context.Context, req *executionv1.DeclineE
 	s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution, s.envID))
 
 	return &executionv1.DeclineExecutionResponse{}, nil
+}
+
+// writeDeclineCause records why the runner declined the execution. It writes the same words as the
+// control plane, so a user reads one sentence for a failed start in both deployments. The message
+// of the runner follows on its own line, because it holds the text that Kubernetes reported.
+func writeDeclineCause(result *testkube.TestWorkflowResult, reason testkube.StartReason, message string) {
+	if result.Initialization == nil {
+		result.Initialization = &testkube.TestWorkflowStepResult{}
+	}
+	// A reason without words keeps its raw code, so a code from a newer runner still reads.
+	sentence := reason.Sentence()
+	if sentence == "" {
+		sentence = string(reason)
+	}
+	text := "Failed to run execution"
+	if sentence != "" {
+		text += ": " + sentence
+	}
+	if message != "" {
+		text += "\n" + message
+	}
+	result.Initialization.ErrorMessage = text
+	result.Initialization.ErrorReason = string(reason)
+	result.Initialization.Status = common.Ptr(testkube.ABORTED_TestWorkflowStepStatus)
+	result.Initialization.FinishedAt = result.FinishedAt
 }
 
 func translateSignature(sigs []*signaturev1.Signature) []testkube.TestWorkflowSignature {

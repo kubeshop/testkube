@@ -42,6 +42,7 @@ func ExecutionDataMachineFor(registry *executiondata.Registry) expressions.Machi
 		Registry:       registry,
 		Repository:     ExecutionDataRepository(),
 		ParentIds:      ParentExecutionIds(),
+		RerunId:        RerunExecutionId(),
 		ArtifactClient: ArtifactClient(),
 	})
 }
@@ -64,6 +65,7 @@ func ExecutionResolver(registry *executiondata.Registry) executiondata.Resolver 
 		Registry:   registry,
 		Repository: ExecutionDataRepository(),
 		ParentIds:  ParentExecutionIds(),
+		RerunId:    RerunExecutionId(),
 	}
 }
 
@@ -87,4 +89,17 @@ func ParentExecutionIds() []string {
 		}
 	}
 	return ids
+}
+
+// RerunExecutionId is the execution this one is a rerun of, empty when it is not
+// one. It is what the reserved "rerun" reference resolves to.
+//
+// An original run records a lineage whose BaseId is empty and must return ""
+// here: returning RootId instead would make every execution a rerun of itself.
+func RerunExecutionId() string {
+	lineage := GetState().InternalConfig.Execution.Lineage
+	if lineage == nil {
+		return ""
+	}
+	return lineage.BaseId
 }

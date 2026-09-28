@@ -69,6 +69,9 @@ type TestWorkflowExecution struct {
 	SilentMode                []byte             `db:"silent_mode" json:"silent_mode"`
 	WorkflowName              pgtype.Text        `db:"workflow_name" json:"workflow_name"`
 	Status                    pgtype.Text        `db:"status" json:"status"`
+	LineageBaseID             pgtype.Text        `db:"lineage_base_id" json:"lineage_base_id"`
+	LineageRootID             pgtype.Text        `db:"lineage_root_id" json:"lineage_root_id"`
+	LineageAttempt            pgtype.Int4        `db:"lineage_attempt" json:"lineage_attempt"`
 }
 
 type TestWorkflowOutput struct {
@@ -117,6 +120,8 @@ type TestWorkflowResult struct {
 	FinishedAt      pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
 	CreatedAt       pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	// Why the execution did not pass: type, reason, message, step, actor, and user. Null for an execution that passed, and for an execution that ended before this column existed.
+	StatusDetails []byte `db:"status_details" json:"status_details"`
 }
 
 type TestWorkflowSignature struct {

@@ -32,6 +32,14 @@ const (
 	// the current one.
 	ParentRef = "parent"
 
+	// RerunRef is the reserved reference pointing at the execution this one is a
+	// rerun of - the one whose results a rerun draws from.
+	//
+	// It is a reference rather than an id the workflow has to be handed, because
+	// the workflow is written once and rerun many times: the author says "the
+	// execution I am a rerun of" and the scheduler decides which that is.
+	RerunRef = "rerun"
+
 	// OutputsInstructionName is the name of the output instruction a step emits to
 	// publish the values it left in the outputs directory. It makes them part of the
 	// execution record, so a parent workflow can read them back with execution().
@@ -71,6 +79,22 @@ type Execution struct {
 	// An output the execution produced but could not publish - its value holds a
 	// sensitive word - is present here as a WithheldMarker rather than as its value.
 	Outputs map[string]string `json:"outputs,omitempty"`
+	// ErrorMessage is the message of the initialization step, empty when it has none.
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	// StepErrors are the messages of the steps that have one, keyed by step ref.
+	StepErrors map[string]string `json:"stepErrors,omitempty"`
+	// StepAttempts are the numbers of attempts of the steps that report one, keyed by step ref.
+	StepAttempts map[string]int64 `json:"stepAttempts,omitempty"`
+	// ErrorReason is the reason code of the initialization step, empty when it has none.
+	ErrorReason string `json:"errorReason,omitempty"`
+	// StepReasons are the reason codes of the steps that have one, keyed by step ref.
+	StepReasons map[string]string `json:"stepReasons,omitempty"`
+	// StatusType is the layer that made the execution fail, empty when it passed.
+	StatusType string `json:"statusType,omitempty"`
+	// StatusReason is the code of the cause that made the execution fail.
+	StatusReason string `json:"statusReason,omitempty"`
+	// StatusStep is the ref of the step that holds the cause, empty when no step holds it.
+	StatusStep string `json:"statusStep,omitempty"`
 }
 
 // Key is the primary reference of the execution - its alias when the parent gave
@@ -100,19 +124,33 @@ func (e Execution) Refs() []string {
 
 // AsMap converts the execution into the shape the expression language sees.
 func (e Execution) AsMap() map[string]interface{} {
-	outputs := make(map[string]interface{}, len(e.Outputs))
-	for k, v := range e.Outputs {
-		outputs[k] = v
-	}
 	return map[string]interface{}{
-		"id":       e.Id,
-		"name":     e.Name,
-		"workflow": e.Workflow,
-		"alias":    e.Alias,
-		"index":    e.Index,
-		"status":   e.Status,
-		"outputs":  outputs,
+		"id":           e.Id,
+		"name":         e.Name,
+		"workflow":     e.Workflow,
+		"alias":        e.Alias,
+		"index":        e.Index,
+		"status":       e.Status,
+		"outputs":      toInterfaceMap(e.Outputs),
+		"errorMessage": e.ErrorMessage,
+		"stepErrors":   toInterfaceMap(e.StepErrors),
+		"stepAttempts": toInterfaceMap(e.StepAttempts),
+		"errorReason":  e.ErrorReason,
+		"stepReasons":  toInterfaceMap(e.StepReasons),
+		"statusType":   e.StatusType,
+		"statusReason": e.StatusReason,
+		"statusStep":   e.StatusStep,
 	}
+}
+
+// toInterfaceMap copies the map into the shape the expression language reads.
+// It returns an empty map for a nil map.
+func toInterfaceMap[V any](values map[string]V) map[string]interface{} {
+	result := make(map[string]interface{}, len(values))
+	for k, v := range values {
+		result[k] = v
+	}
+	return result
 }
 
 // FromExecution converts a full execution record into the data workflows may read.
@@ -131,7 +169,82 @@ func FromExecution(execution *testkube.TestWorkflowExecution) Execution {
 	if execution.Result != nil && execution.Result.Status != nil {
 		result.Status = string(*execution.Result.Status)
 	}
+	result.ErrorMessage, result.StepErrors = ErrorsOf(execution)
+	result.StepAttempts = AttemptsOf(execution)
+	result.ErrorReason, result.StepReasons = ReasonsOf(execution)
+	result.SetStatusDetails(execution)
 	return result
+}
+
+// SetStatusDetails copies the codes of the status details of the execution into the record. Every
+// caller that builds a record from a finished execution needs it, because a workflow reads the codes
+// of a child through the record and not through the stored execution.
+//
+// The message and the user of the object stay out of the record. A workflow asserts the codes, and
+// the words are already available through ErrorMessage and StepErrors.
+func (e *Execution) SetStatusDetails(execution *testkube.TestWorkflowExecution) {
+	if execution == nil || execution.Result == nil || execution.Result.StatusDetails == nil {
+		return
+	}
+	e.StatusType = execution.Result.StatusDetails.Type_
+	e.StatusReason = execution.Result.StatusDetails.Reason
+	e.StatusStep = execution.Result.StatusDetails.Step
+}
+
+// ErrorsOf collects the message of the initialization step and the messages of the
+// steps, so a workflow can assert why another execution failed.
+func ErrorsOf(execution *testkube.TestWorkflowExecution) (string, map[string]string) {
+	return stepStrings(execution, func(step testkube.TestWorkflowStepResult) string { return step.ErrorMessage })
+}
+
+// ReasonsOf collects the reason code of the initialization step and the reason codes of the
+// steps, so a workflow can assert the cause of a failure without the words of a message.
+func ReasonsOf(execution *testkube.TestWorkflowExecution) (string, map[string]string) {
+	return stepStrings(execution, func(step testkube.TestWorkflowStepResult) string { return step.ErrorReason })
+}
+
+// stepStrings returns the field of the initialization step and the same field of every step that
+// holds a value, keyed by step ref. It returns a nil map when no step holds one.
+func stepStrings(execution *testkube.TestWorkflowExecution, field func(step testkube.TestWorkflowStepResult) string) (string, map[string]string) {
+	if execution == nil || execution.Result == nil {
+		return "", nil
+	}
+	initialization := ""
+	if execution.Result.Initialization != nil {
+		initialization = field(*execution.Result.Initialization)
+	}
+	var steps map[string]string
+	for ref, step := range execution.Result.Steps {
+		value := field(step)
+		if value == "" {
+			continue
+		}
+		if steps == nil {
+			steps = make(map[string]string)
+		}
+		steps[ref] = value
+	}
+	return initialization, steps
+}
+
+// AttemptsOf collects the number of attempts of each step, so a workflow can assert
+// how many times another execution ran a step. It skips the steps without a number,
+// because the init process sent no execution result for them.
+func AttemptsOf(execution *testkube.TestWorkflowExecution) map[string]int64 {
+	if execution == nil || execution.Result == nil {
+		return nil
+	}
+	var stepAttempts map[string]int64
+	for ref, step := range execution.Result.Steps {
+		if step.Attempts == 0 {
+			continue
+		}
+		if stepAttempts == nil {
+			stepAttempts = make(map[string]int64)
+		}
+		stepAttempts[ref] = int64(step.Attempts)
+	}
+	return stepAttempts
 }
 
 // OutputsOf collects the values an execution published through its steps.
@@ -159,4 +272,25 @@ func OutputsOf(execution *testkube.TestWorkflowExecution) map[string]string {
 		}
 	}
 	return values
+}
+
+// IsReservedRef reports whether a reference has a meaning Testkube assigns,
+// rather than naming something the workflow executed.
+//
+// Reserved references are resolved before the registry, so this is also the
+// list of names an `as` alias cannot usefully take.
+func IsReservedRef(ref string) bool {
+	return ref == ParentRef || ref == RerunRef
+}
+
+// reservedRefMeaning describes what a reserved reference addresses, for an error
+// that has to explain the collision to a workflow author.
+func reservedRefMeaning(ref string) string {
+	switch ref {
+	case ParentRef:
+		return "the execution that scheduled this one"
+	case RerunRef:
+		return "the execution this one is a rerun of"
+	}
+	return ref
 }

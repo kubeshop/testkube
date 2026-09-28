@@ -15,7 +15,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/commands"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
@@ -23,7 +22,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -42,6 +40,12 @@ const (
 
 	MonitorRetryCount = 10
 	MonitorRetryDelay = 500 * time.Millisecond
+
+	CleanupResourcesRetryCount = 5
+	CleanupResourcesRetryDelay = 500 * time.Millisecond
+
+	AbortExecutionRetryCount = 5
+	AbortExecutionRetryDelay = 500 * time.Millisecond
 
 	RecoverLogsRetryOnFailureDelay = 300 * time.Millisecond
 	RecoverLogsRetryMaxAttempts    = 5
@@ -62,8 +66,12 @@ type Runner interface {
 	Notifications(ctx context.Context, id string) executionworkertypes.NotificationsWatcher
 	Pause(id string) error
 	Resume(id string) error
-	Abort(id string) error
-	Cancel(id string) error
+	// Abort stops the execution and records the actor and the cause the control plane
+	// sent. Both can be empty. An empty actor names the control plane.
+	Abort(id string, actor string, reason string) error
+	// Cancel stops the execution and records the actor and the cause the control plane
+	// sent. Both can be empty. An empty actor names the user.
+	Cancel(id string, actor string, reason string) error
 }
 
 type runner struct {
@@ -80,6 +88,11 @@ type runner struct {
 
 	watching sync.Map
 	sf       singleflight.Group
+
+	// cleanupRetryDelay overrides the wait between Destroy retries; zero falls back to CleanupResourcesRetryDelay.
+	cleanupRetryDelay time.Duration
+	// abortRetryDelay overrides the wait between AbortExecution retries; zero falls back to AbortExecutionRetryDelay.
+	abortRetryDelay time.Duration
 }
 
 func New(
@@ -123,8 +136,13 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	defer r.watching.Delete(execution.Id)
 
 	// Scoped logger carrying human-readable context (workflow name, trigger/source) so every
-	// log line emitted while monitoring this execution is easy to identify.
-	logger := log.DefaultLogger.With(execution.LogFields()...)
+	// log line emitted while monitoring this execution is easy to identify. Env / org are
+	// added so any Errorw the customer sees carries the tenant coordinates needed to route
+	// the incident, matching the ask in TKC-6551.
+	logger := log.DefaultLogger.With(execution.LogFields()...).With(
+		"organizationId", organizationId,
+		"environmentId", environmentId,
+	)
 
 	var notifications executionworkertypes.NotificationsWatcher
 	for i := 0; i < GetNotificationsRetryCount; i++ {
@@ -247,7 +265,15 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		}
 		if !lastResult.IsFinished() {
 			logger.Errorw("failed to recover TestWorkflow result, marking as fatal error...")
-			lastResult.Fatal(errors.New("failed to recover TestWorkflow result"), true, time.Now())
+			lastResult.Fatal(errors.New("failed to recover TestWorkflow result"), testkube.StopReasonUnknown, true, time.Now())
+			// The saver stores this result as the final one, so it needs the object like every
+			// other terminal result. The runner knows only that it could not read the execution.
+			sigSequence := stage.MapSignatureListToInternal(stage.MapSignatureToSequence(stage.MapSignatureList(execution.Signature)))
+			lastResult.StatusDetails = lastResult.ClassifyStatus(sigSequence, testkube.Stop{
+				Code:   string(testkube.ABORTED_TestWorkflowStatus),
+				Actor:  testkube.StopActorRunner,
+				Reason: testkube.StopReasonUnknown,
+			})
 		}
 	}
 
@@ -309,13 +335,21 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	execution.Result = lastResult
 	r.observeExecutionMetrics(execution)
 
-	err = r.worker.Destroy(context.Background(), execution.Id, executionworkertypes.DestroyOptions{})
-	if err != nil {
-		// TODO: what to do on error?
-		logger.Errorw("failed to cleanup TestWorkflow resources", "error", err)
+	if err := r.destroyResources(context.Background(), execution.Id); err != nil {
+		logger.Errorw("failed to cleanup TestWorkflow resources after retries", "error", err)
 	}
 
 	return nil
+}
+
+func (r *runner) destroyResources(ctx context.Context, executionID string) error {
+	delay := r.cleanupRetryDelay
+	if delay == 0 {
+		delay = CleanupResourcesRetryDelay
+	}
+	return retry(CleanupResourcesRetryCount, delay, func(int) error {
+		return r.worker.Destroy(ctx, executionID, executionworkertypes.DestroyOptions{})
+	})
 }
 
 func (r *runner) recoverServiceLogs(ctx context.Context, saver ExecutionSaver, environmentId string, execution *testkube.TestWorkflowExecution, svc commands.ServiceInfo) error {
@@ -400,22 +434,11 @@ func (r *runner) recoverParallelStepLogs(ctx context.Context, saver ExecutionSav
 	})
 	if err == nil {
 		sigSequence := stage.MapSignatureListToInternal(stage.MapSignatureToSequence(stage.MapSignatureList(summary.Signature)))
-		errorMessage := execution.Result.Initialization.ErrorMessage
-		if errorMessage == "" {
-			for _, sig := range sigSequence {
-				if execution.Result.Steps[sig.Ref].ErrorMessage != "" {
-					errorMessage = execution.Result.Steps[sig.Ref].ErrorMessage
-					break
-				}
-			}
-		}
 		status.Result = &summary.Result
-		status.Result.Status = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
-		status.Result.HealAbortedOrCanceled(sigSequence, errorMessage, controller.DefaultErrorMessage, "aborted")
-		status.Result.HealTimestamps(sigSequence, summary.Execution.ScheduledAt, time.Time{}, time.Time{}, true)
-		status.Result.HealDuration(summary.Execution.ScheduledAt)
-		status.Result.HealMissingPauseStatuses()
-		status.Result.HealStatus(sigSequence)
+		// The heal keeps a cause that the worker result already holds. The reason comes from the parent execution and its signature.
+		parentSigSequence := stage.MapSignatureListToInternal(stage.MapSignatureToSequence(stage.MapSignatureList(execution.Signature)))
+		cause, causeReason := recordedCause(execution.Result, parentSigSequence)
+		healRecoveredResult(status.Result, sigSequence, summary.Execution.ScheduledAt, cause, causeReason)
 	}
 
 	// Add information in the execution about the logs
@@ -456,18 +479,24 @@ func (r *runner) Monitor(ctx context.Context, organizationId string, environment
 		return nil
 	}
 
-	// Load the execution
+	// Load the execution. Scoped logger carries the tenant coordinates so retries and the
+	// final failure are attributable to a specific env / org (TKC-6551).
+	logger := log.DefaultLogger.With(
+		"executionId", id,
+		"organizationId", organizationId,
+		"environmentId", environmentId,
+	)
 	var execution *testkube.TestWorkflowExecution
 	err := retry(GetExecutionRetryCount, GetExecutionRetryDelay, func(_ int) (err error) {
 		execution, err = r.client.GetExecution(ctx, environmentId, id)
 		if err != nil {
-			log.DefaultLogger.Warnw("failed to get execution for monitoring, retrying...", "executionId", id, "error", err)
+			logger.Warnw("failed to get execution for monitoring, retrying...", "error", err)
 		}
 		return err
 	})
 	if err != nil {
 		r.watching.Delete(id)
-		log.DefaultLogger.Errorw("failed to get execution for monitoring", "executionId", id, "error", err)
+		logger.Errorw("failed to get execution for monitoring", "error", err)
 		return err
 	}
 	return r.monitor(ctx, organizationId, environmentId, *execution)
@@ -516,8 +545,14 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 	if err == nil {
 		go func() {
 			// The full execution object isn't available here (only the ExecuteRequest), so we
-			// scope with the fields we do have: the execution ID and the workflow name.
-			logger := log.DefaultLogger.With("executionId", request.Execution.Id, "workflowName", request.Workflow.Name)
+			// scope with the fields we do have. Env / org make it possible to route the incident
+			// to the right tenant when the retry budget is exhausted (TKC-6551).
+			logger := log.DefaultLogger.With(
+				"executionId", request.Execution.Id,
+				"workflowName", request.Workflow.Name,
+				"organizationId", request.Execution.OrganizationId,
+				"environmentId", request.Execution.EnvironmentId,
+			)
 			err := retry(MonitorRetryCount, MonitorRetryDelay, func(_ int) error {
 				err := r.Monitor(context.Background(), request.Execution.OrganizationId, request.Execution.EnvironmentId, request.Execution.Id)
 				if err != nil {
@@ -559,24 +594,55 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 }
 
 // abortExecution aborts fetches the execution, updates its result to aborted and finishes it.
+// This runs after the Monitor loop has already given up on the execution, so every
+// control-plane call here is the last line of defence: a transient failure without retry
+// would leave the execution stuck in running state indefinitely.
 func (r *runner) abortExecution(ctx context.Context, environmentID, executionID string) error {
-	execution, err := r.client.GetExecution(context.Background(), environmentID, executionID)
+	var execution *testkube.TestWorkflowExecution
+	delay := r.abortRetryDelay
+	if delay == 0 {
+		delay = AbortExecutionRetryDelay
+	}
+	err := retry(AbortExecutionRetryCount, delay, func(_ int) error {
+		var e error
+		execution, e = r.client.GetExecution(context.Background(), environmentID, executionID)
+		return e
+	})
 	if err != nil {
 		return errors.Wrapf(err, "failed to get execution '%s'", executionID)
 	}
 	if execution.Result == nil {
 		return errors.New("execution result is nil")
 	}
-	execution.Result.Fatal(errors.New("execution is stuck in running state"), true, time.Now())
-	if err = r.client.UpdateExecutionResult(ctx, environmentID, executionID, execution.Result); err != nil {
+	execution.Result.Fatal(errors.New(testkube.StopReasonExecutionStuck.Sentence()), testkube.StopReasonExecutionStuck, true, time.Now())
+	// The runner gave up on a stuck execution, so it is the actor of the stop.
+	sigSequence := stage.MapSignatureListToInternal(stage.MapSignatureToSequence(stage.MapSignatureList(execution.Signature)))
+	execution.Result.StatusDetails = execution.Result.ClassifyStatus(sigSequence, testkube.Stop{
+		Code:   string(testkube.ABORTED_TestWorkflowStatus),
+		Actor:  testkube.StopActorRunner,
+		Reason: testkube.StopReasonExecutionStuck,
+	})
+	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
+		return r.client.UpdateExecutionResult(ctx, environmentID, executionID, execution.Result)
+	})
+	if err != nil {
 		return errors.Wrapf(err, "failed to update execution result '%s' to aborted", executionID)
 	}
 
-	if err = r.client.FinishExecutionResult(ctx, environmentID, executionID, execution.Result); err != nil {
+	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
+		return r.client.FinishExecutionResult(ctx, environmentID, executionID, execution.Result)
+	})
+	if err != nil {
 		return errors.Wrapf(err, "failed to finish execution result '%s'", executionID)
 	}
 
-	if err = r.Abort(executionID); err != nil {
+	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
+		return r.worker.Abort(context.Background(), executionID, executionworkertypes.DestroyOptions{
+			Actor:  testkube.StopActorRunner,
+			Reason: testkube.StopReasonExecutionStuck,
+		})
+	})
+	if err != nil {
 		return errors.Wrapf(err, "failed to destroy execution '%s'", executionID)
 	}
 
@@ -591,10 +657,28 @@ func (r *runner) Resume(id string) error {
 	return r.worker.Resume(context.Background(), id, executionworkertypes.ControlOptions{})
 }
 
-func (r *runner) Abort(id string) error {
-	return r.worker.Abort(context.Background(), id, executionworkertypes.DestroyOptions{})
+// Abort stops the execution on a request from the control plane.
+func (r *runner) Abort(id string, actor string, reason string) error {
+	return r.worker.Abort(context.Background(), id, executionworkertypes.DestroyOptions{
+		Actor:  stopActor(actor, testkube.StopActorControlPlane),
+		Reason: testkube.StopReason(reason),
+	})
 }
 
-func (r *runner) Cancel(id string) error {
-	return r.worker.Cancel(context.Background(), id, executionworkertypes.DestroyOptions{})
+// Cancel stops the execution on a request that the control plane relays, from a user
+// or from one of its own components.
+func (r *runner) Cancel(id string, actor string, reason string) error {
+	return r.worker.Cancel(context.Background(), id, executionworkertypes.DestroyOptions{
+		Actor:  stopActor(actor, testkube.StopActorUser),
+		Reason: testkube.StopReason(reason),
+	})
+}
+
+// stopActor returns the actor the control plane named, or the default of the
+// transition when the control plane sent none.
+func stopActor(actor string, defaultActor testkube.StopActor) testkube.StopActor {
+	if actor == "" {
+		return defaultActor
+	}
+	return testkube.StopActor(actor)
 }

@@ -7,11 +7,18 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 )
+
+const (
+	transferRetryCount = 3
+)
+
+var transferRetryBaseDelay = 500 * time.Millisecond
 
 func NewTransferCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -62,46 +69,55 @@ func ProcessTransferPair(pair string, output io.Writer) int {
 	}
 	fmt.Fprintf(output, "Packing and sending %s to %s...\n", dirPath, url)
 
-	// Create a channel to capture errors from goroutine
-	errChan := make(chan error, 1)
+	var lastErr error
+	for attempt := 0; attempt < transferRetryCount; attempt++ {
+		if attempt > 0 {
+			time.Sleep(time.Duration(attempt) * transferRetryBaseDelay)
+			fmt.Fprintf(output, "retrying tarball transfer (attempt %d/%d)...\n", attempt+1, transferRetryCount)
+		}
+		retryable, err := sendTarballOnce(dirPath, patterns, url)
+		if err == nil {
+			return 0
+		}
+		lastErr = err
+		if !retryable {
+			fmt.Fprintf(output, "error: %s\n", err.Error())
+			return 1
+		}
+	}
+	fmt.Fprintf(output, "error: tarball transfer failed after %d attempts: %s\n", transferRetryCount, lastErr.Error())
+	return 1
+}
 
-	// Start packing the files
+func sendTarballOnce(dirPath string, patterns []string, url string) (retryable bool, err error) {
+	errChan := make(chan error, 1)
 	reader, writer := io.Pipe()
 	go func() {
-		err := common.WriteTarball(writer, dirPath, patterns)
+		e := common.WriteTarball(writer, dirPath, patterns)
 		_ = writer.Close()
-		if err != nil {
-			errChan <- err
-		} else {
-			errChan <- nil
-		}
+		errChan <- e
 	}()
 
-	// Send the tarball
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url, reader)
 	if err != nil {
-		fmt.Fprintf(output, "error: create the tarball request - %s\n", err.Error())
-		return 1
+		return false, fmt.Errorf("create the tarball request - %w", err)
 	}
 	req.Header.Set("Content-Type", "application/tar+gzip")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Fprintf(output, "error: send the tarball request - %s\n", err.Error())
-		return 1
+		return true, fmt.Errorf("send the tarball request - %w", err)
 	}
 	defer resp.Body.Close()
 
-	// Check for write errors
-	writeErr := <-errChan
-	if writeErr != nil {
-		fmt.Fprintf(output, "error: write the tarball stream - %s\n", writeErr.Error())
-		return 1
+	if writeErr := <-errChan; writeErr != nil {
+		return false, fmt.Errorf("write the tarball stream - %w", writeErr)
 	}
 
-	if resp.StatusCode != http.StatusNoContent {
-		fmt.Fprintf(output, "error: failed to send the tarball: status code %d\n", resp.StatusCode)
-		return 1
+	if resp.StatusCode == http.StatusNoContent {
+		return false, nil
 	}
-
-	return 0
+	if resp.StatusCode >= 500 || resp.StatusCode == http.StatusTooManyRequests {
+		return true, fmt.Errorf("failed to send the tarball: status code %d", resp.StatusCode)
+	}
+	return false, fmt.Errorf("failed to send the tarball: status code %d", resp.StatusCode)
 }

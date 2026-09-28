@@ -11,8 +11,8 @@ package testkube
 
 // in-process retry policy for transient git failures during clone.
 type TestWorkflowContentGitRetry struct {
-	// max attempts for transient git failures
+	// max attempts for transient git failures (default 5, max 20)
 	Count int32 `json:"count,omitempty"`
-	// base delay between attempts; exponential backoff applies
+	// base delay between attempts; exponential backoff applies (e.g. \"100ms\", \"1s\"). May be an expression template; validated after resolution.
 	Delay string `json:"delay,omitempty"`
 }

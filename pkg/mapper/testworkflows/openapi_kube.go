@@ -48,6 +48,17 @@ func MapStringPtrToIntOrStringPtr(i *string) *intstr.IntOrString {
 	return common.Ptr(MapStringToIntOrString(*i))
 }
 
+func MapStringToConfigValue(v string) testworkflowsv1.ConfigValue {
+	return testworkflowsv1.ConfigValue(v)
+}
+
+func MapBoxedStringToConfigValue(v *testkube.BoxedString) *testworkflowsv1.ConfigValue {
+	if v == nil {
+		return nil
+	}
+	return testworkflowsv1.NewConfigValue(v.Value)
+}
+
 func MapBoxedStringToString(v *testkube.BoxedString) *string {
 	if v == nil {
 		return nil
@@ -238,8 +249,8 @@ func MapLocalObjectReferenceAPIToKube(v testkube.LocalObjectReference) corev1.Lo
 	return corev1.LocalObjectReference{Name: v.Name}
 }
 
-func MapConfigValueAPIToKube(v map[string]string) map[string]intstr.IntOrString {
-	return common.MapMap(v, MapStringToIntOrString)
+func MapConfigValueAPIToKube(v map[string]string) map[string]testworkflowsv1.ConfigValue {
+	return common.MapMap(v, MapStringToConfigValue)
 }
 
 func MapParameterTypeAPIToKube(v *testkube.TestWorkflowParameterType) testworkflowsv1.ParameterType {
@@ -297,16 +308,16 @@ func MapTimeoutsAPIToKube(v testkube.TestWorkflowTimeouts) testworkflowsv1.TestW
 }
 
 func MapParameterSchemaAPIToKube(v testkube.TestWorkflowParameterSchema) testworkflowsv1.ParameterSchema {
-	var example *intstr.IntOrString
+	var example *testworkflowsv1.ConfigValue
 	if v.Example != "" {
-		example = common.Ptr(MapStringToIntOrString(v.Example))
+		example = testworkflowsv1.NewConfigValue(v.Example)
 	}
 	return testworkflowsv1.ParameterSchema{
 		Description: v.Description,
 		Type:        MapParameterTypeAPIToKube(v.Type_),
 		Enum:        v.Enum,
 		Example:     example,
-		Default:     MapStringPtrToIntOrStringPtr(MapBoxedStringToString(v.Default_)),
+		Default:     MapBoxedStringToConfigValue(v.Default_),
 		ParameterStringSchema: testworkflowsv1.ParameterStringSchema{
 			Format:    v.Format,
 			Pattern:   v.Pattern,
@@ -375,22 +386,22 @@ func MapContentFileAPIToKube(v testkube.TestWorkflowContentFile) testworkflowsv1
 	}
 }
 
-func MapResourcesListAPIToKube(v *testkube.TestWorkflowResourcesList) map[corev1.ResourceName]intstr.IntOrString {
+func MapResourcesListAPIToKube(v *testkube.TestWorkflowResourcesList) map[corev1.ResourceName]testworkflowsv1.ConfigValue {
 	if v == nil {
 		return nil
 	}
-	res := make(map[corev1.ResourceName]intstr.IntOrString)
+	res := make(map[corev1.ResourceName]testworkflowsv1.ConfigValue)
 	if v.Cpu != "" {
-		res[corev1.ResourceCPU] = MapStringToIntOrString(v.Cpu)
+		res[corev1.ResourceCPU] = MapStringToConfigValue(v.Cpu)
 	}
 	if v.Memory != "" {
-		res[corev1.ResourceMemory] = MapStringToIntOrString(v.Memory)
+		res[corev1.ResourceMemory] = MapStringToConfigValue(v.Memory)
 	}
 	if v.Storage != "" {
-		res[corev1.ResourceStorage] = MapStringToIntOrString(v.Storage)
+		res[corev1.ResourceStorage] = MapStringToConfigValue(v.Storage)
 	}
 	if v.EphemeralStorage != "" {
-		res[corev1.ResourceEphemeralStorage] = MapStringToIntOrString(v.EphemeralStorage)
+		res[corev1.ResourceEphemeralStorage] = MapStringToConfigValue(v.EphemeralStorage)
 	}
 	return res
 }
@@ -1023,8 +1034,8 @@ func MapStepExecuteTestAPIToKube(v testkube.TestWorkflowStepExecuteTestRef) test
 		ExecutionRequest: common.MapPtr(v.ExecutionRequest, MapStepExecuteTestExecutionRequestAPIToKube),
 		Tarball:          common.MapMap(v.Tarball, MapTarballRequestAPIToKube),
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-			Count:    MapBoxedStringToIntOrString(v.Count),
-			MaxCount: MapBoxedStringToIntOrString(v.MaxCount),
+			Count:    MapBoxedStringToConfigValue(v.Count),
+			MaxCount: MapBoxedStringToConfigValue(v.MaxCount),
 			Matrix:   MapDynamicListMapAPIToKube(v.Matrix),
 			Shards:   MapDynamicListMapAPIToKube(v.Shards),
 		},
@@ -1063,9 +1074,13 @@ func MapStepExecuteTestWorkflowAPIToKube(v testkube.TestWorkflowStepExecuteTestW
 		Tarball:       common.MapMap(v.Tarball, MapTarballRequestAPIToKube),
 		Config:        MapConfigValueAPIToKube(v.Config),
 		Fetch:         common.MapSlice(v.Fetch, MapStepExecuteFetchAPIToKube),
+		// Both directions map field by field, so a field missing from either is
+		// dropped in silence - which for this one would turn a rerun back into a
+		// first run for every workflow stored through the API.
+		BaseExecutionId: v.BaseExecutionId,
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-			Count:    MapBoxedStringToIntOrString(v.Count),
-			MaxCount: MapBoxedStringToIntOrString(v.MaxCount),
+			Count:    MapBoxedStringToConfigValue(v.Count),
+			MaxCount: MapBoxedStringToConfigValue(v.MaxCount),
 			Matrix:   MapDynamicListMapAPIToKube(v.Matrix),
 			Shards:   MapDynamicListMapAPIToKube(v.Shards),
 		},
@@ -1097,6 +1112,17 @@ func MapStepArtifactsAPIToKube(v testkube.TestWorkflowStepArtifacts) testworkflo
 	}
 }
 
+func MapStepCacheAPIToKube(v testkube.TestWorkflowStepCache) testworkflowsv1.StepCache {
+	return testworkflowsv1.StepCache{
+		Key:         v.Key,
+		RestoreKeys: v.RestoreKeys,
+		Paths:       v.Paths,
+		WorkingDir:  MapBoxedStringToString(v.WorkingDir),
+		Scope:       testworkflowsv1.CacheScope(v.Scope),
+		Mount:       MapBoxedBooleanToBool(v.Mount),
+	}
+}
+
 func MapRetryPolicyAPIToKube(v testkube.TestWorkflowRetryPolicy) testworkflowsv1.RetryPolicy {
 	return testworkflowsv1.RetryPolicy{
 		Count: v.Count,
@@ -1124,8 +1150,8 @@ func MapStepParallelFetchAPIToKube(v testkube.TestWorkflowStepParallelFetch) tes
 func MapStepParallelAPIToKube(v testkube.TestWorkflowStepParallel) testworkflowsv1.StepParallel {
 	return testworkflowsv1.StepParallel{
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-			Count:    MapBoxedStringToIntOrString(v.Count),
-			MaxCount: MapBoxedStringToIntOrString(v.MaxCount),
+			Count:    MapBoxedStringToConfigValue(v.Count),
+			MaxCount: MapBoxedStringToConfigValue(v.MaxCount),
 			Matrix:   MapDynamicListMapAPIToKube(v.Matrix),
 			Shards:   MapDynamicListMapAPIToKube(v.Shards),
 		},
@@ -1160,6 +1186,7 @@ func MapStepParallelAPIToKube(v testkube.TestWorkflowStepParallel) testworkflows
 			Run:       common.MapPtr(v.Run, MapStepRunAPIToKube),
 			Execute:   common.MapPtr(v.Execute, MapStepExecuteAPIToKube),
 			Artifacts: common.MapPtr(v.Artifacts, MapStepArtifactsAPIToKube),
+			Cache:     common.MapPtr(v.Cache, MapStepCacheAPIToKube),
 		},
 		Template: common.MapPtr(v.Template, MapTemplateRefAPIToKube),
 	}
@@ -1168,8 +1195,8 @@ func MapStepParallelAPIToKube(v testkube.TestWorkflowStepParallel) testworkflows
 func MapIndependentStepParallelAPIToKube(v testkube.TestWorkflowIndependentStepParallel) testworkflowsv1.IndependentStepParallel {
 	return testworkflowsv1.IndependentStepParallel{
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-			Count:    MapBoxedStringToIntOrString(v.Count),
-			MaxCount: MapBoxedStringToIntOrString(v.MaxCount),
+			Count:    MapBoxedStringToConfigValue(v.Count),
+			MaxCount: MapBoxedStringToConfigValue(v.MaxCount),
 			Matrix:   MapDynamicListMapAPIToKube(v.Matrix),
 			Shards:   MapDynamicListMapAPIToKube(v.Shards),
 		},
@@ -1207,6 +1234,7 @@ func MapIndependentStepParallelAPIToKube(v testkube.TestWorkflowIndependentStepP
 			Run:       common.MapPtr(v.Run, MapStepRunAPIToKube),
 			Execute:   common.MapPtr(v.Execute, MapStepExecuteAPIToKube),
 			Artifacts: common.MapPtr(v.Artifacts, MapStepArtifactsAPIToKube),
+			Cache:     common.MapPtr(v.Cache, MapStepCacheAPIToKube),
 		},
 	}
 }
@@ -1268,8 +1296,8 @@ func MapProbeAPIToKube(v testkube.Probe) corev1.Probe {
 func MapIndependentServiceSpecAPIToKube(v testkube.TestWorkflowIndependentServiceSpec) testworkflowsv1.IndependentServiceSpec {
 	return testworkflowsv1.IndependentServiceSpec{
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-			Count:    MapBoxedStringToIntOrString(v.Count),
-			MaxCount: MapBoxedStringToIntOrString(v.MaxCount),
+			Count:    MapBoxedStringToConfigValue(v.Count),
+			MaxCount: MapBoxedStringToConfigValue(v.MaxCount),
 			Matrix:   MapDynamicListMapAPIToKube(v.Matrix),
 			Shards:   MapDynamicListMapAPIToKube(v.Shards),
 		},
@@ -1305,8 +1333,8 @@ func MapServiceSpecAPIToKube(v testkube.TestWorkflowServiceSpec) testworkflowsv1
 		Use: common.MapSlice(v.Use, MapTemplateRefAPIToKube),
 		IndependentServiceSpec: testworkflowsv1.IndependentServiceSpec{
 			StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
-				Count:    MapBoxedStringToIntOrString(v.Count),
-				MaxCount: MapBoxedStringToIntOrString(v.MaxCount),
+				Count:    MapBoxedStringToConfigValue(v.Count),
+				MaxCount: MapBoxedStringToConfigValue(v.MaxCount),
 				Matrix:   MapDynamicListMapAPIToKube(v.Matrix),
 				Shards:   MapDynamicListMapAPIToKube(v.Shards),
 			},
@@ -1363,6 +1391,7 @@ func MapStepAPIToKube(v testkube.TestWorkflowStep) testworkflowsv1.Step {
 			Run:       common.MapPtr(v.Run, MapStepRunAPIToKube),
 			Execute:   common.MapPtr(v.Execute, MapStepExecuteAPIToKube),
 			Artifacts: common.MapPtr(v.Artifacts, MapStepArtifactsAPIToKube),
+			Cache:     common.MapPtr(v.Cache, MapStepCacheAPIToKube),
 		},
 		StepDefaults: testworkflowsv1.StepDefaults{
 			WorkingDir: MapBoxedStringToString(v.WorkingDir),
@@ -1401,6 +1430,7 @@ func MapIndependentStepAPIToKube(v testkube.TestWorkflowIndependentStep) testwor
 			Run:       common.MapPtr(v.Run, MapStepRunAPIToKube),
 			Execute:   common.MapPtr(v.Execute, MapStepExecuteAPIToKube),
 			Artifacts: common.MapPtr(v.Artifacts, MapStepArtifactsAPIToKube),
+			Cache:     common.MapPtr(v.Cache, MapStepCacheAPIToKube),
 		},
 		StepDefaults: testworkflowsv1.StepDefaults{
 			WorkingDir: MapBoxedStringToString(v.WorkingDir),
@@ -1562,10 +1592,12 @@ func MapTestWorkflowReportAPIToKube(v testkube.TestWorkflowReport) testworkflows
 func MapTestWorkflowStepResultAPIToKube(v testkube.TestWorkflowStepResult) testworkflowsv1.TestWorkflowStepResult {
 	return testworkflowsv1.TestWorkflowStepResult{
 		ErrorMessage: v.ErrorMessage,
+		ErrorReason:  v.ErrorReason,
 		Status: common.MapPtr(v.Status, func(status testkube.TestWorkflowStepStatus) testworkflowsv1.TestWorkflowStepStatus {
 			return (testworkflowsv1.TestWorkflowStepStatus)(status)
 		}),
 		ExitCode:   int64(v.ExitCode),
+		Attempts:   v.Attempts,
 		QueuedAt:   metav1.Time{Time: v.QueuedAt},
 		StartedAt:  metav1.Time{Time: v.StartedAt},
 		FinishedAt: metav1.Time{Time: v.FinishedAt},
@@ -1607,6 +1639,25 @@ func MapTestWorkflowResultAPIToKube(v testkube.TestWorkflowResult) testworkflows
 		Pauses:          common.MapSlice(v.Pauses, MapTestWorkflowPauseAPIToKube),
 		Initialization:  common.MapPtr(v.Initialization, MapTestWorkflowStepResultAPIToKube),
 		Steps:           common.MapMap(v.Steps, MapTestWorkflowStepResultAPIToKube),
+		StatusDetails:   common.MapPtr(v.StatusDetails, MapTestWorkflowStatusDetailsAPIToKube),
+	}
+}
+
+func MapTestWorkflowStatusDetailsAPIToKube(v testkube.TestWorkflowStatusDetails) testworkflowsv1.TestWorkflowStatusDetails {
+	return testworkflowsv1.TestWorkflowStatusDetails{
+		Type_:   v.Type_,
+		Reason:  v.Reason,
+		Message: v.Message,
+		Step:    v.Step,
+		Actor:   v.Actor,
+		User:    common.MapPtr(v.User, MapTestWorkflowStatusDetailsUserAPIToKube),
+	}
+}
+
+func MapTestWorkflowStatusDetailsUserAPIToKube(v testkube.TestWorkflowStatusDetailsUser) testworkflowsv1.TestWorkflowStatusDetailsUser {
+	return testworkflowsv1.TestWorkflowStatusDetailsUser{
+		Name:  v.Name,
+		Email: v.Email,
 	}
 }
 
@@ -1640,6 +1691,15 @@ func MapTestWorkflowExecutionAPIToKube(v *testkube.TestWorkflowExecution) *testw
 		Tags:                      v.Tags,
 		// Pro edition only (tcl protected code)
 		RunningContext: common.MapPtr(v.RunningContext, mappertcl.MapTestWorkflowRunningContextAPIToKube),
+		Lineage:        common.MapPtr(v.Lineage, MapTestWorkflowExecutionLineageAPIToKube),
+	}
+}
+
+func MapTestWorkflowExecutionLineageAPIToKube(v testkube.TestWorkflowExecutionLineage) testworkflowsv1.TestWorkflowExecutionLineage {
+	return testworkflowsv1.TestWorkflowExecutionLineage{
+		BaseId:  v.BaseId,
+		RootId:  v.RootId,
+		Attempt: v.Attempt,
 	}
 }
 
@@ -1663,6 +1723,7 @@ func MapTestWorkflowResultAPIToKubeTestWorkflowResultSummary(v testkube.TestWork
 		DurationMs:      v.DurationMs,
 		TotalDurationMs: v.TotalDurationMs,
 		PausedMs:        v.PausedMs,
+		StatusDetails:   common.MapPtr(v.StatusDetails, MapTestWorkflowStatusDetailsAPIToKube),
 	}
 }
 

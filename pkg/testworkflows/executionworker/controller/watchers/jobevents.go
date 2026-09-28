@@ -6,6 +6,8 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 type jobEvents struct {
@@ -28,6 +30,7 @@ type JobEvents interface {
 	Error() bool
 	ErrorReason() string
 	ErrorMessage() string
+	WaitingCause() *testkube.Cause
 	Debug() string
 }
 
@@ -178,4 +181,16 @@ func (j *jobEvents) Debug() string {
 	}
 
 	return strings.Join(result, ", ")
+}
+
+// jobWaitingCauses maps the warning events of a job that cannot create its pod to the reason codes.
+// The event message carries the text of the admission check that rejected the pod, for example a webhook or a quota.
+var jobWaitingCauses = map[string]testkube.StopReason{
+	"FailedCreate": testkube.StopReasonAdmissionDenied,
+}
+
+// WaitingCause returns the cause from the latest event that keeps the job from creating its pod.
+// It returns nil when the job created the pod after that event.
+func (j *jobEvents) WaitingCause() *testkube.Cause {
+	return latestWaitingCause(j.events, jobWaitingCauses, []string{"SuccessfulCreate"})
 }

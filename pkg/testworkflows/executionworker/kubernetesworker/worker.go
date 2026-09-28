@@ -16,6 +16,7 @@ import (
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -42,12 +43,22 @@ const (
 	ResumeRetryOnFailureDelay = 300 * time.Millisecond
 )
 
+var (
+	// abortTimeout limits an abort that a watch asks for, with its retries.
+	abortTimeout = 2 * time.Minute
+	// abortRetryDelay is the wait between two attempts of that abort.
+	abortRetryDelay = 3 * time.Second
+)
+
 type worker struct {
 	clientSet        kubernetes.Interface
 	processor        testworkflowprocessor.Processor
 	baseWorkerConfig testworkflowconfig.WorkerConfig
 	config           Config
 	registry         registry.ControllersRegistry
+
+	// aborts holds the ids of the executions with an abort that runs in the background
+	aborts sync.Map
 }
 
 func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.Processor, config Config) *worker {
@@ -162,7 +173,7 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 		Runtime:                runtimeOptions,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to process test workflow")
+		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to process test workflow"), testkube.StartReasonDefinitionInvalid)
 	}
 
 	// Annotate the group ID
@@ -181,7 +192,7 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	// Deploy required resources
 	err = bundle.Deploy(ctx, w.clientSet, cfg.Worker.Namespace)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to deploy test workflow")
+		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to deploy test workflow"), testkube.StartReasonJobCreateFailed)
 	}
 
 	return &executionworkertypes.ExecuteResult{
@@ -228,7 +239,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 		Runtime:                runtimeOptions,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to process test workflow")
+		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to process test workflow"), testkube.StartReasonDefinitionInvalid)
 	}
 
 	// Apply the service setup
@@ -256,7 +267,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 	// Deploy required resources
 	err = bundle.Deploy(ctx, w.clientSet, cfg.Worker.Namespace)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to deploy test workflow")
+		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to deploy test workflow"), testkube.StartReasonJobCreateFailed)
 	}
 
 	return &executionworkertypes.ServiceResult{
@@ -288,6 +299,10 @@ func (w *worker) Notifications(ctx context.Context, id string, opts executionwor
 			recycle()
 		}()
 		for n := range ch {
+			if n.Error == nil && n.Value.AbortReason != "" {
+				w.abortRequested(id, opts.Hints.Namespace, n.Value.AbortReason)
+				continue
+			}
 			if n.Error != nil {
 				watcher.Close(n.Error)
 				return
@@ -330,6 +345,10 @@ func (w *worker) StatusNotifications(ctx context.Context, id string, opts execut
 		prevStepStatus := testkube.QUEUED_TestWorkflowStepStatus
 		prevReady := false
 		for n := range ch {
+			if n.Error == nil && n.Value.AbortReason != "" {
+				w.abortRequested(id, opts.Hints.Namespace, n.Value.AbortReason)
+				continue
+			}
 			if n.Error != nil {
 				watcher.Close(n.Error)
 				return
@@ -547,6 +566,46 @@ func (w *worker) List(ctx context.Context, options executionworkertypes.ListOpti
 	return list, nil
 }
 
+// abortRequested aborts the execution in the background with the runner actor, because the watch asked for it.
+func (w *worker) abortRequested(id, namespace string, reason testkube.StopReason) {
+	w.abortInBackground(id, func(ctx context.Context) error {
+		return w.Abort(ctx, id, executionworkertypes.DestroyOptions{
+			Namespace: namespace,
+			Actor:     testkube.StopActorRunner,
+			Reason:    reason,
+		})
+	})
+}
+
+// abortInBackground runs one abort for each execution, also when several watches ask for it.
+// The watch asks one time, so the abort retries a failure until its time limit ends. A job that is already gone
+// means that the abort is done. It returns a channel that closes when the abort ends, or nil when an abort already runs.
+func (w *worker) abortInBackground(id string, abort func(ctx context.Context) error) <-chan struct{} {
+	if _, running := w.aborts.LoadOrStore(id, struct{}{}); running {
+		return nil
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer w.aborts.Delete(id)
+		ctx, cancel := context.WithTimeout(context.Background(), abortTimeout)
+		defer cancel()
+		for {
+			err := abort(ctx)
+			if err == nil || apierrors.IsNotFound(err) || errors.Is(err, registry.ErrResourceNotFound) {
+				return
+			}
+			select {
+			case <-ctx.Done():
+				log.DefaultLogger.Errorw("failed to abort the execution that the watch asked to abort", "id", id, "error", err)
+				return
+			case <-time.After(abortRetryDelay):
+			}
+		}
+	}()
+	return done
+}
+
 func (w *worker) Abort(ctx context.Context, id string, options executionworkertypes.DestroyOptions) (err error) {
 	if options.Namespace == "" {
 		options.Namespace, err = w.registry.GetNamespace(ctx, id)
@@ -554,7 +613,7 @@ func (w *worker) Abort(ctx context.Context, id string, options executionworkerty
 			return err
 		}
 	}
-	if err := w.patchTerminationAnnotations(ctx, id, options.Namespace, testkube.ABORTED_TestWorkflowStatus, "Job has been aborted by the system"); err != nil {
+	if err := w.patchTerminationAnnotations(ctx, id, options.Namespace, testkube.ABORTED_TestWorkflowStatus, options.TerminationActor(testkube.StopActorSystem), options.Reason, options.Detail); err != nil {
 		return errors.Wrapf(err, "failed to patch job %s/%s with termination code & reason", options.Namespace, id)
 	}
 	// It may safely destroy all the resources - the trace should be still readable.
@@ -568,18 +627,20 @@ func (w *worker) Cancel(ctx context.Context, id string, options executionworkert
 			return err
 		}
 	}
-	if err := w.patchTerminationAnnotations(ctx, id, options.Namespace, testkube.CANCELED_TestWorkflowStatus, "Job has been canceled by a user"); err != nil {
+	if err := w.patchTerminationAnnotations(ctx, id, options.Namespace, testkube.CANCELED_TestWorkflowStatus, options.TerminationActor(testkube.StopActorUser), options.Reason, options.Detail); err != nil {
 		return errors.Wrapf(err, "failed to patch job %s/%s with termination code & reason", options.Namespace, id)
 	}
 	return w.Destroy(ctx, id, options)
 }
 
-func (w *worker) patchTerminationAnnotations(ctx context.Context, id string, namespace string, status testkube.TestWorkflowStatus, reason string) error {
+func (w *worker) patchTerminationAnnotations(ctx context.Context, id string, namespace string, status testkube.TestWorkflowStatus, actor testkube.StopActor, reason testkube.StopReason, detail string) error {
 	patch := map[string]interface{}{
 		"metadata": map[string]any{
 			"annotations": map[string]string{
 				constants.AnnotationTerminationCode:   string(status),
-				constants.AnnotationTerminationReason: reason,
+				constants.AnnotationTerminationActor:  string(actor),
+				constants.AnnotationTerminationReason: string(reason),
+				constants.AnnotationTerminationDetail: detail,
 			},
 		},
 	}

@@ -57,6 +57,15 @@ global:
     createServiceAccountTemplates: true
     # -- Create TestWorkflowTemplates with automatically configured execution
     createOfficialTemplates: true
+    # -- Image used by the built-in TestWorkflowTemplate installer hook Job
+    builtinTemplatesInstaller:
+      image:
+        registry: docker.io
+        repository: kubeshop/testkube-kubectl
+        tag: 1.36.3
+        digest: ""
+        pullPolicy: IfNotPresent
+        pullSecrets: []
     # -- Global TestWorkflowTemplate that will be automatically included for all executions
     globalTemplate:
       # -- Is global template enabled
@@ -910,8 +919,8 @@ testkube-api:
     # -- Minio image from DockerHub
     image:
       registry: docker.io
-      repository: minio/minio
-      tag: RELEASE.2025-06-13T11-33-47Z
+      repository: kubeshop/testkube-minio
+      tag: "2025.10"
       pullSecrets: []
     # -- ServiceAccount name to use for Minio
     serviceAccountName: ""
@@ -1042,6 +1051,12 @@ testkube-api:
     bucket: "testkube-artifacts"
     # -- MinIO Expiration period in days
     expiration: 0
+    # -- Expiration period in days for step dependency caches (the .tkcache/v1 prefix).
+    # Defaults to 1 day, the shortest an object store lifecycle can express; 0 disables
+    # it and leaves them to the bucket-wide `expiration`, which stays at 0 because that
+    # rule is unfiltered and would expire artifacts too. Testkube preserves lifecycle
+    # rules it did not write, so neither setting disturbs one managed elsewhere.
+    cacheExpiration: 1
     # -- MinIO Use SSL
     SSL: false
     # -- Toggle whether to verify TLS certificates
@@ -1300,7 +1315,7 @@ testkube-operator:
       # -- Testkube Operator rbac-proxy image repository
       repository: brancz/kube-rbac-proxy
       # -- Testkube Operator rbac-proxy image tag
-      tag: "v0.22.1"
+      tag: "v0.23.0"
       # -- Testkube Operator rbac-proxy k8s secret for private registries
       pullSecrets: []
     # -- Testkube Operator rbac-proxy resource settings

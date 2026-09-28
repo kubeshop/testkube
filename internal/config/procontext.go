@@ -1,5 +1,11 @@
 package config
 
+import (
+	"slices"
+
+	"github.com/kubeshop/testkube/pkg/cloud"
+)
+
 type ProContextMode string
 
 const (
@@ -73,4 +79,28 @@ type ProContextAgent struct {
 	Labels       map[string]string
 	IsSuperAgent bool
 	Environments []ProContextAgentEnvironment
+	// Capabilities is the effective set after the startup capability update:
+	// the set the Control Plane stored, or the agent's own flag-derived set when
+	// the Control Plane could not be asked. Empty in standalone mode.
+	Capabilities []cloud.AgentCapability
+}
+
+func (a *ProContextAgent) HasCapability(capability cloud.AgentCapability) bool {
+	return slices.Contains(a.Capabilities, capability)
+}
+
+// ShouldPushClusterInventory reports whether this agent should run the CRD
+// watcher and push the cluster-resources inventory. See internal/inventory.
+func ShouldPushClusterInventory(proContext ProContext, testTriggersDisabled bool) bool {
+	// The inventory only feeds the TestTrigger resourceRef picker.
+	if testTriggersDisabled {
+		return false
+	}
+	// Standalone serves discovery from its own API, so it never pushes.
+	if proContext.APIKey == "" {
+		return false
+	}
+	// The Control Plane rejects a push from anyone but a listener, and a
+	// runner-only deployment has no CRD RBAC to watch with.
+	return proContext.Agent.HasCapability(cloud.AgentCapability_AGENT_CAPABILITY_LISTENER)
 }

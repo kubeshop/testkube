@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 )
@@ -43,10 +42,10 @@ type ContainerConfig struct {
 
 type Resources struct {
 	// resource limits for the container
-	Limits map[corev1.ResourceName]intstr.IntOrString `json:"limits,omitempty" expr:"template,template"`
+	Limits map[corev1.ResourceName]ConfigValue `json:"limits,omitempty" expr:"template,template"`
 
 	// resource requests for the container
-	Requests map[corev1.ResourceName]intstr.IntOrString `json:"requests,omitempty" expr:"template,template"`
+	Requests map[corev1.ResourceName]ConfigValue `json:"requests,omitempty" expr:"template,template"`
 }
 
 type EnvVar struct {
@@ -235,7 +234,7 @@ type CronJobConfig struct {
 	// annotations to attach to the cron job
 	Annotations map[string]string `json:"annotations,omitempty" expr:"template,template"`
 	// configuration to pass for the workflow
-	Config map[string]intstr.IntOrString `json:"config,omitempty" expr:"template,template"`
+	Config map[string]ConfigValue `json:"config,omitempty" expr:"template,template"`
 	// Targets helps decide on which runner the execution is scheduled.
 	Target *commonv1.Target `json:"target,omitempty" expr:"include"`
 	// cron timezone
