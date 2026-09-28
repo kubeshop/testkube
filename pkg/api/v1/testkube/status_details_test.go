@@ -170,3 +170,30 @@ func TestNewStatusDetails(t *testing.T) {
 		})
 	}
 }
+
+func TestStatusDetailsType_DisplayName(t *testing.T) {
+	tests := []struct {
+		name string
+		t    StatusDetailsType
+		want string
+	}{
+		{name: "a known type has its display name", t: StatusDetailsTypeExecutionFailure, want: "Infrastructure failure"},
+		{name: "a type without a display name stays the type", t: "a-newer-type", want: "a-newer-type"},
+		{name: "an empty type stays empty", t: "", want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.t.DisplayName())
+		})
+	}
+}
+
+func TestStatusDetailsType_DisplayName_EveryType(t *testing.T) {
+	// A type without a display name shows as a raw code, so every known type has one.
+	for _, detailsType := range []StatusDetailsType{
+		StatusDetailsTypeInitFailure, StatusDetailsTypeExecutionFailure, StatusDetailsTypeStepFailure,
+		StatusDetailsTypeUserCancel, StatusDetailsTypeUnknown,
+	} {
+		assert.NotEqual(t, string(detailsType), detailsType.DisplayName(), detailsType)
+	}
+}
