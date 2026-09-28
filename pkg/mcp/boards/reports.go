@@ -280,6 +280,11 @@ func validateReport(kind string, out map[string]any) error {
 		if err := checkString(out, "measure"); err != nil {
 			return err
 		}
+		if _, ok := out["measure"]; ok {
+			if err := checkNonEmptyString(out, "measure"); err != nil {
+				return err
+			}
+		}
 		if err := checkEnum(out, "aggregate", timeSeriesAggregates); err != nil {
 			return err
 		}
