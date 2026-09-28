@@ -324,7 +324,7 @@ func NewInitCmdDemo() *cobra.Command {
 			ui.NL()
 			ui.H2("Launching web browser...")
 			ui.NL()
-			openOnPremDashboard(cmd, cfg, false, false, license)
+			openOnPremDashboard(cmd, cfg, false, false, license, licenseName)
 		},
 	}
 

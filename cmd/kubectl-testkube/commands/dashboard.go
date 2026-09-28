@@ -41,7 +41,7 @@ func NewDashboardCmd() *cobra.Command {
 			if cfg.ContextType != config.ContextTypeCloud {
 				isDashboardRunning, _ := k8sclient.IsPodOfServiceRunning(context.Background(), cfg.Namespace, config.EnterpriseUiName)
 				if isDashboardRunning {
-					openOnPremDashboard(cmd, cfg, verbose, skipBrowser, "")
+					openOnPremDashboard(cmd, cfg, verbose, skipBrowser, "", "")
 				} else {
 					ui.Warn("No dashboard found. Is it running in the " + cfg.Namespace + " namespace?")
 				}
@@ -69,7 +69,7 @@ func openCloudDashboard(cfg config.Data) {
 	ui.PrintOnError("opening dashboard", err)
 }
 
-func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrowser bool, license string) {
+func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrowser bool, license, email string) {
 	uiLocalPort, err := getDashboardLocalPort(config.EnterpriseApiForwardingPort)
 	ui.PrintOnError("getting an ui forwarding available port", err)
 	uri := fmt.Sprintf("http://localhost:%d", uiLocalPort)
@@ -115,7 +115,7 @@ func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrows
 
 		ui.ExitOnError("opening dashboard in browser", err)
 
-		sendTelemetry(cmd, cfg, license, "dashboard opened successfully")
+		sendTelemetry(cmd, cfg, license, "dashboard opened successfully", email)
 	}
 
 	c := make(chan os.Signal, 1)
