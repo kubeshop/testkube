@@ -27,6 +27,21 @@ spec:
   container:
     workingDir: /data/repo/js/packages/e2e-tests
     image: mcr.microsoft.com/playwright:v1.62.1-noble
+    env:
+    - name: CLOUD_API_URL
+      value: https://api.testkube.dev
+    - name: TEST_ORG_ID
+      value: tkcorg_9deb42dda2197657
+    - name: TEST_ORG_SLUG
+      value: testkube
+    - name: TEST_ENV_ID
+      value: tkcenv_f2eedeef4063f90f
+    - name: TEST_ENV_SLUG
+      value: testkube-cloud-test-dev-e2e
+    - name: TEST_FIXTURE_USER
+      value: test-user-10
+    - name: TESTKUBE_NAMESPACE
+      value: testkube-agent-e2e
     resources:
       requests:
         cpu: 2
@@ -60,22 +75,9 @@ spec:
     timeout: 15m
     run:
       env:
+      # Resolve the preview URL only after the UI service has started.
       - name: CLOUD_BASE_URL
         value: '{{ config.revision == "main" ? "https://app.testkube.dev" : "http://" + services.ui.0.ip + ":5173" }}'
-      - name: CLOUD_API_URL
-        value: https://api.testkube.dev
-      - name: TEST_ORG_ID
-        value: tkcorg_9deb42dda2197657
-      - name: TEST_ORG_SLUG
-        value: testkube
-      - name: TEST_ENV_ID
-        value: tkcenv_f2eedeef4063f90f
-      - name: TEST_ENV_SLUG
-        value: testkube-cloud-test-dev-e2e
-      - name: TEST_FIXTURE_USER
-        value: test-user-10
-      - name: TESTKUBE_NAMESPACE
-        value: testkube-agent-e2e
       shell: npx playwright test --retries=1
     artifacts:
       paths:
@@ -84,6 +86,10 @@ spec:
   - name: E2E Test Coverage report
     optional: true
     shell: npm run scenario-coverage
+  - name: Clean up temporary workflows
+    condition: always
+    optional: true
+    shell: npm run workflows:cleanup
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1

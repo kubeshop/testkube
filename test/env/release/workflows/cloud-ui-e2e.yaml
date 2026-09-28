@@ -68,3 +68,7 @@ spec:
   - name: E2E Test Coverage report
     optional: true
     shell: npm run scenario-coverage
+  - name: Clean up temporary workflows
+    condition: always
+    optional: true
+    shell: npm run workflows:cleanup
