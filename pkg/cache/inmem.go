@@ -21,12 +21,29 @@ type InMemoryCache[T any] struct {
 	timeGetter timeGetter
 }
 
+type InMemoryCacheOption[T any] func(*InMemoryCache[T])
+
+// WithTimeGetter replaces the time source used to set and check expiry, so that callers can
+// exercise TTL behavior without waiting on the wall clock.
+func WithTimeGetter[T any](now timeGetter) InMemoryCacheOption[T] {
+	return func(c *InMemoryCache[T]) {
+		if now != nil {
+			c.timeGetter = now
+		}
+	}
+}
+
 // NewInMemoryCache creates a new in-memory cache.
 // The underlying cache implementation uses a sync.Map so it is thread-safe.
-func NewInMemoryCache[T any]() *InMemoryCache[T] {
-	return &InMemoryCache[T]{
+func NewInMemoryCache[T any](opts ...InMemoryCacheOption[T]) *InMemoryCache[T] {
+	c := &InMemoryCache[T]{
 		timeGetter: time.Now,
 	}
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	return c
 }
 
 func (c *InMemoryCache[T]) Get(ctx context.Context, key string) (T, error) {
@@ -64,6 +81,21 @@ func (c *InMemoryCache[T]) Set(ctx context.Context, key string, value T, ttl tim
 		i.expiresAt = &expiresAt
 	}
 	c.cache.Store(key, i)
+
+	return nil
+}
+
+func (c *InMemoryCache[T]) Delete(ctx context.Context, key string) error {
+	c.cache.Delete(key)
+
+	return nil
+}
+
+func (c *InMemoryCache[T]) Clear(ctx context.Context) error {
+	c.cache.Range(func(key, _ any) bool {
+		c.cache.Delete(key)
+		return true
+	})
 
 	return nil
 }
