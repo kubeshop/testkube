@@ -105,7 +105,7 @@ func TestApplyMissingConfig(t *testing.T) {
 	}, cfg, nil)
 
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Spec: TestWorkflowSpecBase: Pod: Labels: {{config.bar}}-key")
+	assert.Contains(t, err.Error(), "spec.pod.labels[{{config.bar}}-key]")
 	assert.Contains(t, err.Error(), "error while accessing config.baz: unknown variable")
 }
 
