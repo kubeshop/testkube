@@ -67,7 +67,7 @@ func (r StopReason) Sentence() string {
 	case StopReasonQueueTimeout:
 		return "the execution exceeded the queue timeout of the workflow"
 	case StopReasonQueuedTooLong:
-		return "the execution stayed queued for too long"
+		return "no runner started the execution before the queue time limit"
 	case StopReasonTransitionTimeout:
 		return "the execution stayed in a transitional state for too long"
 	case StopReasonStopNotConfirmed:

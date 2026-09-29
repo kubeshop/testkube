@@ -12,9 +12,8 @@ const (
 	StartReasonUnknown           StartReason = "start-failed"
 )
 
-// Sentence returns the words for the reason in a message for people, as the tail of
-// "Failed to run execution: ...". It returns an empty string for a value it does not
-// know, so a reader can keep the raw code.
+// Sentence returns the words for the reason in a message for people. It returns an empty
+// string for a value it does not know, so a reader can keep the raw code.
 func (r StartReason) Sentence() string {
 	switch r {
 	case StartReasonImagePullFailed:
