@@ -97,26 +97,17 @@ func (s *Server) DeclineExecution(ctx context.Context, req *executionv1.DeclineE
 	return &executionv1.DeclineExecutionResponse{}, nil
 }
 
-// writeDeclineCause records why the runner declined the execution. It writes the same words as the
-// control plane, so a user reads one sentence for a failed start in both deployments. The message
-// of the runner follows on its own line, because it holds the text that Kubernetes reported.
+// writeDeclineCause records why the runner declined the execution. The reason code has its own
+// field, so the message holds only the cause that the runner sent. Only a runner that is older
+// than the decline fields sends no cause.
 func writeDeclineCause(result *testkube.TestWorkflowResult, reason testkube.StartReason, message string) {
 	if result.Initialization == nil {
 		result.Initialization = &testkube.TestWorkflowStepResult{}
 	}
-	// A reason without words keeps its raw code, so a code from a newer runner still reads.
-	sentence := reason.Sentence()
-	if sentence == "" {
-		sentence = string(reason)
+	if message == "" {
+		message = "The runner did not send the cause. Upgrade the agent to see the cause here."
 	}
-	text := "Failed to run execution"
-	if sentence != "" {
-		text += ": " + sentence
-	}
-	if message != "" {
-		text += "\n" + message
-	}
-	result.Initialization.ErrorMessage = text
+	result.Initialization.ErrorMessage = message
 	result.Initialization.ErrorReason = string(reason)
 	result.Initialization.Status = common.Ptr(testkube.ABORTED_TestWorkflowStepStatus)
 	result.Initialization.FinishedAt = result.FinishedAt

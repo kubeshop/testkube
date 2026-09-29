@@ -2,6 +2,7 @@ package imageinspector
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -122,4 +123,41 @@ func TestInspector_ResolveName_CustomDefault_NoOverride(t *testing.T) {
 	inspector := NewInspector("custom-registry:443", infos, secrets)
 
 	assert.Equal(t, "custom-registry:443/repo/image:1.2.3", inspector.ResolveName("", "custom-registry:443/repo/image:1.2.3"))
+}
+
+func TestInspector_Inspect_Error(t *testing.T) {
+	tests := []struct {
+		name            string
+		defaultRegistry string
+		info            *Info
+		err             error
+		want            string
+	}{
+		{
+			name: "an image without a default registry keeps its name",
+			err:  errors.New("no such host"),
+			want: `inspecting the image "imgname": no such host`,
+		},
+		{
+			name:            "the default registry is part of the name",
+			defaultRegistry: "default.io",
+			err:             errors.New("no such host"),
+			want:            `inspecting the image "default.io/imgname": no such host`,
+		},
+		{
+			name: "no details from the registry",
+			want: `inspecting the image "imgname": the registry returned no details`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			infos := NewMockInfoFetcher(ctrl)
+			inspector := NewInspector(tt.defaultRegistry, infos, NewMockSecretFetcher(ctrl))
+			infos.EXPECT().Fetch(gomock.Any(), "", "imgname", gomock.Any()).Return(tt.info, tt.err)
+
+			_, err := inspector.Inspect(context.Background(), "", "imgname", corev1.PullAlways, nil)
+			assert.EqualError(t, err, tt.want)
+		})
+	}
 }

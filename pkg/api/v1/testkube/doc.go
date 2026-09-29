@@ -23,10 +23,9 @@
 // # Display labels
 //
 // Label gives the raw type and reason, for tables such as the CLI. StatusDetailsType.DisplayName
-// gives the display name that the dashboard shows for a type, and DisplayLabel adds the reason code
-// to it, for text outside the product, such as a GitHub check. Neither one carries the message or
-// the user. A new type needs a display name in statusDetailsTypeNames and in the dashboard
-// constants, else it shows as its code.
+// gives the display name of a type, and DisplayLabel adds the reason code to it, for a short
+// summary such as a CI check. Both hold only the type and the reason. A new type needs a display
+// name in statusDetailsTypeNames, else it shows as its code.
 //
 // # The stop
 //
