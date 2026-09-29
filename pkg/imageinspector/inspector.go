@@ -61,12 +61,12 @@ func (i *inspector) fetch(ctx context.Context, registry, image string, pullSecre
 		secrets[idx] = *secret
 	}
 
-	// Load the image details
+	// Load the image details. Inspect names the image, so an error here keeps only the cause.
 	info, err := i.fetcher.Fetch(ctx, registry, image, secrets)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("fetching '%s' image from '%s' registry", image, registry))
+		return nil, err
 	} else if info == nil {
-		return nil, fmt.Errorf("unknown problem with fetching '%s' image from '%s' registry", image, registry)
+		return nil, errors.New("the registry returned no details")
 	}
 	if info.Shell != "" && !filepath.IsAbs(info.Shell) {
 		info.Shell = ""
@@ -114,10 +114,7 @@ func (i *inspector) Inspect(ctx context.Context, registry, image string, pullPol
 	// Fetch the data
 	value, err := i.fetch(ctx, registry, image, pullSecretNames)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("inspecting image: '%s' at '%s' registry", image, registry))
-	}
-	if value == nil {
-		return nil, fmt.Errorf("not found image details for: '%s' at '%s' registry", image, registry)
+		return nil, errors.Wrapf(err, "inspecting the image %q", i.ResolveName(registry, image))
 	}
 
 	// Save asynchronously

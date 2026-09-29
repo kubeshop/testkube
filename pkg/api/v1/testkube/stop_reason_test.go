@@ -15,7 +15,7 @@ func TestStopReason_Sentence(t *testing.T) {
 		{name: "abort all", reason: StopReasonAbortAll, want: "all executions of the workflow were stopped"},
 		{name: "superseded", reason: StopReasonSuperseded, want: "a newer commit superseded this run"},
 		{name: "queue timeout", reason: StopReasonQueueTimeout, want: "the execution exceeded the queue timeout of the workflow"},
-		{name: "queued too long", reason: StopReasonQueuedTooLong, want: "the execution stayed queued for too long"},
+		{name: "queued too long", reason: StopReasonQueuedTooLong, want: "no runner started the execution before the queue time limit"},
 		{name: "transition timeout", reason: StopReasonTransitionTimeout, want: "the execution stayed in a transitional state for too long"},
 		{name: "stop not confirmed", reason: StopReasonStopNotConfirmed, want: "the runner did not confirm the stop in time"},
 		{name: "execution timeout", reason: StopReasonExecutionTimeout, want: "the execution ran for too long"},

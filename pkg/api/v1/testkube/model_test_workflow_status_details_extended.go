@@ -27,10 +27,9 @@ func (d *TestWorkflowStatusDetails) Label() string {
 }
 
 // DisplayLabel returns the display name of the type and the reason code, for example
-// "Infrastructure failure, oom-killed", for text outside the dashboard. Label gives the raw codes
-// instead. The reason stays the code, because the code is the stable key. The
-// message and the user are never part of it, because the text can leave the product, for example
-// to GitHub.
+// "Infrastructure failure, oom-killed", for a short summary such as a CI check. Label gives the
+// raw codes instead. The reason stays a code, because the code is the stable key. A reason with
+// the same code as the type, such as user-cancel, only repeats the type and is left out.
 func (d *TestWorkflowStatusDetails) DisplayLabel() string {
 	if d == nil {
 		return ""
@@ -39,7 +38,7 @@ func (d *TestWorkflowStatusDetails) DisplayLabel() string {
 	switch {
 	case name == "":
 		return d.Reason
-	case d.Reason == "":
+	case d.Reason == "" || d.Reason == d.Type_:
 		return name
 	default:
 		return name + ", " + d.Reason
