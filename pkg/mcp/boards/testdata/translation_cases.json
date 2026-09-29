@@ -152,5 +152,81 @@
     "params": {"duration": "week"},
     "endpoint": "/insights/workflows",
     "query": {"startDate": "2026-10-27T05:00:00Z", "endDate": "2026-11-03T05:00:00Z"}
+  },
+  {
+    "name": "failure type and reason filters are sent as their own params",
+    "kind": "workflows",
+    "now": "2026-09-23T15:04:05Z",
+    "params": {
+      "duration": "day",
+      "filter": [
+        {"filterConfigurationKey": "statusDetailsType", "id": "1", "operator": "is", "value": ["step-failure", "init-failure"]},
+        {"filterConfigurationKey": "statusDetailsReason", "id": "2", "operator": "is", "value": ["oom-killed", ""]}
+      ]
+    },
+    "endpoint": "/insights/workflows",
+    "query": {
+      "startDate": "2026-09-23T00:00:00Z",
+      "endDate": "2026-09-24T00:00:00Z",
+      "statusDetailsType": "step-failure,init-failure",
+      "statusDetailsReason": "oom-killed"
+    }
+  },
+  {
+    "name": "pass-fail drops the failure filters, as it drops status",
+    "kind": "pass-fail",
+    "now": "2026-09-23T15:04:05Z",
+    "params": {
+      "duration": "day",
+      "filter": [
+        {"filterConfigurationKey": "statusDetailsType", "id": "1", "operator": "is", "value": ["step-failure"]},
+        {"filterConfigurationKey": "statusDetailsReason", "id": "2", "operator": "is", "value": ["oom-killed"]}
+      ]
+    },
+    "endpoint": "/insights/stats",
+    "query": {"startDate": "2026-09-23T00:00:00Z", "endDate": "2026-09-24T00:00:00Z"}
+  },
+  {
+    "name": "executions grouped by failure type send the failure reason filter",
+    "kind": "executions",
+    "now": "2026-09-23T15:04:05Z",
+    "params": {
+      "duration": "day",
+      "groupBy": "statusDetailsType",
+      "filter": [{"filterConfigurationKey": "statusDetailsReason", "id": "1", "operator": "is", "value": ["deadline-exceeded"]}]
+    },
+    "endpoint": "/insights/executions",
+    "query": {
+      "startDate": "2026-09-23T00:00:00Z",
+      "endDate": "2026-09-24T00:00:00Z",
+      "groupBy": "statusDetailsType",
+      "statusDetailsReason": "deadline-exceeded"
+    }
+  },
+  {
+    "name": "time-series segmented by failure reason keeps the failure filters out of the identity filters",
+    "kind": "time-series",
+    "now": "2026-09-23T15:04:05Z",
+    "params": {
+      "duration": "day",
+      "measure": "execution-count",
+      "segment": "statusDetailsReason",
+      "filter": [
+        {"filterConfigurationKey": "statusDetailsType", "id": "1", "operator": "is", "value": ["execution-failure"]},
+        {"filterConfigurationKey": "statusDetailsReason", "id": "2", "operator": "is", "value": ["oom-killed"]},
+        {"filterConfigurationKey": "scenario", "id": "3", "operator": "is", "value": ["checkout"]}
+      ]
+    },
+    "endpoint": "/insights/series",
+    "query": {
+      "startDate": "2026-09-23T00:00:00Z",
+      "endDate": "2026-09-24T00:00:00Z",
+      "measure": "execution-count",
+      "aggregate": "sum",
+      "segment": "statusDetailsReason",
+      "statusDetailsType": "execution-failure",
+      "statusDetailsReason": "oom-killed",
+      "identityFilters": "{\"scenario\":[\"checkout\"]}"
+    }
   }
 ]
