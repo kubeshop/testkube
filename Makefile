@@ -243,7 +243,7 @@ build-api-server: ## Build API server binary
 		./cmd/api-server/
 	@echo "API server built: $(API_SERVER_BIN)"
 
-.PHONY: build-testkube-cli
+.PHONY: build-testkube-cli $(CLI_BIN)
 build-testkube-cli: $(CLI_BIN) ## Build CLI binary (testkube)
 $(CLI_BIN): $(LOCALBIN_APP)
 	@echo "Building testkube CLI ($(GOOS)/$(GOARCH))..."
@@ -254,7 +254,7 @@ $(CLI_BIN): $(LOCALBIN_APP)
 		cmd/kubectl-testkube/main.go
 	@echo "testkube CLI built: $(CLI_BIN)"
 
-.PHONY: build-kubectl-testkube-cli
+.PHONY: build-kubectl-testkube-cli $(KUBECTL_TESTKUBE_CLI_BIN)
 build-kubectl-testkube-cli: $(KUBECTL_TESTKUBE_CLI_BIN) ## Build CLI binary (kubectl-testkube)
 $(KUBECTL_TESTKUBE_CLI_BIN): $(LOCALBIN_APP)
 	@echo "Building kubectl-testkube CLI ($(GOOS)/$(GOARCH))..."
