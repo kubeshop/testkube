@@ -38,9 +38,18 @@ const (
 	FilterEnvironment = "environment"
 	FilterWorkflow    = "workflow"
 	FilterStatus      = "status"
-	FilterLabels      = "labels-v2"
-	FilterTags        = "tags"
+	// The failure type (init-failure, execution-failure, step-failure,
+	// user-cancel, unknown) and the free-form failure reason code of an
+	// execution that did not pass.
+	FilterStatusDetailsType   = "statusDetailsType"
+	FilterStatusDetailsReason = "statusDetailsReason"
+	FilterLabels              = "labels-v2"
+	FilterTags                = "tags"
 )
+
+// baseFilters lists the filter keys every report kind sends as query params
+// of their own, as the dashboard's BASE_FILTER_KEYS does.
+var baseFilters = []string{FilterEnvironment, FilterWorkflow, FilterStatus, FilterStatusDetailsType, FilterStatusDetailsReason, FilterLabels, FilterTags}
 
 var (
 	durations          = []string{"day", "week", "month", "quarter"}

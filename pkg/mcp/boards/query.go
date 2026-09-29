@@ -3,6 +3,7 @@ package boards
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 )
@@ -40,6 +41,11 @@ type InsightQuery struct {
 	Status    string
 	Selector  string
 	TagFilter string
+
+	// StatusDetailsType and StatusDetailsReason narrow the query to executions
+	// that failed with these types and reason codes, comma-separated.
+	StatusDetailsType   string
+	StatusDetailsReason string
 
 	// executions
 	GroupBy string
@@ -81,6 +87,8 @@ func (q InsightQuery) QueryParams() map[string]string {
 	set("env", q.Env)
 	set("workflow", q.Workflow)
 	set("status", q.Status)
+	set("statusDetailsType", q.StatusDetailsType)
+	set("statusDetailsReason", q.StatusDetailsReason)
 	set("selector", q.Selector)
 	set("tagFilter", q.TagFilter)
 	set("groupBy", q.GroupBy)
@@ -133,6 +141,8 @@ func BuildQuery(kind string, params map[string]any, opts QueryOptions) (InsightQ
 	}
 	q.Workflow = strings.Join(compact(FilterValues(filters, FilterWorkflow)), ",")
 	q.Status = strings.Join(FilterValues(filters, FilterStatus), ",")
+	q.StatusDetailsType = strings.Join(compact(FilterValues(filters, FilterStatusDetailsType)), ",")
+	q.StatusDetailsReason = strings.Join(compact(FilterValues(filters, FilterStatusDetailsReason)), ",")
 	q.Selector = strings.Join(compact(FilterValues(filters, FilterLabels)), ",")
 	// Tag values may contain commas, so tags travel as a JSON array.
 	if tags := compact(FilterValues(filters, FilterTags)); len(tags) > 0 {
@@ -143,9 +153,11 @@ func BuildQuery(kind string, params map[string]any, opts QueryOptions) (InsightQ
 	switch kind {
 	case KindPassFail:
 		q.Endpoint = EndpointStats
-		// The stats endpoint has no status filter; the dashboard sends one and
-		// the backend ignores it.
+		// The stats endpoint has no status or failure filters; the dashboard
+		// sends them and the backend ignores them.
 		q.Status = ""
+		q.StatusDetailsType = ""
+		q.StatusDetailsReason = ""
 	case KindExecutions:
 		q.Endpoint = EndpointExecutions
 		q.GroupBy = stringParam(params, "groupBy")
@@ -226,11 +238,10 @@ func DateRange(duration, from, to string, now time.Time, loc *time.Location) (ti
 // identityFilters collects the non-base filter keys of a time-series report,
 // a port of getTimeSeriesIdentityFilters.
 func identityFilters(filters []Filter) map[string][]string {
-	base := map[string]bool{FilterEnvironment: true, FilterWorkflow: true, FilterStatus: true, FilterLabels: true, FilterTags: true}
 	result := map[string][]string{}
 	for _, f := range filters {
 		key := f.FilterConfigurationKey
-		if base[key] {
+		if slices.Contains(baseFilters, key) {
 			continue
 		}
 		if _, done := result[key]; done {
