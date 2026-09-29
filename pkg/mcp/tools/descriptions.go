@@ -152,7 +152,7 @@ Add reports to it with add_board_report.` + boardSessionNote
 To change the reports on a board, use add_board_report, update_board_report and remove_board_report instead.` + boardSessionNote
 
 	AddBoardReportDescription = `Add a report (chart) to an Insights board. The report is placed on a new row at the bottom of the board, and its ID is returned.
-Kinds: 'pass-fail' (pass/fail ratio or counts over time), 'executions' (execution count or average duration grouped by status, workflow, label or tag),
+Kinds: 'pass-fail' (pass/fail ratio or counts over time), 'executions' (execution count or average duration grouped by status, failure type or reason, workflow, label or tag),
 'workflows' (per-workflow execution, failure and duration summary), 'time-series' (any measure over time, optionally segmented - including performance and resource metrics).
 Params you omit get the same defaults the dashboard gives a new report.` + boardSessionNote
 
@@ -177,17 +177,19 @@ A report that fails is returned with an error without failing the others. Relati
 - filter: dashboard filter list; prefer the 'filters' argument instead.
 Per kind:
 - pass-fail: measure 'ratio' (default), 'failed-count' or 'total-count'. Default duration: month.
-- executions: groupBy 'status' (default), 'workflow', a label key, or 'tag:<key>'; measure 'count' (default) or 'duration' (average, ms).
+- executions: groupBy 'status' (default), 'statusDetailsType' (failure type), 'statusDetailsReason' (failure reason), 'workflow', a label key, or 'tag:<key>'; measure 'count' (default) or 'duration' (average, ms).
 - workflows: no extra params. Default duration: month.
 - time-series: measure (default 'execution-count') - 'execution-count', 'execution-duration', 'case-count',
   a resource measure '<cpu-millicores|memory-used|network-in|network-out|disk-read|disk-write>-<min|max|avg|total>',
   or a granular metric key from list_insight_metric_keys; aggregate 'sum' (default), 'avg', 'min', 'max' or 'count';
-  segment (break down by 'status', 'workflow', a label key, 'tag:<key>' or an identity field; defaults to 'status' for execution-count, '' for none);
+  segment (break down by 'status', 'statusDetailsType', 'statusDetailsReason', 'workflow', a label key, 'tag:<key>' or an identity field; defaults to 'status' for execution-count, '' for none);
   chartType 'bar' (default), 'bar-grouped', 'bar-normalized', 'line-stacked', 'line', 'area-normalized', 'heatmap' or 'horizon'; overlaySuccessRate (boolean).
 Example: {"measure": "execution-duration", "aggregate": "avg", "segment": "workflow", "duration": "month", "chartType": "line"}`
 
 	BoardReportFiltersDescription = `Filters narrowing the report, as {key: [values]}. Keys: 'environment' (environment IDs; omit for every environment),
-'workflow' (workflow names), 'status' (e.g. 'passed', 'failed'), 'labels' (label selectors 'key=value'), 'tags' (tag predicates 'key=value').
+'workflow' (workflow names), 'status' (e.g. 'passed', 'failed'), 'labels' (label selectors 'key=value'), 'tags' (tag predicates 'key=value'),
+'statusDetailsType' (why an execution did not pass: 'init-failure', 'execution-failure', 'step-failure', 'user-cancel' or 'unknown'),
+'statusDetailsReason' (failure reason codes, e.g. 'oom-killed', 'deadline-exceeded'). Pass-fail reports ignore 'status' and the failure filters.
 For time-series reports any other key is a granular identity filter (e.g. 'testcase'). Values prefixed with '~' match as a regex.
 Example: {"workflow": ["api-tests"], "status": ["failed"], "environment": ["tkcenv_..."]}`
 
