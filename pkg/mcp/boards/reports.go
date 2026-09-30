@@ -210,16 +210,25 @@ func NormalizeReport(kind string, params map[string]any) (map[string]any, error)
 	case KindTimeSeries:
 		setDefault(out, "duration", "week")
 		setDefault(out, "measure", DefaultTimeSeriesMeasure)
-		setDefault(out, "aggregate", "sum")
-		// A new report is segmented by status only for the measure whose
-		// segments are execution statuses; an explicit "" means "no segment".
-		if _, ok := out["segment"]; !ok && out["measure"] == DefaultTimeSeriesMeasure {
+		// Choosing a measure in the dashboard picks its preferred aggregate
+		// and segments by status; an explicit "" segment means "no segment".
+		if measure, ok := out["measure"].(string); ok {
+			setDefault(out, "aggregate", PreferredAggregate(measure))
+		}
+		if _, ok := out["segment"]; !ok {
 			out["segment"] = "status"
 		}
 		setDefault(out, "chartType", "bar")
 	}
 	if err := validateReport(kind, out); err != nil {
 		return nil, err
+	}
+	// Everything here is caller input, so the aggregate must be one the
+	// dashboard offers for the measure.
+	if kind == KindTimeSeries {
+		if err := checkAggregateForMeasure(out); err != nil {
+			return nil, err
+		}
 	}
 	// A new report must name what it groups or measures.
 	switch kind {
@@ -248,6 +257,66 @@ func ValidateReport(kind string, params map[string]any) (map[string]any, error) 
 		return nil, err
 	}
 	return out, nil
+}
+
+// EditParams applies a caller's patch to the stored params of a report of the
+// given kind, returning a new params map. Keys in patch replace the stored
+// ones and a nil value removes a key (see MergeParams), and the side effects
+// the dashboard editor gives a change (its setPeriod and setMeasure) follow:
+//   - a preset duration drops the stored from/to, which would otherwise keep
+//     overriding it; a from or to set in the same patch is kept;
+//   - a patch that sets from and to without a duration makes it "custom";
+//   - a new time-series measure resets the aggregate to its preferred one and
+//     the segment to status, unless the patch sets them.
+//
+// A time-series aggregate the patch sets must be one the measure offers. The
+// result still has to be validated with ValidateReport.
+func EditParams(kind string, existing, patch map[string]any) (map[string]any, error) {
+	out := MergeParams(existing, patch)
+
+	if duration, ok := patch["duration"].(string); ok && duration != "" && duration != "custom" {
+		for _, key := range []string{"from", "to"} {
+			if _, set := patch[key]; !set {
+				delete(out, key)
+			}
+		}
+	}
+	if _, set := patch["duration"]; !set && patch["from"] != nil && patch["to"] != nil {
+		out["duration"] = "custom"
+	}
+
+	if kind != KindTimeSeries {
+		return out, nil
+	}
+	if measure, ok := patch["measure"].(string); ok && measure != "" && measure != existing["measure"] {
+		if _, set := patch["aggregate"]; !set {
+			out["aggregate"] = PreferredAggregate(measure)
+		}
+		if _, set := patch["segment"]; !set {
+			out["segment"] = "status"
+		}
+	}
+	if patch["aggregate"] != nil {
+		if err := checkAggregateForMeasure(out); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
+// checkAggregateForMeasure rejects an aggregate the dashboard does not offer
+// for the report's measure. It is applied to caller input only: a stored
+// report may hold an aggregate a since-changed rule no longer offers.
+func checkAggregateForMeasure(params map[string]any) error {
+	measure, _ := params["measure"].(string)
+	aggregate, ok := params["aggregate"].(string)
+	if measure == "" || !ok || aggregate == "" {
+		return nil
+	}
+	if allowed := AggregateOptions(measure); !slices.Contains(allowed, aggregate) {
+		return fmt.Errorf("param aggregate %q is not offered for measure %q (allowed: %s)", aggregate, measure, strings.Join(allowed, ", "))
+	}
+	return nil
 }
 
 // validateReport checks the params that are set, in place: it gives filters
