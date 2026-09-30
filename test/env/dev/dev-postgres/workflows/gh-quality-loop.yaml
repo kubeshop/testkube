@@ -47,9 +47,9 @@ spec:
   - name: Install
     shell: corepack enable npm && npm ci --prefer-offline
     cache:
-      key: cloud-npm-v1-{{hash_files("/data/repo/js/package-lock.json")}}
+      key: cloud-quality-loop-npm-{{hash_files("/data/repo/js/package-lock.json")}}
       restoreKeys:
-      - cloud-npm-v1-
+      - cloud-quality-loop-npm-
       paths:
       - /root/.npm/_cacache
       scope: environment
@@ -114,9 +114,9 @@ spec:
   - name: Install
     shell: corepack enable npm && npm ci --prefer-offline
     cache:
-      key: cloud-npm-v1-{{hash_files("/data/repo/js/package-lock.json")}}
+      key: cloud-quality-loop-npm-{{hash_files("/data/repo/js/package-lock.json")}}
       restoreKeys:
-      - cloud-npm-v1-
+      - cloud-quality-loop-npm-
       paths:
       - /root/.npm/_cacache
       scope: environment
@@ -181,9 +181,9 @@ spec:
   - name: Install
     shell: corepack enable npm && npm ci --prefer-offline
     cache:
-      key: cloud-npm-v1-{{hash_files("/data/repo/js/package-lock.json")}}
+      key: cloud-quality-loop-npm-{{hash_files("/data/repo/js/package-lock.json")}}
       restoreKeys:
-      - cloud-npm-v1-
+      - cloud-quality-loop-npm-
       paths:
       - /root/.npm/_cacache
       scope: environment
@@ -221,6 +221,9 @@ spec:
       authType: github
   container:
     workingDir: /data/repo
+    env:
+    - name: GOMODCACHE
+      value: /root/go/pkg/mod
     resources:
       limits:
         cpu: 8
@@ -236,6 +239,13 @@ spec:
       image: stoplight/spectral:6.14.2
       shell: spectral lint api/v1/base.yaml
   - name: Lint Golang
+    cache:
+      key: cloud-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      restoreKeys:
+      - cloud-quality-loop-gomod-
+      paths:
+      - /root/go/pkg/mod/cache/download
+      scope: environment
     run:
       image: golangci/golangci-lint:v2.12.2
       env:
@@ -310,9 +320,9 @@ spec:
   - name: Install
     shell: corepack enable npm && npm ci --prefer-offline
     cache:
-      key: cloud-npm-v1-{{hash_files("/data/repo/js/package-lock.json")}}
+      key: cloud-quality-loop-npm-{{hash_files("/data/repo/js/package-lock.json")}}
       restoreKeys:
-      - cloud-npm-v1-
+      - cloud-quality-loop-npm-
       paths:
       - /root/.npm/_cacache
       scope: environment
@@ -391,6 +401,8 @@ spec:
     workingDir: /data/repo
     image: golang:1.26.6-bookworm
     env:
+    - name: GOMODCACHE
+      value: /root/go/pkg/mod
     - name: GOPROXY
       value: https://proxy.golang.org,direct
     resources:
@@ -404,6 +416,13 @@ spec:
     activeDeadlineSeconds: 600
   steps:
   - name: Check go.mod, go.sum, and OpenAPI
+    cache:
+      key: cloud-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      restoreKeys:
+      - cloud-quality-loop-gomod-
+      paths:
+      - /root/go/pkg/mod/cache/download
+      scope: environment
     shell: |-
       set -euo pipefail
       apt-get update -qq
@@ -454,6 +473,8 @@ spec:
     workingDir: /data/repo
     image: golang:1.26.6-bookworm
     env:
+    - name: GOMODCACHE
+      value: /root/go/pkg/mod
     - name: E2E
       value: "y"
     - name: INTEGRATION
@@ -635,6 +656,13 @@ spec:
         periodSeconds: 1
   steps:
   - name: Run tests
+    cache:
+      key: cloud-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      restoreKeys:
+      - cloud-quality-loop-gomod-
+      paths:
+      - /root/go/pkg/mod/cache/download
+      scope: environment
     shell: |
       set -euo pipefail
       apt-get update -qq
