@@ -68,3 +68,7 @@ spec:
   - name: E2E Test Coverage report
     optional: true
     shell: npm run scenario-coverage
+  - name: Cleanup test resources
+    condition: always
+    optional: true
+    shell: npm run resources:cleanup
