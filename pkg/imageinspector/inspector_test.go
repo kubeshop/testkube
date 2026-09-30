@@ -21,13 +21,13 @@ func TestInspectorInspect(t *testing.T) {
 
 	sec := corev1.Secret{StringData: map[string]string{"foo": "bar"}}
 	req := RequestBase{Registry: "regname.io", Image: "imgname"}
-	resolvedReq := RequestBase{Image: "regname.io/imgname"}
+	// Only the versioned key is read, so a stale entry under the resolved name or the image alone
+	// is never used.
+	resolvedReq := RequestBase{Registry: resolvedCacheVersion, Image: "regname.io/imgname"}
 	storage1.EXPECT().Get(gomock.Any(), resolvedReq).Return(nil, nil)
 	storage2.EXPECT().Get(gomock.Any(), resolvedReq).Return(nil, nil)
-	storage1.EXPECT().Get(gomock.Any(), req).Return(nil, nil)
-	storage2.EXPECT().Get(gomock.Any(), req).Return(nil, nil)
 	secrets.EXPECT().Get(gomock.Any(), "secname").Return(&sec, nil)
-	infos.EXPECT().Fetch(gomock.Any(), req.Registry, req.Image, []corev1.Secret{sec}).Return(&info1, nil)
+	infos.EXPECT().Fetch(gomock.Any(), "", resolvedReq.Image, []corev1.Secret{sec}).Return(&info1, nil)
 
 	storage1.EXPECT().Store(gomock.Any(), resolvedReq, info1).Return(nil)
 	storage2.EXPECT().Store(gomock.Any(), resolvedReq, info1).Return(nil)
@@ -49,7 +49,7 @@ func TestInspectorInspectWithCache(t *testing.T) {
 	inspector := NewInspector("default.io", infos, secrets, storage1, storage2)
 
 	req := RequestBase{Registry: "regname.io", Image: "imgname"}
-	resolvedReq := RequestBase{Image: "regname.io/imgname"}
+	resolvedReq := RequestBase{Registry: resolvedCacheVersion, Image: "regname.io/imgname"}
 	storage1.EXPECT().Get(gomock.Any(), resolvedReq).Return(&info1, nil)
 
 	v, err := inspector.Inspect(context.Background(), req.Registry, req.Image, corev1.PullIfNotPresent, []string{"secname"})
@@ -129,24 +129,28 @@ func TestInspector_Inspect_Error(t *testing.T) {
 	tests := []struct {
 		name            string
 		defaultRegistry string
+		wantFetched     string
 		info            *Info
 		err             error
 		want            string
 	}{
 		{
-			name: "an image without a default registry keeps its name",
-			err:  errors.New("no such host"),
-			want: `inspecting the image "imgname": no such host`,
+			name:        "an image without a default registry keeps its name",
+			wantFetched: "imgname",
+			err:         errors.New("no such host"),
+			want:        `inspecting the image "imgname": no such host`,
 		},
 		{
-			name:            "the default registry is part of the name",
+			name:            "the image is fetched from the default registry that the pod pulls from",
 			defaultRegistry: "default.io",
+			wantFetched:     "default.io/imgname",
 			err:             errors.New("no such host"),
 			want:            `inspecting the image "default.io/imgname": no such host`,
 		},
 		{
-			name: "no details from the registry",
-			want: `inspecting the image "imgname": the registry returned no details`,
+			name:        "no details from the registry",
+			wantFetched: "imgname",
+			want:        `inspecting the image "imgname": the registry returned no details`,
 		},
 	}
 	for _, tt := range tests {
@@ -154,7 +158,7 @@ func TestInspector_Inspect_Error(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			infos := NewMockInfoFetcher(ctrl)
 			inspector := NewInspector(tt.defaultRegistry, infos, NewMockSecretFetcher(ctrl))
-			infos.EXPECT().Fetch(gomock.Any(), "", "imgname", gomock.Any()).Return(tt.info, tt.err)
+			infos.EXPECT().Fetch(gomock.Any(), "", tt.wantFetched, gomock.Any()).Return(tt.info, tt.err)
 
 			_, err := inspector.Inspect(context.Background(), "", "imgname", corev1.PullAlways, nil)
 			assert.EqualError(t, err, tt.want)
