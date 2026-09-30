@@ -754,3 +754,38 @@ func TestUpdateBoardReport_KeepsWhatTheReportShows(t *testing.T) {
 		assert.Empty(t, f.updates)
 	})
 }
+
+func TestUpdateBoardReport_EditsLikeTheDashboardEditor(t *testing.T) {
+	customRange := strings.Replace(testBoard, `"measure": "ratio", "duration": "month", "filter": []`,
+		`"measure": "ratio", "duration": "custom", "from": "2026-01-01T00:00:00Z", "to": "2026-02-01T00:00:00Z", "filter": []`, 1)
+
+	t.Run("a preset duration drops the stored custom range", func(t *testing.T) {
+		f := &fakeBoardClient{board: customRange}
+		_, handler := UpdateBoardReport(f)
+		result := callTool(t, handler, map[string]any{"board": "quality", "reportId": "aa", "params": map[string]any{"duration": "week"}})
+		require.False(t, result.IsError, getResultText(result))
+		params := f.lastUpdate(t).Content.ContentData.Params
+		assert.Equal(t, "week", params["duration"])
+		assert.NotContains(t, params, "from", "a kept range would go on deciding the window")
+		assert.NotContains(t, params, "to")
+	})
+
+	t.Run("a new measure resets the aggregate and segment", func(t *testing.T) {
+		f := &fakeBoardClient{board: testBoard}
+		_, handler := UpdateBoardReport(f)
+		result := callTool(t, handler, map[string]any{"board": "quality", "reportId": "cc", "params": map[string]any{"measure": "http_req_duration_p95_ms"}})
+		require.False(t, result.IsError, getResultText(result))
+		params := f.lastUpdate(t).Content.ContentData.Params
+		assert.Equal(t, "max", params["aggregate"], "percentiles are not summed")
+		assert.Equal(t, "status", params["segment"])
+	})
+
+	t.Run("an aggregate the measure does not offer is refused", func(t *testing.T) {
+		f := &fakeBoardClient{board: testBoard}
+		_, handler := UpdateBoardReport(f)
+		result := callTool(t, handler, map[string]any{"board": "quality", "reportId": "cc", "params": map[string]any{"measure": "execution-count", "aggregate": "avg"}})
+		assert.True(t, result.IsError)
+		assert.Contains(t, getResultText(result), "not offered for measure")
+		assert.Empty(t, f.updates)
+	})
+}

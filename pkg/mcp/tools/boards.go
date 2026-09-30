@@ -465,7 +465,8 @@ func UpdateBoardReport(client BoardEditor) (tool mcp.Tool, handler server.ToolHa
 		mcp.WithString("name", mcp.Description("New title.")),
 		mcp.WithString("description", mcp.Description("New description. Pass an empty string to clear it; omit to keep it.")),
 		mcp.WithString("kind", mcp.Description("New report kind. Changing it starts from that kind's defaults instead of the old params."), mcp.Enum(boards.Kinds...)),
-		mcp.WithObject("params", mcp.Description(BoardReportParamsDescription+" Merged into the current params unless replaceParams is true; a null value removes a param.")),
+		mcp.WithObject("params", mcp.Description(BoardReportParamsDescription+" Merged into the current params unless replaceParams is true; a null value removes a param."+
+			" As in the dashboard editor, a preset duration drops a stored from/to, and a new time-series measure resets aggregate and segment unless they are given too.")),
 		mcp.WithObject("filters", mcp.Description(BoardReportFiltersDescription+" Each key given replaces that key's current filters; an empty list removes them.")),
 		mcp.WithBoolean("replaceParams", mcp.Description("Replace the params entirely instead of merging (default: false).")),
 	)
@@ -523,11 +524,14 @@ func UpdateBoardReport(client BoardEditor) (tool mcp.Tool, handler server.ToolHa
 			if err != nil {
 				return UpdateBoardRequest{}, mcp.NewToolResultError(err.Error())
 			}
-			base := existing.Params
-			if replaceParams {
-				base = nil
+			// An edit applies the side effects the dashboard editor gives it,
+			// e.g. a preset duration drops the stored custom range.
+			params := boards.MergeParams(nil, patch)
+			if !replaceParams {
+				if params, err = boards.EditParams(draft.Kind, existing.Params, patch); err != nil {
+					return UpdateBoardRequest{}, mcp.NewToolResultError(err.Error())
+				}
 			}
-			params := boards.MergeParams(base, patch)
 			if err := boards.ApplyFilters(params, filters); err != nil {
 				return UpdateBoardRequest{}, mcp.NewToolResultError(err.Error())
 			}
