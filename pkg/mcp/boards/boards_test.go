@@ -87,14 +87,134 @@ func TestNormalizeReport_Defaults(t *testing.T) {
 	}
 }
 
-func TestNormalizeReport_TimeSeriesSegment(t *testing.T) {
-	got, err := NormalizeReport(KindTimeSeries, map[string]any{"measure": "cpu-millicores-max"})
+func TestNormalizeReport_TimeSeriesMeasureDefaults(t *testing.T) {
+	// As the dashboard does when a measure is chosen: its preferred aggregate,
+	// segmented by status.
+	got, err := NormalizeReport(KindTimeSeries, map[string]any{"measure": "http_req_duration_p95_ms"})
 	require.NoError(t, err)
-	assert.NotContains(t, got, "segment", "only execution-count starts segmented by status")
+	assert.Equal(t, "max", got["aggregate"])
+	assert.Equal(t, "status", got["segment"])
+
+	got, err = NormalizeReport(KindTimeSeries, map[string]any{"measure": "cpu-millicores-min", "aggregate": "max"})
+	require.NoError(t, err)
+	assert.Equal(t, "max", got["aggregate"], "an offered aggregate the caller chose is kept")
 
 	got, err = NormalizeReport(KindTimeSeries, map[string]any{"segment": ""})
 	require.NoError(t, err)
 	assert.NotContains(t, got, "segment", "an explicit empty segment means no segment")
+
+	_, err = NormalizeReport(KindTimeSeries, map[string]any{"measure": DefaultTimeSeriesMeasure, "aggregate": "avg"})
+	assert.ErrorContains(t, err, `param aggregate "avg" is not offered for measure "execution-count" (allowed: sum)`)
+}
+
+func TestAggregateOptions(t *testing.T) {
+	tests := []struct {
+		measure string
+		want    []string
+	}{
+		{"execution-count", []string{"sum"}},
+		{"case-count", []string{"sum"}},
+		{"execution-duration", []string{"sum", "avg", "min", "max"}},
+		{"cpu-millicores-max", []string{"max", "min"}},
+		{"memory-used-min", []string{"min", "max"}},
+		{"network-in-avg", []string{"avg"}},
+		{"disk-write-total", []string{"sum"}},
+		{"http_req_duration_min", []string{"min", "max"}},
+		{"iteration_duration_max_ms", []string{"max", "min"}},
+		{"test_count_failed", []string{"sum"}},
+		{"http_reqs", []string{"sum"}},
+		{"http_req_failed_rate", []string{"max", "avg", "min", "sum"}},
+		{"http_req_duration_p95_ms", []string{"max", "avg", "min", "sum"}},
+		{"Checkout_Latency_P99", []string{"max", "avg", "min", "sum"}},
+		{"cart_value", []string{"sum", "avg", "min", "max"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.measure, func(t *testing.T) {
+			assert.Equal(t, tt.want, AggregateOptions(tt.measure))
+			assert.Equal(t, tt.want[0], PreferredAggregate(tt.measure))
+		})
+	}
+}
+
+func TestEditParams(t *testing.T) {
+	custom := map[string]any{"duration": "custom", "from": "2026-01-01T00:00:00Z", "to": "2026-02-01T00:00:00Z", "measure": "ratio"}
+
+	t.Run("a preset duration drops the stored range", func(t *testing.T) {
+		got, err := EditParams(KindPassFail, custom, map[string]any{"duration": "week"})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]any{"duration": "week", "measure": "ratio"}, got)
+
+		// Kept, the range would still decide the window.
+		now := time.Date(2026, 9, 28, 12, 0, 0, 0, time.UTC)
+		q, err := BuildQuery(KindPassFail, got, QueryOptions{Now: now})
+		require.NoError(t, err)
+		assert.Equal(t, time.Date(2026, 9, 29, 0, 0, 0, 0, time.UTC), q.EndDate)
+	})
+
+	t.Run("a preset duration keeps a from or to set with it", func(t *testing.T) {
+		got, err := EditParams(KindPassFail, custom, map[string]any{"duration": "day", "from": "2026-03-01T00:00:00Z"})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]any{"duration": "day", "from": "2026-03-01T00:00:00Z", "measure": "ratio"}, got)
+	})
+
+	t.Run("a custom duration keeps the stored range", func(t *testing.T) {
+		got, err := EditParams(KindPassFail, custom, map[string]any{"duration": "custom"})
+		require.NoError(t, err)
+		assert.Equal(t, custom, got)
+	})
+
+	t.Run("a range without a duration makes it custom", func(t *testing.T) {
+		got, err := EditParams(KindWorkflows, map[string]any{"duration": "month"}, map[string]any{"from": "2026-01-01T00:00:00Z", "to": "2026-02-01T00:00:00Z"})
+		require.NoError(t, err)
+		assert.Equal(t, "custom", got["duration"])
+
+		got, err = EditParams(KindWorkflows, map[string]any{"duration": "month"}, map[string]any{"from": "2026-01-01T00:00:00Z"})
+		require.NoError(t, err)
+		assert.Equal(t, "month", got["duration"], "only from spans the duration forward, so it stays")
+	})
+
+	stored := map[string]any{"measure": "execution-duration", "aggregate": "avg", "segment": "workflow", "chartType": "line"}
+
+	t.Run("a new measure resets the aggregate and segment", func(t *testing.T) {
+		got, err := EditParams(KindTimeSeries, stored, map[string]any{"measure": "http_req_duration_p95_ms"})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]any{"measure": "http_req_duration_p95_ms", "aggregate": "max", "segment": "status", "chartType": "line"}, got)
+	})
+
+	t.Run("a new measure keeps an aggregate and segment set with it", func(t *testing.T) {
+		got, err := EditParams(KindTimeSeries, stored, map[string]any{"measure": "cpu-millicores-max", "aggregate": "min", "segment": ""})
+		require.NoError(t, err)
+		assert.Equal(t, "min", got["aggregate"])
+		assert.Equal(t, "", got["segment"])
+	})
+
+	t.Run("the same measure changes nothing else", func(t *testing.T) {
+		got, err := EditParams(KindTimeSeries, stored, map[string]any{"measure": "execution-duration", "chartType": "bar"})
+		require.NoError(t, err)
+		assert.Equal(t, "avg", got["aggregate"])
+		assert.Equal(t, "workflow", got["segment"])
+	})
+
+	t.Run("a measure outside time-series resets nothing", func(t *testing.T) {
+		got, err := EditParams(KindExecutions, map[string]any{"measure": "count", "groupBy": "workflow"}, map[string]any{"measure": "duration"})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]any{"measure": "duration", "groupBy": "workflow"}, got)
+	})
+
+	t.Run("an aggregate the measure does not offer is refused", func(t *testing.T) {
+		_, err := EditParams(KindTimeSeries, stored, map[string]any{"measure": DefaultTimeSeriesMeasure, "aggregate": "max"})
+		assert.ErrorContains(t, err, `param aggregate "max" is not offered for measure "execution-count"`)
+
+		_, err = EditParams(KindTimeSeries, stored, map[string]any{"aggregate": "last"})
+		assert.ErrorContains(t, err, "allowed: sum, avg, min, max")
+	})
+
+	t.Run("a stored aggregate the measure does not offer stays editable", func(t *testing.T) {
+		odd := map[string]any{"measure": DefaultTimeSeriesMeasure, "aggregate": "last"}
+		got, err := EditParams(KindTimeSeries, odd, map[string]any{"chartType": "line"})
+		require.NoError(t, err)
+		assert.Equal(t, "last", got["aggregate"])
+	})
 }
 
 func TestNormalizeReport_Validation(t *testing.T) {
