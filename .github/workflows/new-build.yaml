@@ -10,8 +10,7 @@ on:
     branches:
       - main
       - release/**
-      - ci/optimise-image-builds
-      
+
 env:
   ALPINE_IMAGE: alpine:3.24.1
   BUSYBOX_IMAGE: busybox:1.36.1-musl
@@ -110,7 +109,7 @@ jobs:
         uses: depot/bake-action@1d58c2668346981089b088b7ef36755b206b20e9 # v1.13.0
         if: ${{ github.ref_type != 'tag' }}
         with:
-          project: ${{ startsWith(github.ref, 'refs/heads/ci/') && '189p1kp969' || github.ref == 'refs/heads/main' && '3cp8bwpbj0' || '' }}
+          project: ${{ startsWith(github.ref, 'refs/heads/release/') && '189p1kp969' || github.ref == 'refs/heads/main' && '3cp8bwpbj0' || '' }}
           files: |
             ./docker-bake.hcl
             ${{ steps.api-meta.outputs.bake-file }}
