@@ -31,6 +31,9 @@ spec:
   container:
     workingDir: /data/repo/js
     image: node:24-bookworm
+    env:
+    - name: npm_config_cache
+      value: /root/.npm
     resources:
       limits:
         cpu: 4
@@ -42,7 +45,14 @@ spec:
     activeDeadlineSeconds: 1200
   steps:
   - name: Install
-    shell: corepack enable npm && npm ci
+    shell: corepack enable npm && npm ci --prefer-offline
+    cache:
+      key: cloud-quality-loop-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      restoreKeys:
+      - cloud-quality-loop-npm-
+      paths:
+      - /root/.npm/_cacache
+      scope: environment
   - name: Test
     shell: |
       mkdir -p /data/artifacts
@@ -88,6 +98,9 @@ spec:
   container:
     workingDir: /data/repo/js
     image: node:24-bookworm
+    env:
+    - name: npm_config_cache
+      value: /root/.npm
     resources:
       limits:
         cpu: 4
@@ -99,7 +112,14 @@ spec:
     activeDeadlineSeconds: 1200
   steps:
   - name: Install
-    shell: corepack enable npm && npm ci
+    shell: corepack enable npm && npm ci --prefer-offline
+    cache:
+      key: cloud-quality-loop-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      restoreKeys:
+      - cloud-quality-loop-npm-
+      paths:
+      - /root/.npm/_cacache
+      scope: environment
   - name: Test
     shell: |
       mkdir -p /data/artifacts
@@ -145,6 +165,9 @@ spec:
   container:
     workingDir: /data/repo/js
     image: node:24-bookworm
+    env:
+    - name: npm_config_cache
+      value: /root/.npm
     resources:
       limits:
         cpu: 4
@@ -156,7 +179,14 @@ spec:
     activeDeadlineSeconds: 1200
   steps:
   - name: Install
-    shell: corepack enable npm && npm ci
+    shell: corepack enable npm && npm ci --prefer-offline
+    cache:
+      key: cloud-quality-loop-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      restoreKeys:
+      - cloud-quality-loop-npm-
+      paths:
+      - /root/.npm/_cacache
+      scope: environment
   - name: Test
     shell: |
       mkdir -p /data/artifacts
@@ -191,6 +221,9 @@ spec:
       authType: github
   container:
     workingDir: /data/repo
+    env:
+    - name: GOMODCACHE
+      value: /root/go/pkg/mod
     resources:
       limits:
         cpu: 8
@@ -206,6 +239,13 @@ spec:
       image: stoplight/spectral:6.14.2
       shell: spectral lint api/v1/base.yaml
   - name: Lint Golang
+    cache:
+      key: cloud-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      restoreKeys:
+      - cloud-quality-loop-gomod-
+      paths:
+      - /root/go/pkg/mod/cache/download
+      scope: environment
     run:
       image: golangci/golangci-lint:v2.12.2
       env:
@@ -248,6 +288,8 @@ spec:
     workingDir: /data/repo/js
     image: node:24-bookworm
     env:
+    - name: npm_config_cache
+      value: /root/.npm
     - name: NODE_OPTIONS
       value: --max_old_space_size=4096
     resources:
@@ -276,7 +318,14 @@ spec:
       console.log('Lockfile platform entries: OK');
       "
   - name: Install
-    shell: corepack enable npm && npm ci
+    shell: corepack enable npm && npm ci --prefer-offline
+    cache:
+      key: cloud-quality-loop-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      restoreKeys:
+      - cloud-quality-loop-npm-
+      paths:
+      - /root/.npm/_cacache
+      scope: environment
   - name: Check TypeScript types
     shell: npx turbo run ts-check --cache-dir=.turbo
   - name: Check formatting
@@ -352,6 +401,8 @@ spec:
     workingDir: /data/repo
     image: golang:1.26.6-bookworm
     env:
+    - name: GOMODCACHE
+      value: /root/go/pkg/mod
     - name: GOPROXY
       value: https://proxy.golang.org,direct
     resources:
@@ -365,6 +416,13 @@ spec:
     activeDeadlineSeconds: 600
   steps:
   - name: Check go.mod, go.sum, and OpenAPI
+    cache:
+      key: cloud-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      restoreKeys:
+      - cloud-quality-loop-gomod-
+      paths:
+      - /root/go/pkg/mod/cache/download
+      scope: environment
     shell: |-
       set -euo pipefail
       apt-get update -qq
@@ -415,6 +473,8 @@ spec:
     workingDir: /data/repo
     image: golang:1.26.6-bookworm
     env:
+    - name: GOMODCACHE
+      value: /root/go/pkg/mod
     - name: E2E
       value: "y"
     - name: INTEGRATION
@@ -596,6 +656,13 @@ spec:
         periodSeconds: 1
   steps:
   - name: Run tests
+    cache:
+      key: cloud-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      restoreKeys:
+      - cloud-quality-loop-gomod-
+      paths:
+      - /root/go/pkg/mod/cache/download
+      scope: environment
     shell: |
       set -euo pipefail
       apt-get update -qq

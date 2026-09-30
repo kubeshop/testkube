@@ -16,7 +16,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: '{{ config.GIT_REVISION }}'
       paths:
-      - js/packages/e2e-tests
+      - js
       usernameFrom:
         secretKeyRef:
           name: 'testkube-agent-secrets'
@@ -39,6 +39,8 @@ spec:
     workingDir: /data/repo/js/packages/e2e-tests
     image: mcr.microsoft.com/playwright:v1.62.1-noble
     env:
+    - name: npm_config_cache
+      value: /root/.npm
     - name: CLOUD_BASE_URL
       value: '{{ dashboard.url }}'
     - name: CLOUD_API_URL
@@ -57,7 +59,13 @@ spec:
       value: 'testkube-agent'
   steps:
   - name: Install dependencies
-    shell: npm install
+    shell: npm ci --prefer-offline
+    cache:
+      key: npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      restoreKeys:
+      - npm-
+      paths:
+      - /root/.npm/_cacache
   - name: Run tests
     timeout: 15m
     shell: npx playwright test --retries=1 --grep-invert @dev-only
@@ -69,6 +77,7 @@ spec:
     optional: true
     shell: npm run scenario-coverage
   - name: Cleanup test resources
+    timeout: 2m
     condition: always
     optional: true
     shell: npm run resources:cleanup

@@ -22,6 +22,9 @@ spec:
       revision: '{{config.revision}}'
   container:
     workingDir: /data/repo
+    env:
+    - name: npm_config_cache
+      value: /root/.npm
     image: node:20-bookworm
     resources:
       requests:
@@ -31,13 +34,20 @@ spec:
     activeDeadlineSeconds: 600
   steps:
   - name: Check formatting
+    cache:
+      key: oss-quality-loop-npm-{{hash_files("/data/repo/package-lock.json")}}
+      restoreKeys:
+      - oss-quality-loop-npm-
+      paths:
+      - /root/.npm/_cacache
+      scope: environment
     timeout: 10m
     run:
       env:
       - name: HUSKY
         value: "0"
       shell: |
-        npm ci
+        npm ci --prefer-offline
         npm run format:check
 ---
 kind: TestWorkflow
@@ -64,6 +74,9 @@ spec:
       revision: '{{config.revision}}'
   container:
     workingDir: /data/repo
+    env:
+    - name: GOMODCACHE
+      value: /root/go/pkg/mod
     image: golangci/golangci-lint:v2.13.1
     resources:
       limits:
@@ -78,6 +91,13 @@ spec:
   - name: Verify golangci-lint config
     shell: golangci-lint config verify
   - name: Lint Go
+    cache:
+      key: oss-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      restoreKeys:
+      - oss-quality-loop-gomod-
+      paths:
+      - /root/go/pkg/mod/cache/download
+      scope: environment
     timeout: 10m
     shell: golangci-lint run ./... --timeout=10m
 ---
@@ -147,6 +167,9 @@ spec:
       revision: '{{config.revision}}'
   container:
     workingDir: /data/repo
+    env:
+    - name: GOMODCACHE
+      value: /root/go/pkg/mod
     image: golang:1.27.0-bookworm
     resources:
       limits:
@@ -239,6 +262,13 @@ spec:
         periodSeconds: 1
   steps:
   - name: Integration tests
+    cache:
+      key: oss-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      restoreKeys:
+      - oss-quality-loop-gomod-
+      paths:
+      - /root/go/pkg/mod/cache/download
+      scope: environment
     timeout: 30m
     run:
       env:
@@ -323,6 +353,9 @@ spec:
       revision: '{{config.revision}}'
   container:
     workingDir: /data/repo
+    env:
+    - name: GOMODCACHE
+      value: /root/go/pkg/mod
     image: golang:1.27.0-bookworm
     resources:
       limits:
@@ -335,6 +368,13 @@ spec:
     activeDeadlineSeconds: 1200
   steps:
   - name: Unit tests
+    cache:
+      key: oss-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      restoreKeys:
+      - oss-quality-loop-gomod-
+      paths:
+      - /root/go/pkg/mod/cache/download
+      scope: environment
     run:
       env:
       - name: GOPROXY
@@ -374,6 +414,9 @@ spec:
       revision: '{{config.revision}}'
   container:
     workingDir: /data/repo
+    env:
+    - name: GOMODCACHE
+      value: /root/go/pkg/mod
     image: golang:1.27.0-bookworm
     resources:
       requests:
@@ -383,6 +426,13 @@ spec:
     activeDeadlineSeconds: 900
   steps:
   - name: Verify generated CRDs
+    cache:
+      key: oss-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      restoreKeys:
+      - oss-quality-loop-gomod-
+      paths:
+      - /root/go/pkg/mod/cache/download
+      scope: environment
     run:
       env:
       - name: GOPROXY
