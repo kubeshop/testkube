@@ -2,6 +2,7 @@ package volume
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"math"
@@ -78,10 +79,7 @@ func RestoreTree(src *os.Root, declaredPaths []string, limits CopyLimits) (wrote
 			continue
 		}
 
-		if mkErr := os.MkdirAll(filepath.FromSlash(dest), 0o777); mkErr != nil {
-			return wrote, mkErr
-		}
-		dst, openErr := os.OpenRoot(filepath.FromSlash(dest))
+		dst, openErr := openDeclaredRoot(dest)
 		if openErr != nil {
 			return wrote, openErr
 		}
@@ -96,6 +94,51 @@ func RestoreTree(src *os.Root, declaredPaths []string, limits CopyLimits) (wrote
 		}
 	}
 	return wrote, nil
+}
+
+// ErrDeclaredPathIsSymlink reports a declared cache path that is - or is reached
+// through - a symlink.
+var ErrDeclaredPathIsSymlink = errors.New("declared cache path is reached through a symlink")
+
+// openDeclaredRoot opens a declared path as a root, having first established that it is
+// a real directory reached only through real directories.
+//
+// os.Root confines what happens *after* it is opened; opening it does not confine
+// itself. os.OpenRoot resolves the name it is given, final symlink included, so a
+// declared path that is a link to somewhere else yields a root at that somewhere else
+// and every subsequent write - confined, correctly, to the wrong place - lands outside
+// the declared path. Worse, the cleanup that a failed restore performs would then empty
+// the link rather than what was written through it.
+//
+// So each component is checked before it is traversed, and missing ones are created as
+// real directories. A step that has made one of them a symlink gets a miss, which is
+// the same answer any other unusable declared path gets.
+func openDeclaredRoot(dest string) (*os.Root, error) {
+	parts := strings.Split(strings.Trim(dest, "/"), "/")
+	current := "/"
+
+	for _, part := range parts {
+		if part == "" || part == "." {
+			continue
+		}
+		current = path.Join(current, part)
+		native := filepath.FromSlash(current)
+
+		info, err := os.Lstat(native)
+		switch {
+		case os.IsNotExist(err):
+			if mkErr := os.Mkdir(native, 0o777); mkErr != nil && !os.IsExist(mkErr) {
+				return nil, mkErr
+			}
+		case err != nil:
+			return nil, err
+		case info.Mode()&os.ModeSymlink != 0:
+			return nil, fmt.Errorf("%s: %w", current, ErrDeclaredPathIsSymlink)
+		case !info.IsDir():
+			return nil, fmt.Errorf("%s is not a directory", current)
+		}
+	}
+	return os.OpenRoot(filepath.FromSlash(dest))
 }
 
 // restoreInto copies one declared path's subtree out of the entry and into dst.

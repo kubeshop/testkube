@@ -856,18 +856,15 @@ func saveToVolume(
 		MaxEntries:    cacheMaxEntries,
 	})
 	if err != nil {
-		if errors.Is(err, volume.ErrTooLarge) || errors.Is(err, volume.ErrTooManyEntries) {
-			// A policy refusal rather than a volume failure: the object store would
-			// apply the same limit, so copying the whole tree again to be refused a
-			// second time helps nobody.
-			fmt.Fprintf(out, "cache: not saving %q: the entry is over the %s limit\n",
-				key, humanize.Bytes(uint64(maxSize)))
-			return true, nil
-		}
-		// The volume filled, or went away, mid-copy. The probe at open time cannot
-		// predict this - a volume with room for a probe file can still run out during a
-		// copy that is gigabytes long - so this is where it is discovered, and the
-		// object store is still there to take it.
+		// Including the size limit. The two backends measure different things - this
+		// one weighs the tree, the archive weighs the gzip of it - so a tree refused
+		// here can still fit as an archive, and a dependency tree of text compresses
+		// well. Settling the save here would drop a cache the object store would have
+		// taken, and every later run would reinstall.
+		//
+		// The volume filling mid-copy lands here too. The probe at open time cannot
+		// predict it, because a volume with room for a probe file can still run out
+		// during a copy of gigabytes.
 		fmt.Fprintf(out, "cache: the shared volume would not take %q: %s\n", key, err.Error())
 		return false, nil
 	}

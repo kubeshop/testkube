@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -1164,24 +1165,50 @@ func assertInboxEmpty(t *testing.T, mount, resourceID string) {
 	assert.Empty(t, entries, "an entry whose pointer was never published must not be left behind")
 }
 
-// An entry over the size limit is a policy refusal, not a sick volume. The object store
-// applies the same limit, so copying the whole tree again to be refused a second time
-// would only cost time.
-func TestRunCacheSave_DoesNotFallBackWhenTheEntryIsTooLarge(t *testing.T) {
+// The two backends measure different things - the volume weighs the tree, the archive
+// weighs the gzip of it - so a tree the volume refuses can still fit as an archive, and
+// a dependency tree of text compresses well. Settling the save on the volume's refusal
+// would drop a cache the object store would have taken, and every later run would
+// reinstall.
+//
+// This also covers the volume filling mid-copy, which arrives at the same branch: the
+// probe at open time cannot predict a volume that runs out during a copy of gigabytes.
+func TestRunCacheSave_FallsBackWhenTheVolumeRefusesTheTree(t *testing.T) {
 	root := t.TempDir()
 	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
-	require.NoError(t, os.WriteFile(filepath.Join(root, "big.txt"), []byte("0123456789"), 0o666))
+	// Highly compressible, so it is over the raw limit but well under it once gzipped.
+	require.NoError(t, os.WriteFile(filepath.Join(root, "big.txt"), bytes.Repeat([]byte("a"), 4096), 0o666))
 	mountCacheVolume(t, "exec-1")
 
-	repo := &fakeCacheRepository{}
+	var uploaded []byte
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		uploaded, _ = io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	repo := &fakeCacheRepository{save: executioncache.SaveResult{URL: server.URL}}
 	out := &bytes.Buffer{}
 	err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
 		Key:   "npm-abc",
 		Paths: []string{posix},
-	}), []string{posix}, "", 4, repo, out)
+	}), []string{posix}, "", 2048, repo, out)
 
 	require.NoError(t, err)
-	assert.Contains(t, out.String(), "over the")
-	assert.NotContains(t, out.String(), "object store instead")
-	assert.Zero(t, repo.saveCalls, "a refused entry must not ask for a grant on either backend")
+	assert.Contains(t, out.String(), "would not take", "the volume must refuse the tree")
+	assert.Contains(t, out.String(), "object store instead", "and the save must not stop there")
+
+	if runtime.GOOS == "windows" {
+		// What the archive half then does cannot be exercised here: its walker needs
+		// the host's own absolute form, where the volume half needs the POSIX one a
+		// cached path actually is, and on Windows those are not the same string. The
+		// decision above - the finding this test exists for - is checked either way.
+		return
+	}
+
+	// The archive was stored, not a pointer: the volume never took the entry.
+	_, isPointer := volume.Decode(uploaded)
+	assert.False(t, isPointer, "the fallback must store the archive itself")
+	assert.NotEmpty(t, uploaded)
+	assert.Less(t, len(uploaded), 2048, "the tree compresses to well under the limit the volume refused")
 }

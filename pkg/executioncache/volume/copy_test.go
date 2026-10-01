@@ -212,3 +212,66 @@ func posixDir(t *testing.T) string {
 	dir := t.TempDir()
 	return filepath.ToSlash(dir[len(filepath.VolumeName(dir)):])
 }
+
+// os.Root confines what happens after it is opened; opening it does not confine itself.
+// A declared path that is a link to somewhere else would yield a root at that somewhere
+// else, and every write - confined, correctly, to the wrong place - would land outside
+// the declared path, where the cleanup after a failed restore would not reach it.
+func TestRestoreRefusesADeclaredPathThatIsASymlink(t *testing.T) {
+	elsewhere := posixDir(t)
+	require.NoError(t, os.WriteFile(filepath.Join(elsewhere, "victim"), []byte("untouched"), 0o666))
+
+	// The entry carries <declared>/victim, which would overwrite it if the link were
+	// followed.
+	declared := posixDir(t)
+	write(t, filepath.Join(declared, "victim"), "from the entry")
+	entry := entryFrom(t, []string{declared})
+	require.NoError(t, os.RemoveAll(declared))
+	require.NoError(t, os.Symlink(elsewhere, declared))
+
+	wrote, err := RestoreTree(entry, []string{declared}, CopyLimits{})
+
+	assert.ErrorIs(t, err, ErrDeclaredPathIsSymlink)
+	assert.False(t, wrote, "nothing may be written, so the caller must not clear the paths")
+	body, readErr := os.ReadFile(filepath.Join(elsewhere, "victim"))
+	require.NoError(t, readErr)
+	assert.Equal(t, "untouched", string(body))
+}
+
+// The same applies to a directory on the way to the declared path: traversing it is how
+// the restore would be redirected, whether the link is the last component or not.
+func TestRestoreRefusesADeclaredPathReachedThroughASymlink(t *testing.T) {
+	elsewhere := posixDir(t)
+	require.NoError(t, os.MkdirAll(filepath.Join(elsewhere, "inner"), 0o777))
+	require.NoError(t, os.WriteFile(filepath.Join(elsewhere, "inner", "victim"), []byte("untouched"), 0o666))
+
+	parent := posixDir(t)
+	declared := parent + "/link/inner"
+	write(t, filepath.Join(parent, "link", "inner", "victim"), "from the entry")
+	entry := entryFrom(t, []string{declared})
+	require.NoError(t, os.RemoveAll(filepath.Join(parent, "link")))
+	require.NoError(t, os.Symlink(elsewhere, filepath.Join(parent, "link")))
+
+	_, err := RestoreTree(entry, []string{declared}, CopyLimits{})
+
+	assert.ErrorIs(t, err, ErrDeclaredPathIsSymlink)
+	body, readErr := os.ReadFile(filepath.Join(elsewhere, "inner", "victim"))
+	require.NoError(t, readErr)
+	assert.Equal(t, "untouched", string(body))
+}
+
+// A declared path that does not exist yet is the ordinary case - the step is about to
+// create it - and must be made as a real directory rather than refused.
+func TestRestoreCreatesAMissingDeclaredPath(t *testing.T) {
+	declared := posixDir(t)
+	write(t, filepath.Join(declared, "dep"), "from the entry")
+	entry := entryFrom(t, []string{declared})
+	require.NoError(t, os.RemoveAll(declared))
+
+	_, err := RestoreTree(entry, []string{declared}, CopyLimits{})
+
+	require.NoError(t, err)
+	body, readErr := os.ReadFile(filepath.Join(declared, "dep"))
+	require.NoError(t, readErr)
+	assert.Equal(t, "from the entry", string(body))
+}
