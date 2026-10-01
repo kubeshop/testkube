@@ -6,6 +6,8 @@ import (
 	errors2 "errors"
 	"fmt"
 	"maps"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -26,6 +28,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executioncache/volume"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
@@ -41,6 +44,14 @@ import (
 
 const (
 	ResumeRetryOnFailureDelay = 300 * time.Millisecond
+
+	// cacheInboxMode is what an execution's cache inbox is created with.
+	//
+	// Open, because the agent cannot know which user the step will run as, and a step
+	// that cannot write its own inbox silently stops using the cache. Nothing is given
+	// away by it: the directory is reachable only through the subPath mount that names
+	// it, which is one execution's alone - see prepareStepCacheInbox.
+	cacheInboxMode = 0o777
 )
 
 var (
@@ -187,6 +198,9 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 		bundle.SetRunnerId(w.config.RunnerId)
 	}
 
+	// Make this execution's cache inbox before the pod that writes to it starts.
+	w.prepareStepCacheInbox(cfg.Resource.Id)
+
 	// Register namespace information in the cache
 	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
 
@@ -261,6 +275,9 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 	if request.GroupId != "" {
 		bundle.SetGroupId(request.GroupId)
 	}
+
+	// Make this execution's cache inbox before the pod that writes to it starts.
+	w.prepareStepCacheInbox(cfg.Resource.Id)
 
 	// Register namespace information in the cache
 	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
@@ -789,4 +806,48 @@ func (w *worker) ResumeMany(ctx context.Context, ids []string, options execution
 	wg.Wait()
 
 	return errs
+}
+
+// prepareStepCacheInbox makes this execution's inbox on the shared cache volume, before
+// the pod that writes to it starts.
+//
+// kubelet would create the subPath directory itself - it creates a missing one, and its
+// parents, when it assembles the mounts. It creates it owned by root, though, with the
+// mode of the volume root and no regard for runAsUser, and fsGroup is not applied to a
+// multi-writer volume at all: the in-tree NFS plugin never reads it, and a CSI driver
+// only does so where its fsGroupPolicy says to. A step running as a non-root user would
+// then be unable to write to its own inbox, and every save would quietly fall back to
+// the object store - the cache would look configured and never once be used.
+//
+// A directory that is already there is taken as it is, so the agent makes it first, with
+// a mode any step can write to. The agent reaches the same storage through its own mount
+// (the claims must share a backing volume, which the chart documents), and it is not
+// root, so an export that squashes root does not take its ownership away.
+//
+// It also keeps the shared "inbox" parent out of kubelet's hands. Creating a subPath is
+// not tolerant of a concurrent creation before Kubernetes v1.37, so two executions
+// starting together on one node while that parent was still missing could fail to start
+// - at first use, which is exactly when somebody is deciding whether this works.
+//
+// Best effort throughout. A cache is an optimization, the pod-side probe already falls
+// back to the object store when the inbox cannot be written to, and kubelet still makes
+// the directory itself if this did not - so there is nothing here worth failing an
+// execution over.
+func (w *worker) prepareStepCacheInbox(resourceId string) {
+	if w.config.StepCacheVolume == nil || w.config.StepCacheVolumeLocalPath == "" || resourceId == "" {
+		return
+	}
+
+	dir := filepath.Join(w.config.StepCacheVolumeLocalPath, filepath.FromSlash(volume.InboxFor(resourceId)))
+	if err := os.MkdirAll(dir, cacheInboxMode); err != nil {
+		log.DefaultLogger.Warnw("could not prepare the step cache inbox; the execution will fall back to the object store if its pod cannot write one",
+			"path", dir, "error", err)
+		return
+	}
+	// MkdirAll applies the process umask, so the mode is set explicitly: a step running
+	// as an arbitrary user has to be able to write here, and the agent cannot know which.
+	if err := os.Chmod(dir, cacheInboxMode); err != nil {
+		log.DefaultLogger.Warnw("could not set the mode of the step cache inbox; a step running as another user may not be able to write to it",
+			"path", dir, "error", err)
+	}
 }

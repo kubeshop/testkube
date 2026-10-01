@@ -136,6 +136,22 @@ restore is a copy rather than an unpack and nothing is gzipped.
   their own Deployment**, because a
   runner-only installation has no api Deployment and the sweep would otherwise read its
   missing inbox directory as an empty volume and let the claim fill.
+- **The agent makes each execution's inbox before its pod starts**
+  (`prepareStepCacheInbox` in `kubernetesworker/worker.go`, called at both deploy
+  sites). kubelet would create the `subPath` directory itself - it creates a missing
+  one and its parents - but owned by **root**, with the mode of the volume root and no
+  regard for `runAsUser`; `fsGroup` is not applied to a multi-writer volume, since the
+  in-tree NFS plugin never reads it. A step running as another user would then be
+  unable to write to its own inbox and would fall back to the object store on every
+  save, so the cache would look configured and never once be used. kubelet takes an
+  existing directory as it is, so the agent makes it first, mode `0777` because it
+  cannot know which user the step runs as. Doing so also keeps the shared `inbox`
+  parent out of kubelet's hands: creating a `subPath` is not tolerant of a concurrent
+  creation before Kubernetes v1.37, so two executions starting together on one node
+  while that parent was still missing could fail to start. It is **best effort** - a
+  failure logs and continues, because kubelet still creates the directory and the
+  pod-side probe still falls back. Note this needs the agent's claim and the execution
+  namespace's claim to share backing storage, which the chart documents.
 - **Symlinks are carried, and never followed on the way out.** A restore writes through
   an `os.Root` opened on each declared path, so a symlink already sitting there cannot
   redirect a write outside it - the entry may have been written by another workflow. The

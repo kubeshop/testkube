@@ -910,6 +910,11 @@ podDisruptionBudget:
 ## The claim must already exist in this chart's release namespace and in every
 ## namespace executions run in; the chart does not create it. Claims in different
 ## namespaces must expose the same backing storage.
+##
+## The agent creates each execution's directory on the volume itself, so that a step
+## running as a non-root user can write to it. It must therefore be able to write to
+## the share: an NFS export that squashes the agent's user leaves the cache unusable,
+## and every save falls back to the object store.
 stepCacheVolume:
   # -- Store step dependency caches on a shared volume instead of in the object store
   enabled: false

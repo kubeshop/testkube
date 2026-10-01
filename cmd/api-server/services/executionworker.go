@@ -69,10 +69,11 @@ func CreateExecutionWorker(
 		},
 		// Automatically disable resource metrics collection in standalone mode (no API key and no agent registration token configured),
 		// as the gRPC control plane connection from execution pods may not be available.
-		DisableResourceMetrics: cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken == "",
-		EmptyDirSizeLimit:      cfg.TestkubeEmptyDirSizeLimit,
-		StepCacheVolume:        stepCacheVolumeConfig(cfg),
-		DefaultImagePullPolicy: cfg.TestkubeDefaultImagePullPolicy,
+		DisableResourceMetrics:   cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken == "",
+		EmptyDirSizeLimit:        cfg.TestkubeEmptyDirSizeLimit,
+		StepCacheVolume:          stepCacheVolumeConfig(cfg),
+		StepCacheVolumeLocalPath: cfg.TestkubeStepCacheVolumeMountPath,
+		DefaultImagePullPolicy:   cfg.TestkubeDefaultImagePullPolicy,
 		DefaultRunnerResources: testworkflowconfig.ContainerResourceConfig{
 			Requests: testworkflowconfig.ContainerResources{
 				CPU:    cfg.TestkubeDefaultRunnerCPURequest,

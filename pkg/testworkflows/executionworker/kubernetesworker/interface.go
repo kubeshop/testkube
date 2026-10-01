@@ -43,4 +43,11 @@ type Config struct {
 	DefaultImagePullPolicy                   string
 	DefaultRunnerResources                   testworkflowconfig.ContainerResourceConfig
 	StepCacheVolume                          *testworkflowconfig.StepCacheVolumeConfig
+	// StepCacheVolumeLocalPath is where the shared step-cache volume is mounted in
+	// this process, so that an execution's inbox can be made before its pod runs.
+	//
+	// It is deliberately not part of StepCacheVolumeConfig: that one is serialized
+	// into a pod annotation, and where the agent happens to mount the volume means
+	// nothing inside the pod, which reaches its inbox through a subPath instead.
+	StepCacheVolumeLocalPath string
 }
