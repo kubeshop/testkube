@@ -22,7 +22,7 @@ func entryFrom(t *testing.T, paths []string) *os.Root {
 	t.Helper()
 	staging := filepath.Join(t.TempDir(), EntryRoot)
 	require.NoError(t, os.MkdirAll(staging, 0o777))
-	_, err := SaveTree(staging, paths, CopyLimits{})
+	_, _, err := SaveTree(staging, paths, CopyLimits{})
 	require.NoError(t, err)
 	root, err := os.OpenRoot(staging)
 	require.NoError(t, err)
@@ -109,7 +109,7 @@ func TestSaveSkipsAPathThatWasNeverCreated(t *testing.T) {
 	staging := filepath.Join(t.TempDir(), EntryRoot)
 	require.NoError(t, os.MkdirAll(staging, 0o777))
 
-	size, err := SaveTree(staging, []string{src, filepath.Join(src, "absent")}, CopyLimits{})
+	size, _, err := SaveTree(staging, []string{src, filepath.Join(src, "absent")}, CopyLimits{})
 
 	require.NoError(t, err)
 	assert.EqualValues(t, 1, size)
@@ -123,7 +123,7 @@ func TestSaveReportsTheTotalSize(t *testing.T) {
 	staging := filepath.Join(t.TempDir(), EntryRoot)
 	require.NoError(t, os.MkdirAll(staging, 0o777))
 
-	size, err := SaveTree(staging, []string{src}, CopyLimits{})
+	size, _, err := SaveTree(staging, []string{src}, CopyLimits{})
 
 	require.NoError(t, err)
 	assert.EqualValues(t, 8, size)
@@ -135,7 +135,7 @@ func TestSaveRefusesTheRoot(t *testing.T) {
 	staging := filepath.Join(t.TempDir(), EntryRoot)
 	require.NoError(t, os.MkdirAll(staging, 0o777))
 
-	size, err := SaveTree(staging, []string{"/"}, CopyLimits{})
+	size, _, err := SaveTree(staging, []string{"/"}, CopyLimits{})
 
 	require.NoError(t, err)
 	assert.Zero(t, size)

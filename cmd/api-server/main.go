@@ -71,6 +71,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/testworkflowexecutiontelemetry"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
+	"github.com/kubeshop/testkube/pkg/executioncache/volume"
 	gitinformer "github.com/kubeshop/testkube/pkg/git/informer"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -1016,6 +1017,41 @@ func main() {
 		})
 	} else {
 		log.DefaultLogger.Infow("Not configured to handle cronjobs")
+	}
+
+	// The shared step-cache volume needs its own expiry. The object store expires the
+	// pointers through the bucket lifecycle rule the cache prefix already carries, but
+	// a volume has no lifecycle rules and, unlike a bucket, a fixed capacity - so
+	// without this it fills once and then every save fails forever.
+	//
+	// Leader-gated because one agent sweeping is enough and the work is idempotent, and
+	// run here rather than in the control plane because the control plane is not
+	// necessarily in this cluster and so cannot reach the volume at all.
+	if cfg.TestkubeStepCacheVolumeClaim != "" {
+		retention := time.Duration(cfg.TestkubeStepCacheVolumeRetentionDays) * 24 * time.Hour
+		if cacheExpiration := time.Duration(cfg.StorageCacheExpiration) * 24 * time.Hour; retention < cacheExpiration {
+			// A pointer outliving what it points at is a restore reporting a miss it
+			// cannot explain, which is far harder to diagnose than the wasted space of
+			// the reverse.
+			log.DefaultLogger.Warnw(
+				"step cache volume retention is shorter than the object store's cache expiration, so entries may be deleted while their pointers are still stored",
+				"retentionDays", cfg.TestkubeStepCacheVolumeRetentionDays,
+				"cacheExpirationDays", cfg.StorageCacheExpiration,
+			)
+		}
+
+		sweeper := &volume.Sweeper{
+			Root:      cfg.TestkubeStepCacheVolumeMountPath,
+			Retention: retention,
+			Interval:  cfg.TestkubeStepCacheVolumeSweepInterval,
+			OnError: func(err error) {
+				log.DefaultLogger.Errorw("failed to sweep the step cache volume", "error", err)
+			},
+		}
+		leaderTasks = append(leaderTasks, leader.Task{
+			Name:  "step-cache-volume-sweeper",
+			Start: sweeper.Run,
+		})
 	}
 
 	g.Go(func() error {

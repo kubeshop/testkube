@@ -244,6 +244,16 @@ spec:
             - name: "TESTKUBE_EMPTYDIR_SIZE_LIMIT"
               value: "{{ .Values.emptyDirSizeLimit }}"
             {{- end }}
+            {{- if and .Values.stepCacheVolume.enabled .Values.stepCacheVolume.claimName }}
+            - name: "TESTKUBE_STEP_CACHE_VOLUME_CLAIM"
+              value: "{{ .Values.stepCacheVolume.claimName }}"
+            - name: "TESTKUBE_STEP_CACHE_VOLUME_MOUNT_PATH"
+              value: "{{ .Values.stepCacheVolume.mountPath }}"
+            - name: "TESTKUBE_STEP_CACHE_VOLUME_RETENTION_DAYS"
+              value: "{{ .Values.stepCacheVolume.retentionDays }}"
+            - name: "TESTKUBE_STEP_CACHE_VOLUME_SWEEP_INTERVAL"
+              value: "{{ .Values.stepCacheVolume.sweepInterval }}"
+            {{- end }}
             - name: "TESTKUBE_NAMESPACE"
               value: "{{ .Release.Namespace }}"
             {{- if .Values.execution.default.namespace }}

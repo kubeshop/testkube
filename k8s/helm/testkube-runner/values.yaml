@@ -306,3 +306,33 @@ defaultRunnerResources:
   limits:
     cpu: ""
     memory: ""
+
+## Shared volume for step dependency caches.
+##
+## A step's `cache:` entries are normally stored whole in the object store, so every
+## restore downloads the archive over HTTP. Point this at an existing ReadWriteMany
+## claim and the entries live on it instead: a restore becomes a local copy, with no
+## transfer and nothing to unpack. The object store still holds a small pointer to each
+## entry, so it still decides who may store what.
+##
+## Everything on the volume is readable by every execution in the cluster. The object
+## store still decides who may *write* an entry, so a pull request cannot poison the
+## cache a trusted run restores - but every workflow can read what every other workflow
+## cached. Only enable this where that is acceptable.
+##
+## The claim must already exist in every namespace executions run in; the chart does not
+## create it.
+stepCacheVolume:
+  # -- Store step dependency caches on a shared volume instead of in the object store
+  enabled: false
+  # -- Name of an existing ReadWriteMany PersistentVolumeClaim
+  claimName: ""
+  # -- Where the volume is mounted inside this deployment, for the expiry sweep
+  mountPath: "/var/testkube/step-cache"
+  # -- How long an execution's cached trees survive on the volume.
+  ## Must be at least storage.cacheExpiration: an entry outliving its pointer only
+  ## wastes space, where a pointer outliving its entry is a restore that reports a miss
+  ## it cannot explain.
+  retentionDays: 7
+  # -- How often to sweep the volume for expired entries
+  sweepInterval: "1h"
