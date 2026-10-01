@@ -13,7 +13,9 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/executioncache"
+	"github.com/kubeshop/testkube/pkg/executioncache/volume"
 	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
@@ -698,6 +700,8 @@ func TestProcessCache_SaveIsConditional(t *testing.T) {
 const (
 	cacheTempDirPath     = "/.tktw-cache"
 	cacheTempDirHeadroom = 64 << 20
+	cacheVolumePath      = "/.tktw-cachestore"
+	cacheInboxPath       = "/.tktw-cacheinbox"
 )
 
 // TestProcessCache_RejectsTheRootHoweverItIsReached covers the gap between the two places
@@ -837,4 +841,149 @@ func TestProcessCache_SaveWaitsOnSuccessUnderAnExplicitCondition(t *testing.T) {
 	// The declared condition is compiled into stage references rather than kept as the
 	// word, so there is nothing literal to look for - what matters is that the save is
 	// gated on a stage result at all, rather than on the author.s condition alone.
+}
+
+// bundleWithCacheVolume bundles a cached step with an operator-configured shared cache
+// volume, which is the only way the mounts below are added.
+func bundleWithCacheVolume(t *testing.T, step testworkflowsv1.Step) (*testworkflowprocessor.Bundle, error) {
+	t.Helper()
+	cfg := testConfig
+	cfg.Worker.StepCacheVolume = &testworkflowconfig.StepCacheVolumeConfig{ClaimName: "shared-cache"}
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{Steps: []testworkflowsv1.Step{step}},
+	}
+	return proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: cfg})
+}
+
+func cachedStep() testworkflowsv1.Step {
+	return testworkflowsv1.Step{
+		StepOperations: testworkflowsv1.StepOperations{
+			Cache: &testworkflowsv1.StepCache{
+				Key:   "npm-{{ hash_files(\"package-lock.json\") }}",
+				Paths: []string{"/data/node_modules"},
+			},
+			Run: &testworkflowsv1.StepRun{
+				ContainerConfig: testworkflowsv1.ContainerConfig{
+					Image:   "node:20",
+					Command: common.Ptr([]string{"npm"}),
+					Args:    common.Ptr([]string{"ci"}),
+				},
+			},
+		},
+	}
+}
+
+// mountsOf returns every mount of the named volume across every container in the pod.
+func mountsOf(res *testworkflowprocessor.Bundle, volumeName string) []corev1.VolumeMount {
+	var out []corev1.VolumeMount
+	for _, container := range res.Job.Spec.Template.Spec.Containers {
+		for _, mount := range container.VolumeMounts {
+			if mount.Name == volumeName {
+				out = append(out, mount)
+			}
+		}
+	}
+	return out
+}
+
+func cacheVolumeName(t *testing.T, res *testworkflowprocessor.Bundle) string {
+	t.Helper()
+	for _, v := range res.Job.Spec.Template.Spec.Volumes {
+		if v.PersistentVolumeClaim != nil && v.PersistentVolumeClaim.ClaimName == "shared-cache" {
+			return v.Name
+		}
+	}
+	t.Fatalf("the shared cache volume was not attached to the pod")
+	return ""
+}
+
+// Without an operator-configured volume the pod must look exactly as it did, because
+// that is what every installation that has not opted in keeps running.
+func TestProcessCache_AttachesNothingWithoutAVolume(t *testing.T) {
+	res, err := bundleWithCache(t, cachedStep())
+	require.NoError(t, err)
+
+	for _, v := range res.Job.Spec.Template.Spec.Volumes {
+		assert.Nil(t, v.PersistentVolumeClaim, "no claim should be attached when none is configured")
+	}
+	for _, container := range res.Job.Spec.Template.Spec.Containers {
+		for _, env := range container.Env {
+			assert.NotEqual(t, volume.EnvStorePath, env.Name)
+			assert.NotEqual(t, volume.EnvInboxPath, env.Name)
+		}
+	}
+}
+
+func TestProcessCache_AttachesTheSharedVolumeOnce(t *testing.T) {
+	res, err := bundleWithCacheVolume(t, cachedStep())
+	require.NoError(t, err)
+
+	var claims int
+	for _, v := range res.Job.Spec.Template.Spec.Volumes {
+		if v.PersistentVolumeClaim != nil && v.PersistentVolumeClaim.ClaimName == "shared-cache" {
+			claims++
+		}
+	}
+	assert.Equal(t, 1, claims, "the claim should be attached once, however many stages mount it")
+}
+
+// The read side is the whole volume, because a restore legitimately reads what an
+// earlier, unrelated execution wrote - and it must be read-only, because both cache
+// stages are pure and are merged into the step's own container, so the step's command
+// ends up holding whatever is mounted here.
+func TestProcessCache_MountsTheStoreReadOnly(t *testing.T) {
+	res, err := bundleWithCacheVolume(t, cachedStep())
+	require.NoError(t, err)
+
+	var store []corev1.VolumeMount
+	for _, mount := range mountsOf(res, cacheVolumeName(t, res)) {
+		if mount.MountPath == cacheVolumePath {
+			store = append(store, mount)
+		}
+	}
+
+	require.NotEmpty(t, store, "the restore stage must mount the shared volume")
+	for _, mount := range store {
+		assert.True(t, mount.ReadOnly, "a writable store mount would let any step rewrite any entry")
+		assert.Empty(t, mount.SubPath, "the whole volume is readable; an entry may come from any execution")
+	}
+}
+
+// The write side is confined by kubelet, not by the toolkit choosing to behave: the
+// subPath resolves to this execution's own directory and nothing else is reachable.
+func TestProcessCache_MountsTheInboxWritableUnderItsOwnSubPath(t *testing.T) {
+	res, err := bundleWithCacheVolume(t, cachedStep())
+	require.NoError(t, err)
+
+	var inbox []corev1.VolumeMount
+	for _, mount := range mountsOf(res, cacheVolumeName(t, res)) {
+		if mount.MountPath == cacheInboxPath {
+			inbox = append(inbox, mount)
+		}
+	}
+
+	require.NotEmpty(t, inbox, "the save stage must mount an inbox")
+	for _, mount := range inbox {
+		assert.False(t, mount.ReadOnly)
+		assert.Equal(t, volume.InboxDir+"/dummy-id-abc", mount.SubPath,
+			"the subPath must resolve to this execution, or a pod could write another's entries")
+	}
+}
+
+// The save stage keeps its staging emptyDir even with a volume configured. A save that
+// cannot use the volume falls back to the object store, and that is decided in the pod
+// after the spec is fixed - so the archive needs somewhere to be packed either way.
+func TestProcessCache_KeepsTheStagingVolumeForTheFallback(t *testing.T) {
+	res, err := bundleWithCacheVolume(t, cachedStep())
+	require.NoError(t, err)
+
+	var staging bool
+	for _, container := range res.Job.Spec.Template.Spec.Containers {
+		for _, mount := range container.VolumeMounts {
+			if mount.MountPath == cacheTempDirPath {
+				staging = true
+			}
+		}
+	}
+	assert.True(t, staging, "the object-store fallback has nowhere to pack without it")
 }

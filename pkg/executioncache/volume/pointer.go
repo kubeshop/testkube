@@ -56,6 +56,19 @@ const (
 
 	// InboxDir is the only directory on the volume a pod ever writes into.
 	InboxDir = "inbox"
+
+	// EnvStorePath and EnvInboxPath tell the toolkit where the processor mounted the
+	// shared volume, and are unset when it mounted none.
+	//
+	// Declared here, with the format, so that the half which mounts and the half which
+	// looks cannot disagree: a processor that mounted a volume the toolkit did not look
+	// for - or the reverse - would produce a cache that silently did nothing.
+	//
+	// They are environment rather than part of the encoded arguments because where the
+	// cache is stored is a deployment fact. A workflow that could name it could name
+	// somebody else's.
+	EnvStorePath = "TK_CACHE_VOLUME"
+	EnvInboxPath = "TK_CACHE_INBOX"
 )
 
 // Pointer names the entry on the volume that an object stands in for.

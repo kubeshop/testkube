@@ -107,9 +107,12 @@ func RestoreTree(src *os.Root, allowedRoots []string, limits CopyLimits) (wrote 
 // step may declare a cache path it never creates, and that is a smaller entry rather
 // than a failure.
 //
-// It returns the total bytes written, which is what the pointer carries and what a
-// quota would be refused against.
-func SaveTree(dst string, paths []string, limits CopyLimits) (int64, error) {
+// It returns the total bytes written - which is what the pointer carries and what a
+// quota would be refused against - and how many files it found. The count is separate
+// because a tree of empty files is still a tree, where zero bytes alone would read as
+// nothing to save and publish an entry that answers every later run with a hit that
+// restores nothing.
+func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error) {
 	var (
 		total   int64
 		entries int
@@ -156,10 +159,10 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, error) {
 			}
 		})
 		if err != nil {
-			return total, err
+			return total, entries, err
 		}
 	}
-	return total, nil
+	return total, entries, nil
 }
 
 // copyFile writes one regular file out of the entry onto the filesystem.

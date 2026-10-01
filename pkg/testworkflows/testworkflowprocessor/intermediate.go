@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
@@ -28,12 +29,27 @@ type Intermediate interface {
 	AppendJobConfig(cfg *testworkflowsv1.JobConfig) Intermediate
 	AppendPodConfig(cfg *testworkflowsv1.PodConfig) Intermediate
 	AppendPvcs(cfg map[string]corev1.PersistentVolumeClaimSpec) Intermediate
+	AppendStepCacheVolume(cfg *testworkflowconfig.StepCacheVolumeConfig) Intermediate
 
 	AddConfigMap(configMap corev1.ConfigMap) Intermediate
 	AddSecret(secret corev1.Secret) Intermediate
 	AddVolume(volume corev1.Volume) Intermediate
 
 	AddEmptyDirVolume(source *corev1.EmptyDirVolumeSource, mountPath string) corev1.VolumeMount
+
+	// StepCacheVolumeMount returns a mount of the operator's shared step-cache volume,
+	// and whether there is one to mount.
+	//
+	// The volume is added to the pod on the first call and reused afterwards: a
+	// workflow with several cached steps needs one volume and several mounts of it,
+	// where AddEmptyDirVolume's one-volume-per-mount shape would attach the same claim
+	// once per step.
+	//
+	// readOnly and subPath are the only confinement there is, and they are enforced by
+	// kubelet rather than by the toolkit choosing to behave. Both cache stages are
+	// pure, so action.Group merges them into the step's own container and the step's
+	// own command ends up holding whatever is mounted here.
+	StepCacheVolumeMount(mountPath, subPath string, readOnly bool) (corev1.VolumeMount, bool)
 
 	AddTextFile(file string, mode *int32) (corev1.VolumeMount, error)
 	AddBinaryFile(file []byte, mode *int32) (corev1.VolumeMount, error)
@@ -60,6 +76,13 @@ type intermediate struct {
 
 	// Default sizeLimit for emptyDir volumes
 	DefaultEmptyDirSizeLimit *resource.Quantity
+
+	// StepCacheVolume is the operator's shared cache volume, or nil when step
+	// dependency caches go to the object store whole.
+	StepCacheVolume *testworkflowconfig.StepCacheVolumeConfig
+	// stepCacheVolumeName is the pod volume once it has been added, so that several
+	// cached steps share one rather than attaching the claim once each.
+	stepCacheVolumeName string
 }
 
 func NewIntermediate(defaultEmptyDirSizeLimit string) Intermediate {
@@ -138,6 +161,36 @@ func (s *intermediate) AppendPvcs(cfg map[string]corev1.PersistentVolumeClaimSpe
 		}
 	}
 	return s
+}
+
+func (s *intermediate) AppendStepCacheVolume(cfg *testworkflowconfig.StepCacheVolumeConfig) Intermediate {
+	if cfg != nil && cfg.ClaimName != "" {
+		s.StepCacheVolume = cfg
+	}
+	return s
+}
+
+func (s *intermediate) StepCacheVolumeMount(mountPath, subPath string, readOnly bool) (corev1.VolumeMount, bool) {
+	if s.StepCacheVolume == nil {
+		return corev1.VolumeMount{}, false
+	}
+	if s.stepCacheVolumeName == "" {
+		s.stepCacheVolumeName = s.NextRef()
+		s.AddVolume(corev1.Volume{
+			Name: s.stepCacheVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: s.StepCacheVolume.ClaimName,
+				},
+			},
+		})
+	}
+	return corev1.VolumeMount{
+		Name:      s.stepCacheVolumeName,
+		MountPath: mountPath,
+		SubPath:   subPath,
+		ReadOnly:  readOnly,
+	}, true
 }
 
 func (s *intermediate) AddVolume(volume corev1.Volume) Intermediate {
