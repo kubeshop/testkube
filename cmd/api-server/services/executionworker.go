@@ -94,7 +94,11 @@ func CreateExecutionWorker(
 // deciding whether to mount anything, the toolkit deciding whether to look - asks one
 // question and cannot answer it differently.
 func stepCacheVolumeConfig(cfg *config.Config) *testworkflowconfig.StepCacheVolumeConfig {
-	if cfg.TestkubeStepCacheVolumeClaim == "" {
+	// Not merely "a claim is configured": an entry on the volume is reachable only
+	// through the object pointing at it, so the arrangement needs cache objects to be
+	// known to expire. commons.StepCacheVolumeConfirmed explains when they are, and
+	// says so in the log when they are not.
+	if !commons.StepCacheVolumeConfirmed(cfg) {
 		return nil
 	}
 	return &testworkflowconfig.StepCacheVolumeConfig{ClaimName: cfg.TestkubeStepCacheVolumeClaim}

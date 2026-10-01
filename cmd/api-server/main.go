@@ -1027,7 +1027,12 @@ func main() {
 	// Leader-gated because one agent sweeping is enough and the work is idempotent, and
 	// run here rather than in the control plane because the control plane is not
 	// necessarily in this cluster and so cannot reach the volume at all.
-	if cfg.TestkubeStepCacheVolumeClaim != "" {
+	//
+	// Gated on the same confirmation the mounts are, so the sweep can never run against
+	// a bucket whose pointers are not known to expire - deleting an entry whose pointer
+	// is kept forever is what makes a key miss permanently. The warning belongs to that
+	// helper, which the execution worker has already called by here.
+	if commons.StepCacheVolumeConfirmed(cfg) {
 		// Retention is raised to however long a pointer can still be served, rather
 		// than warned about and used as given.
 		//
@@ -1044,18 +1049,11 @@ func main() {
 		// SetExpirationPolicies documents. With STORAGE_CACHE_EXPIRATION disabled a
 		// pointer therefore still lives STORAGE_EXPIRATION days, and comparing against
 		// the cache rule alone would sweep entries weeks ahead of their pointers.
+		//
+		// A pointer is known to expire by here - that is what the confirmation above
+		// means - so PointerLifetime's second return needs no case of its own.
 		retention := time.Duration(cfg.TestkubeStepCacheVolumeRetentionDays) * 24 * time.Hour
-		pointerTTL, expires := volume.PointerLifetime(cfg.StorageCacheExpiration, cfg.StorageExpiration)
-		switch {
-		case !expires:
-			// Nothing bounds a pointer, so no retention is long enough and raising it
-			// would only trade one failure for an unbounded volume. Say so instead:
-			// the fix is a lifecycle rule, which is not this process's to set.
-			log.DefaultLogger.Warnw(
-				"nothing expires cache pointers, so entries swept off the shared volume will leave pointers that resolve to nothing and keys that stay cold until the object is removed; set STORAGE_CACHE_EXPIRATION to at most the volume retention",
-				"retentionDays", cfg.TestkubeStepCacheVolumeRetentionDays,
-			)
-		case retention < pointerTTL:
+		if pointerTTL, _ := volume.PointerLifetime(cfg.StorageCacheExpiration, cfg.StorageExpiration); retention < pointerTTL {
 			log.DefaultLogger.Warnw(
 				"step cache volume retention is shorter than the object store expires cache pointers in; raising it, because deleting an entry whose pointer is still stored turns hits into unexplained misses",
 				"configuredRetentionDays", cfg.TestkubeStepCacheVolumeRetentionDays,

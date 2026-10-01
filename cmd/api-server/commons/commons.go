@@ -9,6 +9,8 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -36,6 +38,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/executioncache"
+	"github.com/kubeshop/testkube/pkg/executioncache/volume"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
@@ -168,6 +171,14 @@ func MustGetMinioClient(cfg *config.Config) domainstorage.Client {
 		CacheDays:   cfg.StorageCacheExpiration,
 	}); expErr != nil {
 		log.DefaultLogger.Errorw("Error setting expiration policy", "error", expErr)
+	} else if _, expires := volume.PointerLifetime(cfg.StorageCacheExpiration, cfg.StorageExpiration); expires {
+		// Only now is a cache object known to expire: the call was accepted and the
+		// settings it was given actually expire something. Failing it is not fatal -
+		// reading the existing lifecycle needs a permission an upgrade may not have
+		// granted - but it leaves the rule uninstalled, and anything that sweeps a
+		// shared volume on the strength of these numbers would then delete entries
+		// whose pointers are kept forever. See StepCacheVolumeConfirmed.
+		cacheExpirationConfirmed.Store(true)
 	}
 
 	// A stored cache entry is immutable only if the store applies the condition the
@@ -498,4 +509,58 @@ func CronJobsEnabled(cfg *config.Config) bool {
 	}
 
 	return result
+}
+
+// cacheExpirationConfirmed records that this process installed a lifecycle rule which
+// expires cache objects, and saw the store accept it.
+//
+// It is deliberately not "the operator configured one". SetExpirationPolicies has to
+// read the bucket's existing lifecycle before replacing it, which is a permission
+// earlier versions did not need, so a perfectly well configured installation can fail
+// to install the rule and carry on - the failure is logged and startup continues,
+// because a retention policy is not worth refusing to serve over.
+var (
+	cacheExpirationConfirmed atomic.Bool
+	// stepCacheVolumeWarning keeps the explanation below to one line in the log.
+	stepCacheVolumeWarning sync.Once
+)
+
+// StepCacheVolumeConfirmed reports whether step dependency caches may be kept on a
+// shared volume, which needs more than the claim being configured.
+//
+// An entry on the volume is reachable only through the object that points at it, and
+// the agent's sweep removes entries on a timer. If the object outlives the entry, every
+// hit on that key restores nothing, and the key is immutable, so no later run can
+// replace it until the object itself expires. The whole arrangement therefore rests on
+// cache objects expiring - and on this process knowing that they do.
+//
+// It can only know that where it installs the rule itself, which is standalone mode. An
+// agent attached to a remote Control Plane does not own the bucket, never calls
+// SetExpirationPolicies, and has no way to ask what lifecycle is on it: the expiration
+// settings it holds are its own environment's, with no bearing on the store the
+// pointers are actually written to. Until the Control Plane reports its cache
+// expiration, the honest answer there is no.
+//
+// Unconfirmed disables the volume outright rather than only the sweep. Sweeping is what
+// breaks keys, but not sweeping a volume that is still being written to just fills it,
+// and an operator discovering a full shared volume is no better served than one
+// discovering a cache that always misses.
+func StepCacheVolumeConfirmed(cfg *config.Config) bool {
+	if cfg.TestkubeStepCacheVolumeClaim == "" {
+		return false
+	}
+	if !cacheExpirationConfirmed.Load() {
+		// Once, because both the mounts and the sweep ask, and an operator reading two
+		// identical warnings looks for two problems.
+		stepCacheVolumeWarning.Do(func() {
+			log.DefaultLogger.Warnw(
+				"a step cache volume is configured but cache objects are not known to expire, so caches will go to the object store instead; this process installs that rule only in standalone mode, and an agent attached to a Control Plane cannot confirm the bucket's lifecycle",
+				"claim", cfg.TestkubeStepCacheVolumeClaim,
+				"cacheExpirationDays", cfg.StorageCacheExpiration,
+				"storageExpirationDays", cfg.StorageExpiration,
+			)
+		})
+		return false
+	}
+	return true
 }
