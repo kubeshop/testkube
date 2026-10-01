@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -1211,4 +1212,71 @@ func TestRunCacheSave_FallsBackWhenTheVolumeRefusesTheTree(t *testing.T) {
 	assert.False(t, isPointer, "the fallback must store the archive itself")
 	assert.NotEmpty(t, uploaded)
 	assert.Less(t, len(uploaded), 2048, "the tree compresses to well under the limit the volume refused")
+}
+
+// withEntryLimit lowers the entry bound for one test, because the alternative is
+// creating half a million files.
+func withEntryLimit(t *testing.T, n int) {
+	t.Helper()
+	previous := cacheMaxEntries
+	cacheMaxEntries = n
+	t.Cleanup(func() { cacheMaxEntries = previous })
+}
+
+// An entry holding more files than a restore will accept must not reach either backend.
+//
+// The pack bounds size but not count, where the unpack bounds both, so such an archive
+// would store happily and then be refused by every restore of it - under a key that is
+// immutable, so no later run could replace it. The step would reinstall on every
+// execution until the entry expired, with nothing to say why.
+//
+// Tested through the object-store path, which is where the archive is built. The volume
+// path refuses the same count before it gets there, and settles rather than falling
+// back for exactly this reason - the next test pins that.
+func TestRunCacheSave_RefusesATreeWithTooManyFilesToRestore(t *testing.T) {
+	withEntryLimit(t, 2)
+
+	root := t.TempDir()
+	requireContainerPaths(t, root)
+	for i := 0; i < 3; i++ {
+		require.NoError(t, os.WriteFile(filepath.Join(root, "f"+strconv.Itoa(i)), []byte("x"), 0o666))
+	}
+
+	repo := &fakeCacheRepository{}
+	out := &bytes.Buffer{}
+	err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{root},
+	}), []string{root}, "", cacheDefaultMaxSize, repo, out)
+
+	require.NoError(t, err, "refusing to publish must never fail the step")
+	assert.Contains(t, out.String(), "more than 2 files")
+	assert.Zero(t, repo.saveCalls, "an entry nothing could restore must not even ask for a grant")
+}
+
+// The count does not change between the backends, so a tree the volume refuses for
+// holding too many files would be refused by the archive too. Falling back would only
+// pack it, publish it, and leave every later restore to reject it.
+func TestRunCacheSave_DoesNotFallBackWhenTheTreeHasTooManyFiles(t *testing.T) {
+	withEntryLimit(t, 2)
+
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	for i := 0; i < 3; i++ {
+		require.NoError(t, os.WriteFile(filepath.Join(root, "f"+strconv.Itoa(i)), []byte("x"), 0o666))
+	}
+	mountCacheVolume(t, "exec-1")
+
+	repo := &fakeCacheRepository{}
+	out := &bytes.Buffer{}
+	err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+	}), []string{posix}, "", cacheDefaultMaxSize, repo, out)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "more than 2 files")
+	assert.NotContains(t, out.String(), "object store instead",
+		"falling back would publish an archive no restore would accept")
+	assert.Zero(t, repo.saveCalls)
 }

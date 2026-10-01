@@ -137,9 +137,14 @@ restore is a copy rather than an unpack and nothing is gzipped.
   so the step would never repair it.
 - **A volume that will not take an entry falls back to the object store.** The open-time
   probe cannot predict a volume filling mid-copy, so `saveToVolume` reports whether it
-  settled the save; only a sick volume (a failed copy or commit) falls through, where a
-  policy refusal such as the size limit does not, since the object store applies the same
-  one.
+  settled the save. What falls through is decided by whether the other backend would
+  answer differently: a failed copy or commit does, and so does the **size** limit,
+  because the volume weighs the tree where the archive weighs the gzip of it. The
+  **entry-count** limit does not - that number is the same either way, and
+  `cacheMaxEntries` bounds the save precisely because it bounds the restore. An archive
+  over it would store happily and then be refused by every restore of it, under a key
+  that is immutable, so the step would reinstall every execution until it expired. The
+  archive path refuses it too, which it did not before.
 - A key never becomes a path segment, which is why `MaxEncodedKeyBytes`' budget against
   the object store's 1024-byte limit does not have to answer to POSIX's 255-byte
   `NAME_MAX`.

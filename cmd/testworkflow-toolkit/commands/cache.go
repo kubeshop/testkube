@@ -35,14 +35,25 @@ const (
 	// volume is too small to hold.
 	cacheDefaultMaxSize = executioncache.MaxArchiveSize
 
-	// cacheMaxUnpackedSize and cacheMaxEntries bound what a restore may expand into.
-	// The archive was written by an earlier - possibly different - workflow, so its
-	// contents are not this execution's own doing.
+	// cacheMaxUnpackedSize bounds what a restore may expand into. The archive was
+	// written by an earlier - possibly different - workflow, so its contents are not
+	// this execution's own doing.
 	cacheMaxUnpackedSize = 10 << 30 // 10 GiB
-	cacheMaxEntries      = 500_000
 
 	cacheTransferTimeout = 30 * time.Minute
 )
+
+// cacheMaxEntries bounds how many files an entry may hold.
+//
+// It bounds the restore, and for that reason it also bounds the save: an entry over it
+// would store happily and then be refused by every restore of it, under a key that is
+// immutable. One number, read in both places, so the two cannot drift into a cache that
+// can be written and never read.
+//
+// A variable rather than a constant only so a test can lower it; nothing else writes to
+// it. Flipping an unexported seam is how stdinIsInteractive is tested too, and the
+// alternative here is a test that creates half a million files.
+var cacheMaxEntries = 500_000
 
 // NewCacheCmd restores and saves a step's dependency cache.
 //
@@ -405,6 +416,17 @@ func runCacheSave(ctx context.Context, encoded string, mounts []string, statePat
 	// step did not need to install - and either way there is nothing to cache.
 	if entries == 0 {
 		fmt.Fprintf(out, "cache: not saving %q: nothing was found under %s\n", key, strings.Join(paths, ", "))
+		return nil
+	}
+
+	// The pack is bounded by size but not by count, where the unpack is bounded by
+	// both. An archive over the entry limit would therefore store happily and then be
+	// refused by every restore of it - and the key is immutable, so no later run could
+	// replace it: the step would reinstall on every execution until the entry expired,
+	// with nothing to say why. Refusing to publish it leaves a plain miss instead,
+	// which is the same outcome without the mystery.
+	if entries > cacheMaxEntries {
+		fmt.Fprintf(out, "cache: not saving %q: it holds more than %d files\n", key, cacheMaxEntries)
 		return nil
 	}
 
@@ -856,11 +878,21 @@ func saveToVolume(
 		MaxEntries:    cacheMaxEntries,
 	})
 	if err != nil {
-		// Including the size limit. The two backends measure different things - this
-		// one weighs the tree, the archive weighs the gzip of it - so a tree refused
-		// here can still fit as an archive, and a dependency tree of text compresses
-		// well. Settling the save here would drop a cache the object store would have
-		// taken, and every later run would reinstall.
+		if errors.Is(err, volume.ErrTooManyEntries) {
+			// Settled here, unlike the size limit below, because the count does not
+			// change between the backends: a tree of this many files packs into an
+			// archive of this many files, and the restore refuses that archive at the
+			// same number. Falling back would publish an entry nothing can restore,
+			// under a key that is immutable - so every later run would miss it and
+			// reinstall until it expired.
+			fmt.Fprintf(out, "cache: not saving %q: it holds more than %d files\n", key, cacheMaxEntries)
+			return true, nil
+		}
+		// The size limit, by contrast, measures different things on the two backends -
+		// this one weighs the tree, the archive weighs the gzip of it - so a tree
+		// refused here can still fit as an archive, and a dependency tree of text
+		// compresses well. Settling on it would drop a cache the object store would
+		// have taken.
 		//
 		// The volume filling mid-copy lands here too. The probe at open time cannot
 		// predict it, because a volume with room for a probe file can still run out
