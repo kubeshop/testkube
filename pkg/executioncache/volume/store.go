@@ -154,10 +154,12 @@ func (in *Inbox) Stage() (dir string, name string, err error) {
 	if err := in.dir.Mkdir(name, 0o777); err != nil {
 		return "", "", err
 	}
-if err := in.dir.Mkdir(path.Join(name, EntryRoot), 0o777); err != nil {
-	_ = in.dir.Remove(name)
-	return "", "", err
-}
+	if err := in.dir.Mkdir(path.Join(name, EntryRoot), 0o777); err != nil {
+		// The caller only registers its discard once Stage has returned a name, so
+		// the directory made just above would otherwise sit there until the sweep.
+		_ = in.dir.Remove(name)
+		return "", "", err
+	}
 	return path.Join(in.path, name, EntryRoot), name, nil
 }
 
