@@ -123,3 +123,32 @@ func (s *Sweeper) Sweep(ctx context.Context) error {
 	}
 	return nil
 }
+
+// PointerLifetime reports how long a cache pointer can still be served, and whether
+// anything expires it at all.
+//
+// The sweep has to outlast it. An entry removed while the pointer naming it is still
+// stored turns every hit on that key into a miss the restore cannot explain, and the
+// key is immutable, so no later run can replace it until the object itself expires.
+// Keeping an entry nothing points at only wastes space until the next sweep, so that
+// is the direction to err in.
+//
+// Two lifecycle rules can match one cache object - the cache-prefixed one and the
+// bucket-wide one, which is deliberately left unfiltered and so covers cache objects
+// too - and where both do, the object store applies the earlier. Either count being 0
+// means that rule is disabled. Both being 0 means pointers are kept indefinitely, which
+// no retention can outlast; that is reported rather than answered with a duration,
+// because returning 0 would read as "already expired" and silently pass any retention.
+func PointerLifetime(cacheExpirationDays, bucketExpirationDays int) (time.Duration, bool) {
+	const day = 24 * time.Hour
+	switch {
+	case cacheExpirationDays > 0 && bucketExpirationDays > 0:
+		return time.Duration(min(cacheExpirationDays, bucketExpirationDays)) * day, true
+	case cacheExpirationDays > 0:
+		return time.Duration(cacheExpirationDays) * day, true
+	case bucketExpirationDays > 0:
+		return time.Duration(bucketExpirationDays) * day, true
+	default:
+		return 0, false
+	}
+}

@@ -1028,23 +1028,41 @@ func main() {
 	// run here rather than in the control plane because the control plane is not
 	// necessarily in this cluster and so cannot reach the volume at all.
 	if cfg.TestkubeStepCacheVolumeClaim != "" {
-		// Retention is raised to the object store's cache expiration when it is set
-		// shorter, rather than warned about and used as given.
+		// Retention is raised to however long a pointer can still be served, rather
+		// than warned about and used as given.
 		//
 		// The ordering is not a preference: the object store decides when a pointer
 		// stops being served, and an entry deleted while its pointer is still stored
-		// turns every hit on that key into a miss the restore cannot explain, for as
-		// long as the pointer survives. Wasting space until the next sweep is the
-		// strictly recoverable direction, so a misconfiguration is resolved that way
-		// instead of being left to produce a cache that answers wrongly.
+		// turns every hit on that key into a miss the restore cannot explain - and the
+		// key is immutable, so no later run can replace it for as long as the pointer
+		// survives. Wasting space until the next sweep is the strictly recoverable
+		// direction, so a misconfiguration is resolved that way instead of being left
+		// to produce a cache that answers wrongly.
+		//
+		// Both lifecycle rules decide that, not just the cache one: the bucket-wide
+		// rule is deliberately left unfiltered and so covers cache objects too, which
+		// SetExpirationPolicies documents. With STORAGE_CACHE_EXPIRATION disabled a
+		// pointer therefore still lives STORAGE_EXPIRATION days, and comparing against
+		// the cache rule alone would sweep entries weeks ahead of their pointers.
 		retention := time.Duration(cfg.TestkubeStepCacheVolumeRetentionDays) * 24 * time.Hour
-		if cacheExpiration := time.Duration(cfg.StorageCacheExpiration) * 24 * time.Hour; retention < cacheExpiration {
+		pointerTTL, expires := volume.PointerLifetime(cfg.StorageCacheExpiration, cfg.StorageExpiration)
+		switch {
+		case !expires:
+			// Nothing bounds a pointer, so no retention is long enough and raising it
+			// would only trade one failure for an unbounded volume. Say so instead:
+			// the fix is a lifecycle rule, which is not this process's to set.
 			log.DefaultLogger.Warnw(
-				"step cache volume retention is shorter than the object store's cache expiration; raising it, because deleting an entry whose pointer is still stored turns hits into unexplained misses",
+				"nothing expires cache pointers, so entries swept off the shared volume will leave pointers that resolve to nothing and keys that stay cold until the object is removed; set STORAGE_CACHE_EXPIRATION to at most the volume retention",
+				"retentionDays", cfg.TestkubeStepCacheVolumeRetentionDays,
+			)
+		case retention < pointerTTL:
+			log.DefaultLogger.Warnw(
+				"step cache volume retention is shorter than the object store expires cache pointers in; raising it, because deleting an entry whose pointer is still stored turns hits into unexplained misses",
 				"configuredRetentionDays", cfg.TestkubeStepCacheVolumeRetentionDays,
 				"cacheExpirationDays", cfg.StorageCacheExpiration,
+				"bucketExpirationDays", cfg.StorageExpiration,
 			)
-			retention = cacheExpiration
+			retention = pointerTTL
 		}
 
 		sweeper := &volume.Sweeper{
