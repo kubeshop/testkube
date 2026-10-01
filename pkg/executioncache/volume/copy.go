@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -64,7 +65,7 @@ func RestoreTree(src *os.Root, declaredPaths []string, limits CopyLimits) (wrote
 		entries int
 	)
 
-	for _, declared := range declaredPaths {
+	for _, declared := range coverPaths(declaredPaths) {
 		dest := path.Clean(declared)
 		if dest == "" || dest == "/" || dest == "." {
 			continue
@@ -99,6 +100,43 @@ func RestoreTree(src *os.Root, declaredPaths []string, limits CopyLimits) (wrote
 // ErrDeclaredPathIsSymlink reports a declared cache path that is - or is reached
 // through - a symlink.
 var ErrDeclaredPathIsSymlink = errors.New("declared cache path is reached through a symlink")
+
+// coverPaths drops declared paths that another declared path already contains.
+//
+// A workflow may legitimately declare both /data/deps and /data/deps/packages. Walking
+// each in turn would then visit the nested tree twice: storing it twice on the volume,
+// and counting it twice against the size and entry limits. The archive form does not,
+// because its walker crosses the filesystem once and matches every file against all the
+// patterns - so without this the two backends disagree about how big the same cache is,
+// and the volume can refuse a cache the archive would have taken.
+//
+// Sorting puts a parent immediately before everything beneath it, so comparing each
+// path against the last one kept is enough to drop the whole nested run.
+func coverPaths(paths []string) []string {
+	cleaned := make([]string, 0, len(paths))
+	for _, p := range paths {
+		c := path.Clean(p)
+		if c == "" || c == "/" || c == "." {
+			continue
+		}
+		cleaned = append(cleaned, c)
+	}
+	sort.Strings(cleaned)
+
+	covered := make([]string, 0, len(cleaned))
+	for _, c := range cleaned {
+		if n := len(covered); n > 0 {
+			last := covered[n-1]
+			// The trailing separator is what keeps /data/deps2 from looking like it
+			// sits under /data/deps.
+			if c == last || strings.HasPrefix(c, last+"/") {
+				continue
+			}
+		}
+		covered = append(covered, c)
+	}
+	return covered
+}
 
 // openDeclaredRoot opens a declared path as a root, having first established that it is
 // a real directory reached only through real directories.
@@ -156,13 +194,17 @@ func restoreInto(src *os.Root, within string, dst *os.Root, total *int64, entrie
 			return nil
 		}
 
+		// Directories are made but not counted, because the save does not count them
+		// either. Counting them here would let a tree pass the limit on the way in and
+		// fail it on the way out - the entry would store and then be refused by every
+		// restore of it, under a key no later run could replace.
+		if d.IsDir() {
+			return dst.MkdirAll(rel, 0o777)
+		}
+
 		*entries++
 		if limits.MaxEntries > 0 && *entries > limits.MaxEntries {
 			return ErrTooManyEntries
-		}
-
-		if d.IsDir() {
-			return dst.MkdirAll(rel, 0o777)
 		}
 
 		info, err := d.Info()
@@ -225,7 +267,7 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 		total   int64
 		entries int
 	)
-	for _, p := range paths {
+	for _, p := range coverPaths(paths) {
 		src := path.Clean(p)
 		if src == "" || src == "/" || src == "." {
 			continue

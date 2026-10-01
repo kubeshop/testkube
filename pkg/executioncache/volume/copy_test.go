@@ -275,3 +275,75 @@ func TestRestoreCreatesAMissingDeclaredPath(t *testing.T) {
 	require.NoError(t, readErr)
 	assert.Equal(t, "from the entry", string(body))
 }
+
+// A workflow may legitimately declare both a directory and something beneath it.
+// Walking each in turn would store the nested tree twice and count it twice, so the
+// volume would refuse a cache on a size or entry limit the archive - whose walker
+// crosses the filesystem once - would have accepted.
+func TestSaveCountsAnOverlappingPathOnce(t *testing.T) {
+	outer := posixDir(t)
+	inner := outer + "/packages"
+	write(t, filepath.FromSlash(inner+"/dep"), "xx")
+
+	staging := filepath.Join(t.TempDir(), EntryRoot)
+	require.NoError(t, os.MkdirAll(staging, 0o777))
+
+	size, entries, err := SaveTree(staging, []string{outer, inner}, CopyLimits{})
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, entries, "one file declared twice is still one file")
+	assert.EqualValues(t, 2, size, "and its bytes must not be counted twice either")
+}
+
+// Declaring the nested path first must give the same answer: the cover is about which
+// paths contain which, not the order they were written in.
+func TestSaveCoversRegardlessOfDeclarationOrder(t *testing.T) {
+	outer := posixDir(t)
+	inner := outer + "/packages"
+	write(t, filepath.FromSlash(inner+"/dep"), "xx")
+
+	staging := filepath.Join(t.TempDir(), EntryRoot)
+	require.NoError(t, os.MkdirAll(staging, 0o777))
+
+	_, entries, err := SaveTree(staging, []string{inner, outer}, CopyLimits{})
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, entries)
+}
+
+// A sibling whose name merely starts with another's is not inside it, so dropping it
+// would silently stop caching a declared path.
+func TestCoverPathsKeepsASiblingWithASharedPrefix(t *testing.T) {
+	assert.Equal(t,
+		[]string{"/data/deps", "/data/deps2"},
+		coverPaths([]string{"/data/deps2", "/data/deps"}))
+}
+
+func TestCoverPathsDropsWhatAnotherPathContains(t *testing.T) {
+	assert.Equal(t,
+		[]string{"/a", "/b"},
+		coverPaths([]string{"/a", "/a/b", "/a/b/c", "/b", "/a"}))
+}
+
+// The root, empty strings and unclean spellings are the shapes that would otherwise
+// cover everything else and cache the whole filesystem.
+func TestCoverPathsDiscardsUnusablePaths(t *testing.T) {
+	assert.Empty(t, coverPaths([]string{"", "/", ".", "/.."}))
+	assert.Equal(t, []string{"/data/deps"}, coverPaths([]string{"/data/./deps", "/data/deps/"}))
+}
+
+// The restore side covers too, so a nested declared path is not copied out twice.
+func TestRestoreCoversOverlappingPaths(t *testing.T) {
+	outer := posixDir(t)
+	inner := outer + "/packages"
+	write(t, filepath.FromSlash(inner+"/dep"), "cached")
+	entry := entryFrom(t, []string{outer})
+	require.NoError(t, os.RemoveAll(filepath.FromSlash(outer)))
+
+	_, err := RestoreTree(entry, []string{outer, inner}, CopyLimits{MaxEntries: 1})
+
+	require.NoError(t, err, "the nested path must not be counted a second time")
+	body, readErr := os.ReadFile(filepath.FromSlash(inner + "/dep"))
+	require.NoError(t, readErr)
+	assert.Equal(t, "cached", string(body))
+}
