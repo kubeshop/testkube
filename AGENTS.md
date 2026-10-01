@@ -114,7 +114,10 @@ restore is a copy rather than an unpack and nothing is gzipped.
   `SetPure(true)`, so `action.Group` merges them into the step's own container and
   `CreateContainer` unions the volume mounts - the step's own command therefore holds
   whatever the cache stages mount. The read side is the whole volume **read-only**; the
-  write side is a **subPath** resolving to `inbox/<resource id>`. Dropping either would
+  write side is a **subPath** resolving to `inbox/<root execution id>` - the execution,
+  not the pod, so that a parallel or service worker writes into the inbox the agent
+  already made for its parent (nothing inside a pod can reach the volume root to make
+  one of its own). Dropping either would
   let any step rewrite any entry, so `processor_cache_test.go` pins both.
 - **Everything on the volume is readable by every execution in the cluster.** That is the
   accepted cost of sharing one, stated in the Helm value's own documentation. It is the
@@ -136,9 +139,25 @@ restore is a copy rather than an unpack and nothing is gzipped.
   their own Deployment**, because a
   runner-only installation has no api Deployment and the sweep would otherwise read its
   missing inbox directory as an empty volume and let the claim fill.
+- **The volume is used only where cache objects are known to expire.**
+  `commons.StepCacheVolumeConfirmed` gates both the mounts and the sweep, and a
+  configured claim is not enough: an entry is reachable only through the object naming
+  it, so sweeping on a timer is safe only if that object also goes away.
+  `SetExpirationPolicies` failing is logged and startup continues - reading the
+  existing lifecycle needs a permission an upgrade may not have granted - which would
+  otherwise leave the rule uninstalled while the sweep ran on the strength of the
+  configured numbers. **This process only knows the rule is installed in standalone
+  mode**; an agent attached to a Control Plane does not own the bucket, never calls
+  `SetExpirationPolicies`, and holds expiration settings with no bearing on the store
+  its pointers are written to - so the volume stays off there until the Control Plane
+  reports its cache expiration. Unconfirmed disables the volume outright rather than
+  only the sweep, because not sweeping a volume still being written to just fills it.
 - **The agent makes each execution's inbox before its pod starts**
   (`prepareStepCacheInbox` in `kubernetesworker/worker.go`, called at both deploy
-  sites). kubelet would create the `subPath` directory itself - it creates a missing
+  sites), keyed on the execution's **root** id so that one inbox serves an execution
+  and everything it spawns - a parallel or service worker builds its pods from inside a
+  pod, where nothing can reach the volume root, so it cannot make an inbox of its own.
+  kubelet would create the `subPath` directory itself - it creates a missing
   one and its parents - but owned by **root**, with the mode of the volume root and no
   regard for `runAsUser`; `fsGroup` is not applied to a multi-writer volume, since the
   in-tree NFS plugin never reads it. A step running as another user would then be
