@@ -1088,7 +1088,13 @@ func TestRunCacheSave_CopiesToTheVolumeAndStoresAPointer(t *testing.T) {
 	require.True(t, ok, "the object must hold a pointer: %q", string(uploaded))
 	require.NoError(t, volume.ValidatePath(pointer.Path))
 	assert.EqualValues(t, len("installed"), pointer.Size)
-	assert.EqualValues(t, pointer.Size, repo.savedSize, "the quota must be told the entry's size, not the pointer's")
+
+	// SaveRequest.Size is what the bucket is about to receive, which here is the
+	// pointer rather than the tree - the tree is on a volume the control plane neither
+	// provisions nor can measure. Sending the tree's size would let a quota refuse a
+	// save that stores a few hundred bytes in it.
+	assert.EqualValues(t, len(uploaded), repo.savedSize)
+	assert.Less(t, repo.savedSize, int64(volume.MaxPointerBytes))
 
 	// And the tree really is on the volume, under the path the pointer names.
 	stored, readErr := os.ReadFile(filepath.Join(

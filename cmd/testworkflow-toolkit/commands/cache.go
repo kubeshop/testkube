@@ -837,9 +837,17 @@ func readCacheState(path string) (executioncache.State, bool) {
 // same ordering the archive path has, with the copy standing in for the pack:
 //
 //	copy    - into a staging directory under a name no reader follows
-//	Save    - the control plane decides whether this execution may store this key
 //	Commit  - rename, so the entry appears whole or not at all
+//	Save    - the control plane decides whether this execution may store this key
 //	upload  - the pointer, conditionally, which is what resolves a race on one key
+//
+// Commit comes before Save, unlike the archive path where the pack does, because what
+// gets uploaded here is the pointer and the pointer does not exist until the entry has
+// a published name. SaveRequest.Size is the size about to be uploaded, so it has to be
+// the pointer's few hundred bytes rather than the tree's - a control plane enforcing a
+// quota against the tree would refuse saves that store almost nothing in its bucket.
+// A committed entry no pointer names is invisible either way, and every path below
+// that does not publish discards it.
 //
 // Everything that does not end in a published pointer discards what it staged. An entry
 // is reachable only through its pointer, so one left behind is invisible until the
@@ -910,10 +918,33 @@ func saveToVolume(
 		return true, nil
 	}
 
+	pointer, err := inbox.Commit(staged, size)
+	if err != nil {
+		// A rename within one directory failing means the volume is sick, not that
+		// this entry is unwelcome - so this is the other case worth falling back on.
+		fmt.Fprintf(out, "cache: the shared volume would not take %q: %s\n", key, err.Error())
+		return false, nil
+	}
+	committed = true
+	published := false
+	defer func() {
+		if !published {
+			inbox.Discard(pointer)
+		}
+	}()
+
+	// Taken once: bytes.Reader.Len reports what is left to read, not the whole body.
+	body := bytes.NewReader(volume.Encode(pointer))
+	bodyLen := int64(body.Len())
+
 	upload, err := repository.Save(ctx, executioncache.SaveRequest{
 		Key:   key,
 		Scope: executioncache.ParseScope(scope),
-		Size:  size,
+		// The pointer is the object, so this is what the bucket is about to receive.
+		// The tree itself is on a volume the control plane does not provision and
+		// cannot measure; it is bounded by maxSize above and reclaimed by the agent's
+		// sweep, not by a quota.
+		Size: bodyLen,
 	})
 	if err != nil {
 		if reason, degraded := executioncache.Degraded(err); degraded {
@@ -927,26 +958,8 @@ func saveToVolume(
 		return true, nil
 	}
 
-	pointer, err := inbox.Commit(staged, size)
-	if err != nil {
-		// A rename within one directory failing means the volume is sick, not that
-		// this entry is unwelcome - so this is the other case worth falling back on.
-		// The grant just taken goes unused, which costs nothing: it is a signed URL,
-		// not a reservation.
-		fmt.Fprintf(out, "cache: the shared volume would not take %q: %s\n", key, err.Error())
-		return false, nil
-	}
-	committed = true
-	published := false
-	defer func() {
-		if !published {
-			inbox.Discard(pointer)
-		}
-	}()
-
 	uploadStarted := time.Now()
-	body := bytes.NewReader(volume.Encode(pointer))
-	if err := uploadCache(ctx, upload.URL, upload.Headers, body, int64(body.Len())); err != nil {
+	if err := uploadCache(ctx, upload.URL, upload.Headers, body, bodyLen); err != nil {
 		if errors.Is(err, errCacheEntryWon) {
 			fmt.Fprintf(out, "cache: %q was stored by another execution first, nothing to save\n", key)
 			return true, nil
