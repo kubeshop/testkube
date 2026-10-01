@@ -951,6 +951,12 @@ func TestProcessCache_MountsTheStoreReadOnly(t *testing.T) {
 
 // The write side is confined by kubelet, not by the toolkit choosing to behave: the
 // subPath resolves to this execution's own directory and nothing else is reachable.
+//
+// It is the execution's root, not this pod's resource. A parallel or service worker
+// runs in a pod of its own, and nothing in that pod can reach the volume root to make
+// an inbox there - only the agent can, and the only name it knows before the fan-out is
+// the root's. Keying this on the resource left every nested pod writing to a directory
+// kubelet had made as root, which a step running as anyone else cannot write to.
 func TestProcessCache_MountsTheInboxWritableUnderItsOwnSubPath(t *testing.T) {
 	res, err := bundleWithCacheVolume(t, cachedStep())
 	require.NoError(t, err)
@@ -965,7 +971,7 @@ func TestProcessCache_MountsTheInboxWritableUnderItsOwnSubPath(t *testing.T) {
 	require.NotEmpty(t, inbox, "the save stage must mount an inbox")
 	for _, mount := range inbox {
 		assert.False(t, mount.ReadOnly)
-		assert.Equal(t, volume.InboxDir+"/dummy-id-abc", mount.SubPath,
+		assert.Equal(t, volume.InboxDir+"/dummy-id", mount.SubPath,
 			"the subPath must resolve to this execution, or a pod could write another's entries")
 	}
 }
@@ -986,4 +992,47 @@ func TestProcessCache_KeepsTheStagingVolumeForTheFallback(t *testing.T) {
 		}
 	}
 	assert.True(t, staging, "the object-store fallback has nowhere to pack without it")
+}
+
+// A parallel or service worker is a pod of its own, with its own resource id and the
+// parent's root id. It writes into the inbox named by the root, which is the one the
+// agent made.
+//
+// Nothing inside a pod can reach the volume root, so a nested pod cannot make an inbox
+// of its own, and kubelet making one leaves it owned by root - unwritable by a step
+// running as anyone else, which would quietly send every nested save to the object
+// store while the parent's went to the volume.
+func TestProcessCache_NestedWorkersShareTheRootExecutionsInbox(t *testing.T) {
+	parent := testConfig
+	parent.Worker.StepCacheVolume = &testworkflowconfig.StepCacheVolumeConfig{ClaimName: "shared-cache"}
+
+	child := parent
+	child.Resource = testworkflowconfig.ResourceConfig{
+		Id:     parent.Resource.EffectiveRootId() + "-worker-1",
+		RootId: parent.Resource.EffectiveRootId(),
+	}
+	require.NotEqual(t, child.Resource.Id, parent.Resource.Id, "a child is its own resource")
+
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{Steps: []testworkflowsv1.Step{cachedStep()}},
+	}
+
+	parentBundle, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: parent})
+	require.NoError(t, err)
+	childBundle, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: child})
+	require.NoError(t, err)
+
+	assert.Equal(t, inboxSubPath(t, parentBundle), inboxSubPath(t, childBundle),
+		"a nested worker must write into the inbox the agent already made")
+}
+
+func inboxSubPath(t *testing.T, res *testworkflowprocessor.Bundle) string {
+	t.Helper()
+	for _, mount := range mountsOf(res, cacheVolumeName(t, res)) {
+		if mount.MountPath == cacheInboxPath {
+			return mount.SubPath
+		}
+	}
+	t.Fatal("no inbox mount was added")
+	return ""
 }

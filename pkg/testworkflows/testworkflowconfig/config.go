@@ -73,6 +73,19 @@ type ResourceConfig struct {
 	FsPrefix string `json:"f,omitempty"`
 }
 
+// EffectiveRootId names the execution this resource belongs to, falling back to the
+// resource's own id where nothing set a root - a resource that is its own root.
+//
+// It is what to key anything shared by a whole execution on, rather than by one pod.
+// A parallel or service worker runs in its own pod with its own Id and carries the
+// parent's RootId, so the two agree on this and on nothing else.
+func (r ResourceConfig) EffectiveRootId() string {
+	if r.RootId != "" {
+		return r.RootId
+	}
+	return r.Id
+}
+
 type SignatureConfig struct {
 	Signature
 	Children []Signature `json:"children,omitempty"`

@@ -158,7 +158,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		AppendPodConfig(workflow.Spec.Pod).
 		AppendJobConfig(workflow.Spec.Job).
 		AppendPvcs(workflow.Spec.Pvcs).
-		AppendStepCacheVolume(options.Config.Worker.StepCacheVolume, options.Config.Resource.Id)
+		AppendStepCacheVolume(options.Config.Worker.StepCacheVolume, options.Config.Resource.EffectiveRootId())
 	layer.ContainerDefaults().
 		ApplyCR(constants.DefaultContainerConfig.DeepCopy()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultInternalPath)).

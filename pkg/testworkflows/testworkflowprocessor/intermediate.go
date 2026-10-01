@@ -30,7 +30,10 @@ type Intermediate interface {
 	AppendJobConfig(cfg *testworkflowsv1.JobConfig) Intermediate
 	AppendPodConfig(cfg *testworkflowsv1.PodConfig) Intermediate
 	AppendPvcs(cfg map[string]corev1.PersistentVolumeClaimSpec) Intermediate
-	AppendStepCacheVolume(cfg *testworkflowconfig.StepCacheVolumeConfig, resourceID string) Intermediate
+	// AppendStepCacheVolume attaches the operator's shared cache volume, with rootID
+	// naming the inbox: the execution's root, not this pod's resource, so that a
+	// parallel or service worker writes into the inbox the agent already made.
+	AppendStepCacheVolume(cfg *testworkflowconfig.StepCacheVolumeConfig, rootID string) Intermediate
 
 	AddConfigMap(configMap corev1.ConfigMap) Intermediate
 	AddSecret(secret corev1.Secret) Intermediate
@@ -170,13 +173,18 @@ func (s *intermediate) AppendPvcs(cfg map[string]corev1.PersistentVolumeClaimSpe
 	return s
 }
 
-func (s *intermediate) AppendStepCacheVolume(cfg *testworkflowconfig.StepCacheVolumeConfig, resourceID string) Intermediate {
-	// Both are needed: without a claim there is no volume, and without a resource id a
+func (s *intermediate) AppendStepCacheVolume(cfg *testworkflowconfig.StepCacheVolumeConfig, rootID string) Intermediate {
+	// Both are needed: without a claim there is no volume, and without an id a
 	// committed entry could not be named from the volume root, so no reader would ever
 	// find it.
-	if cfg != nil && cfg.ClaimName != "" && resourceID != "" {
+	//
+	// The id is the execution's root. Everything one execution spawns shares one
+	// inbox, because a parallel or service worker runs in a pod of its own and nothing
+	// in that pod can reach the volume root to make an inbox there - only the agent
+	// can, and the only name it knows ahead of the fan-out is the root's.
+	if cfg != nil && cfg.ClaimName != "" && rootID != "" {
 		s.StepCacheVolume = cfg
-		s.stepCacheInboxName = volume.InboxFor(resourceID)
+		s.stepCacheInboxName = volume.InboxFor(rootID)
 	}
 	return s
 }

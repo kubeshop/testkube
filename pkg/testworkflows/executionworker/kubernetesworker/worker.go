@@ -199,7 +199,7 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	}
 
 	// Make this execution's cache inbox before the pod that writes to it starts.
-	w.prepareStepCacheInbox(cfg.Resource.Id)
+	w.prepareStepCacheInbox(cfg.Resource.EffectiveRootId())
 
 	// Register namespace information in the cache
 	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
@@ -277,7 +277,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 	}
 
 	// Make this execution's cache inbox before the pod that writes to it starts.
-	w.prepareStepCacheInbox(cfg.Resource.Id)
+	w.prepareStepCacheInbox(cfg.Resource.EffectiveRootId())
 
 	// Register namespace information in the cache
 	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
