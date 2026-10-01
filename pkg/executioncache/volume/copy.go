@@ -198,7 +198,14 @@ func restoreInto(src *os.Root, within string, dst *os.Root, total *int64, entrie
 		// either. Counting them here would let a tree pass the limit on the way in and
 		// fail it on the way out - the entry would store and then be refused by every
 		// restore of it, under a key no later run could replace.
+		//
+		// Made still counts as written, though: wrote is what tells the caller to
+		// clear the declared paths after a failure, so it has to mean "this touched
+		// the filesystem", not "this copied bytes". A restore that creates a directory
+		// tree and then stops at the entry limit would otherwise report nothing
+		// written and leave that tree behind for the install to find.
 		if d.IsDir() {
+			wrote = true
 			return dst.MkdirAll(rel, 0o777)
 		}
 
@@ -223,16 +230,16 @@ func restoreInto(src *os.Root, within string, dst *os.Root, total *int64, entrie
 			if readErr != nil {
 				return readErr
 			}
+			// Set before the first mutation rather than after the last one: the Remove
+			// below can succeed and the Symlink then fail, which has changed the tree
+			// even though nothing was created.
+			wrote = true
 			if mkErr := dst.MkdirAll(path.Dir(rel), 0o777); mkErr != nil && path.Dir(rel) != "." {
 				return mkErr
 			}
 			// An entry restored over an existing tree may find the link already there.
 			_ = dst.Remove(rel)
-			if symErr := dst.Symlink(target, rel); symErr != nil {
-				return symErr
-			}
-			wrote = true
-			return nil
+			return dst.Symlink(target, rel)
 		}
 
 		if !info.Mode().IsRegular() {
@@ -241,10 +248,12 @@ func restoreInto(src *os.Root, within string, dst *os.Root, total *int64, entrie
 			return nil
 		}
 
+		// Likewise set before the copy, not from the byte count it returns: an empty
+		// file is still a file the install would find, and copyIntoRoot removes what
+		// is already at the path before creating anything, so even a copy that fails
+		// immediately may have changed the tree.
+		wrote = true
 		n, copyErr := copyIntoRoot(src, name, dst, rel, info, remaining(limits.MaxTotalBytes, *total))
-		if n > 0 {
-			wrote = true
-		}
 		*total += n
 		return copyErr
 	})

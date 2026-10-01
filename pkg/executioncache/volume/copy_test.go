@@ -347,3 +347,28 @@ func TestRestoreCoversOverlappingPaths(t *testing.T) {
 	require.NoError(t, readErr)
 	assert.Equal(t, "cached", string(body))
 }
+
+// wrote is what tells the caller to clear the declared paths after a failed restore, so
+// it has to mean "this touched the filesystem", not "this copied bytes".
+//
+// A restore that makes a directory tree and an empty file and then stops at the entry
+// limit has changed the destination. Reporting nothing written leaves that behind while
+// telling the step it was a plain miss, so the install runs over a half-restored tree
+// nothing will clean up.
+func TestRestoreReportsADirectoryAndAnEmptyFileAsWritten(t *testing.T) {
+	src := posixDir(t)
+	write(t, filepath.FromSlash(src+"/nested/a"), "")
+	write(t, filepath.FromSlash(src+"/nested/b"), "second")
+	entry := entryFrom(t, []string{src})
+	require.NoError(t, os.RemoveAll(filepath.FromSlash(src)))
+
+	// One entry is allowed, so the empty file is restored and the next one is refused -
+	// nothing with any bytes in it is ever copied.
+	wrote, err := RestoreTree(entry, []string{src}, CopyLimits{MaxEntries: 1})
+
+	require.ErrorIs(t, err, ErrTooManyEntries)
+	assert.True(t, wrote, "the directory and the empty file are both left behind")
+
+	_, statErr := os.Stat(filepath.FromSlash(src + "/nested/a"))
+	require.NoError(t, statErr, "and really were created, so the test is pinning the right thing")
+}
