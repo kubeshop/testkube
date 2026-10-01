@@ -320,8 +320,9 @@ defaultRunnerResources:
 ## cache a trusted run restores - but every workflow can read what every other workflow
 ## cached. Only enable this where that is acceptable.
 ##
-## The claim must already exist in every namespace executions run in; the chart does not
-## create it.
+## The claim must already exist in this chart's release namespace and in every
+## namespace executions run in; the chart does not create it. Claims in different
+## namespaces must expose the same backing storage.
 stepCacheVolume:
   # -- Store step dependency caches on a shared volume instead of in the object store
   enabled: false
