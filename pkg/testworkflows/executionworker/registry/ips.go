@@ -55,6 +55,11 @@ func (r *ipsRegistry) load(ctx context.Context, id string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// A reclaimed or deleted pod leaves an empty list. The callers already handle a
+	// missing resource, so report that.
+	if len(pods.Items) == 0 {
+		return "", ErrResourceNotFound
+	}
 	return pods.Items[0].Status.PodIP, nil
 }
 
