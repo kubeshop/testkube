@@ -361,8 +361,21 @@ func runCacheSave(ctx context.Context, encoded string, mounts []string, statePat
 	// is exactly what it was, which is what a pod with no volume - or one whose volume
 	// turned out to be unusable - still runs.
 	if inbox := cacheInbox(out); inbox != nil {
-		defer inbox.Close()
-		return saveToVolume(ctx, inbox, key, spec.Scope, paths, maxSize, repository, out)
+		done, err := saveToVolume(ctx, inbox, key, spec.Scope, paths, maxSize, repository, out)
+		inbox.Close()
+		if done {
+			return err
+		}
+		// The volume could not take the entry - it filled while the tree was being
+		// copied, or went away mid-write. The probe at open time cannot predict that,
+		// because a volume with room for a probe file can still run out during a copy
+		// that is gigabytes long.
+		//
+		// So fall through to the object store rather than leave the key cold: the step
+		// has already installed what it needed, and a save that lands somewhere is
+		// worth more than one that lands nowhere until an operator notices the volume
+		// is full.
+		fmt.Fprintf(out, "cache: storing %q in the object store instead\n", key)
 	}
 
 	// Timed from here, not from the upload. Packing reads and compresses the whole tree
@@ -809,6 +822,12 @@ func readCacheState(path string) (executioncache.State, bool) {
 // Everything that does not end in a published pointer discards what it staged. An entry
 // is reachable only through its pointer, so one left behind is invisible until the
 // volume fills, and it can be gigabytes.
+//
+// done reports whether the save was settled here. It is false only when the volume
+// itself could not take the entry - it filled mid-copy, or went away - which the caller
+// answers by storing in the object store instead. Every other outcome, including the
+// ordinary ones where nothing is stored, is settled: falling back on those would store
+// a second copy of something the control plane has already ruled on.
 func saveToVolume(
 	ctx context.Context,
 	inbox *volume.Inbox,
@@ -817,13 +836,13 @@ func saveToVolume(
 	maxSize int64,
 	repository executioncache.Repository,
 	out io.Writer,
-) error {
+) (done bool, err error) {
 	started := time.Now()
 
 	dir, staged, err := inbox.Stage()
 	if err != nil {
-		fmt.Fprintf(out, "cache: not saving %q: %s\n", key, err.Error())
-		return nil
+		fmt.Fprintf(out, "cache: the shared volume would not take %q: %s\n", key, err.Error())
+		return false, nil
 	}
 	committed := false
 	defer func() {
@@ -837,16 +856,20 @@ func saveToVolume(
 		MaxEntries:    cacheMaxEntries,
 	})
 	if err != nil {
-		if errors.Is(err, volume.ErrTooLarge) {
+		if errors.Is(err, volume.ErrTooLarge) || errors.Is(err, volume.ErrTooManyEntries) {
+			// A policy refusal rather than a volume failure: the object store would
+			// apply the same limit, so copying the whole tree again to be refused a
+			// second time helps nobody.
 			fmt.Fprintf(out, "cache: not saving %q: the entry is over the %s limit\n",
 				key, humanize.Bytes(uint64(maxSize)))
-			return nil
+			return true, nil
 		}
-		// A volume that filled, or went away, mid-copy. The step installed what it
-		// needed either way, so this is a save that did not happen rather than a
-		// failure the step has to care about.
-		fmt.Fprintf(out, "cache: not saving %q: %s\n", key, err.Error())
-		return nil
+		// The volume filled, or went away, mid-copy. The probe at open time cannot
+		// predict this - a volume with room for a probe file can still run out during a
+		// copy that is gigabytes long - so this is where it is discovered, and the
+		// object store is still there to take it.
+		fmt.Fprintf(out, "cache: the shared volume would not take %q: %s\n", key, err.Error())
+		return false, nil
 	}
 	copied := time.Since(started)
 
@@ -855,7 +878,7 @@ func saveToVolume(
 	// hit that restores nothing, and no rerun could displace it.
 	if entries == 0 {
 		fmt.Fprintf(out, "cache: not saving %q: nothing was found under %s\n", key, strings.Join(paths, ", "))
-		return nil
+		return true, nil
 	}
 
 	upload, err := repository.Save(ctx, executioncache.SaveRequest{
@@ -866,19 +889,23 @@ func saveToVolume(
 	if err != nil {
 		if reason, degraded := executioncache.Degraded(err); degraded {
 			fmt.Fprintf(out, "cache: not saving %q: %s\n", key, reason)
-			return nil
+			return true, nil
 		}
-		return err
+		return true, err
 	}
 	if upload.AlreadyExists {
 		fmt.Fprintf(out, "cache: %q is already stored, nothing to save\n", key)
-		return nil
+		return true, nil
 	}
 
 	pointer, err := inbox.Commit(staged, size)
 	if err != nil {
-		fmt.Fprintf(out, "cache: not saving %q: %s\n", key, err.Error())
-		return nil
+		// A rename within one directory failing means the volume is sick, not that
+		// this entry is unwelcome - so this is the other case worth falling back on.
+		// The grant just taken goes unused, which costs nothing: it is a signed URL,
+		// not a reservation.
+		fmt.Fprintf(out, "cache: the shared volume would not take %q: %s\n", key, err.Error())
+		return false, nil
 	}
 	committed = true
 	published := false
@@ -893,10 +920,10 @@ func saveToVolume(
 	if err := uploadCache(ctx, upload.URL, upload.Headers, body, int64(body.Len())); err != nil {
 		if errors.Is(err, errCacheEntryWon) {
 			fmt.Fprintf(out, "cache: %q was stored by another execution first, nothing to save\n", key)
-			return nil
+			return true, nil
 		}
 		fmt.Fprintf(out, "cache: not saving %q: %s\n", key, err.Error())
-		return nil
+		return true, nil
 	}
 	published = true
 
@@ -906,5 +933,5 @@ func saveToVolume(
 	fmt.Fprintf(out, "cache: saved %q to the shared volume (%s in %s, %s copying and %s storing)\n",
 		key, humanize.Bytes(uint64(size)), time.Since(started).Truncate(time.Millisecond),
 		copied.Truncate(time.Millisecond), time.Since(uploadStarted).Truncate(time.Millisecond))
-	return nil
+	return true, nil
 }

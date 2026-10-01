@@ -1028,16 +1028,23 @@ func main() {
 	// run here rather than in the control plane because the control plane is not
 	// necessarily in this cluster and so cannot reach the volume at all.
 	if cfg.TestkubeStepCacheVolumeClaim != "" {
+		// Retention is raised to the object store's cache expiration when it is set
+		// shorter, rather than warned about and used as given.
+		//
+		// The ordering is not a preference: the object store decides when a pointer
+		// stops being served, and an entry deleted while its pointer is still stored
+		// turns every hit on that key into a miss the restore cannot explain, for as
+		// long as the pointer survives. Wasting space until the next sweep is the
+		// strictly recoverable direction, so a misconfiguration is resolved that way
+		// instead of being left to produce a cache that answers wrongly.
 		retention := time.Duration(cfg.TestkubeStepCacheVolumeRetentionDays) * 24 * time.Hour
 		if cacheExpiration := time.Duration(cfg.StorageCacheExpiration) * 24 * time.Hour; retention < cacheExpiration {
-			// A pointer outliving what it points at is a restore reporting a miss it
-			// cannot explain, which is far harder to diagnose than the wasted space of
-			// the reverse.
 			log.DefaultLogger.Warnw(
-				"step cache volume retention is shorter than the object store's cache expiration, so entries may be deleted while their pointers are still stored",
-				"retentionDays", cfg.TestkubeStepCacheVolumeRetentionDays,
+				"step cache volume retention is shorter than the object store's cache expiration; raising it, because deleting an entry whose pointer is still stored turns hits into unexplained misses",
+				"configuredRetentionDays", cfg.TestkubeStepCacheVolumeRetentionDays,
 				"cacheExpirationDays", cfg.StorageCacheExpiration,
 			)
+			retention = cacheExpiration
 		}
 
 		sweeper := &volume.Sweeper{

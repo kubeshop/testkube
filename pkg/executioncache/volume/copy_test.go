@@ -3,7 +3,6 @@ package volume
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,8 +30,7 @@ func entryFrom(t *testing.T, paths []string) *os.Root {
 }
 
 func TestSaveAndRestoreRoundTripATree(t *testing.T) {
-	skipUnlessPosix(t)
-	src := t.TempDir()
+	src := posixDir(t)
 	write(t, filepath.Join(src, "pkg", "a.js"), "alpha")
 	write(t, filepath.Join(src, "pkg", "nested", "b.js"), "beta")
 
@@ -56,9 +54,8 @@ func TestSaveAndRestoreRoundTripATree(t *testing.T) {
 // cache, so anything outside the declared paths is skipped rather than written
 // somewhere the step never asked for and the cleanup would not reach.
 func TestRestoreSkipsWhatTheStepDidNotDeclare(t *testing.T) {
-	skipUnlessPosix(t)
-	declared := t.TempDir()
-	smuggled := t.TempDir()
+	declared := posixDir(t)
+	smuggled := posixDir(t)
 	write(t, filepath.Join(declared, "wanted"), "yes")
 	write(t, filepath.Join(smuggled, "unwanted"), "no")
 
@@ -75,8 +72,7 @@ func TestRestoreSkipsWhatTheStepDidNotDeclare(t *testing.T) {
 }
 
 func TestRestoreStopsAtTheSizeLimit(t *testing.T) {
-	skipUnlessPosix(t)
-	src := t.TempDir()
+	src := posixDir(t)
 	write(t, filepath.Join(src, "big"), "0123456789")
 	entry := entryFrom(t, []string{src})
 	require.NoError(t, os.RemoveAll(src))
@@ -87,8 +83,7 @@ func TestRestoreStopsAtTheSizeLimit(t *testing.T) {
 }
 
 func TestRestoreStopsAtTheEntryLimit(t *testing.T) {
-	skipUnlessPosix(t)
-	src := t.TempDir()
+	src := posixDir(t)
 	write(t, filepath.Join(src, "one"), "a")
 	write(t, filepath.Join(src, "two"), "b")
 	write(t, filepath.Join(src, "three"), "c")
@@ -103,8 +98,7 @@ func TestRestoreStopsAtTheEntryLimit(t *testing.T) {
 // A step may declare a cache path it never creates. That is a smaller entry, not a
 // failure - the same way an unmatched hash_files glob is a miss rather than an error.
 func TestSaveSkipsAPathThatWasNeverCreated(t *testing.T) {
-	skipUnlessPosix(t)
-	src := t.TempDir()
+	src := posixDir(t)
 	write(t, filepath.Join(src, "real"), "x")
 	staging := filepath.Join(t.TempDir(), EntryRoot)
 	require.NoError(t, os.MkdirAll(staging, 0o777))
@@ -116,8 +110,7 @@ func TestSaveSkipsAPathThatWasNeverCreated(t *testing.T) {
 }
 
 func TestSaveReportsTheTotalSize(t *testing.T) {
-	skipUnlessPosix(t)
-	src := t.TempDir()
+	src := posixDir(t)
 	write(t, filepath.Join(src, "a"), "12345")
 	write(t, filepath.Join(src, "b"), "678")
 	staging := filepath.Join(t.TempDir(), EntryRoot)
@@ -141,15 +134,81 @@ func TestSaveRefusesTheRoot(t *testing.T) {
 	assert.Zero(t, size)
 }
 
-// skipUnlessPosix skips a test that depends on mirroring absolute container paths.
-//
-// An entry stores a cached path by its absolute name with the leading separator
-// dropped, which a Windows drive letter cannot be. The agent runs only in Linux
-// containers, so this is the platform the behaviour is defined on rather than a gap to
-// paper over.
-func skipUnlessPosix(t *testing.T) {
+// A symlink already sitting inside a declared path is attacker-controlled input: the
+// entry may have been written by another workflow under an environment-scoped key. A
+// restore that wrote by absolute name would follow it and overwrite a file the step
+// never declared, which is what writing through an os.Root on the declared path stops.
+func TestRestoreDoesNotFollowASymlinkOutOfTheDeclaredPath(t *testing.T) {
+	outside := filepath.Join(t.TempDir(), "outside")
+	require.NoError(t, os.WriteFile(outside, []byte("untouched"), 0o666))
+
+	// The entry carries a plain file at <declared>/escape.
+	declared := posixDir(t)
+	write(t, filepath.Join(declared, "escape"), "from the entry")
+	entry := entryFrom(t, []string{declared})
+	require.NoError(t, os.RemoveAll(declared))
+
+	// The destination already holds a symlink at that name, pointing outside.
+	require.NoError(t, os.MkdirAll(declared, 0o777))
+	require.NoError(t, os.Symlink(outside, filepath.Join(declared, "escape")))
+
+	_, err := RestoreTree(entry, []string{declared}, CopyLimits{})
+	require.NoError(t, err)
+
+	body, readErr := os.ReadFile(outside)
+	require.NoError(t, readErr)
+	assert.Equal(t, "untouched", string(body),
+		"a restore must not write through a symlink that leaves the declared path")
+}
+
+// node_modules/.bin is entirely symlinks. Dropping them would restore an incomplete
+// tree that still answers as an exact hit, so the step would never repair it.
+func TestSaveAndRestorePreserveSymlinks(t *testing.T) {
+	src := posixDir(t)
+	write(t, filepath.Join(src, "pkg", "cli.js"), "#!/usr/bin/env node")
+	require.NoError(t, os.MkdirAll(filepath.Join(src, ".bin"), 0o777))
+	require.NoError(t, os.Symlink("../pkg/cli.js", filepath.Join(src, ".bin", "cli")))
+
+	entry := entryFrom(t, []string{src})
+	require.NoError(t, os.RemoveAll(src))
+
+	_, err := RestoreTree(entry, []string{src}, CopyLimits{})
+	require.NoError(t, err)
+
+	link, readErr := os.Readlink(filepath.Join(src, ".bin", "cli"))
+	require.NoError(t, readErr, "the link must come back as a link")
+	assert.Equal(t, "../pkg/cli.js", filepath.ToSlash(link),
+		"a relative link must stay relative, or it would name the pod that saved it")
+
+	// And it still resolves, which is the whole point of carrying it.
+	body, readErr := os.ReadFile(filepath.Join(src, ".bin", "cli"))
+	require.NoError(t, readErr)
+	assert.Equal(t, "#!/usr/bin/env node", string(body))
+}
+
+// Restoring over a tree that is already there is ordinary: a step may declare a path
+// its checkout populated.
+func TestRestoreOverwritesAnExistingFile(t *testing.T) {
+	declared := posixDir(t)
+	write(t, filepath.Join(declared, "dep"), "from the entry")
+	entry := entryFrom(t, []string{declared})
+
+	require.NoError(t, os.WriteFile(filepath.Join(declared, "dep"), []byte("stale"), 0o666))
+
+	_, err := RestoreTree(entry, []string{declared}, CopyLimits{})
+	require.NoError(t, err)
+
+	body, readErr := os.ReadFile(filepath.Join(declared, "dep"))
+	require.NoError(t, readErr)
+	assert.Equal(t, "from the entry", string(body))
+}
+
+// posixDir returns a temp directory named the way a cached path is: an absolute POSIX
+// path. On Windows the drive letter is dropped, which still resolves to the same
+// directory on the current drive, so the mirroring these tests exercise behaves as it
+// does in the Linux containers the agent actually runs in.
+func posixDir(t *testing.T) string {
 	t.Helper()
-	if runtime.GOOS == "windows" {
-		t.Skip("cached paths are absolute POSIX paths; the agent runs in Linux containers")
-	}
+	dir := t.TempDir()
+	return filepath.ToSlash(dir[len(filepath.VolumeName(dir)):])
 }

@@ -87,6 +87,15 @@ spec:
       {{- end }}
       securityContext: {{ include "testkube-runner.podSecurityContext" . | nindent 8 }}
       volumes:
+        {{- if and .Values.stepCacheVolume.enabled .Values.stepCacheVolume.claimName }}
+        # Mounted here so the expiry sweep can reach the volume. A runner-only
+        # installation has no api Deployment, so without this the sweep would find no
+        # inbox directory, read that as an empty volume, and let entries accumulate
+        # until the claim filled.
+        - name: step-cache
+          persistentVolumeClaim:
+            claimName: {{ .Values.stepCacheVolume.claimName }}
+        {{- end }}
         - name: tmp
           {{- if .Values.emptyDirSizeLimit }}
           emptyDir:
@@ -164,6 +173,10 @@ spec:
           resources:
             {{- toYaml .Values.pod.resources | nindent 12 }}
           volumeMounts:
+            {{- if and .Values.stepCacheVolume.enabled .Values.stepCacheVolume.claimName }}
+            - name: step-cache
+              mountPath: {{ .Values.stepCacheVolume.mountPath }}
+            {{- end }}
             - name: tmp
               mountPath: /tmp
             - name: nats

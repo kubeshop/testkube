@@ -1163,3 +1163,25 @@ func assertInboxEmpty(t *testing.T, mount, resourceID string) {
 	require.NoError(t, err)
 	assert.Empty(t, entries, "an entry whose pointer was never published must not be left behind")
 }
+
+// An entry over the size limit is a policy refusal, not a sick volume. The object store
+// applies the same limit, so copying the whole tree again to be refused a second time
+// would only cost time.
+func TestRunCacheSave_DoesNotFallBackWhenTheEntryIsTooLarge(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	require.NoError(t, os.WriteFile(filepath.Join(root, "big.txt"), []byte("0123456789"), 0o666))
+	mountCacheVolume(t, "exec-1")
+
+	repo := &fakeCacheRepository{}
+	out := &bytes.Buffer{}
+	err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+	}), []string{posix}, "", 4, repo, out)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "over the")
+	assert.NotContains(t, out.String(), "object store instead")
+	assert.Zero(t, repo.saveCalls, "a refused entry must not ask for a grant on either backend")
+}

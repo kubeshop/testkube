@@ -2,9 +2,9 @@ package volume
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"io/fs"
+	"math"
 	"os"
 	"path"
 	"path/filepath"
@@ -28,47 +28,98 @@ var (
 	ErrTooManyEntries = errors.New("cache entry holds more files than the limit")
 )
 
+// remaining is how many bytes a copy may still write.
+//
+// A MaxTotalBytes of zero means unbounded, matching MaxEntries and matching what a
+// zero-valued CopyLimits reads as. Subtracting from zero instead would make "no limit"
+// the tightest limit there is, and refuse the first byte of every copy.
+func remaining(max, used int64) int64 {
+	if max <= 0 {
+		return math.MaxInt64
+	}
+	return max - used
+}
+
 // RestoreTree copies an entry's mirrored tree onto the filesystem.
 //
 // src is <entry>/root, where every path is an absolute container path with its leading
-// separator dropped. allowedRoots is the set of paths the step declared, and anything
-// outside them is skipped rather than written - the same rule the archive form applied,
-// and for the same reason: an entry may have been written by another workflow, so a
-// file in the repository checkout or on a shared internal volume must not be restored
-// somewhere the step never declared and the cleanup would not reach.
+// separator dropped. Each declared path is restored separately and **through an os.Root
+// opened on that path**, which is what confines the write: a symlink already sitting
+// inside a declared path cannot redirect a write outside it, because os.Root refuses to
+// traverse one that leaves the root. Writing by absolute name instead would follow it,
+// and an entry may have been written by another workflow under an environment-scoped
+// key - so that link is attacker-controlled input, not a local detail.
+//
+// Restoring per declared path also does the job the archive form needed an allowlist
+// for: anything in the entry outside the declared paths is simply never reached.
 //
 // It reports whether it wrote anything before failing. A caller that has written
 // something has a half-restored tree and must clear the declared paths; one that has
 // not can leave them alone, which matters because a declared path may hold a checkout
 // the step still needs.
-func RestoreTree(src *os.Root, allowedRoots []string, limits CopyLimits) (wrote bool, err error) {
-	allowed := cleanRoots(allowedRoots)
-
+func RestoreTree(src *os.Root, declaredPaths []string, limits CopyLimits) (wrote bool, err error) {
 	var (
 		total   int64
 		entries int
 	)
-	err = fs.WalkDir(src.FS(), ".", func(name string, d fs.DirEntry, err error) error {
+
+	for _, declared := range declaredPaths {
+		dest := path.Clean(declared)
+		if dest == "" || dest == "/" || dest == "." {
+			continue
+		}
+
+		// Where this path lives inside the entry: the same absolute name with the
+		// leading separator dropped, which is how the entry mirrors the filesystem.
+		within := strings.TrimPrefix(dest, "/")
+		if _, statErr := src.Stat(within); statErr != nil {
+			// The entry does not carry this path. A smaller entry than the step
+			// declared is a normal thing to restore, not a fault.
+			continue
+		}
+
+		if mkErr := os.MkdirAll(filepath.FromSlash(dest), 0o777); mkErr != nil {
+			return wrote, mkErr
+		}
+		dst, openErr := os.OpenRoot(filepath.FromSlash(dest))
+		if openErr != nil {
+			return wrote, openErr
+		}
+
+		didWrite, copyErr := restoreInto(src, within, dst, &total, &entries, limits)
+		dst.Close()
+		if didWrite {
+			wrote = true
+		}
+		if copyErr != nil {
+			return wrote, copyErr
+		}
+	}
+	return wrote, nil
+}
+
+// restoreInto copies one declared path's subtree out of the entry and into dst.
+func restoreInto(src *os.Root, within string, dst *os.Root, total *int64, entries *int, limits CopyLimits) (bool, error) {
+	var wrote bool
+
+	err := fs.WalkDir(src.FS(), within, func(name string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if name == "." {
+
+		// Relative to the declared path, which is what dst is rooted at.
+		rel := strings.TrimPrefix(strings.TrimPrefix(name, within), "/")
+		if rel == "" {
 			return nil
 		}
 
-		target := "/" + name
-		if !permits(target, allowed) {
-			// Skipping a whole directory is what keeps an entry naming a tree outside
-			// the declared paths from costing a walk of all of it.
-			if d.IsDir() {
-				return fs.SkipDir
-			}
-			return nil
-		}
-
-		entries++
-		if limits.MaxEntries > 0 && entries > limits.MaxEntries {
+		*entries++
+		if limits.MaxEntries > 0 && *entries > limits.MaxEntries {
 			return ErrTooManyEntries
+		}
+
+		if d.IsDir() {
+			return dst.MkdirAll(rel, 0o777)
 		}
 
 		info, err := d.Info()
@@ -76,29 +127,43 @@ func RestoreTree(src *os.Root, allowedRoots []string, limits CopyLimits) (wrote 
 			return err
 		}
 
-		switch {
-		case d.IsDir():
-			return os.MkdirAll(target, 0o777)
-		case info.Mode().IsRegular():
-			n, err := copyFile(src, name, target, info, limits.MaxTotalBytes-total)
-			if n > 0 {
-				wrote = true
+		// A symlink is recreated as a symlink rather than followed. Creating one is
+		// safe whatever it points at - it is only a name - and the os.Root this writes
+		// through is what stops anything later following it out of the declared path.
+		// Dropping them instead would restore an incomplete tree that still answers as
+		// an exact hit, so the step would never repair it: node_modules/.bin is
+		// entirely symlinks.
+		if info.Mode()&fs.ModeSymlink != 0 {
+			target, readErr := src.Readlink(name)
+			if readErr != nil {
+				return readErr
 			}
-			total += n
-			return err
-		default:
-			// Sockets, devices and symlinks are skipped rather than refused: a
-			// dependency tree legitimately carries symlinks (npm bins), and following
-			// one when copying back out is how an entry escapes its declared paths.
-			// Dropping them keeps the entry to plain files, which is all a restore can
-			// reproduce faithfully anyway.
+			if mkErr := dst.MkdirAll(path.Dir(rel), 0o777); mkErr != nil && path.Dir(rel) != "." {
+				return mkErr
+			}
+			// An entry restored over an existing tree may find the link already there.
+			_ = dst.Remove(rel)
+			if symErr := dst.Symlink(target, rel); symErr != nil {
+				return symErr
+			}
+			wrote = true
 			return nil
 		}
+
+		if !info.Mode().IsRegular() {
+			// Sockets, devices and pipes cannot be reproduced meaningfully and no
+			// dependency tree needs them.
+			return nil
+		}
+
+		n, copyErr := copyIntoRoot(src, name, dst, rel, info, remaining(limits.MaxTotalBytes, *total))
+		if n > 0 {
+			wrote = true
+		}
+		*total += n
+		return copyErr
 	})
-	if err != nil {
-		return wrote, err
-	}
-	return wrote, nil
+	return wrote, err
 }
 
 // SaveTree copies the declared paths into a staged entry, mirroring the filesystem.
@@ -119,11 +184,13 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 	)
 	for _, p := range paths {
 		src := path.Clean(p)
-		if src == "" || src == "/" {
+		if src == "" || src == "/" || src == "." {
 			continue
 		}
 		base := filepath.Join(dst, filepath.FromSlash(strings.TrimPrefix(src, "/")))
 
+		// filepath.Walk lstats, so a symlink arrives as a symlink rather than as
+		// whatever it points at - which is what lets the entry carry the link itself.
 		err := filepath.Walk(filepath.FromSlash(src), func(name string, info os.FileInfo, err error) error {
 			if err != nil {
 				if os.IsNotExist(err) {
@@ -132,9 +199,9 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 				return err
 			}
 
-			rel, err := filepath.Rel(filepath.FromSlash(src), name)
-			if err != nil {
-				return err
+			rel, relErr := filepath.Rel(filepath.FromSlash(src), name)
+			if relErr != nil {
+				return relErr
 			}
 			target := base
 			if rel != "." {
@@ -144,17 +211,40 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 			switch {
 			case info.IsDir():
 				return os.MkdirAll(target, 0o777)
+
+			case info.Mode()&os.ModeSymlink != 0:
+				entries++
+				if limits.MaxEntries > 0 && entries > limits.MaxEntries {
+					return ErrTooManyEntries
+				}
+				link, readErr := os.Readlink(name)
+				if readErr != nil {
+					if os.IsNotExist(readErr) {
+						return nil
+					}
+					return readErr
+				}
+				if mkErr := os.MkdirAll(filepath.Dir(target), 0o777); mkErr != nil {
+					return mkErr
+				}
+				// The link is stored as written, relative or absolute. Resolving it
+				// here would turn a relative link - which is what a dependency tree
+				// uses, and what survives being restored somewhere else - into one
+				// naming this pod's filesystem.
+				return os.Symlink(link, target)
+
 			case info.Mode().IsRegular():
 				entries++
 				if limits.MaxEntries > 0 && entries > limits.MaxEntries {
 					return ErrTooManyEntries
 				}
-				n, err := copyOut(name, target, info, limits.MaxTotalBytes-total)
+				n, copyErr := copyOut(name, target, info, remaining(limits.MaxTotalBytes, total))
 				total += n
-				return err
+				return copyErr
+
 			default:
-				// See RestoreTree: symlinks and specials are not carried, so an entry
-				// holds only what a restore can faithfully reproduce.
+				// See RestoreTree: sockets, devices and pipes carry nothing a restore
+				// could reproduce.
 				return nil
 			}
 		})
@@ -165,13 +255,15 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 	return total, entries, nil
 }
 
-// copyFile writes one regular file out of the entry onto the filesystem.
-func copyFile(src *os.Root, name, target string, info fs.FileInfo, budget int64) (int64, error) {
+// copyIntoRoot writes one regular file out of the entry, through the destination root.
+func copyIntoRoot(src *os.Root, name string, dst *os.Root, rel string, info fs.FileInfo, budget int64) (int64, error) {
 	if budget <= 0 {
 		return 0, ErrTooLarge
 	}
-	if err := os.MkdirAll(path.Dir(target), 0o777); err != nil {
-		return 0, err
+	if dir := path.Dir(rel); dir != "." {
+		if err := dst.MkdirAll(dir, 0o777); err != nil {
+			return 0, err
+		}
 	}
 
 	in, err := src.Open(name)
@@ -180,10 +272,15 @@ func copyFile(src *os.Root, name, target string, info fs.FileInfo, budget int64)
 	}
 	defer in.Close()
 
+	// O_NOFOLLOW on top of the root: the root already refuses a link out of it, and
+	// this refuses one that stays inside, so a restore cannot be made to write through
+	// any pre-existing link at all.
+	//
 	// 0666 before umask, for the reason the state file uses it: the stages, and whole
 	// executions, may run as different users, and a restored tree a later step cannot
 	// read is worse than a miss.
-	out, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
+	_ = dst.Remove(rel)
+	out, err := dst.OpenFile(rel, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o666)
 	if err != nil {
 		return 0, err
 	}
@@ -199,10 +296,7 @@ func copyFile(src *os.Root, name, target string, info fs.FileInfo, budget int64)
 		return n, ErrTooLarge
 	}
 	// Mode is carried so an executable in a dependency tree stays executable.
-	if err := os.Chmod(target, info.Mode().Perm()|0o666); err != nil {
-		return n, err
-	}
-	return n, nil
+	return n, dst.Chmod(rel, info.Mode().Perm()|0o666)
 }
 
 // copyOut writes one regular file from the filesystem into the staged entry.
@@ -238,35 +332,7 @@ func copyOut(name, target string, info os.FileInfo, budget int64) (int64, error)
 		return n, closeErr
 	}
 	if n == budget && info.Size() > n {
-		return n, fmt.Errorf("%w (at %s)", ErrTooLarge, name)
+		return n, ErrTooLarge
 	}
 	return n, os.Chmod(target, info.Mode().Perm()|0o666)
-}
-
-func cleanRoots(roots []string) []string {
-	out := make([]string, 0, len(roots))
-	for _, r := range roots {
-		if r == "" {
-			continue
-		}
-		out = append(out, path.Clean(r))
-	}
-	return out
-}
-
-// permits reports whether a restored path falls inside one of the declared paths.
-func permits(target string, allowed []string) bool {
-	if len(allowed) == 0 {
-		return true
-	}
-	for _, root := range allowed {
-		if target == root || strings.HasPrefix(target, root+"/") {
-			return true
-		}
-		// A parent of a declared path has to be walked to reach it.
-		if strings.HasPrefix(root, target+"/") {
-			return true
-		}
-	}
-	return false
 }
