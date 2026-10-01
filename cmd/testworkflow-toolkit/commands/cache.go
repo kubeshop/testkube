@@ -698,6 +698,21 @@ func restoreFromVolume(store *volume.Store, body io.Reader, allowedPaths []strin
 // content-derived key.
 var errCacheEntryWon = errors.New("another execution stored this key first")
 
+// errUploadMayHaveLanded marks a failed upload that is not evidence the object was not
+// stored, so that a caller holding something the object would name does not throw it
+// away.
+//
+// A PUT whose response is lost has still been applied. The retry then finds the object
+// present and the condition refuses it, which is indistinguishable from losing a race
+// to another execution - except that the object now stored is this execution's own, and
+// names this execution's entry. Deleting that entry leaves a pointer to nothing under a
+// key that is immutable, so every later run misses it and no run can replace it.
+//
+// A store that answers an error after applying the write is the same case. Only a
+// refusal on the first attempt, with nothing sent before it, is evidence of nothing
+// stored.
+var errUploadMayHaveLanded = errors.New("the upload may have reached the store")
+
 // uploadCache sends the archive, with whatever headers the grant requires.
 //
 // The headers are covered by the signature, so they are not optional decoration: an
@@ -705,6 +720,17 @@ var errCacheEntryWon = errors.New("another execution stored this key first")
 // cannot be dropped to turn the request back into a plain overwrite.
 func uploadCache(ctx context.Context, url string, headers map[string]string, archive io.ReadSeeker, size int64) error {
 	client := &http.Client{Timeout: cacheTransferTimeout}
+
+	// Whether an earlier attempt could already have been applied, which decides whether
+	// a refusal below means "another execution stored this" or "we did, and lost the
+	// answer". See errUploadMayHaveLanded.
+	var mayHaveLanded bool
+	ambiguous := func(err error) error {
+		if mayHaveLanded {
+			return fmt.Errorf("%w: %w", err, errUploadMayHaveLanded)
+		}
+		return err
+	}
 
 	var lastErr error
 	for attempt := 1; attempt <= cacheRetryMaxAttempts; attempt++ {
@@ -741,7 +767,7 @@ func uploadCache(ctx context.Context, url string, headers map[string]string, arc
 			// The condition refused the write, so the entry is already there. Retrying
 			// would only be refused again.
 			if executioncache.UploadRefused(status) {
-				return errCacheEntryWon
+				return ambiguous(errCacheEntryWon)
 			}
 			err = fmt.Errorf("status code %d", status)
 			// None of these change on a second attempt: the first two are a grant the
@@ -751,12 +777,19 @@ func uploadCache(ctx context.Context, url string, headers map[string]string, arc
 			switch status {
 			case http.StatusForbidden, http.StatusBadRequest,
 				http.StatusNotImplemented, http.StatusMethodNotAllowed:
-				return err
+				return ambiguous(err)
 			}
+			// Any other status is retried, and the store answering one does not prove
+			// it did not apply the write first - a proxy can turn a stored object into
+			// a 502 on the way back.
+			mayHaveLanded = true
+		} else {
+			// No answer at all: the request may have been applied and the response lost.
+			mayHaveLanded = true
 		}
 		lastErr = err
 	}
-	return lastErr
+	return ambiguous(lastErr)
 }
 
 // clearCachePaths empties the cached directories without removing them, because an
@@ -927,8 +960,13 @@ func saveToVolume(
 	}
 	committed = true
 	published := false
+	// Set when an upload failed in a way that does not prove the pointer was not
+	// stored. Keeping an entry nothing names only wastes space until the sweep
+	// collects it; deleting one a stored pointer does name breaks that key for as long
+	// as the object lives, and the object is immutable, so nothing can repair it.
+	mayBePublished := false
 	defer func() {
-		if !published {
+		if !published && !mayBePublished {
 			inbox.Discard(pointer)
 		}
 	}()
@@ -960,6 +998,11 @@ func saveToVolume(
 
 	uploadStarted := time.Now()
 	if err := uploadCache(ctx, upload.URL, upload.Headers, body, bodyLen); err != nil {
+		// The entry stays where it is unless it is certain nothing names it. A refusal
+		// after an attempt that may already have been applied is this execution's own
+		// pointer being refused, not another execution's winning, and that pointer
+		// names this entry.
+		mayBePublished = errors.Is(err, errUploadMayHaveLanded)
 		if errors.Is(err, errCacheEntryWon) {
 			fmt.Fprintf(out, "cache: %q was stored by another execution first, nothing to save\n", key)
 			return true, nil

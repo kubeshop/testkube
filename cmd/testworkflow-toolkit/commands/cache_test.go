@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1285,4 +1286,44 @@ func TestRunCacheSave_DoesNotFallBackWhenTheTreeHasTooManyFiles(t *testing.T) {
 	assert.NotContains(t, out.String(), "object store instead",
 		"falling back would publish an archive no restore would accept")
 	assert.Zero(t, repo.saveCalls)
+}
+
+// A PUT whose response is lost has still been applied, and the retry then finds the
+// object present and is refused - which is indistinguishable from losing a race, except
+// that the object now stored is this execution's own and names this execution's entry.
+//
+// Discarding the entry there would leave a pointer to nothing under a key that is
+// immutable: every later run would hit it, restore nothing, and be unable to replace
+// it. Keeping an entry nothing names only wastes space until the sweep collects it, so
+// that is the direction to err in.
+func TestRunCacheSave_KeepsTheEntryWhenTheUploadMayHaveLanded(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	require.NoError(t, os.WriteFile(filepath.Join(root, "dep.txt"), []byte("installed"), 0o666))
+	mount := mountCacheVolume(t, "exec-1")
+
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if atomic.AddInt32(&calls, 1) == 1 {
+			// Applied, and the answer lost on the way back.
+			if conn, _, err := w.(http.Hijacker).Hijack(); err == nil {
+				_ = conn.Close()
+			}
+			return
+		}
+		// The retry meets this execution's own object, already in place.
+		w.WriteHeader(http.StatusPreconditionFailed)
+	}))
+	defer server.Close()
+
+	out := &bytes.Buffer{}
+	err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+	}), nil, "", 1<<20, &fakeCacheRepository{save: executioncache.SaveResult{URL: server.URL}}, out)
+
+	require.NoError(t, err)
+	entries, readErr := os.ReadDir(filepath.Join(mount, volume.InboxDir, "exec-1"))
+	require.NoError(t, readErr)
+	assert.NotEmpty(t, entries, "the pointer that may be stored names this entry")
 }
