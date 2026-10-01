@@ -154,9 +154,10 @@ func (in *Inbox) Stage() (dir string, name string, err error) {
 	if err := in.dir.Mkdir(name, 0o777); err != nil {
 		return "", "", err
 	}
-	if err := in.dir.Mkdir(path.Join(name, EntryRoot), 0o777); err != nil {
-		return "", "", err
-	}
+if err := in.dir.Mkdir(path.Join(name, EntryRoot), 0o777); err != nil {
+	_ = in.dir.Remove(name)
+	return "", "", err
+}
 	return path.Join(in.path, name, EntryRoot), name, nil
 }
 
