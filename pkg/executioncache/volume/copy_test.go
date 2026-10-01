@@ -1,6 +1,7 @@
 package volume
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -371,4 +372,28 @@ func TestRestoreReportsADirectoryAndAnEmptyFileAsWritten(t *testing.T) {
 
 	_, statErr := os.Stat(filepath.FromSlash(src + "/nested/a"))
 	require.NoError(t, statErr, "and really were created, so the test is pinning the right thing")
+}
+
+// A path the entry does not carry is a normal thing to find - an entry smaller than
+// the step declared still restores. Anything else the volume says is not that.
+//
+// Reading an I/O or permission error as "absent" would return a successful restore of
+// nothing. The caller reports that as an exact hit, so the save stage skips replacing
+// the entry, and where one declared path restored and another failed this way the tree
+// looks whole and is not.
+func TestRestoreReportsAVolumeFailureRatherThanAnAbsentPath(t *testing.T) {
+	src := posixDir(t)
+	write(t, filepath.FromSlash(src+"/dep"), "cached")
+	entry := entryFrom(t, []string{src})
+
+	// Standing in for the volume going away mid-restore, which is what an unreadable
+	// entry looks like from here - and unlike a permission bit, it reads the same on
+	// every platform.
+	require.NoError(t, entry.Close())
+
+	wrote, err := RestoreTree(entry, []string{src}, CopyLimits{})
+
+	require.Error(t, err, "a volume that cannot be read is not an entry without this path")
+	assert.NotErrorIs(t, err, fs.ErrNotExist)
+	assert.False(t, wrote)
 }

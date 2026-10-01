@@ -75,9 +75,18 @@ func RestoreTree(src *os.Root, declaredPaths []string, limits CopyLimits) (wrote
 		// leading separator dropped, which is how the entry mirrors the filesystem.
 		within := strings.TrimPrefix(dest, "/")
 		if _, statErr := src.Stat(within); statErr != nil {
-			// The entry does not carry this path. A smaller entry than the step
-			// declared is a normal thing to restore, not a fault.
-			continue
+			if errors.Is(statErr, fs.ErrNotExist) {
+				// The entry does not carry this path. A smaller entry than the step
+				// declared is a normal thing to restore, not a fault.
+				continue
+			}
+			// Anything else - a permission problem, an I/O error, a volume that went
+			// away mid-restore - is not evidence that the path is absent, and reading
+			// it as such would report a hit for a path nothing was restored to. The
+			// entry is exact, so the save stage would then skip replacing it, and a
+			// declared path that did restore leaves a tree that looks whole and is
+			// not. Report it and let the caller clear up and call it a miss.
+			return wrote, statErr
 		}
 
 		dst, openErr := openDeclaredRoot(dest)
