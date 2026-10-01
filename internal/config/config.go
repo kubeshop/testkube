@@ -261,11 +261,44 @@ type Config struct {
 	DisableOfficialTemplates        bool     `envconfig:"DISABLE_OFFICIAL_TEMPLATES" default:"false"`
 	TerminationLogPath              string   `envconfig:"TERMINATION_LOG_PATH" default:"/dev/termination-log"`
 	TestkubeEmptyDirSizeLimit       string   `envconfig:"TESTKUBE_EMPTYDIR_SIZE_LIMIT" default:""`
-	TestkubeDefaultImagePullPolicy  string   `envconfig:"TESTKUBE_DEFAULT_IMAGE_PULL_POLICY" default:""`
-	TestkubeDefaultRunnerCPURequest string   `envconfig:"TESTKUBE_DEFAULT_RUNNER_CPU_REQUEST" default:""`
-	TestkubeDefaultRunnerMemRequest string   `envconfig:"TESTKUBE_DEFAULT_RUNNER_MEMORY_REQUEST" default:""`
-	TestkubeDefaultRunnerCPULimit   string   `envconfig:"TESTKUBE_DEFAULT_RUNNER_CPU_LIMIT" default:""`
-	TestkubeDefaultRunnerMemLimit   string   `envconfig:"TESTKUBE_DEFAULT_RUNNER_MEMORY_LIMIT" default:""`
+
+	// TestkubeStepCacheVolumeClaim is an existing ReadWriteMany PersistentVolumeClaim
+	// that step dependency cache archives are stored on instead of in the object store.
+	// Empty leaves every entry in the object store, which is the behaviour that shipped
+	// before the volume existed.
+	//
+	// The claim must already exist in every namespace executions run in; nothing here
+	// provisions it. It is named rather than described as a volume source because NFS
+	// and CSI both reach a pod through a claim, and this configuration is serialized
+	// into an annotation on every execution pod.
+	//
+	// Everything on the volume is readable by every execution in the cluster. The
+	// object store still decides who may *write* which entry, so a pull request cannot
+	// poison the cache a trusted run restores - but it can read what other workflows
+	// cached. Only set this where that is acceptable.
+	TestkubeStepCacheVolumeClaim string `envconfig:"TESTKUBE_STEP_CACHE_VOLUME_CLAIM" default:""`
+
+	// TestkubeStepCacheVolumeRetentionDays is how long an execution's archives survive
+	// on that volume.
+	//
+	// The object store's own lifecycle rule expires the pointers (STORAGE_CACHE_EXPIRATION);
+	// this expires what they point at, and must not be shorter. The ordering matters one
+	// way only: an archive outliving its pointer wastes space until the sweep, where a
+	// pointer outliving its archive is a restore that reports a miss it cannot explain.
+	TestkubeStepCacheVolumeRetentionDays int `envconfig:"TESTKUBE_STEP_CACHE_VOLUME_RETENTION_DAYS" default:"7"`
+
+	// TestkubeStepCacheVolumeMountPath is where the volume appears inside the agent, so
+	// that the sweep can reach it. Execution pods mount it at their own fixed paths.
+	TestkubeStepCacheVolumeMountPath string `envconfig:"TESTKUBE_STEP_CACHE_VOLUME_MOUNT_PATH" default:"/var/testkube/step-cache"`
+
+	// TestkubeStepCacheVolumeSweepInterval is how often the sweep runs.
+	TestkubeStepCacheVolumeSweepInterval time.Duration `envconfig:"TESTKUBE_STEP_CACHE_VOLUME_SWEEP_INTERVAL" default:"1h"`
+
+	TestkubeDefaultImagePullPolicy  string `envconfig:"TESTKUBE_DEFAULT_IMAGE_PULL_POLICY" default:""`
+	TestkubeDefaultRunnerCPURequest string `envconfig:"TESTKUBE_DEFAULT_RUNNER_CPU_REQUEST" default:""`
+	TestkubeDefaultRunnerMemRequest string `envconfig:"TESTKUBE_DEFAULT_RUNNER_MEMORY_REQUEST" default:""`
+	TestkubeDefaultRunnerCPULimit   string `envconfig:"TESTKUBE_DEFAULT_RUNNER_CPU_LIMIT" default:""`
+	TestkubeDefaultRunnerMemLimit   string `envconfig:"TESTKUBE_DEFAULT_RUNNER_MEMORY_LIMIT" default:""`
 
 	ExportArchiveMaxSize                     int           `envconfig:"EXPORT_ARCHIVE_MAX_SIZE" default:"104857600"`
 	FeatureCloudStorage                      bool          `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`

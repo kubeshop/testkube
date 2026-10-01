@@ -117,6 +117,24 @@ type WorkerConfig struct {
 
 	DefaultImagePullPolicy string                  `json:"Y,omitempty"`
 	DefaultRunnerResources ContainerResourceConfig `json:"D,omitempty"`
+
+	// StepCacheVolume is the operator's shared cache volume, or nil when step
+	// dependency caches go to the object store whole.
+	//
+	// One field, read by both halves: the processor mounts it when it builds the cache
+	// stages, and the toolkit inside the pod finds it in this same serialized config.
+	// There is deliberately no second channel for the two to disagree through - a
+	// processor that mounted a volume the toolkit did not look for, or the reverse,
+	// would produce a cache that silently did nothing.
+	StepCacheVolume *StepCacheVolumeConfig `json:"V,omitempty"`
+}
+
+// StepCacheVolumeConfig describes the shared volume step dependency cache archives are
+// kept on.
+type StepCacheVolumeConfig struct {
+	// ClaimName is a ReadWriteMany PersistentVolumeClaim that must already exist in
+	// every namespace executions run in.
+	ClaimName string `json:"c,omitempty"`
 }
 
 type WorkerConnectionConfig struct {

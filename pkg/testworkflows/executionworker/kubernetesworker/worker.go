@@ -91,6 +91,7 @@ func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.P
 			EmptyDirSizeLimit:                 config.EmptyDirSizeLimit,
 			DefaultImagePullPolicy:            config.DefaultImagePullPolicy,
 			DefaultRunnerResources:            config.DefaultRunnerResources,
+			StepCacheVolume:                   config.StepCacheVolume,
 		},
 	}
 }

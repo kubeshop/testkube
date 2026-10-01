@@ -42,4 +42,5 @@ type Config struct {
 	EmptyDirSizeLimit                        string
 	DefaultImagePullPolicy                   string
 	DefaultRunnerResources                   testworkflowconfig.ContainerResourceConfig
+	StepCacheVolume                          *testworkflowconfig.StepCacheVolumeConfig
 }

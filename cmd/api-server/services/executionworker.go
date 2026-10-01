@@ -71,6 +71,7 @@ func CreateExecutionWorker(
 		// as the gRPC control plane connection from execution pods may not be available.
 		DisableResourceMetrics: cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken == "",
 		EmptyDirSizeLimit:      cfg.TestkubeEmptyDirSizeLimit,
+		StepCacheVolume:        stepCacheVolumeConfig(cfg),
 		DefaultImagePullPolicy: cfg.TestkubeDefaultImagePullPolicy,
 		DefaultRunnerResources: testworkflowconfig.ContainerResourceConfig{
 			Requests: testworkflowconfig.ContainerResources{
@@ -83,4 +84,17 @@ func CreateExecutionWorker(
 			},
 		},
 	})
+}
+
+// stepCacheVolumeConfig describes the operator's shared step-cache volume, or nil when
+// there is none and dependency caches go to the object store whole.
+//
+// Nil rather than a disabled flag, so that every reader downstream - the processor
+// deciding whether to mount anything, the toolkit deciding whether to look - asks one
+// question and cannot answer it differently.
+func stepCacheVolumeConfig(cfg *config.Config) *testworkflowconfig.StepCacheVolumeConfig {
+	if cfg.TestkubeStepCacheVolumeClaim == "" {
+		return nil
+	}
+	return &testworkflowconfig.StepCacheVolumeConfig{ClaimName: cfg.TestkubeStepCacheVolumeClaim}
 }
