@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/executioncache/volume"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
@@ -29,7 +30,7 @@ type Intermediate interface {
 	AppendJobConfig(cfg *testworkflowsv1.JobConfig) Intermediate
 	AppendPodConfig(cfg *testworkflowsv1.PodConfig) Intermediate
 	AppendPvcs(cfg map[string]corev1.PersistentVolumeClaimSpec) Intermediate
-	AppendStepCacheVolume(cfg *testworkflowconfig.StepCacheVolumeConfig) Intermediate
+	AppendStepCacheVolume(cfg *testworkflowconfig.StepCacheVolumeConfig, resourceID string) Intermediate
 
 	AddConfigMap(configMap corev1.ConfigMap) Intermediate
 	AddSecret(secret corev1.Secret) Intermediate
@@ -50,6 +51,10 @@ type Intermediate interface {
 	// pure, so action.Group merges them into the step's own container and the step's
 	// own command ends up holding whatever is mounted here.
 	StepCacheVolumeMount(mountPath, subPath string, readOnly bool) (corev1.VolumeMount, bool)
+
+	// StepCacheInboxName is what this execution's inbox is called from the volume root,
+	// which a pointer needs because the write mount is a subPath and so hides it.
+	StepCacheInboxName() string
 
 	AddTextFile(file string, mode *int32) (corev1.VolumeMount, error)
 	AddBinaryFile(file []byte, mode *int32) (corev1.VolumeMount, error)
@@ -83,6 +88,8 @@ type intermediate struct {
 	// stepCacheVolumeName is the pod volume once it has been added, so that several
 	// cached steps share one rather than attaching the claim once each.
 	stepCacheVolumeName string
+	// stepCacheInboxName is what this execution's inbox is called from the volume root.
+	stepCacheInboxName string
 }
 
 func NewIntermediate(defaultEmptyDirSizeLimit string) Intermediate {
@@ -163,11 +170,20 @@ func (s *intermediate) AppendPvcs(cfg map[string]corev1.PersistentVolumeClaimSpe
 	return s
 }
 
-func (s *intermediate) AppendStepCacheVolume(cfg *testworkflowconfig.StepCacheVolumeConfig) Intermediate {
-	if cfg != nil && cfg.ClaimName != "" {
+func (s *intermediate) AppendStepCacheVolume(cfg *testworkflowconfig.StepCacheVolumeConfig, resourceID string) Intermediate {
+	// Both are needed: without a claim there is no volume, and without a resource id a
+	// committed entry could not be named from the volume root, so no reader would ever
+	// find it.
+	if cfg != nil && cfg.ClaimName != "" && resourceID != "" {
 		s.StepCacheVolume = cfg
+		s.stepCacheInboxName = volume.InboxFor(resourceID)
 	}
 	return s
+}
+
+// StepCacheInboxName is what this execution's inbox is called from the volume root.
+func (s *intermediate) StepCacheInboxName() string {
+	return s.stepCacheInboxName
 }
 
 func (s *intermediate) StepCacheVolumeMount(mountPath, subPath string, readOnly bool) (corev1.VolumeMount, bool) {

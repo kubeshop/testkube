@@ -24,7 +24,7 @@ func openBoth(t *testing.T) (*Store, *Inbox, string) {
 	require.NotNil(t, s)
 	t.Cleanup(func() { s.Close() })
 
-	in, reason := OpenInbox(inboxDir, "exec-1")
+	in, reason := OpenInbox(inboxDir, InboxFor("exec-1"))
 	require.Empty(t, reason)
 	require.NotNil(t, in)
 	t.Cleanup(func() { in.Close() })
@@ -48,12 +48,12 @@ func TestOpenReportsWhyThereIsNoVolume(t *testing.T) {
 	})
 
 	t.Run("inbox not configured", func(t *testing.T) {
-		in, reason := OpenInbox("", "exec-1")
+		in, reason := OpenInbox("", InboxFor("exec-1"))
 		assert.Nil(t, in)
 		assert.NotEmpty(t, reason)
 	})
 
-	t.Run("inbox has no resource id", func(t *testing.T) {
+	t.Run("inbox has no name", func(t *testing.T) {
 		in, reason := OpenInbox(t.TempDir(), "")
 		assert.Nil(t, in)
 		assert.NotEmpty(t, reason)
@@ -73,7 +73,7 @@ func TestOpenInboxProbesInsteadOfTrustingTheMount(t *testing.T) {
 	require.NoError(t, os.Chmod(dir, 0o555))
 	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
 
-	in, reason := OpenInbox(dir, "exec-1")
+	in, reason := OpenInbox(dir, InboxFor("exec-1"))
 
 	assert.Nil(t, in)
 	assert.Contains(t, reason, "cannot write")

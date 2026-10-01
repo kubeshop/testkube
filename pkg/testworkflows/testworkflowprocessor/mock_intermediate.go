@@ -172,17 +172,17 @@ func (mr *MockIntermediateMockRecorder) AppendPvcs(cfg any) *gomock.Call {
 }
 
 // AppendStepCacheVolume mocks base method.
-func (m *MockIntermediate) AppendStepCacheVolume(cfg *testworkflowconfig.StepCacheVolumeConfig) Intermediate {
+func (m *MockIntermediate) AppendStepCacheVolume(cfg *testworkflowconfig.StepCacheVolumeConfig, resourceID string) Intermediate {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AppendStepCacheVolume", cfg)
+	ret := m.ctrl.Call(m, "AppendStepCacheVolume", cfg, resourceID)
 	ret0, _ := ret[0].(Intermediate)
 	return ret0
 }
 
 // AppendStepCacheVolume indicates an expected call of AppendStepCacheVolume.
-func (mr *MockIntermediateMockRecorder) AppendStepCacheVolume(cfg any) *gomock.Call {
+func (mr *MockIntermediateMockRecorder) AppendStepCacheVolume(cfg, resourceID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendStepCacheVolume", reflect.TypeOf((*MockIntermediate)(nil).AppendStepCacheVolume), cfg)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendStepCacheVolume", reflect.TypeOf((*MockIntermediate)(nil).AppendStepCacheVolume), cfg, resourceID)
 }
 
 // ConfigMaps mocks base method.
@@ -281,6 +281,20 @@ func (m *MockIntermediate) Secrets() []v10.Secret {
 func (mr *MockIntermediateMockRecorder) Secrets() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Secrets", reflect.TypeOf((*MockIntermediate)(nil).Secrets))
+}
+
+// StepCacheInboxName mocks base method.
+func (m *MockIntermediate) StepCacheInboxName() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StepCacheInboxName")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// StepCacheInboxName indicates an expected call of StepCacheInboxName.
+func (mr *MockIntermediateMockRecorder) StepCacheInboxName() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StepCacheInboxName", reflect.TypeOf((*MockIntermediate)(nil).StepCacheInboxName))
 }
 
 // StepCacheVolumeMount mocks base method.

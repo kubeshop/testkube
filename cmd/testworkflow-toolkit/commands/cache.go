@@ -20,7 +20,6 @@ import (
 
 	initdata "github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
-	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/executioncache"
 	"github.com/kubeshop/testkube/pkg/executioncache/volume"
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -277,7 +276,12 @@ func runCacheRestore(ctx context.Context, encoded string, repository executionca
 
 	started := time.Now()
 	restored := entry.Size
-	wrote, size, err := downloadCache(ctx, cacheStore(out), entry.URL, spec.Paths)
+	// Closed explicitly: the store holds an open handle on the mount, and a restore is
+	// one of several stages sharing a container.
+	store := cacheStore(out)
+	defer store.Close()
+
+	wrote, size, err := downloadCache(ctx, store, entry.URL, spec.Paths)
 	if size > 0 {
 		// The object was a pointer, so its own size says nothing about what was
 		// restored; the pointer carries what the entry holds.
@@ -537,7 +541,7 @@ func cacheInbox(out io.Writer) *volume.Inbox {
 	if mountPath == "" {
 		return nil
 	}
-	inbox, reason := volume.OpenInbox(mountPath, config.Config().Resource.Id)
+	inbox, reason := volume.OpenInbox(mountPath, os.Getenv(volume.EnvInboxName))
 	if inbox == nil {
 		fmt.Fprintf(out, "cache: not using the shared volume: %s\n", reason)
 	}

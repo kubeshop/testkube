@@ -71,15 +71,15 @@ func OpenStore(mountPath string) (*Store, string) {
 // because a mount that cannot be written to - read-only, full, squashed to an id with
 // no access - announces itself only at the first write, which would otherwise be after
 // copying a tree that can run to gigabytes.
-func OpenInbox(mountPath, resourceID string) (*Inbox, string) {
+func OpenInbox(mountPath, inboxName string) (*Inbox, string) {
 	if mountPath == "" {
 		return nil, "no shared cache volume is configured"
 	}
-	if resourceID == "" {
-		// Without one, a committed entry cannot be named from the volume root, so no
+	if inboxName == "" {
+		// Without it, a committed entry cannot be named from the volume root, so no
 		// reader could ever find it. This cannot happen for a real execution; it guards
-		// against the config being threaded through without the id.
-		return nil, "this step has no resource id, so its cache entry could not be named"
+		// against the config being threaded through without it.
+		return nil, "this step does not know what its cache inbox is called, so its entry could not be named"
 	}
 
 	dir, err := os.OpenRoot(mountPath)
@@ -87,7 +87,7 @@ func OpenInbox(mountPath, resourceID string) (*Inbox, string) {
 		return nil, fmt.Sprintf("cannot open the shared cache inbox at %s (%v)", mountPath, err)
 	}
 
-	in := &Inbox{dir: dir, path: mountPath, rel: path.Join(InboxDir, resourceID)}
+	in := &Inbox{dir: dir, path: mountPath, rel: path.Clean(inboxName)}
 	if err := in.probe(); err != nil {
 		dir.Close()
 		return nil, fmt.Sprintf("cannot write to the shared cache inbox at %s (%v)", mountPath, err)

@@ -21,6 +21,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/kubeshop/testkube/pkg/executioncache"
+	"github.com/kubeshop/testkube/pkg/executioncache/volume"
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
@@ -891,4 +892,274 @@ func TestRunCacheRestore_AcceptsAKeyWhoseComponentsResolve(t *testing.T) {
 		}), repository, out), "%s", key)
 		assert.Equal(t, 1, repository.restoreCalls, "%s should have been looked up", key)
 	}
+}
+
+// mountCacheVolume wires a pod's two views of a shared cache volume the way the
+// processor does, and returns the volume root.
+func mountCacheVolume(t *testing.T, resourceID string) string {
+	t.Helper()
+	mount := t.TempDir()
+	inbox := filepath.Join(mount, volume.InboxDir, resourceID)
+	require.NoError(t, os.MkdirAll(inbox, 0o777))
+	t.Setenv(volume.EnvStorePath, mount)
+	t.Setenv(volume.EnvInboxPath, inbox)
+	t.Setenv(volume.EnvInboxName, volume.InboxFor(resourceID))
+	return mount
+}
+
+// writeEntry puts a committed entry on the volume holding one file at an absolute path,
+// and returns the pointer naming it.
+func writeEntry(t *testing.T, mount, resourceID, absPath, contents string) volume.Pointer {
+	t.Helper()
+	name := "entry"
+	dir := filepath.Join(mount, volume.InboxDir, resourceID, name, volume.EntryRoot)
+	target := filepath.Join(dir, filepath.FromSlash(strings.TrimPrefix(absPath, "/")))
+	require.NoError(t, os.MkdirAll(filepath.Dir(target), 0o777))
+	require.NoError(t, os.WriteFile(target, []byte(contents), 0o666))
+	return volume.Pointer{
+		Path: volume.InboxDir + "/" + resourceID + "/" + name,
+		Size: int64(len(contents)),
+	}
+}
+
+// pointerServer serves a cache object whose body is a pointer rather than an archive.
+func pointerServer(t *testing.T, p volume.Pointer) *httptest.Server {
+	t.Helper()
+	body := volume.Encode(p)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(body)
+	}))
+	t.Cleanup(server.Close)
+	return server
+}
+
+func TestRunCacheRestore_FollowsAPointerToTheSharedVolume(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	mount := mountCacheVolume(t, "exec-1")
+	pointer := writeEntry(t, mount, "exec-1", posix+"/restored.txt", "from-volume")
+	server := pointerServer(t, pointer)
+
+	statePath := filepath.Join(t.TempDir(), "state.json")
+	out := &bytes.Buffer{}
+
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+		State: statePath,
+	}), &fakeCacheRepository{
+		restore: executioncache.RestoreResult{
+			Hit: true, Exact: true, MatchedKey: "npm-abc", URL: server.URL, Size: 128,
+		},
+	}, out)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "cache: hit")
+	restored, readErr := os.ReadFile(filepath.Join(root, "restored.txt"))
+	require.NoError(t, readErr)
+	assert.Equal(t, "from-volume", string(restored))
+
+	// The object is a few hundred bytes now, so the size reported has to come from the
+	// pointer or the line would describe the pointer rather than the entry.
+	assert.Contains(t, out.String(), "11 B")
+	assert.Equal(t, executioncache.HitExact, readState(t, statePath).Hit)
+}
+
+// An entry written before the volume existed, or by a cluster that has none, is the
+// archive itself - and must keep restoring even where a volume is mounted.
+func TestRunCacheRestore_StillRestoresAnArchiveWithAVolumeMounted(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	mountCacheVolume(t, "exec-1")
+	archive := cacheTarball(t, strings.TrimPrefix(posix+"/restored.txt", "/"), "from-archive")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(archive)
+	}))
+	defer server.Close()
+
+	out := &bytes.Buffer{}
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+		State: filepath.Join(t.TempDir(), "state.json"),
+	}), &fakeCacheRepository{
+		restore: executioncache.RestoreResult{Hit: true, Exact: true, MatchedKey: "npm-abc", URL: server.URL},
+	}, out)
+
+	require.NoError(t, err)
+	restored, readErr := os.ReadFile(filepath.Join(root, "restored.txt"))
+	require.NoError(t, readErr)
+	assert.Equal(t, "from-archive", string(restored))
+}
+
+// The bytes only ever existed on the volume, so a pod without it has nothing to fall
+// back to. That is a miss - and one that says why, because the likeliest cause is an
+// operator misconfiguration rather than a cold cache.
+func TestRunCacheRestore_PointerWithoutAVolumeIsAnExplainedMiss(t *testing.T) {
+	server := pointerServer(t, volume.Pointer{Path: "inbox/exec-1/entry", Size: 10})
+	out := &bytes.Buffer{}
+
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{"/data/node_modules"},
+		State: filepath.Join(t.TempDir(), "state.json"),
+	}), &fakeCacheRepository{
+		restore: executioncache.RestoreResult{Hit: true, Exact: true, MatchedKey: "npm-abc", URL: server.URL},
+	}, out)
+
+	require.NoError(t, err, "a pointer that cannot be followed must never fail the step")
+	assert.Contains(t, out.String(), "cache: miss")
+	assert.Contains(t, out.String(), "has not mounted")
+}
+
+// A pointer outliving the entry it names is the shape a retention misconfiguration
+// takes, so it has to be a miss that says so rather than a silent one.
+func TestRunCacheRestore_PointerToAMissingEntryIsAMiss(t *testing.T) {
+	mountCacheVolume(t, "exec-1")
+	server := pointerServer(t, volume.Pointer{Path: "inbox/exec-1/swept-away", Size: 10})
+	out := &bytes.Buffer{}
+
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{"/data/node_modules"},
+		State: filepath.Join(t.TempDir(), "state.json"),
+	}), &fakeCacheRepository{
+		restore: executioncache.RestoreResult{Hit: true, Exact: true, MatchedKey: "npm-abc", URL: server.URL},
+	}, out)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "cache: miss")
+}
+
+// A pointer is written by a pod, so one naming something outside an inbox must be
+// refused - and must leave the declared paths alone, because a miss is meant to leave
+// the step exactly as it would have been with no cache at all.
+func TestRunCacheRestore_RefusesAPointerThatEscapesTheInbox(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	require.NoError(t, os.WriteFile(filepath.Join(root, "theirs.txt"), []byte("untouched"), 0o666))
+	mountCacheVolume(t, "exec-1")
+	server := pointerServer(t, volume.Pointer{Path: "../../etc/passwd", Size: 10})
+
+	out := &bytes.Buffer{}
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+		State: filepath.Join(t.TempDir(), "state.json"),
+	}), &fakeCacheRepository{
+		restore: executioncache.RestoreResult{Hit: true, Exact: true, MatchedKey: "npm-abc", URL: server.URL},
+	}, out)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "cache: miss")
+	body, readErr := os.ReadFile(filepath.Join(root, "theirs.txt"))
+	require.NoError(t, readErr)
+	assert.Equal(t, "untouched", string(body), "a refused pointer must not disturb the declared paths")
+}
+
+func TestRunCacheSave_CopiesToTheVolumeAndStoresAPointer(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	require.NoError(t, os.WriteFile(filepath.Join(root, "dep.txt"), []byte("installed"), 0o666))
+	mount := mountCacheVolume(t, "exec-1")
+
+	var uploaded []byte
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		uploaded, _ = io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	repo := &fakeCacheRepository{save: executioncache.SaveResult{URL: server.URL}}
+	out := &bytes.Buffer{}
+	err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+	}), nil, "", 1<<20, repo, out)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "cache: saved")
+
+	// What was stored is a pointer, not the tree.
+	pointer, ok := volume.Decode(uploaded)
+	require.True(t, ok, "the object must hold a pointer: %q", string(uploaded))
+	require.NoError(t, volume.ValidatePath(pointer.Path))
+	assert.EqualValues(t, len("installed"), pointer.Size)
+	assert.EqualValues(t, pointer.Size, repo.savedSize, "the quota must be told the entry's size, not the pointer's")
+
+	// And the tree really is on the volume, under the path the pointer names.
+	stored, readErr := os.ReadFile(filepath.Join(
+		mount, filepath.FromSlash(pointer.Path), volume.EntryRoot,
+		filepath.FromSlash(strings.TrimPrefix(posix, "/")), "dep.txt"))
+	require.NoError(t, readErr)
+	assert.Equal(t, "installed", string(stored))
+}
+
+// An entry is reachable only through its pointer, so one left behind after a lost race
+// is invisible until the volume fills - and it can be gigabytes.
+func TestRunCacheSave_DiscardsTheEntryWhenAnotherExecutionWon(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	require.NoError(t, os.WriteFile(filepath.Join(root, "dep.txt"), []byte("installed"), 0o666))
+	mount := mountCacheVolume(t, "exec-1")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusPreconditionFailed)
+	}))
+	defer server.Close()
+
+	out := &bytes.Buffer{}
+	err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+	}), nil, "", 1<<20, &fakeCacheRepository{save: executioncache.SaveResult{URL: server.URL}}, out)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "stored by another execution first")
+	assertInboxEmpty(t, mount, "exec-1")
+}
+
+func TestRunCacheSave_DiscardsTheEntryWhenTheKeyAlreadyExists(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	require.NoError(t, os.WriteFile(filepath.Join(root, "dep.txt"), []byte("installed"), 0o666))
+	mount := mountCacheVolume(t, "exec-1")
+
+	out := &bytes.Buffer{}
+	err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+	}), nil, "", 1<<20, &fakeCacheRepository{save: executioncache.SaveResult{AlreadyExists: true}}, out)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "already stored")
+	assertInboxEmpty(t, mount, "exec-1")
+}
+
+// Storing nothing under a key is worse than storing nothing at all: an entry is
+// immutable, so an empty one answers every later run with a hit that restores nothing.
+func TestRunCacheSave_RefusesToStoreAnEmptyEntry(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	mount := mountCacheVolume(t, "exec-1")
+
+	repo := &fakeCacheRepository{}
+	out := &bytes.Buffer{}
+	err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+	}), nil, "", 1<<20, repo, out)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "nothing was found")
+	assert.Zero(t, repo.saveCalls, "an empty entry must not even ask for a grant")
+	assertInboxEmpty(t, mount, "exec-1")
+}
+
+func assertInboxEmpty(t *testing.T, mount, resourceID string) {
+	t.Helper()
+	entries, err := os.ReadDir(filepath.Join(mount, volume.InboxDir, resourceID))
+	require.NoError(t, err)
+	assert.Empty(t, entries, "an entry whose pointer was never published must not be left behind")
 }

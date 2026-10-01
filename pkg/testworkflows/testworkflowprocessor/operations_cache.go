@@ -50,11 +50,12 @@ const (
 
 	// cacheInboxPath is this execution's own directory on that volume, reached through
 	// a subPath mount so the pod holds that directory and nothing else.
+	//
+	// Which directory that is comes from the intermediate, which knows the execution.
+	// It is resolved at bundle time rather than written as an expression because only
+	// volume mounts are finalized with the pod spec - a container's env is not - and
+	// the toolkit needs the same answer in both places.
 	cacheInboxPath = "/.tktw-cacheinbox"
-
-	// cacheInboxSubPath is which directory that is, resolved from the expression the
-	// rest of the pod spec is finalized with.
-	cacheInboxSubPath = volume.InboxDir + "/{{resource.id}}"
 )
 
 // validateCache rejects a cache block that cannot work, at bundle time.
@@ -335,10 +336,11 @@ func ProcessCacheSave(_ InternalProcessor, layer Intermediate, container stage.C
 	// decided in the pod, after the pod spec is fixed - so the archive needs somewhere
 	// to be packed either way. An emptyDir's sizeLimit reserves nothing, so an unused
 	// one costs nothing.
-	if mount, ok := layer.StepCacheVolumeMount(cacheInboxPath, cacheInboxSubPath, false); ok {
+	if mount, ok := layer.StepCacheVolumeMount(cacheInboxPath, layer.StepCacheInboxName(), false); ok {
 		selfContainer.
 			AppendVolumeMounts(mount).
-			AppendEnv(corev1.EnvVar{Name: volume.EnvInboxPath, Value: cacheInboxPath})
+			AppendEnv(corev1.EnvVar{Name: volume.EnvInboxPath, Value: cacheInboxPath}).
+			AppendEnv(corev1.EnvVar{Name: volume.EnvInboxName, Value: layer.StepCacheInboxName()})
 	}
 
 	encoded, err := expressions.EncodeBase64JSON(executioncache.Args{

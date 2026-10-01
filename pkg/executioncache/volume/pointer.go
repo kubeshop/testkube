@@ -69,7 +69,21 @@ const (
 	// somebody else's.
 	EnvStorePath = "TK_CACHE_VOLUME"
 	EnvInboxPath = "TK_CACHE_INBOX"
+
+	// EnvInboxName is what the inbox mount is called from the volume root.
+	//
+	// The write mount is a subPath, so the pod sees its inbox as the mount itself and
+	// cannot tell what it is called from the outside - but a pointer has to name the
+	// entry for a reader that mounted the whole volume. The processor knows the
+	// resource id when it builds the pod, so it resolves this there rather than leaving
+	// the pod to work it out from its own environment.
+	EnvInboxName = "TK_CACHE_INBOX_NAME"
 )
+
+// InboxFor is where one execution's entries live, relative to the volume root.
+func InboxFor(resourceID string) string {
+	return InboxDir + "/" + resourceID
+}
 
 // Pointer names the entry on the volume that an object stands in for.
 type Pointer struct {
