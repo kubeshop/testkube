@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -65,4 +66,55 @@ func TestScopedKeyPrefixesAndIsInertWithoutAnID(t *testing.T) {
 // happened to be newest rather than none at all.
 func TestScopedKeyLeavesAnEmptyKeyEmpty(t *testing.T) {
 	assert.Empty(t, ScopedKey("vol1", ""))
+}
+
+// Created rather than linked into place: link(2) is not implemented by every filesystem
+// a ReadWriteMany claim can be backed by, and ReadWriteMany describes who may mount a
+// volume rather than what the filesystem under it can do. Requiring a link turned the
+// cache off on claims that were otherwise perfectly good, and silently.
+func TestEnsureIDLeavesNoTemporaryFilesBehind(t *testing.T) {
+	root := t.TempDir()
+
+	_, err := EnsureID(root)
+	require.NoError(t, err)
+
+	entries, err := os.ReadDir(root)
+	require.NoError(t, err)
+	require.Len(t, entries, 1, "only the identity itself")
+	assert.Equal(t, IDName, entries[0].Name())
+}
+
+// O_EXCL publishes the name before its contents, so an agent arriving in between finds
+// the file empty. Failing there would refuse the volume for that agent - one identity
+// for one volume is the whole point, so the loser of the race waits for the winner.
+func TestEnsureIDWaitsForAnIdentityBeingWritten(t *testing.T) {
+	root := t.TempDir()
+	name := filepath.Join(root, IDName)
+
+	// The state another agent's O_EXCL leaves behind before it writes.
+	f, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, SharedFileMode)
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		_ = os.WriteFile(name, []byte("written-by-the-winner\n"), SharedFileMode)
+	}()
+
+	id, err := EnsureID(root)
+
+	require.NoError(t, err, "an identity on its way is not a reason to refuse the volume")
+	assert.Equal(t, "written-by-the-winner", id)
+}
+
+// An identity that never arrives is reported rather than waited on for ever.
+func TestEnsureIDGivesUpOnAnIdentityThatStaysEmpty(t *testing.T) {
+	root := t.TempDir()
+	f, err := os.OpenFile(filepath.Join(root, IDName), os.O_WRONLY|os.O_CREATE|os.O_EXCL, SharedFileMode)
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+
+	_, err = EnsureID(root)
+
+	assert.Error(t, err)
 }

@@ -92,7 +92,16 @@ func RestoreTree(entry *os.Root, declaredPaths []string, limits CopyLimits) (wro
 		entries  int
 		wanted   int
 		restored int
+
+		// Where each declared path's recorded modes will be set, once every one of
+		// them has been written. See the append below.
+		pending []declaredRoot
 	)
+	defer func() {
+		for _, p := range pending {
+			p.dst.Close()
+		}
+	}()
 
 	for _, declared := range coverPaths(declaredPaths) {
 		dest := path.Clean(declared)
@@ -162,14 +171,14 @@ func RestoreTree(entry *os.Root, declaredPaths []string, limits CopyLimits) (wro
 			return wrote, copyErr
 		}
 
-		// Applied once the tree is written, and deepest first, because narrowing a
-		// directory before what is inside it has been restored would shut the restore
-		// out of its own work.
-		modeErr := applyModes(dst, within, rootName, modes)
-		dst.Close()
-		if modeErr != nil {
-			return wrote, modeErr
-		}
+		// Held open rather than having its modes set here. A recorded mode can take a
+		// directory's write bit away, and a later declared path can still fail: the
+		// caller then clears what was written, and cannot, because the tree it has to
+		// empty is one this restore just made unwritable. It reports a miss and leaves
+		// a part of a cache behind for the install to find.
+		//
+		// A handful of declared paths, so a handful of descriptors held to the end.
+		pending = append(pending, declaredRoot{dst: dst, within: within, rootName: rootName})
 	}
 
 	// An entry that carries none of the paths this step asked for is not a hit, even
@@ -189,7 +198,25 @@ func RestoreTree(entry *os.Root, declaredPaths []string, limits CopyLimits) (wro
 	if wanted > 0 && restored == 0 {
 		return wrote, ErrEntryHoldsNoDeclaredPath
 	}
+
+	// Set only now that every declared path has been written, so that nothing this
+	// restore might still have to clear up is made unwritable while it could still
+	// fail. Deepest first within each path, because narrowing a directory before what
+	// is inside it has been restored would shut the restore out of its own work.
+	for _, p := range pending {
+		if err := applyModes(p.dst, p.within, p.rootName, modes); err != nil {
+			return wrote, err
+		}
+	}
 	return wrote, nil
+}
+
+// declaredRoot is one declared path's destination, kept open until every other has been
+// written so that its recorded modes are the last thing set.
+type declaredRoot struct {
+	dst      *os.Root
+	within   string
+	rootName string
 }
 
 // ErrEntryHoldsNoDeclaredPath reports an entry that carries none of the paths the step

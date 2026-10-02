@@ -186,3 +186,38 @@ func TestRestoreAppliesTheDefaultsUnderAStrictUmask(t *testing.T) {
 		assert.Equal(t, want, info.Mode().Perm(), "%s came back at the restoring umask", name)
 	}
 }
+
+// A recorded mode can take a directory's write bit away, and a later declared path can
+// still fail. Setting modes as each path finished left the caller unable to clear what
+// had been written - the tree it has to empty is one the restore had just made
+// unwritable - so a reported miss left part of a cache behind for the install to find.
+//
+// Here the first path is cached 0500 and the second is refused by the entry limit.
+func TestRestoreLeavesTheFirstPathWritableWhenALaterOneFails(t *testing.T) {
+	previous := syscall.Umask(0o022)
+	defer syscall.Umask(previous)
+
+	first := posixDir(t) + "/locked"
+	write(t, filepath.FromSlash(first+"/dep"), "cached")
+	require.NoError(t, os.Chmod(filepath.FromSlash(first), 0o500))
+
+	second := posixDir(t) + "/other"
+	write(t, filepath.FromSlash(second+"/a"), "x")
+	write(t, filepath.FromSlash(second+"/b"), "y")
+
+	entry := entryFrom(t, []string{first, second})
+	require.NoError(t, os.Chmod(filepath.FromSlash(first), 0o755))
+	require.NoError(t, os.RemoveAll(filepath.FromSlash(first)))
+	require.NoError(t, os.RemoveAll(filepath.FromSlash(second)))
+
+	// Enough for the first path and not for the second, so the restore fails part way.
+	_, err := RestoreTree(entry, []string{first, second}, CopyLimits{MaxEntries: 3})
+	require.Error(t, err)
+
+	// What the caller does next: empty the declared paths. It cannot, if the restore
+	// has already taken the write bit off what it wrote.
+	info, statErr := os.Lstat(filepath.FromSlash(first))
+	require.NoError(t, statErr)
+	assert.NotZero(t, info.Mode().Perm()&0o200,
+		"a failed restore must leave behind nothing its caller cannot clear")
+}
