@@ -638,3 +638,32 @@ func TestSaveAndRestoreRoundTripASingleFile(t *testing.T) {
 	require.NoError(t, readErr, "the file has to come back as a file")
 	assert.Equal(t, "{}", string(body))
 }
+
+// A declared path that is itself a link has to arrive as a link rather than as whatever
+// it pointed at.
+//
+// It cannot go through the walk: fs.WalkDir stats its own root through the filesystem,
+// which follows the link - a dangling one fails the restore outright, and a live one
+// would walk whatever it pointed at and put that at the declared path instead of the
+// link. The link here dangles inside the entry, which is the ordinary case: what it
+// names is restored by its own declared path or not at all.
+func TestSaveAndRestoreRoundTripASingleSymlink(t *testing.T) {
+	dir := posixDir(t)
+	declared := dir + "/current"
+	if err := os.Symlink("releases/v2", filepath.FromSlash(declared)); err != nil {
+		t.Skipf("this filesystem does not allow symlinks: %s", err)
+	}
+
+	entry := entryFrom(t, []string{declared})
+	require.NoError(t, os.Remove(filepath.FromSlash(declared)))
+
+	wrote, err := RestoreTree(entry, []string{declared}, CopyLimits{})
+
+	require.NoError(t, err)
+	assert.True(t, wrote)
+	target, readErr := os.Readlink(filepath.FromSlash(declared))
+	require.NoError(t, readErr)
+	// Compared with the separators normalised: Windows stores a link target with
+	// backslashes whatever it was written with, which says nothing about the restore.
+	assert.Equal(t, "releases/v2", filepath.ToSlash(target), "the link is carried, not followed")
+}

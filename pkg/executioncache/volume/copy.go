@@ -97,11 +97,26 @@ func RestoreTree(src *os.Root, declaredPaths []string, limits CopyLimits) (wrote
 		}
 		restored++
 
-		// A declared path that is itself a file or a link is restored into its parent
-		// under its own name, because the root this writes through has to be a
-		// directory. Rooting it at the declared path would mean creating a directory
-		// where the file belongs, and the walk below skips its own starting point - so
-		// a single-file cache saved correctly and then restored nothing at all.
+		// A link declared as the path is written straight out rather than walked.
+		// fs.WalkDir stats its own root through the filesystem, which follows a link:
+		// a dangling one fails the restore outright, and a live one would walk whatever
+		// it points at and put that at the declared path in place of the link.
+		if info.Mode()&fs.ModeSymlink != 0 {
+			didWrite, linkErr := restoreLink(src, within, dest, &entries, limits)
+			if didWrite {
+				wrote = true
+			}
+			if linkErr != nil {
+				return wrote, linkErr
+			}
+			continue
+		}
+
+		// A declared path that is itself a file is restored into its parent under its
+		// own name, because the root this writes through has to be a directory. Rooting
+		// it at the declared path would mean creating a directory where the file
+		// belongs, and the walk below skips its own starting point - so a single-file
+		// cache saved correctly and then restored nothing at all.
 		rootedAt, rootName := dest, ""
 		if !info.IsDir() {
 			rootedAt, rootName = path.Dir(dest), path.Base(dest)
@@ -646,4 +661,36 @@ func mkdirAllShared(root, dir string) error {
 // cannot sweep through, so that subtree would never be reclaimed.
 func escapesRoot(rel string) bool {
 	return rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// restoreLink writes a declared path that is itself a symbolic link.
+//
+// Separate from the walk because fs.WalkDir stats its root through the filesystem and
+// so follows the link, which either fails on a dangling one or walks the wrong tree.
+// The link is recreated as a link, for the reason every other link in an entry is: it
+// may well dangle at restore time, and what it names is restored by its own declared
+// path or not at all.
+func restoreLink(src *os.Root, within, dest string, entries *int, limits CopyLimits) (bool, error) {
+	link, err := src.Readlink(within)
+	if err != nil {
+		return false, err
+	}
+
+	*entries++
+	if limits.MaxEntries > 0 && *entries > limits.MaxEntries {
+		return false, ErrTooManyEntries
+	}
+
+	dst, err := openDeclaredRoot(path.Dir(dest))
+	if err != nil {
+		return false, err
+	}
+	defer dst.Close()
+
+	// Reported as written before the removal, not after the creation: what is already
+	// at the path is gone either way, so the caller has to clear up even if the symlink
+	// below fails.
+	name := path.Base(dest)
+	_ = dst.Remove(name)
+	return true, dst.Symlink(link, name)
 }
