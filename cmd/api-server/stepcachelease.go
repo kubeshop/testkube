@@ -16,8 +16,19 @@ import (
 // the charts' own default, so the substitution lands where an unset value would have.
 const defaultStepCacheRetention = 7 * 24 * time.Hour
 
-// stepCacheLifecycleMargin covers how much longer than its configured days an object
-// store may go on serving a pointer.
+// stepCacheLifecycleMargin allows for how much longer than its configured days an
+// object store may go on serving a pointer.
+//
+// **It narrows the window rather than closing it, and cannot close it.** Nothing in the
+// lifecycle contract bounds how late a removal may be, so a store slow enough will
+// still be serving a pointer when the sweep takes the entry it names - and that key
+// then answers every run with a hit that restores nothing, immutably, until the object
+// finally goes. Closing it needs a positive signal that the object is gone, which this
+// process cannot get: attached to a Control Plane it has no access to the bucket its
+// pointers are written to. The fix is the Control Plane's - deleting or replacing a
+// pointer when a restore reports its entry missing, or reporting removals an agent can
+// act on - and until then this is a mitigation, chosen because erring long costs only
+// an entry kept past its usefulness.
 //
 // A day-based lifecycle rule is not a deadline. S3, and the stores that follow it, add
 // the days to the object's creation time and then round up to the next UTC midnight -

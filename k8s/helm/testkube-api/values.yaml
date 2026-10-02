@@ -951,6 +951,15 @@ stepCacheVolume:
   ## Must be at least storage.cacheExpiration: an entry outliving its pointer only
   ## wastes space, where a pointer outliving its entry is a restore that reports a miss
   ## it cannot explain.
+  ## Raised automatically to the object store's own cache expiration plus a margin, so
+  ## setting it shorter than that does nothing. The margin allows for a lifecycle rule
+  ## not being a deadline - the store rounds the days up to a UTC midnight and then
+  ## removes asynchronously - but nothing bounds how late that removal may be, so a
+  ## store slow enough can still be serving a pointer after the entry it names has been
+  ## swept. That key then answers every run with a hit that restores nothing until the
+  ## object itself goes, and no run can replace it meanwhile. The window is small and
+  ## the consequence is a cold cache rather than a wrong one, but it is not closed: if
+  ## your store is known to lag, raise this well past its expiration.
   retentionDays: 7
   # -- How often to sweep the volume for expired entries
   sweepInterval: "1h"

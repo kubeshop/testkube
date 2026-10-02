@@ -160,6 +160,23 @@ restore is a copy rather than an unpack and nothing is gzipped.
   their own Deployment**, because a
   runner-only installation has no api Deployment and the sweep would otherwise read its
   missing inbox directory as an empty volume and let the claim fill.
+- **The sweep rests on an assumption it cannot verify, and this is the known residual
+  risk of the whole arrangement.** Deleting an entry is safe only once the object naming
+  it has stopped being served, and the agent has no way to know that: a day-based
+  lifecycle rule is not a deadline, the store rounds it up to a UTC midnight and then
+  removes asynchronously with **no bound promised on the lag**.
+  `stepCacheLifecycleMargin` (48h, on top of the pointer's configured lifetime and the
+  publication grace) is sized for the rounding and an ordinary delay, so it narrows the
+  window - but a store slow enough still leaves a pointer answering with a hit to an
+  entry that is gone, under a key no run can replace until the object finally expires.
+  **Do not read the margin as a guarantee**; widening it buys probability, not
+  certainty. Closing it needs a positive signal, and the agent cannot obtain one -
+  attached to a Control Plane it has no access to the bucket its pointers go to, which
+  is the same wall the expiration confirmation runs into above. The fix belongs to the
+  Control Plane: deleting or replacing a pointer when a restore reports its entry
+  missing, or reporting removals the agent can act on. Both are proto and
+  `testkube-cloud-api` changes, so this branch documents the risk rather than carrying
+  a half of them.
 - **The volume is enabled, and swept, in every mode.** `commons.StepCacheVolumeEnabled`
   answers on the claim alone, and both the mounts and the sweep ask it. The disk is the
   agent's own and is written to in every mode, so it has to be bounded in every mode; a
