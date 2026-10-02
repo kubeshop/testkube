@@ -549,36 +549,53 @@ func (w *worker) List(ctx context.Context, options executionworkertypes.ListOpti
 	// TODO: make concurrent calls
 	list := make([]executionworkertypes.ListResultItem, 0)
 	for _, ns := range namespaces {
-		// TODO: retry?
-		jobs, err := w.clientSet.BatchV1().Jobs(ns).List(ctx, listOptions)
-		if err != nil {
-			return nil, err
-		}
-		for _, job := range jobs.Items {
-			if options.Finished != nil && *options.Finished != watchers.IsJobFinished(&job) {
-				continue
-			}
-			if options.Root != nil && *options.Root != (job.Labels[constants.RootResourceIdLabelName] == job.Labels[constants.ResourceIdLabelName]) {
-				continue
-			}
-			var cfg testworkflowconfig.InternalConfig
-			err = json.Unmarshal([]byte(job.Spec.Template.Annotations[constants.InternalAnnotationName]), &cfg)
+		// Paged to the end rather than taking the first response and stopping.
+		//
+		// Limit is a page size, not a bound on what exists, and everything that
+		// narrows this list - finished or not, root or not, the organization, the
+		// environment - is applied below, to whatever came back. A namespace holding
+		// more jobs than one page therefore used to answer with a truncated list that
+		// looked complete, and a caller asking which executions are running would
+		// silently not be told about some of them. The step cache's lease renewal is
+		// one such caller, and an execution missing from its answer has its inbox swept
+		// while its pod is still writing to it.
+		pageOptions := listOptions
+		for {
+			// TODO: retry?
+			jobs, err := w.clientSet.BatchV1().Jobs(ns).List(ctx, pageOptions)
 			if err != nil {
-				log.DefaultLogger.Warnw("detected execution job that have invalid internal configuration", "name", job.Name, "namespace", job.Namespace, "error", err)
-				continue
+				return nil, err
 			}
-			if options.OrganizationId != "" && options.OrganizationId != cfg.Execution.OrganizationId {
-				continue
+			for _, job := range jobs.Items {
+				if options.Finished != nil && *options.Finished != watchers.IsJobFinished(&job) {
+					continue
+				}
+				if options.Root != nil && *options.Root != (job.Labels[constants.RootResourceIdLabelName] == job.Labels[constants.ResourceIdLabelName]) {
+					continue
+				}
+				var cfg testworkflowconfig.InternalConfig
+				err = json.Unmarshal([]byte(job.Spec.Template.Annotations[constants.InternalAnnotationName]), &cfg)
+				if err != nil {
+					log.DefaultLogger.Warnw("detected execution job that have invalid internal configuration", "name", job.Name, "namespace", job.Namespace, "error", err)
+					continue
+				}
+				if options.OrganizationId != "" && options.OrganizationId != cfg.Execution.OrganizationId {
+					continue
+				}
+				if options.EnvironmentId != "" && options.EnvironmentId != cfg.Execution.EnvironmentId {
+					continue
+				}
+				list = append(list, executionworkertypes.ListResultItem{
+					Execution: cfg.Execution,
+					Workflow:  cfg.Workflow,
+					Resource:  cfg.Resource,
+					Namespace: job.Namespace,
+				})
 			}
-			if options.EnvironmentId != "" && options.EnvironmentId != cfg.Execution.EnvironmentId {
-				continue
+			if jobs.Continue == "" {
+				break
 			}
-			list = append(list, executionworkertypes.ListResultItem{
-				Execution: cfg.Execution,
-				Workflow:  cfg.Workflow,
-				Resource:  cfg.Resource,
-				Namespace: job.Namespace,
-			})
+			pageOptions.Continue = jobs.Continue
 		}
 	}
 	return list, nil
@@ -838,16 +855,27 @@ func (w *worker) prepareStepCacheInbox(resourceId string) {
 		return
 	}
 
-	dir := filepath.Join(w.config.StepCacheVolumeLocalPath, filepath.FromSlash(volume.InboxFor(resourceId)))
+	parent := filepath.Join(w.config.StepCacheVolumeLocalPath, volume.InboxDir)
+	dir := filepath.Join(parent, resourceId)
 	if err := os.MkdirAll(dir, cacheInboxMode); err != nil {
 		log.DefaultLogger.Warnw("could not prepare the step cache inbox; the execution will fall back to the object store if its pod cannot write one",
 			"path", dir, "error", err)
 		return
 	}
-	// MkdirAll applies the process umask, so the mode is set explicitly: a step running
-	// as an arbitrary user has to be able to write here, and the agent cannot know which.
-	if err := os.Chmod(dir, cacheInboxMode); err != nil {
-		log.DefaultLogger.Warnw("could not set the mode of the step cache inbox; a step running as another user may not be able to write to it",
-			"path", dir, "error", err)
+
+	// MkdirAll applies the process umask, so the mode is set explicitly - on the shared
+	// parent as well as on this execution's own directory.
+	//
+	// The parent is made once, by whichever agent gets there first, and left at 0755
+	// under the usual umask it belongs to that agent's user alone. Every other agent on
+	// the same backing volume - a runner beside an api deployment, or one running as a
+	// different UID - could then neither add an inbox nor remove an expired one: saves
+	// fall back to the object store and nothing is ever reclaimed, on a volume the
+	// whole cluster shares.
+	for _, name := range []string{parent, dir} {
+		if err := os.Chmod(name, cacheInboxMode); err != nil {
+			log.DefaultLogger.Warnw("could not set the mode of a step cache directory; an agent or step running as another user may not be able to write to it",
+				"path", name, "error", err)
+		}
 	}
 }
