@@ -62,10 +62,21 @@ func EnsureID(mountPath string) (string, error) {
 	// rather than overwriting: two identities for one volume would split its cache in
 	// half for no reason.
 	tmp := name + ".tmp-" + id
-	if err := os.WriteFile(tmp, []byte(id+"\n"), 0o666); err != nil {
+	if err := os.WriteFile(tmp, []byte(id+"\n"), SharedFileMode); err != nil {
 		return "", err
 	}
 	defer os.Remove(tmp)
+
+	// Set before the link, because afterwards it is no longer this process's to set:
+	// WriteFile's mode is filtered by the umask, so an agent running under 0077 would
+	// publish the identity 0600 and own it. Every other agent on the volume reads this
+	// - that is the whole point of it - and one that cannot gets no identity, which
+	// turns the volume off for it entirely. A single strict umask would take the
+	// feature away from everyone else.
+	if err := os.Chmod(tmp, SharedFileMode); err != nil {
+		return "", err
+	}
+
 	if err := os.Link(tmp, name); err != nil {
 		if existing, readErr := readID(name); readErr == nil {
 			return existing, nil

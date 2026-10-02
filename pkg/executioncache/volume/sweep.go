@@ -324,25 +324,39 @@ func TouchLease(mountPath, inboxName string) error {
 		return lstatErr
 	}
 
-	now := time.Now()
-	if err := root.Chtimes(LeaseName, now, now); err == nil {
-		return nil
-	} else if !os.IsNotExist(err) {
+	// Renewed by writing to it, not by setting its timestamp.
+	//
+	// Each deployment holds its own leader election, so an api and a runner sharing one
+	// volume both renew, as different users - and whichever did not create this lease
+	// is not its owner. Setting an explicit timestamp is the owner's privilege, where a
+	// write asks only for the write bit the mode below grants, and updates the mtime
+	// just the same. Chtimes would have left the lease renewable only by the process
+	// that made it, so if that one stopped the lease went stale under a live execution
+	// and the sweep took its inbox.
+	//
+	// O_CREATE and not MkdirAll: a missing parent is a swept or never-made inbox, and
+	// the error says so rather than building one nothing reads.
+	f, err := root.OpenFile(LeaseName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, SharedFileMode)
+	if err != nil {
 		return err
+	}
+	_, writeErr := f.Write([]byte("lease\n"))
+	closeErr := f.Close()
+	if writeErr != nil {
+		return writeErr
+	}
+	if closeErr != nil {
+		return closeErr
 	}
 
-	f, err := root.OpenFile(LeaseName, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0o666)
-	if err != nil {
-		if os.IsExist(err) {
-			// Another agent made it between the Chtimes above and here. Each
-			// deployment holds its own leader election, so an api and a runner sharing
-			// one volume both renew, and a lease that exists is exactly the outcome
-			// wanted - reporting it would be reporting success as a failure.
-			return nil
-		}
+	// OpenFile's mode is filtered by the umask, so it is set explicitly: under 0077 a
+	// lease would arrive 0600 and no other agent could renew it. Only the owner may
+	// chmod, which here means only whoever created it - so a refusal is one this
+	// process cannot act on and is not an error, the creator having already decided.
+	if err := root.Chmod(LeaseName, SharedFileMode); err != nil && !os.IsPermission(err) {
 		return err
 	}
-	return f.Close()
+	return nil
 }
 
 // inboxPath resolves an inbox name under the mount, refusing anything that is not

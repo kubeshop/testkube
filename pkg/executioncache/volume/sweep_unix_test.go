@@ -4,8 +4,10 @@ package volume
 
 import (
 	"context"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 
@@ -93,4 +95,33 @@ func TestSweepDoesNotBelieveASymlinkedLease(t *testing.T) {
 	assert.True(t, os.IsNotExist(statErr), "a symlinked lease must not keep the inbox")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "symlink")
+}
+
+// Both of these are read or written by agents that did not create them: an api and a
+// runner sharing a volume hold separate leader elections and run as whatever user each
+// was given. A mode left to the umask makes them private to whoever got there first.
+//
+// The identity is the worse of the two - an agent that cannot read it gets none, and
+// without one the volume is turned off for it entirely, so a single strict umask would
+// take the feature away from every other agent on the volume.
+func TestAgentWrittenFilesStayReadableUnderAStrictUmask(t *testing.T) {
+	previous := syscall.Umask(0o077)
+	defer syscall.Umask(previous)
+
+	root := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(root, InboxDir, "exec-1"), 0o777))
+
+	_, err := EnsureID(root)
+	require.NoError(t, err)
+	require.NoError(t, TouchLease(root, InboxDir+"/exec-1"))
+
+	for _, name := range []string{
+		filepath.Join(root, IDName),
+		filepath.Join(root, InboxDir, "exec-1", LeaseName),
+	} {
+		info, statErr := os.Stat(name)
+		require.NoError(t, statErr, name)
+		assert.Equal(t, fs.FileMode(SharedFileMode), info.Mode().Perm(),
+			"%s is one another agent could not use", name)
+	}
 }
