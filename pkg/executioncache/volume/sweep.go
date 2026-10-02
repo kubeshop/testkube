@@ -98,6 +98,10 @@ func (s *Sweeper) Sweep(ctx context.Context) error {
 	}
 	cutoff := now().Add(-s.Retention)
 
+	// Collected rather than returned at the first failure, so the sweep reaches every
+	// inbox and the caller still hears about the ones it could not take.
+	var failed []string
+
 	inboxes, err := os.ReadDir(filepath.Join(s.Root, InboxDir))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -160,8 +164,13 @@ func (s *Sweeper) Sweep(ctx context.Context) error {
 			continue
 		}
 
+		// Reported and stepped over rather than returned. Every inbox here is already
+		// expired, so one the agent cannot remove - a directory left unwritable by the
+		// step that made it, a file the volume will not release - must not stop the
+		// sweep reaching the rest: that turns one stuck entry into a volume that never
+		// reclaims anything again. The next pass tries it afresh.
 		if err := os.RemoveAll(dir); err != nil && !os.IsNotExist(err) {
-			return err
+			failed = append(failed, fmt.Sprintf("%s: %s", entry.Name(), err))
 		}
 	}
 	return nil

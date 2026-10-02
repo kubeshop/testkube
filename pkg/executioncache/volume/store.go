@@ -154,10 +154,24 @@ func (in *Inbox) Stage() (dir string, name string, err error) {
 	if err := in.dir.Mkdir(name, 0o777); err != nil {
 		return "", "", err
 	}
+	// Mkdir's mode is filtered by the umask of whatever process is calling, which here
+	// is the step's own container: under the usual 022 these arrive as 0755 owned by
+	// the arbitrary user the workflow runs as. The agent sweeps them as a different
+	// one, and cannot unlink anything inside a directory it has no write bit on, so a
+	// single entry would make RemoveAll fail and stop the sweep reaching anything after
+	// it. Set explicitly, the way prepareStepCacheInbox already does for the inbox.
+	if err := in.dir.Chmod(name, SharedDirMode); err != nil {
+		_ = in.dir.Remove(name)
+		return "", "", err
+	}
 	if err := in.dir.Mkdir(path.Join(name, EntryRoot), 0o777); err != nil {
 		// The caller only registers its discard once Stage has returned a name, so
 		// the directory made just above would otherwise sit there until the sweep.
 		_ = in.dir.Remove(name)
+		return "", "", err
+	}
+	if err := in.dir.Chmod(path.Join(name, EntryRoot), SharedDirMode); err != nil {
+		_ = in.removeAll(name)
 		return "", "", err
 	}
 	return path.Join(in.path, name, EntryRoot), name, nil

@@ -351,6 +351,14 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 		}
 		base := filepath.Join(dst, filepath.FromSlash(strings.TrimPrefix(src, "/")))
 
+		// The prefix above this declared path's own root is created once, by one
+		// MkdirAll, and the walk below never visits it - so its mode is set here rather
+		// than per directory. An unwritable directory anywhere in the chain is one the
+		// agent cannot unlink through when it sweeps.
+		if err := mkdirAllShared(dst, base); err != nil {
+			return total, content, err
+		}
+
 		// filepath.Walk lstats, so a symlink arrives as a symlink rather than as
 		// whatever it points at - which is what lets the entry carry the link itself.
 		err := filepath.Walk(filepath.FromSlash(src), func(name string, info os.FileInfo, err error) error {
@@ -386,7 +394,7 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 				if limits.MaxEntries > 0 && counted > limits.MaxEntries {
 					return ErrTooManyEntries
 				}
-				return os.MkdirAll(target, 0o777)
+				return mkdirShared(target)
 
 			case info.Mode()&os.ModeSymlink != 0:
 				counted++
@@ -401,7 +409,7 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 					}
 					return readErr
 				}
-				if mkErr := os.MkdirAll(filepath.Dir(target), 0o777); mkErr != nil {
+				if mkErr := mkdirShared(filepath.Dir(target)); mkErr != nil {
 					return mkErr
 				}
 				// The link is stored as written, relative or absolute. Resolving it
@@ -482,7 +490,7 @@ func copyOut(name, target string, info os.FileInfo, budget int64) (int64, error)
 	if budget <= 0 {
 		return 0, ErrTooLarge
 	}
-	if err := os.MkdirAll(filepath.Dir(target), 0o777); err != nil {
+	if err := mkdirShared(filepath.Dir(target)); err != nil {
 		return 0, err
 	}
 
@@ -513,4 +521,55 @@ func copyOut(name, target string, info os.FileInfo, budget int64) (int64, error)
 		return n, ErrTooLarge
 	}
 	return n, os.Chmod(target, info.Mode().Perm()|0o666)
+}
+
+// SharedDirMode is what every directory written onto the shared volume is set to.
+//
+// Open, because the volume is written by step containers running as whatever user each
+// workflow chose and swept by the agent running as another. A directory's write bit is
+// what permits unlinking the entries inside it, so one directory the agent cannot write
+// is one whose contents it can never reclaim - and since the sweep removes whole
+// inboxes, that single directory strands everything under it on a volume the whole
+// cluster shares.
+//
+// Set explicitly rather than passed to Mkdir, whose mode the caller's umask filters: a
+// step container's usual 022 turns 0777 into 0755 before it reaches the filesystem.
+const SharedDirMode = 0o777
+
+// mkdirShared creates one directory on the shared volume with the mode it needs, having
+// created any missing parents along the way.
+//
+// Only the directory named is chmod'ed. The walk that calls this is top-down, so each
+// parent was itself created by an earlier call and already carries the mode; a chain of
+// chmods per directory would be one syscall per level on a tree with hundreds of
+// thousands of them, for nothing. The one chain that is not covered that way - the
+// prefix above a declared path's own root - is set by mkdirAllShared below.
+func mkdirShared(dir string) error {
+	if err := os.MkdirAll(dir, SharedDirMode); err != nil {
+		return err
+	}
+	return os.Chmod(dir, SharedDirMode)
+}
+
+// mkdirAllShared creates a directory and sets the mode on every component of it under
+// root, which is what the prefix above a declared path's own root needs: those
+// directories are created once, by one MkdirAll, and the walk never visits them.
+func mkdirAllShared(root, dir string) error {
+	if err := os.MkdirAll(dir, SharedDirMode); err != nil {
+		return err
+	}
+
+	rel, err := filepath.Rel(root, dir)
+	if err != nil || rel == "." || strings.HasPrefix(rel, "..") {
+		return os.Chmod(dir, SharedDirMode)
+	}
+
+	current := root
+	for _, part := range strings.Split(rel, string(filepath.Separator)) {
+		current = filepath.Join(current, part)
+		if err := os.Chmod(current, SharedDirMode); err != nil {
+			return err
+		}
+	}
+	return nil
 }
