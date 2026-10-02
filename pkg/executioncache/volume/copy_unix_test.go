@@ -144,3 +144,45 @@ func TestRestoreSetsTheDeclaredDirectorysOwnMode(t *testing.T) {
 	assert.Equal(t, fs.FileMode(0o700), info.Mode().Perm(),
 		"the declared directory's own permissions are part of what was cached")
 }
+
+// The manifest records only what differs from the defaults, so the defaults have to be
+// applied rather than assumed. MkdirAll and OpenFile take their mode through the
+// process umask, and a restoring container is entitled to any umask it likes: under
+// 0077 a tree cached at an ordinary 0755/0644 came back 0700/0600, private to whoever
+// restored it, where the archive backend sets every mode from its tar header.
+//
+// Saved under a permissive umask and restored under a strict one, which is the shape of
+// the problem: two different containers, each with its own.
+func TestRestoreAppliesTheDefaultsUnderAStrictUmask(t *testing.T) {
+	saved := syscall.Umask(0o022)
+	src := posixDir(t) + "/pkg"
+	write(t, filepath.FromSlash(src+"/nested/index.js"), "ordinary")
+	require.NoError(t, os.Chmod(filepath.FromSlash(src), 0o755))
+	require.NoError(t, os.Chmod(filepath.FromSlash(src+"/nested"), 0o755))
+	require.NoError(t, os.Chmod(filepath.FromSlash(src+"/nested/index.js"), 0o644))
+
+	entry := entryFrom(t, []string{src})
+	require.NoError(t, os.RemoveAll(filepath.FromSlash(src)))
+	syscall.Umask(saved)
+
+	// Nothing differed from the defaults, so the entry records nothing at all - which
+	// is exactly the case the defaults have to carry on their own.
+	_, statErr := os.Stat(filepath.Join(entry.Name(), ModesName))
+	require.True(t, os.IsNotExist(statErr), "this tree is all defaults")
+
+	strict := syscall.Umask(0o077)
+	defer syscall.Umask(strict)
+
+	_, err := RestoreTree(entry, []string{src}, CopyLimits{})
+	require.NoError(t, err)
+
+	for name, want := range map[string]fs.FileMode{
+		"":                 0o755,
+		"/nested":          0o755,
+		"/nested/index.js": 0o644,
+	} {
+		info, statErr := os.Lstat(filepath.FromSlash(src + name))
+		require.NoError(t, statErr, name)
+		assert.Equal(t, want, info.Mode().Perm(), "%s came back at the restoring umask", name)
+	}
+}

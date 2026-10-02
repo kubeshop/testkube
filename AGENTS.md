@@ -275,9 +275,15 @@ restore is a copy rather than an unpack and nothing is gzipped.
   execution that may run as another user, so what is stored is widened to be readable
   by anyone - which loses the source's own mode. `modes.v1`, written beside
   `<entry>/root`, records every path whose permissions differ from `DefaultFileMode`
-  (0644) or `DefaultDirMode` (0755); the restore creates at those defaults and applies
-  the recorded ones afterwards, **deepest first**, so narrowing a directory cannot shut
-  the restore out of what is still inside it. Without this a key saved 0600 came back
+  (0644) or `DefaultDirMode` (0755); the restore **sets** those defaults on everything
+  it writes - including the declared directory itself, which `openDeclaredRoot` makes
+  rather than the walk - and then applies the recorded ones, **deepest first**, so
+  narrowing a directory cannot shut the restore out of what is still inside it. Set,
+  not passed to `MkdirAll` and `OpenFile` and left there: a mode given at creation is
+  filtered by the restoring process's umask, so under 0077 a tree cached at an ordinary
+  0755/0644 would come back private to whoever restored it, and the manifest records
+  only what differs from the defaults so the defaults have to be applied rather than
+  assumed. Without this a key saved 0600 came back
   0666 and ssh refused it, where the archive backend carries each mode in its tar
   header - the same workflow behaving differently by backend. The file is versioned in
   its name so an older agent meeting a newer entry simply ignores it and restores at

@@ -332,7 +332,14 @@ func restoreInto(src *os.Root, within string, dst *os.Root, rootName string, tot
 				return ErrTooManyEntries
 			}
 			wrote = true
-			return dst.MkdirAll(rel, DefaultDirMode)
+			if err := dst.MkdirAll(rel, DefaultDirMode); err != nil {
+				return err
+			}
+			// Set, for the reason copyIntoRoot sets a file's: MkdirAll's mode is
+			// filtered by the umask, and the manifest records only what differs from
+			// the default, so a directory cached at an ordinary 0755 would otherwise
+			// come back at whatever the restoring process happened to allow.
+			return dst.Chmod(rel, DefaultDirMode)
 		}
 
 		*entries++
@@ -612,10 +619,16 @@ func copyIntoRoot(src *os.Root, name string, dst *os.Root, rel string, info fs.F
 	if n == budget && info.Size() > n {
 		return n, ErrTooLarge
 	}
-	// No chmod here. The entry's own mode is the widened one and says nothing about
-	// the source's; what differed from the default - an executable among them - is
-	// recorded in the manifest and applied once the tree is written.
-	return n, nil
+	// Set rather than left to the mode OpenFile was given, which the process umask
+	// filters: under 0077 that would be 0600, so a file the workflow cached at an
+	// ordinary 0644 would come back private and a later step running as another user
+	// could not read it. The manifest records only what differs from the default, so
+	// the default has to be applied rather than assumed.
+	//
+	// Not the entry's own mode, which was widened when it was stored and says nothing
+	// about the source's. What differed - an executable among them - is in the manifest
+	// and replaces this once the tree is written.
+	return n, dst.Chmod(rel, DefaultFileMode)
 }
 
 // copyOut writes one regular file from the filesystem into the staged entry, reporting
@@ -770,8 +783,17 @@ func restoreLink(src *os.Root, within, dest string, entries *int, limits CopyLim
 // A path the restore did not write is skipped rather than failed: the manifest covers
 // the whole entry, and a restore only ever asks for the declared paths it wants.
 func applyModes(dst *os.Root, within, rootName string, modes Modes) error {
-	if len(modes) == 0 {
-		return nil
+	// The declared directory is created by openDeclaredRoot, not by the walk, so
+	// nothing else sets its mode - and openDeclaredRoot's Mkdir is filtered by the
+	// umask like any other. Set to the default first; a recorded mode for it replaces
+	// this below, where Apply puts it last because it is the shallowest key.
+	//
+	// Only when dst is that directory. Where the declared path is a single file or
+	// link, dst is its parent, which belongs to the workflow rather than to the entry.
+	if rootName == "" {
+		if err := dst.Chmod(".", DefaultDirMode); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
 	}
 
 	for _, key := range modes.Apply() {
