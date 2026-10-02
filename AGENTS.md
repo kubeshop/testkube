@@ -289,7 +289,10 @@ restore is a copy rather than an unpack and nothing is gzipped.
   its name so an older agent meeting a newer entry simply ignores it and restores at
   the defaults, and `Store.OpenEntry` therefore roots at the **entry**, with the tree
   inside it. It is **streamed and bounded by the entry limit** (`DecodeModesFrom`, with
-  one record capped at `maxModeRecordBytes`): it is read before any copy limit applies,
+  one record capped at `maxModeRecordBytes`, records counted as **read** rather than as
+  kept so that a repeated or malformed one still spends the budget, and the paths
+  retained capped at `maxModeTotalBytes` because a count alone leaves their length
+  free): it is read before any copy limit applies,
   and the inbox an entry is built in is mounted into the step's own container - so a
   workflow can commit a manifest of any size, which every later execution restoring
   that key would otherwise read into memory whole.

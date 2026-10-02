@@ -145,3 +145,27 @@ func TestDecodeModesFromCountsRecordsItCannotRead(t *testing.T) {
 	assert.Empty(t, got, "the budget was spent before the real record arrived")
 	assert.Less(t, counted.read, len(manifest)/2)
 }
+
+// The record count bounds how many paths are kept, not how long they are. At the entry
+// limit, with every path as long as one may be, a manifest written to the letter of
+// both caps still retained gigabytes of strings - before a byte of the tree was copied,
+// so the copy limits never got a say and one entry could exhaust another's restore.
+func TestDecodeModesFromBoundsThePathsItKeeps(t *testing.T) {
+	// Each record is close to the per-record cap, so the byte budget is what has to
+	// stop this rather than the count.
+	long := strings.Repeat("p", 4000)
+	var manifest strings.Builder
+	for i := 0; i < 20_000; i++ {
+		fmt.Fprintf(&manifest, "0600 %s/%d\x00", long, i)
+	}
+
+	got := DecodeModesFrom(strings.NewReader(manifest.String()), 1_000_000)
+
+	kept := 0
+	for rel := range got {
+		kept += len(rel)
+	}
+	assert.LessOrEqual(t, kept, maxModeTotalBytes+4096,
+		"a manifest cannot spend more of the restore's memory than this")
+	assert.Less(t, len(got), 20_000, "and the records past the budget keep the defaults")
+}

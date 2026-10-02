@@ -91,6 +91,20 @@ func DecodeModes(data []byte) Modes {
 // DefaultMaxModeRecords caps a manifest read with no entry limit of its own.
 const DefaultMaxModeRecords = 1 << 20
 
+// maxModeTotalBytes caps the paths a manifest leaves in memory.
+//
+// The record count does not: at the entry limit, with every path as long as one may be,
+// a manifest written to the letter of both caps still retains gigabytes of strings. And
+// it retains them before a byte of the tree is copied, so the copy limits never get a
+// say - one entry could exhaust the restore of another.
+//
+// Sized for the legitimate case rather than the limit: the manifest holds only what
+// differs from 0644 and 0755, which in a dependency tree is a handful of paths, and 32
+// MiB is hundreds of thousands of realistic ones. A tree genuinely past it loses the
+// modes of whatever follows, which is the degradation this file already has for a
+// record it cannot read.
+const maxModeTotalBytes = 32 << 20
+
 // maxModeRecordBytes bounds one record, which is a mode, a space and a path. Generous
 // against PATH_MAX, and what stops a manifest with no terminator anywhere in it from
 // being read into memory entire while something looks for one.
@@ -124,7 +138,7 @@ func DecodeModesFrom(r io.Reader, maxRecords int) Modes {
 	records.Buffer(make([]byte, 0, 4096), maxModeRecordBytes)
 	records.Split(splitNUL)
 
-	scanned := 0
+	scanned, retained := 0, 0
 	for records.Scan() {
 		// Counted whatever the record turns out to be, rather than counting the paths
 		// kept. Budgeting distinct valid paths left a repeated or malformed record
@@ -148,6 +162,18 @@ func DecodeModesFrom(r io.Reader, maxRecords int) Modes {
 		perm, err := strconv.ParseUint(mode, 8, 32)
 		if err != nil {
 			continue
+		}
+
+		// Bounded by what is kept as well as by how much is read. The record count on
+		// its own leaves the paths: at the entry limit, with every path as long as one
+		// may be, a manifest crafted to the letter of both caps still retains gigabytes
+		// of strings - and it retains them before a single byte of the tree is copied,
+		// so the copy limits never get a say. Whatever is past the budget keeps the
+		// default mode, which is the degradation this file already has for a record it
+		// cannot read.
+		retained += len(rel)
+		if retained > maxModeTotalBytes {
+			break
 		}
 		modes[rel] = fs.FileMode(perm).Perm()
 	}

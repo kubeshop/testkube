@@ -707,3 +707,40 @@ func entryPath(t *testing.T, root *os.Root) string {
 	t.Helper()
 	return root.Name()
 }
+
+// entriesForFirstPathOnly is a limit the first path below fits inside and the second
+// does not, so a restore of both fails part way through.
+const entriesForFirstPathOnly = 2
+
+// twoPathsOneLimitApart returns two declared paths under one parent, named so that
+// coverPaths - which sorts - restores them in this order. Separate parents would be
+// ordered by whatever the temporary directories happened to be called, which is to say
+// not ordered at all.
+//
+// A declared directory is not itself counted on the restore, so these are one entry and
+// two.
+func twoPathsOneLimitApart(t *testing.T) (first, second string) {
+	t.Helper()
+	base := posixDir(t)
+	first, second = base+"/a-first", base+"/b-second"
+	write(t, filepath.FromSlash(first+"/dep"), "cached")
+	write(t, filepath.FromSlash(second+"/one"), "x")
+	write(t, filepath.FromSlash(second+"/two"), "y")
+	return first, second
+}
+
+// The arithmetic the unix test for deferred modes rests on: this limit really does let
+// the first path through and stop inside the second. Pinned here because that test
+// cannot run everywhere, and a limit that never trips makes it assert nothing.
+func TestRestoreStopsAtTheEntryLimitPartWayThrough(t *testing.T) {
+	first, second := twoPathsOneLimitApart(t)
+	entry := entryFrom(t, []string{first, second})
+	require.NoError(t, os.RemoveAll(filepath.FromSlash(first)))
+	require.NoError(t, os.RemoveAll(filepath.FromSlash(second)))
+
+	_, err := RestoreTree(entry, []string{first, second}, CopyLimits{MaxEntries: entriesForFirstPathOnly})
+
+	require.ErrorIs(t, err, ErrTooManyEntries)
+	_, statErr := os.Stat(filepath.FromSlash(first + "/dep"))
+	assert.NoError(t, statErr, "the first path is restored, which is what makes this part way through")
+}

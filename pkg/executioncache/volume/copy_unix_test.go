@@ -197,13 +197,8 @@ func TestRestoreLeavesTheFirstPathWritableWhenALaterOneFails(t *testing.T) {
 	previous := syscall.Umask(0o022)
 	defer syscall.Umask(previous)
 
-	first := posixDir(t) + "/locked"
-	write(t, filepath.FromSlash(first+"/dep"), "cached")
+	first, second := twoPathsOneLimitApart(t)
 	require.NoError(t, os.Chmod(filepath.FromSlash(first), 0o500))
-
-	second := posixDir(t) + "/other"
-	write(t, filepath.FromSlash(second+"/a"), "x")
-	write(t, filepath.FromSlash(second+"/b"), "y")
 
 	entry := entryFrom(t, []string{first, second})
 	require.NoError(t, os.Chmod(filepath.FromSlash(first), 0o755))
@@ -211,7 +206,7 @@ func TestRestoreLeavesTheFirstPathWritableWhenALaterOneFails(t *testing.T) {
 	require.NoError(t, os.RemoveAll(filepath.FromSlash(second)))
 
 	// Enough for the first path and not for the second, so the restore fails part way.
-	_, err := RestoreTree(entry, []string{first, second}, CopyLimits{MaxEntries: 3})
+	_, err := RestoreTree(entry, []string{first, second}, CopyLimits{MaxEntries: entriesForFirstPathOnly})
 	require.Error(t, err)
 
 	// What the caller does next: empty the declared paths. It cannot, if the restore
