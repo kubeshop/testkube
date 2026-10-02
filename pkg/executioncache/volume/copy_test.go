@@ -292,8 +292,17 @@ func TestSaveCountsAnOverlappingPathOnce(t *testing.T) {
 	size, entries, err := SaveTree(staging, []string{outer, inner}, CopyLimits{})
 
 	require.NoError(t, err)
-	assert.Equal(t, 1, entries, "one file declared twice is still one file")
-	assert.EqualValues(t, 2, size, "and its bytes must not be counted twice either")
+
+	// Compared against declaring it once rather than against a literal, because what
+	// is being pinned is that the overlap costs nothing - not how many entries a tree
+	// of one file and two directories comes to.
+	baseline := filepath.Join(t.TempDir(), EntryRoot)
+	require.NoError(t, os.MkdirAll(baseline, 0o777))
+	onceSize, onceEntries, err := SaveTree(baseline, []string{outer}, CopyLimits{})
+	require.NoError(t, err)
+
+	assert.Equal(t, onceEntries, entries, "one tree declared twice is still one tree")
+	assert.EqualValues(t, onceSize, size, "and its bytes must not be counted twice either")
 }
 
 // Declaring the nested path first must give the same answer: the cover is about which
@@ -307,9 +316,14 @@ func TestSaveCoversRegardlessOfDeclarationOrder(t *testing.T) {
 	require.NoError(t, os.MkdirAll(staging, 0o777))
 
 	_, entries, err := SaveTree(staging, []string{inner, outer}, CopyLimits{})
-
 	require.NoError(t, err)
-	assert.Equal(t, 1, entries)
+
+	baseline := filepath.Join(t.TempDir(), EntryRoot)
+	require.NoError(t, os.MkdirAll(baseline, 0o777))
+	_, onceEntries, err := SaveTree(baseline, []string{outer}, CopyLimits{})
+	require.NoError(t, err)
+
+	assert.Equal(t, onceEntries, entries)
 }
 
 // A sibling whose name merely starts with another's is not inside it, so dropping it
@@ -341,7 +355,9 @@ func TestRestoreCoversOverlappingPaths(t *testing.T) {
 	entry := entryFrom(t, []string{outer})
 	require.NoError(t, os.RemoveAll(filepath.FromSlash(outer)))
 
-	_, err := RestoreTree(entry, []string{outer, inner}, CopyLimits{MaxEntries: 1})
+	// Two: the nested directory and the file in it. Declaring the nested path as well
+	// must not double that.
+	_, err := RestoreTree(entry, []string{outer, inner}, CopyLimits{MaxEntries: 2})
 
 	require.NoError(t, err, "the nested path must not be counted a second time")
 	body, readErr := os.ReadFile(filepath.FromSlash(inner + "/dep"))
@@ -363,9 +379,9 @@ func TestRestoreReportsADirectoryAndAnEmptyFileAsWritten(t *testing.T) {
 	entry := entryFrom(t, []string{src})
 	require.NoError(t, os.RemoveAll(filepath.FromSlash(src)))
 
-	// One entry is allowed, so the empty file is restored and the next one is refused -
-	// nothing with any bytes in it is ever copied.
-	wrote, err := RestoreTree(entry, []string{src}, CopyLimits{MaxEntries: 1})
+	// Two entries are allowed - the directory is one of them - so the empty file is
+	// restored and the next one is refused. Nothing with any bytes in it is ever copied.
+	wrote, err := RestoreTree(entry, []string{src}, CopyLimits{MaxEntries: 2})
 
 	require.ErrorIs(t, err, ErrTooManyEntries)
 	assert.True(t, wrote, "the directory and the empty file are both left behind")
@@ -461,4 +477,51 @@ func TestRestoreAcceptsAnEntryHoldingOnlySomeDeclaredPaths(t *testing.T) {
 	body, readErr := os.ReadFile(filepath.FromSlash(present + "/dep"))
 	require.NoError(t, readErr)
 	assert.Equal(t, "cached", string(body))
+}
+
+// A directory costs an inode on the shared volume and a mkdir on every restore, and
+// nothing else bounds one: MaxTotalBytes weighs file contents, of which a directory has
+// none. A step controls what sits under its own cached paths, so a tree of empty
+// directories would otherwise be copied onto a volume every execution shares.
+func TestSaveCountsDirectories(t *testing.T) {
+	src := posixDir(t)
+	require.NoError(t, os.MkdirAll(filepath.FromSlash(src+"/a/b/c"), 0o777))
+
+	staging := filepath.Join(t.TempDir(), EntryRoot)
+	require.NoError(t, os.MkdirAll(staging, 0o777))
+
+	_, _, err := SaveTree(staging, []string{src}, CopyLimits{MaxEntries: 2})
+
+	assert.ErrorIs(t, err, ErrTooManyEntries, "four directories and no files is still four entries")
+}
+
+// Counted on both sides, or a tree passes the limit going in and fails it coming out -
+// an entry that stores and is then refused by every restore of it, under a key no later
+// run can replace.
+func TestRestoreCountsDirectories(t *testing.T) {
+	src := posixDir(t)
+	require.NoError(t, os.MkdirAll(filepath.FromSlash(src+"/a/b/c"), 0o777))
+	entry := entryFrom(t, []string{src})
+	require.NoError(t, os.RemoveAll(filepath.FromSlash(src)))
+
+	_, err := RestoreTree(entry, []string{src}, CopyLimits{MaxEntries: 2})
+
+	assert.ErrorIs(t, err, ErrTooManyEntries)
+}
+
+// Counting directories against the limit must not make a tree of nothing but
+// directories look like something worth storing. It restores no files, so publishing it
+// under an immutable key would answer every later run with a hit holding nothing - the
+// case the caller's emptiness check exists for.
+func TestSaveReportsNoContentForADirectoryOnlyTree(t *testing.T) {
+	src := posixDir(t)
+	require.NoError(t, os.MkdirAll(filepath.FromSlash(src+"/a/b"), 0o777))
+
+	staging := filepath.Join(t.TempDir(), EntryRoot)
+	require.NoError(t, os.MkdirAll(staging, 0o777))
+
+	_, content, err := SaveTree(staging, []string{src}, CopyLimits{})
+
+	require.NoError(t, err)
+	assert.Zero(t, content, "directories are work, not content")
 }

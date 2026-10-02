@@ -247,17 +247,24 @@ func restoreInto(src *os.Root, within string, dst *os.Root, total *int64, entrie
 			return nil
 		}
 
-		// Directories are made but not counted, because the save does not count them
-		// either. Counting them here would let a tree pass the limit on the way in and
-		// fail it on the way out - the entry would store and then be refused by every
-		// restore of it, under a key no later run could replace.
+		// Directories are counted, and before they are made, exactly as the save counts
+		// them - a tree that passed the limit going in has to pass it coming out, or
+		// the entry would store and then be refused by every restore of it, under a
+		// key no later run could replace. Nothing else bounds a directory: MaxTotalBytes
+		// weighs file contents and a directory has none, so an entry of millions of
+		// empty directories would otherwise cost an inode and a mkdir apiece on every
+		// restore.
 		//
-		// Made still counts as written, though: wrote is what tells the caller to
-		// clear the declared paths after a failure, so it has to mean "this touched
-		// the filesystem", not "this copied bytes". A restore that creates a directory
-		// tree and then stops at the entry limit would otherwise report nothing
-		// written and leave that tree behind for the install to find.
+		// Made still counts as written: wrote is what tells the caller to clear the
+		// declared paths after a failure, so it has to mean "this touched the
+		// filesystem", not "this copied bytes". A restore that creates a directory tree
+		// and then stops at the limit would otherwise report nothing written and leave
+		// that tree behind for the install to find.
 		if d.IsDir() {
+			*entries++
+			if limits.MaxEntries > 0 && *entries > limits.MaxEntries {
+				return ErrTooManyEntries
+			}
 			wrote = true
 			return dst.MkdirAll(rel, 0o777)
 		}
@@ -326,8 +333,16 @@ func restoreInto(src *os.Root, within string, dst *os.Root, total *int64, entrie
 // restores nothing.
 func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error) {
 	var (
-		total   int64
-		entries int
+		total int64
+		// counted bounds the work this entry will cost - every inode, directories
+		// included - and is what MaxEntries applies to.
+		//
+		// content is what the caller means by an empty entry, and counts only files and
+		// links. A tree of nothing but directories restores nothing, so publishing it
+		// under an immutable key would answer every later run with a hit holding no
+		// files at all.
+		counted int
+		content int
 	)
 	for _, p := range coverPaths(paths) {
 		src := path.Clean(p)
@@ -357,11 +372,26 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 
 			switch {
 			case info.IsDir():
+				// Counted, and before it is made. A directory costs an inode on the
+				// shared volume and a mkdir on every restore, and nothing else here
+				// bounds one: MaxTotalBytes weighs file contents, of which a directory
+				// has none. A step controls what is under its own cached paths, so a
+				// tree of millions of empty directories would otherwise be copied onto
+				// a volume every execution shares, and recreated by every restore.
+				//
+				// The root of a declared path is not skipped here the way it is on the
+				// restore side, because rel == "." is that root and it is one
+				// directory either way.
+				counted++
+				if limits.MaxEntries > 0 && counted > limits.MaxEntries {
+					return ErrTooManyEntries
+				}
 				return os.MkdirAll(target, 0o777)
 
 			case info.Mode()&os.ModeSymlink != 0:
-				entries++
-				if limits.MaxEntries > 0 && entries > limits.MaxEntries {
+				counted++
+				content++
+				if limits.MaxEntries > 0 && counted > limits.MaxEntries {
 					return ErrTooManyEntries
 				}
 				link, readErr := os.Readlink(name)
@@ -381,8 +411,9 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 				return os.Symlink(link, target)
 
 			case info.Mode().IsRegular():
-				entries++
-				if limits.MaxEntries > 0 && entries > limits.MaxEntries {
+				counted++
+				content++
+				if limits.MaxEntries > 0 && counted > limits.MaxEntries {
 					return ErrTooManyEntries
 				}
 				n, copyErr := copyOut(name, target, info, remaining(limits.MaxTotalBytes, total))
@@ -396,10 +427,10 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 			}
 		})
 		if err != nil {
-			return total, entries, err
+			return total, content, err
 		}
 	}
-	return total, entries, nil
+	return total, content, nil
 }
 
 // copyIntoRoot writes one regular file out of the entry, through the destination root.
