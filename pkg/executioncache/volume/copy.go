@@ -406,8 +406,18 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 				return mkdirShared(target)
 
 			case info.Mode()&os.ModeSymlink != 0:
+				// counted bounds the work and so is taken before any is done; an entry
+				// that turns out not to be staged leaves the limit a shade
+				// conservative, which is the harmless direction.
+				//
+				// content is taken after, because it decides whether this entry holds
+				// anything at all. A link that disappears between the walk and the
+				// Readlink below is skipped - the entry is a snapshot, not a
+				// transaction - and counting it would publish an entry of nothing but
+				// directories as though it held content. A restore of that reports an
+				// exact hit having written nothing, under a key no later run can
+				// replace.
 				counted++
-				content++
 				if limits.MaxEntries > 0 && counted > limits.MaxEntries {
 					return ErrTooManyEntries
 				}
@@ -425,16 +435,26 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 				// here would turn a relative link - which is what a dependency tree
 				// uses, and what survives being restored somewhere else - into one
 				// naming this pod's filesystem.
-				return os.Symlink(link, target)
+				if symErr := os.Symlink(link, target); symErr != nil {
+					return symErr
+				}
+				content++
+				return nil
 
 			case info.Mode().IsRegular():
+				// As above: counted before the work, content only once there is some.
+				// copyOut skips a file that vanished between the walk and the open and
+				// says so, because its error alone cannot distinguish that from having
+				// written one.
 				counted++
-				content++
 				if limits.MaxEntries > 0 && counted > limits.MaxEntries {
 					return ErrTooManyEntries
 				}
-				n, copyErr := copyOut(name, target, info, remaining(limits.MaxTotalBytes, total))
+				n, staged, copyErr := copyOut(name, target, info, remaining(limits.MaxTotalBytes, total))
 				total += n
+				if staged {
+					content++
+				}
 				return copyErr
 
 			default:
@@ -494,13 +514,19 @@ func copyIntoRoot(src *os.Root, name string, dst *os.Root, rel string, info fs.F
 	return n, dst.Chmod(rel, info.Mode().Perm()|0o666)
 }
 
-// copyOut writes one regular file from the filesystem into the staged entry.
-func copyOut(name, target string, info os.FileInfo, budget int64) (int64, error) {
+// copyOut writes one regular file from the filesystem into the staged entry, reporting
+// whether it actually created the target.
+//
+// A source that vanished between the walk and the open is skipped rather than failed,
+// so the caller cannot tell from the error alone whether anything was staged - and
+// counting a file that was never written would let an entry holding only directories be
+// published as though it held content.
+func copyOut(name, target string, info os.FileInfo, budget int64) (n int64, staged bool, err error) {
 	if budget <= 0 {
-		return 0, ErrTooLarge
+		return 0, false, ErrTooLarge
 	}
 	if err := mkdirShared(filepath.Dir(target)); err != nil {
-		return 0, err
+		return 0, false, err
 	}
 
 	in, err := os.Open(name)
@@ -508,28 +534,28 @@ func copyOut(name, target string, info os.FileInfo, budget int64) (int64, error)
 		if os.IsNotExist(err) {
 			// The tree changed under the walk, which a build directory does. Skipping
 			// is right: the entry is a snapshot, not a transaction.
-			return 0, nil
+			return 0, false, nil
 		}
-		return 0, err
+		return 0, false, err
 	}
 	defer in.Close()
 
 	out, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
-	n, err := io.Copy(out, io.LimitReader(in, budget))
+	n, err = io.Copy(out, io.LimitReader(in, budget))
 	closeErr := out.Close()
 	if err != nil {
-		return n, err
+		return n, true, err
 	}
 	if closeErr != nil {
-		return n, closeErr
+		return n, true, closeErr
 	}
 	if n == budget && info.Size() > n {
-		return n, ErrTooLarge
+		return n, true, ErrTooLarge
 	}
-	return n, os.Chmod(target, info.Mode().Perm()|0o666)
+	return n, true, os.Chmod(target, info.Mode().Perm()|0o666)
 }
 
 // SharedDirMode is what every directory written onto the shared volume is set to.

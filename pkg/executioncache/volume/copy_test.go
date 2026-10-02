@@ -557,3 +557,44 @@ func TestSaveLeavesNothingForAPathThatDoesNotExist(t *testing.T) {
 	_, restoreErr := RestoreTree(entry, []string{absent}, CopyLimits{})
 	assert.ErrorIs(t, restoreErr, ErrEntryHoldsNoDeclaredPath)
 }
+
+// copyOut has to say whether it staged anything, because its error alone cannot: a
+// source that vanished between the walk listing it and the open is skipped with a nil
+// error, since an entry is a snapshot rather than a transaction.
+//
+// Counting it anyway publishes an entry of nothing but the directories leading to it as
+// though it held content, and every later restore then reports an exact hit having
+// written nothing, under a key no run can replace.
+func TestCopyOutReportsNothingStagedWhenTheSourceVanished(t *testing.T) {
+	source := filepath.Join(t.TempDir(), "dep")
+	require.NoError(t, os.WriteFile(source, []byte("x"), 0o666))
+	info, err := os.Lstat(source)
+	require.NoError(t, err)
+
+	// Listed by the walk, gone by the time it is opened.
+	require.NoError(t, os.Remove(source))
+
+	target := filepath.Join(t.TempDir(), "staged")
+	n, staged, copyErr := copyOut(source, target, info, 1<<20)
+
+	require.NoError(t, copyErr, "a vanished source is skipped, not failed")
+	assert.False(t, staged, "and must not be counted as content")
+	assert.Zero(t, n)
+	_, statErr := os.Stat(target)
+	assert.True(t, os.IsNotExist(statErr), "nothing was written")
+}
+
+// The counterpart: a source that is there is staged and says so.
+func TestCopyOutReportsStagedWhenItWrites(t *testing.T) {
+	source := filepath.Join(t.TempDir(), "dep")
+	require.NoError(t, os.WriteFile(source, []byte("installed"), 0o666))
+	info, err := os.Lstat(source)
+	require.NoError(t, err)
+
+	target := filepath.Join(t.TempDir(), "staged")
+	n, staged, copyErr := copyOut(source, target, info, 1<<20)
+
+	require.NoError(t, copyErr)
+	assert.True(t, staged)
+	assert.EqualValues(t, len("installed"), n)
+}
