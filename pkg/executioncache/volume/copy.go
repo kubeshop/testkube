@@ -61,8 +61,10 @@ func remaining(max, used int64) int64 {
 // the step still needs.
 func RestoreTree(src *os.Root, declaredPaths []string, limits CopyLimits) (wrote bool, err error) {
 	var (
-		total   int64
-		entries int
+		total    int64
+		entries  int
+		wanted   int
+		restored int
 	)
 
 	for _, declared := range coverPaths(declaredPaths) {
@@ -70,6 +72,7 @@ func RestoreTree(src *os.Root, declaredPaths []string, limits CopyLimits) (wrote
 		if dest == "" || dest == "/" || dest == "." {
 			continue
 		}
+		wanted++
 
 		// Where this path lives inside the entry: the same absolute name with the
 		// leading separator dropped, which is how the entry mirrors the filesystem.
@@ -88,6 +91,7 @@ func RestoreTree(src *os.Root, declaredPaths []string, limits CopyLimits) (wrote
 			// not. Report it and let the caller clear up and call it a miss.
 			return wrote, statErr
 		}
+		restored++
 
 		dst, openErr := openDeclaredRoot(dest)
 		if openErr != nil {
@@ -103,8 +107,30 @@ func RestoreTree(src *os.Root, declaredPaths []string, limits CopyLimits) (wrote
 			return wrote, copyErr
 		}
 	}
+
+	// An entry that carries none of the paths this step asked for is not a hit, even
+	// though every lookup said it was. A key does not describe the paths it was saved
+	// with - it is whatever the workflow templated, commonly a lockfile hash - so an
+	// environment-scoped key shared by workflows that cache different directories, or
+	// a workflow that changes its paths without changing its key, lands here.
+	//
+	// Returning success would report an exact hit that restored nothing, and an exact
+	// hit tells the save stage there is nothing to replace, so the step would reinstall
+	// on every execution with the entry still claiming to hold what it does not. The
+	// archive backend refuses the same mismatch through UnpackTarball's allowed roots.
+	//
+	// Some but not all is fine, and stays a hit: SaveTree skips a declared path that
+	// did not exist when the entry was written, so an entry smaller than the step
+	// declared is the ordinary shape of one.
+	if wanted > 0 && restored == 0 {
+		return wrote, ErrEntryHoldsNoDeclaredPath
+	}
 	return wrote, nil
 }
+
+// ErrEntryHoldsNoDeclaredPath reports an entry that carries none of the paths the step
+// asked to restore, which the caller reports as a miss rather than an empty hit.
+var ErrEntryHoldsNoDeclaredPath = errors.New("the entry holds none of the declared cache paths")
 
 // ErrDeclaredPathIsSymlink reports a declared cache path that is - or is reached
 // through - a symlink.

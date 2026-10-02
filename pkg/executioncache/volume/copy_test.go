@@ -422,3 +422,43 @@ func TestRestoreCreatesARelativeDeclaredPathWhereTheStepLooksForIt(t *testing.T)
 	require.NoError(t, readErr, "the restore must land where the step will look")
 	assert.Equal(t, "cached", string(body))
 }
+
+// A key says nothing about the paths it was saved with - it is whatever the workflow
+// templated, commonly a lockfile hash - so an environment-scoped key shared by
+// workflows that cache different directories, or a workflow that changes its paths
+// without changing its key, reaches an entry holding none of what it asked for.
+//
+// Reporting success there records an exact hit that restored nothing, and an exact hit
+// tells the save stage there is nothing to replace: the step would reinstall on every
+// execution while the entry went on claiming to hold what it does not.
+func TestRestoreReportsAnEntryHoldingNoneOfTheDeclaredPaths(t *testing.T) {
+	stored := posixDir(t)
+	write(t, filepath.FromSlash(stored+"/dep"), "cached")
+	entry := entryFrom(t, []string{stored})
+
+	// What this step asks for was never in the entry.
+	asked := posixDir(t)
+
+	wrote, err := RestoreTree(entry, []string{asked}, CopyLimits{})
+
+	require.ErrorIs(t, err, ErrEntryHoldsNoDeclaredPath)
+	assert.False(t, wrote, "nothing was written, so there is nothing to clear up")
+}
+
+// An entry smaller than the step declared is the ordinary shape of one: SaveTree skips
+// a declared path that did not exist when the entry was written. Some is still a hit.
+func TestRestoreAcceptsAnEntryHoldingOnlySomeDeclaredPaths(t *testing.T) {
+	present := posixDir(t)
+	write(t, filepath.FromSlash(present+"/dep"), "cached")
+	entry := entryFrom(t, []string{present})
+	require.NoError(t, os.RemoveAll(filepath.FromSlash(present)))
+	absent := posixDir(t) + "/never-saved"
+
+	wrote, err := RestoreTree(entry, []string{present, absent}, CopyLimits{})
+
+	require.NoError(t, err)
+	assert.True(t, wrote)
+	body, readErr := os.ReadFile(filepath.FromSlash(present + "/dep"))
+	require.NoError(t, readErr)
+	assert.Equal(t, "cached", string(body))
+}
