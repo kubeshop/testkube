@@ -52,7 +52,6 @@ type CloneOptions struct {
 	RetryDelay time.Duration
 }
 
-// NewCloneCmd creates a new clone command
 // gitAuthErrors are the texts that git writes when it refuses a credential. Git reports every
 // clone failure with the exit code 128, so the text is the only signal that tells them apart.
 var gitAuthErrors = []string{
@@ -62,18 +61,41 @@ var gitAuthErrors = []string{
 	"HTTP 403",
 }
 
+// gitNetworkErrors are the texts that git writes when it cannot reach the server. The network is
+// not part of the workflow, so these failures get no code of a configuration error.
+var gitNetworkErrors = []string{
+	"Could not resolve host",
+	"Connection refused",
+	"Connection timed out",
+	"Operation timed out",
+	"Failed to connect to",
+}
+
 // cloneReason returns the code for a clone failure. A credential that git refuses is a different
 // problem from a repository or a revision that does not exist, and the user fixes each one apart.
+// A server that git cannot reach gives no code.
 func cloneReason(err error) testkube.StopReason {
 	text := err.Error()
-	for _, authError := range gitAuthErrors {
-		if strings.Contains(text, authError) {
-			return testkube.StopReasonGitAuthFailed
-		}
+	switch {
+	case containsAny(text, gitAuthErrors):
+		return testkube.StopReasonGitAuthFailed
+	case containsAny(text, gitNetworkErrors):
+		return ""
 	}
 	return testkube.StopReasonGitCloneFailed
 }
 
+// containsAny reports whether the text holds one of the parts.
+func containsAny(text string, parts []string) bool {
+	for _, part := range parts {
+		if strings.Contains(text, part) {
+			return true
+		}
+	}
+	return false
+}
+
+// NewCloneCmd creates a new clone command
 func NewCloneCmd() *cobra.Command {
 	opts := &CloneOptions{}
 
@@ -83,7 +105,7 @@ func NewCloneCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := RunClone(cmd.Context(), args[0], args[1], opts); err != nil {
-				common.FailWithReason(cloneReason(err), err)
+				common.Fail(common.WithReason(cloneReason(err), err))
 			}
 		},
 	}
