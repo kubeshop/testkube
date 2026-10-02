@@ -92,8 +92,13 @@ func readID(name string) (string, error) {
 // Applied to the restore keys as well, and as a prefix rather than a suffix, so that
 // prefix matching stays inside one volume: a restore key of "npm-" must not match
 // another volume's "npm-abc", which would be an entry this runner cannot read.
+//
+// An empty key is left empty. The Control Plane ignores an empty restore key on
+// purpose; scoped it would become "<id>/", which is a prefix every entry on this
+// volume matches - so a workflow carrying one, from a template that resolved to
+// nothing, would restore whichever entry happened to be newest.
 func ScopedKey(id, key string) string {
-	if id == "" {
+	if id == "" || key == "" {
 		return key
 	}
 	return id + "/" + key

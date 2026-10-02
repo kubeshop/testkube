@@ -58,3 +58,11 @@ func TestScopedKeyPrefixesAndIsInertWithoutAnID(t *testing.T) {
 	assert.Equal(t, "vol1/npm-abc", ScopedKey("vol1", "npm-abc"))
 	assert.Equal(t, "npm-abc", ScopedKey("", "npm-abc"))
 }
+
+// The Control Plane ignores an empty restore key on purpose. Scoped it would become
+// "<id>/", which every entry on this volume matches as a prefix, so a workflow carrying
+// one - from a template that resolved to nothing - would restore whichever entry
+// happened to be newest rather than none at all.
+func TestScopedKeyLeavesAnEmptyKeyEmpty(t *testing.T) {
+	assert.Empty(t, ScopedKey("vol1", ""))
+}

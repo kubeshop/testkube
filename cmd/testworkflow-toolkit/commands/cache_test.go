@@ -1357,14 +1357,23 @@ func TestRunCacheRestore_AsksForAKeyPartitionedByVolume(t *testing.T) {
 	out := &bytes.Buffer{}
 	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
 		Key:         "npm-abc",
-		RestoreKeys: []string{"npm-"},
+		RestoreKeys: []string{"npm-", ""},
 		Paths:       []string{t.TempDir()},
 	}), repo, out)
 
 	require.NoError(t, err)
 	assert.Equal(t, "vol1234/npm-abc", repo.restoredKey)
+
 	// A prefix, not a suffix: "npm-" must not match another volume's "npm-abc".
+	//
+	// The empty one reaches the repository as nothing at all. It must never arrive as
+	// "vol1234/", which is a prefix every entry on this volume matches - a workflow
+	// carrying an empty restore key would then restore whichever entry happened to be
+	// newest. Resolution drops it first (see the `str != ""` filter in
+	// resolveCacheSpec) and volume.ScopedKey refuses to scope one even if it did not,
+	// so this holds if either changes.
 	assert.Equal(t, []string{"vol1234/npm-"}, repo.restoredKeys)
+	assert.NotContains(t, repo.restoredKeys, "vol1234/")
 }
 
 func TestRunCacheSave_PublishesUnderAKeyPartitionedByVolume(t *testing.T) {
