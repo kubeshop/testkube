@@ -258,7 +258,7 @@ func runCacheRestore(ctx context.Context, encoded string, repository executionca
 	if err != nil {
 		return err
 	}
-	if err := executioncache.ValidateKey(spec.Key); err != nil {
+	if err := validateScopedCacheKey(spec.Key); err != nil {
 		// Most often an unmatched hash_files(), which yields "". Caching every such
 		// step under one shared entry would be worse than not caching at all.
 		return err
@@ -272,14 +272,13 @@ func runCacheRestore(ctx context.Context, encoded string, repository executionca
 	// to carries no runner or volume and an entry on a volume is reachable only from it.
 	// Applied to the restore keys too, and as a prefix, so prefix matching cannot stray
 	// onto another volume's entry. See volume.EnsureID.
-	volumeID := os.Getenv(volume.EnvVolumeID)
 	restoreKeys := make([]string, 0, len(spec.RestoreKeys))
 	for _, k := range spec.RestoreKeys {
-		restoreKeys = append(restoreKeys, volume.ScopedKey(volumeID, k))
+		restoreKeys = append(restoreKeys, scopedCacheKey(k))
 	}
 
 	entry, err := repository.Restore(ctx, executioncache.RestoreRequest{
-		Key:         volume.ScopedKey(volumeID, spec.Key),
+		Key:         scopedCacheKey(spec.Key),
 		RestoreKeys: restoreKeys,
 		Scope:       executioncache.ParseScope(spec.Scope),
 	})
@@ -369,7 +368,7 @@ func runCacheSave(ctx context.Context, encoded string, mounts []string, statePat
 		}
 	}
 
-	if err := executioncache.ValidateKey(key); err != nil {
+	if err := validateScopedCacheKey(key); err != nil {
 		return err
 	}
 	if reason := executioncache.Reason(repository); reason != "" {
@@ -443,7 +442,7 @@ func runCacheSave(ctx context.Context, encoded string, mounts []string, statePat
 	// Partitioned by volume exactly as the restore is, including on this fallback path:
 	// a key stored here is looked up by a runner that does have the volume.
 	upload, err := repository.Save(ctx, executioncache.SaveRequest{
-		Key:   volume.ScopedKey(os.Getenv(volume.EnvVolumeID), key),
+		Key:   scopedCacheKey(key),
 		Scope: executioncache.ParseScope(spec.Scope),
 		Size:  size,
 	})
@@ -988,7 +987,7 @@ func saveToVolume(
 	bodyLen := int64(body.Len())
 
 	upload, err := repository.Save(ctx, executioncache.SaveRequest{
-		Key:   volume.ScopedKey(os.Getenv(volume.EnvVolumeID), key),
+		Key:   scopedCacheKey(key),
 		Scope: executioncache.ParseScope(scope),
 		// The pointer is the object, so this is what the bucket is about to receive.
 		// The tree itself is on a volume the control plane does not provision and
@@ -1031,4 +1030,29 @@ func saveToVolume(
 		key, humanize.Bytes(uint64(size)), time.Since(started).Truncate(time.Millisecond),
 		copied.Truncate(time.Millisecond), time.Since(uploadStarted).Truncate(time.Millisecond))
 	return true, nil
+}
+
+// scopedCacheKey is the key as the control plane will see it, partitioned by the volume
+// these entries are stored on. See volume.EnsureID.
+func scopedCacheKey(key string) string {
+	return volume.ScopedKey(os.Getenv(volume.EnvVolumeID), key)
+}
+
+// validateScopedCacheKey checks the key that will actually be sent, not the one the
+// author wrote.
+//
+// The prefix is spent out of the same budget: validating the author's key here and then
+// adding bytes to it left a key of 388 bytes or more passing locally and refused by the
+// API on every restore and save, which is a cache that never works and says so in a
+// place nobody is reading. The limit the author has to meet is therefore smaller when a
+// volume is configured, and the message says so rather than naming a limit their key
+// appears to be inside.
+func validateScopedCacheKey(key string) error {
+	scoped := scopedCacheKey(key)
+	err := executioncache.ValidateKey(scoped)
+	if err == nil || scoped == key {
+		return err
+	}
+	return fmt.Errorf("%w; the shared cache volume prefixes every key with %d bytes naming the volume, so the key itself has that much less room",
+		err, len(scoped)-len(key))
 }

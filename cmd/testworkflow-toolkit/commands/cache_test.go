@@ -1401,3 +1401,30 @@ func TestRunCacheRestore_LeavesTheKeyAloneWithoutAVolume(t *testing.T) {
 	assert.Equal(t, "npm-abc", repo.restoredKey)
 	assert.Equal(t, []string{"npm-"}, repo.restoredKeys)
 }
+
+// The volume prefix is spent out of the same budget the author's key is checked
+// against, and the API checks what it is actually sent. Validating the author's key and
+// then adding bytes to it left a key just inside the limit passing here and refused
+// there, on every restore and every save - a cache that never works, failing in a place
+// nobody is reading.
+func TestValidateScopedCacheKey_CountsTheVolumePrefix(t *testing.T) {
+	t.Setenv(volume.EnvVolumeID, "vol1234abcd")
+	justInside := strings.Repeat("k", executioncache.MaxKeyBytes)
+
+	require.NoError(t, executioncache.ValidateKey(justInside), "the author's key is inside the limit")
+	err := validateScopedCacheKey(justInside)
+
+	require.Error(t, err, "but the key the API is sent is not")
+	assert.Contains(t, err.Error(), "prefixes every key")
+}
+
+func TestValidateScopedCacheKey_AcceptsWhatFitsWithThePrefix(t *testing.T) {
+	t.Setenv(volume.EnvVolumeID, "vol1234abcd")
+
+	assert.NoError(t, validateScopedCacheKey(strings.Repeat("k", 300)))
+}
+
+// Without a volume the budget is the author's whole limit, as it always was.
+func TestValidateScopedCacheKey_LeavesTheLimitAloneWithoutAVolume(t *testing.T) {
+	assert.NoError(t, validateScopedCacheKey(strings.Repeat("k", executioncache.MaxKeyBytes)))
+}
