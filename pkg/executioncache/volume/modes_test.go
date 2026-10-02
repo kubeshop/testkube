@@ -1,7 +1,9 @@
 package volume
 
 import (
+	"fmt"
 	"io/fs"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -60,4 +62,46 @@ func TestModesApplyIsDeepestFirst(t *testing.T) {
 	m := Modes{"a": 0o700, "a/b/c": 0o600, "a/b": 0o700, "z": fs.FileMode(0o600)}
 
 	assert.Equal(t, []string{"a/b/c", "a/b", "a", "z"}, m.Apply())
+}
+
+// The manifest is read before any copy limit applies, and the entry it comes from is
+// not necessarily one this installation wrote: the inbox is mounted into the step's own
+// container, so a workflow can commit an entry carrying a manifest of any size and
+// every later execution restoring that key would read it.
+func TestDecodeModesFromKeepsNoMoreThanTheEntryLimit(t *testing.T) {
+	var manifest strings.Builder
+	for i := 0; i < 5_000; i++ {
+		fmt.Fprintf(&manifest, "0600 path/%d\x00", i)
+	}
+
+	got := DecodeModesFrom(strings.NewReader(manifest.String()), 10)
+
+	assert.Len(t, got, 10, "an entry cannot hold more exceptional paths than it holds paths")
+}
+
+// A manifest with no terminator anywhere in it must not be read into memory entire
+// while something looks for one.
+func TestDecodeModesFromRefusesAnEndlessRecord(t *testing.T) {
+	endless := "0600 " + strings.Repeat("a", maxModeRecordBytes*4)
+
+	got := DecodeModesFrom(strings.NewReader(endless), 100)
+
+	assert.Empty(t, got, "a record longer than the buffer costs that path its mode, nothing more")
+}
+
+// The records before an endless one are still read: the scanner stops where it cannot
+// go on, and what it already had stands.
+func TestDecodeModesFromKeepsWhatItReadBeforeAnEndlessRecord(t *testing.T) {
+	data := "0600 first\x00" + "0700 " + strings.Repeat("b", maxModeRecordBytes*2)
+
+	got := DecodeModesFrom(strings.NewReader(data), 100)
+
+	assert.Equal(t, Modes{"first": 0o600}, got)
+}
+
+// A last record whose terminator is missing is still a record.
+func TestDecodeModesFromReadsAnUnterminatedLastRecord(t *testing.T) {
+	got := DecodeModesFrom(strings.NewReader("0600 a\x000700 b"), 100)
+
+	assert.Equal(t, Modes{"a": 0o600, "b": 0o700}, got)
 }

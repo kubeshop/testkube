@@ -1,7 +1,10 @@
 package volume
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
+	"io"
 	"io/fs"
 	"sort"
 	"strconv"
@@ -82,8 +85,49 @@ func (m Modes) Encode() []byte {
 // default, so a record that is malformed, or written by a version that says more than
 // this one understands, costs one path its exact mode rather than the whole restore.
 func DecodeModes(data []byte) Modes {
+	return DecodeModesFrom(bytes.NewReader(data), 0)
+}
+
+// DefaultMaxModeRecords caps a manifest read with no entry limit of its own.
+const DefaultMaxModeRecords = 1 << 20
+
+// maxModeRecordBytes bounds one record, which is a mode, a space and a path. Generous
+// against PATH_MAX, and what stops a manifest with no terminator anywhere in it from
+// being read into memory entire while something looks for one.
+const maxModeRecordBytes = 4096 + 64
+
+// DecodeModesFrom reads a manifest without holding it in memory, keeping at most
+// maxRecords of them. Zero takes DefaultMaxModeRecords, because an unbounded copy is
+// the caller's choice about a tree it owns, where an unbounded manifest is an
+// allocation sized by whoever wrote the entry.
+//
+// Bounded because the restore reads this before any of the copy limits apply, and the
+// file is not necessarily one this installation wrote: the inbox an entry is built in
+// is mounted into the step's own container, so a workflow can commit an entry carrying
+// a manifest of any size it likes, and every later execution restoring that key would
+// read it. Unbounded that is an out-of-memory in somebody else's restore, reached
+// through a cache they had no part in writing.
+//
+// maxRecords is the entry limit for the same reason it bounds the tree: an entry cannot
+// hold more exceptional paths than it holds paths. Records past it are dropped rather
+// than failing the restore, which costs those paths their modes - the same degradation
+// a manifest that cannot be parsed already gets.
+func DecodeModesFrom(r io.Reader, maxRecords int) Modes {
+	if maxRecords <= 0 {
+		maxRecords = DefaultMaxModeRecords
+	}
+
 	modes := make(Modes)
-	for _, record := range strings.Split(string(data), "\x00") {
+
+	records := bufio.NewScanner(r)
+	records.Buffer(make([]byte, 0, 4096), maxModeRecordBytes)
+	records.Split(splitNUL)
+
+	for records.Scan() {
+		if len(modes) >= maxRecords {
+			break
+		}
+		record := records.Text()
 		if record == "" {
 			continue
 		}
@@ -97,7 +141,22 @@ func DecodeModes(data []byte) Modes {
 		}
 		modes[rel] = fs.FileMode(perm).Perm()
 	}
+	// Scanner errors are not reported, including a record longer than the buffer: this
+	// is an optimisation over restoring at the defaults, so what cannot be read costs
+	// those paths their modes and nothing more.
 	return modes
+}
+
+// splitNUL yields the NUL-terminated records Encode writes.
+func splitNUL(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if i := bytes.IndexByte(data, 0); i >= 0 {
+		return i + 1, data[:i], nil
+	}
+	if atEOF && len(data) > 0 {
+		// A manifest whose last record lost its terminator still has a record in it.
+		return len(data), data, nil
+	}
+	return 0, nil, nil
 }
 
 // Apply returns the recorded paths in the order a restore has to set them: deepest

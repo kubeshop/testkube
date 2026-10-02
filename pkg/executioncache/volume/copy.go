@@ -72,10 +72,18 @@ func RestoreTree(entry *os.Root, declaredPaths []string, limits CopyLimits) (wro
 	// Absent for an entry written before modes were recorded, and for one where nothing
 	// differed from the defaults. Both mean the same thing here: restore at the
 	// defaults, which is what those entries were getting anyway.
+	//
+	// Streamed rather than read whole, and bounded by the same entry limit that bounds
+	// the tree: this is read before any of those limits apply, and the file is not
+	// necessarily one this installation wrote - a workflow can commit an entry carrying
+	// a manifest of any size, which every later execution restoring that key would
+	// otherwise read into memory entire.
 	modes := Modes{}
-	if recorded, readErr := fs.ReadFile(entry.FS(), ModesName); readErr == nil {
-		modes = DecodeModes(recorded)
-	} else if !errors.Is(readErr, fs.ErrNotExist) {
+	switch recorded, readErr := entry.Open(ModesName); {
+	case readErr == nil:
+		modes = DecodeModesFrom(recorded, limits.MaxEntries)
+		recorded.Close()
+	case !errors.Is(readErr, fs.ErrNotExist):
 		return false, readErr
 	}
 

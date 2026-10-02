@@ -288,7 +288,11 @@ restore is a copy rather than an unpack and nothing is gzipped.
   header - the same workflow behaving differently by backend. The file is versioned in
   its name so an older agent meeting a newer entry simply ignores it and restores at
   the defaults, and `Store.OpenEntry` therefore roots at the **entry**, with the tree
-  inside it.
+  inside it. It is **streamed and bounded by the entry limit** (`DecodeModesFrom`, with
+  one record capped at `maxModeRecordBytes`): it is read before any copy limit applies,
+  and the inbox an entry is built in is mounted into the step's own container - so a
+  workflow can commit a manifest of any size, which every later execution restoring
+  that key would otherwise read into memory whole.
 - **Symlinks are carried, and never followed on the way out.** A restore writes through
   an `os.Root` opened on each declared path, so a symlink already sitting there cannot
   redirect a write outside it - the entry may have been written by another workflow. The
