@@ -15,6 +15,17 @@ import (
 // the charts' own default, so the substitution lands where an unset value would have.
 const defaultStepCacheRetention = 7 * 24 * time.Hour
 
+// stepCacheLifecycleMargin covers how much longer than its configured days an object
+// store may go on serving a pointer.
+//
+// A day-based lifecycle rule is not a deadline. S3, and the stores that follow it, add
+// the days to the object's creation time and then round up to the next UTC midnight -
+// so a one-day rule keeps an object for up to two days - and the removal after that is
+// asynchronous, with no bound promised on the lag. Twenty-four hours covers the
+// rounding and twenty-four more the removal, erring where the only cost is an entry
+// kept past its usefulness rather than a key that misses until its object goes.
+const stepCacheLifecycleMargin = 48 * time.Hour
+
 // stepCachePublicationGrace covers the gap between committing an entry and storing the
 // pointer that names it, which is what keeps retention genuinely longer than a
 // pointer's life rather than merely equal to it. Generous on purpose: the toolkit's

@@ -1069,14 +1069,24 @@ func main() {
 			retention = defaultStepCacheRetention
 		}
 
-		if pointerTTL, _ := volume.PointerLifetime(cfg.StorageCacheExpiration, cfg.StorageExpiration); retention < pointerTTL {
-			log.DefaultLogger.Warnw(
-				"step cache volume retention is shorter than the object store expires cache pointers in; raising it, because deleting an entry whose pointer is still stored turns hits into unexplained misses",
-				"configuredRetentionDays", cfg.TestkubeStepCacheVolumeRetentionDays,
-				"cacheExpirationDays", cfg.StorageCacheExpiration,
-				"bucketExpirationDays", cfg.StorageExpiration,
-			)
-			retention = pointerTTL
+		if pointerTTL, bounded := volume.PointerLifetime(cfg.StorageCacheExpiration, cfg.StorageExpiration); bounded {
+			// The configured days are not a deadline. S3 and the stores that follow it
+			// add them to the object's creation time and then round up to the next UTC
+			// midnight, so a one-day rule keeps an object for up to two days, and the
+			// removal after that is asynchronous and may lag further still. Sweeping on
+			// the configured number alone would take the entry while its pointer was
+			// still being served.
+			served := pointerTTL + stepCacheLifecycleMargin
+			if retention < served {
+				log.DefaultLogger.Warnw(
+					"step cache volume retention is shorter than the object store may go on serving cache pointers for; raising it, because deleting an entry whose pointer is still stored turns hits into unexplained misses",
+					"configuredRetentionDays", cfg.TestkubeStepCacheVolumeRetentionDays,
+					"cacheExpirationDays", cfg.StorageCacheExpiration,
+					"bucketExpirationDays", cfg.StorageExpiration,
+					"retention", served,
+				)
+				retention = served
+			}
 		}
 
 		// Matching the pointer's lifetime is not enough on its own, because the two
