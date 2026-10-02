@@ -1,5 +1,7 @@
 package testkube
 
+import "fmt"
+
 // ClassifyStatus returns why the execution did not pass, and nil for an execution that passed.
 // The caller runs it on the final result, after the heal functions, and gives what it knows about
 // the stop. The signature sets the order of the steps, so the classifier reads them as the user
@@ -17,6 +19,9 @@ package testkube
 //  6. No signal explains the result.
 //
 // Rule 5 follows rule 4, because a deleted job does not change a test that already failed.
+//
+// The message of the object holds only the cause, because the other fields name the status, the
+// actor and the reason.
 func (r *TestWorkflowResult) ClassifyStatus(sigSequence []TestWorkflowSignature, stop Stop) *TestWorkflowStatusDetails {
 	if r == nil || r.IsPassed() {
 		return nil
@@ -37,7 +42,7 @@ func (r *TestWorkflowResult) ClassifyStatus(sigSequence []TestWorkflowSignature,
 	// A code that differs is a real cause, and Kubernetes or the test process reported it, so it
 	// names no actor.
 	if ref, step, ok := r.recordedCauseStep(sigSequence); ok && step.ErrorReason != string(r.healedReason(stop, reason)) {
-		return NewStatusDetails("", step.ErrorReason, ref, step.ErrorMessage)
+		return NewStatusDetails("", step.ErrorReason, ref, stopCause(step.ErrorMessage, step.ErrorReason))
 	}
 
 	if reason != "" {
@@ -47,8 +52,13 @@ func (r *TestWorkflowResult) ClassifyStatus(sigSequence []TestWorkflowSignature,
 	// A step of the test failed, so the test already had a result. The status of the execution can be
 	// aborted here, because the stop also ended a later step, and the failure still decides the
 	// object. The stop is only the mechanism that ended the rest of the run.
-	if ref, step, ok := r.failedStep(sigSequence); ok {
-		return NewStatusDetails("", string(StopReasonExitCode), ref, step.ErrorMessage)
+	if sig, step, ok := r.failedStep(sigSequence); ok {
+		// The initialization step has no signature, and the object names no ref for it.
+		ref := ""
+		if sig != nil {
+			ref = sig.Ref
+		}
+		return NewStatusDetails("", string(StopReasonExitCode), ref, failedStepMessage(sig, step))
 	}
 
 	// A caller that does not name itself leaves the job without an annotation, so the stop reads as
@@ -83,7 +93,29 @@ var actorReasons = map[StopActor]StopReason{
 // from the step that the stop ended, so a reader gets the text of the step next to the code.
 func (r *TestWorkflowResult) stopDetails(sigSequence []TestWorkflowSignature, actor StopActor, reason StopReason) *TestWorkflowStatusDetails {
 	ref, step := r.stoppedStep(sigSequence)
-	return NewStatusDetails(actor, string(reason), ref, step.ErrorMessage)
+	return NewStatusDetails(actor, string(reason), ref, stopCause(step.ErrorMessage, string(reason)))
+}
+
+// failedStepMessage returns the message of a failed step. A plain command writes no message when
+// it fails, so the message names the step and how it failed. The initialization step has no
+// signature, so its message stays as it is.
+func failedStepMessage(sig *TestWorkflowSignature, step TestWorkflowStepResult) string {
+	if step.ErrorMessage != "" || sig == nil {
+		return step.ErrorMessage
+	}
+	label := sig.Label()
+	if label == "" {
+		label = sig.Ref
+	}
+	switch {
+	case step.ExitCode != 0:
+		return fmt.Sprintf("The step %q exited with code %d.", label, int(step.ExitCode))
+	case sig.Negative:
+		// A negative step fails when its command passes.
+		return fmt.Sprintf("The step %q passed, but it must fail.", label)
+	default:
+		return fmt.Sprintf("The step %q failed.", label)
+	}
 }
 
 // stoppedStep returns the step that holds the message of the stop. That is the initialization step
@@ -146,17 +178,18 @@ func (r *TestWorkflowResult) recordedCauseStep(sigSequence []TestWorkflowSignatu
 	return optionalRef, optionalStep, hasOptional
 }
 
-// failedStep returns the failed step that names the result. It prefers the first failed leaf in the
-// order of the signature, and it falls back to a failed group. A step that the user marked optional
-// never counts, because an optional step does not fail the execution.
-func (r *TestWorkflowResult) failedStep(sigSequence []TestWorkflowSignature) (string, TestWorkflowStepResult, bool) {
+// failedStep returns the signature and the result of the failed step that names the result. It
+// prefers the first failed leaf in the order of the signature, and it falls back to a failed group.
+// A step that the user marked optional never counts, because an optional step does not fail the
+// execution. The initialization step has no signature, so the signature is nil for it.
+func (r *TestWorkflowResult) failedStep(sigSequence []TestWorkflowSignature) (*TestWorkflowSignature, TestWorkflowStepResult, bool) {
 	if r.Initialization != nil && r.Initialization.Status.Failed() {
-		return "", *r.Initialization, true
+		return nil, *r.Initialization, true
 	}
-	var groupRef string
+	var group *TestWorkflowSignature
 	var groupStep TestWorkflowStepResult
-	var hasGroup bool
-	for _, sig := range sigSequence {
+	for i := range sigSequence {
+		sig := &sigSequence[i]
 		step, ok := r.Steps[sig.Ref]
 		if !ok || !step.Status.Failed() || sig.Optional {
 			continue
@@ -164,11 +197,11 @@ func (r *TestWorkflowResult) failedStep(sigSequence []TestWorkflowSignature) (st
 		// A leaf names the failure exactly, so it wins. A group can still fail on its own, because
 		// a negative group fails when its children pass, and then it is the only failure there is.
 		if len(sig.Children) == 0 {
-			return sig.Ref, step, true
+			return sig, step, true
 		}
-		if !hasGroup {
-			groupRef, groupStep, hasGroup = sig.Ref, step, true
+		if group == nil {
+			group, groupStep = sig, step
 		}
 	}
-	return groupRef, groupStep, hasGroup
+	return group, groupStep, group != nil
 }

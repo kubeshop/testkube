@@ -18,9 +18,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
-const (
-	DefaultErrorMessage = "Job has been aborted"
-)
+// DefaultErrorMessage is the reason of a stop that no component explains.
+const DefaultErrorMessage = testkube.DefaultStopMessage
 
 // Not thread-safe, should be used synchronously
 type notifier struct {

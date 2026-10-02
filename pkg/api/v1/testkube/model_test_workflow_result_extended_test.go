@@ -453,6 +453,98 @@ func TestTestWorkflowResult_HealAbortedOrCanceled(t *testing.T) {
 	}
 }
 
+// TestStopCause builds each message with the termination that writes it, so the format and its
+// inverse cannot drift apart.
+func TestStopCause(t *testing.T) {
+	aborted := termination{code: string(ABORTED_TestWorkflowStatus), defaultReason: DefaultStopMessage}
+	canceled := termination{code: string(CANCELED_TestWorkflowStatus), defaultReason: DefaultStopMessage}
+	withReason := func(t termination, reason string) termination {
+		t.reason = reason
+		return t
+	}
+
+	tests := []struct {
+		name    string
+		message string
+		reason  string
+		want    string
+	}{
+		{
+			name:    "a container that ran out of memory keeps the text of Kubernetes",
+			message: withReason(aborted, "OOMKilled").message(),
+			reason:  string(StopReasonOOMKilled),
+			want:    "OOMKilled",
+		},
+		{
+			name: "an initialization timeout keeps the timeout and the cause of the pod",
+			message: withReason(aborted, Stop{Actor: StopActorRunner, Reason: StopReasonInitTimeout}.Sentence()).
+				messageWithCause(Cause{Reason: string(StopReasonUnschedulable), Message: "0/12 nodes are available."}.String()),
+			reason: string(StopReasonUnschedulable),
+			want:   "the first step did not start before the initialization timeout of the workflow: no node can run the pod: 0/12 nodes are available",
+		},
+		{
+			name: "a cause that repeats the sentence of its own reason keeps only the text of Kubernetes",
+			message: withReason(aborted, DefaultStopMessage).
+				messageWithCause(Cause{Reason: string(StopReasonVolumeMountFailed), Message: `MountVolume.SetUp failed for volume "data" : secret "absent" not found`}.String()),
+			reason: string(StopReasonVolumeMountFailed),
+			want:   `MountVolume.SetUp failed for volume "data" : secret "absent" not found`,
+		},
+		{
+			name:    "a cancel by a person has no cause beyond the type",
+			message: withReason(canceled, Stop{Actor: StopActorUser}.Sentence()).message(),
+			reason:  string(StopReasonUserCancel),
+			want:    "",
+		},
+		{
+			name:    "a fail-fast stop has no cause beyond its actor",
+			message: withReason(aborted, Stop{Actor: StopActorFailFast}.Sentence()).message(),
+			reason:  string(StopReasonFailFast),
+			want:    "",
+		},
+		{
+			name:    "a stop of the control plane has no cause beyond its reason",
+			message: withReason(aborted, Stop{Actor: StopActorControlPlane, Reason: StopReasonExecutionTimeout}.Sentence()).message(),
+			reason:  string(StopReasonExecutionTimeout),
+			want:    "",
+		},
+		{
+			name:    "the default text of a stop that no component explains names no cause",
+			message: withReason(aborted, DefaultStopMessage).message(),
+			reason:  string(StopReasonUnknown),
+			want:    "",
+		},
+		{
+			name:    "a termination without a reason names no cause",
+			message: aborted.message(),
+			reason:  string(StopReasonUnknown),
+			want:    "",
+		},
+		{
+			name:    "a reason without words keeps its raw code",
+			message: withReason(aborted, Stop{Actor: StopActorRunner, Reason: "new-code"}.Sentence()).message(),
+			reason:  "new-code",
+			want:    "new-code",
+		},
+		{
+			name:    "a message of a toolkit step does not change",
+			message: "1 of 1 executions failed: child-1 (failed)",
+			reason:  string(StopReasonChildWorkflowFailed),
+			want:    "1 of 1 executions failed: child-1 (failed)",
+		},
+		{
+			name:    "a message with an unknown shape after the termination sentence does not change",
+			message: "The execution has been aborted. extra text",
+			reason:  string(StopReasonUnknown),
+			want:    "The execution has been aborted. extra text",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, stopCause(tt.message, tt.reason))
+		})
+	}
+}
+
 func TestTestWorkflowResult_Clone(t *testing.T) {
 	tests := []struct {
 		name    string

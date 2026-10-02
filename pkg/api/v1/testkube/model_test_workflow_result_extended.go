@@ -672,6 +672,63 @@ type termination struct {
 // terminationPrefix starts every termination sentence, for all termination codes.
 const terminationPrefix = "The execution has been "
 
+// DefaultStopMessage is the reason of a stop that no component explains. The heal writes it into
+// the step message, and the status details leave it out, because it names no cause.
+const DefaultStopMessage = "Job has been aborted"
+
+// stopCause returns the cause in a termination message, for the message of the status details.
+// It is the inverse of termination.message and termination.messageWithCause. The status of the
+// execution, the actor and the sentence of the reason already have their own place in the object
+// and on the screen, so the function removes them. A message without the termination sentence is
+// already a cause, so it does not change.
+func stopCause(message, reason string) string {
+	rest, ok := strings.CutPrefix(message, terminationPrefix)
+	if !ok {
+		return message
+	}
+	_, cause, ok := strings.Cut(rest, ".")
+	if !ok {
+		return message
+	}
+	if cause == "" {
+		return ""
+	}
+	cause, ok = strings.CutPrefix(cause, " (")
+	if !ok || !strings.HasSuffix(cause, ")") {
+		return message
+	}
+	cause = strings.TrimSuffix(cause, ")")
+	for _, actor := range stopActors {
+		if words, ok := cutLeadingSentence(cause, actor.Sentence()); ok {
+			cause = words
+			break
+		}
+	}
+	words := StopReason(reason).Sentence()
+	if words == "" {
+		words = StartReason(reason).Sentence()
+	}
+	if rest, ok := cutLeadingSentence(cause, words); ok {
+		cause = rest
+	}
+	if cause == DefaultStopMessage {
+		return ""
+	}
+	return cause
+}
+
+// cutLeadingSentence removes the sentence from the start of the text, with the colon that joins
+// it to the rest. It reports false when the text does not start with the whole sentence.
+func cutLeadingSentence(text, sentence string) (string, bool) {
+	if sentence == "" {
+		return text, false
+	}
+	if text == sentence {
+		return "", true
+	}
+	return strings.CutPrefix(text, sentence+": ")
+}
+
 func (t termination) sentence() string {
 	return terminationPrefix + t.code + "."
 }
