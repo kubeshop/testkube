@@ -1054,6 +1054,21 @@ func main() {
 		// to and PointerLifetime says so by returning zero, which no retention is below.
 		// StepCacheVolumeEnabled has already warned in that case.
 		retention := time.Duration(cfg.TestkubeStepCacheVolumeRetentionDays) * 24 * time.Hour
+
+		// A retention of zero or less disables the sweep outright - Sweeper.Sweep
+		// returns at once for it - and the chart takes this number without validating
+		// it, so one rendering would leave a volume the whole cluster shares growing
+		// with nothing ever reclaiming it. The default is used instead of refusing to
+		// start, because a cache setting is not worth withholding the agent over.
+		if retention <= 0 {
+			log.DefaultLogger.Warnw(
+				"step cache volume retention is not a positive number of days, which would leave the volume unswept; using the default instead",
+				"configuredRetentionDays", cfg.TestkubeStepCacheVolumeRetentionDays,
+				"retention", defaultStepCacheRetention,
+			)
+			retention = defaultStepCacheRetention
+		}
+
 		if pointerTTL, _ := volume.PointerLifetime(cfg.StorageCacheExpiration, cfg.StorageExpiration); retention < pointerTTL {
 			log.DefaultLogger.Warnw(
 				"step cache volume retention is shorter than the object store expires cache pointers in; raising it, because deleting an entry whose pointer is still stored turns hits into unexplained misses",
@@ -1063,6 +1078,16 @@ func main() {
 			)
 			retention = pointerTTL
 		}
+
+		// Matching the pointer's lifetime is not enough on its own, because the two
+		// clocks do not start together. The sweep ages an inbox from the rename that
+		// commits an entry, while the pointer naming it only exists once the upload
+		// after that rename has succeeded - a grant, then up to five attempts of up to
+		// thirty minutes each. Retention equal to the pointer's lifetime therefore
+		// lets the entry go first, by however long publishing took, and a pointer
+		// naming an entry that is gone is a key that misses until the object expires,
+		// which nothing can shorten because the object is immutable.
+		retention += stepCachePublicationGrace
 
 		sweeper := &volume.Sweeper{
 			Root:      cfg.TestkubeStepCacheVolumeMountPath,

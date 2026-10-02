@@ -10,9 +10,21 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 )
 
+// defaultStepCacheRetention stands in for a retention that is not a positive number of
+// days, which would otherwise disable the sweep and let the shared volume fill. It is
+// the charts' own default, so the substitution lands where an unset value would have.
+const defaultStepCacheRetention = 7 * 24 * time.Hour
+
+// stepCachePublicationGrace covers the gap between committing an entry and storing the
+// pointer that names it, which is what keeps retention genuinely longer than a
+// pointer's life rather than merely equal to it. Generous on purpose: the toolkit's
+// upload allows five attempts of up to thirty minutes, and the only cost of being wrong
+// in this direction is an entry outliving its usefulness.
+const stepCachePublicationGrace = 6 * time.Hour
+
 // stepCacheLeaseInterval is how often a running execution's inbox is kept alive.
 //
-// Well under Sweeper.LeaseTTL below, so that one failed pass - an API server blip, a
+// Well under stepCacheLeaseTTL below, so that one failed pass - an API server blip, a
 // rollout - cannot expose a live inbox to the sweep.
 const stepCacheLeaseInterval = 5 * time.Minute
 
