@@ -54,26 +54,26 @@ testworkflow-toolkit artifacts --id=custom-id "output/"
 - `--unpack`: Auto-extract archives in cloud storage
 - `--mount`: Additional mount paths
 
-#### `clone <repository>`
+#### `clone <repository> <outputPath>`
 Clone git repositories with authentication support.
 
 ```bash
 # Basic clone
-testworkflow-toolkit clone https://github.com/user/repo.git
+testworkflow-toolkit clone https://github.com/user/repo.git /data/repo
 
 # With authentication and branch
-testworkflow-toolkit clone https://github.com/private/repo.git \
-  --token $GITHUB_TOKEN --branch main
+testworkflow-toolkit clone https://github.com/private/repo.git /data/repo \
+  --token $GITHUB_TOKEN --revision main
 
 # Sparse checkout
-testworkflow-toolkit clone https://github.com/user/repo.git \
-  --paths "src/,tests/" --branch develop
+testworkflow-toolkit clone https://github.com/user/repo.git /data/repo \
+  --paths "src/,tests/" --revision develop
 ```
 
 **Authentication Types**:
 - `--token`: Token-based (GitHub, GitLab)
-- `--username`/`--password`: Basic auth
-- `--ssh-key`: SSH key path
+- `--username`/`--token`: Basic auth
+- `--sshKey`: SSH private key
 
 #### `tarball <operation> [args...]`
 Create or extract tarball archives.
