@@ -69,11 +69,30 @@ func buildExecution(i int) testkube.TestWorkflowExecution {
 	name := fmt.Sprintf("wf-run-%03d", i)
 	scheduled := time.Date(2026, 3, 1, 10, 0, 0, 0, time.UTC).Add(time.Duration(i) * time.Minute)
 	status := testkube.PASSED_TestWorkflowStatus
+	var statusDetails *testkube.TestWorkflowStatusDetails
 	if i%3 == 0 {
 		status = testkube.FAILED_TestWorkflowStatus
+		statusDetails = &testkube.TestWorkflowStatusDetails{
+			Type_: "test", Reason: "step-failed", Message: "exit code 1", Step: "root",
+		}
+	}
+
+	// Both repositories synthesize a lineage on read for a document that has
+	// none, so a fixture without one would round-trip even if the migrator
+	// dropped the columns. Mix all three shapes: a rerun, an original run that
+	// recorded its lineage, and a legacy document from before lineage existed.
+	var lineage *testkube.TestWorkflowExecutionLineage
+	switch i % 4 {
+	case 0:
+		lineage = &testkube.TestWorkflowExecutionLineage{
+			BaseId: fmt.Sprintf("exec-%03d", i-1), RootId: "exec-001", Attempt: int32(i/4 + 1),
+		}
+	case 1:
+		lineage = &testkube.TestWorkflowExecutionLineage{RootId: id, Attempt: 1}
 	}
 
 	return testkube.TestWorkflowExecution{
+		Lineage:                   lineage,
 		Id:                        id,
 		Name:                      name,
 		Namespace:                 "testkube",
@@ -113,6 +132,7 @@ func buildExecution(i int) testkube.TestWorkflowExecution {
 		Result: &testkube.TestWorkflowResult{
 			Status:          &status,
 			PredictedStatus: &status,
+			StatusDetails:   statusDetails,
 			QueuedAt:        scheduled,
 			StartedAt:       scheduled.Add(time.Second),
 			FinishedAt:      scheduled.Add(31 * time.Second),

@@ -63,9 +63,45 @@ func TestWriteExecutionRowMinimal(t *testing.T) {
 		"group_id", "runner_id", "runner_target", "runner_original_target", "namespace",
 		"scheduled_at", "assigned_at", "status_at", "test_workflow_execution_name",
 		"tags", "running_context", "config_params", "runtime", "silent_mode",
-		"workflow_name", "status",
+		"workflow_name", "status", "lineage_base_id", "lineage_root_id", "lineage_attempt",
 	} {
 		assert.Equal(t, `\N`, byName[col], "column %s should be NULL when unset", col)
+	}
+}
+
+// Lineage is projected as the repository projects it: an original run keeps its
+// empty base as NULL rather than as a base named the empty string, while a
+// rerun carries all three.
+func TestWriteExecutionRowLineage(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		lineage                 *testkube.TestWorkflowExecutionLineage
+		baseID, rootID, attempt string
+	}{
+		"original run": {
+			lineage: &testkube.TestWorkflowExecutionLineage{RootId: "exec-1", Attempt: 1},
+			baseID:  `\N`, rootID: "exec-1", attempt: "1",
+		},
+		"rerun": {
+			lineage: &testkube.TestWorkflowExecutionLineage{BaseId: "exec-2", RootId: "exec-1", Attempt: 3},
+			baseID:  "exec-2", rootID: "exec-1", attempt: "3",
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			var buf bytes.Buffer
+			require.NoError(t, writeExecutionRow(&buf, &testkube.TestWorkflowExecution{
+				Id: "exec-3", Name: "wf-3", Lineage: tc.lineage,
+			}))
+
+			byName := zip(t, executionColumns, splitRow(t, buf.String()))
+			assert.Equal(t, tc.baseID, byName["lineage_base_id"])
+			assert.Equal(t, tc.rootID, byName["lineage_root_id"])
+			assert.Equal(t, tc.attempt, byName["lineage_attempt"])
+		})
 	}
 }
 
@@ -261,6 +297,19 @@ func TestWriteResultRow(t *testing.T) {
 	assert.Equal(t, "2026-03-01 10:00:00+00", byName["queued_at"])
 }
 
+func TestWriteResultRowStatusDetails(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	require.NoError(t, writeResultRow(&buf, "exec-1", &testkube.TestWorkflowResult{
+		Status:        statusPtr(testkube.FAILED_TestWorkflowStatus),
+		StatusDetails: &testkube.TestWorkflowStatusDetails{Type_: "infrastructure", Reason: "oom-killed"},
+	}))
+
+	byName := zip(t, resultColumns, splitRow(t, buf.String()))
+	assert.Equal(t, `{"type":"infrastructure","reason":"oom-killed"}`, byName["status_details"])
+}
+
 func TestWriteResultRowNilStatuses(t *testing.T) {
 	t.Parallel()
 
@@ -271,6 +320,9 @@ func TestWriteResultRowNilStatuses(t *testing.T) {
 	assert.Equal(t, `\N`, byName["status"])
 	assert.Equal(t, `\N`, byName["predicted_status"])
 	assert.Equal(t, `\N`, byName["queued_at"])
+	// NULL, not the JSON literal null: the column means "passed, or ended before
+	// status details existed", and the type filter reads it with ->>.
+	assert.Equal(t, `\N`, byName["status_details"])
 }
 
 func TestWriteOutputAndReportRows(t *testing.T) {

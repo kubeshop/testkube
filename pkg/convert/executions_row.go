@@ -3,6 +3,7 @@ package convert
 import (
 	"fmt"
 	"io"
+	"strconv"
 
 	"github.com/google/uuid"
 
@@ -32,6 +33,7 @@ var (
 		"name", "namespace", "number", "scheduled_at", "assigned_at", "status_at",
 		"test_workflow_execution_name", "disable_webhooks", "tags", "running_context",
 		"config_params", "runtime", "silent_mode", "workflow_name", "status",
+		"lineage_base_id", "lineage_root_id", "lineage_attempt",
 	}
 
 	signatureColumns = []string{
@@ -42,7 +44,7 @@ var (
 	resultColumns = []string{
 		"execution_id", "status", "predicted_status", "queued_at", "started_at",
 		"finished_at", "duration", "total_duration", "duration_ms", "paused_ms",
-		"total_duration_ms", "pauses", "initialization", "steps",
+		"total_duration_ms", "pauses", "initialization", "steps", "status_details",
 	}
 
 	outputColumns = []string{"execution_id", "ref", "name", "value", "out_order"}
@@ -107,7 +109,19 @@ func writeExecutionRow(w io.Writer, exec *testkube.TestWorkflowExecution) error 
 		status = escapeCopyValue(string(*exec.Result.Status))
 	}
 
-	_, err = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%t\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+	// Lineage is stored as three scalars, projected the way the repository's
+	// lineageBaseID/lineageRootID/lineageAttempt do: a document written before
+	// lineage existed carries none and leaves all three NULL, which
+	// EffectiveLineage() reads back as an original run. A document that has one
+	// keeps an empty base or root as NULL but always records the attempt.
+	lineageBaseID, lineageRootID, lineageAttempt := copyNull, copyNull, copyNull
+	if exec.Lineage != nil {
+		lineageBaseID = escapeCopyValue(exec.Lineage.BaseId)
+		lineageRootID = escapeCopyValue(exec.Lineage.RootId)
+		lineageAttempt = strconv.FormatInt(int64(exec.Lineage.Attempt), 10)
+	}
+
+	_, err = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%t\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 		escapeCopyValue(exec.Id),
 		escapeCopyValue(exec.GroupId),
 		escapeCopyValue(exec.RunnerId),
@@ -128,6 +142,9 @@ func writeExecutionRow(w io.Writer, exec *testkube.TestWorkflowExecution) error 
 		escapeJSONB(silentMode),
 		workflowName,
 		status,
+		lineageBaseID,
+		lineageRootID,
+		lineageAttempt,
 	)
 	return err
 }
@@ -191,6 +208,12 @@ func writeResultRow(w io.Writer, executionID string, result *testkube.TestWorkfl
 	if err != nil {
 		return err
 	}
+	// A nil *TestWorkflowStatusDetails marshals to the JSON literal null, which
+	// escapeJSONB turns into SQL NULL - the column's meaning for a passed run.
+	statusDetails, err := toJSONBytes(result.StatusDetails)
+	if err != nil {
+		return err
+	}
 
 	status := copyNull
 	if result.Status != nil {
@@ -201,7 +224,7 @@ func writeResultRow(w io.Writer, executionID string, result *testkube.TestWorkfl
 		predictedStatus = escapeCopyValue(string(*result.PredictedStatus))
 	}
 
-	_, err = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%s\t%s\t%s\n",
+	_, err = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%s\t%s\t%s\t%s\n",
 		escapeCopyValue(executionID),
 		status,
 		predictedStatus,
@@ -216,6 +239,7 @@ func writeResultRow(w io.Writer, executionID string, result *testkube.TestWorkfl
 		escapeJSONB(pauses),
 		escapeJSONB(initialization),
 		escapeJSONB(steps),
+		escapeJSONB(statusDetails),
 	)
 	return err
 }
