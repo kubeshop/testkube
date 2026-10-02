@@ -116,7 +116,21 @@ func (s *Sweeper) Sweep(ctx context.Context) error {
 		if ctx.Err() != nil {
 			return nil
 		}
-		if !entry.IsDir() {
+		// entry.Info rather than entry.IsDir: the kind a DirEntry reports comes from
+		// whatever readdir returned, and a network or CSI filesystem is entitled to
+		// answer "unknown" for it - which is exactly the kind of volume this feature is
+		// for. IsDir is then false for a real directory, every inbox is skipped, and
+		// the volume is never reclaimed at all. The metadata is wanted below anyway.
+		info, err := entry.Info()
+		if err != nil {
+			if os.IsNotExist(err) {
+				// Swept by another agent between the listing and here.
+				continue
+			}
+			failed = append(failed, fmt.Sprintf("%s: reading it: %s", entry.Name(), err))
+			continue
+		}
+		if !info.IsDir() {
 			continue
 		}
 		dir := filepath.Join(s.Root, InboxDir, entry.Name())
@@ -159,14 +173,9 @@ func (s *Sweeper) Sweep(ctx context.Context) error {
 		}
 
 		// The inbox's own mtime moves whenever an entry is added to or removed from it,
-		// so it tracks the execution's last write without having to walk inside.
-		info, err := entry.Info()
-		if err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			return err
-		}
+		// so it tracks the execution's last write without having to walk inside. Read
+		// once, above, where the kind was established.
+		//
 		// A future mtime is kept from pinning the inbox the same way, and for the same
 		// reason: the step can touch its own inbox directory. Beyond the skew window it
 		// is not a clock difference, so it is treated as expired rather than as
