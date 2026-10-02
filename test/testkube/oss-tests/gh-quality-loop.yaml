@@ -99,7 +99,25 @@ spec:
       - /root/go/pkg/mod/cache/download
       scope: environment
     timeout: 10m
-    shell: golangci-lint run ./... --timeout=10m
+    steps:
+    - name: Analyze Go packages
+      cache:
+        # Entries are immutable: refresh for source/config changes, while reusing
+        # compiled dependencies from the previous successful lint execution.
+        key: oss-lint-go-v1-golangci-2.13.1-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum", "/data/repo/.golangci.yml", "/data/repo/**/*.go")}}
+        restoreKeys:
+        - oss-lint-go-v1-golangci-2.13.1-
+        paths:
+        - /root/.cache/go-build
+        - /root/.cache/golangci-lint
+        scope: workflow
+      run:
+        env:
+        - name: GOCACHE
+          value: /root/.cache/go-build
+        - name: GOLANGCI_LINT_CACHE
+          value: /root/.cache/golangci-lint
+        shell: golangci-lint run ./... --timeout=10m
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
