@@ -125,6 +125,14 @@ The same path exists in the connected-mode scheduler in `testkube-cloud-api`, wh
 - Lease backend: [`pkg/repository/leasebackend/mongo/`](pkg/repository/leasebackend/mongo/)
 - Factory: [`pkg/repository/mongo_factory.go`](pkg/repository/mongo_factory.go)
 
+**MongoDB to PostgreSQL conversion**
+
+- **Entry Point**: [`cmd/convert/main.go`](cmd/convert/main.go). Migrator: [`pkg/convert/`](pkg/convert/)
+- A one-shot tool for an installation moving off MongoDB. It copies `testworkflowresults` into the `test_workflow_*` tables and the Test Workflow counters into `execution_sequences`, so execution history and numbering survive the switch from `API_MONGO_DSN` to `API_POSTGRES_DSN`. Nothing else in MongoDB needs to move: artifacts and logs are in object storage, and definitions are CRDs.
+- It applies the PostgreSQL migrations itself, then streams documents from a Mongo cursor and writes each batch with `COPY`. The batch commits in the same transaction as its progress row in `convert_checkpoints`, so an interrupted run resumes where it stopped and never double-writes. When it finishes, it compares source and target counts.
+- Because it writes rows directly rather than through the repository, any schema change to those tables also needs a change in `pkg/convert/executions_row.go`. See [`AGENTS.md`](AGENTS.md).
+- Shipped as the `kubeshop/testkube-convert` image, and run in-cluster through the chart's optional `convert` Job (see [Kubernetes Deployment](#kubernetes-deployment)).
+
 **MinIO** (Object Storage)
 
 - Stores TestWorkflow execution artifacts (logs, reports, files)
@@ -318,6 +326,7 @@ The Helm chart deploys:
 - MinIO (via subchart)
 - NATS (via subchart)
 - Kubernetes RBAC and service accounts
+- Optionally, the one-shot `convert` Job (`convert.enabled`, off by default) that migrates MongoDB data into PostgreSQL. It is not a Helm hook, because an operator triggers the cutover. It takes both DSNs from the `testkube-api` database settings and resumes from its checkpoint when retried.
 
 **Configuration**: See [`k8s/helm/testkube/values.yaml`](k8s/helm/testkube/values.yaml) for deployment configuration.
 

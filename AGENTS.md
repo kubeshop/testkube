@@ -20,6 +20,7 @@
 - `cmd/testworkflow-toolkit` provides runtime utilities and commands for TestWorkflow containers (artifacts, services, parallel execution, etc.).
 - `cmd/tcl/devbox-mutating-webhook` is a Kubernetes mutating webhook for injecting devbox containers into pods.
 - `cmd/tcl/devbox-binary-storage` serves as a binary storage server for devbox dependencies and cached files.
+- `cmd/convert` is a one-shot tool that migrates control-plane data from MongoDB to PostgreSQL (see "Mongo to Postgres conversion" below).
 - `cmd/debug-server` is a simple HTTP server that dumps incoming requests for debugging purposes.
 - `cmd/proxy` proxies HTTP requests to the Testkube API server for local development and debugging.
 - `cmd/choco-stub` displays a deprecation message for the old Chocolatey package location.
@@ -61,6 +62,47 @@ Still to come: Control Plane persistence and enforcement of the owner, and the `
 - Regenerate Kubernetes CRDs after editing type definitions in `api/` via `make generate-crds`.
 - Regenerate SQL code when query files change via `make generate-sqlc`.
 - Refresh mocks for new or updated interfaces using `make generate-mocks`.
+- Build the Mongo to Postgres convert tool with `make build-convert` (also part of `make build`). Its image, `kubeshop/testkube-convert`, is the `convert` target in `docker-bake.hcl`, built from `build/new/convert.Dockerfile` and published by `.github/workflows/new-build.yaml` with the other images.
+
+## Mongo to Postgres conversion
+
+`cmd/convert` (the CLI and flags) and `pkg/convert` (the migrator) move an OSS installation's
+data from MongoDB to PostgreSQL, so that switching the API server from `API_MONGO_DSN` to
+`API_POSTGRES_DSN` keeps execution history and numbering instead of starting empty and
+restarting execution numbers at 1, which would collide with the names of old executions.
+
+- **Two tasks, and nothing else.** `executions` copies `testworkflowresults` into the seven
+  `test_workflow_*` tables (`executions.go`, `executions_row.go`). `sequences` copies Test
+  Workflow counters into `execution_sequences` (`sequences.go`), and never moves a counter
+  backwards. Logs, outputs and artifacts are in object storage, definitions and triggers are
+  CRDs, and the `triggers` collection holds only a short-lived leader lease, so none of them
+  are migrated.
+- **Rows are written by hand as COPY text**, not through the repository. That makes every
+  schema migration touching `test_workflow_executions` or its child tables a change here
+  too: add the column to the matching `*Columns` list and `write*Row` serializer in
+  `executions_row.go`, projected the way `pkg/repository/testworkflow/postgres` writes it. A
+  column the converter leaves out is silently NULL for every migrated row.
+  `TestConvertExecutions_Integration` reads each execution back through both repositories and
+  compares them, which catches the omission **only if the fixture in `buildExecution` sets
+  the field**. Both repositories synthesize some fields on read (lineage through
+  `EffectiveLineage()`), so a fixture that leaves such a field unset round-trips even when
+  the column was dropped.
+- **Resumable and exactly-once.** Each batch commits in the same transaction as its row in
+  `convert_checkpoints` (migration `20260826120000_convert_checkpoints.sql`, written only by
+  this tool), so an interrupted run resumes after the last committed batch. `--reset --yes`
+  truncates the target and clears the checkpoints. `--dry-run` serializes everything and
+  writes nothing, but still applies schema migrations, because the checkpoint lookup and the
+  verification read those tables.
+- **The tool migrates the schema itself**, with goose's `WithAllowOutofOrder(true)` like
+  the API server, and an out-of-date schema is fatal here rather than a warning: the COPY
+  statements name columns that may not exist yet.
+- **Exit status.** After the summary, the tool exits non-zero if any document failed or the
+  run raised a warning, such as a verification count mismatch (`ErrIncomplete`), so a Job is marked failed.
+- **Deployment.** The `testkube` chart runs it as the `convert` Job
+  (`templates/convert-job.yaml`, `convert.*` values), disabled by default. It is deliberately
+  not a Helm hook: the operator triggers the cutover. The Job reads both DSNs from
+  `testkube-api.mongodb` and `testkube-api.postgresql`, and a retry resumes from the
+  checkpoint.
 
 ## Execution lineage and reruns
 
@@ -158,6 +200,7 @@ contents do.
 ## Configuration references
 
 - Agent behavior is driven by env vars defined in `internal/config/config.go` (scan for `envconfig:"..."` tags when researching a toggle).
+- The convert tool does not use `internal/config`. Each flag in `cmd/convert/main.go` falls back to an env var: it reuses the API server's `API_MONGO_*`, `API_POSTGRES_DSN`, `SKIP_DB_CREATION` and `DISABLE_POSTGRES_MIGRATIONS`, and adds its own `CONVERT_BATCH_SIZE`, `CONVERT_READ_BATCH_SIZE`, `CONVERT_DRY_RUN`, `CONVERT_RESET`, `CONVERT_RESET_CONFIRMED`, `CONVERT_SKIP_ERRORS`, `CONVERT_SKIP` and `CONVERT_VERIFY`. MongoDB TLS material is passed as file paths, because the tool has no cluster client to read a Secret with.
 - GitOps sync of Kubernetes resources into the Control Plane is gated by `GITOPS_KUBERNETES_TO_CLOUD_ENABLED` (default `false`), and additionally requires the Control Plane to report cloud storage support.
 - TestTriggers accept `spec.event` or a `spec.events` list (mutually exclusive, validated service-side); always consume them via `EffectiveEvents()` so both forms are honored — classification gates that read the single `event` field directly will silently skip list-form triggers.
 - Git trigger informer behavior is tuned via `TEST_TRIGGER_GIT_INFORMER_RECONCILE_INTERVAL`, `TEST_TRIGGER_GIT_INFORMER_REPO_DEPTH`, `TEST_TRIGGER_GIT_INFORMER_LIST_TIMEOUT`, `TEST_TRIGGER_GIT_INFORMER_MAX_COMMITS_SCAN`, `TEST_TRIGGER_GIT_INFORMER_PULL_RETRIES`, and `TEST_TRIGGER_GIT_INFORMER_PULL_RETRY_DELAY`.
