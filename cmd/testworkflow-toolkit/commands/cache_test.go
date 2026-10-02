@@ -1496,3 +1496,27 @@ func TestRunCacheRestore_RetriesAPointerBodyItCouldNotRead(t *testing.T) {
 	require.NoError(t, readErr, "and the second attempt restores it")
 	assert.Equal(t, "cached", string(body))
 }
+
+// The volume prefix comes out of the same budget the author's keys are checked against,
+// so a restore key they kept inside the limit can be over it by the time it is sent.
+// Unchecked it would take the whole lookup with it - including the exact key, which
+// passed - so the one that no longer fits is dropped and the rest still go.
+func TestRunCacheRestore_DropsARestoreKeyTheVolumePrefixPushesOverTheLimit(t *testing.T) {
+	t.Setenv(volume.EnvVolumeID, "vol1234abcd")
+	tooLong := strings.Repeat("k", executioncache.MaxKeyBytes)
+	require.NoError(t, executioncache.ValidateKey(tooLong), "the author's own key is inside the limit")
+
+	repo := &fakeCacheRepository{}
+	out := &bytes.Buffer{}
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:         "npm-abc",
+		RestoreKeys: []string{tooLong, "npm-"},
+		Paths:       []string{t.TempDir()},
+	}), repo, out)
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"vol1234abcd/npm-"}, repo.restoredKeys,
+		"the fallback that still fits must survive the one that does not")
+	assert.Contains(t, out.String(), "ignoring the restore key",
+		"a silently dropped fallback looks exactly like one that did not match")
+}

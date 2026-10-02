@@ -272,9 +272,23 @@ func runCacheRestore(ctx context.Context, encoded string, repository executionca
 	// to carries no runner or volume and an entry on a volume is reachable only from it.
 	// Applied to the restore keys too, and as a prefix, so prefix matching cannot stray
 	// onto another volume's entry. See volume.EnsureID.
+	//
+	// Each one is checked after scoping, as the exact key is: the prefix comes out of
+	// the same budget, so a restore key the author kept inside the limit can be over it
+	// by the time it is sent. One that is dropped here would otherwise take the whole
+	// lookup with it - and a restore key is a fallback, so losing one is a worse cache
+	// rather than a failure. Said out loud, because a silently ignored fallback looks
+	// exactly like one that simply did not match.
 	restoreKeys := make([]string, 0, len(spec.RestoreKeys))
 	for _, k := range spec.RestoreKeys {
-		restoreKeys = append(restoreKeys, scopedCacheKey(k))
+		scoped := scopedCacheKey(k)
+		if scoped != "" {
+			if err := executioncache.ValidateKey(scoped); err != nil {
+				fmt.Fprintf(out, "cache: ignoring the restore key %q: %s\n", k, err.Error())
+				continue
+			}
+		}
+		restoreKeys = append(restoreKeys, scoped)
 	}
 
 	entry, err := repository.Restore(ctx, executioncache.RestoreRequest{
