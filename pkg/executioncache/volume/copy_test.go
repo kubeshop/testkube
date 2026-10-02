@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -524,4 +525,35 @@ func TestSaveReportsNoContentForADirectoryOnlyTree(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Zero(t, content, "directories are work, not content")
+}
+
+// A declared path that does not exist has to leave nothing at all in the entry.
+//
+// Creating its mirrored prefix up front put an empty tree there, and a restore reads
+// the presence of that directory as the path being carried: it reports an exact hit
+// having written nothing, and an exact hit tells the save stage there is nothing to
+// replace. The step would then reinstall on every execution while the entry went on
+// claiming to hold a path it never held.
+func TestSaveLeavesNothingForAPathThatDoesNotExist(t *testing.T) {
+	present := posixDir(t)
+	write(t, filepath.FromSlash(present+"/dep"), "cached")
+	absent := posixDir(t) + "/never-created"
+
+	staging := filepath.Join(t.TempDir(), EntryRoot)
+	require.NoError(t, os.MkdirAll(staging, 0o777))
+	_, _, err := SaveTree(staging, []string{present, absent}, CopyLimits{})
+	require.NoError(t, err)
+
+	mirrored := filepath.Join(staging, filepath.FromSlash(strings.TrimPrefix(absent, "/")))
+	_, statErr := os.Stat(mirrored)
+	assert.True(t, os.IsNotExist(statErr), "an absent path must not be mirrored into the entry")
+
+	// And the entry is therefore honest about what it holds: a restore asking only for
+	// the absent path gets a miss rather than a hit over an empty directory.
+	entry, openErr := os.OpenRoot(staging)
+	require.NoError(t, openErr)
+	defer entry.Close()
+
+	_, restoreErr := RestoreTree(entry, []string{absent}, CopyLimits{})
+	assert.ErrorIs(t, restoreErr, ErrEntryHoldsNoDeclaredPath)
 }

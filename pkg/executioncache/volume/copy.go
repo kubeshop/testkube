@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // CopyLimits bound what a copy will move, so a malformed or hostile entry cannot fill
@@ -355,9 +356,14 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 		// MkdirAll, and the walk below never visits it - so its mode is set here rather
 		// than per directory. An unwritable directory anywhere in the chain is one the
 		// agent cannot unlink through when it sweeps.
-		if err := mkdirAllShared(dst, base); err != nil {
-			return total, content, err
-		}
+		//
+		// Made only once the walk has found something, though, because a declared path
+		// that does not exist has to leave nothing at all behind. Creating it up front
+		// put an empty mirrored tree in the entry for every absent path, and a restore
+		// reads the presence of that directory as the path being carried: it reports an
+		// exact hit, writes nothing, and the save stage then skips replacing an entry
+		// that holds nothing for that path.
+		prefix := sync.OnceValue(func() error { return mkdirAllShared(dst, base) })
 
 		// filepath.Walk lstats, so a symlink arrives as a symlink rather than as
 		// whatever it points at - which is what lets the entry carry the link itself.
@@ -367,6 +373,9 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 					return nil
 				}
 				return err
+			}
+			if prefixErr := prefix(); prefixErr != nil {
+				return prefixErr
 			}
 
 			rel, relErr := filepath.Rel(filepath.FromSlash(src), name)
