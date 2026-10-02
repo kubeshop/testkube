@@ -283,7 +283,7 @@ func (n *notifier) pendingCause(state watchers2.ExecutionState) (*testkube.Cause
 	if cause != nil {
 		message = cause.String()
 	}
-	if message == n.written() {
+	if message == n.written() || n.keepsCause(cause, ref) {
 		return nil, "", "", false
 	}
 	// Kubernetes deletes the pod of an ended execution, so the cause goes away with the pod. Keep the last cause.
@@ -294,6 +294,15 @@ func (n *notifier) pendingCause(state watchers2.ExecutionState) (*testkube.Cause
 		return nil, "", "", false
 	}
 	return cause, message, ref, true
+}
+
+// keepsCause reports whether the step keeps the cause that the notifier wrote. While Kubernetes
+// only waits to try again, its message does not say why the action failed, so the earlier
+// message of the same code stays.
+func (n *notifier) keepsCause(cause *testkube.Cause, ref string) bool {
+	isRetryCause := cause != nil && cause.Retry
+	isWrittenForStep := n.causeValue != nil && ref == n.causeRef
+	return isRetryCause && isWrittenForStep && n.stepResult(ref).ErrorReason == cause.Reason
 }
 
 // Instruction applies the precise hint information about the action that took place

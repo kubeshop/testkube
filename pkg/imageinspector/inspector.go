@@ -64,7 +64,7 @@ func (i *inspector) fetch(ctx context.Context, registry, image string, pullSecre
 	for idx, name := range pullSecretNames {
 		secret, err := i.secrets.Get(ctx, name)
 		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("fetching '%s' pull secret", name))
+			return nil, errors.Wrapf(err, "the pull secret %q cannot be read", name)
 		}
 		secrets[idx] = *secret
 	}
@@ -121,7 +121,7 @@ func (i *inspector) Inspect(ctx context.Context, registry, image string, pullPol
 	resolvedName := i.ResolveName(registry, image)
 	value, err := i.fetch(ctx, "", resolvedName, pullSecretNames)
 	if err != nil {
-		return nil, errors.Wrapf(err, "inspecting the image %q", resolvedName)
+		return nil, errors.Wrapf(err, "the image %q cannot be read", resolvedName)
 	}
 
 	// Save asynchronously

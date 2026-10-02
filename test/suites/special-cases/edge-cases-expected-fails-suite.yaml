@@ -123,7 +123,7 @@ spec:
     shell: |
       msg={{ shellquote(execution("missing-template").errorMessage) }}
       echo "$msg"
-      echo "$msg" | grep -qF "cannot fetch Test Workflow Template by name: some-non-existant-template-name" || { echo "unexpected message: $msg"; exit 1; }
+      echo "$msg" | grep -qF 'the template "some-non-existant-template-name"' || { echo "unexpected message: $msg"; exit 1; }
   - name: expected-fail-service-exit-code
     negative: true
     execute:

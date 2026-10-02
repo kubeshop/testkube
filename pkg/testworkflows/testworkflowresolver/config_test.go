@@ -15,6 +15,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
 func TestApplyConfigTestWorkflow(t *testing.T) {
@@ -104,9 +105,8 @@ func TestApplyMissingConfig(t *testing.T) {
 		},
 	}, cfg, nil)
 
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "spec.pod.labels[{{config.bar}}-key]")
-	assert.Contains(t, err.Error(), "error while accessing config.baz: unknown variable")
+	assert.EqualError(t, err, `the config value "baz" is not set`)
+	assert.ErrorIs(t, err, expressions.ErrUnknownVariable)
 }
 
 func TestApplyConfigDefaults(t *testing.T) {

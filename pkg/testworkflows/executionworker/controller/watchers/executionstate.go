@@ -474,7 +474,10 @@ func (e *executionState) podError() errorText {
 }
 
 // imagePullWaitingReasons are the waiting reasons of a container whose image Kubernetes cannot pull.
-var imagePullWaitingReasons = []string{"ErrImagePull", "ImagePullBackOff", "InvalidImageName"}
+var imagePullWaitingReasons = []string{"ErrImagePull", waitingReasonImagePullBackOff, "InvalidImageName"}
+
+// waitingReasonImagePullBackOff is the waiting reason while Kubernetes waits to pull the image again.
+const waitingReasonImagePullBackOff = "ImagePullBackOff"
 
 // CurrentCause returns the cause that keeps the pod from running, or nil when there is none.
 // Kubernetes retries these causes, so the cause does not stop the execution.
@@ -491,7 +494,11 @@ func (e *executionState) CurrentCause() *testkube.Cause {
 		return &testkube.Cause{Reason: string(testkube.StopReasonUnschedulable), Message: message}
 	}
 	if reason, message := e.pod.WaitingReason(imagePullWaitingReasons...); reason != "" {
-		return &testkube.Cause{Reason: string(testkube.StartReasonImagePullFailed), Message: message}
+		return &testkube.Cause{
+			Reason:  string(testkube.StartReasonImagePullFailed),
+			Message: message,
+			Retry:   reason == waitingReasonImagePullBackOff,
+		}
 	}
 	if reason, message := e.pod.WaitingReason("CreateContainerConfigError"); reason != "" {
 		return &testkube.Cause{Reason: string(testkube.StopReasonConfigMissing), Message: message}
