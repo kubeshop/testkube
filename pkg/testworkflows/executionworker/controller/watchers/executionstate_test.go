@@ -61,6 +61,13 @@ func TestExecutionState_CurrentCause(t *testing.T) {
 			want: &testkube.Cause{Reason: "image-pull-failed", Message: "pull access denied"},
 		},
 		{
+			name: "marks the wait to pull an image again as a retry",
+			pod: &corev1.Pod{Status: corev1.PodStatus{Phase: corev1.PodPending, ContainerStatuses: []corev1.ContainerStatus{
+				waiting("1", "ImagePullBackOff", `Back-off pulling image "org/private:1"`),
+			}}},
+			want: &testkube.Cause{Reason: "image-pull-failed", Message: `Back-off pulling image "org/private:1"`, Retry: true},
+		},
+		{
 			name: "returns config-missing for a container that waits for a secret",
 			pod: &corev1.Pod{Status: corev1.PodStatus{Phase: corev1.PodPending, ContainerStatuses: []corev1.ContainerStatus{
 				waiting("1", "CreateContainerConfigError", `secret "does-not-exist" not found`),
