@@ -16,6 +16,10 @@
 // error that has none. Give a code only to a failure that the code names exactly. The init process
 // accepts only a known code.
 //
+// An error in the definition of a step, for example a count that does not resolve, is a
+// DefinitionError of the commands package. It carries definition-invalid, so the user sees a
+// configuration error and not a failed test.
+//
 // When the environment has no TK_ERR_FILE or TK_REASON_FILE, for example outside a workflow step
 // in a test, the helpers do not write that file.
 //
