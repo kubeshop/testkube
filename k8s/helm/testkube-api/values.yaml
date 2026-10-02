@@ -533,6 +533,13 @@ storage:
   ## The bucket-wide rule is unfiltered and so covers cache objects too, and the
   ## earlier expiration wins: this can only bring cache eviction forward, never
   ## postpone it past `expiration`.
+  ##
+  ## Connected to a Control Plane this is not a rule the agent installs - the Control
+  ## Plane owns the bucket there - but one it is told about, so set it to what that
+  ## store actually does. It holds the shared cache volume's sweep to at least this
+  ## long: an entry deleted while the object pointing at it is still being served
+  ## leaves that key restoring nothing until the object goes, and the object is
+  ## immutable, so nothing can repair it meanwhile.
   # -- Days a step dependency cache entry survives, under the .tkcache/v1 prefix. Defaults to 1, the shortest an object store lifecycle can express; 0 disables it and leaves entries to `expiration`. Confined to the cache prefix, so unlike `expiration` it can only ever delete caches.
   cacheExpiration: 1
   ## Toggle whether to enable TLS in the storage client
