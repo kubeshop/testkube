@@ -3,6 +3,7 @@ package volume
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -156,4 +157,43 @@ func TestEnsureIDLeavesAnIdentityAnotherAgentIsWriting(t *testing.T) {
 
 	_, statErr := os.Stat(name)
 	assert.NoError(t, statErr, "and it must still be there for them to finish")
+}
+
+// Agents repairing an unwritten identity together must all end up with the same one.
+//
+// They are not phased apart by chance: each reaches the repair having waited out the
+// same attempts, so they arrive at it within microseconds of each other. Repairing by
+// removing the file and creating a fresh one lets one agent unlink what another has
+// just created and written, leaving each with an identity the other has never seen -
+// and since the identity prefixes every cache key, the volume's cache is then split
+// between them until both restart, each missing on every entry the other saved.
+func TestConcurrentRecoveriesAgreeOnOneIdentity(t *testing.T) {
+	root := t.TempDir()
+	name := filepath.Join(root, IDName)
+
+	require.NoError(t, os.WriteFile(name, nil, SharedFileMode))
+	stale := time.Now().Add(-2 * idStaleAfter)
+	require.NoError(t, os.Chtimes(name, stale, stale))
+
+	const agents = 8
+	ids := make([]string, agents)
+	errs := make([]error, agents)
+	var wg sync.WaitGroup
+	for i := 0; i < agents; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			ids[i], errs[i] = EnsureID(root)
+		}(i)
+	}
+	wg.Wait()
+
+	for i := range ids {
+		require.NoError(t, errs[i], "agent %d", i)
+		assert.Equal(t, ids[0], ids[i], "agent %d repaired its way to a different identity", i)
+	}
+
+	// And the election leaves nothing behind that would stop the next repair.
+	_, err := os.Stat(filepath.Join(root, idRecoveryName))
+	assert.True(t, os.IsNotExist(err), "the recovery marker outlived the repair")
 }

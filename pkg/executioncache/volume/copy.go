@@ -462,7 +462,7 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 		// What the tree itself cannot carry: a file on the volume is read by an
 		// execution that may run as another user, so it is stored readable by anyone
 		// and its own mode no longer says what the source's was. See ModesName.
-		modes = make(Modes)
+		modes = NewRecorder()
 	)
 	for _, p := range coverPaths(paths) {
 		src := path.Clean(p)
@@ -606,14 +606,8 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 
 	// Beside the tree rather than inside it, so that no name a workflow caches can
 	// collide with it. dst is the entry's tree, so its parent is the entry.
-	if encoded := modes.Encode(); len(encoded) > 0 {
-		name := filepath.Join(filepath.Dir(dst), ModesName)
-		if err := os.WriteFile(name, encoded, SharedFileMode); err != nil {
-			return total, content, err
-		}
-		// WriteFile applies the umask, and this is read by whichever agent restores -
-		// not necessarily the one that wrote it, nor as the same user.
-		if err := os.Chmod(name, SharedFileMode); err != nil {
+	if !modes.Empty() {
+		if err := WriteModes(filepath.Join(filepath.Dir(dst), ModesName), modes); err != nil {
 			return total, content, err
 		}
 	}

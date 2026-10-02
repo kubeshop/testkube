@@ -211,7 +211,19 @@ restore is a copy rather than an unpack and nothing is gzipped.
   checking the author's key and then adding bytes to it let a key just inside the limit
   pass in the pod and be refused by the API on every restore and save. The id
   belongs to the volume rather than the runner, so runners that do share a volume go on
-  sharing its entries.
+  sharing its entries. `O_EXCL` publishes the name before the contents, so an agent
+  killed in between leaves an empty `.volume-id` that would otherwise turn the cache off
+  for the whole installation for good - every later startup waiting out the attempts and
+  refusing the volume. One old enough not to be anybody's open write is **repaired in
+  place, never unlinked**: removing it rests on a stat taken earlier, so two agents
+  repairing together can have one unlink what the other has just created and written,
+  leaving the volume's cache split between two key prefixes until both restart. A
+  `.volume-id.recovering` marker, created with `O_EXCL` and held until the identity is
+  written, elects the one agent that repairs; the rest read the result. The mode is set
+  **before** the contents for the same family of reasons - a death in between would
+  otherwise leave a non-empty identity at the creator's umask that no other agent can
+  read and that the repair deliberately will not touch, a file with contents being
+  somebody's identity rather than a half-made one.
 - **A running execution holds its inbox through a lease.** The inbox is made before the
   pod starts and its mtime only moves when something is staged inside it, so an
   execution that has cached nothing yet, or runs one long step, looks expired to the
@@ -299,7 +311,12 @@ restore is a copy rather than an unpack and nothing is gzipped.
   free): it is read before any copy limit applies,
   and the inbox an entry is built in is mounted into the step's own container - so a
   workflow can commit a manifest of any size, which every later execution restoring
-  that key would otherwise read into memory whole.
+  that key would otherwise read into memory whole. **The save records under the same
+  cap** (`Recorder`) and streams the manifest out rather than encoding it into a buffer
+  first: the walk feeding it is bounded only by the entry limit, so 500,000 paths of up
+  to `PATH_MAX` is gigabytes of strings held in the step's own container, where being
+  killed for it fails the step. Matching the decode's number is what makes dropping the
+  excess free - a record past it is one every restore would discard anyway.
 - **Symlinks are carried, and never followed on the way out.** A restore writes through
   an `os.Root` opened on each declared path, so a symlink already sitting there cannot
   redirect a write outside it - the entry may have been written by another workflow. The

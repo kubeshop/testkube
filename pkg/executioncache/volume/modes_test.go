@@ -169,3 +169,27 @@ func TestDecodeModesFromBoundsThePathsItKeeps(t *testing.T) {
 		"a manifest cannot spend more of the restore's memory than this")
 	assert.Less(t, len(got), 20_000, "and the records past the budget keep the defaults")
 }
+
+// The walk feeding the recorder is bounded only by the entry limit, so without a budget
+// of its own a valid tree holds gigabytes of paths in memory before a single copy limit
+// applies - in the step's own container, where being killed for it fails the step.
+//
+// The number is the decode's, which is what makes dropping the excess free: a record
+// past it is one every restore would discard anyway.
+func TestRecordingStopsAtTheBudgetTheRestoreReadsBackUnder(t *testing.T) {
+	recorder := NewRecorder()
+
+	// Each path is recorded only because its mode differs from the default, so this
+	// is the legitimate shape of the problem rather than a malformed manifest.
+	const pathLen = 1024
+	for i := 0; i < 2*maxModeTotalBytes/pathLen; i++ {
+		recorder.Record(fmt.Sprintf("%0*d", pathLen, i), 0o600, false)
+	}
+
+	// Asserted on what the recorder holds, not on what DecodeModes gives back: the
+	// decode applies this budget too, so reading the manifest in again would pass
+	// whether or not the save ever honoured it.
+	assert.NotEmpty(t, recorder.modes, "what fits is still recorded")
+	assert.LessOrEqual(t, len(recorder.modes)*pathLen, maxModeTotalBytes,
+		"the save must not hold more paths than a restore will read back")
+}

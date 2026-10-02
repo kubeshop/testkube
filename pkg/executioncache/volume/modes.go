@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -63,7 +64,15 @@ func (m Modes) Encode() []byte {
 	if len(m) == 0 {
 		return nil
 	}
+	var out bytes.Buffer
+	if err := m.EncodeTo(&out); err != nil {
+		return nil
+	}
+	return out.Bytes()
+}
 
+// EncodeTo writes the manifest to w.
+func (m Modes) EncodeTo(w io.Writer) error {
 	// Sorted so that an entry's manifest is the same bytes however the walk ordered
 	// it, which makes one diffable against another when something has gone wrong.
 	paths := make([]string, 0, len(m))
@@ -72,11 +81,78 @@ func (m Modes) Encode() []byte {
 	}
 	sort.Strings(paths)
 
-	var out strings.Builder
 	for _, rel := range paths {
-		fmt.Fprintf(&out, "%04o %s\x00", m[rel].Perm(), rel)
+		if _, err := fmt.Fprintf(w, "%04o %s\x00", m[rel].Perm(), rel); err != nil {
+			return err
+		}
 	}
-	return []byte(out.String())
+	return nil
+}
+
+// Recorder collects a tree's exceptional permissions as it is walked, under the same
+// cap the restore reads them back under.
+//
+// Bounded for the same reason the decode is, and against the same number. The walk
+// feeding this is bounded only by the entry limit, and 500,000 paths of up to PATH_MAX
+// each is gigabytes of strings held before a single copy limit applies - where the
+// archive backend streams each mode into a tar header and retains none of them. This
+// runs in the step's own container, so being killed for it fails the step, and a cache
+// may never do that.
+//
+// The budget is deliberately the decode's: a record past it would be dropped by every
+// restore that read it, DecodeModesFrom stopping at the same total, so keeping one
+// spends memory on something no restore will ever use. Past it a path keeps the
+// defaults, which is the degradation this file already has for a record it cannot read.
+type Recorder struct {
+	modes Modes
+	bytes int
+}
+
+func NewRecorder() *Recorder {
+	return &Recorder{modes: make(Modes)}
+}
+
+// Record notes a path whose mode a restore would otherwise get wrong, while there is
+// budget left to carry it.
+func (r *Recorder) Record(rel string, mode fs.FileMode, isDir bool) {
+	if r.bytes+len(rel) > maxModeTotalBytes {
+		return
+	}
+	if r.modes.Record(rel, mode, isDir) {
+		r.bytes += len(rel)
+	}
+}
+
+// Empty reports that every path took a default, so there is no manifest to write.
+func (r *Recorder) Empty() bool {
+	return len(r.modes) == 0
+}
+
+// WriteModes writes the manifest beside an entry's tree.
+//
+// Streamed rather than encoded into a buffer and handed to os.WriteFile, which held a
+// second copy of everything recorded - up to the budget again, on top of the map.
+func WriteModes(name string, r *Recorder) error {
+	f, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, SharedFileMode)
+	if err != nil {
+		return err
+	}
+	buffered := bufio.NewWriter(f)
+	if err := r.modes.EncodeTo(buffered); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if err := buffered.Flush(); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+
+	// OpenFile's mode is filtered by the umask, and this is read by whichever agent
+	// restores the entry - not necessarily the one that wrote it, nor as the same user.
+	return os.Chmod(name, SharedFileMode)
 }
 
 // DecodeModes reads a manifest, ignoring any record it cannot make sense of.
