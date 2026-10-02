@@ -74,3 +74,26 @@ func TestSaveSetsTheModeUnderADirectoryNamedLikeADotDot(t *testing.T) {
 		return nil
 	}))
 }
+
+// A declared path that is itself a link has to arrive as a link rather than as whatever
+// it pointed at, and is restored into its parent under its own name like any other
+// single-entry cache path.
+//
+// Unix-only for the assertion, not the behaviour: the link stored in the entry points
+// outside it, and os.Root.Lstat on Windows cannot stat one of those.
+func TestSaveAndRestoreRoundTripASingleSymlink(t *testing.T) {
+	dir := posixDir(t)
+	declared := dir + "/current"
+	require.NoError(t, os.Symlink("releases/v2", filepath.FromSlash(declared)))
+
+	entry := entryFrom(t, []string{declared})
+	require.NoError(t, os.Remove(filepath.FromSlash(declared)))
+
+	wrote, err := RestoreTree(entry, []string{declared}, CopyLimits{})
+
+	require.NoError(t, err)
+	assert.True(t, wrote)
+	target, readErr := os.Readlink(filepath.FromSlash(declared))
+	require.NoError(t, readErr)
+	assert.Equal(t, "releases/v2", target, "the link is carried, not followed")
+}

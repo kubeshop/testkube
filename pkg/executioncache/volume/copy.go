@@ -78,7 +78,10 @@ func RestoreTree(src *os.Root, declaredPaths []string, limits CopyLimits) (wrote
 		// Where this path lives inside the entry: the same absolute name with the
 		// leading separator dropped, which is how the entry mirrors the filesystem.
 		within := strings.TrimPrefix(dest, "/")
-		if _, statErr := src.Stat(within); statErr != nil {
+		// Lstat, so that a declared path which is itself a link arrives as one rather
+		// than as whatever it points at.
+		info, statErr := src.Lstat(within)
+		if statErr != nil {
 			if errors.Is(statErr, fs.ErrNotExist) {
 				// The entry does not carry this path. A smaller entry than the step
 				// declared is a normal thing to restore, not a fault.
@@ -94,12 +97,22 @@ func RestoreTree(src *os.Root, declaredPaths []string, limits CopyLimits) (wrote
 		}
 		restored++
 
-		dst, openErr := openDeclaredRoot(dest)
+		// A declared path that is itself a file or a link is restored into its parent
+		// under its own name, because the root this writes through has to be a
+		// directory. Rooting it at the declared path would mean creating a directory
+		// where the file belongs, and the walk below skips its own starting point - so
+		// a single-file cache saved correctly and then restored nothing at all.
+		rootedAt, rootName := dest, ""
+		if !info.IsDir() {
+			rootedAt, rootName = path.Dir(dest), path.Base(dest)
+		}
+
+		dst, openErr := openDeclaredRoot(rootedAt)
 		if openErr != nil {
 			return wrote, openErr
 		}
 
-		didWrite, copyErr := restoreInto(src, within, dst, &total, &entries, limits)
+		didWrite, copyErr := restoreInto(src, within, dst, rootName, &total, &entries, limits)
 		dst.Close()
 		if didWrite {
 			wrote = true
@@ -234,7 +247,10 @@ func openDeclaredRoot(dest string) (*os.Root, error) {
 }
 
 // restoreInto copies one declared path's subtree out of the entry and into dst.
-func restoreInto(src *os.Root, within string, dst *os.Root, total *int64, entries *int, limits CopyLimits) (bool, error) {
+// rootName is empty when dst is rooted at the declared path itself, and is the name to
+// write it under when the declared path is a single file or link and dst is therefore
+// rooted at its parent.
+func restoreInto(src *os.Root, within string, dst *os.Root, rootName string, total *int64, entries *int, limits CopyLimits) (bool, error) {
 	var wrote bool
 
 	err := fs.WalkDir(src.FS(), within, func(name string, d fs.DirEntry, err error) error {
@@ -245,7 +261,14 @@ func restoreInto(src *os.Root, within string, dst *os.Root, total *int64, entrie
 		// Relative to the declared path, which is what dst is rooted at.
 		rel := strings.TrimPrefix(strings.TrimPrefix(name, within), "/")
 		if rel == "" {
-			return nil
+			if rootName == "" {
+				// The declared directory itself: dst is already rooted at it, so
+				// there is nothing to create.
+				return nil
+			}
+			// A single file or link declared as the path: dst is its parent, and this
+			// is the one entry to write there.
+			rel = rootName
 		}
 
 		// Directories are counted, and before they are made, exactly as the save counts
@@ -363,7 +386,13 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 		// reads the presence of that directory as the path being carried: it reports an
 		// exact hit, writes nothing, and the save stage then skips replacing an entry
 		// that holds nothing for that path.
-		prefix := sync.OnceValue(func() error { return mkdirAllShared(dst, base) })
+		//
+		// Up to the declared path's parent, not the path itself. A workflow may cache a
+		// single file - validateCache allows it and clearCachePaths handles it - and
+		// making base a directory then meant the copy of that file onto it failed with
+		// EISDIR, so every such cache fell back to the object store. The branches below
+		// create base themselves, as whatever the source actually is.
+		prefix := sync.OnceValue(func() error { return mkdirAllShared(dst, filepath.Dir(base)) })
 
 		// filepath.Walk lstats, so a symlink arrives as a symlink rather than as
 		// whatever it points at - which is what lets the entry carry the link itself.

@@ -613,3 +613,28 @@ func TestEscapesRootLooksAtComponentsNotPrefixes(t *testing.T) {
 	assert.False(t, escapesRoot("deps"))
 	assert.False(t, escapesRoot("a"+sep+"b"))
 }
+
+// A workflow may cache a single file rather than a directory - validateCache allows it
+// and clearCachePaths handles one - and both halves have to agree about that.
+//
+// The save made the mirrored path a directory before the walk reached the file, so the
+// copy onto it failed with EISDIR and every such cache fell back to the object store.
+// The restore rooted its writes at the declared path, which meant making a directory
+// where the file belongs, and then skipped its own starting point - so even a correctly
+// saved single-file entry restored nothing.
+func TestSaveAndRestoreRoundTripASingleFile(t *testing.T) {
+	dir := posixDir(t)
+	declared := dir + "/lockfile.json"
+	write(t, filepath.FromSlash(declared), "{}")
+
+	entry := entryFrom(t, []string{declared})
+	require.NoError(t, os.Remove(filepath.FromSlash(declared)))
+
+	wrote, err := RestoreTree(entry, []string{declared}, CopyLimits{})
+
+	require.NoError(t, err)
+	assert.True(t, wrote)
+	body, readErr := os.ReadFile(filepath.FromSlash(declared))
+	require.NoError(t, readErr, "the file has to come back as a file")
+	assert.Equal(t, "{}", string(body))
+}
