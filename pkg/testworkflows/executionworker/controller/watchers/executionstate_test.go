@@ -220,13 +220,31 @@ func TestExecutionState_TerminationCause(t *testing.T) {
 		return &corev1.Event{Type: corev1.EventTypeWarning, Reason: reason, Message: message}
 	}
 
-	deadlineJob := &batchv1.Job{
-		Spec: batchv1.JobSpec{ActiveDeadlineSeconds: common.Ptr(int64(60))},
-		Status: batchv1.JobStatus{Conditions: []batchv1.JobCondition{{
-			Type:   batchv1.JobFailed,
-			Status: corev1.ConditionTrue,
-			Reason: "DeadlineExceeded",
-		}}},
+	deadlineJob := jobWithCondition(batchv1.JobFailed, ReasonDeadlineExceeded)
+	// The job controller deletes the pod for the deadline before it sets a condition, so these jobs
+	// have a start time and a deadline but no condition yet.
+	started := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+	startedJob := func(deadline *int64) *batchv1.Job {
+		return &batchv1.Job{
+			Spec:   batchv1.JobSpec{ActiveDeadlineSeconds: deadline},
+			Status: batchv1.JobStatus{StartTime: common.Ptr(metav1.NewTime(started))},
+		}
+	}
+	podDeleted := func(after time.Duration) []*corev1.Event {
+		return []*corev1.Event{{Reason: "SuccessfulDelete", Message: "Deleted pod: a-b", LastTimestamp: metav1.NewTime(started.Add(after))}}
+	}
+	gracefullyDeletedPod := func(requestedAfter time.Duration) *corev1.Pod {
+		return &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				DeletionTimestamp:          common.Ptr(metav1.NewTime(started.Add(requestedAfter + 30*time.Second))),
+				DeletionGracePeriodSeconds: common.Ptr(int64(30)),
+			},
+			Status: corev1.PodStatus{Phase: corev1.PodRunning},
+		}
+	}
+	deletedPod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: common.Ptr(metav1.NewTime(time.Now()))},
+		Status:     corev1.PodStatus{Phase: corev1.PodRunning},
 	}
 
 	tests := []struct {
@@ -351,6 +369,48 @@ func TestExecutionState_TerminationCause(t *testing.T) {
 			job:  deadlineJob,
 			pod:  stepContainer("Error"),
 			want: &testkube.Cause{Reason: "deadline-exceeded", Message: "Job timed out after 60 seconds"},
+		},
+		{
+			name: "reports the deadline when the job is about to fail and its pod is deleted",
+			job:  jobWithCondition(batchv1.JobFailureTarget, ReasonDeadlineExceeded),
+			pod:  deletedPod,
+			want: &testkube.Cause{Reason: "deadline-exceeded", Message: "Job timed out after 60 seconds"},
+		},
+		{
+			name: "reports nothing when the job is about to fail for another reason",
+			job:  jobWithCondition(batchv1.JobFailureTarget, "BackoffLimitExceeded"),
+			pod:  deletedPod,
+			want: nil,
+		},
+		{
+			name:      "reports the deadline when the job deleted its pod at the end of the deadline",
+			job:       startedJob(common.Ptr(int64(30))),
+			jobEvents: podDeleted(30 * time.Second),
+			want:      &testkube.Cause{Reason: "deadline-exceeded", Message: "Job timed out after 30 seconds"},
+		},
+		{
+			name:      "reports nothing when the job deleted its pod before the deadline",
+			job:       startedJob(common.Ptr(int64(30))),
+			jobEvents: podDeleted(29 * time.Second),
+			want:      nil,
+		},
+		{
+			name:      "reports nothing when the job has no deadline",
+			job:       startedJob(nil),
+			jobEvents: podDeleted(time.Hour),
+			want:      nil,
+		},
+		{
+			name: "reports the deadline from the request time of a graceful deletion of the pod",
+			job:  startedJob(common.Ptr(int64(30))),
+			pod:  gracefullyDeletedPod(30 * time.Second),
+			want: &testkube.Cause{Reason: "deadline-exceeded", Message: "Job timed out after 30 seconds"},
+		},
+		{
+			name: "reports nothing when the graceful deletion of the pod started before the deadline",
+			job:  startedJob(common.Ptr(int64(30))),
+			pod:  gracefullyDeletedPod(10 * time.Second),
+			want: nil,
 		},
 	}
 
