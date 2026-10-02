@@ -90,7 +90,8 @@ func TestServiceFailureDetection_Integration(t *testing.T) {
 	}
 
 	err := executeServices(t, services, "test-group")
-	assert.EqualError(t, err, "1 services failed to start: failing-service: service failed")
+	// The cause after the name comes from the status details of the service, which the classifier writes.
+	assert.ErrorContains(t, err, "1 of 1 services did not start. failing-service: ")
 }
 
 func executeServices(t *testing.T, services map[string]testworkflowsv1.ServiceSpec, groupRef string) error {

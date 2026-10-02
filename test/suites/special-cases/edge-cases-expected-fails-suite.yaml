@@ -107,7 +107,7 @@ spec:
     shell: |
       msg={{ shellquote(execution("private-repo-auth").errorMessage + " " + tojson(execution("private-repo-auth").stepErrors)) }}
       echo "$msg"
-      echo "$msg" | grep -q "error cloning repository" || { echo "unexpected message: $msg"; exit 1; }
+      echo "$msg" | grep -q "Git cannot authenticate to" || { echo "unexpected message: $msg"; exit 1; }
       statusType={{ shellquote(execution("private-repo-auth").statusType) }}
       statusReason={{ shellquote(execution("private-repo-auth").statusReason) }}
       [ "$statusType" = "init-failure" ] || { echo "unexpected status type: $statusType"; exit 1; }
@@ -188,7 +188,7 @@ spec:
     shell: |
       msg={{ shellquote(execution("service-readiness-probe").errorMessage + " " + tojson(execution("service-readiness-probe").stepErrors)) }}
       echo "$msg"
-      echo "$msg" | grep -q "services failed to start: broken-service" || { echo "unexpected message: $msg"; exit 1; }
+      echo "$msg" | grep -q "services did not start. broken-service: the container did not reach readiness" || { echo "unexpected message: $msg"; exit 1; }
       statusType={{ shellquote(execution("service-readiness-probe").statusType) }}
       statusReason={{ shellquote(execution("service-readiness-probe").statusReason) }}
       [ "$statusType" = "execution-failure" ] || { echo "unexpected status type: $statusType"; exit 1; }
@@ -213,6 +213,17 @@ spec:
     execute:
       workflows:
       - name: expected-fail-parallel-oomkilled
+        as: parallel-oomkilled
+  - name: assert-parallel-oomkilled-cause
+    shell: |
+      # The parallel step takes the cause of the worker that the kernel stopped for its memory.
+      msg={{ shellquote(execution("parallel-oomkilled").errorMessage + " " + tojson(execution("parallel-oomkilled").stepErrors)) }}
+      echo "$msg"
+      echo "$msg" | grep -q "1 of 3 workers failed. Worker 3: " || { echo "unexpected message: $msg"; exit 1; }
+      statusType={{ shellquote(execution("parallel-oomkilled").statusType) }}
+      statusReason={{ shellquote(execution("parallel-oomkilled").statusReason) }}
+      [ "$statusType" = "execution-failure" ] || { echo "unexpected status type: $statusType"; exit 1; }
+      case "$statusReason" in oom-killed|process-killed) ;; *) echo "unexpected status reason: $statusReason"; exit 1 ;; esac
   - name: expected-fail-parallel-step-fail-fast
     negative: true
     execute:

@@ -94,6 +94,8 @@ type ServiceExecutionResult struct {
 	Ready   bool
 	Failed  bool
 	Error   error
+	// StatusDetails is the cause of a service that finished and did not pass, when the result has one.
+	StatusDetails *testkube.TestWorkflowStatusDetails
 }
 
 const (
@@ -221,17 +223,18 @@ func (e *ServicesExecutor) Execute(ctx context.Context, args []string) error {
 		return nil
 	}
 	fmt.Printf("Failed to start %d out of %d expected workers.\n", failed, len(instances))
-	return &ServicesNotStartedError{Failed: failed, FirstFailure: firstFailure}
+	return &ServicesNotStartedError{Failed: failed, Total: int64(len(instances)), FirstFailure: firstFailure}
 }
 
 // ServicesNotStartedError is the failure of services that did not start or did not become ready.
 type ServicesNotStartedError struct {
 	Failed       int64
+	Total        int64
 	FirstFailure string
 }
 
 func (e *ServicesNotStartedError) Error() string {
-	return fmt.Sprintf("%d services failed to start: %s", e.Failed, e.FirstFailure)
+	return fmt.Sprintf("%d of %d services did not start. %s.", e.Failed, e.Total, strings.TrimRight(e.FirstFailure, ". "))
 }
 
 // servicesFailureReason returns the code for a failure of the services step. Only services that did
@@ -466,7 +469,7 @@ func (e *ServicesExecutor) runServices(
 		}
 		mu.Lock()
 		if firstFailure == "" {
-			firstFailure = fmt.Sprintf("%s: %s", instance.Name, runner.failure)
+			firstFailure = fmt.Sprintf("%s: %s", instanceName(instance.Name, instance.Index, svcParams[instance.Name].Count), runner.failure)
 		}
 		mu.Unlock()
 		return false
@@ -474,6 +477,15 @@ func (e *ServicesExecutor) runServices(
 
 	failed := spawn.ExecuteParallel(ctx, run, instances, namespaces, int64(len(instances)))
 	return failed, firstFailure
+}
+
+// instanceName names one instance of a service the way the log does. The number shows only when
+// the service has more than one instance, because one instance needs no number.
+func instanceName(name string, index, count int64) string {
+	if count <= 1 {
+		return name
+	}
+	return fmt.Sprintf("%s/%d", name, index+1)
 }
 
 // reportFinalState reports the final state of all services.
@@ -638,6 +650,7 @@ func (r *ServiceRunner) checkForImmediateFailure(
 		if v.Result != nil && v.Result.IsFinished() {
 			if !v.Result.IsPassed() {
 				execResult.Failed = true
+				execResult.StatusDetails = v.Result.StatusDetails
 				r.log("service failed immediately after starting")
 			}
 			break
@@ -691,6 +704,7 @@ func (r *ServiceRunner) processNotifications(
 		if lastWorkflowResult != nil && lastWorkflowResult.IsFinished() {
 			if !lastWorkflowResult.IsPassed() {
 				execResult.Failed = true
+				execResult.StatusDetails = lastWorkflowResult.StatusDetails
 				r.log("service execution failed")
 			}
 			break
@@ -728,19 +742,19 @@ func (r *ServiceRunner) evaluateResult(execResult ServiceExecutionResult) bool {
 		// Service execution finished with non-PASSED status
 		r.info.Status = ServiceStatusFailed
 		r.log("service failed")
-		r.failure = "service failed"
+		r.failure = serviceFailure(execResult.StatusDetails)
 		success = false
 	} else if !execResult.Started {
 		// Container never started
 		r.info.Status = ServiceStatusFailed
 		r.log("container failed to start")
-		r.failure = "container failed to start"
+		r.failure = "the container did not start"
 		success = false
 	} else if !execResult.Ready && r.instance.ReadinessProbe != nil {
 		// Container started but never became ready (only relevant for services with readiness probes)
 		r.info.Status = ServiceStatusFailed
 		r.log("container did not reach readiness")
-		r.failure = "container did not reach readiness"
+		r.failure = "the container did not reach readiness"
 		success = false
 	} else {
 		// All checks passed - service is ready
@@ -750,4 +764,13 @@ func (r *ServiceRunner) evaluateResult(execResult ServiceExecutionResult) bool {
 
 	instructions.PrintOutput(r.deps.Ref, "service", r.info)
 	return success
+}
+
+// serviceFailure returns the cause of a service that finished and did not pass. The cause of the
+// service is more useful than the fact that it failed.
+func serviceFailure(details *testkube.TestWorkflowStatusDetails) string {
+	if cause := statusCause(details); cause != "" {
+		return cause
+	}
+	return "the service failed"
 }

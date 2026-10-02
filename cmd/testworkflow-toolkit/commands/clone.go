@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"net/url"
@@ -64,13 +65,54 @@ var gitAuthErrors = []string{
 // cloneReason returns the code for a clone failure. A credential that git refuses is a different
 // problem from a repository or a revision that does not exist, and the user fixes each one apart.
 func cloneReason(err error) testkube.StopReason {
-	text := err.Error()
-	for _, authError := range gitAuthErrors {
-		if strings.Contains(text, authError) {
-			return testkube.StopReasonGitAuthFailed
-		}
+	if isGitAuthError(err) {
+		return testkube.StopReasonGitAuthFailed
 	}
 	return testkube.StopReasonGitCloneFailed
+}
+
+func isGitAuthError(err error) bool {
+	var cmdErr *CommandError
+	if errors.As(err, &cmdErr) && cmdErr.AuthLine != "" {
+		return true
+	}
+	return hasGitAuthText(err.Error())
+}
+
+// hasGitAuthText reports whether the text holds one of the texts of a refused credential.
+func hasGitAuthText(text string) bool {
+	for _, authError := range gitAuthErrors {
+		if strings.Contains(text, authError) {
+			return true
+		}
+	}
+	return false
+}
+
+// cloneMessage returns the step message for a clone failure. The diagnostic line of git names the
+// cause, so the message drops the steps of the clone and the exit status. The log keeps them.
+func cloneMessage(rawURI string, err error) string {
+	var cmdErr *CommandError
+	if !errors.As(err, &cmdErr) {
+		return err.Error()
+	}
+	if !isGitAuthError(err) {
+		return cmdErr.Line
+	}
+	host := "the repository"
+	if uri, uriErr := normalizeGitURI(rawURI); uriErr == nil && uri.Hostname() != "" {
+		host = uri.Hostname()
+	}
+	line := cmdErr.Line
+	if cmdErr.AuthLine != "" {
+		line = cmdErr.AuthLine
+	}
+	cause := strings.TrimRight(strings.TrimPrefix(line, "fatal: "), ". ")
+	// SSH starts its line with the user and the host, and the message already names the host.
+	if login, rest, ok := strings.Cut(cause, ": "); ok && strings.Contains(login, "@") && !strings.Contains(login, " ") {
+		cause = rest
+	}
+	return fmt.Sprintf("Git cannot authenticate to %s: %s.", host, cause)
 }
 
 // NewCloneCmd creates a new clone command
@@ -83,7 +125,8 @@ func NewCloneCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := RunClone(cmd.Context(), args[0], args[1], opts); err != nil {
-				common.FailWithReason(cloneReason(err), err)
+				fmt.Println(err.Error())
+				common.FailWithReason(cloneReason(err), errors.New(cloneMessage(args[0], err)))
 			}
 		},
 	}

@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -585,6 +586,136 @@ func TestFailFastSpecParsing(t *testing.T) {
 			result, err := parser.ParseSpec(specContent, tc.base64)
 			require.NoError(t, err)
 			assert.Equal(t, tc.expected, result.FailFast)
+		})
+	}
+}
+
+func TestWorkersFailedError(t *testing.T) {
+	tests := []struct {
+		name       string
+		err        *WorkersFailedError
+		want       string
+		wantReason testkube.StopReason
+	}{
+		{
+			name: "a worker killed for its memory names its cause and gives its code",
+			err: &WorkersFailedError{Failed: 1, Total: 4, First: &WorkerFailure{
+				Index: 1, Reason: testkube.StopReasonOOMKilled, Message: "the container exceeded its memory limit",
+			}},
+			want:       "1 of 4 workers failed. Worker 2: the container exceeded its memory limit.",
+			wantReason: testkube.StopReasonOOMKilled,
+		},
+		{
+			name: "a code without a type gives no code",
+			err: &WorkersFailedError{Failed: 2, Total: 2, First: &WorkerFailure{
+				Index: 0, Reason: "not-a-code", Message: "the worker failed",
+			}},
+			want: "2 of 2 workers failed. Worker 1: the worker failed.",
+		},
+		{
+			name: "no worker with a cause names only the count",
+			err:  &WorkersFailedError{Failed: 3, Total: 5},
+			want: "3 of 5 workers failed.",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.err.Error())
+			assert.Equal(t, tt.wantReason, tt.err.Reason())
+		})
+	}
+}
+
+func TestWorkerFailure(t *testing.T) {
+	tests := []struct {
+		name   string
+		result *testkube.TestWorkflowResult
+		err    error
+		want   WorkerFailure
+	}{
+		{
+			name: "the message of the status details wins",
+			result: &testkube.TestWorkflowResult{StatusDetails: &testkube.TestWorkflowStatusDetails{
+				Reason: string(testkube.StopReasonProcessKilled), Message: "the test process was killed, possibly by an out-of-memory kill (signal: killed).",
+			}},
+			want: WorkerFailure{Index: 2, Reason: testkube.StopReasonProcessKilled, Message: "the test process was killed, possibly by an out-of-memory kill (signal: killed)"},
+		},
+		{
+			name: "a code without a message gives the words of the code",
+			result: &testkube.TestWorkflowResult{StatusDetails: &testkube.TestWorkflowStatusDetails{
+				Reason: string(testkube.StopReasonOOMKilled),
+			}},
+			want: WorkerFailure{Index: 2, Reason: testkube.StopReasonOOMKilled, Message: "the container exceeded its memory limit"},
+		},
+		{
+			name: "a worker without a result names its error",
+			err:  errors.New("creating the job: forbidden"),
+			want: WorkerFailure{Index: 2, Message: "creating the job: forbidden"},
+		},
+		{
+			name:   "a worker without a cause gets the fallback words",
+			result: &testkube.TestWorkflowResult{},
+			want:   WorkerFailure{Index: 2, Message: "the worker failed"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, &tt.want, workerFailure(2, tt.result, tt.err))
+		})
+	}
+}
+
+func TestFirstWorkerFailure(t *testing.T) {
+	oom := &testkube.TestWorkflowResult{StatusDetails: &testkube.TestWorkflowStatusDetails{Reason: string(testkube.StopReasonOOMKilled), Message: "OOMKilled"}}
+	failed := &testkube.TestWorkflowResult{StatusDetails: &testkube.TestWorkflowStatusDetails{Reason: string(testkube.StopReasonExitCode), Message: "The step \"Run\" exited with code 1."}}
+	type report struct {
+		index   int64
+		result  *testkube.TestWorkflowResult
+		err     error
+		stopped bool
+	}
+	tests := []struct {
+		name    string
+		reports []report
+		want    *WorkerFailure
+	}{
+		{
+			name: "the worker that reports first wins over a later worker",
+			reports: []report{
+				{index: 0, result: oom},
+				{index: 2, result: failed},
+			},
+			want: &WorkerFailure{Index: 0, Reason: testkube.StopReasonOOMKilled, Message: "OOMKilled"},
+		},
+		{
+			name: "a worker that another worker stopped is not a cause",
+			reports: []report{
+				{index: 1, result: failed, stopped: true},
+				{index: 3, result: oom},
+			},
+			want: &WorkerFailure{Index: 3, Reason: testkube.StopReasonOOMKilled, Message: "OOMKilled"},
+		},
+		{
+			name: "a worker that ended with an error and no result names the error",
+			reports: []report{
+				{index: 0, err: errors.New("stream closed")},
+			},
+			want: &WorkerFailure{Index: 0, Message: "stream closed"},
+		},
+		{
+			name: "no failure when every worker was stopped",
+			reports: []report{
+				{index: 0, result: failed, stopped: true},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			failures := &firstWorkerFailure{}
+			for _, r := range tt.reports {
+				failures.add(r.index, r.result, r.err, r.stopped)
+			}
+			assert.Equal(t, tt.want, failures.get())
 		})
 	}
 }

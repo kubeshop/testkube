@@ -15,6 +15,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -141,7 +142,14 @@ func NewParallelCmd() *cobra.Command {
 
 			err = RunParallel(cmd.Context(), args[0], cfg, base64Encoded)
 			if err != nil {
-				toolkitcommon.ExitOnError("parallel execution", err)
+				// A worker that failed gives its code to the step, so an infrastructure failure of
+				// the worker is not read as a failure of the test.
+				var workersErr *WorkersFailedError
+				if errors.As(err, &workersErr) && workersErr.Reason() != "" {
+					toolkitcommon.FailWithReason(workersErr.Reason(), err)
+				} else {
+					toolkitcommon.Fail(err)
+				}
 			}
 			os.Exit(0)
 		},
@@ -155,8 +163,102 @@ func NewParallelCmd() *cobra.Command {
 // ParallelExecutionResult contains the results of parallel execution.
 // Used to determine overall success/failure of the parallel command.
 type ParallelExecutionResult struct {
-	TotalWorkers  int64 // Total number of workers executed
-	FailedWorkers int64 // Number of workers that failed
+	TotalWorkers  int64          // Total number of workers executed
+	FailedWorkers int64          // Number of workers that failed
+	FirstFailure  *WorkerFailure // The worker that failed first, nil when no worker failed
+}
+
+// WorkerFailure is the cause of a worker that did not pass.
+type WorkerFailure struct {
+	Index   int64
+	Reason  testkube.StopReason
+	Message string
+}
+
+// WorkersFailedError is the failure of a parallel step. It names the worker that failed first,
+// because the count alone does not tell the user what to fix.
+type WorkersFailedError struct {
+	Failed int64
+	Total  int64
+	First  *WorkerFailure
+}
+
+func (e *WorkersFailedError) Error() string {
+	text := fmt.Sprintf("%d of %d workers failed.", e.Failed, e.Total)
+	if e.First != nil {
+		text += fmt.Sprintf(" Worker %d: %s.", e.First.Index+1, e.First.Message)
+	}
+	return text
+}
+
+// Reason returns the code of the worker that failed first. It is empty when the code has no type,
+// so the step does not report a code that the classifier cannot read.
+func (e *WorkersFailedError) Reason() testkube.StopReason {
+	if e.First == nil || testkube.StatusDetailsTypeOf("", string(e.First.Reason)) == testkube.StatusDetailsTypeUnknown {
+		return ""
+	}
+	return e.First.Reason
+}
+
+// firstWorkerFailure keeps the cause of the first worker that failed on its own.
+type firstWorkerFailure struct {
+	mu      sync.Mutex
+	failure *WorkerFailure
+}
+
+// add keeps the cause of the worker when no other worker failed before it. A worker that another
+// worker stopped is not a cause, so stopped drops it.
+func (f *firstWorkerFailure) add(index int64, result *testkube.TestWorkflowResult, err error, stopped bool) {
+	if stopped {
+		return
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.failure == nil {
+		f.failure = workerFailure(index, result, err)
+	}
+}
+
+func (f *firstWorkerFailure) get() *WorkerFailure {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.failure
+}
+
+// workerFailure returns the cause of a worker from its final result. A worker with no result names
+// only the error.
+func workerFailure(index int64, result *testkube.TestWorkflowResult, err error) *WorkerFailure {
+	failure := &WorkerFailure{Index: index}
+	if result != nil && result.StatusDetails != nil {
+		failure.Reason = testkube.StopReason(result.StatusDetails.Reason)
+		failure.Message = statusCause(result.StatusDetails)
+	}
+	if failure.Message == "" && err != nil {
+		failure.Message = trimCause(err.Error())
+	}
+	if failure.Message == "" {
+		failure.Message = "the worker failed"
+	}
+	return failure
+}
+
+// statusCause returns the cause from the status details of an execution that a step started: the
+// message, else the words of the code. It is empty when the details hold no cause.
+func statusCause(details *testkube.TestWorkflowStatusDetails) string {
+	if details == nil {
+		return ""
+	}
+	cause := details.Message
+	if cause == "" && details.Reason != "" {
+		cause = testkube.Cause{Reason: details.Reason}.String()
+	}
+	return trimCause(cause)
+}
+
+// trimCause removes the spaces and the final period of a cause, because the step message puts the
+// cause inside its own sentence.
+func trimCause(cause string) string {
+	return strings.TrimRight(strings.TrimSpace(cause), ". ")
 }
 
 // RunParallel executes parallel workers and returns an error if any failures occur.
@@ -225,7 +327,7 @@ func RunParallelWithOptions(ctx context.Context, specContent string, cfg *config
 		fmt.Printf("Successfully finished %d workers.\n", result.TotalWorkers)
 	} else {
 		fmt.Printf("Failed to finish %d out of %d expected workers.\n", result.FailedWorkers, result.TotalWorkers)
-		return fmt.Errorf("%d workers failed", result.FailedWorkers)
+		return &WorkersFailedError{Failed: result.FailedWorkers, Total: result.TotalWorkers, First: result.FirstFailure}
 	}
 
 	return nil
@@ -469,7 +571,7 @@ func NewWorkerExecutor(storage artifacts.InternalArtifactStorage, registry Worke
 // 5. Handles cleanup (logs, resources)
 // Returns true if worker passed, false if failed, and error for execution issues.
 // Uses non-blocking channel operations to prevent deadlocks.
-func (e *WorkerExecutor) ExecuteWorker(ctx context.Context, worker WorkerSpec, paramsSpec *commontcl.ParamsSpec, onResult ...func(passed bool)) (bool, error) {
+func (e *WorkerExecutor) ExecuteWorker(ctx context.Context, worker WorkerSpec, paramsSpec *commontcl.ParamsSpec, onResult ...func(passed bool, result *testkube.TestWorkflowResult, err error)) (bool, error) {
 	log := spawn.ParallelCreateLogger("worker", worker.Description, worker.Index, paramsSpec.Count)
 
 	cfg := *e.cfg.Internal()
@@ -529,7 +631,7 @@ func (e *WorkerExecutor) ExecuteWorker(ctx context.Context, worker WorkerSpec, p
 // Sends non-blocking updates to prevent channel congestion.
 // Ensures cleanup happens via defer even if monitoring fails.
 // Returns true if worker passed, false otherwise.
-func (e *WorkerExecutor) monitorWorkerExecution(ctx context.Context, worker WorkerSpec, result executionworkertypes.ExecuteResult, cfg testworkflowconfig.InternalConfig, machine expressions.Machine, paramsSpec *commontcl.ParamsSpec, log func(...string), onResult ...func(passed bool)) (bool, error) {
+func (e *WorkerExecutor) monitorWorkerExecution(ctx context.Context, worker WorkerSpec, result executionworkertypes.ExecuteResult, cfg testworkflowconfig.InternalConfig, machine expressions.Machine, paramsSpec *commontcl.ParamsSpec, log func(...string), onResult ...func(passed bool, result *testkube.TestWorkflowResult, err error)) (bool, error) {
 	var lastResult testkube.TestWorkflowResult
 
 	defer func() {
@@ -560,7 +662,7 @@ func (e *WorkerExecutor) monitorWorkerExecution(ctx context.Context, worker Work
 	// Notify caller of pass/fail BEFORE cleanup runs (which may take 25+ seconds).
 	// This allows failFast to cancel other workers promptly.
 	for _, cb := range onResult {
-		cb(passed)
+		cb(passed, lastResult.Clone(), err)
 	}
 	return passed, err
 }
@@ -859,6 +961,8 @@ func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params
 	fullBaseMachine := spawn.ParallelCreateBaseMachine(cfg, stateMachine, data.ExecutionDataMachine(), credentialMachine)
 	executor := NewWorkerExecutor(storage, registry, updates, fullBaseMachine, cfg)
 
+	failures := &firstWorkerFailure{}
+
 	// ExecuteParallel callback - matches worker by index and namespace
 	// Returns true if worker passed, false if failed
 	run := func(index int64, namespace string, spec *testworkflowsv1.TestWorkflowSpec) bool {
@@ -871,15 +975,27 @@ func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params
 			}
 		}
 
-		passed, err := executor.ExecuteWorker(execCtx, worker, params, func(workerPassed bool) {
+		// The callback runs when the worker ends, before the cleanup of the worker. The shared context is
+		// read before this worker cancels it, so a canceled context means that another worker stopped
+		// this one. A worker that ended with an error before a result calls no callback.
+		reported := false
+		passed, err := executor.ExecuteWorker(execCtx, worker, params, func(workerPassed bool, result *testkube.TestWorkflowResult, workerErr error) {
+			reported = true
+			if workerPassed {
+				return
+			}
+			failures.add(index, result, workerErr, execCtx.Err() != nil)
 			// failFast callback: cancel context immediately when a worker fails,
 			// BEFORE cleanup runs, so other workers see the cancellation promptly
-			if !workerPassed && failFast {
+			if failFast {
 				cancel()
 			}
 		})
 		if err != nil {
 			fmt.Printf("%d: error: %v\n", index, err)
+		}
+		if !passed && !reported {
+			failures.add(index, nil, err, execCtx.Err() != nil)
 		}
 		return passed
 	}
@@ -902,6 +1018,7 @@ func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params
 	return &ParallelExecutionResult{
 		TotalWorkers:  params.Count,
 		FailedWorkers: failed,
+		FirstFailure:  failures.get(),
 	}, nil
 }
 
