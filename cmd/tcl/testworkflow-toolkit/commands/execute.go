@@ -157,15 +157,17 @@ type operationResult struct {
 }
 
 // failureSummary returns one line that names the failed executions and then the other failures.
-// It returns an empty string when there is no failure.
+// It returns an empty string when there is no failure. One execution gets a sentence about itself,
+// because a count of one only adds words.
 func failureSummary(results []operationResult) string {
 	total := 0
-	var failed, others []string
+	var failed []executionOutcome
+	var others []string
 	for _, r := range results {
 		for _, o := range r.outcomes {
 			total++
 			if o.err != nil {
-				failed = append(failed, fmt.Sprintf("%s (%s)", o.name, o.err.Error()))
+				failed = append(failed, o)
 			}
 		}
 		if r.err != nil {
@@ -173,11 +175,79 @@ func failureSummary(results []operationResult) string {
 		}
 	}
 
+	single := total == 1 && len(failed) == 1
 	var parts []string
-	if len(failed) > 0 {
-		parts = append(parts, fmt.Sprintf("%d of %d executions failed: %s", len(failed), total, strings.Join(failed, ", ")))
+	switch {
+	case single:
+		parts = append(parts, singleFailure(failed[0]))
+	case len(failed) > 0:
+		names := make([]string, len(failed))
+		for i, o := range failed {
+			names[i] = fmt.Sprintf("%s (%s)", o.name, o.err.Error())
+		}
+		parts = append(parts, fmt.Sprintf("%d of %d executions failed: %s", len(failed), total, strings.Join(names, ", ")))
 	}
-	return strings.Join(append(parts, others...), "; ")
+	summary := strings.Join(append(parts, others...), "; ")
+	if single && len(others) == 0 {
+		return endSentence(summary)
+	}
+	return summary
+}
+
+// failureReason returns the code of the failures of the step. The code says that a workflow this
+// step ran did not pass, which is not a failure of this step, so it applies only when an execution
+// ran. A workflow that the step could not run gives no code.
+func failureReason(results []operationResult) testkube.StopReason {
+	for _, r := range results {
+		for _, o := range r.outcomes {
+			var child *childError
+			if errors.As(o.err, &child) {
+				return testkube.StopReasonChildWorkflowFailed
+			}
+		}
+	}
+	return ""
+}
+
+// executeSubject names the execute step in an error of its definition.
+const executeSubject = "The execute step"
+
+// executeEntrySubject names one entry of the execute step in an error of its definition. An entry
+// that selects workflows by labels has no name.
+func executeEntrySubject(name string) string {
+	if name == "" {
+		return executeSubject
+	}
+	return fmt.Sprintf("The entry of the workflow %q", name)
+}
+
+// singleFailure returns the sentence for the one execution of the step that did not pass. An entry
+// that the step could not schedule names the workflow, because no execution exists.
+func singleFailure(o executionOutcome) string {
+	var child *childError
+	if errors.As(o.err, &child) {
+		return fmt.Sprintf("The execution %s %s", o.name, child.Error())
+	}
+	return fmt.Sprintf("The workflow %s could not run: %s", o.name, o.err.Error())
+}
+
+// childError is an execution that the step ran and that did not pass: its status, then the cause
+// from its status details. The status alone does not tell the user what to fix.
+type childError struct {
+	status testkube.TestWorkflowStatus
+	cause  string
+}
+
+func (e *childError) Error() string {
+	if e.cause == "" {
+		return string(e.status)
+	}
+	return fmt.Sprintf("%s: %s", e.status, e.cause)
+}
+
+// childFailure returns the error for an execution that did not pass.
+func childFailure(status testkube.TestWorkflowStatus, details *testkube.TestWorkflowStatusDetails) error {
+	return &childError{status: status, cause: statusCause(details)}
 }
 
 func buildWorkflowExecution(req workflowExecutionRequest) func() operationResult {
@@ -338,7 +408,7 @@ func buildWorkflowExecution(req workflowExecutionRequest) func() operationResult
 				status := *exec.Result.Status
 				color := ui.Green
 				if status != testkube.PASSED_TestWorkflowStatus {
-					outcomes[index].err = errors.New(string(status))
+					outcomes[index].err = childFailure(status, exec.Result.StatusDetails)
 					color = ui.Red
 				}
 
@@ -503,7 +573,7 @@ func NewExecuteCmd() *cobra.Command {
 				var executeData ExecuteData
 				err := expressionstcl.DecodeBase64JSON(args[0], &executeData)
 				if err != nil {
-					toolkitcommon.Fail(errors.Wrap(err, "parsing execute data"))
+					toolkitcommon.Fail(&DefinitionError{Subject: executeSubject, Err: err})
 				}
 
 				workflows = make([]string, len(executeData.Workflows))
@@ -541,11 +611,11 @@ func NewExecuteCmd() *cobra.Command {
 				var w testworkflowsv1.StepExecuteWorkflow
 				err := json.Unmarshal([]byte(s), &w)
 				if err != nil {
-					toolkitcommon.Fail(errors.Wrap(err, "unmarshal workflow definition"))
+					toolkitcommon.Fail(&DefinitionError{Subject: executeSubject, Err: errors.Wrap(err, "unmarshal workflow definition")})
 				}
 
 				if w.Name == "" && w.Selector == nil {
-					toolkitcommon.Fail(errors.New("either workflow name or selector should be specified"))
+					toolkitcommon.Fail(&DefinitionError{Subject: executeSubject, Err: errors.New("either workflow name or selector should be specified")})
 				}
 
 				var testWorkflowNames []string
@@ -555,7 +625,7 @@ func NewExecuteCmd() *cobra.Command {
 
 				if w.Selector != nil {
 					if len(w.Selector.MatchExpressions) > 0 {
-						toolkitcommon.Fail(errors.New("error creating selector from test workflow selector: matchExpressions is not supported"))
+						toolkitcommon.Fail(&DefinitionError{Subject: executeEntrySubject(w.Name), Err: errors.New("the selector of the workflows does not support matchExpressions")})
 					}
 					testWorkflowsList, err := execute.ListTestWorkflows(w.Selector.MatchLabels)
 					if err != nil {
@@ -575,24 +645,24 @@ func NewExecuteCmd() *cobra.Command {
 				}
 
 				if len((testWorkflowNames)) == 0 {
-					toolkitcommon.Fail(errors.New("no test workflows to run"))
+					toolkitcommon.Fail(&DefinitionError{Subject: executeEntrySubject(w.Name), Err: errors.New("no test workflows to run")})
 				}
 
 				// Resolve the params
 				params, err := commontcl.GetParamsSpec(w.Matrix, w.Shards, w.Count, w.MaxCount, baseMachine)
 				if err != nil {
-					toolkitcommon.Fail(errors.Wrap(err, "matrix and sharding"))
+					toolkitcommon.Fail(&DefinitionError{Subject: executeEntrySubject(w.Name), Err: err})
 				}
 
 				// Resolve the reference this entry will be addressed by. It cannot depend
 				// on any sibling execution, so it is safe to compute it up-front.
 				alias, err := expressions.EvalTemplate(w.As, baseMachine)
 				if err != nil {
-					toolkitcommon.Fail(errors.Wrapf(err, "'%s' workflow: computing the 'as' reference", w.Name))
+					toolkitcommon.Fail(&DefinitionError{Subject: executeEntrySubject(w.Name), Err: errors.Wrap(err, "as")})
 				}
 
 				if err := claimExecutionRefs(aliases, alias, testWorkflowNames); err != nil {
-					toolkitcommon.Fail(err)
+					toolkitcommon.Fail(&DefinitionError{Subject: executeSubject, Err: err})
 				}
 
 				for _, testWorkflowName := range testWorkflowNames {
@@ -669,10 +739,9 @@ func NewExecuteCmd() *cobra.Command {
 			}
 			wg.Wait()
 
-			// The summary becomes the step message, so it names the failed executions. The code says
-			// that a workflow this step ran did not pass, which is not a failure of this step.
+			// The summary becomes the step message, so it names the failed executions.
 			if summary := failureSummary(results); summary != "" {
-				toolkitcommon.Fail(toolkitcommon.WithReason(testkube.StopReasonChildWorkflowFailed, errors.New(summary)))
+				toolkitcommon.Fail(toolkitcommon.WithReason(failureReason(results), errors.New(summary)))
 			}
 		},
 	}

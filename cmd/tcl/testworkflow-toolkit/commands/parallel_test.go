@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,6 +27,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
@@ -585,6 +587,212 @@ func TestFailFastSpecParsing(t *testing.T) {
 			result, err := parser.ParseSpec(specContent, tc.base64)
 			require.NoError(t, err)
 			assert.Equal(t, tc.expected, result.FailFast)
+		})
+	}
+}
+
+func TestWorkersFailedError(t *testing.T) {
+	tests := []struct {
+		name       string
+		err        *WorkersFailedError
+		want       string
+		wantReason testkube.StopReason
+	}{
+		{
+			name: "a worker killed for its memory names its cause and gives its code",
+			err: &WorkersFailedError{Failed: 1, Total: 4, First: &WorkerFailure{
+				Index: 1, Reason: testkube.StopReasonOOMKilled, Message: "the container exceeded its memory limit",
+			}},
+			want:       "1 of 4 workers failed. Worker 2: the container exceeded its memory limit.",
+			wantReason: testkube.StopReasonOOMKilled,
+		},
+		{
+			name: "a code without a type gives no code",
+			err: &WorkersFailedError{Failed: 2, Total: 2, First: &WorkerFailure{
+				Index: 0, Reason: "not-a-code", Message: "the worker failed",
+			}},
+			want: "2 of 2 workers failed. Worker 1: the worker failed.",
+		},
+		{
+			name: "no worker with a cause names only the count",
+			err:  &WorkersFailedError{Failed: 3, Total: 5},
+			want: "3 of 5 workers failed.",
+		},
+		{
+			name: "fail-fast stopped all the other workers",
+			err: &WorkersFailedError{Failed: 1, Stopped: 3, Total: 4, First: &WorkerFailure{
+				Index: 1, Reason: testkube.StopReasonExitCode, Message: `The step "Run" exited with code 1`,
+			}},
+			want:       `1 of 4 workers failed, and failFast stopped the other 3. Worker 2: The step "Run" exited with code 1.`,
+			wantReason: testkube.StopReasonExitCode,
+		},
+		{
+			name: "fail-fast stopped the one other worker",
+			err:  &WorkersFailedError{Failed: 1, Stopped: 1, Total: 2},
+			want: "1 of 2 workers failed, and failFast stopped the other worker.",
+		},
+		{
+			name: "fail-fast stopped some workers after others passed",
+			err:  &WorkersFailedError{Failed: 1, Stopped: 2, Total: 5},
+			want: "1 of 5 workers failed, and failFast stopped 2 other workers.",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.err.Error())
+			assert.Equal(t, tt.wantReason, tt.err.Reason())
+		})
+	}
+}
+
+func TestWorkerFailure(t *testing.T) {
+	tests := []struct {
+		name   string
+		result *testkube.TestWorkflowResult
+		err    error
+		want   WorkerFailure
+	}{
+		{
+			name: "the message of the status details wins",
+			result: &testkube.TestWorkflowResult{StatusDetails: &testkube.TestWorkflowStatusDetails{
+				Reason: string(testkube.StopReasonProcessKilled), Message: "the test process was killed, possibly by an out-of-memory kill (signal: killed).",
+			}},
+			want: WorkerFailure{Index: 2, Reason: testkube.StopReasonProcessKilled, Message: "the test process was killed, possibly by an out-of-memory kill (signal: killed)."},
+		},
+		{
+			name: "a code without a message gives the words of the code",
+			result: &testkube.TestWorkflowResult{StatusDetails: &testkube.TestWorkflowStatusDetails{
+				Reason: string(testkube.StopReasonOOMKilled),
+			}},
+			want: WorkerFailure{Index: 2, Reason: testkube.StopReasonOOMKilled, Message: "the container exceeded its memory limit"},
+		},
+		{
+			name: "a worker without a result names its error",
+			err:  errors.New("creating the job: forbidden"),
+			want: WorkerFailure{Index: 2, Message: "creating the job: forbidden"},
+		},
+		{
+			name:   "a worker without a cause gets the fallback words",
+			result: &testkube.TestWorkflowResult{},
+			want:   WorkerFailure{Index: 2, Message: "the worker failed"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, &tt.want, workerFailure(2, tt.result, tt.err))
+		})
+	}
+}
+
+func TestWorkerFailures(t *testing.T) {
+	oom := &testkube.TestWorkflowResult{StatusDetails: &testkube.TestWorkflowStatusDetails{Reason: string(testkube.StopReasonOOMKilled), Message: "OOMKilled"}}
+	failed := &testkube.TestWorkflowResult{StatusDetails: &testkube.TestWorkflowStatusDetails{Reason: string(testkube.StopReasonExitCode), Message: "The step \"Run\" exited with code 1."}}
+	type report struct {
+		index   int64
+		passed  bool
+		result  *testkube.TestWorkflowResult
+		err     error
+		stopped bool
+	}
+	tests := []struct {
+		name     string
+		total    int64
+		failFast bool
+		reports  []report
+		want     *ParallelExecutionResult
+	}{
+		{
+			name:  "the worker that reports first wins over a later worker",
+			total: 2,
+			reports: []report{
+				{index: 0, result: oom},
+				{index: 1, result: failed},
+			},
+			want: &ParallelExecutionResult{TotalWorkers: 2, FailedWorkers: 2, FirstFailure: &WorkerFailure{Index: 0, Reason: testkube.StopReasonOOMKilled, Message: "OOMKilled"}},
+		},
+		{
+			name:     "fail-fast counts the stopped and the not started workers apart from the failed one",
+			total:    4,
+			failFast: true,
+			reports: []report{
+				{index: 1, result: failed, stopped: true},
+				{index: 3, result: oom},
+			},
+			want: &ParallelExecutionResult{TotalWorkers: 4, FailedWorkers: 1, StoppedWorkers: 3, FirstFailure: &WorkerFailure{Index: 3, Reason: testkube.StopReasonOOMKilled, Message: "OOMKilled"}},
+		},
+		{
+			name:     "a worker that passed is neither failed nor stopped",
+			total:    3,
+			failFast: true,
+			reports: []report{
+				{index: 0, passed: true},
+				{index: 1, err: errors.New("stream closed")},
+			},
+			want: &ParallelExecutionResult{TotalWorkers: 3, FailedWorkers: 1, StoppedWorkers: 1, FirstFailure: &WorkerFailure{Index: 1, Message: "stream closed"}},
+		},
+		{
+			name:     "workers that something outside the step stopped all count as failed",
+			total:    2,
+			failFast: true,
+			reports: []report{
+				{index: 0, result: failed, stopped: true},
+			},
+			want: &ParallelExecutionResult{TotalWorkers: 2, FailedWorkers: 2},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			failures := &workerFailures{}
+			for _, r := range tt.reports {
+				if r.passed {
+					failures.pass()
+				} else {
+					failures.add(r.index, r.result, r.err, r.stopped)
+				}
+			}
+			assert.Equal(t, tt.want, failures.result(tt.total, tt.failFast))
+		})
+	}
+}
+
+func TestStoppedByFailFast(t *testing.T) {
+	status := func(s testkube.TestWorkflowStatus, actor testkube.StopActor) *testkube.TestWorkflowResult {
+		return &testkube.TestWorkflowResult{Status: &s, StatusDetails: &testkube.TestWorkflowStatusDetails{Actor: string(actor)}}
+	}
+	tests := []struct {
+		name     string
+		canceled bool
+		result   *testkube.TestWorkflowResult
+		want     bool
+	}{
+		{name: "a worker that failed while the context lives is a cause", result: status(testkube.FAILED_TestWorkflowStatus, ""), want: false},
+		{name: "a worker that failed on its own after another worker canceled the context is a cause", canceled: true, result: status(testkube.FAILED_TestWorkflowStatus, ""), want: false},
+		{name: "a worker that the cancel aborted was stopped", canceled: true, result: status(testkube.ABORTED_TestWorkflowStatus, ""), want: true},
+		{name: "a worker that fail-fast aborted was stopped", canceled: true, result: status(testkube.ABORTED_TestWorkflowStatus, testkube.StopActorFailFast), want: true},
+		{name: "a worker that another component stopped is a cause", canceled: true, result: status(testkube.ABORTED_TestWorkflowStatus, testkube.StopActorRunner), want: false},
+		{name: "a worker without a result after the cancel was stopped", canceled: true, want: true},
+		{
+			name:     "a worker that ran out of memory after another worker canceled the context is a cause",
+			canceled: true,
+			result: &testkube.TestWorkflowResult{
+				Status:        common.Ptr(testkube.ABORTED_TestWorkflowStatus),
+				StatusDetails: &testkube.TestWorkflowStatusDetails{Reason: string(testkube.StopReasonOOMKilled)},
+			},
+			want: false,
+		},
+		{
+			name:     "a worker that fail-fast aborted with its code was stopped",
+			canceled: true,
+			result: &testkube.TestWorkflowResult{
+				Status:        common.Ptr(testkube.ABORTED_TestWorkflowStatus),
+				StatusDetails: &testkube.TestWorkflowStatusDetails{Reason: string(testkube.StopReasonFailFast), Actor: string(testkube.StopActorFailFast)},
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, stoppedByFailFast(tt.canceled, tt.result))
 		})
 	}
 }
