@@ -31,7 +31,7 @@ func TestPrepareStepCacheInboxOpensTheSharedParentToo(t *testing.T) {
 		StepCacheVolumeLocalPath: root,
 	}}
 
-	w.prepareStepCacheInbox("exec-1")
+	w.prepareStepCacheInbox(cacheClaimBundle("step-cache"), "exec-1")
 
 	for _, name := range []string{
 		filepath.Join(root, volume.InboxDir),

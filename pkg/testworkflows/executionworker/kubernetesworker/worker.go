@@ -199,7 +199,7 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	}
 
 	// Make this execution's cache inbox before the pod that writes to it starts.
-	w.prepareStepCacheInbox(cfg.Resource.EffectiveRootId())
+	w.prepareStepCacheInbox(bundle, cfg.Resource.EffectiveRootId())
 
 	// Register namespace information in the cache
 	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
@@ -277,7 +277,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 	}
 
 	// Make this execution's cache inbox before the pod that writes to it starts.
-	w.prepareStepCacheInbox(cfg.Resource.EffectiveRootId())
+	w.prepareStepCacheInbox(bundle, cfg.Resource.EffectiveRootId())
 
 	// Register namespace information in the cache
 	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
@@ -850,8 +850,19 @@ func (w *worker) ResumeMany(ctx context.Context, ids []string, options execution
 // back to the object store when the inbox cannot be written to, and kubelet still makes
 // the directory itself if this did not - so there is nothing here worth failing an
 // execution over.
-func (w *worker) prepareStepCacheInbox(resourceId string) {
+func (w *worker) prepareStepCacheInbox(bundle *testworkflowprocessor.Bundle, resourceId string) {
 	if w.config.StepCacheVolume == nil || w.config.StepCacheVolumeLocalPath == "" || resourceId == "" {
+		return
+	}
+
+	// Only for a bundle that actually attaches the volume. The feature being enabled
+	// for the installation says nothing about this workflow: one with no cached step
+	// never mounts the claim, and making it an inbox leaves an empty directory and a
+	// lease file behind for the whole retention window - now several days. A busy
+	// installation running mostly uncached workloads would spend a great many inodes
+	// on a volume the whole cluster shares, for executions that were never going to
+	// write to it.
+	if !bundleUsesStepCacheVolume(bundle, w.config.StepCacheVolume.ClaimName) {
 		return
 	}
 
@@ -878,4 +889,23 @@ func (w *worker) prepareStepCacheInbox(resourceId string) {
 				"path", name, "error", err)
 		}
 	}
+}
+
+// bundleUsesStepCacheVolume reports whether this bundle's pod attaches the shared step
+// cache claim.
+//
+// Read off the pod spec rather than asked of the workflow, because the spec is what
+// decides: the processor adds the volume only where a step actually caches, and a
+// workflow that reaches the claim some other way - declaring it among its own pvcs -
+// wants the inbox just the same.
+func bundleUsesStepCacheVolume(bundle *testworkflowprocessor.Bundle, claimName string) bool {
+	if bundle == nil || claimName == "" {
+		return false
+	}
+	for _, v := range bundle.Job.Spec.Template.Spec.Volumes {
+		if v.PersistentVolumeClaim != nil && v.PersistentVolumeClaim.ClaimName == claimName {
+			return true
+		}
+	}
+	return false
 }
