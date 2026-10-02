@@ -106,10 +106,18 @@ restore is a copy rather than an unpack and nothing is gzipped.
   that object - and the race on one key is still resolved where it always was. **Nothing
   about authorization moves onto the volume**, and a change that moves it there would
   undo the whole point.
-- **The format is its own fallback.** A body that does not begin with `volume.Magic` is
-  the archive, so an entry written before the volume existed, or by a cluster without
-  one, restores through the path it always did. The object-store save is kept in its own
-  branch for the same reason.
+- **The format is its own fallback, but only for entries this installation can still
+  address.** A body that does not begin with `volume.Magic` is the archive, so an object
+  holding one restores through the path it always did - which is what lets the
+  object-store save branch, and a cluster without a volume, keep working unchanged.
+  It does **not** reach entries written before keys were partitioned by volume: those
+  live under the unscoped key and a volume-enabled runner now asks only for
+  `<volume id>/<key>`, so they are unreachable and go cold until they expire. That is a
+  one-time cost on upgrade, bounded by `STORAGE_CACHE_EXPIRATION` (default one day).
+  A migration lookup for the unscoped key was considered and not taken: it would add a
+  second round trip to every miss, permanently, and would have to refuse an unscoped
+  *pointer* - which may name an entry on a volume this runner cannot read - to avoid
+  reintroducing the collision partitioning exists to prevent.
 - **The mounts are the confinement, and they are kubelet's.** Both cache stages are
   `SetPure(true)`, so `action.Group` merges them into the step's own container and
   `CreateContainer` unions the volume mounts - the step's own command therefore holds
@@ -120,8 +128,21 @@ restore is a copy rather than an unpack and nothing is gzipped.
   one of its own). Dropping either would
   let any step rewrite any entry, so `processor_cache_test.go` pins both.
 - **Everything on the volume is readable by every execution in the cluster.** That is the
-  accepted cost of sharing one, stated in the Helm value's own documentation. It is the
-  read side only; writes stay confined.
+  accepted cost of sharing one, stated in the Helm value's own documentation.
+- **And the step's own command holds the writable inbox mount, which is a deliberate
+  decision rather than an oversight.** Both cache stages are pure, so `action.Group`
+  merges them into the step's container: the subPath confines *where* a pod may write,
+  to its own execution's inbox, but not *what* it writes there. A workflow can therefore
+  write past `CopyLimits` - which bound what the cache copies, not what the step does -
+  and can leave directories only its own user may enter, which the agent can never
+  reclaim, being neither root nor the owner with `fsGroup` inoperative on NFS. The
+  second is permanent and outlives the execution.
+  **Do not treat the limits or `SharedDirMode` as a security boundary**; they keep the
+  cache's own writes well-behaved and nothing more. The boundary is that the volume is
+  only enabled where every workflow in the environment is trusted with it, which both
+  charts' values say at length. Making `ProcessCacheSave` non-pure would move the mount
+  into a toolkit container of its own and close this, at one extra init container per
+  cached step - that is the change to make if the trust assumption ever stops holding.
 - **The sweep is the agent's, not the control plane's.** The control plane is not
   necessarily in the cluster (`cmd/api-server/services/executionworker.go` points pods at
   `TestkubeProURL`), so it cannot reach the volume. `volume.Sweeper` runs as a

@@ -328,6 +328,24 @@ defaultRunnerResources:
 ## running as a non-root user can write to it. It must therefore be able to write to
 ## the share: an NFS export that squashes the agent's user leaves the cache unusable,
 ## and every save falls back to the object store.
+##
+## A WORKFLOW'S OWN COMMAND HOLDS A WRITABLE MOUNT ON THIS VOLUME. The stage that
+## saves an entry runs inside the step's container rather than beside it, so whatever
+## the workflow runs can write into its own directory on the shared claim directly,
+## without going through the cache at all. Two consequences, neither of which the
+## agent can undo:
+##
+##   - It can write past the cache's size and entry limits, because those bound what
+##     the cache copies and not what the step writes. One workflow can fill the claim
+##     for every execution in the cluster.
+##   - It can leave directories only its own user may enter. The agent sweeps as a
+##     different user, is not root, and cannot chown or chmod what it does not own -
+##     and fsGroup is not applied to NFS at all - so that space is never reclaimed.
+##     This one is permanent, and survives the execution that caused it.
+##
+## Enable this only where every workflow that can run in the environment is trusted
+## with the claim. Where they are not, leave it disabled and let caches go to the
+## object store, which grants each upload separately and holds no shared filesystem.
 stepCacheVolume:
   # -- Store step dependency caches on a shared volume instead of in the object store
   enabled: false
