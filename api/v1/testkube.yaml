@@ -4183,6 +4183,7 @@ paths:
         - $ref: "#/components/parameters/TagSelector"
         - $ref: "#/components/parameters/ActorName"
         - $ref: "#/components/parameters/ActorType"
+        - $ref: "#/components/parameters/StatusDetailsTypeFilter"
       summary: List test workflow executions
       description: List test workflow executions
       operationId: listTestWorkflowExecutionsByTestWorkflow
@@ -4547,6 +4548,7 @@ paths:
         - $ref: "#/components/parameters/TagSelector"
         - $ref: "#/components/parameters/ActorName"
         - $ref: "#/components/parameters/ActorType"
+        - $ref: "#/components/parameters/StatusDetailsTypeFilter"
       summary: List test workflow executions
       description: List test workflow executions
       operationId: listTestWorkflowExecutions
@@ -7450,7 +7452,6 @@ components:
       description: test trigger create or update request body
       type: object
       required:
-        - event
         - action
         - execution
         - testSelector
@@ -8028,6 +8029,9 @@ components:
 
     EventType:
       type: string
+      description: >-
+        The type of an event. The events end-testworkflow-test-failure, end-testworkflow-infrastructure-failure
+        and end-testworkflow-configuration-error select executions by the cause of the failure.
       enum:
         - queue-testworkflow
         - start-testworkflow
@@ -8036,6 +8040,9 @@ components:
         - end-testworkflow-aborted
         - end-testworkflow-canceled
         - end-testworkflow-not-passed
+        - end-testworkflow-test-failure
+        - end-testworkflow-infrastructure-failure
+        - end-testworkflow-configuration-error
         - become-testworkflow-up
         - become-testworkflow-down
         - become-testworkflow-failed
@@ -8149,7 +8156,6 @@ components:
     TestTrigger:
       type: object
       required:
-        - event
         - action
         - execution
         - testSelector
@@ -8189,8 +8195,16 @@ components:
           $ref: "#/components/schemas/TestTriggerSelector"
         event:
           type: string
-          description: listen for event for selected resource
+          description: listen for event for selected resource; exactly one of event and events must be specified
           example: modified
+        events:
+          type: array
+          description: listen for any of the listed events for selected resource; exactly one of event and events must be specified
+          items:
+            type: string
+          example:
+            - created
+            - modified
         match:
           type: array
           description: Match filters which object changes fire the trigger (ANDed).
@@ -9077,10 +9091,38 @@ components:
           $ref: "#/components/schemas/TestWorkflowExecutionConfig"
         runtime:
           $ref: "#/components/schemas/TestWorkflowExecutionRuntime"
+        lineage:
+          $ref: "#/components/schemas/TestWorkflowExecutionLineage"
       required:
         - id
         - name
         - workflow
+
+    TestWorkflowExecutionLineage:
+      type: object
+      description: |
+        records where a rerun came from, so that a workflow can read the run it
+        descends from and a reader can follow the chain back to its origin.
+
+        Recorded on every execution, which is what makes the reserved
+        `execution("rerun")` reference resolve inside the pod after any rerun.
+
+        Derived by the scheduler from the base execution: a caller supplies the
+        base and nothing else, because a client able to assert a root or an
+        attempt number could forge a chain.
+      properties:
+        baseId:
+          type: string
+          description: the execution this one is a rerun of; empty for an original run
+        rootId:
+          type: string
+          description: |
+            the first execution in the chain. An original run is its own root,
+            so that every execution of a chain shares one rootId.
+        attempt:
+          type: integer
+          format: int32
+          description: 1 for an original run, one more than the base for a rerun
 
     TestWorkflowExecutionSummary:
       type: object
@@ -9136,6 +9178,8 @@ components:
         silentMode:
           description: execution mode to determine which events to skip
           $ref: "#/components/schemas/SilentMode"
+        lineage:
+          $ref: "#/components/schemas/TestWorkflowExecutionLineage"
       required:
         - id
         - name
@@ -9193,6 +9237,8 @@ components:
         pausedMs:
           type: integer
           description: Pause duration in milliseconds
+        statusDetails:
+          $ref: "#/components/schemas/TestWorkflowStatusDetails"
       required:
         - status
         - predictedStatus
@@ -9429,12 +9475,56 @@ components:
           type: object
           additionalProperties:
             $ref: "#/components/schemas/TestWorkflowStepResult"
+        statusDetails:
+          $ref: "#/components/schemas/TestWorkflowStatusDetails"
       required:
         - status
         - predictedStatus
         - durationMs
         - pausedMs
         - totalDurationMs
+
+    TestWorkflowStatusDetails:
+      type: object
+      description: |
+        Why an execution did not pass. Present on every terminal status except passed.
+        The type names the layer that failed and the reason names the cause.
+      properties:
+        type:
+          type: string
+          enum:
+            - init-failure
+            - execution-failure
+            - step-failure
+            - user-cancel
+            - unknown
+          description: the layer that failed
+        reason:
+          type: string
+          description: code of the cause, for example unschedulable or oom-killed
+        message:
+          type: string
+          description: the message of the step that holds the cause, verbatim
+        step:
+          type: string
+          description: reference of the step that holds the cause; empty when the initialization step holds it
+        actor:
+          type: string
+          description: code of the component that decided the stop, for example user or control-plane
+        user:
+          $ref: "#/components/schemas/TestWorkflowStatusDetailsUser"
+      required:
+        - type
+        - reason
+
+    TestWorkflowStatusDetailsUser:
+      type: object
+      description: the person who canceled the execution; the control plane fills it
+      properties:
+        name:
+          type: string
+        email:
+          type: string
 
     TestWorkflowPause:
       type: object
@@ -9459,10 +9549,16 @@ components:
       properties:
         errorMessage:
           type: string
+        errorReason:
+          type: string
+          description: code of the cause in the error message, for example unschedulable; empty when the message has no known cause
         status:
           $ref: "#/components/schemas/TestWorkflowStepStatus"
         exitCode:
           type: number
+        attempts:
+          type: integer
+          description: number of attempts that the step started, empty when the init process reported none
         queuedAt:
           type: string
           format: date-time
@@ -9882,6 +9978,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowStepExecute"
         artifacts:
           $ref: "#/components/schemas/TestWorkflowStepArtifacts"
+        cache:
+          $ref: "#/components/schemas/TestWorkflowStepCache"
 
     TestWorkflowIndependentStep:
       type: object
@@ -9934,6 +10032,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowStepExecute"
         artifacts:
           $ref: "#/components/schemas/TestWorkflowStepArtifacts"
+        cache:
+          $ref: "#/components/schemas/TestWorkflowStepCache"
         parallel:
           $ref: "#/components/schemas/TestWorkflowIndependentStepParallel"
         setup:
@@ -10005,6 +10105,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowStepExecute"
         artifacts:
           $ref: "#/components/schemas/TestWorkflowStepArtifacts"
+        cache:
+          $ref: "#/components/schemas/TestWorkflowStepCache"
         parallel:
           $ref: "#/components/schemas/TestWorkflowStepParallel"
         setup:
@@ -10066,6 +10168,9 @@ components:
             description: instructions for downloading artifacts produced by executed test workflows
             items:
               $ref: "#/components/schemas/TestWorkflowStepExecuteFetch"
+          baseExecutionId:
+            type: string
+            description: id of the execution to record this one as a rerun of, so that it resolves execution("rerun"). Runs the current definition, not the base's snapshot. The base must be one the scheduling execution may itself read.
           selector:
             $ref: "#/components/schemas/LabelSelector"
             description: label selector for test workflow
@@ -10270,6 +10375,40 @@ components:
             type: string
           minItems: 1
       required:
+        - paths
+
+    TestWorkflowStepCache:
+      type: object
+      properties:
+        key:
+          type: string
+          description: key to store the cache entry under, usually derived from a lockfile
+          minLength: 1
+          maxLength: 512
+        restoreKeys:
+          type: array
+          description: key prefixes to fall back to when there is no entry for the exact key
+          items:
+            type: string
+          maxItems: 10
+        paths:
+          type: array
+          description: paths to store in the cache, relative to the working directory
+          items:
+            type: string
+          minItems: 1
+        workingDir:
+          $ref: "#/components/schemas/BoxedString"
+        scope:
+          type: string
+          description: how widely the cache entry is shared
+          enum:
+            - workflow
+            - environment
+        mount:
+          $ref: "#/components/schemas/BoxedBoolean"
+      required:
+        - key
         - paths
 
     TestWorkflowStepArtifactsCompression:
@@ -12369,6 +12508,13 @@ components:
       schema:
         $ref: "#/components/schemas/ExecutionStatus"
       description: optional status filter containing multiple values separated by comma
+      required: false
+    StatusDetailsTypeFilter:
+      in: query
+      name: statusDetailsType
+      schema:
+        type: string
+      description: optional filter for the layer that failed, containing multiple values separated by comma
       required: false
     Selector:
       in: query

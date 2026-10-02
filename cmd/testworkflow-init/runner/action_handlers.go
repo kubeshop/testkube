@@ -120,9 +120,11 @@ func handleExecuteAction(action *lite.ActionExecute, ctx *ExecutionContext) Acti
 	if action.Toolkit {
 		serialized, _ := json.Marshal(ctx.InternalConfig)
 		_ = os.Setenv("TK_CFG", string(serialized))
+		_ = os.Setenv(constants.EnvStepErrorFile, constants.StepErrorPath)
 	} else {
 		_ = os.Unsetenv("TK_REF")
 		_ = os.Unsetenv("TK_CFG")
+		_ = os.Unsetenv(constants.EnvStepErrorFile)
 	}
 
 	leaf := []*data.StepData{step}
@@ -177,6 +179,10 @@ func handleExecuteAction(action *lite.ActionExecute, ctx *ExecutionContext) Acti
 	finalizeTimeout()
 
 	if step.IsFinished() {
+		// The timeout of the step or of a parent group can end before the step starts. The run command does not run then.
+		if *step.Status == constants.StepStatusTimeout {
+			orchestration.FinishTimedOutExecution(step)
+		}
 		return ActionResult{ContinueExecution: true}
 	}
 
@@ -229,6 +235,12 @@ func handleExecuteAction(action *lite.ActionExecute, ctx *ExecutionContext) Acti
 		}
 
 		_ = orchestration.Executions.Kill()
+
+		// A signal from outside aborted the execution group, so the next attempt cannot run.
+		// Stop before the iteration hint, because that hint starts a new attempt and clears the message of this attempt.
+		if orchestration.Executions.IsAborted() {
+			break
+		}
 
 		if !shouldRetry(step, hasTimeout.Load(), hasOwnTimeout.Load(), ctx.Stdout) {
 			break

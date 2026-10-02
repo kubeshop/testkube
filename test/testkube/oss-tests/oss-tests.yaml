@@ -3,6 +3,8 @@ kind: TestWorkflowTemplate
 metadata:
   name: oss-tests-setup-template
 spec:
+  job:
+    activeDeadlineSeconds: 600
   system:
     pureByDefault: true
   content:

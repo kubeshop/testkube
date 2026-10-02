@@ -1,10 +1,12 @@
 package common
 
 import (
+	"io"
 	"testing"
 
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 )
@@ -35,14 +37,14 @@ func TestMasterCmds(t *testing.T) {
 	t.Run("Test all master flags set and isnecure", func(t *testing.T) {
 		cmd := NewTestCmd()
 		cmd.SetArgs([]string{"--master-insecure", "true",
-			"--agent-prefix", "dummy-agent-prefix",
+			"--runner-prefix", "dummy-agent-prefix",
 			"--api-prefix", "dummy-api-prefix",
 			"--ui-prefix", "dummy-ui-prefix",
 			"--root-domain", "dummy-root-domain",
 			"--dry-run", "true",
 			"--no-confirm", "true",
-			"--agent-token", "dummy-token",
-			"--agent-uri", "dummy-uri",
+			"--runner-token", "dummy-token",
+			"--runner-uri", "dummy-uri",
 			"--ui-prefix", "dummy-ui-prefix",
 		})
 		err := cmd.Execute()
@@ -61,14 +63,14 @@ func TestMasterCmds(t *testing.T) {
 	})
 	t.Run("Test all master flags set and secure", func(t *testing.T) {
 		cmd := NewTestCmd()
-		cmd.SetArgs([]string{"--agent-prefix", "dummy-agent-prefix",
+		cmd.SetArgs([]string{"--runner-prefix", "dummy-agent-prefix",
 			"--api-prefix", "dummy-api-prefix",
 			"--ui-prefix", "dummy-ui-prefix",
 			"--root-domain", "dummy-root-domain",
 			"--dry-run", "true",
 			"--no-confirm", "true",
-			"--agent-token", "dummy-token",
-			"--agent-uri", "dummy-uri",
+			"--runner-token", "dummy-token",
+			"--runner-uri", "dummy-uri",
 			"--ui-prefix", "dummy-ui-prefix",
 		})
 		err := cmd.Execute()
@@ -286,9 +288,9 @@ func TestMasterCmds(t *testing.T) {
 		assert.Equal(t, "agent.dummy-root-domain:443", opts.Master.URIs.Agent)
 	})
 
-	t.Run("Test defaults for master flags secure with agent uri modified", func(t *testing.T) {
+	t.Run("Test defaults for master flags secure with runner uri modified", func(t *testing.T) {
 		cmd := NewTestCmd()
-		cmd.SetArgs([]string{"--agent-uri", "dummy-agent-uri"})
+		cmd.SetArgs([]string{"--runner-uri", "dummy-agent-uri"})
 		err := cmd.Execute()
 		assert.NoError(t, err)
 		assert.Equal(t, false, opts.Master.Insecure)
@@ -304,9 +306,9 @@ func TestMasterCmds(t *testing.T) {
 		assert.Equal(t, "dummy-agent-uri", opts.Master.URIs.Agent)
 	})
 
-	t.Run("Test defaults for master flags insecure with agent uri modified", func(t *testing.T) {
+	t.Run("Test defaults for master flags insecure with runner uri modified", func(t *testing.T) {
 		cmd := NewTestCmd()
-		cmd.SetArgs([]string{"--master-insecure", "true", "--agent-uri", "dummy-agent-uri"})
+		cmd.SetArgs([]string{"--master-insecure", "true", "--runner-uri", "dummy-agent-uri"})
 		err := cmd.Execute()
 		assert.NoError(t, err)
 		assert.Equal(t, true, opts.Master.Insecure)
@@ -352,5 +354,101 @@ func TestMasterCmds(t *testing.T) {
 		err := cmd.Execute()
 		assert.NoError(t, err)
 		assert.Equal(t, "pro-test-domain", opts.Master.RootDomain)
+	})
+
+	t.Run("deprecated --agent-prefix --agent-token --agent-uri still apply", func(t *testing.T) {
+		cmd := NewTestCmd()
+		cmd.SetArgs([]string{
+			"--agent-prefix", "legacy-agent-prefix",
+			"--agent-token", "legacy-token",
+			"--agent-uri", "legacy-uri",
+		})
+		err := cmd.Execute()
+		assert.NoError(t, err)
+		assert.Equal(t, "legacy-token", opts.Master.AgentToken)
+		assert.Equal(t, "legacy-uri", opts.Master.URIs.Agent)
+		assert.Equal(t, "legacy-agent-prefix", opts.Master.AgentUrlPrefix)
+	})
+
+	t.Run("deprecated --agent-uri-override still applies", func(t *testing.T) {
+		cmd := NewTestCmd()
+		cmd.SetArgs([]string{"--agent-uri-override", "https://legacy.example.com:443"})
+		err := cmd.Execute()
+		assert.NoError(t, err)
+		assert.Equal(t, "https://legacy.example.com:443", opts.Master.URIs.Agent)
+	})
+
+	t.Run("--runner-uri-override applies", func(t *testing.T) {
+		cmd := NewTestCmd()
+		cmd.SetArgs([]string{"--runner-uri-override", "https://runner.example.com:443"})
+		err := cmd.Execute()
+		assert.NoError(t, err)
+		assert.Equal(t, "https://runner.example.com:443", opts.Master.URIs.Agent)
+	})
+}
+
+func TestMasterOrgEnvNameFlags(t *testing.T) {
+	// A local HelmOptions, so these cases do not inherit the package-level opts
+	// that the older subtests above share.
+	newCmd := func(o *HelmOptions) *cobra.Command {
+		cmd := &cobra.Command{Use: "test", Run: func(cmd *cobra.Command, args []string) {}}
+		PopulateMasterFlags(cmd, o, false)
+		cmd.SetOut(io.Discard)
+		cmd.SetErr(io.Discard)
+		return cmd
+	}
+
+	t.Run("name flags bind to master options", func(t *testing.T) {
+		var o HelmOptions
+		cmd := newCmd(&o)
+		cmd.SetArgs([]string{"--org-name", "platform", "--env-name", "staging"})
+
+		require.NoError(t, cmd.Execute())
+		assert.Equal(t, "platform", o.Master.OrgName)
+		assert.Equal(t, "staging", o.Master.EnvName)
+	})
+
+	t.Run("name flags default to empty", func(t *testing.T) {
+		var o HelmOptions
+		cmd := newCmd(&o)
+		cmd.SetArgs([]string{})
+
+		require.NoError(t, cmd.Execute())
+		assert.Empty(t, o.Master.OrgName)
+		assert.Empty(t, o.Master.EnvName)
+	})
+
+	t.Run("an id and a name for the same level conflict", func(t *testing.T) {
+		var o HelmOptions
+		cmd := newCmd(&o)
+		cmd.SetArgs([]string{"--org-id", "tkcorg_1111111111111111", "--org-name", "platform"})
+
+		err := cmd.Execute()
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "org-id")
+		assert.Contains(t, err.Error(), "org-name")
+	})
+
+	t.Run("an env id and an env name conflict", func(t *testing.T) {
+		var o HelmOptions
+		cmd := newCmd(&o)
+		cmd.SetArgs([]string{"--env-id", "tkcenv_1111111111111111", "--env-name", "staging"})
+
+		err := cmd.Execute()
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "env-id")
+		assert.Contains(t, err.Error(), "env-name")
+	})
+
+	t.Run("an org id pairs with an env name across levels", func(t *testing.T) {
+		var o HelmOptions
+		cmd := newCmd(&o)
+		cmd.SetArgs([]string{"--org-id", "tkcorg_1111111111111111", "--env-name", "staging"})
+
+		require.NoError(t, cmd.Execute())
+		assert.Equal(t, "tkcorg_1111111111111111", o.Master.OrgId)
+		assert.Equal(t, "staging", o.Master.EnvName)
 	})
 }

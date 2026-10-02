@@ -38,8 +38,9 @@ type internalTrigger struct {
 	// v1 legacy: event label selector (matches against auto-generated event labels)
 	EventLabelSelector *metav1.LabelSelector
 
-	// When
-	Event string
+	// When. Events is the normalized list of events the trigger fires on:
+	// a v1 trigger with the single event form converts to a one-entry list.
+	Events []string
 
 	// Match
 	FieldConditions []workflowtriggersv1.WorkflowTriggerFieldCondition
@@ -108,6 +109,17 @@ type internalProbe struct {
 	Headers map[string]string
 }
 
+func eventsToStrings(events []testtriggersv1.TestTriggerEvent) []string {
+	if len(events) == 0 {
+		return nil
+	}
+	out := make([]string, len(events))
+	for i, e := range events {
+		out[i] = string(e)
+	}
+	return out
+}
+
 // listenerAgentIDs returns the agent IDs the listener target pins to (its
 // match.id selector), or nil for broadcast (no listener / no id match).
 func listenerAgentIDs(listener *commonv1.Target) []string {
@@ -124,7 +136,7 @@ func convertV1ToInternal(t *testtriggersv1.TestTrigger) *internalTrigger {
 		Namespace:          t.Namespace,
 		Labels:             t.Labels,
 		Source:             triggerSourceV1,
-		Event:              string(t.Spec.Event),
+		Events:             eventsToStrings(t.Spec.EffectiveEvents()),
 		EventLabelSelector: t.Spec.Selector,
 		FieldConditions:    t.Spec.Match,
 		ListenerAgentIds:   listenerAgentIDs(t.Spec.Listener),
@@ -238,7 +250,7 @@ func convertV2ToInternal(t *workflowtriggersv1.WorkflowTrigger) *internalTrigger
 	}
 
 	// When
-	it.Event = t.Spec.When.Event
+	it.Events = []string{t.Spec.When.Event}
 
 	// Watch
 	if t.Spec.Watch != nil {

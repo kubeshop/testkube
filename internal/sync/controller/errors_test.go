@@ -10,33 +10,37 @@ import (
 	syncagent "github.com/kubeshop/testkube/internal/sync"
 )
 
-// An ownership conflict cannot be resolved by retrying, so it has to come back as a terminal error
-// to stop controller-runtime requeueing it forever.
-func TestOwnershipConflictIsTerminal(t *testing.T) {
-	err := fmt.Errorf("update TestWorkflow %q in store: %w", "smoke", syncagent.ErrOwnershipConflict)
-
-	got := terminalOnOwnershipConflict(err)
-
-	if !errors.Is(got, reconcile.TerminalError(nil)) {
-		t.Errorf("expected a terminal error so that controller-runtime stops requeueing, got %v", got)
+func TestTerminalOnRejection(t *testing.T) {
+	tests := []struct {
+		name         string
+		err          error
+		wantTerminal bool
+	}{
+		{
+			name:         "an ownership conflict stands until the owner changes",
+			err:          fmt.Errorf("update TestWorkflow %q in store: %w", "smoke", syncagent.ErrOwnershipConflict),
+			wantTerminal: true,
+		},
+		{
+			name:         "an invalid resource stands until somebody changes it",
+			err:          fmt.Errorf("update Webhook %q in store: %w", "hook", syncagent.ErrInvalidResource),
+			wantTerminal: true,
+		},
+		{
+			name: "any other failure is transient as far as the agent can tell",
+			err:  errors.New("connection refused"),
+		},
 	}
-	// The Control Plane names the current owner in its message, and that message is the only clue
-	// the user gets from the agent log.
-	if !errors.Is(got, syncagent.ErrOwnershipConflict) {
-		t.Errorf("expected the ownership conflict to stay in the error chain, got %v", got)
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := terminalOnRejection(tt.err)
 
-// Every other failure is transient as far as the agent can tell, so it has to stay retryable.
-func TestOtherErrorsStayRetryable(t *testing.T) {
-	err := errors.New("connection refused")
-
-	got := terminalOnOwnershipConflict(err)
-
-	if errors.Is(got, reconcile.TerminalError(nil)) {
-		t.Errorf("expected a retryable error, got terminal error %v", got)
-	}
-	if !errors.Is(got, err) {
-		t.Errorf("expected the original error to be returned unchanged, got %v", got)
+			if errors.Is(got, reconcile.TerminalError(nil)) != tt.wantTerminal {
+				t.Errorf("terminal = %v, want %v, for %v", !tt.wantTerminal, tt.wantTerminal, got)
+			}
+			if !errors.Is(got, tt.err) {
+				t.Errorf("expected the original error to stay in the chain, because the agent log shows only its message, got %v", got)
+			}
+		})
 	}
 }

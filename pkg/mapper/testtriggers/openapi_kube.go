@@ -45,6 +45,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			ResourceRef:       mapResourceRefToCRD(request.ResourceRef),
 			ResourceSelector:  mapSelectorToCRD(request.ResourceSelector),
 			Event:             testsv1.TestTriggerEvent(request.Event),
+			Events:            mapEventsToCRD(request.Events),
 			Match:             mapFieldConditionsToCRD(request.Match),
 			ConditionSpec:     mapConditionSpecCRD(request.ConditionSpec),
 			ProbeSpec:         mapProbeSpecCRD(request.ProbeSpec),
@@ -111,6 +112,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta(request testkub
 			ResourceRef:       mapResourceRefToCRD(request.ResourceRef),
 			ResourceSelector:  mapSelectorToCRD(request.ResourceSelector),
 			Event:             testsv1.TestTriggerEvent(request.Event),
+			Events:            mapEventsToCRD(request.Events),
 			Match:             mapFieldConditionsToCRD(request.Match),
 			ConditionSpec:     mapConditionSpecCRD(request.ConditionSpec),
 			ProbeSpec:         mapProbeSpecCRD(request.ProbeSpec),
@@ -124,6 +126,17 @@ func MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta(request testkub
 			Listener:          common.MapPtr(request.Listener, commonmapper.MapTargetApiToKube),
 		},
 	}
+}
+
+func mapEventsToCRD(events []string) []testsv1.TestTriggerEvent {
+	if len(events) == 0 {
+		return nil
+	}
+	out := make([]testsv1.TestTriggerEvent, len(events))
+	for i, e := range events {
+		out[i] = testsv1.TestTriggerEvent(e)
+	}
+	return out
 }
 
 func mapSelectorToCRD(selector *testkube.TestTriggerSelector) testsv1.TestTriggerSelector {

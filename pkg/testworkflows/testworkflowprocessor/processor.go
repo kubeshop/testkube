@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
-	"path/filepath"
+	"path"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -16,8 +17,10 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
@@ -349,7 +352,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		}
 		imageNameResolutions[image] = p.inspector.ResolveName("", image)
 		if err != nil {
-			return nil, fmt.Errorf("resolving image error: %s: %s", image, err.Error())
+			return nil, executionworkertypes.WithStartReason(err, testkube.StartReasonImagePullFailed)
 		}
 	}
 	err = root.ApplyImages(images, imageNameResolutions)
@@ -442,14 +445,21 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			return nil, errors.Wrap(err, "finalizing container's resources")
 		}
 
-		// Resolve relative paths in the volumeMounts relatively to the working dir
+		// Resolve relative paths in the volumeMounts relatively to the working dir.
+		//
+		// Resolved with `path`, not `filepath`: a mount path and a working directory are
+		// paths inside a Linux container, not paths on whatever host the processor runs
+		// on. They agree on Linux, so this only matters elsewhere - but there
+		// filepath.IsAbs("/root/.m2") is false, so an absolute mount path would be
+		// joined onto the working directory, and Join would then put backslashes into a
+		// MountPath that Kubernetes and the container both read as POSIX.
 		workingDir := constants.DefaultDataPath
 		if containers[i].WorkingDir != "" {
 			workingDir = containers[i].WorkingDir
 		}
 		for j := range containers[i].VolumeMounts {
-			if !filepath.IsAbs(containers[i].VolumeMounts[j].MountPath) {
-				containers[i].VolumeMounts[j].MountPath = filepath.Clean(filepath.Join(workingDir, containers[i].VolumeMounts[j].MountPath))
+			if !strings.HasPrefix(containers[i].VolumeMounts[j].MountPath, "/") {
+				containers[i].VolumeMounts[j].MountPath = path.Clean(path.Join(workingDir, containers[i].VolumeMounts[j].MountPath))
 			}
 			if _, ok := volumeNameMap[containers[i].VolumeMounts[j].Name]; ok {
 				secretMountPaths[containers[i].Name] = append(secretMountPaths[containers[i].Name], containers[i].VolumeMounts[j].MountPath)
@@ -645,6 +655,13 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		constants.InternalAnnotationName:    string(internalConfigSerialized),
 		constants.ScheduledAtAnnotationName: options.ScheduledAt.UTC().Format(time.RFC3339Nano),
 	})
+	if workflow.Spec.Timeouts != nil && workflow.Spec.Timeouts.Initialization != "" {
+		initializationTimeout, err := time.ParseDuration(workflow.Spec.Timeouts.Initialization)
+		if err != nil || initializationTimeout <= 0 {
+			return nil, fmt.Errorf("timeouts.initialization: %q is not a positive duration", workflow.Spec.Timeouts.Initialization)
+		}
+		podAnnotations[constants.InitializationTimeoutAnnotation] = initializationTimeout.String()
+	}
 	jobSpec.Spec.Template.Annotations = podAnnotations
 
 	// Build bundle

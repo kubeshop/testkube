@@ -429,6 +429,7 @@ spec:
 		existingTrigger := &testkube.TestTrigger{
 			Name:      "test-trigger",
 			Namespace: "default",
+			Event:     "created",
 		}
 
 		expectedError := errors.New("update failed")
@@ -1050,6 +1051,7 @@ func TestBulkUpdateTestTriggersHandler(t *testing.T) {
 			{
 				Name:      "trigger-1",
 				Namespace: "default",
+				Event:     "created",
 			},
 		}
 

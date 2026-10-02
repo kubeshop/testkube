@@ -75,6 +75,12 @@ spec:
   {{- if .Event }}
   event: {{ .Event }}
   {{- end }}
+  {{- if ne (len .Events) 0 }}
+  events:
+    {{- range $e := .Events }}
+    - {{ $e }}
+    {{- end }}
+  {{- end }}
   {{- if ne (len .Match) 0 }}
   match:
     {{- range $m := .Match }}

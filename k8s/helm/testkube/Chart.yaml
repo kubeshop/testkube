@@ -2,8 +2,8 @@ apiVersion: v2
 name: testkube
 description: Testkube is an open-source platform that simplifies the deployment and management of automated testing infrastructure.
 type: application
-version: 2.14.0-preview.0
-appVersion: 2.14.0-preview.0
+version: 2.14.0-rc.0
+appVersion: 2.14.0-rc.0
 dependencies:
   - name: testkube-operator
     version: 2.x.x-x
@@ -17,7 +17,7 @@ dependencies:
     version: 18.6-0
     repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
   - name: cloudnative-pg
-    version: 0.29.0
+    version: 0.29.1
     repository: https://cloudnative-pg.github.io/charts
     condition: cloudnative-pg.enabled
   - name: cluster

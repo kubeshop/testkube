@@ -15,6 +15,7 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -60,7 +61,7 @@ func NewCloneCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := RunClone(cmd.Context(), args[0], args[1], opts); err != nil {
-				ui.Fail(err)
+				common.Fail(err)
 			}
 		},
 	}

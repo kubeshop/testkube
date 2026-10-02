@@ -3,7 +3,7 @@ package watchers
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
+	"slices"
 	"strings"
 	"time"
 
@@ -36,6 +36,7 @@ type Pod interface {
 	Signature() ([]stage.Signature, error)
 	InternalConfig() (testworkflowconfig.InternalConfig, error)
 	ScheduledAt() (time.Time, error)
+	InitializationTimeout() time.Duration
 	ContainerStarted(name string) bool
 	ContainerFinished(name string) bool
 	ContainerFailed(name string) bool
@@ -44,6 +45,8 @@ type Pod interface {
 	ContainerResult(name string, executionError string) ContainerResult
 	ContainersReady() bool
 	ContainerError() string
+	WaitingReason(reasons ...string) (reason, message string)
+	Unschedulable() (message string, ok bool)
 	ExecutionError() string
 	Debug() string
 }
@@ -108,14 +111,42 @@ func (p *pod) StartTimestamp() time.Time {
 }
 
 func (p *pod) FinishTimestamp() time.Time {
-	if !p.Finished() {
-		return time.Time{}
+	if IsPodFinished(p.original) {
+		return GetPodCompletionTimestamp(p.original)
 	}
-	return GetPodCompletionTimestamp(p.original)
+	ts, _ := p.stepContainersFinished()
+	return ts
 }
 
+// Finished reports whether the pod finished or every step container of the pod terminated.
 func (p *pod) Finished() bool {
-	return IsPodFinished(p.original)
+	if IsPodFinished(p.original) {
+		return true
+	}
+	_, terminated := p.stepContainersFinished()
+	return terminated
+}
+
+// stepContainersFinished returns the latest finish time and true when the pod has step containers in spec.containers
+// and all of them terminated. The processor puts the earlier step containers in the init containers. Init containers
+// run in order, and IsPodFinished reports a failed init container, so the check reads only spec.containers.
+func (p *pod) stepContainersFinished() (time.Time, bool) {
+	var latest time.Time
+	hasSteps := false
+	for _, c := range p.original.Spec.Containers {
+		if !isStepContainer(c.Name) {
+			continue
+		}
+		status := GetContainerStatus(p.original, c.Name)
+		if status == nil || status.State.Terminated == nil {
+			return time.Time{}, false
+		}
+		hasSteps = true
+		if finishedAt := status.State.Terminated.FinishedAt.Time; finishedAt.After(latest) {
+			latest = finishedAt
+		}
+	}
+	return latest, hasSteps
 }
 
 func (p *pod) ActionGroups() (actions actiontypes.ActionGroups, err error) {
@@ -134,6 +165,10 @@ func (p *pod) InternalConfig() (cfg testworkflowconfig.InternalConfig, err error
 
 func (p *pod) ScheduledAt() (time.Time, error) {
 	return time.Parse(time.RFC3339Nano, p.original.Annotations[constants.ScheduledAtAnnotationName])
+}
+
+func (p *pod) InitializationTimeout() time.Duration {
+	return parseInitializationTimeout(p.original.Annotations)
 }
 
 func (p *pod) ContainerStarted(name string) bool {
@@ -191,8 +226,7 @@ func (p *pod) ContainerError() string {
 
 	// Check only for the last Test Workflow's container, as this is the one we are interested in
 	for _, c := range p.original.Status.ContainerStatuses {
-		// Check for the container that has number in it, as it's likely TestWorkflow's one
-		if _, err := strconv.ParseInt(c.Name, 10, 64); err != nil {
+		if !isStepContainer(c.Name) {
 			continue
 		}
 		if c.State.Terminated != nil && c.State.Terminated.Reason != "" && c.State.Terminated.Reason != "Completed" {
@@ -201,6 +235,38 @@ func (p *pod) ContainerError() string {
 	}
 
 	return ""
+}
+
+// WaitingReason returns the reason and the message of the first container that waits for one of the reasons.
+// It reads the init containers first, then the step containers.
+func (p *pod) WaitingReason(reasons ...string) (string, string) {
+	matches := func(c corev1.ContainerStatus) bool {
+		return c.State.Waiting != nil && slices.Contains(reasons, c.State.Waiting.Reason)
+	}
+	for _, c := range p.original.Status.InitContainerStatuses {
+		if matches(c) {
+			return c.State.Waiting.Reason, c.State.Waiting.Message
+		}
+	}
+	for _, c := range p.original.Status.ContainerStatuses {
+		if !isStepContainer(c.Name) {
+			continue
+		}
+		if matches(c) {
+			return c.State.Waiting.Reason, c.State.Waiting.Message
+		}
+	}
+	return "", ""
+}
+
+// Unschedulable returns the message of the scheduler when no node can run the pod.
+func (p *pod) Unschedulable() (string, bool) {
+	for _, c := range p.original.Status.Conditions {
+		if c.Type == corev1.PodScheduled && c.Status == corev1.ConditionFalse && c.Reason == corev1.PodReasonUnschedulable {
+			return c.Message, true
+		}
+	}
+	return "", false
 }
 
 func (p *pod) ContainersReady() bool {

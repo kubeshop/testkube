@@ -82,7 +82,7 @@ func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, name
 	if !matchInternalResource(trigger, event, s.logger) {
 		return nil
 	}
-	if !matchEventOrCause(trigger.Event, event) {
+	if !matchEventOrCause(trigger.Events, event) {
 		return nil
 	}
 	if trigger.Conditions != nil && len(trigger.Conditions.Items) > 0 {
@@ -138,6 +138,14 @@ func isGitSyntheticTargetReady(trigger *internalTrigger) bool {
 	if !strings.EqualFold(trigger.ResourceKind, string(testtrigger.ResourceContent)) {
 		return false
 	}
-	e := strings.ToLower(trigger.Event)
-	return e == string(v1.TestTriggerEventGitPush) || e == string(v1.TestTriggerEventGitTagPush) || e == string(v1.TestTriggerEventGitPullRequest)
+	if len(trigger.Events) == 0 {
+		return false
+	}
+	for _, event := range trigger.Events {
+		e := strings.ToLower(event)
+		if e != string(v1.TestTriggerEventGitPush) && e != string(v1.TestTriggerEventGitTagPush) && e != string(v1.TestTriggerEventGitPullRequest) {
+			return false
+		}
+	}
+	return true
 }

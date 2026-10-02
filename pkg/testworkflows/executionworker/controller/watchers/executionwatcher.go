@@ -49,6 +49,7 @@ type ExecutionWatcher interface {
 
 	RefreshPod(ctx context.Context)
 	RefreshJob(ctx context.Context)
+	RefreshPodEvents(ctx context.Context)
 
 	Started() <-chan struct{}
 	Updated(ctx context.Context) <-chan struct{}
@@ -107,6 +108,24 @@ func (e *executionWatcher) RefreshPod(ctx context.Context) {
 
 func (e *executionWatcher) RefreshJob(ctx context.Context) {
 	e.jobWatcher.Update(ctx)
+}
+
+// RefreshPodEvents lists the events of the pod again, so the state gets the events that the
+// watch has not received yet. It does nothing before the pod exists, because the events
+// watcher starts with the name of the pod.
+func (e *executionWatcher) RefreshPodEvents(ctx context.Context) {
+	if !e.podEventsInitialized.Load() {
+		return
+	}
+	if _, err := e.podEventsWatcher.Update(0); err != nil {
+		return
+	}
+	// The update loop needs one cycle to put the events into the state.
+	select {
+	case <-e.Next():
+	case <-time.After(10 * ReadLatestBufferingTimeframe):
+	case <-ctx.Done():
+	}
 }
 
 func (e *executionWatcher) baseStarted() <-chan struct{} {
@@ -209,9 +228,8 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 		}
 	}()
 
-	// Create helper to read the latest data
-	podEventsCh := podEvents.Channel(ctx)
-	jobEventsCh := jobEvents.Channel(ctx)
+	// Create helper to read the latest data.
+	// It copies all the events that each list holds. Many events can arrive in one update, and the next update can come much later.
 	readLatestData := func() {
 		time.Sleep(ReadLatestBufferingTimeframe)
 
@@ -221,21 +239,8 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 		if pod.Latest() != nil {
 			watcher.uncommitted.pod = NewPod(pod.Latest())
 		}
-		for ok := true; ok; {
-			var event *corev1.Event
-			select {
-			case event, ok = <-podEventsCh:
-				if ok {
-					watcher.uncommitted.podEvents = NewPodEvents(append(watcher.uncommitted.podEvents.Original(), event))
-				}
-			case event, ok = <-jobEventsCh:
-				if ok {
-					watcher.uncommitted.jobEvents = NewJobEvents(append(watcher.uncommitted.jobEvents.Original(), event))
-				}
-			default:
-				ok = false
-			}
-		}
+		watcher.uncommitted.podEvents = NewPodEvents(podEvents.Latest())
+		watcher.uncommitted.jobEvents = NewJobEvents(jobEvents.Latest())
 		watcher.initializePodEventsWatcher()
 	}
 

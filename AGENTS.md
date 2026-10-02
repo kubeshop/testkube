@@ -31,6 +31,10 @@
 - Exposes tools across workflows, executions, artifacts, and metadata via `testkube mcp serve` (CLI), Docker image (`testkube/mcp-server`), or Control Plane's `/mcp` endpoint per environment.
 - Uses interface-based tool design; new tools need registration in both `pkg/mcp/server.go` and control plane's `mcp_handler.go`.
 - See `pkg/mcp/README.md` for architecture, tool patterns, and usage examples.
+- Insights board tools (`pkg/mcp/tools/boards.go`) keep their rules in `pkg/mcp/boards/`: report param validation and defaults, the report-to-`/insights/*` query translation, and the layout. It is a port of the dashboard's TypeScript (`utils/insights.ts`, `DynamicFilters/types.ts`, `reports/*/type.ts` in `testkube-cloud-api/js/packages/web`), since the Control Plane stores report params opaquely. **The Control Plane's `HandlerClient` must use this package rather than reimplement it**, and a dashboard change to those files needs a matching change here; `testdata/translation_cases.json` pins the translation.
+- Boards are organization-scoped and the Control Plane refuses API tokens on every board endpoint, so the board tools need a user session. `APIClient` refuses a `tkcapi_` token before sending anything and returns `tools.ErrBoardsRequireUser`. Every board write reads the board first and resends its description. Current Control Planes keep a description an update omits, but older ones clear it, so resending is what keeps it on those.
+- **Board updates are optimistic-concurrency writes.** Resending a value read earlier (the description, a recomputed layout) would overwrite a concurrent edit, so every update - `update_board` and the three report tools - goes through `writeBoard` in `pkg/mcp/tools/boards.go`: it sends `expectedVersion` (the board `version` it read; every write to a board increments it), the Control Plane refuses a stale write with 409, both clients turn that into `tools.ErrBoardChanged`, and the write is rebuilt from a fresh read, up to `boardWriteAttempts` times. A write's builder must derive everything from the board it is handed, never from an earlier read. The token is a counter, not `updatedAt`: two writes can share a timestamp, and a reused token would let a stale write through. A Control Plane that predates versions returns none, and the write is then unconditional. `delete_board` is deliberately not conditional: it resends nothing it read (the read only resolves a slug to the ID it deletes by), and the Control Plane checks visibility and delete rights against the board as it is at delete time, so deleting removes the board whatever changed since the read, as deleting in the dashboard does.
+- **Relative report ranges are anchored in a time zone.** The dashboard ends a `day`/`week`/`month`/`quarter` range at the viewer's local midnight, so `render_board` takes an IANA `timeZone` (default UTC) and passes it as `boards.QueryOptions.Location`; `boards` embeds `time/tzdata` because the MCP also runs from images without a zoneinfo database.
 
 ## GitOps resource sync
 
@@ -58,6 +62,64 @@ Still to come: Control Plane persistence and enforcement of the owner, and the `
 - Regenerate SQL code when query files change via `make generate-sqlc`.
 - Refresh mocks for new or updated interfaces using `make generate-mocks`.
 
+## Execution lineage and reruns
+
+- `TestWorkflowExecutionLineage` (`baseId`, `rootId`, `attempt`) records what an execution is a rerun of. It is written for **every** execution, not only reruns: an original run is its own root at attempt 1, so "every execution of chain R" is one predicate and includes the original - in SQL `COALESCE(lineage_root_id, id) = R`, matching the chain index, because a legacy row carries NULL there and is its own root. `TestWorkflowExecution.EffectiveLineage()` synthesizes that default for rows written before the columns existed, which is why nothing has to be backfilled - derive it there and nowhere else, or the two repositories will disagree.
+- It travels `ScheduleRequest.base_execution_id` -> `Enqueuer.deriveLineage` -> the execution record -> `ExecutionStart.lineage` -> `ExecutionConfig.Lineage` -> `RerunExecutionId()` in the pod, which is what makes the reserved `execution("rerun")` reference resolve. **Every path that builds an `ExecutionStart` must set it from the execution record**, in this repo and in `testkube-cloud-api`: a writer that forgets sends the pod no lineage, `execution("rerun")` silently stops resolving, and nothing reports it. That has already happened once - `go build` cannot catch it, because an unused helper function is not a compile error; the `unused` linter is the guard.
+- Only the base id travels on the wire. The Control Plane derives the root and attempt by loading the base through the environment-scoped results repository, which is also where it confirms the base belongs to the caller's environment - `proto/service.proto` requires that, and the load is what enforces it. A caller able to assert a root or an attempt could forge a chain.
+- **An original run has an empty `baseId` and must resolve to no rerun.** Returning `rootId` there would make every execution a rerun of itself.
+- **Reserved references win over the registry.** `execution("parent")` and `execution("rerun")` are resolved before the executions the workflow scheduled, so a child aliased - or a workflow named - `parent`/`rerun` cannot shadow them. A collision is refused rather than resolved either way, because preferring the reserved meaning would instead make that child unreachable by name. `IsReservedRef` is the list.
+
+## Transient-failure retries
+
+- `pkg/runner/runner.go` runs `worker.Destroy` (cleanup of the execution's Secrets/Pods after the workflow ends) through the shared `retry()` helper via `destroyResources`. Bounded by `CleanupResourcesRetryCount` and `CleanupResourcesRetryDelay`; a brief `kube-apiserver` blip during teardown should not leave orphan resources in the customer namespace.
+- `pkg/event/kind/webhook/listener.go` retries the outbound `HttpClient.Do` for `sendRetryCount` attempts with a linear `sendRetryBaseDelay`. Retryable outcomes: network errors, `5xx`, and `429`. Other `4xx` short-circuit so a bad URL / auth failure is not spammed at the subscriber. Delivery is intentionally at-least-once (subscribers own dedupe, matching Stripe/GitHub/Slack convention).
+
+## Step dependency cache
+
+A step's `cache` block (`api/testworkflows/v1/step_types.go`, `StepCache`) restores
+directories from object storage before the step runs and saves them back once it passes,
+so dependency installs survive between executions.
+
+- `pkg/executioncache/` is the transport-free core: the object-key derivation
+  (`objectkey.go`), the restore-key match policy (`match.go`), the payload and handshake
+  shapes both sides share (`args.go`), and the repository interface plus its
+  degrade-to-miss classification (`repository.go`). **The Control Plane must import this
+  package rather than reimplement it** — a disagreement produces entries the other side
+  can never find, so every run silently misses its own cache.
+- `ProcessCacheRestore` / `ProcessCacheSave` in
+  `pkg/testworkflows/testworkflowprocessor/operations_cache.go`, registered in **both**
+  presets. Restore sits after the content operations so the repository is checked out
+  when the key is resolved; save sits after the step's work and before artifacts.
+- `cmd/testworkflow-toolkit/commands/cache.go` is the pod-side half. It never exits
+  non-zero: a cache is an optimization, so a miss, an unreachable Control Plane, a
+  missing capability, a corrupt archive or a refused upload all leave the step to install
+  from the network.
+
+Three constraints are easy to break and worth knowing before editing any of it:
+
+- **The specification travels base64-encoded in one argument.** `testworkflow-init`
+  resolves every container argument with `expressions.FinalizerFail` and exits the step
+  on failure, so a key holding `hash_files()` over an absent lockfile would kill the step
+  rather than miss the cache. `TestProcessCache_KeyTemplateStaysOpaque` guards this.
+- **The two stages hand the resolved key over through `TK_CACHE_STATE`** on the shared
+  `/testkube` volume instead of each computing it. They are separate containers, and an
+  install may rewrite the very lockfile the key hashes (`npm ci` does), so a recomputed
+  key could store the entry where nothing later searches for it.
+- **Cached paths are mounted automatically.** Each stage is its own container, and
+  containers share volumes but not their root filesystems, so a path outside every volume
+  is restored where the container running the install cannot see it. `mount: false` on an
+  uncovered path is refused at bundle time rather than silently doing nothing.
+
+The save stage sets no condition, inheriting `passed` — deliberately unlike the artifacts
+stage, which is `always`: publishing a failed install under a content-hash key would
+poison every later run with no way for a user to invalidate it.
+
+`hash()` (`pkg/expressions/stdlib.go`) and `hash_files()`
+(`pkg/expressions/libs/fs.go`) exist for building keys. Prefer `hash_files`:
+`hash(glob(...))` digests the matched **paths**, so it does not change when a file's
+contents do.
+
 ## Telemetry and cluster detection
 
 - `pkg/telemetry/` contains all telemetry event construction, sending, and cluster identification logic.
@@ -77,21 +139,33 @@ Still to come: Control Plane persistence and enforcement of the owner, and the `
 - Adding a new CI/runtime detection: extend `pkg/cliruntime/context.go` so both telemetry and the update-check feature stay in sync.
 - Adding a new AI-tool detection: extend `DetectAITool` in `pkg/cliruntime/context.go` (add the env-var check and a `TestDetectAITool` case in `context_test.go`); no telemetry wiring changes are needed since payloads already read the `AITool` field.
 
+## CLI prompts and non-interactive runs
+
+- `pkg/ui/interactive.go` holds the terminal check every prompt goes through. `ui.Select`, `ui.Confirm` and `ui.TextInput` call `requireInteractive` first and exit with an actionable message when stdin is not a terminal, so no call site has to guard itself. `ui.StdinIsInteractive()` exposes the same check for callers that want to take a different path instead of failing.
+- The guard exists because a prompt with nobody to answer it used to spin: `atomicgo.dev/keyboard` cannot open a non-terminal stdin, reports every failed read as an empty keypress with a nil error, and pterm has no case for an empty keypress, so its listener loops forever and burns more than a core.
+- `GetClient` (`cmd/kubectl-testkube/commands/common/client.go`) uses `ui.StdinIsInteractive()` to refuse starting a login when a token refresh fails with no terminal present, the same way the email-link branch beside it already does.
+- Adding a new prompt: use the `ui` helpers rather than pterm directly, and it inherits the guard. Adding a command that must not prompt at all: branch on `ui.StdinIsInteractive()`.
+- Tests flip the unexported `stdinIsInteractive` seam rather than allocating a pseudo terminal.
+
 ## On-prem demo install
 
 - `testkube init demo` (`cmd/kubectl-testkube/commands/init.go`) installs the On-Prem demo on the new architecture: the Control Plane (enterprise chart + `values.demo.v2.yaml`) plus a **separate** listener-enabled runner (`kubeshop/testkube-runner`). The bundled agent is gone.
 - The CLI generates one agent secret key per install (`common.GenerateDemoAgentSecretKey`) and passes the *same* key to both sides — injected into the Control Plane's `bootstrapConfig` runner so the CP provisions it, and into the runner install (`common.HelmUpgradeOrInstallTestkubeOnPremDemoRunner` → `demoRunnerHelmOptions`). No secret is baked into the binary or chart.
 - The runner identity (`demoRunnerID`/`OrgID`/`EnvID`) must stay in sync with the runner declared under `bootstrapConfig` in `values.demo.v2.yaml` (in `testkube-cloud-charts`).
 - The legacy `values.demo.yaml` profile (bundled agent, MongoDB) is deprecated but kept for older CLIs.
+- Install lifecycle telemetry: `init demo` reports `cli_install_started` (before Helm install) and `cli_install_finished` (after success) to the license service at `POST https://license.testkube.io/events`. The client lives in `pkg/diagnostics/validators/license/client.go` (`Client.ReportEvent`, `EventRequest`, the `LicenseEventsURL` and `EventCLIInstall*` constants); the `reportLicenseEvent`/`waitLicenseEvents` helpers in `init.go` make delivery telemetry-gated, non-blocking (background goroutine), and flushed before exit with a bounded wait. The license key in the body is the credential (validated worker-side before recording), so no shared secret ships in the CLI. Adding a new lifecycle event: add an `EventCLIInstall*` constant and a `reportLicenseEvent` call, and allowlist it in the license worker's `/events` handler (`testkube-infrastructure`). Keep `ARCHITECTURE.md` in sync.
 
 ## Configuration references
 
 - Agent behavior is driven by env vars defined in `internal/config/config.go` (scan for `envconfig:"..."` tags when researching a toggle).
 - GitOps sync of Kubernetes resources into the Control Plane is gated by `GITOPS_KUBERNETES_TO_CLOUD_ENABLED` (default `false`), and additionally requires the Control Plane to report cloud storage support.
+- TestTriggers accept `spec.event` or a `spec.events` list (mutually exclusive, validated service-side); always consume them via `EffectiveEvents()` so both forms are honored — classification gates that read the single `event` field directly will silently skip list-form triggers.
 - Git trigger informer behavior is tuned via `TEST_TRIGGER_GIT_INFORMER_RECONCILE_INTERVAL`, `TEST_TRIGGER_GIT_INFORMER_REPO_DEPTH`, `TEST_TRIGGER_GIT_INFORMER_LIST_TIMEOUT`, `TEST_TRIGGER_GIT_INFORMER_MAX_COMMITS_SCAN`, `TEST_TRIGGER_GIT_INFORMER_PULL_RETRIES`, and `TEST_TRIGGER_GIT_INFORMER_PULL_RETRY_DELAY`.
 - Git trigger informer execution is leader-gated in `cmd/api-server/main.go` through the shared `leader` coordinator tasks, so only the active leader performs periodic git pulls/reconciliation.
 - Helm chart values are the source of deployment defaults; `build/_local/values.dev.yaml` (shaped by the `values.dev.tpl.yaml` template) shows the local overrides used by `tk-dev` if you need a concrete reference.
+- `testkube-api` chart values `jobTolerations`/`jobAffinity`/`jobNodeSelector` (`k8s/helm/testkube-api/values.yaml`) set the `tolerations`/`affinity`/`nodeSelector` applied to the ephemeral pods spawned per test execution (`_job-template.yaml.tpl` for legacy prebuilt/container executors, `_slave-pod-template.yaml.tpl` for test-workflow slave pods). Unset (empty) by default and deliberately does not fall back to `global.tolerations`/`global.affinity`/`global.nodeSelector`, since those already carry a non-empty default (an arm64 toleration) that would otherwise silently change job/slave pod scheduling for every chart consumer.
 - CLI update-check toggle: set `TESTKUBE_DISABLE_UPDATE_CHECK=1` to suppress both the per-command hint and the `testkube version` status block. The CLI persists `lastUpdateCheckAt` and `latestKnownVersion` in `~/.testkube/config.json` to throttle the per-command hint to once per day.
+- Object retention is driven by `STORAGE_EXPIRATION` (whole bucket, in days) and `STORAGE_CACHE_EXPIRATION` (step dependency caches under the `.tkcache/v1` prefix, in days). **`STORAGE_CACHE_EXPIRATION` defaults to 1 day; `STORAGE_EXPIRATION` stays opt-in.** The difference is the filter, not taste: the cache rule is confined to the cache prefix and can only delete caches, where the bucket-wide rule is unfiltered and governs artifacts and logs too, so a default there would delete a deployment's results on an upgrade. `TestExpirationDefaults` pins both. `SetExpirationPolicies` in `pkg/storage/minio/minio.go` applies them with `SetBucketLifecycle`, which replaces the bucket lifecycle wholesale - so it reads the existing configuration first and carries through every rule Testkube does not own, matched by ID (`mergeLifecycleRules`). That merge is what makes a default safe at all: without it, defaulting either setting would drop the rules of installations whose bucket lifecycle is managed elsewhere, purely by upgrading. It fails closed - if the existing lifecycle cannot be read, nothing is written. That read is a permission earlier versions did not need (`s3:GetLifecycleConfiguration` on S3 and MinIO, `storage.buckets.get` on GCS), and because `STORAGE_CACHE_EXPIRATION` now defaults to 1 the call happens on every installation rather than only those configuring an expiration - so an upgrade can need permissions the deployment never granted. The error names them. Note also that the bucket-wide rule is unfiltered and so covers cache objects too, and the earlier expiration wins — a cache TTL can only bring eviction forward, never postpone it, and `MustGetMinioClient` warns when it is set longer than the bucket-wide one.
 
 ## Architecture reference
 

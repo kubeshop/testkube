@@ -97,27 +97,32 @@ func TestEvaluateResult(t *testing.T) {
 		result       ServiceExecutionResult
 		hasReadiness bool
 		wantSuccess  bool
+		wantFailure  string
 	}{
 		{
 			name:        "error takes priority",
 			result:      ServiceExecutionResult{Started: true, Ready: true, Failed: false, Error: errors.New("err")},
 			wantSuccess: false,
+			wantFailure: "error during monitoring: err",
 		},
 		{
 			name:        "failed takes priority over started",
 			result:      ServiceExecutionResult{Started: true, Ready: true, Failed: true},
 			wantSuccess: false,
+			wantFailure: "service failed",
 		},
 		{
 			name:        "not started is failure",
 			result:      ServiceExecutionResult{Started: false, Ready: true, Failed: false},
 			wantSuccess: false,
+			wantFailure: "container failed to start",
 		},
 		{
 			name:         "not ready with readiness probe is failure",
 			result:       ServiceExecutionResult{Started: true, Ready: false, Failed: false},
 			hasReadiness: true,
 			wantSuccess:  false,
+			wantFailure:  "container did not reach readiness",
 		},
 		{
 			name:         "not ready without readiness probe is success",
@@ -139,6 +144,7 @@ func TestEvaluateResult(t *testing.T) {
 			got := runner.evaluateResult(tt.result)
 
 			assert.Equal(t, tt.wantSuccess, got)
+			assert.Equal(t, tt.wantFailure, runner.failure)
 		})
 	}
 }

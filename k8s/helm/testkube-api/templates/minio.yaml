@@ -88,6 +88,7 @@ spec:
           # Pulls the lastest Minio image from Docker Hub
           image: {{ include "global.images.image" (dict "imageRoot" .Values.minio.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.minio.image.pullPolicy }}
+          command: ["minio"]
           args:
             - server
             - /data

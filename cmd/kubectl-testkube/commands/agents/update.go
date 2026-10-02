@@ -6,9 +6,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	common2 "github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/cloud/client"
-	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func NewUpdateAgentCommand() *cobra.Command {
@@ -20,8 +20,8 @@ func NewUpdateAgentCommand() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "agent <name>",
-		Aliases: []string{"runner"},
+		Use:     "runner <name>",
+		Aliases: []string{"agent"},
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			UiUpdateAgent(cmd, strings.Join(args, ""), setLabels, deleteLabels, runnerMode, groupName)
@@ -38,13 +38,34 @@ func NewUpdateAgentCommand() *cobra.Command {
 
 func UiUpdateAgent(cmd *cobra.Command, name string, setLabels, deleteLabels []string, runnerMode string, groupName string) {
 	agent, err := GetControlPlaneAgent(cmd, name)
-	ui.ExitOnError("getting agent", err)
+	if err != nil {
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrRunnerGetFailed,
+			"Error getting the runner",
+			common2.RunnerLookupHint,
+			err,
+		))
+	}
 
 	input, err := buildUpdateAgentInput(agent, setLabels, deleteLabels, runnerMode, groupName)
-	ui.ExitOnError("preparing agent update", err)
+	if err != nil {
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrInvalidRuntimeParameter,
+			"Error preparing the runner update",
+			"Check the '--runner-mode', '--group-name', '--label' and '--delete-label' values; a runner in group mode keeps a 'group' label",
+			err,
+		))
+	}
 
 	agent, err = UpdateAgent(cmd, agent.ID, input)
-	ui.ExitOnError("updating agent", err)
+	if err != nil {
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrRunnerWriteFailed,
+			"Error updating the runner",
+			common2.RunnerWriteHint,
+			err,
+		))
+	}
 
 	PrintControlPlaneAgent(*agent)
 }

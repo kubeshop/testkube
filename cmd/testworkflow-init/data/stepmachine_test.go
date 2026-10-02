@@ -5,10 +5,12 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
@@ -123,6 +125,71 @@ func TestStepMachine_Outputs(t *testing.T) {
 					GetState().SetStepOutput(stepId, k, v)
 				}
 			}
+			val, ok := resolveStepExpr(t, tc.expr)
+			assert.Equal(t, tc.wantOk, ok)
+			if tc.wantOk {
+				assert.Equal(t, tc.wantVal, val)
+			}
+		})
+	}
+}
+
+func TestStepMachine_StatusAndExitCode(t *testing.T) {
+	passed := constants.StepStatusPassed
+	failed := constants.StepStatusFailed
+	skipped := constants.StepStatusSkipped
+	startedAt := time.Now()
+
+	tests := map[string]struct {
+		steps   map[string]*StepData
+		expr    string
+		wantVal string
+		wantOk  bool
+	}{
+		"resolves the status of a step that ran": {
+			steps:   map[string]*StepData{"ref1": {Id: "build", Status: &failed, ExitCode: 3, StartedAt: &startedAt}},
+			expr:    "step.build.status",
+			wantVal: "failed",
+			wantOk:  true,
+		},
+		"resolves the exit code of a step that ran": {
+			steps:   map[string]*StepData{"ref1": {Id: "build", Status: &failed, ExitCode: 3, StartedAt: &startedAt}},
+			expr:    "step.build.exitCode",
+			wantVal: "3",
+			wantOk:  true,
+		},
+		"resolves the exit code of a step that passed": {
+			steps:   map[string]*StepData{"ref1": {Id: "build", Status: &passed, StartedAt: &startedAt}},
+			expr:    "step.build.exitCode",
+			wantVal: "0",
+			wantOk:  true,
+		},
+		"returns nothing for a step that did not run": {
+			steps:  map[string]*StepData{"ref1": {Id: "build"}},
+			expr:   "step.build.exitCode",
+			wantOk: false,
+		},
+		"returns nothing for an unknown step": {
+			steps:  map[string]*StepData{"ref1": {Id: "build", Status: &failed, StartedAt: &startedAt}},
+			expr:   "step.other.status",
+			wantOk: false,
+		},
+		"resolves the status of a step that a condition skipped": {
+			steps:   map[string]*StepData{"ref1": {Id: "build", Status: &skipped}},
+			expr:    "step.build.status",
+			wantVal: "skipped",
+			wantOk:  true,
+		},
+		"returns nothing for the exit code of a step that a condition skipped": {
+			steps:  map[string]*StepData{"ref1": {Id: "build", Status: &skipped}},
+			expr:   "step.build.exitCode",
+			wantOk: false,
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			setupTestState(tc.steps, "ref1")
+
 			val, ok := resolveStepExpr(t, tc.expr)
 			assert.Equal(t, tc.wantOk, ok)
 			if tc.wantOk {

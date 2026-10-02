@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -273,45 +274,83 @@ type ContainerResult struct {
 	ErrorDetails string
 }
 
+// ReasonDeadlineExceeded is the reason that the pod and the job report when they pass
+// activeDeadlineSeconds.
+const ReasonDeadlineExceeded = "DeadlineExceeded"
+
+// GetPodDisruption returns the reason and the message of the disruption condition of the pod, and
+// empty strings when the pod has none. Kubernetes sets this condition when it takes the pod away,
+// for example on an eviction, a preemption, or a shutdown of the node.
+func GetPodDisruption(pod *corev1.Pod) (reason, message string) {
+	if pod == nil {
+		return "", ""
+	}
+	for _, c := range pod.Status.Conditions {
+		if c.Type == corev1.DisruptionTarget && c.Status == corev1.ConditionTrue {
+			return c.Reason, c.Message
+		}
+	}
+	return "", ""
+}
+
 func GetPodError(pod *corev1.Pod) string {
 	if pod == nil {
 		return ""
 	}
-	if pod.Status.Reason == "DeadlineExceeded" && pod.Spec.ActiveDeadlineSeconds != nil {
+	if pod.Status.Reason == ReasonDeadlineExceeded && pod.Spec.ActiveDeadlineSeconds != nil {
 		return fmt.Sprintf("Pod timed out after %d seconds", *pod.Spec.ActiveDeadlineSeconds)
 	}
-	for _, c := range pod.Status.Conditions {
-		if c.Type == corev1.DisruptionTarget && c.Status == corev1.ConditionTrue {
-			if c.Message == "" {
-				return c.Reason
-			}
-			return fmt.Sprintf("%s: %s", c.Reason, c.Message)
+	if reason, message := GetPodDisruption(pod); reason != "" {
+		if message == "" {
+			return reason
 		}
+		return fmt.Sprintf("%s: %s", reason, message)
 	}
 	return ""
 }
 
+// GetJobStop returns what the job says about the stop of the execution. The worker annotates a
+// stop with the actor, a reason token, and an optional detail.
+func GetJobStop(job *batchv1.Job) testkube.Stop {
+	stop := testkube.Stop{Code: GetTerminationCode(job)}
+	if job == nil {
+		return stop
+	}
+	stop.Actor = testkube.StopActor(job.Annotations[constants2.AnnotationTerminationActor])
+	stop.Reason = testkube.StopReason(job.Annotations[constants2.AnnotationTerminationReason])
+	stop.Detail = job.Annotations[constants2.AnnotationTerminationDetail]
+	if stop.Actor == "" && stop.Reason == "" && job.DeletionTimestamp != nil {
+		// A deleted job without the annotations is a stop by an unknown party.
+		stop.Actor = testkube.StopActorSystem
+	}
+	return stop
+}
+
+// IsJobDeadlineExceeded reports whether the job failed because it passed activeDeadlineSeconds.
+// The condition of the job carries this signal, and the event stream of the job carries it too. The
+// watch can read the condition before the event arrives, so the reader of the code reads both.
+func IsJobDeadlineExceeded(job *batchv1.Job) bool {
+	if job == nil || job.Spec.ActiveDeadlineSeconds == nil {
+		return false
+	}
+	for _, c := range job.Status.Conditions {
+		if c.Type == batchv1.JobFailed && c.Status == corev1.ConditionTrue && c.Reason == ReasonDeadlineExceeded {
+			return true
+		}
+	}
+	return false
+}
+
+// GetJobError returns the words for the stop that GetJobStop reports, so the message and the codes
+// read one source. The deadline of the job wins, because it names the limit that ended it.
 func GetJobError(job *batchv1.Job) string {
 	if job == nil {
 		return ""
 	}
-	if job.Spec.ActiveDeadlineSeconds != nil {
-		for _, c := range job.Status.Conditions {
-			if c.Type == batchv1.JobFailed && c.Status == corev1.ConditionTrue && c.Reason == "DeadlineExceeded" {
-				return fmt.Sprintf("Job timed out after %d seconds", *job.Spec.ActiveDeadlineSeconds)
-			}
-		}
+	if IsJobDeadlineExceeded(job) {
+		return fmt.Sprintf("Job timed out after %d seconds", *job.Spec.ActiveDeadlineSeconds)
 	}
-	var msg string
-	if job.DeletionTimestamp != nil {
-		msg = "Job has been aborted"
-	}
-	if job.Annotations != nil {
-		if terminationReason, ok := job.Annotations["testkube.io/termination-reason"]; ok && terminationReason != "" {
-			msg = terminationReason
-		}
-	}
-	return msg
+	return GetJobStop(job).Sentence()
 }
 
 func GetTerminationCode(job *batchv1.Job) string {
@@ -402,4 +441,41 @@ func GetEventContainerName(event *corev1.Event) string {
 		return name
 	}
 	return ""
+}
+
+// isStepContainer reports whether the container runs Test Workflow steps. The processor gives these containers numeric names.
+func isStepContainer(name string) bool {
+	_, err := strconv.ParseInt(name, 10, 64)
+	return err == nil
+}
+
+// latestWaitingCause returns the cause of the latest warning event with a reason in causes.
+// It returns nil when an event with a reason in progress is not older than that event.
+// The watcher does not sort the events, so the event time decides the order, and the list position only breaks a tie.
+func latestWaitingCause(events []*corev1.Event, causes map[string]testkube.StopReason, progress []string) *testkube.Cause {
+	var cause *corev1.Event
+	var causeTs, progressTs time.Time
+	causeIndex, progressIndex := -1, -1
+	for i, event := range events {
+		ts := GetEventTimestamp(event)
+		if slices.Contains(progress, event.Reason) && !ts.Before(progressTs) {
+			progressTs, progressIndex = ts, i
+		}
+		if _, ok := causes[event.Reason]; ok && event.Type == corev1.EventTypeWarning && !ts.Before(causeTs) {
+			cause, causeTs, causeIndex = event, ts, i
+		}
+	}
+	if cause == nil || progressTs.After(causeTs) || (progressTs.Equal(causeTs) && progressIndex > causeIndex) {
+		return nil
+	}
+	return &testkube.Cause{Reason: string(causes[cause.Reason]), Message: cause.Message}
+}
+
+// parseInitializationTimeout reads the initialization timeout annotation. It returns zero when the value is absent or invalid.
+func parseInitializationTimeout(annotations map[string]string) time.Duration {
+	timeout, err := time.ParseDuration(annotations[constants2.InitializationTimeoutAnnotation])
+	if err != nil || timeout < 0 {
+		return 0
+	}
+	return timeout
 }

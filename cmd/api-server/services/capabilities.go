@@ -34,7 +34,7 @@ func AgentCapabilities(cfg *config.Config) []string {
 	}
 
 	if !cfg.DisableRunner {
-		caps = append(caps, "runner")
+		caps = append(caps, "execution", "runner")
 	}
 	if cfg.FloatingRunner {
 		caps = append(caps, "floating-runner")

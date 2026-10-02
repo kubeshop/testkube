@@ -363,10 +363,25 @@ func triggerKeyFromRefSubKey(k string) string {
 func isGitContentTrigger(trigger testkube.TestTrigger) bool {
 	return !trigger.Disabled &&
 		isContentResource(trigger) &&
-		isGitContentEvent(trigger.Event) &&
+		allGitContentEvents(trigger.EffectiveEvents()) &&
 		trigger.ContentSelector != nil &&
 		trigger.ContentSelector.Git != nil &&
 		trigger.ContentSelector.Git.Uri != ""
+}
+
+// allGitContentEvents reports whether the list is non-empty and every entry is
+// a git content event; validation enforces this for content-resource triggers,
+// so a mixed list never classifies as a git content trigger.
+func allGitContentEvents(events []string) bool {
+	if len(events) == 0 {
+		return false
+	}
+	for _, e := range events {
+		if !isGitContentEvent(e) {
+			return false
+		}
+	}
+	return true
 }
 
 func isGitContentEvent(event string) bool {

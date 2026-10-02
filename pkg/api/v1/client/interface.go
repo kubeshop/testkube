@@ -181,6 +181,8 @@ type FilterTestWorkflowExecutionOptions struct {
 	ActorName   string
 	ActorType   testkube.TestWorkflowRunningContextActorType
 	Status      string
+	// StatusDetailsType filters by the layer that failed, with values separated by a comma.
+	StatusDetailsType string
 }
 
 // Gettable is an interface of gettable objects

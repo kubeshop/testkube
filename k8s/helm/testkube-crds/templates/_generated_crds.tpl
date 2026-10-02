@@ -291,6 +291,9 @@ spec:
                   - end-testworkflow-aborted
                   - end-testworkflow-canceled
                   - end-testworkflow-not-passed
+                  - end-testworkflow-test-failure
+                  - end-testworkflow-infrastructure-failure
+                  - end-testworkflow-configuration-error
                   - become-testworkflow-up
                   - become-testworkflow-down
                   - become-testworkflow-failed
@@ -504,6 +507,9 @@ spec:
                   - end-testworkflow-aborted
                   - end-testworkflow-canceled
                   - end-testworkflow-not-passed
+                  - end-testworkflow-test-failure
+                  - end-testworkflow-infrastructure-failure
+                  - end-testworkflow-configuration-error
                   - become-testworkflow-up
                   - become-testworkflow-down
                   - become-testworkflow-failed
@@ -7108,7 +7114,9 @@ spec:
                 description: whether test trigger is disabled
                 type: boolean
               event:
-                description: On which Event for a Resource should an Action be triggered
+                description: |-
+                  On which Event for a Resource should an Action be triggered.
+                  Exactly one of Event or Events must be specified.
                 enum:
                 - created
                 - modified
@@ -7143,6 +7151,48 @@ spec:
                 - event-updated
                 - event-deleted
                 type: string
+              events:
+                description: |-
+                  Events is a list of Events for a Resource on which an Action should be triggered;
+                  the trigger fires when any event in the list occurs.
+                  Exactly one of Event or Events must be specified.
+                items:
+                  description: TestTriggerEvent defines event for test triggers
+                  enum:
+                  - created
+                  - modified
+                  - deleted
+                  - git-push
+                  - git-tag-push
+                  - git-pull-request
+                  - deployment-scale-update
+                  - deployment-image-update
+                  - deployment-env-update
+                  - deployment-containers-modified
+                  - deployment-generation-modified
+                  - deployment-resource-modified
+                  - event-start-test
+                  - event-end-test-success
+                  - event-end-test-failed
+                  - event-end-test-aborted
+                  - event-end-test-timeout
+                  - event-start-testsuite
+                  - event-end-testsuite-success
+                  - event-end-testsuite-failed
+                  - event-end-testsuite-aborted
+                  - event-end-testsuite-timeout
+                  - event-queue-testworkflow
+                  - event-start-testworkflow
+                  - event-end-testworkflow-success
+                  - event-end-testworkflow-failed
+                  - event-end-testworkflow-aborted
+                  - event-end-testworkflow-canceled
+                  - event-end-testworkflow-not-passed
+                  - event-created
+                  - event-updated
+                  - event-deleted
+                  type: string
+                type: array
               execution:
                 description: Execution identifies for which test execution should
                   an Action be executed
@@ -7472,7 +7522,6 @@ spec:
                 type: object
             required:
             - action
-            - event
             - execution
             - testSelector
             type: object
@@ -7675,6 +7724,24 @@ spec:
                     id:
                       description: unique execution identifier
                       type: string
+                    lineage:
+                      description: |-
+                        where this execution sits in its chain of reruns. Recorded on every
+                        execution: an original run is its own root at attempt 1, with no base.
+                      properties:
+                        attempt:
+                          description: 1 for an original run, one more than the base for a rerun
+                          format: int32
+                          type: integer
+                        baseId:
+                          description: the execution this one is a rerun of; empty for an original run
+                          type: string
+                        rootId:
+                          description: |-
+                            the first execution in the chain. An original run is its own root, so
+                            that every execution of a chain shares one rootId.
+                          type: string
+                      type: object
                     name:
                       description: execution name
                       type: string
@@ -7814,7 +7881,14 @@ spec:
                         initialization:
                           description: TestWorkflowStepResult contains step result of TestWorkflow
                           properties:
+                            attempts:
+                              description: number of attempts that the step started, empty when the init process reported none
+                              format: int32
+                              type: integer
                             errorMessage:
+                              type: string
+                            errorReason:
+                              description: code of the cause in the error message, for example unschedulable; empty when the message has no known cause
                               type: string
                             exitCode:
                               format: int64
@@ -7887,11 +7961,56 @@ spec:
                             - failed
                             - aborted
                           type: string
+                        statusDetails:
+                          description: |-
+                            TestWorkflowStatusDetails gives the reason why an execution did not pass. It is
+                            present on every terminal status except passed.
+                          properties:
+                            actor:
+                              description: code of the component that decided the stop, for example user or control-plane
+                              type: string
+                            message:
+                              description: the message of the step that holds the cause, verbatim
+                              type: string
+                            reason:
+                              description: code of the cause, for example unschedulable or oom-killed
+                              type: string
+                            step:
+                              description: reference of the step that holds the cause; empty when the initialization step holds it
+                              type: string
+                            type:
+                              description: the layer that failed
+                              enum:
+                                - init-failure
+                                - execution-failure
+                                - step-failure
+                                - user-cancel
+                                - unknown
+                              type: string
+                            user:
+                              description: the person who canceled the execution; the control plane fills it
+                              properties:
+                                email:
+                                  type: string
+                                name:
+                                  type: string
+                              type: object
+                          required:
+                            - reason
+                            - type
+                          type: object
                         steps:
                           additionalProperties:
                             description: TestWorkflowStepResult contains step result of TestWorkflow
                             properties:
+                              attempts:
+                                description: number of attempts that the step started, empty when the init process reported none
+                                format: int32
+                                type: integer
                               errorMessage:
+                                type: string
+                              errorReason:
+                                description: code of the cause in the error message, for example unschedulable; empty when the message has no known cause
                                 type: string
                               exitCode:
                                 format: int64
@@ -8109,6 +8228,49 @@ spec:
                             description: working directory to override, so it will be used as a base dir
                             type: string
                         type: object
+                      cache:
+                        description: dependency cache to restore before and save after this step's operations
+                        properties:
+                          key:
+                            description: |-
+                              key to store the entry under, usually derived from a lockfile,
+                              e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          mount:
+                            description: |-
+                              should a volume be mounted at every cached path that is not part of one already
+                              (true if not specified); a path outside any volume would otherwise be restored
+                              into a container's own filesystem, where the step that needs it cannot see it
+                            type: boolean
+                          paths:
+                            description: paths to store in the cache, relative to the working directory
+                            items:
+                              type: string
+                            minItems: 1
+                            type: array
+                          restoreKeys:
+                            description: |-
+                              key prefixes to fall back to when there is no entry for the exact key,
+                              tried in order, where the most recently saved match wins
+                            items:
+                              type: string
+                            maxItems: 10
+                            type: array
+                          scope:
+                            description: how widely the entry is shared (defaults to workflow)
+                            enum:
+                              - workflow
+                              - environment
+                            type: string
+                          workingDir:
+                            description: working directory to override, so it will be used as a base dir
+                            type: string
+                        required:
+                          - key
+                          - paths
+                        type: object
                       condition:
                         description: |-
                           expression to declare under which conditions the step should be run
@@ -8776,10 +8938,10 @@ spec:
                             items:
                               properties:
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test execution description to display
@@ -9071,10 +9233,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: test name to run
@@ -9098,6 +9260,12 @@ spec:
                                 as:
                                   description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                   type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -9107,10 +9275,10 @@ spec:
                                   description: configuration to pass for the workflow
                                   type: object
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test workflow execution description to display
@@ -9145,10 +9313,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: workflow name to run
@@ -9261,6 +9429,49 @@ spec:
                                 description: working directory to override, so it will be used as a base dir
                                 type: string
                             type: object
+                          cache:
+                            description: dependency cache to restore before and save after this step's operations
+                            properties:
+                              key:
+                                description: |-
+                                  key to store the entry under, usually derived from a lockfile,
+                                  e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                                maxLength: 512
+                                minLength: 1
+                                type: string
+                              mount:
+                                description: |-
+                                  should a volume be mounted at every cached path that is not part of one already
+                                  (true if not specified); a path outside any volume would otherwise be restored
+                                  into a container's own filesystem, where the step that needs it cannot see it
+                                type: boolean
+                              paths:
+                                description: paths to store in the cache, relative to the working directory
+                                items:
+                                  type: string
+                                minItems: 1
+                                type: array
+                              restoreKeys:
+                                description: |-
+                                  key prefixes to fall back to when there is no entry for the exact key,
+                                  tried in order, where the most recently saved match wins
+                                items:
+                                  type: string
+                                maxItems: 10
+                                type: array
+                              scope:
+                                description: how widely the entry is shared (defaults to workflow)
+                                enum:
+                                  - workflow
+                                  - environment
+                                type: string
+                              workingDir:
+                                description: working directory to override, so it will be used as a base dir
+                                type: string
+                            required:
+                              - key
+                              - paths
+                            type: object
                           config:
                             description: make the instance configurable with some input data for scheduling it
                             x-kubernetes-preserve-unknown-fields: true
@@ -9271,10 +9482,10 @@ spec:
                             description: global content that should be fetched into all containers
                             x-kubernetes-preserve-unknown-fields: true
                           count:
+                            description: static number of sharded instances to spawn
                             anyOf:
                               - type: integer
                               - type: string
-                            description: static number of sharded instances to spawn
                             x-kubernetes-int-or-string: true
                           delay:
                             description: delay before the step
@@ -9301,10 +9512,10 @@ spec:
                                 items:
                                   properties:
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test execution description to display
@@ -9596,10 +9807,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: test name to run
@@ -9623,6 +9834,12 @@ spec:
                                     as:
                                       description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                       type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -9632,10 +9849,10 @@ spec:
                                       description: configuration to pass for the workflow
                                       type: object
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test workflow execution description to display
@@ -9670,10 +9887,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: workflow name to run
@@ -9768,10 +9985,10 @@ spec:
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           maxCount:
+                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             anyOf:
                               - type: integer
                               - type: string
-                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             x-kubernetes-int-or-string: true
                           negative:
                             description: is the step expected to fail
@@ -10798,10 +11015,10 @@ spec:
                                   type: array
                               type: object
                             count:
+                              description: static number of sharded instances to spawn
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: static number of sharded instances to spawn
                               x-kubernetes-int-or-string: true
                             description:
                               description: service description to display
@@ -10930,10 +11147,10 @@ spec:
                               type: object
                               x-kubernetes-preserve-unknown-fields: true
                             maxCount:
+                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               x-kubernetes-int-or-string: true
                             pod:
                               description: configuration for the scheduled pod
@@ -11574,10 +11791,10 @@ spec:
                   additionalProperties:
                     properties:
                       default:
+                        description: default value - if not provided, the parameter is required
                         anyOf:
                           - type: integer
                           - type: string
-                        description: default value - if not provided, the parameter is required
                         x-kubernetes-int-or-string: true
                       description:
                         description: parameter description
@@ -11588,10 +11805,10 @@ spec:
                           type: string
                         type: array
                       example:
+                        description: exemplary value
                         anyOf:
                           - type: integer
                           - type: string
-                        description: exemplary value
                         x-kubernetes-int-or-string: true
                       exclusiveMaximum:
                         description: maximum value for the number (exclusive)
@@ -13134,10 +13351,10 @@ spec:
                             type: array
                         type: object
                       count:
+                        description: static number of sharded instances to spawn
                         anyOf:
                           - type: integer
                           - type: string
-                        description: static number of sharded instances to spawn
                         x-kubernetes-int-or-string: true
                       description:
                         description: service description to display
@@ -13266,10 +13483,10 @@ spec:
                         type: object
                         x-kubernetes-preserve-unknown-fields: true
                       maxCount:
+                        description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                         anyOf:
                           - type: integer
                           - type: string
-                        description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                         x-kubernetes-int-or-string: true
                       pod:
                         description: configuration for the scheduled pod
@@ -13858,6 +14075,49 @@ spec:
                           workingDir:
                             description: working directory to override, so it will be used as a base dir
                             type: string
+                        type: object
+                      cache:
+                        description: dependency cache to restore before and save after this step's operations
+                        properties:
+                          key:
+                            description: |-
+                              key to store the entry under, usually derived from a lockfile,
+                              e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          mount:
+                            description: |-
+                              should a volume be mounted at every cached path that is not part of one already
+                              (true if not specified); a path outside any volume would otherwise be restored
+                              into a container's own filesystem, where the step that needs it cannot see it
+                            type: boolean
+                          paths:
+                            description: paths to store in the cache, relative to the working directory
+                            items:
+                              type: string
+                            minItems: 1
+                            type: array
+                          restoreKeys:
+                            description: |-
+                              key prefixes to fall back to when there is no entry for the exact key,
+                              tried in order, where the most recently saved match wins
+                            items:
+                              type: string
+                            maxItems: 10
+                            type: array
+                          scope:
+                            description: how widely the entry is shared (defaults to workflow)
+                            enum:
+                              - workflow
+                              - environment
+                            type: string
+                          workingDir:
+                            description: working directory to override, so it will be used as a base dir
+                            type: string
+                        required:
+                          - key
+                          - paths
                         type: object
                       condition:
                         description: |-
@@ -14526,10 +14786,10 @@ spec:
                             items:
                               properties:
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test execution description to display
@@ -14821,10 +15081,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: test name to run
@@ -14848,6 +15108,12 @@ spec:
                                 as:
                                   description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                   type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -14857,10 +15123,10 @@ spec:
                                   description: configuration to pass for the workflow
                                   type: object
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test workflow execution description to display
@@ -14895,10 +15161,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: workflow name to run
@@ -15011,6 +15277,49 @@ spec:
                                 description: working directory to override, so it will be used as a base dir
                                 type: string
                             type: object
+                          cache:
+                            description: dependency cache to restore before and save after this step's operations
+                            properties:
+                              key:
+                                description: |-
+                                  key to store the entry under, usually derived from a lockfile,
+                                  e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                                maxLength: 512
+                                minLength: 1
+                                type: string
+                              mount:
+                                description: |-
+                                  should a volume be mounted at every cached path that is not part of one already
+                                  (true if not specified); a path outside any volume would otherwise be restored
+                                  into a container's own filesystem, where the step that needs it cannot see it
+                                type: boolean
+                              paths:
+                                description: paths to store in the cache, relative to the working directory
+                                items:
+                                  type: string
+                                minItems: 1
+                                type: array
+                              restoreKeys:
+                                description: |-
+                                  key prefixes to fall back to when there is no entry for the exact key,
+                                  tried in order, where the most recently saved match wins
+                                items:
+                                  type: string
+                                maxItems: 10
+                                type: array
+                              scope:
+                                description: how widely the entry is shared (defaults to workflow)
+                                enum:
+                                  - workflow
+                                  - environment
+                                type: string
+                              workingDir:
+                                description: working directory to override, so it will be used as a base dir
+                                type: string
+                            required:
+                              - key
+                              - paths
+                            type: object
                           config:
                             description: make the instance configurable with some input data for scheduling it
                             x-kubernetes-preserve-unknown-fields: true
@@ -15021,10 +15330,10 @@ spec:
                             description: global content that should be fetched into all containers
                             x-kubernetes-preserve-unknown-fields: true
                           count:
+                            description: static number of sharded instances to spawn
                             anyOf:
                               - type: integer
                               - type: string
-                            description: static number of sharded instances to spawn
                             x-kubernetes-int-or-string: true
                           delay:
                             description: delay before the step
@@ -15051,10 +15360,10 @@ spec:
                                 items:
                                   properties:
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test execution description to display
@@ -15346,10 +15655,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: test name to run
@@ -15373,6 +15682,12 @@ spec:
                                     as:
                                       description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                       type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -15382,10 +15697,10 @@ spec:
                                       description: configuration to pass for the workflow
                                       type: object
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test workflow execution description to display
@@ -15420,10 +15735,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: workflow name to run
@@ -15518,10 +15833,10 @@ spec:
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           maxCount:
+                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             anyOf:
                               - type: integer
                               - type: string
-                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             x-kubernetes-int-or-string: true
                           negative:
                             description: is the step expected to fail
@@ -16548,10 +16863,10 @@ spec:
                                   type: array
                               type: object
                             count:
+                              description: static number of sharded instances to spawn
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: static number of sharded instances to spawn
                               x-kubernetes-int-or-string: true
                             description:
                               description: service description to display
@@ -16680,10 +16995,10 @@ spec:
                               type: object
                               x-kubernetes-preserve-unknown-fields: true
                             maxCount:
+                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               x-kubernetes-int-or-string: true
                             pod:
                               description: configuration for the scheduled pod
@@ -17327,6 +17642,49 @@ spec:
                             description: working directory to override, so it will be used as a base dir
                             type: string
                         type: object
+                      cache:
+                        description: dependency cache to restore before and save after this step's operations
+                        properties:
+                          key:
+                            description: |-
+                              key to store the entry under, usually derived from a lockfile,
+                              e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          mount:
+                            description: |-
+                              should a volume be mounted at every cached path that is not part of one already
+                              (true if not specified); a path outside any volume would otherwise be restored
+                              into a container's own filesystem, where the step that needs it cannot see it
+                            type: boolean
+                          paths:
+                            description: paths to store in the cache, relative to the working directory
+                            items:
+                              type: string
+                            minItems: 1
+                            type: array
+                          restoreKeys:
+                            description: |-
+                              key prefixes to fall back to when there is no entry for the exact key,
+                              tried in order, where the most recently saved match wins
+                            items:
+                              type: string
+                            maxItems: 10
+                            type: array
+                          scope:
+                            description: how widely the entry is shared (defaults to workflow)
+                            enum:
+                              - workflow
+                              - environment
+                            type: string
+                          workingDir:
+                            description: working directory to override, so it will be used as a base dir
+                            type: string
+                        required:
+                          - key
+                          - paths
+                        type: object
                       condition:
                         description: |-
                           expression to declare under which conditions the step should be run
@@ -17994,10 +18352,10 @@ spec:
                             items:
                               properties:
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test execution description to display
@@ -18289,10 +18647,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: test name to run
@@ -18316,6 +18674,12 @@ spec:
                                 as:
                                   description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                   type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -18325,10 +18689,10 @@ spec:
                                   description: configuration to pass for the workflow
                                   type: object
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test workflow execution description to display
@@ -18363,10 +18727,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: workflow name to run
@@ -18479,6 +18843,49 @@ spec:
                                 description: working directory to override, so it will be used as a base dir
                                 type: string
                             type: object
+                          cache:
+                            description: dependency cache to restore before and save after this step's operations
+                            properties:
+                              key:
+                                description: |-
+                                  key to store the entry under, usually derived from a lockfile,
+                                  e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                                maxLength: 512
+                                minLength: 1
+                                type: string
+                              mount:
+                                description: |-
+                                  should a volume be mounted at every cached path that is not part of one already
+                                  (true if not specified); a path outside any volume would otherwise be restored
+                                  into a container's own filesystem, where the step that needs it cannot see it
+                                type: boolean
+                              paths:
+                                description: paths to store in the cache, relative to the working directory
+                                items:
+                                  type: string
+                                minItems: 1
+                                type: array
+                              restoreKeys:
+                                description: |-
+                                  key prefixes to fall back to when there is no entry for the exact key,
+                                  tried in order, where the most recently saved match wins
+                                items:
+                                  type: string
+                                maxItems: 10
+                                type: array
+                              scope:
+                                description: how widely the entry is shared (defaults to workflow)
+                                enum:
+                                  - workflow
+                                  - environment
+                                type: string
+                              workingDir:
+                                description: working directory to override, so it will be used as a base dir
+                                type: string
+                            required:
+                              - key
+                              - paths
+                            type: object
                           config:
                             description: make the instance configurable with some input data for scheduling it
                             x-kubernetes-preserve-unknown-fields: true
@@ -18489,10 +18896,10 @@ spec:
                             description: global content that should be fetched into all containers
                             x-kubernetes-preserve-unknown-fields: true
                           count:
+                            description: static number of sharded instances to spawn
                             anyOf:
                               - type: integer
                               - type: string
-                            description: static number of sharded instances to spawn
                             x-kubernetes-int-or-string: true
                           delay:
                             description: delay before the step
@@ -18519,10 +18926,10 @@ spec:
                                 items:
                                   properties:
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test execution description to display
@@ -18814,10 +19221,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: test name to run
@@ -18841,6 +19248,12 @@ spec:
                                     as:
                                       description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                       type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -18850,10 +19263,10 @@ spec:
                                       description: configuration to pass for the workflow
                                       type: object
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test workflow execution description to display
@@ -18888,10 +19301,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: workflow name to run
@@ -18986,10 +19399,10 @@ spec:
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           maxCount:
+                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             anyOf:
                               - type: integer
                               - type: string
-                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             x-kubernetes-int-or-string: true
                           negative:
                             description: is the step expected to fail
@@ -20016,10 +20429,10 @@ spec:
                                   type: array
                               type: object
                             count:
+                              description: static number of sharded instances to spawn
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: static number of sharded instances to spawn
                               x-kubernetes-int-or-string: true
                             description:
                               description: service description to display
@@ -20148,10 +20561,10 @@ spec:
                               type: object
                               x-kubernetes-preserve-unknown-fields: true
                             maxCount:
+                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               x-kubernetes-int-or-string: true
                             pod:
                               description: configuration for the scheduled pod
@@ -20783,7 +21196,9 @@ spec:
                   description: per-workflow timeout configuration
                   properties:
                     initialization:
-                      description: maximum time for initialization/transitioning before steps run
+                      description: |-
+                        maximum time from the job creation until the first step container starts, as a Go duration (for example 2m).
+                        When it ends, the runner aborts the execution and keeps the cause that Kubernetes reported.
                       type: string
                     queue:
                       description: maximum time the execution may spend in queue before starting
@@ -20891,6 +21306,44 @@ spec:
                             - failed
                             - aborted
                           type: string
+                        statusDetails:
+                          description: |-
+                            TestWorkflowStatusDetails gives the reason why an execution did not pass. It is
+                            present on every terminal status except passed.
+                          properties:
+                            actor:
+                              description: code of the component that decided the stop, for example user or control-plane
+                              type: string
+                            message:
+                              description: the message of the step that holds the cause, verbatim
+                              type: string
+                            reason:
+                              description: code of the cause, for example unschedulable or oom-killed
+                              type: string
+                            step:
+                              description: reference of the step that holds the cause; empty when the initialization step holds it
+                              type: string
+                            type:
+                              description: the layer that failed
+                              enum:
+                                - init-failure
+                                - execution-failure
+                                - step-failure
+                                - user-cancel
+                                - unknown
+                              type: string
+                            user:
+                              description: the person who canceled the execution; the control plane fills it
+                              properties:
+                                email:
+                                  type: string
+                                name:
+                                  type: string
+                              type: object
+                          required:
+                            - reason
+                            - type
+                          type: object
                         totalDuration:
                           description: Go-formatted (human-readable) duration (incl. pause)
                           type: string
@@ -21077,6 +21530,49 @@ spec:
                             description: working directory to override, so it will be used as a base dir
                             type: string
                         type: object
+                      cache:
+                        description: dependency cache to restore before and save after this step's operations
+                        properties:
+                          key:
+                            description: |-
+                              key to store the entry under, usually derived from a lockfile,
+                              e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          mount:
+                            description: |-
+                              should a volume be mounted at every cached path that is not part of one already
+                              (true if not specified); a path outside any volume would otherwise be restored
+                              into a container's own filesystem, where the step that needs it cannot see it
+                            type: boolean
+                          paths:
+                            description: paths to store in the cache, relative to the working directory
+                            items:
+                              type: string
+                            minItems: 1
+                            type: array
+                          restoreKeys:
+                            description: |-
+                              key prefixes to fall back to when there is no entry for the exact key,
+                              tried in order, where the most recently saved match wins
+                            items:
+                              type: string
+                            maxItems: 10
+                            type: array
+                          scope:
+                            description: how widely the entry is shared (defaults to workflow)
+                            enum:
+                              - workflow
+                              - environment
+                            type: string
+                          workingDir:
+                            description: working directory to override, so it will be used as a base dir
+                            type: string
+                        required:
+                          - key
+                          - paths
+                        type: object
                       condition:
                         description: |-
                           expression to declare under which conditions the step should be run
@@ -21744,10 +22240,10 @@ spec:
                             items:
                               properties:
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test execution description to display
@@ -22039,10 +22535,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: test name to run
@@ -22066,6 +22562,12 @@ spec:
                                 as:
                                   description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                   type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -22075,10 +22577,10 @@ spec:
                                   description: configuration to pass for the workflow
                                   type: object
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test workflow execution description to display
@@ -22113,10 +22615,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: workflow name to run
@@ -22226,11 +22728,54 @@ spec:
                                 description: working directory to override, so it will be used as a base dir
                                 type: string
                             type: object
+                          cache:
+                            description: dependency cache to restore before and save after this step's operations
+                            properties:
+                              key:
+                                description: |-
+                                  key to store the entry under, usually derived from a lockfile,
+                                  e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                                maxLength: 512
+                                minLength: 1
+                                type: string
+                              mount:
+                                description: |-
+                                  should a volume be mounted at every cached path that is not part of one already
+                                  (true if not specified); a path outside any volume would otherwise be restored
+                                  into a container's own filesystem, where the step that needs it cannot see it
+                                type: boolean
+                              paths:
+                                description: paths to store in the cache, relative to the working directory
+                                items:
+                                  type: string
+                                minItems: 1
+                                type: array
+                              restoreKeys:
+                                description: |-
+                                  key prefixes to fall back to when there is no entry for the exact key,
+                                  tried in order, where the most recently saved match wins
+                                items:
+                                  type: string
+                                maxItems: 10
+                                type: array
+                              scope:
+                                description: how widely the entry is shared (defaults to workflow)
+                                enum:
+                                  - workflow
+                                  - environment
+                                type: string
+                              workingDir:
+                                description: working directory to override, so it will be used as a base dir
+                                type: string
+                            required:
+                              - key
+                              - paths
+                            type: object
                           count:
+                            description: static number of sharded instances to spawn
                             anyOf:
                               - type: integer
                               - type: string
-                            description: static number of sharded instances to spawn
                             x-kubernetes-int-or-string: true
                           delay:
                             description: delay before the step
@@ -22254,10 +22799,10 @@ spec:
                                 items:
                                   properties:
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test execution description to display
@@ -22549,10 +23094,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: test name to run
@@ -22576,6 +23121,12 @@ spec:
                                     as:
                                       description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                       type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -22585,10 +23136,10 @@ spec:
                                       description: configuration to pass for the workflow
                                       type: object
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test workflow execution description to display
@@ -22623,10 +23174,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: workflow name to run
@@ -22715,10 +23266,10 @@ spec:
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           maxCount:
+                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             anyOf:
                               - type: integer
                               - type: string
-                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             x-kubernetes-int-or-string: true
                           negative:
                             description: is the step expected to fail
@@ -23701,10 +24252,10 @@ spec:
                                   type: array
                               type: object
                             count:
+                              description: static number of sharded instances to spawn
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: static number of sharded instances to spawn
                               x-kubernetes-int-or-string: true
                             description:
                               description: service description to display
@@ -23833,10 +24384,10 @@ spec:
                               type: object
                               x-kubernetes-preserve-unknown-fields: true
                             maxCount:
+                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               x-kubernetes-int-or-string: true
                             pod:
                               description: configuration for the scheduled pod
@@ -24420,10 +24971,10 @@ spec:
                   additionalProperties:
                     properties:
                       default:
+                        description: default value - if not provided, the parameter is required
                         anyOf:
                           - type: integer
                           - type: string
-                        description: default value - if not provided, the parameter is required
                         x-kubernetes-int-or-string: true
                       description:
                         description: parameter description
@@ -24434,10 +24985,10 @@ spec:
                           type: string
                         type: array
                       example:
+                        description: exemplary value
                         anyOf:
                           - type: integer
                           - type: string
-                        description: exemplary value
                         x-kubernetes-int-or-string: true
                       exclusiveMaximum:
                         description: maximum value for the number (exclusive)
@@ -25980,10 +26531,10 @@ spec:
                             type: array
                         type: object
                       count:
+                        description: static number of sharded instances to spawn
                         anyOf:
                           - type: integer
                           - type: string
-                        description: static number of sharded instances to spawn
                         x-kubernetes-int-or-string: true
                       description:
                         description: service description to display
@@ -26112,10 +26663,10 @@ spec:
                         type: object
                         x-kubernetes-preserve-unknown-fields: true
                       maxCount:
+                        description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                         anyOf:
                           - type: integer
                           - type: string
-                        description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                         x-kubernetes-int-or-string: true
                       pod:
                         description: configuration for the scheduled pod
@@ -26684,6 +27235,49 @@ spec:
                           workingDir:
                             description: working directory to override, so it will be used as a base dir
                             type: string
+                        type: object
+                      cache:
+                        description: dependency cache to restore before and save after this step's operations
+                        properties:
+                          key:
+                            description: |-
+                              key to store the entry under, usually derived from a lockfile,
+                              e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          mount:
+                            description: |-
+                              should a volume be mounted at every cached path that is not part of one already
+                              (true if not specified); a path outside any volume would otherwise be restored
+                              into a container's own filesystem, where the step that needs it cannot see it
+                            type: boolean
+                          paths:
+                            description: paths to store in the cache, relative to the working directory
+                            items:
+                              type: string
+                            minItems: 1
+                            type: array
+                          restoreKeys:
+                            description: |-
+                              key prefixes to fall back to when there is no entry for the exact key,
+                              tried in order, where the most recently saved match wins
+                            items:
+                              type: string
+                            maxItems: 10
+                            type: array
+                          scope:
+                            description: how widely the entry is shared (defaults to workflow)
+                            enum:
+                              - workflow
+                              - environment
+                            type: string
+                          workingDir:
+                            description: working directory to override, so it will be used as a base dir
+                            type: string
+                        required:
+                          - key
+                          - paths
                         type: object
                       condition:
                         description: |-
@@ -27352,10 +27946,10 @@ spec:
                             items:
                               properties:
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test execution description to display
@@ -27647,10 +28241,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: test name to run
@@ -27674,6 +28268,12 @@ spec:
                                 as:
                                   description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                   type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -27683,10 +28283,10 @@ spec:
                                   description: configuration to pass for the workflow
                                   type: object
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test workflow execution description to display
@@ -27721,10 +28321,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: workflow name to run
@@ -27834,11 +28434,54 @@ spec:
                                 description: working directory to override, so it will be used as a base dir
                                 type: string
                             type: object
+                          cache:
+                            description: dependency cache to restore before and save after this step's operations
+                            properties:
+                              key:
+                                description: |-
+                                  key to store the entry under, usually derived from a lockfile,
+                                  e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                                maxLength: 512
+                                minLength: 1
+                                type: string
+                              mount:
+                                description: |-
+                                  should a volume be mounted at every cached path that is not part of one already
+                                  (true if not specified); a path outside any volume would otherwise be restored
+                                  into a container's own filesystem, where the step that needs it cannot see it
+                                type: boolean
+                              paths:
+                                description: paths to store in the cache, relative to the working directory
+                                items:
+                                  type: string
+                                minItems: 1
+                                type: array
+                              restoreKeys:
+                                description: |-
+                                  key prefixes to fall back to when there is no entry for the exact key,
+                                  tried in order, where the most recently saved match wins
+                                items:
+                                  type: string
+                                maxItems: 10
+                                type: array
+                              scope:
+                                description: how widely the entry is shared (defaults to workflow)
+                                enum:
+                                  - workflow
+                                  - environment
+                                type: string
+                              workingDir:
+                                description: working directory to override, so it will be used as a base dir
+                                type: string
+                            required:
+                              - key
+                              - paths
+                            type: object
                           count:
+                            description: static number of sharded instances to spawn
                             anyOf:
                               - type: integer
                               - type: string
-                            description: static number of sharded instances to spawn
                             x-kubernetes-int-or-string: true
                           delay:
                             description: delay before the step
@@ -27862,10 +28505,10 @@ spec:
                                 items:
                                   properties:
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test execution description to display
@@ -28157,10 +28800,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: test name to run
@@ -28184,6 +28827,12 @@ spec:
                                     as:
                                       description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                       type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -28193,10 +28842,10 @@ spec:
                                       description: configuration to pass for the workflow
                                       type: object
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test workflow execution description to display
@@ -28231,10 +28880,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: workflow name to run
@@ -28323,10 +28972,10 @@ spec:
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           maxCount:
+                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             anyOf:
                               - type: integer
                               - type: string
-                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             x-kubernetes-int-or-string: true
                           negative:
                             description: is the step expected to fail
@@ -29309,10 +29958,10 @@ spec:
                                   type: array
                               type: object
                             count:
+                              description: static number of sharded instances to spawn
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: static number of sharded instances to spawn
                               x-kubernetes-int-or-string: true
                             description:
                               description: service description to display
@@ -29441,10 +30090,10 @@ spec:
                               type: object
                               x-kubernetes-preserve-unknown-fields: true
                             maxCount:
+                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               x-kubernetes-int-or-string: true
                             pod:
                               description: configuration for the scheduled pod
@@ -30031,6 +30680,49 @@ spec:
                             description: working directory to override, so it will be used as a base dir
                             type: string
                         type: object
+                      cache:
+                        description: dependency cache to restore before and save after this step's operations
+                        properties:
+                          key:
+                            description: |-
+                              key to store the entry under, usually derived from a lockfile,
+                              e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          mount:
+                            description: |-
+                              should a volume be mounted at every cached path that is not part of one already
+                              (true if not specified); a path outside any volume would otherwise be restored
+                              into a container's own filesystem, where the step that needs it cannot see it
+                            type: boolean
+                          paths:
+                            description: paths to store in the cache, relative to the working directory
+                            items:
+                              type: string
+                            minItems: 1
+                            type: array
+                          restoreKeys:
+                            description: |-
+                              key prefixes to fall back to when there is no entry for the exact key,
+                              tried in order, where the most recently saved match wins
+                            items:
+                              type: string
+                            maxItems: 10
+                            type: array
+                          scope:
+                            description: how widely the entry is shared (defaults to workflow)
+                            enum:
+                              - workflow
+                              - environment
+                            type: string
+                          workingDir:
+                            description: working directory to override, so it will be used as a base dir
+                            type: string
+                        required:
+                          - key
+                          - paths
+                        type: object
                       condition:
                         description: |-
                           expression to declare under which conditions the step should be run
@@ -30698,10 +31390,10 @@ spec:
                             items:
                               properties:
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test execution description to display
@@ -30993,10 +31685,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: test name to run
@@ -31020,6 +31712,12 @@ spec:
                                 as:
                                   description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                   type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -31029,10 +31727,10 @@ spec:
                                   description: configuration to pass for the workflow
                                   type: object
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test workflow execution description to display
@@ -31067,10 +31765,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: workflow name to run
@@ -31180,11 +31878,54 @@ spec:
                                 description: working directory to override, so it will be used as a base dir
                                 type: string
                             type: object
+                          cache:
+                            description: dependency cache to restore before and save after this step's operations
+                            properties:
+                              key:
+                                description: |-
+                                  key to store the entry under, usually derived from a lockfile,
+                                  e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                                maxLength: 512
+                                minLength: 1
+                                type: string
+                              mount:
+                                description: |-
+                                  should a volume be mounted at every cached path that is not part of one already
+                                  (true if not specified); a path outside any volume would otherwise be restored
+                                  into a container's own filesystem, where the step that needs it cannot see it
+                                type: boolean
+                              paths:
+                                description: paths to store in the cache, relative to the working directory
+                                items:
+                                  type: string
+                                minItems: 1
+                                type: array
+                              restoreKeys:
+                                description: |-
+                                  key prefixes to fall back to when there is no entry for the exact key,
+                                  tried in order, where the most recently saved match wins
+                                items:
+                                  type: string
+                                maxItems: 10
+                                type: array
+                              scope:
+                                description: how widely the entry is shared (defaults to workflow)
+                                enum:
+                                  - workflow
+                                  - environment
+                                type: string
+                              workingDir:
+                                description: working directory to override, so it will be used as a base dir
+                                type: string
+                            required:
+                              - key
+                              - paths
+                            type: object
                           count:
+                            description: static number of sharded instances to spawn
                             anyOf:
                               - type: integer
                               - type: string
-                            description: static number of sharded instances to spawn
                             x-kubernetes-int-or-string: true
                           delay:
                             description: delay before the step
@@ -31208,10 +31949,10 @@ spec:
                                 items:
                                   properties:
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test execution description to display
@@ -31503,10 +32244,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: test name to run
@@ -31530,6 +32271,12 @@ spec:
                                     as:
                                       description: name to reference this execution by in the execution() expression, defaults to the workflow name
                                       type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -31539,10 +32286,10 @@ spec:
                                       description: configuration to pass for the workflow
                                       type: object
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test workflow execution description to display
@@ -31577,10 +32324,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: workflow name to run
@@ -31669,10 +32416,10 @@ spec:
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           maxCount:
+                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             anyOf:
                               - type: integer
                               - type: string
-                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             x-kubernetes-int-or-string: true
                           negative:
                             description: is the step expected to fail
@@ -32655,10 +33402,10 @@ spec:
                                   type: array
                               type: object
                             count:
+                              description: static number of sharded instances to spawn
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: static number of sharded instances to spawn
                               x-kubernetes-int-or-string: true
                             description:
                               description: service description to display
@@ -32787,10 +33534,10 @@ spec:
                               type: object
                               x-kubernetes-preserve-unknown-fields: true
                             maxCount:
+                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               x-kubernetes-int-or-string: true
                             pod:
                               description: configuration for the scheduled pod
@@ -33365,7 +34112,9 @@ spec:
                   description: per-workflow timeout configuration
                   properties:
                     initialization:
-                      description: maximum time for initialization/transitioning before steps run
+                      description: |-
+                        maximum time from the job creation until the first step container starts, as a Go duration (for example 2m).
+                        When it ends, the runner aborts the execution and keeps the cause that Kubernetes reported.
                       type: string
                     queue:
                       description: maximum time the execution may spend in queue before starting

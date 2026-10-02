@@ -287,7 +287,7 @@ func TestService_updateTrigger_listenerPinning(t *testing.T) {
 			s.updateTrigger(context.Background(), mkTrigger(tc.updatePin, updateEvent))
 			if tc.wantRegistered {
 				assert.NotNil(t, s.triggerStatus[key], "expected trigger registered")
-				assert.Equal(t, updateEvent, s.triggerStatus[key].trigger.Event,
+				assert.Equal(t, []string{updateEvent}, s.triggerStatus[key].trigger.Events,
 					"expected in-place update to replace event")
 			} else {
 				assert.Nil(t, s.triggerStatus[key], "expected trigger absent")

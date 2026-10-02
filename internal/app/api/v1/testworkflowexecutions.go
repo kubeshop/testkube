@@ -570,6 +570,7 @@ func (s *TestkubeAPI) abortTestWorkflowExecutionHandlerPro() fiber.Handler {
 		// Abort the Test Workflow
 		err = s.ExecutionWorkerClient.Abort(ctx, execution.Id, executionworkertypes.DestroyOptions{
 			Namespace: execution.Namespace,
+			Actor:     testkube.StopActorAPI,
 		})
 		if err != nil {
 			return s.ClientError(c, "aborting test workflow execution", err)
@@ -800,6 +801,8 @@ func (s *TestkubeAPI) abortAllTestWorkflowExecutionsHandlerPro() fiber.Handler {
 		for _, execution := range executions {
 			err = s.ExecutionWorkerClient.Abort(ctx, execution.Id, executionworkertypes.DestroyOptions{
 				Namespace: execution.Namespace,
+				Actor:     testkube.StopActorAPI,
+				Reason:    testkube.StopReasonAbortAll,
 			})
 			if err != nil {
 				return s.ClientError(c, errPrefix, err)
@@ -985,6 +988,11 @@ func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow2.Filter {
 	status := c.Query("status", "")
 	if status != "" {
 		filter = filter.WithStatus(status)
+	}
+
+	statusDetailsType := c.Query("statusDetailsType", "")
+	if statusDetailsType != "" {
+		filter = filter.WithStatusDetailsTypes(statusDetailsType)
 	}
 
 	last, err := strconv.Atoi(c.Query("last", "0"))

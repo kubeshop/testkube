@@ -60,6 +60,7 @@ func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
 		ResourceRef:       resourceRef,
 		ResourceSelector:  mapSelectorFromCRD(crd.Spec.ResourceSelector),
 		Event:             string(crd.Spec.Event),
+		Events:            mapEventsFromCRD(crd.Spec.Events),
 		Match:             mapFieldConditionsFromCRD(crd.Spec.Match),
 		ConditionSpec:     mapConditionSpecFromCRD(crd.Spec.ConditionSpec),
 		ProbeSpec:         mapProbeSpecFromCRD(crd.Spec.ProbeSpec),
@@ -72,6 +73,17 @@ func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
 		Disabled:          crd.Spec.Disabled,
 		Listener:          common.MapPtr(crd.Spec.Listener, commonmapper.MapTargetKubeToAPI),
 	}
+}
+
+func mapEventsFromCRD(events []testsv1.TestTriggerEvent) []string {
+	if len(events) == 0 {
+		return nil
+	}
+	out := make([]string, len(events))
+	for i, e := range events {
+		out[i] = string(e)
+	}
+	return out
 }
 
 func mapSelectorFromCRD(selector testsv1.TestTriggerSelector) *testkube.TestTriggerSelector {
@@ -193,6 +205,7 @@ func MapTestTriggerCRDToTestTriggerUpsertRequest(request testsv1.TestTrigger) te
 		ResourceRef:       resourceRef,
 		ResourceSelector:  mapSelectorFromCRD(request.Spec.ResourceSelector),
 		Event:             string(request.Spec.Event),
+		Events:            mapEventsFromCRD(request.Spec.Events),
 		Match:             mapFieldConditionsFromCRD(request.Spec.Match),
 		ConditionSpec:     mapConditionSpecFromCRD(request.Spec.ConditionSpec),
 		ProbeSpec:         mapProbeSpecFromCRD(request.Spec.ProbeSpec),

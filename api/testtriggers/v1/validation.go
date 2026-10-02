@@ -107,10 +107,26 @@ func ValidateMatchConditions(conditions []workflowtriggersv1.WorkflowTriggerFiel
 func (s *TestTriggerSpec) Validate() []error {
 	var errs []error
 
+	if s.Event != "" && len(s.Events) > 0 {
+		errs = append(errs, fmt.Errorf("only one of event or events can be set"))
+		return errs
+	}
+	if s.Event == "" && len(s.Events) == 0 {
+		errs = append(errs, fmt.Errorf("one of event or events must be set"))
+		return errs
+	}
+
+	effectiveEvents := s.EffectiveEvents()
+
 	isContentResource := s.Resource == TestTriggerResourceContent || (s.ResourceRef != nil && s.ResourceRef.Kind == string(TestTriggerResourceContent))
 
-	if isContentResource && s.Event != TestTriggerEventGitPush && s.Event != TestTriggerEventGitTagPush && s.Event != TestTriggerEventGitPullRequest {
-		errs = append(errs, fmt.Errorf("resource %q requires event to be one of %q, %q, or %q", TestTriggerResourceContent, TestTriggerEventGitPush, TestTriggerEventGitTagPush, TestTriggerEventGitPullRequest))
+	if isContentResource {
+		for _, event := range effectiveEvents {
+			if event != TestTriggerEventGitPush && event != TestTriggerEventGitTagPush && event != TestTriggerEventGitPullRequest {
+				errs = append(errs, fmt.Errorf("resource %q requires event to be one of %q, %q, or %q", TestTriggerResourceContent, TestTriggerEventGitPush, TestTriggerEventGitTagPush, TestTriggerEventGitPullRequest))
+				break
+			}
+		}
 	}
 	if isContentResource && s.ConditionSpec != nil && len(s.ConditionSpec.Conditions) > 0 {
 		errs = append(errs, fmt.Errorf("resource %q does not support conditionSpec.conditions", TestTriggerResourceContent))
@@ -129,7 +145,20 @@ func (s *TestTriggerSpec) Validate() []error {
 		}
 	}
 
-	errs = append(errs, ValidateMatchConditions(s.Match, s.Event)...)
+	// Validate match conditions against every effective event so the
+	// change-operator/modified-event coupling holds for each event the trigger
+	// can fire on. Event-independent errors (e.g. bad paths) are identical
+	// across events, so duplicates are dropped.
+	seenMatchErrs := make(map[string]struct{})
+	for _, event := range effectiveEvents {
+		for _, err := range ValidateMatchConditions(s.Match, event) {
+			if _, ok := seenMatchErrs[err.Error()]; ok {
+				continue
+			}
+			seenMatchErrs[err.Error()] = struct{}{}
+			errs = append(errs, err)
+		}
+	}
 
 	return errs
 }

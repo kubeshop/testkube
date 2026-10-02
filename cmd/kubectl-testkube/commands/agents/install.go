@@ -22,14 +22,15 @@ func NewInstallAgentCommand() *cobra.Command {
 	var namespace string
 
 	cmd := &cobra.Command{
-		Use:  "agent <name>",
-		Args: cobra.MaximumNArgs(1),
+		Use:     "runner <name>",
+		Aliases: []string{"agent"},
+		Args:    cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			// Check for deprecated --type flag usage
 			if cmd.Flags().Changed("type") {
 				ui.Warn("⚠️  The --type/-t flag is deprecated.")
 				ui.Info("Please use capability flags instead:")
-				ui.Info("  --runner    : Enable runner capability")
+				ui.Info("  --execution : Enable execution capability")
 				ui.Info("  --listener  : Enable listener capability")
 				ui.Info("  --gitops    : Enable GitOps capability")
 				ui.Info("  --webhooks  : Enable webhooks capability")
@@ -41,41 +42,8 @@ func NewInstallAgentCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the agent")
-	common2.PopulateRunnerFlags(cmd, false)
-	return cmd
-}
-
-// NewInstallRunnerCommand creates a command equivalent to `install agent --runner`.
-// It intentionally does not expose the --listener flag.
-func NewInstallRunnerCommand() *cobra.Command {
-	var namespace string
-
-	cmd := &cobra.Command{
-		Use:  "runner <name>",
-		Args: cobra.MaximumNArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			// Check for deprecated --type flag usage
-			if cmd.Flags().Changed("type") {
-				ui.Warn("⚠️  The --type/-t flag is deprecated.")
-				ui.Info("This command installs a runner-only agent by default.")
-				ui.Hint("For more flexibility, use 'testkube install agent' with:")
-				ui.Info("  --runner    : Enable runner capability")
-				ui.Info("  --listener  : Enable listener capability")
-				ui.Info("  --gitops    : Enable GitOps capability")
-				ui.Info("  --webhooks  : Enable webhooks capability")
-				ui.NL()
-				return
-			}
-
-			// Force runner-only behavior
-			_ = cmd.Flags().Set("runner", "true")
-			UiInstallAgent(cmd, strings.Join(args, ""), []string{"testkube.io/source=cloud"})
-		},
-	}
-
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the agent")
-	common2.PopulateRunnerFlags(cmd, true)
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the runner")
+	common2.PopulateRunnerFlags(cmd)
 	return cmd
 }
 
@@ -105,13 +73,23 @@ func UiInstallCRD(cmd *cobra.Command, namespace string, releaseName string, dryR
 	spinner := ui.NewSpinner("Fetching current CRDs")
 	currentNamespace, currentReleaseName, installed, err := GetCRDInstallation()
 	if err != nil {
-		spinner.Fail(err)
-		os.Exit(1)
+		spinner.Fail()
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrResourceLookupFailed,
+			"Error getting the installed CRDs",
+			common2.ClusterLookupHint,
+			err,
+		))
 	}
 
 	if installed && currentReleaseName == "" {
-		spinner.Fail("The CRDs are installed, but they are not managed by our Helm Chart")
-		os.Exit(1)
+		spinner.Fail()
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrInvalidInstallConfig,
+			"The CRDs are not managed by the Testkube Helm Chart",
+			"Delete the Testkube CRDs by hand, so that this command can install them with Helm",
+			fmt.Errorf("the CRDs are installed, but they carry no Helm release annotation"),
+		))
 	}
 
 	if installed {
@@ -125,11 +103,7 @@ func UiInstallCRD(cmd *cobra.Command, namespace string, releaseName string, dryR
 	}
 
 	opts := CreateCRDsHelmOptions(namespace, releaseName, dryRun, nil)
-	cliErr := common2.HelmUpgradeOrInstallGeneric(opts)
-	if cliErr != nil {
-		cliErr.Print()
-		os.Exit(1)
-	}
+	common2.HandleCLIError(common2.HelmUpgradeOrInstallGeneric(opts))
 	spinner.Success("CRDs installed")
 }
 
@@ -143,18 +117,17 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 	isGlobalRunner, _ := cmd.Flags().GetBool("global")
 	runnerGroup, _ := cmd.Flags().GetString("group")
 	// Component flags
-	runnerChanged := cmd.Flags().Changed("runner")
+	executionChanged, enableExecution := common2.ExecutionCapabilityFromFlags(cmd)
 	listenerChanged := cmd.Flags().Changed("listener")
 	gitopsChanged := cmd.Flags().Changed("gitops")
 	webhooksChanged := cmd.Flags().Changed("webhooks")
-	anyChanged := runnerChanged || listenerChanged || gitopsChanged || webhooksChanged
-	enableRunner, _ := cmd.Flags().GetBool("runner")
+	anyChanged := executionChanged || listenerChanged || gitopsChanged || webhooksChanged
 	enableListener, _ := cmd.Flags().GetBool("listener")
 	enableGitops, _ := cmd.Flags().GetBool("gitops")
 	enableWebhooks, _ := cmd.Flags().GetBool("webhooks")
 	// we default to both capabilities if none flags are set
 	if !anyChanged {
-		enableRunner = true
+		enableExecution = true
 		enableListener = true
 	}
 
@@ -162,16 +135,36 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 	if globalTemplatePath != "" {
 		var err error
 		globalTemplate, err = os.ReadFile(globalTemplatePath)
-		ui.ExitOnError("reading global template", err)
+		if err != nil {
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrInvalidRuntimeParameter,
+				"Error reading the global template",
+				"Check that the '--global-template-path' value points at a readable file",
+				err,
+			))
+		}
 		globalTemplateMap := make(map[string]interface{})
 		err = yaml.Unmarshal(globalTemplate, &globalTemplateMap)
-		ui.ExitOnError("reading global template", err)
+		if err != nil {
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrInvalidRuntimeParameter,
+				"Error parsing the global template",
+				"The file that '--global-template-path' names must be a YAML Test Workflow template",
+				err,
+			))
+		}
 		if spec, ok := globalTemplateMap["spec"]; ok {
 			globalTemplate, err = json.Marshal(spec)
-			ui.ExitOnError("marshalling global template", err)
 		} else {
 			globalTemplate, err = json.Marshal(globalTemplateMap)
-			ui.ExitOnError("marshalling global template", err)
+		}
+		if err != nil {
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrInvalidRuntimeParameter,
+				"Error converting the global template",
+				"The file that '--global-template-path' names must hold values that convert to JSON",
+				err,
+			))
 		}
 	}
 
@@ -180,8 +173,13 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 	if name != "" {
 		var err error
 		agent, err = GetControlPlaneAgent(cmd, name)
-		if !autoCreate {
-			ui.ExitOnError("getting agent", err)
+		if err != nil && !autoCreate {
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrRunnerGetFailed,
+				"Error getting the runner",
+				"Check the runner name or ID and that your credentials are valid, or pass '--create' to create the runner",
+				err,
+			))
 		}
 		if agent != nil {
 			PrintControlPlaneAgent(*agent)
@@ -202,7 +200,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 			isGlobalRunner,
 			runnerGroup,
 			floating,
-			enableRunner,
+			enableExecution,
 			enableListener,
 			enableGitops,
 			enableWebhooks,
@@ -212,14 +210,26 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 	// Load agents from the Control Plane and select one
 	if agent == nil {
 		agents, err := GetControlPlaneAgents(cmd, false)
-		ui.ExitOnError("listing agents", err)
+		if err != nil {
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrRunnerGetFailed,
+				"Error getting the runners",
+				common2.RunnerLookupHint,
+				err,
+			))
+		}
 
 		if name == "" {
-			name = ui.Select("select agent", common.MapSlice(agents, func(t cloudclient.Agent) string {
+			name = ui.Select("select runner", common.MapSlice(agents, func(t cloudclient.Agent) string {
 				return t.Name
 			}))
 			if name == "" {
-				ui.Failf("agent name not provided")
+				common2.HandleCLIError(common2.NewCLIError(
+					common2.TKErrInvalidRuntimeParameter,
+					"No runner name provided",
+					"Pass the runner name as an argument, for example `testkube install runner my-runner`",
+					fmt.Errorf("runner name not provided"),
+				))
 			}
 		}
 
@@ -233,7 +243,12 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 
 	// Fail if there is no matching agent available
 	if agent == nil {
-		ui.Failf("agent %s not found", name)
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrResourceNotFound,
+			"Runner not found",
+			"Check the runner name or ID and list the runners with `testkube get runners`, or pass '--create' to create it",
+			fmt.Errorf("runner %s not found", name),
+		))
 		return
 	}
 
@@ -243,7 +258,14 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 
 	if agent.SecretKey == "" {
 		secretKey, err := GetControlPlaneAgentSecretKey(cmd, agent.ID)
-		ui.ExitOnError("failed to fetch the secret key", err)
+		if err != nil {
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrRunnerGetFailed,
+				"Error getting the runner secret key",
+				"Check that your credentials are valid and that your user can read the secret key of this runner, or pass it with '--secret'",
+				err,
+			))
+		}
 		agent.SecretKey = secretKey
 	}
 
@@ -274,13 +296,25 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 		}
 		ns = ui.TextInput("namespace to install", defaultNs)
 		if ns == "" {
-			ui.Failf("you need to select namespace to install")
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrInvalidRuntimeParameter,
+				"No namespace provided",
+				"Pass the namespace with '--namespace', or type one at the prompt",
+				fmt.Errorf("you need to select namespace to install"),
+			))
 		}
 	}
 
 	// Load the Cloud settings
 	cfg, err := config.Load()
-	ui.ExitOnError("loading config file", err)
+	if err != nil {
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrConfigInitFailed,
+			"Error loading testkube config file",
+			common2.ConfigFileHint,
+			err,
+		))
+	}
 	skipTLS := common2.ResolveSkipTLS(cmd, &cfg)
 	opts := &common2.HelmOptions{}
 	common2.ProcessMasterFlags(cmd, opts, &cfg)
@@ -308,7 +342,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 
 	// Install runner chart
 	helmOpts := CreateRunnerHelmOptions(controlPlane, ns, version, dryRun, map[string]interface{}{
-		"runner.enabled":   enableRunner,
+		"runner.enabled":   enableExecution,
 		"listener.enabled": enableListener,
 		"gitops.enabled":   enableGitops,
 		"webhooks.enabled": enableWebhooks,
@@ -331,11 +365,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 		helmOpts.Values["globalTemplate.inline"] = true
 		helmOpts.Values["globalTemplate.spec"] = string(globalTemplate)
 	}
-	cliErr := common2.HelmUpgradeOrInstallGeneric(helmOpts)
-	if cliErr != nil {
-		cliErr.Print()
-		os.Exit(1)
-	}
+	common2.HandleCLIError(common2.HelmUpgradeOrInstallGeneric(helmOpts))
 
 	if dryRun {
 		return
@@ -344,7 +374,14 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 	spinner.Success()
 
 	agents, err := GetKubernetesAgents([]string{ns})
-	ui.ExitOnError("getting agents in kubernetes", err)
+	if err != nil {
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrResourceLookupFailed,
+			"Error getting the runners running in the cluster",
+			common2.ClusterLookupHint,
+			err,
+		))
+	}
 
 	var foundAgent *internalAgent
 	for i := range agents {
@@ -355,7 +392,12 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 	}
 
 	if foundAgent == nil {
-		ui.Failf("not found the agent installed in namespace '%s'", ns)
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrResourceNotFound,
+			"Runner not found in the cluster",
+			"The Helm release installed, but no runner Pod carries its id yet. Check the Pods of the namespace, for example with `kubectl get pods -n <namespace>`",
+			fmt.Errorf("not found the runner installed in namespace '%s'", ns),
+		))
 		return
 	}
 

@@ -62,7 +62,7 @@ func (c *client) ListTestTriggers(ctx context.Context, environmentId string, opt
 		Selector:   options.Selector,
 		Namespace:  namespace,
 	}
-	res, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.ListTestTriggers, req)
+	res, err := callWithRetry(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.ListTestTriggers, req)
 	if err != nil {
 		return channels.NewError[*testkube.TestTrigger](err)
 	}
