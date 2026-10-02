@@ -6,11 +6,25 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
+
+// jobWithCondition returns a job with a deadline of 60 seconds and one true condition.
+func jobWithCondition(conditionType batchv1.JobConditionType, reason string) *batchv1.Job {
+	return &batchv1.Job{
+		Spec: batchv1.JobSpec{ActiveDeadlineSeconds: common.Ptr(int64(60))},
+		Status: batchv1.JobStatus{Conditions: []batchv1.JobCondition{{
+			Type:   conditionType,
+			Status: corev1.ConditionTrue,
+			Reason: reason,
+		}}},
+	}
+}
 
 func TestGetJobError(t *testing.T) {
 	deleted := metav1.NewTime(time.Now())
@@ -66,6 +80,30 @@ func TestGetJobError(t *testing.T) {
 		{
 			name: "job that still runs",
 			job:  &batchv1.Job{},
+			want: "",
+		},
+		{
+			name: "job that failed on its deadline",
+			job:  jobWithCondition(batchv1.JobFailed, ReasonDeadlineExceeded),
+			want: "Job timed out after 60 seconds",
+		},
+		{
+			name: "a deadline of one second uses the singular",
+			job: func() *batchv1.Job {
+				job := jobWithCondition(batchv1.JobFailed, ReasonDeadlineExceeded)
+				job.Spec.ActiveDeadlineSeconds = common.Ptr(int64(1))
+				return job
+			}(),
+			want: "Job timed out after 1 second",
+		},
+		{
+			name: "job that is about to fail on its deadline",
+			job:  jobWithCondition(batchv1.JobFailureTarget, ReasonDeadlineExceeded),
+			want: "Job timed out after 60 seconds",
+		},
+		{
+			name: "job that is about to fail for another reason",
+			job:  jobWithCondition(batchv1.JobFailureTarget, "BackoffLimitExceeded"),
 			want: "",
 		},
 	}
