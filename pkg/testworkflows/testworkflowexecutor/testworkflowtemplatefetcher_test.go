@@ -1,6 +1,7 @@
 package testworkflowexecutor
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -143,4 +144,16 @@ func TestTestWorkflowTemplateFetcher_ConcurrentAccess(t *testing.T) {
 		assert.Equal(t, newTmpl.Description, fetched.Description)
 		assert.Equal(t, newTmpl.Labels, fetched.Labels)
 	})
+}
+
+func TestTestWorkflowTemplateFetcher_Prefetch_Error(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	client := testworkflowtemplateclient.NewMockTestWorkflowTemplateClient(ctrl)
+	client.EXPECT().
+		Get(gomock.Any(), "test-env", testworkflowresolver.GetInternalTemplateName("group/missing")).
+		Return(nil, errors.New("record does not exist"))
+
+	err := NewTestWorkflowTemplateFetcher(client, "test-env").Prefetch("group/missing")
+
+	assert.EqualError(t, err, `the template "group/missing": record does not exist`)
 }

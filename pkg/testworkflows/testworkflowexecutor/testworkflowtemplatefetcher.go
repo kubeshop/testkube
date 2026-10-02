@@ -47,7 +47,7 @@ func (r *testWorkflowTemplateFetcher) Prefetch(name string) error {
 	}
 	template, err := r.client.Get(context.Background(), r.environmentId, name)
 	if err != nil {
-		return errors.Wrapf(err, "cannot fetch Test Workflow Template by name: %s", name)
+		return errors.Wrapf(err, "the template %q", testworkflowresolver.GetDisplayTemplateName(name))
 	}
 	r.SetCache(name, template)
 	return nil
