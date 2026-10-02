@@ -294,3 +294,58 @@ func TestSweepReportsWhatItCouldNotRemoveAndKeepsGoing(t *testing.T) {
 		assert.Contains(t, err.Error(), "exec-stuck")
 	}
 }
+
+// The agent makes an inbox for every execution the volume is enabled for, because it
+// cannot know whether a parallel worker bundled later will cache into it. Most never
+// write anything, and holding those for the full retention - days - would spend a great
+// many inodes on a volume the whole cluster shares.
+//
+// Retention exists to keep an entry alive as long as the pointer naming it, so an inbox
+// holding no entries has nothing to be held for.
+func TestSweepRemovesAnEmptyInboxOnceItsLeaseIsStale(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, InboxDir, "exec-never-cached")
+	require.NoError(t, os.MkdirAll(dir, 0o777))
+	require.NoError(t, TouchLease(root, InboxDir+"/exec-never-cached"))
+	age(t, filepath.Join(dir, LeaseName))
+	age(t, dir)
+
+	// Retention is far from up; only the lease has gone stale.
+	s := &Sweeper{Root: root, Retention: 30 * 24 * time.Hour, LeaseTTL: time.Hour}
+	require.NoError(t, s.Sweep(context.Background()))
+
+	_, err := os.Stat(dir)
+	assert.True(t, os.IsNotExist(err), "an inbox that cached nothing holds nothing to keep")
+}
+
+// An inbox that holds an entry is kept for the whole retention window, because that is
+// how long the pointer naming it may still be served.
+func TestSweepKeepsAnInboxHoldingAnEntryUntilRetention(t *testing.T) {
+	root := t.TempDir()
+	dir := inboxAged(t, root, "exec-cached", 48*time.Hour)
+	require.NoError(t, TouchLease(root, InboxDir+"/exec-cached"))
+	age(t, filepath.Join(dir, LeaseName))
+
+	s := &Sweeper{Root: root, Retention: 30 * 24 * time.Hour, LeaseTTL: time.Hour}
+	require.NoError(t, s.Sweep(context.Background()))
+
+	_, err := os.Stat(dir)
+	assert.NoError(t, err, "an entry outlives its pointer only if retention keeps it")
+}
+
+// A running execution that has not reached its cached step yet looks exactly like one
+// that never will. The lease is what tells them apart, so a fresh one keeps an empty
+// inbox whatever its mtime says.
+func TestSweepKeepsAnEmptyInboxWithAFreshLease(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, InboxDir, "exec-still-running")
+	require.NoError(t, os.MkdirAll(dir, 0o777))
+	age(t, dir)
+	require.NoError(t, TouchLease(root, InboxDir+"/exec-still-running"))
+
+	s := &Sweeper{Root: root, Retention: 30 * 24 * time.Hour, LeaseTTL: time.Hour}
+	require.NoError(t, s.Sweep(context.Background()))
+
+	_, err := os.Stat(dir)
+	assert.NoError(t, err, "its step may still be on its way to caching")
+}

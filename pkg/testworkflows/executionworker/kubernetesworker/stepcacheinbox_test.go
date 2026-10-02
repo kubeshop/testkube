@@ -8,10 +8,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 
+	"github.com/kubeshop/testkube/pkg/executioncache/volume"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 )
 
 // kubelet creates a missing subPath directory itself, but owned by root and with the
@@ -26,7 +25,7 @@ func TestPrepareStepCacheInboxMakesThisExecutionsInbox(t *testing.T) {
 		StepCacheVolumeLocalPath: root,
 	}}
 
-	w.prepareStepCacheInbox(cacheClaimBundle("step-cache"), "exec-1")
+	w.prepareStepCacheInbox("exec-1")
 
 	info, err := os.Stat(filepath.Join(root, "inbox", "exec-1"))
 	require.NoError(t, err)
@@ -46,8 +45,8 @@ func TestPrepareStepCacheInboxMakesTheSharedParent(t *testing.T) {
 		StepCacheVolumeLocalPath: root,
 	}}
 
-	w.prepareStepCacheInbox(cacheClaimBundle("step-cache"), "exec-1")
-	w.prepareStepCacheInbox(cacheClaimBundle("step-cache"), "exec-2")
+	w.prepareStepCacheInbox("exec-1")
+	w.prepareStepCacheInbox("exec-2")
 
 	for _, id := range []string{"exec-1", "exec-2"} {
 		_, err := os.Stat(filepath.Join(root, "inbox", id))
@@ -61,7 +60,7 @@ func TestPrepareStepCacheInboxDoesNothingWithoutAVolume(t *testing.T) {
 	root := t.TempDir()
 	w := &worker{config: Config{StepCacheVolumeLocalPath: root}}
 
-	w.prepareStepCacheInbox(cacheClaimBundle("step-cache"), "exec-1")
+	w.prepareStepCacheInbox("exec-1")
 
 	entries, err := os.ReadDir(root)
 	require.NoError(t, err)
@@ -76,36 +75,26 @@ func TestPrepareStepCacheInboxSurvivesAnUnusableVolume(t *testing.T) {
 		StepCacheVolumeLocalPath: filepath.Join(t.TempDir(), "not-mounted", "x\x00y"),
 	}}
 
-	assert.NotPanics(t, func() { w.prepareStepCacheInbox(cacheClaimBundle("step-cache"), "exec-1") })
+	assert.NotPanics(t, func() { w.prepareStepCacheInbox("exec-1") })
 }
 
-// cacheClaimBundle is a bundle whose pod attaches the shared cache claim, which is what
-// prepareStepCacheInbox looks for before making an inbox at all.
-func cacheClaimBundle(claimName string) *testworkflowprocessor.Bundle {
-	bundle := &testworkflowprocessor.Bundle{}
-	bundle.Job.Spec.Template.Spec.Volumes = []corev1.Volume{{
-		Name: "step-cache",
-		VolumeSource: corev1.VolumeSource{
-			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: claimName},
-		},
-	}}
-	return bundle
-}
-
-// A workflow with no cached step never mounts the claim, and an inbox made for it is an
-// empty directory and a lease file left behind for the whole retention window - days.
-// An installation running mostly uncached workloads would spend a great many inodes on
-// a volume the whole cluster shares, for executions that were never going to write.
-func TestPrepareStepCacheInboxSkipsABundleThatDoesNotMountTheVolume(t *testing.T) {
+// A workflow may cache only inside a parallel or service worker, whose spec is bundled
+// later by a worker running in a pod - and that worker is handed the volume config but
+// no local path, because nothing inside a pod can reach the volume root. The root agent
+// is the only thing that can make the inbox, so it makes one whenever the volume is
+// enabled rather than only when its own bundle mounts the claim.
+//
+// What that costs in empty directories is the sweep's to reclaim: one holding no entries
+// goes as soon as its lease is stale, well before a real entry's retention.
+func TestPrepareStepCacheInboxDoesNotDependOnThisBundle(t *testing.T) {
 	root := t.TempDir()
 	w := &worker{config: Config{
 		StepCacheVolume:          &testworkflowconfig.StepCacheVolumeConfig{ClaimName: "step-cache", ID: "vol1"},
 		StepCacheVolumeLocalPath: root,
 	}}
 
-	w.prepareStepCacheInbox(&testworkflowprocessor.Bundle{}, "exec-1")
+	w.prepareStepCacheInbox("exec-1")
 
-	entries, err := os.ReadDir(root)
-	require.NoError(t, err)
-	assert.Empty(t, entries, "nothing is made for an execution that will not cache")
+	_, err := os.Stat(filepath.Join(root, volume.InboxDir, "exec-1"))
+	assert.NoError(t, err, "a nested cached step has no other way to get one")
 }

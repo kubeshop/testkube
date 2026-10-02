@@ -216,6 +216,13 @@ restore is a copy rather than an unpack and nothing is gzipped.
   sites), keyed on the execution's **root** id so that one inbox serves an execution
   and everything it spawns - a parallel or service worker builds its pods from inside a
   pod, where nothing can reach the volume root, so it cannot make an inbox of its own.
+  For the same reason it is made for **every** execution the volume is enabled for, and
+  deliberately **not** gated on this bundle mounting the claim: a workflow may cache
+  only inside a nested worker, whose spec is bundled later, so the root bundle proves
+  nothing. The empty directories that costs are the sweep's to reclaim - an inbox
+  holding no entries goes as soon as its lease is stale, well before the retention a
+  real entry gets, since retention exists to outlive a pointer and an empty inbox has
+  none.
   kubelet would create the `subPath` directory itself - it creates a missing
   one and its parents - but owned by **root**, with the mode of the volume root and no
   regard for `runAsUser`; `fsGroup` is not applied to a multi-writer volume, since the

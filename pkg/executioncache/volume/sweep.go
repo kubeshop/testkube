@@ -185,7 +185,28 @@ func (s *Sweeper) Sweep(ctx context.Context) error {
 		// what holds a live inbox, and the agent writes that one.
 		modified := info.ModTime()
 		if modified.After(cutoff) && !modified.After(now().Add(maxClockSkew)) {
-			continue
+			// Retention bounds how long an entry outlives the pointer naming it, so an
+			// inbox holding no entries has nothing to be held for. The agent makes one
+			// for every execution the volume is enabled for - it cannot know whether a
+			// parallel worker bundled later will cache - and most of those never write
+			// anything, so holding them all for days would spend a great many inodes
+			// on a volume the whole cluster shares.
+			//
+			// Still only once the lease has gone stale, which is what says the
+			// execution is over. An inbox that is empty because its step has not
+			// reached its cache yet is a running one, and the lease is what tells the
+			// two apart.
+			if s.LeaseTTL <= 0 || now().Sub(modified) < s.LeaseTTL {
+				continue
+			}
+			empty, err := inboxIsEmpty(dir)
+			if err != nil {
+				failed = append(failed, fmt.Sprintf("%s: reading it: %s", entry.Name(), err))
+				continue
+			}
+			if !empty {
+				continue
+			}
 		}
 
 		// Reported and stepped over rather than returned. Every inbox here is already
@@ -335,4 +356,26 @@ func inboxPath(mountPath, inboxName string) (string, error) {
 		return "", fmt.Errorf("%q is not an inbox name", inboxName)
 	}
 	return filepath.Join(mountPath, parts[0], parts[1]), nil
+}
+
+// inboxIsEmpty reports whether an inbox holds no entries, the lease not counting as one.
+//
+// The lease is written by the agent rather than by the execution, so an inbox holding
+// only that has had nothing cached into it and names nothing any pointer could follow.
+func inboxIsEmpty(dir string) (bool, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// Swept by another agent between the listing and here, which is as empty
+			// as it gets.
+			return true, nil
+		}
+		return false, err
+	}
+	for _, e := range entries {
+		if e.Name() != LeaseName {
+			return false, nil
+		}
+	}
+	return true, nil
 }
