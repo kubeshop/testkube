@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/kubeshop/testkube/internal/common"
@@ -61,6 +62,11 @@ func refreshStepCacheLeases(ctx context.Context, worker executionworkertypes.Wor
 	// Several resources of one execution share the root's inbox, so the same name
 	// arrives repeatedly - a parallel fan-out is the usual reason.
 	seen := make(map[string]struct{}, len(running))
+	var (
+		failed     int
+		firstErr   error
+		firstInbox string
+	)
 	for _, item := range running {
 		root := item.Resource.EffectiveRootId()
 		if root == "" {
@@ -72,10 +78,28 @@ func refreshStepCacheLeases(ctx context.Context, worker executionworkertypes.Wor
 		}
 		seen[inbox] = struct{}{}
 
-		// A missing inbox is the ordinary case for an execution that predates the
-		// volume being configured, or one already swept, so it is not worth a line
-		// each time round.
-		_ = volume.TouchLease(mountPath, inbox)
+		// A missing inbox is the ordinary case - an execution that predates the volume
+		// being configured, or one already swept - and is not worth a line each time
+		// round. Anything else is the protection failing silently: a volume remounted
+		// read-only, a permission the agent lost, an I/O error. The lease then goes
+		// stale while the execution is still running, and the sweep takes an inbox its
+		// pod is still writing to, so an operator has to hear about it while there is
+		// still time to act.
+		if err := volume.TouchLease(mountPath, inbox); err != nil && !os.IsNotExist(err) {
+			failed++
+			if firstErr == nil {
+				firstErr, firstInbox = err, inbox
+			}
+		}
+	}
+
+	// One line for the pass rather than one per execution: a volume that has gone
+	// read-only fails every inbox, and a hundred identical lines every five minutes
+	// buries the thing it is reporting.
+	if failed > 0 {
+		log.DefaultLogger.Errorw(
+			"could not renew step cache leases; the inboxes of running executions may be swept while their pods still write to them, and the pointers they publish would then name entries that are gone",
+			"failed", failed, "of", len(seen), "inbox", firstInbox, "error", firstErr)
 	}
 }
 

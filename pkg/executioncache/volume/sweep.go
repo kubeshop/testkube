@@ -301,6 +301,13 @@ func TouchLease(mountPath, inboxName string) error {
 
 	f, err := root.OpenFile(LeaseName, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0o666)
 	if err != nil {
+		if os.IsExist(err) {
+			// Another agent made it between the Chtimes above and here. Each
+			// deployment holds its own leader election, so an api and a runner sharing
+			// one volume both renew, and a lease that exists is exactly the outcome
+			// wanted - reporting it would be reporting success as a failure.
+			return nil
+		}
 		return err
 	}
 	return f.Close()

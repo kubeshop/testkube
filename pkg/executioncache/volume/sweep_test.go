@@ -163,8 +163,36 @@ func TestTouchLeaseDoesNotCreateTheInbox(t *testing.T) {
 	err := TouchLease(root, InboxDir+"/never-existed")
 
 	require.Error(t, err)
+	// os.IsNotExist specifically, because the caller tells the ordinary case apart
+	// from a real one by it: an inbox that was swept or never made is nothing to
+	// report, where a volume gone read-only, a lost permission or an I/O error means
+	// the lease is going stale under a running execution and an operator has to hear
+	// about it while there is still time to act.
+	assert.True(t, os.IsNotExist(err), "got %v", err)
+
 	_, statErr := os.Stat(filepath.Join(root, InboxDir, "never-existed"))
 	assert.True(t, os.IsNotExist(statErr))
+}
+
+// A lease already in place is renewed rather than recreated, and a lease another agent
+// created in the meantime is not a failure: each deployment holds its own leader
+// election, so an api and a runner sharing one volume both renew.
+func TestTouchLeaseRenewsOneThatExists(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, InboxDir, "exec-1")
+	require.NoError(t, os.MkdirAll(dir, 0o777))
+	require.NoError(t, TouchLease(root, InboxDir+"/exec-1"))
+
+	lease := filepath.Join(dir, LeaseName)
+	age(t, lease)
+	before, err := os.Stat(lease)
+	require.NoError(t, err)
+
+	require.NoError(t, TouchLease(root, InboxDir+"/exec-1"))
+
+	after, err := os.Stat(lease)
+	require.NoError(t, err)
+	assert.True(t, after.ModTime().After(before.ModTime()), "a renewal has to move the lease forward")
 }
 
 // The name decides where a file is written, so it is checked rather than trusted.
