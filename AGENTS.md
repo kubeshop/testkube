@@ -168,7 +168,10 @@ restore is a copy rather than an unpack and nothing is gzipped.
   `StepCacheVolumeConfig.ID` and `TK_CACHE_VOLUME_ID` (a pod cannot read the volume
   root on the save side - its only writable mount is a subPath), and
   `volume.ScopedKey` prefixes the key **and every restore key** with it. A prefix, not
-  a suffix, so prefix matching cannot stray onto another volume's entry. The id
+  a suffix, so prefix matching cannot stray onto another volume's entry. The prefix is spent out of
+  `MaxKeyBytes`, so the key is validated **after** scoping (`validateScopedCacheKey`) -
+  checking the author's key and then adding bytes to it let a key just inside the limit
+  pass in the pod and be refused by the API on every restore and save. The id
   belongs to the volume rather than the runner, so runners that do share a volume go on
   sharing its entries.
 - **A running execution holds its inbox through a lease.** The inbox is made before the
@@ -177,7 +180,10 @@ restore is a copy rather than an unpack and nothing is gzipped.
   sweep however alive it is - and unlinking it leaves the pod writing through its
   subPath to an inode nothing can reach, then publishing a pointer naming a path that
   is gone. `volume.TouchLease` refreshes `<inbox>/.lease`, `Sweeper.LeaseTTL` skips an
-  inbox whose lease is fresh, and `refreshStepCacheLeases`
+  inbox whose lease is fresh - but only when its age is **non-negative**, within a
+  five minute skew window, because the step's own command holds the inbox mount and
+  could otherwise date `.lease` a century ahead and pin that directory for good; the
+  inbox's own mtime is bounded the same way, and `refreshStepCacheLeases`
   (`cmd/api-server/stepcachelease.go`) renews them every 5 minutes against a 30 minute
   TTL, inside the sweeper task so the first renewal precedes the first sweep. The live
   set is **read back from the cluster** (`worker.List` with `Finished: false`) rather

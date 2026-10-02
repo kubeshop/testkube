@@ -181,3 +181,56 @@ func age(t *testing.T, name string) {
 	when := time.Now().Add(-48 * time.Hour)
 	require.NoError(t, os.Chtimes(name, when, when))
 }
+
+// The step's own command holds the inbox mount - the save stage is pure, so it merges
+// into that container - which means a workflow can write .lease itself and date it a
+// century ahead. Treating a negative age as fresh would keep that inbox for good, and a
+// few of them would fill a volume every execution in the cluster shares.
+func TestSweepRemovesAnInboxWhoseLeaseIsDatedInTheFuture(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, InboxDir, "exec-squatter")
+	require.NoError(t, os.MkdirAll(dir, 0o777))
+	require.NoError(t, TouchLease(root, InboxDir+"/exec-squatter"))
+	ahead := time.Now().Add(100 * 365 * 24 * time.Hour)
+	require.NoError(t, os.Chtimes(filepath.Join(dir, LeaseName), ahead, ahead))
+	age(t, dir)
+
+	s := &Sweeper{Root: root, Retention: time.Hour, LeaseTTL: time.Hour}
+	require.NoError(t, s.Sweep(context.Background()))
+
+	_, err := os.Stat(dir)
+	assert.True(t, os.IsNotExist(err), "a lease nobody can outlive must not pin the volume")
+}
+
+// The inbox's own mtime is reachable the same way, so it is bounded the same way.
+func TestSweepRemovesAnInboxDatedInTheFuture(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, InboxDir, "exec-squatter")
+	require.NoError(t, os.MkdirAll(dir, 0o777))
+	ahead := time.Now().Add(100 * 365 * 24 * time.Hour)
+	require.NoError(t, os.Chtimes(dir, ahead, ahead))
+
+	s := &Sweeper{Root: root, Retention: time.Hour, LeaseTTL: time.Hour}
+	require.NoError(t, s.Sweep(context.Background()))
+
+	_, err := os.Stat(dir)
+	assert.True(t, os.IsNotExist(err))
+}
+
+// A lease written moments ago may read as marginally ahead, because the agent and
+// whatever serves the volume keep their own clocks. That must not sweep a live inbox.
+func TestSweepKeepsAnInboxWhoseLeaseIsBarelyAhead(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, InboxDir, "exec-live")
+	require.NoError(t, os.MkdirAll(dir, 0o777))
+	require.NoError(t, TouchLease(root, InboxDir+"/exec-live"))
+	ahead := time.Now().Add(maxClockSkew / 2)
+	require.NoError(t, os.Chtimes(filepath.Join(dir, LeaseName), ahead, ahead))
+	age(t, dir)
+
+	s := &Sweeper{Root: root, Retention: time.Hour, LeaseTTL: time.Hour}
+	require.NoError(t, s.Sweep(context.Background()))
+
+	_, err := os.Stat(dir)
+	assert.NoError(t, err, "a small clock difference is not a squatter")
+}

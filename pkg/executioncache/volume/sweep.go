@@ -123,7 +123,17 @@ func (s *Sweeper) Sweep(ctx context.Context) error {
 		if s.LeaseTTL > 0 {
 			switch lease, err := os.Stat(filepath.Join(dir, LeaseName)); {
 			case err == nil:
-				if now().Sub(lease.ModTime()) < s.LeaseTTL {
+				// Age, not "before now plus the window": a negative age is a timestamp
+				// in the future, and a future one stays in the future, so it would
+				// keep this inbox for good. The step's own command holds the inbox
+				// mount - the save stage is pure and merges into it - so a workflow
+				// can write .lease itself and date it a century ahead, and the shared
+				// volume would never reclaim that directory again.
+				//
+				// A little slack below zero, because the agent and whatever serves the
+				// volume keep their own clocks and a lease written moments ago may
+				// read as marginally ahead.
+				if age := now().Sub(lease.ModTime()); age >= -maxClockSkew && age < s.LeaseTTL {
 					continue
 				}
 			case !os.IsNotExist(err):
@@ -140,7 +150,13 @@ func (s *Sweeper) Sweep(ctx context.Context) error {
 			}
 			return err
 		}
-		if info.ModTime().After(cutoff) {
+		// A future mtime is kept from pinning the inbox the same way, and for the same
+		// reason: the step can touch its own inbox directory. Beyond the skew window it
+		// is not a clock difference, so it is treated as expired rather than as
+		// infinitely recent. A running execution is still safe - the lease above is
+		// what holds a live inbox, and the agent writes that one.
+		modified := info.ModTime()
+		if modified.After(cutoff) && !modified.After(now().Add(maxClockSkew)) {
 			continue
 		}
 
@@ -189,6 +205,15 @@ func PointerLifetime(cacheExpirationDays, bucketExpirationDays int) (time.Durati
 // subPath: the writes go to an inode nothing can reach, and the pointer that execution
 // publishes names a path that no longer exists, which is a key that misses until its
 // object expires.
+// maxClockSkew is how far ahead of this process a timestamp on the volume may be and
+// still be believed.
+//
+// The agent and whatever serves the volume keep their own clocks, so a lease written
+// moments ago can read as marginally ahead. Anything further is not a clock difference:
+// the step's own command holds the inbox mount, so a workflow can date a timestamp a
+// century ahead, and without a bound that inbox would never be reclaimed.
+const maxClockSkew = 5 * time.Minute
+
 const LeaseName = ".lease"
 
 // TouchLease marks an inbox as still in use, and is the other half of Sweeper.LeaseTTL.
