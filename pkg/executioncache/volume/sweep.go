@@ -141,7 +141,15 @@ func (s *Sweeper) Sweep(ctx context.Context) error {
 					continue
 				}
 			case !os.IsNotExist(err):
-				return err
+				// Recorded and stepped over, never returned. The lease sits inside a
+				// directory the step's own command can write, so a workflow can
+				// replace it with a symlink pointing at itself and every Stat of it
+				// answers ELOOP - and returning here would stop the sweep at that
+				// inbox for good, on every pass, with everything after it never
+				// reclaimed. A lease that cannot be read is simply not believed, so
+				// this falls through to the mtime below and the inbox expires the
+				// ordinary way.
+				failed = append(failed, fmt.Sprintf("%s: reading its lease: %s", entry.Name(), err))
 			}
 		}
 
