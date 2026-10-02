@@ -228,6 +228,10 @@ restore is a copy rather than an unpack and nothing is gzipped.
   than tracked in memory: a registration that is never cleared would pin an inbox for
   good, where a listing simply stops returning what has stopped running. Time-based for
   the same reason - a lease nobody refreshes goes stale and the sweep carries on.
+  **Nothing is swept until that first listing succeeds** (`awaitStepCacheLeases`): a
+  leader that has just taken over holds no leases, so a failed first pass would make
+  every live inbox look abandoned. A later pass may fail safely, falling back on the
+  leases the previous one wrote, which is why the interval is well under the TTL.
 - **The agent makes each execution's inbox before its pod starts**
   (`prepareStepCacheInbox` in `kubernetesworker/worker.go`, called at both deploy
   sites), keyed on the execution's **root** id so that one inbox serves an execution

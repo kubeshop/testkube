@@ -118,3 +118,42 @@ func TestEnsureIDGivesUpOnAnIdentityThatStaysEmpty(t *testing.T) {
 
 	assert.Error(t, err)
 }
+
+// The name is published by O_EXCL before the contents are written. An agent killed in
+// that window - an eviction, or a node going away between two syscalls - leaves an empty
+// identity nobody will ever write, and nothing afterwards repaired it: every later
+// startup waited out the attempts, found it still empty and refused the volume, turning
+// the cache off for the whole installation permanently, over six bytes.
+func TestEnsureIDRecoversAnIdentityNobodyWillWrite(t *testing.T) {
+	root := t.TempDir()
+	name := filepath.Join(root, IDName)
+
+	require.NoError(t, os.WriteFile(name, nil, SharedFileMode))
+	stale := time.Now().Add(-2 * idStaleAfter)
+	require.NoError(t, os.Chtimes(name, stale, stale))
+
+	id, err := EnsureID(root)
+	require.NoError(t, err)
+	assert.NotEmpty(t, id, "an identity left unwritten has to be replaceable")
+
+	// And the replacement is what the volume now carries, so every agent agrees on it.
+	again, err := EnsureID(root)
+	require.NoError(t, err)
+	assert.Equal(t, id, again)
+}
+
+// The same empty file is what another agent in the middle of its own create leaves
+// behind, one write wide. Taking that for a stale one would hand the two agents separate
+// identities for one volume, splitting its cache between them - so only age tells them
+// apart, and a fresh one is waited on exactly as before.
+func TestEnsureIDLeavesAnIdentityAnotherAgentIsWriting(t *testing.T) {
+	root := t.TempDir()
+	name := filepath.Join(root, IDName)
+	require.NoError(t, os.WriteFile(name, nil, SharedFileMode))
+
+	_, err := EnsureID(root)
+	require.Error(t, err, "an empty identity written a moment ago is somebody's open write")
+
+	_, statErr := os.Stat(name)
+	assert.NoError(t, statErr, "and it must still be there for them to finish")
+}

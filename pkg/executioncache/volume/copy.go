@@ -236,8 +236,15 @@ var ErrDeclaredPathIsSymlink = errors.New("declared cache path is reached throug
 // patterns - so without this the two backends disagree about how big the same cache is,
 // and the volume can refuse a cache the archive would have taken.
 //
-// Sorting puts a parent immediately before everything beneath it, so comparing each
-// path against the last one kept is enough to drop the whole nested run.
+// Sorting on each path with its separator appended puts a parent immediately before
+// everything beneath it, so comparing each path against the last one kept is enough to
+// drop the whole nested run.
+//
+// The separator is what makes that true, and plain lexicographic order is not: "-"
+// precedes "/", so /a, /a- and /a/b sort in that order and the comparison against the
+// last kept path sees /a-, not /a, and keeps /a/b. Appending the separator sorts /a-
+// before /a instead, and the only paths that can then fall between /a/ and /a/b/ are
+// ones beginning /a/ - descendants, which is precisely what the comparison drops.
 func coverPaths(paths []string) []string {
 	cleaned := make([]string, 0, len(paths))
 	for _, p := range paths {
@@ -247,7 +254,7 @@ func coverPaths(paths []string) []string {
 		}
 		cleaned = append(cleaned, c)
 	}
-	sort.Strings(cleaned)
+	sort.Slice(cleaned, func(i, j int) bool { return cleaned[i]+"/" < cleaned[j]+"/" })
 
 	covered := make([]string, 0, len(cleaned))
 	for _, c := range cleaned {

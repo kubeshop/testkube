@@ -744,3 +744,12 @@ func TestRestoreStopsAtTheEntryLimitPartWayThrough(t *testing.T) {
 	_, statErr := os.Stat(filepath.FromSlash(first + "/dep"))
 	assert.NoError(t, statErr, "the first path is restored, which is what makes this part way through")
 }
+
+// A sibling can sort between a parent and its children, which is enough to let the
+// nested run through. "/a", "/a-" and "/a/b" sort in that order, because "-" precedes
+// "/" - so comparing each path against the last one kept sees "/a-", not "/a", and
+// keeps "/a/b". The subtree is then walked twice: stored twice on the volume and
+// counted twice against both limits, which is exactly what this is here to prevent.
+func TestCoverDropsADescendantASiblingSortsBetween(t *testing.T) {
+	assert.Equal(t, []string{"/a-", "/a"}, coverPaths([]string{"/a", "/a-", "/a/b"}))
+}

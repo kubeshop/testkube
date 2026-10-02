@@ -3,6 +3,7 @@ package volume
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -29,7 +30,21 @@ const (
 	// that a file which is genuinely empty is not waited on for long.
 	idReadAttempts = 20
 	idReadDelay    = 50 * time.Millisecond
+
+	// idStaleAfter is how long an empty identity has to have sat there before it is
+	// taken to be one nobody is going to write.
+	//
+	// Far longer than the write it is waiting on, because the mtime was set by whichever
+	// node created the file and is read here by another: minutes of clock skew between
+	// two nodes of one cluster is ordinary, and the cost of being wrong is a slow writer
+	// ending up with an identity no other agent shares. An agent that stalled five
+	// minutes between creating the name and writing six bytes has worse problems.
+	idStaleAfter = 5 * time.Minute
 )
+
+// errStaleID reports that an unwritten identity has been cleared and the create is worth
+// attempting again. It never leaves this file.
+var errStaleID = errors.New("volume identity was empty and has been removed")
 
 // EnsureID reads the volume's identity, writing one the first time.
 //
@@ -53,6 +68,20 @@ func EnsureID(mountPath string) (string, error) {
 	}
 	name := filepath.Join(mountPath, IDName)
 
+	// Twice at most. The second pass is the one that follows a stale name having been
+	// cleared; a third would only mean another agent won the create in between, and the
+	// wait inside each pass already covers that.
+	var err error
+	for attempt := 0; attempt < 2; attempt++ {
+		var id string
+		if id, err = ensureID(name); !errors.Is(err, errStaleID) {
+			return id, err
+		}
+	}
+	return "", err
+}
+
+func ensureID(name string) (string, error) {
 	switch id, err := readID(name); {
 	case err == nil:
 		return id, nil
@@ -121,6 +150,13 @@ func EnsureID(mountPath string) (string, error) {
 // it empty. That window is one write wide and happens once in a volume's life, but
 // falling at it would refuse the volume for this agent - so it is waited out rather
 // than reported.
+//
+// A write that never comes at all leaves the same empty file permanently. The agent that
+// created it was killed in the window - an eviction or a node failure between two
+// syscalls - and nothing afterwards repairs it: every later startup waits out the
+// attempts, finds it still empty, and turns the volume off for the whole installation,
+// over six bytes. So an empty identity old enough not to be anybody's open write is
+// removed and the create attempted again.
 func awaitID(name string) (string, error) {
 	var err error
 	for attempt := 0; attempt < idReadAttempts; attempt++ {
@@ -135,7 +171,38 @@ func awaitID(name string) (string, error) {
 		}
 		time.Sleep(idReadDelay)
 	}
+	if clearStaleID(name) {
+		return "", errStaleID
+	}
 	return "", err
+}
+
+// clearStaleID removes an identity that was created and never written, reporting whether
+// the name is now free to be created again.
+//
+// Two agents may do this at once, which settles itself: one removes the file and the
+// other finds it already gone, and the O_EXCL create that follows picks a single winner
+// as it always does.
+func clearStaleID(name string) bool {
+	info, err := os.Stat(name)
+	if err != nil || info.Size() != 0 {
+		// Nothing this can mend. Either the name is gone, or it holds something readID
+		// could not make sense of - which is a volume being shared with a writer this
+		// agent does not understand, and removing it would be the wrong answer: the
+		// cache turns off here rather than this partitioning the volume against them.
+		return false
+	}
+	if time.Since(info.ModTime()) < idStaleAfter {
+		// Young enough that the write may still be on its way, so it is left alone and
+		// the next startup looks again. Clock skew only makes it look younger than it
+		// is, which errs towards leaving it.
+		return false
+	}
+	// Another agent getting there first leaves the name free just the same.
+	if err := os.Remove(name); err != nil && !os.IsNotExist(err) {
+		return false
+	}
+	return true
 }
 
 func readID(name string) (string, error) {

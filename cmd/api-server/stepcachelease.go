@@ -54,6 +54,13 @@ const stepCacheLeaseInterval = 5 * time.Minute
 // stepCacheLeaseTTL is how long an inbox survives without a refresh.
 const stepCacheLeaseTTL = 30 * time.Minute
 
+// stepCacheLeaseStartupRetry is how long the sweep waits before trying again to
+// establish which executions are running. Shorter than the renewal interval because
+// nothing is being swept until it succeeds, so there is no reason to be patient.
+//
+// A variable only so that a test can shorten it.
+var stepCacheLeaseStartupRetry = 30 * time.Second
+
 // refreshStepCacheLeases keeps the inbox of every running execution from being swept.
 //
 // The set of live executions is read back from the cluster rather than tracked in
@@ -61,13 +68,18 @@ const stepCacheLeaseTTL = 30 * time.Minute
 // a crash, a lost watch, a replica that went away - would pin an inbox for good, while
 // a listing simply stops returning what is no longer running.
 //
-// Each pass is best effort. A failure leaves the leases it did not reach to expire,
-// and the next pass renews them; nothing here is worth failing an agent over.
-func refreshStepCacheLeases(ctx context.Context, worker executionworkertypes.Worker, mountPath string) {
+// Failing to list is reported to the caller rather than logged here, because the two
+// callers owe it different things: a pass on the ticker has the previous pass's leases
+// to fall back on and only needs to say so, where the first pass has none and must stop
+// the sweep until it succeeds.
+//
+// Failing to renew an individual inbox is not reported, only logged. The live set is
+// known in that case, and holding the sweep for one inbox that cannot be touched would
+// mean a single stuck directory stops the volume ever being reclaimed.
+func refreshStepCacheLeases(ctx context.Context, worker executionworkertypes.Worker, mountPath string) error {
 	running, err := worker.List(ctx, executionworkertypes.ListOptions{Finished: common.Ptr(false)})
 	if err != nil {
-		log.DefaultLogger.Warnw("could not list running executions to renew step cache leases; an execution quiet for longer than the lease may have its inbox swept while it still holds it", "error", err)
-		return
+		return err
 	}
 
 	// Several resources of one execution share the root's inbox, so the same name
@@ -112,6 +124,48 @@ func refreshStepCacheLeases(ctx context.Context, worker executionworkertypes.Wor
 			"could not renew step cache leases; the inboxes of running executions may be swept while their pods still write to them, and the pointers they publish would then name entries that are gone",
 			"failed", failed, "of", len(seen), "inbox", firstInbox, "error", firstErr)
 	}
+	return nil
+}
+
+// awaitStepCacheLeases establishes the live set before anything is swept, and keeps
+// trying until it can.
+//
+// The sweep decides what to keep from the leases it finds on the volume, and a leader
+// that has just taken over has written none of them: every inbox of every running
+// execution looks abandoned to it until the first pass lands. Sweeping anyway would
+// unlink the directory a pod is writing through its subPath into - leaving it writing
+// to an inode nothing can reach, and then publishing a pointer naming a path that is
+// gone, which is a key that misses for as long as the object lives and that nothing can
+// replace.
+//
+// So a failure here holds the sweep rather than passing it through. Not sweeping costs
+// space on a shared volume, which is recovered on the next pass; sweeping without the
+// live set costs running executions their caches, permanently. The wait is reported once
+// and then kept quiet, because the API server being unreachable for an hour should not
+// be a hundred identical lines about the cache.
+//
+// Reports whether the live set was established. False means the context ended first, and
+// the caller must not sweep: an error would be the wrong answer there, because the
+// coordinator cancels this on losing leadership and that is a handover, not a failure.
+func awaitStepCacheLeases(ctx context.Context, worker executionworkertypes.Worker, mountPath string) bool {
+	for attempt := 0; ; attempt++ {
+		err := refreshStepCacheLeases(ctx, worker, mountPath)
+		if err == nil {
+			if attempt > 0 {
+				log.DefaultLogger.Infow("step cache leases established; the volume sweep is starting", "attempts", attempt+1)
+			}
+			return true
+		}
+		if attempt == 0 {
+			log.DefaultLogger.Warnw("could not list running executions, so nothing on the step cache volume will be swept until that succeeds; the volume may fill meanwhile", "error", err)
+		}
+
+		select {
+		case <-ctx.Done():
+			return false
+		case <-time.After(stepCacheLeaseStartupRetry):
+		}
+	}
 }
 
 // runStepCacheLeaseRenewal renews the leases on a ticker until the context is
@@ -120,6 +174,10 @@ func refreshStepCacheLeases(ctx context.Context, worker executionworkertypes.Wor
 // The first pass is the caller's, and has to be: Sweeper.Run sweeps as soon as it
 // starts, and an agent that has just taken over holds no leases yet, so every live
 // inbox would look abandoned to it.
+//
+// A pass that cannot list falls back on the leases the previous one wrote, which is why
+// the interval is well under the TTL. Reported each time, because by now the sweep is
+// running and a long enough outage does expose a live inbox to it.
 func runStepCacheLeaseRenewal(ctx context.Context, worker executionworkertypes.Worker, mountPath string) {
 	ticker := time.NewTicker(stepCacheLeaseInterval)
 	defer ticker.Stop()
@@ -128,7 +186,9 @@ func runStepCacheLeaseRenewal(ctx context.Context, worker executionworkertypes.W
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			refreshStepCacheLeases(ctx, worker, mountPath)
+			if err := refreshStepCacheLeases(ctx, worker, mountPath); err != nil {
+				log.DefaultLogger.Warnw("could not list running executions to renew step cache leases; an execution quiet for longer than the lease may have its inbox swept while it still holds it", "error", err)
+			}
 		}
 	}
 }

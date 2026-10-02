@@ -101,11 +101,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
-func init() {
-	flag.Parse()
-}
-
 func main() {
+	// Parsed here rather than from an init, which ran before testing registered its own
+	// flags and so made the whole package refuse to be tested: every `go test` of it
+	// died on "flag provided but not defined: -test.testlogfile". Nothing between init
+	// and here reads a flag, so the binary behaves as it always did.
+	flag.Parse()
+
 	startTime := time.Now()
 	log.DefaultLogger.Info("starting Testkube API Server")
 	log.DefaultLogger.Infow("version info", "version", version.Version, "commit", version.Commit)
@@ -1111,10 +1113,14 @@ func main() {
 		leaderTasks = append(leaderTasks, leader.Task{
 			Name: "step-cache-volume-sweeper",
 			Start: func(taskCtx context.Context) error {
-				// Renewed before the first sweep, not alongside it: Sweeper.Run sweeps
-				// as soon as it starts, and an agent that has just taken over holds no
-				// leases yet - every live inbox would look abandoned.
-				refreshStepCacheLeases(taskCtx, executionWorker, cfg.TestkubeStepCacheVolumeMountPath)
+				// Renewed before the first sweep, not alongside it, and the sweep does
+				// not start until it succeeds: Sweeper.Run sweeps as soon as it starts,
+				// and an agent that has just taken over holds no leases yet - every live
+				// inbox would look abandoned, and be unlinked from under the pod still
+				// writing to it.
+				if !awaitStepCacheLeases(taskCtx, executionWorker, cfg.TestkubeStepCacheVolumeMountPath) {
+					return nil
+				}
 				go runStepCacheLeaseRenewal(taskCtx, executionWorker, cfg.TestkubeStepCacheVolumeMountPath)
 				return sweeper.Run(taskCtx)
 			},
