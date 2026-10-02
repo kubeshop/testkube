@@ -2,8 +2,12 @@ package volume
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -33,6 +37,15 @@ type Sweeper struct {
 	Retention time.Duration
 	// Interval is how often to sweep.
 	Interval time.Duration
+	// LeaseTTL is how long a lease keeps an inbox, counted from its last refresh.
+	//
+	// An execution holds its inbox for as long as it runs, however quiet it is, and
+	// mtime cannot see that - see LeaseName. Zero disables the check, which sweeps on
+	// mtime alone and may unlink a directory a running pod still writes to.
+	//
+	// Comfortably above the refresh interval, so that one missed refresh does not
+	// expose a live inbox.
+	LeaseTTL time.Duration
 	// Now is the clock, so a test does not have to wait out a retention window.
 	Now func() time.Time
 	// OnError reports a sweep that could not finish. A sweep is maintenance, so a
@@ -104,6 +117,20 @@ func (s *Sweeper) Sweep(ctx context.Context) error {
 		}
 		dir := filepath.Join(s.Root, InboxDir, entry.Name())
 
+		// A live execution holds its inbox whether or not it has written to it lately,
+		// and only the lease can say so. Checked before mtime, because an execution
+		// that has cached nothing yet is exactly the one mtime judges most harshly.
+		if s.LeaseTTL > 0 {
+			switch lease, err := os.Stat(filepath.Join(dir, LeaseName)); {
+			case err == nil:
+				if now().Sub(lease.ModTime()) < s.LeaseTTL {
+					continue
+				}
+			case !os.IsNotExist(err):
+				return err
+			}
+		}
+
 		// The inbox's own mtime moves whenever an entry is added to or removed from it,
 		// so it tracks the execution's last write without having to walk inside.
 		info, err := entry.Info()
@@ -151,4 +178,60 @@ func PointerLifetime(cacheExpirationDays, bucketExpirationDays int) (time.Durati
 	default:
 		return 0, false
 	}
+}
+
+// LeaseName is the file inside an inbox whose mtime says an execution still holds it.
+//
+// The inbox's own mtime cannot answer that. It is made before the pod starts and only
+// moves when something is staged directly inside it, so an execution that caches
+// nothing for a while - or runs one long step - looks untouched however alive it is.
+// Sweeping it then unlinks a directory a running pod still has mounted through its
+// subPath: the writes go to an inode nothing can reach, and the pointer that execution
+// publishes names a path that no longer exists, which is a key that misses until its
+// object expires.
+const LeaseName = ".lease"
+
+// TouchLease marks an inbox as still in use, and is the other half of Sweeper.LeaseTTL.
+//
+// It never creates the inbox, only the lease inside one that is already there, so a
+// refresh arriving after a sweep cannot resurrect a directory nothing is mounted at.
+//
+// Deliberately time-based rather than a flag the agent sets and clears. A flag that was
+// never cleared - a crash, a lost watch, a replica that went away - would pin an inbox
+// for good and fill the volume with no way to reclaim it. A lease that stops being
+// refreshed goes stale on its own, and the sweep carries on.
+func TouchLease(mountPath, inboxName string) error {
+	dir, err := inboxPath(mountPath, inboxName)
+	if err != nil {
+		return err
+	}
+
+	name := filepath.Join(dir, LeaseName)
+	now := time.Now()
+	if err := os.Chtimes(name, now, now); err == nil {
+		return nil
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	// O_CREATE without MkdirAll: a missing parent is a swept or never-made inbox, and
+	// the error says so rather than building one nothing will ever read.
+	f, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY, 0o666)
+	if err != nil {
+		return err
+	}
+	return f.Close()
+}
+
+// inboxPath resolves an inbox name under the mount, refusing anything that is not
+// exactly inbox/<segment> so that a lease cannot be written outside one.
+func inboxPath(mountPath, inboxName string) (string, error) {
+	if mountPath == "" {
+		return "", errors.New("no shared cache volume is configured")
+	}
+	parts := strings.Split(path.Clean(inboxName), "/")
+	if len(parts) != 2 || parts[0] != InboxDir || parts[1] == "" || parts[1] == "." || parts[1] == ".." {
+		return "", fmt.Errorf("%q is not an inbox name", inboxName)
+	}
+	return filepath.Join(mountPath, parts[0], parts[1]), nil
 }

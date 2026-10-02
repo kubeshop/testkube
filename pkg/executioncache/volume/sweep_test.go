@@ -118,3 +118,66 @@ func TestRunSweepsImmediatelyAndStops(t *testing.T) {
 		t.Fatal("Run did not return after cancellation")
 	}
 }
+
+// An inbox is made before its pod starts and its mtime only moves when something is
+// staged inside it, so an execution that has cached nothing yet - or runs one long step
+// - looks expired however alive it is. Sweeping it unlinks a directory the running pod
+// still holds through its subPath: the writes land on an unreachable inode, and the
+// pointer that execution publishes names a path that is gone.
+func TestSweepKeepsAnInboxWithAFreshLease(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, InboxDir, "exec-live")
+	require.NoError(t, os.MkdirAll(dir, 0o777))
+	age(t, dir)
+	require.NoError(t, TouchLease(root, InboxDir+"/exec-live"))
+
+	s := &Sweeper{Root: root, Retention: time.Hour, LeaseTTL: time.Hour}
+	require.NoError(t, s.Sweep(context.Background()))
+
+	_, err := os.Stat(dir)
+	assert.NoError(t, err, "a running execution still writes here")
+}
+
+// A lease that stops being refreshed has to stop protecting, or an agent that died
+// mid-execution would pin that inbox for good and fill the volume.
+func TestSweepRemovesAnInboxWhoseLeaseWentStale(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, InboxDir, "exec-gone")
+	require.NoError(t, os.MkdirAll(dir, 0o777))
+	require.NoError(t, TouchLease(root, InboxDir+"/exec-gone"))
+	stale := filepath.Join(dir, LeaseName)
+	age(t, stale)
+	age(t, dir)
+
+	s := &Sweeper{Root: root, Retention: time.Hour, LeaseTTL: time.Hour}
+	require.NoError(t, s.Sweep(context.Background()))
+
+	_, err := os.Stat(dir)
+	assert.True(t, os.IsNotExist(err), "a lease nobody refreshes must not pin the volume")
+}
+
+// A refresh arriving after a sweep must not rebuild an inbox nothing is mounted at.
+func TestTouchLeaseDoesNotCreateTheInbox(t *testing.T) {
+	root := t.TempDir()
+
+	err := TouchLease(root, InboxDir+"/never-existed")
+
+	require.Error(t, err)
+	_, statErr := os.Stat(filepath.Join(root, InboxDir, "never-existed"))
+	assert.True(t, os.IsNotExist(statErr))
+}
+
+// The name decides where a file is written, so it is checked rather than trusted.
+func TestTouchLeaseRefusesAnythingThatIsNotAnInboxName(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"", "exec-1", "inbox", "inbox/../../etc", "inbox/a/b", "/etc"} {
+		assert.Error(t, TouchLease(root, name), "name %q", name)
+	}
+}
+
+// age backdates a path well past any retention a test sets.
+func age(t *testing.T, name string) {
+	t.Helper()
+	when := time.Now().Add(-48 * time.Hour)
+	require.NoError(t, os.Chtimes(name, when, when))
+}

@@ -157,6 +157,19 @@ restore is a copy rather than an unpack and nothing is gzipped.
   anyway on the configured retention and the risk is stated once at startup: an entry
   swept before its pointer expires leaves a key that restores nothing until the object
   goes, and the key is immutable, so nothing repairs it meanwhile.
+- **A running execution holds its inbox through a lease.** The inbox is made before the
+  pod starts and its mtime only moves when something is staged inside it, so an
+  execution that has cached nothing yet, or runs one long step, looks expired to the
+  sweep however alive it is - and unlinking it leaves the pod writing through its
+  subPath to an inode nothing can reach, then publishing a pointer naming a path that
+  is gone. `volume.TouchLease` refreshes `<inbox>/.lease`, `Sweeper.LeaseTTL` skips an
+  inbox whose lease is fresh, and `refreshStepCacheLeases`
+  (`cmd/api-server/stepcachelease.go`) renews them every 5 minutes against a 30 minute
+  TTL, inside the sweeper task so the first renewal precedes the first sweep. The live
+  set is **read back from the cluster** (`worker.List` with `Finished: false`) rather
+  than tracked in memory: a registration that is never cleared would pin an inbox for
+  good, where a listing simply stops returning what has stopped running. Time-based for
+  the same reason - a lease nobody refreshes goes stale and the sweep carries on.
 - **The agent makes each execution's inbox before its pod starts**
   (`prepareStepCacheInbox` in `kubernetesworker/worker.go`, called at both deploy
   sites), keyed on the execution's **root** id so that one inbox serves an execution

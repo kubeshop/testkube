@@ -1068,13 +1068,21 @@ func main() {
 			Root:      cfg.TestkubeStepCacheVolumeMountPath,
 			Retention: retention,
 			Interval:  cfg.TestkubeStepCacheVolumeSweepInterval,
+			LeaseTTL:  stepCacheLeaseTTL,
 			OnError: func(err error) {
 				log.DefaultLogger.Errorw("failed to sweep the step cache volume", "error", err)
 			},
 		}
 		leaderTasks = append(leaderTasks, leader.Task{
-			Name:  "step-cache-volume-sweeper",
-			Start: sweeper.Run,
+			Name: "step-cache-volume-sweeper",
+			Start: func(taskCtx context.Context) error {
+				// Renewed before the first sweep, not alongside it: Sweeper.Run sweeps
+				// as soon as it starts, and an agent that has just taken over holds no
+				// leases yet - every live inbox would look abandoned.
+				refreshStepCacheLeases(taskCtx, executionWorker, cfg.TestkubeStepCacheVolumeMountPath)
+				go runStepCacheLeaseRenewal(taskCtx, executionWorker, cfg.TestkubeStepCacheVolumeMountPath)
+				return sweeper.Run(taskCtx)
+			},
 		})
 	}
 
