@@ -80,3 +80,42 @@ func TestReadStepError(t *testing.T) {
 		})
 	}
 }
+
+func TestReadStepReason(t *testing.T) {
+	tests := []struct {
+		name    string
+		content *string
+		want    string
+	}{
+		{
+			name: "returns no code when the toolkit wrote no file",
+			want: "",
+		},
+		{
+			name:    "returns the code",
+			content: common.Ptr("git-auth-failed"),
+			want:    "git-auth-failed",
+		},
+		{
+			name:    "keeps only the first line without the spaces around it",
+			content: common.Ptr(" service-not-ready \nnext"),
+			want:    "service-not-ready",
+		},
+		{
+			name:    "returns no code for text that is not a known code",
+			content: common.Ptr("connection refused"),
+			want:    "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "reason")
+			if tt.content != nil {
+				require.NoError(t, os.WriteFile(path, []byte(*tt.content), 0666))
+			}
+
+			assert.Equal(t, tt.want, readStepReason(path))
+		})
+	}
+}

@@ -595,9 +595,14 @@ func TestCloneReason(t *testing.T) {
 			want: testkube.StopReasonGitCloneFailed,
 		},
 		{
-			name: "a host that does not resolve",
+			name: "a host that does not resolve has no code",
 			err:  errors.New("fatal: unable to access 'https://git.invalid/': Could not resolve host: git.invalid"),
-			want: testkube.StopReasonGitCloneFailed,
+			want: "",
+		},
+		{
+			name: "a server that refuses the connection has no code",
+			err:  errors.New("fatal: unable to access 'https://git.example.com/org/repo.git/': Failed to connect to git.example.com port 443: Connection refused"),
+			want: "",
 		},
 	}
 	for _, tt := range tests {

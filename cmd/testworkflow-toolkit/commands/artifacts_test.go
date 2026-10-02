@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	gomock "go.uber.org/mock/gomock"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/mapper/cdevents"
 
@@ -90,4 +91,9 @@ func TestArtifactsHandlerRun(t *testing.T) {
 	run(handler, walker, testDataFixtures)
 
 	assert.Equal(t, 4, httpRequestCount)
+}
+
+func TestPatternReason(t *testing.T) {
+	assert.Equal(t, testkube.StatusDetailsTypeInitFailure, testkube.StatusDetailsTypeOf("", string(patternReason)),
+		"path patterns that match nothing are a configuration error")
 }
