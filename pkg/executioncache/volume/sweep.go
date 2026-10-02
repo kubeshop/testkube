@@ -125,7 +125,12 @@ func (s *Sweeper) Sweep(ctx context.Context) error {
 		// and only the lease can say so. Checked before mtime, because an execution
 		// that has cached nothing yet is exactly the one mtime judges most harshly.
 		if s.LeaseTTL > 0 {
-			switch lease, err := os.Stat(filepath.Join(dir, LeaseName)); {
+			// Lstat, not Stat: the step owns what .lease is, and a Stat would follow it
+			// to whatever it names - another inbox's lease, or any file reachable from
+			// here whose mtime happens to suit. A lease that is a link is not a lease.
+			switch lease, err := os.Lstat(filepath.Join(dir, LeaseName)); {
+			case err == nil && lease.Mode()&os.ModeSymlink != 0:
+				failed = append(failed, fmt.Sprintf("%s: its lease is a symlink, which is not believed", entry.Name()))
 			case err == nil:
 				// Age, not "before now plus the window": a negative age is a timestamp
 				// in the future, and a future one stays in the future, so it would
@@ -256,17 +261,45 @@ func TouchLease(mountPath, inboxName string) error {
 		return err
 	}
 
-	name := filepath.Join(dir, LeaseName)
+	// Everything below goes through a root opened on the inbox, never through a path
+	// the agent assembles itself.
+	//
+	// The inbox is writable by the step, so the step owns what .lease is. Left to
+	// os.Chtimes and os.OpenFile, both of which follow the final symlink, a workflow
+	// could point .lease at an absolute path and have the **agent** stamp - or create -
+	// a file inside its own container, which the step has no access to and far fewer
+	// privileges than. os.Root refuses a link that leaves the root, so the worst a link
+	// can name is something else in this same inbox; the Lstat below refuses even that,
+	// since a lease is a file this process writes and nothing else should be.
+	//
+	// Opening the root fails when the inbox is not there, which is a swept or
+	// never-made inbox - the error says so, rather than building one nothing reads.
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+
+	switch info, lstatErr := root.Lstat(LeaseName); {
+	case lstatErr == nil && info.Mode()&os.ModeSymlink != 0:
+		// Not followed and not trusted: replaced. Failing instead would leave the
+		// inbox pinned for as long as its mtime held out, which is the outcome the
+		// step would be angling for.
+		if rmErr := root.Remove(LeaseName); rmErr != nil {
+			return rmErr
+		}
+	case lstatErr != nil && !os.IsNotExist(lstatErr):
+		return lstatErr
+	}
+
 	now := time.Now()
-	if err := os.Chtimes(name, now, now); err == nil {
+	if err := root.Chtimes(LeaseName, now, now); err == nil {
 		return nil
 	} else if !os.IsNotExist(err) {
 		return err
 	}
 
-	// O_CREATE without MkdirAll: a missing parent is a swept or never-made inbox, and
-	// the error says so rather than building one nothing will ever read.
-	f, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY, 0o666)
+	f, err := root.OpenFile(LeaseName, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0o666)
 	if err != nil {
 		return err
 	}

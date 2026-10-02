@@ -43,3 +43,54 @@ func TestSweepContinuesWhenALeaseCannotBeRead(t *testing.T) {
 	require.Error(t, err, "the operator still has to hear that a lease could not be read")
 	assert.Contains(t, err.Error(), "exec-wedged")
 }
+
+// The inbox is writable by the step, so the step owns what .lease is. os.Chtimes and
+// os.OpenFile both follow the final symlink, so a workflow pointing .lease at an
+// absolute path would have the agent stamp - or create - a file inside its own
+// container: a process the step cannot reach and that holds far more privilege.
+func TestTouchLeaseDoesNotFollowALinkOutOfTheInbox(t *testing.T) {
+	root := t.TempDir()
+	inbox := filepath.Join(root, InboxDir, "exec-1")
+	require.NoError(t, os.MkdirAll(inbox, 0o777))
+
+	// Somewhere the agent can reach and the step cannot, standing in for anything in
+	// the agent's own filesystem.
+	outside := filepath.Join(t.TempDir(), "agent-file")
+	require.NoError(t, os.WriteFile(outside, []byte("untouched"), 0o666))
+	before, err := os.Stat(outside)
+	require.NoError(t, err)
+
+	require.NoError(t, os.Symlink(outside, filepath.Join(inbox, LeaseName)))
+
+	require.NoError(t, TouchLease(root, InboxDir+"/exec-1"))
+
+	after, err := os.Stat(outside)
+	require.NoError(t, err)
+	assert.Equal(t, before.ModTime(), after.ModTime(), "the agent must not stamp a file the step named")
+
+	// The link is replaced by a lease of this process's own, so the inbox is not left
+	// pinned by a timestamp the step controls.
+	lease, err := os.Lstat(filepath.Join(inbox, LeaseName))
+	require.NoError(t, err)
+	assert.Zero(t, lease.Mode()&os.ModeSymlink, "a lease is a file this process writes")
+}
+
+// And a lease that is a link is not believed by the sweep either, so it cannot pin an
+// inbox by naming something with a convenient mtime.
+func TestSweepDoesNotBelieveASymlinkedLease(t *testing.T) {
+	root := t.TempDir()
+	dir := inboxAged(t, root, "exec-1", 48*time.Hour)
+
+	fresh := filepath.Join(t.TempDir(), "fresh")
+	require.NoError(t, os.WriteFile(fresh, []byte("now"), 0o666))
+	require.NoError(t, os.Symlink(fresh, filepath.Join(dir, LeaseName)))
+	age(t, dir)
+
+	s := &Sweeper{Root: root, Retention: time.Hour, LeaseTTL: time.Hour}
+	err := s.Sweep(context.Background())
+
+	_, statErr := os.Stat(dir)
+	assert.True(t, os.IsNotExist(statErr), "a symlinked lease must not keep the inbox")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "symlink")
+}
