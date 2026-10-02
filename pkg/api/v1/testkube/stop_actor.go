@@ -24,6 +24,13 @@ const (
 	StopActorSystem StopActor = "system"
 )
 
+// stopActors holds every actor. A new actor goes here too, so that the status details can remove
+// its sentence from a termination message.
+var stopActors = []StopActor{
+	StopActorUser, StopActorControlPlane, StopActorTrigger, StopActorFailFast,
+	StopActorRunner, StopActorQualityLoop, StopActorAPI, StopActorSystem,
+}
+
 // IsPerson reports whether a person decided the stop. The abort endpoint of the
 // standalone agent acts for the person who calls it, so it counts as a person too.
 func (a StopActor) IsPerson() bool {

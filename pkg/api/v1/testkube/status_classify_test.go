@@ -55,8 +55,7 @@ func TestTestWorkflowResult_ClassifyStatus(t *testing.T) {
 			steps:          map[string]TestWorkflowStepResult{"a": step(SKIPPED_TestWorkflowStepStatus, "", "")},
 			sigSequence:    []TestWorkflowSignature{{Ref: "a"}},
 			stop:           Stop{Code: canceled, Actor: StopActorUser},
-			want: details(StatusDetailsTypeUserCancel, string(StopReasonUserCancel), "",
-				"The execution has been canceled. (by the user)", StopActorUser),
+			want:           details(StatusDetailsTypeUserCancel, string(StopReasonUserCancel), "", "", StopActorUser),
 		},
 		{
 			name:           "a person who cancels an unschedulable execution still cancels",
@@ -66,7 +65,7 @@ func TestTestWorkflowResult_ClassifyStatus(t *testing.T) {
 			sigSequence:    []TestWorkflowSignature{{Ref: "a"}},
 			stop:           Stop{Code: canceled, Actor: StopActorUser},
 			want: details(StatusDetailsTypeUserCancel, string(StopReasonUserCancel), "",
-				"The execution has been canceled. (by the user: no node can run the pod)", StopActorUser),
+				"no node can run the pod", StopActorUser),
 		},
 		{
 			name:           "a person who stops all executions of a workflow still cancels",
@@ -74,8 +73,7 @@ func TestTestWorkflowResult_ClassifyStatus(t *testing.T) {
 			initialization: step(ABORTED_TestWorkflowStepStatus, "The execution has been aborted. (by the user)", ""),
 			steps:          map[string]TestWorkflowStepResult{},
 			stop:           Stop{Code: aborted, Actor: StopActorUser, Reason: StopReasonAbortAll},
-			want: details(StatusDetailsTypeUserCancel, string(StopReasonAbortAll), "",
-				"The execution has been aborted. (by the user)", StopActorUser),
+			want:           details(StatusDetailsTypeUserCancel, string(StopReasonAbortAll), "", "", StopActorUser),
 		},
 		{
 			name:           "the abort endpoint of a standalone agent acts for a person",
@@ -83,20 +81,19 @@ func TestTestWorkflowResult_ClassifyStatus(t *testing.T) {
 			initialization: step(ABORTED_TestWorkflowStepStatus, "The execution has been aborted. (through the API)", ""),
 			steps:          map[string]TestWorkflowStepResult{},
 			stop:           Stop{Code: aborted, Actor: StopActorAPI},
-			want: details(StatusDetailsTypeUserCancel, string(StopReasonUserCancel), "",
-				"The execution has been aborted. (through the API)", StopActorAPI),
+			want:           details(StatusDetailsTypeUserCancel, string(StopReasonUserCancel), "", "", StopActorAPI),
 		},
 		{
 			// A code that differs from the reason of the stop is a cause of its own, so it wins and
 			// it names no actor.
 			name:           "a cause that the pod recorded wins over the reason of the stop",
 			status:         ABORTED_TestWorkflowStatus,
-			initialization: step(ABORTED_TestWorkflowStepStatus, "The execution has been aborted. (no node can run the pod)", string(StopReasonUnschedulable)),
+			initialization: step(ABORTED_TestWorkflowStepStatus, "The execution has been aborted. (no node can run the pod: 0/1 nodes are available)", string(StopReasonUnschedulable)),
 			steps:          map[string]TestWorkflowStepResult{"a": step(SKIPPED_TestWorkflowStepStatus, "", "")},
 			sigSequence:    []TestWorkflowSignature{{Ref: "a"}},
 			stop:           Stop{Code: aborted, Actor: StopActorRunner, Reason: StopReasonInitTimeout},
 			want: details(StatusDetailsTypeInitFailure, string(StopReasonUnschedulable), "",
-				"The execution has been aborted. (no node can run the pod)", ""),
+				"0/1 nodes are available", ""),
 		},
 		{
 			name:           "a code that a toolkit step reported names the step",
@@ -133,6 +130,15 @@ func TestTestWorkflowResult_ClassifyStatus(t *testing.T) {
 				"upload failed", ""),
 		},
 		{
+			name:           "a failed initialization step keeps its message",
+			status:         FAILED_TestWorkflowStatus,
+			initialization: step(FAILED_TestWorkflowStepStatus, "the init process failed", ""),
+			steps:          map[string]TestWorkflowStepResult{"a": step(SKIPPED_TestWorkflowStepStatus, "", "")},
+			sigSequence:    []TestWorkflowSignature{{Ref: "a"}},
+			want: details(StatusDetailsTypeStepFailure, string(StopReasonExitCode), "",
+				"the init process failed", ""),
+		},
+		{
 			name:           "a step that passed on a later attempt holds no cause",
 			status:         PASSED_TestWorkflowStatus,
 			initialization: step(PASSED_TestWorkflowStepStatus, "", ""),
@@ -147,7 +153,7 @@ func TestTestWorkflowResult_ClassifyStatus(t *testing.T) {
 			steps:          map[string]TestWorkflowStepResult{},
 			stop:           Stop{Code: aborted, Actor: StopActorControlPlane, Reason: StopReasonExecutionTimeout},
 			want: details(StatusDetailsTypeExecutionFailure, string(StopReasonExecutionTimeout), "",
-				"The execution has been aborted. (by the control plane: the execution ran for too long)", StopActorControlPlane),
+				"", StopActorControlPlane),
 		},
 		{
 			name:           "a fail-fast actor without a reason reads fail-fast",
@@ -159,7 +165,7 @@ func TestTestWorkflowResult_ClassifyStatus(t *testing.T) {
 			sigSequence: []TestWorkflowSignature{{Ref: "a"}},
 			stop:        Stop{Code: aborted, Actor: StopActorFailFast},
 			want: details(StatusDetailsTypeExecutionFailure, string(StopReasonFailFast), "a",
-				"The execution has been aborted. (because another parallel worker failed)", StopActorFailFast),
+				"", StopActorFailFast),
 		},
 		{
 			name:           "a trigger actor without a reason reads trigger-abort",
@@ -168,7 +174,7 @@ func TestTestWorkflowResult_ClassifyStatus(t *testing.T) {
 			steps:          map[string]TestWorkflowStepResult{},
 			stop:           Stop{Code: aborted, Actor: StopActorTrigger},
 			want: details(StatusDetailsTypeExecutionFailure, string(StopReasonTriggerAbort), "",
-				"The execution has been aborted. (because its trigger was deleted)", StopActorTrigger),
+				"", StopActorTrigger),
 		},
 		{
 			name:           "a failed step reads exit-code and names the step",
@@ -176,10 +182,11 @@ func TestTestWorkflowResult_ClassifyStatus(t *testing.T) {
 			initialization: step(PASSED_TestWorkflowStepStatus, "", ""),
 			steps: map[string]TestWorkflowStepResult{
 				"a": step(PASSED_TestWorkflowStepStatus, "", ""),
-				"b": step(FAILED_TestWorkflowStepStatus, "", ""),
+				"b": {Status: common.Ptr(FAILED_TestWorkflowStepStatus), ExitCode: 2},
 			},
-			sigSequence: []TestWorkflowSignature{{Ref: "a"}, {Ref: "b"}},
-			want:        details(StatusDetailsTypeStepFailure, string(StopReasonExitCode), "b", "", ""),
+			sigSequence: []TestWorkflowSignature{{Ref: "a"}, {Ref: "b", Name: "Run tests"}},
+			want: details(StatusDetailsTypeStepFailure, string(StopReasonExitCode), "b",
+				`The step "Run tests" exited with code 2.`, ""),
 		},
 		{
 			// A negative group fails when its children pass, so the group is the only failure there
@@ -195,7 +202,8 @@ func TestTestWorkflowResult_ClassifyStatus(t *testing.T) {
 				{Ref: "group", Negative: true, Children: []TestWorkflowSignature{{Ref: "leaf"}}},
 				{Ref: "leaf"},
 			},
-			want: details(StatusDetailsTypeStepFailure, string(StopReasonExitCode), "group", "", ""),
+			want: details(StatusDetailsTypeStepFailure, string(StopReasonExitCode), "group",
+				`The step "group" passed, but it must fail.`, ""),
 		},
 		{
 			// A failed leaf names the failure more precisely than the group that holds it.
@@ -220,8 +228,9 @@ func TestTestWorkflowResult_ClassifyStatus(t *testing.T) {
 				"optional": step(FAILED_TestWorkflowStepStatus, "", ""),
 				"required": step(FAILED_TestWorkflowStepStatus, "", ""),
 			},
-			sigSequence: []TestWorkflowSignature{{Ref: "optional", Optional: true}, {Ref: "required"}},
-			want:        details(StatusDetailsTypeStepFailure, string(StopReasonExitCode), "required", "", ""),
+			sigSequence: []TestWorkflowSignature{{Ref: "optional", Optional: true}, {Ref: "required", Category: "Run shell command"}},
+			want: details(StatusDetailsTypeStepFailure, string(StopReasonExitCode), "required",
+				`The step "Run shell command" failed.`, ""),
 		},
 		{
 			// The heal writes the code of the stop into the step it stops, so the classifier reads a
@@ -232,7 +241,7 @@ func TestTestWorkflowResult_ClassifyStatus(t *testing.T) {
 			steps:          map[string]TestWorkflowStepResult{},
 			stop:           Stop{Code: aborted, Actor: StopActorRunner, Reason: StopReasonInitTimeout},
 			want: details(StatusDetailsTypeInitFailure, string(StopReasonInitTimeout), "",
-				"The execution has been aborted. (by the runner: the first step did not start before the initialization timeout of the workflow)", StopActorRunner),
+				"", StopActorRunner),
 		},
 		{
 			name:           "a fail-fast stop keeps its actor after the heal wrote the code",
@@ -244,7 +253,7 @@ func TestTestWorkflowResult_ClassifyStatus(t *testing.T) {
 			sigSequence: []TestWorkflowSignature{{Ref: "a"}},
 			stop:        Stop{Code: aborted, Actor: StopActorFailFast},
 			want: details(StatusDetailsTypeExecutionFailure, string(StopReasonFailFast), "a",
-				"The execution has been aborted. (because another parallel worker failed)", StopActorFailFast),
+				"", StopActorFailFast),
 		},
 		{
 			name:           "a declined start keeps the actor of the runner",
@@ -271,7 +280,7 @@ func TestTestWorkflowResult_ClassifyStatus(t *testing.T) {
 			},
 			stop: Stop{Code: aborted, Actor: StopActorRunner, Reason: StopReasonExecutionStuck},
 			want: details(StatusDetailsTypeExecutionFailure, string(StopReasonExecutionStuck), "leaf",
-				"The execution has been aborted. (by the runner: the execution is stuck in the running state)", StopActorRunner),
+				"", StopActorRunner),
 		},
 		{
 			// An actor with no reason and no rule of its own still leaves a message on the step it
@@ -285,7 +294,7 @@ func TestTestWorkflowResult_ClassifyStatus(t *testing.T) {
 			sigSequence: []TestWorkflowSignature{{Ref: "a"}},
 			stop:        Stop{Code: aborted, Actor: StopActorControlPlane},
 			want: details(StatusDetailsTypeUnknown, string(StopReasonUnknown), "a",
-				"The execution has been aborted. (by the control plane)", StopActorControlPlane),
+				"", StopActorControlPlane),
 		},
 		{
 			name:           "no signal reads unknown with the message of the initialization step",
@@ -293,8 +302,7 @@ func TestTestWorkflowResult_ClassifyStatus(t *testing.T) {
 			initialization: step(ABORTED_TestWorkflowStepStatus, "The execution has been aborted.", ""),
 			steps:          map[string]TestWorkflowStepResult{},
 			stop:           Stop{Code: aborted},
-			want: details(StatusDetailsTypeUnknown, string(StopReasonUnknown), "",
-				"The execution has been aborted.", ""),
+			want:           details(StatusDetailsTypeUnknown, string(StopReasonUnknown), "", "", ""),
 		},
 		{
 			name:           "a step that the stop skipped does not carry the cause",
@@ -307,7 +315,7 @@ func TestTestWorkflowResult_ClassifyStatus(t *testing.T) {
 			sigSequence: []TestWorkflowSignature{{Ref: "a"}, {Ref: "b"}},
 			stop:        Stop{Code: aborted, Actor: StopActorRunner, Reason: StopReasonExecutionStuck},
 			want: details(StatusDetailsTypeExecutionFailure, string(StopReasonExecutionStuck), "a",
-				"The execution has been aborted. (by the runner)", StopActorRunner),
+				"", StopActorRunner),
 		},
 	}
 
@@ -364,7 +372,7 @@ func TestTestWorkflowResult_ClassifyStatusAfterHeal(t *testing.T) {
 			wantReason:  StopReasonFailFast,
 			wantStep:    "leaf",
 			wantActor:   StopActorFailFast,
-			wantMessage: "The execution has been aborted. (because another parallel worker failed)",
+			wantMessage: "",
 		},
 		{
 			// The job went away after the test already had a result, so the exit code wins and the
@@ -380,6 +388,7 @@ func TestTestWorkflowResult_ClassifyStatusAfterHeal(t *testing.T) {
 			wantType:    StatusDetailsTypeStepFailure,
 			wantReason:  StopReasonExitCode,
 			wantStep:    "failed",
+			wantMessage: `The step "failed" exited with code 3.`,
 		},
 		{
 			name: "a deleted job with no failed step keeps the actor of the system",
@@ -393,13 +402,13 @@ func TestTestWorkflowResult_ClassifyStatusAfterHeal(t *testing.T) {
 			wantReason:  StopReasonJobDeleted,
 			wantStep:    "a",
 			wantActor:   StopActorSystem,
-			wantMessage: "The execution has been aborted. (by the system)",
+			wantMessage: "",
 		},
 		{
 			// A real cause differs from the code of the stop, so it wins and it names no actor.
 			name: "a cause that the pod recorded still wins over the stop",
 			steps: map[string]TestWorkflowStepResult{
-				"a": {Status: common.Ptr(RUNNING_TestWorkflowStepStatus), ErrorReason: string(StopReasonUnschedulable), ErrorMessage: "no node can run the pod"},
+				"a": {Status: common.Ptr(RUNNING_TestWorkflowStepStatus), ErrorReason: string(StopReasonUnschedulable), ErrorMessage: "no node can run the pod: 0/12 nodes are available."},
 			},
 			sigSequence: []TestWorkflowSignature{{Ref: "a"}},
 			errorStr:    "by the runner: the first step did not start before the initialization timeout of the workflow",
@@ -407,7 +416,7 @@ func TestTestWorkflowResult_ClassifyStatusAfterHeal(t *testing.T) {
 			wantType:    StatusDetailsTypeInitFailure,
 			wantReason:  StopReasonUnschedulable,
 			wantStep:    "a",
-			wantMessage: "The execution has been aborted. (by the runner: the first step did not start before the initialization timeout of the workflow: no node can run the pod)",
+			wantMessage: "the first step did not start before the initialization timeout of the workflow: no node can run the pod: 0/12 nodes are available",
 		},
 	}
 
@@ -435,9 +444,7 @@ func TestTestWorkflowResult_ClassifyStatusAfterHeal(t *testing.T) {
 			assert.Equal(t, string(tt.wantReason), got.Reason)
 			assert.Equal(t, tt.wantStep, got.Step)
 			assert.Equal(t, string(tt.wantActor), got.Actor)
-			if tt.wantMessage != "" {
-				assert.Equal(t, tt.wantMessage, got.Message)
-			}
+			assert.Equal(t, tt.wantMessage, got.Message)
 		})
 	}
 }
