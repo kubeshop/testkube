@@ -46,3 +46,31 @@ func TestSaveLeavesEveryDirectoryWritable(t *testing.T) {
 		return nil
 	}))
 }
+
+// "..cache" is an ordinary directory name, not an escape. Classifying it as one by its
+// first two characters left the chain above it at whatever the step's umask gave -
+// which is the mode the agent cannot sweep through, so that subtree would never be
+// reclaimed from a volume the whole cluster shares.
+func TestSaveSetsTheModeUnderADirectoryNamedLikeADotDot(t *testing.T) {
+	previous := syscall.Umask(0o022)
+	defer syscall.Umask(previous)
+
+	src := posixDir(t) + "/..cache/deps"
+	write(t, filepath.FromSlash(src+"/dep"), "x")
+
+	staging := filepath.Join(t.TempDir(), EntryRoot)
+	require.NoError(t, os.MkdirAll(staging, 0o777))
+	require.NoError(t, os.Chmod(staging, 0o777))
+
+	_, _, err := SaveTree(staging, []string{src}, CopyLimits{})
+	require.NoError(t, err)
+
+	require.NoError(t, filepath.Walk(staging, func(name string, info os.FileInfo, err error) error {
+		if err != nil || !info.IsDir() {
+			return err
+		}
+		assert.Equal(t, os.FileMode(SharedDirMode), info.Mode().Perm(),
+			"%s is a directory the sweep could not unlink through", name)
+		return nil
+	}))
+}

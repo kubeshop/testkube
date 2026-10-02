@@ -598,3 +598,18 @@ func TestCopyOutReportsStagedWhenItWrites(t *testing.T) {
 	assert.True(t, staged)
 	assert.EqualValues(t, len("installed"), n)
 }
+
+// Only a ".." component leaves the staging root. A name that merely starts with two
+// dots does not, and calling it an escape skipped the chmod of every directory above
+// it - leaving a subtree on a cluster-shared volume that the agent can never sweep.
+func TestEscapesRootLooksAtComponentsNotPrefixes(t *testing.T) {
+	sep := string(filepath.Separator)
+
+	assert.True(t, escapesRoot(".."), "the parent itself")
+	assert.True(t, escapesRoot(".."+sep+"elsewhere"))
+
+	assert.False(t, escapesRoot("..cache"), "an ordinary directory whose name begins with two dots")
+	assert.False(t, escapesRoot("..cache"+sep+"deps"))
+	assert.False(t, escapesRoot("deps"))
+	assert.False(t, escapesRoot("a"+sep+"b"))
+}

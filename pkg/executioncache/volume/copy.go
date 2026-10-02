@@ -595,7 +595,7 @@ func mkdirAllShared(root, dir string) error {
 	}
 
 	rel, err := filepath.Rel(root, dir)
-	if err != nil || rel == "." || strings.HasPrefix(rel, "..") {
+	if err != nil || rel == "." || escapesRoot(rel) {
 		return os.Chmod(dir, SharedDirMode)
 	}
 
@@ -607,4 +607,14 @@ func mkdirAllShared(root, dir string) error {
 		}
 	}
 	return nil
+}
+
+// escapesRoot reports whether a relative path leaves the directory it is relative to.
+//
+// A ".." component is what does that, not a name that happens to begin with two dots:
+// "..cache/deps" is an ordinary directory a workflow may declare, and treating it as an
+// escape left the chain above it at whatever the step's umask gave - the mode the agent
+// cannot sweep through, so that subtree would never be reclaimed.
+func escapesRoot(rel string) bool {
+	return rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
