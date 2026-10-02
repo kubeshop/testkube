@@ -214,12 +214,18 @@ restore is a copy rather than an unpack and nothing is gzipped.
   sharing its entries. `O_EXCL` publishes the name before the contents, so an agent
   killed in between leaves an empty `.volume-id` that would otherwise turn the cache off
   for the whole installation for good - every later startup waiting out the attempts and
-  refusing the volume. One old enough not to be anybody's open write is **repaired in
-  place, never unlinked**: removing it rests on a stat taken earlier, so two agents
-  repairing together can have one unlink what the other has just created and written,
-  leaving the volume's cache split between two key prefixes until both restart. A
-  `.volume-id.recovering` marker, created with `O_EXCL` and held until the identity is
-  written, elects the one agent that repairs; the rest read the result. The mode is set
+  refusing the volume. One old enough not to be anybody's open write is **superseded,
+  never repaired and never unlinked**: the agent moves to the next generation of the name
+  (`.volume-id.2`, then `.volume-id.3`, bounded by `idGenerations`), and a generation that
+  exists always wins over the one before it, so an abandoned name written long afterwards
+  cannot take the volume back off the agents using its successor. **Nothing in this file
+  unlinks anything**, which is the whole point: every name is settled by an atomic
+  `O_EXCL` create and no name is ever reused, so there is no instant at which one agent
+  can remove what another has just created. Repairing in place instead needs exclusion,
+  and a lock on a shared filesystem cannot be reclaimed safely - reclaiming it means
+  unlinking a path on the strength of a stat taken earlier, which is the very race the
+  lock exists to prevent, so a crash mid-repair would either wedge the volume for good or
+  let two agents write different identities into it. The mode is set
   **before** the contents for the same family of reasons - a death in between would
   otherwise leave a non-empty identity at the creator's umask that no other agent can
   read and that the repair deliberately will not touch, a file with contents being

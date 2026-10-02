@@ -31,9 +31,14 @@ const (
 	idReadAttempts = 20
 	idReadDelay    = 50 * time.Millisecond
 
-	// idRecoveryName elects a single agent to repair an identity that was created and
-	// never written. Beside it at the volume root, which only agents can reach.
-	idRecoveryName = IDName + ".recovering"
+	// idGenerations bounds how many identity files are tried before the volume is
+	// refused.
+	//
+	// A new one is started only by an agent dying between creating the previous name
+	// and writing thirteen bytes into it, a window two syscalls wide, and the volume
+	// then carries the abandoned name for good. Eight is far past what that can
+	// plausibly happen in.
+	idGenerations = 8
 
 	// idStaleAfter is how long an empty identity has to have sat there before it is
 	// taken to be one nobody is going to write.
@@ -46,9 +51,9 @@ const (
 	idStaleAfter = 5 * time.Minute
 )
 
-// errIDRecoveryHeld reports that another agent is repairing the identity. Its write is
-// what this agent is waiting for, so the answer is to read again rather than to fail.
-var errIDRecoveryHeld = errors.New("another agent is repairing the volume identity")
+// errIDAbandoned reports an identity that was created and never written, and has sat
+// there too long for the write to still be coming. It never leaves this file.
+var errIDAbandoned = errors.New("volume identity was created and never written")
 
 // EnsureID reads the volume's identity, writing one the first time.
 //
@@ -66,23 +71,47 @@ var errIDRecoveryHeld = errors.New("another agent is repairing the volume identi
 //
 // The identity belongs to the volume rather than to the runner, so several runners that
 // do share one volume go on sharing its entries, which is the arrangement worth having.
+//
+// An identity that was created and never written - an agent killed between the two
+// syscalls - is superseded rather than repaired, by moving to the next generation of the
+// name. **Nothing here ever unlinks anything**, which is what makes concurrent agents
+// safe: every name is settled by an O_EXCL create, which is atomic, and a name that has
+// been used is never reused, so there is no instant at which one agent can remove what
+// another has just created. Repairing in place needs exclusion, and a lock on a shared
+// filesystem cannot be reclaimed safely - reclaiming it means unlinking a path on the
+// strength of a stat taken earlier, which is the very race the lock was there to
+// prevent, so a crash would either wedge the volume for good or let two agents write
+// different identities into it.
 func EnsureID(mountPath string) (string, error) {
 	if mountPath == "" {
 		return "", nil
 	}
-	name := filepath.Join(mountPath, IDName)
 
-	// Twice at most. The second pass is for having found another agent already
-	// repairing the identity: its write is the one being waited for, so the way to get
-	// the identity is to go round and read it. A third pass would say nothing new.
 	var err error
-	for attempt := 0; attempt < 2; attempt++ {
+	for generation := 0; generation < idGenerations; generation++ {
+		// A later generation supersedes this one. It exists only because this one was
+		// found abandoned, and the agents that made it are using it - so an abandoned
+		// name that is somehow written long afterwards cannot take the volume back off
+		// them.
+		if _, statErr := os.Stat(idName(mountPath, generation+1)); statErr == nil {
+			continue
+		}
+
 		var id string
-		if id, err = ensureID(name); !errors.Is(err, errIDRecoveryHeld) {
+		if id, err = ensureID(idName(mountPath, generation)); !errors.Is(err, errIDAbandoned) {
 			return id, err
 		}
 	}
 	return "", err
+}
+
+// idName is where a generation of the identity lives. The first keeps the plain name,
+// so a volume that never had one abandoned looks exactly as it always did.
+func idName(mountPath string, generation int) string {
+	if generation == 0 {
+		return filepath.Join(mountPath, IDName)
+	}
+	return filepath.Join(mountPath, fmt.Sprintf("%s.%d", IDName, generation+1))
 }
 
 func ensureID(name string) (string, error) {
@@ -171,8 +200,8 @@ func writeID(f *os.File, id string) error {
 // created it was killed in the window - an eviction or a node failure between two
 // syscalls - and nothing afterwards repairs it: every later startup waits out the
 // attempts, finds it still empty, and turns the volume off for the whole installation,
-// over six bytes. So an empty identity old enough not to be anybody's open write is
-// removed and the create attempted again.
+// over thirteen bytes. So an empty identity old enough not to be anybody's open write is
+// reported as abandoned, and the caller moves to the next generation of the name.
 func awaitID(name string) (string, error) {
 	var err error
 	for attempt := 0; attempt < idReadAttempts; attempt++ {
@@ -187,103 +216,27 @@ func awaitID(name string) (string, error) {
 		}
 		time.Sleep(idReadDelay)
 	}
-	id, recoverErr := recoverStaleID(name)
-	switch {
-	case recoverErr == nil:
-		return id, nil
-	case errors.Is(recoverErr, errIDRecoveryHeld):
-		// Passed through rather than folded into the error below, because it is the one
-		// the caller acts on: another agent is writing the identity right now, so the
-		// answer is to read again.
-		return "", recoverErr
+	if abandonedID(name) {
+		return "", errIDAbandoned
 	}
-	// Anything else leaves the original failure, which says what was actually wrong
-	// with the identity rather than what the repair made of it.
 	return "", err
 }
 
-// recoverStaleID fills in an identity that was created and never written.
+// abandonedID reports an identity that was created and never written, and that nobody is
+// going to write now.
 //
-// **The file is never unlinked, on any path.** Removing it and creating a fresh one is
-// the obvious repair and is not safe: the decision to remove rests on a stat taken
-// earlier, so two agents repairing together can have one remove the file, create its
-// own and write it, and the other then unlink *that* - leaving each with an identity
-// the other has never seen, and the volume's cache split between two key prefixes until
-// both restart. Nothing in POSIX unlinks a particular file rather than a name, so the
-// repair writes into the file that is already there, which belongs to whoever reaches
-// it. A late arrival finds contents and simply reads them.
-//
-// The marker is what keeps two agents from writing different identities into it. Both
-// agents reach here having waited out the same attempts, so they are not phased apart
-// by chance: a race here is likely rather than remote. Only the agent that creates the
-// marker with O_EXCL repairs anything, and it holds it until the identity is written.
-func recoverStaleID(name string) (string, error) {
-	marker, err := acquireIDRecovery(filepath.Join(filepath.Dir(name), idRecoveryName))
-	if err != nil {
-		return "", err
-	}
-	defer func() {
-		_ = marker.Close()
-		// Removed by the agent that created it, which is the only one that may.
-		_ = os.Remove(marker.Name())
-	}()
-
-	// Looked at again under the marker, because the wait for it may have been spent on
-	// another agent doing exactly this repair - whose identity is then the one to take.
+// Only an empty file qualifies. One holding something readID could not make sense of is
+// a volume being shared with a writer this agent does not understand, and superseding it
+// would be the wrong answer: the cache turns off here rather than partitioning the
+// volume against them.
+func abandonedID(name string) bool {
 	info, err := os.Stat(name)
-	if err != nil {
-		return "", err
+	if err != nil || info.Size() != 0 {
+		return false
 	}
-	if info.Size() != 0 {
-		return readID(name)
-	}
-	if time.Since(info.ModTime()) < idStaleAfter {
-		// Young enough that the write may still be on its way, so it is left alone and
-		// the next startup looks again. Clock skew only makes it look younger than it
-		// is, which errs towards leaving it.
-		return "", fmt.Errorf("%s is empty", name)
-	}
-
-	var buf [idBytes]byte
-	if _, err := rand.Read(buf[:]); err != nil {
-		return "", err
-	}
-	id := hex.EncodeToString(buf[:])
-
-	// Opened without O_TRUNC and without O_EXCL: the file is the one already there, and
-	// it is empty.
-	f, err := os.OpenFile(name, os.O_WRONLY, SharedFileMode)
-	if err != nil {
-		return "", err
-	}
-	if err := writeID(f, id); err != nil {
-		return "", err
-	}
-	return id, nil
-}
-
-// acquireIDRecovery takes the right to repair the identity, or reports that another
-// agent holds it.
-func acquireIDRecovery(marker string) (*os.File, error) {
-	f, err := os.OpenFile(marker, os.O_WRONLY|os.O_CREATE|os.O_EXCL, SharedFileMode)
-	if err == nil || !os.IsExist(err) {
-		return f, err
-	}
-
-	// Either another agent is repairing right now, or one died in the middle of it. The
-	// second would block every repair from here on, which is the failure this whole path
-	// exists to undo, one level up - so a marker old enough not to be anybody's is
-	// cleared and the create tried once more. A held marker is seconds old, so clearing
-	// one that is genuinely held takes a crash to have happened first, and costs at
-	// worst the split identity the marker is here to prevent.
-	info, statErr := os.Stat(marker)
-	if statErr != nil || time.Since(info.ModTime()) < idStaleAfter {
-		return nil, errIDRecoveryHeld
-	}
-	if rmErr := os.Remove(marker); rmErr != nil && !os.IsNotExist(rmErr) {
-		return nil, errIDRecoveryHeld
-	}
-	return os.OpenFile(marker, os.O_WRONLY|os.O_CREATE|os.O_EXCL, SharedFileMode)
+	// Clock skew between the node that created this and the one reading it only makes
+	// the file look younger than it is, which errs towards waiting for a write.
+	return time.Since(info.ModTime()) >= idStaleAfter
 }
 
 func readID(name string) (string, error) {

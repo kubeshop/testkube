@@ -141,6 +141,13 @@ func TestEnsureIDRecoversAnIdentityNobodyWillWrite(t *testing.T) {
 	again, err := EnsureID(root)
 	require.NoError(t, err)
 	assert.Equal(t, id, again)
+
+	// The abandoned name is left exactly as it was found. Nothing here unlinks, which
+	// is what keeps concurrent agents from removing each other's work, so the volume
+	// carries the dead name rather than reusing it.
+	info, statErr := os.Stat(name)
+	require.NoError(t, statErr)
+	assert.Zero(t, info.Size(), "the abandoned identity must not be written or removed")
 }
 
 // The same empty file is what another agent in the middle of its own create leaves
@@ -159,14 +166,15 @@ func TestEnsureIDLeavesAnIdentityAnotherAgentIsWriting(t *testing.T) {
 	assert.NoError(t, statErr, "and it must still be there for them to finish")
 }
 
-// Agents repairing an unwritten identity together must all end up with the same one.
+// Agents superseding an unwritten identity together must all end up with the same one.
 //
-// They are not phased apart by chance: each reaches the repair having waited out the
-// same attempts, so they arrive at it within microseconds of each other. Repairing by
-// removing the file and creating a fresh one lets one agent unlink what another has
-// just created and written, leaving each with an identity the other has never seen -
-// and since the identity prefixes every cache key, the volume's cache is then split
-// between them until both restart, each missing on every entry the other saved.
+// They are not phased apart by chance: each reaches this having waited out the same
+// attempts, so they arrive within microseconds of each other. Any repair that unlinks -
+// the abandoned identity, or a lock taken to guard it - lets one agent remove what
+// another has just created and written, leaving each with an identity the other has
+// never seen; and since the identity prefixes every cache key, the volume's cache is
+// then split between them until both restart, each missing on every entry the other
+// saved. An O_EXCL create on a name that is never reused has no such window.
 func TestConcurrentRecoveriesAgreeOnOneIdentity(t *testing.T) {
 	root := t.TempDir()
 	name := filepath.Join(root, IDName)
@@ -193,7 +201,34 @@ func TestConcurrentRecoveriesAgreeOnOneIdentity(t *testing.T) {
 		assert.Equal(t, ids[0], ids[i], "agent %d repaired its way to a different identity", i)
 	}
 
-	// And the election leaves nothing behind that would stop the next repair.
-	_, err := os.Stat(filepath.Join(root, idRecoveryName))
-	assert.True(t, os.IsNotExist(err), "the recovery marker outlived the repair")
+	// And they all agreed on one generation rather than each taking its own: with
+	// eight agents and no reuse of a name, a volume that ends up carrying more than one
+	// new identity is one where the election did not happen.
+	entries, err := os.ReadDir(root)
+	require.NoError(t, err)
+	assert.Len(t, entries, 2, "the abandoned identity and exactly one successor")
+}
+
+// A superseded name is never unlinked, so it can still be written - by the very agent
+// whose stall abandoned it, waking long after everyone else moved on. Reading the names
+// in order and taking the first that holds an identity would hand the volume back to it,
+// and every agent already running would keep using the successor: one volume, two key
+// prefixes, lastingly. The later generation wins instead.
+func TestALaterGenerationWinsOverAnAbandonedNameWrittenLate(t *testing.T) {
+	root := t.TempDir()
+	name := filepath.Join(root, IDName)
+
+	require.NoError(t, os.WriteFile(name, nil, SharedFileMode))
+	stale := time.Now().Add(-2 * idStaleAfter)
+	require.NoError(t, os.Chtimes(name, stale, stale))
+
+	id, err := EnsureID(root)
+	require.NoError(t, err)
+
+	// The stalled agent finally gets its write in, into the name it created.
+	require.NoError(t, os.WriteFile(name, []byte("0123456789ab\n"), SharedFileMode))
+
+	again, err := EnsureID(root)
+	require.NoError(t, err)
+	assert.Equal(t, id, again, "the volume changed identity under the agents using it")
 }
