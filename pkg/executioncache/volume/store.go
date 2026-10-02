@@ -132,11 +132,14 @@ func (in *Inbox) Close() error {
 // The pointer came out of an object a pod wrote, so it is validated here rather than
 // where it was decoded: this is the only place that turns one into a directory, and a
 // validation that lives anywhere else can be bypassed by a second caller.
+// Rooted at the entry rather than at its tree, so that what sits beside the tree - the
+// recorded modes - is reachable through the same confinement. RestoreTree opens the
+// tree within it.
 func (s *Store) OpenEntry(p Pointer) (*os.Root, error) {
 	if err := ValidatePath(p.Path); err != nil {
 		return nil, err
 	}
-	return s.root.OpenRoot(path.Join(p.Path, EntryRoot))
+	return s.root.OpenRoot(p.Path)
 }
 
 // Stage creates the directory an entry is built in, and returns its absolute path

@@ -247,6 +247,18 @@ restore is a copy rather than an unpack and nothing is gzipped.
   restore would accept out of the store - so falling back cannot publish one, and
   settling here would drop a cache the archive had room for. The size limit falls back
   for the same reason, measuring the tree where the archive measures the gzip of it.
+- **Permissions travel beside the tree, not on it.** A file on the volume is read by an
+  execution that may run as another user, so what is stored is widened to be readable
+  by anyone - which loses the source's own mode. `modes.v1`, written beside
+  `<entry>/root`, records every path whose permissions differ from `DefaultFileMode`
+  (0644) or `DefaultDirMode` (0755); the restore creates at those defaults and applies
+  the recorded ones afterwards, **deepest first**, so narrowing a directory cannot shut
+  the restore out of what is still inside it. Without this a key saved 0600 came back
+  0666 and ssh refused it, where the archive backend carries each mode in its tar
+  header - the same workflow behaving differently by backend. The file is versioned in
+  its name so an older agent meeting a newer entry simply ignores it and restores at
+  the defaults, and `Store.OpenEntry` therefore roots at the **entry**, with the tree
+  inside it.
 - **Symlinks are carried, and never followed on the way out.** A restore writes through
   an `os.Root` opened on each declared path, so a symlink already sitting there cannot
   redirect a write outside it - the entry may have been written by another workflow. The

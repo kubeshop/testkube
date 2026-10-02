@@ -60,7 +60,25 @@ func remaining(max, used int64) int64 {
 // something has a half-restored tree and must clear the declared paths; one that has
 // not can leave them alone, which matters because a declared path may hold a checkout
 // the step still needs.
-func RestoreTree(src *os.Root, declaredPaths []string, limits CopyLimits) (wrote bool, err error) {
+// entry is the entry, not its tree: the modes the tree could not carry are recorded
+// beside it, and both are read through the one root.
+func RestoreTree(entry *os.Root, declaredPaths []string, limits CopyLimits) (wrote bool, err error) {
+	src, err := entry.OpenRoot(EntryRoot)
+	if err != nil {
+		return false, err
+	}
+	defer src.Close()
+
+	// Absent for an entry written before modes were recorded, and for one where nothing
+	// differed from the defaults. Both mean the same thing here: restore at the
+	// defaults, which is what those entries were getting anyway.
+	modes := Modes{}
+	if recorded, readErr := fs.ReadFile(entry.FS(), ModesName); readErr == nil {
+		modes = DecodeModes(recorded)
+	} else if !errors.Is(readErr, fs.ErrNotExist) {
+		return false, readErr
+	}
+
 	var (
 		total    int64
 		entries  int
@@ -128,12 +146,21 @@ func RestoreTree(src *os.Root, declaredPaths []string, limits CopyLimits) (wrote
 		}
 
 		didWrite, copyErr := restoreInto(src, within, dst, rootName, &total, &entries, limits)
-		dst.Close()
 		if didWrite {
 			wrote = true
 		}
 		if copyErr != nil {
+			dst.Close()
 			return wrote, copyErr
+		}
+
+		// Applied once the tree is written, and deepest first, because narrowing a
+		// directory before what is inside it has been restored would shut the restore
+		// out of its own work.
+		modeErr := applyModes(dst, within, rootName, modes)
+		dst.Close()
+		if modeErr != nil {
+			return wrote, modeErr
 		}
 	}
 
@@ -305,7 +332,7 @@ func restoreInto(src *os.Root, within string, dst *os.Root, rootName string, tot
 				return ErrTooManyEntries
 			}
 			wrote = true
-			return dst.MkdirAll(rel, 0o777)
+			return dst.MkdirAll(rel, DefaultDirMode)
 		}
 
 		*entries++
@@ -333,7 +360,7 @@ func restoreInto(src *os.Root, within string, dst *os.Root, rootName string, tot
 			// below can succeed and the Symlink then fail, which has changed the tree
 			// even though nothing was created.
 			wrote = true
-			if mkErr := dst.MkdirAll(path.Dir(rel), 0o777); mkErr != nil && path.Dir(rel) != "." {
+			if mkErr := dst.MkdirAll(path.Dir(rel), DefaultDirMode); mkErr != nil && path.Dir(rel) != "." {
 				return mkErr
 			}
 			// An entry restored over an existing tree may find the link already there.
@@ -382,6 +409,11 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 		// files at all.
 		counted int
 		content int
+
+		// What the tree itself cannot carry: a file on the volume is read by an
+		// execution that may run as another user, so it is stored readable by anyone
+		// and its own mode no longer says what the source's was. See ModesName.
+		modes = make(Modes)
 	)
 	for _, p := range coverPaths(paths) {
 		src := path.Clean(p)
@@ -429,6 +461,17 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 			target := base
 			if rel != "." {
 				target = filepath.Join(base, rel)
+			}
+
+			// Keyed by where this lands inside the entry, which is what the restore
+			// walks. A link's own mode means nothing on either side, so only files and
+			// directories are recorded.
+			if info.Mode()&os.ModeSymlink == 0 {
+				within, relErr := filepath.Rel(dst, target)
+				if relErr != nil {
+					return relErr
+				}
+				modes.Record(filepath.ToSlash(within), info.Mode(), info.IsDir())
 			}
 
 			switch {
@@ -511,6 +554,20 @@ func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error)
 			return total, content, err
 		}
 	}
+
+	// Beside the tree rather than inside it, so that no name a workflow caches can
+	// collide with it. dst is the entry's tree, so its parent is the entry.
+	if encoded := modes.Encode(); len(encoded) > 0 {
+		name := filepath.Join(filepath.Dir(dst), ModesName)
+		if err := os.WriteFile(name, encoded, SharedFileMode); err != nil {
+			return total, content, err
+		}
+		// WriteFile applies the umask, and this is read by whichever agent restores -
+		// not necessarily the one that wrote it, nor as the same user.
+		if err := os.Chmod(name, SharedFileMode); err != nil {
+			return total, content, err
+		}
+	}
 	return total, content, nil
 }
 
@@ -520,7 +577,7 @@ func copyIntoRoot(src *os.Root, name string, dst *os.Root, rel string, info fs.F
 		return 0, ErrTooLarge
 	}
 	if dir := path.Dir(rel); dir != "." {
-		if err := dst.MkdirAll(dir, 0o777); err != nil {
+		if err := dst.MkdirAll(dir, DefaultDirMode); err != nil {
 			return 0, err
 		}
 	}
@@ -535,11 +592,12 @@ func copyIntoRoot(src *os.Root, name string, dst *os.Root, rel string, info fs.F
 	// this refuses one that stays inside, so a restore cannot be made to write through
 	// any pre-existing link at all.
 	//
-	// 0666 before umask, for the reason the state file uses it: the stages, and whole
-	// executions, may run as different users, and a restored tree a later step cannot
-	// read is worse than a miss.
+	// Created at the default, not at the mode the entry's own file carries: that one
+	// was widened when it was stored, so a key saved 0600 is 0666 there and restoring
+	// it that way is what the recorded modes exist to stop. Anything that differed
+	// from the default is in the manifest and is set once the tree is written.
 	_ = dst.Remove(rel)
-	out, err := dst.OpenFile(rel, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o666)
+	out, err := dst.OpenFile(rel, os.O_WRONLY|os.O_CREATE|os.O_EXCL, DefaultFileMode)
 	if err != nil {
 		return 0, err
 	}
@@ -554,8 +612,10 @@ func copyIntoRoot(src *os.Root, name string, dst *os.Root, rel string, info fs.F
 	if n == budget && info.Size() > n {
 		return n, ErrTooLarge
 	}
-	// Mode is carried so an executable in a dependency tree stays executable.
-	return n, dst.Chmod(rel, info.Mode().Perm()|0o666)
+	// No chmod here. The entry's own mode is the widened one and says nothing about
+	// the source's; what differed from the default - an executable among them - is
+	// recorded in the manifest and applied once the tree is written.
+	return n, nil
 }
 
 // copyOut writes one regular file from the filesystem into the staged entry, reporting
@@ -614,6 +674,11 @@ func copyOut(name, target string, info os.FileInfo, budget int64) (n int64, stag
 // Set explicitly rather than passed to Mkdir, whose mode the caller's umask filters: a
 // step container's usual 022 turns 0777 into 0755 before it reaches the filesystem.
 const SharedDirMode = 0o777
+
+// SharedFileMode is what a file the agent writes onto the volume is set to, for the
+// same reason: whichever agent reads it next is not necessarily the one that wrote it,
+// nor running as the same user.
+const SharedFileMode = 0o666
 
 // mkdirShared creates one directory on the shared volume with the mode it needs, having
 // created any missing parents along the way.
@@ -693,4 +758,52 @@ func restoreLink(src *os.Root, within, dest string, entries *int, limits CopyLim
 	name := path.Base(dest)
 	_ = dst.Remove(name)
 	return true, dst.Symlink(link, name)
+}
+
+// applyModes sets the permissions the entry's own files could not carry.
+//
+// within names this declared path inside the entry, and dst is rooted at the declared
+// path itself - or, for a single file or link, at its parent, with rootName the name to
+// write it under. The recorded keys are entry-relative, so they are translated to the
+// one and matched against the other.
+//
+// A path the restore did not write is skipped rather than failed: the manifest covers
+// the whole entry, and a restore only ever asks for the declared paths it wants.
+func applyModes(dst *os.Root, within, rootName string, modes Modes) error {
+	if len(modes) == 0 {
+		return nil
+	}
+
+	for _, key := range modes.Apply() {
+		rel, inside := relativeToDeclared(key, within, rootName)
+		if !inside {
+			continue
+		}
+		if err := dst.Chmod(rel, modes[key]); err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				continue
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+// relativeToDeclared turns a key recorded against the entry into the name to chmod
+// through dst, and reports whether it belongs to this declared path at all.
+func relativeToDeclared(key, within, rootName string) (string, bool) {
+	if key == within {
+		if rootName != "" {
+			// dst is the parent; the declared path itself is written under this name.
+			return rootName, true
+		}
+		// dst is the declared directory itself, which has no name within its own root.
+		return "", false
+	}
+	if rootName != "" {
+		// A single file or link declared as the path carries nothing beneath it.
+		return "", false
+	}
+	rel, found := strings.CutPrefix(key, within+"/")
+	return rel, found
 }

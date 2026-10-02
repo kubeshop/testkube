@@ -21,11 +21,15 @@ func write(t *testing.T, name, body string) {
 // does, and returns a reader over its mirrored tree.
 func entryFrom(t *testing.T, paths []string) *os.Root {
 	t.Helper()
-	staging := filepath.Join(t.TempDir(), EntryRoot)
+	entry := t.TempDir()
+	staging := filepath.Join(entry, EntryRoot)
 	require.NoError(t, os.MkdirAll(staging, 0o777))
 	_, _, err := SaveTree(staging, paths, CopyLimits{})
 	require.NoError(t, err)
-	root, err := os.OpenRoot(staging)
+
+	// Rooted at the entry, not at its tree: the recorded modes sit beside the tree,
+	// and RestoreTree reads both through the one root.
+	root, err := os.OpenRoot(entry)
 	require.NoError(t, err)
 	t.Cleanup(func() { root.Close() })
 	return root
@@ -550,7 +554,7 @@ func TestSaveLeavesNothingForAPathThatDoesNotExist(t *testing.T) {
 
 	// And the entry is therefore honest about what it holds: a restore asking only for
 	// the absent path gets a miss rather than a hit over an empty directory.
-	entry, openErr := os.OpenRoot(staging)
+	entry, openErr := os.OpenRoot(filepath.Dir(staging))
 	require.NoError(t, openErr)
 	defer entry.Close()
 
@@ -666,4 +670,40 @@ func TestSaveAndRestoreRoundTripASingleSymlink(t *testing.T) {
 	// Compared with the separators normalised: Windows stores a link target with
 	// backslashes whatever it was written with, which says nothing about the restore.
 	assert.Equal(t, "releases/v2", filepath.ToSlash(target), "the link is carried, not followed")
+}
+
+// What is stored on the volume is widened so an execution running as another user can
+// read it, which loses the source's own mode - so the modes that differ from the
+// defaults are recorded beside the tree and applied on the way out.
+//
+// Asserted here through the read-only bit, which is the part of a POSIX mode Windows
+// also enforces, so this runs everywhere. TestSaveAndRestorePreserveModes covers the
+// rest where there are real permission bits to cover.
+func TestSaveAndRestorePreserveAReadOnlyFile(t *testing.T) {
+	src := posixDir(t)
+	write(t, filepath.FromSlash(src+"/pkg/vendored"), "do not edit")
+	require.NoError(t, os.Chmod(filepath.FromSlash(src+"/pkg/vendored"), 0o444))
+
+	entry := entryFrom(t, []string{src})
+
+	// The manifest is written beside the tree, never inside it, so no cached path can
+	// collide with it.
+	_, statErr := os.Stat(filepath.Join(entryPath(t, entry), ModesName))
+	require.NoError(t, statErr, "an entry holding a non-default mode has to record it")
+
+	require.NoError(t, os.Chmod(filepath.FromSlash(src+"/pkg/vendored"), 0o666))
+	require.NoError(t, os.RemoveAll(filepath.FromSlash(src)))
+
+	_, err := RestoreTree(entry, []string{src}, CopyLimits{})
+	require.NoError(t, err)
+
+	info, statErr := os.Lstat(filepath.FromSlash(src + "/pkg/vendored"))
+	require.NoError(t, statErr)
+	assert.Zero(t, info.Mode().Perm()&0o222, "a read-only file must not come back writable")
+}
+
+// entryPath is where a root opened by entryFrom actually lives.
+func entryPath(t *testing.T, root *os.Root) string {
+	t.Helper()
+	return root.Name()
 }

@@ -110,11 +110,11 @@ func TestCommitNamesTheEntryFromTheVolumeRoot(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "bytes", string(body))
 
-	// And the reader reaches the mirrored tree by that name.
+	// And the reader reaches the entry by that name, with the mirrored tree inside it.
 	root, err := s.OpenEntry(p)
 	require.NoError(t, err)
 	defer root.Close()
-	f, err := root.Open("data/dep")
+	f, err := root.Open(EntryRoot + "/data/dep")
 	require.NoError(t, err)
 	f.Close()
 }

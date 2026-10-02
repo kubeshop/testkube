@@ -3,6 +3,7 @@
 package volume
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -73,4 +74,48 @@ func TestSaveSetsTheModeUnderADirectoryNamedLikeADotDot(t *testing.T) {
 			"%s is a directory the sweep could not unlink through", name)
 		return nil
 	}))
+}
+
+// A file on the volume is read by an execution that may run as another user, so what is
+// stored is widened to be readable by anyone - which loses the source's own mode. The
+// archive backend has no such problem, carrying each mode in a tar header, so the same
+// workflow behaved differently depending on which backend held its cache: a key saved
+// 0600 came back 0666, and ssh refuses a key that anyone could read.
+//
+// Unix-only because the assertion is about POSIX permission bits, which is not what
+// Windows enforces.
+func TestSaveAndRestorePreserveModes(t *testing.T) {
+	previous := syscall.Umask(0o022)
+	defer syscall.Umask(previous)
+
+	src := posixDir(t)
+	write(t, filepath.FromSlash(src+"/pkg/index.js"), "ordinary")
+	write(t, filepath.FromSlash(src+"/.npmrc"), "//registry:_authToken=secret")
+	write(t, filepath.FromSlash(src+"/bin/tool"), "#!/bin/sh")
+	require.NoError(t, os.MkdirAll(filepath.FromSlash(src+"/private"), 0o755))
+	write(t, filepath.FromSlash(src+"/private/key"), "-----BEGIN-----")
+
+	require.NoError(t, os.Chmod(filepath.FromSlash(src+"/.npmrc"), 0o600))
+	require.NoError(t, os.Chmod(filepath.FromSlash(src+"/bin/tool"), 0o755))
+	require.NoError(t, os.Chmod(filepath.FromSlash(src+"/private/key"), 0o400))
+	require.NoError(t, os.Chmod(filepath.FromSlash(src+"/private"), 0o700))
+
+	entry := entryFrom(t, []string{src})
+	require.NoError(t, os.Chmod(filepath.FromSlash(src+"/private"), 0o755))
+	require.NoError(t, os.RemoveAll(filepath.FromSlash(src)))
+
+	_, err := RestoreTree(entry, []string{src}, CopyLimits{})
+	require.NoError(t, err)
+
+	for name, want := range map[string]fs.FileMode{
+		"/pkg/index.js": 0o644,
+		"/.npmrc":       0o600,
+		"/bin/tool":     0o755,
+		"/private":      0o700,
+		"/private/key":  0o400,
+	} {
+		info, statErr := os.Lstat(filepath.FromSlash(src + name))
+		require.NoError(t, statErr, name)
+		assert.Equal(t, want, info.Mode().Perm(), "%s came back with the wrong permissions", name)
+	}
 }
