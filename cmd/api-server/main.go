@@ -1028,11 +1028,11 @@ func main() {
 	// run here rather than in the control plane because the control plane is not
 	// necessarily in this cluster and so cannot reach the volume at all.
 	//
-	// Gated on the same confirmation the mounts are, so the sweep can never run against
-	// a bucket whose pointers are not known to expire - deleting an entry whose pointer
-	// is kept forever is what makes a key miss permanently. The warning belongs to that
-	// helper, which the execution worker has already called by here.
-	if commons.StepCacheVolumeConfirmed(cfg) {
+	// It runs wherever the volume is mounted, in every mode: the disk is written to in
+	// every mode, so it has to be bounded in every mode. What differs by mode is whether
+	// the objects pointing at these entries are known to expire too, which
+	// StepCacheVolumeEnabled warns about rather than gates on.
+	if commons.StepCacheVolumeEnabled(cfg) {
 		// Retention is raised to however long a pointer can still be served, rather
 		// than warned about and used as given.
 		//
@@ -1050,8 +1050,9 @@ func main() {
 		// pointer therefore still lives STORAGE_EXPIRATION days, and comparing against
 		// the cache rule alone would sweep entries weeks ahead of their pointers.
 		//
-		// A pointer is known to expire by here - that is what the confirmation above
-		// means - so PointerLifetime's second return needs no case of its own.
+		// Where nothing expires a pointer at all, there is no lifetime to raise retention
+		// to and PointerLifetime says so by returning zero, which no retention is below.
+		// StepCacheVolumeEnabled has already warned in that case.
 		retention := time.Duration(cfg.TestkubeStepCacheVolumeRetentionDays) * 24 * time.Hour
 		if pointerTTL, _ := volume.PointerLifetime(cfg.StorageCacheExpiration, cfg.StorageExpiration); retention < pointerTTL {
 			log.DefaultLogger.Warnw(

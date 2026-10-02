@@ -266,6 +266,11 @@ spec:
               value: "{{ .Values.stepCacheVolume.retentionDays }}"
             - name: "TESTKUBE_STEP_CACHE_VOLUME_SWEEP_INTERVAL"
               value: "{{ .Values.stepCacheVolume.sweepInterval }}"
+            {{- /* A runner owns no bucket, so it cannot read how long a cache object
+                 lives there and has to be told, or the sweep would hold entries to a
+                 default that has nothing to do with the Control Plane's store. */}}
+            - name: "STORAGE_CACHE_EXPIRATION"
+              value: "{{ .Values.stepCacheVolume.objectExpirationDays }}"
             {{- end }}
             - name: "TESTKUBE_NAMESPACE"
               value: "{{ .Release.Namespace }}"

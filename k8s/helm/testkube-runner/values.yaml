@@ -342,3 +342,14 @@ stepCacheVolume:
   retentionDays: 7
   # -- How often to sweep the volume for expired entries
   sweepInterval: "1h"
+  # -- How many days a cache object survives in the store the Control Plane owns.
+  ## A runner has no access to that bucket and cannot read its lifecycle, so it has to
+  ## be told. The sweep is held to at least this long: deleting an entry while the
+  ## object pointing at it is still served leaves that key restoring nothing, and the
+  ## object is immutable, so no later run can repair it until it expires.
+  ##
+  ## Set it to the shortest rule that applies to cache objects there - the cache rule
+  ## or a shorter bucket-wide one, whichever comes first. 0 means nothing expires them,
+  ## which no retention can outlast; the runner then warns and sweeps on retentionDays
+  ## alone.
+  objectExpirationDays: 1

@@ -139,19 +139,24 @@ restore is a copy rather than an unpack and nothing is gzipped.
   their own Deployment**, because a
   runner-only installation has no api Deployment and the sweep would otherwise read its
   missing inbox directory as an empty volume and let the claim fill.
-- **The volume is used only where cache objects are known to expire.**
-  `commons.StepCacheVolumeConfirmed` gates both the mounts and the sweep, and a
-  configured claim is not enough: an entry is reachable only through the object naming
-  it, so sweeping on a timer is safe only if that object also goes away.
-  `SetExpirationPolicies` failing is logged and startup continues - reading the
-  existing lifecycle needs a permission an upgrade may not have granted - which would
-  otherwise leave the rule uninstalled while the sweep ran on the strength of the
-  configured numbers. **This process only knows the rule is installed in standalone
-  mode**; an agent attached to a Control Plane does not own the bucket, never calls
-  `SetExpirationPolicies`, and holds expiration settings with no bearing on the store
-  its pointers are written to - so the volume stays off there until the Control Plane
-  reports its cache expiration. Unconfirmed disables the volume outright rather than
-  only the sweep, because not sweeping a volume still being written to just fills it.
+- **The volume is enabled, and swept, in every mode.** `commons.StepCacheVolumeEnabled`
+  answers on the claim alone, and both the mounts and the sweep ask it. The disk is the
+  agent's own and is written to in every mode, so it has to be bounded in every mode; a
+  shared volume filling without limit takes the cluster's storage with it.
+- **Only one half of the arrangement can be confirmed, and it is not the disk.** An
+  entry is reachable only through the object naming it, so a sweep is safe exactly when
+  that object also goes away. This process installs that rule only where it owns the
+  bucket - standalone mode, through `SetExpirationPolicies`, whose failure is logged
+  while startup continues because reading the existing lifecycle needs a permission an
+  upgrade may not have granted. **An agent or runner attached to a Control Plane owns
+  no bucket**: it never calls `SetExpirationPolicies`, cannot read the lifecycle, and
+  must be told how long a cache object lives there - `stepCacheVolume.objectExpirationDays`
+  on the runner chart, `storage.cacheExpiration` on the api chart, both reaching
+  `STORAGE_CACHE_EXPIRATION`. Retention is still raised to that lifetime
+  (`volume.PointerLifetime`). Where nothing is known to expire a pointer, the sweep runs
+  anyway on the configured retention and the risk is stated once at startup: an entry
+  swept before its pointer expires leaves a key that restores nothing until the object
+  goes, and the key is immutable, so nothing repairs it meanwhile.
 - **The agent makes each execution's inbox before its pod starts**
   (`prepareStepCacheInbox` in `kubernetesworker/worker.go`, called at both deploy
   sites), keyed on the execution's **root** id so that one inbox serves an execution
@@ -269,7 +274,7 @@ contents do.
 - Helm chart values are the source of deployment defaults; `build/_local/values.dev.yaml` (shaped by the `values.dev.tpl.yaml` template) shows the local overrides used by `tk-dev` if you need a concrete reference.
 - `testkube-api` chart values `jobTolerations`/`jobAffinity`/`jobNodeSelector` (`k8s/helm/testkube-api/values.yaml`) set the `tolerations`/`affinity`/`nodeSelector` applied to the ephemeral pods spawned per test execution (`_job-template.yaml.tpl` for legacy prebuilt/container executors, `_slave-pod-template.yaml.tpl` for test-workflow slave pods). Unset (empty) by default and deliberately does not fall back to `global.tolerations`/`global.affinity`/`global.nodeSelector`, since those already carry a non-empty default (an arm64 toleration) that would otherwise silently change job/slave pod scheduling for every chart consumer.
 - CLI update-check toggle: set `TESTKUBE_DISABLE_UPDATE_CHECK=1` to suppress both the per-command hint and the `testkube version` status block. The CLI persists `lastUpdateCheckAt` and `latestKnownVersion` in `~/.testkube/config.json` to throttle the per-command hint to once per day.
-- Step dependency caches can be kept on a shared ReadWriteMany volume instead of whole in the object store, via `TESTKUBE_STEP_CACHE_VOLUME_CLAIM` (an existing RWX PVC, which must exist in every execution namespace; empty disables it), `TESTKUBE_STEP_CACHE_VOLUME_MOUNT_PATH` (where the agent mounts it for the expiry sweep), `TESTKUBE_STEP_CACHE_VOLUME_RETENTION_DAYS` (default `7`) and `TESTKUBE_STEP_CACHE_VOLUME_SWEEP_INTERVAL` (default `1h`). Helm exposes all four as `stepCacheVolume.*` on **both** the `testkube-api` and `testkube-runner` charts, because both build execution pods, and both mount the claim on their own Deployment so the leader-gated sweep can reach it in a runner-only installation too. Retention shorter than the earlier of `STORAGE_CACHE_EXPIRATION` and `STORAGE_EXPIRATION` is raised to it at startup, with a warning, rather than used as given; with neither set the agent warns that nothing expires pointers. See "Shared volume for cache entries" above for what the arrangement does and does not confine.
+- Step dependency caches can be kept on a shared ReadWriteMany volume instead of whole in the object store, via `TESTKUBE_STEP_CACHE_VOLUME_CLAIM` (an existing RWX PVC, which must exist in every execution namespace; empty disables it), `TESTKUBE_STEP_CACHE_VOLUME_MOUNT_PATH` (where the agent mounts it for the expiry sweep), `TESTKUBE_STEP_CACHE_VOLUME_RETENTION_DAYS` (default `7`) and `TESTKUBE_STEP_CACHE_VOLUME_SWEEP_INTERVAL` (default `1h`). Helm exposes all four as `stepCacheVolume.*` on **both** the `testkube-api` and `testkube-runner` charts, because both build execution pods, and both mount the claim on their own Deployment so the leader-gated sweep can reach it in a runner-only installation too. The volume and its sweep run in **every** mode; the claim alone enables them. Retention shorter than the earlier of `STORAGE_CACHE_EXPIRATION` and `STORAGE_EXPIRATION` is raised to it at startup, with a warning, rather than used as given. A runner owns no bucket and cannot read its lifecycle, so it is told one through `stepCacheVolume.objectExpirationDays` (default `1`), which reaches `STORAGE_CACHE_EXPIRATION`; the api chart uses `storage.cacheExpiration` as before. With nothing expiring a pointer the sweep still runs on the configured retention, and the agent warns once that a swept entry may leave a pointer behind it. See "Shared volume for cache entries" above for what the arrangement does and does not confine.
 - Object retention is driven by `STORAGE_EXPIRATION` (whole bucket, in days) and `STORAGE_CACHE_EXPIRATION` (step dependency caches under the `.tkcache/v1` prefix, in days). **`STORAGE_CACHE_EXPIRATION` defaults to 1 day; `STORAGE_EXPIRATION` stays opt-in.** The difference is the filter, not taste: the cache rule is confined to the cache prefix and can only delete caches, where the bucket-wide rule is unfiltered and governs artifacts and logs too, so a default there would delete a deployment's results on an upgrade. `TestExpirationDefaults` pins both. `SetExpirationPolicies` in `pkg/storage/minio/minio.go` applies them with `SetBucketLifecycle`, which replaces the bucket lifecycle wholesale - so it reads the existing configuration first and carries through every rule Testkube does not own, matched by ID (`mergeLifecycleRules`). That merge is what makes a default safe at all: without it, defaulting either setting would drop the rules of installations whose bucket lifecycle is managed elsewhere, purely by upgrading. It fails closed - if the existing lifecycle cannot be read, nothing is written. That read is a permission earlier versions did not need (`s3:GetLifecycleConfiguration` on S3 and MinIO, `storage.buckets.get` on GCS), and because `STORAGE_CACHE_EXPIRATION` now defaults to 1 the call happens on every installation rather than only those configuring an expiration - so an upgrade can need permissions the deployment never granted. The error names them. Note also that the bucket-wide rule is unfiltered and so covers cache objects too, and the earlier expiration wins — a cache TTL can only bring eviction forward, never postpone it, and `MustGetMinioClient` warns when it is set longer than the bucket-wide one.
 
 ## Architecture reference

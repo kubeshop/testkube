@@ -177,7 +177,7 @@ func MustGetMinioClient(cfg *config.Config) domainstorage.Client {
 		// reading the existing lifecycle needs a permission an upgrade may not have
 		// granted - but it leaves the rule uninstalled, and anything that sweeps a
 		// shared volume on the strength of these numbers would then delete entries
-		// whose pointers are kept forever. See StepCacheVolumeConfirmed.
+		// whose pointers are kept forever. See StepCacheVolumeEnabled.
 		cacheExpirationConfirmed.Store(true)
 	}
 
@@ -525,27 +525,23 @@ var (
 	stepCacheVolumeWarning sync.Once
 )
 
-// StepCacheVolumeConfirmed reports whether step dependency caches may be kept on a
-// shared volume, which needs more than the claim being configured.
+// StepCacheVolumeEnabled reports whether step dependency caches are kept on a shared
+// volume, which is a question of the claim being configured and nothing else.
 //
-// An entry on the volume is reachable only through the object that points at it, and
-// the agent's sweep removes entries on a timer. If the object outlives the entry, every
-// hit on that key restores nothing, and the key is immutable, so no later run can
-// replace it until the object itself expires. The whole arrangement therefore rests on
-// cache objects expiring - and on this process knowing that they do.
+// Deliberately not conditional on the object store's expiration being confirmed. The
+// volume is the agent's own disk: it is written to in every mode, so it has to be
+// bounded in every mode, and the sweep answers to this same question for that reason.
+// A mode that filled a shared volume without limit would take the cluster's storage
+// down with it, which is worse than a cache that occasionally misses.
 //
-// It can only know that where it installs the rule itself, which is standalone mode. An
-// agent attached to a remote Control Plane does not own the bucket, never calls
-// SetExpirationPolicies, and has no way to ask what lifecycle is on it: the expiration
-// settings it holds are its own environment's, with no bearing on the store the
-// pointers are actually written to. Until the Control Plane reports its cache
-// expiration, the honest answer there is no.
-//
-// Unconfirmed disables the volume outright rather than only the sweep. Sweeping is what
-// breaks keys, but not sweeping a volume that is still being written to just fills it,
-// and an operator discovering a full shared volume is no better served than one
-// discovering a cache that always misses.
-func StepCacheVolumeConfirmed(cfg *config.Config) bool {
+// What cannot be confirmed in every mode is the other half - that the object pointing
+// at an entry also goes away. This process installs that rule only where it owns the
+// bucket, which is standalone mode: an agent attached to a Control Plane does not own
+// it, never calls SetExpirationPolicies, and holds expiration settings with no bearing
+// on the store its pointers are written to. Where an entry is swept before its pointer
+// expires, that key restores nothing until the object goes. That is stated once at
+// startup, with the setting that avoids it, rather than resolved by refusing to cache.
+func StepCacheVolumeEnabled(cfg *config.Config) bool {
 	if cfg.TestkubeStepCacheVolumeClaim == "" {
 		return false
 	}
@@ -554,13 +550,13 @@ func StepCacheVolumeConfirmed(cfg *config.Config) bool {
 		// identical warnings looks for two problems.
 		stepCacheVolumeWarning.Do(func() {
 			log.DefaultLogger.Warnw(
-				"a step cache volume is configured but cache objects are not known to expire, so caches will go to the object store instead; this process installs that rule only in standalone mode, and an agent attached to a Control Plane cannot confirm the bucket's lifecycle",
+				"this process has not installed a lifecycle rule that expires cache objects, so an entry swept off the shared volume may leave a pointer that outlives it, and that key will restore nothing until the object expires; an agent attached to a Control Plane can neither install nor read that rule, so set the cache expiration on the Control Plane and keep the volume retention at least as long",
 				"claim", cfg.TestkubeStepCacheVolumeClaim,
+				"retentionDays", cfg.TestkubeStepCacheVolumeRetentionDays,
 				"cacheExpirationDays", cfg.StorageCacheExpiration,
 				"storageExpirationDays", cfg.StorageExpiration,
 			)
 		})
-		return false
 	}
 	return true
 }
