@@ -397,3 +397,28 @@ func TestRestoreReportsAVolumeFailureRatherThanAnAbsentPath(t *testing.T) {
 	assert.NotErrorIs(t, err, fs.ErrNotExist)
 	assert.False(t, wrote)
 }
+
+// A declared path is relative whenever the step's own image decides the working
+// directory, which is the common case - mountCachePaths resolves one against the
+// working directory only where the bundle already knows it.
+//
+// The destination walk used to start at the filesystem root regardless, so it created
+// /node_modules, left ./node_modules alone, and os.OpenRoot then failed on a directory
+// nothing had made: the volume never restored a relative path at all. It also ran the
+// symlink guard against a path other than the one about to be written to.
+func TestRestoreCreatesARelativeDeclaredPathWhereTheStepLooksForIt(t *testing.T) {
+	t.Chdir(t.TempDir())
+	write(t, filepath.Join("node_modules", "dep"), "cached")
+
+	// Built from the same spelling the step declared, as a save does.
+	entry := entryFrom(t, []string{"node_modules"})
+	require.NoError(t, os.RemoveAll("node_modules"))
+
+	wrote, err := RestoreTree(entry, []string{"node_modules"}, CopyLimits{})
+
+	require.NoError(t, err)
+	assert.True(t, wrote)
+	body, readErr := os.ReadFile(filepath.Join("node_modules", "dep"))
+	require.NoError(t, readErr, "the restore must land where the step will look")
+	assert.Equal(t, "cached", string(body))
+}

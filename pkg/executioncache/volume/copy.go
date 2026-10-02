@@ -162,7 +162,25 @@ func coverPaths(paths []string) []string {
 // the same answer any other unusable declared path gets.
 func openDeclaredRoot(dest string) (*os.Root, error) {
 	parts := strings.Split(strings.Trim(dest, "/"), "/")
-	current := "/"
+
+	// Where the walk starts has to be where os.OpenRoot below will look, or this
+	// checks and creates one directory and then opens another.
+	//
+	// A declared path is relative whenever the step's own image decides the working
+	// directory, which is the common case: mountCachePaths resolves a relative path
+	// against the working directory only where the bundle already knows it, and leaves
+	// it alone otherwise. Walking from the root then created /node_modules, left
+	// ./node_modules uncreated, and OpenRoot failed on it - so the volume never
+	// restored a relative path at all. It also ran the symlink guard below against a
+	// path that was not the one about to be written to, which is the whole point of
+	// the guard.
+	//
+	// Relative to the process, deliberately: SaveTree walks the same spelling from the
+	// same place, so the two agree about what an entry holds.
+	current := "."
+	if strings.HasPrefix(dest, "/") {
+		current = "/"
+	}
 
 	for _, part := range parts {
 		if part == "" || part == "." {
