@@ -246,18 +246,34 @@ spec:
       paths:
       - /root/go/pkg/mod/cache/download
       scope: environment
-    run:
-      image: golangci/golangci-lint:v2.12.2
-      env:
-      - name: GOPROXY
-        value: https://proxy.golang.org,direct
-      shell: |-
-        golangci-lint run -c ./.golangci.yml \
-          --verbose \
-          --timeout=20m \
-          --issues-exit-code=1 \
-          --max-issues-per-linter=0 \
-          ./...
+    steps:
+    - name: Analyze Go packages
+      cache:
+        # Entries are immutable: refresh for source/config changes, while reusing
+        # compiled dependencies from the previous successful lint execution.
+        key: cloud-lint-go-v1-golangci-2.12.2-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum", "/data/repo/.golangci.yml", "/data/repo/**/*.go")}}
+        restoreKeys:
+        - cloud-lint-go-v1-golangci-2.12.2-
+        paths:
+        - /root/.cache/go-build
+        - /root/.cache/golangci-lint
+        scope: workflow
+      run:
+        image: golangci/golangci-lint:v2.12.2
+        env:
+        - name: GOPROXY
+          value: https://proxy.golang.org,direct
+        - name: GOCACHE
+          value: /root/.cache/go-build
+        - name: GOLANGCI_LINT_CACHE
+          value: /root/.cache/golangci-lint
+        shell: |-
+          golangci-lint run -c ./.golangci.yml \
+            --verbose \
+            --timeout=20m \
+            --issues-exit-code=1 \
+            --max-issues-per-linter=0 \
+            ./...
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
