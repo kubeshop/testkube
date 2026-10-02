@@ -209,6 +209,23 @@ restore is a copy rather than an unpack and nothing is gzipped.
   failure logs and continues, because kubelet still creates the directory and the
   pod-side probe still falls back. Note this needs the agent's claim and the execution
   namespace's claim to share backing storage, which the chart documents.
+- **Every directory written onto the volume is chmod'ed to `SharedDirMode` (0777).** A
+  step container creates them under its own umask, as whatever user the workflow chose,
+  while the agent sweeps them as another; a directory's write bit is what permits
+  unlinking what is inside it, so one left at 0755 is a subtree the agent can never
+  reclaim. Mkdir's mode argument is not enough - the usual 022 turns 0777 into 0755
+  before it reaches the filesystem - so `mkdirShared` sets it explicitly, and
+  `mkdirAllShared` covers the prefix above a declared path's root, which the walk never
+  visits. The sweep also **reports a removal it could not make and continues**, rather
+  than returning at the first: one stuck inbox must not stop it reclaiming everything
+  after it.
+- **The entry limit is the volume's own, and a refusal on it falls back.** The volume
+  counts every directory where the archive's walker emits only files and links, so a
+  directory holding two files is three entries here and two there. The archive path
+  enforces its own count before asking for a grant, which is what keeps an entry no
+  restore would accept out of the store - so falling back cannot publish one, and
+  settling here would drop a cache the archive had room for. The size limit falls back
+  for the same reason, measuring the tree where the archive measures the gzip of it.
 - **Symlinks are carried, and never followed on the way out.** A restore writes through
   an `os.Root` opened on each declared path, so a symlink already sitting there cannot
   redirect a write outside it - the entry may have been written by another workflow. The
@@ -218,13 +235,14 @@ restore is a copy rather than an unpack and nothing is gzipped.
 - **A volume that will not take an entry falls back to the object store.** The open-time
   probe cannot predict a volume filling mid-copy, so `saveToVolume` reports whether it
   settled the save. What falls through is decided by whether the other backend would
-  answer differently: a failed copy or commit does, and so does the **size** limit,
-  because the volume weighs the tree where the archive weighs the gzip of it. The
-  **entry-count** limit does not - that number is the same either way, and
-  `cacheMaxEntries` bounds the save precisely because it bounds the restore. An archive
-  over it would store happily and then be refused by every restore of it, under a key
-  that is immutable, so the step would reinstall every execution until it expired. The
-  archive path refuses it too, which it did not before.
+  answer differently - and **both** limits do: the size, because the volume weighs the
+  tree where the archive weighs the gzip of it, and the count, because the volume counts
+  every directory where the archive's walker emits only files and links. A failed copy
+  or commit falls back too. What keeps a fallback from publishing an entry no restore
+  would accept is that the archive path enforces `cacheMaxEntries` on its own count
+  before asking for a grant: an archive over it would store happily and then be refused
+  by every restore of it, under a key that is immutable, so the step would reinstall
+  every execution until it expired.
 - **`SaveRequest.Size` is the object's size, so on this path it is the pointer's.** The
   contract is what the bucket is about to receive, which a quota can refuse before the
   transfer; the tree is on a volume the Control Plane neither provisions nor can

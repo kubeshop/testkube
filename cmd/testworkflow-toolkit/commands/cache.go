@@ -930,21 +930,18 @@ func saveToVolume(
 		MaxEntries:    cacheMaxEntries,
 	})
 	if err != nil {
-		if errors.Is(err, volume.ErrTooManyEntries) {
-			// Settled here, unlike the size limit below, because the count does not
-			// change between the backends: a tree of this many files packs into an
-			// archive of this many files, and the restore refuses that archive at the
-			// same number. Falling back would publish an entry nothing can restore,
-			// under a key that is immutable - so every later run would miss it and
-			// reinstall until it expired.
-			fmt.Fprintf(out, "cache: not saving %q: it holds more than %d files\n", key, cacheMaxEntries)
-			return true, nil
-		}
-		// The size limit, by contrast, measures different things on the two backends -
-		// this one weighs the tree, the archive weighs the gzip of it - so a tree
-		// refused here can still fit as an archive, and a dependency tree of text
-		// compresses well. Settling on it would drop a cache the object store would
-		// have taken.
+		// Both limits measure different things on the two backends, so a tree refused
+		// here can still be one the object store would take.
+		//
+		// The count does: this one counts every directory, where the archive's walker
+		// emits only files and links, so a directory holding two files is three entries
+		// here and two there. The archive path enforces its own count before asking for
+		// a grant, which is what keeps an entry no restore would accept from being
+		// published - so falling back cannot publish one, and settling here would drop
+		// a cache the archive could hold.
+		//
+		// The size does too: this one weighs the tree where the archive weighs the gzip
+		// of it, and a dependency tree of text compresses well.
 		//
 		// The volume filling mid-copy lands here too. The probe at open time cannot
 		// predict it, because a volume with room for a probe file can still run out

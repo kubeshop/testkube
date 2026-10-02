@@ -1265,10 +1265,15 @@ func TestRunCacheSave_RefusesATreeWithTooManyFilesToRestore(t *testing.T) {
 	assert.Zero(t, repo.saveCalls, "an entry nothing could restore must not even ask for a grant")
 }
 
-// The count does not change between the backends, so a tree the volume refuses for
-// holding too many files would be refused by the archive too. Falling back would only
-// pack it, publish it, and leave every later restore to reject it.
-func TestRunCacheSave_DoesNotFallBackWhenTheTreeHasTooManyFiles(t *testing.T) {
+// The count does change between the backends - the volume counts every directory,
+// where the archive's walker emits only files and links - so a tree refused here can be
+// one the archive would hold, and settling on it would drop a cache the object store
+// had room for.
+//
+// Falling back is safe because the archive path enforces its own count before asking
+// for a grant, which is what keeps an entry no restore would accept out of the store.
+// Here that second count refuses it too, so nothing is published either way.
+func TestRunCacheSave_FallsBackWhenTheVolumeRefusesTheEntryCount(t *testing.T) {
 	withEntryLimit(t, 2)
 
 	root := t.TempDir()
@@ -1286,10 +1291,14 @@ func TestRunCacheSave_DoesNotFallBackWhenTheTreeHasTooManyFiles(t *testing.T) {
 	}), []string{posix}, "", cacheDefaultMaxSize, repo, out)
 
 	require.NoError(t, err)
-	assert.Contains(t, out.String(), "more than 2 files")
-	assert.NotContains(t, out.String(), "object store instead",
-		"falling back would publish an archive no restore would accept")
-	assert.Zero(t, repo.saveCalls)
+	assert.Contains(t, out.String(), "object store instead",
+		"the archive counts differently, so it gets its own say")
+
+	// What the archive then decides is its own business, and
+	// TestRunCacheSave_RefusesATreeWithTooManyFilesToRestore pins it. Asserting the
+	// outcome here as well would tie this test to whether the walker can see the
+	// declared path, which is a different thing and platform-dependent.
+	assert.Zero(t, repo.saveCalls, "an entry nothing could restore must not even ask for a grant")
 }
 
 // A PUT whose response is lost has still been applied, and the retry then finds the
