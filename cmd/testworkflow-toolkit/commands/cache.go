@@ -643,9 +643,22 @@ func downloadCache(ctx context.Context, store *volume.Store, url string, allowed
 			if peekErr == nil && bytes.Equal(head, []byte(volume.Magic)) {
 				wrote, size, err = restoreFromVolume(store, body, allowedPaths)
 				resp.Body.Close()
-				// A pointer that cannot be followed will not start working on a retry:
-				// the bytes only ever existed on the volume.
-				return wrote, size, err
+
+				// A pointer that was read and could not be followed will not start
+				// working on a retry: the bytes only ever existed on the volume, and
+				// fetching the same few hundred bytes again answers the same.
+				//
+				// Failing to read it is a different thing, though. The magic is only
+				// the first bytes; the rest arrives over the same connection an
+				// archive would, and a reset part-way through is what the retries
+				// around this loop exist for. Treating every pointer outcome as final
+				// gave the pointer path less resilience than the archive path it
+				// replaced, for a failure that has nothing to do with pointers.
+				if !errors.Is(err, errPointerUnread) {
+					return wrote, size, err
+				}
+				lastErr = err
+				continue
 			}
 
 			err = common.UnpackTarball("/", body,
@@ -674,11 +687,18 @@ func downloadCache(ctx context.Context, store *volume.Store, url string, allowed
 func restoreFromVolume(store *volume.Store, body io.Reader, allowedPaths []string) (bool, int64, error) {
 	head, err := io.ReadAll(io.LimitReader(body, volume.MaxPointerBytes))
 	if err != nil {
-		return false, 0, fmt.Errorf("reading the cache pointer: %w", err)
+		// Marked retryable: the magic was only the first bytes, and the rest of the
+		// body still arrives over the same connection an archive would. A reset
+		// part-way through is exactly what a second GET recovers from, where
+		// everything below this point is a settled answer about the volume that no
+		// amount of fetching will change.
+		return false, 0, fmt.Errorf("%w: reading the cache pointer: %w", errPointerUnread, err)
 	}
 	pointer, ok := volume.Decode(head)
 	if !ok {
-		return false, 0, errors.New("the entry is a cache pointer this agent cannot read")
+		// A truncated body can look like this too - the magic matched and what
+		// followed did not parse - so it is retried for the same reason.
+		return false, 0, fmt.Errorf("%w: the entry is a cache pointer this agent cannot read", errPointerUnread)
 	}
 	if store == nil {
 		return false, 0, errors.New("the entry is on a shared cache volume this pod has not mounted")
@@ -699,6 +719,15 @@ func restoreFromVolume(store *volume.Store, body io.Reader, allowedPaths []strin
 	}
 	return wrote, pointer.Size, nil
 }
+
+// errPointerUnread marks a pointer whose body could not be read or parsed, as opposed
+// to one that was read and led nowhere.
+//
+// The first is a transport failure like any other - the magic is only the opening bytes
+// and the rest comes over the same connection an archive would - so it is retried. The
+// second is a settled answer about the volume, which fetching the same few hundred
+// bytes again cannot change.
+var errPointerUnread = errors.New("the cache pointer could not be read")
 
 // errCacheEntryWon reports that another execution stored this key first.
 //

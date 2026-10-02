@@ -1446,3 +1446,53 @@ func TestValidateScopedCacheKey_AcceptsWhatFitsWithThePrefix(t *testing.T) {
 func TestValidateScopedCacheKey_LeavesTheLimitAloneWithoutAVolume(t *testing.T) {
 	assert.NoError(t, validateScopedCacheKey(strings.Repeat("k", executioncache.MaxKeyBytes)))
 }
+
+// The magic is only the opening bytes of a pointer; the rest arrives over the same
+// connection an archive would, so a reset part-way through is an ordinary transport
+// failure and a second GET recovers from it.
+//
+// Treating every pointer outcome as final gave the pointer path less resilience than
+// the archive path it replaced, for a failure that has nothing to do with pointers.
+func TestRunCacheRestore_RetriesAPointerBodyItCouldNotRead(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	mount := mountCacheVolume(t, "exec-1")
+
+	// A real entry, so the retry has something to find.
+	entryDir := filepath.Join(mount, volume.InboxDir, "exec-1", "entry")
+	stored := filepath.Join(entryDir, volume.EntryRoot, filepath.FromSlash(strings.TrimPrefix(posix, "/")))
+	require.NoError(t, os.MkdirAll(stored, 0o777))
+	require.NoError(t, os.WriteFile(filepath.Join(stored, "dep.txt"), []byte("cached"), 0o666))
+	pointer := volume.Encode(volume.Pointer{Path: volume.InboxFor("exec-1") + "/entry", Size: 6})
+
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if atomic.AddInt32(&calls, 1) == 1 {
+			// The magic arrives and what follows it does not parse, which is what a
+			// body cut short delivers once the length happens to line up. The
+			// connection-reset form of this is the same branch, reached by the same
+			// sentinel; it just cannot be staged deterministically, because the reset
+			// usually lands before the client has buffered the magic at all and then
+			// the transport retry below catches it instead.
+			_, _ = w.Write([]byte(volume.Magic))
+			_, _ = w.Write([]byte("not a pointer"))
+			return
+		}
+		_, _ = w.Write(pointer)
+	}))
+	defer server.Close()
+
+	out := &bytes.Buffer{}
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+	}), &fakeCacheRepository{
+		restore: executioncache.RestoreResult{Hit: true, Exact: true, MatchedKey: "npm-abc", URL: server.URL},
+	}, out)
+
+	require.NoError(t, err)
+	assert.Greater(t, atomic.LoadInt32(&calls), int32(1), "the truncated body must be fetched again")
+	body, readErr := os.ReadFile(filepath.Join(root, "dep.txt"))
+	require.NoError(t, readErr, "and the second attempt restores it")
+	assert.Equal(t, "cached", string(body))
+}
