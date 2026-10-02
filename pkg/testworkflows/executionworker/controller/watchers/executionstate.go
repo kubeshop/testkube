@@ -62,6 +62,7 @@ type ExecutionState interface {
 	InitializationTimeout() time.Duration
 
 	ExecutionError() string
+	EndingError() string
 	CurrentCause() *testkube.Cause
 	TerminationCause() *testkube.Cause
 	JobExecutionError() string
@@ -412,43 +413,64 @@ func (e *executionState) Completed() bool {
 	return !e.CompletionTimestamp().IsZero()
 }
 
+// errorText is one text of ExecutionError. A coded text only repeats what a code already names:
+// the sentence of the stop of the job, or the bare termination reason of a container.
+type errorText struct {
+	text  string
+	coded bool
+}
+
 func (e *executionState) JobExecutionError() string {
+	return e.jobError().text
+}
+
+func (e *executionState) jobError() errorText {
 	if e.job != nil && e.job.ExecutionError() != "" {
-		return e.job.ExecutionError()
+		// The deadline text names the limit that ended the job. Else the text is the sentence of the stop.
+		return errorText{text: e.job.ExecutionError(), coded: !IsJobDeadlineExceeded(e.job.Original())}
 	}
 
 	if e.jobEvents.Error() {
 		reason := e.jobEvents.ErrorReason()
 		message := e.jobEvents.ErrorMessage()
 		if message == "" {
-			return reason
+			return errorText{text: reason}
 		}
-		return fmt.Sprintf("%s: %s", reason, message)
+		return errorText{text: fmt.Sprintf("%s: %s", reason, message)}
 	}
 
-	return ""
+	return errorText{}
 }
 
 func (e *executionState) PodExecutionError() string {
-	errorStr := ""
-	if e.pod != nil && e.pod.ExecutionError() != "" {
-		errorStr = e.pod.ExecutionError()
+	return e.podError().text
+}
+
+func (e *executionState) podError() errorText {
+	// The same order as the ExecutionError of the pod, but it keeps the source of the text.
+	var err errorText
+	if e.pod != nil {
+		if text := GetPodError(e.pod.Original()); text != "" && text != "Error" {
+			err = errorText{text: text}
+		} else {
+			err = errorText{text: e.pod.ContainerError(), coded: true}
+		}
 	}
 
-	if (errorStr == "" || errorStr == "Error") && e.podEvents.Error() {
+	if (err.text == "" || err.text == "Error") && e.podEvents.Error() {
 		reason := e.podEvents.ErrorReason()
 		message := e.podEvents.ErrorMessage()
 		if message == "" {
-			return reason
+			return errorText{text: reason}
 		}
-		return fmt.Sprintf("%s: %s", reason, message)
+		return errorText{text: fmt.Sprintf("%s: %s", reason, message)}
 	}
 
-	if errorStr == "Error" {
-		return "Fatal Error"
+	if err.text == "Error" {
+		return errorText{text: "Fatal Error"}
 	}
 
-	return errorStr
+	return err
 }
 
 // imagePullWaitingReasons are the waiting reasons of a container whose image Kubernetes cannot pull.
@@ -550,12 +572,31 @@ func (e *executionState) terminationReason() testkube.StopReason {
 }
 
 func (e *executionState) ExecutionError() string {
-	podErr := e.PodExecutionError()
-	jobErr := e.JobExecutionError()
-	if podErr == "" && strings.HasPrefix(jobErr, "BackoffLimitExceeded") {
-		return "Fatal Error"
+	return e.executionError().text
+}
+
+// EndingError returns the text of ExecutionError when the text names the cause in its own words,
+// for example the deadline of the job or the message of a pod failure. It returns an empty string
+// for the sentence of the stop and for a bare container reason such as OOMKilled, because the stop
+// and the termination code already name them.
+func (e *executionState) EndingError() string {
+	if err := e.executionError(); !err.coded {
+		return err.text
 	}
-	if podErr == "" || (podErr == "Fatal Error" && jobErr != "" && !strings.HasPrefix(jobErr, "BackoffLimitExceeded")) {
+	return ""
+}
+
+func (e *executionState) executionError() errorText {
+	podErr := e.podError()
+	jobErr := e.jobError()
+	isPodErrorEmpty := podErr.text == ""
+	isBackoffLimitExceeded := strings.HasPrefix(jobErr.text, "BackoffLimitExceeded")
+	if isPodErrorEmpty && isBackoffLimitExceeded {
+		return errorText{text: "Fatal Error"}
+	}
+	isPodErrorGeneric := podErr.text == "Fatal Error"
+	isJobErrorSpecific := jobErr.text != "" && !isBackoffLimitExceeded
+	if isPodErrorEmpty || (isPodErrorGeneric && isJobErrorSpecific) {
 		return jobErr
 	}
 	return podErr

@@ -17,6 +17,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
@@ -169,35 +170,221 @@ func TestNotifier_Align(t *testing.T) {
 }
 
 func TestNotifier_End(t *testing.T) {
+	const scheduler = "0/1 nodes are available: 1 Insufficient cpu."
+	scheduledPod := &corev1.Pod{Status: corev1.PodStatus{Phase: corev1.PodPending}}
+	deadlineJob := func(annotations map[string]string) *batchv1.Job {
+		return &batchv1.Job{
+			ObjectMeta: metav1.ObjectMeta{Name: "exec-1", Annotations: annotations},
+			Spec:       batchv1.JobSpec{ActiveDeadlineSeconds: common.Ptr(int64(60))},
+			Status: batchv1.JobStatus{Conditions: []batchv1.JobCondition{{
+				Type: batchv1.JobFailed, Status: corev1.ConditionTrue, Reason: watchers.ReasonDeadlineExceeded,
+			}}},
+		}
+	}
+	plainJob := func(annotations map[string]string) *batchv1.Job {
+		return &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "exec-1", Annotations: annotations}}
+	}
+	initTimeout := map[string]string{
+		constants.AnnotationTerminationCode:   string(testkube.ABORTED_TestWorkflowStatus),
+		constants.AnnotationTerminationActor:  string(testkube.StopActorRunner),
+		constants.AnnotationTerminationReason: string(testkube.StopReasonInitTimeout),
+	}
+	userCancel := map[string]string{
+		constants.AnnotationTerminationCode:  string(testkube.CANCELED_TestWorkflowStatus),
+		constants.AnnotationTerminationActor: string(testkube.StopActorUser),
+	}
+
 	tests := []struct {
 		name        string
-		annotations map[string]string
+		job         *batchv1.Job
+		pod         *corev1.Pod
+		initMessage string
+		initReason  string
+		// then runs after the notifier wrote the cause of the pod, and before End
+		then        func(n *notifier)
 		wantStatus  testkube.TestWorkflowStepStatus
 		wantMessage string
+		wantReason  string
+		wantDetails string
 	}{
 		{
 			name:        "puts the recorded cause into the cancel message",
-			annotations: map[string]string{constants.AnnotationTerminationCode: string(testkube.CANCELED_TestWorkflowStatus)},
+			job:         plainJob(map[string]string{constants.AnnotationTerminationCode: string(testkube.CANCELED_TestWorkflowStatus)}),
+			pod:         unschedulablePod,
 			wantStatus:  testkube.CANCELED_TestWorkflowStepStatus,
 			wantMessage: "The execution has been canceled. (no node can run the pod: 0/1 nodes are available: 1 Insufficient cpu)",
+			wantReason:  string(testkube.StopReasonUnschedulable),
+			wantDetails: scheduler,
 		},
 		{
 			name:        "puts the recorded cause into the abort message of a job without a termination code",
+			job:         plainJob(nil),
+			pod:         unschedulablePod,
 			wantStatus:  testkube.ABORTED_TestWorkflowStepStatus,
 			wantMessage: "The execution has been aborted. (no node can run the pod: 0/1 nodes are available: 1 Insufficient cpu)",
+			wantReason:  string(testkube.StopReasonUnschedulable),
+			wantDetails: scheduler,
+		},
+		{
+			name:        "gives the words of a stop of the runner before the recorded cause",
+			job:         plainJob(initTimeout),
+			pod:         unschedulablePod,
+			wantStatus:  testkube.ABORTED_TestWorkflowStepStatus,
+			wantMessage: "The execution has been aborted. (by the runner: the first step did not start before the initialization timeout of the workflow: no node can run the pod: 0/1 nodes are available: 1 Insufficient cpu)",
+			wantReason:  string(testkube.StopReasonUnschedulable),
+			wantDetails: "the first step did not start before the initialization timeout of the workflow: " + scheduler,
+		},
+		{
+			name:        "gives only the recorded cause when a person canceled",
+			job:         plainJob(userCancel),
+			pod:         unschedulablePod,
+			wantStatus:  testkube.CANCELED_TestWorkflowStepStatus,
+			wantMessage: "The execution has been canceled. (by the user: no node can run the pod: 0/1 nodes are available: 1 Insufficient cpu)",
+			wantReason:  string(testkube.StopReasonUserCancel),
+			wantDetails: scheduler,
+		},
+		{
+			name:        "gives the deadline of the job when the step holds no cause",
+			job:         deadlineJob(nil),
+			pod:         scheduledPod,
+			wantStatus:  testkube.ABORTED_TestWorkflowStepStatus,
+			wantMessage: "The execution has been aborted. (Job timed out after 60 seconds)",
+			wantReason:  string(testkube.StopReasonDeadlineExceeded),
+			wantDetails: "Job timed out after 60 seconds",
+		},
+		{
+			name:        "gives the deadline of the job before the recorded cause",
+			job:         deadlineJob(nil),
+			pod:         unschedulablePod,
+			wantStatus:  testkube.ABORTED_TestWorkflowStepStatus,
+			wantMessage: "The execution has been aborted. (Job timed out after 60 seconds: no node can run the pod: 0/1 nodes are available: 1 Insufficient cpu)",
+			wantReason:  string(testkube.StopReasonUnschedulable),
+			wantDetails: "Job timed out after 60 seconds: " + scheduler,
+		},
+		{
+			name:        "gives no message when nothing explains the stop",
+			job:         plainJob(nil),
+			pod:         scheduledPod,
+			wantStatus:  testkube.ABORTED_TestWorkflowStepStatus,
+			wantMessage: "The execution has been aborted. (Job has been aborted)",
+			wantReason:  string(testkube.StopReasonUnknown),
+			wantDetails: "",
+		},
+		{
+			name:        "keeps a cause that another writer put into the step as it was written",
+			job:         plainJob(nil),
+			pod:         scheduledPod,
+			initMessage: "the image could not be pulled: not found",
+			initReason:  string(testkube.StartReasonImagePullFailed),
+			wantStatus:  testkube.ABORTED_TestWorkflowStepStatus,
+			wantMessage: "The execution has been aborted. (the image could not be pulled: not found)",
+			wantReason:  string(testkube.StartReasonImagePullFailed),
+			wantDetails: "the image could not be pulled: not found",
+		},
+		{
+			name: "forgets the cause after the container of the step started",
+			job:  plainJob(nil),
+			pod:  unschedulablePod,
+			then: func(n *notifier) {
+				n.Instruction(time.Now(), instructions.Instruction{Ref: initconstants.InitStepName, Name: initconstants.InstructionStart}, "exec-1")
+			},
+			wantStatus:  testkube.ABORTED_TestWorkflowStepStatus,
+			wantMessage: "The execution has been aborted. (Job has been aborted)",
+			wantReason:  string(testkube.StopReasonUnknown),
+			wantDetails: "",
+		},
+		{
+			name: "forgets the cause after another writer cleared the message of the step",
+			job:  plainJob(nil),
+			pod:  unschedulablePod,
+			then: func(n *notifier) {
+				n.result.Initialization.ErrorMessage, n.result.Initialization.ErrorReason = "", ""
+				n.Align(watchers.NewExecutionState(watchers.NewJob(plainJob(nil)), watchers.NewPod(scheduledPod), watchers.NewJobEvents(nil), watchers.NewPodEvents(nil), nil))
+			},
+			wantStatus:  testkube.ABORTED_TestWorkflowStepStatus,
+			wantMessage: "The execution has been aborted. (Job has been aborted)",
+			wantReason:  string(testkube.StopReasonUnknown),
+			wantDetails: "",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n := newTestNotifier(t, testkube.RUNNING_TestWorkflowStepStatus, "")
-			job := watchers.NewJob(&batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "exec-1", Annotations: tt.annotations}})
-			n.Align(watchers.NewExecutionState(job, watchers.NewPod(unschedulablePod), watchers.NewJobEvents(nil), watchers.NewPodEvents(nil), nil))
+			n := newTestNotifier(t, testkube.RUNNING_TestWorkflowStepStatus, tt.initMessage)
+			n.result.Initialization.ErrorReason = tt.initReason
+			n.Align(watchers.NewExecutionState(watchers.NewJob(tt.job), watchers.NewPod(tt.pod), watchers.NewJobEvents(nil), watchers.NewPodEvents(nil), nil))
+			if tt.then != nil {
+				tt.then(n)
+			}
 
 			n.End()
 
 			assert.Equal(t, tt.wantStatus, *n.result.Initialization.Status)
 			assert.Equal(t, tt.wantMessage, n.result.Initialization.ErrorMessage)
+			require.NotNil(t, n.result.StatusDetails)
+			assert.Equal(t, tt.wantReason, n.result.StatusDetails.Reason)
+			assert.Equal(t, tt.wantDetails, n.result.StatusDetails.Message)
+		})
+	}
+}
+
+func TestNotifier_End_InitProcessCause(t *testing.T) {
+	const ref = "rstep1"
+	execution := func(details, reason string) instructions.Instruction {
+		return instructions.Instruction{Ref: ref, Name: initconstants.InstructionExecution, Value: initconstants.ExecutionResult{ExitCode: 1, Details: details, Reason: reason}}
+	}
+	end := instructions.Instruction{Ref: ref, Name: initconstants.InstructionEnd, Value: string(testkube.ABORTED_TestWorkflowStepStatus)}
+	retry := instructions.Instruction{Ref: ref, Name: initconstants.InstructionIteration, Value: 1}
+
+	tests := []struct {
+		name        string
+		hints       []instructions.Instruction
+		wantMessage string
+		wantDetails string
+	}{
+		{
+			name:        "a code without details names the step and the phrase of the code",
+			hints:       []instructions.Instruction{execution("", string(testkube.StopReasonStepTimeout)), end},
+			wantMessage: "the step did not finish within its timeout",
+			wantDetails: `The step "Run tests" did not finish within its timeout.`,
+		},
+		{
+			name:        "details from the init process stay as the cause",
+			hints:       []instructions.Instruction{execution("the test process was killed (signal: killed)", string(testkube.StopReasonProcessKilled)), end},
+			wantMessage: "the test process was killed (signal: killed)",
+			wantDetails: "the test process was killed (signal: killed)",
+		},
+		{
+			name:        "later details replace a code without details",
+			hints:       []instructions.Instruction{execution("", string(testkube.StopReasonStepTimeout)), execution("the step stopped: exit 137", string(testkube.StopReasonStepTimeout)), end},
+			wantMessage: "the step stopped: exit 137",
+			wantDetails: "the step stopped: exit 137",
+		},
+		{
+			name:        "a retry forgets the code of the previous attempt",
+			hints:       []instructions.Instruction{execution("", string(testkube.StopReasonStepTimeout)), retry, execution("the step stopped: exit 137", string(testkube.StopReasonProcessKilled)), end},
+			wantMessage: "the step stopped: exit 137",
+			wantDetails: "the step stopped: exit 137",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := newTestNotifier(t, testkube.PASSED_TestWorkflowStepStatus, "")
+			n.Align(watchers.NewExecutionState(watchers.NewJob(&batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "exec-1"}}), watchers.NewPod(&corev1.Pod{}), watchers.NewJobEvents(nil), watchers.NewPodEvents(nil), nil))
+			// One container runs the step, so the notifier can read the order of the steps.
+			n.sigSequence = []testkube.TestWorkflowSignature{{Ref: ref, Name: "Run tests"}}
+			n.actions = make(actiontypes.ActionGroups, 1)
+			n.endRefs = [][]string{{ref}}
+			for _, hint := range tt.hints {
+				n.Instruction(time.Now(), hint, "exec-1")
+			}
+
+			n.End()
+
+			assert.Equal(t, tt.wantMessage, n.result.Steps[ref].ErrorMessage)
+			require.NotNil(t, n.result.StatusDetails)
+			assert.Equal(t, tt.wantDetails, n.result.StatusDetails.Message)
 		})
 	}
 }
@@ -269,6 +456,13 @@ func TestNotifier_Instruction(t *testing.T) {
 		{
 			name:         "writes the reason code that the init process sends with its message",
 			hints:        []instructions.Instruction{executionWithReason(timeout, "step-timeout")},
+			wantMessage:  timeout,
+			wantReason:   "step-timeout",
+			wantAttempts: 1,
+		},
+		{
+			name:         "writes the sentence of the code that the init process sends without details",
+			hints:        []instructions.Instruction{executionWithReason("", "step-timeout")},
 			wantMessage:  timeout,
 			wantReason:   "step-timeout",
 			wantAttempts: 1,

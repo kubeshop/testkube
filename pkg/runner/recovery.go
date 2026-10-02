@@ -15,7 +15,7 @@ func healRecoveredResult(result *testkube.TestWorkflowResult, sigSequence []test
 	if result.IsFinished() {
 		return
 	}
-	result.HealAbortedOrCanceled(sigSequence, cause, controller.DefaultErrorMessage, string(testkube.ABORTED_TestWorkflowStatus), causeReason)
+	result.HealAbortedOrCanceled(sigSequence, cause, controller.DefaultErrorMessage, string(testkube.ABORTED_TestWorkflowStatus), causeReason, nil)
 	result.HealTimestamps(sigSequence, scheduledAt, time.Time{}, time.Time{}, true)
 	result.HealDuration(scheduledAt)
 	result.HealMissingPauseStatuses()

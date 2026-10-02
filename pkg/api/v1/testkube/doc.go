@@ -14,6 +14,9 @@
 //   - Reason is a code for the cause. The codes live in stop_reason.go and start_reason.go, each
 //     with a sentence for a message. The values are stable, because filters and telemetry use them.
 //   - Message and Step name the step that holds the cause. They stay inside the deployment.
+//     The message holds only the cause, because the type, the reason and the status already have
+//     their own place. The step message keeps the full termination sentence. So the runner gives
+//     the classifier the plain cause of each step that a stop ended, from the values it saw.
 //   - Actor is the component that decided a stop. The codes live in stop_actor.go.
 //   - User is the person who canceled. The control plane fills it, and the runner never does.
 //

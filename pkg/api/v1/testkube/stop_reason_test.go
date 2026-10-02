@@ -56,3 +56,23 @@ func TestStopReason_Sentence(t *testing.T) {
 		})
 	}
 }
+
+func TestStopReason_Phrase(t *testing.T) {
+	tests := []struct {
+		name   string
+		reason StopReason
+		want   string
+	}{
+		{name: "out of memory", reason: StopReasonOOMKilled, want: "ran out of memory"},
+		{name: "step timeout", reason: StopReasonStepTimeout, want: "did not finish within its timeout"},
+		{name: "process killed", reason: StopReasonProcessKilled, want: "was killed, possibly by an out-of-memory kill"},
+		{name: "container error", reason: StopReasonContainerError, want: "could not run its container"},
+		{name: "a code that one step does not hold has no phrase", reason: StopReasonUnschedulable, want: ""},
+		{name: "an unknown code has no phrase", reason: StopReason("later-added"), want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.reason.Phrase())
+		})
+	}
+}

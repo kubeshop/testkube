@@ -33,12 +33,15 @@ type notifier struct {
 	lastTs time.Time
 	ended  bool
 
-	// The message that alignCause wrote, empty when it wrote none
-	cause string
 	// The step that holds the cause that alignCause wrote
 	causeRef string
+	// The cause that alignCause wrote, nil when it wrote none. The step message is its String().
+	causeValue *testkube.Cause
 	// The last state that alignCause checked. The watcher builds a new state for each update.
 	causeState watchers2.ExecutionState
+	// The steps that the init process ended with a reason code and no words of its own. The step
+	// message is the sentence of the code, so the plain cause of the step is empty.
+	codeOnly map[string]bool
 
 	// Cached data for better performance
 	actions     actiontypes.ActionGroups
@@ -225,8 +228,8 @@ func (n *notifier) alignCause(state watchers2.ExecutionState) bool {
 	}
 	n.causeState = state
 	// Another writer replaced the message of the cause, for example the result of the step. The notifier does not own it anymore.
-	if n.cause != "" && n.stepResult(n.causeRef).ErrorMessage != n.cause {
-		n.cause, n.causeRef = "", ""
+	if n.causeValue != nil && n.stepResult(n.causeRef).ErrorMessage != n.written() {
+		n.clearCause()
 	}
 	cause, message, ref, ok := n.pendingCause(state)
 	if !ok {
@@ -243,11 +246,24 @@ func (n *notifier) alignCause(state watchers2.ExecutionState) bool {
 		}
 	}
 	n.setStepResult(ref, step)
-	n.cause, n.causeRef = message, ref
-	if message == "" {
-		n.causeRef = ""
+	n.causeRef, n.causeValue = ref, cause
+	if cause == nil {
+		n.clearCause()
 	}
 	return true
+}
+
+// clearCause forgets the cause that alignCause wrote. After it, the notifier does not own the message of the step.
+func (n *notifier) clearCause() {
+	n.causeRef, n.causeValue = "", nil
+}
+
+// written returns the message of the cause that alignCause wrote, empty when it wrote none.
+func (n *notifier) written() string {
+	if n.causeValue == nil {
+		return ""
+	}
+	return n.causeValue.String()
 }
 
 // pendingCause returns the current cause, its message, the step for the message, and true when the message must change.
@@ -256,8 +272,8 @@ func (n *notifier) pendingCause(state watchers2.ExecutionState) (*testkube.Cause
 	ref := n.waitingStep()
 	// A running step, or another waiting step, shows that the container of the cause started.
 	// Then the notifier clears its own cause, also after the execution completes.
-	if n.cause != "" && (n.anyStepRunning() || ref != n.causeRef) {
-		return nil, "", n.causeRef, n.stepResult(n.causeRef).ErrorMessage == n.cause
+	if n.causeValue != nil && (n.anyStepRunning() || ref != n.causeRef) {
+		return nil, "", n.causeRef, n.stepResult(n.causeRef).ErrorMessage == n.written()
 	}
 	if ref == "" || n.anyStepRunning() {
 		return nil, "", "", false
@@ -267,14 +283,14 @@ func (n *notifier) pendingCause(state watchers2.ExecutionState) (*testkube.Cause
 	if cause != nil {
 		message = cause.String()
 	}
-	if message == n.cause {
+	if message == n.written() {
 		return nil, "", "", false
 	}
 	// Kubernetes deletes the pod of an ended execution, so the cause goes away with the pod. Keep the last cause.
 	if cause == nil && state.Completed() {
 		return nil, "", "", false
 	}
-	if existing := n.stepResult(ref).ErrorMessage; existing != n.cause && existing != message {
+	if existing := n.stepResult(ref).ErrorMessage; existing != n.written() && existing != message {
 		return nil, "", "", false
 	}
 	return cause, message, ref, true
@@ -308,9 +324,9 @@ func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction, exec
 		step.StartedAt = ts
 		step.Status = common.Ptr(testkube.RUNNING_TestWorkflowStepStatus)
 		// The container of the step started, so the cause of its wait does not apply anymore.
-		if hint.Ref == n.causeRef && step.ErrorMessage == n.cause {
+		if n.causeValue != nil && hint.Ref == n.causeRef && step.ErrorMessage == n.written() {
 			step.ErrorMessage, step.ErrorReason = "", ""
-			n.cause, n.causeRef = "", ""
+			n.clearCause()
 		}
 	case constants.InstructionEnd:
 		status := testkube.TestWorkflowStepStatus(hint.Value.(string))
@@ -325,9 +341,19 @@ func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction, exec
 		_ = json.Unmarshal(serialized, &executionResult)
 		step.ExitCode = float64(executionResult.ExitCode)
 		step.Attempts = max(step.Attempts, int32(executionResult.Iteration)+1)
-		if executionResult.Details != "" {
+		switch {
+		case executionResult.Details != "":
 			// The init process sends the code of its own causes, and an empty code for a message from a command.
 			step.ErrorMessage, step.ErrorReason = executionResult.Details, executionResult.Reason
+			delete(n.codeOnly, hint.Ref)
+		case executionResult.Reason != "":
+			// The code alone says what happened, so the step message is the sentence of the code.
+			step.ErrorMessage = testkube.Cause{Reason: executionResult.Reason}.String()
+			step.ErrorReason = executionResult.Reason
+			if n.codeOnly == nil {
+				n.codeOnly = map[string]bool{}
+			}
+			n.codeOnly[hint.Ref] = true
 		}
 	case constants.InstructionIteration:
 		// The init process sends the iteration before each retry, and the iteration starts at 0.
@@ -338,6 +364,7 @@ func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction, exec
 		step.Attempts = max(step.Attempts, iteration+1)
 		// A retry starts a new attempt, so the message of the previous attempt does not describe the step anymore.
 		step.ErrorMessage, step.ErrorReason = "", ""
+		delete(n.codeOnly, hint.Ref)
 	case constants.InstructionPause:
 		pauseTsStr := hint.Value.(string)
 		pauseTs, err := time.Parse(time.RFC3339Nano, pauseTsStr)
@@ -398,13 +425,36 @@ func (n *notifier) End() {
 	if n.state != nil && n.state.ExecutionError() != "" {
 		errorMessage = n.state.ExecutionError()
 	}
-	n.result.HealAbortedOrCanceled(n.sigSequence, errorMessage, DefaultErrorMessage, stop.Code, n.terminationReason(stop))
+	causes := testkube.StopCauses{Stop: stop, Written: n.writtenCauses(), Ending: n.state.EndingError()}
+	stop.Causes = n.result.HealAbortedOrCanceled(n.sigSequence, errorMessage, DefaultErrorMessage, stop.Code, n.terminationReason(stop), &causes)
+	// The heal does not end a step that the init process ended, so the step keeps the sentence of its code.
+	for ref := range n.codeOnly {
+		if ref == constants.InitStepName {
+			ref = ""
+		}
+		if _, ok := stop.Causes[ref]; !ok {
+			stop.Causes[ref] = ""
+		}
+	}
 
 	// Finalize the status
 	n.reconcile()
 
 	// The classifier reads the final result, so it runs after the reconcile settles the statuses.
 	n.result.StatusDetails = n.result.ClassifyStatus(n.sigSequence, stop)
+}
+
+// writtenCauses returns the cause that alignCause wrote, by the reference that the heal and the
+// classifier use, with an empty reference for the initialization step.
+func (n *notifier) writtenCauses() map[string]*testkube.Cause {
+	if n.causeValue == nil {
+		return nil
+	}
+	ref := n.causeRef
+	if ref == constants.InitStepName {
+		ref = ""
+	}
+	return map[string]*testkube.Cause{ref: n.causeValue}
 }
 
 // terminationReason returns the code for the stop of the execution, and an empty string when no

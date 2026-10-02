@@ -136,3 +136,21 @@ func (r StopReason) Sentence() string {
 		return ""
 	}
 }
+
+// Phrase returns the words for what happened to one step, for a sentence that names the step,
+// for example "ran out of memory". It returns an empty string for a reason that does not end
+// one step.
+func (r StopReason) Phrase() string {
+	switch r {
+	case StopReasonOOMKilled:
+		return "ran out of memory"
+	case StopReasonStepTimeout:
+		return "did not finish within its timeout"
+	case StopReasonProcessKilled:
+		return "was killed, possibly by an out-of-memory kill"
+	case StopReasonContainerError:
+		return "could not run its container"
+	default:
+		return ""
+	}
+}
