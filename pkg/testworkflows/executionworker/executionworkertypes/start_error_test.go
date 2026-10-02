@@ -23,9 +23,17 @@ func TestStartReasonOf(t *testing.T) {
 			want: testkube.StartReasonJobCreateFailed,
 		},
 		{
-			name: "inner phase keeps its reason when an outer phase wraps it",
+			name: "inner phase keeps its reason when an outer phase sets another",
 			err: WithStartReason(
-				pkgerrors.Wrap(WithStartReason(errors.New("unauthorized"), testkube.StartReasonImagePullFailed), "failed to process test workflow"),
+				WithStartReason(errors.New("unauthorized"), testkube.StartReasonImagePullFailed),
+				testkube.StartReasonDefinitionInvalid,
+			),
+			want: testkube.StartReasonImagePullFailed,
+		},
+		{
+			name: "inner phase keeps its reason through a wrap",
+			err: WithStartReason(
+				pkgerrors.Wrap(WithStartReason(errors.New("unauthorized"), testkube.StartReasonImagePullFailed), "applying image data"),
 				testkube.StartReasonDefinitionInvalid,
 			),
 			want: testkube.StartReasonImagePullFailed,

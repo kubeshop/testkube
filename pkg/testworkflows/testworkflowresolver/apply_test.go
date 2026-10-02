@@ -212,33 +212,48 @@ var (
 	}
 )
 
-func TestApplyTemplatesMissingTemplate(t *testing.T) {
-	wf := workflowSteps.DeepCopy()
-	wf.Spec.Use = []testworkflowsv1.TemplateRef{{Name: "unknown"}}
-	err := ApplyTemplates(wf, templates, nil)
-
-	assert.Error(t, err)
-	assert.Equal(t, err.Error(), `spec.use[0]: resolving template: template "unknown" not found`)
-}
-
-func TestApplyTemplatesMissingConfig(t *testing.T) {
-	wf := workflowSteps.DeepCopy()
-	wf.Spec.Use = []testworkflowsv1.TemplateRef{tplPodConfigRefEmpty}
-	err := ApplyTemplates(wf, templates, nil)
-
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), `spec.use[0]: resolving template:`)
-	assert.Contains(t, err.Error(), `config.department: unknown variable`)
-}
-
-func TestApplyTemplatesInvalidConfig(t *testing.T) {
-	wf := workflowSteps.DeepCopy()
-	wf.Spec.Use = []testworkflowsv1.TemplateRef{tplStepsConfigRefStringInvalid}
-	err := ApplyTemplates(wf, templates, nil)
-
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), `spec.use[0]: resolving template: config.index`)
-	assert.Contains(t, err.Error(), `error while converting value to number`)
+func TestApplyTemplates_Errors(t *testing.T) {
+	stepWithTemplate := func(ref testworkflowsv1.TemplateRef) *testworkflowsv1.TestWorkflow {
+		wf := workflowSteps.DeepCopy()
+		wf.Spec.Steps[0].Template = &ref
+		return wf
+	}
+	specWithTemplate := func(ref testworkflowsv1.TemplateRef) *testworkflowsv1.TestWorkflow {
+		wf := workflowSteps.DeepCopy()
+		wf.Spec.Use = []testworkflowsv1.TemplateRef{ref}
+		return wf
+	}
+	tests := []struct {
+		name     string
+		workflow *testworkflowsv1.TestWorkflow
+		want     string
+	}{
+		{
+			name:     "a template that does not exist",
+			workflow: specWithTemplate(testworkflowsv1.TemplateRef{Name: "unknown"}),
+			want:     `spec.use[0] "unknown": the template does not exist`,
+		},
+		{
+			name:     "a config value that the workflow does not set",
+			workflow: specWithTemplate(tplPodConfigRefEmpty),
+			want:     `spec.use[0] "podConfig": the config value "department" is not set`,
+		},
+		{
+			name:     "a config value of the wrong type",
+			workflow: specWithTemplate(tplStepsConfigRefStringInvalid),
+			want:     `spec.use[0] "stepsConfig": config.index: error while calling int("text"): error while converting value to number: "text": invalid syntax`,
+		},
+		{
+			name:     "a step names the template that needs a config value",
+			workflow: stepWithTemplate(tplPodConfigRefEmpty),
+			want:     `spec.steps[0].template "podConfig": the config value "department" is not set`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.EqualError(t, ApplyTemplates(tt.workflow, templates, nil), tt.want)
+		})
+	}
 }
 
 func TestApplyTemplatesConfig(t *testing.T) {

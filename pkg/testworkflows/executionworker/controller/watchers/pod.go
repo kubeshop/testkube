@@ -259,10 +259,14 @@ func (p *pod) WaitingReason(reasons ...string) (string, string) {
 	return "", ""
 }
 
-// Unschedulable returns the message of the scheduler when no node can run the pod.
+// Unschedulable returns the message of the scheduler when no node can run the pod. The scheduler
+// can end its message with two periods, so the message ends with one.
 func (p *pod) Unschedulable() (string, bool) {
 	for _, c := range p.original.Status.Conditions {
 		if c.Type == corev1.PodScheduled && c.Status == corev1.ConditionFalse && c.Reason == corev1.PodReasonUnschedulable {
+			if message := strings.TrimRight(c.Message, "."); message != c.Message {
+				return message + ".", true
+			}
 			return c.Message, true
 		}
 	}

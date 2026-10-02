@@ -1,10 +1,13 @@
 package testworkflowexecutor
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	gomock "go.uber.org/mock/gomock"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
@@ -143,4 +146,40 @@ func TestTestWorkflowTemplateFetcher_ConcurrentAccess(t *testing.T) {
 		assert.Equal(t, newTmpl.Description, fetched.Description)
 		assert.Equal(t, newTmpl.Labels, fetched.Labels)
 	})
+}
+
+func TestTestWorkflowTemplateFetcher_Prefetch_Error(t *testing.T) {
+	notFound := k8serrors.NewNotFound(schema.GroupResource{Group: "testworkflows.testkube.io", Resource: "testworkflowtemplates"}, "group--missing")
+	tests := []struct {
+		name     string
+		err      error
+		want     string
+		notFound bool
+	}{
+		{
+			name: "an error of the store names the template once",
+			err:  errors.New("record does not exist"),
+			want: `the template "group/missing": record does not exist`,
+		},
+		{
+			name:     "a template that Kubernetes does not find gives one sentence",
+			err:      notFound,
+			want:     `the template "group/missing" does not exist`,
+			notFound: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			client := testworkflowtemplateclient.NewMockTestWorkflowTemplateClient(ctrl)
+			client.EXPECT().
+				Get(gomock.Any(), "test-env", testworkflowresolver.GetInternalTemplateName("group/missing")).
+				Return(nil, tt.err)
+
+			err := NewTestWorkflowTemplateFetcher(client, "test-env").Prefetch("group/missing")
+
+			assert.EqualError(t, err, tt.want)
+			assert.Equal(t, tt.notFound, k8serrors.IsNotFound(err))
+		})
+	}
 }

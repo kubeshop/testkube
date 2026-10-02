@@ -78,3 +78,40 @@ func TestPod_FinishTimestamp(t *testing.T) {
 		})
 	}
 }
+
+func TestPod_Unschedulable(t *testing.T) {
+	tests := []struct {
+		name    string
+		message string
+		want    string
+	}{
+		{
+			name:    "a message with two final periods ends with one",
+			message: "0/2 nodes are available: 2 node(s) didn't match Pod's node affinity/selector. preemption: 0/2 nodes are available: 2 Preemption is not helpful for scheduling..",
+			want:    "0/2 nodes are available: 2 node(s) didn't match Pod's node affinity/selector. preemption: 0/2 nodes are available: 2 Preemption is not helpful for scheduling.",
+		},
+		{
+			name:    "a message with one final period stays",
+			message: "0/1 nodes are available: 1 Insufficient cpu.",
+			want:    "0/1 nodes are available: 1 Insufficient cpu.",
+		},
+		{
+			name:    "a message without a final period stays",
+			message: "0/1 nodes are available",
+			want:    "0/1 nodes are available",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := NewPod(&corev1.Pod{Status: corev1.PodStatus{Conditions: []corev1.PodCondition{{
+				Type:    corev1.PodScheduled,
+				Status:  corev1.ConditionFalse,
+				Reason:  corev1.PodReasonUnschedulable,
+				Message: tt.message,
+			}}}})
+			got, ok := p.Unschedulable()
+			assert.True(t, ok)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
