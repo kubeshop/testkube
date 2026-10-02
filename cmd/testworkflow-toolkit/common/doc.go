@@ -11,8 +11,11 @@
 // the first line, as plain text. The orchestration package of the init process documents
 // the full contract.
 //
-// When the environment has no TK_ERR_FILE, for example outside a workflow step in a test,
-// the helpers only call pkg/ui.
+// FailWithReason and ExitOnErrorWithReason also write a reason code to the file that
+// TK_REASON_FILE names. Use them only for a failure that the code names exactly.
+//
+// When the environment has no TK_ERR_FILE or TK_REASON_FILE, for example outside a workflow step
+// in a test, the helpers do not write that file.
 //
 // The env and env/config packages cannot import this package, because that makes an import
 // cycle. A failure in these packages, for example a Kubernetes configuration that the toolkit

@@ -29,8 +29,7 @@ func ExitOnErrorWithReason(reason testkube.StopReason, item string, err error) {
 
 // Fail writes the error as the step message, then prints it and exits.
 func Fail(err error) {
-	writeStepError(err.Error())
-	ui.Fail(err)
+	FailWithReason("", err)
 }
 
 // Failf writes the formatted error as the step message, then prints it and exits.
@@ -42,10 +41,7 @@ func Failf(format string, params ...interface{}) {
 // ExitOnError writes the item and the error as the step message, then prints them and exits.
 // When the error is nil, only pkg/ui runs, because it prints the item in verbose mode.
 func ExitOnError(item string, err error) {
-	if err != nil {
-		writeStepError(fmt.Sprintf("%s: %s", item, err.Error()))
-	}
-	ui.ExitOnError(item, err)
+	ExitOnErrorWithReason("", item, err)
 }
 
 // writeStepError writes the message to the file that TK_ERR_FILE names. A write error is not
@@ -54,8 +50,12 @@ func writeStepError(message string) {
 	writeStepFile(constants.EnvStepErrorFile, message)
 }
 
-// writeStepReason writes the code to the file that TK_REASON_FILE names.
+// writeStepReason writes the code to the file that TK_REASON_FILE names. A failure without a code
+// writes no file.
 func writeStepReason(reason string) {
+	if reason == "" {
+		return
+	}
 	writeStepFile(constants.EnvStepReasonFile, reason)
 }
 

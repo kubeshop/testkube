@@ -104,9 +104,7 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 		output.ExitErrorf(constants.CodeInputError, "%s", executiondata.WithheldError("the command of this step", markers).Error())
 	}
 
-	// Remove the message of an earlier step or attempt. When the file stays, its message can be old, so the step does not read it.
-	// Both files must be gone before the step runs, so a message of an earlier attempt does not
-	// reach this one.
+	// Remove the message and the code of an earlier step or attempt. When a file stays, its content can be old, so the step does not read it.
 	stepErrorFresh := removeStepError(constants.StepErrorPath) && removeStepError(constants.StepReasonPath)
 
 	// Run the operation with context

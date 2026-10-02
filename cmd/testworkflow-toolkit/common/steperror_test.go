@@ -46,24 +46,24 @@ func TestWriteStepError(t *testing.T) {
 
 func TestWriteStepReason(t *testing.T) {
 	tests := []struct {
-		name    string
-		setPath bool
-		reason  testkube.StopReason
-		want    string
-		wantAny bool
+		name     string
+		setPath  bool
+		reason   testkube.StopReason
+		wantFile bool
 	}{
 		{
-			name:    "writes the code to the file that TK_REASON_FILE names",
-			setPath: true,
-			reason:  testkube.StopReasonGitAuthFailed,
-			want:    "git-auth-failed",
-			wantAny: true,
+			name:     "writes the code to the file that TK_REASON_FILE names",
+			setPath:  true,
+			reason:   testkube.StopReasonGitAuthFailed,
+			wantFile: true,
 		},
 		{
-			// An init image from an earlier release names no reason file, so the toolkit writes
-			// none and the step keeps its message alone.
-			name:   "writes no file when the init process names none",
+			name:   "an init process of an earlier release names no file, so the toolkit writes none",
 			reason: testkube.StopReasonGitAuthFailed,
+		},
+		{
+			name:    "a failure without a code writes no file",
+			setPath: true,
 		},
 	}
 
@@ -79,12 +79,12 @@ func TestWriteStepReason(t *testing.T) {
 			writeStepReason(string(tt.reason))
 
 			content, err := os.ReadFile(path)
-			if !tt.wantAny {
-				assert.Error(t, err)
+			if !tt.wantFile {
+				assert.ErrorIs(t, err, os.ErrNotExist)
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, string(content))
+			assert.Equal(t, string(tt.reason), string(content))
 		})
 	}
 }

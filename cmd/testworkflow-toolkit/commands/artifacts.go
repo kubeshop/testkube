@@ -53,7 +53,7 @@ func NewArtifactsCmd() *cobra.Command {
 			common.ExitOnErrorWithReason(testkube.StopReasonArtifactUploadFailed, "building a walker", err)
 
 			if len(walker.Patterns()) == 0 || len(walker.SearchPaths()) == 0 {
-				common.FailWithReason(testkube.StopReasonArtifactUploadFailed, errors.New("did not found any valid path pattern in the mounted directories"))
+				common.FailWithReason(testkube.StopReasonArtifactUploadFailed, errors.New("did not find any valid path pattern in the mounted directories"))
 			}
 
 			fmt.Printf("Root: %s\nPatterns:\n", ui.LightCyan(walker.Root()))
@@ -82,7 +82,7 @@ func NewArtifactsCmd() *cobra.Command {
 			cfg := config.Config()
 			client, err := env.Cloud()
 			if err != nil {
-				common.Failf("could not create cloud client: %v", err)
+				common.FailWithReason(testkube.StopReasonArtifactUploadFailed, fmt.Errorf("could not create cloud client: %w", err))
 			}
 
 			postProcessors := make([]artifacts.PostProcessor, 0, 5)

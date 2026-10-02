@@ -151,9 +151,11 @@ func NewServicesCmd() *cobra.Command {
 
 			executor := NewServicesExecutor(groupRef, base64Encoded, deps)
 			if err := executor.Execute(cmd.Context(), args); err != nil {
-				// A service that does not start or does not become ready is an infrastructure
-				// failure, so the step reports it apart from a failure of the test.
-				toolkitcommon.FailWithReason(testkube.StopReasonServiceNotReady, err)
+				if reason := servicesFailureReason(err); reason != "" {
+					toolkitcommon.FailWithReason(reason, err)
+				} else {
+					toolkitcommon.Fail(err)
+				}
 			}
 		},
 	}
@@ -219,7 +221,28 @@ func (e *ServicesExecutor) Execute(ctx context.Context, args []string) error {
 		return nil
 	}
 	fmt.Printf("Failed to start %d out of %d expected workers.\n", failed, len(instances))
-	return fmt.Errorf("%d services failed to start: %s", failed, firstFailure)
+	return &ServicesNotStartedError{Failed: failed, FirstFailure: firstFailure}
+}
+
+// ServicesNotStartedError is the failure of services that did not start or did not become ready.
+type ServicesNotStartedError struct {
+	Failed       int64
+	FirstFailure string
+}
+
+func (e *ServicesNotStartedError) Error() string {
+	return fmt.Sprintf("%d services failed to start: %s", e.Failed, e.FirstFailure)
+}
+
+// servicesFailureReason returns the code for a failure of the services step. Only services that did
+// not start or did not become ready are an infrastructure failure. An error in the definition or in
+// the setup of the step happens before a service starts, so it gets no code.
+func servicesFailureReason(err error) testkube.StopReason {
+	var notStarted *ServicesNotStartedError
+	if errors.As(err, &notStarted) {
+		return testkube.StopReasonServiceNotReady
+	}
+	return ""
 }
 
 // parseServices supports two input formats:

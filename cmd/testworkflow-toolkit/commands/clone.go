@@ -52,7 +52,6 @@ type CloneOptions struct {
 	RetryDelay time.Duration
 }
 
-// NewCloneCmd creates a new clone command
 // gitAuthErrors are the texts that git writes when it refuses a credential. Git reports every
 // clone failure with the exit code 128, so the text is the only signal that tells them apart.
 var gitAuthErrors = []string{
@@ -74,6 +73,7 @@ func cloneReason(err error) testkube.StopReason {
 	return testkube.StopReasonGitCloneFailed
 }
 
+// NewCloneCmd creates a new clone command
 func NewCloneCmd() *cobra.Command {
 	opts := &CloneOptions{}
 
