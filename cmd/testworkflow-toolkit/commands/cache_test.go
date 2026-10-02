@@ -36,13 +36,17 @@ type fakeCacheRepository struct {
 	saveErr    error
 
 	restoreCalls int
+	restoredKey  string
+	restoredKeys []string
 	saveCalls    int
 	savedKey     string
 	savedSize    int64
 }
 
-func (f *fakeCacheRepository) Restore(context.Context, executioncache.RestoreRequest) (executioncache.RestoreResult, error) {
+func (f *fakeCacheRepository) Restore(_ context.Context, req executioncache.RestoreRequest) (executioncache.RestoreResult, error) {
 	f.restoreCalls++
+	f.restoredKey = req.Key
+	f.restoredKeys = req.RestoreKeys
 	return f.restore, f.restoreErr
 }
 
@@ -1326,4 +1330,74 @@ func TestRunCacheSave_KeepsTheEntryWhenTheUploadMayHaveLanded(t *testing.T) {
 	entries, readErr := os.ReadDir(filepath.Join(mount, volume.InboxDir, "exec-1"))
 	require.NoError(t, readErr)
 	assert.NotEmpty(t, entries, "the pointer that may be stored names this entry")
+}
+
+// A cache key is shared by every runner in an environment, but an entry on a volume is
+// reachable only from that volume - executions pick a runner through spec.target, and
+// the scope a key resolves to carries no runner or volume.
+//
+// Unpartitioned, whichever runner saved first owned the key for its whole lifetime:
+// every runner on a different volume got an exact hit it could not follow, and could
+// not publish a replacement either, because the object is immutable. In a two-runner
+// environment that is about half of all runs caching nothing, silently, because an
+// unfollowable pointer degrades to a plain miss.
+func TestRunCacheRestore_AsksForAKeyPartitionedByVolume(t *testing.T) {
+	t.Setenv(volume.EnvVolumeID, "vol1234")
+
+	repo := &fakeCacheRepository{}
+	out := &bytes.Buffer{}
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:         "npm-abc",
+		RestoreKeys: []string{"npm-"},
+		Paths:       []string{t.TempDir()},
+	}), repo, out)
+
+	require.NoError(t, err)
+	assert.Equal(t, "vol1234/npm-abc", repo.restoredKey)
+	// A prefix, not a suffix: "npm-" must not match another volume's "npm-abc".
+	assert.Equal(t, []string{"vol1234/npm-"}, repo.restoredKeys)
+}
+
+func TestRunCacheSave_PublishesUnderAKeyPartitionedByVolume(t *testing.T) {
+	t.Setenv(volume.EnvVolumeID, "vol1234")
+
+	root := t.TempDir()
+	requireContainerPaths(t, root)
+	require.NoError(t, os.WriteFile(filepath.Join(root, "dep.txt"), []byte("installed"), 0o644))
+
+	statePath := filepath.Join(t.TempDir(), "state.json")
+	writeState(t, statePath, executioncache.State{
+		Key: "npm-abc", Hit: executioncache.HitMiss, Paths: []string{root},
+	})
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	repo := &fakeCacheRepository{save: executioncache.SaveResult{URL: server.URL}}
+	out := &bytes.Buffer{}
+	require.NoError(t, runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{root},
+	}), []string{root}, statePath, cacheDefaultMaxSize, repo, out))
+
+	assert.Equal(t, "vol1234/npm-abc", repo.savedKey,
+		"a save has to publish under the key a restore on this volume will ask for")
+}
+
+// With no volume the keys are untouched, so an installation that never enables one -
+// and every entry stored before this existed - behaves exactly as before.
+func TestRunCacheRestore_LeavesTheKeyAloneWithoutAVolume(t *testing.T) {
+	repo := &fakeCacheRepository{}
+	out := &bytes.Buffer{}
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:         "npm-abc",
+		RestoreKeys: []string{"npm-"},
+		Paths:       []string{t.TempDir()},
+	}), repo, out)
+
+	require.NoError(t, err)
+	assert.Equal(t, "npm-abc", repo.restoredKey)
+	assert.Equal(t, []string{"npm-"}, repo.restoredKeys)
 }

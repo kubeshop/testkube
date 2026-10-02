@@ -148,6 +148,11 @@ type StepCacheVolumeConfig struct {
 	// ClaimName is a ReadWriteMany PersistentVolumeClaim that must already exist in
 	// every namespace executions run in.
 	ClaimName string `json:"c,omitempty"`
+	// ID identifies the volume itself, and prefixes every cache key stored on it.
+	//
+	// A key is shared by every runner in an environment, where an entry on a volume is
+	// reachable only from that volume - see volume.EnsureID.
+	ID string `json:"d,omitempty"`
 }
 
 type WorkerConnectionConfig struct {

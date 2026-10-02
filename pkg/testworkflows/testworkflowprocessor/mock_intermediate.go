@@ -172,17 +172,17 @@ func (mr *MockIntermediateMockRecorder) AppendPvcs(cfg any) *gomock.Call {
 }
 
 // AppendStepCacheVolume mocks base method.
-func (m *MockIntermediate) AppendStepCacheVolume(cfg *testworkflowconfig.StepCacheVolumeConfig, resourceID string) Intermediate {
+func (m *MockIntermediate) AppendStepCacheVolume(cfg *testworkflowconfig.StepCacheVolumeConfig, rootID string) Intermediate {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AppendStepCacheVolume", cfg, resourceID)
+	ret := m.ctrl.Call(m, "AppendStepCacheVolume", cfg, rootID)
 	ret0, _ := ret[0].(Intermediate)
 	return ret0
 }
 
 // AppendStepCacheVolume indicates an expected call of AppendStepCacheVolume.
-func (mr *MockIntermediateMockRecorder) AppendStepCacheVolume(cfg, resourceID any) *gomock.Call {
+func (mr *MockIntermediateMockRecorder) AppendStepCacheVolume(cfg, rootID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendStepCacheVolume", reflect.TypeOf((*MockIntermediate)(nil).AppendStepCacheVolume), cfg, resourceID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendStepCacheVolume", reflect.TypeOf((*MockIntermediate)(nil).AppendStepCacheVolume), cfg, rootID)
 }
 
 // ConfigMaps mocks base method.
@@ -295,6 +295,20 @@ func (m *MockIntermediate) StepCacheInboxName() string {
 func (mr *MockIntermediateMockRecorder) StepCacheInboxName() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StepCacheInboxName", reflect.TypeOf((*MockIntermediate)(nil).StepCacheInboxName))
+}
+
+// StepCacheVolumeID mocks base method.
+func (m *MockIntermediate) StepCacheVolumeID() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StepCacheVolumeID")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// StepCacheVolumeID indicates an expected call of StepCacheVolumeID.
+func (mr *MockIntermediateMockRecorder) StepCacheVolumeID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StepCacheVolumeID", reflect.TypeOf((*MockIntermediate)(nil).StepCacheVolumeID))
 }
 
 // StepCacheVolumeMount mocks base method.

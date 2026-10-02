@@ -268,9 +268,19 @@ func runCacheRestore(ctx context.Context, encoded string, repository executionca
 		return nil
 	}
 
+	// Partitioned by the volume these entries live on, because the scope a key resolves
+	// to carries no runner or volume and an entry on a volume is reachable only from it.
+	// Applied to the restore keys too, and as a prefix, so prefix matching cannot stray
+	// onto another volume's entry. See volume.EnsureID.
+	volumeID := os.Getenv(volume.EnvVolumeID)
+	restoreKeys := make([]string, 0, len(spec.RestoreKeys))
+	for _, k := range spec.RestoreKeys {
+		restoreKeys = append(restoreKeys, volume.ScopedKey(volumeID, k))
+	}
+
 	entry, err := repository.Restore(ctx, executioncache.RestoreRequest{
-		Key:         spec.Key,
-		RestoreKeys: spec.RestoreKeys,
+		Key:         volume.ScopedKey(volumeID, spec.Key),
+		RestoreKeys: restoreKeys,
 		Scope:       executioncache.ParseScope(spec.Scope),
 	})
 	if err != nil {
@@ -430,8 +440,10 @@ func runCacheSave(ctx context.Context, encoded string, mounts []string, statePat
 		return nil
 	}
 
+	// Partitioned by volume exactly as the restore is, including on this fallback path:
+	// a key stored here is looked up by a runner that does have the volume.
 	upload, err := repository.Save(ctx, executioncache.SaveRequest{
-		Key:   key,
+		Key:   volume.ScopedKey(os.Getenv(volume.EnvVolumeID), key),
 		Scope: executioncache.ParseScope(spec.Scope),
 		Size:  size,
 	})
@@ -976,7 +988,7 @@ func saveToVolume(
 	bodyLen := int64(body.Len())
 
 	upload, err := repository.Save(ctx, executioncache.SaveRequest{
-		Key:   key,
+		Key:   volume.ScopedKey(os.Getenv(volume.EnvVolumeID), key),
 		Scope: executioncache.ParseScope(scope),
 		// The pointer is the object, so this is what the bucket is about to receive.
 		// The tree itself is on a volume the control plane does not provision and

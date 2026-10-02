@@ -249,7 +249,8 @@ func ProcessCacheRestore(_ InternalProcessor, layer Intermediate, container stag
 	if mount, ok := layer.StepCacheVolumeMount(cacheVolumePath, "", true); ok {
 		selfContainer.
 			AppendVolumeMounts(mount).
-			AppendEnv(corev1.EnvVar{Name: volume.EnvStorePath, Value: cacheVolumePath})
+			AppendEnv(corev1.EnvVar{Name: volume.EnvStorePath, Value: cacheVolumePath}).
+			AppendEnv(corev1.EnvVar{Name: volume.EnvVolumeID, Value: layer.StepCacheVolumeID()})
 	}
 
 	// The two stages are separate containers, so the save stage cannot simply
@@ -340,7 +341,10 @@ func ProcessCacheSave(_ InternalProcessor, layer Intermediate, container stage.C
 		selfContainer.
 			AppendVolumeMounts(mount).
 			AppendEnv(corev1.EnvVar{Name: volume.EnvInboxPath, Value: cacheInboxPath}).
-			AppendEnv(corev1.EnvVar{Name: volume.EnvInboxName, Value: layer.StepCacheInboxName()})
+			AppendEnv(corev1.EnvVar{Name: volume.EnvInboxName, Value: layer.StepCacheInboxName()}).
+			// Carried on the save side too: the key a save publishes under has to match
+			// the one a restore looks for, and this stage cannot read the volume root.
+			AppendEnv(corev1.EnvVar{Name: volume.EnvVolumeID, Value: layer.StepCacheVolumeID()})
 	}
 
 	encoded, err := expressions.EncodeBase64JSON(executioncache.Args{

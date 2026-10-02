@@ -8,6 +8,8 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/config"
+	"github.com/kubeshop/testkube/pkg/executioncache/volume"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
@@ -100,5 +102,23 @@ func stepCacheVolumeConfig(cfg *config.Config) *testworkflowconfig.StepCacheVolu
 	if !commons.StepCacheVolumeEnabled(cfg) {
 		return nil
 	}
-	return &testworkflowconfig.StepCacheVolumeConfig{ClaimName: cfg.TestkubeStepCacheVolumeClaim}
+
+	// Read once at startup and carried to every pod, because a pod cannot read it for
+	// itself: its only writable mount is a subPath into its own inbox.
+	//
+	// Without an identity the volume is still usable, just unpartitioned - so a failure
+	// here degrades to the behaviour that prompted it rather than turning the cache
+	// off. It is worth a loud line, because the symptom is a runner that caches nothing
+	// while another one holds the key.
+	id, err := volume.EnsureID(cfg.TestkubeStepCacheVolumeMountPath)
+	if err != nil {
+		log.DefaultLogger.Errorw(
+			"could not read or write the step cache volume's identity; cache keys will not be partitioned by volume, so a runner on a different volume may hold a key this one cannot follow",
+			"mountPath", cfg.TestkubeStepCacheVolumeMountPath, "error", err)
+	}
+
+	return &testworkflowconfig.StepCacheVolumeConfig{
+		ClaimName: cfg.TestkubeStepCacheVolumeClaim,
+		ID:        id,
+	}
 }

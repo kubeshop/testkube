@@ -157,6 +157,20 @@ restore is a copy rather than an unpack and nothing is gzipped.
   anyway on the configured retention and the risk is stated once at startup: an entry
   swept before its pointer expires leaves a key that restores nothing until the object
   goes, and the key is immutable, so nothing repairs it meanwhile.
+- **Cache keys are partitioned by the volume they are stored on.** A key is shared by
+  every runner in an environment - `cacheScope` carries the environment, workflow,
+  scope and namespace, and no runner or volume - while an entry on a volume is
+  reachable only from that volume, and `spec.target` decides which runner runs an
+  execution. Unpartitioned, whichever runner saved first owned the key for its whole
+  lifetime: every runner on another volume got an exact hit it could not follow and
+  could not replace, because the object is immutable. `volume.EnsureID` writes a stable
+  id to `<volume>/.volume-id`, the agent carries it to the pod in
+  `StepCacheVolumeConfig.ID` and `TK_CACHE_VOLUME_ID` (a pod cannot read the volume
+  root on the save side - its only writable mount is a subPath), and
+  `volume.ScopedKey` prefixes the key **and every restore key** with it. A prefix, not
+  a suffix, so prefix matching cannot stray onto another volume's entry. The id
+  belongs to the volume rather than the runner, so runners that do share a volume go on
+  sharing its entries.
 - **A running execution holds its inbox through a lease.** The inbox is made before the
   pod starts and its mtime only moves when something is staged inside it, so an
   execution that has cached nothing yet, or runs one long step, looks expired to the

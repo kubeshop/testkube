@@ -55,6 +55,11 @@ type Intermediate interface {
 	// own command ends up holding whatever is mounted here.
 	StepCacheVolumeMount(mountPath, subPath string, readOnly bool) (corev1.VolumeMount, bool)
 
+	// StepCacheVolumeID identifies the volume itself, and partitions the cache keys
+	// stored on it - see volume.EnsureID. Empty when there is no volume, or when the
+	// agent could not establish one.
+	StepCacheVolumeID() string
+
 	// StepCacheInboxName is what this execution's inbox is called from the volume root,
 	// which a pointer needs because the write mount is a subPath and so hides it.
 	StepCacheInboxName() string
@@ -190,6 +195,13 @@ func (s *intermediate) AppendStepCacheVolume(cfg *testworkflowconfig.StepCacheVo
 }
 
 // StepCacheInboxName is what this execution's inbox is called from the volume root.
+func (s *intermediate) StepCacheVolumeID() string {
+	if s.StepCacheVolume == nil {
+		return ""
+	}
+	return s.StepCacheVolume.ID
+}
+
 func (s *intermediate) StepCacheInboxName() string {
 	return s.stepCacheInboxName
 }
