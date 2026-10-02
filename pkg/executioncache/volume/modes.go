@@ -97,7 +97,8 @@ const DefaultMaxModeRecords = 1 << 20
 const maxModeRecordBytes = 4096 + 64
 
 // DecodeModesFrom reads a manifest without holding it in memory, keeping at most
-// maxRecords of them. Zero takes DefaultMaxModeRecords, because an unbounded copy is
+// maxRecords of them. The limit is on records read, not on paths kept, so a repeated
+// or malformed record spends it like any other. Zero takes DefaultMaxModeRecords, because an unbounded copy is
 // the caller's choice about a tree it owns, where an unbounded manifest is an
 // allocation sized by whoever wrote the entry.
 //
@@ -123,10 +124,19 @@ func DecodeModesFrom(r io.Reader, maxRecords int) Modes {
 	records.Buffer(make([]byte, 0, 4096), maxModeRecordBytes)
 	records.Split(splitNUL)
 
+	scanned := 0
 	for records.Scan() {
-		if len(modes) >= maxRecords {
+		// Counted whatever the record turns out to be, rather than counting the paths
+		// kept. Budgeting distinct valid paths left a repeated or malformed record
+		// costing nothing, so a manifest of one short record written over and over was
+		// read to its end however long that was - memory bounded, but the scan and the
+		// reads off the volume were not, and the entry it came from is one a workflow
+		// wrote.
+		scanned++
+		if scanned > maxRecords {
 			break
 		}
+
 		record := records.Text()
 		if record == "" {
 			continue

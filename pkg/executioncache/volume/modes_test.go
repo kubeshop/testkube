@@ -2,6 +2,7 @@ package volume
 
 import (
 	"fmt"
+	"io"
 	"io/fs"
 	"strings"
 	"testing"
@@ -104,4 +105,43 @@ func TestDecodeModesFromReadsAnUnterminatedLastRecord(t *testing.T) {
 	got := DecodeModesFrom(strings.NewReader("0600 a\x000700 b"), 100)
 
 	assert.Equal(t, Modes{"a": 0o600, "b": 0o700}, got)
+}
+
+// countingReader reports how much of a manifest was actually read.
+type countingReader struct {
+	inner io.Reader
+	read  int
+}
+
+func (c *countingReader) Read(p []byte) (int, error) {
+	n, err := c.inner.Read(p)
+	c.read += n
+	return n, err
+}
+
+// Budgeting the paths kept let a repeated record cost nothing, so a manifest of one
+// short record written over and over was read to its end however long that was. Memory
+// stayed bounded; the scan and the reads off the volume did not - and the entry it came
+// from is one a workflow wrote, restored by an execution that had no part in it.
+func TestDecodeModesFromStopsReadingAfterTheRecordLimit(t *testing.T) {
+	manifest := strings.Repeat("0600 a\x00", 100_000)
+	counted := &countingReader{inner: strings.NewReader(manifest)}
+
+	got := DecodeModesFrom(counted, 10)
+
+	assert.Equal(t, Modes{"a": 0o600}, got, "every record names the same path")
+	assert.Less(t, counted.read, len(manifest)/2,
+		"the limit has to bound the reading, not only what is kept")
+}
+
+// Malformed records spend the budget too: they are as cheap to write and as expensive
+// to scan.
+func TestDecodeModesFromCountsRecordsItCannotRead(t *testing.T) {
+	manifest := strings.Repeat("rubbish\x00", 100_000) + "0600 real\x00"
+	counted := &countingReader{inner: strings.NewReader(manifest)}
+
+	got := DecodeModesFrom(counted, 10)
+
+	assert.Empty(t, got, "the budget was spent before the real record arrived")
+	assert.Less(t, counted.read, len(manifest)/2)
 }
