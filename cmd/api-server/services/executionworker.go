@@ -106,15 +106,28 @@ func stepCacheVolumeConfig(cfg *config.Config) *testworkflowconfig.StepCacheVolu
 	// Read once at startup and carried to every pod, because a pod cannot read it for
 	// itself: its only writable mount is a subPath into its own inbox.
 	//
-	// Without an identity the volume is still usable, just unpartitioned - so a failure
-	// here degrades to the behaviour that prompted it rather than turning the cache
-	// off. It is worth a loud line, because the symptom is a runner that caches nothing
-	// while another one holds the key.
+	// Without it the volume is not used at all. Carrying on unpartitioned would put
+	// back exactly the failure the identity exists to prevent: one runner publishing an
+	// immutable pointer onto its own volume that every runner on another volume hits,
+	// cannot follow, and cannot replace until it expires. Caches go to the object
+	// store, which every runner can reach, and which is where they went before this
+	// feature existed.
 	id, err := volume.EnsureID(cfg.TestkubeStepCacheVolumeMountPath)
 	if err != nil {
 		log.DefaultLogger.Errorw(
-			"could not read or write the step cache volume's identity; cache keys will not be partitioned by volume, so a runner on a different volume may hold a key this one cannot follow",
+			"could not read or write the step cache volume's identity, so the volume will not be used and caches will go to the object store; without it keys are not partitioned by volume, and a runner on another volume would hold keys this one could never follow or replace",
 			"mountPath", cfg.TestkubeStepCacheVolumeMountPath, "error", err)
+		return nil
+	}
+	if id == "" {
+		// EnsureID answers "" only for an empty mount path, which cannot happen here -
+		// the claim is configured, so the mount path has its default at least. Guarded
+		// because an empty id silently means unpartitioned, which is the one outcome
+		// this must not reach.
+		log.DefaultLogger.Errorw(
+			"the step cache volume has no identity, so the volume will not be used and caches will go to the object store",
+			"mountPath", cfg.TestkubeStepCacheVolumeMountPath)
+		return nil
 	}
 
 	return &testworkflowconfig.StepCacheVolumeConfig{
