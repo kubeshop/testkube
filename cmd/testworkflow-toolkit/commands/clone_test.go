@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -603,6 +604,52 @@ func TestCloneReason(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.want, cloneReason(tt.err))
+		})
+	}
+}
+
+func TestCloneMessage(t *testing.T) {
+	exit128 := errors.New("exit status 128")
+	tests := []struct {
+		name string
+		uri  string
+		err  error
+		want string
+	}{
+		{
+			name: "a refused credential names the host and the cause without the steps of the clone",
+			uri:  "https://github.com/org/private.git",
+			err:  fmt.Errorf("error cloning repository: initializing sparse repository: %w", &CommandError{Err: exit128, Line: "fatal: could not read Username for 'https://github.com': terminal prompts disabled"}),
+			want: "Git cannot authenticate to github.com: could not read Username for 'https://github.com': terminal prompts disabled.",
+		},
+		{
+			name: "a refused SSH key names the host of the SSH address",
+			uri:  "git@gitlab.com:org/private.git",
+			err:  fmt.Errorf("error cloning repository: %w", &CommandError{Err: exit128, Line: "fatal: Could not read from remote repository. Permission denied (publickey)."}),
+			want: "Git cannot authenticate to gitlab.com: Could not read from remote repository. Permission denied (publickey).",
+		},
+		{
+			name: "a refused SSH key on its own line names that line",
+			uri:  "git@github.com:org/private.git",
+			err:  fmt.Errorf("error cloning repository: %w", &CommandError{Err: exit128, Line: "fatal: Could not read from remote repository.", AuthLine: "git@github.com: Permission denied (publickey)."}),
+			want: "Git cannot authenticate to github.com: Permission denied (publickey).",
+		},
+		{
+			name: "another failure keeps the line of git",
+			uri:  "https://github.com/org/absent.git",
+			err:  fmt.Errorf("error cloning repository: %w", &CommandError{Err: exit128, Line: "fatal: repository 'https://github.com/org/absent.git/' not found"}),
+			want: "fatal: repository 'https://github.com/org/absent.git/' not found",
+		},
+		{
+			name: "a failure without a line of git keeps the error",
+			uri:  "https://github.com/org/repo.git",
+			err:  errors.New("setting up SSH key: invalid key"),
+			want: "setting up SSH key: invalid key",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, cloneMessage(tt.uri, tt.err))
 		})
 	}
 }

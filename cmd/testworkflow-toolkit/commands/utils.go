@@ -53,10 +53,28 @@ func Run(c string, args ...interface{}) error {
 	}
 	if err != nil {
 		if line := diagnostic.Line(); line != "" {
-			return fmt.Errorf("%w: %s", err, line)
+			return &CommandError{Err: err, Line: line, AuthLine: diagnostic.auth}
 		}
 	}
 	return err
+}
+
+// CommandError is the failure of a command with the diagnostic line of its standard error. The
+// line names the cause, so a caller can show it without the exit status.
+type CommandError struct {
+	Err  error
+	Line string
+	// AuthLine is the line of the standard error that names a refused credential. SSH writes it
+	// before the "fatal:" line of git, so the diagnostic line alone can miss it.
+	AuthLine string
+}
+
+func (e *CommandError) Error() string {
+	return fmt.Sprintf("%s: %s", e.Err, e.Line)
+}
+
+func (e *CommandError) Unwrap() error {
+	return e.Err
 }
 
 // maxDiagnosticLineSize limits the memory for one line of the standard error.
@@ -69,6 +87,7 @@ type diagnosticLine struct {
 	current []byte
 	last    string
 	fatal   string
+	auth    string
 }
 
 func (d *diagnosticLine) Write(p []byte) (int, error) {
@@ -94,6 +113,9 @@ func (d *diagnosticLine) endLine() {
 	if strings.HasPrefix(line, "fatal:") {
 		d.fatal = line
 	}
+	if hasGitAuthText(line) {
+		d.auth = line
+	}
 }
 
 // Line returns the diagnostic line, or an empty string when the output has no text.
@@ -110,6 +132,10 @@ func RunWithRetry(retries int, delay time.Duration, c string, args ...interface{
 		err = Run(c, args...)
 		if err == nil {
 			return nil
+		}
+		// A retry cannot fix a credential that the server refused.
+		if isGitAuthError(err) {
+			return err
 		}
 		if i+1 < retries {
 			nextDelay := time.Duration(i+1) * delay

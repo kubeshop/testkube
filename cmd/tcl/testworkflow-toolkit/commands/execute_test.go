@@ -279,3 +279,35 @@ func TestFailureSummary(t *testing.T) {
 		})
 	}
 }
+
+func TestChildFailure(t *testing.T) {
+	tests := []struct {
+		name    string
+		status  testkube.TestWorkflowStatus
+		details *testkube.TestWorkflowStatusDetails
+		want    string
+	}{
+		{
+			name:   "an execution without status details names its status",
+			status: testkube.FAILED_TestWorkflowStatus,
+			want:   "failed",
+		},
+		{
+			name:    "an execution with a cause names its status and the cause",
+			status:  testkube.ABORTED_TestWorkflowStatus,
+			details: &testkube.TestWorkflowStatusDetails{Reason: string(testkube.StopReasonStepTimeout), Message: "the step did not finish within its timeout."},
+			want:    "aborted: the step did not finish within its timeout",
+		},
+		{
+			name:    "an execution with a code but no message names the words of its code",
+			status:  testkube.FAILED_TestWorkflowStatus,
+			details: &testkube.TestWorkflowStatusDetails{Reason: string(testkube.StopReasonExitCode)},
+			want:    "failed: a step of the test failed",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, childFailure(tt.status, tt.details))
+		})
+	}
+}

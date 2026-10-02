@@ -110,20 +110,36 @@ func TestEvaluateResult(t *testing.T) {
 			name:        "failed takes priority over started",
 			result:      ServiceExecutionResult{Started: true, Ready: true, Failed: true},
 			wantSuccess: false,
-			wantFailure: "service failed",
+			wantFailure: "the service failed",
+		},
+		{
+			name: "a failed service names the message of its cause",
+			result: ServiceExecutionResult{Started: true, Ready: true, Failed: true, StatusDetails: &testkube.TestWorkflowStatusDetails{
+				Reason: string(testkube.StopReasonExitCode), Message: "The step \"run\" exited with code 2.",
+			}},
+			wantSuccess: false,
+			wantFailure: "The step \"run\" exited with code 2",
+		},
+		{
+			name: "a failed service without a message names the words of its code",
+			result: ServiceExecutionResult{Started: true, Ready: true, Failed: true, StatusDetails: &testkube.TestWorkflowStatusDetails{
+				Reason: string(testkube.StopReasonOOMKilled),
+			}},
+			wantSuccess: false,
+			wantFailure: "the container exceeded its memory limit",
 		},
 		{
 			name:        "not started is failure",
 			result:      ServiceExecutionResult{Started: false, Ready: true, Failed: false},
 			wantSuccess: false,
-			wantFailure: "container failed to start",
+			wantFailure: "the container did not start",
 		},
 		{
 			name:         "not ready with readiness probe is failure",
 			result:       ServiceExecutionResult{Started: true, Ready: false, Failed: false},
 			hasReadiness: true,
 			wantSuccess:  false,
-			wantFailure:  "container did not reach readiness",
+			wantFailure:  "the container did not reach readiness",
 		},
 		{
 			name:         "not ready without readiness probe is success",
@@ -345,6 +361,23 @@ func TestServicesFailureReason(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.want, servicesFailureReason(tt.err))
+		})
+	}
+}
+
+func TestInstanceName(t *testing.T) {
+	tests := []struct {
+		name  string
+		index int64
+		count int64
+		want  string
+	}{
+		{name: "one instance has no number", index: 0, count: 1, want: "db"},
+		{name: "an instance of several gets its number from one", index: 1, count: 3, want: "db/2"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, instanceName("db", tt.index, tt.count))
 		})
 	}
 }

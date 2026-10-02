@@ -180,6 +180,16 @@ func failureSummary(results []operationResult) string {
 	return strings.Join(append(parts, others...), "; ")
 }
 
+// childFailure returns the words for an execution that did not pass: its status, then the cause
+// from its status details. The status alone does not tell the user what to fix.
+func childFailure(status testkube.TestWorkflowStatus, details *testkube.TestWorkflowStatusDetails) string {
+	cause := statusCause(details)
+	if cause == "" {
+		return string(status)
+	}
+	return fmt.Sprintf("%s: %s", status, cause)
+}
+
 func buildWorkflowExecution(req workflowExecutionRequest) func() operationResult {
 	return func() operationResult {
 		workflow := *req.spec.DeepCopy()
@@ -338,7 +348,7 @@ func buildWorkflowExecution(req workflowExecutionRequest) func() operationResult
 				status := *exec.Result.Status
 				color := ui.Green
 				if status != testkube.PASSED_TestWorkflowStatus {
-					outcomes[index].err = errors.New(string(status))
+					outcomes[index].err = errors.New(childFailure(status, exec.Result.StatusDetails))
 					color = ui.Red
 				}
 
