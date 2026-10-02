@@ -250,9 +250,9 @@ func TestFailureSummary(t *testing.T) {
 		{
 			name: "names the failed executions of all entries with their status",
 			results: []operationResult{
-				{outcomes: []executionOutcome{passed("a-1"), {name: "a-2", err: errors.New("failed")}}},
+				{outcomes: []executionOutcome{passed("a-1"), {name: "a-2", err: childFailure(testkube.FAILED_TestWorkflowStatus, nil)}}},
 				{outcomes: []executionOutcome{passed("b-1"), passed("b-2")}},
-				{outcomes: []executionOutcome{{name: "c-1", err: errors.New("aborted")}}},
+				{outcomes: []executionOutcome{{name: "c-1", err: childFailure(testkube.ABORTED_TestWorkflowStatus, nil)}}},
 				notScheduled("consumer", errors.New("computing execution: unknown execution \"p\"")),
 			},
 			want: "3 of 6 executions failed: a-2 (failed), c-1 (aborted), consumer (computing execution: unknown execution \"p\")",
@@ -260,9 +260,25 @@ func TestFailureSummary(t *testing.T) {
 		{
 			name: "adds a failure that is not about one execution after the executions",
 			results: []operationResult{
-				{outcomes: []executionOutcome{{name: "a-1", err: errors.New("failed")}}, err: errors.New("fetching artifacts: fetch.0: not found")},
+				{outcomes: []executionOutcome{{name: "a-1", err: childFailure(testkube.FAILED_TestWorkflowStatus, nil)}}, err: errors.New("fetching artifacts: fetch.0: not found")},
 			},
-			want: "1 of 1 executions failed: a-1 (failed); fetching artifacts: fetch.0: not found",
+			want: "The execution a-1 failed; fetching artifacts: fetch.0: not found",
+		},
+		{
+			name: "one execution gets a sentence with its status and its cause",
+			results: []operationResult{
+				{outcomes: []executionOutcome{{name: "child-12", err: childFailure(testkube.FAILED_TestWorkflowStatus, &testkube.TestWorkflowStatusDetails{
+					Reason: string(testkube.StopReasonExitCode), Message: "The step \"Run\" exited with code 1.",
+				})}}},
+			},
+			want: "The execution child-12 failed: The step \"Run\" exited with code 1.",
+		},
+		{
+			name: "one entry that the step could not schedule names the workflow",
+			results: []operationResult{
+				notScheduled("consumer", errors.New("computing execution: unknown execution \"p\"")),
+			},
+			want: "The workflow consumer could not run: computing execution: unknown execution \"p\".",
 		},
 		{
 			name: "returns only the other failure when every execution passed",
@@ -276,6 +292,74 @@ func TestFailureSummary(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.want, failureSummary(tt.results))
+		})
+	}
+}
+
+func TestChildFailure(t *testing.T) {
+	tests := []struct {
+		name    string
+		status  testkube.TestWorkflowStatus
+		details *testkube.TestWorkflowStatusDetails
+		want    string
+	}{
+		{
+			name:   "an execution without status details names its status",
+			status: testkube.FAILED_TestWorkflowStatus,
+			want:   "failed",
+		},
+		{
+			name:    "an execution with a cause names its status and the cause",
+			status:  testkube.ABORTED_TestWorkflowStatus,
+			details: &testkube.TestWorkflowStatusDetails{Reason: string(testkube.StopReasonStepTimeout), Message: "the step did not finish within its timeout."},
+			want:    "aborted: the step did not finish within its timeout.",
+		},
+		{
+			name:    "an execution with a code but no message names the words of its code",
+			status:  testkube.FAILED_TestWorkflowStatus,
+			details: &testkube.TestWorkflowStatusDetails{Reason: string(testkube.StopReasonExitCode)},
+			want:    "failed: a step of the test failed",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, childFailure(tt.status, tt.details).Error())
+		})
+	}
+}
+
+func TestFailureReason(t *testing.T) {
+	tests := []struct {
+		name    string
+		results []operationResult
+		want    testkube.StopReason
+	}{
+		{
+			name: "a child execution that failed gives the code of a failed child",
+			results: []operationResult{
+				{outcomes: []executionOutcome{{name: "a-1", err: childFailure(testkube.FAILED_TestWorkflowStatus, nil)}}},
+				notScheduled("consumer", errors.New("computing execution: unknown execution \"p\"")),
+			},
+			want: testkube.StopReasonChildWorkflowFailed,
+		},
+		{
+			name: "a workflow that the step could not run gives no code",
+			results: []operationResult{
+				notScheduled("consumer", errors.New("computing execution: unknown execution \"p\"")),
+			},
+			want: "",
+		},
+		{
+			name: "a failure that is not about one execution gives no code",
+			results: []operationResult{
+				{outcomes: []executionOutcome{{name: "a-1"}}, err: errors.New("fetching artifacts: fetch.0: not found")},
+			},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, failureReason(tt.results))
 		})
 	}
 }

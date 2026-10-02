@@ -94,6 +94,8 @@ type ServiceExecutionResult struct {
 	Ready   bool
 	Failed  bool
 	Error   error
+	// Result is the final result of a service that finished and did not pass.
+	Result *testkube.TestWorkflowResult
 }
 
 const (
@@ -151,11 +153,7 @@ func NewServicesCmd() *cobra.Command {
 
 			executor := NewServicesExecutor(groupRef, base64Encoded, deps)
 			if err := executor.Execute(cmd.Context(), args); err != nil {
-				if reason := servicesFailureReason(err); reason != "" {
-					toolkitcommon.Fail(toolkitcommon.WithReason(reason, err))
-				} else {
-					toolkitcommon.Fail(err)
-				}
+				toolkitcommon.Fail(err)
 			}
 		},
 	}
@@ -213,7 +211,7 @@ func (e *ServicesExecutor) Execute(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	failed, firstFailure := e.runServices(ctx, instances, namespaces, state, svcParams)
+	failed, first := e.runServices(ctx, instances, namespaces, state, svcParams)
 	e.reportFinalState(state)
 
 	if failed == 0 {
@@ -221,28 +219,46 @@ func (e *ServicesExecutor) Execute(ctx context.Context, args []string) error {
 		return nil
 	}
 	fmt.Printf("Failed to start %d out of %d expected workers.\n", failed, len(instances))
-	return &ServicesNotStartedError{Failed: failed, FirstFailure: firstFailure}
+	return &ServicesFailedError{Failed: failed, Total: int64(len(instances)), FirstName: first.name, FirstFailure: first.failure, FirstReason: first.reason}
 }
 
-// ServicesNotStartedError is the failure of services that did not start or did not become ready.
-type ServicesNotStartedError struct {
-	Failed       int64
+// ServicesFailedError is the failure of services that did not start, did not become ready, or
+// failed while the step ran.
+type ServicesFailedError struct {
+	Failed int64
+	Total  int64
+	// FirstName names the instance that failed first.
+	FirstName string
+	// FirstFailure says how that instance failed, for example "exited with code 1".
 	FirstFailure string
+	// FirstReason is the code of that instance when the code names an infrastructure failure, for
+	// example oom-killed. It is empty for a service that did not start or did not become ready.
+	FirstReason testkube.StopReason
 }
 
-func (e *ServicesNotStartedError) Error() string {
-	return fmt.Sprintf("%d services failed to start: %s", e.Failed, e.FirstFailure)
-}
-
-// servicesFailureReason returns the code for a failure of the services step. Only services that did
-// not start or did not become ready are an infrastructure failure. An error in the definition or in
-// the setup of the step happens before a service starts, so it gets no code.
-func servicesFailureReason(err error) testkube.StopReason {
-	var notStarted *ServicesNotStartedError
-	if errors.As(err, &notStarted) {
-		return testkube.StopReasonServiceNotReady
+func (e *ServicesFailedError) Error() string {
+	if e.Total == 1 {
+		return endSentence(fmt.Sprintf("The service %q %s", e.FirstName, e.FirstFailure))
 	}
-	return ""
+	return endSentence(fmt.Sprintf("%d of %d services failed. %s %s", e.Failed, e.Total, e.FirstName, e.FirstFailure))
+}
+
+// Reason returns the code for the services that failed. A service that failed for an infrastructure
+// cause gives its own code, for example oom-killed. Other services that did not start, did not
+// become ready or failed are not ready.
+func (e *ServicesFailedError) Reason() testkube.StopReason {
+	if e.FirstReason != "" {
+		return e.FirstReason
+	}
+	return testkube.StopReasonServiceNotReady
+}
+
+// servicesSubject names the services step in an error of its definition.
+const servicesSubject = "The services step"
+
+// serviceSubject names a service in an error of its definition.
+func serviceSubject(name string) string {
+	return fmt.Sprintf("The service %q", name)
 }
 
 // parseServices supports two input formats:
@@ -256,12 +272,12 @@ func (e *ServicesExecutor) parseServices(args []string) (map[string]testworkflow
 		// from prematurely resolving expressions like {{ matrix.browser.driver }}.
 		var servicesMap map[string]json.RawMessage
 		if err := expressionstcl.DecodeBase64JSON(args[0], &servicesMap); err != nil {
-			return nil, errors.Wrap(err, "decoding services")
+			return nil, &DefinitionError{Subject: servicesSubject, Err: err}
 		}
 		for name, raw := range servicesMap {
 			var svc testworkflowsv1.ServiceSpec
 			if err := json.Unmarshal(raw, &svc); err != nil {
-				return nil, errors.Wrapf(err, "parsing service spec for %s", name)
+				return nil, &DefinitionError{Subject: serviceSubject(name), Err: err}
 			}
 			services[name] = svc
 		}
@@ -315,7 +331,7 @@ func (e *ServicesExecutor) prepareInstances(services map[string]testworkflowsv1.
 	for name, svc := range services {
 		params, err := commontcl.GetParamsSpec(svc.Matrix, svc.Shards, svc.Count, svc.MaxCount, e.deps.BaseMachine)
 		if err != nil {
-			return nil, nil, nil, nil, errors.Wrapf(err, "%s: compute matrix and sharding", commontcl.ServiceLabel(name))
+			return nil, nil, nil, nil, &DefinitionError{Subject: serviceSubject(name), Err: err}
 		}
 		svcParams[name] = params
 
@@ -356,9 +372,10 @@ func (e *ServicesExecutor) buildServiceInstances(
 	for index := int64(0); index < params.Count; index++ {
 		machines := []expressions.Machine{e.deps.BaseMachine, params.MachineAt(index)}
 
+		subject := serviceSubject(instanceName(name, index, params.Count))
 		svcSpec := svc.DeepCopy()
 		if err := expressions.Simplify(&svcSpec, machines...); err != nil {
-			return nil, nil, errors.Wrapf(err, "%s: %d: simplify", commontcl.ServiceLabel(name), index)
+			return nil, nil, &DefinitionError{Subject: subject, Err: err}
 		}
 
 		spec := testworkflowsv1.TestWorkflowSpec{
@@ -380,7 +397,7 @@ func (e *ServicesExecutor) buildServiceInstances(
 		}
 		tarballs, err := spawn.ProcessTransfer(e.deps.TransferSrv, svcSpec.Transfer, machines...)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "%s: %d: transfer", commontcl.ServiceLabel(name), index)
+			return nil, nil, definitionOrRuntime(subject, errors.Wrap(err, "transfer"))
 		}
 		spec.Content.Tarball = append(spec.Content.Tarball, tarballs...)
 
@@ -400,11 +417,11 @@ func (e *ServicesExecutor) buildServiceInstances(
 		if svcSpec.Timeout != "" {
 			v, err := expressions.EvalTemplate(svcSpec.Timeout, machines...)
 			if err != nil {
-				return nil, nil, errors.Wrapf(err, "%s: %d: timeout expression", commontcl.ServiceLabel(name), index)
+				return nil, nil, &DefinitionError{Subject: subject, Err: errors.Wrap(err, "timeout")}
 			}
 			d, err := time.ParseDuration(strings.ReplaceAll(v, " ", ""))
 			if err != nil {
-				return nil, nil, errors.Wrapf(err, "%s: %d: invalid timeout: %s", commontcl.ServiceLabel(name), index, v)
+				return nil, nil, &DefinitionError{Subject: subject, Err: errors.Wrapf(err, "timeout %q", v)}
 			}
 			svcInstances[index].Timeout = &d
 		}
@@ -448,32 +465,52 @@ func (e *ServicesExecutor) startTransferServer() error {
 	return nil
 }
 
+// serviceFailureInfo is how the service that failed first failed.
+type serviceFailureInfo struct {
+	name    string
+	failure string
+	reason  testkube.StopReason
+}
+
 // runServices executes all service instances in parallel. It returns the number of failed
-// services and the cause of the service that failed first.
+// services, and how the service that failed first failed.
 func (e *ServicesExecutor) runServices(
 	ctx context.Context,
 	instances []ServiceInstance,
 	namespaces []string,
 	state map[string][]ServiceState,
 	svcParams map[string]*commontcl.ParamsSpec,
-) (int64, string) {
+) (int64, serviceFailureInfo) {
 	var mu sync.Mutex
-	firstFailure := ""
+	var first serviceFailureInfo
 	run := func(_ int64, _ string, instance *ServiceInstance) bool {
 		runner := NewServiceRunner(instance, e.groupRef, e.deps, svcParams[instance.Name], state)
 		if runner.Run() {
 			return true
 		}
 		mu.Lock()
-		if firstFailure == "" {
-			firstFailure = fmt.Sprintf("%s: %s", instance.Name, runner.failure)
+		if first.failure == "" {
+			first = serviceFailureInfo{
+				name:    instanceName(instance.Name, instance.Index, svcParams[instance.Name].Count),
+				failure: runner.failure,
+				reason:  runner.reason,
+			}
 		}
 		mu.Unlock()
 		return false
 	}
 
 	failed := spawn.ExecuteParallel(ctx, run, instances, namespaces, int64(len(instances)))
-	return failed, firstFailure
+	return failed, first
+}
+
+// instanceName names one instance of a service the way the log does. The number shows only when
+// the service has more than one instance, because one instance needs no number.
+func instanceName(name string, index, count int64) string {
+	if count <= 1 {
+		return name
+	}
+	return fmt.Sprintf("%s/%d", name, index+1)
 }
 
 // reportFinalState reports the final state of all services.
@@ -492,8 +529,10 @@ type ServiceRunner struct {
 	state    map[string][]ServiceState
 	log      func(...string)
 	info     ServiceInfo
-	// failure is the plain text cause when Run returns false.
+	// failure says how the service failed when Run returns false, for example "did not start".
 	failure string
+	// reason is the code of an infrastructure failure of the service, for example oom-killed.
+	reason testkube.StopReason
 }
 
 func NewServiceRunner(
@@ -543,7 +582,7 @@ func (r *ServiceRunner) Run() bool {
 	result, err := r.deployService(cfg)
 	if err != nil {
 		r.log("failed to prepare resources", err.Error())
-		r.failure = "failed to prepare resources: " + err.Error()
+		r.failure = "could not be deployed: " + err.Error()
 		return false
 	}
 
@@ -638,6 +677,7 @@ func (r *ServiceRunner) checkForImmediateFailure(
 		if v.Result != nil && v.Result.IsFinished() {
 			if !v.Result.IsPassed() {
 				execResult.Failed = true
+				execResult.Result = v.Result
 				r.log("service failed immediately after starting")
 			}
 			break
@@ -691,6 +731,7 @@ func (r *ServiceRunner) processNotifications(
 		if lastWorkflowResult != nil && lastWorkflowResult.IsFinished() {
 			if !lastWorkflowResult.IsPassed() {
 				execResult.Failed = true
+				execResult.Result = lastWorkflowResult
 				r.log("service execution failed")
 			}
 			break
@@ -722,25 +763,25 @@ func (r *ServiceRunner) evaluateResult(execResult ServiceExecutionResult) bool {
 	if execResult.Error != nil {
 		r.info.Status = ServiceStatusFailed
 		r.log("error during monitoring")
-		r.failure = "error during monitoring: " + execResult.Error.Error()
+		r.failure = "could not be watched: " + execResult.Error.Error()
 		success = false
 	} else if execResult.Failed {
 		// Service execution finished with non-PASSED status
 		r.info.Status = ServiceStatusFailed
 		r.log("service failed")
-		r.failure = "service failed"
+		r.failure, r.reason = serviceFailure(execResult.Result)
 		success = false
 	} else if !execResult.Started {
 		// Container never started
 		r.info.Status = ServiceStatusFailed
 		r.log("container failed to start")
-		r.failure = "container failed to start"
+		r.failure = "did not start"
 		success = false
 	} else if !execResult.Ready && r.instance.ReadinessProbe != nil {
 		// Container started but never became ready (only relevant for services with readiness probes)
 		r.info.Status = ServiceStatusFailed
 		r.log("container did not reach readiness")
-		r.failure = "container did not reach readiness"
+		r.failure = "did not become ready"
 		success = false
 	} else {
 		// All checks passed - service is ready
@@ -750,4 +791,33 @@ func (r *ServiceRunner) evaluateResult(execResult ServiceExecutionResult) bool {
 
 	instructions.PrintOutput(r.deps.Ref, "service", r.info)
 	return success
+}
+
+// serviceFailure says how a service that finished and did not pass failed, and gives the code of
+// the service when the code names an infrastructure failure. The services step takes that code, so
+// a service that ran out of memory is not read as a service that did not become ready.
+func serviceFailure(result *testkube.TestWorkflowResult) (string, testkube.StopReason) {
+	if result == nil || result.StatusDetails == nil {
+		return "failed", ""
+	}
+	details := result.StatusDetails
+	code := testkube.StopReason(details.Reason)
+	reason := code
+	if testkube.StatusDetailsTypeOf("", details.Reason) != testkube.StatusDetailsTypeExecutionFailure {
+		reason = ""
+	}
+	step, ok := result.Steps[details.Step]
+	isNonZeroExitCode := ok && code == testkube.StopReasonExitCode && step.ExitCode != 0
+	if isNonZeroExitCode {
+		return fmt.Sprintf("exited with code %d", int(step.ExitCode)), reason
+	}
+	// A service runs one command, so the phrase names the service and not a step that the user
+	// did not name.
+	if phrase := code.Phrase(); phrase != "" {
+		return phrase, reason
+	}
+	if cause := statusCause(details); cause != "" {
+		return "failed: " + cause, reason
+	}
+	return "failed", reason
 }

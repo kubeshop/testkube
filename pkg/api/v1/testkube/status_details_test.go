@@ -27,6 +27,7 @@ func TestStatusDetailsTypeOf(t *testing.T) {
 		{name: "initialization timeout", reason: string(StopReasonInitTimeout), want: StatusDetailsTypeInitFailure},
 		{name: "git auth failed", reason: string(StopReasonGitAuthFailed), want: StatusDetailsTypeInitFailure},
 		{name: "git clone failed", reason: string(StopReasonGitCloneFailed), want: StatusDetailsTypeInitFailure},
+		{name: "git server unreachable", reason: string(StopReasonGitUnreachable), want: StatusDetailsTypeExecutionFailure},
 
 		{name: "evicted", reason: string(StopReasonEvicted), want: StatusDetailsTypeExecutionFailure},
 		{name: "preempted", reason: string(StopReasonPreempted), want: StatusDetailsTypeExecutionFailure},
