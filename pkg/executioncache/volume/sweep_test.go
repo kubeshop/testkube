@@ -234,3 +234,35 @@ func TestSweepKeepsAnInboxWhoseLeaseIsBarelyAhead(t *testing.T) {
 	_, err := os.Stat(dir)
 	assert.NoError(t, err, "a small clock difference is not a squatter")
 }
+
+// Continuing past an inbox it cannot remove is what keeps one stuck entry from
+// stranding every inbox after it. Reporting what it could not take is what keeps that
+// from happening in silence, with the volume filling and nothing said - the caller logs
+// whatever Sweep returns.
+func TestSweepReportsWhatItCouldNotRemoveAndKeepsGoing(t *testing.T) {
+	root := t.TempDir()
+	stuck := inboxAged(t, root, "exec-stuck", 48*time.Hour)
+	other := inboxAged(t, root, "exec-other", 48*time.Hour)
+
+	// Stands in for a directory the agent cannot unlink through: an open handle on
+	// Windows, a mode the sweeping user does not hold on Linux.
+	blocker, err := os.Open(filepath.Join(stuck, "entry", EntryRoot, "f"))
+	require.NoError(t, err)
+	require.NoError(t, os.Chmod(filepath.Join(stuck, "entry", EntryRoot), 0o500))
+	t.Cleanup(func() {
+		blocker.Close()
+		_ = os.Chmod(filepath.Join(stuck, "entry", EntryRoot), 0o777)
+	})
+
+	s := &Sweeper{Root: root, Retention: time.Hour}
+	err = s.Sweep(context.Background())
+
+	// The one it could take is gone whatever happened to the other.
+	_, otherErr := os.Stat(other)
+	assert.True(t, os.IsNotExist(otherErr), "a stuck inbox must not strand the ones after it")
+
+	if _, stillThere := os.Stat(stuck); stillThere == nil {
+		require.Error(t, err, "an inbox it could not remove has to be reported")
+		assert.Contains(t, err.Error(), "exec-stuck")
+	}
+}

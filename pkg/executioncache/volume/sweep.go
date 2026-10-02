@@ -173,6 +173,14 @@ func (s *Sweeper) Sweep(ctx context.Context) error {
 			failed = append(failed, fmt.Sprintf("%s: %s", entry.Name(), err))
 		}
 	}
+
+	// Returned together, after everything that could be swept has been. Continuing is
+	// what keeps one stuck inbox from stranding the rest; reporting is what keeps it
+	// from being stuck in silence, with the volume filling and nothing said.
+	if len(failed) > 0 {
+		return fmt.Errorf("could not remove %d expired cache inbox(es): %s",
+			len(failed), strings.Join(failed, "; "))
+	}
 	return nil
 }
 
