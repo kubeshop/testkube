@@ -1,8 +1,13 @@
 package imageinspector
 
 import (
+	"errors"
+	"fmt"
+	"net/http"
+	"net/url"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -255,4 +260,77 @@ func TestParseSecretData(t *testing.T) {
 		assert.ErrorContains(t, err, "illegal base64 data")
 	})
 
+}
+
+func TestRegistryError(t *testing.T) {
+	dockerHub := &http.Request{Method: http.MethodGet, URL: &url.URL{Scheme: "https", Host: "index.docker.io", Path: "/v2/org/private/manifests/1.0"}}
+	unauthorized := transport.Diagnostic{
+		Code:    transport.UnauthorizedErrorCode,
+		Message: "authentication required",
+		Detail:  []map[string]string{{"Type": "repository", "Name": "org/private", "Action": "pull"}},
+	}
+	tests := []struct {
+		name          string
+		err           error
+		hasPullSecret bool
+		want          string
+	}{
+		{
+			name: "a private or missing repository without a pull secret",
+			err:  &transport.Error{Errors: []transport.Diagnostic{unauthorized}, StatusCode: http.StatusUnauthorized, Request: dockerHub},
+			want: "the registry index.docker.io answered UNAUTHORIZED: authentication required. The repository does not exist, or it is private and the workflow has no pull secret for it.",
+		},
+		{
+			name:          "a pull secret without access",
+			err:           &transport.Error{Errors: []transport.Diagnostic{unauthorized}, StatusCode: http.StatusUnauthorized, Request: dockerHub},
+			hasPullSecret: true,
+			want:          "the registry index.docker.io answered UNAUTHORIZED: authentication required. The pull secret does not give access to this repository.",
+		},
+		{
+			name: "a tag that does not exist",
+			err:  &transport.Error{Errors: []transport.Diagnostic{{Code: transport.ManifestUnknownErrorCode, Message: "manifest unknown"}}, StatusCode: http.StatusNotFound, Request: dockerHub},
+			want: "the registry index.docker.io answered MANIFEST_UNKNOWN: manifest unknown. The tag does not exist.",
+		},
+		{
+			name: "a rate limit",
+			err:  &transport.Error{Errors: []transport.Diagnostic{{Code: transport.TooManyRequestsErrorCode, Message: "too many requests"}}, StatusCode: http.StatusTooManyRequests, Request: dockerHub},
+			want: "the registry index.docker.io answered TOOMANYREQUESTS: too many requests. The registry limits the pulls. Use a pull secret or a mirror.",
+		},
+		{
+			name: "several answers keep the hint of the first answer that has one",
+			err: &transport.Error{Errors: []transport.Diagnostic{
+				{Code: transport.UnknownErrorCode, Message: "first"},
+				{Code: transport.NameUnknownErrorCode, Message: "repository name not known to registry"},
+			}, StatusCode: http.StatusNotFound, Request: dockerHub},
+			want: "the registry index.docker.io answered UNKNOWN: first; NAME_UNKNOWN: repository name not known to registry. The repository does not exist.",
+		},
+		{
+			name: "an answer without a body",
+			err:  &transport.Error{StatusCode: http.StatusServiceUnavailable, Request: dockerHub},
+			want: "the registry index.docker.io answered 503 Service Unavailable",
+		},
+		{
+			name: "an answer without a body that refuses the credential",
+			err:  &transport.Error{StatusCode: http.StatusForbidden},
+			want: "the registry answered 403 Forbidden. The repository does not exist, or it is private and the workflow has no pull secret for it.",
+		},
+		{
+			name: "a wrapped answer",
+			err:  fmt.Errorf("fetch: %w", &transport.Error{Errors: []transport.Diagnostic{{Code: transport.DeniedErrorCode, Message: "requested access to the resource is denied"}}, Request: dockerHub}),
+			want: "the registry index.docker.io answered DENIED: requested access to the resource is denied. The repository does not exist, or it is private and the workflow has no pull secret for it.",
+		},
+		{
+			name: "an error that did not come from the registry keeps its text",
+			err:  errors.New(`Get "https://registry.invalid/v2/": dial tcp: lookup registry.invalid: no such host`),
+			want: `Get "https://registry.invalid/v2/": dial tcp: lookup registry.invalid: no such host`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := registryError(tt.err, tt.hasPullSecret)
+			assert.EqualError(t, got, tt.want)
+			var terr *transport.Error
+			assert.Equal(t, errors.As(tt.err, &terr), errors.As(got, &terr), "the original error stays reachable")
+		})
+	}
 }

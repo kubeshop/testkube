@@ -11,6 +11,7 @@ package testworkflowresolver
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -19,6 +20,27 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/rand"
 )
+
+// pathError puts a path in the workflow before an error. An inner path that starts with a dot
+// continues the outer path, so the two read as one path, for example spec.steps[0].template "x".
+type pathError struct {
+	path string
+	err  error
+}
+
+func (e *pathError) Error() string {
+	message := e.err.Error()
+	if strings.HasPrefix(message, ".") {
+		return e.path + message
+	}
+	return e.path + ": " + message
+}
+
+func (e *pathError) Unwrap() error { return e.err }
+
+func wrapPath(err error, format string, args ...any) error {
+	return &pathError{path: fmt.Sprintf(format, args...), err: err}
+}
 
 func buildTemplate(template *testworkflowsv1.TestWorkflowTemplate, cfg map[string]testworkflowsv1.ConfigValue,
 	externalize func(key, value string) (expressions.Expression, error)) (*testworkflowsv1.TestWorkflowTemplate, error) {
@@ -40,7 +62,7 @@ func getTemplate(name string, templates map[string]*testworkflowsv1.TestWorkflow
 	if ok {
 		return tpl, nil
 	}
-	return tpl, fmt.Errorf(`template "%s" not found`, name)
+	return tpl, errors.New("the template does not exist")
 }
 
 func getConfiguredTemplate(name string, cfg map[string]testworkflowsv1.ConfigValue, templates map[string]*testworkflowsv1.TestWorkflowTemplate,
@@ -130,18 +152,18 @@ func applyTemplatesToStep(step testworkflowsv1.Step, spec *testworkflowsv1.TestW
 		ref := step.Use[i]
 		tpl, err := getConfiguredTemplate(ref.Name, ref.Config, templates, externalize)
 		if err != nil {
-			return step, errors.Wrap(err, fmt.Sprintf(".use[%d]: resolving template", i))
+			return step, wrapPath(err, ".use[%d] %q", i, ref.Name)
 		}
 		if spec != nil && tpl.Spec.Pod != nil {
 			if err := checkTemplatePodVolumeConflict(spec.Pod, tpl.Spec.Pod, ref.Name); err != nil {
-				return step, errors.Wrap(err, fmt.Sprintf(".use[%d]: injecting template", i))
+				return step, wrapPath(err, ".use[%d] %q", i, ref.Name)
 			}
 			spec.Pod = MergePodConfig(tpl.Spec.Pod, spec.Pod)
 			spec.Pod.Volumes = dedupeVolumesByName(spec.Pod.Volumes)
 		}
 		err = InjectStepTemplate(&step, tpl)
 		if err != nil {
-			return step, errors.Wrap(err, fmt.Sprintf(".use[%d]: injecting template", i))
+			return step, wrapPath(err, ".use[%d] %q", i, ref.Name)
 		}
 	}
 	step.Use = nil
@@ -150,11 +172,11 @@ func applyTemplatesToStep(step testworkflowsv1.Step, spec *testworkflowsv1.TestW
 	if step.Template != nil {
 		tpl, err := getConfiguredTemplate(step.Template.Name, step.Template.Config, templates, externalize)
 		if err != nil {
-			return step, errors.Wrap(err, ".template: resolving template")
+			return step, wrapPath(err, ".template %q", step.Template.Name)
 		}
 		if spec != nil && tpl.Spec.Pod != nil {
 			if err := checkTemplatePodVolumeConflict(spec.Pod, tpl.Spec.Pod, step.Template.Name); err != nil {
-				return step, errors.Wrap(err, ".template: injecting template")
+				return step, wrapPath(err, ".template %q", step.Template.Name)
 			}
 			spec.Pod = MergePodConfig(tpl.Spec.Pod, spec.Pod)
 			spec.Pod.Volumes = dedupeVolumesByName(spec.Pod.Volumes)
@@ -162,7 +184,7 @@ func applyTemplatesToStep(step testworkflowsv1.Step, spec *testworkflowsv1.TestW
 		isolate := testworkflowsv1.Step{}
 		err = InjectStepTemplate(&isolate, tpl)
 		if err != nil {
-			return step, errors.Wrap(err, ".template: injecting template")
+			return step, wrapPath(err, ".template %q", step.Template.Name)
 		}
 
 		if len(isolate.Setup) > 0 || len(isolate.Steps) > 0 {
@@ -182,17 +204,17 @@ func applyTemplatesToStep(step testworkflowsv1.Step, spec *testworkflowsv1.TestW
 			ref := svc.Use[i]
 			tpl, err := getConfiguredTemplate(ref.Name, ref.Config, templates, externalize)
 			if err != nil {
-				return step, errors.Wrap(err, fmt.Sprintf("services[%s].use[%d]: resolving template", name, i))
+				return step, wrapPath(err, ".services[%s].use[%d] %q", name, i, ref.Name)
 			}
 			if len(tpl.Spec.Setup) > 0 || len(tpl.Spec.Steps) > 0 || len(tpl.Spec.After) > 0 {
-				return step, fmt.Errorf("services[%s].use[%d]: steps in template used for the service are not supported", name, i)
+				return step, fmt.Errorf(".services[%s].use[%d]: steps in template used for the service are not supported", name, i)
 			}
 			if len(tpl.Spec.Services) > 0 {
-				return step, fmt.Errorf("services[%s].use[%d]: additional services in template used for the service are not supported", name, i)
+				return step, fmt.Errorf(".services[%s].use[%d]: additional services in template used for the service are not supported", name, i)
 			}
 			err = InjectServiceTemplate(&svc, tpl)
 			if err != nil {
-				return step, errors.Wrap(err, fmt.Sprintf("services[%s].use[%d]: injecting template", name, i))
+				return step, wrapPath(err, ".services[%s].use[%d] %q", name, i, ref.Name)
 			}
 		}
 		svc.Use = nil
@@ -218,7 +240,7 @@ func applyTemplatesToStep(step testworkflowsv1.Step, spec *testworkflowsv1.TestW
 		testWorkflowSpec := step.Parallel.NewTestWorkflowSpec()
 		err := applyTemplatesToSpec(testWorkflowSpec, templates, externalize)
 		if err != nil {
-			return step, errors.Wrap(err, ".parallel")
+			return step, wrapPath(err, ".parallel")
 		}
 		step.Parallel.Use = testWorkflowSpec.Use
 		step.Parallel.Events = testWorkflowSpec.Events
@@ -242,13 +264,13 @@ func applyTemplatesToStep(step testworkflowsv1.Step, spec *testworkflowsv1.TestW
 	for i := range step.Setup {
 		step.Setup[i], err = applyTemplatesToStep(step.Setup[i], spec, templates, externalize)
 		if err != nil {
-			return step, errors.Wrap(err, fmt.Sprintf(".steps[%d]", i))
+			return step, wrapPath(err, ".steps[%d]", i)
 		}
 	}
 	for i := range step.Steps {
 		step.Steps[i], err = applyTemplatesToStep(step.Steps[i], spec, templates, externalize)
 		if err != nil {
-			return step, errors.Wrap(err, fmt.Sprintf(".steps[%d]", i))
+			return step, wrapPath(err, ".steps[%d]", i)
 		}
 	}
 
@@ -297,11 +319,11 @@ func applyTemplatesToSpec(spec *testworkflowsv1.TestWorkflowSpec, templates map[
 		ref := spec.Use[i]
 		tpl, err := getConfiguredTemplate(ref.Name, ref.Config, templates, externalize)
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("spec.use[%d]: resolving template", i))
+			return wrapPath(err, "spec.use[%d] %q", i, ref.Name)
 		}
 		err = injectTemplateToSpec(spec, tpl)
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("spec.use[%d]: injecting template", i))
+			return wrapPath(err, "spec.use[%d] %q", i, ref.Name)
 		}
 	}
 	spec.Use = nil
@@ -312,17 +334,17 @@ func applyTemplatesToSpec(spec *testworkflowsv1.TestWorkflowSpec, templates map[
 			ref := svc.Use[i]
 			tpl, err := getConfiguredTemplate(ref.Name, ref.Config, templates, externalize)
 			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("services[%s].use[%d]: resolving template", name, i))
+				return wrapPath(err, "spec.services[%s].use[%d] %q", name, i, ref.Name)
 			}
 			if len(tpl.Spec.Setup) > 0 || len(tpl.Spec.Steps) > 0 || len(tpl.Spec.After) > 0 {
-				return fmt.Errorf("services[%s].use[%d]: steps in template used for the service are not supported", name, i)
+				return fmt.Errorf("spec.services[%s].use[%d]: steps in template used for the service are not supported", name, i)
 			}
 			if len(tpl.Spec.Services) > 0 {
-				return fmt.Errorf("services[%s].use[%d]: additional services in template used for the service are not supported", name, i)
+				return fmt.Errorf("spec.services[%s].use[%d]: additional services in template used for the service are not supported", name, i)
 			}
 			err = InjectServiceTemplate(&svc, tpl)
 			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("services[%s].use[%d]: injecting template", name, i))
+				return wrapPath(err, "spec.services[%s].use[%d] %q", name, i, ref.Name)
 			}
 		}
 		svc.Use = nil
@@ -333,19 +355,19 @@ func applyTemplatesToSpec(spec *testworkflowsv1.TestWorkflowSpec, templates map[
 	for i := range spec.Setup {
 		spec.Setup[i], err = applyTemplatesToStep(spec.Setup[i], spec, templates, externalize)
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("spec.setup[%d]", i))
+			return wrapPath(err, "spec.setup[%d]", i)
 		}
 	}
 	for i := range spec.Steps {
 		spec.Steps[i], err = applyTemplatesToStep(spec.Steps[i], spec, templates, externalize)
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("spec.steps[%d]", i))
+			return wrapPath(err, "spec.steps[%d]", i)
 		}
 	}
 	for i := range spec.After {
 		spec.After[i], err = applyTemplatesToStep(spec.After[i], spec, templates, externalize)
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("spec.after[%d]", i))
+			return wrapPath(err, "spec.after[%d]", i)
 		}
 	}
 

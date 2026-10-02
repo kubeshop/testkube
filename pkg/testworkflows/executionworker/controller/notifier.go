@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	color2 "github.com/gookit/color"
@@ -267,7 +268,7 @@ func (n *notifier) pendingCause(state watchers2.ExecutionState) (*testkube.Cause
 	if cause != nil {
 		message = cause.String()
 	}
-	if message == n.cause {
+	if message == n.cause || n.keepsPullError(cause, ref) {
 		return nil, "", "", false
 	}
 	// Kubernetes deletes the pod of an ended execution, so the cause goes away with the pod. Keep the last cause.
@@ -278,6 +279,18 @@ func (n *notifier) pendingCause(state watchers2.ExecutionState) (*testkube.Cause
 		return nil, "", "", false
 	}
 	return cause, message, ref, true
+}
+
+// imagePullBackOffPrefix starts the message of Kubernetes while it waits to pull the image again.
+const imagePullBackOffPrefix = "Back-off pulling image"
+
+// keepsPullError reports whether the step keeps the error of a failed pull. After the error,
+// Kubernetes reports that it waits to try again, and that message does not say why the pull failed.
+func (n *notifier) keepsPullError(cause *testkube.Cause, ref string) bool {
+	return cause != nil && n.cause != "" && ref == n.causeRef &&
+		cause.Reason == string(testkube.StartReasonImagePullFailed) &&
+		n.stepResult(ref).ErrorReason == cause.Reason &&
+		strings.HasPrefix(cause.Message, imagePullBackOffPrefix)
 }
 
 // Instruction applies the precise hint information about the action that took place

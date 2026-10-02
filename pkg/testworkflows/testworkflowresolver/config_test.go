@@ -106,7 +106,7 @@ func TestApplyMissingConfig(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "spec.pod.labels[{{config.bar}}-key]")
-	assert.Contains(t, err.Error(), "error while accessing config.baz: unknown variable")
+	assert.Contains(t, err.Error(), "config.baz is not defined")
 }
 
 func TestApplyConfigDefaults(t *testing.T) {

@@ -29,6 +29,14 @@ var unschedulablePod = &corev1.Pod{Status: corev1.PodStatus{Phase: corev1.PodPen
 
 func TestNotifier_Align(t *testing.T) {
 	const unschedulableMessage = "no node can run the pod: 0/1 nodes are available: 1 Insufficient cpu."
+	const pullError = `Failed to pull image "org/private:1": pull access denied, repository does not exist or may require authorization`
+	const pullBackOff = `Back-off pulling image "org/private:1"`
+	waitingPod := func(reason, message string) *corev1.Pod {
+		return &corev1.Pod{Status: corev1.PodStatus{Phase: corev1.PodPending, InitContainerStatuses: []corev1.ContainerStatus{{
+			Name:  "1",
+			State: corev1.ContainerState{Waiting: &corev1.ContainerStateWaiting{Reason: reason, Message: message}},
+		}}}}
+	}
 	type cause struct {
 		message string
 		reason  string
@@ -127,6 +135,18 @@ func TestNotifier_Align(t *testing.T) {
 			wantStep:     cause{"the step ran for too long", ""},
 			wantNextStep: cause{unschedulableMessage, "unschedulable"},
 			wantEvents:   2,
+		},
+		{
+			name:                 "keeps the error of a failed pull when Kubernetes waits to pull again",
+			initializationStatus: testkube.RUNNING_TestWorkflowStepStatus,
+			pods:                 []*corev1.Pod{waitingPod("ErrImagePull", pullError), waitingPod("ImagePullBackOff", pullBackOff)},
+			wantInitialization:   cause{"the image could not be pulled: " + pullError, "image-pull-failed"},
+		},
+		{
+			name:                 "writes the wait to pull again when no error came before it",
+			initializationStatus: testkube.RUNNING_TestWorkflowStepStatus,
+			pods:                 []*corev1.Pod{waitingPod("ImagePullBackOff", pullBackOff)},
+			wantInitialization:   cause{"the image could not be pulled: " + pullBackOff, "image-pull-failed"},
 		},
 		{
 			name:                 "clears its own cause when the step starts to run",
