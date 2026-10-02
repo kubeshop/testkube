@@ -413,6 +413,9 @@ func (e *executionState) Completed() bool {
 }
 
 func (e *executionState) JobExecutionError() string {
+	if e.deadlineExceeded() {
+		return jobTimeoutMessage(e.job.Original())
+	}
 	if e.job != nil && e.job.ExecutionError() != "" {
 		return e.job.ExecutionError()
 	}
@@ -515,9 +518,7 @@ func (e *executionState) TerminationCause() *testkube.Cause {
 // decides which signal wins when Kubernetes reports more than one.
 func (e *executionState) terminationReason() testkube.StopReason {
 	var containerReason, disruption string
-	// The condition of the job and the event of the job both report the deadline, and the watch can
-	// read one before the other. The message reads the condition, so the code reads it too.
-	deadline := e.job != nil && IsJobDeadlineExceeded(e.job.Original())
+	deadline := e.deadlineExceeded()
 	if e.pod != nil {
 		original := e.pod.Original()
 		containerReason = e.pod.ContainerError()
@@ -547,6 +548,35 @@ func (e *executionState) terminationReason() testkube.StopReason {
 		return testkube.StopReasonContainerError
 	}
 	return ""
+}
+
+// deadlineExceeded reports whether the deadline of the job ended the execution. The message and the
+// code both read it, so they agree. The condition, the event and the time of the pod deletion all
+// report the deadline, and the watch can end before the condition or the event arrives.
+func (e *executionState) deadlineExceeded() bool {
+	if e.job == nil {
+		return false
+	}
+	job := e.job.Original()
+	return IsJobDeadlineExceeded(job) || jobDeadlinePassed(job, e.podDeleteRequestTimestamp())
+}
+
+// podDeleteRequestTimestamp returns the time when the job asked to delete the pod. A graceful
+// deletion sets the deletion time of the pod to the request time plus the grace period, so the
+// function removes the grace period.
+func (e *executionState) podDeleteRequestTimestamp() time.Time {
+	if ts := e.jobEvents.PodDeletionTimestamp(); !ts.IsZero() {
+		return ts
+	}
+	if e.pod == nil || e.pod.Original() == nil || e.pod.Original().DeletionTimestamp == nil {
+		return time.Time{}
+	}
+	original := e.pod.Original()
+	ts := original.DeletionTimestamp.Time
+	if original.DeletionGracePeriodSeconds != nil {
+		ts = ts.Add(-time.Duration(*original.DeletionGracePeriodSeconds) * time.Second)
+	}
+	return ts
 }
 
 func (e *executionState) ExecutionError() string {

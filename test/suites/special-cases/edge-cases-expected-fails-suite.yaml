@@ -78,6 +78,10 @@ spec:
       msg={{ shellquote(execution("timeout-activedeadlineseconds").errorMessage + " " + tojson(execution("timeout-activedeadlineseconds").stepErrors)) }}
       echo "$msg"
       echo "$msg" | grep -q "has been aborted" || { echo "unexpected message: $msg"; exit 1; }
+      statusType={{ shellquote(execution("timeout-activedeadlineseconds").statusType) }}
+      statusReason={{ shellquote(execution("timeout-activedeadlineseconds").statusReason) }}
+      [ "$statusType" = "execution-failure" ] || { echo "unexpected status type: $statusType"; exit 1; }
+      [ "$statusReason" = "deadline-exceeded" ] || { echo "unexpected status reason: $statusReason"; exit 1; }
   - name: expected-fail-timeout-step
     negative: true
     execute:
