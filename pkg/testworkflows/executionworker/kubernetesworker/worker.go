@@ -537,7 +537,14 @@ func (w *worker) List(ctx context.Context, options executionworkertypes.ListOpti
 	listOptions := metav1.ListOptions{
 		Limit: 100000,
 	}
-	labelSelectors := make([]string, 0)
+	// Every execution job carries this, and nothing else in the namespace does. Asked
+	// for server-side rather than sorted out here: without it the request is every Job
+	// in every configured namespace, whose internal annotation is then unmarshalled one
+	// by one only to be discarded, with a warning logged for each one that has none
+	// because it was never an execution. The step cache's lease renewal asks this
+	// question every five minutes, which turned that into a recurring full scan of the
+	// cluster's Jobs.
+	labelSelectors := []string{constants.ResourceIdLabelName}
 	if options.GroupId != "" {
 		labelSelectors = append(labelSelectors, fmt.Sprintf("%s=%s", constants.GroupIdLabelName, options.GroupId))
 	}

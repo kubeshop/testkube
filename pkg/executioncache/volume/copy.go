@@ -797,8 +797,11 @@ func relativeToDeclared(key, within, rootName string) (string, bool) {
 			// dst is the parent; the declared path itself is written under this name.
 			return rootName, true
 		}
-		// dst is the declared directory itself, which has no name within its own root.
-		return "", false
+		// dst is the declared directory itself. It has a recorded mode like any other
+		// - SaveTree walks it first - and addressing it as "." is how that reaches it.
+		// Skipping it left a directory saved 0700 restored at whatever the umask gave,
+		// or at whatever mode it already had from a previous run.
+		return ".", true
 	}
 	if rootName != "" {
 		// A single file or link declared as the path carries nothing beneath it.

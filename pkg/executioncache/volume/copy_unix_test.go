@@ -119,3 +119,28 @@ func TestSaveAndRestorePreserveModes(t *testing.T) {
 		assert.Equal(t, want, info.Mode().Perm(), "%s came back with the wrong permissions", name)
 	}
 }
+
+// The declared directory has a recorded mode like anything else in the entry - SaveTree
+// walks it first - and it is restored through the root opened on it, which it addresses
+// as ".". Skipping it left a directory saved 0700 at whatever the umask gave a fresh
+// one, or at whatever mode a previous run had left behind.
+func TestRestoreSetsTheDeclaredDirectorysOwnMode(t *testing.T) {
+	previous := syscall.Umask(0o022)
+	defer syscall.Umask(previous)
+
+	src := posixDir(t) + "/private"
+	write(t, filepath.FromSlash(src+"/key"), "-----BEGIN-----")
+	require.NoError(t, os.Chmod(filepath.FromSlash(src), 0o700))
+
+	entry := entryFrom(t, []string{src})
+	require.NoError(t, os.Chmod(filepath.FromSlash(src), 0o755))
+	require.NoError(t, os.RemoveAll(filepath.FromSlash(src)))
+
+	_, err := RestoreTree(entry, []string{src}, CopyLimits{})
+	require.NoError(t, err)
+
+	info, statErr := os.Lstat(filepath.FromSlash(src))
+	require.NoError(t, statErr)
+	assert.Equal(t, fs.FileMode(0o700), info.Mode().Perm(),
+		"the declared directory's own permissions are part of what was cached")
+}

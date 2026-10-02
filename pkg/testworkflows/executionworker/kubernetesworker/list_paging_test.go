@@ -29,7 +29,13 @@ func executionJob(t *testing.T, name, resourceID string) batchv1.Job {
 	require.NoError(t, err)
 
 	return batchv1.Job{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "exec-ns"},
+		// Every execution job carries this, and List now asks the API server for it
+		// rather than listing the namespace and sorting it out here.
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "exec-ns",
+			Labels:    map[string]string{constants.ResourceIdLabelName: resourceID},
+		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -89,4 +95,32 @@ func TestListPagesThroughEveryJob(t *testing.T) {
 	}
 	assert.ElementsMatch(t, []string{"exec-1", "exec-2"}, ids,
 		"an execution beyond the first page is still running")
+}
+
+// Asked of the API server rather than sorted out here. Without it the request is every
+// Job in every configured namespace, each one's internal annotation unmarshalled only
+// to be discarded and a warning logged for every Job that was never an execution - and
+// the step cache's lease renewal asks this every five minutes.
+func TestListAsksTheApiServerForExecutionJobsOnly(t *testing.T) {
+	clientSet := fake.NewSimpleClientset()
+
+	var selectors []string
+	clientSet.PrependReactor("list", "jobs", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		listAction, ok := action.(k8stesting.ListAction)
+		require.True(t, ok)
+		selectors = append(selectors, listAction.GetListRestrictions().Labels.String())
+		return true, &batchv1.JobList{}, nil
+	})
+
+	w := &worker{
+		clientSet: clientSet,
+		config:    Config{Cluster: ClusterConfig{Namespaces: map[string]NamespaceConfig{"exec-ns": {}}}},
+	}
+
+	_, err := w.List(context.Background(), executionworkertypes.ListOptions{Finished: common.Ptr(false)})
+
+	require.NoError(t, err)
+	require.Len(t, selectors, 1)
+	assert.Contains(t, selectors[0], constants.ResourceIdLabelName,
+		"the namespace holds Jobs that are not executions, and they are not this query's business")
 }

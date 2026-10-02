@@ -1520,3 +1520,36 @@ func TestRunCacheRestore_DropsARestoreKeyTheVolumePrefixPushesOverTheLimit(t *te
 	assert.Contains(t, out.String(), "ignoring the restore key",
 		"a silently dropped fallback looks exactly like one that did not match")
 }
+
+// The repository is asked for a key with this volume's id in front of it and answers
+// with the same. That partition is internal - the author never chose it - so it has no
+// business in their log line, nor in the state the save stage reads back, where
+// MatchedKey means the key as it was written.
+func TestRunCacheRestore_ReportsTheMatchedKeyAsItWasAuthored(t *testing.T) {
+	t.Setenv(volume.EnvVolumeID, "vol1234")
+
+	root := t.TempDir()
+	statePath := filepath.Join(t.TempDir(), "state.json")
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	archive := cacheTarball(t, strings.TrimPrefix(posix+"/restored.txt", "/"), "older")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(archive)
+	}))
+	defer server.Close()
+
+	out := &bytes.Buffer{}
+	require.NoError(t, runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:         "npm-abc",
+		RestoreKeys: []string{"npm-"},
+		Paths:       []string{posix},
+		State:       statePath,
+	}), &fakeCacheRepository{
+		restore: executioncache.RestoreResult{
+			Hit: true, Exact: false, MatchedKey: "vol1234/npm-older", URL: server.URL,
+		},
+	}, out))
+
+	assert.Contains(t, out.String(), `from "npm-older"`, "the volume's id is not part of the key")
+	assert.NotContains(t, out.String(), "vol1234")
+	assert.Equal(t, "npm-older", readState(t, statePath).MatchedKey)
+}

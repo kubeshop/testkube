@@ -345,14 +345,18 @@ func runCacheRestore(ctx context.Context, encoded string, repository executionca
 	if !entry.Exact {
 		state.Hit = executioncache.HitPartial
 	}
-	state.MatchedKey = entry.MatchedKey
+	// Reported as the workflow wrote it. The repository was asked for a key with this
+	// volume's id in front of it, and answers with the same - an internal partition the
+	// author never chose, which has no business in their log line or in the state the
+	// save stage reads back.
+	state.MatchedKey = unscopedCacheKey(entry.MatchedKey)
 
 	if entry.Exact {
 		fmt.Fprintf(out, "cache: hit for %q (%s in %s)\n",
 			spec.Key, humanize.Bytes(uint64(restored)), time.Since(started).Truncate(time.Millisecond))
 	} else {
 		fmt.Fprintf(out, "cache: partial hit for %q from %q (%s in %s)\n",
-			spec.Key, entry.MatchedKey, humanize.Bytes(uint64(restored)), time.Since(started).Truncate(time.Millisecond))
+			spec.Key, state.MatchedKey, humanize.Bytes(uint64(restored)), time.Since(started).Truncate(time.Millisecond))
 	}
 	return nil
 }
@@ -1095,4 +1099,22 @@ func validateScopedCacheKey(key string) error {
 	}
 	return fmt.Errorf("%w; the shared cache volume prefixes every key with %d bytes naming the volume, so the key itself has that much less room",
 		err, len(scoped)-len(key))
+}
+
+// unscopedCacheKey is a key as the workflow wrote it, with this volume's partition
+// taken back off.
+//
+// Only this volume's own prefix: a key that does not carry it is returned untouched, so
+// an entry stored before the partition existed, or by an installation without a volume,
+// still reads as itself.
+func unscopedCacheKey(key string) string {
+	id := os.Getenv(volume.EnvVolumeID)
+	if id == "" {
+		return key
+	}
+	unscoped, found := strings.CutPrefix(key, id+"/")
+	if !found {
+		return key
+	}
+	return unscoped
 }
