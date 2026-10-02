@@ -116,11 +116,13 @@ func (s *Sweeper) Sweep(ctx context.Context) error {
 		if ctx.Err() != nil {
 			return nil
 		}
-		// entry.Info rather than entry.IsDir: the kind a DirEntry reports comes from
-		// whatever readdir returned, and a network or CSI filesystem is entitled to
-		// answer "unknown" for it - which is exactly the kind of volume this feature is
-		// for. IsDir is then false for a real directory, every inbox is skipped, and
-		// the volume is never reclaimed at all. The metadata is wanted below anyway.
+		// entry.Info rather than entry.IsDir, and read once here because the mtime
+		// below wants it too.
+		//
+		// The two agree: os resolves a kind readdir did not know with an lstat before
+		// handing the DirEntry over (file_unix.go, newUnixDirent), so IsDir is not the
+		// hazard on a network filesystem it looks like. This is one source for both
+		// questions rather than a guard against that.
 		info, err := entry.Info()
 		if err != nil {
 			if os.IsNotExist(err) {

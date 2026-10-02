@@ -253,7 +253,26 @@ func (in *Inbox) removeAll(name string) error {
 	}
 	for _, e := range entries {
 		child := path.Join(name, e.Name())
-		if e.IsDir() {
+
+		// e.Info rather than e.IsDir. The two agree here - these entries come from a
+		// file opened in a Root, and os always lstats those rather than trusting the
+		// kind readdir gave it (file_unix.go, newUnixDirent) - so this costs nothing:
+		// the DirEntry is already carrying the FileInfo.
+		//
+		// Written this way because what it decides is whether a child is recursed into
+		// or unlinked, and a directory unlinked as a file fails on being non-empty.
+		// Discarding an entry that lost a race or failed to publish would then leave it
+		// whole on the shared volume until the sweep caught up, and those entries are
+		// the size of a dependency tree. Worth not resting on a kind that arrives from
+		// somewhere else.
+		info, err := e.Info()
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return err
+		}
+		if info.IsDir() {
 			if err := in.removeAll(child); err != nil {
 				return err
 			}
