@@ -218,7 +218,16 @@ restore is a copy rather than an unpack and nothing is gzipped.
   never repaired and never unlinked**: the agent moves to the next generation of the name
   (`.volume-id.2`, then `.volume-id.3`, bounded by `idGenerations`), and a generation that
   exists always wins over the one before it, so an abandoned name written long afterwards
-  cannot take the volume back off the agents using its successor. **Nothing in this file
+  cannot take the volume back off the agents using its successor. **The agent that was
+  declared abandoned must not keep its own identity either**, and that is closed on both
+  sides, because one side cannot do it: after writing, a creator looks for a successor and
+  adopts it (`errIDSuperseded`); and a new generation decides what it holds only once its
+  `O_EXCL` create is won, inheriting whatever the generation it supersedes has gained by
+  then (`inheritedID`). A successor made before that look is found by it, one made after
+  it inherits the identity just written, and there is no ordering in which the two
+  disagree. Note this needs no five-minute stall to reach: an mtime set by a skewed
+  creating node can make an identity look abandoned the moment it is made, so
+  `idStaleAfter` is a margin and not a guarantee. **Nothing in this file
   unlinks anything**, which is the whole point: every name is settled by an atomic
   `O_EXCL` create and no name is ever reused, so there is no instant at which one agent
   can remove what another has just created. Repairing in place instead needs exclusion,

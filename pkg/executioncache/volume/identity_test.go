@@ -232,3 +232,49 @@ func TestALaterGenerationWinsOverAnAbandonedNameWrittenLate(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, id, again, "the volume changed identity under the agents using it")
 }
+
+// An agent can finish writing a generation after another has declared it abandoned: a
+// stall past idStaleAfter does it, and so does a clock skewed far enough that the file
+// looked that old the moment it was made. Returning the identity it just wrote would
+// leave it alone on a prefix nobody else uses, missing every entry the others save and
+// saving entries none of them find.
+func TestACreatorOvertakenByASuccessorDoesNotKeepItsOwnIdentity(t *testing.T) {
+	root := t.TempDir()
+
+	// The successor, as the agent that gave this one up for abandoned would have left
+	// it while this one was still writing.
+	require.NoError(t, os.WriteFile(idName(root, 1), []byte("successor\n"), SharedFileMode))
+
+	_, err := ensureID(root, 0)
+	require.ErrorIs(t, err, errIDSuperseded)
+
+	// And the volume answers with the successor, for this agent as for every other.
+	id, err := EnsureID(root)
+	require.NoError(t, err)
+	assert.Equal(t, "successor", id)
+}
+
+// The other half of the same race, and the half a successor check cannot reach: the
+// successor is created *after* the stalled agent has looked for one. It is settled on
+// the other side, by deciding what a new generation holds only once its create is won -
+// late enough to see what the generation it supersedes has gained in the meantime.
+func TestANewGenerationInheritsWhatItsPredecessorGainedLate(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.WriteFile(idName(root, 0), []byte("late\n"), SharedFileMode))
+
+	id, err := inheritedID(root, 1)
+	require.NoError(t, err)
+	assert.Equal(t, "late", id,
+		"a predecessor written late must not name a different prefix from its successor")
+}
+
+// An abandoned generation holds nothing, so there is nothing to inherit and the
+// successor is a fresh identity. This is the ordinary case.
+func TestANewGenerationAfterAnEmptyOneIsFresh(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.WriteFile(idName(root, 0), nil, SharedFileMode))
+
+	id, err := inheritedID(root, 1)
+	require.NoError(t, err)
+	assert.NotEmpty(t, id)
+}

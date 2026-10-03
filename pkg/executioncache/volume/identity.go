@@ -55,6 +55,11 @@ const (
 // there too long for the write to still be coming. It never leaves this file.
 var errIDAbandoned = errors.New("volume identity was created and never written")
 
+// errIDSuperseded reports that a later generation appeared while this one was being
+// written, so the identity just written is not the one the volume answers with. It never
+// leaves this file.
+var errIDSuperseded = errors.New("volume identity was superseded while being written")
+
 // EnsureID reads the volume's identity, writing one the first time.
 //
 // A cache key is shared by every runner in an environment, but an entry on a volume is
@@ -98,9 +103,11 @@ func EnsureID(mountPath string) (string, error) {
 		}
 
 		var id string
-		if id, err = ensureID(idName(mountPath, generation)); !errors.Is(err, errIDAbandoned) {
-			return id, err
+		id, err = ensureID(mountPath, generation)
+		if errors.Is(err, errIDAbandoned) || errors.Is(err, errIDSuperseded) {
+			continue
 		}
+		return id, err
 	}
 	return "", err
 }
@@ -114,7 +121,9 @@ func idName(mountPath string, generation int) string {
 	return filepath.Join(mountPath, fmt.Sprintf("%s.%d", IDName, generation+1))
 }
 
-func ensureID(name string) (string, error) {
+func ensureID(mountPath string, generation int) (string, error) {
+	name := idName(mountPath, generation)
+
 	switch id, err := readID(name); {
 	case err == nil:
 		return id, nil
@@ -128,12 +137,6 @@ func ensureID(name string) (string, error) {
 		// volume off for this agent over a window one write wide.
 		return awaitID(name)
 	}
-
-	var buf [idBytes]byte
-	if _, err := rand.Read(buf[:]); err != nil {
-		return "", err
-	}
-	id := hex.EncodeToString(buf[:])
 
 	// Created with O_EXCL, not written elsewhere and linked into place.
 	//
@@ -156,10 +159,52 @@ func ensureID(name string) (string, error) {
 		}
 		return "", err
 	}
+
+	// What goes in it is decided now the create is won, not before. The generation this
+	// one supersedes was empty when that was decided, and may have been written since -
+	// by the very agent whose stall made it look abandoned. Inheriting what it gained
+	// is what keeps that agent's identity and this one the same.
+	id, err := inheritedID(mountPath, generation)
+	if err != nil {
+		_ = f.Close()
+		return "", err
+	}
 	if err := writeID(f, id); err != nil {
 		return "", err
 	}
+
+	// And this agent may itself be the one that stalled. A write it finishes after
+	// another agent has declared it abandoned is a write nobody is reading: everyone
+	// else is on the successor, and returning the identity just written would leave
+	// this agent alone on a prefix of its own, missing every entry the others save.
+	//
+	// The two checks meet in the middle. A successor created before this stat is found
+	// here and adopted; one created after it inherits the identity just written, by the
+	// paragraph above. There is no ordering in which the two disagree.
+	if _, statErr := os.Stat(idName(mountPath, generation+1)); statErr == nil {
+		return "", errIDSuperseded
+	}
 	return id, nil
+}
+
+// inheritedID is what a new generation carries: the identity of the newest generation
+// before it that has one, or a fresh identity when none has.
+//
+// Inherited rather than freshly generated so that a predecessor written late does not
+// end up naming a different prefix from the successor that replaced it. An abandoned
+// generation holds nothing, which is the ordinary case and the one that generates.
+func inheritedID(mountPath string, generation int) (string, error) {
+	for previous := generation - 1; previous >= 0; previous-- {
+		if id, err := readID(idName(mountPath, previous)); err == nil {
+			return id, nil
+		}
+	}
+
+	var buf [idBytes]byte
+	if _, err := rand.Read(buf[:]); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(buf[:]), nil
 }
 
 // writeID sets the mode and then the contents, in that order, and closes the file.
@@ -234,8 +279,12 @@ func abandonedID(name string) bool {
 	if err != nil || info.Size() != 0 {
 		return false
 	}
-	// Clock skew between the node that created this and the one reading it only makes
-	// the file look younger than it is, which errs towards waiting for a write.
+	// The mtime may have been set by the node that created the file rather than by the
+	// server holding it, so clock skew can make a file look older than it is as easily
+	// as younger - a skewed enough creator has its identity declared abandoned the
+	// moment it is made. The window that opens is closed on both sides by ensureID
+	// rather than by trusting this, which is why the margin here can stay small enough
+	// to be useful.
 	return time.Since(info.ModTime()) >= idStaleAfter
 }
 
