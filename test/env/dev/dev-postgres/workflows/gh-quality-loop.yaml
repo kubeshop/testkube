@@ -8,7 +8,7 @@ metadata:
     core-tests: cloud-ui
     artifacts: "true"
     junit: "true"
-    team: frontend
+    team-frontend: "true"
     package: web
     tool: vitest
 spec:
@@ -75,7 +75,7 @@ metadata:
     core-tests: backoffice
     artifacts: "true"
     junit: "true"
-    team: frontend
+    team-frontend: "true"
     package: backoffice
     tool: vitest
 spec:
@@ -142,7 +142,7 @@ metadata:
     core-tests: cloud-api
     artifacts: "true"
     junit: "true"
-    team: backend
+    team-backend: "true"
     package: runspace-controller
     tool: vitest
 spec:
@@ -207,7 +207,7 @@ metadata:
     category: static-analysis
     quality-loop: "true"
     core-tests: cloud-api
-    team: backend
+    team-backend: "true"
     tool: golangci-lint
 spec:
   config:
@@ -283,7 +283,8 @@ metadata:
     category: static-analysis
     quality-loop: "true"
     core-tests: cloud-ui
-    team: frontend
+    team-frontend: "true"
+    team-backend: "true"
     tool: turbo
 spec:
   system:
@@ -357,7 +358,8 @@ metadata:
     category: static-analysis
     quality-loop: "true"
     core-tests: cloud-api
-    team: backend
+    team-backend: "true"
+    team-frontend: "true"
     tool: helm
 spec:
   config:
@@ -401,7 +403,7 @@ metadata:
     category: build-integration
     quality-loop: "true"
     core-tests: cloud-api
-    team: backend
+    team-backend: "true"
     tool: go
 spec:
   config:
@@ -473,7 +475,7 @@ metadata:
     core-tests: cloud-api
     artifacts: "true"
     junit: "true"
-    team: backend
+    team-backend: "true"
     tool: go
 spec:
   config:

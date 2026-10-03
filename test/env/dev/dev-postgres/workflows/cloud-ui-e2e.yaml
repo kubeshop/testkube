@@ -10,6 +10,8 @@ metadata:
     playwright-traces: "on"
     category: e2e-ui-testing
     dev-quality-gate: "true"
+    team-backend: "true"
+    team-frontend: "true"
 spec:
   config:
     revision:
