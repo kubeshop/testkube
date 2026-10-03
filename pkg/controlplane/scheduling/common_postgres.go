@@ -214,3 +214,22 @@ func mapPgTestWorkflowExecutionLineage(exec sqlc.TestWorkflowExecution) *testkub
 		Attempt: exec.LineageAttempt.Int32,
 	}
 }
+
+// mapPgTestWorkflowExecutionForDispatch builds the projection the runner is sent,
+// and nothing more.
+//
+// Workflow carries the denormalised name only. The runner fetches the real
+// workflow with GetExecutionWorkflow, so reading the spec here bought nothing and
+// cost six extra queries and a jsonb decode per queued execution per second -
+// which is what made a burst of scheduled workflows stall the dispatch loop.
+//
+// Result.Status comes from the denormalised e.status column, which a trigger on
+// test_workflow_results keeps in step. The handler switches on it, so it has to
+// be populated even though no result row was read.
+func mapPgTestWorkflowExecutionForDispatch(exec sqlc.TestWorkflowExecution) testkube.TestWorkflowExecution {
+	out := mapPgTestWorkflowExecutionPartial(exec, sqlc.TestWorkflowResult{Status: exec.Status})
+	if exec.WorkflowName.Valid {
+		out.Workflow = &testkube.TestWorkflow{Name: exec.WorkflowName.String}
+	}
+	return out
+}
