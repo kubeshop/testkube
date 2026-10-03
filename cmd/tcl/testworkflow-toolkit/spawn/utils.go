@@ -80,6 +80,11 @@ func buildKubernetesWorkerConfig(cfg *testworkflowconfig.InternalConfig, debug b
 		EmptyDirSizeLimit:      cfg.Worker.EmptyDirSizeLimit,
 		DefaultImagePullPolicy: cfg.Worker.DefaultImagePullPolicy,
 		DefaultRunnerResources: cfg.Worker.DefaultRunnerResources,
+		// Carried so a cached step inside a parallel or service worker reaches the same
+		// volume the parent execution does. Without it those pods would silently fall
+		// back to the object store, which is the kind of difference nobody notices
+		// except as a cache that works everywhere but there.
+		StepCacheVolume: cfg.Worker.StepCacheVolume,
 	}
 }
 

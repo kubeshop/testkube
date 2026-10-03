@@ -201,3 +201,74 @@ tests:
       - equal:
           path: spec.template.spec.serviceAccountName
           value: my-sa
+
+  - it: does not configure the step cache volume by default
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TESTKUBE_STEP_CACHE_VOLUME_CLAIM
+          any: true
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: step-cache
+          any: true
+
+  # A claim without enabled, or enabled without a claim, is a half-configured volume:
+  # the agent would be told to sweep a path nothing is mounted at.
+  - it: ignores the step cache volume unless both enabled and a claim are given
+    set:
+      stepCacheVolume.enabled: true
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TESTKUBE_STEP_CACHE_VOLUME_CLAIM
+          any: true
+
+  - it: configures the step cache volume and mounts the claim on this deployment
+    set:
+      stepCacheVolume.enabled: true
+      stepCacheVolume.claimName: shared-cache
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TESTKUBE_STEP_CACHE_VOLUME_CLAIM
+            value: shared-cache
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TESTKUBE_STEP_CACHE_VOLUME_MOUNT_PATH
+            value: /var/testkube/step-cache
+      # The runner owns no bucket, so it cannot read how long a cache object lives and
+      # has to be told: without this the sweep would hold entries to a default that has
+      # nothing to do with the Control Plane's store, and could delete an entry whose
+      # pointer is still served.
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: STORAGE_CACHE_EXPIRATION
+            value: "1"
+      # Mounted here, not only on execution pods: a runner-only installation has no api
+      # Deployment, and the sweep would otherwise read a missing directory as an empty
+      # volume and let the claim fill.
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: step-cache
+            persistentVolumeClaim:
+              claimName: shared-cache
+
+  - it: carries a changed object expiration into the environment
+    set:
+      stepCacheVolume.enabled: true
+      stepCacheVolume.claimName: shared-cache
+      stepCacheVolume.objectExpirationDays: 14
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: STORAGE_CACHE_EXPIRATION
+            value: "14"

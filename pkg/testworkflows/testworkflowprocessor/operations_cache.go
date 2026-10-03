@@ -13,6 +13,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/executioncache"
+	"github.com/kubeshop/testkube/pkg/executioncache/volume"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -40,6 +41,21 @@ const (
 	// accounted with its metadata and a limit of exactly the archive size would leave no
 	// room for that.
 	cacheTempDirHeadroom = 64 << 20
+)
+
+const (
+	// cacheVolumePath is the whole volume, mounted read-only, so a restore can read an
+	// entry any earlier execution wrote.
+	cacheVolumePath = "/.tktw-cachestore"
+
+	// cacheInboxPath is this execution's own directory on that volume, reached through
+	// a subPath mount so the pod holds that directory and nothing else.
+	//
+	// Which directory that is comes from the intermediate, which knows the execution.
+	// It is resolved at bundle time rather than written as an expression because only
+	// volume mounts are finalized with the pod spec - a container's env is not - and
+	// the toolkit needs the same answer in both places.
+	cacheInboxPath = "/.tktw-cacheinbox"
 )
 
 // validateCache rejects a cache block that cannot work, at bundle time.
@@ -225,6 +241,18 @@ func ProcessCacheRestore(_ InternalProcessor, layer Intermediate, container stag
 		return nil, err
 	}
 
+	// Read-only, and the whole volume: a restore legitimately reads what an earlier,
+	// unrelated execution saved, so there is no subPath that would still answer. That
+	// is why reads across the volume are the accepted cost of sharing one, and why the
+	// mount must stay read-only - this stage is pure, so it is merged into the step's
+	// own container and the step's own command holds it.
+	if mount, ok := layer.StepCacheVolumeMount(cacheVolumePath, "", true); ok {
+		selfContainer.
+			AppendVolumeMounts(mount).
+			AppendEnv(corev1.EnvVar{Name: volume.EnvStorePath, Value: cacheVolumePath}).
+			AppendEnv(corev1.EnvVar{Name: volume.EnvVolumeID, Value: layer.StepCacheVolumeID()})
+	}
+
 	// The two stages are separate containers, so the save stage cannot simply
 	// recompute the key: an install may rewrite the very lockfile the key hashes -
 	// npm ci does - and the entry would then be stored under a key nothing ever looks
@@ -299,6 +327,25 @@ func ProcessCacheSave(_ InternalProcessor, layer Intermediate, container stage.C
 	selfContainer.
 		AppendVolumeMounts(layer.AddEmptyDirVolume(&corev1.EmptyDirVolumeSource{SizeLimit: stagingLimit}, cacheTempDirPath)).
 		AppendEnv(corev1.EnvVar{Name: cacheTempDirEnvName, Value: cacheTempDirPath})
+
+	// Writable, and only this execution's own directory on the volume. The subPath is
+	// what confines it: kubelet resolves it at mount time, so the pod holds that
+	// directory and nothing else however the step behaves.
+	//
+	// The staging emptyDir above stays mounted even when there is a volume. A save that
+	// cannot use the volume falls back to the object store, and that fallback is
+	// decided in the pod, after the pod spec is fixed - so the archive needs somewhere
+	// to be packed either way. An emptyDir's sizeLimit reserves nothing, so an unused
+	// one costs nothing.
+	if mount, ok := layer.StepCacheVolumeMount(cacheInboxPath, layer.StepCacheInboxName(), false); ok {
+		selfContainer.
+			AppendVolumeMounts(mount).
+			AppendEnv(corev1.EnvVar{Name: volume.EnvInboxPath, Value: cacheInboxPath}).
+			AppendEnv(corev1.EnvVar{Name: volume.EnvInboxName, Value: layer.StepCacheInboxName()}).
+			// Carried on the save side too: the key a save publishes under has to match
+			// the one a restore looks for, and this stage cannot read the volume root.
+			AppendEnv(corev1.EnvVar{Name: volume.EnvVolumeID, Value: layer.StepCacheVolumeID()})
+	}
 
 	encoded, err := expressions.EncodeBase64JSON(executioncache.Args{
 		Key:         step.Cache.Key,

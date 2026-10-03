@@ -1,0 +1,870 @@
+package volume
+
+import (
+	"errors"
+	"fmt"
+	"io"
+	"io/fs"
+	"math"
+	"os"
+	"path"
+	"path/filepath"
+	"sort"
+	"strings"
+	"sync"
+)
+
+// CopyLimits bound what a copy will move, so a malformed or hostile entry cannot fill
+// the destination or walk forever.
+//
+// They mirror the guards the archive form carried, because the entry is still written
+// by whoever populated the cache - under an environment-scoped cache, another workflow.
+type CopyLimits struct {
+	MaxTotalBytes int64
+	MaxEntries    int
+}
+
+var (
+	// ErrTooLarge reports that a copy stopped at MaxTotalBytes.
+	ErrTooLarge = errors.New("cache entry is larger than the limit")
+	// ErrTooManyEntries reports that a copy stopped at MaxEntries.
+	ErrTooManyEntries = errors.New("cache entry holds more files than the limit")
+)
+
+// remaining is how many bytes a copy may still write.
+//
+// A MaxTotalBytes of zero means unbounded, matching MaxEntries and matching what a
+// zero-valued CopyLimits reads as. Subtracting from zero instead would make "no limit"
+// the tightest limit there is, and refuse the first byte of every copy.
+func remaining(max, used int64) int64 {
+	if max <= 0 {
+		return math.MaxInt64
+	}
+	return max - used
+}
+
+// RestoreTree copies an entry's mirrored tree onto the filesystem.
+//
+// src is <entry>/root, where every path is an absolute container path with its leading
+// separator dropped. Each declared path is restored separately and **through an os.Root
+// opened on that path**, which is what confines the write: a symlink already sitting
+// inside a declared path cannot redirect a write outside it, because os.Root refuses to
+// traverse one that leaves the root. Writing by absolute name instead would follow it,
+// and an entry may have been written by another workflow under an environment-scoped
+// key - so that link is attacker-controlled input, not a local detail.
+//
+// Restoring per declared path also does the job the archive form needed an allowlist
+// for: anything in the entry outside the declared paths is simply never reached.
+//
+// It reports whether it wrote anything before failing. A caller that has written
+// something has a half-restored tree and must clear the declared paths; one that has
+// not can leave them alone, which matters because a declared path may hold a checkout
+// the step still needs.
+// entry is the entry, not its tree: the modes the tree could not carry are recorded
+// beside it, and both are read through the one root.
+func RestoreTree(entry *os.Root, declaredPaths []string, limits CopyLimits) (wrote bool, err error) {
+	src, err := entry.OpenRoot(EntryRoot)
+	if err != nil {
+		return false, err
+	}
+	defer src.Close()
+
+	// Absent for an entry written before modes were recorded, and for one where nothing
+	// differed from the defaults. Both mean the same thing here: restore at the
+	// defaults, which is what those entries were getting anyway.
+	//
+	// Streamed rather than read whole, and bounded by the same entry limit that bounds
+	// the tree: this is read before any of those limits apply, and the file is not
+	// necessarily one this installation wrote - a workflow can commit an entry carrying
+	// a manifest of any size, which every later execution restoring that key would
+	// otherwise read into memory entire.
+	modes := Modes{}
+	switch recorded, readErr := entry.Open(ModesName); {
+	case readErr == nil:
+		modes = DecodeModesFrom(recorded, limits.MaxEntries)
+		recorded.Close()
+	case !errors.Is(readErr, fs.ErrNotExist):
+		return false, readErr
+	}
+
+	var (
+		total    int64
+		entries  int
+		wanted   int
+		restored int
+
+		// Where each declared path's recorded modes will be set, once every one of
+		// them has been written. See the append below.
+		pending []declaredRoot
+	)
+	defer func() {
+		for _, p := range pending {
+			p.dst.Close()
+		}
+	}()
+
+	for _, declared := range coverPaths(declaredPaths) {
+		dest := path.Clean(declared)
+		if dest == "" || dest == "/" || dest == "." {
+			continue
+		}
+		wanted++
+
+		// Where this path lives inside the entry: the same absolute name with the
+		// leading separator dropped, which is how the entry mirrors the filesystem.
+		within := strings.TrimPrefix(dest, "/")
+		// Lstat, so that a declared path which is itself a link arrives as one rather
+		// than as whatever it points at.
+		info, statErr := src.Lstat(within)
+		if statErr != nil {
+			if errors.Is(statErr, fs.ErrNotExist) {
+				// The entry does not carry this path. A smaller entry than the step
+				// declared is a normal thing to restore, not a fault.
+				continue
+			}
+			// Anything else - a permission problem, an I/O error, a volume that went
+			// away mid-restore - is not evidence that the path is absent, and reading
+			// it as such would report a hit for a path nothing was restored to. The
+			// entry is exact, so the save stage would then skip replacing it, and a
+			// declared path that did restore leaves a tree that looks whole and is
+			// not. Report it and let the caller clear up and call it a miss.
+			return wrote, statErr
+		}
+		restored++
+
+		// A link declared as the path is written straight out rather than walked.
+		// fs.WalkDir stats its own root through the filesystem, which follows a link:
+		// a dangling one fails the restore outright, and a live one would walk whatever
+		// it points at and put that at the declared path in place of the link.
+		if info.Mode()&fs.ModeSymlink != 0 {
+			didWrite, linkErr := restoreLink(src, within, dest, &entries, limits)
+			if didWrite {
+				wrote = true
+			}
+			if linkErr != nil {
+				return wrote, linkErr
+			}
+			continue
+		}
+
+		// A declared path that is itself a file is restored into its parent under its
+		// own name, because the root this writes through has to be a directory. Rooting
+		// it at the declared path would mean creating a directory where the file
+		// belongs, and the walk below skips its own starting point - so a single-file
+		// cache saved correctly and then restored nothing at all.
+		rootedAt, rootName := dest, ""
+		if !info.IsDir() {
+			rootedAt, rootName = path.Dir(dest), path.Base(dest)
+		}
+
+		dst, openErr := openDeclaredRoot(rootedAt)
+		if openErr != nil {
+			return wrote, openErr
+		}
+
+		didWrite, copyErr := restoreInto(src, within, dst, rootName, &total, &entries, limits)
+		if didWrite {
+			wrote = true
+		}
+		if copyErr != nil {
+			dst.Close()
+			return wrote, copyErr
+		}
+
+		// Held open rather than having its modes set here. A recorded mode can take a
+		// directory's write bit away, and a later declared path can still fail: the
+		// caller then clears what was written, and cannot, because the tree it has to
+		// empty is one this restore just made unwritable. It reports a miss and leaves
+		// a part of a cache behind for the install to find.
+		//
+		// A handful of declared paths, so a handful of descriptors held to the end.
+		pending = append(pending, declaredRoot{dst: dst, within: within, rootName: rootName})
+	}
+
+	// An entry that carries none of the paths this step asked for is not a hit, even
+	// though every lookup said it was. A key does not describe the paths it was saved
+	// with - it is whatever the workflow templated, commonly a lockfile hash - so an
+	// environment-scoped key shared by workflows that cache different directories, or
+	// a workflow that changes its paths without changing its key, lands here.
+	//
+	// Returning success would report an exact hit that restored nothing, and an exact
+	// hit tells the save stage there is nothing to replace, so the step would reinstall
+	// on every execution with the entry still claiming to hold what it does not. The
+	// archive backend refuses the same mismatch through UnpackTarball's allowed roots.
+	//
+	// Some but not all is fine, and stays a hit: SaveTree skips a declared path that
+	// did not exist when the entry was written, so an entry smaller than the step
+	// declared is the ordinary shape of one.
+	if wanted > 0 && restored == 0 {
+		return wrote, ErrEntryHoldsNoDeclaredPath
+	}
+
+	// Set only now that every declared path has been written, so that nothing this
+	// restore might still have to clear up is made unwritable while it could still
+	// fail. Deepest first within each path, because narrowing a directory before what
+	// is inside it has been restored would shut the restore out of its own work.
+	for _, p := range pending {
+		if err := applyModes(p.dst, p.within, p.rootName, modes); err != nil {
+			return wrote, err
+		}
+	}
+	return wrote, nil
+}
+
+// declaredRoot is one declared path's destination, kept open until every other has been
+// written so that its recorded modes are the last thing set.
+type declaredRoot struct {
+	dst      *os.Root
+	within   string
+	rootName string
+}
+
+// ErrEntryHoldsNoDeclaredPath reports an entry that carries none of the paths the step
+// asked to restore, which the caller reports as a miss rather than an empty hit.
+var ErrEntryHoldsNoDeclaredPath = errors.New("the entry holds none of the declared cache paths")
+
+// ErrDeclaredPathIsSymlink reports a declared cache path that is - or is reached
+// through - a symlink.
+var ErrDeclaredPathIsSymlink = errors.New("declared cache path is reached through a symlink")
+
+// coverPaths drops declared paths that another declared path already contains.
+//
+// A workflow may legitimately declare both /data/deps and /data/deps/packages. Walking
+// each in turn would then visit the nested tree twice: storing it twice on the volume,
+// and counting it twice against the size and entry limits. The archive form does not,
+// because its walker crosses the filesystem once and matches every file against all the
+// patterns - so without this the two backends disagree about how big the same cache is,
+// and the volume can refuse a cache the archive would have taken.
+//
+// Sorting on each path with its separator appended puts a parent immediately before
+// everything beneath it, so comparing each path against the last one kept is enough to
+// drop the whole nested run.
+//
+// The separator is what makes that true, and plain lexicographic order is not: "-"
+// precedes "/", so /a, /a- and /a/b sort in that order and the comparison against the
+// last kept path sees /a-, not /a, and keeps /a/b. Appending the separator sorts /a-
+// before /a instead, and the only paths that can then fall between /a/ and /a/b/ are
+// ones beginning /a/ - descendants, which is precisely what the comparison drops.
+func coverPaths(paths []string) []string {
+	cleaned := make([]string, 0, len(paths))
+	for _, p := range paths {
+		c := path.Clean(p)
+		if c == "" || c == "/" || c == "." {
+			continue
+		}
+		cleaned = append(cleaned, c)
+	}
+	sort.Slice(cleaned, func(i, j int) bool { return cleaned[i]+"/" < cleaned[j]+"/" })
+
+	covered := make([]string, 0, len(cleaned))
+	for _, c := range cleaned {
+		if n := len(covered); n > 0 {
+			last := covered[n-1]
+			// The trailing separator is what keeps /data/deps2 from looking like it
+			// sits under /data/deps.
+			if c == last || strings.HasPrefix(c, last+"/") {
+				continue
+			}
+		}
+		covered = append(covered, c)
+	}
+	return covered
+}
+
+// openDeclaredRoot opens a declared path as a root, having first established that it is
+// a real directory reached only through real directories.
+//
+// os.Root confines what happens *after* it is opened; opening it does not confine
+// itself. os.OpenRoot resolves the name it is given, final symlink included, so a
+// declared path that is a link to somewhere else yields a root at that somewhere else
+// and every subsequent write - confined, correctly, to the wrong place - lands outside
+// the declared path. Worse, the cleanup that a failed restore performs would then empty
+// the link rather than what was written through it.
+//
+// So each component is checked before it is traversed, and missing ones are created as
+// real directories. A step that has made one of them a symlink gets a miss, which is
+// the same answer any other unusable declared path gets.
+func openDeclaredRoot(dest string) (*os.Root, error) {
+	parts := strings.Split(strings.Trim(dest, "/"), "/")
+
+	// Where the walk starts has to be where os.OpenRoot below will look, or this
+	// checks and creates one directory and then opens another.
+	//
+	// A declared path is relative whenever the step's own image decides the working
+	// directory, which is the common case: mountCachePaths resolves a relative path
+	// against the working directory only where the bundle already knows it, and leaves
+	// it alone otherwise. Walking from the root then created /node_modules, left
+	// ./node_modules uncreated, and OpenRoot failed on it - so the volume never
+	// restored a relative path at all. It also ran the symlink guard below against a
+	// path that was not the one about to be written to, which is the whole point of
+	// the guard.
+	//
+	// Relative to the process, deliberately: SaveTree walks the same spelling from the
+	// same place, so the two agree about what an entry holds.
+	current := "."
+	if strings.HasPrefix(dest, "/") {
+		current = "/"
+	}
+
+	for _, part := range parts {
+		if part == "" || part == "." {
+			continue
+		}
+		current = path.Join(current, part)
+		native := filepath.FromSlash(current)
+
+		info, err := os.Lstat(native)
+		switch {
+		case os.IsNotExist(err):
+			if mkErr := os.Mkdir(native, 0o777); mkErr != nil && !os.IsExist(mkErr) {
+				return nil, mkErr
+			}
+		case err != nil:
+			return nil, err
+		case info.Mode()&os.ModeSymlink != 0:
+			return nil, fmt.Errorf("%s: %w", current, ErrDeclaredPathIsSymlink)
+		case !info.IsDir():
+			return nil, fmt.Errorf("%s is not a directory", current)
+		}
+	}
+	return os.OpenRoot(filepath.FromSlash(dest))
+}
+
+// restoreInto copies one declared path's subtree out of the entry and into dst.
+// rootName is empty when dst is rooted at the declared path itself, and is the name to
+// write it under when the declared path is a single file or link and dst is therefore
+// rooted at its parent.
+func restoreInto(src *os.Root, within string, dst *os.Root, rootName string, total *int64, entries *int, limits CopyLimits) (bool, error) {
+	var wrote bool
+
+	err := fs.WalkDir(src.FS(), within, func(name string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Relative to the declared path, which is what dst is rooted at.
+		rel := strings.TrimPrefix(strings.TrimPrefix(name, within), "/")
+		if rel == "" {
+			if rootName == "" {
+				// The declared directory itself: dst is already rooted at it, so
+				// there is nothing to create.
+				return nil
+			}
+			// A single file or link declared as the path: dst is its parent, and this
+			// is the one entry to write there.
+			rel = rootName
+		}
+
+		// Directories are counted, and before they are made, exactly as the save counts
+		// them - a tree that passed the limit going in has to pass it coming out, or
+		// the entry would store and then be refused by every restore of it, under a
+		// key no later run could replace. Nothing else bounds a directory: MaxTotalBytes
+		// weighs file contents and a directory has none, so an entry of millions of
+		// empty directories would otherwise cost an inode and a mkdir apiece on every
+		// restore.
+		//
+		// Made still counts as written: wrote is what tells the caller to clear the
+		// declared paths after a failure, so it has to mean "this touched the
+		// filesystem", not "this copied bytes". A restore that creates a directory tree
+		// and then stops at the limit would otherwise report nothing written and leave
+		// that tree behind for the install to find.
+		if d.IsDir() {
+			*entries++
+			if limits.MaxEntries > 0 && *entries > limits.MaxEntries {
+				return ErrTooManyEntries
+			}
+			wrote = true
+			if err := dst.MkdirAll(rel, DefaultDirMode); err != nil {
+				return err
+			}
+			// Set, for the reason copyIntoRoot sets a file's: MkdirAll's mode is
+			// filtered by the umask, and the manifest records only what differs from
+			// the default, so a directory cached at an ordinary 0755 would otherwise
+			// come back at whatever the restoring process happened to allow.
+			return dst.Chmod(rel, DefaultDirMode)
+		}
+
+		*entries++
+		if limits.MaxEntries > 0 && *entries > limits.MaxEntries {
+			return ErrTooManyEntries
+		}
+
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+
+		// A symlink is recreated as a symlink rather than followed. Creating one is
+		// safe whatever it points at - it is only a name - and the os.Root this writes
+		// through is what stops anything later following it out of the declared path.
+		// Dropping them instead would restore an incomplete tree that still answers as
+		// an exact hit, so the step would never repair it: node_modules/.bin is
+		// entirely symlinks.
+		if info.Mode()&fs.ModeSymlink != 0 {
+			target, readErr := src.Readlink(name)
+			if readErr != nil {
+				return readErr
+			}
+			// Set before the first mutation rather than after the last one: the Remove
+			// below can succeed and the Symlink then fail, which has changed the tree
+			// even though nothing was created.
+			wrote = true
+			if mkErr := dst.MkdirAll(path.Dir(rel), DefaultDirMode); mkErr != nil && path.Dir(rel) != "." {
+				return mkErr
+			}
+			// An entry restored over an existing tree may find the link already there.
+			_ = dst.Remove(rel)
+			return dst.Symlink(target, rel)
+		}
+
+		if !info.Mode().IsRegular() {
+			// Sockets, devices and pipes cannot be reproduced meaningfully and no
+			// dependency tree needs them.
+			return nil
+		}
+
+		// Likewise set before the copy, not from the byte count it returns: an empty
+		// file is still a file the install would find, and copyIntoRoot removes what
+		// is already at the path before creating anything, so even a copy that fails
+		// immediately may have changed the tree.
+		wrote = true
+		n, copyErr := copyIntoRoot(src, name, dst, rel, info, remaining(limits.MaxTotalBytes, *total))
+		*total += n
+		return copyErr
+	})
+	return wrote, err
+}
+
+// SaveTree copies the declared paths into a staged entry, mirroring the filesystem.
+//
+// dst is the staging directory's <entry>/root. Paths that do not exist are skipped: a
+// step may declare a cache path it never creates, and that is a smaller entry rather
+// than a failure.
+//
+// It returns the total bytes written - which is what the pointer carries and what a
+// quota would be refused against - and how many files it found. The count is separate
+// because a tree of empty files is still a tree, where zero bytes alone would read as
+// nothing to save and publish an entry that answers every later run with a hit that
+// restores nothing.
+func SaveTree(dst string, paths []string, limits CopyLimits) (int64, int, error) {
+	var (
+		total int64
+		// counted bounds the work this entry will cost - every inode, directories
+		// included - and is what MaxEntries applies to.
+		//
+		// content is what the caller means by an empty entry, and counts only files and
+		// links. A tree of nothing but directories restores nothing, so publishing it
+		// under an immutable key would answer every later run with a hit holding no
+		// files at all.
+		counted int
+		content int
+
+		// What the tree itself cannot carry: a file on the volume is read by an
+		// execution that may run as another user, so it is stored readable by anyone
+		// and its own mode no longer says what the source's was. See ModesName.
+		modes = NewRecorder()
+	)
+	for _, p := range coverPaths(paths) {
+		src := path.Clean(p)
+		if src == "" || src == "/" || src == "." {
+			continue
+		}
+		base := filepath.Join(dst, filepath.FromSlash(strings.TrimPrefix(src, "/")))
+
+		// The prefix above this declared path's own root is created once, by one
+		// MkdirAll, and the walk below never visits it - so its mode is set here rather
+		// than per directory. An unwritable directory anywhere in the chain is one the
+		// agent cannot unlink through when it sweeps.
+		//
+		// Made only once the walk has found something, though, because a declared path
+		// that does not exist has to leave nothing at all behind. Creating it up front
+		// put an empty mirrored tree in the entry for every absent path, and a restore
+		// reads the presence of that directory as the path being carried: it reports an
+		// exact hit, writes nothing, and the save stage then skips replacing an entry
+		// that holds nothing for that path.
+		//
+		// Up to the declared path's parent, not the path itself. A workflow may cache a
+		// single file - validateCache allows it and clearCachePaths handles it - and
+		// making base a directory then meant the copy of that file onto it failed with
+		// EISDIR, so every such cache fell back to the object store. The branches below
+		// create base themselves, as whatever the source actually is.
+		prefix := sync.OnceValue(func() error { return mkdirAllShared(dst, filepath.Dir(base)) })
+
+		// filepath.Walk lstats, so a symlink arrives as a symlink rather than as
+		// whatever it points at - which is what lets the entry carry the link itself.
+		err := filepath.Walk(filepath.FromSlash(src), func(name string, info os.FileInfo, err error) error {
+			if err != nil {
+				if os.IsNotExist(err) {
+					return nil
+				}
+				return err
+			}
+			if prefixErr := prefix(); prefixErr != nil {
+				return prefixErr
+			}
+
+			rel, relErr := filepath.Rel(filepath.FromSlash(src), name)
+			if relErr != nil {
+				return relErr
+			}
+			target := base
+			if rel != "." {
+				target = filepath.Join(base, rel)
+			}
+
+			// Keyed by where this lands inside the entry, which is what the restore
+			// walks. A link's own mode means nothing on either side, so only files and
+			// directories are recorded.
+			if info.Mode()&os.ModeSymlink == 0 {
+				within, relErr := filepath.Rel(dst, target)
+				if relErr != nil {
+					return relErr
+				}
+				modes.Record(filepath.ToSlash(within), info.Mode(), info.IsDir())
+			}
+
+			switch {
+			case info.IsDir():
+				// Counted, and before it is made. A directory costs an inode on the
+				// shared volume and a mkdir on every restore, and nothing else here
+				// bounds one: MaxTotalBytes weighs file contents, of which a directory
+				// has none. A step controls what is under its own cached paths, so a
+				// tree of millions of empty directories would otherwise be copied onto
+				// a volume every execution shares, and recreated by every restore.
+				//
+				// The root of a declared path is not skipped here the way it is on the
+				// restore side, because rel == "." is that root and it is one
+				// directory either way.
+				counted++
+				if limits.MaxEntries > 0 && counted > limits.MaxEntries {
+					return ErrTooManyEntries
+				}
+				return mkdirShared(target)
+
+			case info.Mode()&os.ModeSymlink != 0:
+				// counted bounds the work and so is taken before any is done; an entry
+				// that turns out not to be staged leaves the limit a shade
+				// conservative, which is the harmless direction.
+				//
+				// content is taken after, because it decides whether this entry holds
+				// anything at all. A link that disappears between the walk and the
+				// Readlink below is skipped - the entry is a snapshot, not a
+				// transaction - and counting it would publish an entry of nothing but
+				// directories as though it held content. A restore of that reports an
+				// exact hit having written nothing, under a key no later run can
+				// replace.
+				counted++
+				if limits.MaxEntries > 0 && counted > limits.MaxEntries {
+					return ErrTooManyEntries
+				}
+				link, readErr := os.Readlink(name)
+				if readErr != nil {
+					if os.IsNotExist(readErr) {
+						return nil
+					}
+					return readErr
+				}
+				if mkErr := mkdirShared(filepath.Dir(target)); mkErr != nil {
+					return mkErr
+				}
+				// The link is stored as written, relative or absolute. Resolving it
+				// here would turn a relative link - which is what a dependency tree
+				// uses, and what survives being restored somewhere else - into one
+				// naming this pod's filesystem.
+				if symErr := os.Symlink(link, target); symErr != nil {
+					return symErr
+				}
+				content++
+				return nil
+
+			case info.Mode().IsRegular():
+				// As above: counted before the work, content only once there is some.
+				// copyOut skips a file that vanished between the walk and the open and
+				// says so, because its error alone cannot distinguish that from having
+				// written one.
+				counted++
+				if limits.MaxEntries > 0 && counted > limits.MaxEntries {
+					return ErrTooManyEntries
+				}
+				n, staged, copyErr := copyOut(name, target, info, remaining(limits.MaxTotalBytes, total))
+				total += n
+				if staged {
+					content++
+				}
+				return copyErr
+
+			default:
+				// See RestoreTree: sockets, devices and pipes carry nothing a restore
+				// could reproduce.
+				return nil
+			}
+		})
+		if err != nil {
+			return total, content, err
+		}
+	}
+
+	// Beside the tree rather than inside it, so that no name a workflow caches can
+	// collide with it. dst is the entry's tree, so its parent is the entry.
+	if !modes.Empty() {
+		if err := WriteModes(filepath.Join(filepath.Dir(dst), ModesName), modes); err != nil {
+			return total, content, err
+		}
+	}
+	return total, content, nil
+}
+
+// copyIntoRoot writes one regular file out of the entry, through the destination root.
+func copyIntoRoot(src *os.Root, name string, dst *os.Root, rel string, info fs.FileInfo, budget int64) (int64, error) {
+	if budget <= 0 {
+		return 0, ErrTooLarge
+	}
+	if dir := path.Dir(rel); dir != "." {
+		if err := dst.MkdirAll(dir, DefaultDirMode); err != nil {
+			return 0, err
+		}
+	}
+
+	in, err := src.Open(name)
+	if err != nil {
+		return 0, err
+	}
+	defer in.Close()
+
+	// O_NOFOLLOW on top of the root: the root already refuses a link out of it, and
+	// this refuses one that stays inside, so a restore cannot be made to write through
+	// any pre-existing link at all.
+	//
+	// Created at the default, not at the mode the entry's own file carries: that one
+	// was widened when it was stored, so a key saved 0600 is 0666 there and restoring
+	// it that way is what the recorded modes exist to stop. Anything that differed
+	// from the default is in the manifest and is set once the tree is written.
+	_ = dst.Remove(rel)
+	out, err := dst.OpenFile(rel, os.O_WRONLY|os.O_CREATE|os.O_EXCL, DefaultFileMode)
+	if err != nil {
+		return 0, err
+	}
+	n, err := io.Copy(out, io.LimitReader(in, budget))
+	closeErr := out.Close()
+	if err != nil {
+		return n, err
+	}
+	if closeErr != nil {
+		return n, closeErr
+	}
+	if n == budget && info.Size() > n {
+		return n, ErrTooLarge
+	}
+	// Set rather than left to the mode OpenFile was given, which the process umask
+	// filters: under 0077 that would be 0600, so a file the workflow cached at an
+	// ordinary 0644 would come back private and a later step running as another user
+	// could not read it. The manifest records only what differs from the default, so
+	// the default has to be applied rather than assumed.
+	//
+	// Not the entry's own mode, which was widened when it was stored and says nothing
+	// about the source's. What differed - an executable among them - is in the manifest
+	// and replaces this once the tree is written.
+	return n, dst.Chmod(rel, DefaultFileMode)
+}
+
+// copyOut writes one regular file from the filesystem into the staged entry, reporting
+// whether it actually created the target.
+//
+// A source that vanished between the walk and the open is skipped rather than failed,
+// so the caller cannot tell from the error alone whether anything was staged - and
+// counting a file that was never written would let an entry holding only directories be
+// published as though it held content.
+func copyOut(name, target string, info os.FileInfo, budget int64) (n int64, staged bool, err error) {
+	if budget <= 0 {
+		return 0, false, ErrTooLarge
+	}
+	if err := mkdirShared(filepath.Dir(target)); err != nil {
+		return 0, false, err
+	}
+
+	in, err := os.Open(name)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// The tree changed under the walk, which a build directory does. Skipping
+			// is right: the entry is a snapshot, not a transaction.
+			return 0, false, nil
+		}
+		return 0, false, err
+	}
+	defer in.Close()
+
+	out, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
+	if err != nil {
+		return 0, false, err
+	}
+	n, err = io.Copy(out, io.LimitReader(in, budget))
+	closeErr := out.Close()
+	if err != nil {
+		return n, true, err
+	}
+	if closeErr != nil {
+		return n, true, closeErr
+	}
+	if n == budget && info.Size() > n {
+		return n, true, ErrTooLarge
+	}
+	return n, true, os.Chmod(target, info.Mode().Perm()|0o666)
+}
+
+// SharedDirMode is what every directory written onto the shared volume is set to.
+//
+// Open, because the volume is written by step containers running as whatever user each
+// workflow chose and swept by the agent running as another. A directory's write bit is
+// what permits unlinking the entries inside it, so one directory the agent cannot write
+// is one whose contents it can never reclaim - and since the sweep removes whole
+// inboxes, that single directory strands everything under it on a volume the whole
+// cluster shares.
+//
+// Set explicitly rather than passed to Mkdir, whose mode the caller's umask filters: a
+// step container's usual 022 turns 0777 into 0755 before it reaches the filesystem.
+const SharedDirMode = 0o777
+
+// SharedFileMode is what a file the agent writes onto the volume is set to, for the
+// same reason: whichever agent reads it next is not necessarily the one that wrote it,
+// nor running as the same user.
+const SharedFileMode = 0o666
+
+// mkdirShared creates one directory on the shared volume with the mode it needs, having
+// created any missing parents along the way.
+//
+// Only the directory named is chmod'ed. The walk that calls this is top-down, so each
+// parent was itself created by an earlier call and already carries the mode; a chain of
+// chmods per directory would be one syscall per level on a tree with hundreds of
+// thousands of them, for nothing. The one chain that is not covered that way - the
+// prefix above a declared path's own root - is set by mkdirAllShared below.
+func mkdirShared(dir string) error {
+	if err := os.MkdirAll(dir, SharedDirMode); err != nil {
+		return err
+	}
+	return os.Chmod(dir, SharedDirMode)
+}
+
+// mkdirAllShared creates a directory and sets the mode on every component of it under
+// root, which is what the prefix above a declared path's own root needs: those
+// directories are created once, by one MkdirAll, and the walk never visits them.
+func mkdirAllShared(root, dir string) error {
+	if err := os.MkdirAll(dir, SharedDirMode); err != nil {
+		return err
+	}
+
+	rel, err := filepath.Rel(root, dir)
+	if err != nil || rel == "." || escapesRoot(rel) {
+		return os.Chmod(dir, SharedDirMode)
+	}
+
+	current := root
+	for _, part := range strings.Split(rel, string(filepath.Separator)) {
+		current = filepath.Join(current, part)
+		if err := os.Chmod(current, SharedDirMode); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// escapesRoot reports whether a relative path leaves the directory it is relative to.
+//
+// A ".." component is what does that, not a name that happens to begin with two dots:
+// "..cache/deps" is an ordinary directory a workflow may declare, and treating it as an
+// escape left the chain above it at whatever the step's umask gave - the mode the agent
+// cannot sweep through, so that subtree would never be reclaimed.
+func escapesRoot(rel string) bool {
+	return rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// restoreLink writes a declared path that is itself a symbolic link.
+//
+// Separate from the walk because fs.WalkDir stats its root through the filesystem and
+// so follows the link, which either fails on a dangling one or walks the wrong tree.
+// The link is recreated as a link, for the reason every other link in an entry is: it
+// may well dangle at restore time, and what it names is restored by its own declared
+// path or not at all.
+func restoreLink(src *os.Root, within, dest string, entries *int, limits CopyLimits) (bool, error) {
+	link, err := src.Readlink(within)
+	if err != nil {
+		return false, err
+	}
+
+	*entries++
+	if limits.MaxEntries > 0 && *entries > limits.MaxEntries {
+		return false, ErrTooManyEntries
+	}
+
+	dst, err := openDeclaredRoot(path.Dir(dest))
+	if err != nil {
+		return false, err
+	}
+	defer dst.Close()
+
+	// Reported as written before the removal, not after the creation: what is already
+	// at the path is gone either way, so the caller has to clear up even if the symlink
+	// below fails.
+	name := path.Base(dest)
+	_ = dst.Remove(name)
+	return true, dst.Symlink(link, name)
+}
+
+// applyModes sets the permissions the entry's own files could not carry.
+//
+// within names this declared path inside the entry, and dst is rooted at the declared
+// path itself - or, for a single file or link, at its parent, with rootName the name to
+// write it under. The recorded keys are entry-relative, so they are translated to the
+// one and matched against the other.
+//
+// A path the restore did not write is skipped rather than failed: the manifest covers
+// the whole entry, and a restore only ever asks for the declared paths it wants.
+func applyModes(dst *os.Root, within, rootName string, modes Modes) error {
+	// The declared directory is created by openDeclaredRoot, not by the walk, so
+	// nothing else sets its mode - and openDeclaredRoot's Mkdir is filtered by the
+	// umask like any other. Set to the default first; a recorded mode for it replaces
+	// this below, where Apply puts it last because it is the shallowest key.
+	//
+	// Only when dst is that directory. Where the declared path is a single file or
+	// link, dst is its parent, which belongs to the workflow rather than to the entry.
+	if rootName == "" {
+		if err := dst.Chmod(".", DefaultDirMode); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+	}
+
+	for _, key := range modes.Apply() {
+		rel, inside := relativeToDeclared(key, within, rootName)
+		if !inside {
+			continue
+		}
+		if err := dst.Chmod(rel, modes[key]); err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				continue
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+// relativeToDeclared turns a key recorded against the entry into the name to chmod
+// through dst, and reports whether it belongs to this declared path at all.
+func relativeToDeclared(key, within, rootName string) (string, bool) {
+	if key == within {
+		if rootName != "" {
+			// dst is the parent; the declared path itself is written under this name.
+			return rootName, true
+		}
+		// dst is the declared directory itself. It has a recorded mode like any other
+		// - SaveTree walks it first - and addressing it as "." is how that reaches it.
+		// Skipping it left a directory saved 0700 restored at whatever the umask gave,
+		// or at whatever mode it already had from a previous run.
+		return ".", true
+	}
+	if rootName != "" {
+		// A single file or link declared as the path carries nothing beneath it.
+		return "", false
+	}
+	rel, found := strings.CutPrefix(key, within+"/")
+	return rel, found
+}
