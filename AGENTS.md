@@ -225,7 +225,10 @@ restore is a copy rather than an unpack and nothing is gzipped.
   `O_EXCL` create is won, inheriting whatever the generation it supersedes has gained by
   then (`inheritedID`). A successor made before that look is found by it, one made after
   it inherits the identity just written, and there is no ordering in which the two
-  disagree. Note this needs no five-minute stall to reach: an mtime set by a skewed
+  disagree. That look covers **every** path out of `ensureID`, not just the one that
+  writes: an agent waiting out an empty generation holds no opinion for a second at a
+  time, long enough for another to supersede it and the stalled creator to fill the old
+  name, so a waiter can be handed an identity that was superseded while it waited. Note this needs no five-minute stall to reach: an mtime set by a skewed
   creating node can make an identity look abandoned the moment it is made, so
   `idStaleAfter` is a margin and not a guarantee. **Nothing in this file
   unlinks anything**, which is the whole point: every name is settled by an atomic
@@ -259,6 +262,17 @@ restore is a copy rather than an unpack and nothing is gzipped.
   leader that has just taken over holds no leases, so a failed first pass would make
   every live inbox look abandoned. A later pass may fail safely, falling back on the
   leases the previous one wrote, which is why the interval is well under the TTL.
+  **A lease is how one agent tells *another*** - an api and a runner sharing a volume
+  hold separate leader elections and know only their own executions - and within one
+  agent it is an indirection that can fail, because the step holds its inbox's mount and
+  can create `.lease` itself, as its own user and umask. A lease the agent cannot write
+  is **replaced** rather than given up on (unlinking needs the write bit on the 0777
+  inbox, not ownership of the file), and `Sweeper.Protected` is the backstop: the live
+  set from the last successful listing is held in memory (`liveInboxes`) and consulted
+  **before** the lease and the mtime, so what this agent knows directly about its own
+  executions never depends on reading it back off the volume. Without it a renewal that
+  keeps failing leaves a running execution's inbox looking abandoned, and the empty-inbox
+  branch takes it 30 minutes later while its pod is still writing through the subPath.
 - **The agent makes each execution's inbox before its pod starts**
   (`prepareStepCacheInbox` in `kubernetesworker/worker.go`, called at both deploy
   sites), keyed on the execution's **root** id so that one inbox serves an execution

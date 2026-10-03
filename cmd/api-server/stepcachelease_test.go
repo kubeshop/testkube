@@ -35,7 +35,7 @@ func TestTheSweepDoesNotStartUntilTheLiveSetIsKnown(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
-	assert.False(t, awaitStepCacheLeases(ctx, worker, t.TempDir()),
+	assert.False(t, awaitStepCacheLeases(ctx, worker, t.TempDir(), &liveInboxes{}),
 		"nothing may be swept while it is unknown which executions are running")
 }
 
@@ -63,6 +63,6 @@ func TestTheSweepStartsOnceTheLiveSetCanBeRead(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	assert.True(t, awaitStepCacheLeases(ctx, worker, root),
+	assert.True(t, awaitStepCacheLeases(ctx, worker, root, &liveInboxes{}),
 		"a listing that recovers has to let the sweep start")
 }

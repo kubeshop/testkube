@@ -278,3 +278,27 @@ func TestANewGenerationAfterAnEmptyOneIsFresh(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, id)
 }
+
+// An agent waiting out an empty generation holds no opinion for a whole second, and a
+// lot can happen in it: another agent declares the generation abandoned and creates its
+// successor, then the stalled creator fills the old name. The waiter's read then succeeds
+// and hands back an identity that was superseded while it waited, leaving it alone on a
+// prefix nobody else uses.
+func TestAWaiterDoesNotAdoptAnIdentitySupersededWhileItWaited(t *testing.T) {
+	root := t.TempDir()
+
+	// The generation being waited on: created, not yet written.
+	require.NoError(t, os.WriteFile(idName(root, 0), nil, SharedFileMode))
+
+	// The successor another agent makes while this one waits, and then the stalled
+	// creator's write landing afterwards.
+	go func() {
+		time.Sleep(2 * idReadDelay)
+		_ = os.WriteFile(idName(root, 1), []byte("successor\n"), SharedFileMode)
+		_ = os.WriteFile(idName(root, 0), []byte("stalled\n"), SharedFileMode)
+	}()
+
+	_, err := ensureID(root, 0)
+	require.ErrorIs(t, err, errIDSuperseded,
+		"an identity superseded while it was being waited for must not be answered with")
+}

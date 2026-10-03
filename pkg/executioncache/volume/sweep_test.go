@@ -349,3 +349,34 @@ func TestSweepKeepsAnEmptyInboxWithAFreshLease(t *testing.T) {
 	_, err := os.Stat(dir)
 	assert.NoError(t, err, "its step may still be on its way to caching")
 }
+
+// A lease is how one agent tells another that an inbox is live, and it can fail: the
+// step holds its inbox's mount, so .lease may be a file the agent cannot write. The
+// renewal then fails for as long as the execution runs, the lease goes stale, and this
+// is the path that takes the inbox - an empty one, which is exactly what an execution
+// that has not reached its cache yet looks like. Its pod is then writing through a
+// subPath to an inode nothing can reach, and the pointer it publishes names a path that
+// is gone.
+//
+// So what the agent knows directly about its own running executions overrides both the
+// lease and the mtime.
+func TestSweepKeepsAnInboxKnownToBeRunning(t *testing.T) {
+	root := t.TempDir()
+	live := filepath.Join(root, InboxDir, "live")
+	require.NoError(t, os.MkdirAll(live, SharedDirMode))
+
+	// No lease at all, and old enough for every other rule to expire it.
+	old := time.Now().Add(-72 * time.Hour)
+	require.NoError(t, os.Chtimes(live, old, old))
+
+	sweeper := &Sweeper{
+		Root:      root,
+		Retention: time.Hour,
+		LeaseTTL:  30 * time.Minute,
+		Protected: func(inbox string) bool { return inbox == "live" },
+	}
+	require.NoError(t, sweeper.Sweep(context.Background()))
+
+	_, err := os.Stat(live)
+	assert.NoError(t, err, "an inbox this agent knows is running must survive a failed lease")
+}

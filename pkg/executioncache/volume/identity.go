@@ -121,7 +121,33 @@ func idName(mountPath string, generation int) string {
 	return filepath.Join(mountPath, fmt.Sprintf("%s.%d", IDName, generation+1))
 }
 
+// ensureID settles one generation of the identity, and refuses to answer with it if that
+// generation has been superseded.
+//
+// The check covers every way an identity is arrived at, not only writing one. An agent
+// waiting out an empty generation holds no opinion for as long as it waits, and that wait
+// is a second long: another agent can declare the generation abandoned and create its
+// successor inside it, and the stalled creator can then fill the old name, so the waiter
+// is handed an identity that was superseded while it waited. Reading an existing
+// generation has a narrower form of the same gap, between the caller's look for a
+// successor and the read.
 func ensureID(mountPath string, generation int) (string, error) {
+	id, err := settleID(mountPath, generation)
+	if err != nil {
+		return "", err
+	}
+
+	// A successor existing now is the one the volume answers with, whatever this
+	// generation says. Paired with inheritedID, which covers a successor created after
+	// this stat: it inherits whatever this generation holds by then, so the two cannot
+	// disagree whichever order they fall in.
+	if _, statErr := os.Stat(idName(mountPath, generation+1)); statErr == nil {
+		return "", errIDSuperseded
+	}
+	return id, nil
+}
+
+func settleID(mountPath string, generation int) (string, error) {
 	name := idName(mountPath, generation)
 
 	switch id, err := readID(name); {
@@ -173,17 +199,8 @@ func ensureID(mountPath string, generation int) (string, error) {
 		return "", err
 	}
 
-	// And this agent may itself be the one that stalled. A write it finishes after
-	// another agent has declared it abandoned is a write nobody is reading: everyone
-	// else is on the successor, and returning the identity just written would leave
-	// this agent alone on a prefix of its own, missing every entry the others save.
-	//
-	// The two checks meet in the middle. A successor created before this stat is found
-	// here and adopted; one created after it inherits the identity just written, by the
-	// paragraph above. There is no ordering in which the two disagree.
-	if _, statErr := os.Stat(idName(mountPath, generation+1)); statErr == nil {
-		return "", errIDSuperseded
-	}
+	// Whether this agent was itself the one declared abandoned is settled by the caller,
+	// which checks for a successor on every path out rather than only this one.
 	return id, nil
 }
 

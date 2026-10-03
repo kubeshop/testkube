@@ -46,6 +46,16 @@ type Sweeper struct {
 	// Comfortably above the refresh interval, so that one missed refresh does not
 	// expose a live inbox.
 	LeaseTTL time.Duration
+	// Protected reports an inbox this process knows is live, whatever its lease and
+	// mtime say. Optional; nil protects nothing.
+	//
+	// The lease files are how one agent tells *another* that an inbox is live, and
+	// across deployments sharing a volume they are the only way. Within one agent they
+	// are an indirection that can fail: the step holds the inbox mount, so .lease is a
+	// file this process may be unable to write, and a renewal that fails leaves a live
+	// inbox looking abandoned to this agent's own sweep. What the agent knows directly
+	// it should not have to read back off the disk to believe.
+	Protected func(inbox string) bool
 	// Now is the clock, so a test does not have to wait out a retention window.
 	Now func() time.Time
 	// OnError reports a sweep that could not finish. A sweep is maintenance, so a
@@ -133,6 +143,13 @@ func (s *Sweeper) Sweep(ctx context.Context) error {
 			continue
 		}
 		if !info.IsDir() {
+			continue
+		}
+
+		// Asked before the lease and before the mtime, because it is the one answer
+		// that cannot have been tampered with from inside a pod or lost to a file this
+		// process could not write.
+		if s.Protected != nil && s.Protected(entry.Name()) {
 			continue
 		}
 		dir := filepath.Join(s.Root, InboxDir, entry.Name())
@@ -337,6 +354,21 @@ func TouchLease(mountPath, inboxName string) error {
 	// O_CREATE and not MkdirAll: a missing parent is a swept or never-made inbox, and
 	// the error says so rather than building one nothing reads.
 	f, err := root.OpenFile(LeaseName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, SharedFileMode)
+	if os.IsPermission(err) {
+		// Replaced rather than given up on, for the same reason as the symlink above.
+		// The step holds this inbox's mount and can make .lease itself, as whatever
+		// user the workflow runs and under its own umask: one left 0600 by uid 1000 is
+		// one an agent running as another user can never write. Giving up would fail
+		// the renewal for as long as the execution ran, and a lease going stale under a
+		// live execution is precisely what has its inbox swept from under it - after
+		// which its pod writes through a subPath to an inode nothing can reach and
+		// publishes a pointer naming a path that is gone. Unlinking needs the write bit
+		// on the inbox, not ownership of the file, and the inbox is 0777.
+		if rmErr := root.Remove(LeaseName); rmErr != nil && !os.IsNotExist(rmErr) {
+			return err
+		}
+		f, err = root.OpenFile(LeaseName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, SharedFileMode)
+	}
 	if err != nil {
 		return err
 	}

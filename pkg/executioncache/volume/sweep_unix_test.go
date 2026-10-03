@@ -125,3 +125,34 @@ func TestAgentWrittenFilesStayReadableUnderAStrictUmask(t *testing.T) {
 			"%s is one another agent could not use", name)
 	}
 }
+
+// The step holds its own inbox's mount, so it can create .lease itself - as whatever
+// user the workflow runs, under its own umask. A lease left unwritable is one the agent
+// can never renew, so it goes stale while the execution is still running and the sweep
+// takes the inbox from under its pod. Unlinking it needs the write bit on the inbox
+// rather than ownership of the file, so the renewal replaces it.
+//
+// Unix-only because the mode is the whole point.
+func TestTouchLeaseReplacesALeaseItCannotWrite(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root can write any mode, so there is nothing to replace")
+	}
+
+	root := t.TempDir()
+	inbox := filepath.Join(root, InboxDir, "exec")
+	require.NoError(t, os.MkdirAll(inbox, SharedDirMode))
+	require.NoError(t, os.Chmod(inbox, SharedDirMode))
+
+	// What the step left behind: a lease nothing else may write.
+	lease := filepath.Join(inbox, LeaseName)
+	require.NoError(t, os.WriteFile(lease, []byte("theirs\n"), 0o400))
+	require.NoError(t, os.Chmod(lease, 0o000))
+
+	require.NoError(t, TouchLease(root, InboxFor("exec")),
+		"a lease the agent cannot write must be replaced, not given up on")
+
+	info, err := os.Stat(lease)
+	require.NoError(t, err)
+	assert.WithinDuration(t, time.Now(), info.ModTime(), time.Minute,
+		"the replacement has to carry a fresh timestamp, which is the whole renewal")
+}

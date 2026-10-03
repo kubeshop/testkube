@@ -1101,11 +1101,17 @@ func main() {
 		// which nothing can shorten because the object is immutable.
 		retention += stepCachePublicationGrace
 
+		// What this agent knows about its own running executions, so that its sweep
+		// does not depend on reading that back out of a lease file the step's own
+		// container may have made unwritable.
+		live := &liveInboxes{}
+
 		sweeper := &volume.Sweeper{
 			Root:      cfg.TestkubeStepCacheVolumeMountPath,
 			Retention: retention,
 			Interval:  cfg.TestkubeStepCacheVolumeSweepInterval,
 			LeaseTTL:  stepCacheLeaseTTL,
+			Protected: live.contains,
 			OnError: func(err error) {
 				log.DefaultLogger.Errorw("failed to sweep the step cache volume", "error", err)
 			},
@@ -1118,10 +1124,10 @@ func main() {
 				// and an agent that has just taken over holds no leases yet - every live
 				// inbox would look abandoned, and be unlinked from under the pod still
 				// writing to it.
-				if !awaitStepCacheLeases(taskCtx, executionWorker, cfg.TestkubeStepCacheVolumeMountPath) {
+				if !awaitStepCacheLeases(taskCtx, executionWorker, cfg.TestkubeStepCacheVolumeMountPath, live) {
 					return nil
 				}
-				go runStepCacheLeaseRenewal(taskCtx, executionWorker, cfg.TestkubeStepCacheVolumeMountPath)
+				go runStepCacheLeaseRenewal(taskCtx, executionWorker, cfg.TestkubeStepCacheVolumeMountPath, live)
 				return sweeper.Run(taskCtx)
 			},
 		})

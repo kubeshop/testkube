@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/kubeshop/testkube/internal/common"
@@ -68,6 +69,37 @@ var stepCacheLeaseStartupRetry = 30 * time.Second
 // a crash, a lost watch, a replica that went away - would pin an inbox for good, while
 // a listing simply stops returning what is no longer running.
 //
+// liveInboxes remembers the executions the last successful listing found running, so
+// that this agent's own sweep does not have to read that back off the volume to believe
+// it.
+//
+// The lease files remain how one agent tells *another* - an api and a runner sharing a
+// volume hold separate leader elections and know only their own executions - but within
+// one agent they are an indirection that can fail. The step holds its inbox's mount and
+// can create .lease as its own user, so the agent may be unable to write it; TouchLease
+// replaces such a lease, and this is what covers the renewal failing anyway. A live
+// inbox swept out from under its pod leaves it writing through a subPath to an inode
+// nothing can reach, and then publishing a pointer naming a path that is gone.
+type liveInboxes struct {
+	mu    sync.RWMutex
+	names map[string]struct{}
+}
+
+func (l *liveInboxes) replace(names map[string]struct{}) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.names = names
+}
+
+// contains reports an execution the last listing found running. Keyed by the inbox's
+// own directory name, which is what the sweep walks.
+func (l *liveInboxes) contains(name string) bool {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	_, ok := l.names[name]
+	return ok
+}
+
 // Failing to list is reported to the caller rather than logged here, because the two
 // callers owe it different things: a pass on the ticker has the previous pass's leases
 // to fall back on and only needs to say so, where the first pass has none and must stop
@@ -76,7 +108,7 @@ var stepCacheLeaseStartupRetry = 30 * time.Second
 // Failing to renew an individual inbox is not reported, only logged. The live set is
 // known in that case, and holding the sweep for one inbox that cannot be touched would
 // mean a single stuck directory stops the volume ever being reclaimed.
-func refreshStepCacheLeases(ctx context.Context, worker executionworkertypes.Worker, mountPath string) error {
+func refreshStepCacheLeases(ctx context.Context, worker executionworkertypes.Worker, mountPath string, live *liveInboxes) error {
 	running, err := worker.List(ctx, executionworkertypes.ListOptions{Finished: common.Ptr(false)})
 	if err != nil {
 		return err
@@ -85,6 +117,13 @@ func refreshStepCacheLeases(ctx context.Context, worker executionworkertypes.Wor
 	// Several resources of one execution share the root's inbox, so the same name
 	// arrives repeatedly - a parallel fan-out is the usual reason.
 	seen := make(map[string]struct{}, len(running))
+
+	// Keyed by the inbox's own directory name, which is what the sweep walks, and
+	// published before the first lease is written rather than after the pass: the
+	// renewals below are what can fail, and this is what covers them when they do.
+	roots := make(map[string]struct{}, len(running))
+	defer func() { live.replace(roots) }()
+
 	var (
 		failed     int
 		firstErr   error
@@ -100,6 +139,7 @@ func refreshStepCacheLeases(ctx context.Context, worker executionworkertypes.Wor
 			continue
 		}
 		seen[inbox] = struct{}{}
+		roots[root] = struct{}{}
 
 		// A missing inbox is the ordinary case - an execution that predates the volume
 		// being configured, or one already swept - and is not worth a line each time
@@ -147,9 +187,9 @@ func refreshStepCacheLeases(ctx context.Context, worker executionworkertypes.Wor
 // Reports whether the live set was established. False means the context ended first, and
 // the caller must not sweep: an error would be the wrong answer there, because the
 // coordinator cancels this on losing leadership and that is a handover, not a failure.
-func awaitStepCacheLeases(ctx context.Context, worker executionworkertypes.Worker, mountPath string) bool {
+func awaitStepCacheLeases(ctx context.Context, worker executionworkertypes.Worker, mountPath string, live *liveInboxes) bool {
 	for attempt := 0; ; attempt++ {
-		err := refreshStepCacheLeases(ctx, worker, mountPath)
+		err := refreshStepCacheLeases(ctx, worker, mountPath, live)
 		if err == nil {
 			if attempt > 0 {
 				log.DefaultLogger.Infow("step cache leases established; the volume sweep is starting", "attempts", attempt+1)
@@ -178,7 +218,7 @@ func awaitStepCacheLeases(ctx context.Context, worker executionworkertypes.Worke
 // A pass that cannot list falls back on the leases the previous one wrote, which is why
 // the interval is well under the TTL. Reported each time, because by now the sweep is
 // running and a long enough outage does expose a live inbox to it.
-func runStepCacheLeaseRenewal(ctx context.Context, worker executionworkertypes.Worker, mountPath string) {
+func runStepCacheLeaseRenewal(ctx context.Context, worker executionworkertypes.Worker, mountPath string, live *liveInboxes) {
 	ticker := time.NewTicker(stepCacheLeaseInterval)
 	defer ticker.Stop()
 	for {
@@ -186,7 +226,7 @@ func runStepCacheLeaseRenewal(ctx context.Context, worker executionworkertypes.W
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if err := refreshStepCacheLeases(ctx, worker, mountPath); err != nil {
+			if err := refreshStepCacheLeases(ctx, worker, mountPath, live); err != nil {
 				log.DefaultLogger.Warnw("could not list running executions to renew step cache leases; an execution quiet for longer than the lease may have its inbox swept while it still holds it", "error", err)
 			}
 		}
