@@ -15,19 +15,25 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
-// singleConnPool opens a second pool against the same database, limited to one
-// connection.
+// singleConnPool opens a second pool against the same database as the one given,
+// limited to one connection.
 //
 // One connection is the whole point: a function that opens a transaction and
 // then reads through the pool needs two at once, so it can never complete here.
 // With the production default of max(4, NumCPU) the same bug needs four
 // executions finishing at the same instant to show itself, which is why it
 // reached production as an unexplained stall rather than a failing test.
-func singleConnPool(t *testing.T, dsn string) *pgxpool.Pool {
+//
+// The config is copied from the live pool rather than re-parsed from its
+// ConnString: PreparePostgresTestDatabase points the pool at the temporary
+// database by setting ConnConfig.Database on the already-parsed config, so the
+// connection string still names the database it was parsed from. Re-parsing it
+// silently connects to that one instead, where no migration has run - which
+// fails as a missing relation and looks nothing like the deadlock this is for.
+func singleConnPool(t *testing.T, from *pgxpool.Pool) *pgxpool.Pool {
 	t.Helper()
 
-	cfg, err := pgxpool.ParseConfig(dsn)
-	require.NoError(t, err)
+	cfg := from.Config().Copy()
 	cfg.MaxConns = 1
 
 	pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
@@ -77,12 +83,23 @@ func TestResultStrictHoldsOneConnection_Integration(t *testing.T) {
 		runnerID = "test-runner"
 	)
 
-	pool := singleConnPool(t, testDB.Pool.Config().ConnString())
+	pool := singleConnPool(t, testDB.Pool)
 	repo := NewPostgresRepository(pool, WithOrganizationID(orgID), WithEnvironmentID(envID))
 
 	setup := context.Background()
 	seedRunningExecution(t, testDB.Pool, setup, orgID, envID, "exec-finish", runnerID)
 	seedRunningExecution(t, testDB.Pool, setup, orgID, envID, "exec-update", runnerID)
+
+	// Prove the second pool is on the migrated database holding the seed before
+	// anything else runs. Without this, a pool pointed at the wrong database
+	// fails inside the calls below as a missing relation, which reads like a
+	// broken fixture rather than what this test is actually about.
+	var seeded int
+	require.NoError(t, pool.QueryRow(setup,
+		`SELECT count(*) FROM test_workflow_executions WHERE id = ANY($1)`,
+		[]string{"exec-finish", "exec-update"},
+	).Scan(&seeded))
+	require.Equal(t, 2, seeded, "the single-connection pool must see the seeded executions")
 
 	t.Run("FinishResultStrict", func(t *testing.T) {
 		// The deadline is the assertion: on the old code this call never returns,
