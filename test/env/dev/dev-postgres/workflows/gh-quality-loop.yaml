@@ -679,40 +679,61 @@ spec:
       paths:
       - /root/go/pkg/mod/cache/download
       scope: environment
-    shell: |
-      set -euo pipefail
-      apt-get update -qq
-      apt-get install -y -qq socat curl
-      git config --global --add safe.directory /data/repo
-      mkdir -p /data/artifacts
+    steps:
+    - name: Run test suite
+      cache:
+        # Keyed on the modules only: the build cache addresses its own contents, so it
+        # stays correct across commits, where a key per commit would grow storage
+        # without bound. go.mod carries the toolchain directive, and the image tag covers
+        # an image newer than it: build outputs only serve the toolchain that made them.
+        key: cloud-test-app-v1-golang-1.26.6-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+        restoreKeys:
+        - cloud-test-app-v1-golang-1.26.6-
+        paths:
+        - /root/.cache/go-build
+        scope: workflow
+      run:
+        env:
+        - name: GOCACHE
+          value: /root/.cache/go-build
+        # GOCACHE also holds test results, which do not track the services these
+        # tests talk to; always run the tests.
+        - name: GOFLAGS
+          value: -count=1
+        shell: |
+          set -euo pipefail
+          apt-get update -qq
+          apt-get install -y -qq socat curl
+          git config --global --add safe.directory /data/repo
+          mkdir -p /data/artifacts
 
-      forward() {{"{"}}
-        local port="$1" dest="$2"
-        socat TCP-LISTEN:${{"{"}}port},bind=127.0.0.1,fork,reuseaddr TCP:${{"{"}}dest} &
-      }
-      forward 27017 "{{services.mongo.0.ip}}:27017"
-      forward 4222 "{{services.nats.0.ip}}:4222"
-      forward 9000 "{{services.minio.0.ip}}:9000"
-      forward 5432 "{{services.postgres.0.ip}}:5432"
-      forward 8200 "{{services.vault.0.ip}}:8200"
-      forward 2525 "{{services.smtp.0.ip}}:25"
-      forward 4443 "{{services.gcs.0.ip}}:4443"
-      sleep 1
+          forward() {{"{"}}
+            local port="$1" dest="$2"
+            socat TCP-LISTEN:${{"{"}}port},bind=127.0.0.1,fork,reuseaddr TCP:${{"{"}}dest} &
+          }
+          forward 27017 "{{services.mongo.0.ip}}:27017"
+          forward 4222 "{{services.nats.0.ip}}:4222"
+          forward 9000 "{{services.minio.0.ip}}:9000"
+          forward 5432 "{{services.postgres.0.ip}}:5432"
+          forward 8200 "{{services.vault.0.ip}}:8200"
+          forward 2525 "{{services.smtp.0.ip}}:25"
+          forward 4443 "{{services.gcs.0.ip}}:4443"
+          sleep 1
 
-      curl -sS -X POST "http://127.0.0.1:4443/storage/v1/b?project=test" \
-        -H "Content-Type: application/json" \
-        -d '{{"{"}}"name":"testkube_integration_tests"}' \
-        || true
+          curl -sS -X POST "http://127.0.0.1:4443/storage/v1/b?project=test" \
+            -H "Content-Type: application/json" \
+            -d '{{"{"}}"name":"testkube_integration_tests"}' \
+            || true
 
-      set +e
-      go tool gotestsum --format pkgname --hide-summary skipped \
-        --junitfile /data/artifacts/junit.xml \
-        -- -coverprofile=/data/artifacts/coverage.out -covermode=atomic ./...
-      code=$?
-      echo "gotestsum_exit=${{"{"}}code}"
-      kill $(jobs -p) 2>/dev/null
-      wait
-      exit "${{"{"}}code}"
-    artifacts:
-      paths:
-      - /data/artifacts/**
+          set +e
+          go tool gotestsum --format pkgname --hide-summary skipped \
+            --junitfile /data/artifacts/junit.xml \
+            -- -coverprofile=/data/artifacts/coverage.out -covermode=atomic ./...
+          code=$?
+          echo "gotestsum_exit=${{"{"}}code}"
+          kill $(jobs -p) 2>/dev/null
+          wait
+          exit "${{"{"}}code}"
+      artifacts:
+        paths:
+        - /data/artifacts/**
