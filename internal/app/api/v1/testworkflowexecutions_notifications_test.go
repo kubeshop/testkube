@@ -1,6 +1,13 @@
 package v1
 
 import (
+	"bufio"
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -8,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 )
 
@@ -99,4 +107,92 @@ func TestWorkflowNotificationEventType(t *testing.T) {
 func TestWorkflowNotificationResumableIgnoresTemporaryNotifications(t *testing.T) {
 	assert.False(t, workflowNotificationResumable(testkube.TestWorkflowExecutionNotification{Log: "temporary", Temporary: true}))
 	assert.True(t, workflowNotificationResumable(testkube.TestWorkflowExecutionNotification{Log: "durable", Ts: time.Now()}))
+}
+
+func TestWriteWorkflowNotificationEventWritesServerSentEvent(t *testing.T) {
+	var buf bytes.Buffer
+	w := bufio.NewWriter(&buf)
+
+	err := writeWorkflowNotificationEvent(w, json.NewEncoder(w), testkube.TestWorkflowExecutionNotification{SeqNo: 3, EventType: "log", Log: "line"})
+
+	require.NoError(t, err)
+	assert.Equal(t, "id: 3\nevent: log\ndata: {\"ts\":\"0001-01-01T00:00:00Z\",\"seqNo\":3,\"eventType\":\"log\",\"log\":\"line\"}\n\n", buf.String())
+}
+
+type closedConnWriter struct{}
+
+func (closedConnWriter) Write([]byte) (int, error) { return 0, errors.New("connection closed") }
+
+func TestWriteWorkflowNotificationEventReportsClosedStream(t *testing.T) {
+	w := bufio.NewWriterSize(closedConnWriter{}, 16)
+
+	err := writeWorkflowNotificationEvent(w, json.NewEncoder(w), testkube.TestWorkflowExecutionNotification{Log: "a line longer than the 16 byte buffer"})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "connection closed")
+}
+
+// fakeNotificationsWatcher feeds notifications until the watch context is cancelled, counting what was sent.
+type fakeNotificationsWatcher struct {
+	ch   chan *testkube.TestWorkflowExecutionNotification
+	sent atomic.Int32
+}
+
+func newFakeNotificationsWatcher(ctx context.Context, total int) *fakeNotificationsWatcher {
+	f := &fakeNotificationsWatcher{ch: make(chan *testkube.TestWorkflowExecutionNotification)}
+	go func() {
+		defer close(f.ch)
+		for i := 0; i < total; i++ {
+			select {
+			case f.ch <- &testkube.TestWorkflowExecutionNotification{Log: "line"}:
+				f.sent.Add(1)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return f
+}
+
+func (f *fakeNotificationsWatcher) Channel() <-chan *testkube.TestWorkflowExecutionNotification {
+	return f.ch
+}
+func (f *fakeNotificationsWatcher) All() ([]*testkube.TestWorkflowExecutionNotification, error) {
+	return nil, nil
+}
+func (f *fakeNotificationsWatcher) Err() error { return nil }
+
+func TestWriteNotificationStreamStopsAndReleasesWatcherWhenClientIsGone(t *testing.T) {
+	s := &TestkubeAPI{Log: log.DefaultLogger}
+	watchCtx, stop := context.WithCancel(context.Background())
+	defer stop()
+	const total = 1000
+	source := newFakeNotificationsWatcher(watchCtx, total)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		s.writeNotificationStream(bufio.NewWriter(closedConnWriter{}), watchCtx, stop, "id", source, 0, time.Hour)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("stream kept writing after the client was gone")
+	}
+	assert.Error(t, watchCtx.Err(), "watcher context should be cancelled")
+	assert.Less(t, int(source.sent.Load()), total, "notifications should not be drained into a closed stream")
+}
+
+func TestWriteNotificationStreamWritesAllNotificationsAndReleasesWatcher(t *testing.T) {
+	s := &TestkubeAPI{Log: log.DefaultLogger}
+	watchCtx, stop := context.WithCancel(context.Background())
+	defer stop()
+	source := newFakeNotificationsWatcher(watchCtx, 3)
+	var buf bytes.Buffer
+
+	s.writeNotificationStream(bufio.NewWriter(&buf), watchCtx, stop, "id", source, 0, time.Hour)
+
+	assert.Equal(t, 3, strings.Count(buf.String(), "data: "))
+	assert.Error(t, watchCtx.Err(), "watcher context should be cancelled when the stream ends")
 }
