@@ -26,6 +26,9 @@ type eventsWatcher struct {
 	cancel    context.CancelCauseFunc
 	mu        sync.Mutex
 	lastTs    time.Time
+	// sent holds each version of an event that the listener received. A list can return a version
+	// that the watch already sent, and the version of an event is the only way to know it.
+	sent map[string]struct{}
 }
 
 type EventsWatcher interface {
@@ -47,6 +50,7 @@ func NewEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.
 		startedCh: make(chan struct{}),
 		ctx:       ctx,
 		cancel:    ctxCancel,
+		sent:      make(map[string]struct{}),
 	}
 	close(watcher.optsCh)
 	go watcher.cycle()
@@ -62,6 +66,7 @@ func NewAsyncEventsWatcher(parentCtx context.Context, client kubernetesClient[co
 		startedCh: make(chan struct{}),
 		ctx:       ctx,
 		cancel:    ctxCancel,
+		sent:      make(map[string]struct{}),
 	}
 	go watcher.waitForOpts(opts)
 	go watcher.cycle()
@@ -121,7 +126,7 @@ func (e *eventsWatcher) read(tsInPast time.Time, t time.Duration) (<-chan readSt
 		if opts.TimeoutSeconds == nil {
 			opts.TimeoutSeconds = common.Ptr(defaultListTimeoutSeconds)
 		}
-		list, err := e.client.List(e.ctx, e.opts)
+		list, err := e.client.List(e.ctx, opts)
 		if err != nil {
 			started <- readStart{err: err}
 			close(started)
@@ -131,13 +136,15 @@ func (e *eventsWatcher) read(tsInPast time.Time, t time.Duration) (<-chan readSt
 		// Update the latest resource version
 		e.opts.ResourceVersion = list.ResourceVersion
 
-		// Omit the events that have been already sent
+		// Omit the event versions that the listener already received. The version of the list does not
+		// tell them apart: when the newest event is also the newest write, both have the same version.
+		items := list.Items[:0]
 		for i := range list.Items {
-			if list.Items[i].ResourceVersion == e.opts.ResourceVersion {
-				list.Items = list.Items[i+1:]
-				break
+			if e.markSent(&list.Items[i]) {
+				items = append(items, list.Items[i])
 			}
 		}
+		list.Items = items
 
 		if len(list.Items) == 0 {
 			if e.started.CompareAndSwap(false, true) {
@@ -234,8 +241,14 @@ func (e *eventsWatcher) watch() error {
 			}
 			e.mu.Unlock()
 
-			// Continue watching if that's just a bookmark
+			// Continue watching if that's just a bookmark, or if a list already sent this version
 			if event.Type == watch.Bookmark {
+				continue
+			}
+			e.mu.Lock()
+			fresh := e.markSent(object)
+			e.mu.Unlock()
+			if !fresh {
 				continue
 			}
 
@@ -273,6 +286,17 @@ func (e *eventsWatcher) cycle() {
 		err = e.watch()
 	}
 	e.cancel(err)
+}
+
+// markSent records the version of the event, and reports false when the listener already received it.
+// The caller holds the lock.
+func (e *eventsWatcher) markSent(event *corev1.Event) bool {
+	key := string(event.UID) + "/" + event.ResourceVersion
+	if _, ok := e.sent[key]; ok {
+		return false
+	}
+	e.sent[key] = struct{}{}
+	return true
 }
 
 func (e *eventsWatcher) Err() error {
