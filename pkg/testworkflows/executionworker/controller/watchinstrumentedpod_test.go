@@ -54,15 +54,14 @@ func (w *fakeWatcher) State() watchers.ExecutionState {
 	defer w.mu.Unlock()
 	return w.state
 }
-func (w *fakeWatcher) Commit()                          {}
-func (w *fakeWatcher) JobEventsErr() error              { return nil }
-func (w *fakeWatcher) PodEventsErr() error              { return nil }
-func (w *fakeWatcher) JobErr() error                    { return nil }
-func (w *fakeWatcher) PodErr() error                    { return nil }
-func (w *fakeWatcher) RefreshPod(context.Context)       {}
-func (w *fakeWatcher) RefreshJob(context.Context)       {}
-func (w *fakeWatcher) RefreshPodEvents(context.Context) {}
-func (w *fakeWatcher) Started() <-chan struct{}         { return nil }
+func (w *fakeWatcher) Commit()                    {}
+func (w *fakeWatcher) JobEventsErr() error        { return nil }
+func (w *fakeWatcher) PodEventsErr() error        { return nil }
+func (w *fakeWatcher) JobErr() error              { return nil }
+func (w *fakeWatcher) PodErr() error              { return nil }
+func (w *fakeWatcher) RefreshPod(context.Context) {}
+func (w *fakeWatcher) RefreshJob(context.Context) {}
+func (w *fakeWatcher) Started() <-chan struct{}   { return nil }
 
 // Updated forwards the updates of the test and closes the channel when the context ends, like the real watcher.
 func (w *fakeWatcher) Updated(ctx context.Context) <-chan struct{} {
