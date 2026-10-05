@@ -1,6 +1,8 @@
 package executionworkertypes
 
 import (
+	"context"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/repository/channels"
 )
@@ -18,6 +20,7 @@ type NotificationsWatcher interface {
 type WritableNotificationsWatcher interface {
 	NotificationsWatcher
 	Send(notification *testkube.TestWorkflowExecutionNotification)
+	SendWithContext(ctx context.Context, notification *testkube.TestWorkflowExecutionNotification) bool
 	Close(err error)
 }
 
