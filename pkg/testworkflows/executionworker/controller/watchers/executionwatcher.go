@@ -188,12 +188,20 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 	watcher.podWatcher = NewPodWatcher(ctx, clientSet.CoreV1().Pods(namespace), metav1.ListOptions{
 		LabelSelector: constants.ResourceIdLabelName + "=" + id,
 	}, pod.Put)
+	// The event watchers retry an error only while the job or the pod watcher observes the execution.
+	// The updates close when all watchers are done, so a retry without an end would keep them open.
+	observed := make(chan struct{})
+	go func() {
+		<-watcher.jobWatcher.Done()
+		<-watcher.podWatcher.Done()
+		close(observed)
+	}()
 	watcher.jobEventsWatcher = NewEventsWatcher(ctx, clientSet.CoreV1().Events(namespace), metav1.ListOptions{
 		FieldSelector: "involvedObject.name=" + id,
 		TypeMeta:      metav1.TypeMeta{Kind: "Job"},
-	}, jobEvents.Put)
+	}, observed, jobEvents.Put)
 
-	watcher.podEventsWatcher = NewAsyncEventsWatcher(ctx, clientSet.CoreV1().Events(namespace), watcher.podEventsOptsCh, podEvents.Put)
+	watcher.podEventsWatcher = NewAsyncEventsWatcher(ctx, clientSet.CoreV1().Events(namespace), watcher.podEventsOptsCh, observed, podEvents.Put)
 
 	// Watch for errors
 	go func() {
