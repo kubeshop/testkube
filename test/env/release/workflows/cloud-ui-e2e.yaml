@@ -61,9 +61,9 @@ spec:
   - name: Install dependencies
     shell: npm ci --prefer-offline
     cache:
-      key: npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      key: cloud-ui-e2e-v1-npm-{{hash_files("/data/repo/js/package-lock.json")}}
       restoreKeys:
-      - npm-
+      - cloud-ui-e2e-v1-npm-
       paths:
       - /root/.npm/_cacache
   - name: Run tests

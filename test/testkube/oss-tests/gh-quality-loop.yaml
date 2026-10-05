@@ -35,12 +35,11 @@ spec:
   steps:
   - name: Check formatting
     cache:
-      key: oss-quality-loop-npm-{{hash_files("/data/repo/package-lock.json")}}
+      key: docs-prettier-v1-npm-{{hash_files("/data/repo/package-lock.json")}}
       restoreKeys:
-      - oss-quality-loop-npm-
+      - docs-prettier-v1-npm-
       paths:
       - /root/.npm/_cacache
-      scope: environment
     timeout: 10m
     run:
       env:
@@ -92,21 +91,20 @@ spec:
     shell: golangci-lint config verify
   - name: Lint Go
     cache:
-      key: oss-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      key: oss-lint-go-v1-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
       restoreKeys:
-      - oss-quality-loop-gomod-
+      - oss-lint-go-v1-gomod-
       paths:
       - /root/go/pkg/mod/cache/download
-      scope: environment
     timeout: 10m
     steps:
     - name: Analyze Go packages
       cache:
-        # Entries are immutable: refresh for source/config changes, while reusing
-        # compiled dependencies from the previous successful lint execution.
-        key: oss-lint-go-v1-golangci-2.13.1-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum", "/data/repo/.golangci.yml", "/data/repo/**/*.go")}}
+        # Keyed on the modules and lint config, never the sources: both caches address
+        # their own contents, so one entry serves every commit until dependencies change.
+        key: oss-lint-go-v2-golangci-2.13.1-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum", "/data/repo/.golangci.yml")}}
         restoreKeys:
-        - oss-lint-go-v1-golangci-2.13.1-
+        - oss-lint-go-v2-golangci-2.13.1-
         paths:
         - /root/.cache/go-build
         - /root/.cache/golangci-lint
@@ -281,12 +279,11 @@ spec:
   steps:
   - name: Integration tests
     cache:
-      key: oss-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      key: oss-integration-tests-v1-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
       restoreKeys:
-      - oss-quality-loop-gomod-
+      - oss-integration-tests-v1-gomod-
       paths:
       - /root/go/pkg/mod/cache/download
-      scope: environment
     steps:
     - name: Run integration tests
       cache:
@@ -406,12 +403,11 @@ spec:
   steps:
   - name: Unit tests
     cache:
-      key: oss-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      key: oss-unit-tests-v1-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
       restoreKeys:
-      - oss-quality-loop-gomod-
+      - oss-unit-tests-v1-gomod-
       paths:
       - /root/go/pkg/mod/cache/download
-      scope: environment
     steps:
     - name: Run unit tests
       cache:
@@ -482,12 +478,11 @@ spec:
   steps:
   - name: Verify generated CRDs
     cache:
-      key: oss-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      key: oss-verify-crds-v1-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
       restoreKeys:
-      - oss-quality-loop-gomod-
+      - oss-verify-crds-v1-gomod-
       paths:
       - /root/go/pkg/mod/cache/download
-      scope: environment
     run:
       env:
       - name: GOPROXY
