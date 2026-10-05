@@ -1,7 +1,7 @@
 dependencies:
 - name: testkube-operator
   repository: file://../testkube-operator
-  version: 2.12.0
+  version: 2.12.1
 - name: mongodb
   repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
   version: 8.3.11-0
@@ -19,9 +19,9 @@ dependencies:
   version: 1.2.6-4
 - name: testkube-api
   repository: file://../testkube-api
-  version: 2.14.0
+  version: 2.14.1
 - name: global
   repository: file://../global
   version: 0.1.3
-digest: sha256:c9761b0d6e831cf5145c00f008ab6480a12fcd04cba88f79de7df292ca8f07d1
-generated: "2026-10-05T08:57:01.933332-05:00"
+digest: sha256:b996cd2e3b1d3449ade7ea61df33fb1607b7ab1bdaaddf32fc78959000615394
+generated: "2026-10-05T16:05:32.247127482Z"
