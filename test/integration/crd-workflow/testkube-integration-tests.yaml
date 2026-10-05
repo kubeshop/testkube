@@ -32,7 +32,7 @@ spec:
           port: 4222
         periodSeconds: 1
     minio:
-      image: bitnami/minio
+      image: kubeshop/testkube-minio:2025.10
       env:
       - name: MINIO_ROOT_USER
         value: minio99
