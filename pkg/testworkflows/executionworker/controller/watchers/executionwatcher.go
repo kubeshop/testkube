@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/log"
 	store2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/store"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -20,6 +21,8 @@ import (
 const (
 	ReadLatestBufferingTimeframe = 5 * time.Millisecond
 	ReadCriticalGracefullyTime   = 750 * time.Millisecond
+	// finalEventsTimeout limits the last list of the events when the execution ends.
+	finalEventsTimeout = 5 * time.Second
 )
 
 type executionWatcher struct {
@@ -49,7 +52,6 @@ type ExecutionWatcher interface {
 
 	RefreshPod(ctx context.Context)
 	RefreshJob(ctx context.Context)
-	RefreshPodEvents(ctx context.Context)
 
 	Started() <-chan struct{}
 	Updated(ctx context.Context) <-chan struct{}
@@ -108,24 +110,6 @@ func (e *executionWatcher) RefreshPod(ctx context.Context) {
 
 func (e *executionWatcher) RefreshJob(ctx context.Context) {
 	e.jobWatcher.Update(ctx)
-}
-
-// RefreshPodEvents lists the events of the pod again, so the state gets the events that the
-// watch has not received yet. It does nothing before the pod exists, because the events
-// watcher starts with the name of the pod.
-func (e *executionWatcher) RefreshPodEvents(ctx context.Context) {
-	if !e.podEventsInitialized.Load() {
-		return
-	}
-	if _, err := e.podEventsWatcher.Update(0); err != nil {
-		return
-	}
-	// The update loop needs one cycle to put the events into the state.
-	select {
-	case <-e.Next():
-	case <-time.After(10 * ReadLatestBufferingTimeframe):
-	case <-ctx.Done():
-	}
 }
 
 func (e *executionWatcher) baseStarted() <-chan struct{} {
@@ -339,6 +323,27 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 			}
 		}
 
+		// commit lists the events one more time before it commits the first state of an ended
+		// execution. A busy API server can deliver no watch event for a long time while a list
+		// still works, and the watchers stop when the execution ends, so this is the last chance
+		// to get the cause of a pod that waited.
+		finalized := false
+		commit := func() {
+			if !finalized && watcher.uncommitted.Completed() {
+				finalized = true
+				if _, err := watcher.jobEventsWatcher.Update(finalEventsTimeout); err != nil {
+					log.DefaultLogger.Warnw("listing the events of the job failed", "executionId", id, "error", err)
+				}
+				if watcher.podEventsInitialized.Load() {
+					if _, err := watcher.podEventsWatcher.Update(finalEventsTimeout); err != nil {
+						log.DefaultLogger.Warnw("listing the events of the pod failed", "executionId", id, "error", err)
+					}
+				}
+				readLatestData()
+			}
+			watcher.Commit()
+		}
+
 		<-watcher.baseStarted()
 
 		next(false)
@@ -346,7 +351,7 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 			<-watcher.podEventsWatcher.Started()
 			next(false)
 		}
-		watcher.Commit()
+		commit()
 		for {
 			_, ok := <-update.Channel(ctx)
 			if !ok {
@@ -354,14 +359,14 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 			}
 
 			next(false)
-			watcher.Commit()
+			commit()
 
 			if watcher.State().Completed() {
 				return
 			}
 		}
 		next(false)
-		watcher.Commit()
+		commit()
 	}()
 
 	return watcher

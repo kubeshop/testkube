@@ -398,14 +398,15 @@ func (e *eventsWatcher) Done() <-chan struct{} {
 }
 
 // Update gets the latest list of the events, to ensure that nothing is missed at that point.
-// It returns number of items that have been appended.
+// It returns number of items that have been appended, after the listener received them.
 func (e *eventsWatcher) Update(t time.Duration) (int, error) {
 	// Wait for readiness
 	<-e.optsCh
 
 	// Start reading data
-	started, _ := e.read(time.Time{}, t)
+	started, finished := e.read(time.Time{}, t)
 	result := <-started
+	<-finished
 	return result.count, result.err
 }
 

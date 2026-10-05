@@ -304,8 +304,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		}
 
 		// Kubernetes can stop the pod after the last step ended, for example when it removes a sidecar.
-		// The watch can end before the events of that stop arrive, so it reads the events one more time.
-		watcher.RefreshPodEvents(ctx)
+		// The state holds the events of that stop, because the watcher lists the events before it commits an ended state.
 		notifyTeardownEvents(notifier, eventsSince(watcher.State().PodEvents().Original(), currentPodEventsIndex), executionId)
 
 		// Mark as finished
