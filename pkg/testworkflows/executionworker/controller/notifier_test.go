@@ -171,7 +171,21 @@ func TestNotifier_Align(t *testing.T) {
 
 func TestNotifier_End(t *testing.T) {
 	const scheduler = "0/1 nodes are available: 1 Insufficient cpu."
+	const mountMessage = `MountVolume.SetUp failed for volume "missing-secret" : secret "absent" not found`
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	scheduledPod := &corev1.Pod{Status: corev1.PodStatus{Phase: corev1.PodPending}}
+	// deletedPod is a pod that the job deleted before it started, so it reports no waiting cause of its own.
+	deletedPod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &metav1.Time{Time: start.Add(time.Minute)}},
+		Status:     corev1.PodStatus{Phase: corev1.PodPending},
+	}
+	event := func(eventType, reason, message string, after time.Duration) *corev1.Event {
+		return &corev1.Event{Type: eventType, Reason: reason, Message: message, LastTimestamp: metav1.NewTime(start.Add(after))}
+	}
+	mountEvents := []*corev1.Event{
+		event(corev1.EventTypeNormal, "Scheduled", "Successfully assigned", 0),
+		event(corev1.EventTypeWarning, "FailedMount", mountMessage, 32*time.Second),
+	}
 	deadlineJob := func(annotations map[string]string) *batchv1.Job {
 		return &batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{Name: "exec-1", Annotations: annotations},
@@ -198,6 +212,7 @@ func TestNotifier_End(t *testing.T) {
 		name        string
 		job         *batchv1.Job
 		pod         *corev1.Pod
+		podEvents   []*corev1.Event
 		initMessage string
 		initReason  string
 		// then runs after the notifier wrote the cause of the pod, and before End
@@ -271,9 +286,30 @@ func TestNotifier_End(t *testing.T) {
 			wantDetails: "",
 		},
 		{
+			name:        "writes the waiting cause that only the final events of a deleted pod hold",
+			job:         plainJob(nil),
+			pod:         deletedPod,
+			podEvents:   mountEvents,
+			wantStatus:  testkube.ABORTED_TestWorkflowStepStatus,
+			wantMessage: "The execution has been aborted. (Kubernetes cannot mount a volume of the pod: " + mountMessage + ")",
+			wantReason:  string(testkube.StopReasonVolumeMountFailed),
+			wantDetails: mountMessage,
+		},
+		{
+			name:        "gives the deadline of the job before the waiting cause of the final events",
+			job:         deadlineJob(nil),
+			pod:         deletedPod,
+			podEvents:   mountEvents,
+			wantStatus:  testkube.ABORTED_TestWorkflowStepStatus,
+			wantMessage: "The execution has been aborted. (Job timed out after 60 seconds: Kubernetes cannot mount a volume of the pod: " + mountMessage + ")",
+			wantReason:  string(testkube.StopReasonVolumeMountFailed),
+			wantDetails: "Job timed out after 60 seconds: " + mountMessage,
+		},
+		{
 			name:        "keeps a cause that another writer put into the step as it was written",
 			job:         plainJob(nil),
-			pod:         scheduledPod,
+			pod:         deletedPod,
+			podEvents:   mountEvents,
 			initMessage: "the image could not be pulled: not found",
 			initReason:  string(testkube.StartReasonImagePullFailed),
 			wantStatus:  testkube.ABORTED_TestWorkflowStepStatus,
@@ -312,7 +348,7 @@ func TestNotifier_End(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			n := newTestNotifier(t, testkube.RUNNING_TestWorkflowStepStatus, tt.initMessage)
 			n.result.Initialization.ErrorReason = tt.initReason
-			n.Align(watchers.NewExecutionState(watchers.NewJob(tt.job), watchers.NewPod(tt.pod), watchers.NewJobEvents(nil), watchers.NewPodEvents(nil), nil))
+			n.Align(watchers.NewExecutionState(watchers.NewJob(tt.job), watchers.NewPod(tt.pod), watchers.NewJobEvents(nil), watchers.NewPodEvents(tt.podEvents), nil))
 			if tt.then != nil {
 				tt.then(n)
 			}
