@@ -1,4 +1,4 @@
-package localinstall
+package telemetry
 
 import (
 	"net/http"
@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTracker_OptOutSendsNothing(t *testing.T) {
+func TestInstallTracker_OptOutSendsNothing(t *testing.T) {
 	tests := []struct {
 		name             string
 		telemetryEnabled bool
@@ -32,7 +32,7 @@ func TestTracker_OptOutSendsNothing(t *testing.T) {
 			defer server.Close()
 			t.Setenv("DO_NOT_TRACK", tt.doNotTrack)
 
-			tracker := NewTracker(tt.telemetryEnabled, "machine", "test")
+			tracker := NewInstallTracker(tt.telemetryEnabled, "machine", "test")
 			tracker.endpoint = server.URL
 			tracker.Send("install_local_started", nil)
 			tracker.Wait()

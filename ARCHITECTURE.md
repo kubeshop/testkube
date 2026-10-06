@@ -369,7 +369,7 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 
 `testkube install local` (hidden) runs preflight checks before a laptop install. Missing, unreachable or permission-denied Docker blocks; missing `kubectl`, `helm` or `kind` and low Docker CPU, memory or disk only warn. Resources come from `docker info`, so Docker Desktop's VM limits apply rather than the host's.
 
-Each step is reported to PostHog (project "On Prem Trials", via the `t.testkube.io` proxy) by [`pkg/localinstall/tracker.go`](pkg/localinstall/tracker.go), so drop-off can be measured per step. A one-line notice is printed first; `DO_NOT_TRACK` or the CLI's `telemetryEnabled: false` disables it.
+Each step is reported to PostHog (project "On Prem Trials", via the `t.testkube.io` proxy) by [`pkg/telemetry/install_tracker.go`](pkg/telemetry/install_tracker.go), so drop-off can be measured per step. A one-line notice is printed first; `DO_NOT_TRACK` or the CLI's `telemetryEnabled: false` disables it.
 
 ### MCP Server
 

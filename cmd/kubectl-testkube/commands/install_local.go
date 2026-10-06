@@ -22,7 +22,7 @@ func NewInstallLocalCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			tracker := newInstallTracker()
 			if tracker.Enabled() {
-				ui.Printf("%s\n\n", ui.LightGray(localinstall.Notice))
+				ui.Printf("%s\n\n", ui.LightGray(telemetry.InstallNotice))
 			}
 			tracker.Send("install_local_started", nil)
 
@@ -51,15 +51,15 @@ func NewInstallLocalCmd() *cobra.Command {
 	}
 }
 
-func newInstallTracker() *localinstall.Tracker {
+func newInstallTracker() *telemetry.InstallTracker {
 	cfg, err := config.Load()
 	if err != nil {
 		cfg = config.DefaultConfig
 	}
-	return localinstall.NewTracker(cfg.TelemetryEnabled, telemetry.GetMachineID(), common.Version)
+	return telemetry.NewInstallTracker(cfg.TelemetryEnabled, telemetry.GetMachineID(), common.Version)
 }
 
-func trackCheck(tracker *localinstall.Tracker, r localinstall.Result) {
+func trackCheck(tracker *telemetry.InstallTracker, r localinstall.Result) {
 	tracker.Send("install_local_check", map[string]any{"check": r.Name, "status": string(r.Status)})
 }
 

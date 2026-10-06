@@ -1,4 +1,4 @@
-package localinstall
+package telemetry
 
 import (
 	"bytes"
@@ -19,9 +19,16 @@ const (
 	postHogEndpoint = "https://t.testkube.io/capture/"
 )
 
-const Notice = "Testkube sends install progress to help us fix setup problems. Opt out: DO_NOT_TRACK=1. Details: docs.testkube.io/articles/telemetry"
+const InstallNotice = "Testkube sends install progress to help us fix setup problems. Opt out: DO_NOT_TRACK=1. Details: docs.testkube.io/articles/telemetry"
 
-type Tracker struct {
+// InstallTracker reports `testkube install local` steps to PostHog
+// project "On Prem Trials" through https://t.testkube.io/capture/,
+// keyed by the CLI machine ID plus a per-run install_session_id.
+// Sends run in the background with a 2s timeout.
+// DO_NOT_TRACK or telemetryEnabled false sends nothing, hides the notice.
+// Events: install_local_started, install_local_check,
+// install_local_failed, install_local_checks_done.
+type InstallTracker struct {
 	enabled    bool
 	distinctID string
 	sessionID  string
@@ -31,8 +38,8 @@ type Tracker struct {
 	wg         sync.WaitGroup
 }
 
-func NewTracker(telemetryEnabled bool, machineID, version string) *Tracker {
-	return &Tracker{
+func NewInstallTracker(telemetryEnabled bool, machineID, version string) *InstallTracker {
+	return &InstallTracker{
 		enabled:    telemetryEnabled && !doNotTrack(),
 		distinctID: machineID,
 		sessionID:  uuid.NewString(),
@@ -42,12 +49,12 @@ func NewTracker(telemetryEnabled bool, machineID, version string) *Tracker {
 	}
 }
 
-func (t *Tracker) Enabled() bool {
+func (t *InstallTracker) Enabled() bool {
 	return t.enabled
 }
 
 // Background send: a slow network must never stall the install.
-func (t *Tracker) Send(event string, props map[string]any) {
+func (t *InstallTracker) Send(event string, props map[string]any) {
 	if !t.enabled {
 		return
 	}
@@ -81,7 +88,7 @@ func (t *Tracker) Send(event string, props map[string]any) {
 }
 
 // Call before exiting; os.Exit skips deferred calls.
-func (t *Tracker) Wait() {
+func (t *InstallTracker) Wait() {
 	t.wg.Wait()
 }
 
