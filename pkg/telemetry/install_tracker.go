@@ -20,11 +20,12 @@ const (
 	postHogEndpoint = "https://t.testkube.io/capture/"
 )
 
-const InstallNotice = "Testkube sends install progress to help us fix setup problems. Opt out: DO_NOT_TRACK=1. Details: docs.testkube.io/articles/telemetry"
+const InstallNotice = "Testkube sends install progress, linked to your license, to help us fix setup problems. Opt out: DO_NOT_TRACK=1. Details: docs.testkube.io/articles/telemetry"
 
 // InstallTracker reports `testkube install local` steps to PostHog
 // project "On Prem Trials" through https://t.testkube.io/capture/,
 // keyed by the CLI machine ID plus a per-run install_session_id.
+// Identify switches to the license owner's email, merging earlier events.
 // Sends run in the background with a 2s timeout.
 // DO_NOT_TRACK or telemetryEnabled false sends nothing, hides the notice.
 // Events: install_local_started, install_local_checks (one per run),
@@ -109,6 +110,19 @@ func (t *InstallTracker) Send(event string, props map[string]any) {
 }
 
 // Call before exiting; os.Exit skips deferred calls.
+func (t *InstallTracker) Identify(email string) {
+	if email == "" {
+		return
+	}
+	anonymousID := t.distinctID
+	t.distinctID = email
+	t.Send("$identify", map[string]any{
+		// PostHog merges the anonymous machine events into this person.
+		"$anon_distinct_id": anonymousID,
+		"$set":              map[string]any{"email": email},
+	})
+}
+
 func (t *InstallTracker) Wait() {
 	t.wg.Wait()
 }

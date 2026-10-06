@@ -30,7 +30,11 @@ func NewInstallLocalCmd() *cobra.Command {
 			}
 			tracker.Send("install_local_started", nil)
 
-			runLicenseStep(tracker, licenseKey)
+			key := runLicenseStep(tracker, licenseKey)
+			// Opted-out users' keys must not reach the owner lookup.
+			if tracker.Enabled() {
+				tracker.Identify(telemetry.GetEmail(key))
+			}
 
 			checker := localinstall.NewChecker()
 			results := checker.CheckTools(cmd.Context())
@@ -58,27 +62,36 @@ func NewInstallLocalCmd() *cobra.Command {
 	return cmd
 }
 
-func runLicenseStep(tracker *telemetry.InstallTracker, flagKey string) {
+func runLicenseStep(tracker *telemetry.InstallTracker, flagKey string) string {
 	if flagKey == "" && !ui.StdinIsInteractive() {
 		failLicense(tracker, localinstall.Result{Name: "license", Status: localinstall.StatusFail, Detail: "no key given",
 			Fix: "Pass it with --license <key>. " + localinstall.LicenseHelp})
 	}
-	_, attempts, err := localinstall.NewLicenseStep(terminalKeyPrompter{tracker: tracker}).Run(flagKey)
+	key, attempts, err := localinstall.NewLicenseStep(terminalKeyPrompter{tracker: tracker}).Run(flagKey)
 	for _, a := range attempts {
 		tracker.Send("install_local_license", map[string]any{"attempt": a.Number, "status": a.Status})
 	}
-	switch {
-	case err == nil:
+	if err == nil {
 		printCheckResult(localinstall.Result{Name: "license", Status: localinstall.StatusPass, Detail: "valid"})
-	case errors.Is(err, localinstall.ErrLicenseUnreachable):
-		failLicense(tracker, localinstall.Result{Name: "license", Status: localinstall.StatusFail, Detail: "cannot reach license.testkube.io", Fix: localinstall.LicenseUnreachableHelp})
-	case errors.Is(err, localinstall.ErrLicenseMissing):
-		failLicense(tracker, localinstall.Result{Name: "license", Status: localinstall.StatusFail, Detail: "no key entered", Fix: localinstall.LicenseHelp})
-	case errors.Is(err, localinstall.ErrLicenseInvalid):
-		failLicense(tracker, localinstall.Result{Name: "license", Status: localinstall.StatusFail, Detail: "not valid", Fix: localinstall.LicenseHelp})
-	default:
-		failLicense(tracker, localinstall.Result{Name: "license", Status: localinstall.StatusFail, Detail: "could not read the key", Fix: "Pass it with --license <key>"})
+		return key
 	}
+	failLicense(tracker, licenseFailure(err))
+	return "" // failLicense exits
+}
+
+func licenseFailure(err error) localinstall.Result {
+	r := localinstall.Result{Name: "license", Status: localinstall.StatusFail, Fix: localinstall.LicenseHelp}
+	switch {
+	case errors.Is(err, localinstall.ErrLicenseUnreachable):
+		r.Detail, r.Fix = "cannot reach license.testkube.io", localinstall.LicenseUnreachableHelp
+	case errors.Is(err, localinstall.ErrLicenseMissing):
+		r.Detail = "no key entered"
+	case errors.Is(err, localinstall.ErrLicenseInvalid):
+		r.Detail = "not valid"
+	default:
+		r.Detail, r.Fix = "could not read the key", "Pass it with --license <key>"
+	}
+	return r
 }
 
 func failLicense(tracker *telemetry.InstallTracker, r localinstall.Result) {
