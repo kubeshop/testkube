@@ -29,12 +29,16 @@ type Result struct {
 
 // Swapped in tests.
 var (
-	lookPath      = exec.LookPath
-	dockerRunning = func(ctx context.Context) bool {
+	lookPath        = exec.LookPath
+	dockerReachable = func(ctx context.Context) error {
 		// docker info hangs while the daemon is still starting.
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
-		return exec.CommandContext(ctx, "docker", "info").Run() == nil
+		out, err := exec.CommandContext(ctx, "docker", "info").CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("%w: %s", err, out)
+		}
+		return nil
 	}
 	// Docker Desktop only gets a share of the host.
 	dockerResources = func(ctx context.Context) (cpus int, memoryBytes int64, err error) {
@@ -80,6 +84,11 @@ const (
 	minMemory     = 6 * gigabyte
 	minFreeDisk   = 10 * gigabyte
 	resourcesHint = "Testkube may run slowly or fail to start"
+
+	dockerPermissionFix = "Your user can't use Docker yet. Run:\n" +
+		"  sudo usermod -aG docker $USER\n" +
+		"  newgrp docker\n" +
+		"Then run the installer again. Details: https://docs.docker.com/engine/install/linux-postinstall/"
 )
 
 // We install these ourselves, so missing is only a warning.
@@ -142,7 +151,11 @@ func checkDocker(ctx context.Context) Result {
 	if err != nil {
 		return Result{Name: "docker", Status: StatusFail, Detail: "not found", Fix: "Install Docker: https://docs.docker.com/get-docker/"}
 	}
-	if !dockerRunning(ctx) {
+	if err := dockerReachable(ctx); err != nil {
+		// Common on Linux: daemon runs, user lacks docker group.
+		if strings.Contains(err.Error(), "permission denied") {
+			return Result{Name: "docker", Status: StatusFail, Detail: "permission denied", Fix: dockerPermissionFix}
+		}
 		return Result{Name: "docker", Status: StatusFail, Detail: "not running", Fix: "Start Docker, then run the installer again"}
 	}
 	return Result{Name: "docker", Status: StatusPass, Detail: path}

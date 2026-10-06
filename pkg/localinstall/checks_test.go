@@ -10,29 +10,34 @@ import (
 
 func TestCheckTools_DockerBlocksButMissingToolsOnlyWarn(t *testing.T) {
 	tests := []struct {
-		name          string
-		missing       map[string]bool
-		dockerRunning bool
-		wantFailure   bool
+		name             string
+		missing          map[string]bool
+		dockerErr        error
+		wantFailure      bool
+		wantDockerDetail string
 	}{
-		{"docker missing", map[string]bool{"docker": true}, false, true},
-		{"docker not running", nil, false, true},
-		{"all tools missing but docker running", map[string]bool{"kubectl": true, "helm": true, "kind": true}, true, false},
+		{"docker missing", map[string]bool{"docker": true}, nil, true, "not found"},
+		{"docker not running", nil, errors.New("Cannot connect to the Docker daemon"), true, "not running"},
+		{"docker socket permission denied", nil, errors.New("permission denied while trying to connect to the Docker daemon socket"), true, "permission denied"},
+		{"all tools missing but docker running", map[string]bool{"kubectl": true, "helm": true, "kind": true}, nil, false, "/usr/bin/docker"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			restoreLookPath, restoreDocker := lookPath, dockerRunning
-			t.Cleanup(func() { lookPath, dockerRunning = restoreLookPath, restoreDocker })
+			restoreLookPath, restoreDocker := lookPath, dockerReachable
+			t.Cleanup(func() { lookPath, dockerReachable = restoreLookPath, restoreDocker })
 			lookPath = func(name string) (string, error) {
 				if tt.missing[name] {
 					return "", errors.New("not found")
 				}
 				return "/usr/bin/" + name, nil
 			}
-			dockerRunning = func(context.Context) bool { return tt.dockerRunning }
+			dockerReachable = func(context.Context) error { return tt.dockerErr }
 
-			assert.Equal(t, tt.wantFailure, HasFailure(CheckTools(context.Background())))
+			results := CheckTools(context.Background())
+
+			assert.Equal(t, tt.wantFailure, HasFailure(results))
+			assert.Equal(t, tt.wantDockerDetail, results[0].Detail)
 		})
 	}
 }

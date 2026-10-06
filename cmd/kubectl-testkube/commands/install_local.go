@@ -2,6 +2,7 @@ package commands
 
 import (
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -37,7 +38,10 @@ func printCheckResult(r localinstall.Result) {
 		localinstall.StatusFail: ui.LightRed("✖"),
 	}[r.Status]
 	ui.Printf("  %s %-8s %s\n", icon, r.Name, ui.LightGray(r.Detail))
-	if r.Fix != "" {
-		ui.Printf("      %s\n", r.Fix)
+	if r.Fix == "" {
+		return
+	}
+	for _, line := range strings.Split(r.Fix, "\n") {
+		ui.Printf("      %s\n", line)
 	}
 }
