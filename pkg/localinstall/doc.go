@@ -3,6 +3,11 @@
 // It prepares a laptop for a local Testkube trial.
 // Today it only runs preflight checks; installing comes later.
 //
+// The license key comes first (see LicenseStep):
+// --license gets one try, a masked prompt gets three.
+// An unreachable license.testkube.io stops the install,
+// because the installed control plane would fail the same way.
+//
 // Checks (see Checker):
 //   - Docker missing, unreachable or permission denied blocks the install.
 //   - Missing kubectl, helm or kind only warns; we install them.
