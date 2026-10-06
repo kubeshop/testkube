@@ -63,6 +63,8 @@ func (t *InstallTracker) Send(event string, props map[string]any) {
 		"installer_version":  t.version,
 		"os":                 runtime.GOOS,
 		"arch":               runtime.GOARCH,
+		// Local builds report 999.0.0-*; lets PostHog filter our own runs.
+		"dev_build": strings.HasPrefix(t.version, "999.0.0"),
 	}
 	for k, v := range props {
 		properties[k] = v

@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -38,6 +39,37 @@ func TestInstallTracker_OptOutSendsNothing(t *testing.T) {
 			tracker.Wait()
 
 			assert.Equal(t, tt.wantRequests, requests.Load())
+		})
+	}
+}
+
+func TestInstallTracker_TagsOnlyLocalBuildsAsDev(t *testing.T) {
+	tests := []struct {
+		version string
+		wantDev bool
+	}{
+		{"999.0.0-dev", true},
+		{"999.0.0-abc1234", true},
+		{"2.14.1", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.version, func(t *testing.T) {
+			var payload struct {
+				Properties map[string]any `json:"properties"`
+			}
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_ = json.NewDecoder(r.Body).Decode(&payload)
+			}))
+			defer server.Close()
+			t.Setenv("DO_NOT_TRACK", "")
+
+			tracker := NewInstallTracker(true, "machine", tt.version)
+			tracker.endpoint = server.URL
+			tracker.Send("install_local_started", nil)
+			tracker.Wait()
+
+			assert.Equal(t, tt.wantDev, payload.Properties["dev_build"])
 		})
 	}
 }
