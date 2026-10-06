@@ -10,8 +10,9 @@
 //
 // Resources come from one `docker info --format '{{json .}}'` call,
 // so Docker Desktop's VM limits apply, not the host's.
+// docker info gives up after 10 seconds.
 // Free disk is read at Docker's data dir;
-// Docker Desktop hides that dir in its VM: skipped.
+// skipped when that dir isn't on this host (Docker Desktop).
 //
 // Checker reaches Docker and the machine through private interfaces;
 // NewChecker wires the real ones, tests pass fakes.
