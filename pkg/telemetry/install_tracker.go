@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -94,7 +95,13 @@ func (t *InstallTracker) Send(event string, props map[string]any) {
 	t.wg.Add(1)
 	go func() {
 		defer t.wg.Done()
-		resp, err := t.client.Post(t.endpoint, "application/json", bytes.NewReader(body))
+		// Not the command context: aborted events must send after Ctrl+C.
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, t.endpoint, bytes.NewReader(body))
+		if err != nil {
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := t.client.Do(req)
 		if err == nil {
 			resp.Body.Close()
 		}
