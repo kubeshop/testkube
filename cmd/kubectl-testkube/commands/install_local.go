@@ -177,23 +177,24 @@ func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, 
 }
 
 func failToolInstall(tracker *telemetry.InstallTracker, name string, err error) {
-	printCheckResult(localinstall.Result{Name: name, Status: localinstall.StatusFail, Detail: "could not install",
-		Fix: err.Error() + "\nCheck your network, proxy or firewall, then run again"})
-	tracker.Send("install_local_failed", map[string]any{"stage": "tool_install", "tool": name, "reason": toolFailureReason(err)})
-	tracker.Wait()
-	os.Exit(1)
-}
-
-// Fixed values only: raw errors can leak paths or proxies.
-func toolFailureReason(err error) string {
+	r := localinstall.Result{Name: name, Status: localinstall.StatusFail}
+	// Fixed reasons only: raw errors can leak paths or proxies.
+	var reason string
 	switch {
 	case errors.Is(err, localinstall.ErrUnsupportedPlatform):
-		return "unsupported_platform"
+		reason, r.Detail = "unsupported_platform", "no download for this system"
+		r.Fix = "Install " + name + " yourself, then run again: " + localinstall.ToolManualURL(name)
 	case errors.Is(err, localinstall.ErrChecksumMismatch):
-		return "checksum"
+		reason, r.Detail = "checksum", "download was damaged"
+		r.Fix = "Run again. If it keeps failing, a proxy may be changing downloads"
 	default:
-		return "download"
+		reason, r.Detail = "download", "could not download"
+		r.Fix = err.Error() + "\nCheck your network, proxy or firewall, then run again"
 	}
+	printCheckResult(r)
+	tracker.Send("install_local_failed", map[string]any{"stage": "tool_install", "tool": name, "reason": reason})
+	tracker.Wait()
+	os.Exit(1)
 }
 
 // One row per run: every status and measured value together.

@@ -26,6 +26,7 @@ var (
 // %[1]s is GOOS, %[2]s is GOARCH.
 type toolSource struct {
 	version       string
+	manualURL     string
 	url           string
 	checksumURL   string
 	pathInTarball string
@@ -35,17 +36,20 @@ type toolSource struct {
 var toolSources = map[string]toolSource{
 	"kubectl": {
 		version:     "v1.37.1",
+		manualURL:   "https://kubernetes.io/docs/tasks/tools/",
 		url:         "https://dl.k8s.io/release/v1.37.1/bin/%[1]s/%[2]s/kubectl",
 		checksumURL: "https://dl.k8s.io/release/v1.37.1/bin/%[1]s/%[2]s/kubectl.sha256",
 	},
 	"helm": {
 		version:       "v4.3.0",
+		manualURL:     "https://helm.sh/docs/intro/install/",
 		url:           "https://get.helm.sh/helm-v4.3.0-%[1]s-%[2]s.tar.gz",
 		checksumURL:   "https://get.helm.sh/helm-v4.3.0-%[1]s-%[2]s.tar.gz.sha256sum",
 		pathInTarball: "%[1]s-%[2]s/helm",
 	},
 	"kind": {
 		version:     "v0.33.0",
+		manualURL:   "https://kind.sigs.k8s.io/docs/user/quick-start/#installation",
 		url:         "https://kind.sigs.k8s.io/dl/v0.33.0/kind-%[1]s-%[2]s",
 		checksumURL: "https://kind.sigs.k8s.io/dl/v0.33.0/kind-%[1]s-%[2]s.sha256sum",
 	},
@@ -93,6 +97,10 @@ func AddToolsDirToPath() error {
 
 func ToolVersion(name string) string {
 	return toolSources[name].version
+}
+
+func ToolManualURL(name string) string {
+	return toolSources[name].manualURL
 }
 
 func (i *ToolInstaller) Install(ctx context.Context, name string) (string, error) {
