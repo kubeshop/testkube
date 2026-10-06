@@ -54,16 +54,23 @@ var (
 		memoryBytes, err = strconv.ParseInt(fields[1], 10, 64)
 		return cpus, memoryBytes, err
 	}
-	freeDiskBytes = func() (uint64, error) {
-		home, err := os.UserHomeDir()
+	// Docker Desktop's data dir lives inside its VM, invisible here.
+	dockerFreeDiskBytes = func(ctx context.Context) (free uint64, visible bool, err error) {
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+		out, err := exec.CommandContext(ctx, "docker", "info", "--format", "{{.DockerRootDir}}").Output()
 		if err != nil {
-			return 0, err
+			return 0, false, err
 		}
-		usage, err := disk.Usage(home)
+		root := strings.TrimSpace(string(out))
+		if _, err := os.Stat(root); err != nil {
+			return 0, false, nil
+		}
+		usage, err := disk.Usage(root)
 		if err != nil {
-			return 0, err
+			return 0, true, err
 		}
-		return usage.Free, nil
+		return usage.Free, true, nil
 	}
 )
 
@@ -100,9 +107,12 @@ func CheckMachine(ctx context.Context) []Result {
 			minimumResult("memory", memoryBytes >= minMemory, formatGB(uint64(memoryBytes)), "needs "+formatGB(minMemory)))
 	}
 
-	free, err := freeDiskBytes()
-	if err != nil {
+	free, visible, err := dockerFreeDiskBytes(ctx)
+	switch {
+	case err != nil:
 		return append(results, Result{Name: "disk", Status: StatusWarn, Detail: "could not read free space"})
+	case !visible:
+		return results
 	}
 	return append(results, minimumResult("disk", free >= minFreeDisk, formatGB(free)+" free", "needs "+formatGB(minFreeDisk)))
 }

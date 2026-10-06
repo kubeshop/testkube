@@ -39,24 +39,27 @@ func TestCheckTools_DockerBlocksButMissingToolsOnlyWarn(t *testing.T) {
 
 func TestCheckMachine_WarnsAtBoundaryButNeverFails(t *testing.T) {
 	tests := []struct {
-		name      string
-		cpus      int
-		memory    int64
-		free      uint64
-		readErr   error
-		wantWarns int
+		name        string
+		cpus        int
+		memory      int64
+		free        uint64
+		diskVisible bool
+		readErr     error
+		wantWarns   int
+		wantResults int
 	}{
-		{"exactly the minimum", minCPUs, minMemory, minFreeDisk, nil, 0},
-		{"one below every minimum", minCPUs - 1, minMemory - 1, minFreeDisk - 1, nil, 3},
-		{"docker and disk unreadable", 0, 0, 0, errors.New("boom"), 3},
+		{"exactly the minimum", minCPUs, minMemory, minFreeDisk, true, nil, 0, 3},
+		{"one below every minimum", minCPUs - 1, minMemory - 1, minFreeDisk - 1, true, nil, 3, 3},
+		{"docker and disk unreadable", 0, 0, 0, false, errors.New("boom"), 3, 3},
+		{"docker desktop disk not visible is skipped", minCPUs, minMemory, 0, false, nil, 0, 2},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			restoreResources, restoreDisk := dockerResources, freeDiskBytes
-			t.Cleanup(func() { dockerResources, freeDiskBytes = restoreResources, restoreDisk })
+			restoreResources, restoreDisk := dockerResources, dockerFreeDiskBytes
+			t.Cleanup(func() { dockerResources, dockerFreeDiskBytes = restoreResources, restoreDisk })
 			dockerResources = func(context.Context) (int, int64, error) { return tt.cpus, tt.memory, tt.readErr }
-			freeDiskBytes = func() (uint64, error) { return tt.free, tt.readErr }
+			dockerFreeDiskBytes = func(context.Context) (uint64, bool, error) { return tt.free, tt.diskVisible, tt.readErr }
 
 			results := CheckMachine(context.Background())
 
@@ -67,6 +70,7 @@ func TestCheckMachine_WarnsAtBoundaryButNeverFails(t *testing.T) {
 				}
 			}
 			assert.Equal(t, tt.wantWarns, warns)
+			assert.Len(t, results, tt.wantResults)
 			assert.False(t, HasFailure(results))
 		})
 	}
