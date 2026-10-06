@@ -28,12 +28,7 @@ func NewInstallLocalCmd() *cobra.Command {
 
 			checker := localinstall.NewChecker()
 			results := checker.CheckTools(cmd.Context())
-			// Ctrl+C is the user quitting, not Docker failing.
-			if cmd.Context().Err() != nil {
-				tracker.Send("install_local_aborted", map[string]any{"stage": "tools"})
-				tracker.Wait()
-				os.Exit(130)
-			}
+			exitIfCancelled(cmd, tracker, "tools")
 			for _, r := range results {
 				printCheckResult(r)
 				trackCheck(tracker, r)
@@ -43,7 +38,9 @@ func NewInstallLocalCmd() *cobra.Command {
 				tracker.Wait()
 				os.Exit(1)
 			}
-			for _, r := range checker.CheckMachine(cmd.Context()) {
+			machine := checker.CheckMachine(cmd.Context())
+			exitIfCancelled(cmd, tracker, "machine")
+			for _, r := range machine {
 				printCheckResult(r)
 				trackCheck(tracker, r)
 			}
@@ -63,6 +60,16 @@ func newInstallTracker() *telemetry.InstallTracker {
 		MachineID: telemetry.GetMachineID(),
 		Version:   common.Version,
 	})
+}
+
+// Ctrl+C is the user quitting, not a step failing.
+func exitIfCancelled(cmd *cobra.Command, tracker *telemetry.InstallTracker, stage string) {
+	if cmd.Context().Err() == nil {
+		return
+	}
+	tracker.Send("install_local_aborted", map[string]any{"stage": stage})
+	tracker.Wait()
+	os.Exit(130)
 }
 
 func trackCheck(tracker *telemetry.InstallTracker, r localinstall.Result) {
