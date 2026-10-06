@@ -84,22 +84,24 @@ func TestCheckMachine_WarnsAtBoundaryButNeverFails(t *testing.T) {
 		name        string
 		cpus        int
 		memory      int64
+		root        string
 		free        uint64
 		diskVisible bool
 		readErr     error
 		wantWarns   int
 		wantResults int
 	}{
-		{"exactly the minimum", minCPUs, minMemory, minFreeDisk, true, nil, 0, 3},
-		{"one below every minimum", minCPUs - 1, minMemory - 1, minFreeDisk - 1, true, nil, 3, 3},
-		{"docker and disk unreadable", 0, 0, 0, false, errors.New("boom"), 3, 3},
-		{"docker desktop disk not visible is skipped", minCPUs, minMemory, 0, false, nil, 0, 2},
+		{"exactly the minimum", minCPUs, minMemory, "/var/lib/docker", minFreeDisk, true, nil, 0, 3},
+		{"one below every minimum", minCPUs - 1, minMemory - 1, "/var/lib/docker", minFreeDisk - 1, true, nil, 3, 3},
+		{"docker info error", 0, 0, "", 0, false, errors.New("boom"), 3, 3},
+		{"docker desktop disk not visible is skipped", minCPUs, minMemory, "/var/lib/docker", 0, false, nil, 0, 2},
+		{"podman-style zero fields warn instead of fake numbers", 0, 0, "", 0, false, nil, 3, 3},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			checker := &Checker{
-				Docker:     fakeDocker{info: DockerInfo{NCPU: tt.cpus, MemTotal: tt.memory}, err: tt.readErr},
+				Docker:     fakeDocker{info: DockerInfo{NCPU: tt.cpus, MemTotal: tt.memory, DockerRootDir: tt.root}, err: tt.readErr},
 				FreeDiskAt: func(string) (uint64, bool, error) { return tt.free, tt.diskVisible, tt.readErr },
 			}
 

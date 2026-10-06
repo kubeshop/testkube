@@ -67,7 +67,8 @@ func (c *Checker) CheckTools(ctx context.Context) []Result {
 // Machine size only warns: users may continue on smaller machines.
 func (c *Checker) CheckMachine(ctx context.Context) []Result {
 	info, err := c.dockerInfo(ctx)
-	if err != nil {
+	// Docker-compatible engines like Podman report other fields, so zeros.
+	if err != nil || info.NCPU == 0 || info.MemTotal == 0 {
 		return []Result{
 			{Name: "cpu", Status: StatusWarn, Detail: "could not read from Docker"},
 			{Name: "memory", Status: StatusWarn, Detail: "could not read from Docker"},
@@ -80,6 +81,9 @@ func (c *Checker) CheckMachine(ctx context.Context) []Result {
 		minimumResult("memory", info.MemTotal >= minMemory, formatGB(uint64(info.MemTotal)), "needs "+formatGB(minMemory)),
 	}
 
+	if info.DockerRootDir == "" {
+		return append(results, Result{Name: "disk", Status: StatusWarn, Detail: "could not read free space"})
+	}
 	free, visible, err := c.FreeDiskAt(info.DockerRootDir)
 	switch {
 	case err != nil:
