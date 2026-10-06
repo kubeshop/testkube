@@ -47,12 +47,11 @@ spec:
   - name: Install
     shell: corepack enable npm && npm ci --prefer-offline
     cache:
-      key: cloud-quality-loop-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      key: cloud-web-unit-v1-npm-{{hash_files("/data/repo/js/package-lock.json")}}
       restoreKeys:
-      - cloud-quality-loop-npm-
+      - cloud-web-unit-v1-npm-
       paths:
       - /root/.npm/_cacache
-      scope: environment
   - name: Test
     shell: |
       mkdir -p /data/artifacts
@@ -114,12 +113,11 @@ spec:
   - name: Install
     shell: corepack enable npm && npm ci --prefer-offline
     cache:
-      key: cloud-quality-loop-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      key: cloud-backoffice-unit-v1-npm-{{hash_files("/data/repo/js/package-lock.json")}}
       restoreKeys:
-      - cloud-quality-loop-npm-
+      - cloud-backoffice-unit-v1-npm-
       paths:
       - /root/.npm/_cacache
-      scope: environment
   - name: Test
     shell: |
       mkdir -p /data/artifacts
@@ -181,12 +179,11 @@ spec:
   - name: Install
     shell: corepack enable npm && npm ci --prefer-offline
     cache:
-      key: cloud-quality-loop-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      key: cloud-runspace-controller-unit-v1-npm-{{hash_files("/data/repo/js/package-lock.json")}}
       restoreKeys:
-      - cloud-quality-loop-npm-
+      - cloud-runspace-controller-unit-v1-npm-
       paths:
       - /root/.npm/_cacache
-      scope: environment
   - name: Test
     shell: |
       mkdir -p /data/artifacts
@@ -240,20 +237,19 @@ spec:
       shell: spectral lint api/v1/base.yaml
   - name: Lint Golang
     cache:
-      key: cloud-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      key: cloud-lint-go-v1-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
       restoreKeys:
-      - cloud-quality-loop-gomod-
+      - cloud-lint-go-v1-gomod-
       paths:
       - /root/go/pkg/mod/cache/download
-      scope: environment
     steps:
     - name: Analyze Go packages
       cache:
-        # Entries are immutable: refresh for source/config changes, while reusing
-        # compiled dependencies from the previous successful lint execution.
-        key: cloud-lint-go-v1-golangci-2.12.2-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum", "/data/repo/.golangci.yml", "/data/repo/**/*.go")}}
+        # Keyed on the modules and lint config, never the sources: both caches address
+        # their own contents, so one entry serves every commit until dependencies change.
+        key: cloud-lint-go-v2-golangci-2.12.2-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum", "/data/repo/.golangci.yml")}}
         restoreKeys:
-        - cloud-lint-go-v1-golangci-2.12.2-
+        - cloud-lint-go-v2-golangci-2.12.2-
         paths:
         - /root/.cache/go-build
         - /root/.cache/golangci-lint
@@ -336,12 +332,11 @@ spec:
   - name: Install
     shell: corepack enable npm && npm ci --prefer-offline
     cache:
-      key: cloud-quality-loop-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      key: cloud-lint-js-v1-npm-{{hash_files("/data/repo/js/package-lock.json")}}
       restoreKeys:
-      - cloud-quality-loop-npm-
+      - cloud-lint-js-v1-npm-
       paths:
       - /root/.npm/_cacache
-      scope: environment
   - name: Check TypeScript types
     shell: npx turbo run ts-check --cache-dir=.turbo
   - name: Check formatting
@@ -433,12 +428,11 @@ spec:
   steps:
   - name: Check go.mod, go.sum, and OpenAPI
     cache:
-      key: cloud-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      key: cloud-gomod-codegen-v1-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
       restoreKeys:
-      - cloud-quality-loop-gomod-
+      - cloud-gomod-codegen-v1-gomod-
       paths:
       - /root/go/pkg/mod/cache/download
-      scope: environment
     shell: |-
       set -euo pipefail
       apt-get update -qq
@@ -673,12 +667,11 @@ spec:
   steps:
   - name: Run tests
     cache:
-      key: cloud-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      key: cloud-test-app-v1-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
       restoreKeys:
-      - cloud-quality-loop-gomod-
+      - cloud-test-app-v1-gomod-
       paths:
       - /root/go/pkg/mod/cache/download
-      scope: environment
     steps:
     - name: Run test suite
       cache:
