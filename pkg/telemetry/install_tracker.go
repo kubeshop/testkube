@@ -27,7 +27,7 @@ const InstallNotice = "Testkube sends install progress to help us fix setup prob
 // Sends run in the background with a 2s timeout.
 // DO_NOT_TRACK or telemetryEnabled false sends nothing, hides the notice.
 // Events: install_local_started, install_local_check,
-// install_local_failed, install_local_checks_done.
+// install_local_failed, install_local_aborted, install_local_checks_done.
 type InstallTracker struct {
 	enabled    bool
 	distinctID string
@@ -38,13 +38,25 @@ type InstallTracker struct {
 	wg         sync.WaitGroup
 }
 
-func NewInstallTracker(telemetryEnabled bool, machineID, version string) *InstallTracker {
+type InstallTrackerConfig struct {
+	Enabled   bool
+	MachineID string
+	Version   string
+	// Empty means production; tests point it at a local server.
+	Endpoint string
+}
+
+func NewInstallTracker(cfg InstallTrackerConfig) *InstallTracker {
+	endpoint := cfg.Endpoint
+	if endpoint == "" {
+		endpoint = postHogEndpoint
+	}
 	return &InstallTracker{
-		enabled:    telemetryEnabled && !doNotTrack(),
-		distinctID: machineID,
+		enabled:    cfg.Enabled,
+		distinctID: cfg.MachineID,
 		sessionID:  uuid.NewString(),
-		version:    version,
-		endpoint:   postHogEndpoint,
+		version:    cfg.Version,
+		endpoint:   endpoint,
 		client:     &http.Client{Timeout: 2 * time.Second},
 	}
 }
@@ -94,7 +106,8 @@ func (t *InstallTracker) Wait() {
 	t.wg.Wait()
 }
 
-func doNotTrack() bool {
+// DO_NOT_TRACK is the cross-tool opt-out convention.
+func DoNotTrack() bool {
 	v := strings.ToLower(strings.TrimSpace(os.Getenv("DO_NOT_TRACK")))
 	return v != "" && v != "0" && v != "false"
 }

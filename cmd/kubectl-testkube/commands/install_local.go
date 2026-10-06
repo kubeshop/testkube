@@ -30,6 +30,8 @@ func NewInstallLocalCmd() *cobra.Command {
 			results := checker.CheckTools(cmd.Context())
 			// Ctrl+C is the user quitting, not Docker failing.
 			if cmd.Context().Err() != nil {
+				tracker.Send("install_local_aborted", map[string]any{"stage": "tools"})
+				tracker.Wait()
 				os.Exit(130)
 			}
 			for _, r := range results {
@@ -56,7 +58,11 @@ func newInstallTracker() *telemetry.InstallTracker {
 	if err != nil {
 		cfg = config.DefaultConfig
 	}
-	return telemetry.NewInstallTracker(cfg.TelemetryEnabled, telemetry.GetMachineID(), common.Version)
+	return telemetry.NewInstallTracker(telemetry.InstallTrackerConfig{
+		Enabled:   cfg.TelemetryEnabled && !telemetry.DoNotTrack(),
+		MachineID: telemetry.GetMachineID(),
+		Version:   common.Version,
+	})
 }
 
 func trackCheck(tracker *telemetry.InstallTracker, r localinstall.Result) {

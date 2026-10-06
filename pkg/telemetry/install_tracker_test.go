@@ -10,36 +10,45 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInstallTracker_OptOutSendsNothing(t *testing.T) {
+func TestDoNotTrack_OnlyTruthyValuesOptOut(t *testing.T) {
 	tests := []struct {
-		name             string
-		telemetryEnabled bool
-		doNotTrack       string
-		wantRequests     int32
+		value string
+		want  bool
 	}{
-		{"enabled", true, "", 1},
-		{"DO_NOT_TRACK=1", true, "1", 0},
-		{"DO_NOT_TRACK=true", true, "true", 0},
-		{"DO_NOT_TRACK=0 still tracks", true, "0", 1},
-		{"telemetry disabled in CLI config", false, "", 0},
+		{"", false},
+		{"0", false},
+		{"false", false},
+		{"FALSE", false},
+		{"1", true},
+		{" 1 ", true},
+		{"true", true},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var requests atomic.Int32
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				requests.Add(1)
-			}))
-			defer server.Close()
-			t.Setenv("DO_NOT_TRACK", tt.doNotTrack)
-
-			tracker := NewInstallTracker(tt.telemetryEnabled, "machine", "test")
-			tracker.endpoint = server.URL
-			tracker.Send("install_local_started", nil)
-			tracker.Wait()
-
-			assert.Equal(t, tt.wantRequests, requests.Load())
+		t.Run("value="+tt.value, func(t *testing.T) {
+			t.Setenv("DO_NOT_TRACK", tt.value)
+			assert.Equal(t, tt.want, DoNotTrack())
 		})
+	}
+}
+
+func TestInstallTracker_DisabledSendsNothing(t *testing.T) {
+	for _, enabled := range []bool{true, false} {
+		var requests atomic.Int32
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requests.Add(1)
+		}))
+
+		tracker := NewInstallTracker(InstallTrackerConfig{Enabled: enabled, MachineID: "machine", Version: "test", Endpoint: server.URL})
+		tracker.Send("install_local_started", nil)
+		tracker.Wait()
+		server.Close()
+
+		want := int32(0)
+		if enabled {
+			want = 1
+		}
+		assert.Equal(t, want, requests.Load(), "enabled=%v", enabled)
 	}
 }
 
@@ -62,10 +71,8 @@ func TestInstallTracker_TagsOnlyLocalBuildsAsDev(t *testing.T) {
 				_ = json.NewDecoder(r.Body).Decode(&payload)
 			}))
 			defer server.Close()
-			t.Setenv("DO_NOT_TRACK", "")
 
-			tracker := NewInstallTracker(true, "machine", tt.version)
-			tracker.endpoint = server.URL
+			tracker := NewInstallTracker(InstallTrackerConfig{Enabled: true, MachineID: "machine", Version: tt.version, Endpoint: server.URL})
 			tracker.Send("install_local_started", nil)
 			tracker.Wait()
 
