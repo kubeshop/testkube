@@ -187,6 +187,9 @@ func failToolInstall(tracker *telemetry.InstallTracker, name string, err error) 
 	case errors.Is(err, localinstall.ErrChecksumMismatch):
 		reason, r.Detail = "checksum", "download was damaged"
 		r.Fix = "Run again. If it keeps failing, a proxy may be changing downloads"
+	case errors.Is(err, localinstall.ErrSaveFailed):
+		reason, r.Detail = "save", "could not save"
+		r.Fix = err.Error() + "\nCheck that you can write to ~/.testkube/bin, then run again"
 	default:
 		reason, r.Detail = "download", "could not download"
 		r.Fix = err.Error() + "\nCheck your network, proxy or firewall, then run again"

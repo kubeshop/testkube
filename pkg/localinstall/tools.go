@@ -21,6 +21,7 @@ import (
 var (
 	ErrUnsupportedPlatform = errors.New("no download for this system")
 	ErrChecksumMismatch    = errors.New("download does not match its checksum")
+	ErrSaveFailed          = errors.New("could not save the tool")
 )
 
 // %[1]s is GOOS, %[2]s is GOARCH.
@@ -128,7 +129,11 @@ func (i *ToolInstaller) Install(ctx context.Context, name string) (string, error
 			return "", err
 		}
 	}
-	return i.writeExecutable(name, data)
+	path, err := i.writeExecutable(name, data)
+	if err != nil {
+		return "", fmt.Errorf("%w: %w", ErrSaveFailed, err)
+	}
+	return path, nil
 }
 
 func (i *ToolInstaller) fetch(ctx context.Context, url string) ([]byte, error) {

@@ -98,6 +98,22 @@ func TestToolInstaller_ExtractsBinaryFromTarball(t *testing.T) {
 	}
 }
 
+func TestToolInstaller_SaveFailureIsNotADownloadError(t *testing.T) {
+	server, _ := serveFiles(t, map[string][]byte{
+		"/kind-linux-amd64":        []byte("kind"),
+		"/kind-linux-amd64.sha256": []byte(sha256Hex([]byte("kind"))),
+	})
+	blocked := filepath.Join(t.TempDir(), "bin")
+	require.NoError(t, os.WriteFile(blocked, nil, 0o644))
+	installer := testInstaller(blocked, "linux", "amd64", map[string]toolSource{
+		"kind": {url: server.URL + "/kind-%[1]s-%[2]s", checksumURL: server.URL + "/kind-%[1]s-%[2]s.sha256"},
+	})
+
+	_, err := installer.Install(context.Background(), "kind")
+
+	assert.ErrorIs(t, err, ErrSaveFailed)
+}
+
 func TestToolInstaller_UnsupportedPlatformDownloadsNothing(t *testing.T) {
 	for _, platform := range [][2]string{{"windows", "amd64"}, {"linux", "386"}} {
 		server, hits := serveFiles(t, nil)
