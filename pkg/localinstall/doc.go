@@ -13,6 +13,6 @@
 // Free disk is read at Docker's data dir;
 // Docker Desktop hides that dir in its VM: skipped.
 //
-// Docker access goes through the Docker interface;
-// tests pass a fake to Checker instead of real Docker.
+// Checker reaches Docker and the machine through private interfaces;
+// NewChecker wires the real ones, tests pass fakes.
 package localinstall

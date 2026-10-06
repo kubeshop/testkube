@@ -44,16 +44,29 @@ const (
 // We install these ourselves, so missing is only a warning.
 var installableTools = []string{"kubectl", "helm", "kind"}
 
-type Checker struct {
-	LookPath   func(string) (string, error)
-	Docker     Docker
-	FreeDiskAt func(path string) (free uint64, visible bool, err error)
+type host interface {
+	LookPath(name string) (string, error)
+	FreeDiskAt(path string) (free uint64, visible bool, err error)
+}
 
-	info *DockerInfo
+type realHost struct{}
+
+func (realHost) LookPath(name string) (string, error) {
+	return exec.LookPath(name)
+}
+
+func (realHost) FreeDiskAt(path string) (uint64, bool, error) {
+	return freeDiskAt(path)
+}
+
+type Checker struct {
+	host   host
+	docker dockerClient
+	info   *dockerInfo
 }
 
 func NewChecker() *Checker {
-	return &Checker{LookPath: exec.LookPath, Docker: dockerCLI{}, FreeDiskAt: freeDiskAt}
+	return &Checker{host: realHost{}, docker: dockerCLI{}}
 }
 
 func (c *Checker) CheckTools(ctx context.Context) []Result {
@@ -66,7 +79,7 @@ func (c *Checker) CheckTools(ctx context.Context) []Result {
 
 // Machine size only warns: users may continue on smaller machines.
 func (c *Checker) CheckMachine(ctx context.Context) []Result {
-	info, err := c.dockerInfo(ctx)
+	info, err := c.readDockerInfo(ctx)
 	// Docker-compatible engines like Podman report other fields, so zeros.
 	if err != nil || info.NCPU == 0 || info.MemTotal == 0 {
 		return []Result{
@@ -84,7 +97,7 @@ func (c *Checker) CheckMachine(ctx context.Context) []Result {
 	if info.DockerRootDir == "" {
 		return append(results, Result{Name: "disk", Status: StatusWarn, Detail: "could not read free space"})
 	}
-	free, visible, err := c.FreeDiskAt(info.DockerRootDir)
+	free, visible, err := c.host.FreeDiskAt(info.DockerRootDir)
 	switch {
 	case err != nil:
 		return append(results, Result{Name: "disk", Status: StatusWarn, Detail: "could not read free space"})
@@ -104,24 +117,24 @@ func HasFailure(results []Result) bool {
 }
 
 // Both check groups read one docker info call.
-func (c *Checker) dockerInfo(ctx context.Context) (DockerInfo, error) {
+func (c *Checker) readDockerInfo(ctx context.Context) (dockerInfo, error) {
 	if c.info != nil {
 		return *c.info, nil
 	}
-	info, err := c.Docker.Info(ctx)
+	info, err := c.docker.Info(ctx)
 	if err != nil {
-		return DockerInfo{}, err
+		return dockerInfo{}, err
 	}
 	c.info = &info
 	return info, nil
 }
 
 func (c *Checker) checkDocker(ctx context.Context) Result {
-	path, err := c.LookPath("docker")
+	path, err := c.host.LookPath("docker")
 	if err != nil {
 		return Result{Name: "docker", Status: StatusFail, Detail: "not found", Fix: "Install Docker: https://docs.docker.com/get-docker/"}
 	}
-	if _, err := c.dockerInfo(ctx); err != nil {
+	if _, err := c.readDockerInfo(ctx); err != nil {
 		if errors.Is(err, errDockerTimeout) {
 			return Result{Name: "docker", Status: StatusFail, Detail: "not answering", Fix: "Docker did not answer within 10 seconds. It may still be starting; wait a moment, then run again"}
 		}
@@ -135,7 +148,7 @@ func (c *Checker) checkDocker(ctx context.Context) Result {
 }
 
 func (c *Checker) checkInstallable(name string) Result {
-	path, err := c.LookPath(name)
+	path, err := c.host.LookPath(name)
 	if err != nil {
 		return Result{Name: name, Status: StatusWarn, Detail: "not found, will be installed"}
 	}

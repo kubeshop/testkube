@@ -10,22 +10,22 @@ import (
 	"time"
 )
 
-type DockerInfo struct {
+type dockerInfo struct {
 	NCPU          int      `json:"NCPU"`
 	MemTotal      int64    `json:"MemTotal"`
 	DockerRootDir string   `json:"DockerRootDir"`
 	ServerErrors  []string `json:"ServerErrors"`
 }
 
-type Docker interface {
-	Info(ctx context.Context) (DockerInfo, error)
+type dockerClient interface {
+	Info(ctx context.Context) (dockerInfo, error)
 }
 
 var errDockerTimeout = errors.New("docker did not answer within 10 seconds")
 
 type dockerCLI struct{}
 
-func (dockerCLI) Info(ctx context.Context) (DockerInfo, error) {
+func (dockerCLI) Info(ctx context.Context) (dockerInfo, error) {
 	// docker info hangs while the daemon is still starting.
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -37,19 +37,19 @@ func (dockerCLI) Info(ctx context.Context) (DockerInfo, error) {
 	out, err := cmd.Output()
 	if err != nil {
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return DockerInfo{}, errDockerTimeout
+			return dockerInfo{}, errDockerTimeout
 		}
 		if reason := strings.TrimSpace(stderr.String()); reason != "" {
-			return DockerInfo{}, errors.New(reason)
+			return dockerInfo{}, errors.New(reason)
 		}
-		return DockerInfo{}, err
+		return dockerInfo{}, err
 	}
-	var info DockerInfo
+	var info dockerInfo
 	if err := json.Unmarshal(out, &info); err != nil {
-		return DockerInfo{}, err
+		return dockerInfo{}, err
 	}
 	if len(info.ServerErrors) > 0 {
-		return DockerInfo{}, errors.New(strings.Join(info.ServerErrors, "; "))
+		return dockerInfo{}, errors.New(strings.Join(info.ServerErrors, "; "))
 	}
 	return info, nil
 }

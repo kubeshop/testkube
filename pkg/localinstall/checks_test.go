@@ -12,12 +12,30 @@ import (
 )
 
 type fakeDocker struct {
-	info DockerInfo
+	info dockerInfo
 	err  error
 }
 
-func (f fakeDocker) Info(context.Context) (DockerInfo, error) {
+func (f fakeDocker) Info(context.Context) (dockerInfo, error) {
 	return f.info, f.err
+}
+
+type fakeHost struct {
+	missing     map[string]bool
+	free        uint64
+	diskVisible bool
+	diskErr     error
+}
+
+func (f fakeHost) LookPath(name string) (string, error) {
+	if f.missing[name] {
+		return "", errors.New("not found")
+	}
+	return "/usr/bin/" + name, nil
+}
+
+func (f fakeHost) FreeDiskAt(string) (uint64, bool, error) {
+	return f.free, f.diskVisible, f.diskErr
 }
 
 func TestFreeDiskAt_OnlyMissingDirIsSkipped(t *testing.T) {
@@ -63,13 +81,8 @@ func TestCheckTools_DockerBlocksButMissingToolsOnlyWarn(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			checker := &Checker{
-				LookPath: func(name string) (string, error) {
-					if tt.missing[name] {
-						return "", errors.New("not found")
-					}
-					return "/usr/bin/" + name, nil
-				},
-				Docker: fakeDocker{err: tt.dockerErr},
+				host:   fakeHost{missing: tt.missing},
+				docker: fakeDocker{err: tt.dockerErr},
 			}
 
 			results := checker.CheckTools(context.Background())
@@ -102,8 +115,8 @@ func TestCheckMachine_WarnsAtBoundaryButNeverFails(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			checker := &Checker{
-				Docker:     fakeDocker{info: DockerInfo{NCPU: tt.cpus, MemTotal: tt.memory, DockerRootDir: tt.root}, err: tt.readErr},
-				FreeDiskAt: func(string) (uint64, bool, error) { return tt.free, tt.diskVisible, tt.readErr },
+				host:   fakeHost{free: tt.free, diskVisible: tt.diskVisible, diskErr: tt.readErr},
+				docker: fakeDocker{info: dockerInfo{NCPU: tt.cpus, MemTotal: tt.memory, DockerRootDir: tt.root}, err: tt.readErr},
 			}
 
 			results := checker.CheckMachine(context.Background())
