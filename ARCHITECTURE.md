@@ -363,6 +363,12 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 - Authentication tokens
 - Contexts (for multi-environment setups)
 
+### Local Install
+
+**Location**: [`pkg/localinstall/`](pkg/localinstall/), command [`cmd/kubectl-testkube/commands/install_local.go`](cmd/kubectl-testkube/commands/install_local.go)
+
+`testkube install local` (hidden) runs preflight checks before a laptop install. Missing, unreachable or permission-denied Docker blocks; missing `kubectl`, `helm` or `kind` and low Docker CPU, memory or disk only warn. Resources come from `docker info`, so Docker Desktop's VM limits apply rather than the host's.
+
 ### MCP Server
 
 **Location**: [`pkg/mcp/`](pkg/mcp/) (see its [README](pkg/mcp/README.md))
