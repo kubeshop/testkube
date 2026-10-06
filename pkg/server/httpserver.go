@@ -22,6 +22,8 @@ func NewServer(config Config) HTTPServer {
 		Mux:    fiber.New(config.Http),
 		Log:    log.DefaultLogger,
 		Config: config,
+
+		readiness: newReadinessRegistry(),
 	}
 
 	s.Init()
@@ -33,7 +35,11 @@ type HTTPServer struct {
 	Mux    *fiber.App
 	Log    *zap.SugaredLogger
 	Routes fiber.Router
-	Config Config
+
+	// readiness is a pointer so the registry is shared by every copy of this
+	// value-typed server.
+	readiness *readinessRegistry
+	Config    Config
 }
 
 // Init initializes router and setting up basic routes for health and metrics
@@ -53,6 +59,7 @@ func (s *HTTPServer) Init() {
 
 	// server generic endpoints
 	s.Mux.Get("/health", s.HealthEndpoint())
+	s.Mux.Get("/ready", s.ReadyEndpoint())
 	s.Mux.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
 
 	// v1 API

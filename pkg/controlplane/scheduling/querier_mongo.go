@@ -3,18 +3,17 @@ package scheduling
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-// ExecutionQuerier accesses the underlying mongo database and queries a test workflow execution
-// collection to gather information about executions that should have their state modified
-// by a runner in some way.
-// If either the database or collection name retrieval function are `nil` then no executions
-// will ever be yielded by the iterator functions.
+// MongoExecutionQuerier reads the work the runner has to be told about from the
+// test workflow execution collection.
 type MongoExecutionQuerier struct {
 	executionsCollection *mongo.Collection
 }
@@ -23,79 +22,133 @@ func NewMongoExecutionQuerier(col *mongo.Collection) *MongoExecutionQuerier {
 	return &MongoExecutionQuerier{executionsCollection: col}
 }
 
-// Pausing yields an iterator returning all executions assigned to the runner indicated
-// by the passed runner, that should be paused by the runner.
-func (a MongoExecutionQuerier) Pausing(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
-	return a.executionIterator(ctx, bson.M{"result.status": testkube.PAUSING_TestWorkflowStatus})
+// dispatchProjection is the set of fields the runner is sent. Postgres gets this
+// for free by reading one table; mongo stores the whole execution in a single
+// document, so it has to ask, or every poll drags back the full workflow spec of
+// every queued execution.
+var dispatchProjection = bson.M{
+	"id":                     1,
+	"groupid":                1,
+	"name":                   1,
+	"number":                 1,
+	"scheduledat":            1,
+	"assignedat":             1,
+	"statusat":               1,
+	"disablewebhooks":        1,
+	"tags":                   1,
+	"runningcontext":         1,
+	"runtime":                1,
+	"lineage":                1,
+	"silentmode":             1,
+	"result.status":          1,
+	"result.predictedstatus": 1,
+	"workflow.name":          1,
 }
 
-// Resuming yields an iterator returning all executions assigned to the runner indicated
-// by the passed runner, that should be resumed by the runner.
-func (a MongoExecutionQuerier) Resuming(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
-	return a.executionIterator(ctx, bson.M{"result.status": testkube.RESUMING_TestWorkflowStatus})
-}
+// Transitions returns every execution awaiting a pause, resume or stop.
+func (a MongoExecutionQuerier) Transitions(ctx context.Context) ([]ExecutionTransition, error) {
+	filter := bson.M{"result.status": bson.M{"$in": bson.A{
+		testkube.PAUSING_TestWorkflowStatus,
+		testkube.RESUMING_TestWorkflowStatus,
+		testkube.STOPPING_TestWorkflowStatus,
+	}}}
+	opts := options.Find().SetProjection(bson.M{
+		"id":                     1,
+		"result.status":          1,
+		"result.predictedstatus": 1,
+	})
 
-// Aborting yields an iterator returning all executions assigned to the runner indicated
-// by the passed runner, that should be aborted by the runner.
-func (a MongoExecutionQuerier) Aborting(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
-	return a.executionIterator(ctx, bson.M{"$and": bson.A{
-		bson.M{"result.status": testkube.STOPPING_TestWorkflowStatus},
-		bson.M{"result.predictedstatus": bson.M{"$ne": testkube.CANCELED_TestWorkflowStatus}},
-	}})
-}
-
-// Cancelling yields an iterator returning all executions assigned to the runner indicated
-// by the passed runner, that should be cancelled by the runner.
-func (a MongoExecutionQuerier) Cancelling(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
-	return a.executionIterator(ctx, bson.M{"$and": bson.A{
-		bson.M{"result.status": testkube.STOPPING_TestWorkflowStatus},
-		bson.M{"result.predictedstatus": testkube.CANCELED_TestWorkflowStatus},
-	}})
-}
-
-// Assigned yields an iterator returning all executions assigned to the runner indicated
-// by the passed runner, that should be started by the runner.
-func (a MongoExecutionQuerier) Assigned(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
-	return a.executionIterator(ctx, bson.M{"result.status": testkube.ASSIGNED_TestWorkflowStatus})
-}
-
-// Starting yields an iterator returning all executions assigned to the runner indicated
-// by the passed runner, that should be started by the runner.
-func (a MongoExecutionQuerier) Starting(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
-	return a.executionIterator(ctx, bson.M{"result.status": testkube.STARTING_TestWorkflowStatus})
-}
-
-// ByStatus yields an iterator returning all executions that match one of the given statuses.
-func (a MongoExecutionQuerier) ByStatus(ctx context.Context, statuses []testkube.TestWorkflowStatus) func(yield func(testkube.TestWorkflowExecution, error) bool) {
-	return a.executionIterator(ctx, bson.M{"result.status": bson.M{"$in": statuses}})
-}
-
-func (a MongoExecutionQuerier) executionIterator(ctx context.Context, filter any) func(yield func(testkube.TestWorkflowExecution, error) bool) {
-	return func(yield func(testkube.TestWorkflowExecution, error) bool) {
-		cur, err := a.executionsCollection.Find(ctx, filter)
-		if err != nil {
-			yield(testkube.TestWorkflowExecution{}, fmt.Errorf("find executions with ExecutionQuerier statuses: %w", err))
-			return
-		}
-		defer func() {
-			if err := cur.Close(ctx); err != nil {
-				yield(testkube.TestWorkflowExecution{}, fmt.Errorf("close cursor: %w", err))
-			}
-		}()
-		for cur.Next(ctx) {
-			var exe testkube.TestWorkflowExecution
-			if err := cur.Decode(&exe); err != nil {
-				if !yield(exe, fmt.Errorf("decode test workflow execution: %w", err)) {
-					return
-				}
-				continue
-			}
-			if !yield(exe, nil) {
-				return
-			}
-		}
-		if err := cur.Err(); err != nil {
-			yield(testkube.TestWorkflowExecution{}, fmt.Errorf("cursor error: %w", err))
-		}
+	executions, err := a.find(ctx, filter, opts)
+	if err != nil {
+		return nil, fmt.Errorf("find executions awaiting a transition: %w", err)
 	}
+
+	transitions := make([]ExecutionTransition, 0, len(executions))
+	for _, exe := range executions {
+		if exe.Result == nil || exe.Result.Status == nil {
+			continue
+		}
+		var predicted testkube.TestWorkflowStatus
+		if exe.Result.PredictedStatus != nil {
+			predicted = *exe.Result.PredictedStatus
+		}
+		transitions = append(transitions, ExecutionTransition{
+			Id:              exe.Id,
+			Status:          *exe.Result.Status,
+			PredictedStatus: predicted,
+		})
+	}
+	return transitions, nil
+}
+
+// ToStart returns at most limit executions to dispatch, oldest scheduled first.
+func (a MongoExecutionQuerier) ToStart(ctx context.Context, limit int, redispatchBefore time.Time) ([]testkube.TestWorkflowExecution, error) {
+	filter := bson.M{"$or": bson.A{
+		bson.M{"result.status": testkube.ASSIGNED_TestWorkflowStatus},
+		bson.M{
+			"result.status": testkube.STARTING_TestWorkflowStatus,
+			"statusat":      bson.M{"$lt": redispatchBefore},
+		},
+	}}
+	// The sort is not cosmetic: without it mongo dispatched in natural order,
+	// which is the opposite of the postgres path and starves the oldest work.
+	opts := options.Find().
+		SetSort(bson.D{{Key: "scheduledat", Value: 1}}).
+		SetLimit(int64(limit)).
+		SetProjection(dispatchProjection)
+
+	executions, err := a.find(ctx, filter, opts)
+	if err != nil {
+		return nil, fmt.Errorf("find executions to start: %w", err)
+	}
+	return executions, nil
+}
+
+// StaleStarting returns the ids of executions the runner never acknowledged.
+func (a MongoExecutionQuerier) StaleStarting(ctx context.Context, staleBefore time.Time, limit int) ([]string, error) {
+	filter := bson.M{
+		"result.status": testkube.STARTING_TestWorkflowStatus,
+		"statusat":      bson.M{"$lt": staleBefore},
+	}
+	opts := options.Find().
+		SetSort(bson.D{{Key: "scheduledat", Value: 1}}).
+		SetLimit(int64(limit)).
+		SetProjection(bson.M{"id": 1})
+
+	executions, err := a.find(ctx, filter, opts)
+	if err != nil {
+		return nil, fmt.Errorf("find stale starting executions: %w", err)
+	}
+
+	ids := make([]string, 0, len(executions))
+	for _, exe := range executions {
+		ids = append(ids, exe.Id)
+	}
+	return ids, nil
+}
+
+// find drains the cursor into a slice.
+//
+// A decode failure on one document skips that document rather than abandoning
+// the rest: one malformed record must not stop the runner being told about
+// everything behind it.
+func (a MongoExecutionQuerier) find(ctx context.Context, filter any, opts *options.FindOptionsBuilder) ([]testkube.TestWorkflowExecution, error) {
+	cur, err := a.executionsCollection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+
+	var executions []testkube.TestWorkflowExecution
+	for cur.Next(ctx) {
+		var exe testkube.TestWorkflowExecution
+		if err := cur.Decode(&exe); err != nil {
+			continue
+		}
+		executions = append(executions, exe)
+	}
+	if err := cur.Err(); err != nil {
+		return nil, fmt.Errorf("cursor error: %w", err)
+	}
+	return executions, nil
 }

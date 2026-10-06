@@ -16,7 +16,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
+
+	"github.com/kubeshop/testkube/pkg/grpcutils"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -82,11 +83,7 @@ func callWithRetry[Request any, Response any](
 }
 
 func isRetryableGrpcCode(code codes.Code) bool {
-	switch code {
-	case codes.Unavailable, codes.DeadlineExceeded, codes.ResourceExhausted:
-		return true
-	}
-	return false
+	return grpcutils.IsRetryableCode(code)
 }
 
 // TODO: add timeout?
@@ -99,13 +96,7 @@ func watch[Response any](ctx context.Context, md metadata.MD, fn func(context.Co
 }
 
 func getGrpcErrorCode(err error) codes.Code {
-	if err == nil {
-		return codes.Unknown
-	}
-	if e, ok := err.(interface{ GRPCStatus() *status.Status }); ok {
-		return e.GRPCStatus().Code()
-	}
-	return codes.Unknown
+	return grpcutils.ErrorCode(err)
 }
 
 type notificationRequest interface {
