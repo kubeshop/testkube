@@ -106,7 +106,9 @@ func TestCheckMachine_WarnsAtBoundaryButNeverFails(t *testing.T) {
 		wantResults int
 	}{
 		{"exactly the minimum", minCPUs, minMemory, "/var/lib/docker", minFreeDisk, true, nil, 0, 3},
-		{"one below every minimum", minCPUs - 1, minMemory - 1, "/var/lib/docker", minFreeDisk - 1, true, nil, 3, 3},
+		{"one below every minimum", minCPUs - 1, minMemoryReported - 1, "/var/lib/docker", minFreeDisk - 1, true, nil, 3, 3},
+		{"6 GB setting reported as 5.8 GB passes", minCPUs, 58 * gigabyte / 10, "/var/lib/docker", minFreeDisk, true, nil, 0, 3},
+		{"5.4 GB reported warns", minCPUs, 54 * gigabyte / 10, "/var/lib/docker", minFreeDisk, true, nil, 1, 3},
 		{"docker info error", 0, 0, "", 0, false, errors.New("boom"), 3, 3},
 		{"docker desktop disk not visible is skipped", minCPUs, minMemory, "/var/lib/docker", 0, false, nil, 0, 2},
 		{"podman-style zero fields warn instead of fake numbers", 0, 0, "", 0, false, nil, 3, 3},

@@ -34,6 +34,9 @@ const (
 	minFreeDisk   = 10 * gigabyte
 	resourcesHint = "Testkube may run slowly or fail to start"
 
+	// Docker reports ~3% under its setting: 6 GB shows ~5.8.
+	minMemoryReported = 55 * gigabyte / 10
+
 	systemDockerSocket  = "/var/run/docker.sock"
 	dockerPermissionFix = "Your user can't use Docker yet. Run:\n" +
 		"  sudo usermod -aG docker $USER\n" +
@@ -91,7 +94,7 @@ func (c *Checker) CheckMachine(ctx context.Context) []Result {
 	// Docker Desktop only gets a share of the host.
 	results := []Result{
 		minimumResult("cpu", info.NCPU >= minCPUs, fmt.Sprintf("%d cores", info.NCPU), fmt.Sprintf("needs %d", minCPUs)),
-		minimumResult("memory", info.MemTotal >= minMemory, formatGB(uint64(info.MemTotal)), "needs "+formatGB(minMemory)),
+		minimumResult("memory", info.MemTotal >= minMemoryReported, formatGB(uint64(info.MemTotal)), "needs "+formatGB(minMemory)),
 	}
 
 	if info.DockerRootDir == "" {
