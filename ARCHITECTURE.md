@@ -236,6 +236,9 @@ Telemetry collects usage analytics to help improve the product. It can be disabl
 - **Segment.io** (`sender_sio.go`) - Primary analytics backend
 - **Google Analytics** (`sender_ga4.go`) - Alternative analytics backend
 - **Testkube Analytics** (`sender_tka.go`) - Internal analytics
+- **PostHog** (`install_tracker.go`) - `testkube install local` step events, see [Local Install](#local-install)
+
+All sends are skipped when `DO_NOT_TRACK` is set.
 
 **Heartbeat**: [`cmd/api-server/services/telemetry.go`](cmd/api-server/services/telemetry.go)
 
@@ -369,7 +372,7 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 
 `testkube install local` (hidden) runs preflight checks before a laptop install. Missing, unreachable or permission-denied Docker blocks; missing `kubectl`, `helm` or `kind` and low Docker CPU, memory or disk only warn. Resources come from `docker info`, so Docker Desktop's VM limits apply rather than the host's.
 
-Each step is reported to PostHog (project "On Prem Trials", via the `t.testkube.io` proxy) by [`pkg/telemetry/install_tracker.go`](pkg/telemetry/install_tracker.go), so drop-off can be measured per step. A one-line notice is printed first; `DO_NOT_TRACK` or the CLI's `telemetryEnabled: false` disables it.
+Each step is reported to PostHog (project "On Prem Trials", via the `t.testkube.io` proxy) by [`pkg/telemetry/install_tracker.go`](pkg/telemetry/install_tracker.go), so drop-off can be measured per step. A one-line notice is printed first; `DO_NOT_TRACK` or the CLI's `telemetryEnabled: false` disables the events and the notice.
 
 ### MCP Server
 
