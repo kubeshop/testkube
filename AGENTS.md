@@ -199,9 +199,7 @@ contents do.
 
 ## Local laptop install
 
-- `testkube install local` (`cmd/kubectl-testkube/commands/install_local.go`) is hidden while the guided laptop installer is built. Today it only runs preflight checks.
-- Checks live in `pkg/localinstall/checks.go`: Docker missing, stopped or permission denied blocks; missing `kubectl`/`helm`/`kind` and low Docker CPU, memory or disk only warn. Free disk is read from Docker's root dir and skipped when that dir is not on the host (Docker Desktop).
-- Probes are package-level vars (`lookPath`, `dockerReachable`, `dockerResources`, `dockerFreeDiskBytes`) swapped in tests.
+- Hidden `testkube install local` lives in `pkg/localinstall`; see its `doc.go`.
 
 ## Configuration references
 
