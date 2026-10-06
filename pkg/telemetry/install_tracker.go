@@ -109,7 +109,6 @@ func (t *InstallTracker) Send(event string, props map[string]any) {
 	}()
 }
 
-// Call before exiting; os.Exit skips deferred calls.
 func (t *InstallTracker) Identify(email string) {
 	if email == "" {
 		return
@@ -123,6 +122,7 @@ func (t *InstallTracker) Identify(email string) {
 	})
 }
 
+// Call before exiting; os.Exit skips deferred calls.
 func (t *InstallTracker) Wait() {
 	t.wg.Wait()
 }

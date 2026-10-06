@@ -84,8 +84,12 @@ type Checker struct {
 func (c *Checker) Facts() map[string]any {
 	facts := map[string]any{"os_version": c.host.OSVersion()}
 	if c.info != nil {
-		facts["docker_version"] = c.info.ServerVersion
-		facts["docker_engine"] = c.info.OperatingSystem
+		if c.info.ServerVersion != "" {
+			facts["docker_version"] = c.info.ServerVersion
+		}
+		if c.info.OperatingSystem != "" {
+			facts["docker_engine"] = c.info.OperatingSystem
+		}
 		if c.info.NCPU > 0 && c.info.MemTotal > 0 {
 			facts["cpus"] = c.info.NCPU
 			facts["memory_gb"] = roundGB(uint64(c.info.MemTotal))
