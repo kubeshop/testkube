@@ -16,4 +16,13 @@
 //
 // Checker reaches Docker and the machine through private interfaces;
 // NewChecker wires the real ones, tests pass fakes.
+//
+// Tracker reports each step to PostHog project "On Prem Trials"
+// through https://t.testkube.io/capture/, keyed by the CLI machine ID
+// plus a per-run install_session_id.
+// Sends run in the background with a 2s timeout;
+// call Wait before exit, since os.Exit skips defers.
+// DO_NOT_TRACK or telemetryEnabled false sends nothing, hides the notice.
+// Events: install_local_started, install_local_check,
+// install_local_failed, install_local_checks_done.
 package localinstall
