@@ -122,6 +122,9 @@ func (c *Checker) checkDocker(ctx context.Context) Result {
 		return Result{Name: "docker", Status: StatusFail, Detail: "not found", Fix: "Install Docker: https://docs.docker.com/get-docker/"}
 	}
 	if _, err := c.dockerInfo(ctx); err != nil {
+		if errors.Is(err, errDockerTimeout) {
+			return Result{Name: "docker", Status: StatusFail, Detail: "not answering", Fix: "Docker did not answer within 10 seconds. It may still be starting; wait a moment, then run again"}
+		}
 		// The docker group only grants access to the system socket.
 		if strings.Contains(err.Error(), "permission denied") && strings.Contains(err.Error(), systemDockerSocket) {
 			return Result{Name: "docker", Status: StatusFail, Detail: "permission denied", Fix: dockerPermissionFix}

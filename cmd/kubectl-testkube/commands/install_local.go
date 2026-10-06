@@ -19,6 +19,10 @@ func NewInstallLocalCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			checker := localinstall.NewChecker()
 			results := checker.CheckTools(cmd.Context())
+			// Ctrl+C is the user quitting, not Docker failing.
+			if cmd.Context().Err() != nil {
+				os.Exit(130)
+			}
 			for _, r := range results {
 				printCheckResult(r)
 			}

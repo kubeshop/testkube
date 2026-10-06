@@ -21,6 +21,8 @@ type Docker interface {
 	Info(ctx context.Context) (DockerInfo, error)
 }
 
+var errDockerTimeout = errors.New("docker did not answer within 10 seconds")
+
 type dockerCLI struct{}
 
 func (dockerCLI) Info(ctx context.Context) (DockerInfo, error) {
@@ -28,10 +30,15 @@ func (dockerCLI) Info(ctx context.Context) (DockerInfo, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "docker", "info", "--format", "{{json .}}")
+	// Children holding stdout open would outlive the timeout.
+	cmd.WaitDelay = time.Second
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
 	if err != nil {
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return DockerInfo{}, errDockerTimeout
+		}
 		if reason := strings.TrimSpace(stderr.String()); reason != "" {
 			return DockerInfo{}, errors.New(reason)
 		}
