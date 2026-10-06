@@ -23,6 +23,9 @@ func NewInstallLocalCmd() *cobra.Command {
 			if localinstall.HasFailure(results) {
 				os.Exit(1)
 			}
+			for _, r := range localinstall.CheckMachine(cmd.Context()) {
+				printCheckResult(r)
+			}
 		},
 	}
 }

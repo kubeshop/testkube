@@ -36,3 +36,38 @@ func TestCheckTools_DockerBlocksButMissingToolsOnlyWarn(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckMachine_WarnsAtBoundaryButNeverFails(t *testing.T) {
+	tests := []struct {
+		name      string
+		cpus      int
+		memory    int64
+		free      uint64
+		readErr   error
+		wantWarns int
+	}{
+		{"exactly the minimum", minCPUs, minMemory, minFreeDisk, nil, 0},
+		{"one below every minimum", minCPUs - 1, minMemory - 1, minFreeDisk - 1, nil, 3},
+		{"docker and disk unreadable", 0, 0, 0, errors.New("boom"), 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			restoreResources, restoreDisk := dockerResources, freeDiskBytes
+			t.Cleanup(func() { dockerResources, freeDiskBytes = restoreResources, restoreDisk })
+			dockerResources = func(context.Context) (int, int64, error) { return tt.cpus, tt.memory, tt.readErr }
+			freeDiskBytes = func() (uint64, error) { return tt.free, tt.readErr }
+
+			results := CheckMachine(context.Background())
+
+			warns := 0
+			for _, r := range results {
+				if r.Status == StatusWarn {
+					warns++
+				}
+			}
+			assert.Equal(t, tt.wantWarns, warns)
+			assert.False(t, HasFailure(results))
+		})
+	}
+}
