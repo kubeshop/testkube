@@ -17,8 +17,9 @@ func TestCheckTools_DockerBlocksButMissingToolsOnlyWarn(t *testing.T) {
 		wantDockerDetail string
 	}{
 		{"docker missing", map[string]bool{"docker": true}, nil, true, "not found"},
-		{"docker not running", nil, errors.New("Cannot connect to the Docker daemon"), true, "not running"},
-		{"docker socket permission denied", nil, errors.New("permission denied while trying to connect to the Docker daemon socket"), true, "permission denied"},
+		{"docker not running", nil, errors.New("Cannot connect to the Docker daemon"), true, "not reachable"},
+		{"system socket permission denied", nil, errors.New("permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock"), true, "permission denied"},
+		{"rootless socket permission denied gets no group advice", nil, errors.New("permission denied while trying to connect to the Docker daemon socket at unix:///run/user/1000/docker.sock"), true, "not reachable"},
 		{"all tools missing but docker running", map[string]bool{"kubectl": true, "helm": true, "kind": true}, nil, false, "/usr/bin/docker"},
 	}
 

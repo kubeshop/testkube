@@ -2,6 +2,7 @@ package localinstall
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -35,10 +36,15 @@ var (
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 		out, err := exec.CommandContext(ctx, "docker", "info").CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("%w: %s", err, out)
+		if err == nil {
+			return nil
 		}
-		return nil
+		// docker info prints the connection error as its last line.
+		lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+		if reason := strings.TrimSpace(lines[len(lines)-1]); reason != "" {
+			return errors.New(reason)
+		}
+		return err
 	}
 	// Docker Desktop only gets a share of the host.
 	dockerResources = func(ctx context.Context) (cpus int, memoryBytes int64, err error) {
@@ -85,6 +91,7 @@ const (
 	minFreeDisk   = 10 * gigabyte
 	resourcesHint = "Testkube may run slowly or fail to start"
 
+	systemDockerSocket  = "/var/run/docker.sock"
 	dockerPermissionFix = "Your user can't use Docker yet. Run:\n" +
 		"  sudo usermod -aG docker $USER\n" +
 		"  newgrp docker\n" +
@@ -152,11 +159,11 @@ func checkDocker(ctx context.Context) Result {
 		return Result{Name: "docker", Status: StatusFail, Detail: "not found", Fix: "Install Docker: https://docs.docker.com/get-docker/"}
 	}
 	if err := dockerReachable(ctx); err != nil {
-		// Common on Linux: daemon runs, user lacks docker group.
-		if strings.Contains(err.Error(), "permission denied") {
+		// The docker group only grants access to the system socket.
+		if strings.Contains(err.Error(), "permission denied") && strings.Contains(err.Error(), systemDockerSocket) {
 			return Result{Name: "docker", Status: StatusFail, Detail: "permission denied", Fix: dockerPermissionFix}
 		}
-		return Result{Name: "docker", Status: StatusFail, Detail: "not running", Fix: "Start Docker, then run the installer again"}
+		return Result{Name: "docker", Status: StatusFail, Detail: "not reachable", Fix: err.Error() + "\nStart Docker, then run the installer again"}
 	}
 	return Result{Name: "docker", Status: StatusPass, Detail: path}
 }
