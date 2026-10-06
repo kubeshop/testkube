@@ -16,4 +16,6 @@
 //
 // Checker reaches Docker and the machine through private interfaces;
 // NewChecker wires the real ones, tests pass fakes.
+//
+// Step tracking lives in pkg/telemetry, see InstallTracker.
 package localinstall
