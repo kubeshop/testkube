@@ -17,14 +17,15 @@ func NewInstallLocalCmd() *cobra.Command {
 		// Hidden until the guided installer is complete.
 		Hidden: true,
 		Run: func(cmd *cobra.Command, args []string) {
-			results := localinstall.CheckTools(cmd.Context())
+			checker := localinstall.NewChecker()
+			results := checker.CheckTools(cmd.Context())
 			for _, r := range results {
 				printCheckResult(r)
 			}
 			if localinstall.HasFailure(results) {
 				os.Exit(1)
 			}
-			for _, r := range localinstall.CheckMachine(cmd.Context()) {
+			for _, r := range checker.CheckMachine(cmd.Context()) {
 				printCheckResult(r)
 			}
 		},

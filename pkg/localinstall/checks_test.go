@@ -11,6 +11,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type fakeDocker struct {
+	info DockerInfo
+	err  error
+}
+
+func (f fakeDocker) Info(context.Context) (DockerInfo, error) {
+	return f.info, f.err
+}
+
 func TestFreeDiskAt_OnlyMissingDirIsSkipped(t *testing.T) {
 	tmp := t.TempDir()
 
@@ -52,17 +61,17 @@ func TestCheckTools_DockerBlocksButMissingToolsOnlyWarn(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			restoreLookPath, restoreDocker := lookPath, dockerReachable
-			t.Cleanup(func() { lookPath, dockerReachable = restoreLookPath, restoreDocker })
-			lookPath = func(name string) (string, error) {
-				if tt.missing[name] {
-					return "", errors.New("not found")
-				}
-				return "/usr/bin/" + name, nil
+			checker := &Checker{
+				LookPath: func(name string) (string, error) {
+					if tt.missing[name] {
+						return "", errors.New("not found")
+					}
+					return "/usr/bin/" + name, nil
+				},
+				Docker: fakeDocker{err: tt.dockerErr},
 			}
-			dockerReachable = func(context.Context) error { return tt.dockerErr }
 
-			results := CheckTools(context.Background())
+			results := checker.CheckTools(context.Background())
 
 			assert.Equal(t, tt.wantFailure, HasFailure(results))
 			assert.Equal(t, tt.wantDockerDetail, results[0].Detail)
@@ -89,12 +98,12 @@ func TestCheckMachine_WarnsAtBoundaryButNeverFails(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			restoreResources, restoreDisk := dockerResources, dockerFreeDiskBytes
-			t.Cleanup(func() { dockerResources, dockerFreeDiskBytes = restoreResources, restoreDisk })
-			dockerResources = func(context.Context) (int, int64, error) { return tt.cpus, tt.memory, tt.readErr }
-			dockerFreeDiskBytes = func(context.Context) (uint64, bool, error) { return tt.free, tt.diskVisible, tt.readErr }
+			checker := &Checker{
+				Docker:     fakeDocker{info: DockerInfo{NCPU: tt.cpus, MemTotal: tt.memory}, err: tt.readErr},
+				FreeDiskAt: func(string) (uint64, bool, error) { return tt.free, tt.diskVisible, tt.readErr },
+			}
 
-			results := CheckMachine(context.Background())
+			results := checker.CheckMachine(context.Background())
 
 			warns := 0
 			for _, r := range results {

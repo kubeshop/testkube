@@ -7,9 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/shirou/gopsutil/v4/disk"
 )
@@ -29,69 +27,6 @@ type Result struct {
 	Fix    string
 }
 
-// Swapped in tests.
-var (
-	lookPath        = exec.LookPath
-	dockerReachable = func(ctx context.Context) error {
-		// docker info hangs while the daemon is still starting.
-		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		defer cancel()
-		out, err := exec.CommandContext(ctx, "docker", "info").CombinedOutput()
-		if err == nil {
-			return nil
-		}
-		// docker info prints the connection error as its last line.
-		lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-		if reason := strings.TrimSpace(lines[len(lines)-1]); reason != "" {
-			return errors.New(reason)
-		}
-		return err
-	}
-	// Docker Desktop only gets a share of the host.
-	dockerResources = func(ctx context.Context) (cpus int, memoryBytes int64, err error) {
-		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		defer cancel()
-		out, err := exec.CommandContext(ctx, "docker", "info", "--format", "{{.NCPU}} {{.MemTotal}}").Output()
-		if err != nil {
-			return 0, 0, err
-		}
-		fields := strings.Fields(string(out))
-		if len(fields) != 2 {
-			return 0, 0, fmt.Errorf("unexpected docker info output: %q", out)
-		}
-		if cpus, err = strconv.Atoi(fields[0]); err != nil {
-			return 0, 0, err
-		}
-		memoryBytes, err = strconv.ParseInt(fields[1], 10, 64)
-		return cpus, memoryBytes, err
-	}
-	// Docker Desktop's data dir lives inside its VM, invisible here.
-	dockerFreeDiskBytes = func(ctx context.Context) (free uint64, visible bool, err error) {
-		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		defer cancel()
-		out, err := exec.CommandContext(ctx, "docker", "info", "--format", "{{.DockerRootDir}}").Output()
-		if err != nil {
-			return 0, false, err
-		}
-		return freeDiskAt(strings.TrimSpace(string(out)))
-	}
-)
-
-func freeDiskAt(root string) (free uint64, visible bool, err error) {
-	if _, err := os.Stat(root); err != nil {
-		// Only absence means VM-hidden; other errors must still warn.
-		if errors.Is(err, fs.ErrNotExist) {
-			return 0, false, nil
-		}
-		return 0, true, err
-	}
-	usage, err := disk.Usage(root)
-	if err != nil {
-		return 0, true, err
-	}
-	return usage.Free, true, nil
-}
-
 const (
 	gigabyte      = 1 << 30
 	minCPUs       = 4
@@ -109,29 +44,43 @@ const (
 // We install these ourselves, so missing is only a warning.
 var installableTools = []string{"kubectl", "helm", "kind"}
 
-func CheckTools(ctx context.Context) []Result {
-	results := []Result{checkDocker(ctx)}
+type Checker struct {
+	LookPath   func(string) (string, error)
+	Docker     Docker
+	FreeDiskAt func(path string) (free uint64, visible bool, err error)
+
+	info *DockerInfo
+}
+
+func NewChecker() *Checker {
+	return &Checker{LookPath: exec.LookPath, Docker: dockerCLI{}, FreeDiskAt: freeDiskAt}
+}
+
+func (c *Checker) CheckTools(ctx context.Context) []Result {
+	results := []Result{c.checkDocker(ctx)}
 	for _, name := range installableTools {
-		results = append(results, checkInstallable(name))
+		results = append(results, c.checkInstallable(name))
 	}
 	return results
 }
 
 // Machine size only warns: users may continue on smaller machines.
-func CheckMachine(ctx context.Context) []Result {
-	results := make([]Result, 0, 3)
-	cpus, memoryBytes, err := dockerResources(ctx)
+func (c *Checker) CheckMachine(ctx context.Context) []Result {
+	info, err := c.dockerInfo(ctx)
 	if err != nil {
-		results = append(results,
-			Result{Name: "cpu", Status: StatusWarn, Detail: "could not read from Docker"},
-			Result{Name: "memory", Status: StatusWarn, Detail: "could not read from Docker"})
-	} else {
-		results = append(results,
-			minimumResult("cpu", cpus >= minCPUs, fmt.Sprintf("%d cores", cpus), fmt.Sprintf("needs %d", minCPUs)),
-			minimumResult("memory", memoryBytes >= minMemory, formatGB(uint64(memoryBytes)), "needs "+formatGB(minMemory)))
+		return []Result{
+			{Name: "cpu", Status: StatusWarn, Detail: "could not read from Docker"},
+			{Name: "memory", Status: StatusWarn, Detail: "could not read from Docker"},
+			{Name: "disk", Status: StatusWarn, Detail: "could not read free space"},
+		}
+	}
+	// Docker Desktop only gets a share of the host.
+	results := []Result{
+		minimumResult("cpu", info.NCPU >= minCPUs, fmt.Sprintf("%d cores", info.NCPU), fmt.Sprintf("needs %d", minCPUs)),
+		minimumResult("memory", info.MemTotal >= minMemory, formatGB(uint64(info.MemTotal)), "needs "+formatGB(minMemory)),
 	}
 
-	free, visible, err := dockerFreeDiskBytes(ctx)
+	free, visible, err := c.FreeDiskAt(info.DockerRootDir)
 	switch {
 	case err != nil:
 		return append(results, Result{Name: "disk", Status: StatusWarn, Detail: "could not read free space"})
@@ -139,17 +88,6 @@ func CheckMachine(ctx context.Context) []Result {
 		return results
 	}
 	return append(results, minimumResult("disk", free >= minFreeDisk, formatGB(free)+" free", "needs "+formatGB(minFreeDisk)))
-}
-
-func minimumResult(name string, ok bool, have, need string) Result {
-	if ok {
-		return Result{Name: name, Status: StatusPass, Detail: have}
-	}
-	return Result{Name: name, Status: StatusWarn, Detail: have + ", " + need, Fix: resourcesHint}
-}
-
-func formatGB(bytes uint64) string {
-	return fmt.Sprintf("%.1f GB", float64(bytes)/gigabyte)
 }
 
 func HasFailure(results []Result) bool {
@@ -161,12 +99,25 @@ func HasFailure(results []Result) bool {
 	return false
 }
 
-func checkDocker(ctx context.Context) Result {
-	path, err := lookPath("docker")
+// Both check groups read one docker info call.
+func (c *Checker) dockerInfo(ctx context.Context) (DockerInfo, error) {
+	if c.info != nil {
+		return *c.info, nil
+	}
+	info, err := c.Docker.Info(ctx)
+	if err != nil {
+		return DockerInfo{}, err
+	}
+	c.info = &info
+	return info, nil
+}
+
+func (c *Checker) checkDocker(ctx context.Context) Result {
+	path, err := c.LookPath("docker")
 	if err != nil {
 		return Result{Name: "docker", Status: StatusFail, Detail: "not found", Fix: "Install Docker: https://docs.docker.com/get-docker/"}
 	}
-	if err := dockerReachable(ctx); err != nil {
+	if _, err := c.dockerInfo(ctx); err != nil {
 		// The docker group only grants access to the system socket.
 		if strings.Contains(err.Error(), "permission denied") && strings.Contains(err.Error(), systemDockerSocket) {
 			return Result{Name: "docker", Status: StatusFail, Detail: "permission denied", Fix: dockerPermissionFix}
@@ -176,10 +127,37 @@ func checkDocker(ctx context.Context) Result {
 	return Result{Name: "docker", Status: StatusPass, Detail: path}
 }
 
-func checkInstallable(name string) Result {
-	path, err := lookPath(name)
+func (c *Checker) checkInstallable(name string) Result {
+	path, err := c.LookPath(name)
 	if err != nil {
 		return Result{Name: name, Status: StatusWarn, Detail: "not found, will be installed"}
 	}
 	return Result{Name: name, Status: StatusPass, Detail: path}
+}
+
+// Docker Desktop's data dir lives inside its VM, invisible here.
+func freeDiskAt(root string) (free uint64, visible bool, err error) {
+	if _, err := os.Stat(root); err != nil {
+		// Only absence means VM-hidden; other errors must still warn.
+		if errors.Is(err, fs.ErrNotExist) {
+			return 0, false, nil
+		}
+		return 0, true, err
+	}
+	usage, err := disk.Usage(root)
+	if err != nil {
+		return 0, true, err
+	}
+	return usage.Free, true, nil
+}
+
+func minimumResult(name string, ok bool, have, need string) Result {
+	if ok {
+		return Result{Name: name, Status: StatusPass, Detail: have}
+	}
+	return Result{Name: name, Status: StatusWarn, Detail: have + ", " + need, Fix: resourcesHint}
+}
+
+func formatGB(bytes uint64) string {
+	return fmt.Sprintf("%.1f GB", float64(bytes)/gigabyte)
 }
