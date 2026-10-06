@@ -148,8 +148,8 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *internalTrigg
 			for _, parameter := range parameters {
 				for key, value := range parameter.s {
 					if parameter.name == "config" && isReservedProvenanceKey(key) {
-						s.logger.Warnf("trigger service: executor component: trigger %s/%s ignoring config key %s: %s* is reserved for git provenance",
-							t.Namespace, t.Name, key, testworkflowexecutor.GitMetadataKeyPrefix)
+						s.logger.Warnf("trigger service: executor component: trigger %s/%s ignoring config key %s: reserved for event provenance",
+							t.Namespace, t.Name, key)
 						continue
 					}
 					if t.Source == triggerSourceV2 {
@@ -581,7 +581,8 @@ func (s *Service) getTestWorkflowsFromInternal(t *internalTrigger) ([]testworkfl
 	return testWorkflows, nil
 }
 
-// isReservedProvenanceKey reports whether a trigger's configuration may set this key.
+// isReservedProvenanceKey identifies event metadata that trigger configuration must not override.
+// WATCHER_EVENT_* supplies source details used by control-plane metrics.
 //
 // The git keys are provenance, not configuration: they are written from what the informer
 // observed about the event, and the control plane reads them to decide whether a run
@@ -593,5 +594,5 @@ func (s *Service) getTestWorkflowsFromInternal(t *internalTrigger) ([]testworkfl
 // deciding which runs are trusted, and the override would be silent either way: nothing
 // downstream can tell a blanked marker from an event that never carried one.
 func isReservedProvenanceKey(key string) bool {
-	return strings.HasPrefix(key, testworkflowexecutor.GitMetadataKeyPrefix)
+	return strings.HasPrefix(key, testworkflowexecutor.GitMetadataKeyPrefix) || strings.HasPrefix(key, "WATCHER_EVENT_")
 }
