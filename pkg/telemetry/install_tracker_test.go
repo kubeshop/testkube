@@ -53,7 +53,7 @@ func TestInstallTracker_DisabledSendsNothing(t *testing.T) {
 	}
 }
 
-func TestInstallTracker_IdentifyLinksMachineToEmail(t *testing.T) {
+func TestInstallTracker_IdentifyLinksThisRunToEmail(t *testing.T) {
 	type event struct {
 		Event      string         `json:"event"`
 		DistinctID string         `json:"distinct_id"`
@@ -78,9 +78,11 @@ func TestInstallTracker_IdentifyLinksMachineToEmail(t *testing.T) {
 	tracker.Wait()
 
 	assert.Len(t, events, 3, "empty email must not send an identify")
-	assert.Equal(t, "machine", events["before"].DistinctID)
+	before := events["before"]
+	assert.Equal(t, before.Properties["install_session_id"], before.DistinctID, "owners share machines, so per run")
+	assert.Equal(t, "machine", before.Properties["machine_id"])
 	assert.Equal(t, "owner@example.com", events["$identify"].DistinctID)
-	assert.Equal(t, "machine", events["$identify"].Properties["$anon_distinct_id"])
+	assert.Equal(t, before.DistinctID, events["$identify"].Properties["$anon_distinct_id"])
 	assert.Equal(t, "owner@example.com", events["after"].DistinctID)
 }
 

@@ -24,7 +24,7 @@ const InstallNotice = "Testkube sends install progress, linked to your license, 
 
 // InstallTracker reports `testkube install local` steps to PostHog
 // project "On Prem Trials" through https://t.testkube.io/capture/,
-// keyed by the CLI machine ID plus a per-run install_session_id.
+// keyed by a per-run install_session_id, with machine_id as a property.
 // Identify switches to the license owner's email, merging earlier events.
 // Sends run in the background with a 2s timeout.
 // DO_NOT_TRACK or telemetryEnabled false sends nothing, hides the notice.
@@ -34,6 +34,7 @@ type InstallTracker struct {
 	enabled    bool
 	distinctID string
 	sessionID  string
+	machineID  string
 	version    string
 	endpoint   string
 	client     *http.Client
@@ -53,10 +54,13 @@ func NewInstallTracker(cfg InstallTrackerConfig) *InstallTracker {
 	if endpoint == "" {
 		endpoint = postHogEndpoint
 	}
+	// Machine IDs are shared by owners, so identify would misattribute.
+	sessionID := uuid.NewString()
 	return &InstallTracker{
 		enabled:    cfg.Enabled,
-		distinctID: cfg.MachineID,
-		sessionID:  uuid.NewString(),
+		distinctID: sessionID,
+		sessionID:  sessionID,
+		machineID:  cfg.MachineID,
 		version:    cfg.Version,
 		endpoint:   endpoint,
 		client:     &http.Client{Timeout: 2 * time.Second},
@@ -74,6 +78,7 @@ func (t *InstallTracker) Send(event string, props map[string]any) {
 	}
 	properties := map[string]any{
 		"install_session_id": t.sessionID,
+		"machine_id":         t.machineID,
 		"installer_version":  t.version,
 		"os":                 runtime.GOOS,
 		"arch":               runtime.GOARCH,
@@ -116,7 +121,7 @@ func (t *InstallTracker) Identify(email string) {
 	anonymousID := t.distinctID
 	t.distinctID = email
 	t.Send("$identify", map[string]any{
-		// PostHog merges the anonymous machine events into this person.
+		// PostHog merges this run's anonymous events into this person.
 		"$anon_distinct_id": anonymousID,
 		"$set":              map[string]any{"email": email},
 	})
