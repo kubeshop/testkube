@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"strconv"
@@ -72,17 +73,24 @@ var (
 		if err != nil {
 			return 0, false, err
 		}
-		root := strings.TrimSpace(string(out))
-		if _, err := os.Stat(root); err != nil {
-			return 0, false, nil
-		}
-		usage, err := disk.Usage(root)
-		if err != nil {
-			return 0, true, err
-		}
-		return usage.Free, true, nil
+		return freeDiskAt(strings.TrimSpace(string(out)))
 	}
 )
+
+func freeDiskAt(root string) (free uint64, visible bool, err error) {
+	if _, err := os.Stat(root); err != nil {
+		// Only absence means VM-hidden; other errors must still warn.
+		if errors.Is(err, fs.ErrNotExist) {
+			return 0, false, nil
+		}
+		return 0, true, err
+	}
+	usage, err := disk.Usage(root)
+	if err != nil {
+		return 0, true, err
+	}
+	return usage.Free, true, nil
+}
 
 const (
 	gigabyte      = 1 << 30

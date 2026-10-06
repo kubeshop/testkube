@@ -3,10 +3,37 @@ package localinstall
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestFreeDiskAt_OnlyMissingDirIsSkipped(t *testing.T) {
+	tmp := t.TempDir()
+
+	_, visible, err := freeDiskAt(filepath.Join(tmp, "missing"))
+	assert.False(t, visible)
+	assert.NoError(t, err)
+
+	_, visible, err = freeDiskAt(tmp)
+	assert.True(t, visible)
+	assert.NoError(t, err)
+
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("directory permissions are not enforced here")
+	}
+	locked := filepath.Join(tmp, "locked")
+	assert.NoError(t, os.MkdirAll(filepath.Join(locked, "docker"), 0o700))
+	assert.NoError(t, os.Chmod(locked, 0))
+	t.Cleanup(func() { _ = os.Chmod(locked, 0o700) })
+
+	_, visible, err = freeDiskAt(filepath.Join(locked, "docker"))
+	assert.True(t, visible)
+	assert.Error(t, err)
+}
 
 func TestCheckTools_DockerBlocksButMissingToolsOnlyWarn(t *testing.T) {
 	tests := []struct {
