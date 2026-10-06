@@ -27,7 +27,7 @@ const InstallNotice = "Testkube sends install progress to help us fix setup prob
 // keyed by the CLI machine ID plus a per-run install_session_id.
 // Sends run in the background with a 2s timeout.
 // DO_NOT_TRACK or telemetryEnabled false sends nothing, hides the notice.
-// Events: install_local_started, install_local_check,
+// Events: install_local_started, install_local_checks (one per run),
 // install_local_failed, install_local_aborted, install_local_checks_done.
 type InstallTracker struct {
 	enabled    bool

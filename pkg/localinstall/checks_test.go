@@ -38,6 +38,35 @@ func (f fakeHost) FreeDiskAt(string) (uint64, bool, error) {
 	return f.free, f.diskVisible, f.diskErr
 }
 
+func (f fakeHost) OSVersion() string {
+	return "darwin 15.1"
+}
+
+func TestChecker_FactsReportRealValuesOnly(t *testing.T) {
+	t.Run("reachable docker reports measured values", func(t *testing.T) {
+		checker := &Checker{
+			host: fakeHost{free: 100 * gigabyte, diskVisible: true},
+			docker: fakeDocker{info: dockerInfo{NCPU: 8, MemTotal: 8 * gigabyte, DockerRootDir: "/var/lib/docker",
+				ServerVersion: "29.3.1", OperatingSystem: "Docker Desktop"}},
+		}
+		checker.CheckTools(context.Background())
+		checker.CheckMachine(context.Background())
+
+		assert.Equal(t, map[string]any{
+			"os_version": "darwin 15.1", "docker_version": "29.3.1", "docker_engine": "Docker Desktop",
+			"cpus": 8, "memory_gb": 8.0, "disk_free_gb": 100.0,
+		}, checker.Facts())
+	})
+
+	t.Run("unreachable docker reports no fake numbers", func(t *testing.T) {
+		checker := &Checker{host: fakeHost{}, docker: fakeDocker{err: errors.New("down")}}
+		checker.CheckTools(context.Background())
+		checker.CheckMachine(context.Background())
+
+		assert.Equal(t, map[string]any{"os_version": "darwin 15.1"}, checker.Facts())
+	})
+}
+
 func TestFreeDiskAt_OnlyMissingDirIsSkipped(t *testing.T) {
 	tmp := t.TempDir()
 

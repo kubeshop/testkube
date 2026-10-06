@@ -31,9 +31,9 @@ func NewInstallLocalCmd() *cobra.Command {
 			exitIfCancelled(cmd, tracker, "tools")
 			for _, r := range results {
 				printCheckResult(r)
-				trackCheck(tracker, r)
 			}
 			if localinstall.HasFailure(results) {
+				trackChecks(tracker, results, checker.Facts())
 				tracker.Send("install_local_failed", map[string]any{"stage": "tools"})
 				tracker.Wait()
 				os.Exit(1)
@@ -42,8 +42,8 @@ func NewInstallLocalCmd() *cobra.Command {
 			exitIfCancelled(cmd, tracker, "machine")
 			for _, r := range machine {
 				printCheckResult(r)
-				trackCheck(tracker, r)
 			}
+			trackChecks(tracker, append(results, machine...), checker.Facts())
 			tracker.Send("install_local_checks_done", nil)
 			tracker.Wait()
 		},
@@ -72,8 +72,16 @@ func exitIfCancelled(cmd *cobra.Command, tracker *telemetry.InstallTracker, stag
 	os.Exit(130)
 }
 
-func trackCheck(tracker *telemetry.InstallTracker, r localinstall.Result) {
-	tracker.Send("install_local_check", map[string]any{"check": r.Name, "status": string(r.Status)})
+// One row per run: every status and measured value together.
+func trackChecks(tracker *telemetry.InstallTracker, results []localinstall.Result, facts map[string]any) {
+	props := map[string]any{}
+	for k, v := range facts {
+		props[k] = v
+	}
+	for _, r := range results {
+		props[r.Name] = string(r.Status)
+	}
+	tracker.Send("install_local_checks", props)
 }
 
 func printCheckResult(r localinstall.Result) {

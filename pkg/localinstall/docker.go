@@ -15,6 +15,9 @@ type dockerInfo struct {
 	MemTotal      int64    `json:"MemTotal"`
 	DockerRootDir string   `json:"DockerRootDir"`
 	ServerErrors  []string `json:"ServerErrors"`
+	// OperatingSystem names the engine: Docker Desktop, OrbStack, Colima.
+	ServerVersion   string `json:"ServerVersion"`
+	OperatingSystem string `json:"OperatingSystem"`
 }
 
 type dockerClient interface {

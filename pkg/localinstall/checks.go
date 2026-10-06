@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"math"
 	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/shirou/gopsutil/v4/disk"
+	gopsutilhost "github.com/shirou/gopsutil/v4/host"
 )
 
 type Status string
@@ -50,6 +52,7 @@ var installableTools = []string{"kubectl", "helm", "kind"}
 type host interface {
 	LookPath(name string) (string, error)
 	FreeDiskAt(path string) (free uint64, visible bool, err error)
+	OSVersion() string
 }
 
 type realHost struct{}
@@ -62,10 +65,36 @@ func (realHost) FreeDiskAt(path string) (uint64, bool, error) {
 	return freeDiskAt(path)
 }
 
+func (realHost) OSVersion() string {
+	platform, _, version, err := gopsutilhost.PlatformInformation()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(platform + " " + version)
+}
+
 type Checker struct {
-	host   host
-	docker dockerClient
-	info   *dockerInfo
+	host     host
+	docker   dockerClient
+	info     *dockerInfo
+	diskFree *uint64
+}
+
+// Facts are the measured values behind the results, for tracking.
+func (c *Checker) Facts() map[string]any {
+	facts := map[string]any{"os_version": c.host.OSVersion()}
+	if c.info != nil {
+		facts["docker_version"] = c.info.ServerVersion
+		facts["docker_engine"] = c.info.OperatingSystem
+		if c.info.NCPU > 0 && c.info.MemTotal > 0 {
+			facts["cpus"] = c.info.NCPU
+			facts["memory_gb"] = roundGB(uint64(c.info.MemTotal))
+		}
+	}
+	if c.diskFree != nil {
+		facts["disk_free_gb"] = roundGB(*c.diskFree)
+	}
+	return facts
 }
 
 func NewChecker() *Checker {
@@ -107,6 +136,7 @@ func (c *Checker) CheckMachine(ctx context.Context) []Result {
 	case !visible:
 		return results
 	}
+	c.diskFree = &free
 	return append(results, minimumResult("disk", free >= minFreeDisk, formatGB(free)+" free", "needs "+formatGB(minFreeDisk)))
 }
 
@@ -183,4 +213,8 @@ func minimumResult(name string, ok bool, have, need string) Result {
 
 func formatGB(bytes uint64) string {
 	return fmt.Sprintf("%.1f GB", float64(bytes)/gigabyte)
+}
+
+func roundGB(bytes uint64) float64 {
+	return math.Round(float64(bytes)/gigabyte*10) / 10
 }
