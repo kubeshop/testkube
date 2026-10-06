@@ -3,6 +3,10 @@ name: Manual CLI Release
 on:
   workflow_dispatch:
     inputs:
+      release_tag:
+        description: 'Existing tag to release (leave empty to use the workflow ref)'
+        type: string
+        required: false
       confirm:
         description: 'Are you sure you want to proceed with CLI release?'
         type: choice
@@ -16,7 +20,7 @@ permissions:
 
 env:
   TESTKUBE_CHOCO_REPO: https://chocolatey.kubeshop.io/
-  ALPINE_IMAGE: alpine:3.24.1
+  ALPINE_IMAGE: alpine:3.24.2
   BUSYBOX_IMAGE: busybox:1.36.1-musl
 
 jobs:
@@ -37,7 +41,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ inputs.release_tag || github.ref }}
           fetch-depth: 0
           persist-credentials: false
       - name: Set up Go
@@ -48,9 +52,16 @@ jobs:
           cache: false
       - name: Get tag
         id: tag
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
-          # Find tag pointing to current commit
-          TAG=$(git describe --tags --exact-match 2>/dev/null || git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$RELEASE_TAG" ]; then
+            test "$(git rev-parse HEAD)" = "$(git rev-parse --verify "refs/tags/$RELEASE_TAG^{commit}")"
+            TAG="$RELEASE_TAG"
+          else
+            # Find tag pointing to current commit
+            TAG=$(git describe --tags --exact-match 2>/dev/null || git describe --tags --abbrev=0 2>/dev/null || echo "")
+          fi
           if [ -z "$TAG" ]; then
             echo "Error: No tag found"
             exit 1
@@ -111,9 +122,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ inputs.release_tag || github.ref }}
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: false
+      # Use the selected tag's source with the workflow ref's packaging fixes.
+      - name: Checkout release configuration
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          path: .release-config
+          sparse-checkout: .goreleaser.yml
+          sparse-checkout-cone-mode: false
           persist-credentials: false
       - name: Configure git
         env:
@@ -152,9 +172,15 @@ jobs:
           cache: false
       - name: Get tag
         id: tag
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
-          git fetch --tags --force
-          TAG=$(git describe --tags --abbrev=0)
+          if [ -n "$RELEASE_TAG" ]; then
+            test "$(git rev-parse HEAD)" = "$(git rev-parse --verify "refs/tags/$RELEASE_TAG^{commit}")"
+            TAG="$RELEASE_TAG"
+          else
+            TAG=$(git describe --tags --abbrev=0)
+          fi
           TAG_STRIPPED=${TAG#v}
           echo "tag=${TAG_STRIPPED}" >> "$GITHUB_OUTPUT"
       - name: Check if GitHub release already exists
@@ -173,7 +199,7 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: 'v2.18.2' # 2.4.4 fails with "no such file or directory"
-          args: release -f .goreleaser.yml --skip=validate${{ steps.release-check.outputs.skip_publish == 'true' && ',publish' || '' }}
+          args: release -f .release-config/.goreleaser.yml --skip=validate${{ steps.release-check.outputs.skip_publish == 'true' && ',publish' || '' }}
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"

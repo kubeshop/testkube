@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -20,13 +21,13 @@ func NewGetAgentCommand() *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Args:    cobra.MaximumNArgs(1),
-		Use:     "agent [name]",
-		Short:   "Get agents registered in the current environment",
-		Long:    `Get details of a specific agent or list all agents. By default only active agents in the current environment are shown. Use --all-environments to list across environments, --show-deleted to view deleted agents, or --show-unknown to find cluster agents not registered in the control plane.`,
-		Aliases: []string{"agents", "a"},
+		Use:     "runner [name]",
+		Short:   "Get runners registered in the current environment",
+		Long:    `Get details of a specific runner or list all runners. By default only active runners in the current environment are shown. Use --all-environments to list across environments, --show-deleted to view deleted runners, or --show-unknown to find cluster runners not registered in the control plane.`,
+		Aliases: []string{"runners", "agent", "agents", "a"},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			if allEnvironments && showUnknown {
-				ui.Warn("Note: --all-environments is ignored when using --show-unknown (unknown agents have no environment registration)")
+				ui.Warn("Note: --all-environments is ignored when using --show-unknown (unknown runners have no environment registration)")
 				allEnvironments = false
 			}
 		},
@@ -40,22 +41,43 @@ func NewGetAgentCommand() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&decryptSecretKey, "decrypted-secret", false, "should it fetch decrypted secret key")
-	cmd.Flags().BoolVar(&showUnknown, "show-unknown", false, "show only unknown agents (agents in cluster not registered in control plane)")
-	cmd.Flags().BoolVar(&showDeleted, "show-deleted", false, "show only deleted agents")
-	cmd.Flags().BoolVar(&allEnvironments, "all-environments", false, "show agents from all environments (not just current environment)")
+	cmd.Flags().BoolVar(&showUnknown, "show-unknown", false, "show only unknown runners (runners in cluster not registered in control plane)")
+	cmd.Flags().BoolVar(&showDeleted, "show-deleted", false, "show only deleted runners")
+	cmd.Flags().BoolVar(&allEnvironments, "all-environments", false, "show runners from all environments (not just current environment)")
 
 	return cmd
 }
 
 func UiGetAgent(cmd *cobra.Command, agentId string, decryptSecretKey bool) {
 	registeredAgents, err := GetControlPlaneAgents(cmd, true)
-	ui.ExitOnError("getting agents", err)
+	if err != nil {
+		common.HandleCLIError(common.NewCLIError(
+			common.TKErrRunnerGetFailed,
+			"Error getting the runners",
+			common.RunnerLookupHint,
+			err,
+		))
+	}
 
 	namespaces, err := GetKubernetesNamespaces()
-	ui.ExitOnError("listing namespaces", err)
+	if err != nil {
+		common.HandleCLIError(common.NewCLIError(
+			common.TKErrResourceLookupFailed,
+			"Error listing the Kubernetes namespaces",
+			common.ClusterLookupHint,
+			err,
+		))
+	}
 
 	agents, err := GetKubernetesAgents(namespaces)
-	ui.ExitOnError("listing pods", err)
+	if err != nil {
+		common.HandleCLIError(common.NewCLIError(
+			common.TKErrResourceLookupFailed,
+			"Error getting the runners running in the cluster",
+			common.ClusterLookupHint,
+			err,
+		))
+	}
 
 	agents = CombineAgents(agents, registeredAgents)
 
@@ -67,12 +89,24 @@ func UiGetAgent(cmd *cobra.Command, agentId string, decryptSecretKey bool) {
 		}
 	}
 	if agent == nil {
-		ui.Fail(fmt.Errorf("agent '%s' not found", agentId))
+		common.HandleCLIError(common.NewCLIError(
+			common.TKErrResourceNotFound,
+			"Runner not found",
+			"Check the runner name or ID, or list the runners with `testkube get runners`. Add --show-unknown to include cluster runners that are not registered, and --show-deleted to include deleted ones",
+			fmt.Errorf("runner '%s' not found", agentId),
+		))
 	}
 
 	if decryptSecretKey {
 		secretKey, err := GetControlPlaneAgentSecretKey(cmd, agent.Registered.ID)
-		ui.ExitOnError("failed to decrypt secret key", err)
+		if err != nil {
+			common.HandleCLIError(common.NewCLIError(
+				common.TKErrRunnerGetFailed,
+				"Error getting the decrypted runner secret key",
+				"Check that your credentials are valid and that your user can read the secret key of this runner",
+				err,
+			))
+		}
 		agent.Registered.SecretKey = secretKey
 	}
 
@@ -81,17 +115,39 @@ func UiGetAgent(cmd *cobra.Command, agentId string, decryptSecretKey bool) {
 
 func UiListAgents(cmd *cobra.Command, showUnknown bool, showDeleted bool, allEnvironments bool) {
 	registeredAgents, err := GetControlPlaneAgents(cmd, showDeleted)
-	ui.ExitOnError("getting agents", err)
+	if err != nil {
+		// The hint of a lookup by name points at `testkube get runners`, which is this command.
+		common.HandleCLIError(common.NewCLIError(
+			common.TKErrRunnerGetFailed,
+			"Error getting the runners",
+			"Check that your credentials are valid and that the current context points at the organization and environment you expect",
+			err,
+		))
+	}
 
 	// Filter agents by current environment (matching dashboard behavior) unless --all-environments is set
 	if !allEnvironments {
 		cfg, err := config.Load()
-		ui.ExitOnError("loading config", err)
+		if err != nil {
+			common.HandleCLIError(common.NewCLIError(
+				common.TKErrConfigInitFailed,
+				"Error loading testkube config file",
+				common.ConfigFileHint,
+				err,
+			))
+		}
 		registeredAgents = FilterAgentsByEnvironment(registeredAgents, cfg.CloudContext.EnvironmentId)
 	}
 
 	agents, err := GetKubernetesAgents([]string{""})
-	ui.ExitOnError("listing pods", err)
+	if err != nil {
+		common.HandleCLIError(common.NewCLIError(
+			common.TKErrResourceLookupFailed,
+			"Error getting the runners running in the cluster",
+			common.ClusterLookupHint,
+			err,
+		))
+	}
 
 	agents = CombineAgents(agents, registeredAgents)
 
@@ -130,7 +186,7 @@ func UiListAgents(cmd *cobra.Command, showUnknown bool, showDeleted bool, allEnv
 	agents = filteredAgents
 
 	if len(agents) == 0 {
-		ui.Print(ui.LightGray("\nNo agents found"))
+		ui.Print(ui.LightGray("\nNo runners found"))
 		return
 	}
 

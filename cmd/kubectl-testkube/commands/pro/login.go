@@ -140,11 +140,11 @@ func NewLoginCmd() *cobra.Command {
 					if !cmd.Flags().Changed("ui-uri-override") && result.UIURL != "" {
 						cmd.Flags().Set("ui-uri-override", result.UIURL)
 					}
-					if !cmd.Flags().Changed("agent-uri-override") && result.AgentURL != "" {
+					if !cmd.Flags().Changed("runner-uri-override") && !cmd.Flags().Changed("agent-uri-override") && result.AgentURL != "" {
 						if !strings.Contains(result.AgentURL, "://") {
 							result.AgentURL = fmt.Sprintf("%s://%s", u.Scheme, result.AgentURL)
 						}
-						cmd.Flags().Set("agent-uri-override", result.AgentURL)
+						cmd.Flags().Set("runner-uri-override", result.AgentURL)
 					}
 
 					if !cmd.Flags().Changed("callback-port") {

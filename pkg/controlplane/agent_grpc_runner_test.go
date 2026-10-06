@@ -22,31 +22,24 @@ func TestWriteDeclineCause(t *testing.T) {
 		wantReason  string
 	}{
 		{
-			name:        "writes the words of the reason and the message of the runner",
+			name:        "writes the message of the runner",
 			result:      &testkube.TestWorkflowResult{Initialization: &testkube.TestWorkflowStepResult{}},
 			reason:      testkube.StartReasonImagePullFailed,
 			message:     "pull access denied for private/image",
-			wantMessage: "Failed to run execution: the image could not be pulled\npull access denied for private/image",
+			wantMessage: "pull access denied for private/image",
 			wantReason:  string(testkube.StartReasonImagePullFailed),
 		},
 		{
-			name:        "keeps the raw code of a reason that has no words",
+			name:        "tells the user to upgrade a runner that sends no cause",
 			result:      &testkube.TestWorkflowResult{Initialization: &testkube.TestWorkflowStepResult{}},
-			reason:      "later-added",
-			message:     "the runner refused the execution",
-			wantMessage: "Failed to run execution: later-added\nthe runner refused the execution",
-			wantReason:  "later-added",
-		},
-		{
-			name:        "writes the header alone without a reason and a message",
-			result:      &testkube.TestWorkflowResult{Initialization: &testkube.TestWorkflowStepResult{}},
-			wantMessage: "Failed to run execution",
+			wantMessage: "The runner did not send the cause. Upgrade the agent to see the cause here.",
 		},
 		{
 			name:        "creates the initialization step when the result has none",
 			result:      &testkube.TestWorkflowResult{},
 			reason:      testkube.StartReasonJobCreateFailed,
-			wantMessage: "Failed to run execution: the job could not be created",
+			message:     "jobs.batch is forbidden",
+			wantMessage: "jobs.batch is forbidden",
 			wantReason:  string(testkube.StartReasonJobCreateFailed),
 		},
 	}

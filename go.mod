@@ -43,8 +43,8 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/keygen-sh/jsonapi-go v1.2.1
 	github.com/keygen-sh/keygen-go/v3 v3.3.0
-	github.com/klauspost/compress v1.20.0
-	github.com/mark3labs/mcp-go v1.1.0
+	github.com/klauspost/compress v1.20.1
+	github.com/mark3labs/mcp-go v1.1.1
 	github.com/mattn/go-isatty v0.0.24
 	github.com/minio/minio-go/v7 v7.3.0
 	github.com/nats-io/nats-server/v2 v2.15.0
@@ -52,7 +52,7 @@ require (
 	github.com/ohler55/ojg v1.28.6
 	github.com/olekukonko/tablewriter v1.1.5
 	github.com/onsi/ginkgo/v2 v2.33.0
-	github.com/onsi/gomega v1.43.1
+	github.com/onsi/gomega v1.44.0
 	github.com/otiai10/copy v1.14.1
 	github.com/pashagolub/pgxmock/v5 v5.2.0
 	github.com/pkg/errors v0.9.1

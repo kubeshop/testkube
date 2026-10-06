@@ -31,6 +31,9 @@ spec:
   container:
     workingDir: /data/repo/js
     image: node:24-bookworm
+    env:
+    - name: npm_config_cache
+      value: /root/.npm
     resources:
       limits:
         cpu: 4
@@ -42,7 +45,13 @@ spec:
     activeDeadlineSeconds: 1200
   steps:
   - name: Install
-    shell: corepack enable npm && npm ci
+    shell: corepack enable npm && npm ci --prefer-offline
+    cache:
+      key: cloud-web-unit-v1-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      restoreKeys:
+      - cloud-web-unit-v1-npm-
+      paths:
+      - /root/.npm/_cacache
   - name: Test
     shell: |
       mkdir -p /data/artifacts
@@ -88,6 +97,9 @@ spec:
   container:
     workingDir: /data/repo/js
     image: node:24-bookworm
+    env:
+    - name: npm_config_cache
+      value: /root/.npm
     resources:
       limits:
         cpu: 4
@@ -99,7 +111,13 @@ spec:
     activeDeadlineSeconds: 1200
   steps:
   - name: Install
-    shell: corepack enable npm && npm ci
+    shell: corepack enable npm && npm ci --prefer-offline
+    cache:
+      key: cloud-backoffice-unit-v1-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      restoreKeys:
+      - cloud-backoffice-unit-v1-npm-
+      paths:
+      - /root/.npm/_cacache
   - name: Test
     shell: |
       mkdir -p /data/artifacts
@@ -145,6 +163,9 @@ spec:
   container:
     workingDir: /data/repo/js
     image: node:24-bookworm
+    env:
+    - name: npm_config_cache
+      value: /root/.npm
     resources:
       limits:
         cpu: 4
@@ -156,7 +177,13 @@ spec:
     activeDeadlineSeconds: 1200
   steps:
   - name: Install
-    shell: corepack enable npm && npm ci
+    shell: corepack enable npm && npm ci --prefer-offline
+    cache:
+      key: cloud-runspace-controller-unit-v1-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      restoreKeys:
+      - cloud-runspace-controller-unit-v1-npm-
+      paths:
+      - /root/.npm/_cacache
   - name: Test
     shell: |
       mkdir -p /data/artifacts
@@ -191,9 +218,12 @@ spec:
       authType: github
   container:
     workingDir: /data/repo
+    env:
+    - name: GOMODCACHE
+      value: /root/go/pkg/mod
     resources:
       limits:
-        cpu: 4
+        cpu: 8
         memory: 8Gi
       requests:
         cpu: 2
@@ -206,17 +236,40 @@ spec:
       image: stoplight/spectral:6.14.2
       shell: spectral lint api/v1/base.yaml
   - name: Lint Golang
-    run:
-      image: golangci/golangci-lint:v2.12.2
-      env:
-      - name: GOPROXY
-        value: https://proxy.golang.org,direct
-      shell: |-
-        golangci-lint run -c ./.golangci.yml \
-          --timeout=20m \
-          --issues-exit-code=1 \
-          --max-issues-per-linter=0 \
-          ./...
+    cache:
+      key: cloud-lint-go-v1-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      restoreKeys:
+      - cloud-lint-go-v1-gomod-
+      paths:
+      - /root/go/pkg/mod/cache/download
+    steps:
+    - name: Analyze Go packages
+      cache:
+        # Keyed on the modules and lint config, never the sources: both caches address
+        # their own contents, so one entry serves every commit until dependencies change.
+        key: cloud-lint-go-v2-golangci-2.12.2-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum", "/data/repo/.golangci.yml")}}
+        restoreKeys:
+        - cloud-lint-go-v2-golangci-2.12.2-
+        paths:
+        - /root/.cache/go-build
+        - /root/.cache/golangci-lint
+        scope: workflow
+      run:
+        image: golangci/golangci-lint:v2.12.2
+        env:
+        - name: GOPROXY
+          value: https://proxy.golang.org,direct
+        - name: GOCACHE
+          value: /root/.cache/go-build
+        - name: GOLANGCI_LINT_CACHE
+          value: /root/.cache/golangci-lint
+        shell: |-
+          golangci-lint run -c ./.golangci.yml \
+            --verbose \
+            --timeout=20m \
+            --issues-exit-code=1 \
+            --max-issues-per-linter=0 \
+            ./...
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
@@ -247,6 +300,8 @@ spec:
     workingDir: /data/repo/js
     image: node:24-bookworm
     env:
+    - name: npm_config_cache
+      value: /root/.npm
     - name: NODE_OPTIONS
       value: --max_old_space_size=4096
     resources:
@@ -275,7 +330,13 @@ spec:
       console.log('Lockfile platform entries: OK');
       "
   - name: Install
-    shell: corepack enable npm && npm ci
+    shell: corepack enable npm && npm ci --prefer-offline
+    cache:
+      key: cloud-lint-js-v1-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      restoreKeys:
+      - cloud-lint-js-v1-npm-
+      paths:
+      - /root/.npm/_cacache
   - name: Check TypeScript types
     shell: npx turbo run ts-check --cache-dir=.turbo
   - name: Check formatting
@@ -351,6 +412,8 @@ spec:
     workingDir: /data/repo
     image: golang:1.26.6-bookworm
     env:
+    - name: GOMODCACHE
+      value: /root/go/pkg/mod
     - name: GOPROXY
       value: https://proxy.golang.org,direct
     resources:
@@ -364,6 +427,12 @@ spec:
     activeDeadlineSeconds: 600
   steps:
   - name: Check go.mod, go.sum, and OpenAPI
+    cache:
+      key: cloud-gomod-codegen-v1-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      restoreKeys:
+      - cloud-gomod-codegen-v1-gomod-
+      paths:
+      - /root/go/pkg/mod/cache/download
     shell: |-
       set -euo pipefail
       apt-get update -qq
@@ -414,6 +483,8 @@ spec:
     workingDir: /data/repo
     image: golang:1.26.6-bookworm
     env:
+    - name: GOMODCACHE
+      value: /root/go/pkg/mod
     - name: E2E
       value: "y"
     - name: INTEGRATION
@@ -538,7 +609,7 @@ spec:
       - full_page_writes=off
       resources:
         requests:
-          cpu: 2
+          cpu: 1
           memory: 512Mi
         limits:
           cpu: 4
@@ -595,40 +666,67 @@ spec:
         periodSeconds: 1
   steps:
   - name: Run tests
-    shell: |
-      set -euo pipefail
-      apt-get update -qq
-      apt-get install -y -qq socat curl
-      git config --global --add safe.directory /data/repo
-      mkdir -p /data/artifacts
-
-      forward() {{"{"}}
-        local port="$1" dest="$2"
-        socat TCP-LISTEN:${{"{"}}port},bind=127.0.0.1,fork,reuseaddr TCP:${{"{"}}dest} &
-      }
-      forward 27017 "{{services.mongo.0.ip}}:27017"
-      forward 4222 "{{services.nats.0.ip}}:4222"
-      forward 9000 "{{services.minio.0.ip}}:9000"
-      forward 5432 "{{services.postgres.0.ip}}:5432"
-      forward 8200 "{{services.vault.0.ip}}:8200"
-      forward 2525 "{{services.smtp.0.ip}}:25"
-      forward 4443 "{{services.gcs.0.ip}}:4443"
-      sleep 1
-
-      curl -sS -X POST "http://127.0.0.1:4443/storage/v1/b?project=test" \
-        -H "Content-Type: application/json" \
-        -d '{{"{"}}"name":"testkube_integration_tests"}' \
-        || true
-
-      set +e
-      go tool gotestsum --format pkgname --hide-summary skipped \
-        --junitfile /data/artifacts/junit.xml \
-        -- -coverprofile=/data/artifacts/coverage.out -covermode=atomic ./...
-      code=$?
-      echo "gotestsum_exit=${{"{"}}code}"
-      kill $(jobs -p) 2>/dev/null
-      wait
-      exit "${{"{"}}code}"
-    artifacts:
+    cache:
+      key: cloud-test-app-v1-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      restoreKeys:
+      - cloud-test-app-v1-gomod-
       paths:
-      - /data/artifacts/**
+      - /root/go/pkg/mod/cache/download
+    steps:
+    - name: Run test suite
+      cache:
+        # Keyed on the modules only: the build cache addresses its own contents, so it
+        # stays correct across commits, where a key per commit would grow storage
+        # without bound. go.mod carries the toolchain directive, and the image tag covers
+        # an image newer than it: build outputs only serve the toolchain that made them.
+        key: cloud-test-app-v1-golang-1.26.6-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+        restoreKeys:
+        - cloud-test-app-v1-golang-1.26.6-
+        paths:
+        - /root/.cache/go-build
+        scope: workflow
+      run:
+        env:
+        - name: GOCACHE
+          value: /root/.cache/go-build
+        # GOCACHE also holds test results, which do not track the services these
+        # tests talk to; always run the tests.
+        - name: GOFLAGS
+          value: -count=1
+        shell: |
+          set -euo pipefail
+          apt-get update -qq
+          apt-get install -y -qq socat curl
+          git config --global --add safe.directory /data/repo
+          mkdir -p /data/artifacts
+
+          forward() {{"{"}}
+            local port="$1" dest="$2"
+            socat TCP-LISTEN:${{"{"}}port},bind=127.0.0.1,fork,reuseaddr TCP:${{"{"}}dest} &
+          }
+          forward 27017 "{{services.mongo.0.ip}}:27017"
+          forward 4222 "{{services.nats.0.ip}}:4222"
+          forward 9000 "{{services.minio.0.ip}}:9000"
+          forward 5432 "{{services.postgres.0.ip}}:5432"
+          forward 8200 "{{services.vault.0.ip}}:8200"
+          forward 2525 "{{services.smtp.0.ip}}:25"
+          forward 4443 "{{services.gcs.0.ip}}:4443"
+          sleep 1
+
+          curl -sS -X POST "http://127.0.0.1:4443/storage/v1/b?project=test" \
+            -H "Content-Type: application/json" \
+            -d '{{"{"}}"name":"testkube_integration_tests"}' \
+            || true
+
+          set +e
+          go tool gotestsum --format pkgname --hide-summary skipped \
+            --junitfile /data/artifacts/junit.xml \
+            -- -coverprofile=/data/artifacts/coverage.out -covermode=atomic ./...
+          code=$?
+          echo "gotestsum_exit=${{"{"}}code}"
+          kill $(jobs -p) 2>/dev/null
+          wait
+          exit "${{"{"}}code}"
+      artifacts:
+        paths:
+        - /data/artifacts/**

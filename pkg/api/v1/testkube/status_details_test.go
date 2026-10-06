@@ -120,12 +120,46 @@ func TestNewStatusDetails(t *testing.T) {
 			},
 		},
 		{
-			name:   "a cancel by a person carries no reason",
-			actor:  StopActorUser,
-			reason: "",
+			name:  "a cancel by a person without a reason",
+			actor: StopActorUser,
 			want: TestWorkflowStatusDetails{
 				Type_:  string(StatusDetailsTypeUserCancel),
+				Reason: string(StopReasonUserCancel),
+				Actor:  string(StopActorUser),
+			},
+		},
+		{
+			name:  "a cancel through the API without a reason",
+			actor: StopActorAPI,
+			want: TestWorkflowStatusDetails{
+				Type_:  string(StatusDetailsTypeUserCancel),
+				Reason: string(StopReasonUserCancel),
+				Actor:  string(StopActorAPI),
+			},
+		},
+		{
+			name:  "a control plane stop without a reason",
+			actor: StopActorControlPlane,
+			want: TestWorkflowStatusDetails{
+				Type_:  string(StatusDetailsTypeUnknown),
 				Reason: string(StopReasonUnknown),
+				Actor:  string(StopActorControlPlane),
+			},
+		},
+		{
+			name: "a stop without an actor and without a reason",
+			want: TestWorkflowStatusDetails{
+				Type_:  string(StatusDetailsTypeUnknown),
+				Reason: string(StopReasonUnknown),
+			},
+		},
+		{
+			name:   "a cancel by a person keeps the reason it carries",
+			actor:  StopActorUser,
+			reason: string(StopReasonAbortAll),
+			want: TestWorkflowStatusDetails{
+				Type_:  string(StatusDetailsTypeUserCancel),
+				Reason: string(StopReasonAbortAll),
 				Actor:  string(StopActorUser),
 			},
 		},
@@ -134,5 +168,32 @@ func TestNewStatusDetails(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.want, *NewStatusDetails(tt.actor, tt.reason, tt.step, tt.message))
 		})
+	}
+}
+
+func TestStatusDetailsType_DisplayName(t *testing.T) {
+	tests := []struct {
+		name string
+		t    StatusDetailsType
+		want string
+	}{
+		{name: "a known type has its display name", t: StatusDetailsTypeExecutionFailure, want: "Infrastructure failure"},
+		{name: "a type without a display name stays the type", t: "a-newer-type", want: "a-newer-type"},
+		{name: "an empty type stays empty", t: "", want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.t.DisplayName())
+		})
+	}
+}
+
+func TestStatusDetailsType_DisplayName_EveryType(t *testing.T) {
+	// A type without a display name shows as a raw code, so every known type has one.
+	for _, detailsType := range []StatusDetailsType{
+		StatusDetailsTypeInitFailure, StatusDetailsTypeExecutionFailure, StatusDetailsTypeStepFailure,
+		StatusDetailsTypeUserCancel, StatusDetailsTypeUnknown,
+	} {
+		assert.NotEqual(t, string(detailsType), detailsType.DisplayName(), detailsType)
 	}
 }

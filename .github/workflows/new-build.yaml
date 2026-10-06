@@ -7,12 +7,12 @@ on:
       - "[0-9].[0-9]+.[0-9]+-rc.[0-9]+"
       - "[0-9].[0-9]+.[0-9]+-dev.[0-9]+"
       - "[0-9].[0-9]+.[0-9]+-beta.[0-9]+"
-    branches-ignore:
-      - renovate/**
-      - dependabot/**
-      
+    branches:
+      - main
+      - release/**
+
 env:
-  ALPINE_IMAGE: alpine:3.24.1
+  ALPINE_IMAGE: alpine:3.24.2
   BUSYBOX_IMAGE: busybox:1.36.1-musl
 
 permissions:
@@ -34,6 +34,7 @@ jobs:
         uses: depot/setup-action@91bc8495a33ebfc504ffc89e5674379ccf23c29c # v1.7.2
 
       - name: Login to DockerHub
+        if: ${{ github.ref_type == 'tag' }}
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -48,6 +49,7 @@ jobs:
             kubeshop/testkube-api-server
           tags: |
             type=ref,event=branch
+            type=ref,event=tag
             type=semver,pattern={{version}}
 
       - name: Create Docker tags and metadata for the API
@@ -59,6 +61,7 @@ jobs:
             kubeshop/testkube-cli
           tags: |
             type=ref,event=branch
+            type=ref,event=tag
             type=semver,pattern={{version}}
 
       - name: Create Docker tags and metadata for tw-init
@@ -70,6 +73,7 @@ jobs:
             kubeshop/testkube-tw-init
           tags: |
             type=ref,event=branch
+            type=ref,event=tag
             type=semver,pattern={{version}}
 
       - name: Create Docker tags and metadata for tw-toolkit
@@ -81,6 +85,7 @@ jobs:
             kubeshop/testkube-tw-toolkit
           tags: |
             type=ref,event=branch
+            type=ref,event=tag
             type=semver,pattern={{version}}
 
       - name: Create Docker tags and metadata for mcp-server
@@ -90,6 +95,18 @@ jobs:
           bake-target: "mcp-server-meta"
           images: |
             kubeshop/mcp-server
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+
+      - name: Create Docker tags and metadata for convert
+        id: convert-meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          bake-target: "convert-meta"
+          images: |
+            kubeshop/testkube-convert
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
@@ -103,6 +120,7 @@ jobs:
         uses: depot/bake-action@1d58c2668346981089b088b7ef36755b206b20e9 # v1.13.0
         if: ${{ github.ref_type != 'tag' }}
         with:
+          project: ${{ startsWith(github.ref, 'refs/heads/release/') && '189p1kp969' || github.ref == 'refs/heads/main' && '3cp8bwpbj0' || '' }}
           files: |
             ./docker-bake.hcl
             ${{ steps.api-meta.outputs.bake-file }}
@@ -110,16 +128,18 @@ jobs:
             ${{ steps.tw-init-meta.outputs.bake-file }}
             ${{ steps.tw-toolkit-meta.outputs.bake-file }}
             ${{ steps.mcp-server-meta.outputs.bake-file }}
-          targets: api,cli,tw-init,tw-toolkit,mcp-server
+            ${{ steps.convert-meta.outputs.bake-file }}
+          targets: api,cli,tw-init,tw-toolkit,mcp-server,convert
           set: |
             api.platform=linux/amd64
             cli.platform=linux/amd64
             tw-init.platform=linux/amd64
             tw-toolkit.platform=linux/amd64
             mcp-server.platform=linux/amd64
+            convert.platform=linux/amd64
           provenance: mode=max
           sbom: true
-          # Only tags are pushed, pushes to branches test whether app can be built.
+          # Save branch images only to Depot; do not push them to DockerHub.
           push: false
           save: true
           save-tag: ${{ steps.short-sha.outputs.sha }}
@@ -135,12 +155,12 @@ jobs:
             ${{ steps.tw-init-meta.outputs.bake-file }}
             ${{ steps.tw-toolkit-meta.outputs.bake-file }}
             ${{ steps.mcp-server-meta.outputs.bake-file }}
-          targets: api,cli,tw-init,tw-toolkit,mcp-server
+            ${{ steps.convert-meta.outputs.bake-file }}
+          targets: api,cli,tw-init,tw-toolkit,mcp-server,convert
           provenance: mode=max
           sbom: true
           push: true
-          save: true
-          save-tag: ${{ steps.short-sha.outputs.sha }}
+          save: false
         env:
           VERSION: ${{ fromJSON(steps.api-meta.outputs.json).labels['org.opencontainers.image.version'] }}
           GIT_SHA: ${{ fromJSON(steps.api-meta.outputs.json).labels['org.opencontainers.image.revision'] }}

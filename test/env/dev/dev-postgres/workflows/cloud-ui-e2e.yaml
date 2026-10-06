@@ -27,6 +27,23 @@ spec:
   container:
     workingDir: /data/repo/js/packages/e2e-tests
     image: mcr.microsoft.com/playwright:v1.62.1-noble
+    env:
+    - name: npm_config_cache
+      value: /root/.npm
+    - name: CLOUD_API_URL
+      value: https://api.testkube.dev
+    - name: TEST_ORG_ID
+      value: tkcorg_9deb42dda2197657
+    - name: TEST_ORG_SLUG
+      value: testkube
+    - name: TEST_ENV_ID
+      value: tkcenv_f2eedeef4063f90f
+    - name: TEST_ENV_SLUG
+      value: testkube-cloud-test-dev-e2e
+    - name: TEST_FIXTURE_USER
+      value: test-user-10
+    - name: TESTKUBE_NAMESPACE
+      value: testkube-agent-e2e
     resources:
       requests:
         cpu: 2
@@ -55,27 +72,20 @@ spec:
         periodSeconds: 2
   steps:
   - name: Install dependencies
-    shell: npm install
+    shell: npm ci --prefer-offline
+    cache:
+      key: cloud-ui-e2e-v1-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      restoreKeys:
+      - cloud-ui-e2e-v1-npm-
+      paths:
+      - /root/.npm/_cacache
   - name: Run tests
     timeout: 15m
     run:
       env:
+      # Resolve the preview URL only after the UI service has started.
       - name: CLOUD_BASE_URL
         value: '{{ config.revision == "main" ? "https://app.testkube.dev" : "http://" + services.ui.0.ip + ":5173" }}'
-      - name: CLOUD_API_URL
-        value: https://api.testkube.dev
-      - name: TEST_ORG_ID
-        value: tkcorg_9deb42dda2197657
-      - name: TEST_ORG_SLUG
-        value: testkube
-      - name: TEST_ENV_ID
-        value: tkcenv_f2eedeef4063f90f
-      - name: TEST_ENV_SLUG
-        value: testkube-cloud-test-dev-e2e
-      - name: TEST_FIXTURE_USER
-        value: test-user-10
-      - name: TESTKUBE_NAMESPACE
-        value: testkube-agent-e2e
       shell: npx playwright test --retries=1
     artifacts:
       paths:
@@ -84,6 +94,11 @@ spec:
   - name: E2E Test Coverage report
     optional: true
     shell: npm run scenario-coverage
+  - name: Cleanup test resources
+    timeout: 2m
+    condition: always
+    optional: true
+    shell: npm run resources:cleanup
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
@@ -103,7 +118,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: '{{ config.revision }}'
       paths:
-      - js/packages/e2e-tests
+      - js
       usernameFrom:
         secretKeyRef:
           name: 'testkube-agent-secrets'
@@ -126,6 +141,8 @@ spec:
         cpu: 256m
         memory: 256Mi
     env:
+    - name: npm_config_cache
+      value: /root/.npm
     - name: CLOUD_BASE_URL
       value: '{{ config.CLOUD_BASE_URL }}'
     - name: CLOUD_API_URL
@@ -144,7 +161,13 @@ spec:
       value: 'testkube-agent-e2e'
   steps:
   - name: Install dependencies
-    shell: npm install
+    shell: npm ci --prefer-offline
+    cache:
+      key: cloud-ui-e2e-distributed-v1-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      restoreKeys:
+      - cloud-ui-e2e-distributed-v1-npm-
+      paths:
+      - /root/.npm/_cacache
   - name: Run tests
     parallel:
       description: "Shard: {{ index + 1 }}/{{ count }}"

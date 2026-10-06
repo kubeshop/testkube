@@ -115,6 +115,7 @@ CLI_BIN := $(LOCALBIN_APP)/testkube
 KUBECTL_TESTKUBE_CLI_BIN := $(LOCALBIN_APP)/kubectl-testkube
 TOOLKIT_BIN := $(LOCALBIN_APP)/testworkflow-toolkit
 INIT_BIN := $(LOCALBIN_APP)/testworkflow-init
+CONVERT_BIN := $(LOCALBIN_APP)/convert
 
 # Docker configuration
 DOCKER := docker
@@ -231,7 +232,7 @@ version-bump-dev:
 ##@ Build
 
 .PHONY: build
-build: build-api-server build-testkube-cli build-toolkit build-init ## Build all binaries
+build: build-api-server build-testkube-cli build-toolkit build-init build-convert ## Build all binaries
 
 .PHONY: build-api-server
 build-api-server: ## Build API server binary
@@ -243,7 +244,7 @@ build-api-server: ## Build API server binary
 		./cmd/api-server/
 	@echo "API server built: $(API_SERVER_BIN)"
 
-.PHONY: build-testkube-cli
+.PHONY: build-testkube-cli $(CLI_BIN)
 build-testkube-cli: $(CLI_BIN) ## Build CLI binary (testkube)
 $(CLI_BIN): $(LOCALBIN_APP)
 	@echo "Building testkube CLI ($(GOOS)/$(GOARCH))..."
@@ -254,7 +255,7 @@ $(CLI_BIN): $(LOCALBIN_APP)
 		cmd/kubectl-testkube/main.go
 	@echo "testkube CLI built: $(CLI_BIN)"
 
-.PHONY: build-kubectl-testkube-cli
+.PHONY: build-kubectl-testkube-cli $(KUBECTL_TESTKUBE_CLI_BIN)
 build-kubectl-testkube-cli: $(KUBECTL_TESTKUBE_CLI_BIN) ## Build CLI binary (kubectl-testkube)
 $(KUBECTL_TESTKUBE_CLI_BIN): $(LOCALBIN_APP)
 	@echo "Building kubectl-testkube CLI ($(GOOS)/$(GOARCH))..."
@@ -290,6 +291,16 @@ build-init: ## Build testworkflow init
 		-o $(INIT_BIN) \
 		cmd/testworkflow-init/main.go
 	@echo "Init built: $(INIT_BIN)"
+
+.PHONY: build-convert
+build-convert: ## Build the Mongo -> Postgres convert tool
+	@echo "Building convert tool ($(GOOS)/$(GOARCH))..."
+	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build \
+		$(GOFLAGS) \
+		-ldflags='-s -w -X main.commit=$(COMMIT) -X main.date=$(DATE) -X main.builtBy=$(USER) -X github.com/kubeshop/testkube/pkg/version.Version=$(VERSION) -X github.com/kubeshop/testkube/pkg/version.Commit=$(COMMIT)' \
+		-o $(CONVERT_BIN) \
+		./cmd/convert/
+	@echo "Convert tool built: $(CONVERT_BIN)"
 
 .PHONY: build-all-platforms
 build-all-platforms: ## Build binaries for all supported platforms
@@ -471,7 +482,7 @@ docker-build-api: ## Build API server Docker image
 	@env ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** \
 		SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** \
 		DOCKER_BUILDX_CACHE_FROM=type=registry,ref=$(DOCKER_REGISTRY)/testkube-api-server:latest \
-		ALPINE_IMAGE=alpine:3.24.1 \
+		ALPINE_IMAGE=alpine:3.24.2 \
 		$(GORELEASER) release -f goreleaser_files/.goreleaser-docker-build-api.yml --clean --snapshot
 
 .PHONY: docker-build-cli
@@ -480,7 +491,7 @@ docker-build-cli: ## Build CLI Docker image
 	@env ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** \
 		SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** \
 		DOCKER_BUILDX_CACHE_FROM=type=registry,ref=$(DOCKER_REGISTRY)/testkube-cli:latest \
-		ALPINE_IMAGE=alpine:3.24.1 \
+		ALPINE_IMAGE=alpine:3.24.2 \
 		$(GORELEASER) release -f .builds-linux.goreleaser.yml --clean --snapshot
 
 # ==================== Kubernetes ====================

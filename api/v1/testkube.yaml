@@ -8029,6 +8029,9 @@ components:
 
     EventType:
       type: string
+      description: >-
+        The type of an event. The events end-testworkflow-test-failure, end-testworkflow-infrastructure-failure
+        and end-testworkflow-configuration-error select executions by the cause of the failure.
       enum:
         - queue-testworkflow
         - start-testworkflow
@@ -8037,6 +8040,9 @@ components:
         - end-testworkflow-aborted
         - end-testworkflow-canceled
         - end-testworkflow-not-passed
+        - end-testworkflow-test-failure
+        - end-testworkflow-infrastructure-failure
+        - end-testworkflow-configuration-error
         - become-testworkflow-up
         - become-testworkflow-down
         - become-testworkflow-failed

@@ -1,7 +1,7 @@
 variable "GOCACHE"       { default = "/go/pkg" }
 variable "GOMODCACHE"    { default = "/root/.cache/go-build" }
 variable "BUSYBOX_IMAGE" { default = "busybox:1.37.0-musl"}
-variable "ALPINE_IMAGE"  { default = "alpine:3.24.1" }
+variable "ALPINE_IMAGE"  { default = "alpine:3.24.2" }
 variable "VERSION"       { default = "0.0.0-unknown"}
 
 variable "GIT_SHA"                 { default = ""}
@@ -12,7 +12,7 @@ variable "CLOUD_SEGMENTIO_KEY"     { default = ""}
 variable "KEYGEN_PUBLIC_KEY"       { default = ""}
 
 group "default" {
-  targets = ["api", "cli", "tw-init", "tw-toolkit", "mcp-server"]
+  targets = ["api", "cli", "tw-init", "tw-toolkit", "mcp-server", "convert"]
 }
 
 target "api-meta" {}
@@ -33,6 +33,19 @@ target "api" {
   }
 }
 
+
+target "convert-meta" {}
+target "convert" {
+  inherits = ["convert-meta"]
+  context="."
+  dockerfile = "build/new/convert.Dockerfile"
+  platforms = ["linux/arm64", "linux/amd64"]
+  args = {
+    VERSION = "${VERSION}"
+    GIT_SHA = "${GIT_SHA}"
+    ALPINE_IMAGE = "${ALPINE_IMAGE}"
+  }
+}
 target "cli-meta" {}
 target "cli" {
   inherits = ["cli-meta"]

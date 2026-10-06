@@ -19,8 +19,9 @@ func NewCreateAgentCommand() *cobra.Command {
 		agentType      string
 	)
 	cmd := &cobra.Command{
-		Use:  "agent",
-		Args: cobra.ExactArgs(1),
+		Use:     "runner",
+		Aliases: []string{"agent"},
+		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			// Check for deprecated --type flag usage
 			if cmd.Flags().Changed("type") {
@@ -62,8 +63,8 @@ func NewCreateAgentCommand() *cobra.Command {
 				enableWebhooks,
 			)
 			ui.NL()
-			ui.Hint("Install the agent with command:")
-			installCmd := fmt.Sprintf("testkube install agent %s --secret %s", agent.Name, agent.SecretKey)
+			ui.Hint("Install the runner with command:")
+			installCmd := fmt.Sprintf("testkube install runner %s --secret %s", agent.Name, agent.SecretKey)
 			if enableExecution {
 				installCmd += " --execution"
 			}
@@ -80,11 +81,11 @@ func NewCreateAgentCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&environmentIds, "env", "e", nil, "environment ID or slug that the agent have access to")
+	cmd.Flags().StringSliceVarP(&environmentIds, "env", "e", nil, "environment ID or slug that the runner have access to")
 	cmd.Flags().StringSliceVarP(&labelPairs, "label", "l", nil, "label key value pair: --label key1=value1")
-	cmd.Flags().BoolVar(&global, "global", false, "make it global agent")
-	cmd.Flags().StringVar(&group, "group", "", "make it grouped agent")
-	cmd.Flags().BoolVar(&floating, "floating", false, "create as a floating agent")
+	cmd.Flags().BoolVar(&global, "global", false, "make it global runner")
+	cmd.Flags().StringVar(&group, "group", "", "make it grouped runner")
+	cmd.Flags().BoolVar(&floating, "floating", false, "create as a floating runner")
 
 	// Components selection
 	common.AddExecutionCapabilityFlags(cmd)
@@ -93,7 +94,7 @@ func NewCreateAgentCommand() *cobra.Command {
 	cmd.Flags().Bool("webhooks", false, "enable webhooks capability")
 
 	// Deprecated flag
-	cmd.Flags().StringVarP(&agentType, "type", "t", "", "[DEPRECATED] agent type - use capability flags instead")
+	cmd.Flags().StringVarP(&agentType, "type", "t", "", "[DEPRECATED] runner type - use capability flags instead")
 	cmd.Flags().MarkDeprecated("type", "use --execution, --listener, --gitops, and/or --webhooks instead")
 
 	return cmd

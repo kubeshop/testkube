@@ -291,6 +291,9 @@ spec:
                   - end-testworkflow-aborted
                   - end-testworkflow-canceled
                   - end-testworkflow-not-passed
+                  - end-testworkflow-test-failure
+                  - end-testworkflow-infrastructure-failure
+                  - end-testworkflow-configuration-error
                   - become-testworkflow-up
                   - become-testworkflow-down
                   - become-testworkflow-failed
@@ -504,6 +507,9 @@ spec:
                   - end-testworkflow-aborted
                   - end-testworkflow-canceled
                   - end-testworkflow-not-passed
+                  - end-testworkflow-test-failure
+                  - end-testworkflow-infrastructure-failure
+                  - end-testworkflow-configuration-error
                   - become-testworkflow-up
                   - become-testworkflow-down
                   - become-testworkflow-failed

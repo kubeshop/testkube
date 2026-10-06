@@ -20,6 +20,7 @@
 - `cmd/testworkflow-toolkit` provides runtime utilities and commands for TestWorkflow containers (artifacts, services, parallel execution, etc.).
 - `cmd/tcl/devbox-mutating-webhook` is a Kubernetes mutating webhook for injecting devbox containers into pods.
 - `cmd/tcl/devbox-binary-storage` serves as a binary storage server for devbox dependencies and cached files.
+- `cmd/convert` is a one-shot tool that migrates control-plane data from MongoDB to PostgreSQL (see "Mongo to Postgres conversion" below).
 - `cmd/debug-server` is a simple HTTP server that dumps incoming requests for debugging purposes.
 - `cmd/proxy` proxies HTTP requests to the Testkube API server for local development and debugging.
 - `cmd/choco-stub` displays a deprecation message for the old Chocolatey package location.
@@ -31,6 +32,10 @@
 - Exposes tools across workflows, executions, artifacts, and metadata via `testkube mcp serve` (CLI), Docker image (`testkube/mcp-server`), or Control Plane's `/mcp` endpoint per environment.
 - Uses interface-based tool design; new tools need registration in both `pkg/mcp/server.go` and control plane's `mcp_handler.go`.
 - See `pkg/mcp/README.md` for architecture, tool patterns, and usage examples.
+- Insights board tools (`pkg/mcp/tools/boards.go`) keep their rules in `pkg/mcp/boards/`: report param validation and defaults, the report-to-`/insights/*` query translation, and the layout. It is a port of the dashboard's TypeScript (`utils/insights.ts`, `DynamicFilters/types.ts`, `reports/*/type.ts` in `testkube-cloud-api/js/packages/web`), since the Control Plane stores report params opaquely. **The Control Plane's `HandlerClient` must use this package rather than reimplement it**, and a dashboard change to those files needs a matching change here; `testdata/translation_cases.json` pins the translation.
+- Boards are organization-scoped and the Control Plane refuses API tokens on every board endpoint, so the board tools need a user session. `APIClient` refuses a `tkcapi_` token before sending anything and returns `tools.ErrBoardsRequireUser`. Every board write reads the board first and resends its description. Current Control Planes keep a description an update omits, but older ones clear it, so resending is what keeps it on those.
+- **Board updates are optimistic-concurrency writes.** Resending a value read earlier (the description, a recomputed layout) would overwrite a concurrent edit, so every update - `update_board` and the three report tools - goes through `writeBoard` in `pkg/mcp/tools/boards.go`: it sends `expectedVersion` (the board `version` it read; every write to a board increments it), the Control Plane refuses a stale write with 409, both clients turn that into `tools.ErrBoardChanged`, and the write is rebuilt from a fresh read, up to `boardWriteAttempts` times. A write's builder must derive everything from the board it is handed, never from an earlier read. The token is a counter, not `updatedAt`: two writes can share a timestamp, and a reused token would let a stale write through. A Control Plane that predates versions returns none, and the write is then unconditional. `delete_board` is deliberately not conditional: it resends nothing it read (the read only resolves a slug to the ID it deletes by), and the Control Plane checks visibility and delete rights against the board as it is at delete time, so deleting removes the board whatever changed since the read, as deleting in the dashboard does.
+- **Relative report ranges are anchored in a time zone.** The dashboard ends a `day`/`week`/`month`/`quarter` range at the viewer's local midnight, so `render_board` takes an IANA `timeZone` (default UTC) and passes it as `boards.QueryOptions.Location`; `boards` embeds `time/tzdata` because the MCP also runs from images without a zoneinfo database.
 
 ## GitOps resource sync
 
@@ -57,6 +62,47 @@ Still to come: Control Plane persistence and enforcement of the owner, and the `
 - Regenerate Kubernetes CRDs after editing type definitions in `api/` via `make generate-crds`.
 - Regenerate SQL code when query files change via `make generate-sqlc`.
 - Refresh mocks for new or updated interfaces using `make generate-mocks`.
+- Build the Mongo to Postgres convert tool with `make build-convert` (also part of `make build`). Its image, `kubeshop/testkube-convert`, is the `convert` target in `docker-bake.hcl`, built from `build/new/convert.Dockerfile` and published by `.github/workflows/new-build.yaml` with the other images.
+
+## Mongo to Postgres conversion
+
+`cmd/convert` (the CLI and flags) and `pkg/convert` (the migrator) move an OSS installation's
+data from MongoDB to PostgreSQL, so that switching the API server from `API_MONGO_DSN` to
+`API_POSTGRES_DSN` keeps execution history and numbering instead of starting empty and
+restarting execution numbers at 1, which would collide with the names of old executions.
+
+- **Two tasks, and nothing else.** `executions` copies `testworkflowresults` into the seven
+  `test_workflow_*` tables (`executions.go`, `executions_row.go`). `sequences` copies Test
+  Workflow counters into `execution_sequences` (`sequences.go`), and never moves a counter
+  backwards. Logs, outputs and artifacts are in object storage, definitions and triggers are
+  CRDs, and the `triggers` collection holds only a short-lived leader lease, so none of them
+  are migrated.
+- **Rows are written by hand as COPY text**, not through the repository. That makes every
+  schema migration touching `test_workflow_executions` or its child tables a change here
+  too: add the column to the matching `*Columns` list and `write*Row` serializer in
+  `executions_row.go`, projected the way `pkg/repository/testworkflow/postgres` writes it. A
+  column the converter leaves out is silently NULL for every migrated row.
+  `TestConvertExecutions_Integration` reads each execution back through both repositories and
+  compares them, which catches the omission **only if the fixture in `buildExecution` sets
+  the field**. Both repositories synthesize some fields on read (lineage through
+  `EffectiveLineage()`), so a fixture that leaves such a field unset round-trips even when
+  the column was dropped.
+- **Resumable and exactly-once.** Each batch commits in the same transaction as its row in
+  `convert_checkpoints` (migration `20260826120000_convert_checkpoints.sql`, written only by
+  this tool), so an interrupted run resumes after the last committed batch. `--reset --yes`
+  truncates the target and clears the checkpoints. `--dry-run` serializes everything and
+  writes nothing, but still applies schema migrations, because the checkpoint lookup and the
+  verification read those tables.
+- **The tool migrates the schema itself**, with goose's `WithAllowOutofOrder(true)` like
+  the API server, and an out-of-date schema is fatal here rather than a warning: the COPY
+  statements name columns that may not exist yet.
+- **Exit status.** After the summary, the tool exits non-zero if any document failed or the
+  run raised a warning, such as a verification count mismatch (`ErrIncomplete`), so a Job is marked failed.
+- **Deployment.** The `testkube` chart runs it as the `convert` Job
+  (`templates/convert-job.yaml`, `convert.*` values), disabled by default. It is deliberately
+  not a Helm hook: the operator triggers the cutover. The Job reads both DSNs from
+  `testkube-api.mongodb` and `testkube-api.postgresql`, and a retry resumes from the
+  checkpoint.
 
 ## Execution lineage and reruns
 
@@ -151,9 +197,14 @@ contents do.
 - The legacy `values.demo.yaml` profile (bundled agent, MongoDB) is deprecated but kept for older CLIs.
 - Install lifecycle telemetry: `init demo` reports `cli_install_started` (before Helm install) and `cli_install_finished` (after success) to the license service at `POST https://license.testkube.io/events`. The client lives in `pkg/diagnostics/validators/license/client.go` (`Client.ReportEvent`, `EventRequest`, the `LicenseEventsURL` and `EventCLIInstall*` constants); the `reportLicenseEvent`/`waitLicenseEvents` helpers in `init.go` make delivery telemetry-gated, non-blocking (background goroutine), and flushed before exit with a bounded wait. The license key in the body is the credential (validated worker-side before recording), so no shared secret ships in the CLI. Adding a new lifecycle event: add an `EventCLIInstall*` constant and a `reportLicenseEvent` call, and allowlist it in the license worker's `/events` handler (`testkube-infrastructure`). Keep `ARCHITECTURE.md` in sync.
 
+## Local laptop install
+
+- Hidden `testkube install local` lives in `pkg/localinstall`; see its `doc.go`.
+
 ## Configuration references
 
 - Agent behavior is driven by env vars defined in `internal/config/config.go` (scan for `envconfig:"..."` tags when researching a toggle).
+- The convert tool does not use `internal/config`. Each flag in `cmd/convert/main.go` falls back to an env var: it reuses the API server's `API_MONGO_*`, `API_POSTGRES_DSN`, `SKIP_DB_CREATION` and `DISABLE_POSTGRES_MIGRATIONS`, and adds its own `CONVERT_BATCH_SIZE`, `CONVERT_READ_BATCH_SIZE`, `CONVERT_DRY_RUN`, `CONVERT_RESET`, `CONVERT_RESET_CONFIRMED`, `CONVERT_SKIP_ERRORS`, `CONVERT_SKIP` and `CONVERT_VERIFY`. MongoDB TLS material is passed as file paths, because the tool has no cluster client to read a Secret with.
 - GitOps sync of Kubernetes resources into the Control Plane is gated by `GITOPS_KUBERNETES_TO_CLOUD_ENABLED` (default `false`), and additionally requires the Control Plane to report cloud storage support.
 - `DISABLE_TEST_TRIGGERS` also turns off the cluster-inventory CRD watcher and push (`internal/inventory/`, gated by `ShouldPushClusterInventory` in `internal/config/procontext.go`): the inventory only feeds the Control Plane's TestTrigger resourceRef picker, and watching CRDs without the RBAC for it logs a watch error on every retry.
 - TestTriggers accept `spec.event` or a `spec.events` list (mutually exclusive, validated service-side); always consume them via `EffectiveEvents()` so both forms are honored — classification gates that read the single `event` field directly will silently skip list-form triggers.
@@ -161,6 +212,7 @@ contents do.
 - Git trigger informer execution is leader-gated in `cmd/api-server/main.go` through the shared `leader` coordinator tasks, so only the active leader performs periodic git pulls/reconciliation.
 - Helm chart values are the source of deployment defaults; `build/_local/values.dev.yaml` (shaped by the `values.dev.tpl.yaml` template) shows the local overrides used by `tk-dev` if you need a concrete reference.
 - `testkube-api` chart values `jobTolerations`/`jobAffinity`/`jobNodeSelector` (`k8s/helm/testkube-api/values.yaml`) set the `tolerations`/`affinity`/`nodeSelector` applied to the ephemeral pods spawned per test execution (`_job-template.yaml.tpl` for legacy prebuilt/container executors, `_slave-pod-template.yaml.tpl` for test-workflow slave pods). Unset (empty) by default and deliberately does not fall back to `global.tolerations`/`global.affinity`/`global.nodeSelector`, since those already carry a non-empty default (an arm64 toleration) that would otherwise silently change job/slave pod scheduling for every chart consumer.
+- Telemetry opt-out: `DO_NOT_TRACK=1` (any value except empty, `0` or `false`) skips every telemetry send in the CLI and the agent (`pkg/telemetry`).
 - CLI update-check toggle: set `TESTKUBE_DISABLE_UPDATE_CHECK=1` to suppress both the per-command hint and the `testkube version` status block. The CLI persists `lastUpdateCheckAt` and `latestKnownVersion` in `~/.testkube/config.json` to throttle the per-command hint to once per day.
 - Object retention is driven by `STORAGE_EXPIRATION` (whole bucket, in days) and `STORAGE_CACHE_EXPIRATION` (step dependency caches under the `.tkcache/v1` prefix, in days). **`STORAGE_CACHE_EXPIRATION` defaults to 1 day; `STORAGE_EXPIRATION` stays opt-in.** The difference is the filter, not taste: the cache rule is confined to the cache prefix and can only delete caches, where the bucket-wide rule is unfiltered and governs artifacts and logs too, so a default there would delete a deployment's results on an upgrade. `TestExpirationDefaults` pins both. `SetExpirationPolicies` in `pkg/storage/minio/minio.go` applies them with `SetBucketLifecycle`, which replaces the bucket lifecycle wholesale - so it reads the existing configuration first and carries through every rule Testkube does not own, matched by ID (`mergeLifecycleRules`). That merge is what makes a default safe at all: without it, defaulting either setting would drop the rules of installations whose bucket lifecycle is managed elsewhere, purely by upgrading. It fails closed - if the existing lifecycle cannot be read, nothing is written. That read is a permission earlier versions did not need (`s3:GetLifecycleConfiguration` on S3 and MinIO, `storage.buckets.get` on GCS), and because `STORAGE_CACHE_EXPIRATION` now defaults to 1 the call happens on every installation rather than only those configuring an expiration - so an upgrade can need permissions the deployment never granted. The error names them. Note also that the bucket-wide rule is unfiltered and so covers cache objects too, and the earlier expiration wins — a cache TTL can only bring eviction forward, never postpone it, and `MustGetMinioClient` warns when it is set longer than the bucket-wide one.
 

@@ -125,6 +125,14 @@ The same path exists in the connected-mode scheduler in `testkube-cloud-api`, wh
 - Lease backend: [`pkg/repository/leasebackend/mongo/`](pkg/repository/leasebackend/mongo/)
 - Factory: [`pkg/repository/mongo_factory.go`](pkg/repository/mongo_factory.go)
 
+**MongoDB to PostgreSQL conversion**
+
+- **Entry Point**: [`cmd/convert/main.go`](cmd/convert/main.go). Migrator: [`pkg/convert/`](pkg/convert/)
+- A one-shot tool for an installation moving off MongoDB. It copies `testworkflowresults` into the `test_workflow_*` tables and the Test Workflow counters into `execution_sequences`, so execution history and numbering survive the switch from `API_MONGO_DSN` to `API_POSTGRES_DSN`. Nothing else in MongoDB needs to move: artifacts and logs are in object storage, and definitions are CRDs.
+- It applies the PostgreSQL migrations itself, then streams documents from a Mongo cursor and writes each batch with `COPY`. The batch commits in the same transaction as its progress row in `convert_checkpoints`, so an interrupted run resumes where it stopped and never double-writes. When it finishes, it compares source and target counts.
+- Because it writes rows directly rather than through the repository, any schema change to those tables also needs a change in `pkg/convert/executions_row.go`. See [`AGENTS.md`](AGENTS.md).
+- Shipped as the `kubeshop/testkube-convert` image, and run in-cluster through the chart's optional `convert` Job (see [Kubernetes Deployment](#kubernetes-deployment)).
+
 **MinIO** (Object Storage)
 
 - Stores TestWorkflow execution artifacts (logs, reports, files)
@@ -228,6 +236,9 @@ Telemetry collects usage analytics to help improve the product. It can be disabl
 - **Segment.io** (`sender_sio.go`) - Primary analytics backend
 - **Google Analytics** (`sender_ga4.go`) - Alternative analytics backend
 - **Testkube Analytics** (`sender_tka.go`) - Internal analytics
+- **PostHog** (`install_tracker.go`) - `testkube install local` step events, see [Local Install](#local-install)
+
+All sends are skipped when `DO_NOT_TRACK` is set.
 
 **Heartbeat**: [`cmd/api-server/services/telemetry.go`](cmd/api-server/services/telemetry.go)
 
@@ -318,6 +329,7 @@ The Helm chart deploys:
 - MinIO (via subchart)
 - NATS (via subchart)
 - Kubernetes RBAC and service accounts
+- Optionally, the one-shot `convert` Job (`convert.enabled`, off by default) that migrates MongoDB data into PostgreSQL. It is not a Helm hook, because an operator triggers the cutover. It takes both DSNs from the `testkube-api` database settings and resumes from its checkpoint when retried.
 
 **Configuration**: See [`k8s/helm/testkube/values.yaml`](k8s/helm/testkube/values.yaml) for deployment configuration.
 
@@ -353,6 +365,22 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 - API server endpoints (standalone or control plane)
 - Authentication tokens
 - Contexts (for multi-environment setups)
+
+### Local Install
+
+**Location**: [`pkg/localinstall/`](pkg/localinstall/), command [`cmd/kubectl-testkube/commands/install_local.go`](cmd/kubectl-testkube/commands/install_local.go)
+
+`testkube install local` (hidden) runs preflight checks before a laptop install. Missing, unreachable or permission-denied Docker blocks; missing `kubectl`, `helm` or `kind` and low Docker CPU, memory or disk only warn. Resources come from `docker info`, so Docker Desktop's VM limits apply rather than the host's.
+
+Each step is reported to PostHog (project "On Prem Trials", via the `t.testkube.io` proxy) by [`pkg/telemetry/install_tracker.go`](pkg/telemetry/install_tracker.go), so drop-off can be measured per step. A one-line notice is printed first; `DO_NOT_TRACK` or the CLI's `telemetryEnabled: false` disables the events and the notice.
+
+### MCP Server
+
+**Location**: [`pkg/mcp/`](pkg/mcp/) (see its [README](pkg/mcp/README.md))
+
+`testkube mcp serve` and the `testkube/mcp-server` image expose Testkube to AI assistants over the Model Context Protocol. The tools in [`pkg/mcp/tools/`](pkg/mcp/tools/) depend on small client interfaces, implemented over HTTP by `APIClient` ([`pkg/mcp/api.go`](pkg/mcp/api.go)) and in-process by the Control Plane's `HandlerClient`, which registers the same tools on its per-environment `/mcp` endpoint.
+
+The Insights board tools keep their shared rules in [`pkg/mcp/boards/`](pkg/mcp/boards/): the report param validation and defaults, the translation of a report into the org-scoped `/insights/*` query that renders it, and the board layout. It is a port of the dashboard's rules, because the Control Plane stores report params opaquely, and both clients use it so that what the MCP writes renders in the dashboard and `render_board` returns the numbers the dashboard shows. Boards are organization-scoped and served only to user sessions, never to API tokens. Board updates are conditional on the board version the tool read (a counter every write increments), so an update built from a stale read is refused and rebuilt rather than overwriting a concurrent edit. Deleting a board is not conditional: it removes the board whatever changed since it was read.
 
 ### External Integration: License Event Reporting
 

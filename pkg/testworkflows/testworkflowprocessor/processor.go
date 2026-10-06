@@ -352,7 +352,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		}
 		imageNameResolutions[image] = p.inspector.ResolveName("", image)
 		if err != nil {
-			return nil, executionworkertypes.WithStartReason(fmt.Errorf("resolving image error: %s: %w", image, err), testkube.StartReasonImagePullFailed)
+			return nil, executionworkertypes.WithStartReason(err, testkube.StartReasonImagePullFailed)
 		}
 	}
 	err = root.ApplyImages(images, imageNameResolutions)
