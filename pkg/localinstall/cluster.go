@@ -132,7 +132,7 @@ func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 	var state ClusterState
 	// Saved settings survive a stop, so we check before touching it.
 	out, err := c.run(ctx, "docker", "inspect", "-f",
-		"{{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .HostConfig.Binds}}", nodeName)
+		"{{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .HostConfig.Binds}}\n{{json .Config.Labels}}", nodeName)
 	if err != nil {
 		return state, string(out), err
 	}
@@ -161,12 +161,14 @@ func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 // Ours means every browser port on 127.0.0.1 and our data folder.
 func (c *Cluster) ownedSettings(inspect string) (running bool, ports Ports, ok bool) {
 	lines := strings.Split(strings.TrimSpace(inspect), "\n")
-	if len(lines) != 3 {
+	if len(lines) != 4 {
 		return false, nil, false
 	}
 	var bindings map[string][]struct{ HostIp, HostPort string }
 	var binds []string
-	if json.Unmarshal([]byte(lines[1]), &bindings) != nil || json.Unmarshal([]byte(lines[2]), &binds) != nil {
+	var labels map[string]string
+	if json.Unmarshal([]byte(lines[1]), &bindings) != nil || json.Unmarshal([]byte(lines[2]), &binds) != nil ||
+		json.Unmarshal([]byte(lines[3]), &labels) != nil {
 		return false, nil, false
 	}
 	ports = Ports{}
@@ -181,18 +183,48 @@ func (c *Cluster) ownedSettings(inspect string) (running bool, ports Ports, ok b
 		}
 		ports[cp.name] = host
 	}
-	return lines[0] == "true", ports, mountsData(binds, filepath.Join(c.dir, "data"))
+	return lines[0] == "true", ports, mountsData(binds, labels, filepath.Join(c.dir, "data"))
 }
 
-// Docker Desktop prefixes sources, e.g. /host_mnt/Users/...
-func mountsData(binds []string, dataDir string) bool {
+// Some Docker setups on WSL replace the source with a hashed path.
+const (
+	dockerDesktopWSLMounts  = "/run/desktop/mnt/host/wsl/docker-desktop-bind-mounts/"
+	rancherDesktopWSLMounts = "/mnt/wsl/rancher-desktop/run/docker-mounts/"
+)
+
+func mountsData(binds []string, labels map[string]string, dataDir string) bool {
 	for _, b := range binds {
+		// Podman adds options after the destination, e.g. ":rw,rbind".
 		src, rest, found := strings.Cut(b, ":"+nodeStorageDir)
-		if found && (rest == "" || strings.HasPrefix(rest, ":")) && strings.HasSuffix(src, dataDir) {
+		if !found || (rest != "" && !strings.HasPrefix(rest, ":")) {
+			continue
+		}
+		switch {
+		case strings.HasSuffix(src, dataDir): // Docker Desktop on Mac adds /host_mnt.
+			return true
+		case strings.HasPrefix(src, dockerDesktopWSLMounts):
+			return desktopLabelsPointTo(labels, dataDir)
+		case strings.HasPrefix(src, rancherDesktopWSLMounts):
+			// No trace of the real path; the port check must carry it.
 			return true
 		}
 	}
 	return false
+}
+
+// Docker Desktop keeps each real source in desktop.docker.io/binds/N/Source.
+func desktopLabelsPointTo(labels map[string]string, dataDir string) bool {
+	found := false
+	for k, v := range labels {
+		if strings.HasPrefix(k, "desktop.docker.io/binds/") && strings.HasSuffix(k, "/Source") {
+			if v == dataDir {
+				return true
+			}
+			found = true
+		}
+	}
+	// Without labels we can't tell, so the port check decides.
+	return !found
 }
 
 func (c *Cluster) waitReady(ctx context.Context) ([]byte, error) {
