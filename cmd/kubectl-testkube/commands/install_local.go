@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/pterm/pterm"
@@ -214,6 +215,7 @@ func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, 
 	if err != nil {
 		failToolInstall(tracker, missing[0], err)
 	}
+	start := time.Now()
 	for _, name := range missing {
 		version := localinstall.ToolVersion(name)
 		spinner := startSpinner(fmt.Sprintf("Installing %s %s", name, version))
@@ -225,7 +227,8 @@ func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, 
 		}
 		printCheckResult(localinstall.Result{Name: name, Status: localinstall.StatusPass, Version: version, Detail: "downloaded, checksum verified"})
 	}
-	tracker.Send("install_local_tools_installed", map[string]any{"tools": missing})
+	// Measured, so the plan's time hints can match reality.
+	tracker.Send("install_local_tools_installed", map[string]any{"tools": missing, "duration_s": int(time.Since(start).Seconds())})
 }
 
 func failToolInstall(tracker *telemetry.InstallTracker, name string, err error) {
@@ -259,6 +262,7 @@ func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) {
 		failCluster(tracker, "", err)
 	}
 	spinner := startSpinner(fmt.Sprintf("Starting cluster %q (about 1 minute on first run)", localinstall.ClusterName))
+	start := time.Now()
 	state, out, err := cluster.Ensure(cmd.Context())
 	_ = spinner.Stop()
 	exitIfCancelled(cmd, tracker, "cluster")
@@ -280,7 +284,8 @@ func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) {
 	disk, free := cluster.CheckDisk(cmd.Context())
 	printCheckResult(disk)
 	ui.Printf("  %s\n", ui.LightGray("Your Testkube data is kept in ~/.testkube/data"))
-	props := map[string]any{"created": state.Created, "ports_moved": len(state.Ports.Moved()), "disk": string(disk.Status)}
+	props := map[string]any{"created": state.Created, "ports_moved": len(state.Ports.Moved()), "disk": string(disk.Status),
+		"duration_s": int(time.Since(start).Seconds())}
 	if free > 0 {
 		props["node_disk_free_gb"] = free
 	}
