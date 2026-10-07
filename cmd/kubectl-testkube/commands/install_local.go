@@ -307,9 +307,10 @@ func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
 	r := localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "could not create"}
 	reason := "create"
 	switch {
-	case errors.Is(err, localinstall.ErrClusterOutdated):
-		reason, r.Detail = "outdated", "made by an older installer"
-		r.Fix = "Delete it, then run again:\n  ~/.testkube/bin/kind delete cluster --name " + localinstall.ClusterName
+	case errors.Is(err, localinstall.ErrClusterNotOurs):
+		reason, r.Detail = "not_ours", "name already taken"
+		r.Fix = fmt.Sprintf("A kind cluster named %q exists that this installer didn't create.\n"+
+			"Delete it if you don't need it, then run again:\n  kind delete cluster --name %s", localinstall.ClusterName, localinstall.ClusterName)
 	case errors.Is(err, localinstall.ErrClusterStart):
 		reason, r.Detail = "start", "could not start"
 		r.Fix = lastLines(out, 5) + "\nIf a port is in use, close that program and run again.\n" +

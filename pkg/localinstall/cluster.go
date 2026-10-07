@@ -3,13 +3,13 @@ package localinstall
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -29,8 +29,8 @@ const (
 )
 
 var (
-	ErrClusterOutdated = errors.New("the existing cluster lacks Testkube ports or data folder")
-	ErrClusterStart    = errors.New("the stopped cluster could not start")
+	ErrClusterNotOurs = errors.New("a cluster with our name exists that this installer did not create")
+	ErrClusterStart   = errors.New("the stopped cluster could not start")
 )
 
 // Browser-facing; Testkube's settings embed these exact addresses.
@@ -130,12 +130,18 @@ func (c *Cluster) Ensure(ctx context.Context) (ClusterState, string, error) {
 
 func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 	var state ClusterState
-	out, err := c.run(ctx, "docker", "inspect", "-f", "{{.State.Running}}", nodeName)
+	// Saved settings survive a stop, so we check before touching it.
+	out, err := c.run(ctx, "docker", "inspect", "-f",
+		"{{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .HostConfig.Binds}}", nodeName)
 	if err != nil {
 		return state, string(out), err
 	}
-	// A stopped node has no port bindings to read; start it first.
-	if strings.TrimSpace(string(out)) != "true" {
+	running, ports, ok := c.ownedSettings(string(out))
+	if !ok {
+		return state, "", ErrClusterNotOurs
+	}
+	state.Ports = ports
+	if !running {
 		if out, err = c.run(ctx, "docker", "start", nodeName); err != nil {
 			return state, string(out), ErrClusterStart
 		}
@@ -149,18 +155,44 @@ func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 	if out, err = c.run(ctx, c.kind, "export", "kubeconfig", "--name", ClusterName, "--kubeconfig", c.kubeconfig); err != nil {
 		return state, string(out), err
 	}
-	// Mappings are fixed at creation, so read what it got.
-	if out, err = c.run(ctx, "docker", "port", nodeName); err != nil {
-		return state, string(out), err
-	}
-	state.Ports = parsePorts(string(out))
-	if out, err = c.run(ctx, "docker", "inspect", "-f", "{{range .Mounts}}{{.Destination}}\n{{end}}", nodeName); err != nil {
-		return state, string(out), err
-	}
-	if len(state.Ports) != len(clusterPorts) || !hasLine(string(out), nodeStorageDir) {
-		return ClusterState{}, "", ErrClusterOutdated
-	}
 	return state, "", nil
+}
+
+// Ours means every browser port on 127.0.0.1 and our data folder.
+func (c *Cluster) ownedSettings(inspect string) (running bool, ports Ports, ok bool) {
+	lines := strings.Split(strings.TrimSpace(inspect), "\n")
+	if len(lines) != 3 {
+		return false, nil, false
+	}
+	var bindings map[string][]struct{ HostIp, HostPort string }
+	var binds []string
+	if json.Unmarshal([]byte(lines[1]), &bindings) != nil || json.Unmarshal([]byte(lines[2]), &binds) != nil {
+		return false, nil, false
+	}
+	ports = Ports{}
+	for _, cp := range clusterPorts {
+		b := bindings[fmt.Sprintf("%d/tcp", cp.inNodes)]
+		if len(b) != 1 || b[0].HostIp != "127.0.0.1" {
+			return false, nil, false
+		}
+		host, err := strconv.Atoi(b[0].HostPort)
+		if err != nil {
+			return false, nil, false
+		}
+		ports[cp.name] = host
+	}
+	return lines[0] == "true", ports, mountsData(binds, filepath.Join(c.dir, "data"))
+}
+
+// Docker Desktop prefixes sources, e.g. /host_mnt/Users/...
+func mountsData(binds []string, dataDir string) bool {
+	for _, b := range binds {
+		src, rest, found := strings.Cut(b, ":"+nodeStorageDir)
+		if found && (rest == "" || strings.HasPrefix(rest, ":")) && strings.HasSuffix(src, dataDir) {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Cluster) waitReady(ctx context.Context) ([]byte, error) {
@@ -234,27 +266,6 @@ func kindConfig(ports Ports, dataDir string) string {
 	}
 	fmt.Fprintf(&b, "  extraMounts:\n  - hostPath: %q\n    containerPath: %s\n", dataDir, nodeStorageDir)
 	return b.String()
-}
-
-// Lines look like "30080/tcp -> 127.0.0.1:8080".
-var portLine = regexp.MustCompile(`^(\d+)/tcp -> [^:]+:(\d+)$`)
-
-func parsePorts(out string) Ports {
-	ports := Ports{}
-	for _, line := range strings.Split(out, "\n") {
-		m := portLine.FindStringSubmatch(strings.TrimSpace(line))
-		if m == nil {
-			continue
-		}
-		inNodes, _ := strconv.Atoi(m[1])
-		host, _ := strconv.Atoi(m[2])
-		for _, cp := range clusterPorts {
-			if cp.inNodes == inNodes {
-				ports[cp.name] = host
-			}
-		}
-	}
-	return ports
 }
 
 // Exact match: "testkube-dev" is someone else's cluster.
