@@ -55,6 +55,7 @@ var installableTools = []string{"kubectl", "helm", "kind"}
 type host interface {
 	LookPath(name string) (string, error)
 	ToolVersion(ctx context.Context, path string, args ...string) string
+	Reachable(ctx context.Context, url string) bool
 	FreeDiskAt(path string) (free uint64, visible bool, err error)
 	OSVersion() string
 }
@@ -94,10 +95,11 @@ func (realHost) OSVersion() string {
 }
 
 type Checker struct {
-	host     host
-	docker   dockerClient
-	info     *dockerInfo
-	diskFree *uint64
+	host        host
+	docker      dockerClient
+	info        *dockerInfo
+	diskFree    *uint64
+	unreachable []string
 }
 
 // Facts are the measured values behind the results, for tracking.
@@ -117,6 +119,9 @@ func (c *Checker) Facts() map[string]any {
 	}
 	if c.diskFree != nil {
 		facts["disk_free_gb"] = roundGB(*c.diskFree)
+	}
+	if len(c.unreachable) > 0 {
+		facts["network_unreachable"] = c.unreachable
 	}
 	return facts
 }

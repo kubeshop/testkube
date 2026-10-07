@@ -25,6 +25,7 @@ type fakeHost struct {
 	free        uint64
 	diskVisible bool
 	diskErr     error
+	blocked     map[string]bool
 }
 
 func (f fakeHost) LookPath(name string) (string, error) {
@@ -40,6 +41,10 @@ func (f fakeHost) FreeDiskAt(string) (uint64, bool, error) {
 
 func (f fakeHost) ToolVersion(context.Context, string, ...string) string {
 	return "v1.0.0"
+}
+
+func (f fakeHost) Reachable(_ context.Context, url string) bool {
+	return !f.blocked[url]
 }
 
 func (f fakeHost) OSVersion() string {
@@ -124,6 +129,19 @@ func TestCheckTools_DockerBlocksButMissingToolsOnlyWarn(t *testing.T) {
 			assert.Equal(t, tt.wantDockerDetail, results[0].Detail)
 		})
 	}
+}
+
+func TestCheckNetwork_NamesBlockedSitesButOnlyWarns(t *testing.T) {
+	checker := &Checker{host: fakeHost{blocked: map[string]bool{
+		"https://registry-1.docker.io/v2/": true,
+		"https://github.com/":              true,
+	}}}
+
+	r := checker.CheckNetwork(context.Background())
+
+	assert.Equal(t, StatusWarn, r.Status)
+	assert.Equal(t, "can't reach Docker Hub, github.com", r.Detail)
+	assert.Equal(t, []string{"Docker Hub", "github.com"}, checker.Facts()["network_unreachable"])
 }
 
 func TestSemver_ReadsEachToolsVersionOutput(t *testing.T) {

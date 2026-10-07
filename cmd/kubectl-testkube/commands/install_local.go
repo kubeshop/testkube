@@ -58,7 +58,7 @@ func NewInstallLocalCmd() *cobra.Command {
 				os.Exit(1)
 			}
 			printStep(3, "Checking this machine")
-			machine := checker.CheckMachine(cmd.Context())
+			machine := append(checker.CheckMachine(cmd.Context()), checker.CheckNetwork(cmd.Context()))
 			exitIfCancelled(cmd, tracker, "machine")
 			for _, r := range machine {
 				printCheckResult(r)
