@@ -370,7 +370,7 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 
 **Location**: [`pkg/localinstall/`](pkg/localinstall/), command [`cmd/kubectl-testkube/commands/install_local.go`](cmd/kubectl-testkube/commands/install_local.go)
 
-`testkube install local` (hidden) runs preflight checks before a laptop install. Missing, unreachable or permission-denied Docker blocks; missing `kubectl`, `helm` or `kind` and low Docker CPU, memory or disk only warn. Resources come from `docker info`, so Docker Desktop's VM limits apply rather than the host's.
+`testkube install local` (hidden) runs preflight checks before a laptop install. Missing, unreachable or permission-denied Docker blocks; missing `kubectl`, `helm` or `kind` and low Docker CPU, memory or disk only warn. Resources come from `docker info`, so Docker Desktop's VM limits apply rather than the host's. Missing tools are then downloaded at pinned versions, checksum-verified, into `~/.testkube/bin`; that folder is appended to the CLI's own `PATH`, so the user's versions still win.
 
 Each step is reported to PostHog (project "On Prem Trials", via the `t.testkube.io` proxy) by [`pkg/telemetry/install_tracker.go`](pkg/telemetry/install_tracker.go), so drop-off can be measured per step. Once the license key is valid, events are linked to the license owner's email (`GetEmail`), merging the earlier anonymous ones. A one-line notice is printed first; `DO_NOT_TRACK` or the CLI's `telemetryEnabled: false` disables the events and the notice.
 

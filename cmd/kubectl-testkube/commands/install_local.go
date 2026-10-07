@@ -36,6 +36,8 @@ func NewInstallLocalCmd() *cobra.Command {
 				tracker.Identify(telemetry.GetEmail(key))
 			}
 
+			// Finds tools a previous run installed.
+			_ = localinstall.AddToolsDirToPath()
 			checker := localinstall.NewChecker()
 			results := checker.CheckTools(cmd.Context())
 			exitIfCancelled(cmd, tracker, "tools")
@@ -55,6 +57,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			}
 			trackChecks(tracker, append(results, machine...), checker.Facts())
 			tracker.Send("install_local_checks_done", nil)
+			installMissingTools(cmd, tracker, results)
 			tracker.Wait()
 		},
 	}
@@ -140,6 +143,61 @@ func abortInstall(tracker *telemetry.InstallTracker, stage string) {
 	tracker.Send("install_local_aborted", map[string]any{"stage": stage})
 	tracker.Wait()
 	os.Exit(130)
+}
+
+func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, results []localinstall.Result) {
+	var missing []string
+	for _, r := range results {
+		if r.Status == localinstall.StatusWarn && localinstall.ToolVersion(r.Name) != "" {
+			missing = append(missing, r.Name)
+		}
+	}
+	if len(missing) == 0 {
+		return
+	}
+	ui.NL()
+	installer, err := localinstall.NewToolInstaller()
+	if err != nil {
+		failToolInstall(tracker, missing[0], err)
+	}
+	for _, name := range missing {
+		version := localinstall.ToolVersion(name)
+		spinner := ui.NewSpinner(fmt.Sprintf("Installing %s %s", name, version))
+		_, err := installer.Install(cmd.Context(), name)
+		// Its own success line would clash with our check rows.
+		spinner.RemoveWhenDone = true
+		_ = spinner.Stop()
+		exitIfCancelled(cmd, tracker, "tool_install")
+		if err != nil {
+			failToolInstall(tracker, name, err)
+		}
+		printCheckResult(localinstall.Result{Name: name, Status: localinstall.StatusPass, Detail: version + " installed"})
+	}
+	tracker.Send("install_local_tools_installed", map[string]any{"tools": missing})
+}
+
+func failToolInstall(tracker *telemetry.InstallTracker, name string, err error) {
+	r := localinstall.Result{Name: name, Status: localinstall.StatusFail}
+	// Fixed reasons only: raw errors can leak paths or proxies.
+	var reason string
+	switch {
+	case errors.Is(err, localinstall.ErrUnsupportedPlatform):
+		reason, r.Detail = "unsupported_platform", "no download for this system"
+		r.Fix = "Install " + name + " yourself, then run again: " + localinstall.ToolManualURL(name)
+	case errors.Is(err, localinstall.ErrChecksumMismatch):
+		reason, r.Detail = "checksum", "download was damaged"
+		r.Fix = "Run again. If it keeps failing, a proxy may be changing downloads"
+	case errors.Is(err, localinstall.ErrSaveFailed):
+		reason, r.Detail = "save", "could not save"
+		r.Fix = err.Error() + "\nCheck that you can write to ~/.testkube/bin, then run again"
+	default:
+		reason, r.Detail = "download", "could not download"
+		r.Fix = err.Error() + "\nCheck your network, proxy or firewall, then run again"
+	}
+	printCheckResult(r)
+	tracker.Send("install_local_failed", map[string]any{"stage": "tool_install", "tool": name, "reason": reason})
+	tracker.Wait()
+	os.Exit(1)
 }
 
 // One row per run: every status and measured value together.
