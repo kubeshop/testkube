@@ -30,7 +30,9 @@ type Result struct {
 	Status  Status
 	Version string
 	Detail  string
-	Fix     string
+	// Secondary info, shown dimmed after Detail.
+	Hint string
+	Fix  string
 }
 
 const (
@@ -246,10 +248,11 @@ func freeDiskAt(root string) (free uint64, visible bool, err error) {
 }
 
 func minimumResult(name string, ok bool, have, need string) Result {
+	// Shown on pass too, so users see their headroom.
 	if ok {
-		return Result{Name: name, Status: StatusPass, Detail: have}
+		return Result{Name: name, Status: StatusPass, Detail: have, Hint: need}
 	}
-	return Result{Name: name, Status: StatusWarn, Detail: have + ", " + need, Fix: resourcesHint}
+	return Result{Name: name, Status: StatusWarn, Detail: have, Hint: need, Fix: resourcesHint}
 }
 
 func formatGB(bytes uint64) string {

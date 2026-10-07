@@ -47,7 +47,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			exitIfCancelled(cmd, tracker, "tools")
 			for _, r := range results {
 				if r.Status == localinstall.StatusWarn {
-					r.Detail += ", will be installed in step 4"
+					r.Hint = "will be installed in step 4"
 				}
 				printCheckResult(r)
 			}
@@ -263,11 +263,15 @@ func printCheckResult(r localinstall.Result) {
 		localinstall.StatusWarn: ui.LightYellow("⚠"),
 		localinstall.StatusFail: ui.LightRed("✖"),
 	}[r.Status]
-	detail := ui.LightGray(r.Detail)
-	if r.Version != "" {
-		detail = fmt.Sprintf("%-10s %s", r.Version, detail)
+	// Padded before coloring: escape codes break %-12s widths.
+	line := r.Detail
+	switch {
+	case r.Version != "":
+		line = ui.LightGray(fmt.Sprintf("%-12s", r.Version)) + r.Detail
+	case r.Hint != "":
+		line = fmt.Sprintf("%-12s", r.Detail) + ui.LightGray(r.Hint)
 	}
-	ui.Printf("  %s %-10s %s\n", icon, r.Name, detail)
+	ui.Printf("  %s %-10s %s\n", icon, r.Name, line)
 	if r.Fix == "" {
 		return
 	}
