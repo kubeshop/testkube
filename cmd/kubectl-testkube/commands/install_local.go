@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -276,8 +277,14 @@ func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) {
 		r.Hint = "busy port moved: " + strings.Join(moved, ", ")
 	}
 	printCheckResult(r)
+	disk, free := cluster.CheckDisk(cmd.Context())
+	printCheckResult(disk)
 	ui.Printf("  %s\n", ui.LightGray("Your Testkube data is kept in ~/.testkube/data"))
-	tracker.Send("install_local_cluster", map[string]any{"created": state.Created, "ports_moved": len(state.Ports.Moved())})
+	props := map[string]any{"created": state.Created, "ports_moved": len(state.Ports.Moved()), "disk": string(disk.Status)}
+	if free > 0 {
+		props["node_disk_free_gb"] = free
+	}
+	tracker.Send("install_local_cluster", props)
 }
 
 // pterm's light white text vanishes on light terminals.
@@ -335,22 +342,27 @@ func trackChecks(tracker *telemetry.InstallTracker, results []localinstall.Resul
 	tracker.Send("install_local_checks", props)
 }
 
+// Two spaces minimum, so long values never touch the next column.
+func column(s string) string {
+	return s + strings.Repeat(" ", max(2, 16-utf8.RuneCountInString(s)))
+}
+
 func printCheckResult(r localinstall.Result) {
 	icon := map[localinstall.Status]string{
 		localinstall.StatusPass: ui.Green("✔"),
 		localinstall.StatusWarn: ui.LightYellow("⚠"),
 		localinstall.StatusFail: ui.LightRed("✖"),
 	}[r.Status]
-	// Padded before coloring: escape codes break %-12s widths.
+	// Padded before coloring: escape codes break widths.
 	line := r.Detail
 	switch {
 	case r.Version != "":
-		line = ui.LightGray(fmt.Sprintf("%-12s", r.Version)) + r.Detail
+		line = ui.LightGray(column(r.Version)) + r.Detail
 		if r.Hint != "" {
 			line += "  " + ui.LightGray(r.Hint)
 		}
 	case r.Hint != "":
-		line = fmt.Sprintf("%-12s", r.Detail) + ui.LightGray(r.Hint)
+		line = column(r.Detail) + ui.LightGray(r.Hint)
 	}
 	ui.Printf("  %s %-10s %s\n", icon, r.Name, line)
 	if r.Fix == "" {

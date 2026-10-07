@@ -178,6 +178,30 @@ func (c *Cluster) waitReady(ctx context.Context) ([]byte, error) {
 	}
 }
 
+// Docker Desktop hides its disk from the host; the node sees it.
+func (c *Cluster) CheckDisk(ctx context.Context) (r Result, freeGB float64) {
+	out, err := c.run(ctx, "docker", "exec", nodeName, "df", "-Pk", "/var")
+	free, ok := parseDfAvailable(string(out))
+	if err != nil || !ok {
+		return Result{Name: "disk", Status: StatusWarn, Detail: "could not read free space"}, 0
+	}
+	return minimumResult("disk", free >= minFreeDisk, formatGB(free)+" free", "needs "+formatGB(minFreeDisk)), roundGB(free)
+}
+
+// df -P prints a header, then: filesystem, blocks, used, available.
+func parseDfAvailable(out string) (uint64, bool) {
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) < 2 {
+		return 0, false
+	}
+	fields := strings.Fields(lines[len(lines)-1])
+	if len(fields) < 4 {
+		return 0, false
+	}
+	kb, err := strconv.ParseUint(fields[3], 10, 64)
+	return kb * 1024, err == nil
+}
+
 func pickPorts(free func(int) bool) Ports {
 	ports, taken := Ports{}, map[int]bool{}
 	for _, cp := range clusterPorts {

@@ -193,3 +193,29 @@ func TestClusterEnsure_FailedStartShowsDockersReason(t *testing.T) {
 	assert.ErrorIs(t, err, ErrClusterStart)
 	assert.Contains(t, out, "port is already allocated")
 }
+
+func TestCheckDisk_WarnsWhenLowOrUnreadable(t *testing.T) {
+	df := func(availableKB string) string {
+		return "Filesystem 1024-blocks Used Available Capacity Mounted on\noverlay 61202244 1000 " + availableKB + " 2% /\n"
+	}
+	tests := []struct {
+		name   string
+		out    string
+		err    error
+		status Status
+	}{
+		{"plenty of space", df("44363220"), nil, StatusPass},
+		{"under 10 GB", df("5242880"), nil, StatusWarn},
+		{"node not answering", "", errors.New("exit status 1"), StatusWarn},
+		{"unexpected output", "df: /var: No such file", nil, StatusWarn},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Cluster{run: func(context.Context, string, ...string) ([]byte, error) { return []byte(tt.out), tt.err }}
+
+			r, _ := c.CheckDisk(context.Background())
+
+			assert.Equal(t, tt.status, r.Status)
+		})
+	}
+}
