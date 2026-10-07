@@ -3,6 +3,7 @@ package localinstall
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -24,9 +25,9 @@ type fakeValidator struct {
 	calls int
 }
 
-func (f *fakeValidator) Validate(key string) (bool, error) {
+func (f *fakeValidator) Validate(key string) (bool, time.Time, error) {
 	f.calls++
-	return f.valid[key], f.err
+	return f.valid[key], time.Time{}, f.err
 }
 
 func TestLicenseStep_Run(t *testing.T) {
@@ -54,9 +55,9 @@ func TestLicenseStep_Run(t *testing.T) {
 			validator := &fakeValidator{valid: map[string]bool{"good": true}, err: tt.validatorErr}
 			step := &LicenseStep{validator: validator, prompter: prompter}
 
-			key, attempts, err := step.Run(tt.flagKey)
+			license, attempts, err := step.Run(tt.flagKey)
 
-			assert.Equal(t, tt.wantKey, key)
+			assert.Equal(t, tt.wantKey, license.Key)
 			assert.ErrorIs(t, err, tt.wantErr)
 			var statuses []string
 			for _, a := range attempts {

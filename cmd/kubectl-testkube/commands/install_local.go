@@ -24,12 +24,15 @@ func NewInstallLocalCmd() *cobra.Command {
 		// Hidden until the guided installer is complete.
 		Hidden: true,
 		Run: func(cmd *cobra.Command, args []string) {
+			printBanner()
 			tracker := newInstallTracker()
 			if tracker.Enabled() {
-				ui.Printf("%s\n\n", ui.LightGray(telemetry.InstallNotice))
+				ui.Printf("%s\n", ui.LightGray(telemetry.InstallNotice))
 			}
 			tracker.Send("install_local_started", nil)
+			printPlan()
 
+			printStep(1, "License")
 			key := runLicenseStep(tracker, licenseKey)
 			// Opted-out users' keys must not reach the owner lookup.
 			if tracker.Enabled() {
@@ -38,6 +41,7 @@ func NewInstallLocalCmd() *cobra.Command {
 
 			// Finds tools a previous run installed.
 			_ = localinstall.AddToolsDirToPath()
+			printStep(2, "Checks")
 			checker := localinstall.NewChecker()
 			results := checker.CheckTools(cmd.Context())
 			exitIfCancelled(cmd, tracker, "tools")
@@ -61,22 +65,30 @@ func NewInstallLocalCmd() *cobra.Command {
 			tracker.Wait()
 		},
 	}
-	cmd.Flags().StringVarP(&licenseKey, "license", "l", "", "Testkube license key from your trial email")
+	cmd.Flags().StringVarP(&licenseKey, "license", "l", "", "Testkube license key from your trial email (or set TESTKUBE_LICENSE)")
 	return cmd
 }
 
 func runLicenseStep(tracker *telemetry.InstallTracker, flagKey string) string {
+	// curl | bash can't pass flags easily; a variable can.
+	if flagKey == "" {
+		flagKey = os.Getenv("TESTKUBE_LICENSE")
+	}
 	if flagKey == "" && !ui.StdinIsInteractive() {
 		failLicense(tracker, localinstall.Result{Name: "license", Status: localinstall.StatusFail, Detail: "no key given",
-			Fix: "Pass it with --license <key>. " + localinstall.LicenseHelp})
+			Fix: "Pass it with --license <key> or TESTKUBE_LICENSE=<key>. " + localinstall.LicenseHelp})
 	}
-	key, attempts, err := localinstall.NewLicenseStep(terminalKeyPrompter{tracker: tracker}).Run(flagKey)
+	license, attempts, err := localinstall.NewLicenseStep(terminalKeyPrompter{tracker: tracker}).Run(flagKey)
 	for _, a := range attempts {
 		tracker.Send("install_local_license", map[string]any{"attempt": a.Number, "status": a.Status})
 	}
 	if err == nil {
-		printCheckResult(localinstall.Result{Name: "license", Status: localinstall.StatusPass, Detail: "valid"})
-		return key
+		detail := "valid"
+		if !license.Expiry.IsZero() {
+			detail = "valid until " + license.Expiry.Local().Format("2 Jan 2006")
+		}
+		printCheckResult(localinstall.Result{Name: "license", Status: localinstall.StatusPass, Detail: detail})
+		return license.Key
 	}
 	failLicense(tracker, licenseFailure(err))
 	return "" // failLicense exits
@@ -145,7 +157,33 @@ func abortInstall(tracker *telemetry.InstallTracker, stage string) {
 	os.Exit(130)
 }
 
+func printBanner() {
+	pterm.DefaultBox.WithBoxStyle(pterm.NewStyle(pterm.FgLightMagenta)).Println(
+		pterm.Bold.Sprint("Testkube On-Prem Installer") + "  " + ui.LightGray(common.Version) +
+			"\nTry Testkube on your own machine.")
+}
+
+// Numbered like the step headers, so [3/5] means line 3.
+func printPlan() {
+	ui.Printf("\nThis installer will\n" +
+		"  1. check your license key\n" +
+		"  2. check Docker and this machine\n" +
+		"  3. install kubectl, helm and kind into ~/.testkube/bin, if missing\n" +
+		"  4. create a local cluster called \"testkube\" in Docker\n" +
+		"  5. install Testkube and open it in your browser\n\n")
+	ui.Printf("%s\n", ui.LightGray("It takes about 5 minutes. Your own tools and clusters are not changed.\n"+
+		"Press Ctrl+C to exit at any time."))
+}
+
+// Later slices add Cluster and Testkube.
+const installSteps = 5
+
+func printStep(n int, title string) {
+	ui.Printf("\n%s %s\n", ui.LightGray(fmt.Sprintf("[%d/%d]", n, installSteps)), title)
+}
+
 func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, results []localinstall.Result) {
+	printStep(3, "Tools")
 	var missing []string
 	for _, r := range results {
 		if r.Status == localinstall.StatusWarn && localinstall.ToolVersion(r.Name) != "" {
@@ -153,9 +191,9 @@ func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, 
 		}
 	}
 	if len(missing) == 0 {
+		printCheckResult(localinstall.Result{Name: "tools", Status: localinstall.StatusPass, Detail: "nothing to install"})
 		return
 	}
-	ui.NL()
 	installer, err := localinstall.NewToolInstaller()
 	if err != nil {
 		failToolInstall(tracker, missing[0], err)

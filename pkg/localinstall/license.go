@@ -3,6 +3,7 @@ package localinstall
 import (
 	"errors"
 	"strings"
+	"time"
 
 	licensevalidator "github.com/kubeshop/testkube/pkg/diagnostics/validators/license"
 )
@@ -25,7 +26,13 @@ type KeyPrompter interface {
 }
 
 type licenseValidator interface {
-	Validate(key string) (valid bool, err error)
+	Validate(key string) (valid bool, expiry time.Time, err error)
+}
+
+// Expiry is zero when the service sends none.
+type License struct {
+	Key    string
+	Expiry time.Time
 }
 
 // LicenseAttempt is one try, kept so each can be tracked.
@@ -44,44 +51,46 @@ func NewLicenseStep(prompter KeyPrompter) *LicenseStep {
 }
 
 // A flag key can't be retyped: one try only.
-func (s *LicenseStep) Run(flagKey string) (key string, attempts []LicenseAttempt, err error) {
+func (s *LicenseStep) Run(flagKey string) (license License, attempts []LicenseAttempt, err error) {
 	maxAttempts := MaxLicenseAttempts
 	if flagKey != "" {
 		maxAttempts = 1
 	}
 	for n := 1; n <= maxAttempts; n++ {
-		key = strings.TrimSpace(flagKey)
+		key := strings.TrimSpace(flagKey)
 		if flagKey == "" {
 			answer, err := s.prompter.Ask(n)
 			if err != nil {
-				return "", attempts, err
+				return License{}, attempts, err
 			}
 			key = strings.TrimSpace(answer)
 		}
 		if key == "" {
-			return "", append(attempts, LicenseAttempt{Number: n, Status: "missing"}), ErrLicenseMissing
+			return License{}, append(attempts, LicenseAttempt{Number: n, Status: "missing"}), ErrLicenseMissing
 		}
-		valid, err := s.validator.Validate(key)
+		valid, expiry, err := s.validator.Validate(key)
 		switch {
 		case err != nil:
 			// Retrying won't help; the cluster would fail the same way.
-			return "", append(attempts, LicenseAttempt{Number: n, Status: "unreachable"}), ErrLicenseUnreachable
+			return License{}, append(attempts, LicenseAttempt{Number: n, Status: "unreachable"}), ErrLicenseUnreachable
 		case valid:
-			return key, append(attempts, LicenseAttempt{Number: n, Status: "valid"}), nil
+			return License{Key: key, Expiry: expiry}, append(attempts, LicenseAttempt{Number: n, Status: "valid"}), nil
 		}
 		attempts = append(attempts, LicenseAttempt{Number: n, Status: "invalid"})
 	}
-	return "", attempts, ErrLicenseInvalid
+	return License{}, attempts, ErrLicenseInvalid
 }
 
 type licenseService struct {
 	client *licensevalidator.Client
 }
 
-func (s licenseService) Validate(key string) (bool, error) {
+func (s licenseService) Validate(key string) (bool, time.Time, error) {
 	resp, err := s.client.ValidateLicense(licensevalidator.LicenseRequest{License: key})
 	if err != nil {
-		return false, err
+		return false, time.Time{}, err
 	}
-	return resp.Valid, nil
+	// Display only: an odd format must not fail validation.
+	expiry, _ := time.Parse(time.RFC3339, resp.License.Expiry)
+	return resp.Valid, expiry, nil
 }
