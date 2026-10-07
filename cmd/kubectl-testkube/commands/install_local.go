@@ -273,6 +273,7 @@ func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) {
 		r.Hint = "busy port moved: " + strings.Join(moved, ", ")
 	}
 	printCheckResult(r)
+	ui.Printf("  %s\n", ui.LightGray("Your Testkube data is kept in ~/.testkube/data"))
 	tracker.Send("install_local_cluster", map[string]any{"created": state.Created, "ports_moved": len(state.Ports.Moved())})
 }
 
@@ -289,7 +290,7 @@ func startSpinner(text string) *pterm.SpinnerPrinter {
 
 func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
 	r := localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "could not create"}
-	if errors.Is(err, localinstall.ErrClusterWithoutPorts) {
+	if errors.Is(err, localinstall.ErrClusterOutdated) {
 		r.Detail = "made by an older installer"
 		r.Fix = "Delete it, then run again:\n  ~/.testkube/bin/kind delete cluster --name " + localinstall.ClusterName
 	} else {

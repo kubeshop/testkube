@@ -2,8 +2,10 @@ package localinstall
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -18,14 +20,22 @@ const dockerPortOutput = `30080/tcp -> 127.0.0.1:8080
 30990/tcp -> 127.0.0.1:9090
 `
 
+const mounts = "/var/lib/docker\n/var/local-path-provisioner\n"
+
 func fakeKind(clusters, dockerPort string, calls *[]string) runFunc {
+	return fakeKindWithMounts(clusters, dockerPort, mounts, calls)
+}
+
+func fakeKindWithMounts(clusters, dockerPort, mounts string, calls *[]string) runFunc {
 	return func(_ context.Context, name string, args ...string) ([]byte, error) {
 		*calls = append(*calls, name+" "+strings.Join(args, " "))
 		switch {
 		case args[0] == "get":
 			return []byte(clusters), nil
-		case name == "docker":
+		case name == "docker" && args[0] == "port":
 			return []byte(dockerPort), nil
+		case name == "docker" && args[0] == "inspect":
+			return []byte(mounts), nil
 		}
 		return nil, nil
 	}
@@ -48,6 +58,7 @@ func TestClusterEnsure_ReusesOursOnly(t *testing.T) {
 			"kind get clusters",
 			"kind export kubeconfig --name testkube --kubeconfig " + kubeconfig,
 			"docker port testkube-control-plane",
+			"docker inspect -f {{range .Mounts}}{{.Destination}}\n{{end}} testkube-control-plane",
 		}},
 		{"a similar name is someone else's", "testkube-dev\n", true, []string{"kind get clusters", create}},
 		{"no clusters at all", "No kind clusters found.\n", true, []string{"kind get clusters", create}},
@@ -78,13 +89,22 @@ func TestClusterEnsure_ReusedClusterKeepsItsPorts(t *testing.T) {
 	assert.Equal(t, []string{"storage 9000→9001"}, state.Ports.Moved())
 }
 
-func TestClusterEnsure_OldClusterWithoutPortsIsRejected(t *testing.T) {
-	var calls []string
-	c := &Cluster{kind: "kind", dir: t.TempDir(), run: fakeKind("testkube\n", "", &calls)}
+func TestClusterEnsure_OlderClusterIsRejected(t *testing.T) {
+	for name, run := range map[string]func(*[]string) runFunc{
+		"no ports": func(c *[]string) runFunc { return fakeKind("testkube\n", "", c) },
+		"no data folder": func(c *[]string) runFunc {
+			return fakeKindWithMounts("testkube\n", dockerPortOutput, "/var/lib/docker\n", c)
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var calls []string
+			c := &Cluster{kind: "kind", dir: t.TempDir(), run: run(&calls)}
 
-	_, _, err := c.Ensure(context.Background())
+			_, _, err := c.Ensure(context.Background())
 
-	assert.ErrorIs(t, err, ErrClusterWithoutPorts)
+			assert.ErrorIs(t, err, ErrClusterOutdated)
+		})
+	}
 }
 
 func TestPickPorts_MovesBusyPortsWithoutCollisions(t *testing.T) {
@@ -108,4 +128,21 @@ func TestClusterEnsure_PortsListenOnThisMachineOnly(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, len(clusterPorts), strings.Count(string(config), "hostPort:"))
 	assert.Equal(t, len(clusterPorts), strings.Count(string(config), "listenAddress: 127.0.0.1"))
+}
+
+func TestClusterEnsure_DataFolderIsMountedAndWritableByPods(t *testing.T) {
+	dir := t.TempDir()
+	var calls []string
+	c := &Cluster{kind: "kind", dir: dir, portFree: allFree, run: fakeKind("", "", &calls)}
+
+	_, _, err := c.Ensure(context.Background())
+	require.NoError(t, err)
+
+	config, _ := os.ReadFile(filepath.Join(dir, "kind.yaml"))
+	assert.Contains(t, string(config), fmt.Sprintf("hostPath: %q\n    containerPath: /var/local-path-provisioner", filepath.Join(dir, "data")))
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(filepath.Join(dir, "data"))
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o777), info.Mode().Perm())
+	}
 }

@@ -20,9 +20,12 @@ const (
 
 	// kind requires the digest; the tag alone may change.
 	nodeImage = "kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5"
+
+	// kind's storage writes here; mounting it keeps data on the host.
+	nodeStorageDir = "/var/local-path-provisioner"
 )
 
-var ErrClusterWithoutPorts = errors.New("the existing cluster has no Testkube port mappings")
+var ErrClusterOutdated = errors.New("the existing cluster lacks Testkube ports or data folder")
 
 // Browser-facing; Testkube's settings embed these exact addresses.
 var clusterPorts = []struct {
@@ -100,18 +103,26 @@ func (c *Cluster) Ensure(ctx context.Context) (ClusterState, string, error) {
 			return ClusterState{}, string(out), err
 		}
 		ports := parsePorts(string(out))
-		if len(ports) != len(clusterPorts) {
-			return ClusterState{}, "", ErrClusterWithoutPorts
+		if out, err = c.run(ctx, "docker", "inspect", "-f", "{{range .Mounts}}{{.Destination}}\n{{end}}", ClusterName+"-control-plane"); err != nil {
+			return ClusterState{}, string(out), err
+		}
+		if len(ports) != len(clusterPorts) || !hasLine(string(out), nodeStorageDir) {
+			return ClusterState{}, "", ErrClusterOutdated
 		}
 		return ClusterState{Ports: ports}, "", nil
 	}
 
 	ports := pickPorts(c.portFree)
-	if err := os.MkdirAll(c.dir, 0o755); err != nil {
+	data := filepath.Join(c.dir, "data")
+	if err := os.MkdirAll(data, 0o755); err != nil {
+		return ClusterState{}, "", err
+	}
+	// Pods write as their own users (postgres is uid 70 or 999).
+	if err := os.Chmod(data, 0o777); err != nil {
 		return ClusterState{}, "", err
 	}
 	config := filepath.Join(c.dir, "kind.yaml")
-	if err := os.WriteFile(config, []byte(kindConfig(ports)), 0o644); err != nil {
+	if err := os.WriteFile(config, []byte(kindConfig(ports, data)), 0o644); err != nil {
 		return ClusterState{}, "", err
 	}
 	out, err = c.run(ctx, c.kind, "create", "cluster", "--name", ClusterName, "--config", config,
@@ -142,12 +153,13 @@ func portFree(port int) bool {
 }
 
 // 127.0.0.1 only: a trial must not be reachable from the network.
-func kindConfig(ports Ports) string {
+func kindConfig(ports Ports, dataDir string) string {
 	var b strings.Builder
 	b.WriteString("kind: Cluster\napiVersion: kind.x-k8s.io/v1alpha4\nnodes:\n- role: control-plane\n  extraPortMappings:\n")
 	for _, cp := range clusterPorts {
 		fmt.Fprintf(&b, "  - containerPort: %d\n    hostPort: %d\n    listenAddress: 127.0.0.1\n", cp.inNodes, ports[cp.name])
 	}
+	fmt.Fprintf(&b, "  extraMounts:\n  - hostPath: %q\n    containerPath: %s\n", dataDir, nodeStorageDir)
 	return b.String()
 }
 
