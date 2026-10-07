@@ -228,7 +228,12 @@ func (c *Checker) checkInstallable(ctx context.Context, name string) Result {
 	if err != nil {
 		return Result{Name: name, Status: StatusWarn, Detail: "not found"}
 	}
-	return Result{Name: name, Status: StatusPass, Version: c.host.ToolVersion(ctx, path, versionArgs[name]...), Detail: path}
+	version := c.host.ToolVersion(ctx, path, versionArgs[name]...)
+	// Keeps the row aligned with the others.
+	if version == "" {
+		version = "unknown"
+	}
+	return Result{Name: name, Status: StatusPass, Version: version, Detail: path}
 }
 
 // Docker Desktop's data dir lives inside its VM, invisible here.
