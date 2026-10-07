@@ -8,8 +8,11 @@ import (
 	"time"
 )
 
-// Sites the cluster and Testkube steps download from.
+// Sites the tools, cluster and Testkube steps download from.
 var networkProbes = []struct{ name, url string }{
+	{"dl.k8s.io", "https://dl.k8s.io/"},
+	{"get.helm.sh", "https://get.helm.sh/"},
+	{"kind.sigs.k8s.io", "https://kind.sigs.k8s.io/"},
 	{"Docker Hub", "https://registry-1.docker.io/v2/"},
 	{"kubeshop.github.io", "https://kubeshop.github.io/helm-charts/index.yaml"},
 	{"raw.githubusercontent.com", "https://raw.githubusercontent.com/"},
