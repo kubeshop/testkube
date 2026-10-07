@@ -68,6 +68,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			trackChecks(tracker, append(results, machine...), checker.Facts())
 			tracker.Send("install_local_checks_done", nil)
 			installMissingTools(cmd, tracker, checker, results)
+			runClusterStep(cmd, tracker)
 			tracker.Wait()
 		},
 	}
@@ -214,10 +215,8 @@ func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, 
 	}
 	for _, name := range missing {
 		version := localinstall.ToolVersion(name)
-		spinner := ui.NewSpinner(fmt.Sprintf("Installing %s %s", name, version))
+		spinner := startSpinner(fmt.Sprintf("Installing %s %s", name, version))
 		_, err := installer.Install(cmd.Context(), name)
-		// Its own success line would clash with our check rows.
-		spinner.RemoveWhenDone = true
 		_ = spinner.Stop()
 		exitIfCancelled(cmd, tracker, "tool_install")
 		if err != nil {
@@ -250,6 +249,59 @@ func failToolInstall(tracker *telemetry.InstallTracker, name string, err error) 
 	tracker.Send("install_local_failed", map[string]any{"stage": "tool_install", "tool": name, "reason": reason})
 	tracker.Wait()
 	os.Exit(1)
+}
+
+func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) {
+	printStep(5, "Creating the cluster")
+	cluster, err := localinstall.NewCluster()
+	if err != nil {
+		failCluster(tracker, "", err)
+	}
+	spinner := startSpinner(fmt.Sprintf("Starting cluster %q (about 1 minute on first run)", localinstall.ClusterName))
+	created, out, err := cluster.Ensure(cmd.Context())
+	_ = spinner.Stop()
+	exitIfCancelled(cmd, tracker, "cluster")
+	if err != nil {
+		failCluster(tracker, out, err)
+	}
+	detail := "already exists"
+	if created {
+		detail = "created"
+	}
+	printCheckResult(localinstall.Result{Name: "cluster", Status: localinstall.StatusPass, Version: localinstall.KubernetesVersion, Detail: detail})
+	tracker.Send("install_local_cluster", map[string]any{"created": created})
+}
+
+// pterm's light white text vanishes on light terminals.
+// Removed when done: its success line would clash with our rows.
+func startSpinner(text string) *pterm.SpinnerPrinter {
+	spinner, _ := pterm.DefaultSpinner.
+		WithSequence(` ⠋ `, ` ⠹ `, ` ⠼ `, ` ⠦ `, ` ⠇ `).
+		WithMessageStyle(pterm.NewStyle(pterm.FgDefault)).
+		WithRemoveWhenDone(true).
+		Start(text)
+	return spinner
+}
+
+func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
+	reason := lastLines(out, 5)
+	if reason == "" {
+		reason = err.Error()
+	}
+	printCheckResult(localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "could not create",
+		Fix: reason + "\nCheck that Docker has enough memory and disk, then run again"})
+	tracker.Send("install_local_failed", map[string]any{"stage": "cluster"})
+	tracker.Wait()
+	os.Exit(1)
+}
+
+// kind prints progress first; the reason is at the end.
+func lastLines(out string, n int) string {
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) > n {
+		lines = lines[len(lines)-n:]
+	}
+	return strings.TrimSpace(strings.Join(lines, "\n"))
 }
 
 // One row per run: every status and measured value together.
