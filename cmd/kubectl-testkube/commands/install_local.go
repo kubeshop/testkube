@@ -190,7 +190,8 @@ func printStep(n int, title string) {
 }
 
 func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, checker *localinstall.Checker, results []localinstall.Result) {
-	printStep(4, "Installing missing tools")
+	printStep(4, "Preparing Testkube's tools")
+	ui.Printf("  %s\n", ui.LightGray("Testkube uses its own copies in ~/.testkube/bin. Yours are not changed."))
 	var missing []string
 	for _, r := range results {
 		if r.Status == localinstall.StatusWarn && localinstall.ToolVersion(r.Name) != "" {
@@ -200,10 +201,11 @@ func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, 
 	for _, name := range localinstall.OwnTools {
 		if checker.NeedsOwn(cmd.Context(), name) {
 			missing = append(missing, name)
+			continue
 		}
+		printCheckResult(localinstall.Result{Name: name, Status: localinstall.StatusPass, Version: localinstall.ToolVersion(name), Detail: "ready"})
 	}
 	if len(missing) == 0 {
-		printCheckResult(localinstall.Result{Name: "tools", Status: localinstall.StatusPass, Detail: "already installed"})
 		return
 	}
 	installer, err := localinstall.NewToolInstaller()
@@ -221,7 +223,7 @@ func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, 
 		if err != nil {
 			failToolInstall(tracker, name, err)
 		}
-		printCheckResult(localinstall.Result{Name: name, Status: localinstall.StatusPass, Version: version, Detail: "installed, checksum verified"})
+		printCheckResult(localinstall.Result{Name: name, Status: localinstall.StatusPass, Version: version, Detail: "downloaded, checksum verified"})
 	}
 	tracker.Send("install_local_tools_installed", map[string]any{"tools": missing})
 }
