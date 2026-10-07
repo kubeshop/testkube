@@ -35,7 +35,14 @@ const (
 	// connection at once, so the failures arrive in a run rather than in isolation. Only a
 	// successful poll clears the wait, and a runner that waits does not poll, so a long wait
 	// outlives the outage that caused it and nothing but a restart ends it.
-	maxPollBackoff = time.Second * 30
+	//
+	// Two bounds decide the value. It must be short enough that a runner returns to work
+	// promptly once the control plane answers again, because the runner idles for up to this
+	// long after that moment. It must be long enough to give a saturated control plane room,
+	// which the fleet size makes the weaker of the two. A failed call already waits out
+	// defaultCallTimeout before this applies, so that timeout and not this cap sets the floor
+	// on how fast a runner can retry.
+	maxPollBackoff = time.Second * 15
 	// pollBackoffDecay clears the failure count once a poll succeeds for this long. Without it
 	// the count only ever rises, so isolated failures hours apart still reach the cap.
 	pollBackoffDecay = time.Minute * 5
