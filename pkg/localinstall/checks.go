@@ -8,7 +8,9 @@ import (
 	"math"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/shirou/gopsutil/v4/disk"
 	gopsutilhost "github.com/shirou/gopsutil/v4/host"
@@ -23,10 +25,11 @@ const (
 )
 
 type Result struct {
-	Name   string
-	Status Status
-	Detail string
-	Fix    string
+	Name    string
+	Status  Status
+	Version string
+	Detail  string
+	Fix     string
 }
 
 const (
@@ -51,6 +54,7 @@ var installableTools = []string{"kubectl", "helm", "kind"}
 
 type host interface {
 	LookPath(name string) (string, error)
+	ToolVersion(ctx context.Context, path string, args ...string) string
 	FreeDiskAt(path string) (free uint64, visible bool, err error)
 	OSVersion() string
 }
@@ -59,6 +63,22 @@ type realHost struct{}
 
 func (realHost) LookPath(name string) (string, error) {
 	return exec.LookPath(name)
+}
+
+// Each tool prints its version differently; all contain vX.Y.Z.
+var semver = regexp.MustCompile(`v\d+\.\d+\.\d+`)
+
+var versionArgs = map[string][]string{
+	"kubectl": {"version", "--client"},
+	"helm":    {"version", "--short"},
+	"kind":    {"version"},
+}
+
+func (realHost) ToolVersion(ctx context.Context, path string, args ...string) string {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	out, _ := exec.CommandContext(ctx, path, args...).Output()
+	return semver.FindString(string(out))
 }
 
 func (realHost) FreeDiskAt(path string) (uint64, bool, error) {
@@ -108,7 +128,7 @@ func NewChecker() *Checker {
 func (c *Checker) CheckTools(ctx context.Context) []Result {
 	results := []Result{c.checkDocker(ctx)}
 	for _, name := range installableTools {
-		results = append(results, c.checkInstallable(name))
+		results = append(results, c.checkInstallable(ctx, name))
 	}
 	return results
 }
@@ -167,8 +187,7 @@ func (c *Checker) readDockerInfo(ctx context.Context) (dockerInfo, error) {
 }
 
 func (c *Checker) checkDocker(ctx context.Context) Result {
-	path, err := c.host.LookPath("docker")
-	if err != nil {
+	if _, err := c.host.LookPath("docker"); err != nil {
 		return Result{Name: "docker", Status: StatusFail, Detail: "not found", Fix: "Install Docker: https://docs.docker.com/get-docker/"}
 	}
 	if _, err := c.readDockerInfo(ctx); err != nil {
@@ -181,15 +200,19 @@ func (c *Checker) checkDocker(ctx context.Context) Result {
 		}
 		return Result{Name: "docker", Status: StatusFail, Detail: "not reachable", Fix: err.Error() + "\nStart Docker, then run the installer again"}
 	}
-	return Result{Name: "docker", Status: StatusPass, Detail: path}
+	version := ""
+	if c.info.ServerVersion != "" {
+		version = "v" + c.info.ServerVersion
+	}
+	return Result{Name: "docker", Status: StatusPass, Version: version, Detail: "running"}
 }
 
-func (c *Checker) checkInstallable(name string) Result {
+func (c *Checker) checkInstallable(ctx context.Context, name string) Result {
 	path, err := c.host.LookPath(name)
 	if err != nil {
-		return Result{Name: name, Status: StatusWarn, Detail: "not found, will be installed"}
+		return Result{Name: name, Status: StatusWarn, Detail: "not found"}
 	}
-	return Result{Name: name, Status: StatusPass, Detail: path}
+	return Result{Name: name, Status: StatusPass, Version: c.host.ToolVersion(ctx, path, versionArgs[name]...), Detail: path}
 }
 
 // Docker Desktop's data dir lives inside its VM, invisible here.

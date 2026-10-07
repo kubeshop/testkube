@@ -41,11 +41,14 @@ func NewInstallLocalCmd() *cobra.Command {
 
 			// Finds tools a previous run installed.
 			_ = localinstall.AddToolsDirToPath()
-			printStep(2, "Checks")
+			printStep(2, "Checking required tools")
 			checker := localinstall.NewChecker()
 			results := checker.CheckTools(cmd.Context())
 			exitIfCancelled(cmd, tracker, "tools")
 			for _, r := range results {
+				if r.Status == localinstall.StatusWarn {
+					r.Detail += ", will be installed in step 4"
+				}
 				printCheckResult(r)
 			}
 			if localinstall.HasFailure(results) {
@@ -54,6 +57,7 @@ func NewInstallLocalCmd() *cobra.Command {
 				tracker.Wait()
 				os.Exit(1)
 			}
+			printStep(3, "Checking this machine")
 			machine := checker.CheckMachine(cmd.Context())
 			exitIfCancelled(cmd, tracker, "machine")
 			for _, r := range machine {
@@ -163,27 +167,28 @@ func printBanner() {
 			"\nTry Testkube on your own machine.")
 }
 
-// Numbered like the step headers, so [3/5] means line 3.
+// Numbered like the step headers, so [3/6] means line 3.
 func printPlan() {
 	ui.Printf("\nThis installer will\n" +
 		"  1. check your license key\n" +
-		"  2. check Docker and this machine\n" +
-		"  3. install kubectl, helm and kind into ~/.testkube/bin, if missing\n" +
-		"  4. create a local cluster called \"testkube\" in Docker\n" +
-		"  5. install Testkube and open it in your browser\n\n")
+		"  2. check the tools it needs\n" +
+		"  3. check this machine\n" +
+		"  4. install kubectl, helm and kind into ~/.testkube/bin, if missing\n" +
+		"  5. create a local cluster called \"testkube\" in Docker\n" +
+		"  6. install Testkube and open it in your browser\n\n")
 	ui.Printf("%s\n", ui.LightGray("It takes about 5 minutes. Your own tools and clusters are not changed.\n"+
 		"Press Ctrl+C to exit at any time."))
 }
 
 // Later slices add Cluster and Testkube.
-const installSteps = 5
+const installSteps = 6
 
 func printStep(n int, title string) {
 	ui.Printf("\n%s %s\n", ui.LightGray(fmt.Sprintf("[%d/%d]", n, installSteps)), title)
 }
 
 func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, results []localinstall.Result) {
-	printStep(3, "Tools")
+	printStep(4, "Tools")
 	var missing []string
 	for _, r := range results {
 		if r.Status == localinstall.StatusWarn && localinstall.ToolVersion(r.Name) != "" {
@@ -256,7 +261,11 @@ func printCheckResult(r localinstall.Result) {
 		localinstall.StatusWarn: ui.LightYellow("⚠"),
 		localinstall.StatusFail: ui.LightRed("✖"),
 	}[r.Status]
-	ui.Printf("  %s %-8s %s\n", icon, r.Name, ui.LightGray(r.Detail))
+	detail := ui.LightGray(r.Detail)
+	if r.Version != "" {
+		detail = fmt.Sprintf("%-10s %s", r.Version, detail)
+	}
+	ui.Printf("  %s %-10s %s\n", icon, r.Name, detail)
 	if r.Fix == "" {
 		return
 	}

@@ -38,6 +38,10 @@ func (f fakeHost) FreeDiskAt(string) (uint64, bool, error) {
 	return f.free, f.diskVisible, f.diskErr
 }
 
+func (f fakeHost) ToolVersion(context.Context, string, ...string) string {
+	return "v1.0.0"
+}
+
 func (f fakeHost) OSVersion() string {
 	return "darwin 15.1"
 }
@@ -104,7 +108,7 @@ func TestCheckTools_DockerBlocksButMissingToolsOnlyWarn(t *testing.T) {
 		{"docker slow to answer", nil, errDockerTimeout, true, "not answering"},
 		{"system socket permission denied", nil, errors.New("permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock"), true, "permission denied"},
 		{"rootless socket permission denied gets no group advice", nil, errors.New("permission denied while trying to connect to the Docker daemon socket at unix:///run/user/1000/docker.sock"), true, "not reachable"},
-		{"all tools missing but docker running", map[string]bool{"kubectl": true, "helm": true, "kind": true}, nil, false, "/usr/bin/docker"},
+		{"all tools missing but docker running", map[string]bool{"kubectl": true, "helm": true, "kind": true}, nil, false, "running"},
 	}
 
 	for _, tt := range tests {
@@ -119,6 +123,18 @@ func TestCheckTools_DockerBlocksButMissingToolsOnlyWarn(t *testing.T) {
 			assert.Equal(t, tt.wantFailure, HasFailure(results))
 			assert.Equal(t, tt.wantDockerDetail, results[0].Detail)
 		})
+	}
+}
+
+func TestSemver_ReadsEachToolsVersionOutput(t *testing.T) {
+	outputs := map[string]string{
+		"Client Version: v1.37.1\nKustomize Version: v5.8.1": "v1.37.1",
+		"v4.3.0+gbec5b06":                    "v4.3.0",
+		"kind v0.33.0 go1.26.7 darwin/arm64": "v0.33.0",
+		"command not found":                  "",
+	}
+	for out, want := range outputs {
+		assert.Equal(t, want, semver.FindString(out), out)
 	}
 }
 
