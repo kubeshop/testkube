@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
+	"unicode/utf8"
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -67,7 +69,8 @@ func NewInstallLocalCmd() *cobra.Command {
 			}
 			trackChecks(tracker, append(results, machine...), checker.Facts())
 			tracker.Send("install_local_checks_done", nil)
-			installMissingTools(cmd, tracker, results)
+			installMissingTools(cmd, tracker, checker, results)
+			runClusterStep(cmd, tracker)
 			tracker.Wait()
 		},
 	}
@@ -175,7 +178,7 @@ func printPlan() {
 		"  1. check your license key\n" +
 		"  2. check the tools it needs\n" +
 		"  3. check this machine\n" +
-		"  4. install kubectl, helm and kind into ~/.testkube/bin, if missing\n" +
+		"  4. download helm and kind into ~/.testkube/bin (kubectl too, if missing)\n" +
 		"  5. create a local cluster called \"testkube\" in Docker\n" +
 		"  6. install Testkube and open it in your browser\n\n")
 	ui.Printf("%s\n", ui.LightGray("It takes about 5 minutes. Your own tools and clusters are not changed.\n"+
@@ -189,36 +192,43 @@ func printStep(n int, title string) {
 	ui.Printf("\n%s %s\n", ui.LightGray(fmt.Sprintf("[%d/%d]", n, installSteps)), title)
 }
 
-func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, results []localinstall.Result) {
-	printStep(4, "Installing missing tools")
+func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, checker *localinstall.Checker, results []localinstall.Result) {
+	printStep(4, "Preparing Testkube's tools")
+	ui.Printf("  %s\n", ui.LightGray("Testkube uses its own copies in ~/.testkube/bin. Yours are not changed."))
 	var missing []string
 	for _, r := range results {
 		if r.Status == localinstall.StatusWarn && localinstall.ToolVersion(r.Name) != "" {
 			missing = append(missing, r.Name)
 		}
 	}
+	for _, name := range localinstall.OwnTools {
+		if checker.NeedsOwn(cmd.Context(), name) {
+			missing = append(missing, name)
+			continue
+		}
+		printCheckResult(localinstall.Result{Name: name, Status: localinstall.StatusPass, Version: localinstall.ToolVersion(name), Detail: "ready"})
+	}
 	if len(missing) == 0 {
-		printCheckResult(localinstall.Result{Name: "tools", Status: localinstall.StatusPass, Detail: "already installed"})
 		return
 	}
 	installer, err := localinstall.NewToolInstaller()
 	if err != nil {
 		failToolInstall(tracker, missing[0], err)
 	}
+	start := time.Now()
 	for _, name := range missing {
 		version := localinstall.ToolVersion(name)
-		spinner := ui.NewSpinner(fmt.Sprintf("Installing %s %s", name, version))
+		spinner := startSpinner(fmt.Sprintf("Installing %s %s", name, version))
 		_, err := installer.Install(cmd.Context(), name)
-		// Its own success line would clash with our check rows.
-		spinner.RemoveWhenDone = true
 		_ = spinner.Stop()
 		exitIfCancelled(cmd, tracker, "tool_install")
 		if err != nil {
 			failToolInstall(tracker, name, err)
 		}
-		printCheckResult(localinstall.Result{Name: name, Status: localinstall.StatusPass, Version: version, Detail: "installed, checksum verified"})
+		printCheckResult(localinstall.Result{Name: name, Status: localinstall.StatusPass, Version: version, Detail: "downloaded, checksum verified"})
 	}
-	tracker.Send("install_local_tools_installed", map[string]any{"tools": missing})
+	// Measured, so the plan's time hints can match reality.
+	tracker.Send("install_local_tools_installed", map[string]any{"tools": missing, "duration_s": int(time.Since(start).Seconds())})
 }
 
 func failToolInstall(tracker *telemetry.InstallTracker, name string, err error) {
@@ -245,6 +255,88 @@ func failToolInstall(tracker *telemetry.InstallTracker, name string, err error) 
 	os.Exit(1)
 }
 
+func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) {
+	printStep(5, "Creating the cluster")
+	cluster, err := localinstall.NewCluster()
+	if err != nil {
+		failCluster(tracker, "", err)
+	}
+	spinner := startSpinner(fmt.Sprintf("Starting cluster %q (about 1 minute on first run)", localinstall.ClusterName))
+	start := time.Now()
+	state, out, err := cluster.Ensure(cmd.Context())
+	_ = spinner.Stop()
+	exitIfCancelled(cmd, tracker, "cluster")
+	if err != nil {
+		failCluster(tracker, out, err)
+	}
+	detail := "already exists"
+	switch {
+	case state.Created:
+		detail = "created"
+	case state.Started:
+		detail = "started"
+	}
+	r := localinstall.Result{Name: "cluster", Status: localinstall.StatusPass, Version: localinstall.KubernetesVersion, Detail: detail}
+	if moved := state.Ports.Moved(); len(moved) > 0 {
+		r.Hint = "busy port moved: " + strings.Join(moved, ", ")
+	}
+	printCheckResult(r)
+	disk, free := cluster.CheckDisk(cmd.Context())
+	printCheckResult(disk)
+	ui.Printf("  %s\n", ui.LightGray("Your Testkube data is kept in ~/.testkube/data"))
+	props := map[string]any{"created": state.Created, "ports_moved": len(state.Ports.Moved()), "disk": string(disk.Status),
+		"duration_s": int(time.Since(start).Seconds())}
+	if free > 0 {
+		props["node_disk_free_gb"] = free
+	}
+	tracker.Send("install_local_cluster", props)
+}
+
+// pterm's light white text vanishes on light terminals.
+// Removed when done: its success line would clash with our rows.
+func startSpinner(text string) *pterm.SpinnerPrinter {
+	spinner, _ := pterm.DefaultSpinner.
+		WithSequence(` ⠋ `, ` ⠹ `, ` ⠼ `, ` ⠦ `, ` ⠇ `).
+		WithMessageStyle(pterm.NewStyle(pterm.FgDefault)).
+		WithRemoveWhenDone(true).
+		Start(text)
+	return spinner
+}
+
+func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
+	r := localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "could not create"}
+	reason := "create"
+	switch {
+	case errors.Is(err, localinstall.ErrClusterNotOurs):
+		reason, r.Detail = "not_ours", "name already taken"
+		r.Fix = fmt.Sprintf("A kind cluster named %q exists that this installer didn't create.\n"+
+			"Delete it if you don't need it, then run again:\n  kind delete cluster --name %s", localinstall.ClusterName, localinstall.ClusterName)
+	case errors.Is(err, localinstall.ErrClusterStart):
+		reason, r.Detail = "start", "could not start"
+		r.Fix = lastLines(out, 5) + "\nIf a port is in use, close that program and run again.\n" +
+			"Otherwise delete the cluster: ~/.testkube/bin/kind delete cluster --name " + localinstall.ClusterName
+	default:
+		why := lastLines(out, 5)
+		if why == "" {
+			why = err.Error()
+		}
+		r.Fix = why + "\nCheck that Docker has enough memory and disk, then run again"
+	}
+	printCheckResult(r)
+	tracker.Send("install_local_failed", map[string]any{"stage": "cluster", "reason": reason})
+	tracker.Wait()
+	os.Exit(1)
+}
+
+// kind prints progress first; the reason is at the end.
+func lastLines(out string, n int) string {
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) > n {
+		lines = lines[len(lines)-n:]
+	}
+	return strings.TrimSpace(strings.Join(lines, "\n"))
+}
+
 // One row per run: every status and measured value together.
 func trackChecks(tracker *telemetry.InstallTracker, results []localinstall.Result, facts map[string]any) {
 	props := map[string]any{}
@@ -257,19 +349,27 @@ func trackChecks(tracker *telemetry.InstallTracker, results []localinstall.Resul
 	tracker.Send("install_local_checks", props)
 }
 
+// Two spaces minimum, so long values never touch the next column.
+func column(s string) string {
+	return s + strings.Repeat(" ", max(2, 16-utf8.RuneCountInString(s)))
+}
+
 func printCheckResult(r localinstall.Result) {
 	icon := map[localinstall.Status]string{
 		localinstall.StatusPass: ui.Green("✔"),
 		localinstall.StatusWarn: ui.LightYellow("⚠"),
 		localinstall.StatusFail: ui.LightRed("✖"),
 	}[r.Status]
-	// Padded before coloring: escape codes break %-12s widths.
+	// Padded before coloring: escape codes break widths.
 	line := r.Detail
 	switch {
 	case r.Version != "":
-		line = ui.LightGray(fmt.Sprintf("%-12s", r.Version)) + r.Detail
+		line = ui.LightGray(column(r.Version)) + r.Detail
+		if r.Hint != "" {
+			line += "  " + ui.LightGray(r.Hint)
+		}
 	case r.Hint != "":
-		line = fmt.Sprintf("%-12s", r.Detail) + ui.LightGray(r.Hint)
+		line = column(r.Detail) + ui.LightGray(r.Hint)
 	}
 	ui.Printf("  %s %-10s %s\n", icon, r.Name, line)
 	if r.Fix == "" {

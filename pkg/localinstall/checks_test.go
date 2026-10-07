@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeDocker struct {
@@ -26,6 +27,7 @@ type fakeHost struct {
 	diskVisible bool
 	diskErr     error
 	blocked     map[string]bool
+	versions    map[string]string
 }
 
 func (f fakeHost) LookPath(name string) (string, error) {
@@ -39,7 +41,10 @@ func (f fakeHost) FreeDiskAt(string) (uint64, bool, error) {
 	return f.free, f.diskVisible, f.diskErr
 }
 
-func (f fakeHost) ToolVersion(context.Context, string, ...string) string {
+func (f fakeHost) ToolVersion(_ context.Context, path string, _ ...string) string {
+	if v, ok := f.versions[path]; ok {
+		return v
+	}
 	return "v1.0.0"
 }
 
@@ -128,6 +133,35 @@ func TestCheckTools_DockerBlocksButMissingToolsOnlyWarn(t *testing.T) {
 			assert.Equal(t, tt.wantFailure, HasFailure(results))
 			assert.Equal(t, tt.wantDockerDetail, results[0].Detail)
 		})
+	}
+}
+
+func TestNeedsOwn_IgnoresUsersCopyAndStaleOnes(t *testing.T) {
+	dir, err := ToolsDir()
+	require.NoError(t, err)
+	tests := []struct {
+		name       string
+		oursIs     string
+		wantNeeded bool
+	}{
+		{"our pinned copy present", "pinned", false},
+		{"our copy from an older pin", "v0.0.1", true},
+		{"no copy of ours", "", true},
+	}
+	for _, tool := range OwnTools {
+		for _, tt := range tests {
+			t.Run(tool+"/"+tt.name, func(t *testing.T) {
+				ours := tt.oursIs
+				if ours == "pinned" {
+					ours = ToolVersion(tool)
+				}
+				checker := &Checker{host: fakeHost{versions: map[string]string{
+					filepath.Join(dir, tool): ours,
+					"/usr/bin/" + tool:       ToolVersion(tool),
+				}}}
+				assert.Equal(t, tt.wantNeeded, checker.NeedsOwn(context.Background(), tool))
+			})
+		}
 	}
 }
 
