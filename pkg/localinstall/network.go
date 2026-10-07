@@ -14,7 +14,11 @@ var networkProbes = []struct{ name, url string }{
 	{"get.helm.sh", "https://get.helm.sh/"},
 	{"kind.sigs.k8s.io", "https://kind.sigs.k8s.io/"},
 	{"Docker Hub", "https://registry-1.docker.io/v2/"},
+	{"auth.docker.io", "https://auth.docker.io/token"},
+	{"production.cloudflare.docker.com", "https://production.cloudflare.docker.com/"},
 	{"kubeshop.github.io", "https://kubeshop.github.io/helm-charts/index.yaml"},
+	// The chart index points here for the chart files.
+	{"us-east1-docker.pkg.dev", "https://us-east1-docker.pkg.dev/v2/"},
 	{"raw.githubusercontent.com", "https://raw.githubusercontent.com/"},
 	{"github.com", "https://github.com/"},
 }
