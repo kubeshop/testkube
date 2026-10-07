@@ -25,6 +25,7 @@ type fakeHost struct {
 	free        uint64
 	diskVisible bool
 	diskErr     error
+	blocked     map[string]bool
 }
 
 func (f fakeHost) LookPath(name string) (string, error) {
@@ -36,6 +37,14 @@ func (f fakeHost) LookPath(name string) (string, error) {
 
 func (f fakeHost) FreeDiskAt(string) (uint64, bool, error) {
 	return f.free, f.diskVisible, f.diskErr
+}
+
+func (f fakeHost) ToolVersion(context.Context, string, ...string) string {
+	return "v1.0.0"
+}
+
+func (f fakeHost) Reachable(_ context.Context, url string) bool {
+	return !f.blocked[url]
 }
 
 func (f fakeHost) OSVersion() string {
@@ -104,7 +113,7 @@ func TestCheckTools_DockerBlocksButMissingToolsOnlyWarn(t *testing.T) {
 		{"docker slow to answer", nil, errDockerTimeout, true, "not answering"},
 		{"system socket permission denied", nil, errors.New("permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock"), true, "permission denied"},
 		{"rootless socket permission denied gets no group advice", nil, errors.New("permission denied while trying to connect to the Docker daemon socket at unix:///run/user/1000/docker.sock"), true, "not reachable"},
-		{"all tools missing but docker running", map[string]bool{"kubectl": true, "helm": true, "kind": true}, nil, false, "/usr/bin/docker"},
+		{"all tools missing but docker running", map[string]bool{"kubectl": true, "helm": true, "kind": true}, nil, false, "running"},
 	}
 
 	for _, tt := range tests {
@@ -119,6 +128,31 @@ func TestCheckTools_DockerBlocksButMissingToolsOnlyWarn(t *testing.T) {
 			assert.Equal(t, tt.wantFailure, HasFailure(results))
 			assert.Equal(t, tt.wantDockerDetail, results[0].Detail)
 		})
+	}
+}
+
+func TestCheckNetwork_NamesBlockedSitesButOnlyWarns(t *testing.T) {
+	checker := &Checker{host: fakeHost{blocked: map[string]bool{
+		"https://registry-1.docker.io/v2/": true,
+		"https://github.com/":              true,
+	}}}
+
+	r := checker.CheckNetwork(context.Background())
+
+	assert.Equal(t, StatusWarn, r.Status)
+	assert.Equal(t, "can't reach Docker Hub, github.com", r.Detail)
+	assert.Equal(t, []string{"Docker Hub", "github.com"}, checker.Facts()["network_unreachable"])
+}
+
+func TestSemver_ReadsEachToolsVersionOutput(t *testing.T) {
+	outputs := map[string]string{
+		"Client Version: v1.37.1\nKustomize Version: v5.8.1": "v1.37.1",
+		"v4.3.0+gbec5b06":                    "v4.3.0",
+		"kind v0.33.0 go1.26.7 darwin/arm64": "v0.33.0",
+		"command not found":                  "",
+	}
+	for out, want := range outputs {
+		assert.Equal(t, want, semver.FindString(out), out)
 	}
 }
 

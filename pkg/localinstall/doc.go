@@ -5,7 +5,7 @@
 // the cluster and Testkube install come later.
 //
 // The license key comes first (see LicenseStep):
-// --license gets one try, a masked prompt gets three.
+// --license or TESTKUBE_LICENSE gets one try, a masked prompt gets three.
 // An unreachable license.testkube.io stops the install,
 // because the installed control plane would fail the same way.
 //
@@ -13,6 +13,7 @@
 //   - Docker missing, unreachable or permission denied blocks the install.
 //   - Missing kubectl, helm or kind only warns; we install them.
 //   - Low Docker CPU, memory or disk only warns.
+//   - Unreachable download sites only warn; Docker may use its own proxy.
 //
 // Resources come from one `docker info --format '{{json .}}'` call,
 // so Docker Desktop's VM limits apply, not the host's.

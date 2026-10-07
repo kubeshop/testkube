@@ -24,12 +24,15 @@ func NewInstallLocalCmd() *cobra.Command {
 		// Hidden until the guided installer is complete.
 		Hidden: true,
 		Run: func(cmd *cobra.Command, args []string) {
+			printBanner()
 			tracker := newInstallTracker()
 			if tracker.Enabled() {
-				ui.Printf("%s\n\n", ui.LightGray(telemetry.InstallNotice))
+				ui.Printf("%s\n", ui.LightGray(telemetry.InstallNotice))
 			}
 			tracker.Send("install_local_started", nil)
+			printPlan()
 
+			printStep(1, "Checking your license")
 			key := runLicenseStep(tracker, licenseKey)
 			// Opted-out users' keys must not reach the owner lookup.
 			if tracker.Enabled() {
@@ -38,10 +41,14 @@ func NewInstallLocalCmd() *cobra.Command {
 
 			// Finds tools a previous run installed.
 			_ = localinstall.AddToolsDirToPath()
+			printStep(2, "Checking required tools")
 			checker := localinstall.NewChecker()
 			results := checker.CheckTools(cmd.Context())
 			exitIfCancelled(cmd, tracker, "tools")
 			for _, r := range results {
+				if r.Status == localinstall.StatusWarn {
+					r.Hint = "will be installed in step 4"
+				}
 				printCheckResult(r)
 			}
 			if localinstall.HasFailure(results) {
@@ -50,7 +57,10 @@ func NewInstallLocalCmd() *cobra.Command {
 				tracker.Wait()
 				os.Exit(1)
 			}
-			machine := checker.CheckMachine(cmd.Context())
+			printStep(3, "Checking this machine")
+			// Not tracked: "os" would overwrite the event's os property.
+			printCheckResult(checker.CheckOS())
+			machine := append(checker.CheckMachine(cmd.Context()), checker.CheckNetwork(cmd.Context()))
 			exitIfCancelled(cmd, tracker, "machine")
 			for _, r := range machine {
 				printCheckResult(r)
@@ -61,22 +71,30 @@ func NewInstallLocalCmd() *cobra.Command {
 			tracker.Wait()
 		},
 	}
-	cmd.Flags().StringVarP(&licenseKey, "license", "l", "", "Testkube license key from your trial email")
+	cmd.Flags().StringVarP(&licenseKey, "license", "l", "", "Testkube license key from your trial email (or set TESTKUBE_LICENSE)")
 	return cmd
 }
 
 func runLicenseStep(tracker *telemetry.InstallTracker, flagKey string) string {
+	// curl | bash can't pass flags easily; a variable can.
+	if flagKey == "" {
+		flagKey = os.Getenv("TESTKUBE_LICENSE")
+	}
 	if flagKey == "" && !ui.StdinIsInteractive() {
 		failLicense(tracker, localinstall.Result{Name: "license", Status: localinstall.StatusFail, Detail: "no key given",
-			Fix: "Pass it with --license <key>. " + localinstall.LicenseHelp})
+			Fix: "Pass it with --license <key> or TESTKUBE_LICENSE=<key>. " + localinstall.LicenseHelp})
 	}
-	key, attempts, err := localinstall.NewLicenseStep(terminalKeyPrompter{tracker: tracker}).Run(flagKey)
+	license, attempts, err := localinstall.NewLicenseStep(terminalKeyPrompter{tracker: tracker}).Run(flagKey)
 	for _, a := range attempts {
 		tracker.Send("install_local_license", map[string]any{"attempt": a.Number, "status": a.Status})
 	}
 	if err == nil {
-		printCheckResult(localinstall.Result{Name: "license", Status: localinstall.StatusPass, Detail: "valid"})
-		return key
+		detail := "valid"
+		if !license.Expiry.IsZero() {
+			detail = "valid until " + license.Expiry.Local().Format("2 Jan 2006")
+		}
+		printCheckResult(localinstall.Result{Name: "license", Status: localinstall.StatusPass, Detail: detail})
+		return license.Key
 	}
 	failLicense(tracker, licenseFailure(err))
 	return "" // failLicense exits
@@ -145,7 +163,34 @@ func abortInstall(tracker *telemetry.InstallTracker, stage string) {
 	os.Exit(130)
 }
 
+func printBanner() {
+	pterm.DefaultBox.WithBoxStyle(pterm.NewStyle(pterm.FgLightMagenta)).Println(
+		pterm.Bold.Sprint("Testkube On-Prem Installer") + "  " + ui.LightGray(common.Version) +
+			"\nTry Testkube on your own machine.")
+}
+
+// Numbered like the step headers, so [3/6] means line 3.
+func printPlan() {
+	ui.Printf("\nThis installer will\n" +
+		"  1. check your license key\n" +
+		"  2. check the tools it needs\n" +
+		"  3. check this machine\n" +
+		"  4. install kubectl, helm and kind into ~/.testkube/bin, if missing\n" +
+		"  5. create a local cluster called \"testkube\" in Docker\n" +
+		"  6. install Testkube and open it in your browser\n\n")
+	ui.Printf("%s\n", ui.LightGray("It takes about 5 minutes. Your own tools and clusters are not changed.\n"+
+		"Press Ctrl+C to exit at any time."))
+}
+
+// Later slices add Cluster and Testkube.
+const installSteps = 6
+
+func printStep(n int, title string) {
+	ui.Printf("\n%s %s\n", ui.LightGray(fmt.Sprintf("[%d/%d]", n, installSteps)), title)
+}
+
 func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, results []localinstall.Result) {
+	printStep(4, "Installing missing tools")
 	var missing []string
 	for _, r := range results {
 		if r.Status == localinstall.StatusWarn && localinstall.ToolVersion(r.Name) != "" {
@@ -153,9 +198,9 @@ func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, 
 		}
 	}
 	if len(missing) == 0 {
+		printCheckResult(localinstall.Result{Name: "tools", Status: localinstall.StatusPass, Detail: "already installed"})
 		return
 	}
-	ui.NL()
 	installer, err := localinstall.NewToolInstaller()
 	if err != nil {
 		failToolInstall(tracker, missing[0], err)
@@ -171,7 +216,7 @@ func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, 
 		if err != nil {
 			failToolInstall(tracker, name, err)
 		}
-		printCheckResult(localinstall.Result{Name: name, Status: localinstall.StatusPass, Detail: version + " installed"})
+		printCheckResult(localinstall.Result{Name: name, Status: localinstall.StatusPass, Version: version, Detail: "installed, checksum verified"})
 	}
 	tracker.Send("install_local_tools_installed", map[string]any{"tools": missing})
 }
@@ -218,7 +263,15 @@ func printCheckResult(r localinstall.Result) {
 		localinstall.StatusWarn: ui.LightYellow("⚠"),
 		localinstall.StatusFail: ui.LightRed("✖"),
 	}[r.Status]
-	ui.Printf("  %s %-8s %s\n", icon, r.Name, ui.LightGray(r.Detail))
+	// Padded before coloring: escape codes break %-12s widths.
+	line := r.Detail
+	switch {
+	case r.Version != "":
+		line = ui.LightGray(fmt.Sprintf("%-12s", r.Version)) + r.Detail
+	case r.Hint != "":
+		line = fmt.Sprintf("%-12s", r.Detail) + ui.LightGray(r.Hint)
+	}
+	ui.Printf("  %s %-10s %s\n", icon, r.Name, line)
 	if r.Fix == "" {
 		return
 	}

@@ -20,7 +20,8 @@ const (
 	postHogEndpoint = "https://t.testkube.io/capture/"
 )
 
-const InstallNotice = "Testkube sends install progress, linked to your license, to help us fix setup problems. Opt out: DO_NOT_TRACK=1. Details: docs.testkube.io/articles/telemetry"
+const InstallNotice = "Testkube sends install progress, linked to your license, to help us fix setup problems.\n" +
+	"Opt out: DO_NOT_TRACK=1. Details: docs.testkube.io/articles/telemetry"
 
 // InstallTracker reports `testkube install local` steps to PostHog
 // project "On Prem Trials" through https://t.testkube.io/capture/,
