@@ -33,8 +33,9 @@
 // its kubeconfig is ~/.testkube/kubeconfig, never ~/.kube/config;
 // five browser ports map to 127.0.0.1 only, next free when busy;
 // ~/.testkube/data holds its storage, so data outlives the cluster.
-// Re-runs reuse it only when its saved ports and data folder
-// match ours, starting it first if Docker stopped it.
+// Re-runs reuse it only when it carries the random
+// mark saved in ~/.testkube/cluster-id at creation,
+// read from its mounts before starting a stopped node.
 //
 // Step tracking lives in pkg/telemetry, see InstallTracker.
 package localinstall

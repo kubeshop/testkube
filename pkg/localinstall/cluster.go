@@ -3,6 +3,7 @@ package localinstall
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -24,6 +26,9 @@ const (
 
 	// kind's storage writes here; mounting it keeps data on the host.
 	nodeStorageDir = "/var/local-path-provisioner"
+
+	// Mount destinations survive a stop; Docker never rewrites them.
+	ownerMountDir = "/testkube/owner/"
 
 	nodeName = ClusterName + "-control-plane"
 )
@@ -61,9 +66,6 @@ type ClusterState struct {
 	Created bool
 	Started bool
 	Ports   Ports
-	// First folder of a foreign data source, e.g. "/host_mnt".
-	// Tracked to spot unknown Docker setups; never the full path.
-	DataSourceRoot string
 }
 
 // The API refuses connections for a few seconds after start.
@@ -122,8 +124,13 @@ func (c *Cluster) Ensure(ctx context.Context) (ClusterState, string, error) {
 	if err := os.Chmod(data, 0o777); err != nil {
 		return ClusterState{}, "", err
 	}
+	// Saved first, so a Ctrl+C'd half-built node stays ours.
+	owner := rand.Text()
+	if err := os.WriteFile(c.ownerFile(), []byte(owner), 0o600); err != nil {
+		return ClusterState{}, "", err
+	}
 	config := filepath.Join(c.dir, "kind.yaml")
-	if err := os.WriteFile(config, []byte(kindConfig(ports, data)), 0o644); err != nil {
+	if err := os.WriteFile(config, []byte(kindConfig(ports, data, owner)), 0o644); err != nil {
 		return ClusterState{}, "", err
 	}
 	out, err = c.run(ctx, c.kind, "create", "cluster", "--name", ClusterName, "--config", config,
@@ -133,15 +140,19 @@ func (c *Cluster) Ensure(ctx context.Context) (ClusterState, string, error) {
 
 func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 	var state ClusterState
-	// Saved settings survive a stop, so we check before touching it.
+	owner, err := os.ReadFile(c.ownerFile())
+	if err != nil || len(owner) == 0 {
+		return state, "", ErrClusterNotOurs
+	}
+	// Saved settings survive a stop: check before touching it.
 	out, err := c.run(ctx, "docker", "inspect", "-f",
-		"{{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .HostConfig.Binds}}\n{{json .Config.Labels}}", nodeName)
+		"{{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .Mounts}}", nodeName)
 	if err != nil {
 		return state, string(out), err
 	}
-	running, ports, ok, root := c.ownedSettings(string(out))
+	running, ports, ok := ownedSettings(string(out), string(owner))
 	if !ok {
-		return ClusterState{DataSourceRoot: root}, "", ErrClusterNotOurs
+		return state, "", ErrClusterNotOurs
 	}
 	state.Ports = ports
 	if !running {
@@ -161,76 +172,37 @@ func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 	return state, "", nil
 }
 
-// Ours means every browser port on 127.0.0.1 and our data folder.
-func (c *Cluster) ownedSettings(inspect string) (running bool, ports Ports, ok bool, sourceRoot string) {
+// Ours means our saved mark and every browser port on 127.0.0.1.
+func ownedSettings(inspect, owner string) (running bool, ports Ports, ok bool) {
 	lines := strings.Split(strings.TrimSpace(inspect), "\n")
-	if len(lines) != 4 {
-		return false, nil, false, ""
+	if len(lines) != 3 {
+		return false, nil, false
 	}
 	var bindings map[string][]struct{ HostIp, HostPort string }
-	var binds []string
-	var labels map[string]string
-	if json.Unmarshal([]byte(lines[1]), &bindings) != nil || json.Unmarshal([]byte(lines[2]), &binds) != nil ||
-		json.Unmarshal([]byte(lines[3]), &labels) != nil {
-		return false, nil, false, ""
+	var mounts []struct{ Destination string }
+	if json.Unmarshal([]byte(lines[1]), &bindings) != nil || json.Unmarshal([]byte(lines[2]), &mounts) != nil {
+		return false, nil, false
+	}
+	if !slices.ContainsFunc(mounts, func(m struct{ Destination string }) bool { return m.Destination == ownerMountDir+owner }) {
+		return false, nil, false
 	}
 	ports = Ports{}
 	for _, cp := range clusterPorts {
 		b := bindings[fmt.Sprintf("%d/tcp", cp.inNodes)]
 		if len(b) != 1 || b[0].HostIp != "127.0.0.1" {
-			return false, nil, false, ""
+			return false, nil, false
 		}
 		host, err := strconv.Atoi(b[0].HostPort)
 		if err != nil {
-			return false, nil, false, ""
+			return false, nil, false
 		}
 		ports[cp.name] = host
 	}
-	ok, sourceRoot = mountsData(binds, labels, filepath.Join(c.dir, "data"))
-	return lines[0] == "true", ports, ok, sourceRoot
+	return lines[0] == "true", ports, true
 }
 
-// Some Docker setups on WSL replace the source with a hashed path.
-const (
-	dockerDesktopWSLMounts  = "/run/desktop/mnt/host/wsl/docker-desktop-bind-mounts/"
-	rancherDesktopWSLMounts = "/mnt/wsl/rancher-desktop/run/docker-mounts/"
-)
-
-func mountsData(binds []string, labels map[string]string, dataDir string) (ok bool, sourceRoot string) {
-	for _, b := range binds {
-		// Podman adds options after the destination, e.g. ":rw,rbind".
-		src, rest, found := strings.Cut(b, ":"+nodeStorageDir)
-		if !found || (rest != "" && !strings.HasPrefix(rest, ":")) {
-			continue
-		}
-		switch {
-		case src == dataDir, src == "/host_mnt"+dataDir: // Docker Desktop on Mac adds /host_mnt.
-			return true, ""
-		case strings.HasPrefix(src, dockerDesktopWSLMounts):
-			return desktopLabelsPointTo(labels, dataDir), ""
-		case strings.HasPrefix(src, rancherDesktopWSLMounts):
-			// No trace of the real path; the port check must carry it.
-			return true, ""
-		}
-		root, _, _ := strings.Cut(strings.TrimPrefix(src, "/"), "/")
-		return false, "/" + root
-	}
-	return false, ""
-}
-
-// Docker Desktop keeps each real source in desktop.docker.io/binds/N/Source.
-func desktopLabelsPointTo(labels map[string]string, dataDir string) bool {
-	found := false
-	for k, v := range labels {
-		if strings.HasPrefix(k, "desktop.docker.io/binds/") && strings.HasSuffix(k, "/Source") {
-			if v == dataDir {
-				return true
-			}
-			found = true
-		}
-	}
-	// Without labels we can't tell, so the port check decides.
-	return !found
+func (c *Cluster) ownerFile() string {
+	return filepath.Join(c.dir, "cluster-id")
 }
 
 func (c *Cluster) waitReady(ctx context.Context) ([]byte, error) {
@@ -296,13 +268,14 @@ func portFree(port int) bool {
 }
 
 // 127.0.0.1 only: a trial must not be reachable from the network.
-func kindConfig(ports Ports, dataDir string) string {
+func kindConfig(ports Ports, dataDir, owner string) string {
 	var b strings.Builder
 	b.WriteString("kind: Cluster\napiVersion: kind.x-k8s.io/v1alpha4\nnodes:\n- role: control-plane\n  extraPortMappings:\n")
 	for _, cp := range clusterPorts {
 		fmt.Fprintf(&b, "  - containerPort: %d\n    hostPort: %d\n    listenAddress: 127.0.0.1\n", cp.inNodes, ports[cp.name])
 	}
 	fmt.Fprintf(&b, "  extraMounts:\n  - hostPath: %q\n    containerPath: %s\n", dataDir, nodeStorageDir)
+	fmt.Fprintf(&b, "  - hostPath: %q\n    containerPath: %s\n    readOnly: true\n", dataDir, ownerMountDir+owner)
 	return b.String()
 }
 

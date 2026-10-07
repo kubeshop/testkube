@@ -22,10 +22,10 @@ const ourBindings = `{"30080/tcp":[{"HostIp":"127.0.0.1","HostPort":"8080"}],` +
 	`"6443/tcp":[{"HostIp":"127.0.0.1","HostPort":"51412"}]}`
 
 type kindFake struct {
-	clusters, running, bindings, binds, labels string
-	startErr                                   error
-	refusedWaits                               int
-	calls                                      []string
+	clusters, running, bindings, mounts string
+	startErr                            error
+	refusedWaits                        int
+	calls                               []string
 }
 
 func (f *kindFake) run(_ context.Context, name string, args ...string) ([]byte, error) {
@@ -34,7 +34,7 @@ func (f *kindFake) run(_ context.Context, name string, args ...string) ([]byte, 
 	case name != "docker" && args[0] == "get":
 		return []byte(f.clusters), nil
 	case args[0] == "inspect":
-		return []byte(f.running + "\n" + f.bindings + "\n" + f.binds + "\n" + f.labels + "\n"), nil
+		return []byte(f.running + "\n" + f.bindings + "\n" + f.mounts + "\n"), nil
 	case args[0] == "start":
 		return []byte("Bind for 127.0.0.1:9000 failed: port is already allocated"), f.startErr
 	case args[0] == "exec" && f.refusedWaits > 0:
@@ -44,10 +44,10 @@ func (f *kindFake) run(_ context.Context, name string, args ...string) ([]byte, 
 	return nil, nil
 }
 
-// A healthy, running cluster of ours; Docker Desktop prefixes the source.
-func ours(dir string) *kindFake {
-	binds := fmt.Sprintf(`["/lib/modules:/lib/modules:ro","/host_mnt%s:/var/local-path-provisioner"]`, filepath.Join(dir, "data"))
-	return &kindFake{clusters: "testkube\n", running: "true", bindings: ourBindings, binds: binds, labels: "{}"}
+func ours(t *testing.T, dir string) *kindFake {
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "cluster-id"), []byte("OURMARK"), 0o600))
+	mounts := `[{"Destination":"/lib/modules"},{"Destination":"/var/local-path-provisioner"},{"Destination":"/testkube/owner/OURMARK"}]`
+	return &kindFake{clusters: "testkube\n", running: "true", bindings: ourBindings, mounts: mounts}
 }
 
 func allFree(int) bool { return true }
@@ -65,7 +65,7 @@ func TestClusterEnsure_ReusesOursOnly(t *testing.T) {
 	}{
 		{"our cluster is reused, not recreated", "kind\ntestkube\n", false, []string{
 			"kind get clusters",
-			"docker inspect -f {{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .HostConfig.Binds}}\n{{json .Config.Labels}} testkube-control-plane",
+			"docker inspect -f {{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .Mounts}} testkube-control-plane",
 			"docker exec testkube-control-plane kubectl --kubeconfig=/etc/kubernetes/admin.conf wait --for=condition=Ready nodes --all --timeout=10s",
 			"kind export kubeconfig --name testkube --kubeconfig " + kubeconfig,
 		}},
@@ -74,7 +74,7 @@ func TestClusterEnsure_ReusesOursOnly(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fake := ours(dir)
+			fake := ours(t, dir)
 			fake.clusters = tt.clusters
 			c := &Cluster{kind: "kind", dir: dir, kubeconfig: kubeconfig, portFree: allFree, run: fake.run}
 
@@ -89,7 +89,7 @@ func TestClusterEnsure_ReusesOursOnly(t *testing.T) {
 
 func TestClusterEnsure_ReusedClusterKeepsItsPorts(t *testing.T) {
 	dir := t.TempDir()
-	c := &Cluster{kind: "kind", dir: dir, run: ours(dir).run}
+	c := &Cluster{kind: "kind", dir: dir, run: ours(t, dir).run}
 
 	state, _, err := c.Ensure(context.Background())
 
@@ -99,27 +99,28 @@ func TestClusterEnsure_ReusedClusterKeepsItsPorts(t *testing.T) {
 }
 
 func TestClusterEnsure_SomeoneElsesClusterIsNeverStarted(t *testing.T) {
-	dir := t.TempDir()
-	tests := map[string]func(f *kindFake){
-		"ports open to the network": func(f *kindFake) { f.bindings = strings.ReplaceAll(ourBindings, "127.0.0.1", "0.0.0.0") },
-		"no browser ports":          func(f *kindFake) { f.bindings = `{"6443/tcp":[{"HostIp":"127.0.0.1","HostPort":"51412"}]}` },
-		"data in another folder":    func(f *kindFake) { f.binds = `["/home/other/data:/var/local-path-provisioner"]` },
-		"no data folder":            func(f *kindFake) { f.binds = `["/lib/modules:/lib/modules:ro"]` },
+	tests := map[string]func(f *kindFake, dir string){
+		"ports open to the network": func(f *kindFake, _ string) { f.bindings = strings.ReplaceAll(ourBindings, "127.0.0.1", "0.0.0.0") },
+		"no browser ports":          func(f *kindFake, _ string) { f.bindings = `{"6443/tcp":[{"HostIp":"127.0.0.1","HostPort":"51412"}]}` },
+		"no owner mark":             func(f *kindFake, _ string) { f.mounts = `[{"Destination":"/var/local-path-provisioner"}]` },
+		"another install's mark": func(_ *kindFake, dir string) {
+			_ = os.WriteFile(filepath.Join(dir, "cluster-id"), []byte("OTHER"), 0o600)
+		},
+		"our saved mark is gone":  func(_ *kindFake, dir string) { _ = os.Remove(filepath.Join(dir, "cluster-id")) },
+		"our saved mark is empty": func(_ *kindFake, dir string) { _ = os.WriteFile(filepath.Join(dir, "cluster-id"), nil, 0o600) },
 	}
 	for name, change := range tests {
 		t.Run(name, func(t *testing.T) {
-			fake := ours(dir)
+			dir := t.TempDir()
+			fake := ours(t, dir)
 			fake.running = "false"
-			change(fake)
+			change(fake, dir)
 			c := &Cluster{kind: "kind", dir: dir, run: fake.run}
 
-			state, _, err := c.Ensure(context.Background())
+			_, _, err := c.Ensure(context.Background())
 
 			assert.ErrorIs(t, err, ErrClusterNotOurs)
-			assert.Len(t, fake.calls, 2, "only listed and inspected, never started")
-			if name == "data in another folder" {
-				assert.Equal(t, "/home", state.DataSourceRoot, "first folder only, never the full path")
-			}
+			assert.NotContains(t, fake.calls, "docker start testkube-control-plane")
 		})
 	}
 }
@@ -162,9 +163,23 @@ func TestClusterEnsure_DataFolderIsMountedAndWritableByPods(t *testing.T) {
 	}
 }
 
+func TestClusterEnsure_NewClusterCarriesTheMarkWeSaved(t *testing.T) {
+	dir := t.TempDir()
+	c := &Cluster{kind: "kind", dir: dir, portFree: allFree, run: (&kindFake{}).run}
+
+	_, _, err := c.Ensure(context.Background())
+	require.NoError(t, err)
+
+	owner, err := os.ReadFile(filepath.Join(dir, "cluster-id"))
+	require.NoError(t, err)
+	require.NotEmpty(t, owner)
+	config, _ := os.ReadFile(filepath.Join(dir, "kind.yaml"))
+	assert.Contains(t, string(config), "containerPath: /testkube/owner/"+string(owner)+"\n    readOnly: true")
+}
+
 func TestClusterEnsure_StoppedClusterIsStartedBeforeReading(t *testing.T) {
 	dir := t.TempDir()
-	fake := ours(dir)
+	fake := ours(t, dir)
 	fake.running = "false"
 	c := &Cluster{kind: "kind", dir: dir, run: fake.run}
 
@@ -180,7 +195,7 @@ func TestClusterEnsure_WaitsWhileTheAPIIsStillStarting(t *testing.T) {
 	startRetry = time.Millisecond
 	t.Cleanup(func() { startRetry = 2 * time.Second })
 	dir := t.TempDir()
-	fake := ours(dir)
+	fake := ours(t, dir)
 	fake.running, fake.refusedWaits = "false", 2
 	c := &Cluster{kind: "kind", dir: dir, run: fake.run}
 
@@ -195,7 +210,7 @@ func TestClusterEnsure_RunningButHalfBuiltClusterIsNotReused(t *testing.T) {
 	startTimeout, startRetry = 5*time.Millisecond, time.Millisecond
 	t.Cleanup(func() { startTimeout, startRetry = 2*time.Minute, 2*time.Second })
 	dir := t.TempDir()
-	fake := ours(dir)
+	fake := ours(t, dir)
 	fake.refusedWaits = 1 << 30
 	c := &Cluster{kind: "kind", dir: dir, run: fake.run}
 
@@ -207,7 +222,7 @@ func TestClusterEnsure_RunningButHalfBuiltClusterIsNotReused(t *testing.T) {
 
 func TestClusterEnsure_FailedStartShowsDockersReason(t *testing.T) {
 	dir := t.TempDir()
-	fake := ours(dir)
+	fake := ours(t, dir)
 	fake.running, fake.startErr = "false", errors.New("exit status 1")
 	c := &Cluster{kind: "kind", dir: dir, run: fake.run}
 
@@ -239,33 +254,6 @@ func TestCheckDisk_WarnsWhenLowOrUnreadable(t *testing.T) {
 			r, _ := c.CheckDisk(context.Background())
 
 			assert.Equal(t, tt.status, r.Status)
-		})
-	}
-}
-
-func TestMountsData_RecognizesOurFolderOnEveryDockerSetup(t *testing.T) {
-	const data = "/home/u/.testkube/data"
-	wsl := `/run/desktop/mnt/host/wsl/docker-desktop-bind-mounts/Ubuntu/9f2c1e:/var/local-path-provisioner`
-	tests := []struct {
-		name   string
-		bind   string
-		labels map[string]string
-		ours   bool
-	}{
-		{"linux and colima keep the path", data + ":/var/local-path-provisioner", nil, true},
-		{"docker desktop on mac prefixes it", "/host_mnt" + data + ":/var/local-path-provisioner", nil, true},
-		{"podman adds options", data + ":/var/local-path-provisioner:rw,rprivate,rbind", nil, true},
-		{"docker desktop on wsl, label is ours", wsl, map[string]string{"desktop.docker.io/binds/1/Source": data}, true},
-		{"docker desktop on wsl, label is another folder", wsl, map[string]string{"desktop.docker.io/binds/1/Source": "/home/other/data"}, false},
-		{"rancher desktop on wsl hides the path", "/mnt/wsl/rancher-desktop/run/docker-mounts/1b2c:/var/local-path-provisioner", nil, true},
-		{"another folder", "/home/other/data:/var/local-path-provisioner", nil, false},
-		{"a folder that only ends like ours", "/tmp" + data + ":/var/local-path-provisioner", nil, false},
-		{"a longer destination is not ours", data + ":/var/local-path-provisioner-old", nil, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ours, _ := mountsData([]string{tt.bind}, tt.labels, data)
-			assert.Equal(t, tt.ours, ours)
 		})
 	}
 }
