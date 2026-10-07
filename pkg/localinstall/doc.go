@@ -1,8 +1,8 @@
 // Package localinstall powers the hidden `testkube install local` command.
 //
 // It prepares a laptop for a local Testkube trial.
-// Today it checks the machine and installs missing tools;
-// the cluster and Testkube install come later.
+// Today it checks the machine, prepares tools and creates the cluster;
+// the Testkube install comes later.
 //
 // The license key comes first (see LicenseStep):
 // --license or TESTKUBE_LICENSE gets one try, a masked prompt gets three.
@@ -28,6 +28,12 @@
 // Missing tools (see ToolInstaller) are downloaded at pinned versions,
 // checksum-verified, into ~/.testkube/bin. That folder is appended
 // to the CLI's own PATH, so the user's versions still win.
+//
+// The cluster (see Cluster) is a kind cluster named "testkube":
+// its kubeconfig is ~/.testkube/kubeconfig, never ~/.kube/config;
+// five browser ports map to 127.0.0.1 only, next free when busy;
+// ~/.testkube/data holds its storage, so data outlives the cluster.
+// Re-runs reuse it, starting it first if Docker stopped it.
 //
 // Step tracking lives in pkg/telemetry, see InstallTracker.
 package localinstall
