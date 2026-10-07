@@ -32,7 +32,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			tracker.Send("install_local_started", nil)
 			printPlan()
 
-			printStep(1, "License")
+			printStep(1, "Checking your license")
 			key := runLicenseStep(tracker, licenseKey)
 			// Opted-out users' keys must not reach the owner lookup.
 			if tracker.Enabled() {
@@ -58,6 +58,8 @@ func NewInstallLocalCmd() *cobra.Command {
 				os.Exit(1)
 			}
 			printStep(3, "Checking this machine")
+			// Not tracked: "os" would overwrite the event's os property.
+			printCheckResult(checker.CheckOS())
 			machine := append(checker.CheckMachine(cmd.Context()), checker.CheckNetwork(cmd.Context()))
 			exitIfCancelled(cmd, tracker, "machine")
 			for _, r := range machine {
@@ -188,7 +190,7 @@ func printStep(n int, title string) {
 }
 
 func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, results []localinstall.Result) {
-	printStep(4, "Tools")
+	printStep(4, "Installing missing tools")
 	var missing []string
 	for _, r := range results {
 		if r.Status == localinstall.StatusWarn && localinstall.ToolVersion(r.Name) != "" {

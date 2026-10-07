@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -136,6 +137,14 @@ func (c *Checker) CheckTools(ctx context.Context) []Result {
 		results = append(results, c.checkInstallable(ctx, name))
 	}
 	return results
+}
+
+func (c *Checker) CheckOS() Result {
+	name := strings.Replace(c.host.OSVersion(), "darwin", "macOS", 1)
+	if name == "" {
+		name = runtime.GOOS
+	}
+	return Result{Name: "os", Status: StatusPass, Detail: name + " " + runtime.GOARCH}
 }
 
 // Machine size only warns: users may continue on smaller machines.
