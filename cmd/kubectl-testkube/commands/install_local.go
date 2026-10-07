@@ -258,18 +258,22 @@ func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) {
 		failCluster(tracker, "", err)
 	}
 	spinner := startSpinner(fmt.Sprintf("Starting cluster %q (about 1 minute on first run)", localinstall.ClusterName))
-	created, out, err := cluster.Ensure(cmd.Context())
+	state, out, err := cluster.Ensure(cmd.Context())
 	_ = spinner.Stop()
 	exitIfCancelled(cmd, tracker, "cluster")
 	if err != nil {
 		failCluster(tracker, out, err)
 	}
 	detail := "already exists"
-	if created {
+	if state.Created {
 		detail = "created"
 	}
-	printCheckResult(localinstall.Result{Name: "cluster", Status: localinstall.StatusPass, Version: localinstall.KubernetesVersion, Detail: detail})
-	tracker.Send("install_local_cluster", map[string]any{"created": created})
+	r := localinstall.Result{Name: "cluster", Status: localinstall.StatusPass, Version: localinstall.KubernetesVersion, Detail: detail}
+	if moved := state.Ports.Moved(); len(moved) > 0 {
+		r.Hint = "busy port moved: " + strings.Join(moved, ", ")
+	}
+	printCheckResult(r)
+	tracker.Send("install_local_cluster", map[string]any{"created": state.Created, "ports_moved": len(state.Ports.Moved())})
 }
 
 // pterm's light white text vanishes on light terminals.
@@ -284,12 +288,18 @@ func startSpinner(text string) *pterm.SpinnerPrinter {
 }
 
 func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
-	reason := lastLines(out, 5)
-	if reason == "" {
-		reason = err.Error()
+	r := localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "could not create"}
+	if errors.Is(err, localinstall.ErrClusterWithoutPorts) {
+		r.Detail = "made by an older installer"
+		r.Fix = "Delete it, then run again:\n  ~/.testkube/bin/kind delete cluster --name " + localinstall.ClusterName
+	} else {
+		reason := lastLines(out, 5)
+		if reason == "" {
+			reason = err.Error()
+		}
+		r.Fix = reason + "\nCheck that Docker has enough memory and disk, then run again"
 	}
-	printCheckResult(localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "could not create",
-		Fix: reason + "\nCheck that Docker has enough memory and disk, then run again"})
+	printCheckResult(r)
 	tracker.Send("install_local_failed", map[string]any{"stage": "cluster"})
 	tracker.Wait()
 	os.Exit(1)
@@ -327,6 +337,9 @@ func printCheckResult(r localinstall.Result) {
 	switch {
 	case r.Version != "":
 		line = ui.LightGray(fmt.Sprintf("%-12s", r.Version)) + r.Detail
+		if r.Hint != "" {
+			line += "  " + ui.LightGray(r.Hint)
+		}
 	case r.Hint != "":
 		line = fmt.Sprintf("%-12s", r.Detail) + ui.LightGray(r.Hint)
 	}
