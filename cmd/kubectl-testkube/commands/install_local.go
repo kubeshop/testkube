@@ -265,8 +265,11 @@ func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) {
 		failCluster(tracker, out, err)
 	}
 	detail := "already exists"
-	if state.Created {
+	switch {
+	case state.Created:
 		detail = "created"
+	case state.Started:
+		detail = "started"
 	}
 	r := localinstall.Result{Name: "cluster", Status: localinstall.StatusPass, Version: localinstall.KubernetesVersion, Detail: detail}
 	if moved := state.Ports.Moved(); len(moved) > 0 {
@@ -290,18 +293,23 @@ func startSpinner(text string) *pterm.SpinnerPrinter {
 
 func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
 	r := localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "could not create"}
-	if errors.Is(err, localinstall.ErrClusterOutdated) {
-		r.Detail = "made by an older installer"
+	reason := "create"
+	switch {
+	case errors.Is(err, localinstall.ErrClusterOutdated):
+		reason, r.Detail = "outdated", "made by an older installer"
 		r.Fix = "Delete it, then run again:\n  ~/.testkube/bin/kind delete cluster --name " + localinstall.ClusterName
-	} else {
-		reason := lastLines(out, 5)
-		if reason == "" {
-			reason = err.Error()
+	case errors.Is(err, localinstall.ErrClusterStart):
+		reason, r.Detail = "start", "could not start"
+		r.Fix = lastLines(out, 5) + "\nIf a port is in use, close that program, then run again"
+	default:
+		why := lastLines(out, 5)
+		if why == "" {
+			why = err.Error()
 		}
-		r.Fix = reason + "\nCheck that Docker has enough memory and disk, then run again"
+		r.Fix = why + "\nCheck that Docker has enough memory and disk, then run again"
 	}
 	printCheckResult(r)
-	tracker.Send("install_local_failed", map[string]any{"stage": "cluster"})
+	tracker.Send("install_local_failed", map[string]any{"stage": "cluster", "reason": reason})
 	tracker.Wait()
 	os.Exit(1)
 }

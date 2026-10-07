@@ -2,12 +2,14 @@ package localinstall
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,23 +24,36 @@ const dockerPortOutput = `30080/tcp -> 127.0.0.1:8080
 
 const mounts = "/var/lib/docker\n/var/local-path-provisioner\n"
 
-func fakeKind(clusters, dockerPort string, calls *[]string) runFunc {
-	return fakeKindWithMounts(clusters, dockerPort, mounts, calls)
+type kindFake struct {
+	clusters, ports, mounts, running string
+	startErr                         error
+	refusedWaits                     int
+	calls                            []string
 }
 
-func fakeKindWithMounts(clusters, dockerPort, mounts string, calls *[]string) runFunc {
-	return func(_ context.Context, name string, args ...string) ([]byte, error) {
-		*calls = append(*calls, name+" "+strings.Join(args, " "))
-		switch {
-		case args[0] == "get":
-			return []byte(clusters), nil
-		case name == "docker" && args[0] == "port":
-			return []byte(dockerPort), nil
-		case name == "docker" && args[0] == "inspect":
-			return []byte(mounts), nil
-		}
-		return nil, nil
+func (f *kindFake) run(_ context.Context, name string, args ...string) ([]byte, error) {
+	f.calls = append(f.calls, name+" "+strings.Join(args, " "))
+	switch {
+	case name != "docker" && args[0] == "get":
+		return []byte(f.clusters), nil
+	case args[0] == "port":
+		return []byte(f.ports), nil
+	case args[0] == "inspect" && args[2] == "{{.State.Running}}":
+		return []byte(f.running), nil
+	case args[0] == "inspect":
+		return []byte(f.mounts), nil
+	case args[0] == "start":
+		return []byte("Bind for 127.0.0.1:9000 failed: port is already allocated"), f.startErr
+	case args[0] == "exec" && f.refusedWaits > 0:
+		f.refusedWaits--
+		return []byte("The connection to the server testkube-control-plane:6443 was refused"), errors.New("exit status 1")
 	}
+	return nil, nil
+}
+
+// A healthy, running cluster of ours unless a test overrides it.
+func ours() *kindFake {
+	return &kindFake{clusters: "testkube\n", ports: dockerPortOutput, mounts: mounts, running: "true\n"}
 }
 
 func allFree(int) bool { return true }
@@ -56,6 +71,7 @@ func TestClusterEnsure_ReusesOursOnly(t *testing.T) {
 	}{
 		{"our cluster is reused, not recreated", "kind\ntestkube\n", false, []string{
 			"kind get clusters",
+			"docker inspect -f {{.State.Running}} testkube-control-plane",
 			"kind export kubeconfig --name testkube --kubeconfig " + kubeconfig,
 			"docker port testkube-control-plane",
 			"docker inspect -f {{range .Mounts}}{{.Destination}}\n{{end}} testkube-control-plane",
@@ -65,22 +81,21 @@ func TestClusterEnsure_ReusesOursOnly(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var calls []string
-			c := &Cluster{kind: "kind", dir: dir, kubeconfig: kubeconfig, portFree: allFree,
-				run: fakeKind(tt.clusters, dockerPortOutput, &calls)}
+			fake := ours()
+			fake.clusters = tt.clusters
+			c := &Cluster{kind: "kind", dir: dir, kubeconfig: kubeconfig, portFree: allFree, run: fake.run}
 
 			state, _, err := c.Ensure(context.Background())
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantCreated, state.Created)
-			assert.Equal(t, tt.wantCalls, calls)
+			assert.Equal(t, tt.wantCalls, fake.calls)
 		})
 	}
 }
 
 func TestClusterEnsure_ReusedClusterKeepsItsPorts(t *testing.T) {
-	var calls []string
-	c := &Cluster{kind: "kind", dir: t.TempDir(), run: fakeKind("testkube\n", dockerPortOutput, &calls)}
+	c := &Cluster{kind: "kind", dir: t.TempDir(), run: ours().run}
 
 	state, _, err := c.Ensure(context.Background())
 
@@ -90,15 +105,11 @@ func TestClusterEnsure_ReusedClusterKeepsItsPorts(t *testing.T) {
 }
 
 func TestClusterEnsure_OlderClusterIsRejected(t *testing.T) {
-	for name, run := range map[string]func(*[]string) runFunc{
-		"no ports": func(c *[]string) runFunc { return fakeKind("testkube\n", "", c) },
-		"no data folder": func(c *[]string) runFunc {
-			return fakeKindWithMounts("testkube\n", dockerPortOutput, "/var/lib/docker\n", c)
-		},
-	} {
+	noPorts, noData := ours(), ours()
+	noPorts.ports, noData.mounts = "", "/var/lib/docker\n"
+	for name, fake := range map[string]*kindFake{"no ports": noPorts, "no data folder": noData} {
 		t.Run(name, func(t *testing.T) {
-			var calls []string
-			c := &Cluster{kind: "kind", dir: t.TempDir(), run: run(&calls)}
+			c := &Cluster{kind: "kind", dir: t.TempDir(), run: fake.run}
 
 			_, _, err := c.Ensure(context.Background())
 
@@ -118,8 +129,7 @@ func TestPickPorts_MovesBusyPortsWithoutCollisions(t *testing.T) {
 
 func TestClusterEnsure_PortsListenOnThisMachineOnly(t *testing.T) {
 	dir := t.TempDir()
-	var calls []string
-	c := &Cluster{kind: "kind", dir: dir, portFree: allFree, run: fakeKind("", "", &calls)}
+	c := &Cluster{kind: "kind", dir: dir, portFree: allFree, run: (&kindFake{}).run}
 
 	_, _, err := c.Ensure(context.Background())
 	require.NoError(t, err)
@@ -132,8 +142,7 @@ func TestClusterEnsure_PortsListenOnThisMachineOnly(t *testing.T) {
 
 func TestClusterEnsure_DataFolderIsMountedAndWritableByPods(t *testing.T) {
 	dir := t.TempDir()
-	var calls []string
-	c := &Cluster{kind: "kind", dir: dir, portFree: allFree, run: fakeKind("", "", &calls)}
+	c := &Cluster{kind: "kind", dir: dir, portFree: allFree, run: (&kindFake{}).run}
 
 	_, _, err := c.Ensure(context.Background())
 	require.NoError(t, err)
@@ -145,4 +154,42 @@ func TestClusterEnsure_DataFolderIsMountedAndWritableByPods(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, os.FileMode(0o777), info.Mode().Perm())
 	}
+}
+
+func TestClusterEnsure_StoppedClusterIsStartedBeforeReading(t *testing.T) {
+	fake := ours()
+	fake.running = "false\n"
+	c := &Cluster{kind: "kind", dir: t.TempDir(), run: fake.run}
+
+	state, _, err := c.Ensure(context.Background())
+
+	require.NoError(t, err)
+	assert.True(t, state.Started)
+	assert.Equal(t, "docker start testkube-control-plane", fake.calls[2])
+	assert.Contains(t, fake.calls[3], "wait --for=condition=Ready")
+}
+
+func TestClusterEnsure_WaitsWhileTheAPIIsStillStarting(t *testing.T) {
+	startRetry = time.Millisecond
+	t.Cleanup(func() { startRetry = 2 * time.Second })
+	fake := ours()
+	fake.running, fake.refusedWaits = "false\n", 2
+	c := &Cluster{kind: "kind", dir: t.TempDir(), run: fake.run}
+
+	state, _, err := c.Ensure(context.Background())
+
+	require.NoError(t, err)
+	assert.True(t, state.Started)
+	assert.Zero(t, fake.refusedWaits)
+}
+
+func TestClusterEnsure_FailedStartShowsDockersReason(t *testing.T) {
+	fake := ours()
+	fake.running, fake.startErr = "false\n", errors.New("exit status 1")
+	c := &Cluster{kind: "kind", dir: t.TempDir(), run: fake.run}
+
+	_, out, err := c.Ensure(context.Background())
+
+	assert.ErrorIs(t, err, ErrClusterStart)
+	assert.Contains(t, out, "port is already allocated")
 }

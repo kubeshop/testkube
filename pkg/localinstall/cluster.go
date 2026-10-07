@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -23,9 +24,14 @@ const (
 
 	// kind's storage writes here; mounting it keeps data on the host.
 	nodeStorageDir = "/var/local-path-provisioner"
+
+	nodeName = ClusterName + "-control-plane"
 )
 
-var ErrClusterOutdated = errors.New("the existing cluster lacks Testkube ports or data folder")
+var (
+	ErrClusterOutdated = errors.New("the existing cluster lacks Testkube ports or data folder")
+	ErrClusterStart    = errors.New("the stopped cluster could not start")
+)
 
 // Browser-facing; Testkube's settings embed these exact addresses.
 var clusterPorts = []struct {
@@ -53,8 +59,15 @@ func (p Ports) Moved() []string {
 
 type ClusterState struct {
 	Created bool
+	Started bool
 	Ports   Ports
 }
+
+// The API refuses connections for a few seconds after start.
+var (
+	startTimeout = 2 * time.Minute
+	startRetry   = 2 * time.Second
+)
 
 type runFunc func(ctx context.Context, name string, args ...string) ([]byte, error)
 
@@ -94,22 +107,7 @@ func (c *Cluster) Ensure(ctx context.Context) (ClusterState, string, error) {
 		return ClusterState{}, string(out), err
 	}
 	if hasLine(string(out), ClusterName) {
-		// Rewrites our kubeconfig in case it was deleted.
-		if out, err = c.run(ctx, c.kind, "export", "kubeconfig", "--name", ClusterName, "--kubeconfig", c.kubeconfig); err != nil {
-			return ClusterState{}, string(out), err
-		}
-		// Mappings are fixed at creation, so read what it got.
-		if out, err = c.run(ctx, "docker", "port", ClusterName+"-control-plane"); err != nil {
-			return ClusterState{}, string(out), err
-		}
-		ports := parsePorts(string(out))
-		if out, err = c.run(ctx, "docker", "inspect", "-f", "{{range .Mounts}}{{.Destination}}\n{{end}}", ClusterName+"-control-plane"); err != nil {
-			return ClusterState{}, string(out), err
-		}
-		if len(ports) != len(clusterPorts) || !hasLine(string(out), nodeStorageDir) {
-			return ClusterState{}, "", ErrClusterOutdated
-		}
-		return ClusterState{Ports: ports}, "", nil
+		return c.reuse(ctx)
 	}
 
 	ports := pickPorts(c.portFree)
@@ -128,6 +126,56 @@ func (c *Cluster) Ensure(ctx context.Context) (ClusterState, string, error) {
 	out, err = c.run(ctx, c.kind, "create", "cluster", "--name", ClusterName, "--config", config,
 		"--image", nodeImage, "--kubeconfig", c.kubeconfig, "--wait", "2m")
 	return ClusterState{Created: err == nil, Ports: ports}, string(out), err
+}
+
+func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
+	var state ClusterState
+	out, err := c.run(ctx, "docker", "inspect", "-f", "{{.State.Running}}", nodeName)
+	if err != nil {
+		return state, string(out), err
+	}
+	// A stopped node has no port bindings to read; start it first.
+	if strings.TrimSpace(string(out)) != "true" {
+		if out, err = c.run(ctx, "docker", "start", nodeName); err != nil {
+			return state, string(out), ErrClusterStart
+		}
+		if out, err = c.waitReady(ctx); err != nil {
+			return state, string(out), ErrClusterStart
+		}
+		state.Started = true
+	}
+	// Rewrites our kubeconfig in case it was deleted.
+	if out, err = c.run(ctx, c.kind, "export", "kubeconfig", "--name", ClusterName, "--kubeconfig", c.kubeconfig); err != nil {
+		return state, string(out), err
+	}
+	// Mappings are fixed at creation, so read what it got.
+	if out, err = c.run(ctx, "docker", "port", nodeName); err != nil {
+		return state, string(out), err
+	}
+	state.Ports = parsePorts(string(out))
+	if out, err = c.run(ctx, "docker", "inspect", "-f", "{{range .Mounts}}{{.Destination}}\n{{end}}", nodeName); err != nil {
+		return state, string(out), err
+	}
+	if len(state.Ports) != len(clusterPorts) || !hasLine(string(out), nodeStorageDir) {
+		return ClusterState{}, "", ErrClusterOutdated
+	}
+	return state, "", nil
+}
+
+func (c *Cluster) waitReady(ctx context.Context) ([]byte, error) {
+	deadline := time.Now().Add(startTimeout)
+	for {
+		out, err := c.run(ctx, "docker", "exec", nodeName, "kubectl", "--kubeconfig=/etc/kubernetes/admin.conf",
+			"wait", "--for=condition=Ready", "nodes", "--all", "--timeout=10s")
+		if err == nil || time.Now().After(deadline) {
+			return out, err
+		}
+		select {
+		case <-ctx.Done():
+			return out, ctx.Err()
+		case <-time.After(startRetry):
+		}
+	}
 }
 
 func pickPorts(free func(int) bool) Ports {
