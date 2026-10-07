@@ -31,6 +31,14 @@ import (
 const (
 	defaultCallTimeout  = time.Second * 30
 	defaultPollInterval = time.Second
+	// maxPollBackoff caps the wait after a failed poll. A control plane restart breaks every
+	// connection at once, so the failures arrive in a run rather than in isolation. Only a
+	// successful poll clears the wait, and a runner that waits does not poll, so a long wait
+	// outlives the outage that caused it and nothing but a restart ends it.
+	maxPollBackoff = time.Second * 30
+	// pollBackoffDecay clears the failure count once a poll succeeds for this long. Without it
+	// the count only ever rises, so isolated failures hours apart still reach the cap.
+	pollBackoffDecay = time.Minute * 5
 )
 
 type runner interface {
@@ -56,6 +64,23 @@ type Client struct {
 	callTimeout   time.Duration
 	runner        runner
 	pollInterval  time.Duration
+	// sleep waits for a duration or until the context ends. A test replaces it to read the
+	// waits without spending them. A zero value means waitBackoff uses the real clock.
+	sleep func(ctx context.Context, d time.Duration) error
+}
+
+// waitBackoff waits out the backoff of a failed poll. It returns the error of the context when
+// the runner shuts down during the wait, so a shutdown does not sit out a wait it cannot use.
+func (c Client) waitBackoff(ctx context.Context, d time.Duration) error {
+	if c.sleep != nil {
+		return c.sleep(ctx, d)
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(d):
+		return nil
+	}
 }
 
 func executionConfigFromStart(start *executionv1.ExecutionStart, organizationId string, rc *executionv1.ExecutionRunningContext) testworkflowconfig.ExecutionConfig {
@@ -158,7 +183,8 @@ func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, r runne
 // to be received. Whilst this is not a severe issue it could cause executions to become "stuck"
 // in a queue at the Control Plane awaiting them going live on the runner.
 func (c Client) Start(ctx context.Context, environmentId string) error {
-	b := backoff.New(backoff.DefaultMaxDuration, c.pollInterval)
+	b := backoff.New(maxPollBackoff, c.pollInterval)
+	b.SetDecay(pollBackoffDecay)
 	ticker := time.Tick(c.pollInterval)
 	req := &executionv1.GetExecutionUpdatesRequest{}
 	for {
@@ -178,11 +204,15 @@ func (c Client) Start(ctx context.Context, environmentId string) error {
 			response, err := c.client.GetExecutionUpdates(callCtx, req, c.callOpts...)
 			cancel()
 			if err != nil {
+				// Duration advances the attempt counter, so it is read once and both logged
+				// and waited. Reading it twice doubles the counter on every failure.
+				wait := b.Duration()
 				c.logger.Warnw("Failed to get execution updates, backing off before retrying.",
-					"backoff", b.Duration(),
+					"backoff", wait,
 					"error", err)
-				// In the event of an error wait for backoff before trying again.
-				<-time.After(b.Duration())
+				if err := c.waitBackoff(ctx, wait); err != nil {
+					return err
+				}
 				continue
 			}
 			// If request succeeds then backoffs can be reset.
