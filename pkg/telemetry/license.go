@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 )
 
 const (
@@ -30,7 +31,8 @@ func GetEmail(license string) string {
 			return ""
 		}
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := http.DefaultClient.Do(req)
+		// Without a timeout, a slow network hangs every command.
+		resp, err := (&http.Client{Timeout: 5 * time.Second}).Do(req)
 		if err != nil {
 			return ""
 		}

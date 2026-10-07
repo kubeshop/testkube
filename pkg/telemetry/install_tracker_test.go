@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -50,6 +51,39 @@ func TestInstallTracker_DisabledSendsNothing(t *testing.T) {
 		}
 		assert.Equal(t, want, requests.Load(), "enabled=%v", enabled)
 	}
+}
+
+func TestInstallTracker_IdentifyLinksThisRunToEmail(t *testing.T) {
+	type event struct {
+		Event      string         `json:"event"`
+		DistinctID string         `json:"distinct_id"`
+		Properties map[string]any `json:"properties"`
+	}
+	var mu sync.Mutex
+	events := map[string]event{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var e event
+		_ = json.NewDecoder(r.Body).Decode(&e)
+		mu.Lock()
+		events[e.Event] = e
+		mu.Unlock()
+	}))
+	defer server.Close()
+
+	tracker := NewInstallTracker(InstallTrackerConfig{Enabled: true, MachineID: "machine", Version: "test", Endpoint: server.URL})
+	tracker.Identify("")
+	tracker.Send("before", nil)
+	tracker.Identify("owner@example.com")
+	tracker.Send("after", nil)
+	tracker.Wait()
+
+	assert.Len(t, events, 3, "empty email must not send an identify")
+	before := events["before"]
+	assert.Equal(t, before.Properties["install_session_id"], before.DistinctID, "owners share machines, so per run")
+	assert.Equal(t, "machine", before.Properties["machine_id"])
+	assert.Equal(t, "owner@example.com", events["$identify"].DistinctID)
+	assert.Equal(t, before.DistinctID, events["$identify"].Properties["$anon_distinct_id"])
+	assert.Equal(t, "owner@example.com", events["after"].DistinctID)
 }
 
 func TestInstallTracker_TagsOnlyLocalBuildsAsDev(t *testing.T) {
