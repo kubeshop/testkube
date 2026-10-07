@@ -139,10 +139,11 @@ func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 		if out, err = c.run(ctx, "docker", "start", nodeName); err != nil {
 			return state, string(out), ErrClusterStart
 		}
-		if out, err = c.waitReady(ctx); err != nil {
-			return state, string(out), ErrClusterStart
-		}
 		state.Started = true
+	}
+	// Also catches a cluster left half-built by Ctrl+C.
+	if out, err = c.waitReady(ctx); err != nil {
+		return ClusterState{}, string(out), ErrClusterStart
 	}
 	// Rewrites our kubeconfig in case it was deleted.
 	if out, err = c.run(ctx, c.kind, "export", "kubeconfig", "--name", ClusterName, "--kubeconfig", c.kubeconfig); err != nil {

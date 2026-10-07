@@ -312,7 +312,8 @@ func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
 		r.Fix = "Delete it, then run again:\n  ~/.testkube/bin/kind delete cluster --name " + localinstall.ClusterName
 	case errors.Is(err, localinstall.ErrClusterStart):
 		reason, r.Detail = "start", "could not start"
-		r.Fix = lastLines(out, 5) + "\nIf a port is in use, close that program, then run again"
+		r.Fix = lastLines(out, 5) + "\nIf a port is in use, close that program and run again.\n" +
+			"Otherwise delete the cluster: ~/.testkube/bin/kind delete cluster --name " + localinstall.ClusterName
 	default:
 		why := lastLines(out, 5)
 		if why == "" {

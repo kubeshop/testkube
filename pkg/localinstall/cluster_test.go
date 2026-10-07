@@ -72,6 +72,7 @@ func TestClusterEnsure_ReusesOursOnly(t *testing.T) {
 		{"our cluster is reused, not recreated", "kind\ntestkube\n", false, []string{
 			"kind get clusters",
 			"docker inspect -f {{.State.Running}} testkube-control-plane",
+			"docker exec testkube-control-plane kubectl --kubeconfig=/etc/kubernetes/admin.conf wait --for=condition=Ready nodes --all --timeout=10s",
 			"kind export kubeconfig --name testkube --kubeconfig " + kubeconfig,
 			"docker port testkube-control-plane",
 			"docker inspect -f {{range .Mounts}}{{.Destination}}\n{{end}} testkube-control-plane",
@@ -181,6 +182,19 @@ func TestClusterEnsure_WaitsWhileTheAPIIsStillStarting(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, state.Started)
 	assert.Zero(t, fake.refusedWaits)
+}
+
+func TestClusterEnsure_RunningButHalfBuiltClusterIsNotReused(t *testing.T) {
+	startTimeout, startRetry = 5*time.Millisecond, time.Millisecond
+	t.Cleanup(func() { startTimeout, startRetry = 2*time.Minute, 2*time.Second })
+	fake := ours()
+	fake.refusedWaits = 1 << 30
+	c := &Cluster{kind: "kind", dir: t.TempDir(), run: fake.run}
+
+	_, out, err := c.Ensure(context.Background())
+
+	assert.ErrorIs(t, err, ErrClusterStart)
+	assert.Contains(t, out, "refused")
 }
 
 func TestClusterEnsure_FailedStartShowsDockersReason(t *testing.T) {
