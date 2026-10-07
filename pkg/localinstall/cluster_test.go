@@ -113,10 +113,13 @@ func TestClusterEnsure_SomeoneElsesClusterIsNeverStarted(t *testing.T) {
 			change(fake)
 			c := &Cluster{kind: "kind", dir: dir, run: fake.run}
 
-			_, _, err := c.Ensure(context.Background())
+			state, _, err := c.Ensure(context.Background())
 
 			assert.ErrorIs(t, err, ErrClusterNotOurs)
 			assert.Len(t, fake.calls, 2, "only listed and inspected, never started")
+			if name == "data in another folder" {
+				assert.Equal(t, "/home", state.DataSourceRoot, "first folder only, never the full path")
+			}
 		})
 	}
 }
@@ -256,11 +259,13 @@ func TestMountsData_RecognizesOurFolderOnEveryDockerSetup(t *testing.T) {
 		{"docker desktop on wsl, label is another folder", wsl, map[string]string{"desktop.docker.io/binds/1/Source": "/home/other/data"}, false},
 		{"rancher desktop on wsl hides the path", "/mnt/wsl/rancher-desktop/run/docker-mounts/1b2c:/var/local-path-provisioner", nil, true},
 		{"another folder", "/home/other/data:/var/local-path-provisioner", nil, false},
+		{"a folder that only ends like ours", "/tmp" + data + ":/var/local-path-provisioner", nil, false},
 		{"a longer destination is not ours", data + ":/var/local-path-provisioner-old", nil, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.ours, mountsData([]string{tt.bind}, tt.labels, data))
+			ours, _ := mountsData([]string{tt.bind}, tt.labels, data)
+			assert.Equal(t, tt.ours, ours)
 		})
 	}
 }

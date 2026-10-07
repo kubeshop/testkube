@@ -61,6 +61,9 @@ type ClusterState struct {
 	Created bool
 	Started bool
 	Ports   Ports
+	// First folder of a foreign data source, e.g. "/host_mnt".
+	// Tracked to spot unknown Docker setups; never the full path.
+	DataSourceRoot string
 }
 
 // The API refuses connections for a few seconds after start.
@@ -136,9 +139,9 @@ func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 	if err != nil {
 		return state, string(out), err
 	}
-	running, ports, ok := c.ownedSettings(string(out))
+	running, ports, ok, root := c.ownedSettings(string(out))
 	if !ok {
-		return state, "", ErrClusterNotOurs
+		return ClusterState{DataSourceRoot: root}, "", ErrClusterNotOurs
 	}
 	state.Ports = ports
 	if !running {
@@ -159,31 +162,32 @@ func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 }
 
 // Ours means every browser port on 127.0.0.1 and our data folder.
-func (c *Cluster) ownedSettings(inspect string) (running bool, ports Ports, ok bool) {
+func (c *Cluster) ownedSettings(inspect string) (running bool, ports Ports, ok bool, sourceRoot string) {
 	lines := strings.Split(strings.TrimSpace(inspect), "\n")
 	if len(lines) != 4 {
-		return false, nil, false
+		return false, nil, false, ""
 	}
 	var bindings map[string][]struct{ HostIp, HostPort string }
 	var binds []string
 	var labels map[string]string
 	if json.Unmarshal([]byte(lines[1]), &bindings) != nil || json.Unmarshal([]byte(lines[2]), &binds) != nil ||
 		json.Unmarshal([]byte(lines[3]), &labels) != nil {
-		return false, nil, false
+		return false, nil, false, ""
 	}
 	ports = Ports{}
 	for _, cp := range clusterPorts {
 		b := bindings[fmt.Sprintf("%d/tcp", cp.inNodes)]
 		if len(b) != 1 || b[0].HostIp != "127.0.0.1" {
-			return false, nil, false
+			return false, nil, false, ""
 		}
 		host, err := strconv.Atoi(b[0].HostPort)
 		if err != nil {
-			return false, nil, false
+			return false, nil, false, ""
 		}
 		ports[cp.name] = host
 	}
-	return lines[0] == "true", ports, mountsData(binds, labels, filepath.Join(c.dir, "data"))
+	ok, sourceRoot = mountsData(binds, labels, filepath.Join(c.dir, "data"))
+	return lines[0] == "true", ports, ok, sourceRoot
 }
 
 // Some Docker setups on WSL replace the source with a hashed path.
@@ -192,7 +196,7 @@ const (
 	rancherDesktopWSLMounts = "/mnt/wsl/rancher-desktop/run/docker-mounts/"
 )
 
-func mountsData(binds []string, labels map[string]string, dataDir string) bool {
+func mountsData(binds []string, labels map[string]string, dataDir string) (ok bool, sourceRoot string) {
 	for _, b := range binds {
 		// Podman adds options after the destination, e.g. ":rw,rbind".
 		src, rest, found := strings.Cut(b, ":"+nodeStorageDir)
@@ -200,16 +204,18 @@ func mountsData(binds []string, labels map[string]string, dataDir string) bool {
 			continue
 		}
 		switch {
-		case strings.HasSuffix(src, dataDir): // Docker Desktop on Mac adds /host_mnt.
-			return true
+		case src == dataDir, src == "/host_mnt"+dataDir: // Docker Desktop on Mac adds /host_mnt.
+			return true, ""
 		case strings.HasPrefix(src, dockerDesktopWSLMounts):
-			return desktopLabelsPointTo(labels, dataDir)
+			return desktopLabelsPointTo(labels, dataDir), ""
 		case strings.HasPrefix(src, rancherDesktopWSLMounts):
 			// No trace of the real path; the port check must carry it.
-			return true
+			return true, ""
 		}
+		root, _, _ := strings.Cut(strings.TrimPrefix(src, "/"), "/")
+		return false, "/" + root
 	}
-	return false
+	return false, ""
 }
 
 // Docker Desktop keeps each real source in desktop.docker.io/binds/N/Source.

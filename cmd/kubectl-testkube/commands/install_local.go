@@ -259,7 +259,7 @@ func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) {
 	printStep(5, "Creating the cluster")
 	cluster, err := localinstall.NewCluster()
 	if err != nil {
-		failCluster(tracker, "", err)
+		failCluster(tracker, localinstall.ClusterState{}, "", err)
 	}
 	spinner := startSpinner(fmt.Sprintf("Starting cluster %q (about 1 minute on first run)", localinstall.ClusterName))
 	start := time.Now()
@@ -267,7 +267,7 @@ func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) {
 	_ = spinner.Stop()
 	exitIfCancelled(cmd, tracker, "cluster")
 	if err != nil {
-		failCluster(tracker, out, err)
+		failCluster(tracker, state, out, err)
 	}
 	detail := "already exists"
 	switch {
@@ -303,7 +303,7 @@ func startSpinner(text string) *pterm.SpinnerPrinter {
 	return spinner
 }
 
-func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
+func failCluster(tracker *telemetry.InstallTracker, state localinstall.ClusterState, out string, err error) {
 	r := localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "could not create"}
 	reason := "create"
 	switch {
@@ -323,7 +323,11 @@ func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
 		r.Fix = why + "\nCheck that Docker has enough memory and disk, then run again"
 	}
 	printCheckResult(r)
-	tracker.Send("install_local_failed", map[string]any{"stage": "cluster", "reason": reason})
+	props := map[string]any{"stage": "cluster", "reason": reason}
+	if state.DataSourceRoot != "" {
+		props["data_source_root"] = state.DataSourceRoot
+	}
+	tracker.Send("install_local_failed", props)
 	tracker.Wait()
 	os.Exit(1)
 }
