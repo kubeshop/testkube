@@ -67,7 +67,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			}
 			trackChecks(tracker, append(results, machine...), checker.Facts())
 			tracker.Send("install_local_checks_done", nil)
-			installMissingTools(cmd, tracker, results)
+			installMissingTools(cmd, tracker, checker, results)
 			tracker.Wait()
 		},
 	}
@@ -175,7 +175,7 @@ func printPlan() {
 		"  1. check your license key\n" +
 		"  2. check the tools it needs\n" +
 		"  3. check this machine\n" +
-		"  4. install kubectl, helm and kind into ~/.testkube/bin, if missing\n" +
+		"  4. download helm and kind into ~/.testkube/bin (kubectl too, if missing)\n" +
 		"  5. create a local cluster called \"testkube\" in Docker\n" +
 		"  6. install Testkube and open it in your browser\n\n")
 	ui.Printf("%s\n", ui.LightGray("It takes about 5 minutes. Your own tools and clusters are not changed.\n"+
@@ -189,12 +189,17 @@ func printStep(n int, title string) {
 	ui.Printf("\n%s %s\n", ui.LightGray(fmt.Sprintf("[%d/%d]", n, installSteps)), title)
 }
 
-func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, results []localinstall.Result) {
+func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, checker *localinstall.Checker, results []localinstall.Result) {
 	printStep(4, "Installing missing tools")
 	var missing []string
 	for _, r := range results {
 		if r.Status == localinstall.StatusWarn && localinstall.ToolVersion(r.Name) != "" {
 			missing = append(missing, r.Name)
+		}
+	}
+	for _, name := range localinstall.OwnTools {
+		if checker.NeedsOwn(cmd.Context(), name) {
+			missing = append(missing, name)
 		}
 	}
 	if len(missing) == 0 {

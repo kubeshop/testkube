@@ -11,7 +11,8 @@
 //
 // Checks (see Checker):
 //   - Docker missing, unreachable or permission denied blocks the install.
-//   - Missing kubectl, helm or kind only warns; we install them.
+//   - Missing kubectl only warns; we install it.
+//   - helm and kind are always our pinned copies, never the user's.
 //   - Low Docker CPU, memory or disk only warns.
 //   - Unreachable download sites only warn; Docker may use its own proxy.
 //

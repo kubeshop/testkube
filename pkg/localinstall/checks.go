@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -53,7 +54,10 @@ const (
 )
 
 // We install these ourselves, so missing is only a warning.
-var installableTools = []string{"kubectl", "helm", "kind"}
+var installableTools = []string{"kubectl"}
+
+// Always our pinned copies: other versions break the install.
+var OwnTools = []string{"helm", "kind"}
 
 type host interface {
 	LookPath(name string) (string, error)
@@ -139,6 +143,15 @@ func (c *Checker) CheckTools(ctx context.Context) []Result {
 		results = append(results, c.checkInstallable(ctx, name))
 	}
 	return results
+}
+
+// The user's copy never counts, only ours at the pinned version.
+func (c *Checker) NeedsOwn(ctx context.Context, name string) bool {
+	dir, err := ToolsDir()
+	if err != nil {
+		return true
+	}
+	return c.host.ToolVersion(ctx, filepath.Join(dir, name), versionArgs[name]...) != ToolVersion(name)
 }
 
 func (c *Checker) CheckOS() Result {
