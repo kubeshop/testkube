@@ -198,7 +198,7 @@ func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, 
 		}
 	}
 	if len(missing) == 0 {
-		printCheckResult(localinstall.Result{Name: "tools", Status: localinstall.StatusPass, Detail: "nothing to install"})
+		printCheckResult(localinstall.Result{Name: "tools", Status: localinstall.StatusPass, Detail: "already installed"})
 		return
 	}
 	installer, err := localinstall.NewToolInstaller()
@@ -216,7 +216,7 @@ func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, 
 		if err != nil {
 			failToolInstall(tracker, name, err)
 		}
-		printCheckResult(localinstall.Result{Name: name, Status: localinstall.StatusPass, Detail: version + " installed"})
+		printCheckResult(localinstall.Result{Name: name, Status: localinstall.StatusPass, Version: version, Detail: "installed, checksum verified"})
 	}
 	tracker.Send("install_local_tools_installed", map[string]any{"tools": missing})
 }
