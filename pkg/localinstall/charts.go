@@ -9,6 +9,10 @@ const (
 	RunnerChart            = "oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube/testkube-runner"
 	RunnerChartVersion     = "2.14.1"
 	AppVersion             = "v2.14.1"
+
+	// The demo values' static dex login.
+	AdminEmail    = "admin@example.com"
+	AdminPassword = "password"
 )
 
 // Embedded, so a values change upstream can't break old CLIs.
