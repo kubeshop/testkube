@@ -107,11 +107,11 @@ func runLicenseStep(tracker *telemetry.InstallTracker, flagKey string) string {
 		printCheckResult(localinstall.Result{Name: "license", Status: localinstall.StatusPass, Detail: detail})
 		return license.Key
 	}
-	failLicense(tracker, licenseFailure(err))
+	failLicense(tracker, licenseFailure(err, license.Expiry))
 	return "" // failLicense exits
 }
 
-func licenseFailure(err error) localinstall.Result {
+func licenseFailure(err error, expiry time.Time) localinstall.Result {
 	r := localinstall.Result{Name: "license", Status: localinstall.StatusFail, Fix: localinstall.LicenseHelp}
 	switch {
 	case errors.Is(err, localinstall.ErrLicenseUnreachable):
@@ -120,6 +120,11 @@ func licenseFailure(err error) localinstall.Result {
 		r.Detail = "no key entered"
 	case errors.Is(err, localinstall.ErrLicenseInvalid):
 		r.Detail = "not valid"
+	case errors.Is(err, localinstall.ErrLicenseExpired):
+		r.Detail, r.Fix = "expired", "This key has expired. Get a new one at https://testkube.io/get-started/on-prem"
+		if !expiry.IsZero() {
+			r.Detail = "expired on " + expiry.Local().Format("2 Jan 2006")
+		}
 	default:
 		r.Detail, r.Fix = "could not read the key", "Pass it with --license <key>"
 	}

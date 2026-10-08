@@ -18,6 +18,7 @@ const (
 var (
 	ErrLicenseMissing     = errors.New("no license key entered")
 	ErrLicenseInvalid     = errors.New("license key is not valid")
+	ErrLicenseExpired     = errors.New("license key has expired")
 	ErrLicenseUnreachable = errors.New("cannot reach license.testkube.io")
 )
 
@@ -70,6 +71,9 @@ func (s *LicenseStep) Run(flagKey string) (license License, attempts []LicenseAt
 		}
 		valid, expiry, err := s.validator.Validate(key)
 		switch {
+		// The right key, just too old: another try can't help.
+		case errors.Is(err, ErrLicenseExpired):
+			return License{Expiry: expiry}, append(attempts, LicenseAttempt{Number: n, Status: "expired"}), err
 		case err != nil:
 			// Retrying won't help; the cluster would fail the same way.
 			return License{}, append(attempts, LicenseAttempt{Number: n, Status: "unreachable"}), ErrLicenseUnreachable
@@ -92,5 +96,8 @@ func (s licenseService) Validate(key string) (bool, time.Time, error) {
 	}
 	// Display only: an odd format must not fail validation.
 	expiry, _ := time.Parse(time.RFC3339, resp.License.Expiry)
+	if !resp.Valid && resp.Code == "EXPIRED" {
+		return false, expiry, ErrLicenseExpired
+	}
 	return resp.Valid, expiry, nil
 }
