@@ -380,3 +380,15 @@ func TestCheckDisk_WarnsWhenLowOrUnreadable(t *testing.T) {
 		})
 	}
 }
+
+func TestRunCombined_KindNeverPicksUpUsersPodmanSetting(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("needs sh")
+	}
+	t.Setenv("KIND_EXPERIMENTAL_PROVIDER", "podman")
+
+	out, err := runCombined(context.Background(), "sh", "-c", "echo $KIND_EXPERIMENTAL_PROVIDER")
+
+	require.NoError(t, err)
+	assert.Equal(t, "docker", strings.TrimSpace(string(out)))
+}

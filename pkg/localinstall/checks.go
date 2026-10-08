@@ -229,6 +229,10 @@ func (c *Checker) checkDocker(ctx context.Context) Result {
 		}
 		return Result{Name: "docker", Status: StatusFail, Detail: "not reachable", Fix: err.Error() + "\nStart Docker, then run the installer again"}
 	}
+	if len(c.info.PodmanHost) > 0 {
+		return Result{Name: "docker", Status: StatusFail, Version: "Podman", Detail: "not supported yet",
+			Fix: "Testkube needs Docker for now. Install Docker:\nhttps://docs.docker.com/get-docker/"}
+	}
 	version := ""
 	if c.info.ServerVersion != "" {
 		version = "v" + c.info.ServerVersion

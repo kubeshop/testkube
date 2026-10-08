@@ -382,6 +382,8 @@ func hasLine(out, want string) bool {
 func runCombined(ctx context.Context, name string, args ...string) ([]byte, error) {
 	var out bytes.Buffer
 	cmd := exec.CommandContext(ctx, name, args...)
+	// Our inspect and exec calls only reach Docker nodes.
+	cmd.Env = append(os.Environ(), "KIND_EXPERIMENTAL_PROVIDER=docker")
 	cmd.Stdout, cmd.Stderr = &out, &out
 	err := cmd.Run()
 	return out.Bytes(), err

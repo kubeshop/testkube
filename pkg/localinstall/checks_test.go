@@ -2,6 +2,7 @@ package localinstall
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -132,6 +133,27 @@ func TestCheckTools_DockerBlocksButMissingToolsOnlyWarn(t *testing.T) {
 
 			assert.Equal(t, tt.wantFailure, HasFailure(results))
 			assert.Equal(t, tt.wantDockerDetail, results[0].Detail)
+		})
+	}
+}
+
+func TestCheckTools_PodmanStandInIsRefused(t *testing.T) {
+	tests := map[string]struct {
+		info     string
+		wantFail bool
+	}{
+		"podman-docker": {`{"host":{"arch":"arm64","cpus":8},"version":{"Version":"5.4.2"}}`, true},
+		"docker":        {`{"ServerVersion":"28.0.1","NCPU":8,"HttpProxy":"","Name":"docker-desktop"}`, false},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			var info dockerInfo
+			require.NoError(t, json.Unmarshal([]byte(tt.info), &info))
+			checker := &Checker{host: fakeHost{}, docker: fakeDocker{info: info}}
+
+			results := checker.CheckTools(context.Background())
+
+			assert.Equal(t, tt.wantFail, HasFailure(results))
 		})
 	}
 }
