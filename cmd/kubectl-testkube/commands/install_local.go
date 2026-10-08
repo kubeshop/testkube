@@ -189,7 +189,7 @@ func printPlan() {
 		"  4. download helm and kind into ~/.testkube/bin (kubectl too, if missing)\n" +
 		"  5. create a local cluster called \"testkube\" in Docker\n" +
 		"  6. install Testkube and open it in your browser\n\n")
-	ui.Printf("%s\n", ui.LightGray("It takes about 5 minutes. Your own tools and clusters are not changed.\n"+
+	ui.Printf("%s\n", ui.LightGray("First run takes 5 to 10 minutes, mostly downloads. Your own tools and clusters are not changed.\n"+
 		"Press Ctrl+C to exit at any time."))
 }
 
@@ -312,7 +312,7 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 	}
 	start := time.Now()
 	waiting := func(elapsed time.Duration) string {
-		return "Installing Testkube · " + took(elapsed) + " (first run about 5 minutes)"
+		return "Installing Testkube · " + took(elapsed) + " (first run 3 to 8 minutes)"
 	}
 	spinner := startSpinner(waiting(0))
 	stopTicking := tickElapsed(spinner, start, waiting)
