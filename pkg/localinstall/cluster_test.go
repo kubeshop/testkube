@@ -24,10 +24,10 @@ const ourBindings = `{"30080/tcp":[{"HostIp":"127.0.0.1","HostPort":"8080"}],` +
 
 type kindFake struct {
 	clusters, running, bindings, mounts string
-	storagePattern                      string
-	applyErr                            error
+	storagePattern, createOut           string
+	applyErr, inspectErr, exportErr     error
 	startErr                            error
-	refusedWaits                        int
+	refusedWaits, createFails           int
 	calls                               []string
 }
 
@@ -36,8 +36,13 @@ func (f *kindFake) run(_ context.Context, name string, args ...string) ([]byte, 
 	switch {
 	case name != "docker" && args[0] == "get":
 		return []byte(f.clusters), nil
+	case name != "docker" && args[0] == "create" && f.createFails > 0:
+		f.createFails--
+		return []byte(f.createOut), errExit
+	case name != "docker" && args[0] == "export":
+		return nil, f.exportErr
 	case args[0] == "inspect":
-		return []byte(f.running + "\n" + f.bindings + "\n" + f.mounts + "\n"), nil
+		return []byte(f.running + "\n" + f.bindings + "\n" + f.mounts + "\n"), f.inspectErr
 	case args[0] == "start":
 		return []byte("Bind for 127.0.0.1:9000 failed: port is already allocated"), f.startErr
 	case args[0] == "exec" && f.refusedWaits > 0:
@@ -130,6 +135,62 @@ func TestClusterEnsure_SomeoneElsesClusterIsNeverStarted(t *testing.T) {
 
 			assert.ErrorIs(t, err, ErrClusterNotOurs)
 			assert.NotContains(t, fake.calls, "docker start testkube-control-plane")
+		})
+	}
+}
+
+var errExit = errors.New("exit status 1")
+
+func TestClusterEnsure_TakenPortIsNamed(t *testing.T) {
+	tests := map[string]struct {
+		out  string
+		want error
+	}{
+		"docker":          {"Error response from daemon: Bind for 127.0.0.1:9001 failed: port is already allocated", PortTakenError{Port: 9001}},
+		"podman":          {"Error: rootlessport listen tcp 127.0.0.1:8090: bind: address already in use", PortTakenError{Port: 8090}},
+		"another failure": {"ERROR: failed to create cluster: no space left on device", errExit},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			fake := &kindFake{createOut: tt.out, createFails: 2}
+			c := &Cluster{kind: "kind", dir: t.TempDir(), portFree: allFree, run: fake.run}
+
+			_, _, err := c.Ensure(context.Background())
+
+			assert.Equal(t, tt.want, err)
+		})
+	}
+}
+
+func TestClusterEnsure_PortTakenDuringCreateMovesToAFreeOne(t *testing.T) {
+	fake := &kindFake{createOut: "Bind for 127.0.0.1:9000 failed: port is already allocated", createFails: 1}
+	c := &Cluster{kind: "kind", dir: t.TempDir(), portFree: allFree, run: fake.run}
+
+	state, _, err := c.Ensure(context.Background())
+
+	require.NoError(t, err)
+	assert.True(t, state.Created)
+	assert.Equal(t, []string{"storage 9000→9001"}, state.Ports.Moved())
+}
+
+func TestClusterEnsure_ReuseFailuresAreNamed(t *testing.T) {
+	tests := map[string]struct {
+		change func(f *kindFake)
+		want   error
+	}{
+		"cluster can't be read":     {func(f *kindFake) { f.inspectErr = errExit }, ErrClusterInspect},
+		"kubeconfig can't be saved": {func(f *kindFake) { f.exportErr = errExit }, ErrClusterKubeconfig},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			fake := ours(t, dir)
+			tt.change(fake)
+			c := &Cluster{kind: "kind", dir: dir, run: fake.run}
+
+			_, _, err := c.Ensure(context.Background())
+
+			assert.ErrorIs(t, err, tt.want)
 		})
 	}
 }

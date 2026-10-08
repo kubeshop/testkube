@@ -306,11 +306,12 @@ func startSpinner(text string) *pterm.SpinnerPrinter {
 func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
 	r := localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "could not create"}
 	reason := "create"
+	var taken localinstall.PortTakenError
 	switch {
 	case errors.Is(err, localinstall.ErrClusterNotOurs):
 		reason, r.Detail = "not_ours", "name already taken"
 		r.Fix = fmt.Sprintf("A kind cluster named %q exists that this installer didn't create.\n"+
-			"Delete it if you don't need it, then run again:\n  kind delete cluster --name %s", localinstall.ClusterName, localinstall.ClusterName)
+			"Delete it if you don't need it, then run again:\n  ~/.testkube/bin/kind delete cluster --name %s", localinstall.ClusterName, localinstall.ClusterName)
 	case errors.Is(err, localinstall.ErrClusterStart):
 		reason, r.Detail = "start", "could not start"
 		r.Fix = lastLines(out, 5) + "\nIf a port is in use, close that program and run again.\n" +
@@ -319,6 +320,15 @@ func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
 		reason, r.Detail = "storage", "could not set up storage"
 		r.Fix = lastLines(out, 5) + "\nRun again. If it keeps failing, delete the cluster:\n" +
 			"  ~/.testkube/bin/kind delete cluster --name " + localinstall.ClusterName
+	case errors.Is(err, localinstall.ErrClusterInspect):
+		reason, r.Detail = "inspect", "could not read existing cluster"
+		r.Fix = withWhy(out, "Check that Docker is running, then run again")
+	case errors.Is(err, localinstall.ErrClusterKubeconfig):
+		reason, r.Detail = "kubeconfig", "could not save its settings"
+		r.Fix = withWhy(out, "Check that ~/.testkube is writable, then run again")
+	case errors.As(err, &taken):
+		reason, r.Detail = "port_taken", "port taken"
+		r.Fix = fmt.Sprintf("Another program took port %d just now. Close it, then run again", taken.Port)
 	default:
 		why := lastLines(out, 5)
 		if why == "" {
@@ -339,6 +349,14 @@ func lastLines(out string, n int) string {
 		lines = lines[len(lines)-n:]
 	}
 	return strings.TrimSpace(strings.Join(lines, "\n"))
+}
+
+// Docker's own words first, when it gave any.
+func withWhy(out, fix string) string {
+	if why := lastLines(out, 3); why != "" {
+		return why + "\n" + fix
+	}
+	return fix
 }
 
 // One row per run: every status and measured value together.
