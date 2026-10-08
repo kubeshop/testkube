@@ -231,6 +231,10 @@ func (c *Checker) CheckInotify(ctx context.Context) []Result {
 			minInotifyInstances, minInotifyWatches)}}
 }
 
+func isWSL(kernel string) bool {
+	return strings.Contains(strings.ToLower(kernel), "microsoft")
+}
+
 // Both check groups read one docker info call.
 func (c *Checker) readDockerInfo(ctx context.Context) (dockerInfo, error) {
 	if c.info != nil {
@@ -246,6 +250,11 @@ func (c *Checker) readDockerInfo(ctx context.Context) (dockerInfo, error) {
 
 func (c *Checker) checkDocker(ctx context.Context) Result {
 	if _, err := c.host.LookPath("docker"); err != nil {
+		// Usually Docker Desktop is installed, just not shared here.
+		if isWSL(c.host.ReadSysctl("kernel.osrelease")) {
+			return Result{Name: "docker", Status: StatusFail, Detail: "not found",
+				Fix: "In Docker Desktop, open Settings > Resources > WSL integration,\nturn on this distro, then run again."}
+		}
 		return Result{Name: "docker", Status: StatusFail, Detail: "not found", Fix: "Install Docker: https://docs.docker.com/get-docker/"}
 	}
 	if _, err := c.readDockerInfo(ctx); err != nil {

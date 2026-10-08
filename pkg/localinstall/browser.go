@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"strings"
 )
 
 // False means the user must open it themselves.
@@ -28,7 +27,7 @@ func browserCommand(goos string, getenv func(string) string, kernel string, look
 	case goos == "windows":
 		return []string{"rundll32", "url.dll,FileProtocolHandler", url}
 	// WSL has no Linux browser; open the Windows one.
-	case strings.Contains(strings.ToLower(kernel), "microsoft"):
+	case isWSL(kernel):
 		if _, err := lookPath("wslview"); err == nil {
 			return []string{"wslview", url}
 		}

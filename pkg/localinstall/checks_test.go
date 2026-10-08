@@ -142,6 +142,26 @@ func TestCheckTools_DockerBlocksButMissingToolsOnlyWarn(t *testing.T) {
 	}
 }
 
+func TestCheckTools_MissingDockerInWSLPointsAtDockerDesktop(t *testing.T) {
+	tests := map[string]struct {
+		kernel  string
+		wantFix string
+	}{
+		"WSL":   {"5.15.167.4-microsoft-standard-WSL2", "WSL integration"},
+		"Linux": {"6.8.0-45-generic", "https://docs.docker.com/get-docker/"},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			checker := &Checker{host: fakeHost{missing: map[string]bool{"docker": true},
+				sysctl: map[string]string{"kernel.osrelease": tt.kernel}}}
+
+			results := checker.CheckTools(context.Background())
+
+			assert.Contains(t, results[0].Fix, tt.wantFix)
+		})
+	}
+}
+
 func TestCheckTools_PodmanStandInIsRefused(t *testing.T) {
 	tests := map[string]struct {
 		info     string
