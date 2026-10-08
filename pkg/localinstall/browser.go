@@ -22,7 +22,7 @@ func OpenBrowser(url string) bool {
 	err := exec.CommandContext(ctx, args[0], args[1:]...).Run()
 	// explorer.exe exits 1 even after opening the page.
 	var exitErr *exec.ExitError
-	return err == nil || (args[0] == "explorer.exe" && errors.As(err, &exitErr))
+	return err == nil || (args[0] == "explorer.exe" && ctx.Err() == nil && errors.As(err, &exitErr) && exitErr.ExitCode() == 1)
 }
 
 func browserCommand(goos string, getenv func(string) string, kernel string, lookPath func(string) (string, error), url string) []string {
