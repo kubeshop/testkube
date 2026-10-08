@@ -337,12 +337,24 @@ spec:
       - cloud-lint-js-v1-npm-
       paths:
       - /root/.npm/_cacache
-  - name: Check TypeScript types
-    shell: npx turbo run ts-check --cache-dir=.turbo
-  - name: Check formatting
-    shell: npx turbo run format:check --cache-dir=.turbo
-  - name: Check linters
-    shell: npx turbo run lint --cache-dir=.turbo
+  - name: Checks
+    cache:
+      # Turbo's task cache, kept between runs: a package whose inputs are unchanged
+      # skips its type check, format check and lint. Each run saves a new entry and
+      # restores the newest, so the cache follows main rather than staying at the first
+      # run's sources; entries hold only task logs, so one per run stays small.
+      key: cloud-lint-js-v1-turbo-{{execution.id}}
+      restoreKeys:
+      - cloud-lint-js-v1-turbo-
+      paths:
+      - /data/repo/js/.turbo
+    steps:
+    - name: Check TypeScript types
+      shell: npx turbo run ts-check --cache-dir=.turbo
+    - name: Check formatting
+      shell: npx turbo run format:check --cache-dir=.turbo
+    - name: Check linters
+      shell: npx turbo run lint --cache-dir=.turbo
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
@@ -416,6 +428,8 @@ spec:
       value: /root/go/pkg/mod
     - name: GOPROXY
       value: https://proxy.golang.org,direct
+    - name: GOCACHE
+      value: /root/.cache/go-build
     resources:
       limits:
         cpu: 4
@@ -428,15 +442,19 @@ spec:
   steps:
   - name: Check go.mod, go.sum, and OpenAPI
     cache:
-      key: cloud-gomod-codegen-v1-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      # The build cache too: the OpenAPI generation builds cmd/openapi-merge and runs
+      # ogen through `go tool`, each from source unless the build cache already holds
+      # it. Keyed on the modules, which declare ogen, and the image's Go, whose outputs
+      # only it can reuse.
+      key: cloud-gomod-codegen-v2-golang-1.26.6-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
       restoreKeys:
-      - cloud-gomod-codegen-v1-gomod-
+      - cloud-gomod-codegen-v2-golang-1.26.6-
       paths:
       - /root/go/pkg/mod/cache/download
+      - /root/.cache/go-build
     shell: |-
       set -euo pipefail
-      apt-get update -qq
-      apt-get install -y -qq git make
+      # git and make come with the golang image.
       git config --global --add safe.directory /data/repo
 
       go mod tidy

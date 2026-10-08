@@ -478,17 +478,24 @@ spec:
   steps:
   - name: Verify generated CRDs
     cache:
-      key: oss-verify-crds-v1-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      # The build cache too: every `go tool controller-gen` and `go tool yq` builds its
+      # tool from source unless the build cache already holds it. Keyed on the modules,
+      # which declare the tools, and the image's Go, whose outputs only it can reuse.
+      key: oss-verify-crds-v2-golang-1.27.0-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
       restoreKeys:
-      - oss-verify-crds-v1-gomod-
+      - oss-verify-crds-v2-golang-1.27.0-
       paths:
       - /root/go/pkg/mod/cache/download
+      - /root/.cache/go-build
     run:
       env:
       - name: GOPROXY
         value: https://proxy.golang.org,direct
+      - name: GOCACHE
+        value: /root/.cache/go-build
       shell: |
-        apt-get update && apt-get install -y --no-install-recommends make curl ca-certificates nodejs
+        # make, curl and ca-certificates come with the golang image.
+        apt-get update && apt-get install -y --no-install-recommends nodejs
         git config --global --add safe.directory /data/repo
         make verify-crds-generated
 ---
