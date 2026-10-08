@@ -36,6 +36,7 @@ const (
 var (
 	ErrClusterNotOurs = errors.New("a cluster with our name exists that this installer did not create")
 	ErrClusterStart   = errors.New("the stopped cluster could not start")
+	ErrClusterStorage = errors.New("the cluster's storage could not be set up")
 )
 
 // Browser-facing; Testkube's settings embed these exact addresses.
@@ -135,7 +136,11 @@ func (c *Cluster) Ensure(ctx context.Context) (ClusterState, string, error) {
 	}
 	out, err = c.run(ctx, c.kind, "create", "cluster", "--name", ClusterName, "--config", config,
 		"--image", nodeImage, "--kubeconfig", c.kubeconfig, "--wait", "2m")
-	return ClusterState{Created: err == nil, Ports: ports}, string(out), err
+	if err != nil {
+		return ClusterState{Ports: ports}, string(out), err
+	}
+	why, err := c.fixStorage(ctx)
+	return ClusterState{Created: true, Ports: ports}, why, err
 }
 
 func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
@@ -164,6 +169,9 @@ func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 	// Also catches a cluster left half-built by Ctrl+C.
 	if out, err = c.waitReady(ctx); err != nil {
 		return ClusterState{}, string(out), ErrClusterStart
+	}
+	if why, err := c.fixStorage(ctx); err != nil {
+		return state, why, err
 	}
 	// Rewrites our kubeconfig in case it was deleted.
 	if out, err = c.run(ctx, c.kind, "export", "kubeconfig", "--name", ClusterName, "--kubeconfig", c.kubeconfig); err != nil {
@@ -203,6 +211,44 @@ func ownedSettings(inspect, owner string) (running bool, ports Ports, ok bool) {
 
 func (c *Cluster) ownerFile() string {
 	return filepath.Join(c.dir, "cluster-id")
+}
+
+// kind's default folders are random; a rebuilt cluster loses data.
+const storagePathPattern = "{{ .PVC.Namespace }}/{{ .PVC.Name }}/data"
+
+// Retain: helm uninstall must not wipe the user's data folder.
+const storageClass = `apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: standard
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: rancher.io/local-path
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+parameters:
+  pathPattern: "` + storagePathPattern + `"
+`
+
+func (c *Cluster) fixStorage(ctx context.Context) (string, error) {
+	out, err := c.nodeKubectl(ctx, "get", "storageclass", "standard", "-o", "jsonpath={.parameters.pathPattern}")
+	if err == nil && string(out) == storagePathPattern {
+		return "", nil
+	}
+	// Parameters can't change in place, so the class is replaced.
+	if out, err = c.nodeKubectl(ctx, "delete", "storageclass", "standard", "--ignore-not-found"); err != nil {
+		return string(out), ErrClusterStorage
+	}
+	out, err = c.run(ctx, "docker", "exec", nodeName, "sh", "-c",
+		`printf '%s' "$1" | kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f -`, "_", storageClass)
+	if err != nil {
+		return string(out), ErrClusterStorage
+	}
+	return "", nil
+}
+
+func (c *Cluster) nodeKubectl(ctx context.Context, args ...string) ([]byte, error) {
+	return c.run(ctx, "docker", append([]string{"exec", nodeName, "kubectl", "--kubeconfig=/etc/kubernetes/admin.conf"}, args...)...)
 }
 
 func (c *Cluster) waitReady(ctx context.Context) ([]byte, error) {

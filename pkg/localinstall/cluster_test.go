@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -23,6 +24,8 @@ const ourBindings = `{"30080/tcp":[{"HostIp":"127.0.0.1","HostPort":"8080"}],` +
 
 type kindFake struct {
 	clusters, running, bindings, mounts string
+	storagePattern                      string
+	applyErr                            error
 	startErr                            error
 	refusedWaits                        int
 	calls                               []string
@@ -40,6 +43,10 @@ func (f *kindFake) run(_ context.Context, name string, args ...string) ([]byte, 
 	case args[0] == "exec" && f.refusedWaits > 0:
 		f.refusedWaits--
 		return []byte("The connection to the server testkube-control-plane:6443 was refused"), errors.New("exit status 1")
+	case args[0] == "exec" && slices.Contains(args, "get") && slices.Contains(args, "storageclass"):
+		return []byte(f.storagePattern), nil
+	case args[0] == "exec" && args[2] == "sh":
+		return []byte("error: storageclasses.storage.k8s.io is forbidden"), f.applyErr
 	}
 	return nil, nil
 }
@@ -47,7 +54,7 @@ func (f *kindFake) run(_ context.Context, name string, args ...string) ([]byte, 
 func ours(t *testing.T, dir string) *kindFake {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "cluster-id"), []byte("OURMARK"), 0o600))
 	mounts := `[{"Destination":"/lib/modules"},{"Destination":"/var/local-path-provisioner"},{"Destination":"/testkube/owner/OURMARK"}]`
-	return &kindFake{clusters: "testkube\n", running: "true", bindings: ourBindings, mounts: mounts}
+	return &kindFake{clusters: "testkube\n", running: "true", bindings: ourBindings, mounts: mounts, storagePattern: storagePathPattern}
 }
 
 func allFree(int) bool { return true }
@@ -57,6 +64,7 @@ func TestClusterEnsure_ReusesOursOnly(t *testing.T) {
 	kubeconfig := filepath.Join(dir, "kubeconfig")
 	create := "kind create cluster --name testkube --config " + filepath.Join(dir, "kind.yaml") +
 		" --image " + nodeImage + " --kubeconfig " + kubeconfig + " --wait 2m"
+	storage := "docker exec testkube-control-plane kubectl --kubeconfig=/etc/kubernetes/admin.conf get storageclass standard -o jsonpath={.parameters.pathPattern}"
 	tests := []struct {
 		name        string
 		clusters    string
@@ -67,10 +75,11 @@ func TestClusterEnsure_ReusesOursOnly(t *testing.T) {
 			"kind get clusters",
 			"docker inspect -f {{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .Mounts}} testkube-control-plane",
 			"docker exec testkube-control-plane kubectl --kubeconfig=/etc/kubernetes/admin.conf wait --for=condition=Ready nodes --all --timeout=10s",
+			storage,
 			"kind export kubeconfig --name testkube --kubeconfig " + kubeconfig,
 		}},
-		{"a similar name is someone else's", "testkube-dev\n", true, []string{"kind get clusters", create}},
-		{"no clusters at all", "No kind clusters found.\n", true, []string{"kind get clusters", create}},
+		{"a similar name is someone else's", "testkube-dev\n", true, []string{"kind get clusters", create, storage}},
+		{"no clusters at all", "No kind clusters found.\n", true, []string{"kind get clusters", create, storage}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -175,6 +184,43 @@ func TestClusterEnsure_NewClusterCarriesTheMarkWeSaved(t *testing.T) {
 	require.NotEmpty(t, owner)
 	config, _ := os.ReadFile(filepath.Join(dir, "kind.yaml"))
 	assert.Contains(t, string(config), "containerPath: /testkube/owner/"+string(owner)+"\n    readOnly: true")
+}
+
+func TestClusterEnsure_DataFoldersSurviveARebuild(t *testing.T) {
+	tests := map[string]*kindFake{
+		"new cluster":                   {},
+		"cluster from an older install": nil,
+	}
+	for name, fake := range tests {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			if fake == nil {
+				fake = ours(t, dir)
+				fake.storagePattern = ""
+			}
+			c := &Cluster{kind: "kind", dir: dir, portFree: allFree, run: fake.run}
+
+			_, _, err := c.Ensure(context.Background())
+			require.NoError(t, err)
+
+			i := slices.IndexFunc(fake.calls, func(c string) bool { return strings.Contains(c, "apply -f -") })
+			require.NotEqual(t, -1, i)
+			apply := fake.calls[i]
+			assert.Contains(t, fake.calls, "docker exec testkube-control-plane kubectl --kubeconfig=/etc/kubernetes/admin.conf delete storageclass standard --ignore-not-found")
+			assert.Contains(t, apply, `pathPattern: "`+storagePathPattern+`"`)
+			assert.Contains(t, apply, "reclaimPolicy: Retain")
+		})
+	}
+}
+
+func TestClusterEnsure_StorageFailureIsNamed(t *testing.T) {
+	fake := &kindFake{applyErr: errors.New("exit status 1")}
+	c := &Cluster{kind: "kind", dir: t.TempDir(), portFree: allFree, run: fake.run}
+
+	_, out, err := c.Ensure(context.Background())
+
+	assert.ErrorIs(t, err, ErrClusterStorage)
+	assert.Contains(t, out, "forbidden")
 }
 
 func TestClusterEnsure_StoppedClusterIsStartedBeforeReading(t *testing.T) {
