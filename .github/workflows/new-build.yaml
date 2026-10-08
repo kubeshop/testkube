@@ -172,6 +172,17 @@ jobs:
           SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
           CLOUD_SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
 
+  publish-gar:
+    needs: build
+    # Only stable releases (X.Y.Z), excluding -preview, -rc, -dev and -beta
+    if: ${{ github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/publish-gar.yaml
+    with:
+      version: ${{ github.ref_name }}
+    secrets: inherit
+
   helm:
     runs-on: depot-ubuntu-22.04
     needs: build
