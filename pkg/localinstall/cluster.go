@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -34,10 +35,31 @@ const (
 )
 
 var (
-	ErrClusterNotOurs = errors.New("a cluster with our name exists that this installer did not create")
-	ErrClusterStart   = errors.New("the stopped cluster could not start")
-	ErrClusterStorage = errors.New("the cluster's storage could not be set up")
+	ErrClusterNotOurs    = errors.New("a cluster with our name exists that this installer did not create")
+	ErrClusterStart      = errors.New("the stopped cluster could not start")
+	ErrClusterStorage    = errors.New("the cluster's storage could not be set up")
+	ErrClusterInspect    = errors.New("the existing cluster could not be read")
+	ErrClusterKubeconfig = errors.New("the cluster's kubeconfig could not be saved")
 )
+
+// Another program bound the port between our check and kind's.
+type PortTakenError struct{ Port int }
+
+func (e PortTakenError) Error() string {
+	return fmt.Sprintf("port %d was taken before the cluster could use it", e.Port)
+}
+
+// Docker's wording, then Podman's.
+var portTakenLine = regexp.MustCompile(`127\.0\.0\.1:(\d+).*(port is already allocated|address already in use)`)
+
+func portTaken(out string) (int, bool) {
+	m := portTakenLine.FindStringSubmatch(out)
+	if m == nil {
+		return 0, false
+	}
+	port, err := strconv.Atoi(m[1])
+	return port, err == nil
+}
 
 // Browser-facing; Testkube's settings embed these exact addresses.
 var clusterPorts = []struct {
@@ -116,7 +138,9 @@ func (c *Cluster) Ensure(ctx context.Context) (ClusterState, string, error) {
 		return c.reuse(ctx)
 	}
 
-	ports := pickPorts(c.portFree)
+	busy := map[int]bool{}
+	free := func(port int) bool { return !busy[port] && c.portFree(port) }
+	ports := pickPorts(free)
 	data := filepath.Join(c.dir, "data")
 	if err := os.MkdirAll(data, 0o755); err != nil {
 		return ClusterState{}, "", err
@@ -131,13 +155,25 @@ func (c *Cluster) Ensure(ctx context.Context) (ClusterState, string, error) {
 		return ClusterState{}, "", err
 	}
 	config := filepath.Join(c.dir, "kind.yaml")
-	if err := os.WriteFile(config, []byte(kindConfig(ports, data, owner)), 0o644); err != nil {
-		return ClusterState{}, "", err
-	}
-	out, err = c.run(ctx, c.kind, "create", "cluster", "--name", ClusterName, "--config", config,
-		"--image", nodeImage, "--kubeconfig", c.kubeconfig, "--wait", "2m")
-	if err != nil {
-		return ClusterState{Ports: ports}, string(out), err
+	for attempt := 1; ; attempt++ {
+		if err := os.WriteFile(config, []byte(kindConfig(ports, data, owner)), 0o644); err != nil {
+			return ClusterState{}, "", err
+		}
+		out, err = c.run(ctx, c.kind, "create", "cluster", "--name", ClusterName, "--config", config,
+			"--image", nodeImage, "--kubeconfig", c.kubeconfig, "--wait", "2m")
+		if err == nil {
+			break
+		}
+		port, taken := portTaken(string(out))
+		if !taken {
+			return ClusterState{Ports: ports}, string(out), err
+		}
+		if attempt == 2 {
+			return ClusterState{Ports: ports}, string(out), PortTakenError{Port: port}
+		}
+		// kind removes the failed node, so the retry starts clean.
+		busy[port] = true
+		ports = pickPorts(free)
 	}
 	why, err := c.fixStorage(ctx)
 	return ClusterState{Created: true, Ports: ports}, why, err
@@ -153,7 +189,7 @@ func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 	out, err := c.run(ctx, "docker", "inspect", "-f",
 		"{{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .Mounts}}", nodeName)
 	if err != nil {
-		return state, string(out), err
+		return state, string(out), ErrClusterInspect
 	}
 	running, ports, ok := ownedSettings(string(out), string(owner))
 	if !ok {
@@ -175,7 +211,7 @@ func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 	}
 	// Rewrites our kubeconfig in case it was deleted.
 	if out, err = c.run(ctx, c.kind, "export", "kubeconfig", "--name", ClusterName, "--kubeconfig", c.kubeconfig); err != nil {
-		return state, string(out), err
+		return state, string(out), ErrClusterKubeconfig
 	}
 	return state, "", nil
 }
