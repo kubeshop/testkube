@@ -346,6 +346,14 @@ func portFree(port int) bool {
 		return false
 	}
 	l.Close()
+	// Binding succeeds beside a wildcard listener the browser may reach.
+	for _, host := range []string{"127.0.0.1", "::1"} {
+		dialer := net.Dialer{Timeout: 300 * time.Millisecond}
+		if c, err := dialer.DialContext(context.Background(), "tcp", net.JoinHostPort(host, strconv.Itoa(port))); err == nil {
+			c.Close()
+			return false
+		}
+	}
 	return true
 }
 
