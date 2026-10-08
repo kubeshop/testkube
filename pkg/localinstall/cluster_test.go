@@ -147,8 +147,14 @@ func TestClusterEnsure_TakenPortIsNamed(t *testing.T) {
 		out  string
 		want error
 	}{
-		"docker":          {"Error response from daemon: Bind for 127.0.0.1:9001 failed: port is already allocated", PortTakenError{Port: 9001}},
-		"podman":          {"Error: rootlessport listen tcp 127.0.0.1:8090: bind: address already in use", PortTakenError{Port: 8090}},
+		"docker": {"Error response from daemon: Bind for 127.0.0.1:9001 failed: port is already allocated", PortTakenError{Port: 9001}},
+		"podman": {"Error: rootlessport listen tcp 127.0.0.1:8090: bind: address already in use", PortTakenError{Port: 8090}},
+		"windows in use": {"Error response from daemon: Ports are not available: exposing port TCP 127.0.0.1:8080 -> 0.0.0.0:0: " +
+			"listen tcp 127.0.0.1:8080: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.",
+			PortTakenError{Port: 8080}},
+		"windows reserved": {"Error response from daemon: Ports are not available: exposing port TCP 127.0.0.1:5556 -> 0.0.0.0:0: " +
+			"listen tcp 127.0.0.1:5556: bind: An attempt was made to access a socket in a way forbidden by its access permissions.",
+			PortTakenError{Port: 5556}},
 		"another failure": {"ERROR: failed to create cluster: no space left on device", errExit},
 	}
 	for name, tt := range tests {
