@@ -50,6 +50,10 @@ func (f *helmFake) run(_ context.Context, args ...string) ([]byte, error) {
 func newTestInstaller(t *testing.T, f *helmFake) *Installer {
 	f.files = map[string]string{}
 	return &Installer{helm: f.run, dir: t.TempDir(),
+		wait: func(context.Context) ([]byte, error) {
+			f.calls = append(f.calls, []string{"wait", "postgres"})
+			return nil, nil
+		},
 		apply: func(_ context.Context, m string) ([]byte, error) { f.manifest = m; return nil, nil }}
 }
 
@@ -168,6 +172,7 @@ func TestInstall_MigrationThatLostTheRaceIsRetriedOnce(t *testing.T) {
 				}
 			}
 			assert.Equal(t, tt.wantAttempts, attempts)
+			assert.Equal(t, tt.wantAttempts == 2, slices.Contains(f.commands(), "wait postgres"), "waits for postgres before retrying")
 		})
 	}
 }

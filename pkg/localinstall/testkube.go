@@ -36,6 +36,7 @@ type InstallState struct {
 type Installer struct {
 	helm  func(ctx context.Context, args ...string) ([]byte, error)
 	apply func(ctx context.Context, manifest string) ([]byte, error)
+	wait  func(ctx context.Context) ([]byte, error)
 	dir   string
 }
 
@@ -48,7 +49,7 @@ func NewInstaller() (*Installer, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Installer{helm: h.Run, apply: kubectlApply, dir: filepath.Dir(kubeconfig)}, nil
+	return &Installer{helm: h.Run, apply: kubectlApply, wait: waitForPostgres, dir: filepath.Dir(kubeconfig)}, nil
 }
 
 func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license string) (InstallState, string, error) {
@@ -85,6 +86,8 @@ func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license
 	// The chart's migration retries ~1 minute; postgres can take longer.
 	if err != nil && migrationLostRace(string(out)) {
 		state.MigrationRetried = true
+		// Best effort: if postgres never comes up, the retry says so.
+		_, _ = i.wait(ctx)
 		out, err = install()
 	}
 	if err != nil {
@@ -119,6 +122,12 @@ func (i *Installer) recover(ctx context.Context, release string) (bool, string, 
 	// Data survives: volumes are kept and Secrets aren't helm's.
 	out, err = i.helm(ctx, "uninstall", release, "--namespace", Namespace, "--wait", "--timeout", "5m")
 	return err == nil, string(out), err
+}
+
+// Slow downloads can keep postgres starting for minutes.
+func waitForPostgres(ctx context.Context) ([]byte, error) {
+	return runCombined(ctx, "docker", "exec", nodeName, "kubectl", "--kubeconfig=/etc/kubernetes/admin.conf",
+		"--namespace", Namespace, "wait", "--for=condition=Ready", "pod/testkube-enterprise-postgresql-0", "--timeout=10m")
 }
 
 func migrationLostRace(out string) bool {
