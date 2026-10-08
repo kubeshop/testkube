@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -362,11 +363,18 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error) {
 	reason := "install"
 	switch {
 	case errors.Is(err, localinstall.ErrSecretsLost):
-		reason, r.Version, r.Detail = "secrets_lost", "", "old data can't be opened"
+		reason, r.Detail = "secrets_lost", "old data can't be opened"
+		rm := "rm"
+		// Linux keeps the database's own user on its files.
+		if runtime.GOOS == "linux" {
+			rm = "sudo rm"
+		}
 		r.Fix = "~/.testkube/data holds data from an earlier install whose passwords are gone.\n" +
-			"Delete it to start fresh, then run again:\n  rm -rf ~/.testkube/data/" + localinstall.Namespace
+			"Delete the cluster and that data to start fresh, then run again:\n" +
+			"  ~/.testkube/bin/kind delete cluster --name " + localinstall.ClusterName + "\n" +
+			"  " + rm + " -rf ~/.testkube/data/" + localinstall.Namespace
 	case errors.Is(err, localinstall.ErrSecretsDamaged):
-		reason, r.Version, r.Detail = "secrets_damaged", "", "saved passwords can't be read"
+		reason, r.Detail = "secrets_damaged", "saved passwords can't be read"
 		r.Fix = "Restore ~/.testkube/secrets.json, or delete it and ~/.testkube/data/" + localinstall.Namespace +
 			" to start fresh"
 	case errors.Is(err, localinstall.ErrRunnerInstall):
