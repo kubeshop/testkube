@@ -13,6 +13,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	licensevalidator "github.com/kubeshop/testkube/pkg/diagnostics/validators/license"
 	"github.com/kubeshop/testkube/pkg/localinstall"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -40,6 +41,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			if tracker.Enabled() {
 				tracker.Identify(telemetry.GetEmail(key))
 			}
+			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallStarted)
 
 			// Finds tools a previous run installed.
 			_ = localinstall.AddToolsDirToPath()
@@ -56,7 +58,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			if localinstall.HasFailure(results) {
 				trackChecks(tracker, results, checker.Facts())
 				tracker.Send("install_local_failed", map[string]any{"stage": "tools"})
-				tracker.Wait()
+				waitForEvents(tracker)
 				os.Exit(1)
 			}
 			printStep(3, "Checking this machine")
@@ -72,7 +74,8 @@ func NewInstallLocalCmd() *cobra.Command {
 			installMissingTools(cmd, tracker, checker, results)
 			ports := runClusterStep(cmd, tracker)
 			runTestkubeStep(cmd, tracker, key, ports)
-			tracker.Wait()
+			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallFinished)
+			waitForEvents(tracker)
 		},
 	}
 	cmd.Flags().StringVarP(&licenseKey, "license", "l", "", "Testkube license key from your trial email (or set TESTKUBE_LICENSE)")
@@ -122,7 +125,7 @@ func licenseFailure(err error) localinstall.Result {
 func failLicense(tracker *telemetry.InstallTracker, r localinstall.Result) {
 	printCheckResult(r)
 	tracker.Send("install_local_failed", map[string]any{"stage": "license"})
-	tracker.Wait()
+	waitForEvents(tracker)
 	os.Exit(1)
 }
 
@@ -163,7 +166,7 @@ func exitIfCancelled(cmd *cobra.Command, tracker *telemetry.InstallTracker, stag
 
 func abortInstall(tracker *telemetry.InstallTracker, stage string) {
 	tracker.Send("install_local_aborted", map[string]any{"stage": stage})
-	tracker.Wait()
+	waitForEvents(tracker)
 	os.Exit(130)
 }
 
@@ -252,7 +255,7 @@ func failToolInstall(tracker *telemetry.InstallTracker, name string, err error) 
 	}
 	printCheckResult(r)
 	tracker.Send("install_local_failed", map[string]any{"stage": "tool_install", "tool": name, "reason": reason})
-	tracker.Wait()
+	waitForEvents(tracker)
 	os.Exit(1)
 }
 
@@ -387,7 +390,7 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error) {
 	}
 	printCheckResult(r)
 	tracker.Send("install_local_failed", map[string]any{"stage": "testkube", "reason": reason})
-	tracker.Wait()
+	waitForEvents(tracker)
 	os.Exit(1)
 }
 
@@ -437,7 +440,7 @@ func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
 	}
 	printCheckResult(r)
 	tracker.Send("install_local_failed", map[string]any{"stage": "cluster", "reason": reason})
-	tracker.Wait()
+	waitForEvents(tracker)
 	os.Exit(1)
 }
 
@@ -499,4 +502,17 @@ func printCheckResult(r localinstall.Result) {
 	for _, line := range strings.Split(r.Fix, "\n") {
 		ui.Printf("      %s\n", line)
 	}
+}
+
+// Sales sees trial installs through these; opt-outs send nothing.
+func reportInstallLicenseEvent(tracker *telemetry.InstallTracker, license, event string) {
+	if tracker.Enabled() {
+		reportLicenseEvent(config.Data{TelemetryEnabled: true}, license, event)
+	}
+}
+
+// os.Exit drops in-flight sends; give both a moment.
+func waitForEvents(tracker *telemetry.InstallTracker) {
+	tracker.Wait()
+	waitLicenseEvents()
 }
