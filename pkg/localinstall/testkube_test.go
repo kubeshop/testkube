@@ -21,6 +21,7 @@ type helmFake struct {
 	status   string
 	failOn   string
 	failOut  string
+	failures int
 	calls    [][]string
 	files    map[string]string
 	manifest string
@@ -39,7 +40,8 @@ func (f *helmFake) run(_ context.Context, args ...string) ([]byte, error) {
 		return []byte(`[{"name":"x","status":"` + f.status + `"}]`), nil
 	case args[0] == "list":
 		return []byte(`[]`), nil
-	case f.failOn != "" && args[0] == "upgrade" && args[2] == f.failOn:
+	case f.failOn != "" && args[0] == "upgrade" && args[2] == f.failOn && f.failures != 0:
+		f.failures--
 		return []byte(f.failOut), errors.New("exit status 1")
 	}
 	return nil, nil
@@ -128,7 +130,7 @@ func TestInstall_FailuresNameTheirStage(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			f := &helmFake{failOn: tt.failOn, failOut: tt.out}
+			f := &helmFake{failOn: tt.failOn, failOut: tt.out, failures: -1}
 
 			_, out, err := newTestInstaller(t, f).Install(context.Background(), movedPorts, testSecrets, testLicense)
 
@@ -136,6 +138,36 @@ func TestInstall_FailuresNameTheirStage(t *testing.T) {
 				assert.ErrorIs(t, err, want)
 			}
 			assert.Equal(t, tt.out, out)
+		})
+	}
+}
+
+func TestInstall_MigrationThatLostTheRaceIsRetriedOnce(t *testing.T) {
+	lost := "Error: resource Job/testkube/testkube-enterprise-api-migration-1 not ready. status: Failed, message: Job Failed. failed: 4/1"
+	tests := map[string]struct {
+		out          string
+		failures     int
+		wantAttempts int
+		wantErr      bool
+	}{
+		"lost once, retry works":  {lost, 1, 2, false},
+		"lost twice, gives up":    {lost, 2, 2, true},
+		"other failure, no retry": {"Error: context deadline exceeded", 1, 1, true},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			f := &helmFake{failOn: ReleaseName, failOut: tt.out, failures: tt.failures}
+
+			_, _, err := newTestInstaller(t, f).Install(context.Background(), movedPorts, testSecrets, testLicense)
+
+			assert.Equal(t, tt.wantErr, err != nil)
+			attempts := 0
+			for _, c := range f.calls {
+				if c[0] == "upgrade" && c[2] == ReleaseName {
+					attempts++
+				}
+			}
+			assert.Equal(t, tt.wantAttempts, attempts)
 		})
 	}
 }

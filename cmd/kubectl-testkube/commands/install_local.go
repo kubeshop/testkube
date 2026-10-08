@@ -325,7 +325,7 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 	printCheckResult(r)
 	printCheckResult(localinstall.Result{Name: "runner", Status: localinstall.StatusPass, Version: localinstall.AppVersion,
 		Detail: "installed in " + took(state.RunnerTook)})
-	tracker.Send("install_local_testkube", map[string]any{"recovered": state.Recovered,
+	tracker.Send("install_local_testkube", map[string]any{"recovered": state.Recovered, "migration_retried": state.MigrationRetried,
 		"testkube_s": int(state.TestkubeTook.Seconds()), "runner_s": int(state.RunnerTook.Seconds()),
 		"duration_s": int(time.Since(start).Seconds())})
 }

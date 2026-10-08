@@ -27,9 +27,10 @@ var (
 
 type InstallState struct {
 	// An earlier run was killed mid-install and got cleaned up.
-	Recovered    bool
-	TestkubeTook time.Duration
-	RunnerTook   time.Duration
+	Recovered        bool
+	MigrationRetried bool
+	TestkubeTook     time.Duration
+	RunnerTook       time.Duration
 }
 
 type Installer struct {
@@ -75,9 +76,17 @@ func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license
 	}
 
 	start := time.Now()
-	out, err := i.helm(ctx, "upgrade", "--install", ReleaseName, EnterpriseChart, "--version", EnterpriseChartVersion,
-		"--namespace", Namespace, "--create-namespace", "-f", values["demo"], "-f", values["ports"], "-f", values["private"],
-		"--wait", "--wait-for-jobs", "--timeout", "15m")
+	install := func() ([]byte, error) {
+		return i.helm(ctx, "upgrade", "--install", ReleaseName, EnterpriseChart, "--version", EnterpriseChartVersion,
+			"--namespace", Namespace, "--create-namespace", "-f", values["demo"], "-f", values["ports"], "-f", values["private"],
+			"--wait", "--wait-for-jobs", "--timeout", "15m")
+	}
+	out, err := install()
+	// The chart's migration retries ~1 minute; postgres can take longer.
+	if err != nil && migrationLostRace(string(out)) {
+		state.MigrationRetried = true
+		out, err = install()
+	}
 	if err != nil {
 		return state, string(out), classify(string(out), ErrTestkubeInstall)
 	}
@@ -110,6 +119,10 @@ func (i *Installer) recover(ctx context.Context, release string) (bool, string, 
 	// Data survives: volumes are kept and Secrets aren't helm's.
 	out, err = i.helm(ctx, "uninstall", release, "--namespace", Namespace, "--wait", "--timeout", "5m")
 	return err == nil, string(out), err
+}
+
+func migrationLostRace(out string) bool {
+	return strings.Contains(out, "api-migration") && strings.Contains(out, "status: Failed")
 }
 
 func classify(out string, stage error) error {
