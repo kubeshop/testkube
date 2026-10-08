@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,6 +47,10 @@ const (
 	// Docker reports ~3% under its setting: 6 GB shows ~5.8.
 	minMemoryReported = 55 * gigabyte / 10
 
+	// kind's known issue: lower limits crash pods at random.
+	minInotifyInstances = 512
+	minInotifyWatches   = 524288
+
 	systemDockerSocket  = "/var/run/docker.sock"
 	dockerPermissionFix = "Your user can't use Docker yet. Run:\n" +
 		"  sudo usermod -aG docker $USER\n" +
@@ -65,6 +70,7 @@ type host interface {
 	Reachable(ctx context.Context, url string) bool
 	FreeDiskAt(path string) (free uint64, visible bool, err error)
 	OSVersion() string
+	ReadSysctl(name string) string
 }
 
 type realHost struct{}
@@ -91,6 +97,12 @@ func (realHost) ToolVersion(ctx context.Context, path string, args ...string) st
 
 func (realHost) FreeDiskAt(path string) (uint64, bool, error) {
 	return freeDiskAt(path)
+}
+
+// Empty off Linux: there is no /proc there.
+func (realHost) ReadSysctl(name string) string {
+	data, _ := os.ReadFile(filepath.Join("/proc/sys", strings.ReplaceAll(name, ".", "/")))
+	return strings.TrimSpace(string(data))
 }
 
 func (realHost) OSVersion() string {
@@ -200,6 +212,23 @@ func HasFailure(results []Result) bool {
 		}
 	}
 	return false
+}
+
+// A VM engine has its own kernel, so its own limits.
+func (c *Checker) CheckInotify(ctx context.Context) []Result {
+	info, err := c.readDockerInfo(ctx)
+	if err != nil || info.KernelVersion == "" || info.KernelVersion != c.host.ReadSysctl("kernel.osrelease") {
+		return nil
+	}
+	instances, err1 := strconv.Atoi(c.host.ReadSysctl("fs.inotify.max_user_instances"))
+	watches, err2 := strconv.Atoi(c.host.ReadSysctl("fs.inotify.max_user_watches"))
+	if err1 != nil || err2 != nil || (instances >= minInotifyInstances && watches >= minInotifyWatches) {
+		return nil
+	}
+	return []Result{{Name: "inotify", Status: StatusWarn, Detail: "too low",
+		Hint: fmt.Sprintf("needs %d instances, %d watches", minInotifyInstances, minInotifyWatches),
+		Fix: fmt.Sprintf("Testkube may crash at random. Raise the limits:\nsudo sysctl fs.inotify.max_user_instances=%d fs.inotify.max_user_watches=%d",
+			minInotifyInstances, minInotifyWatches)}}
 }
 
 // Both check groups read one docker info call.

@@ -66,7 +66,8 @@ func NewInstallLocalCmd() *cobra.Command {
 			printStep(3, "Checking this machine")
 			// Not tracked: "os" would overwrite the event's os property.
 			printCheckResult(checker.CheckOS())
-			machine := append(checker.CheckMachine(cmd.Context()), checker.CheckNetwork(cmd.Context()))
+			machine := append(checker.CheckMachine(cmd.Context()), checker.CheckInotify(cmd.Context())...)
+			machine = append(machine, checker.CheckNetwork(cmd.Context()))
 			exitIfCancelled(cmd, tracker, "machine")
 			for _, r := range machine {
 				printCheckResult(r)

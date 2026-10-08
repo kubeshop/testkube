@@ -29,6 +29,7 @@ type fakeHost struct {
 	diskErr     error
 	blocked     map[string]bool
 	versions    map[string]string
+	sysctl      map[string]string
 }
 
 func (f fakeHost) LookPath(name string) (string, error) {
@@ -51,6 +52,10 @@ func (f fakeHost) ToolVersion(_ context.Context, path string, _ ...string) strin
 
 func (f fakeHost) Reachable(_ context.Context, url string) bool {
 	return !f.blocked[url]
+}
+
+func (f fakeHost) ReadSysctl(name string) string {
+	return f.sysctl[name]
 }
 
 func (f fakeHost) OSVersion() string {
@@ -154,6 +159,35 @@ func TestCheckTools_PodmanStandInIsRefused(t *testing.T) {
 			results := checker.CheckTools(context.Background())
 
 			assert.Equal(t, tt.wantFail, HasFailure(results))
+		})
+	}
+}
+
+func TestCheckInotify_WarnsOnlyWhenThisKernelRunsDocker(t *testing.T) {
+	tests := map[string]struct {
+		dockerKernel string
+		instances    string
+		watches      string
+		wantWarn     bool
+	}{
+		"low limits":          {"6.8.0-45-generic", "128", "8192", true},
+		"one below instances": {"6.8.0-45-generic", "511", "524288", true},
+		"one below watches":   {"6.8.0-45-generic", "512", "524287", true},
+		"at the limits":       {"6.8.0-45-generic", "512", "524288", false},
+		"Docker Desktop VM":   {"6.10.14-linuxkit", "128", "8192", false},
+		"unreadable limits":   {"6.8.0-45-generic", "", "", false},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			checker := &Checker{
+				host: fakeHost{sysctl: map[string]string{"kernel.osrelease": "6.8.0-45-generic",
+					"fs.inotify.max_user_instances": tt.instances, "fs.inotify.max_user_watches": tt.watches}},
+				docker: fakeDocker{info: dockerInfo{KernelVersion: tt.dockerKernel}},
+			}
+
+			results := checker.CheckInotify(context.Background())
+
+			assert.Equal(t, tt.wantWarn, len(results) == 1)
 		})
 	}
 }
