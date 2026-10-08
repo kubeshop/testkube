@@ -10,7 +10,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/pterm/pterm"
-	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -542,6 +541,11 @@ func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports) {
 			"  " + label("Email") + localinstall.AdminEmail + "\n" +
 			"  " + label("Password") + localinstall.AdminPassword)
 	ui.Printf("\n  %s~/.testkube/bin/kind delete cluster --name %s\n", label("Remove it"), localinstall.ClusterName)
-	ui.Printf("\n  Opening %s in your browser ...\n", url)
-	tracker.Send("install_local_ready", map[string]any{"browser_opened": open.Run(url) == nil})
+	opened := localinstall.OpenBrowser(url)
+	if opened {
+		ui.Printf("\n  Opening %s in your browser ...\n", url)
+	} else {
+		ui.Printf("\n  Open %s in your browser.\n", url)
+	}
+	tracker.Send("install_local_ready", map[string]any{"browser_opened": opened})
 }
