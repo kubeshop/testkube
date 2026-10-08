@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -104,6 +105,30 @@ func TestInstall_SecretsStayOffTheCommandLineAndDisk(t *testing.T) {
 	assert.Contains(t, f.manifest, `password: "MASTERPW"`)
 	left, _ := os.ReadDir(i.dir)
 	assert.Empty(t, left, "values files with the license are removed")
+}
+
+func TestInstall_LicenseFilesNeverOutliveTheInstall(t *testing.T) {
+	tests := map[string]struct {
+		failures int
+		leftover bool
+	}{
+		"helm fails":                {failures: -1},
+		"an earlier run was killed": {leftover: true},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			f := &helmFake{failOn: ReleaseName, failOut: "Error: boom", failures: tt.failures}
+			i := newTestInstaller(t, f)
+			if tt.leftover {
+				require.NoError(t, os.MkdirAll(filepath.Join(i.dir, "install-123", "private.yaml"), 0o700))
+			}
+
+			_, _, _ = i.Install(context.Background(), movedPorts, testSecrets, testLicense)
+
+			left, _ := os.ReadDir(i.dir)
+			assert.Empty(t, left)
+		})
+	}
 }
 
 func TestInstall_RunnerKeyReachesBothCharts(t *testing.T) {

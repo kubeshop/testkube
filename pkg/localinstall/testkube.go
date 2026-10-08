@@ -65,6 +65,11 @@ func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license
 		state.Recovered = state.Recovered || recovered
 	}
 
+	// A second Ctrl+C exits before the defer below runs.
+	leftovers, _ := filepath.Glob(filepath.Join(i.dir, "install-*"))
+	for _, dir := range leftovers {
+		_ = os.RemoveAll(dir)
+	}
 	files, err := os.MkdirTemp(i.dir, "install-")
 	if err != nil {
 		return state, "", err
@@ -86,7 +91,7 @@ func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license
 	// The chart's migration retries ~1 minute; postgres can take longer.
 	if err != nil && migrationLostRace(string(out)) {
 		state.MigrationRetried = true
-		// Best effort: if postgres never comes up, the retry says so.
+		// Best effort: a postgres that never starts fails the retry.
 		_, _ = i.wait(ctx)
 		out, err = install()
 	}

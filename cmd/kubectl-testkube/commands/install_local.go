@@ -189,7 +189,6 @@ func printPlan() {
 		"Press Ctrl+C to exit at any time."))
 }
 
-// Later slices add Cluster and Testkube.
 const installSteps = 6
 
 func printStep(n int, title string) {
