@@ -6,6 +6,16 @@ metadata:
     core-tests: healthcheck
     environment: prod
 spec:
+  pod:
+    # Healthchecks drive prod alerts; keep them off spot nodes so a preemption does not page as an outage.
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: cloud.google.com/gke-spot
+                  operator: NotIn
+                  values: ["true"]
   system:
     pureByDefault: true
   job:
