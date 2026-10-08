@@ -8,6 +8,7 @@
 // --license or TESTKUBE_LICENSE gets one try, a masked prompt gets three.
 // An unreachable license.testkube.io stops the install,
 // because the installed control plane would fail the same way.
+// An expired key stops at once; retyping it can't help.
 //
 // Checks (see Checker):
 //   - Docker missing, unreachable or permission denied blocks the install.
