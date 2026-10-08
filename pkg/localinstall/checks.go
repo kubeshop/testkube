@@ -131,6 +131,9 @@ func (c *Checker) Facts() map[string]any {
 		if c.info.OperatingSystem != "" {
 			facts["docker_engine"] = c.info.OperatingSystem
 		}
+		if len(c.info.PodmanHost) > 0 {
+			facts["docker_engine"] = "Podman"
+		}
 		if c.info.NCPU > 0 && c.info.MemTotal > 0 {
 			facts["cpus"] = c.info.NCPU
 			facts["memory_gb"] = roundGB(uint64(c.info.MemTotal))
