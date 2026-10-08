@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -26,7 +27,9 @@ var (
 
 type InstallState struct {
 	// An earlier run was killed mid-install and got cleaned up.
-	Recovered bool
+	Recovered    bool
+	TestkubeTook time.Duration
+	RunnerTook   time.Duration
 }
 
 type Installer struct {
@@ -71,23 +74,26 @@ func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license
 		return state, "", err
 	}
 
+	start := time.Now()
 	out, err := i.helm(ctx, "upgrade", "--install", ReleaseName, EnterpriseChart, "--version", EnterpriseChartVersion,
 		"--namespace", Namespace, "--create-namespace", "-f", values["demo"], "-f", values["ports"], "-f", values["private"],
 		"--wait", "--wait-for-jobs", "--timeout", "15m")
 	if err != nil {
 		return state, string(out), classify(string(out), ErrTestkubeInstall)
 	}
+	state.TestkubeTook, start = time.Since(start), time.Now()
 	out, err = i.helm(ctx, "upgrade", "--install", runnerRelease, RunnerChart, "--version", RunnerChartVersion,
 		"--namespace", Namespace, "-f", values["runner"], "--wait", "--timeout", "10m")
 	if err != nil {
 		return state, string(out), classify(string(out), ErrRunnerInstall)
 	}
+	state.RunnerTook = time.Since(start)
 	return state, "", nil
 }
 
 // A killed helm leaves a pending release that blocks upgrades.
 func (i *Installer) recover(ctx context.Context, release string) (bool, string, error) {
-	out, err := i.helm(ctx, "list", "--namespace", Namespace, "--all", "--filter", "^"+release+"$", "-o", "json")
+	out, err := i.helm(ctx, "list", "--namespace", Namespace, "--pending", "--uninstalling", "--filter", "^"+release+"$", "-o", "json")
 	if err != nil {
 		return false, string(out), err
 	}

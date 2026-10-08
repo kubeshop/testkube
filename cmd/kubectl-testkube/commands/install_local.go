@@ -70,7 +70,8 @@ func NewInstallLocalCmd() *cobra.Command {
 			trackChecks(tracker, append(results, machine...), checker.Facts())
 			tracker.Send("install_local_checks_done", nil)
 			installMissingTools(cmd, tracker, checker, results)
-			runClusterStep(cmd, tracker)
+			ports := runClusterStep(cmd, tracker)
+			runTestkubeStep(cmd, tracker, key, ports)
 			tracker.Wait()
 		},
 	}
@@ -255,7 +256,7 @@ func failToolInstall(tracker *telemetry.InstallTracker, name string, err error) 
 	os.Exit(1)
 }
 
-func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) {
+func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) localinstall.Ports {
 	printStep(5, "Creating the cluster")
 	cluster, err := localinstall.NewCluster()
 	if err != nil {
@@ -290,6 +291,104 @@ func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) {
 		props["node_disk_free_gb"] = free
 	}
 	tracker.Send("install_local_cluster", props)
+	return state.Ports
+}
+
+func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, license string, ports localinstall.Ports) {
+	printStep(6, "Installing Testkube")
+	secrets, err := localinstall.LoadOrCreateSecrets()
+	if err != nil {
+		failTestkube(tracker, "", err)
+	}
+	installer, err := localinstall.NewInstaller()
+	if err != nil {
+		failTestkube(tracker, "", err)
+	}
+	start := time.Now()
+	waiting := func(elapsed time.Duration) string {
+		return "Installing Testkube · " + took(elapsed) + " (first run about 5 minutes)"
+	}
+	spinner := startSpinner(waiting(0))
+	stopTicking := tickElapsed(spinner, start, waiting)
+	state, out, err := installer.Install(cmd.Context(), ports, secrets, license)
+	stopTicking()
+	_ = spinner.Stop()
+	exitIfCancelled(cmd, tracker, "testkube")
+	if err != nil {
+		failTestkube(tracker, out, err)
+	}
+	r := localinstall.Result{Name: "testkube", Status: localinstall.StatusPass, Version: localinstall.AppVersion,
+		Detail: "installed in " + took(state.TestkubeTook)}
+	if state.Recovered {
+		r.Hint = "cleaned up an interrupted install"
+	}
+	printCheckResult(r)
+	printCheckResult(localinstall.Result{Name: "runner", Status: localinstall.StatusPass, Version: localinstall.AppVersion,
+		Detail: "installed in " + took(state.RunnerTook)})
+	tracker.Send("install_local_testkube", map[string]any{"recovered": state.Recovered,
+		"testkube_s": int(state.TestkubeTook.Seconds()), "runner_s": int(state.RunnerTook.Seconds()),
+		"duration_s": int(time.Since(start).Seconds())})
+}
+
+// Long waits need a visible pulse; download ETAs would lie.
+func tickElapsed(spinner *pterm.SpinnerPrinter, start time.Time, text func(time.Duration) string) (stop func()) {
+	done := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				spinner.UpdateText(text(time.Since(start)))
+			}
+		}
+	}()
+	return func() { close(done) }
+}
+
+func took(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	}
+	return fmt.Sprintf("%dm %ds", int(d.Minutes()), int(d.Seconds())%60)
+}
+
+func failTestkube(tracker *telemetry.InstallTracker, out string, err error) {
+	r := localinstall.Result{Name: "testkube", Status: localinstall.StatusFail, Version: localinstall.AppVersion, Detail: "could not install"}
+	reason := "install"
+	switch {
+	case errors.Is(err, localinstall.ErrSecretsLost):
+		reason, r.Version, r.Detail = "secrets_lost", "", "old data can't be opened"
+		r.Fix = "~/.testkube/data holds data from an earlier install whose passwords are gone.\n" +
+			"Delete it to start fresh, then run again:\n  rm -rf ~/.testkube/data/" + localinstall.Namespace
+	case errors.Is(err, localinstall.ErrSecretsDamaged):
+		reason, r.Version, r.Detail = "secrets_damaged", "", "saved passwords can't be read"
+		r.Fix = "Restore ~/.testkube/secrets.json, or delete it and ~/.testkube/data/" + localinstall.Namespace +
+			" to start fresh"
+	case errors.Is(err, localinstall.ErrRunnerInstall):
+		reason, r.Name = "runner", "runner"
+		r.Fix = withWhy(out, "Testkube is installed; run again to retry the runner")
+	case errors.Is(err, localinstall.ErrInstallTimeout):
+		reason, r.Detail = "timeout", "not ready after 15 minutes"
+		r.Fix = withWhy(out, "Run again; finished downloads are kept")
+	case errors.Is(err, localinstall.ErrChartDownload):
+		reason, r.Detail = "chart_download", "could not download"
+		r.Fix = withWhy(out, "Check your network, proxy or firewall, then run again")
+	case errors.Is(err, localinstall.ErrTestkubePrepare):
+		reason, r.Detail = "prepare", "could not prepare the cluster"
+		r.Fix = withWhy(out, "Run again")
+	default:
+		if out == "" {
+			out = err.Error()
+		}
+		r.Fix = withWhy(out, "Run again")
+	}
+	printCheckResult(r)
+	tracker.Send("install_local_failed", map[string]any{"stage": "testkube", "reason": reason})
+	tracker.Wait()
+	os.Exit(1)
 }
 
 // pterm's light white text vanishes on light terminals.

@@ -13,7 +13,10 @@ import (
 
 const Namespace = "testkube"
 
-var ErrSecretsLost = errors.New("data from an earlier install exists but its saved passwords are gone")
+var (
+	ErrSecretsLost    = errors.New("data from an earlier install exists but its saved passwords are gone")
+	ErrSecretsDamaged = errors.New("the saved passwords can't be read")
+)
 
 // On the host, so rebuilt clusters open the kept data.
 type Secrets struct {
@@ -38,7 +41,7 @@ func loadOrCreateSecrets(dir string) (Secrets, error) {
 		var s Secrets
 		if err := json.Unmarshal(data, &s); err != nil || s.RunnerKey == "" || s.MasterPassword == "" ||
 			s.MinioPassword == "" || s.AIToken == "" {
-			return Secrets{}, fmt.Errorf("%s is damaged", path)
+			return Secrets{}, fmt.Errorf("%w: %s", ErrSecretsDamaged, path)
 		}
 		return s, nil
 	}

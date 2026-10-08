@@ -8,6 +8,7 @@ const (
 	EnterpriseChartVersion = "2.337.1"
 	RunnerChart            = "oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube/testkube-runner"
 	RunnerChartVersion     = "2.14.1"
+	AppVersion             = "v2.14.1"
 )
 
 // Embedded, so a values change upstream can't break old CLIs.
