@@ -127,7 +127,9 @@ func (r *executionRecorder) complete(entry executiondata.Execution, exec testkub
 // store must be called with the lock held.
 func (r *executionRecorder) store(entry executiondata.Execution) {
 	r.registry.Add(entry)
-	instructions.PrintOutput(config.Ref(), executiondata.ExecutionInstructionName(entry.Key()), r.registry.Group(entry.Key()))
+	instructions.PrintOutput(config.Ref(), executiondata.ExecutionInstructionName(entry.Key()), executiondata.ExecutionGroup{
+		Executions: r.registry.Group(entry.Key()),
+	})
 }
 
 // workflowExecutionRequest is a single test workflow execution the step will run.
