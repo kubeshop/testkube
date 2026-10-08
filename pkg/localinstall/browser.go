@@ -1,10 +1,12 @@
 package localinstall
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/exec"
 	"runtime"
+	"time"
 )
 
 // False means the user must open it themselves.
@@ -14,7 +16,10 @@ func OpenBrowser(url string) bool {
 	if args == nil {
 		return false
 	}
-	err := exec.Command(args[0], args[1:]...).Run()
+	// A stuck opener must not hang the end of the install.
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	err := exec.CommandContext(ctx, args[0], args[1:]...).Run()
 	// explorer.exe exits 1 even after opening the page.
 	var exitErr *exec.ExitError
 	return err == nil || (args[0] == "explorer.exe" && errors.As(err, &exitErr))
