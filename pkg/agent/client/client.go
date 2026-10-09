@@ -5,6 +5,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net"
+	"strings"
 	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
@@ -24,7 +26,7 @@ import (
 )
 
 const (
-	connectionTimeout          = 10 * time.Second
+	connectionTimeout          = 3 * time.Second
 	apiKeyMeta                 = "api-key"
 	organizationIdMetadataName = "organization-id"
 	environmentIdMetadataName  = "environment-id"
@@ -42,11 +44,38 @@ const (
 	GRPCKeepaliveTime                = 10 * time.Second
 	GRPCKeepaliveTimeout             = GRPCKeepaliveTime / 2
 	GRPCKeepalivePermitWithoutStream = true
+	// Last-resort recycle of long-lived agent streams, for targets where the client
+	// cannot see the individual replicas (an Ingress, or a plain ClusticIP Service).
+	// Recycling breaks live notification streams, which then resume from the agent's
+	// seqNo replay buffer, so keep it rare: prefer resolving replicas via
+	// GRPCLoadBalancingPolicy below, which spreads streams without breaking any.
+	GRPCMaxConnectionAge      = 30 * time.Minute
+	GRPCMaxConnectionAgeGrace = 30 * time.Second
+	// How long to stay in TransientFailure before giving up on this dial
+	// attempt so the next credential mode (or retry) can run.
+	transientFailureTimeout = 2 * time.Second
+
+	// round_robin opens a subchannel per resolved address and assigns each new
+	// stream to the next one, so an agent's long-lived streams spread over every
+	// replica a `dns:///` target resolves to and a dead replica only takes down its
+	// own streams. Against a single-address target (Ingress, ClusterIP VIP) it
+	// degrades to the pick_first behaviour it replaces.
+	GRPCLoadBalancingPolicy = `{"loadBalancingConfig":[{"round_robin":{}}]}`
+
+	// grpc-go's DNS resolver does not poll: after a successful lookup it blocks
+	// until something calls ResolveNow, which the LB policy only does when a
+	// subchannel fails. So a scale-up is invisible — the new Pod is never dialled
+	// and receives no streams. Re-resolving on this interval adds a subchannel for
+	// each new replica without touching any established stream. The resolver
+	// rate-limits re-resolution to 30s (dns.MinResolutionInterval), so this must
+	// stay above that to have any effect.
+	GRPCResolveInterval = 60 * time.Second
 )
 
 // Build dial options
 var dialOpts = []grpc.DialOption{
 	grpc.WithUserAgent(version.Version + "/" + version.Commit),
+	grpc.WithDefaultServiceConfig(GRPCLoadBalancingPolicy),
 	grpc.WithKeepaliveParams(keepalive.ClientParameters{
 		Time:                GRPCKeepaliveTime,
 		Timeout:             GRPCKeepaliveTimeout,
@@ -61,6 +90,12 @@ var dialOpts = []grpc.DialOption{
 		},
 		MinConnectTimeout: connectionTimeout,
 	}),
+}
+
+func init() {
+	if r := refreshingDNSResolver(GRPCResolveInterval); r != nil {
+		dialOpts = append(dialOpts, grpc.WithResolvers(r))
+	}
 }
 
 // NewGRPCConnection keeps backward compatibility, tracing disabled by default.
@@ -123,51 +158,59 @@ func NewGRPCConnectionWithTracing(
 	creds := credentials.NewClientTLSFromCert(certPool, "")
 
 	// If a CA certificate file is passed then use that CA to verify server certificates.
+	// A leaf/self-signed PEM without CA:TRUE fails AppendCertsFromPEM; keep going so
+	// skipVerify / insecure fallbacks can still connect (typical for Ingress lab certs).
 	if caFile != "" {
-		creds, err = credentials.NewClientTLSFromFile(caFile, "")
-		if err != nil {
-			return nil, err
+		caCreds, caErr := credentials.NewClientTLSFromFile(caFile, "")
+		if caErr != nil {
+			logger.Warnw("failed to load TESTKUBE_PRO_CA_FILE, continuing with TLS fallbacks", "error", caErr)
+		} else {
+			creds = caCreds
+		}
+	}
+
+	// If the caller explicitly requested plaintext, try that first. TLS-first
+	// against an HTTP Ingress (:80) or a self-signed :443 sits in Connecting
+	// until MinConnectTimeout and used to burn the whole startup budget.
+	if isInsecure {
+		insecureDialOptions := append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		// nginx grpc_pass often stays Connecting until the first RPC.
+		client, err := attemptConnection(ctx, server, true, insecureDialOptions...)
+		if err == nil {
+			logger.Error("Using insecure gRPC connection")
+			return client, nil
 		}
 	}
 
 	// Attempt to use a TLS connection.
 	tlsDialOptions := append(opts, grpc.WithTransportCredentials(creds))
-	client, err := attemptConnection(ctx, server, tlsDialOptions...)
-	// WARNING, checking for no error to early return with a secure client before attempting with local client.
+	// If skipVerify is set, do not accept Connecting here: grpc-go defers the
+	// TLS handshake until the first RPC, so a self-signed Ingress would look
+	// successful and skipVerify would never run. With a real CA, Connecting is
+	// fine — the first RPC completes the handshake.
+	client, err := attemptConnection(ctx, server, !skipVerify, tlsDialOptions...)
 	if err == nil {
 		logger.Info("Using TLS gRPC connection")
 		return client, nil
 	}
 
-	// Attempt to use a Local connection (for our usage only local TCP connections will work).
-	localDialOptions := append(opts, grpc.WithTransportCredentials(local.NewCredentials()))
-	client, err = attemptConnection(ctx, server, localDialOptions...)
-	// WARNING, checking for no error to early return with a local client before descending into madness.
-	if err == nil {
-		logger.Info("Using local gRPC connection")
-		return client, nil
+	if isLocalTarget(server) {
+		localDialOptions := append(opts, grpc.WithTransportCredentials(local.NewCredentials()))
+		client, err = attemptConnection(ctx, server, true, localDialOptions...)
+		if err == nil {
+			logger.Info("Using local gRPC connection")
+			return client, nil
+		}
 	}
 
-	// The following cases exist purely for backwards compatibility.
-	// They should be removed once TLS is enforced on Control Plane gRPC servers.
 	if skipVerify {
 		skipVerifyDialOptions := append(opts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
 			MinVersion:         tls.VersionTLS12,
 			InsecureSkipVerify: skipVerify,
 		})))
-		client, err = attemptConnection(ctx, server, skipVerifyDialOptions...)
-		// WARNING, checking for no error to early return with an insecure (MitM is possible with skip verify) client before descending further into madness.
+		client, err = attemptConnection(ctx, server, true, skipVerifyDialOptions...)
 		if err == nil {
 			logger.Error("Using TLS with no certificate verification for gRPC connection")
-			return client, nil
-		}
-	}
-	if isInsecure {
-		insecureDialOptions := append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		client, err = attemptConnection(ctx, server, insecureDialOptions...)
-		// WARNING, checking for no error to early return with an insecure client, this is madness.
-		if err == nil {
-			logger.Error("Using insecure gRPC connection")
 			return client, nil
 		}
 	}
@@ -175,28 +218,58 @@ func NewGRPCConnectionWithTracing(
 	return nil, err
 }
 
-func attemptConnection(ctx context.Context, url string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+func isLocalTarget(server string) bool {
+	host := server
+	if h, _, err := net.SplitHostPort(server); err == nil {
+		host = h
+	}
+	host = strings.Trim(host, "[]")
+	return host == "127.0.0.1" || host == "localhost" || host == "::1"
+}
+
+func attemptConnection(ctx context.Context, url string, acceptUnready bool, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
 	ctx, cancel := context.WithTimeout(ctx, connectionTimeout)
 	defer cancel()
 
 	client, err := grpc.NewClient(url, opts...)
 	if err != nil {
-		return client, fmt.Errorf("create new grpc client: %w", err)
+		return nil, fmt.Errorf("create new grpc client: %w", err)
 	}
-	// Wait for connection to go ready.
+	closeFailed := func(err error) (*grpc.ClientConn, error) {
+		_ = client.Close()
+		return nil, err
+	}
+	transientDeadline := time.Now().Add(transientFailureTimeout)
 	for {
 		s := client.GetState()
 		if s == connectivity.Idle {
 			client.Connect()
 		}
 		if s == connectivity.Ready {
-			// Successfully connected.
 			return client, nil
 		}
-		// Wait for transition away from current state.
-		if !client.WaitForStateChange(ctx, s) {
-			return nil, ctx.Err()
+		waitCtx := ctx
+		var waitCancel context.CancelFunc
+		if s == connectivity.TransientFailure {
+			waitCtx, waitCancel = context.WithDeadline(ctx, transientDeadline)
 		}
+		changed := client.WaitForStateChange(waitCtx, s)
+		if waitCancel != nil {
+			waitCancel()
+		}
+		if changed {
+			continue
+		}
+		if s == connectivity.TransientFailure {
+			return closeFailed(fmt.Errorf("grpc connection stuck in TransientFailure"))
+		}
+		// nginx grpc_pass often leaves skipVerify/plaintext in Connecting until
+		// the first RPC. Verified TLS must not take that shortcut or skipVerify
+		// never runs against a self-signed Ingress.
+		if acceptUnready {
+			return client, nil
+		}
+		return closeFailed(fmt.Errorf("wait for grpc ready: context deadline exceeded"))
 	}
 }
 
@@ -249,5 +322,5 @@ func NewVeryInsecureGRPCClientDoNotUseThisClientUnlessYouAreReallySureYouKnowWha
 
 	insecureDialOptions := append(opts, grpc.WithTransportCredentials(creds))
 
-	return attemptConnection(ctx, server, insecureDialOptions...)
+	return attemptConnection(ctx, server, true, insecureDialOptions...)
 }

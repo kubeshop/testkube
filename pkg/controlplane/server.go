@@ -140,7 +140,12 @@ func (s *Server) Start(ctx context.Context, ln net.Listener) error {
 	}
 	opts = append(opts,
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{PermitWithoutStream: true}),
-		grpc.KeepaliveParams(keepalive.ServerParameters{Time: client.GRPCKeepaliveTime, Timeout: client.GRPCKeepaliveTimeout}))
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			Time:                  client.GRPCKeepaliveTime,
+			Timeout:               client.GRPCKeepaliveTimeout,
+			MaxConnectionAge:      client.GRPCMaxConnectionAge,
+			MaxConnectionAgeGrace: client.GRPCMaxConnectionAgeGrace,
+		}))
 	grpcServer := grpc.NewServer(opts...)
 
 	cloud.RegisterTestKubeCloudAPIServer(grpcServer, s)
