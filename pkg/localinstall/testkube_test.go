@@ -208,6 +208,17 @@ func TestInstall_TimeoutNamesTheStuckServiceAndItsLastLogs(t *testing.T) {
 	assert.Equal(t, []string{"failed to load config: open /etc/dex/cfg/config.yaml: no such file"}, stuck.Logs)
 }
 
+func TestInstall_HelmsOwnErrorsAreNotBlamedOnPods(t *testing.T) {
+	f := &helmFake{failOn: ReleaseName, failures: 1, cluster: crashingCluster,
+		failOut: "Error: UPGRADE FAILED: another operation (install/upgrade/rollback) is in progress"}
+
+	_, out, err := newTestInstaller(t, f).Install(context.Background(), movedPorts, testSecrets, testLicense)
+
+	assert.ErrorIs(t, err, ErrTestkubeInstall)
+	assert.False(t, errors.As(err, new(StuckError)), "a crashing pod is not why helm refused")
+	assert.Contains(t, out, "another operation")
+}
+
 const (
 	noMemoryCluster = `{"items":[{"kind":"Pod","metadata":{"name":"minio-1","labels":{"app.kubernetes.io/name":"minio"}},` +
 		`"status":{"phase":"Pending","conditions":[{"type":"PodScheduled","status":"False","reason":"Unschedulable",` +
