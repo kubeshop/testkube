@@ -3,6 +3,7 @@ package localinstall
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -199,4 +200,20 @@ func TestReport_AFailedJobShowsItsRealExitCode(t *testing.T) {
 
 	assert.Contains(t, out.String(), "exit=3")
 	assert.Contains(t, out.String(), "    Error\n")
+}
+
+func TestSaveReport_StillSavedWhenTheClusterCantBeRead(t *testing.T) {
+	f := &helmFake{failOn: ReleaseName, failures: 1, failOut: "Error: context deadline exceeded"}
+	i := newTestInstaller(t, f)
+	i.read = func(context.Context) ([]byte, error) { return nil, errors.New("Cannot connect to the Docker daemon") }
+	i.docker = func(context.Context) DockerResources { return DockerResources{} }
+
+	state, _, _ := i.Install(context.Background(), movedPorts, testSecrets, testLicense)
+
+	require.NotEmpty(t, state.ReportPath)
+	data, err := os.ReadFile(state.ReportPath)
+	require.NoError(t, err)
+	for _, want := range []string{"CLI: v9.9.9", "Docker: not reachable", "Cluster details: could not be read (Cannot connect to the Docker daemon)"} {
+		assert.Contains(t, string(data), want)
+	}
 }

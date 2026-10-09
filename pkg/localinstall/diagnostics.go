@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -194,35 +195,11 @@ const (
 func (i *Installer) saveReport(ctx context.Context, since time.Time, installErr error, ports Ports, secrets ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	data, err := i.read(ctx)
-	if err != nil {
-		return "", err
-	}
-	snap, err := parseSnapshot(data)
-	if err != nil {
-		return "", err
-	}
-	var stuck *Stuck
-	var se StuckError
-	if errors.As(installErr, &se) {
-		stuck = &se.Stuck
-	} else if st, ok := findStuck(snap, since, time.Now()); ok {
-		stuck = &st
-	}
 	rd := newRedactor(append(secrets, demoSecrets()...)...)
-	r := buildReport(snap, stuck)
-	for _, p := range r.services {
-		if !p.ready && p.phase != string(corev1.PodSucceeded) {
-			if out, err := i.logs(ctx, p.pod, false, reportLogLines); err == nil && len(out) > 0 {
-				// Mask before cutting: a cut secret no longer matches.
-				r.logsByPod[p.pod] = cutLines(rd.clean(string(out)))
-			}
-		}
-	}
 	now := time.Now()
 	text := fmt.Sprintf("Testkube install report, saved after a failed install on %s.\n"+
 		"Your license key and Testkube passwords are masked.\n\n%s\nError: %s\n\n%s",
-		now.Format("2 Jan 2006 at 15:04"), i.machine(ctx, ports), installErr, renderReport(r, newRedactor()))
+		now.Format("2 Jan 2006 at 15:04"), i.machine(ctx, ports), installErr, i.clusterSection(ctx, since, installErr, rd))
 	text = capReport(rd.clean(text))
 	dir := filepath.Join(i.dir, "logs")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -236,6 +213,44 @@ func (i *Installer) saveReport(ctx context.Context, since time.Time, installErr 
 	return path, nil
 }
 
+// A broken cluster is often the cause; still report.
+func (i *Installer) clusterSection(ctx context.Context, since time.Time, installErr error, rd redactor) string {
+	data, err := i.read(ctx)
+	var snap clusterSnapshot
+	if err == nil {
+		snap, err = parseSnapshot(data)
+	}
+	if err != nil {
+		return "Cluster details: could not be read (" + readError(err) + ")\n"
+	}
+	var stuck *Stuck
+	var se StuckError
+	if errors.As(installErr, &se) {
+		stuck = &se.Stuck
+	} else if st, ok := findStuck(snap, since, time.Now()); ok {
+		stuck = &st
+	}
+	r := buildReport(snap, stuck)
+	for _, p := range r.services {
+		if !p.ready && p.phase != string(corev1.PodSucceeded) {
+			if out, err := i.logs(ctx, p.pod, false, reportLogLines); err == nil && len(out) > 0 {
+				// Mask before cutting: a cut secret no longer matches.
+				r.logsByPod[p.pod] = cutLines(rd.clean(string(out)))
+			}
+		}
+	}
+	return renderReport(r, newRedactor())
+}
+
+// kubectl's reason is on stderr; the error is just "exit 1".
+func readError(err error) string {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) && len(exitErr.Stderr) > 0 {
+		return strings.TrimSpace(string(exitErr.Stderr))
+	}
+	return err.Error()
+}
+
 // Support's first questions, answered before they ask.
 func (i *Installer) machine(ctx context.Context, ports Ports) string {
 	var b strings.Builder
@@ -243,8 +258,11 @@ func (i *Installer) machine(ctx context.Context, ports Ports) string {
 	fmt.Fprintf(&b, "Testkube: %s (charts: enterprise %s, runner %s)\n", AppVersion, EnterpriseChartVersion, RunnerChartVersion)
 	fmt.Fprintf(&b, "Tools: kind %s, helm %s, node %s\n", ToolVersion("kind"), ToolVersion("helm"), nodeImage)
 	fmt.Fprintf(&b, "OS: %s\n", (&Checker{host: realHost{}}).CheckOS().Detail)
+	// Missing would read as "no Docker line", not "Docker down".
 	if d := i.docker(ctx); d.Engine != "" {
 		fmt.Fprintf(&b, "Docker: %s %s, %d CPUs, %s memory\n", d.Engine, d.Version, d.CPUs, d.MemoryText())
+	} else {
+		fmt.Fprintln(&b, "Docker: not reachable")
 	}
 	var mapped []string
 	for _, p := range clusterPorts {
