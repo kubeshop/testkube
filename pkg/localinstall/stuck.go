@@ -116,8 +116,11 @@ func findStuck(s clusterSnapshot, since, now time.Time) (Stuck, bool) {
 			pods[name] = p
 		}
 	}
-	// Waiting can't fix these, wherever they are.
+	// Waiting can't fix these; a healthy pod's old OOM doesn't count.
 	for _, svc := range stuckServices {
+		if _, ready := serviceReadySince(svc, pods[svc.name], s.jobs); ready {
+			continue
+		}
 		if p := pods[svc.name]; p != nil {
 			if st, ok := hopeless(svc.name, p, s, since); ok {
 				return st, true

@@ -136,6 +136,11 @@ func TestFindStuck_BlamesTheRootNotTheServicesWaitingOnIt(t *testing.T) {
 				testEvent("Pod", "postgres-pod", "Pulling", "Pulling image")),
 			want: Stuck{Service: "api", Pod: "api-pod", Reason: "oom", Detail: "512Mi", Restarts: 2}, found: true,
 		},
+		"an old out-of-memory on a healthy api is history": {
+			snapshot: healthy(testPod("api", crashed(1, "OOMKilled", installStart.Add(time.Minute)), readyAt(installStart.Add(2*time.Minute))),
+				testPod("runner", crashed(1, "Error", installStart.Add(time.Minute)))),
+			want: Stuck{Service: "runner", Pod: "runner-pod", Reason: "not_ready", Detail: "running but never ready", Restarts: 1}, found: true,
+		},
 		"not enough memory to start": {
 			snapshot: healthy(testPod("minio", unschedulable("0/1 nodes are available: 1 Insufficient memory."))),
 			want:     Stuck{Service: "minio", Pod: "minio-pod", Reason: "no_memory"}, found: true,
