@@ -43,12 +43,28 @@ func runUninstallLocal(cmd *cobra.Command) {
 	case err != nil:
 		failUninstall(localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "could not remove",
 			Fix: withWhy(out, "Try: ~/.testkube/bin/kind delete cluster --name "+localinstall.ClusterName)})
-	case !found:
+	}
+	if found {
+		printCheckResult(localinstall.Result{Name: "cluster", Status: localinstall.StatusPass, Detail: "removed",
+			Hint: fmt.Sprintf("%q", localinstall.ClusterName)})
+	}
+	removed, err := localinstall.RemoveFiles()
+	if err != nil {
+		failUninstall(localinstall.Result{Name: "files", Status: localinstall.StatusFail, Detail: "could not remove", Fix: err.Error()})
+	}
+	if !found && !removed {
 		ui.Printf("  Nothing to uninstall: no local Testkube found.\n")
 		return
 	}
-	printCheckResult(localinstall.Result{Name: "cluster", Status: localinstall.StatusPass, Detail: "removed",
-		Hint: fmt.Sprintf("%q", localinstall.ClusterName)})
+	if removed {
+		printCheckResult(localinstall.Result{Name: "files", Status: localinstall.StatusPass, Detail: "removed",
+			Hint: "~/.testkube (cluster settings and caches)"})
+	}
+	ui.Printf("\n  Testkube is uninstalled.\n")
+	if localinstall.HasData() {
+		ui.Printf("  Your data is kept in ~/.testkube/data. `testkube install local` uses it again.\n" +
+			"  To delete it too: testkube uninstall local --delete-data\n")
+	}
 }
 
 func failUninstall(r localinstall.Result) {
