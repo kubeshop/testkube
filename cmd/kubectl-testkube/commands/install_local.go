@@ -417,7 +417,7 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error, repo
 		}
 		r.Fix = stuckFix(stuck.Stuck, docker)
 	}
-	// Support asks for it later; no nudge to send it now.
+	// Support asks for it later; no nudge now.
 	if report != "" {
 		r.Fix += "\n" + ui.LightGray("Details saved to "+homeRelative(report))
 	}

@@ -70,7 +70,7 @@ func NewInstaller(cliVersion string) (*Installer, error) {
 		logs: podLogs, dir: filepath.Dir(kubeconfig), cliVersion: cliVersion, docker: ReadDockerResources}, nil
 }
 
-// After Ctrl+C nobody needs a report of what was cut short.
+// After Ctrl+C nobody needs a report of the cut-short run.
 func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license string) (InstallState, string, error) {
 	began := time.Now()
 	state, out, err := i.install(ctx, ports, s, license)

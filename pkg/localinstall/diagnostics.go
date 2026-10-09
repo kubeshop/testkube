@@ -21,11 +21,10 @@ const maxReportEvents = 100
 
 // Picked fields only: pod specs carry the license and keys.
 type report struct {
-	stuck    *Stuck
-	services []serviceState
-	events   []eventLine
-	// Pod name to its last log lines.
-	logs map[string][]string
+	stuck     *Stuck
+	services  []serviceState
+	events    []eventLine
+	logsByPod map[string][]string
 }
 
 type serviceState struct {
@@ -41,7 +40,7 @@ type eventLine struct {
 }
 
 func buildReport(s clusterSnapshot, stuck *Stuck) report {
-	r := report{stuck: stuck, logs: map[string][]string{}}
+	r := report{stuck: stuck, logsByPod: map[string][]string{}}
 	for i := range s.pods {
 		r.services = append(r.services, stateOf(&s.pods[i]))
 	}
@@ -103,13 +102,13 @@ func (r report) write(w io.Writer) {
 	for _, e := range r.events {
 		fmt.Fprintf(w, "  %s  %s %s %s x%d: %s\n", e.at.UTC().Format(time.RFC3339), e.kind, e.reason, e.object, e.count, e.message)
 	}
-	pods := make([]string, 0, len(r.logs))
-	for pod := range r.logs {
+	pods := make([]string, 0, len(r.logsByPod))
+	for pod := range r.logsByPod {
 		pods = append(pods, pod)
 	}
 	sort.Strings(pods)
 	for _, pod := range pods {
-		fmt.Fprintf(w, "\nLast log lines of %s:\n  %s\n", pod, strings.Join(r.logs[pod], "\n  "))
+		fmt.Fprintf(w, "\nLast log lines of %s:\n  %s\n", pod, strings.Join(r.logsByPod[pod], "\n  "))
 	}
 }
 
@@ -134,7 +133,7 @@ var secretPatterns = []struct {
 	re   *regexp.Regexp
 	repl string
 }{
-	// Greedy up to the host, so an @ inside the password goes too.
+	// Greedy to the host: an @ in the password goes too.
 	{regexp.MustCompile(`(://[^/:@\s]+:)[^\s/]+@`), "${1}[removed]@"},
 	{regexp.MustCompile(`(?i)(bearer\s+)[A-Za-z0-9._~+/=-]+`), "${1}[removed]"},
 	{regexp.MustCompile(`eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`), "[removed]"},
@@ -163,7 +162,7 @@ const (
 	reportLogLines = 50
 )
 
-// Best effort: a failed save must not hide the install's error.
+// Best effort: a failed save never hides the install error.
 func (i *Installer) saveReport(ctx context.Context, since time.Time, installErr error, ports Ports, secrets ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
@@ -188,7 +187,7 @@ func (i *Installer) saveReport(ctx context.Context, since time.Time, installErr 
 		if !p.ready && p.phase != string(corev1.PodSucceeded) {
 			if out, err := i.logs(ctx, p.pod, false, reportLogLines); err == nil && len(out) > 0 {
 				// Mask before cutting: a cut secret no longer matches.
-				r.logs[p.pod] = cutLines(rd.clean(string(out)))
+				r.logsByPod[p.pod] = cutLines(rd.clean(string(out)))
 			}
 		}
 	}
@@ -239,7 +238,7 @@ func pruneReports(dir string) {
 	}
 }
 
-// Cut after masking, so a cut can't leave half a secret.
+// After masking, so a cut never leaves half a secret.
 func capReport(text string) string {
 	if len(text) <= maxReportBytes {
 		return text

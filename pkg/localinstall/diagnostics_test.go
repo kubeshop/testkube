@@ -56,7 +56,7 @@ func TestReport_PlantedSecretsNeverSurvive(t *testing.T) {
 		testEvent("Pod", "api-pod", "Failed", "encoded "+base64.StdEncoding.EncodeToString([]byte(runnerKey))),
 	}
 	r := buildReport(clusterSnapshot{pods: []corev1.Pod{api}, events: events}, nil)
-	r.logs["api-pod"] = []string{"connect postgresql://testkube:" + password + "@db:5432/backend failed", "agent " + runnerKey}
+	r.logsByPod["api-pod"] = []string{"connect postgresql://testkube:" + password + "@db:5432/backend failed", "agent " + runnerKey}
 
 	out := renderReport(r, newRedactor(license, runnerKey, password))
 
