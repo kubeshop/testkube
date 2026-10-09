@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
@@ -265,7 +266,18 @@ func capReport(text string) string {
 	if len(text) <= maxReportBytes {
 		return text
 	}
-	return text[:maxReportBytes] + "\n[cut at 1 MB]\n"
+	return cutAt(text, maxReportBytes) + "\n[cut at 1 MB]\n"
+}
+
+// Back to a whole character, so the text stays valid.
+func cutAt(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	for n > 0 && !utf8.RuneStart(s[n]) {
+		n--
+	}
+	return s[:n]
 }
 
 func cutLines(out string) []string {
@@ -273,7 +285,7 @@ func cutLines(out string) []string {
 	var lines []string
 	for _, line := range all[max(0, len(all)-reportLogLines):] {
 		if len(line) > 2048 {
-			line = line[:2048] + "…"
+			line = cutAt(line, 2048) + "…"
 		}
 		lines = append(lines, line)
 	}

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -178,4 +179,11 @@ func TestSaveReport_SecretAcrossALongLineCutIsStillMasked(t *testing.T) {
 
 func TestDemoSecrets_ComeFromTheEmbeddedValues(t *testing.T) {
 	assert.ElementsMatch(t, []string{"postgres5432", "QWkVzs3nct6HZM5hxsPzwaZtq"}, demoSecrets())
+}
+
+func TestCutAt_NeverSplitsACharacter(t *testing.T) {
+	cut := cutAt(strings.Repeat("é", 10), 5)
+
+	assert.True(t, utf8.ValidString(cut))
+	assert.Equal(t, "éé", cut)
 }
