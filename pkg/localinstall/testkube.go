@@ -84,7 +84,7 @@ func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license
 	start := time.Now()
 	install := func() ([]byte, error) {
 		return i.helm(ctx, "upgrade", "--install", ReleaseName, EnterpriseChart, "--version", EnterpriseChartVersion,
-			"--namespace", Namespace, "--create-namespace", "-f", values["demo"], "-f", values["ports"], "-f", values["private"],
+			"--namespace", Namespace, "--create-namespace", "-f", values["demo"], "-f", values["ports"], "-f", values["worker"], "-f", values["private"],
 			"--wait", "--wait-for-jobs", "--timeout", "15m")
 	}
 	out, err := install()
@@ -201,15 +201,34 @@ func writeValues(dir string, ports Ports, s Secrets, license string) (map[string
 	if err != nil {
 		return nil, err
 	}
+	worker, err := workerDatabaseValues()
+	if err != nil {
+		return nil, err
+	}
 	paths := map[string]string{}
 	for name, data := range map[string][]byte{"demo": EnterpriseDemoValues, "ports": []byte(PortValues(ports)),
-		"private": private, "runner": runner} {
+		"worker": worker, "private": private, "runner": runner} {
 		paths[name] = filepath.Join(dir, name+".yaml")
 		if err := os.WriteFile(paths[name], data, 0o600); err != nil {
 			return nil, err
 		}
 	}
 	return paths, nil
+}
+
+// Upstream demo leaves worker-service on Mongo, which isn't installed.
+func workerDatabaseValues() ([]byte, error) {
+	var demo map[string]any
+	if err := yaml.Unmarshal(EnterpriseDemoValues, &demo); err != nil {
+		return nil, err
+	}
+	api, _ := dig(demo, "testkube-cloud-api", "api").(map[string]any)
+	if api["mongo"] == nil || api["postgres"] == nil {
+		return nil, errors.New("demo values have no API database")
+	}
+	return yaml.Marshal(map[string]any{
+		"testkube-worker-service": map[string]any{"api": map[string]any{"mongo": api["mongo"], "postgres": api["postgres"]}},
+	})
 }
 
 // Helm replaces lists whole, so the runner list is copied.
