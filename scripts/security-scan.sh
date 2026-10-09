@@ -8,10 +8,10 @@
 #
 # Env:
 #   BASE_REF=origin/main      branch to compare against
-#   ENFORCE=1                 exit non-zero when there are findings
+#   ENFORCE=1                 exit non-zero when there are findings (scanner errors always exit non-zero)
 #   SEMGREP_RULES=...         Semgrep rulesets (space separated)
 #   GITLEAKS_IGNORE_PATHS=... path regexes Gitleaks never reports (space separated)
-#   OUT=.security-scan        where JSON reports are written
+#   OUT=.security-scan        dedicated directory for the JSON reports
 set -euo pipefail
 
 SEMGREP_IMAGE=semgrep/semgrep:1.101.0
@@ -28,7 +28,13 @@ ROOT=$(git rev-parse --show-toplevel)
 cd "$ROOT"
 OUT_REL="${OUT:-.security-scan}"
 OUT=$(mkdir -p "$OUT_REL" && cd "$OUT_REL" && pwd -P)
-rm -f "$OUT"/*.json "$OUT"/*.status "$OUT"/*.tsv "$OUT"/gitleaks.toml
+if [ "$OUT" = "$(pwd -P)" ]; then
+  echo "security-scan: OUT must be a dedicated directory, not the repository root" >&2
+  exit 2
+fi
+rm -f "$OUT"/changed-files.txt "$OUT"/semgrep.json "$OUT"/semgrep.status "$OUT"/gitleaks.json \
+  "$OUT"/gitleaks.status "$OUT"/gitleaks.toml "$OUT"/trivy-targets.tsv "$OUT"/trivy-config.status \
+  "$OUT"/trivy-config-*.json "$OUT"/trivy-config-*.dir
 
 command -v docker >/dev/null || { echo "security-scan: Docker is required" >&2; exit 2; }
 if [ "$(git config --get remote.origin.promisor)" = "true" ]; then
@@ -101,7 +107,8 @@ from pathlib import Path
 
 R, H, O = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
 cfg = [f for f in (O / "changed-files.txt").read_text().split()
-       if re.search(r"\.(tf|ya?ml|tpl)$|(^|/)Dockerfile", f) and (R / f).exists()]
+       if re.search(r"\.(tf|ya?ml|tpl)$|(^|/)(Dockerfile|Containerfile)[^/]*$|\.[Dd]ockerfile$", f)
+       and (R / f).exists()]
 
 def deps(chart_yaml):
     lines = chart_yaml.read_text().splitlines(keepends=True)
@@ -212,16 +219,21 @@ for d in sorted(O.glob("trivy-config-*.dir")):
     for r in (load(d.with_suffix(".json").name) or {}).get("Results") or []:
         trivy += [(m["Severity"], f"{folder}/{r['Target']}", m["ID"], m["Title"]) for m in r.get("Misconfigurations") or []]
 
-def result(key, rows):
-    if rows:
-        return "findings"
-    return "clean" if (O / f"{key}.status").read_text().strip() == "0" else "error"
+def result(key, reports, ok_codes, rows):
+    # "1" means findings for Semgrep (--error) and Gitleaks (--exit-code 1), but both also use it for failures
+    f = O / f"{key}.status"
+    code = f.read_text().strip() if f.exists() else "missing"
+    if code not in ok_codes or any(not (O / r).exists() for r in reports) or (code != "0" and not rows):
+        return "error"
+    return "findings" if rows else "clean"
 
-scanners = [("Code — Semgrep", "semgrep", semgrep), ("Secrets — Gitleaks", "gitleaks", gitleaks),
-            ("Configuration — Trivy config", "trivy-config", trivy)]
+trivy_reports = [d.with_suffix(".json").name for d in O.glob("trivy-config-*.dir")]
+scanners = [("Code — Semgrep", result("semgrep", ["semgrep.json"], {"0", "1"}, semgrep), semgrep),
+            ("Secrets — Gitleaks", result("gitleaks", ["gitleaks.json"], {"0", "1"}, gitleaks), gitleaks),
+            ("Configuration — Trivy config", result("trivy-config", trivy_reports, {"0"}, trivy), trivy)]
 print(f"{'Scanner':<32}{'Result':<10}Findings")
-for label, key, rows in scanners:
-    print(f"{label:<32}{result(key, rows):<10}{len(rows)}")
+for label, res, rows in scanners:
+    print(f"{label:<32}{res:<10}{len(rows)}")
 for label, _, rows in scanners:
     if rows:
         print(f"\n{label}:")
@@ -230,6 +242,10 @@ for label, _, rows in scanners:
 if trivy:
     print("\nNote: unlike the PR check, the local Trivy scan also lists misconfigurations already on the base branch.")
 print(f"\nJSON reports: {O}")
+failed = [label for label, res, _ in scanners if res == "error"]
+if failed:
+    print(f"\nERROR: scan incomplete ({', '.join(failed)}); see the output above.")
+    sys.exit(2)
 total = sum(len(rows) for _, _, rows in scanners)
 if total and enforce:
     sys.exit(1)
