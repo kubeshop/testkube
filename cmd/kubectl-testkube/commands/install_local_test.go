@@ -1,9 +1,12 @@
 package commands
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/kubeshop/testkube/pkg/localinstall"
 )
@@ -25,4 +28,13 @@ func TestResourceFix_PointsAtEachDockerAppsOwnSetting(t *testing.T) {
 			assert.Contains(t, resourceFix(tt.cpu, tt.docker), tt.want)
 		})
 	}
+}
+
+func TestHomeRelative_ShortensOnlyPathsInsideHome(t *testing.T) {
+	home, err := os.UserHomeDir()
+	require.NoError(t, err)
+	inside := filepath.Join(home, ".testkube", "logs", "install-1.txt")
+
+	assert.Equal(t, "~"+string(os.PathSeparator)+filepath.Join(".testkube", "logs", "install-1.txt"), homeRelative(inside))
+	assert.Equal(t, home+"2/x.txt", homeRelative(home+"2/x.txt"), "a sibling folder isn't home")
 }

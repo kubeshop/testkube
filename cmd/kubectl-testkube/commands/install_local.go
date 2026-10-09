@@ -309,11 +309,11 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 	printStep(6, "Installing Testkube")
 	secrets, err := localinstall.LoadOrCreateSecrets()
 	if err != nil {
-		failTestkube(tracker, "", err)
+		failTestkube(tracker, "", err, "")
 	}
 	installer, err := localinstall.NewInstaller()
 	if err != nil {
-		failTestkube(tracker, "", err)
+		failTestkube(tracker, "", err, "")
 	}
 	start := time.Now()
 	waiting := func(elapsed time.Duration) string {
@@ -326,7 +326,7 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 	_ = spinner.Stop()
 	exitIfCancelled(cmd, tracker, "testkube")
 	if err != nil {
-		failTestkube(tracker, out, err)
+		failTestkube(tracker, out, err, state.ReportPath)
 	}
 	r := localinstall.Result{Name: "testkube", Status: localinstall.StatusPass, Version: localinstall.AppVersion,
 		Detail: "installed in " + took(state.TestkubeTook)}
@@ -366,7 +366,7 @@ func took(d time.Duration) string {
 	return fmt.Sprintf("%dm %ds", int(d.Minutes()), int(d.Seconds())%60)
 }
 
-func failTestkube(tracker *telemetry.InstallTracker, out string, err error) {
+func failTestkube(tracker *telemetry.InstallTracker, out string, err error, report string) {
 	r := localinstall.Result{Name: "testkube", Status: localinstall.StatusFail, Version: localinstall.AppVersion, Detail: "could not install"}
 	reason := "install"
 	var stuck localinstall.StuckError
@@ -417,6 +417,10 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error) {
 		}
 		r.Fix = stuckFix(stuck.Stuck, docker)
 	}
+	// Support asks for it later; no nudge to send it now.
+	if report != "" {
+		r.Fix += "\n" + ui.LightGray("Details saved to "+homeRelative(report))
+	}
 	printCheckResult(r)
 	props := map[string]any{"stage": "testkube", "reason": reason}
 	if isStuck {
@@ -429,7 +433,7 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error) {
 
 const (
 	rerunCommand = "`testkube install local`"
-	contactFix   = "If it fails again, send us this output: https://testkube.io/contact"
+	contactFix   = "If it fails again, contact us: https://testkube.io/contact"
 	retryFix     = "Try " + rerunCommand + " once more. " + contactFix
 	// A rerun rarely fixes these, so don't pretend it will.
 	bugFix = "This looks like a Testkube problem, not your setup.\n" + retryFix
@@ -506,6 +510,15 @@ func resourceFix(cpu bool, docker localinstall.DockerResources) string {
 		return have + "\nRun `colima stop && colima start " + colima + "`" + then
 	}
 	return have + "\n" + other + then
+}
+
+// Short, and the same on every machine support talks to.
+func homeRelative(path string) string {
+	home, err := os.UserHomeDir()
+	if err != nil || !strings.HasPrefix(path, home+string(os.PathSeparator)) {
+		return path
+	}
+	return "~" + strings.TrimPrefix(path, home)
 }
 
 // pterm's light white text vanishes on light terminals.
