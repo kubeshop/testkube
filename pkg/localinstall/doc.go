@@ -44,6 +44,8 @@
 // embedded values, installed by our helm (see Helm).
 // Passwords the kept data needs live in secrets.json,
 // so a rebuilt cluster can still open its old data.
+// A failed install names the root stuck service (see Stuck);
+// helm stops early when waiting can't help, like a missing image.
 //
 // Step tracking lives in pkg/telemetry, see InstallTracker.
 package localinstall
