@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/pterm/pterm"
+	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -75,6 +76,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			installMissingTools(cmd, tracker, checker, results)
 			ports := runClusterStep(cmd, tracker)
 			runTestkubeStep(cmd, tracker, key, ports)
+			printReady(tracker, ports)
 			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallFinished)
 			waitForEvents(tracker)
 		},
@@ -522,4 +524,18 @@ func reportInstallLicenseEvent(tracker *telemetry.InstallTracker, license, event
 func waitForEvents(tracker *telemetry.InstallTracker) {
 	tracker.Wait()
 	waitLicenseEvents()
+}
+
+func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports) {
+	url := fmt.Sprintf("http://localhost:%d", ports["dashboard"])
+	label := func(s string) string { return ui.LightGray(fmt.Sprintf("%-12s", s)) }
+	ui.NL()
+	pterm.DefaultBox.WithBoxStyle(pterm.NewStyle(pterm.FgLightMagenta)).Println(
+		ui.Green("✔") + " " + pterm.Bold.Sprint("Testkube is ready") + "\n\n" +
+			"  " + label("Dashboard") + url + "\n" +
+			"  " + label("Email") + localinstall.AdminEmail + "\n" +
+			"  " + label("Password") + localinstall.AdminPassword)
+	ui.Printf("\n  %s~/.testkube/bin/kind delete cluster --name %s\n", label("Remove it"), localinstall.ClusterName)
+	ui.Printf("\n  Opening %s in your browser ...\n", url)
+	tracker.Send("install_local_ready", map[string]any{"browser_opened": open.Run(url) == nil})
 }
