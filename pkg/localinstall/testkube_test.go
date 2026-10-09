@@ -34,6 +34,7 @@ type helmFake struct {
 	blockFor time.Duration
 	clusters []string
 	reads    int
+	logCalls int
 	mu       sync.Mutex
 }
 
@@ -84,7 +85,12 @@ func newTestInstaller(t *testing.T, f *helmFake) *Installer {
 			}
 			return []byte(f.cluster), nil
 		},
-		logs: func(context.Context, string, bool) ([]byte, error) { return []byte(f.logs), nil }}
+		logs: func(context.Context, string, bool) ([]byte, error) {
+			f.mu.Lock()
+			defer f.mu.Unlock()
+			f.logCalls++
+			return []byte(f.logs), nil
+		}}
 }
 
 func (f *helmFake) commands() []string {
@@ -263,6 +269,9 @@ func TestInstall_StopsEarlyOnlyWhenWaitingCantHelp(t *testing.T) {
 
 			if !tt.stopped {
 				assert.NoError(t, err)
+				f.mu.Lock()
+				defer f.mu.Unlock()
+				assert.Zero(t, f.logCalls, "watching never reads logs")
 				return
 			}
 			assert.ErrorIs(t, err, ErrStuck)

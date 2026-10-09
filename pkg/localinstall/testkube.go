@@ -183,7 +183,8 @@ func (i *Installer) watchedHelm(ctx context.Context, since time.Time, args ...st
 				return
 			case <-ticker.C:
 			}
-			st, ok := i.diagnose(since)
+			// Logs only matter for the final message.
+			st, ok := i.diagnose(since, false)
 			switch {
 			case !ok || !stopsEarly[st.Reason]:
 				seen = Stuck{}
@@ -218,14 +219,14 @@ func (i *Installer) explain(ctx context.Context, out string, err error, since ti
 	if ctx.Err() != nil || !errors.Is(err, ErrInstallTimeout) && !strings.Contains(out, " not ready. status: ") {
 		return err
 	}
-	if st, ok := i.diagnose(since); ok {
+	if st, ok := i.diagnose(since, true); ok {
 		return StuckError{Stuck: st, err: err}
 	}
 	return err
 }
 
 // Fresh context: the install's own may be done by now.
-func (i *Installer) diagnose(since time.Time) (Stuck, bool) {
+func (i *Installer) diagnose(since time.Time, withLogs bool) (Stuck, bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	data, err := i.read(ctx)
@@ -237,7 +238,7 @@ func (i *Installer) diagnose(since time.Time) (Stuck, bool) {
 		return Stuck{}, false
 	}
 	st, ok := findStuck(s, since, time.Now())
-	if ok && st.Pod != "" && (st.Reason == "crashloop" || st.Reason == "job_failed") {
+	if ok && withLogs && st.Pod != "" && (st.Reason == "crashloop" || st.Reason == "job_failed") {
 		st.Logs = i.lastLogLines(ctx, st.Pod)
 	}
 	return st, ok
