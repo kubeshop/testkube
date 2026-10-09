@@ -84,7 +84,7 @@ func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license
 	start := time.Now()
 	install := func() ([]byte, error) {
 		return i.helm(ctx, "upgrade", "--install", ReleaseName, EnterpriseChart, "--version", EnterpriseChartVersion,
-			"--namespace", Namespace, "--create-namespace", "-f", values["demo"], "-f", values["ports"], "-f", values["worker"], "-f", values["private"],
+			"--namespace", Namespace, "--create-namespace", "-f", values["demo"], "-f", values["ports"], "-f", values["demo-fixes"], "-f", values["private"],
 			"--wait", "--wait-for-jobs", "--timeout", "15m")
 	}
 	out, err := install()
@@ -201,13 +201,13 @@ func writeValues(dir string, ports Ports, s Secrets, license string) (map[string
 	if err != nil {
 		return nil, err
 	}
-	worker, err := workerDatabaseValues()
+	fixes, err := demoFixValues()
 	if err != nil {
 		return nil, err
 	}
 	paths := map[string]string{}
 	for name, data := range map[string][]byte{"demo": EnterpriseDemoValues, "ports": []byte(PortValues(ports)),
-		"worker": worker, "private": private, "runner": runner} {
+		"demo-fixes": fixes, "private": private, "runner": runner} {
 		paths[name] = filepath.Join(dir, name+".yaml")
 		if err := os.WriteFile(paths[name], data, 0o600); err != nil {
 			return nil, err
@@ -216,8 +216,8 @@ func writeValues(dir string, ports Ports, s Secrets, license string) (map[string
 	return paths, nil
 }
 
-// Upstream demo leaves worker-service on Mongo, which isn't installed.
-func workerDatabaseValues() ([]byte, error) {
+// Upstream demo values miss these; drop each once fixed there.
+func demoFixValues() ([]byte, error) {
 	var demo map[string]any
 	if err := yaml.Unmarshal(EnterpriseDemoValues, &demo); err != nil {
 		return nil, err
@@ -227,7 +227,10 @@ func workerDatabaseValues() ([]byte, error) {
 		return nil, errors.New("demo values have no API database")
 	}
 	return yaml.Marshal(map[string]any{
+		// Otherwise it waits for Mongo, which isn't installed.
 		"testkube-worker-service": map[string]any{"api": map[string]any{"mongo": api["mongo"], "postgres": api["postgres"]}},
+		// Otherwise built from a domain we don't have.
+		"global": map[string]any{"ai": map[string]any{"serviceUrl": "http://testkube-enterprise-ai-service:9090"}},
 	})
 }
 

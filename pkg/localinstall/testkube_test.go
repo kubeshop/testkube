@@ -154,7 +154,7 @@ func TestInstall_WorkerServiceUsesTheAPIsPostgres(t *testing.T) {
 	require.NoError(t, err)
 
 	var worker, demo map[string]any
-	require.NoError(t, yaml.Unmarshal([]byte(f.files["worker.yaml"]), &worker))
+	require.NoError(t, yaml.Unmarshal([]byte(f.files["demo-fixes.yaml"]), &worker))
 	require.NoError(t, yaml.Unmarshal(EnterpriseDemoValues, &demo))
 	assert.Equal(t, false, dig(worker, "testkube-worker-service", "api", "mongo", "enabled"))
 	assert.Equal(t, true, dig(worker, "testkube-worker-service", "api", "postgres", "enabled"))
