@@ -24,7 +24,16 @@ var (
 	ErrRunnerInstall   = errors.New("the runner could not be installed")
 	ErrChartDownload   = errors.New("the chart could not be downloaded")
 	ErrInstallTimeout  = errors.New("the Testkube install was not ready in time")
+	ErrStuck           = errors.New("the Testkube install can't finish")
 )
+
+var (
+	stuckPoll  = 5 * time.Second
+	stuckLasts = time.Minute
+)
+
+// Waiting can't fix these; anything else may still pass.
+var stopsEarly = map[string]bool{"image_missing": true, "rate_limit": true, "no_cpu": true, "no_memory": true}
 
 type InstallState struct {
 	// An earlier run was killed mid-install and got cleaned up.
@@ -87,25 +96,31 @@ func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license
 
 	start := time.Now()
 	began := start
-	install := func() ([]byte, error) {
-		return i.helm(ctx, "upgrade", "--install", ReleaseName, EnterpriseChart, "--version", EnterpriseChartVersion,
+	install := func() ([]byte, *Stuck, error) {
+		return i.watchedHelm(ctx, began, "upgrade", "--install", ReleaseName, EnterpriseChart, "--version", EnterpriseChartVersion,
 			"--namespace", Namespace, "--create-namespace", "-f", values["demo"], "-f", values["ports"], "-f", values["demo-fixes"], "-f", values["private"],
 			"--wait", "--wait-for-jobs", "--timeout", "15m")
 	}
-	out, err := install()
+	out, stuck, err := install()
 	// The chart's migration retries ~1 minute; postgres can take longer.
-	if err != nil && migrationLostRace(string(out)) {
+	if err != nil && stuck == nil && migrationLostRace(string(out)) {
 		state.MigrationRetried = true
 		// Best effort: a postgres that never starts fails the retry.
 		_, _ = i.wait(ctx)
-		out, err = install()
+		out, stuck, err = install()
+	}
+	if err != nil && stuck != nil {
+		return state, string(out), StuckError{Stuck: *stuck, After: time.Since(began), err: fmt.Errorf("%w: %w", ErrTestkubeInstall, ErrStuck)}
 	}
 	if err != nil {
 		return state, string(out), i.explain(classify(string(out), ErrTestkubeInstall), began)
 	}
 	state.TestkubeTook, start = time.Since(start), time.Now()
-	out, err = i.helm(ctx, "upgrade", "--install", runnerRelease, RunnerChart, "--version", RunnerChartVersion,
+	out, stuck, err = i.watchedHelm(ctx, began, "upgrade", "--install", runnerRelease, RunnerChart, "--version", RunnerChartVersion,
 		"--namespace", Namespace, "-f", values["runner"], "--wait", "--timeout", "10m")
+	if err != nil && stuck != nil {
+		return state, string(out), StuckError{Stuck: *stuck, After: time.Since(began), err: fmt.Errorf("%w: %w", ErrRunnerInstall, ErrStuck)}
+	}
 	if err != nil {
 		return state, string(out), i.explain(classify(string(out), ErrRunnerInstall), began)
 	}
@@ -143,7 +158,56 @@ func waitForPostgres(ctx context.Context) ([]byte, error) {
 // Carried on the install error, so errors.Is checks still match.
 type StuckError struct {
 	Stuck
-	err error
+	// Set when we stopped helm early.
+	After time.Duration
+	err   error
+}
+
+// Cancels only helm's own context, so it never looks like Ctrl+C.
+func (i *Installer) watchedHelm(ctx context.Context, since time.Time, args ...string) ([]byte, *Stuck, error) {
+	helmCtx, stopHelm := context.WithCancel(ctx)
+	defer stopHelm()
+	found := make(chan Stuck, 1)
+	done := make(chan struct{})
+	poll, lasts := stuckPoll, stuckLasts
+	go func() {
+		ticker := time.NewTicker(poll)
+		defer ticker.Stop()
+		var seen Stuck
+		var seenAt time.Time
+		for {
+			select {
+			case <-done:
+				return
+			case <-helmCtx.Done():
+				return
+			case <-ticker.C:
+			}
+			st, ok := i.diagnose(since)
+			switch {
+			case !ok || !stopsEarly[st.Reason]:
+				seen = Stuck{}
+			case st.Service != seen.Service || st.Reason != seen.Reason:
+				seen, seenAt = st, time.Now()
+			// A pod still terminating can block scheduling briefly.
+			case time.Since(seenAt) >= lasts:
+				found <- st
+				stopHelm()
+				return
+			}
+		}
+	}()
+	out, err := i.helm(helmCtx, args...)
+	close(done)
+	if err == nil {
+		return out, nil, nil
+	}
+	select {
+	case st := <-found:
+		return out, &st, err
+	default:
+		return out, nil, err
+	}
 }
 
 func (e StuckError) Error() string { return e.err.Error() }

@@ -368,6 +368,8 @@ func took(d time.Duration) string {
 func failTestkube(tracker *telemetry.InstallTracker, out string, err error) {
 	r := localinstall.Result{Name: "testkube", Status: localinstall.StatusFail, Version: localinstall.AppVersion, Detail: "could not install"}
 	reason := "install"
+	var stuck localinstall.StuckError
+	isStuck := errors.As(err, &stuck)
 	switch {
 	case errors.Is(err, localinstall.ErrSecretsLost):
 		reason, r.Detail = "secrets_lost", "old data can't be opened"
@@ -384,6 +386,11 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error) {
 		reason, r.Detail = "secrets_damaged", "saved passwords can't be read"
 		r.Fix = "Restore ~/.testkube/secrets.json, or delete it and ~/.testkube/data/" + localinstall.Namespace +
 			" to start fresh"
+	case errors.Is(err, localinstall.ErrStuck):
+		reason, r.Detail = "stuck", "stopped after "+took(stuck.After)
+		if errors.Is(err, localinstall.ErrRunnerInstall) {
+			r.Name = "runner"
+		}
 	case errors.Is(err, localinstall.ErrRunnerInstall):
 		reason, r.Name = "runner", "runner"
 		r.Fix = withWhy(out, "Testkube is installed; run again to retry the runner")
@@ -402,8 +409,7 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error) {
 		}
 		r.Fix = withWhy(out, "Run again")
 	}
-	var stuck localinstall.StuckError
-	if errors.As(err, &stuck) {
+	if isStuck {
 		r.Fix = stuckFix(stuck.Stuck)
 	}
 	printCheckResult(r)

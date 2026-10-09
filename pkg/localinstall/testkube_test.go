@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,9 +30,14 @@ type helmFake struct {
 	manifest string
 	cluster  string
 	logs     string
+	// Install blocks like a slow helm, until done or cancelled.
+	blockFor time.Duration
+	clusters []string
+	reads    int
+	mu       sync.Mutex
 }
 
-func (f *helmFake) run(_ context.Context, args ...string) ([]byte, error) {
+func (f *helmFake) run(ctx context.Context, args ...string) ([]byte, error) {
 	f.calls = append(f.calls, args)
 	for i, a := range args {
 		if a == "-f" {
@@ -43,6 +50,12 @@ func (f *helmFake) run(_ context.Context, args ...string) ([]byte, error) {
 		return []byte(`[{"name":"x","status":"` + f.status + `"}]`), nil
 	case args[0] == "list":
 		return []byte(`[]`), nil
+	case f.blockFor > 0 && args[0] == "upgrade" && args[2] == ReleaseName:
+		select {
+		case <-ctx.Done():
+			return []byte("Release testkube has been cancelled.\nError: context canceled"), ctx.Err()
+		case <-time.After(f.blockFor):
+		}
 	case f.failOn != "" && args[0] == "upgrade" && args[2] == f.failOn && f.failures != 0:
 		f.failures--
 		return []byte(f.failOut), errors.New("exit status 1")
@@ -59,6 +72,13 @@ func newTestInstaller(t *testing.T, f *helmFake) *Installer {
 		},
 		apply: func(_ context.Context, m string) ([]byte, error) { f.manifest = m; return nil, nil },
 		read: func(context.Context) ([]byte, error) {
+			f.mu.Lock()
+			defer f.mu.Unlock()
+			if len(f.clusters) > 0 {
+				c := f.clusters[min(f.reads, len(f.clusters)-1)]
+				f.reads++
+				return []byte(c), nil
+			}
 			if f.cluster == "" {
 				return []byte(`{"items":[]}`), nil
 			}
@@ -186,6 +206,54 @@ func TestInstall_TimeoutNamesTheStuckServiceAndItsLastLogs(t *testing.T) {
 	assert.Equal(t, "dex", stuck.Service)
 	assert.Equal(t, "crashloop", stuck.Reason)
 	assert.Equal(t, []string{"failed to load config: open /etc/dex/cfg/config.yaml: no such file"}, stuck.Logs)
+}
+
+const (
+	noMemoryCluster = `{"items":[{"kind":"Pod","metadata":{"name":"minio-1","labels":{"app.kubernetes.io/name":"minio"}},` +
+		`"status":{"phase":"Pending","conditions":[{"type":"PodScheduled","status":"False","reason":"Unschedulable",` +
+		`"message":"0/1 nodes are available: 1 Insufficient memory."}]}}]}`
+	crashingCluster = `{"items":[{"kind":"Pod","metadata":{"name":"dex-1","labels":{"app.kubernetes.io/name":"dex"}},` +
+		`"status":{"phase":"Running","containerStatuses":[{"name":"dex","restartCount":4,` +
+		`"lastState":{"terminated":{"reason":"Error","exitCode":1,"finishedAt":"2999-01-01T00:00:00Z"}}}]}}]}`
+)
+
+func fastStuckWatch(t *testing.T) {
+	poll, lasts := stuckPoll, stuckLasts
+	stuckPoll, stuckLasts = 5*time.Millisecond, 150*time.Millisecond
+	t.Cleanup(func() { stuckPoll, stuckLasts = poll, lasts })
+}
+
+func TestInstall_StopsEarlyOnlyWhenWaitingCantHelp(t *testing.T) {
+	fastStuckWatch(t)
+	tests := map[string]struct {
+		clusters []string
+		stopped  bool
+	}{
+		"not enough memory for a minute": {clusters: []string{noMemoryCluster}, stopped: true},
+		"not enough memory that clears":  {clusters: []string{noMemoryCluster, noMemoryCluster, `{"items":[]}`}},
+		"a crash may still recover":      {clusters: []string{crashingCluster}},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			f := &helmFake{blockFor: time.Second, clusters: tt.clusters}
+
+			_, _, err := newTestInstaller(t, f).Install(context.Background(), movedPorts, testSecrets, testLicense)
+
+			if !tt.stopped {
+				assert.NoError(t, err)
+				return
+			}
+			assert.ErrorIs(t, err, ErrStuck)
+			assert.ErrorIs(t, err, ErrTestkubeInstall)
+			var stuck StuckError
+			require.ErrorAs(t, err, &stuck)
+			assert.Equal(t, "no_memory", stuck.Reason)
+			assert.Less(t, stuck.After, time.Second, "helm was stopped, not waited out")
+			for _, call := range f.calls {
+				assert.NotContains(t, call, runnerRelease, "the runner never starts")
+			}
+		})
+	}
 }
 
 func TestInstall_FailuresNameTheirStage(t *testing.T) {
