@@ -62,22 +62,34 @@ func parseSnapshot(data []byte) (clusterSnapshot, error) {
 
 type stuckService struct {
 	name, label string
-	job         bool
-	deps        []string
+	// Role first for users, name kept for support.
+	title string
+	job   bool
+	deps  []string
 }
 
 // Root first, so a dependency is blamed before its users.
 var stuckServices = []stuckService{
-	{name: "postgres", label: "postgresql"},
-	{name: "nats", label: "nats"},
-	{name: "minio", label: "minio"},
-	{name: "dex", label: "dex"},
-	{name: "ui", label: "testkube-cloud-ui"},
-	{name: "migration", label: "testkube-enterprise-api-migration", job: true, deps: []string{"postgres"}},
-	{name: "api", label: "testkube-cloud-api", deps: []string{"postgres", "nats", "minio", "migration"}},
-	{name: "worker-service", label: "testkube-worker-service", deps: []string{"nats", "minio"}},
-	{name: "ai-service", label: "testkube-ai-service", deps: []string{"postgres"}},
-	{name: "runner", label: "testkube-runner", deps: []string{"api"}},
+	{name: "postgres", label: "postgresql", title: "The database (postgres)"},
+	{name: "nats", label: "nats", title: "Messaging (nats)"},
+	{name: "minio", label: "minio", title: "File storage (minio)"},
+	{name: "dex", label: "dex", title: "Login (dex)"},
+	{name: "ui", label: "testkube-cloud-ui", title: "The dashboard (ui)"},
+	{name: "migration", label: "testkube-enterprise-api-migration", title: "Database setup (migration)", job: true,
+		deps: []string{"postgres"}},
+	{name: "api", label: "testkube-cloud-api", title: "The API (api)", deps: []string{"postgres", "nats", "minio", "migration"}},
+	{name: "worker-service", label: "testkube-worker-service", title: "Background jobs (worker-service)", deps: []string{"nats", "minio"}},
+	{name: "ai-service", label: "testkube-ai-service", title: "The AI assistant (ai-service)", deps: []string{"postgres"}},
+	{name: "runner", label: "testkube-runner", title: "The runner", deps: []string{"api"}},
+}
+
+func (s Stuck) Title() string {
+	for _, svc := range stuckServices {
+		if svc.name == s.Service {
+			return svc.title
+		}
+	}
+	return s.Service
 }
 
 // Covers kubelet's 300s restart backoff after dependencies come up.

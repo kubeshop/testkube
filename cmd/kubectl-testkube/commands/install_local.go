@@ -433,7 +433,7 @@ const (
 
 // Plain words for what's stuck; helm's own lines never say why.
 func stuckFix(st localinstall.Stuck, docker localinstall.DockerResources) string {
-	name := st.Service
+	name := st.Title()
 	switch st.Reason {
 	case "downloading":
 		return fmt.Sprintf("%s is still downloading its image %s\nYour connection may be slow. Run %s again; finished downloads are kept.",
