@@ -85,6 +85,10 @@ func newTestInstaller(t *testing.T, f *helmFake) *Installer {
 			}
 			return []byte(f.cluster), nil
 		},
+		cliVersion: "v9.9.9",
+		docker: func(context.Context) DockerResources {
+			return DockerResources{Engine: "Docker Desktop", Version: "29.0.0", CPUs: 8, Memory: 8 << 30}
+		},
 		logs: func(context.Context, string, bool, int) ([]byte, error) {
 			f.mu.Lock()
 			defer f.mu.Unlock()

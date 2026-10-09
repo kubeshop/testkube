@@ -64,9 +64,10 @@ func (dockerCLI) Info(ctx context.Context) (dockerInfo, error) {
 
 // Zero when Docker couldn't be read; fixes then stay generic.
 type DockerResources struct {
-	Engine string
-	CPUs   int
-	Memory uint64
+	Engine  string
+	Version string
+	CPUs    int
+	Memory  uint64
 }
 
 func (d DockerResources) DockerDesktop() bool { return d.Engine == "Docker Desktop" }
@@ -96,5 +97,5 @@ func ReadDockerResources(ctx context.Context) DockerResources {
 	if strings.HasPrefix(info.Name, "colima") {
 		engine = info.Name
 	}
-	return DockerResources{Engine: engine, CPUs: info.NCPU, Memory: uint64(info.MemTotal)}
+	return DockerResources{Engine: engine, Version: info.ServerVersion, CPUs: info.NCPU, Memory: uint64(info.MemTotal)}
 }

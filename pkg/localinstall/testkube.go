@@ -52,9 +52,12 @@ type Installer struct {
 	read  func(ctx context.Context) ([]byte, error)
 	logs  func(ctx context.Context, pod string, previous bool, tail int) ([]byte, error)
 	dir   string
+	// For the failure report; the CLI knows its own version.
+	cliVersion string
+	docker     func(ctx context.Context) DockerResources
 }
 
-func NewInstaller() (*Installer, error) {
+func NewInstaller(cliVersion string) (*Installer, error) {
 	h, err := NewHelm()
 	if err != nil {
 		return nil, err
@@ -64,7 +67,7 @@ func NewInstaller() (*Installer, error) {
 		return nil, err
 	}
 	return &Installer{helm: h.Run, apply: kubectlApply, wait: waitForPostgres, read: readCluster,
-		logs: podLogs, dir: filepath.Dir(kubeconfig)}, nil
+		logs: podLogs, dir: filepath.Dir(kubeconfig), cliVersion: cliVersion, docker: ReadDockerResources}, nil
 }
 
 // After Ctrl+C nobody needs a report of what was cut short.
@@ -72,7 +75,7 @@ func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license
 	began := time.Now()
 	state, out, err := i.install(ctx, ports, s, license)
 	if err != nil && ctx.Err() == nil {
-		state.ReportPath, _ = i.saveReport(began, err, s.RunnerKey, s.MasterPassword, s.MinioPassword, s.AIToken, license)
+		state.ReportPath, _ = i.saveReport(began, err, ports, s.RunnerKey, s.MasterPassword, s.MinioPassword, s.AIToken, license)
 	}
 	return state, out, err
 }

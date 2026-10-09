@@ -116,6 +116,9 @@ func TestSaveReport_OnlyAfterARealFailure(t *testing.T) {
 			require.NoError(t, err)
 			assert.True(t, strings.HasPrefix(string(data), "Testkube install report, saved after a failed install on "))
 			assert.Contains(t, string(data), "dex-1", "the stuck pod's state is there")
+			assert.Contains(t, string(data), "CLI: v9.9.9")
+			assert.Contains(t, string(data), "Docker: Docker Desktop 29.0.0, 8 CPUs, 8.0 GB memory")
+			assert.Contains(t, string(data), "Ports: dashboard 8081, api 8091, login 5557, storage 9001, ai 9091")
 			assert.NotContains(t, string(data), testSecrets.RunnerKey)
 			if runtime.GOOS != "windows" {
 				info, err := os.Stat(files[0])

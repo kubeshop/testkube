@@ -311,7 +311,7 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 	if err != nil {
 		failTestkube(tracker, "", err, "")
 	}
-	installer, err := localinstall.NewInstaller()
+	installer, err := localinstall.NewInstaller(common.Version)
 	if err != nil {
 		failTestkube(tracker, "", err, "")
 	}

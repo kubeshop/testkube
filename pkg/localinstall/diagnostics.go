@@ -164,7 +164,7 @@ const (
 )
 
 // Best effort: a failed save must not hide the install's error.
-func (i *Installer) saveReport(since time.Time, installErr error, secrets ...string) (string, error) {
+func (i *Installer) saveReport(since time.Time, installErr error, ports Ports, secrets ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	data, err := i.read(ctx)
@@ -192,8 +192,8 @@ func (i *Installer) saveReport(since time.Time, installErr error, secrets ...str
 	}
 	now := time.Now()
 	text := fmt.Sprintf("Testkube install report, saved after a failed install on %s.\n"+
-		"Your license key and Testkube passwords are masked.\n\nError: %s\n\n%s",
-		now.Format("2 Jan 2006 at 15:04"), installErr, renderReport(r, newRedactor()))
+		"Your license key and Testkube passwords are masked.\n\n%s\nError: %s\n\n%s",
+		now.Format("2 Jan 2006 at 15:04"), i.machine(ctx, ports), installErr, renderReport(r, newRedactor()))
 	text = capReport(newRedactor(secrets...).clean(text))
 	dir := filepath.Join(i.dir, "logs")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -205,6 +205,26 @@ func (i *Installer) saveReport(since time.Time, installErr error, secrets ...str
 	}
 	pruneReports(dir)
 	return path, nil
+}
+
+// Support's first questions, answered before they ask.
+func (i *Installer) machine(ctx context.Context, ports Ports) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "CLI: %s\n", i.cliVersion)
+	fmt.Fprintf(&b, "Testkube: %s (charts: enterprise %s, runner %s)\n", AppVersion, EnterpriseChartVersion, RunnerChartVersion)
+	fmt.Fprintf(&b, "Tools: kind %s, helm %s, node %s\n", ToolVersion("kind"), ToolVersion("helm"), nodeImage)
+	fmt.Fprintf(&b, "OS: %s\n", (&Checker{host: realHost{}}).CheckOS().Detail)
+	if d := i.docker(ctx); d.Engine != "" {
+		fmt.Fprintf(&b, "Docker: %s %s, %d CPUs, %s memory\n", d.Engine, d.Version, d.CPUs, d.MemoryText())
+	}
+	var mapped []string
+	for _, p := range clusterPorts {
+		if host, ok := ports[p.name]; ok {
+			mapped = append(mapped, fmt.Sprintf("%s %d", p.name, host))
+		}
+	}
+	fmt.Fprintf(&b, "Ports: %s\n", strings.Join(mapped, ", "))
+	return b.String()
 }
 
 // Names sort by time, so the oldest come first.
