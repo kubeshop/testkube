@@ -178,6 +178,7 @@ jobs:
     if: ${{ github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
     permissions:
       contents: read
+      id-token: write # cosign keyless signing
     uses: ./.github/workflows/publish-gar.yaml
     with:
       version: ${{ github.ref_name }}
@@ -235,17 +236,28 @@ jobs:
           printf '%s' "$DOCKERHUB_TOKEN" | helm registry login "$REGISTRY" --username "$DOCKERHUB_USERNAME" --password-stdin
           helm repo add cloudnative-pg https://cloudnative-pg.github.io/charts --force-update
 
+          # Push <chart> to <registry path> and record "<repository> <digest>" of
+          # that push for the signing step. Docker Hub is recorded as docker.io,
+          # which is where docker login stored the credentials cosign reads.
+          push_chart() {
+            local chart="$1" repository="$2" output digest
+            output="$(helm push "${chart}-${HELM_VERSION}.tgz" "oci://${repository}" 2>&1)" || { echo "$output"; return 1; }
+            echo "$output"
+            digest="$(echo "$output" | awk '/^Digest:/ {print $2}')"
+            echo "${repository/#${REGISTRY}/docker.io}/${chart} ${digest}" >> "${RUNNER_TEMP}/charts-to-sign.txt"
+          }
+
           # testkube chart
           helm dependency build k8s/helm/testkube
           helm package k8s/helm/testkube
-          helm push "testkube-${HELM_VERSION}.tgz" "oci://${REGISTRY}/kubeshop"
-          helm push "testkube-${HELM_VERSION}.tgz" "oci://${REGISTRY_GAR}/${GAR_PROJECT_ID}/${CHARTS_REPOSITORY}"
+          push_chart testkube "${REGISTRY}/kubeshop"
+          push_chart testkube "${REGISTRY_GAR}/${GAR_PROJECT_ID}/${CHARTS_REPOSITORY}"
 
           # testkube runner chart
           helm dependency build k8s/helm/testkube-runner
           helm package k8s/helm/testkube-runner
-          helm push "testkube-runner-${HELM_VERSION}.tgz" "oci://${REGISTRY}/kubeshop"
-          helm push "testkube-runner-${HELM_VERSION}.tgz" "oci://${REGISTRY_GAR}/${GAR_PROJECT_ID}/${CHARTS_REPOSITORY}"
+          push_chart testkube-runner "${REGISTRY}/kubeshop"
+          push_chart testkube-runner "${REGISTRY_GAR}/${GAR_PROJECT_ID}/${CHARTS_REPOSITORY}"
 
       - id: helm-index-update
         name: Dispatch update for legacy Helm index
@@ -262,6 +274,21 @@ jobs:
                 chart_version: '${{ steps.helm-version.outputs.result }}'
               }
             })
+
+      # Runs after publishing so a signing failure never blocks a chart release.
+      # Only stable releases (X.Y.Z) are signed.
+      - name: Install cosign
+        if: ${{ !contains(github.ref_name, '-') }}
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.1.3
+
+      - name: Sign Helm charts
+        if: ${{ !contains(github.ref_name, '-') }}
+        run: |
+          while read -r repository digest; do
+            ./scripts/cosign-sign.sh "$repository" "$digest" < /dev/null
+          done < "${RUNNER_TEMP}/charts-to-sign.txt"
 
   publish_mcp_registry:
     name: Publish to MCP Registry

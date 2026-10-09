@@ -1,9 +1,10 @@
 name: Publish images to GAR
 
 # Copies released images from Docker Hub to Google Artifact Registry by digest
-# (no rebuild). Called for stable tags by new-build.yaml and release.yaml (the
-# agent image is built there); both calls sync the full list, so whichever runs
-# last completes it. Run it manually to backfill a released version.
+# (no rebuild) and signs them in both registries with cosign keyless. Called
+# for stable tags by new-build.yaml and release.yaml (the agent image is built
+# there); both calls sync and sign the full list, so whichever runs last
+# completes it. Run it manually to backfill or sign a released version.
 on:
   workflow_call:
     inputs:
@@ -23,9 +24,24 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # cosign keyless signing
     concurrency:
       group: publish-gar-${{ inputs.version }}
       cancel-in-progress: false
+    env:
+      VERSION: ${{ inputs.version }}
+      GAR_REPOSITORY: ${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID_PROD }}/testkube
+      # <Docker Hub image>=<GAR name>
+      IMAGES: >-
+        docker.io/kubeshop/testkube-api-server=api-server
+        docker.io/kubeshop/testkube-cli=cli
+        docker.io/kubeshop/testkube-tw-init=tw-init
+        docker.io/kubeshop/testkube-tw-toolkit=tw-toolkit
+        docker.io/kubeshop/mcp-server=mcp-server
+        docker.io/kubeshop/testkube-convert=convert
+        docker.io/kubeshop/testkube-agent=agent
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -46,15 +62,13 @@ jobs:
           password: ${{ secrets.GKE_SA_KEY_PROD }}
 
       - name: Push images to GAR
-        env:
-          VERSION: ${{ inputs.version }}
-          GAR_REPOSITORY: ${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID_PROD }}/testkube
-        run: |
-          ./scripts/push-to-gar.sh "$VERSION" "$GAR_REPOSITORY" \
-            docker.io/kubeshop/testkube-api-server=api-server \
-            docker.io/kubeshop/testkube-cli=cli \
-            docker.io/kubeshop/testkube-tw-init=tw-init \
-            docker.io/kubeshop/testkube-tw-toolkit=tw-toolkit \
-            docker.io/kubeshop/mcp-server=mcp-server \
-            docker.io/kubeshop/testkube-convert=convert \
-            docker.io/kubeshop/testkube-agent=agent
+        # IMAGES is intentionally word-split into one argument per mapping
+        run: ./scripts/push-to-gar.sh "$VERSION" "$GAR_REPOSITORY" $IMAGES
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.1.3
+
+      - name: Sign images
+        run: ./scripts/sign-images.sh "$VERSION" "$GAR_REPOSITORY" $IMAGES

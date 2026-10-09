@@ -74,6 +74,9 @@ jobs:
     name: Create and upload release-artifacts
     needs: pre_build
     runs-on: depot-ubuntu-22.04
+    permissions:
+      contents: read
+      id-token: write # cosign keyless signing of checksums.txt
 
     steps:
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
@@ -133,6 +136,10 @@ jobs:
           go-version: stable
           # Disable build caching so a poisoned shared cache cannot influence released artifacts.
           cache: false
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.1.3
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
@@ -246,6 +253,7 @@ jobs:
     needs: build_agent_image
     permissions:
       contents: read
+      id-token: write # cosign keyless signing
     uses: ./.github/workflows/publish-gar.yaml
     with:
       version: ${{ github.ref_name }}
