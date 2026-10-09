@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -130,7 +131,32 @@ func streamableWorkflowNotificationsWithHeartbeat(done <-chan struct{}, source <
 	return notifications
 }
 
-func (s *TestkubeAPI) streamNotifications(ctx *fasthttp.RequestCtx, id string, notifications executionworkertypes.NotificationsWatcher, resumeAfterSeqNo uint32) {
+// writeWorkflowNotificationEvent writes a single notification as a server-sent event and flushes it.
+func writeWorkflowNotificationEvent(w *bufio.Writer, enc *json.Encoder, n testkube.TestWorkflowExecutionNotification) error {
+	if n.SeqNo > 0 {
+		if _, err := fmt.Fprintf(w, "id: %d\n", n.SeqNo); err != nil {
+			return errors.Wrap(err, "printing SSE id")
+		}
+	}
+	if n.EventType != "" {
+		if _, err := fmt.Fprintf(w, "event: %s\n", n.EventType); err != nil {
+			return errors.Wrap(err, "printing SSE event")
+		}
+	}
+	if _, err := io.WriteString(w, "data: "); err != nil {
+		return errors.Wrap(err, "printing SSE data prefix")
+	}
+	if err := enc.Encode(n); err != nil {
+		return errors.Wrap(err, "encoding value")
+	}
+	if _, err := io.WriteString(w, "\n"); err != nil {
+		return errors.Wrap(err, "printing new line")
+	}
+	return errors.Wrap(w.Flush(), "flushing stream body")
+}
+
+// streamNotifications streams the notifications as server-sent events.
+func (s *TestkubeAPI) streamNotifications(ctx *fasthttp.RequestCtx, watchCtx context.Context, stop context.CancelFunc, id string, notifications executionworkertypes.NotificationsWatcher, resumeAfterSeqNo uint32) {
 	// Initiate processing event stream
 	ctx.SetContentType("text/event-stream")
 	ctx.Response.Header.Set("Cache-Control", "no-cache")
@@ -139,53 +165,33 @@ func (s *TestkubeAPI) streamNotifications(ctx *fasthttp.RequestCtx, id string, n
 
 	// Stream the notifications
 	ctx.SetBodyStreamWriter(func(w *bufio.Writer) {
-		err := w.Flush()
-		if err != nil {
-			s.Log.Errorw("could not flush stream body", "error", err, "id", id)
-		}
-
-		enc := json.NewEncoder(w)
-
-		for n := range streamableWorkflowNotificationsWithHeartbeat(ctx.Done(), notifications.Channel(), resumeAfterSeqNo, workflowNotificationHeartbeatInterval) {
-			if n.SeqNo > 0 {
-				_, err = fmt.Fprintf(w, "id: %d\n", n.SeqNo)
-				if err != nil {
-					s.Log.Errorw("could not print SSE id", "error", err, "id", id)
-				}
-			}
-			if n.EventType != "" {
-				_, err = fmt.Fprintf(w, "event: %s\n", n.EventType)
-				if err != nil {
-					s.Log.Errorw("could not print SSE event", "error", err, "id", id)
-				}
-			}
-			_, err = fmt.Fprintf(w, "data: ")
-			if err != nil {
-				s.Log.Errorw("could not print SSE data prefix", "error", err, "id", id)
-			}
-
-			err := enc.Encode(n)
-			if err != nil {
-				s.Log.Errorw("could not encode value", "error", err, "id", id)
-			}
-
-			_, err = fmt.Fprintf(w, "\n")
-			if err != nil {
-				s.Log.Errorw("could not print new line", "error", err, "id", id)
-			}
-
-			err = w.Flush()
-			if err != nil {
-				s.Log.Errorw("could not flush stream body", "error", err, "id", id)
-			}
-		}
+		s.writeNotificationStream(w, watchCtx, stop, id, notifications, resumeAfterSeqNo, workflowNotificationHeartbeatInterval)
 	})
+}
+
+// writeNotificationStream writes notifications to w until the source is exhausted or a write fails, then calls stop.
+func (s *TestkubeAPI) writeNotificationStream(w *bufio.Writer, watchCtx context.Context, stop context.CancelFunc, id string, notifications executionworkertypes.NotificationsWatcher, resumeAfterSeqNo uint32, heartbeatInterval time.Duration) {
+	defer stop()
+
+	if err := w.Flush(); err != nil {
+		s.Log.Debugw("notification stream closed by the client", "error", err, "id", id)
+		return
+	}
+
+	enc := json.NewEncoder(w)
+
+	for n := range streamableWorkflowNotificationsWithHeartbeat(watchCtx.Done(), notifications.Channel(), resumeAfterSeqNo, heartbeatInterval) {
+		if err := writeWorkflowNotificationEvent(w, enc, n); err != nil {
+			s.Log.Debugw("notification stream closed by the client", "error", err, "id", id)
+			return
+		}
+	}
 }
 
 func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
-		id := c.Params("executionID")
+		id := strings.Clone(c.Params("executionID"))
 		errPrefix := fmt.Sprintf("failed to stream test workflow execution notifications '%s'", id)
 		resumeAfterSeqNo, err := parseResumeAfterSeqNo(c)
 		if err != nil {
@@ -199,7 +205,8 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsHandler() fiber.Ha
 		}
 
 		// Check for the logs
-		notifications := s.ExecutionWorkerClient.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
+		watchCtx, stopWatching := context.WithCancel(ctx)
+		notifications := s.ExecutionWorkerClient.Notifications(watchCtx, execution.Id, executionworkertypes.NotificationsOptions{
 			Hints: executionworkertypes.Hints{
 				Namespace:   execution.Namespace,
 				ScheduledAt: common.Ptr(execution.ScheduledAt),
@@ -207,10 +214,11 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsHandler() fiber.Ha
 			},
 		})
 		if notifications.Err() != nil {
+			stopWatching()
 			return s.BadRequest(c, errPrefix, "fetching notifications", notifications.Err())
 		}
 
-		s.streamNotifications(ctx, id, notifications, resumeAfterSeqNo)
+		s.streamNotifications(ctx, watchCtx, stopWatching, id, notifications, resumeAfterSeqNo)
 		return nil
 	}
 }
@@ -245,17 +253,19 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionServiceNotificationsHandler() f
 
 		// Check for the logs
 		id := fmt.Sprintf("%s-%s-%s", execution.Id, serviceName, serviceIndex)
-		notifications := s.ExecutionWorkerClient.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
+		watchCtx, stopWatching := context.WithCancel(ctx)
+		notifications := s.ExecutionWorkerClient.Notifications(watchCtx, id, executionworkertypes.NotificationsOptions{
 			Hints: executionworkertypes.Hints{
 				Namespace:   execution.Namespace,
 				ScheduledAt: common.Ptr(execution.ScheduledAt),
 			},
 		})
 		if notifications.Err() != nil {
+			stopWatching()
 			return s.BadRequest(c, errPrefix, "fetching notifications", notifications.Err())
 		}
 
-		s.streamNotifications(ctx, id, notifications, resumeAfterSeqNo)
+		s.streamNotifications(ctx, watchCtx, stopWatching, id, notifications, resumeAfterSeqNo)
 		return nil
 	}
 }
@@ -286,17 +296,19 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionParallelStepNotificationsHandle
 
 		// Check for the logs
 		id := fmt.Sprintf("%s-%s-%s", execution.Id, reference, workerIndex)
-		notifications := s.ExecutionWorkerClient.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
+		watchCtx, stopWatching := context.WithCancel(ctx)
+		notifications := s.ExecutionWorkerClient.Notifications(watchCtx, id, executionworkertypes.NotificationsOptions{
 			Hints: executionworkertypes.Hints{
 				Namespace:   execution.Namespace,
 				ScheduledAt: common.Ptr(execution.ScheduledAt),
 			},
 		})
 		if notifications.Err() != nil {
+			stopWatching()
 			return s.BadRequest(c, errPrefix, "fetching notifications", notifications.Err())
 		}
 
-		s.streamNotifications(ctx, id, notifications, resumeAfterSeqNo)
+		s.streamNotifications(ctx, watchCtx, stopWatching, id, notifications, resumeAfterSeqNo)
 		return nil
 	}
 }
