@@ -29,3 +29,28 @@ func TestUninstallLocal_NeverReachesTheRealClusterPurge(t *testing.T) {
 		})
 	}
 }
+
+func TestShouldDeleteData_NoAnswerMeansNo(t *testing.T) {
+	tests := map[string]struct {
+		yes, interactive, answer bool
+		want                     bool
+		wantErr                  error
+		asked                    bool
+	}{
+		"--yes skips the question":  {yes: true, want: true},
+		"no terminal needs --yes":   {wantErr: errNeedsYes},
+		"declined keeps everything": {interactive: true, asked: true},
+		"accepted deletes":          {interactive: true, answer: true, want: true, asked: true},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			asked := false
+
+			got, err := shouldDeleteData(tt.yes, tt.interactive, func() bool { asked = true; return tt.answer })
+
+			assert.Equal(t, tt.want, got)
+			assert.ErrorIs(t, err, tt.wantErr)
+			assert.Equal(t, tt.asked, asked)
+		})
+	}
+}

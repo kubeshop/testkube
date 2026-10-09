@@ -1,6 +1,10 @@
 package localinstall
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -41,4 +45,56 @@ func HasData() bool {
 	}
 	entries, _ := os.ReadDir(filepath.Join(filepath.Dir(kubeconfig), "data", Namespace))
 	return len(entries) > 0
+}
+
+var ErrDataUnsafe = errors.New("the data folder isn't a plain folder we made")
+
+// Run after the cluster is gone: nothing may write meanwhile.
+func DeleteData(ctx context.Context) (removed bool, sudo string, err error) {
+	kubeconfig, err := KubeconfigPath()
+	if err != nil {
+		return false, "", err
+	}
+	return deleteData(ctx, filepath.Dir(kubeconfig), runCombined)
+}
+
+func deleteData(ctx context.Context, dir string, run runFunc) (removed bool, sudo string, err error) {
+	data := filepath.Join(dir, "data")
+	secrets := filepath.Join(dir, "secrets.json")
+	info, err := os.Lstat(data)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return removeIfThere(secrets), "", nil
+	case err != nil:
+		return false, "", err
+	// Docker follows a symlinked mount source: never delete through one.
+	case !info.IsDir() || info.Mode()&fs.ModeSymlink != 0 || filepath.Base(dir) != ".testkube":
+		return false, "", ErrDataUnsafe
+	}
+	entries, err := os.ReadDir(data)
+	if err != nil {
+		return false, "", err
+	}
+	// On Linux containers own some files; rm alone may fail.
+	if len(entries) > 0 {
+		args := []string{"run", "--rm", "--pull=never", "--network=none", "--entrypoint", "rm",
+			"-v", data + ":/d", nodeImage, "-rf", "--one-file-system"}
+		for _, e := range entries {
+			args = append(args, "/d/"+e.Name())
+		}
+		_, _ = run(ctx, "docker", args...)
+	}
+	if err := os.RemoveAll(data); err != nil {
+		return false, fmt.Sprintf("sudo rm -rf '%s'", data), err
+	}
+	// Only now: passwords without data are harmless, the reverse isn't.
+	removeIfThere(secrets)
+	return true, "", nil
+}
+
+func removeIfThere(path string) bool {
+	if _, err := os.Lstat(path); err != nil {
+		return false
+	}
+	return os.Remove(path) == nil
 }

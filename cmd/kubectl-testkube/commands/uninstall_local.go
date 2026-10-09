@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/pkg/localinstall"
@@ -13,18 +14,53 @@ import (
 
 // Under purge, so `uninstall local` never purges the real cluster.
 func NewUninstallLocalCmd() *cobra.Command {
-	return &cobra.Command{
+	var deleteData, yes bool
+	cmd := &cobra.Command{
 		Use:    "local",
 		Short:  "Remove the local Testkube trial made by install local",
 		Hidden: true,
 		Args:   cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
-			runUninstallLocal(cmd)
+			runUninstallLocal(cmd, deleteData, yes)
 		},
 	}
+	cmd.Flags().BoolVar(&deleteData, "delete-data", false, "also delete your Testkube data in ~/.testkube/data")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the confirmation prompt")
+	return cmd
 }
 
-func runUninstallLocal(cmd *cobra.Command) {
+var errNeedsYes = errors.New("--delete-data needs confirmation. Run again with --yes")
+
+// Deleting data can't be undone, so no answer means no.
+func shouldDeleteData(yes, interactive bool, confirm func() bool) (bool, error) {
+	switch {
+	case yes:
+		return true, nil
+	case !interactive:
+		return false, errNeedsYes
+	}
+	return confirm(), nil
+}
+
+func confirmDataDeletion() bool {
+	ui.Printf("  This also deletes your Testkube data in ~/.testkube/data\n" +
+		"  (workflows, results, users). This can't be undone.\n")
+	ok, _ := pterm.DefaultInteractiveConfirm.WithDefaultValue(false).Show("  Continue?")
+	return ok
+}
+
+func runUninstallLocal(cmd *cobra.Command, deleteData, yes bool) {
+	if deleteData {
+		ok, err := shouldDeleteData(yes, ui.StdinIsInteractive(), confirmDataDeletion)
+		if err != nil {
+			ui.Printf("  %s\n", err)
+			os.Exit(1)
+		}
+		if !ok {
+			ui.Printf("  Nothing was removed.\n")
+			return
+		}
+	}
 	// The install's Docker check, so the same fixes apply.
 	if docker := localinstall.NewChecker().CheckDocker(cmd.Context()); docker.Status == localinstall.StatusFail {
 		printCheckResult(docker)
@@ -52,13 +88,28 @@ func runUninstallLocal(cmd *cobra.Command) {
 	if err != nil {
 		failUninstall(localinstall.Result{Name: "files", Status: localinstall.StatusFail, Detail: "could not remove", Fix: err.Error()})
 	}
-	if !found && !removed {
-		ui.Printf("  Nothing to uninstall: no local Testkube found.\n")
-		return
-	}
 	if removed {
 		printCheckResult(localinstall.Result{Name: "files", Status: localinstall.StatusPass, Detail: "removed",
 			Hint: "~/.testkube (cluster settings and caches)"})
+	}
+	dataDeleted := false
+	if deleteData {
+		var sudo string
+		dataDeleted, sudo, err = localinstall.DeleteData(cmd.Context())
+		if err != nil {
+			fix := err.Error()
+			if sudo != "" {
+				fix = "Some files belong to the containers. Delete them with:\n  " + sudo
+			}
+			failUninstall(localinstall.Result{Name: "data", Status: localinstall.StatusFail, Detail: "could not delete", Fix: fix})
+		}
+		if dataDeleted {
+			printCheckResult(localinstall.Result{Name: "data", Status: localinstall.StatusPass, Detail: "deleted", Hint: "~/.testkube/data"})
+		}
+	}
+	if !found && !removed && !dataDeleted {
+		ui.Printf("  Nothing to uninstall: no local Testkube found.\n")
+		return
 	}
 	ui.Printf("\n  Testkube is uninstalled.\n")
 	if localinstall.HasData() {
