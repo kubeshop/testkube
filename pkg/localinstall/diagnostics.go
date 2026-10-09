@@ -182,11 +182,13 @@ func (i *Installer) saveReport(since time.Time, installErr error, ports Ports, s
 	} else if st, ok := findStuck(snap, since, time.Now()); ok {
 		stuck = &st
 	}
+	rd := newRedactor(secrets...)
 	r := buildReport(snap, stuck)
 	for _, p := range r.services {
 		if !p.ready && p.phase != string(corev1.PodSucceeded) {
 			if out, err := i.logs(ctx, p.pod, false, reportLogLines); err == nil && len(out) > 0 {
-				r.logs[p.pod] = cutLines(string(out))
+				// Mask before cutting: a cut secret no longer matches.
+				r.logs[p.pod] = cutLines(rd.clean(string(out)))
 			}
 		}
 	}
@@ -194,7 +196,7 @@ func (i *Installer) saveReport(since time.Time, installErr error, ports Ports, s
 	text := fmt.Sprintf("Testkube install report, saved after a failed install on %s.\n"+
 		"Your license key and Testkube passwords are masked.\n\n%s\nError: %s\n\n%s",
 		now.Format("2 Jan 2006 at 15:04"), i.machine(ctx, ports), installErr, renderReport(r, newRedactor()))
-	text = capReport(newRedactor(secrets...).clean(text))
+	text = capReport(rd.clean(text))
 	dir := filepath.Join(i.dir, "logs")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", err

@@ -160,3 +160,15 @@ func TestCapReport_StopsAtOneMegabyte(t *testing.T) {
 	assert.LessOrEqual(t, len(capReport(strings.Repeat("x", 3*maxReportBytes))), maxReportBytes+32)
 	assert.Equal(t, "short", capReport("short"))
 }
+
+func TestSaveReport_SecretAcrossALongLineCutIsStillMasked(t *testing.T) {
+	f := &helmFake{failOn: ReleaseName, failures: 1, failOut: "Error: context deadline exceeded",
+		cluster: `{"items":[{"kind":"Pod","metadata":{"name":"dex-1"},"status":{"phase":"Running"}}]}`,
+		logs:    strings.Repeat("x", 2040) + testSecrets.RunnerKey}
+
+	state, _, _ := newTestInstaller(t, f).Install(context.Background(), movedPorts, testSecrets, testLicense)
+
+	data, err := os.ReadFile(state.ReportPath)
+	require.NoError(t, err)
+	assert.NotContains(t, string(data), testSecrets.RunnerKey[:8], "not even the part before the cut")
+}
