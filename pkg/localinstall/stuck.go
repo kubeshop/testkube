@@ -18,6 +18,8 @@ type Stuck struct {
 	Reason   string
 	Detail   string
 	Restarts int32
+	// Last lines of a crashed container, for crashes and failed jobs.
+	Logs []string
 }
 
 type clusterSnapshot struct {
@@ -324,6 +326,32 @@ func podName(p *corev1.Pod) string {
 		return ""
 	}
 	return p.Name
+}
+
+// Our services log JSON; people read the message.
+func readableLogLines(out string) []string {
+	var lines []string
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		line = strings.TrimSpace(line)
+		var entry struct {
+			Msg   string `json:"msg"`
+			Error string `json:"error"`
+		}
+		if json.Unmarshal([]byte(line), &entry) == nil && entry.Msg != "" {
+			line = entry.Msg
+			if entry.Error != "" {
+				line += ": " + entry.Error
+			}
+		}
+		if line == "" {
+			continue
+		}
+		if r := []rune(line); len(r) > 200 {
+			line = string(r[:200]) + "…"
+		}
+		lines = append(lines, line)
+	}
+	return lines
 }
 
 func containsAny(s string, words []string) bool {

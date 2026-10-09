@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -38,6 +39,7 @@ type Installer struct {
 	apply func(ctx context.Context, manifest string) ([]byte, error)
 	wait  func(ctx context.Context) ([]byte, error)
 	read  func(ctx context.Context) ([]byte, error)
+	logs  func(ctx context.Context, pod string, previous bool) ([]byte, error)
 	dir   string
 }
 
@@ -51,7 +53,7 @@ func NewInstaller() (*Installer, error) {
 		return nil, err
 	}
 	return &Installer{helm: h.Run, apply: kubectlApply, wait: waitForPostgres, read: readCluster,
-		dir: filepath.Dir(kubeconfig)}, nil
+		logs: podLogs, dir: filepath.Dir(kubeconfig)}, nil
 }
 
 func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license string) (InstallState, string, error) {
@@ -84,6 +86,7 @@ func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license
 	}
 
 	start := time.Now()
+	began := start
 	install := func() ([]byte, error) {
 		return i.helm(ctx, "upgrade", "--install", ReleaseName, EnterpriseChart, "--version", EnterpriseChartVersion,
 			"--namespace", Namespace, "--create-namespace", "-f", values["demo"], "-f", values["ports"], "-f", values["demo-fixes"], "-f", values["private"],
@@ -98,13 +101,13 @@ func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license
 		out, err = install()
 	}
 	if err != nil {
-		return state, string(out), classify(string(out), ErrTestkubeInstall)
+		return state, string(out), i.explain(classify(string(out), ErrTestkubeInstall), began)
 	}
 	state.TestkubeTook, start = time.Since(start), time.Now()
 	out, err = i.helm(ctx, "upgrade", "--install", runnerRelease, RunnerChart, "--version", RunnerChartVersion,
 		"--namespace", Namespace, "-f", values["runner"], "--wait", "--timeout", "10m")
 	if err != nil {
-		return state, string(out), classify(string(out), ErrRunnerInstall)
+		return state, string(out), i.explain(classify(string(out), ErrRunnerInstall), began)
 	}
 	state.RunnerTook = time.Since(start)
 	return state, "", nil
@@ -137,8 +140,28 @@ func waitForPostgres(ctx context.Context) ([]byte, error) {
 		"--namespace", Namespace, "wait", "--for=condition=Ready", "pod/testkube-enterprise-postgresql-0", "--timeout=10m")
 }
 
+// Carried on the install error, so errors.Is checks still match.
+type StuckError struct {
+	Stuck
+	err error
+}
+
+func (e StuckError) Error() string { return e.err.Error() }
+func (e StuckError) Unwrap() error { return e.err }
+
+// A chart that never downloaded left nothing in the cluster.
+func (i *Installer) explain(err error, since time.Time) error {
+	if errors.Is(err, ErrChartDownload) {
+		return err
+	}
+	if st, ok := i.diagnose(since); ok {
+		return StuckError{Stuck: st, err: err}
+	}
+	return err
+}
+
 // Fresh context: the install's own may be done by now.
-func (i *Installer) Diagnose(since time.Time) (Stuck, bool) {
+func (i *Installer) diagnose(since time.Time) (Stuck, bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	data, err := i.read(ctx)
@@ -149,7 +172,30 @@ func (i *Installer) Diagnose(since time.Time) (Stuck, bool) {
 	if err != nil {
 		return Stuck{}, false
 	}
-	return findStuck(s, since, time.Now())
+	st, ok := findStuck(s, since, time.Now())
+	if ok && st.Pod != "" && (st.Reason == "crashloop" || st.Reason == "job_failed") {
+		st.Logs = i.lastLogLines(ctx, st.Pod)
+	}
+	return st, ok
+}
+
+// The current container is often the dead one; previous may lie.
+func (i *Installer) lastLogLines(ctx context.Context, pod string) []string {
+	for _, previous := range []bool{false, true} {
+		out, err := i.logs(ctx, pod, previous)
+		if err != nil || strings.Contains(string(out), "unable to retrieve container logs") {
+			continue
+		}
+		if lines := readableLogLines(string(out)); len(lines) > 0 {
+			return lines
+		}
+	}
+	return nil
+}
+
+func podLogs(ctx context.Context, pod string, previous bool) ([]byte, error) {
+	return exec.CommandContext(ctx, "docker", "exec", nodeName, "kubectl", "--kubeconfig=/etc/kubernetes/admin.conf",
+		"--namespace", Namespace, "logs", pod, "--tail=3", "--previous="+strconv.FormatBool(previous)).CombinedOutput()
 }
 
 // Stdout only: kubectl warnings on stderr would break the JSON.

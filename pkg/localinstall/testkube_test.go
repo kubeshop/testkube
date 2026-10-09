@@ -26,6 +26,8 @@ type helmFake struct {
 	calls    [][]string
 	files    map[string]string
 	manifest string
+	cluster  string
+	logs     string
 }
 
 func (f *helmFake) run(_ context.Context, args ...string) ([]byte, error) {
@@ -55,7 +57,14 @@ func newTestInstaller(t *testing.T, f *helmFake) *Installer {
 			f.calls = append(f.calls, []string{"wait", "postgres"})
 			return nil, nil
 		},
-		apply: func(_ context.Context, m string) ([]byte, error) { f.manifest = m; return nil, nil }}
+		apply: func(_ context.Context, m string) ([]byte, error) { f.manifest = m; return nil, nil },
+		read: func(context.Context) ([]byte, error) {
+			if f.cluster == "" {
+				return []byte(`{"items":[]}`), nil
+			}
+			return []byte(f.cluster), nil
+		},
+		logs: func(context.Context, string, bool) ([]byte, error) { return []byte(f.logs), nil }}
 }
 
 func (f *helmFake) commands() []string {
@@ -160,6 +169,23 @@ func TestInstall_WorkerServiceUsesTheAPIsPostgres(t *testing.T) {
 	assert.Equal(t, true, dig(worker, "testkube-worker-service", "api", "postgres", "enabled"))
 	assert.Equal(t, dig(demo, "testkube-cloud-api", "api", "postgres", "dsn"),
 		dig(worker, "testkube-worker-service", "api", "postgres", "dsn"))
+}
+
+func TestInstall_TimeoutNamesTheStuckServiceAndItsLastLogs(t *testing.T) {
+	crashing := `{"items":[{"kind":"Pod","metadata":{"name":"dex-1","labels":{"app.kubernetes.io/name":"dex"}},` +
+		`"status":{"phase":"Running","containerStatuses":[{"name":"dex","restartCount":4,` +
+		`"lastState":{"terminated":{"reason":"Error","exitCode":1,"finishedAt":"2999-01-01T00:00:00Z"}}}]}}]}`
+	f := &helmFake{failOn: ReleaseName, failOut: "Error: context deadline exceeded", failures: 1, cluster: crashing,
+		logs: `{"level":"fatal","msg":"failed to load config","error":"open /etc/dex/cfg/config.yaml: no such file"}`}
+
+	_, _, err := newTestInstaller(t, f).Install(context.Background(), movedPorts, testSecrets, testLicense)
+
+	assert.ErrorIs(t, err, ErrInstallTimeout)
+	var stuck StuckError
+	require.ErrorAs(t, err, &stuck)
+	assert.Equal(t, "dex", stuck.Service)
+	assert.Equal(t, "crashloop", stuck.Reason)
+	assert.Equal(t, []string{"failed to load config: open /etc/dex/cfg/config.yaml: no such file"}, stuck.Logs)
 }
 
 func TestInstall_FailuresNameTheirStage(t *testing.T) {

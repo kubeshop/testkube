@@ -402,10 +402,49 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error) {
 		}
 		r.Fix = withWhy(out, "Run again")
 	}
+	var stuck localinstall.StuckError
+	if errors.As(err, &stuck) {
+		r.Fix = stuckFix(stuck.Stuck)
+	}
 	printCheckResult(r)
 	tracker.Send("install_local_failed", map[string]any{"stage": "testkube", "reason": reason})
 	waitForEvents(tracker)
 	os.Exit(1)
+}
+
+const contactFix = "Run again. If it fails the same way, tell us at https://testkube.io/contact"
+
+// Plain words for what's stuck; helm's own lines never say why.
+func stuckFix(st localinstall.Stuck) string {
+	name := st.Service
+	switch st.Reason {
+	case "downloading":
+		return fmt.Sprintf("%s is still downloading %s\nYour connection may be slow. Run again; finished downloads are kept.", name, st.Detail)
+	case "image_pull", "rate_limit":
+		return fmt.Sprintf("%s can't download %s\nCheck your network, proxy or firewall, then run again. Finished downloads are kept.", name, st.Detail)
+	case "image_missing":
+		return fmt.Sprintf("%s can't download %s: it doesn't exist or needs a login\n%s", name, st.Detail, contactFix)
+	case "no_cpu":
+		return fmt.Sprintf("%s can't start: Docker doesn't have enough CPU\nGive Docker 4 CPUs or more, then run again.", name)
+	case "no_memory":
+		return fmt.Sprintf("%s can't start: Docker doesn't have enough memory\nGive Docker 6 GB or more, then run again.", name)
+	case "oom":
+		return fmt.Sprintf("%s ran out of memory (limit %s)\n%s", name, st.Detail, contactFix)
+	case "storage":
+		return fmt.Sprintf("%s can't get its storage: %s\n%s", name, st.Detail, contactFix)
+	case "crashloop", "job_failed":
+		head := fmt.Sprintf("%s keeps crashing (restarted %d times).", name, st.Restarts)
+		if st.Reason == "job_failed" {
+			head = name + " failed."
+		}
+		if len(st.Logs) == 0 {
+			return head + "\n" + contactFix
+		}
+		return head + " Last log lines:\n  " + strings.Join(st.Logs, "\n  ") + "\n" + contactFix
+	case "not_ready":
+		return fmt.Sprintf("%s is %s\n%s", name, st.Detail, contactFix)
+	}
+	return fmt.Sprintf("%s can't start: %s\n%s", name, st.Detail, contactFix)
 }
 
 // pterm's light white text vanishes on light terminals.
