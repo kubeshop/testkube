@@ -205,8 +205,7 @@ func hopeless(name string, p *corev1.Pod, s clusterSnapshot, since time.Time) (S
 				st.Reason, st.Detail = "config", w.Message
 				return st, true
 			case "ErrImagePull", "ImagePullBackOff":
-				// The newest Failed event is a bare "Error: ImagePullBackOff".
-				msg := w.Message + "\n" + allEvents(s.events, "Pod", p.Name, "Failed")
+				msg := w.Message + "\n" + latestPullFailure(s.events, p)
 				switch {
 				case strings.Contains(msg, "toomanyrequests"):
 					st.Reason, st.Detail = "rate_limit", c.Image
@@ -316,25 +315,35 @@ func latestEvent(events []corev1.Event, kind, name, reason string) string {
 		if e.InvolvedObject.Kind != kind || e.InvolvedObject.Name != name || e.Reason != reason {
 			continue
 		}
-		t := e.LastTimestamp.Time
-		if t.IsZero() {
-			t = e.EventTime.Time
-		}
-		if msg == "" || t.After(at) {
+		if t := eventTime(e); msg == "" || t.After(at) {
 			msg, at = e.Message, t
 		}
 	}
 	return msg
 }
 
-func allEvents(events []corev1.Event, kind, name, reason string) string {
-	var msgs []string
+// Bare "Error: ImagePullBackOff" events and a recreated pod's history mislead.
+func latestPullFailure(events []corev1.Event, p *corev1.Pod) string {
+	var msg string
+	var at time.Time
 	for _, e := range events {
-		if e.InvolvedObject.Kind == kind && e.InvolvedObject.Name == name && e.Reason == reason {
-			msgs = append(msgs, e.Message)
+		o := e.InvolvedObject
+		if o.Kind != "Pod" || o.Name != p.Name || o.UID != p.UID || e.Reason != "Failed" ||
+			!strings.HasPrefix(e.Message, "Failed to pull image") {
+			continue
+		}
+		if t := eventTime(e); msg == "" || t.After(at) {
+			msg, at = e.Message, t
 		}
 	}
-	return strings.Join(msgs, "\n")
+	return msg
+}
+
+func eventTime(e corev1.Event) time.Time {
+	if e.LastTimestamp.IsZero() {
+		return e.EventTime.Time
+	}
+	return e.LastTimestamp.Time
 }
 
 // Only the volume's event says why; its status doesn't.

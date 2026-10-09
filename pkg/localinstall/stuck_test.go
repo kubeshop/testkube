@@ -116,14 +116,25 @@ func TestFindStuck_BlamesTheRootNotTheServicesWaitingOnIt(t *testing.T) {
 		"all ready": {snapshot: healthy()},
 		"missing postgres image, not the crashing api": {
 			snapshot: withEvents(healthy(testPod("postgres", waitingFor("ImagePullBackOff")), apiCrashing),
-				testEvent("Pod", "postgres-pod", "Failed", "pull access denied, repository does not exist")),
+				testEvent("Pod", "postgres-pod", "Failed", `Failed to pull image "x": pull access denied, repository does not exist`)),
 			want: Stuck{Service: "postgres", Pod: "postgres-pod", Reason: "image_missing", Detail: "docker.io/kubeshop/postgres:1"}, found: true,
 		},
 		"docker hub limit behind kubelet's newer bare event": {
 			snapshot: withEvents(healthy(testPod("nats", waitingFor("ImagePullBackOff"))),
-				testEvent("Pod", "nats-pod", "Failed", "429 Too Many Requests - Server message: toomanyrequests: You have reached"),
+				testEvent("Pod", "nats-pod", "Failed", rateLimited),
 				later(testEvent("Pod", "nats-pod", "Failed", "Error: ImagePullBackOff"))),
 			want: Stuck{Service: "nats", Pod: "nats-pod", Reason: "rate_limit", Detail: "docker.io/kubeshop/nats:1"}, found: true,
+		},
+		"a recreated pod doesn't inherit the old one's limit": {
+			snapshot: withEvents(healthy(testPod("nats", waitingFor("ErrImagePull"), func(p *corev1.Pod) { p.UID = "new" })),
+				testEvent("Pod", "nats-pod", "Failed", rateLimited)),
+			want: Stuck{Service: "nats", Pod: "nats-pod", Reason: "image_pull", Detail: "docker.io/kubeshop/nats:1"}, found: true,
+		},
+		"a newer network error replaces an old limit": {
+			snapshot: withEvents(healthy(testPod("nats", waitingFor("ErrImagePull"))),
+				testEvent("Pod", "nats-pod", "Failed", rateLimited),
+				later(testEvent("Pod", "nats-pod", "Failed", `Failed to pull image "x": dial tcp: i/o timeout`))),
+			want: Stuck{Service: "nats", Pod: "nats-pod", Reason: "image_pull", Detail: "docker.io/kubeshop/nats:1"}, found: true,
 		},
 		"missing image named only in the waiting message": {
 			snapshot: healthy(testPod("dex", waitingFor("ErrImagePull"), func(p *corev1.Pod) {
@@ -207,6 +218,8 @@ func withPods(s clusterSnapshot, pods ...corev1.Pod) clusterSnapshot {
 	s.pods = append(s.pods, pods...)
 	return s
 }
+
+const rateLimited = `Failed to pull image "x": 429 Too Many Requests - Server message: toomanyrequests: You have reached`
 
 func later(e corev1.Event) corev1.Event {
 	e.LastTimestamp = metav1.NewTime(e.LastTimestamp.Add(time.Minute))
