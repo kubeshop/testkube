@@ -119,10 +119,17 @@ func TestFindStuck_BlamesTheRootNotTheServicesWaitingOnIt(t *testing.T) {
 				testEvent("Pod", "postgres-pod", "Failed", "pull access denied, repository does not exist")),
 			want: Stuck{Service: "postgres", Pod: "postgres-pod", Reason: "image_missing", Detail: "docker.io/kubeshop/postgres:1"}, found: true,
 		},
-		"docker hub limit": {
-			snapshot: withEvents(healthy(testPod("nats", waitingFor("ErrImagePull"))),
-				testEvent("Pod", "nats-pod", "Failed", "429 Too Many Requests - Server message: toomanyrequests: You have reached")),
+		"docker hub limit behind kubelet's newer bare event": {
+			snapshot: withEvents(healthy(testPod("nats", waitingFor("ImagePullBackOff"))),
+				testEvent("Pod", "nats-pod", "Failed", "429 Too Many Requests - Server message: toomanyrequests: You have reached"),
+				later(testEvent("Pod", "nats-pod", "Failed", "Error: ImagePullBackOff"))),
 			want: Stuck{Service: "nats", Pod: "nats-pod", Reason: "rate_limit", Detail: "docker.io/kubeshop/nats:1"}, found: true,
+		},
+		"missing image named only in the waiting message": {
+			snapshot: healthy(testPod("dex", waitingFor("ErrImagePull"), func(p *corev1.Pod) {
+				p.Status.ContainerStatuses[0].State.Waiting.Message = `failed to resolve reference "docker.io/kubeshop/dex:1": not found`
+			})),
+			want: Stuck{Service: "dex", Pod: "dex-pod", Reason: "image_missing", Detail: "docker.io/kubeshop/dex:1"}, found: true,
 		},
 		"api out of memory beats a slow postgres download": {
 			snapshot: withEvents(healthy(testPod("postgres", waitingFor("ContainerCreating")), oomAPI),
@@ -177,6 +184,11 @@ func TestFindStuck_BlamesTheRootNotTheServicesWaitingOnIt(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func later(e corev1.Event) corev1.Event {
+	e.LastTimestamp = metav1.NewTime(e.LastTimestamp.Add(time.Minute))
+	return e
 }
 
 func withEvents(s clusterSnapshot, events ...corev1.Event) clusterSnapshot {

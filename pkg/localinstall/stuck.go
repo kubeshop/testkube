@@ -190,7 +190,8 @@ func hopeless(name string, p *corev1.Pod, s clusterSnapshot, since time.Time) (S
 				st.Reason, st.Detail = "config", w.Message
 				return st, true
 			case "ErrImagePull", "ImagePullBackOff":
-				msg := latestEvent(s.events, "Pod", p.Name, "Failed")
+				// The newest Failed event is a bare "Error: ImagePullBackOff".
+				msg := w.Message + "\n" + allEvents(s.events, "Pod", p.Name, "Failed")
 				switch {
 				case strings.Contains(msg, "toomanyrequests"):
 					st.Reason, st.Detail = "rate_limit", c.Image
@@ -309,6 +310,16 @@ func latestEvent(events []corev1.Event, kind, name, reason string) string {
 		}
 	}
 	return msg
+}
+
+func allEvents(events []corev1.Event, kind, name, reason string) string {
+	var msgs []string
+	for _, e := range events {
+		if e.InvolvedObject.Kind == kind && e.InvolvedObject.Name == name && e.Reason == reason {
+			msgs = append(msgs, e.Message)
+		}
+	}
+	return strings.Join(msgs, "\n")
 }
 
 // Only the volume's event says why; its status doesn't.
