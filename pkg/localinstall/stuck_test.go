@@ -158,6 +158,17 @@ func TestFindStuck_BlamesTheRootNotTheServicesWaitingOnIt(t *testing.T) {
 			snapshot: healthy(apiCrashing, testPod("nats", readyAt(installEnd.Add(-2*time.Minute)))),
 			want:     Stuck{Service: "api", Pod: "api-pod", Reason: "not_ready", Detail: "running but never ready", Restarts: 6}, found: true,
 		},
+		"a new api pod crashing behind the old healthy one": {
+			snapshot: withPods(healthy(), testPod("api", crashed(6, "Error", installEnd.Add(-time.Minute)), func(p *corev1.Pod) {
+				p.Name, p.CreationTimestamp = "api-new", metav1.NewTime(installStart)
+			})),
+			want: Stuck{Service: "api", Pod: "api-new", Reason: "crashloop", Restarts: 6}, found: true,
+		},
+		"a newer pod shutting down is not stuck": {
+			snapshot: withPods(healthy(), testPod("ui", func(p *corev1.Pod) {
+				p.Name, p.CreationTimestamp, p.DeletionTimestamp = "ui-going", metav1.NewTime(installEnd), &metav1.Time{Time: installEnd}
+			})),
+		},
 		"a service without dependencies crashing twice": {
 			snapshot: healthy(testPod("dex", crashed(2, "Error", installEnd.Add(-time.Minute)))),
 			want:     Stuck{Service: "dex", Pod: "dex-pod", Reason: "crashloop", Restarts: 2}, found: true,
@@ -184,6 +195,12 @@ func TestFindStuck_BlamesTheRootNotTheServicesWaitingOnIt(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+// Extra pods next to the healthy ones, as a rerun leaves them.
+func withPods(s clusterSnapshot, pods ...corev1.Pod) clusterSnapshot {
+	s.pods = append(s.pods, pods...)
+	return s
 }
 
 func later(e corev1.Event) corev1.Event {

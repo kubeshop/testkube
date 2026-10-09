@@ -99,10 +99,21 @@ var imageMissingWords = []string{"not found", "manifest unknown", "denied", "una
 
 // Blames the root cause, never a service waiting on it.
 func findStuck(s clusterSnapshot, since, now time.Time) (Stuck, bool) {
+	jobs := map[string]bool{}
+	for _, svc := range stuckServices {
+		jobs[svc.name] = svc.job
+	}
+	// A rerun keeps the old pod until the new one is ready.
 	pods := map[string]*corev1.Pod{}
 	for i := range s.pods {
-		if name := serviceOf(&s.pods[i]); name != "" && pods[name] == nil {
-			pods[name] = &s.pods[i]
+		p := &s.pods[i]
+		name := serviceOf(p)
+		finished := p.Status.Phase == corev1.PodFailed || p.Status.Phase == corev1.PodSucceeded
+		if name == "" || p.DeletionTimestamp != nil || finished && !jobs[name] {
+			continue
+		}
+		if cur := pods[name]; cur == nil || p.CreationTimestamp.After(cur.CreationTimestamp.Time) {
+			pods[name] = p
 		}
 	}
 	// Waiting can't fix these, wherever they are.
