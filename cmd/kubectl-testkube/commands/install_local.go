@@ -387,27 +387,27 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error) {
 		r.Fix = "Restore ~/.testkube/secrets.json, or delete it and ~/.testkube/data/" + localinstall.Namespace +
 			" to start fresh"
 	case errors.Is(err, localinstall.ErrStuck):
-		reason, r.Detail = "stuck", "stopped after "+took(stuck.After)
+		reason, r.Detail = "stuck", "gave up after "+took(stuck.After)
 		if errors.Is(err, localinstall.ErrRunnerInstall) {
 			r.Name = "runner"
 		}
 	case errors.Is(err, localinstall.ErrRunnerInstall):
 		reason, r.Name = "runner", "runner"
-		r.Fix = withWhy(out, "Testkube is installed; run again to retry the runner")
+		r.Fix = withWhy(out, "Testkube is installed; run "+rerunCommand+" again to retry the runner.")
 	case errors.Is(err, localinstall.ErrInstallTimeout):
-		reason, r.Detail = "timeout", "not ready after 15 minutes"
-		r.Fix = withWhy(out, "Run again; finished downloads are kept")
+		reason, r.Detail = "timeout", "timed out after 15 minutes"
+		r.Fix = withWhy(out, "Run "+rerunCommand+" again; finished downloads are kept.")
 	case errors.Is(err, localinstall.ErrChartDownload):
 		reason, r.Detail = "chart_download", "could not download"
-		r.Fix = withWhy(out, "Check your network, proxy or firewall, then run again")
+		r.Fix = withWhy(out, "Check your network, proxy or firewall, then run "+rerunCommand+" again.")
 	case errors.Is(err, localinstall.ErrTestkubePrepare):
 		reason, r.Detail = "prepare", "could not prepare the cluster"
-		r.Fix = withWhy(out, "Run again")
+		r.Fix = withWhy(out, "Run "+rerunCommand+" again.")
 	default:
 		if out == "" {
 			out = err.Error()
 		}
-		r.Fix = withWhy(out, "Run again")
+		r.Fix = withWhy(out, "Run "+rerunCommand+" again.")
 	}
 	if isStuck {
 		r.Fix = stuckFix(stuck.Stuck)
@@ -418,44 +418,54 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error) {
 	os.Exit(1)
 }
 
-const contactFix = "Run again. If it fails the same way, tell us at https://testkube.io/contact"
+const (
+	rerunCommand = "`testkube install local`"
+	contactFix   = "If it fails again, send us this output: https://testkube.io/contact"
+	retryFix     = "Try " + rerunCommand + " once more. " + contactFix
+	// A rerun rarely fixes these, so don't pretend it will.
+	bugFix = "This looks like a Testkube problem, not your setup.\n" + retryFix
+)
 
 // Plain words for what's stuck; helm's own lines never say why.
 func stuckFix(st localinstall.Stuck) string {
 	name := st.Service
 	switch st.Reason {
 	case "downloading":
-		return fmt.Sprintf("%s is still downloading %s\nYour connection may be slow. Run again; finished downloads are kept.", name, st.Detail)
+		return fmt.Sprintf("%s is still downloading its image %s\nYour connection may be slow. Run %s again; finished downloads are kept.",
+			name, st.Detail, rerunCommand)
 	case "image_pull":
-		return fmt.Sprintf("%s can't download %s\nCheck your network, proxy or firewall, then run again. Finished downloads are kept.", name, st.Detail)
+		return fmt.Sprintf("%s can't download its image %s\nCheck your network, proxy or firewall, then run %s again. Finished downloads are kept.",
+			name, st.Detail, rerunCommand)
 	// No numbers: they change. No docker login: cluster ignores it.
 	case "rate_limit":
-		return fmt.Sprintf("%s can't download %s: Docker Hub's download limit was reached\n"+
-			"Wait a few hours or switch networks, then run again. Finished downloads are kept.\n"+
-			"Details: https://docs.docker.com/docker-hub/usage/", name, st.Detail)
+		return fmt.Sprintf("%s can't download its image %s\nDocker Hub's download limit was reached for this network.\n"+
+			"Wait a few hours or switch networks, then run %s again. Finished downloads are kept.\n"+
+			"Details: https://docs.docker.com/docker-hub/usage/", name, st.Detail, rerunCommand)
 	case "image_missing":
-		return fmt.Sprintf("%s can't download %s: it doesn't exist or needs a login\n%s", name, st.Detail, contactFix)
+		return fmt.Sprintf("%s can't download its image %s\nIt doesn't exist or needs a login. %s", name, st.Detail, bugFix)
 	case "no_cpu":
-		return fmt.Sprintf("%s can't start: Docker doesn't have enough CPU\nGive Docker 4 CPUs or more, then run again.", name)
+		return fmt.Sprintf("%s can't start: Docker doesn't have enough CPU.\nGive Docker 4 CPUs or more, then run %s again.", name, rerunCommand)
 	case "no_memory":
-		return fmt.Sprintf("%s can't start: Docker doesn't have enough memory\nGive Docker 6 GB or more, then run again.", name)
+		return fmt.Sprintf("%s can't start: Docker doesn't have enough memory.\nGive Docker 6 GB or more, then run %s again.", name, rerunCommand)
 	case "oom":
-		return fmt.Sprintf("%s ran out of memory (limit %s)\n%s", name, st.Detail, contactFix)
+		return fmt.Sprintf("%s ran out of memory (limit %s).\n%s", name, st.Detail, bugFix)
 	case "storage":
-		return fmt.Sprintf("%s can't get its storage: %s\n%s", name, st.Detail, contactFix)
+		return fmt.Sprintf("%s can't get its storage:\n  %s\n%s", name, st.Detail, retryFix)
+	case "config":
+		return fmt.Sprintf("%s can't start:\n  %s\n%s", name, st.Detail, bugFix)
 	case "crashloop", "job_failed":
 		head := fmt.Sprintf("%s keeps crashing (restarted %d times).", name, st.Restarts)
 		if st.Reason == "job_failed" {
 			head = name + " failed."
 		}
-		if len(st.Logs) == 0 {
-			return head + "\n" + contactFix
+		if len(st.Logs) > 0 {
+			head += " Last log lines:\n  " + strings.Join(st.Logs, "\n  ")
 		}
-		return head + " Last log lines:\n  " + strings.Join(st.Logs, "\n  ") + "\n" + contactFix
+		return head + "\n" + bugFix
 	case "not_ready":
-		return fmt.Sprintf("%s is %s\n%s", name, st.Detail, contactFix)
+		return fmt.Sprintf("%s is %s.\n%s", name, st.Detail, retryFix)
 	}
-	return fmt.Sprintf("%s can't start: %s\n%s", name, st.Detail, contactFix)
+	return fmt.Sprintf("%s can't start:\n  %s\n%s", name, st.Detail, retryFix)
 }
 
 // pterm's light white text vanishes on light terminals.
