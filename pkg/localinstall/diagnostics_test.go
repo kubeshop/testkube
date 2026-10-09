@@ -1,7 +1,9 @@
 package localinstall
 
 import (
+	"encoding/base64"
 	"fmt"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -37,4 +39,39 @@ func TestReport_KeepsOnlyTheNewestEvents(t *testing.T) {
 
 	assert.Len(t, r.events, maxReportEvents)
 	assert.Equal(t, fmt.Sprintf("event-%03d", maxReportEvents+4), r.events[0].message, "newest first")
+}
+
+func TestReport_PlantedSecretsNeverSurvive(t *testing.T) {
+	license, runnerKey, password := "CANARY-LICENSE-1234-V3", "tkckey_agent_canary0123456789", "canary-p@ss/word=9"
+	api := testPod("api", waitingFor("CreateContainerConfigError"), func(p *corev1.Pod) {
+		p.Status.ContainerStatuses[0].State.Waiting.Message = "bad license " + license
+	})
+	events := []corev1.Event{
+		testEvent("Pod", "api-pod", "Failed", "key="+url.QueryEscape(password)),
+		testEvent("Pod", "api-pod", "Failed", "encoded "+base64.StdEncoding.EncodeToString([]byte(runnerKey))),
+	}
+	r := buildReport(clusterSnapshot{pods: []corev1.Pod{api}, events: events}, nil)
+	r.logs["api-pod"] = []string{"connect postgresql://testkube:" + password + "@db:5432/backend failed", "agent " + runnerKey}
+
+	out := renderReport(r, newRedactor(license, runnerKey, password))
+
+	for _, v := range []string{license, runnerKey, password, url.QueryEscape(password), base64.StdEncoding.EncodeToString([]byte(runnerKey))} {
+		assert.NotContains(t, out, v)
+	}
+	assert.Contains(t, out, "postgresql://testkube:[removed]@db:5432", "the address stays readable")
+}
+
+func TestRedactor_PatternsCatchUnknownSecretsButSpareTheRest(t *testing.T) {
+	tests := map[string]struct{ in, want string }{
+		"dsn password":           {"dial postgresql://u:s3cr@t@db:5432/x", "dial postgresql://u:[removed]@db:5432/x"},
+		"dsn without password":   {"dial postgresql://db:5432/x", "dial postgresql://db:5432/x"},
+		"bearer token":           {"Authorization: Bearer abc.def-123", "Authorization: Bearer [removed]"},
+		"key value":              {`api_key="zzz123" next`, `api_key="[removed]" next`},
+		"short known value kept": {"login with password", "login with password"},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.want, newRedactor("password").clean(tt.in))
+		})
+	}
 }

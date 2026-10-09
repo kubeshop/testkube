@@ -1,8 +1,11 @@
 package localinstall
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
+	"net/url"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -102,4 +105,48 @@ func (r report) write(w io.Writer) {
 	for _, pod := range pods {
 		fmt.Fprintf(w, "\nLast log lines of %s:\n  %s\n", pod, strings.Join(r.logs[pod], "\n  "))
 	}
+}
+
+// Second layer: a crash log can still print a secret.
+type redactor struct {
+	values []string
+}
+
+// Short values like "password" would mangle ordinary words.
+func newRedactor(secrets ...string) redactor {
+	var r redactor
+	for _, v := range secrets {
+		if len(v) < 12 {
+			continue
+		}
+		r.values = append(r.values, v, url.QueryEscape(v), base64.StdEncoding.EncodeToString([]byte(v)))
+	}
+	return r
+}
+
+var secretPatterns = []struct {
+	re   *regexp.Regexp
+	repl string
+}{
+	// Greedy up to the host, so an @ inside the password goes too.
+	{regexp.MustCompile(`(://[^/:@\s]+:)[^\s/]+@`), "${1}[removed]@"},
+	{regexp.MustCompile(`(?i)(bearer\s+)[A-Za-z0-9._~+/=-]+`), "${1}[removed]"},
+	{regexp.MustCompile(`eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`), "[removed]"},
+	{regexp.MustCompile(`(?i)((?:password|secret|token|api_?key|license)[\w-]*["']?\s*[:=]\s*["']?)[^\s"',]+`), "${1}[removed]"},
+}
+
+func (r redactor) clean(s string) string {
+	for _, v := range r.values {
+		s = strings.ReplaceAll(s, v, "[removed]")
+	}
+	for _, p := range secretPatterns {
+		s = p.re.ReplaceAllString(s, p.repl)
+	}
+	return s
+}
+
+func renderReport(r report, rd redactor) string {
+	var b strings.Builder
+	r.write(&b)
+	return rd.clean(b.String())
 }
