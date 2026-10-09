@@ -75,7 +75,7 @@ func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license
 	began := time.Now()
 	state, out, err := i.install(ctx, ports, s, license)
 	if err != nil && ctx.Err() == nil {
-		state.ReportPath, _ = i.saveReport(ctx, began, err, ports, s.RunnerKey, s.MasterPassword, s.MinioPassword, s.AIToken, license)
+		state.ReportPath, _ = i.saveReport(ctx, began, err, out, ports, s.RunnerKey, s.MasterPassword, s.MinioPassword, s.AIToken, license)
 	}
 	return state, out, err
 }

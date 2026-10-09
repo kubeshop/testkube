@@ -217,3 +217,15 @@ func TestSaveReport_StillSavedWhenTheClusterCantBeRead(t *testing.T) {
 		assert.Contains(t, string(data), want)
 	}
 }
+
+func TestSaveReport_KeepsHelmsOwnWordsMasked(t *testing.T) {
+	f := &helmFake{failOn: ReleaseName, failures: 1, cluster: `{"items":[]}`,
+		failOut: "Error: failed to fetch oci://us-east1-docker.pkg.dev/x: 503\nvalues: runner key " + testSecrets.RunnerKey}
+
+	state, _, _ := newTestInstaller(t, f).Install(context.Background(), movedPorts, testSecrets, testLicense)
+
+	data, err := os.ReadFile(state.ReportPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(data), "failed to fetch oci://us-east1-docker.pkg.dev/x: 503")
+	assert.NotContains(t, string(data), testSecrets.RunnerKey)
+}

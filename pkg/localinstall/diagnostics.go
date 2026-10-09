@@ -192,14 +192,15 @@ const (
 )
 
 // Best effort: a failed save never hides the install error.
-func (i *Installer) saveReport(ctx context.Context, since time.Time, installErr error, ports Ports, secrets ...string) (string, error) {
+func (i *Installer) saveReport(ctx context.Context, since time.Time, installErr error, helmOut string, ports Ports, secrets ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	rd := newRedactor(append(secrets, demoSecrets()...)...)
 	now := time.Now()
 	text := fmt.Sprintf("Testkube install report, saved after a failed install on %s.\n"+
-		"Your license key and Testkube passwords are masked.\n\n%s\nError: %s\n\n%s",
-		now.Format("2 Jan 2006 at 15:04"), i.machine(ctx, ports), installErr, i.clusterSection(ctx, since, installErr, rd))
+		"Your license key and Testkube passwords are masked.\n\n%s\nError: %s\n%s\n%s",
+		now.Format("2 Jan 2006 at 15:04"), i.machine(ctx, ports), installErr, helmSection(helmOut, rd),
+		i.clusterSection(ctx, since, installErr, rd))
 	text = capReport(rd.clean(text))
 	dir := filepath.Join(i.dir, "logs")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -240,6 +241,14 @@ func (i *Installer) clusterSection(ctx context.Context, since time.Time, install
 		}
 	}
 	return renderReport(r, newRedactor())
+}
+
+// Our error is a label; helm says the real cause.
+func helmSection(out string, rd redactor) string {
+	if strings.TrimSpace(out) == "" {
+		return ""
+	}
+	return fmt.Sprintf("\nHelm output (last %d lines):\n  %s\n", reportLogLines, strings.Join(cutLines(rd.clean(out)), "\n  "))
 }
 
 // kubectl's reason is on stderr; the error is just "exit 1".
