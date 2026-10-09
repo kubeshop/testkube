@@ -18,6 +18,9 @@ type dockerInfo struct {
 	ServerVersion string   `json:"ServerVersion"`
 	// Names the engine: Docker Desktop, OrbStack, Colima.
 	OperatingSystem string `json:"OperatingSystem"`
+	KernelVersion   string `json:"KernelVersion"`
+	// Only Podman's docker stand-in answers with this.
+	PodmanHost json.RawMessage `json:"host"`
 }
 
 type dockerClient interface {

@@ -49,8 +49,9 @@ func (e PortTakenError) Error() string {
 	return fmt.Sprintf("port %d was taken before the cluster could use it", e.Port)
 }
 
-// Docker's wording, then Podman's.
-var portTakenLine = regexp.MustCompile(`127\.0\.0\.1:(\d+).*(port is already allocated|address already in use)`)
+// Linux and macOS wording, then Docker Desktop on Windows.
+var portTakenLine = regexp.MustCompile(`127\.0\.0\.1:(\d+).*(port is already allocated|address already in use|` +
+	`Only one usage of each socket address|forbidden by its access permissions)`)
 
 func portTaken(out string) (int, bool) {
 	m := portTakenLine.FindStringSubmatch(out)
@@ -382,6 +383,8 @@ func hasLine(out, want string) bool {
 func runCombined(ctx context.Context, name string, args ...string) ([]byte, error) {
 	var out bytes.Buffer
 	cmd := exec.CommandContext(ctx, name, args...)
+	// Our inspect and exec calls only reach Docker nodes.
+	cmd.Env = append(os.Environ(), "KIND_EXPERIMENTAL_PROVIDER=docker")
 	cmd.Stdout, cmd.Stderr = &out, &out
 	err := cmd.Run()
 	return out.Bytes(), err

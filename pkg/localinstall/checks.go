@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,6 +47,10 @@ const (
 	// Docker reports ~3% under its setting: 6 GB shows ~5.8.
 	minMemoryReported = 55 * gigabyte / 10
 
+	// kind's known issue: lower limits crash pods at random.
+	minInotifyInstances = 512
+	minInotifyWatches   = 524288
+
 	systemDockerSocket  = "/var/run/docker.sock"
 	dockerPermissionFix = "Your user can't use Docker yet. Run:\n" +
 		"  sudo usermod -aG docker $USER\n" +
@@ -65,6 +70,7 @@ type host interface {
 	Reachable(ctx context.Context, url string) bool
 	FreeDiskAt(path string) (free uint64, visible bool, err error)
 	OSVersion() string
+	ReadSysctl(name string) string
 }
 
 type realHost struct{}
@@ -93,6 +99,12 @@ func (realHost) FreeDiskAt(path string) (uint64, bool, error) {
 	return freeDiskAt(path)
 }
 
+// Empty off Linux: there is no /proc there.
+func (realHost) ReadSysctl(name string) string {
+	data, _ := os.ReadFile(filepath.Join("/proc/sys", strings.ReplaceAll(name, ".", "/")))
+	return strings.TrimSpace(string(data))
+}
+
 func (realHost) OSVersion() string {
 	platform, _, version, err := gopsutilhost.PlatformInformation()
 	if err != nil {
@@ -118,6 +130,9 @@ func (c *Checker) Facts() map[string]any {
 		}
 		if c.info.OperatingSystem != "" {
 			facts["docker_engine"] = c.info.OperatingSystem
+		}
+		if len(c.info.PodmanHost) > 0 {
+			facts["docker_engine"] = "Podman"
 		}
 		if c.info.NCPU > 0 && c.info.MemTotal > 0 {
 			facts["cpus"] = c.info.NCPU
@@ -202,6 +217,27 @@ func HasFailure(results []Result) bool {
 	return false
 }
 
+// A VM engine has its own kernel, so its own limits.
+func (c *Checker) CheckInotify(ctx context.Context) []Result {
+	info, err := c.readDockerInfo(ctx)
+	if err != nil || info.KernelVersion == "" || info.KernelVersion != c.host.ReadSysctl("kernel.osrelease") {
+		return nil
+	}
+	instances, err1 := strconv.Atoi(c.host.ReadSysctl("fs.inotify.max_user_instances"))
+	watches, err2 := strconv.Atoi(c.host.ReadSysctl("fs.inotify.max_user_watches"))
+	if err1 != nil || err2 != nil || (instances >= minInotifyInstances && watches >= minInotifyWatches) {
+		return nil
+	}
+	return []Result{{Name: "inotify", Status: StatusWarn, Detail: "too low",
+		Hint: fmt.Sprintf("needs %d instances, %d watches", minInotifyInstances, minInotifyWatches),
+		Fix: fmt.Sprintf("Testkube may crash at random. Raise the limits:\nsudo sysctl fs.inotify.max_user_instances=%d fs.inotify.max_user_watches=%d",
+			minInotifyInstances, minInotifyWatches)}}
+}
+
+func isWSL(kernel string) bool {
+	return strings.Contains(strings.ToLower(kernel), "microsoft")
+}
+
 // Both check groups read one docker info call.
 func (c *Checker) readDockerInfo(ctx context.Context) (dockerInfo, error) {
 	if c.info != nil {
@@ -217,6 +253,11 @@ func (c *Checker) readDockerInfo(ctx context.Context) (dockerInfo, error) {
 
 func (c *Checker) checkDocker(ctx context.Context) Result {
 	if _, err := c.host.LookPath("docker"); err != nil {
+		// Usually Docker Desktop is installed, just not shared here.
+		if isWSL(c.host.ReadSysctl("kernel.osrelease")) {
+			return Result{Name: "docker", Status: StatusFail, Detail: "not found",
+				Fix: "In Docker Desktop, open Settings > Resources > WSL integration,\nturn on this distro, then run again."}
+		}
 		return Result{Name: "docker", Status: StatusFail, Detail: "not found", Fix: "Install Docker: https://docs.docker.com/get-docker/"}
 	}
 	if _, err := c.readDockerInfo(ctx); err != nil {
@@ -228,6 +269,10 @@ func (c *Checker) checkDocker(ctx context.Context) Result {
 			return Result{Name: "docker", Status: StatusFail, Detail: "permission denied", Fix: dockerPermissionFix}
 		}
 		return Result{Name: "docker", Status: StatusFail, Detail: "not reachable", Fix: err.Error() + "\nStart Docker, then run the installer again"}
+	}
+	if len(c.info.PodmanHost) > 0 {
+		return Result{Name: "docker", Status: StatusFail, Version: "Podman", Detail: "not supported yet",
+			Fix: "Testkube needs Docker for now. Install Docker:\nhttps://docs.docker.com/get-docker/"}
 	}
 	version := ""
 	if c.info.ServerVersion != "" {

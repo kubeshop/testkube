@@ -8,12 +8,15 @@
 // --license or TESTKUBE_LICENSE gets one try, a masked prompt gets three.
 // An unreachable license.testkube.io stops the install,
 // because the installed control plane would fail the same way.
+// An expired key stops at once; retyping it can't help.
 //
 // Checks (see Checker):
 //   - Docker missing, unreachable or permission denied blocks the install.
+//   - So does Podman's docker stand-in; kind is always told to use Docker.
 //   - Missing kubectl only warns; we install it.
 //   - helm and kind are always our pinned copies, never the user's.
 //   - Low Docker CPU, memory or disk only warns.
+//   - Low inotify limits only warn, when Docker shares this kernel.
 //   - Unreachable download sites only warn; Docker may use its own proxy.
 //
 // Resources come from one `docker info --format '{{json .}}'` call,

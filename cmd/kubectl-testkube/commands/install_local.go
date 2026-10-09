@@ -10,7 +10,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/pterm/pterm"
-	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -66,7 +65,8 @@ func NewInstallLocalCmd() *cobra.Command {
 			printStep(3, "Checking this machine")
 			// Not tracked: "os" would overwrite the event's os property.
 			printCheckResult(checker.CheckOS())
-			machine := append(checker.CheckMachine(cmd.Context()), checker.CheckNetwork(cmd.Context()))
+			machine := append(checker.CheckMachine(cmd.Context()), checker.CheckInotify(cmd.Context())...)
+			machine = append(machine, checker.CheckNetwork(cmd.Context()))
 			exitIfCancelled(cmd, tracker, "machine")
 			for _, r := range machine {
 				printCheckResult(r)
@@ -106,11 +106,11 @@ func runLicenseStep(tracker *telemetry.InstallTracker, flagKey string) string {
 		printCheckResult(localinstall.Result{Name: "license", Status: localinstall.StatusPass, Detail: detail})
 		return license.Key
 	}
-	failLicense(tracker, licenseFailure(err))
+	failLicense(tracker, licenseFailure(err, license.Expiry))
 	return "" // failLicense exits
 }
 
-func licenseFailure(err error) localinstall.Result {
+func licenseFailure(err error, expiry time.Time) localinstall.Result {
 	r := localinstall.Result{Name: "license", Status: localinstall.StatusFail, Fix: localinstall.LicenseHelp}
 	switch {
 	case errors.Is(err, localinstall.ErrLicenseUnreachable):
@@ -119,6 +119,11 @@ func licenseFailure(err error) localinstall.Result {
 		r.Detail = "no key entered"
 	case errors.Is(err, localinstall.ErrLicenseInvalid):
 		r.Detail = "not valid"
+	case errors.Is(err, localinstall.ErrLicenseExpired):
+		r.Detail, r.Fix = "expired", "This key has expired. Get a new one at https://testkube.io/get-started/on-prem"
+		if !expiry.IsZero() {
+			r.Detail = "expired on " + expiry.Local().Format("2 Jan 2006")
+		}
 	default:
 		r.Detail, r.Fix = "could not read the key", "Pass it with --license <key>"
 	}
@@ -188,7 +193,7 @@ func printPlan() {
 		"  4. download helm and kind into ~/.testkube/bin (kubectl too, if missing)\n" +
 		"  5. create a local cluster called \"testkube\" in Docker\n" +
 		"  6. install Testkube and open it in your browser\n\n")
-	ui.Printf("%s\n", ui.LightGray("It takes about 5 minutes. Your own tools and clusters are not changed.\n"+
+	ui.Printf("%s\n", ui.LightGray("First run takes 5 to 10 minutes, mostly downloads. Your own tools and clusters are not changed.\n"+
 		"Press Ctrl+C to exit at any time."))
 }
 
@@ -311,7 +316,7 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 	}
 	start := time.Now()
 	waiting := func(elapsed time.Duration) string {
-		return "Installing Testkube · " + took(elapsed) + " (first run about 5 minutes)"
+		return "Installing Testkube · " + took(elapsed) + " (first run 3 to 8 minutes)"
 	}
 	spinner := startSpinner(waiting(0))
 	stopTicking := tickElapsed(spinner, start, waiting)
@@ -536,6 +541,11 @@ func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports) {
 			"  " + label("Email") + localinstall.AdminEmail + "\n" +
 			"  " + label("Password") + localinstall.AdminPassword)
 	ui.Printf("\n  %s~/.testkube/bin/kind delete cluster --name %s\n", label("Remove it"), localinstall.ClusterName)
-	ui.Printf("\n  Opening %s in your browser ...\n", url)
-	tracker.Send("install_local_ready", map[string]any{"browser_opened": open.Run(url) == nil})
+	opened := localinstall.OpenBrowser(url)
+	if opened {
+		ui.Printf("\n  Opening %s in your browser ...\n", url)
+	} else {
+		ui.Printf("\n  Open %s in your browser.\n", url)
+	}
+	tracker.Send("install_local_ready", map[string]any{"browser_opened": opened})
 }
