@@ -56,7 +56,7 @@ func (r *dnsRefreshResolver) refresh(ctx context.Context, interval time.Duration
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			r.Resolver.ResolveNow(resolver.ResolveNowOptions{})
+			r.ResolveNow(resolver.ResolveNowOptions{})
 		}
 	}
 }
