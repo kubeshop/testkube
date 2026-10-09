@@ -1,14 +1,19 @@
 package localinstall
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"net/url"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -74,4 +79,81 @@ func TestRedactor_PatternsCatchUnknownSecretsButSpareTheRest(t *testing.T) {
 			assert.Equal(t, tt.want, newRedactor("password").clean(tt.in))
 		})
 	}
+}
+
+func TestSaveReport_OnlyAfterARealFailure(t *testing.T) {
+	leaky := `{"items":[{"kind":"Pod","metadata":{"name":"dex-1","labels":{"app.kubernetes.io/name":"dex"}},` +
+		`"status":{"phase":"Running"}}]}`
+	tests := map[string]struct {
+		cancelled bool
+		saved     bool
+	}{
+		"helm timed out": {saved: true},
+		"user quit":      {cancelled: true},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			f := &helmFake{failOn: ReleaseName, failures: 1, failOut: "Error: context deadline exceeded", cluster: leaky,
+				logs: "connecting with " + testSecrets.RunnerKey}
+			ctx, cancel := context.WithCancel(context.Background())
+			if tt.cancelled {
+				cancel()
+			}
+			defer cancel()
+			i := newTestInstaller(t, f)
+
+			state, _, _ := i.Install(ctx, movedPorts, testSecrets, testLicense)
+
+			files, _ := filepath.Glob(filepath.Join(i.dir, "logs", "install-*.txt"))
+			if !tt.saved {
+				assert.Empty(t, files)
+				assert.Empty(t, state.ReportPath)
+				return
+			}
+			require.Len(t, files, 1)
+			assert.Equal(t, files[0], state.ReportPath)
+			data, err := os.ReadFile(files[0])
+			require.NoError(t, err)
+			assert.True(t, strings.HasPrefix(string(data), "Testkube install report, saved after a failed install on "))
+			assert.Contains(t, string(data), "dex-1", "the stuck pod's state is there")
+			assert.NotContains(t, string(data), testSecrets.RunnerKey)
+			if runtime.GOOS != "windows" {
+				info, err := os.Stat(files[0])
+				require.NoError(t, err)
+				assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+			}
+		})
+	}
+}
+
+func TestSaveReport_KeepsTheNewestTenAndTheLastLogLines(t *testing.T) {
+	var lines []string
+	for n := range 1000 {
+		lines = append(lines, fmt.Sprintf("line-%04d", n))
+	}
+	f := &helmFake{failOn: ReleaseName, failures: 1, failOut: "Error: context deadline exceeded",
+		cluster: `{"items":[{"kind":"Pod","metadata":{"name":"dex-1"},"status":{"phase":"Running"}}]}`,
+		logs:    strings.Join(lines, "\n")}
+	i := newTestInstaller(t, f)
+	logs := filepath.Join(i.dir, "logs")
+	require.NoError(t, os.MkdirAll(logs, 0o700))
+	for n := range keptReports + 2 {
+		require.NoError(t, os.WriteFile(filepath.Join(logs, fmt.Sprintf("install-20250101-0000%02d.txt", n)), nil, 0o600))
+	}
+
+	state, _, _ := i.Install(context.Background(), movedPorts, testSecrets, testLicense)
+
+	files, _ := filepath.Glob(filepath.Join(logs, "install-*.txt"))
+	assert.Len(t, files, keptReports)
+	assert.NotContains(t, files, filepath.Join(logs, "install-20250101-000000.txt"), "the oldest went")
+	assert.Contains(t, files, state.ReportPath, "the new one stays")
+	data, err := os.ReadFile(state.ReportPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(data), "line-0999")
+	assert.NotContains(t, string(data), fmt.Sprintf("line-%04d", 999-reportLogLines), "only the last lines")
+}
+
+func TestCapReport_StopsAtOneMegabyte(t *testing.T) {
+	assert.LessOrEqual(t, len(capReport(strings.Repeat("x", 3*maxReportBytes))), maxReportBytes+32)
+	assert.Equal(t, "short", capReport("short"))
 }

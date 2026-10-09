@@ -1,10 +1,14 @@
 package localinstall
 
 import (
+	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
+	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -63,8 +67,9 @@ func stateOf(p *corev1.Pod) serviceState {
 			st.reason, st.message = c.Reason, c.Message
 		}
 	}
+	var images []string
 	for _, c := range p.Status.ContainerStatuses {
-		st.image = c.Image
+		images = append(images, c.Image)
 		st.restarts = max(st.restarts, c.RestartCount)
 		if w := c.State.Waiting; w != nil {
 			st.reason, st.message = w.Reason, w.Message
@@ -76,6 +81,7 @@ func stateOf(p *corev1.Pod) serviceState {
 			}
 		}
 	}
+	st.image = strings.Join(images, ",")
 	return st
 }
 
@@ -149,4 +155,84 @@ func renderReport(r report, rd redactor) string {
 	var b strings.Builder
 	r.write(&b)
 	return rd.clean(b.String())
+}
+
+const (
+	maxReportBytes = 1 << 20
+	keptReports    = 10
+	reportLogLines = 50
+)
+
+// Best effort: a failed save must not hide the install's error.
+func (i *Installer) saveReport(since time.Time, installErr error, secrets ...string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	data, err := i.read(ctx)
+	if err != nil {
+		return "", err
+	}
+	snap, err := parseSnapshot(data)
+	if err != nil {
+		return "", err
+	}
+	var stuck *Stuck
+	var se StuckError
+	if errors.As(installErr, &se) {
+		stuck = &se.Stuck
+	} else if st, ok := findStuck(snap, since, time.Now()); ok {
+		stuck = &st
+	}
+	r := buildReport(snap, stuck)
+	for _, p := range r.services {
+		if !p.ready && p.phase != string(corev1.PodSucceeded) {
+			if out, err := i.logs(ctx, p.pod, false, reportLogLines); err == nil && len(out) > 0 {
+				r.logs[p.pod] = cutLines(string(out))
+			}
+		}
+	}
+	now := time.Now()
+	text := fmt.Sprintf("Testkube install report, saved after a failed install on %s.\n"+
+		"Your license key and Testkube passwords are masked.\n\nError: %s\n\n%s",
+		now.Format("2 Jan 2006 at 15:04"), installErr, renderReport(r, newRedactor()))
+	text = capReport(newRedactor(secrets...).clean(text))
+	dir := filepath.Join(i.dir, "logs")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", err
+	}
+	path := filepath.Join(dir, "install-"+now.Format("20060102-150405")+".txt")
+	if err := writePrivate(path, []byte(text)); err != nil {
+		return "", err
+	}
+	pruneReports(dir)
+	return path, nil
+}
+
+// Names sort by time, so the oldest come first.
+func pruneReports(dir string) {
+	old, _ := filepath.Glob(filepath.Join(dir, "install-*.txt"))
+	sort.Strings(old)
+	for len(old) > keptReports {
+		_ = os.Remove(old[0])
+		old = old[1:]
+	}
+}
+
+// Cut after masking, so a cut can't leave half a secret.
+func capReport(text string) string {
+	if len(text) <= maxReportBytes {
+		return text
+	}
+	return text[:maxReportBytes] + "\n[cut at 1 MB]\n"
+}
+
+func cutLines(out string) []string {
+	all := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	var lines []string
+	for _, line := range all[max(0, len(all)-reportLogLines):] {
+		if len(line) > 2048 {
+			line = line[:2048] + "…"
+		}
+		lines = append(lines, line)
+	}
+	return lines
 }

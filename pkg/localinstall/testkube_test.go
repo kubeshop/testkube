@@ -85,7 +85,7 @@ func newTestInstaller(t *testing.T, f *helmFake) *Installer {
 			}
 			return []byte(f.cluster), nil
 		},
-		logs: func(context.Context, string, bool) ([]byte, error) {
+		logs: func(context.Context, string, bool, int) ([]byte, error) {
 			f.mu.Lock()
 			defer f.mu.Unlock()
 			f.logCalls++
@@ -160,7 +160,7 @@ func TestInstall_LicenseFilesNeverOutliveTheInstall(t *testing.T) {
 
 			_, _, _ = i.Install(context.Background(), movedPorts, testSecrets, testLicense)
 
-			left, _ := os.ReadDir(i.dir)
+			left, _ := filepath.Glob(filepath.Join(i.dir, "install-*"))
 			assert.Empty(t, left)
 		})
 	}

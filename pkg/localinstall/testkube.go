@@ -41,6 +41,8 @@ type InstallState struct {
 	MigrationRetried bool
 	TestkubeTook     time.Duration
 	RunnerTook       time.Duration
+	// Set when a failed install saved its report.
+	ReportPath string
 }
 
 type Installer struct {
@@ -48,7 +50,7 @@ type Installer struct {
 	apply func(ctx context.Context, manifest string) ([]byte, error)
 	wait  func(ctx context.Context) ([]byte, error)
 	read  func(ctx context.Context) ([]byte, error)
-	logs  func(ctx context.Context, pod string, previous bool) ([]byte, error)
+	logs  func(ctx context.Context, pod string, previous bool, tail int) ([]byte, error)
 	dir   string
 }
 
@@ -65,7 +67,17 @@ func NewInstaller() (*Installer, error) {
 		logs: podLogs, dir: filepath.Dir(kubeconfig)}, nil
 }
 
+// After Ctrl+C nobody needs a report of what was cut short.
 func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license string) (InstallState, string, error) {
+	began := time.Now()
+	state, out, err := i.install(ctx, ports, s, license)
+	if err != nil && ctx.Err() == nil {
+		state.ReportPath, _ = i.saveReport(began, err, s.RunnerKey, s.MasterPassword, s.MinioPassword, s.AIToken, license)
+	}
+	return state, out, err
+}
+
+func (i *Installer) install(ctx context.Context, ports Ports, s Secrets, license string) (InstallState, string, error) {
 	var state InstallState
 	if out, err := i.apply(ctx, preinstallManifest(s)); err != nil {
 		return state, string(out), ErrTestkubePrepare
@@ -247,7 +259,7 @@ func (i *Installer) diagnose(since time.Time, withLogs bool) (Stuck, bool) {
 // The current container is often the dead one; previous may lie.
 func (i *Installer) lastLogLines(ctx context.Context, pod string) []string {
 	for _, previous := range []bool{false, true} {
-		out, err := i.logs(ctx, pod, previous)
+		out, err := i.logs(ctx, pod, previous, 3)
 		if err != nil || strings.Contains(string(out), "unable to retrieve container logs") {
 			continue
 		}
@@ -259,9 +271,9 @@ func (i *Installer) lastLogLines(ctx context.Context, pod string) []string {
 }
 
 // Stdout only: kubectl's notes on stderr aren't the pod's logs.
-func podLogs(ctx context.Context, pod string, previous bool) ([]byte, error) {
+func podLogs(ctx context.Context, pod string, previous bool, tail int) ([]byte, error) {
 	return exec.CommandContext(ctx, "docker", "exec", nodeName, "kubectl", "--kubeconfig=/etc/kubernetes/admin.conf",
-		"--namespace", Namespace, "logs", pod, "--tail=3", "--previous="+strconv.FormatBool(previous)).Output()
+		"--namespace", Namespace, "logs", pod, "--tail="+strconv.Itoa(tail), "--previous="+strconv.FormatBool(previous)).Output()
 }
 
 // Stdout only: kubectl warnings on stderr would break the JSON.
