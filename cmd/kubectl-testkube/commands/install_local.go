@@ -489,8 +489,13 @@ func resourceFix(cpu bool, docker localinstall.DockerResources) string {
 	}
 	then := ", then run " + rerunCommand + " again."
 	switch {
-	// Numbers that look sufficient would contradict the message.
-	case docker.Engine == "" || docker.Enough(cpu):
+	// Docker is big enough; something else in the cluster took it.
+	case docker.Enough(cpu):
+		if cpu {
+			return "there isn't enough free CPU in the cluster for it.\n" + retryFix
+		}
+		return "there isn't enough free memory in the cluster for it.\n" + retryFix
+	case docker.Engine == "":
 		if cpu {
 			return fmt.Sprintf("Docker doesn't have enough CPU.\nGive Docker %d CPUs or more%s", localinstall.NeededCPUs, then)
 		}
