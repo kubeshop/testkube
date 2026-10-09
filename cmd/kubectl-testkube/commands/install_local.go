@@ -426,8 +426,13 @@ func stuckFix(st localinstall.Stuck) string {
 	switch st.Reason {
 	case "downloading":
 		return fmt.Sprintf("%s is still downloading %s\nYour connection may be slow. Run again; finished downloads are kept.", name, st.Detail)
-	case "image_pull", "rate_limit":
+	case "image_pull":
 		return fmt.Sprintf("%s can't download %s\nCheck your network, proxy or firewall, then run again. Finished downloads are kept.", name, st.Detail)
+	// No numbers: they change. No docker login: cluster ignores it.
+	case "rate_limit":
+		return fmt.Sprintf("%s can't download %s: Docker Hub's download limit was reached\n"+
+			"Wait a few hours or switch networks, then run again. Finished downloads are kept.\n"+
+			"Details: https://docs.docker.com/docker-hub/usage/", name, st.Detail)
 	case "image_missing":
 		return fmt.Sprintf("%s can't download %s: it doesn't exist or needs a login\n%s", name, st.Detail, contactFix)
 	case "no_cpu":
