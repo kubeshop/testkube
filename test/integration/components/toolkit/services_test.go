@@ -90,7 +90,10 @@ func TestServiceFailureDetection_Integration(t *testing.T) {
 	}
 
 	err := executeServices(t, services, "test-group")
-	assert.EqualError(t, err, "1 services failed to start: failing-service: service failed")
+	var failed *commands.ServicesFailedError
+	require.ErrorAs(t, err, &failed)
+	assert.Equal(t, commands.ServicesFailedError{Failed: 1, Total: 1, FirstName: "failing-service", FirstFailure: "exited with code 1"}, *failed)
+	assert.EqualError(t, err, `The service "failing-service" exited with code 1.`)
 }
 
 func executeServices(t *testing.T, services map[string]testworkflowsv1.ServiceSpec, groupRef string) error {

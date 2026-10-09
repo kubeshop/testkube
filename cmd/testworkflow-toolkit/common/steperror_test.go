@@ -37,11 +37,11 @@ func TestWriteStepError(t *testing.T) {
 			}
 			t.Setenv(constants.EnvStepErrorFile, path)
 
-			writeStepError("error cloning repository: exit status 128")
+			writeStepError("fatal: repository 'https://github.com/org/absent.git/' not found")
 
 			content, err := os.ReadFile(path)
 			require.NoError(t, err)
-			assert.Equal(t, "error cloning repository: exit status 128", string(content))
+			assert.Equal(t, "fatal: repository 'https://github.com/org/absent.git/' not found", string(content))
 		})
 	}
 }

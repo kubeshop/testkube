@@ -1,10 +1,15 @@
 package commands
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRun(t *testing.T) {
@@ -57,7 +62,7 @@ func TestRun(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			start := time.Now()
-			err := Run("sh", "-c", tt.script)
+			err := Run(gitDiagnostics, "sh", "-c", tt.script)
 			assert.Less(t, time.Since(start), 2*time.Second)
 
 			if tt.wantErr == "" {
@@ -65,6 +70,53 @@ func TestRun(t *testing.T) {
 				return
 			}
 			assert.EqualError(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestRunWithRetry(t *testing.T) {
+	tests := []struct {
+		name         string
+		stderr       string
+		wantErr      string
+		wantAttempts int
+	}{
+		{
+			name:         "retries a failure that can be transient",
+			stderr:       "fatal: unable to access 'https://github.com/org/repo.git/': Could not resolve host: github.com",
+			wantAttempts: 3,
+		},
+		{
+			name:         "does not retry a credential that the server refused",
+			stderr:       "fatal: could not read Username for 'https://github.com': terminal prompts disabled",
+			wantAttempts: 1,
+		},
+		{
+			name:         "does not retry an SSH key that the server refused on a line before the fatal line",
+			stderr:       "git@github.com: Permission denied (publickey).\nfatal: Could not read from remote repository.",
+			wantErr:      "exit status 128: fatal: Could not read from remote repository.",
+			wantAttempts: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			counter := filepath.Join(dir, "attempts")
+			stderr := filepath.Join(dir, "stderr")
+			require.NoError(t, os.WriteFile(stderr, []byte(tt.stderr+"\n"), 0o600))
+			script := fmt.Sprintf("echo x >> %s; cat %s >&2; exit 128", counter, stderr)
+
+			err := RunWithRetry(3, time.Millisecond, isGitAuthError, gitDiagnostics, "sh", "-c", script)
+
+			wantErr := tt.wantErr
+			if wantErr == "" {
+				wantErr = "exit status 128: " + tt.stderr
+			}
+			assert.EqualError(t, err, wantErr)
+			content, readErr := os.ReadFile(counter)
+			require.NoError(t, readErr)
+			assert.Equal(t, tt.wantAttempts, strings.Count(string(content), "x"))
 		})
 	}
 }

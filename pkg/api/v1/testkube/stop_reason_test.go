@@ -34,6 +34,7 @@ func TestStopReason_Sentence(t *testing.T) {
 		{name: "queue limit exceeded", reason: StopReasonQueueLimitExceeded, want: "the environment reached its queue limit"},
 		{name: "git auth failed", reason: StopReasonGitAuthFailed, want: "the credential for the repository was refused"},
 		{name: "git clone failed", reason: StopReasonGitCloneFailed, want: "the repository could not be cloned"},
+		{name: "git server unreachable", reason: StopReasonGitUnreachable, want: "the server of the repository could not be reached"},
 		{name: "service not ready", reason: StopReasonServiceNotReady, want: "a service of the step did not become ready"},
 		{name: "artifact upload failed", reason: StopReasonArtifactUploadFailed, want: "the artifacts could not be uploaded"},
 		{name: "child workflow failed", reason: StopReasonChildWorkflowFailed, want: "a workflow that this step ran did not pass"},

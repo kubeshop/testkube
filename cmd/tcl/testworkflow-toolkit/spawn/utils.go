@@ -108,6 +108,21 @@ func MapDynamicListToStringList(list []interface{}) []string {
 	return result
 }
 
+// ExpressionError is an error of an expression in the definition of a step, for example a
+// transfer path that cannot resolve. The user fixes it in the workflow. An error while the step
+// packs or sends files is not one.
+type ExpressionError struct {
+	Err error
+}
+
+func (e *ExpressionError) Error() string {
+	return e.Err.Error()
+}
+
+func (e *ExpressionError) Unwrap() error {
+	return e.Err
+}
+
 func ProcessTransfer(transferSrv transfer.Server, transfer []testworkflowsv1.StepParallelTransfer, machines ...expressions.Machine) ([]testworkflowsv1.ContentTarball, error) {
 	if len(transfer) == 0 {
 		return nil, nil
@@ -117,7 +132,7 @@ func ProcessTransfer(transferSrv transfer.Server, transfer []testworkflowsv1.Ste
 		// Parse 'from' clause
 		from, err := expressions.EvalTemplate(t.From, machines...)
 		if err != nil {
-			return nil, errors.Wrapf(err, "%d.from", ti)
+			return nil, &ExpressionError{Err: errors.Wrapf(err, "%d.from", ti)}
 		}
 
 		// Parse 'to' clause
@@ -125,7 +140,7 @@ func ProcessTransfer(transferSrv transfer.Server, transfer []testworkflowsv1.Ste
 		if t.To != "" {
 			to, err = expressions.EvalTemplate(t.To, machines...)
 			if err != nil {
-				return nil, errors.Wrapf(err, "%d.to", ti)
+				return nil, &ExpressionError{Err: errors.Wrapf(err, "%d.to", ti)}
 			}
 		}
 
@@ -136,11 +151,11 @@ func ProcessTransfer(transferSrv transfer.Server, transfer []testworkflowsv1.Ste
 		} else if t.Files != nil && t.Files.Dynamic {
 			patternsExpr, err := expressions.EvalExpression(t.Files.Expression, machines...)
 			if err != nil {
-				return nil, errors.Wrapf(err, "%d.files", ti)
+				return nil, &ExpressionError{Err: errors.Wrapf(err, "%d.files", ti)}
 			}
 			patternsList, err := patternsExpr.Static().SliceValue()
 			if err != nil {
-				return nil, errors.Wrapf(err, "%d.files", ti)
+				return nil, &ExpressionError{Err: errors.Wrapf(err, "%d.files", ti)}
 			}
 			patterns = make([]string, len(patternsList))
 			for pi, p := range patternsList {
@@ -149,7 +164,7 @@ func ProcessTransfer(transferSrv transfer.Server, transfer []testworkflowsv1.Ste
 				} else {
 					p, err := json.Marshal(s)
 					if err != nil {
-						return nil, errors.Wrapf(err, "%d.files.%d", ti, pi)
+						return nil, &ExpressionError{Err: errors.Wrapf(err, "%d.files.%d", ti, pi)}
 					}
 					patterns[pi] = string(p)
 				}
@@ -483,7 +498,7 @@ func ParallelProcessFetch(cfg *config.ConfigV2, transferSrv transfer.Server, fet
 		// Parse 'from' clause
 		from, err := expressions.EvalTemplate(t.From, machines...)
 		if err != nil {
-			return nil, errors.Wrapf(err, "%d.from", ti)
+			return nil, &ExpressionError{Err: errors.Wrapf(err, "%d.from", ti)}
 		}
 
 		// Parse 'to' clause
@@ -491,7 +506,7 @@ func ParallelProcessFetch(cfg *config.ConfigV2, transferSrv transfer.Server, fet
 		if t.To != "" {
 			to, err = expressions.EvalTemplate(t.To, machines...)
 			if err != nil {
-				return nil, errors.Wrapf(err, "%d.to", ti)
+				return nil, &ExpressionError{Err: errors.Wrapf(err, "%d.to", ti)}
 			}
 		}
 
@@ -502,11 +517,11 @@ func ParallelProcessFetch(cfg *config.ConfigV2, transferSrv transfer.Server, fet
 		} else if t.Files != nil && t.Files.Dynamic {
 			patternsExpr, err := expressions.EvalExpression(t.Files.Expression, machines...)
 			if err != nil {
-				return nil, errors.Wrapf(err, "%d.files", ti)
+				return nil, &ExpressionError{Err: errors.Wrapf(err, "%d.files", ti)}
 			}
 			patternsList, err := patternsExpr.Static().SliceValue()
 			if err != nil {
-				return nil, errors.Wrapf(err, "%d.files", ti)
+				return nil, &ExpressionError{Err: errors.Wrapf(err, "%d.files", ti)}
 			}
 			patterns = make([]string, len(patternsList))
 			for pi, p := range patternsList {
@@ -515,7 +530,7 @@ func ParallelProcessFetch(cfg *config.ConfigV2, transferSrv transfer.Server, fet
 				} else {
 					p, err := json.Marshal(s)
 					if err != nil {
-						return nil, errors.Wrapf(err, "%d.files.%d", ti, pi)
+						return nil, &ExpressionError{Err: errors.Wrapf(err, "%d.files.%d", ti, pi)}
 					}
 					patterns[pi] = string(p)
 				}

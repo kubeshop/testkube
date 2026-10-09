@@ -34,6 +34,7 @@ const (
 	// A toolkit step reported the cause.
 	StopReasonGitAuthFailed        StopReason = "git-auth-failed"
 	StopReasonGitCloneFailed       StopReason = "git-clone-failed"
+	StopReasonGitUnreachable       StopReason = "git-unreachable"
 	StopReasonServiceNotReady      StopReason = "service-not-ready"
 	StopReasonArtifactUploadFailed StopReason = "artifact-upload-failed"
 	StopReasonChildWorkflowFailed  StopReason = "child-workflow-failed"
@@ -104,6 +105,8 @@ func (r StopReason) Sentence() string {
 		return "the credential for the repository was refused"
 	case StopReasonGitCloneFailed:
 		return "the repository could not be cloned"
+	case StopReasonGitUnreachable:
+		return "the server of the repository could not be reached"
 	case StopReasonServiceNotReady:
 		return "a service of the step did not become ready"
 	case StopReasonArtifactUploadFailed:

@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -558,7 +559,7 @@ func TestSetupCredentialStore(t *testing.T) {
 	})
 }
 
-func TestCloneReason(t *testing.T) {
+func TestCloneError_Reason(t *testing.T) {
 	tests := []struct {
 		name string
 		err  error
@@ -566,48 +567,136 @@ func TestCloneReason(t *testing.T) {
 	}{
 		{
 			name: "a repository without a credential",
-			err:  errors.New("error cloning repository: fatal: could not read Username for 'https://github.com': terminal prompts disabled"),
+			err:  fmt.Errorf("error cloning repository: %w", gitOutputError("fatal: could not read Username for 'https://github.com': terminal prompts disabled")),
 			want: testkube.StopReasonGitAuthFailed,
 		},
 		{
 			name: "a credential that the server refused",
-			err:  errors.New("fatal: Authentication failed for 'https://github.com/org/private.git/'"),
+			err:  gitOutputError("remote: Invalid username or token.", "fatal: Authentication failed for 'https://github.com/org/private.git/'"),
 			want: testkube.StopReasonGitAuthFailed,
 		},
 		{
 			name: "an SSH key that the server refused",
-			err:  errors.New("git@github.com: Permission denied (publickey). fatal: Could not read from remote repository."),
+			err:  gitOutputError("git@github.com: Permission denied (publickey).", "fatal: Could not read from remote repository."),
 			want: testkube.StopReasonGitAuthFailed,
 		},
 		{
 			name: "a token without access to the repository",
-			err:  errors.New("fatal: unable to access 'https://github.com/org/private.git/': The requested URL returned error: HTTP 403"),
+			err:  gitOutputError("fatal: unable to access 'https://github.com/org/private.git/': The requested URL returned error: HTTP 403"),
 			want: testkube.StopReasonGitAuthFailed,
 		},
 		{
 			name: "a repository that does not exist",
-			err:  errors.New("fatal: repository 'https://github.com/org/absent.git/' not found"),
+			err:  gitOutputError("fatal: repository 'https://github.com/org/absent.git/' not found"),
 			want: testkube.StopReasonGitCloneFailed,
 		},
 		{
 			name: "a revision that does not exist",
-			err:  errors.New("fatal: couldn't find remote ref refs/heads/absent"),
+			err:  gitOutputError("fatal: couldn't find remote ref refs/heads/absent"),
 			want: testkube.StopReasonGitCloneFailed,
 		},
 		{
-			name: "a host that does not resolve has no code",
-			err:  errors.New("fatal: unable to access 'https://git.invalid/': Could not resolve host: git.invalid"),
-			want: "",
+			name: "a host that does not resolve is unreachable",
+			err:  gitOutputError("fatal: unable to access 'https://git.invalid/': Could not resolve host: git.invalid"),
+			want: testkube.StopReasonGitUnreachable,
 		},
 		{
-			name: "a server that refuses the connection has no code",
-			err:  errors.New("fatal: unable to access 'https://git.example.com/org/repo.git/': Failed to connect to git.example.com port 443: Connection refused"),
-			want: "",
+			name: "a server that refuses the connection is unreachable",
+			err:  gitOutputError("fatal: unable to access 'https://git.example.com/org/repo.git/': Failed to connect to git.example.com port 443: Connection refused"),
+			want: testkube.StopReasonGitUnreachable,
+		},
+		{
+			name: "an error that git did not write is a clone failure, even with the text of a refusal",
+			err:  errors.New("setting up authentication: GitHub App token: Authentication failed"),
+			want: testkube.StopReasonGitCloneFailed,
+		},
+		{
+			name: "a text of a refusal outside the output of git does not count",
+			err:  fmt.Errorf("Authentication failed: %w", gitOutputError("fatal: repository 'https://github.com/org/absent.git/' not found")),
+			want: testkube.StopReasonGitCloneFailed,
+		},
+		{
+			name: "a text of the network outside the output of git does not count",
+			err:  fmt.Errorf("connection refused: %w", gitOutputError("fatal: couldn't find remote ref refs/heads/absent")),
+			want: testkube.StopReasonGitCloneFailed,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, cloneReason(tt.err))
+			assert.Equal(t, tt.want, (&cloneError{err: tt.err}).Reason())
+		})
+	}
+}
+
+// gitOutputError builds the error that runGit returns when git writes the lines to its standard error
+// and exits with the code 128.
+func gitOutputError(lines ...string) error {
+	diagnostic := &diagnosticLine{diagnostics: gitDiagnostics}
+	for _, line := range lines {
+		_, _ = diagnostic.Write([]byte(line + "\n"))
+	}
+	return &CommandError{Err: errors.New("exit status 128"), Line: diagnostic.Line(), Note: diagnostic.note}
+}
+
+func TestCloneMessage(t *testing.T) {
+	tests := []struct {
+		name string
+		uri  string
+		err  error
+		want string
+	}{
+		{
+			name: "a repository without credentials says that the workflow gives none",
+			uri:  "https://github.com/org/private.git",
+			err:  fmt.Errorf("error cloning repository: initializing sparse repository: %w", gitOutputError("fatal: could not read Username for 'https://github.com': terminal prompts disabled")),
+			want: "Git cannot authenticate to github.com: the repository needs credentials, and the workflow gives none.",
+		},
+		{
+			name: "refused credentials say that the server refused them",
+			uri:  "https://github.com/org/private.git",
+			err:  fmt.Errorf("error cloning repository: %w", gitOutputError("fatal: Authentication failed for 'https://github.com/org/private.git/'")),
+			want: "Git cannot authenticate to github.com: the server refused the credentials.",
+		},
+		{
+			name: "a token without access says that the server refused the credentials",
+			uri:  "https://github.com/org/private.git",
+			err:  fmt.Errorf("error cloning repository: %w", gitOutputError("fatal: unable to access 'https://github.com/org/private.git/': The requested URL returned error: HTTP 403")),
+			want: "Git cannot authenticate to github.com: the server refused the credentials.",
+		},
+		{
+			name: "a refusal in another case of letters is found",
+			uri:  "https://github.com/org/private.git",
+			err:  fmt.Errorf("error cloning repository: %w", gitOutputError("remote: Invalid username or password.")),
+			want: "Git cannot authenticate to github.com: the server refused the credentials.",
+		},
+		{
+			name: "a refused SSH key in the line of git says that the server refused the key",
+			uri:  "git@gitlab.com:org/private.git",
+			err:  fmt.Errorf("error cloning repository: %w", gitOutputError("fatal: Could not read from remote repository. Permission denied (publickey).")),
+			want: "Git cannot authenticate to gitlab.com: the server refused the SSH key.",
+		},
+		{
+			name: "a refused SSH key on its own line says that the server refused the key",
+			uri:  "git@github.com:org/private.git",
+			err:  fmt.Errorf("error cloning repository: %w", gitOutputError("git@github.com: Permission denied (publickey).", "fatal: Could not read from remote repository.")),
+			want: "Git cannot authenticate to github.com: the server refused the SSH key.",
+		},
+		{
+			name: "another failure keeps the line of git without its severity",
+			uri:  "https://github.com/org/absent.git",
+			err:  fmt.Errorf("error cloning repository: %w", gitOutputError("fatal: repository 'https://github.com/org/absent.git/' not found")),
+			want: "repository 'https://github.com/org/absent.git/' not found",
+		},
+		{
+			name: "a failure without a line of git keeps the error",
+			uri:  "https://github.com/org/repo.git",
+			err:  errors.New("setting up SSH key: invalid key"),
+			want: "setting up SSH key: invalid key",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, cloneMessage(tt.uri, tt.err))
 		})
 	}
 }

@@ -21,6 +21,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
+	toolkitcommon "github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -104,26 +105,34 @@ func TestEvaluateResult(t *testing.T) {
 			name:        "error takes priority",
 			result:      ServiceExecutionResult{Started: true, Ready: true, Failed: false, Error: errors.New("err")},
 			wantSuccess: false,
-			wantFailure: "error during monitoring: err",
+			wantFailure: "could not be watched: err",
 		},
 		{
 			name:        "failed takes priority over started",
 			result:      ServiceExecutionResult{Started: true, Ready: true, Failed: true},
 			wantSuccess: false,
-			wantFailure: "service failed",
+			wantFailure: "failed",
+		},
+		{
+			name: "a failed service names how it failed",
+			result: ServiceExecutionResult{Started: true, Ready: true, Failed: true, Result: &testkube.TestWorkflowResult{
+				StatusDetails: &testkube.TestWorkflowStatusDetails{Reason: string(testkube.StopReasonOOMKilled)},
+			}},
+			wantSuccess: false,
+			wantFailure: "ran out of memory",
 		},
 		{
 			name:        "not started is failure",
 			result:      ServiceExecutionResult{Started: false, Ready: true, Failed: false},
 			wantSuccess: false,
-			wantFailure: "container failed to start",
+			wantFailure: "did not start",
 		},
 		{
 			name:         "not ready with readiness probe is failure",
 			result:       ServiceExecutionResult{Started: true, Ready: false, Failed: false},
 			hasReadiness: true,
 			wantSuccess:  false,
-			wantFailure:  "container did not reach readiness",
+			wantFailure:  "did not become ready",
 		},
 		{
 			name:         "not ready without readiness probe is success",
@@ -320,7 +329,7 @@ func createTestMachineWithoutEnv(cfg *testworkflowconfig.InternalConfig) express
 	)
 }
 
-func TestServicesFailureReason(t *testing.T) {
+func TestServicesFailedError_Reason(t *testing.T) {
 	tests := []struct {
 		name string
 		err  error
@@ -328,23 +337,133 @@ func TestServicesFailureReason(t *testing.T) {
 	}{
 		{
 			name: "services that did not start are not ready",
-			err:  &ServicesNotStartedError{Failed: 1, FirstFailure: "db: container did not reach readiness"},
+			err:  &ServicesFailedError{Failed: 1, Total: 1, FirstName: "db", FirstFailure: "did not become ready"},
 			want: testkube.StopReasonServiceNotReady,
 		},
 		{
 			name: "a wrapped error of services that did not start keeps the code",
-			err:  fmt.Errorf("services: %w", &ServicesNotStartedError{Failed: 2, FirstFailure: "db: service failed"}),
+			err:  fmt.Errorf("services: %w", &ServicesFailedError{Failed: 2, Total: 2, FirstName: "db/1", FirstFailure: "failed"}),
 			want: testkube.StopReasonServiceNotReady,
 		},
 		{
-			name: "an error in the definition of the services gets no code",
-			err:  errors.New("db: compute matrix and sharding: count: env.COUNT: could not resolve"),
-			want: "",
+			name: "a service that ran out of memory gives its own code",
+			err:  &ServicesFailedError{Failed: 1, Total: 1, FirstName: "db", FirstFailure: "ran out of memory", FirstReason: testkube.StopReasonOOMKilled},
+			want: testkube.StopReasonOOMKilled,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, servicesFailureReason(tt.err))
+			assert.Equal(t, tt.want, toolkitcommon.ReasonOf(tt.err))
+		})
+	}
+}
+
+func TestServicesFailedError_Error(t *testing.T) {
+	tests := []struct {
+		name string
+		err  *ServicesFailedError
+		want string
+	}{
+		{
+			name: "one service gets a sentence about itself",
+			err:  &ServicesFailedError{Failed: 1, Total: 1, FirstName: "broken-service", FirstFailure: "did not become ready"},
+			want: `The service "broken-service" did not become ready.`,
+		},
+		{
+			name: "one service that ran out of memory",
+			err:  &ServicesFailedError{Failed: 1, Total: 1, FirstName: "service", FirstFailure: "ran out of memory"},
+			want: `The service "service" ran out of memory.`,
+		},
+		{
+			name: "several services name the count and the first failure",
+			err:  &ServicesFailedError{Failed: 2, Total: 2, FirstName: "slave/2", FirstFailure: "exited with code 1"},
+			want: "2 of 2 services failed. slave/2 exited with code 1.",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.err.Error())
+		})
+	}
+}
+
+func TestServiceFailure(t *testing.T) {
+	exitCode := &testkube.TestWorkflowStatusDetails{Reason: string(testkube.StopReasonExitCode), Step: "r1", Message: `The step "Run shell command" exited with code 1.`}
+	tests := []struct {
+		name       string
+		result     *testkube.TestWorkflowResult
+		want       string
+		wantReason testkube.StopReason
+	}{
+		{
+			name:   "a command that exits with a code names the code, not the generated step name",
+			result: &testkube.TestWorkflowResult{StatusDetails: exitCode, Steps: map[string]testkube.TestWorkflowStepResult{"r1": {ExitCode: 1}}},
+			want:   "exited with code 1",
+		},
+		{
+			name: "a service that ran out of memory names it and gives its code",
+			result: &testkube.TestWorkflowResult{StatusDetails: &testkube.TestWorkflowStatusDetails{
+				Reason: string(testkube.StopReasonOOMKilled), Message: `The step "Run shell command" ran out of memory.`,
+			}},
+			want:       "ran out of memory",
+			wantReason: testkube.StopReasonOOMKilled,
+		},
+		{
+			name: "a service that timed out names it and gives its code",
+			result: &testkube.TestWorkflowResult{StatusDetails: &testkube.TestWorkflowStatusDetails{
+				Reason: string(testkube.StopReasonStepTimeout),
+			}},
+			want:       "did not finish within its timeout",
+			wantReason: testkube.StopReasonStepTimeout,
+		},
+		{
+			name: "a service whose container could not run names it with the shared phrase",
+			result: &testkube.TestWorkflowResult{StatusDetails: &testkube.TestWorkflowStatusDetails{
+				Reason: string(testkube.StopReasonContainerError),
+			}},
+			want:       "could not run its container",
+			wantReason: testkube.StopReasonContainerError,
+		},
+		{
+			name: "an infrastructure cause without a phrase names its message and gives its code",
+			result: &testkube.TestWorkflowResult{StatusDetails: &testkube.TestWorkflowStatusDetails{
+				Reason: string(testkube.StopReasonEvicted), Message: "the node ran out of disk.",
+			}},
+			want:       "failed: the node ran out of disk.",
+			wantReason: testkube.StopReasonEvicted,
+		},
+		{
+			name:   "an exit code without the step result names the message",
+			result: &testkube.TestWorkflowResult{StatusDetails: exitCode},
+			want:   `failed: The step "Run shell command" exited with code 1.`,
+		},
+		{
+			name: "a result without status details only failed",
+			want: "failed",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, reason := serviceFailure(tt.result)
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.wantReason, reason)
+		})
+	}
+}
+
+func TestInstanceName(t *testing.T) {
+	tests := []struct {
+		name  string
+		index int64
+		count int64
+		want  string
+	}{
+		{name: "one instance has no number", index: 0, count: 1, want: "db"},
+		{name: "an instance of several gets its number from one", index: 1, count: 3, want: "db/2"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, instanceName("db", tt.index, tt.count))
 		})
 	}
 }
