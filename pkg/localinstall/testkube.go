@@ -257,9 +257,10 @@ func (i *Installer) lastLogLines(ctx context.Context, pod string) []string {
 	return nil
 }
 
+// Stdout only: kubectl's notes on stderr aren't the pod's logs.
 func podLogs(ctx context.Context, pod string, previous bool) ([]byte, error) {
 	return exec.CommandContext(ctx, "docker", "exec", nodeName, "kubectl", "--kubeconfig=/etc/kubernetes/admin.conf",
-		"--namespace", Namespace, "logs", pod, "--tail=3", "--previous="+strconv.FormatBool(previous)).CombinedOutput()
+		"--namespace", Namespace, "logs", pod, "--tail=3", "--previous="+strconv.FormatBool(previous)).Output()
 }
 
 // Stdout only: kubectl warnings on stderr would break the JSON.
