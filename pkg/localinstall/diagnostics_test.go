@@ -73,6 +73,9 @@ func TestRedactor_PatternsCatchUnknownSecretsButSpareTheRest(t *testing.T) {
 		"bearer token":           {"Authorization: Bearer abc.def-123", "Authorization: Bearer [removed]"},
 		"key value":              {`api_key="zzz123" next`, `api_key="[removed]" next`},
 		"short known value kept": {"login with password", "login with password"},
+		"api key header":         {"X-Api-Key: abc123def", "X-Api-Key: [removed]"},
+		"basic auth":             {"Authorization: Basic dXNlcjpwYXNz", "Authorization: Basic [removed]"},
+		"license flag":           {"run --license ABCD-1234-EFGH", "run --license [removed]"},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -171,4 +174,8 @@ func TestSaveReport_SecretAcrossALongLineCutIsStillMasked(t *testing.T) {
 	data, err := os.ReadFile(state.ReportPath)
 	require.NoError(t, err)
 	assert.NotContains(t, string(data), testSecrets.RunnerKey[:8], "not even the part before the cut")
+}
+
+func TestDemoSecrets_ComeFromTheEmbeddedValues(t *testing.T) {
+	assert.ElementsMatch(t, []string{"postgres5432", "QWkVzs3nct6HZM5hxsPzwaZtq"}, demoSecrets())
 }

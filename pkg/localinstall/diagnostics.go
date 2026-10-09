@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -135,9 +136,30 @@ var secretPatterns = []struct {
 }{
 	// Greedy to the host: an @ in the password goes too.
 	{regexp.MustCompile(`(://[^/:@\s]+:)[^\s/]+@`), "${1}[removed]@"},
-	{regexp.MustCompile(`(?i)(bearer\s+)[A-Za-z0-9._~+/=-]+`), "${1}[removed]"},
+	{regexp.MustCompile(`(?i)((?:bearer|basic)\s+)[A-Za-z0-9._~+/=-]+`), "${1}[removed]"},
 	{regexp.MustCompile(`eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`), "[removed]"},
-	{regexp.MustCompile(`(?i)((?:password|secret|token|api_?key|license)[\w-]*["']?\s*[:=]\s*["']?)[^\s"',]+`), "${1}[removed]"},
+	{regexp.MustCompile(`(?i)((?:password|secret|token|api[_-]?key|license)[\w-]*["']?\s*[:=]\s*["']?)[^\s"',]+`), "${1}[removed]"},
+	{regexp.MustCompile(`(?i)(--(?:password|secret|token|api[_-]?key|license)[\w-]*\s+)\S+`), "${1}[removed]"},
+}
+
+// From the demo values, so a chart bump keeps up.
+func demoSecrets() []string {
+	var demo map[string]any
+	if yaml.Unmarshal(EnterpriseDemoValues, &demo) != nil {
+		return nil
+	}
+	var out []string
+	if dsn, ok := dig(demo, "testkube-cloud-api", "api", "postgres", "dsn").(string); ok {
+		if u, err := url.Parse(dsn); err == nil {
+			if pw, ok := u.User.Password(); ok {
+				out = append(out, pw)
+			}
+		}
+	}
+	if secret, ok := dig(demo, "testkube-cloud-api", "api", "oauth", "clientSecret").(string); ok {
+		out = append(out, secret)
+	}
+	return out
 }
 
 func (r redactor) clean(s string) string {
@@ -181,7 +203,7 @@ func (i *Installer) saveReport(ctx context.Context, since time.Time, installErr 
 	} else if st, ok := findStuck(snap, since, time.Now()); ok {
 		stuck = &st
 	}
-	rd := newRedactor(secrets...)
+	rd := newRedactor(append(secrets, demoSecrets()...)...)
 	r := buildReport(snap, stuck)
 	for _, p := range r.services {
 		if !p.ready && p.phase != string(corev1.PodSucceeded) {
