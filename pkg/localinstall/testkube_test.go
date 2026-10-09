@@ -147,6 +147,21 @@ func TestInstall_RunnerKeyReachesBothCharts(t *testing.T) {
 	assert.Contains(t, f.files["runner.yaml"], "secret: "+testSecrets.RunnerKey)
 }
 
+func TestInstall_WorkerServiceUsesTheAPIsPostgres(t *testing.T) {
+	f := &helmFake{}
+
+	_, _, err := newTestInstaller(t, f).Install(context.Background(), movedPorts, testSecrets, testLicense)
+	require.NoError(t, err)
+
+	var worker, demo map[string]any
+	require.NoError(t, yaml.Unmarshal([]byte(f.files["worker.yaml"]), &worker))
+	require.NoError(t, yaml.Unmarshal(EnterpriseDemoValues, &demo))
+	assert.Equal(t, false, dig(worker, "testkube-worker-service", "api", "mongo", "enabled"))
+	assert.Equal(t, true, dig(worker, "testkube-worker-service", "api", "postgres", "enabled"))
+	assert.Equal(t, dig(demo, "testkube-cloud-api", "api", "postgres", "dsn"),
+		dig(worker, "testkube-worker-service", "api", "postgres", "dsn"))
+}
+
 func TestInstall_FailuresNameTheirStage(t *testing.T) {
 	tests := map[string]struct {
 		failOn, out string
