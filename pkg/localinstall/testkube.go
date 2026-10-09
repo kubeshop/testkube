@@ -119,7 +119,7 @@ func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license
 	out, stuck, err = i.watchedHelm(ctx, began, "upgrade", "--install", runnerRelease, RunnerChart, "--version", RunnerChartVersion,
 		"--namespace", Namespace, "-f", values["runner"], "--wait", "--timeout", "10m")
 	if err != nil && stuck != nil {
-		return state, string(out), StuckError{Stuck: *stuck, After: time.Since(began), err: fmt.Errorf("%w: %w", ErrRunnerInstall, ErrStuck)}
+		return state, string(out), StuckError{Stuck: *stuck, After: time.Since(start), err: fmt.Errorf("%w: %w", ErrRunnerInstall, ErrStuck)}
 	}
 	if err != nil {
 		return state, string(out), i.explain(ctx, string(out), classify(string(out), ErrRunnerInstall), began)

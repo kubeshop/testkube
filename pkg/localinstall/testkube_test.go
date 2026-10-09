@@ -247,7 +247,7 @@ const (
 
 func fastStuckWatch(t *testing.T) {
 	poll, lasts := stuckPoll, stuckLasts
-	stuckPoll, stuckLasts = 5*time.Millisecond, 150*time.Millisecond
+	stuckPoll, stuckLasts = 5*time.Millisecond, 500*time.Millisecond
 	t.Cleanup(func() { stuckPoll, stuckLasts = poll, lasts })
 }
 
@@ -263,7 +263,7 @@ func TestInstall_StopsEarlyOnlyWhenWaitingCantHelp(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			f := &helmFake{blockFor: time.Second, clusters: tt.clusters}
+			f := &helmFake{blockFor: 1500 * time.Millisecond, clusters: tt.clusters}
 
 			_, _, err := newTestInstaller(t, f).Install(context.Background(), movedPorts, testSecrets, testLicense)
 
@@ -279,7 +279,7 @@ func TestInstall_StopsEarlyOnlyWhenWaitingCantHelp(t *testing.T) {
 			var stuck StuckError
 			require.ErrorAs(t, err, &stuck)
 			assert.Equal(t, "no_memory", stuck.Reason)
-			assert.Less(t, stuck.After, time.Second, "helm was stopped, not waited out")
+			assert.Less(t, stuck.After, 1500*time.Millisecond, "helm was stopped, not waited out")
 			for _, call := range f.calls {
 				assert.NotContains(t, call, runnerRelease, "the runner never starts")
 			}
