@@ -178,9 +178,9 @@ func TestFindStuck_BlamesTheRootNotTheServicesWaitingOnIt(t *testing.T) {
 				testPod("ui", crashed(3, "Unknown", installEnd.Add(-time.Minute)))),
 			want: Stuck{Service: "dex", Pod: "dex-pod", Reason: "not_ready", Detail: "running but never ready"}, found: true,
 		},
-		"migration failed with postgres up": {
+		"migration failed even though postgres came up late": {
 			snapshot: func() clusterSnapshot {
-				s := healthy()
+				s := healthy(testPod("postgres", readyAt(installEnd.Add(-2*time.Minute))))
 				s.jobs = []batchv1.Job{migrationJob(batchv1.JobFailed, installStart.Add(10*time.Minute))}
 				return s
 			}(),

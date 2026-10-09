@@ -143,7 +143,8 @@ func findStuck(s clusterSnapshot, since, now time.Time) (Stuck, bool) {
 			continue
 		}
 		if svc.job {
-			if job := findJob(s.jobs, svc.label); job != nil && jobFailed(job) && settled(svc) {
+			// Failed is final, and our install already retried it once.
+			if job := findJob(s.jobs, svc.label); job != nil && jobFailed(job) {
 				return Stuck{Service: svc.name, Reason: "job_failed", Detail: job.Name, Pod: podName(pods[svc.name])}, true
 			}
 			continue
