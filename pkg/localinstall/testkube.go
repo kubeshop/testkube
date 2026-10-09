@@ -75,7 +75,7 @@ func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license
 	began := time.Now()
 	state, out, err := i.install(ctx, ports, s, license)
 	if err != nil && ctx.Err() == nil {
-		state.ReportPath, _ = i.saveReport(began, err, ports, s.RunnerKey, s.MasterPassword, s.MinioPassword, s.AIToken, license)
+		state.ReportPath, _ = i.saveReport(ctx, began, err, ports, s.RunnerKey, s.MasterPassword, s.MinioPassword, s.AIToken, license)
 	}
 	return state, out, err
 }
@@ -199,7 +199,7 @@ func (i *Installer) watchedHelm(ctx context.Context, since time.Time, args ...st
 			case <-ticker.C:
 			}
 			// Logs only matter for the final message.
-			st, ok := i.diagnose(since, false)
+			st, ok := i.diagnose(helmCtx, since, false)
 			switch {
 			case !ok || !stopsEarly[st.Reason]:
 				seen = Stuck{}
@@ -234,15 +234,15 @@ func (i *Installer) explain(ctx context.Context, out string, err error, since ti
 	if ctx.Err() != nil || !errors.Is(err, ErrInstallTimeout) && !strings.Contains(out, " not ready. status: ") {
 		return err
 	}
-	if st, ok := i.diagnose(since, true); ok {
+	if st, ok := i.diagnose(ctx, since, true); ok {
 		return StuckError{Stuck: st, err: err}
 	}
 	return err
 }
 
-// Fresh context: the install's own may be done by now.
-func (i *Installer) diagnose(since time.Time, withLogs bool) (Stuck, bool) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+// Bounded, and Ctrl+C stops it: a hung Docker never answers.
+func (i *Installer) diagnose(ctx context.Context, since time.Time, withLogs bool) (Stuck, bool) {
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	data, err := i.read(ctx)
 	if err != nil {

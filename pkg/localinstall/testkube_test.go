@@ -240,6 +240,27 @@ func TestInstall_CtrlCSkipsTheDiagnosis(t *testing.T) {
 	assert.Zero(t, f.reads, "the cluster isn't read after the user quit")
 }
 
+func TestInstall_CtrlCStopsAHungClusterRead(t *testing.T) {
+	f := &helmFake{failOn: ReleaseName, failures: 1, failOut: "Error: context deadline exceeded"}
+	i := newTestInstaller(t, f)
+	i.read = func(ctx context.Context) ([]byte, error) {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(10 * time.Second):
+			return []byte(`{"items":[]}`), nil
+		}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	time.AfterFunc(100*time.Millisecond, cancel)
+	start := time.Now()
+
+	state, _, _ := i.Install(ctx, movedPorts, testSecrets, testLicense)
+
+	assert.Less(t, time.Since(start), 2*time.Second, "a hung Docker doesn't trap the user")
+	assert.Empty(t, state.ReportPath)
+}
+
 const (
 	noMemoryCluster = `{"items":[{"kind":"Pod","metadata":{"name":"minio-1","labels":{"app.kubernetes.io/name":"minio"}},` +
 		`"status":{"phase":"Pending","conditions":[{"type":"PodScheduled","status":"False","reason":"Unschedulable",` +

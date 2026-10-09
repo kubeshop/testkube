@@ -164,8 +164,8 @@ const (
 )
 
 // Best effort: a failed save must not hide the install's error.
-func (i *Installer) saveReport(since time.Time, installErr error, ports Ports, secrets ...string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+func (i *Installer) saveReport(ctx context.Context, since time.Time, installErr error, ports Ports, secrets ...string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	data, err := i.read(ctx)
 	if err != nil {
