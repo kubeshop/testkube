@@ -19,6 +19,8 @@ type dockerInfo struct {
 	// Names the engine: Docker Desktop, OrbStack, Colima.
 	OperatingSystem string `json:"OperatingSystem"`
 	KernelVersion   string `json:"KernelVersion"`
+	// Colima's VM is named after it.
+	Name string `json:"Name"`
 	// Only Podman's docker stand-in answers with this.
 	PodmanHost json.RawMessage `json:"host"`
 }
@@ -58,4 +60,41 @@ func (dockerCLI) Info(ctx context.Context) (dockerInfo, error) {
 		return dockerInfo{}, errors.New(strings.Join(info.ServerErrors, "; "))
 	}
 	return info, nil
+}
+
+// Zero when Docker couldn't be read; fixes then stay generic.
+type DockerResources struct {
+	Engine string
+	CPUs   int
+	Memory uint64
+}
+
+func (d DockerResources) DockerDesktop() bool { return d.Engine == "Docker Desktop" }
+func (d DockerResources) Colima() bool        { return strings.HasPrefix(d.Engine, "colima") }
+func (d DockerResources) MemoryText() string  { return formatGB(d.Memory) }
+
+// Same bar as the checks: Docker reports ~3% low.
+func (d DockerResources) Enough(cpu bool) bool {
+	if cpu {
+		return d.CPUs >= minCPUs
+	}
+	return d.Memory >= minMemoryReported
+}
+
+const (
+	NeededCPUs     = minCPUs
+	NeededMemoryGB = minMemory / gigabyte
+)
+
+// The failure path has no Checker; one more call is cheap.
+func ReadDockerResources(ctx context.Context) DockerResources {
+	info, err := dockerCLI{}.Info(ctx)
+	if err != nil || info.NCPU == 0 || info.MemTotal == 0 {
+		return DockerResources{}
+	}
+	engine := info.OperatingSystem
+	if strings.HasPrefix(info.Name, "colima") {
+		engine = info.Name
+	}
+	return DockerResources{Engine: engine, CPUs: info.NCPU, Memory: uint64(info.MemTotal)}
 }

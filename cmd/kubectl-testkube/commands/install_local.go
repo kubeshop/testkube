@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -368,6 +369,8 @@ func took(d time.Duration) string {
 func failTestkube(tracker *telemetry.InstallTracker, out string, err error) {
 	r := localinstall.Result{Name: "testkube", Status: localinstall.StatusFail, Version: localinstall.AppVersion, Detail: "could not install"}
 	reason := "install"
+	var stuck localinstall.StuckError
+	isStuck := errors.As(err, &stuck)
 	switch {
 	case errors.Is(err, localinstall.ErrSecretsLost):
 		reason, r.Detail = "secrets_lost", "old data can't be opened"
@@ -384,28 +387,125 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error) {
 		reason, r.Detail = "secrets_damaged", "saved passwords can't be read"
 		r.Fix = "Restore ~/.testkube/secrets.json, or delete it and ~/.testkube/data/" + localinstall.Namespace +
 			" to start fresh"
+	case errors.Is(err, localinstall.ErrStuck):
+		reason, r.Detail = "stuck", "gave up after "+took(stuck.After)
+		if errors.Is(err, localinstall.ErrRunnerInstall) {
+			r.Name = "runner"
+		}
 	case errors.Is(err, localinstall.ErrRunnerInstall):
 		reason, r.Name = "runner", "runner"
-		r.Fix = withWhy(out, "Testkube is installed; run again to retry the runner")
+		r.Fix = withWhy(out, "Testkube is installed; run "+rerunCommand+" again to retry the runner.")
 	case errors.Is(err, localinstall.ErrInstallTimeout):
-		reason, r.Detail = "timeout", "not ready after 15 minutes"
-		r.Fix = withWhy(out, "Run again; finished downloads are kept")
+		reason, r.Detail = "timeout", "timed out after 15 minutes"
+		r.Fix = withWhy(out, "Run "+rerunCommand+" again; finished downloads are kept.")
 	case errors.Is(err, localinstall.ErrChartDownload):
 		reason, r.Detail = "chart_download", "could not download"
-		r.Fix = withWhy(out, "Check your network, proxy or firewall, then run again")
+		r.Fix = withWhy(out, "Check your network, proxy or firewall, then run "+rerunCommand+" again.")
 	case errors.Is(err, localinstall.ErrTestkubePrepare):
 		reason, r.Detail = "prepare", "could not prepare the cluster"
-		r.Fix = withWhy(out, "Run again")
+		r.Fix = withWhy(out, "Run "+rerunCommand+" again.")
 	default:
 		if out == "" {
 			out = err.Error()
 		}
-		r.Fix = withWhy(out, "Run again")
+		r.Fix = withWhy(out, "Run "+rerunCommand+" again.")
+	}
+	if isStuck {
+		var docker localinstall.DockerResources
+		if stuck.Reason == "no_cpu" || stuck.Reason == "no_memory" {
+			docker = localinstall.ReadDockerResources(context.Background())
+		}
+		r.Fix = stuckFix(stuck.Stuck, docker)
 	}
 	printCheckResult(r)
-	tracker.Send("install_local_failed", map[string]any{"stage": "testkube", "reason": reason})
+	props := map[string]any{"stage": "testkube", "reason": reason}
+	if isStuck {
+		props["stuck_service"], props["stuck_reason"] = stuck.Service, stuck.Reason
+	}
+	tracker.Send("install_local_failed", props)
 	waitForEvents(tracker)
 	os.Exit(1)
+}
+
+const (
+	rerunCommand = "`testkube install local`"
+	contactFix   = "If it fails again, send us this output: https://testkube.io/contact"
+	retryFix     = "Try " + rerunCommand + " once more. " + contactFix
+	// A rerun rarely fixes these, so don't pretend it will.
+	bugFix = "This looks like a Testkube problem, not your setup.\n" + retryFix
+)
+
+// Plain words for what's stuck; helm's own lines never say why.
+func stuckFix(st localinstall.Stuck, docker localinstall.DockerResources) string {
+	name := st.Title()
+	switch st.Reason {
+	case "downloading":
+		return fmt.Sprintf("%s is still downloading its image %s\nYour connection may be slow. Run %s again; finished downloads are kept.",
+			name, st.Detail, rerunCommand)
+	case "image_pull":
+		return fmt.Sprintf("%s can't download its image %s\nCheck your network, proxy or firewall, then run %s again. Finished downloads are kept.",
+			name, st.Detail, rerunCommand)
+	// No numbers: they change. No docker login: cluster ignores it.
+	case "rate_limit":
+		return fmt.Sprintf("%s can't download its image %s\nDocker Hub's download limit was reached for this network.\n"+
+			"Wait a few hours or switch networks, then run %s again. Finished downloads are kept.\n"+
+			"Details: https://docs.docker.com/docker-hub/usage/", name, st.Detail, rerunCommand)
+	case "image_missing":
+		return fmt.Sprintf("%s can't download its image %s\nIt doesn't exist or needs a login. %s", name, st.Detail, bugFix)
+	case "no_cpu", "no_memory":
+		return name + " can't start: " + resourceFix(st.Reason == "no_cpu", docker)
+	case "oom":
+		return fmt.Sprintf("%s ran out of memory (limit %s).\n%s", name, st.Detail, bugFix)
+	case "storage":
+		return fmt.Sprintf("%s can't get its storage:\n  %s\n%s", name, st.Detail, retryFix)
+	case "config":
+		return fmt.Sprintf("%s can't start:\n  %s\n%s", name, st.Detail, bugFix)
+	case "crashloop", "job_failed":
+		head := fmt.Sprintf("%s keeps crashing (restarted %d times).", name, st.Restarts)
+		if st.Reason == "job_failed" {
+			head = name + " failed."
+		}
+		if len(st.Logs) > 0 {
+			head += " Last log lines:\n  " + strings.Join(st.Logs, "\n  ")
+		}
+		return head + "\n" + bugFix
+	case "not_ready":
+		return fmt.Sprintf("%s is %s.\n%s", name, st.Detail, retryFix)
+	}
+	return fmt.Sprintf("%s can't start:\n  %s\n%s", name, st.Detail, retryFix)
+}
+
+// Each Docker app sets its size in a different place.
+func resourceFix(cpu bool, docker localinstall.DockerResources) string {
+	have := fmt.Sprintf("Docker has %s of memory, Testkube needs %d GB.", docker.MemoryText(), localinstall.NeededMemoryGB)
+	desktop := fmt.Sprintf("set Memory to %d GB or more", localinstall.NeededMemoryGB)
+	colima := fmt.Sprintf("--memory %d", localinstall.NeededMemoryGB)
+	other := "Free up memory or use a machine with more"
+	if cpu {
+		have = fmt.Sprintf("Docker has %d CPUs, Testkube needs %d.", docker.CPUs, localinstall.NeededCPUs)
+		desktop = fmt.Sprintf("set CPUs to %d or more", localinstall.NeededCPUs)
+		colima = fmt.Sprintf("--cpu %d", localinstall.NeededCPUs)
+		other = "Use a machine with more CPUs"
+	}
+	then := ", then run " + rerunCommand + " again."
+	switch {
+	// Docker is big enough; something else in the cluster took it.
+	case docker.Enough(cpu):
+		if cpu {
+			return "there isn't enough free CPU in the cluster for it.\n" + retryFix
+		}
+		return "there isn't enough free memory in the cluster for it.\n" + retryFix
+	case docker.Engine == "":
+		if cpu {
+			return fmt.Sprintf("Docker doesn't have enough CPU.\nGive Docker %d CPUs or more%s", localinstall.NeededCPUs, then)
+		}
+		return fmt.Sprintf("Docker doesn't have enough memory.\nGive Docker %d GB or more%s", localinstall.NeededMemoryGB, then)
+	case docker.DockerDesktop():
+		return have + "\nOpen Docker Desktop > Settings > Resources, " + desktop + then
+	case docker.Colima():
+		return have + "\nRun `colima stop && colima start " + colima + "`" + then
+	}
+	return have + "\n" + other + then
 }
 
 // pterm's light white text vanishes on light terminals.
