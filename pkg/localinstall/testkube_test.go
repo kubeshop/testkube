@@ -219,6 +219,17 @@ func TestInstall_HelmsOwnErrorsAreNotBlamedOnPods(t *testing.T) {
 	assert.Contains(t, out, "another operation")
 }
 
+func TestInstall_CtrlCSkipsTheDiagnosis(t *testing.T) {
+	f := &helmFake{failOn: ReleaseName, failures: 1, failOut: "Error: context deadline exceeded", clusters: []string{crashingCluster}}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, _, err := newTestInstaller(t, f).Install(ctx, movedPorts, testSecrets, testLicense)
+
+	assert.False(t, errors.As(err, new(StuckError)))
+	assert.Zero(t, f.reads, "the cluster isn't read after the user quit")
+}
+
 const (
 	noMemoryCluster = `{"items":[{"kind":"Pod","metadata":{"name":"minio-1","labels":{"app.kubernetes.io/name":"minio"}},` +
 		`"status":{"phase":"Pending","conditions":[{"type":"PodScheduled","status":"False","reason":"Unschedulable",` +

@@ -113,7 +113,7 @@ func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license
 		return state, string(out), StuckError{Stuck: *stuck, After: time.Since(began), err: fmt.Errorf("%w: %w", ErrTestkubeInstall, ErrStuck)}
 	}
 	if err != nil {
-		return state, string(out), i.explain(string(out), classify(string(out), ErrTestkubeInstall), began)
+		return state, string(out), i.explain(ctx, string(out), classify(string(out), ErrTestkubeInstall), began)
 	}
 	state.TestkubeTook, start = time.Since(start), time.Now()
 	out, stuck, err = i.watchedHelm(ctx, began, "upgrade", "--install", runnerRelease, RunnerChart, "--version", RunnerChartVersion,
@@ -122,7 +122,7 @@ func (i *Installer) Install(ctx context.Context, ports Ports, s Secrets, license
 		return state, string(out), StuckError{Stuck: *stuck, After: time.Since(began), err: fmt.Errorf("%w: %w", ErrRunnerInstall, ErrStuck)}
 	}
 	if err != nil {
-		return state, string(out), i.explain(string(out), classify(string(out), ErrRunnerInstall), began)
+		return state, string(out), i.explain(ctx, string(out), classify(string(out), ErrRunnerInstall), began)
 	}
 	state.RunnerTook = time.Since(start)
 	return state, "", nil
@@ -213,9 +213,9 @@ func (i *Installer) watchedHelm(ctx context.Context, since time.Time, args ...st
 func (e StuckError) Error() string { return e.err.Error() }
 func (e StuckError) Unwrap() error { return e.err }
 
-// Only waits involve pods; other errors are helm's own to show.
-func (i *Installer) explain(out string, err error, since time.Time) error {
-	if !errors.Is(err, ErrInstallTimeout) && !strings.Contains(out, " not ready. status: ") {
+// Only waits involve pods; after Ctrl+C nobody reads the answer.
+func (i *Installer) explain(ctx context.Context, out string, err error, since time.Time) error {
+	if ctx.Err() != nil || !errors.Is(err, ErrInstallTimeout) && !strings.Contains(out, " not ready. status: ") {
 		return err
 	}
 	if st, ok := i.diagnose(since); ok {
