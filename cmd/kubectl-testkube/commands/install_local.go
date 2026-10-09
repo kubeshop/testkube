@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -410,7 +411,11 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error) {
 		r.Fix = withWhy(out, "Run "+rerunCommand+" again.")
 	}
 	if isStuck {
-		r.Fix = stuckFix(stuck.Stuck)
+		var docker localinstall.DockerResources
+		if stuck.Reason == "no_cpu" || stuck.Reason == "no_memory" {
+			docker = localinstall.ReadDockerResources(context.Background())
+		}
+		r.Fix = stuckFix(stuck.Stuck, docker)
 	}
 	printCheckResult(r)
 	tracker.Send("install_local_failed", map[string]any{"stage": "testkube", "reason": reason})
@@ -427,7 +432,7 @@ const (
 )
 
 // Plain words for what's stuck; helm's own lines never say why.
-func stuckFix(st localinstall.Stuck) string {
+func stuckFix(st localinstall.Stuck, docker localinstall.DockerResources) string {
 	name := st.Service
 	switch st.Reason {
 	case "downloading":
@@ -443,10 +448,8 @@ func stuckFix(st localinstall.Stuck) string {
 			"Details: https://docs.docker.com/docker-hub/usage/", name, st.Detail, rerunCommand)
 	case "image_missing":
 		return fmt.Sprintf("%s can't download its image %s\nIt doesn't exist or needs a login. %s", name, st.Detail, bugFix)
-	case "no_cpu":
-		return fmt.Sprintf("%s can't start: Docker doesn't have enough CPU.\nGive Docker 4 CPUs or more, then run %s again.", name, rerunCommand)
-	case "no_memory":
-		return fmt.Sprintf("%s can't start: Docker doesn't have enough memory.\nGive Docker 6 GB or more, then run %s again.", name, rerunCommand)
+	case "no_cpu", "no_memory":
+		return name + " can't start: " + resourceFix(st.Reason == "no_cpu", docker)
 	case "oom":
 		return fmt.Sprintf("%s ran out of memory (limit %s).\n%s", name, st.Detail, bugFix)
 	case "storage":
@@ -466,6 +469,34 @@ func stuckFix(st localinstall.Stuck) string {
 		return fmt.Sprintf("%s is %s.\n%s", name, st.Detail, retryFix)
 	}
 	return fmt.Sprintf("%s can't start:\n  %s\n%s", name, st.Detail, retryFix)
+}
+
+// Each Docker app sets its size in a different place.
+func resourceFix(cpu bool, docker localinstall.DockerResources) string {
+	have := fmt.Sprintf("Docker has %s of memory, Testkube needs %d GB.", docker.MemoryText(), localinstall.NeededMemoryGB)
+	desktop := fmt.Sprintf("set Memory to %d GB or more", localinstall.NeededMemoryGB)
+	colima := fmt.Sprintf("--memory %d", localinstall.NeededMemoryGB)
+	other := "Free up memory or use a machine with more"
+	if cpu {
+		have = fmt.Sprintf("Docker has %d CPUs, Testkube needs %d.", docker.CPUs, localinstall.NeededCPUs)
+		desktop = fmt.Sprintf("set CPUs to %d or more", localinstall.NeededCPUs)
+		colima = fmt.Sprintf("--cpu %d", localinstall.NeededCPUs)
+		other = "Use a machine with more CPUs"
+	}
+	then := ", then run " + rerunCommand + " again."
+	switch {
+	// Numbers that look sufficient would contradict the message.
+	case docker.Engine == "" || docker.Enough(cpu):
+		if cpu {
+			return fmt.Sprintf("Docker doesn't have enough CPU.\nGive Docker %d CPUs or more%s", localinstall.NeededCPUs, then)
+		}
+		return fmt.Sprintf("Docker doesn't have enough memory.\nGive Docker %d GB or more%s", localinstall.NeededMemoryGB, then)
+	case docker.DockerDesktop():
+		return have + "\nOpen Docker Desktop > Settings > Resources, " + desktop + then
+	case docker.Colima():
+		return have + "\nRun `colima stop && colima start " + colima + "`" + then
+	}
+	return have + "\n" + other + then
 }
 
 // pterm's light white text vanishes on light terminals.
