@@ -418,7 +418,11 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error) {
 		r.Fix = stuckFix(stuck.Stuck, docker)
 	}
 	printCheckResult(r)
-	tracker.Send("install_local_failed", map[string]any{"stage": "testkube", "reason": reason})
+	props := map[string]any{"stage": "testkube", "reason": reason}
+	if isStuck {
+		props["stuck_service"], props["stuck_reason"] = stuck.Service, stuck.Reason
+	}
+	tracker.Send("install_local_failed", props)
 	waitForEvents(tracker)
 	os.Exit(1)
 }
