@@ -46,6 +46,8 @@
 // so a rebuilt cluster can still open its old data.
 // A failed install names the root stuck service (see Stuck);
 // helm stops early when waiting can't help, like a missing image.
+// It also saves a private report for support (see saveReport),
+// built from picked fields only, with known secrets masked.
 //
 // Step tracking lives in pkg/telemetry, see InstallTracker.
 package localinstall

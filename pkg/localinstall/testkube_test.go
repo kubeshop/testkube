@@ -85,7 +85,11 @@ func newTestInstaller(t *testing.T, f *helmFake) *Installer {
 			}
 			return []byte(f.cluster), nil
 		},
-		logs: func(context.Context, string, bool) ([]byte, error) {
+		cliVersion: "v9.9.9",
+		docker: func(context.Context) DockerResources {
+			return DockerResources{Engine: "Docker Desktop", Version: "29.0.0", CPUs: 8, Memory: 8 << 30}
+		},
+		logs: func(context.Context, string, bool, int) ([]byte, error) {
 			f.mu.Lock()
 			defer f.mu.Unlock()
 			f.logCalls++
@@ -160,7 +164,7 @@ func TestInstall_LicenseFilesNeverOutliveTheInstall(t *testing.T) {
 
 			_, _, _ = i.Install(context.Background(), movedPorts, testSecrets, testLicense)
 
-			left, _ := os.ReadDir(i.dir)
+			left, _ := filepath.Glob(filepath.Join(i.dir, "install-*"))
 			assert.Empty(t, left)
 		})
 	}
@@ -234,6 +238,27 @@ func TestInstall_CtrlCSkipsTheDiagnosis(t *testing.T) {
 
 	assert.False(t, errors.As(err, new(StuckError)))
 	assert.Zero(t, f.reads, "the cluster isn't read after the user quit")
+}
+
+func TestInstall_CtrlCStopsAHungClusterRead(t *testing.T) {
+	f := &helmFake{failOn: ReleaseName, failures: 1, failOut: "Error: context deadline exceeded"}
+	i := newTestInstaller(t, f)
+	i.read = func(ctx context.Context) ([]byte, error) {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(10 * time.Second):
+			return []byte(`{"items":[]}`), nil
+		}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	time.AfterFunc(100*time.Millisecond, cancel)
+	start := time.Now()
+
+	state, _, _ := i.Install(ctx, movedPorts, testSecrets, testLicense)
+
+	assert.Less(t, time.Since(start), 2*time.Second, "a hung Docker doesn't trap the user")
+	assert.Empty(t, state.ReportPath)
 }
 
 const (
