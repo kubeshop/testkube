@@ -11,6 +11,7 @@ package commands
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -317,4 +318,33 @@ func createTestMachineWithoutEnv(cfg *testworkflowconfig.InternalConfig) express
 		testworkflowconfig.CreateExecutionMachine(&cfg.Execution),
 		testworkflowconfig.CreateWorkflowMachine(&cfg.Workflow),
 	)
+}
+
+func TestServicesFailureReason(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want testkube.StopReason
+	}{
+		{
+			name: "services that did not start are not ready",
+			err:  &ServicesNotStartedError{Failed: 1, FirstFailure: "db: container did not reach readiness"},
+			want: testkube.StopReasonServiceNotReady,
+		},
+		{
+			name: "a wrapped error of services that did not start keeps the code",
+			err:  fmt.Errorf("services: %w", &ServicesNotStartedError{Failed: 2, FirstFailure: "db: service failed"}),
+			want: testkube.StopReasonServiceNotReady,
+		},
+		{
+			name: "an error in the definition of the services gets no code",
+			err:  errors.New("db: compute matrix and sharding: count: env.COUNT: could not resolve"),
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, servicesFailureReason(tt.err))
+		})
+	}
 }
