@@ -1,6 +1,7 @@
 package expressions
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -67,6 +68,9 @@ func (s *accessor) SafeResolve(m ...Machine) (v Expression, changed bool, err er
 				return result, true, nil
 			}
 		}
+		if errors.Is(err, ErrUnknownVariable) {
+			return nil, false, &UndefinedError{Name: s.String(), err: err}
+		}
 		if err != nil {
 			return nil, false, fmt.Errorf("error while accessing %s: %w", s.String(), err)
 		}
@@ -89,3 +93,13 @@ func (s *accessor) Accessors() map[string]struct{} {
 func (s *accessor) Functions() map[string]struct{} {
 	return nil
 }
+
+// UndefinedError names a variable that no machine defines, in the words that a user reads in a
+// failed execution. It keeps ErrUnknownVariable for errors.Is.
+type UndefinedError struct {
+	Name string
+	err  error
+}
+
+func (e *UndefinedError) Error() string { return e.Name + " is not defined" }
+func (e *UndefinedError) Unwrap() error { return e.err }

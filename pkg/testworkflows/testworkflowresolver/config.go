@@ -10,6 +10,7 @@ package testworkflowresolver
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -95,7 +96,33 @@ func ApplyWorkflowConfig(t *testworkflowsv1.TestWorkflow, cfg map[string]testwor
 		return nil, err
 	}
 	err = expressions.Simplify(&t, machine, configFinalizer)
-	return t, err
+	return t, configError(err)
+}
+
+// configNotSetError names a config value that an expression reads and that nothing sets. The path
+// of the expression can be a path in a template, not in the workflow, so it stays out.
+type configNotSetError struct {
+	name string
+	err  error
+}
+
+func (e *configNotSetError) Error() string {
+	return fmt.Sprintf("the config value %q is not set", e.name)
+}
+
+func (e *configNotSetError) Unwrap() error { return e.err }
+
+// configError gives a config value that is not set its own words, and keeps other errors.
+func configError(err error) error {
+	var undefined *expressions.UndefinedError
+	if !errors.As(err, &undefined) {
+		return err
+	}
+	name, ok := strings.CutPrefix(undefined.Name, "config.")
+	if !ok {
+		return err
+	}
+	return &configNotSetError{name: name, err: err}
 }
 
 func ApplyWorkflowTemplateConfig(t *testworkflowsv1.TestWorkflowTemplate, cfg map[string]testworkflowsv1.ConfigValue,
@@ -108,5 +135,5 @@ func ApplyWorkflowTemplateConfig(t *testworkflowsv1.TestWorkflowTemplate, cfg ma
 		return nil, err
 	}
 	err = expressions.Simplify(&t, machine, configFinalizer)
-	return t, err
+	return t, configError(err)
 }

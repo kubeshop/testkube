@@ -172,8 +172,9 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 		AllowLowSecurityFields: w.baseWorkerConfig.AllowLowSecurityFields,
 		Runtime:                runtimeOptions,
 	})
+	// The start reason names the stage that failed, so the message keeps only the cause.
 	if err != nil {
-		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to process test workflow"), testkube.StartReasonDefinitionInvalid)
+		return nil, executionworkertypes.WithStartReason(err, testkube.StartReasonDefinitionInvalid)
 	}
 
 	// Annotate the group ID
@@ -192,7 +193,7 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	// Deploy required resources
 	err = bundle.Deploy(ctx, w.clientSet, cfg.Worker.Namespace)
 	if err != nil {
-		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to deploy test workflow"), testkube.StartReasonJobCreateFailed)
+		return nil, executionworkertypes.WithStartReason(err, testkube.StartReasonJobCreateFailed)
 	}
 
 	return &executionworkertypes.ExecuteResult{
@@ -239,7 +240,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 		Runtime:                runtimeOptions,
 	})
 	if err != nil {
-		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to process test workflow"), testkube.StartReasonDefinitionInvalid)
+		return nil, executionworkertypes.WithStartReason(err, testkube.StartReasonDefinitionInvalid)
 	}
 
 	// Apply the service setup
@@ -267,7 +268,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 	// Deploy required resources
 	err = bundle.Deploy(ctx, w.clientSet, cfg.Worker.Namespace)
 	if err != nil {
-		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to deploy test workflow"), testkube.StartReasonJobCreateFailed)
+		return nil, executionworkertypes.WithStartReason(err, testkube.StartReasonJobCreateFailed)
 	}
 
 	return &executionworkertypes.ServiceResult{
