@@ -75,7 +75,7 @@ func runUninstallLocal(cmd *cobra.Command, deleteData, yes bool) {
 	case errors.Is(err, localinstall.ErrClusterNotOurs):
 		failUninstall(localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "not ours",
 			Fix: fmt.Sprintf("%q wasn't created by this installer, so it's left alone.\n"+
-				"Remove it yourself if you don't need it: kind delete cluster --name %s", localinstall.ClusterName, localinstall.ClusterName)})
+				"Remove it yourself if you don't need it: ~/.testkube/bin/kind delete cluster --name %s", localinstall.ClusterName, localinstall.ClusterName)})
 	case err != nil:
 		failUninstall(localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "could not remove",
 			Fix: withWhy(out, "Try: ~/.testkube/bin/kind delete cluster --name "+localinstall.ClusterName)})

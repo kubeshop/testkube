@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"runtime"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -374,19 +373,12 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error, repo
 	switch {
 	case errors.Is(err, localinstall.ErrSecretsLost):
 		reason, r.Detail = "secrets_lost", "old data can't be opened"
-		rm := "rm"
-		// Linux keeps the database's own user on its files.
-		if runtime.GOOS == "linux" {
-			rm = "sudo rm"
-		}
 		r.Fix = "~/.testkube/data holds data from an earlier install whose passwords are gone.\n" +
 			"Delete the cluster and that data to start fresh, then run again:\n" +
-			"  ~/.testkube/bin/kind delete cluster --name " + localinstall.ClusterName + "\n" +
-			"  " + rm + " -rf ~/.testkube/data/" + localinstall.Namespace
+			"  testkube uninstall local --delete-data"
 	case errors.Is(err, localinstall.ErrSecretsDamaged):
 		reason, r.Detail = "secrets_damaged", "saved passwords can't be read"
-		r.Fix = "Restore ~/.testkube/secrets.json, or delete it and ~/.testkube/data/" + localinstall.Namespace +
-			" to start fresh"
+		r.Fix = "Restore ~/.testkube/secrets.json, or start fresh: testkube uninstall local --delete-data"
 	case errors.Is(err, localinstall.ErrStuck):
 		reason, r.Detail = "stuck", "gave up after "+took(stuck.After)
 		if errors.Is(err, localinstall.ErrRunnerInstall) {
@@ -544,11 +536,11 @@ func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
 	case errors.Is(err, localinstall.ErrClusterStart):
 		reason, r.Detail = "start", "could not start"
 		r.Fix = lastLines(out, 5) + "\nIf a port is in use, close that program and run again.\n" +
-			"Otherwise delete the cluster: ~/.testkube/bin/kind delete cluster --name " + localinstall.ClusterName
+			"Otherwise remove it: testkube uninstall local"
 	case errors.Is(err, localinstall.ErrClusterStorage):
 		reason, r.Detail = "storage", "could not set up storage"
-		r.Fix = lastLines(out, 5) + "\nRun again. If it keeps failing, delete the cluster:\n" +
-			"  ~/.testkube/bin/kind delete cluster --name " + localinstall.ClusterName
+		r.Fix = lastLines(out, 5) + "\nRun again. If it keeps failing, remove it:\n" +
+			"  testkube uninstall local"
 	case errors.Is(err, localinstall.ErrClusterInspect):
 		reason, r.Detail = "inspect", "could not read existing cluster"
 		r.Fix = withWhy(out, "Check that Docker is running, then run again")
@@ -653,7 +645,7 @@ func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports) {
 			"  " + label("Dashboard") + url + "\n" +
 			"  " + label("Email") + localinstall.AdminEmail + "\n" +
 			"  " + label("Password") + localinstall.AdminPassword)
-	ui.Printf("\n  %s~/.testkube/bin/kind delete cluster --name %s\n", label("Remove it"), localinstall.ClusterName)
+	ui.Printf("\n  %stestkube uninstall local\n", label("Remove it"))
 	opened := localinstall.OpenBrowser(url)
 	if opened {
 		ui.Printf("\n  Opening %s in your browser ...\n", url)
