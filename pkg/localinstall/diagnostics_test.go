@@ -187,3 +187,16 @@ func TestCutAt_NeverSplitsACharacter(t *testing.T) {
 	assert.True(t, utf8.ValidString(cut))
 	assert.Equal(t, "éé", cut)
 }
+
+func TestReport_AFailedJobShowsItsRealExitCode(t *testing.T) {
+	job := testPod("migration", func(p *corev1.Pod) {
+		p.Status.Phase = corev1.PodFailed
+		p.Status.ContainerStatuses[0].State.Terminated = &corev1.ContainerStateTerminated{Reason: "Error", ExitCode: 3}
+	})
+
+	var out strings.Builder
+	buildReport(clusterSnapshot{pods: []corev1.Pod{job}}, nil).write(&out)
+
+	assert.Contains(t, out.String(), "exit=3")
+	assert.Contains(t, out.String(), "    Error\n")
+}

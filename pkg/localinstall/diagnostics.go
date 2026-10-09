@@ -75,7 +75,12 @@ func stateOf(p *corev1.Pod) serviceState {
 		if w := c.State.Waiting; w != nil {
 			st.reason, st.message = w.Reason, w.Message
 		}
-		if t := c.LastTerminationState.Terminated; t != nil {
+		// A container that never restarts keeps its result here.
+		t := c.State.Terminated
+		if t == nil {
+			t = c.LastTerminationState.Terminated
+		}
+		if t != nil {
 			st.exitCode = t.ExitCode
 			if st.reason == "" {
 				st.reason = t.Reason
