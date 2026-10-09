@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -202,6 +203,21 @@ func TestPickPorts_MovesBusyPortsWithoutCollisions(t *testing.T) {
 	ports := pickPorts(func(p int) bool { return !busy[p] })
 
 	assert.Equal(t, Ports{"dashboard": 8090, "api": 8091, "login": 5556, "storage": 9001, "ai": 9090}, ports)
+}
+
+// A dev server on [::] shared its port; localhost hit it.
+func TestPortFree_AnotherAppAnsweringLocalhostIsBusy(t *testing.T) {
+	for _, addr := range []string{"[::1]:0", "[::]:0", "0.0.0.0:0"} {
+		t.Run(addr, func(t *testing.T) {
+			l, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", addr)
+			if err != nil {
+				t.Skip("no IPv6 here:", err)
+			}
+			defer l.Close()
+
+			assert.False(t, portFree(l.Addr().(*net.TCPAddr).Port))
+		})
+	}
 }
 
 func TestClusterEnsure_PortsListenOnThisMachineOnly(t *testing.T) {

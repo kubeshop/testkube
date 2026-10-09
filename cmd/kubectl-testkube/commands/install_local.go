@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	licensevalidator "github.com/kubeshop/testkube/pkg/diagnostics/validators/license"
 	"github.com/kubeshop/testkube/pkg/localinstall"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -40,6 +42,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			if tracker.Enabled() {
 				tracker.Identify(telemetry.GetEmail(key))
 			}
+			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallStarted)
 
 			// Finds tools a previous run installed.
 			_ = localinstall.AddToolsDirToPath()
@@ -56,7 +59,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			if localinstall.HasFailure(results) {
 				trackChecks(tracker, results, checker.Facts())
 				tracker.Send("install_local_failed", map[string]any{"stage": "tools"})
-				tracker.Wait()
+				waitForEvents(tracker)
 				os.Exit(1)
 			}
 			printStep(3, "Checking this machine")
@@ -70,8 +73,10 @@ func NewInstallLocalCmd() *cobra.Command {
 			trackChecks(tracker, append(results, machine...), checker.Facts())
 			tracker.Send("install_local_checks_done", nil)
 			installMissingTools(cmd, tracker, checker, results)
-			runClusterStep(cmd, tracker)
-			tracker.Wait()
+			ports := runClusterStep(cmd, tracker)
+			runTestkubeStep(cmd, tracker, key, ports)
+			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallFinished)
+			waitForEvents(tracker)
 		},
 	}
 	cmd.Flags().StringVarP(&licenseKey, "license", "l", "", "Testkube license key from your trial email (or set TESTKUBE_LICENSE)")
@@ -121,7 +126,7 @@ func licenseFailure(err error) localinstall.Result {
 func failLicense(tracker *telemetry.InstallTracker, r localinstall.Result) {
 	printCheckResult(r)
 	tracker.Send("install_local_failed", map[string]any{"stage": "license"})
-	tracker.Wait()
+	waitForEvents(tracker)
 	os.Exit(1)
 }
 
@@ -162,7 +167,7 @@ func exitIfCancelled(cmd *cobra.Command, tracker *telemetry.InstallTracker, stag
 
 func abortInstall(tracker *telemetry.InstallTracker, stage string) {
 	tracker.Send("install_local_aborted", map[string]any{"stage": stage})
-	tracker.Wait()
+	waitForEvents(tracker)
 	os.Exit(130)
 }
 
@@ -185,7 +190,6 @@ func printPlan() {
 		"Press Ctrl+C to exit at any time."))
 }
 
-// Later slices add Cluster and Testkube.
 const installSteps = 6
 
 func printStep(n int, title string) {
@@ -251,11 +255,11 @@ func failToolInstall(tracker *telemetry.InstallTracker, name string, err error) 
 	}
 	printCheckResult(r)
 	tracker.Send("install_local_failed", map[string]any{"stage": "tool_install", "tool": name, "reason": reason})
-	tracker.Wait()
+	waitForEvents(tracker)
 	os.Exit(1)
 }
 
-func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) {
+func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) localinstall.Ports {
 	printStep(5, "Creating the cluster")
 	cluster, err := localinstall.NewCluster()
 	if err != nil {
@@ -290,6 +294,111 @@ func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) {
 		props["node_disk_free_gb"] = free
 	}
 	tracker.Send("install_local_cluster", props)
+	return state.Ports
+}
+
+func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, license string, ports localinstall.Ports) {
+	printStep(6, "Installing Testkube")
+	secrets, err := localinstall.LoadOrCreateSecrets()
+	if err != nil {
+		failTestkube(tracker, "", err)
+	}
+	installer, err := localinstall.NewInstaller()
+	if err != nil {
+		failTestkube(tracker, "", err)
+	}
+	start := time.Now()
+	waiting := func(elapsed time.Duration) string {
+		return "Installing Testkube · " + took(elapsed) + " (first run about 5 minutes)"
+	}
+	spinner := startSpinner(waiting(0))
+	stopTicking := tickElapsed(spinner, start, waiting)
+	state, out, err := installer.Install(cmd.Context(), ports, secrets, license)
+	stopTicking()
+	_ = spinner.Stop()
+	exitIfCancelled(cmd, tracker, "testkube")
+	if err != nil {
+		failTestkube(tracker, out, err)
+	}
+	r := localinstall.Result{Name: "testkube", Status: localinstall.StatusPass, Version: localinstall.AppVersion,
+		Detail: "installed in " + took(state.TestkubeTook)}
+	if state.Recovered {
+		r.Hint = "cleaned up an interrupted install"
+	}
+	printCheckResult(r)
+	printCheckResult(localinstall.Result{Name: "runner", Status: localinstall.StatusPass, Version: localinstall.AppVersion,
+		Detail: "installed in " + took(state.RunnerTook)})
+	tracker.Send("install_local_testkube", map[string]any{"recovered": state.Recovered, "migration_retried": state.MigrationRetried,
+		"testkube_s": int(state.TestkubeTook.Seconds()), "runner_s": int(state.RunnerTook.Seconds()),
+		"duration_s": int(time.Since(start).Seconds())})
+}
+
+// Long waits need a visible pulse; download ETAs would lie.
+func tickElapsed(spinner *pterm.SpinnerPrinter, start time.Time, text func(time.Duration) string) (stop func()) {
+	done := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				spinner.UpdateText(text(time.Since(start)))
+			}
+		}
+	}()
+	return func() { close(done) }
+}
+
+func took(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	}
+	return fmt.Sprintf("%dm %ds", int(d.Minutes()), int(d.Seconds())%60)
+}
+
+func failTestkube(tracker *telemetry.InstallTracker, out string, err error) {
+	r := localinstall.Result{Name: "testkube", Status: localinstall.StatusFail, Version: localinstall.AppVersion, Detail: "could not install"}
+	reason := "install"
+	switch {
+	case errors.Is(err, localinstall.ErrSecretsLost):
+		reason, r.Detail = "secrets_lost", "old data can't be opened"
+		rm := "rm"
+		// Linux keeps the database's own user on its files.
+		if runtime.GOOS == "linux" {
+			rm = "sudo rm"
+		}
+		r.Fix = "~/.testkube/data holds data from an earlier install whose passwords are gone.\n" +
+			"Delete the cluster and that data to start fresh, then run again:\n" +
+			"  ~/.testkube/bin/kind delete cluster --name " + localinstall.ClusterName + "\n" +
+			"  " + rm + " -rf ~/.testkube/data/" + localinstall.Namespace
+	case errors.Is(err, localinstall.ErrSecretsDamaged):
+		reason, r.Detail = "secrets_damaged", "saved passwords can't be read"
+		r.Fix = "Restore ~/.testkube/secrets.json, or delete it and ~/.testkube/data/" + localinstall.Namespace +
+			" to start fresh"
+	case errors.Is(err, localinstall.ErrRunnerInstall):
+		reason, r.Name = "runner", "runner"
+		r.Fix = withWhy(out, "Testkube is installed; run again to retry the runner")
+	case errors.Is(err, localinstall.ErrInstallTimeout):
+		reason, r.Detail = "timeout", "not ready after 15 minutes"
+		r.Fix = withWhy(out, "Run again; finished downloads are kept")
+	case errors.Is(err, localinstall.ErrChartDownload):
+		reason, r.Detail = "chart_download", "could not download"
+		r.Fix = withWhy(out, "Check your network, proxy or firewall, then run again")
+	case errors.Is(err, localinstall.ErrTestkubePrepare):
+		reason, r.Detail = "prepare", "could not prepare the cluster"
+		r.Fix = withWhy(out, "Run again")
+	default:
+		if out == "" {
+			out = err.Error()
+		}
+		r.Fix = withWhy(out, "Run again")
+	}
+	printCheckResult(r)
+	tracker.Send("install_local_failed", map[string]any{"stage": "testkube", "reason": reason})
+	waitForEvents(tracker)
+	os.Exit(1)
 }
 
 // pterm's light white text vanishes on light terminals.
@@ -338,7 +447,7 @@ func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
 	}
 	printCheckResult(r)
 	tracker.Send("install_local_failed", map[string]any{"stage": "cluster", "reason": reason})
-	tracker.Wait()
+	waitForEvents(tracker)
 	os.Exit(1)
 }
 
@@ -400,4 +509,17 @@ func printCheckResult(r localinstall.Result) {
 	for _, line := range strings.Split(r.Fix, "\n") {
 		ui.Printf("      %s\n", line)
 	}
+}
+
+// Sales sees trial installs through these; opt-outs send nothing.
+func reportInstallLicenseEvent(tracker *telemetry.InstallTracker, license, event string) {
+	if tracker.Enabled() {
+		reportLicenseEvent(config.Data{TelemetryEnabled: true}, license, event)
+	}
+}
+
+// os.Exit drops in-flight sends; give both a moment.
+func waitForEvents(tracker *telemetry.InstallTracker) {
+	tracker.Wait()
+	waitLicenseEvents()
 }

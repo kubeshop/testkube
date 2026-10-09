@@ -37,5 +37,10 @@
 // mark saved in ~/.testkube/cluster-id at creation,
 // read from its mounts before starting a stopped node.
 //
+// Testkube (see Installer) comes from pinned charts and
+// embedded values, installed by our helm (see Helm).
+// Passwords the kept data needs live in secrets.json,
+// so a rebuilt cluster can still open its old data.
+//
 // Step tracking lives in pkg/telemetry, see InstallTracker.
 package localinstall
