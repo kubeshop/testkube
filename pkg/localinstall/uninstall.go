@@ -3,10 +3,10 @@ package localinstall
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Only the cluster's files; data, tools and reports stay.
@@ -87,11 +87,16 @@ func deleteData(ctx context.Context, dir string, run runFunc) (removed bool, sud
 		_, _ = run(ctx, "docker", args...)
 	}
 	if err := os.RemoveAll(data); err != nil {
-		return false, fmt.Sprintf("sudo rm -rf '%s'", data), err
+		return false, "sudo rm -rf " + shellQuote(data), err
 	}
 	// Only now: passwords without data are harmless, the reverse isn't.
 	removeIfThere(secrets)
 	return true, "", nil
+}
+
+// Single quotes stop expansion; an inner quote needs closing first.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
 func removeIfThere(path string) bool {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -116,4 +117,16 @@ func TestDeleteData_OnlyLeftoverPasswordsIsNotDataDeleted(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, removed, "no data folder, so no \"data deleted\" row")
 	assert.NoFileExists(t, filepath.Join(dir, "secrets.json"))
+}
+
+func TestShellQuote_SurvivesAQuoteInThePath(t *testing.T) {
+	if _, err := exec.LookPath("sh"); err != nil {
+		t.Skip("needs sh")
+	}
+	path := "/home/o'neil/.testkube/data"
+
+	out, err := exec.CommandContext(context.Background(), "sh", "-c", "printf %s "+shellQuote(path)).Output()
+
+	require.NoError(t, err)
+	assert.Equal(t, path, string(out))
 }
