@@ -600,7 +600,7 @@ func column(s string) string {
 func printCheckResult(r localinstall.Result) {
 	icon := map[localinstall.Status]string{
 		localinstall.StatusPass: ui.Green("✔"),
-		localinstall.StatusWarn: ui.LightYellow("⚠"),
+		localinstall.StatusWarn: ui.Yellow("⚠"),
 		localinstall.StatusFail: ui.LightRed("✖"),
 	}[r.Status]
 	// Padded before coloring: escape codes break widths.
