@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -81,11 +82,11 @@ func runUninstallLocal(cmd *cobra.Command, deleteData, yes bool) {
 		if docker.Detail != "permission denied" {
 			docker.Fix = "The cluster may still be there. Start Docker, then run `testkube uninstall local` again."
 		}
-		failUninstall(tracker, strings.ReplaceAll(docker.Detail, " ", "_"), docker)
+		failUninstall(cmd.Context(), tracker, strings.ReplaceAll(docker.Detail, " ", "_"), docker)
 	}
 	removed, err := localinstall.RemoveFiles()
 	if err != nil {
-		failUninstall(tracker, "remove", localinstall.Result{Name: "files", Status: localinstall.StatusFail, Detail: "could not remove", Fix: err.Error()})
+		failUninstall(cmd.Context(), tracker, "remove", localinstall.Result{Name: "files", Status: localinstall.StatusFail, Detail: "could not remove", Fix: err.Error()})
 	}
 	if removed {
 		printCheckResult(localinstall.Result{Name: "files", Status: localinstall.StatusPass, Detail: "removed",
@@ -104,7 +105,7 @@ func runUninstallLocal(cmd *cobra.Command, deleteData, yes bool) {
 			if sudo != "" {
 				reason = "needs_sudo"
 			}
-			failUninstall(tracker, reason, localinstall.Result{Name: "data", Status: localinstall.StatusFail, Detail: "could not delete", Fix: fix})
+			failUninstall(cmd.Context(), tracker, reason, localinstall.Result{Name: "data", Status: localinstall.StatusFail, Detail: "could not delete", Fix: fix})
 		}
 		if dataDeleted {
 			printCheckResult(localinstall.Result{Name: "data", Status: localinstall.StatusPass, Detail: "deleted", Hint: "~/.testkube/data"})
@@ -137,16 +138,16 @@ func printKeptData(lead string) {
 func removeCluster(cmd *cobra.Command, tracker *telemetry.InstallTracker) bool {
 	cluster, err := localinstall.NewCluster()
 	if err != nil {
-		failUninstall(tracker, "setup", localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "could not start", Fix: err.Error()})
+		failUninstall(cmd.Context(), tracker, "setup", localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "could not start", Fix: err.Error()})
 	}
 	found, out, err := cluster.Remove(cmd.Context())
 	switch {
 	case errors.Is(err, localinstall.ErrClusterNotOurs):
-		failUninstall(tracker, "not_ours", localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "not ours",
+		failUninstall(cmd.Context(), tracker, "not_ours", localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "not ours",
 			Fix: fmt.Sprintf("%q wasn't created by this installer, so it's left alone.\n"+
 				"Remove it yourself if you don't need it: ~/.testkube/bin/kind delete cluster --name %s", localinstall.ClusterName, localinstall.ClusterName)})
 	case err != nil:
-		failUninstall(tracker, "remove", localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "could not remove",
+		failUninstall(cmd.Context(), tracker, "remove", localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "could not remove",
 			Fix: withWhy(out, "Try: ~/.testkube/bin/kind delete cluster --name "+localinstall.ClusterName)})
 	}
 	if found {
@@ -156,7 +157,14 @@ func removeCluster(cmd *cobra.Command, tracker *telemetry.InstallTracker) bool {
 	return found
 }
 
-func failUninstall(tracker *telemetry.InstallTracker, reason string, r localinstall.Result) {
+func failUninstall(ctx context.Context, tracker *telemetry.InstallTracker, reason string, r localinstall.Result) {
+	// Ctrl+C cancels the Docker call: a choice, not a failure.
+	if ctx.Err() != nil {
+		ui.Printf("  Uninstall cancelled. Run it again to finish.\n")
+		tracker.Send("install_local_uninstall_aborted", map[string]any{"stage": r.Name})
+		waitForEvents(tracker)
+		os.Exit(130)
+	}
 	printCheckResult(r)
 	tracker.Send("install_local_uninstall_failed", map[string]any{"stage": r.Name, "reason": reason})
 	waitForEvents(tracker)
