@@ -1,0 +1,159 @@
+# Verbatim copy of kubeshop/testkube-cloud-charts@78de7b61f0
+# charts/testkube-enterprise/profiles/values.demo.v2.yaml; bump with the chart pins.
+global:
+  ingress:
+    enabled: false
+  dex:
+    issuer: http://localhost:5556
+  storage:
+    endpoint: "testkube-enterprise-minio:9000"
+    region: eu-west-1
+    public:
+      endpoint: localhost:9000
+      secure: false
+    credsSecretRef: testkube-minio-credentials
+    secure: false
+  credentials:
+    masterPassword:
+      secretKeyRef:
+        name: testkube-credentials-master
+
+sharedSecretGenerator:
+  enabled: true
+
+testkube-cloud-api:
+  additionalEnv:
+    OAUTH_ENABLED: true
+    OAUTH_SKIP_DISCOVERY: true
+    OAUTH_AUTH_URL: http://localhost:5556/auth
+    OAUTH_TOKEN_URL: http://testkube-enterprise-dex:5556/token
+    OAUTH_USER_INFO_URL: http://testkube-enterprise-dex:5556/userinfo
+    OAUTH_JWKS_URL: http://testkube-enterprise-dex:5556/keys
+    DEX_SIGNUP_ORIGIN: testkube-enterprise-dex:5557
+    DISABLE_MONGO_MIGRATIONS: "true"
+  api:
+    mongo:
+      enabled: false
+    postgres:
+      enabled: true
+      dsn: "postgresql://testkube:postgres5432@testkube-enterprise-postgresql:5432/backend?sslmode=disable"
+    migrations:
+      enabled: true
+    features:
+      disablePersonalOrgs: true
+      planUsageSyncEnabled: true
+      bootstrapConfig:
+        enabled: true
+        config:
+          default_organizations:
+            - demo
+          organizations:
+            - id: demo
+              name: demo
+              default_role: owner
+              default_environments:
+                - my-first-environment
+              environments:
+                - id: my-first-environment
+                  name: my-first-environment
+                  default_role: admin
+              runners:
+                - id: demo-runner
+                  name: demo-runner
+                  secret_key: "tkckey_agent_000000000000000000000PLACEHOLDER"
+                  floating: false
+                  environments:
+                    - my-first-environment
+    agent:
+      host: "testkube-enterprise-api"
+      port: 8089
+    tls:
+      serveHTTPS: false
+    oauth:
+      secretRef: ""
+      clientId: "testkube-enterprise"
+      clientSecret: "QWkVzs3nct6HZM5hxsPzwaZtq"
+      redirectUri: "http://localhost:8090/auth/callback"
+      issuerUrl: ""
+      allowedExternalRedirectURIs: "http://localhost:*"
+    dashboardAddress: "http://localhost:8080"
+    apiAddress: "http://localhost:8090"
+    outputsBucket: testkube-cloud-outputs
+  prometheus:
+    enabled: false
+
+testkube-cloud-ui:
+  ui:
+    authStrategy: ""
+    apiServerEndpoint: "http://localhost:8090"
+    wsServerEndpoint: "ws://localhost:8090"
+    rootRoute: "http://testkube-enterprise-ui:8080"
+  ai:
+    enabled: true
+    aiServiceApiUri: "http://localhost:9090"
+  additionalEnv:
+    REACT_APP_ENABLE_SIGNUP: "true"
+    POSTHOG_KEY: "phc_zNRKh8Ph9Y6JcSoSNQhZuM7BmQPVyGxiwUYbRaC6VYdA"
+    POSTHOG_HOST: "https://us.i.posthog.com"
+    REACT_APP_ENTERPRISE: "true"
+
+testkube-worker-service:
+  additionalEnv:
+    USE_MINIO: true
+
+testkube-ai-service:
+  enabled: true
+  controlPlaneRestApiUri: "http://testkube-enterprise-api:8088"
+  llmApi:
+    url: https://llm.testkube.io
+  tls:
+    serveHTTPS: false
+
+postgresql:
+  enabled: true
+mongodb:
+  enabled: false
+
+nats:
+  config:
+    cluster:
+      enabled: false
+
+minio:
+  auth:
+    existingSecret: testkube-minio-credentials
+
+dex:
+  ingress:
+    enabled: false
+  configSecret:
+    create: false
+    createCustom: true
+    name: "testkube-enterprise-dex-config"
+  storage:
+    type: memory
+  grpc:
+    enabled: true
+  configTemplate:
+    customConfig: ""
+    additionalStaticClients:
+      - id: testkube-enterprise
+        redirectURIs:
+          - http://localhost:8090/auth/callback
+          - http://localhost:38090/auth/callback
+        name: Testkube
+        secret: QWkVzs3nct6HZM5hxsPzwaZtq
+      - id: testkube-cloud-cli
+        name: 'Testkube Enterprise CLI'
+        public: true
+        redirectURIs:
+        - 'http://127.0.0.1:8090/callback'
+        - 'http://127.0.0.1:38090/callback'
+    additionalConfig: |
+      enablePasswordDB: true
+      staticPasswords:
+        - email: "admin@example.com"
+          # bcrypt hash of the string "password": $(echo password | htpasswd -BinC 10 admin | cut -d: -f2)
+          hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+          username: "admin"
+          userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
