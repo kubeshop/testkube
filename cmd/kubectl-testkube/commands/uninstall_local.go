@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -54,6 +55,11 @@ func confirmDataDeletion() bool {
 }
 
 func runUninstallLocal(cmd *cobra.Command, deleteData, yes bool) {
+	// Install only runs in WSL, so its files live there.
+	if runtime.GOOS == "windows" {
+		ui.Printf("  On Windows the local trial lives inside WSL. Run `testkube uninstall local` in your WSL terminal.\n")
+		os.Exit(1)
+	}
 	if deleteData {
 		ok, err := shouldDeleteData(yes, ui.StdinIsInteractive(), confirmDataDeletion)
 		if err != nil {
