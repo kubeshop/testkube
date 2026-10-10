@@ -39,6 +39,7 @@ var (
 	ErrClusterStart      = errors.New("the stopped cluster could not start")
 	ErrClusterStorage    = errors.New("the cluster's storage could not be set up")
 	ErrClusterInspect    = errors.New("the existing cluster could not be read")
+	ErrClusterRemove     = errors.New("the cluster could not be removed")
 	ErrClusterKubeconfig = errors.New("the cluster's kubeconfig could not be saved")
 )
 
@@ -182,21 +183,12 @@ func (c *Cluster) Ensure(ctx context.Context) (ClusterState, string, error) {
 
 func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 	var state ClusterState
-	owner, err := os.ReadFile(c.ownerFile())
-	if err != nil || len(owner) == 0 {
-		return state, "", ErrClusterNotOurs
-	}
-	// Saved settings survive a stop: check before touching it.
-	out, err := c.run(ctx, "docker", "inspect", "-f",
-		"{{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .Mounts}}", nodeName)
+	running, ports, why, err := c.owned(ctx)
 	if err != nil {
-		return state, string(out), ErrClusterInspect
-	}
-	running, ports, ok := ownedSettings(string(out), string(owner))
-	if !ok {
-		return state, "", ErrClusterNotOurs
+		return state, why, err
 	}
 	state.Ports = ports
+	var out []byte
 	if !running {
 		if out, err = c.run(ctx, "docker", "start", nodeName); err != nil {
 			return state, string(out), ErrClusterStart
@@ -215,6 +207,43 @@ func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 		return state, string(out), ErrClusterKubeconfig
 	}
 	return state, "", nil
+}
+
+// Saved settings survive a stop: check before touching it.
+func (c *Cluster) owned(ctx context.Context) (running bool, ports Ports, out string, err error) {
+	owner, err := os.ReadFile(c.ownerFile())
+	if err != nil || len(owner) == 0 {
+		return false, nil, "", ErrClusterNotOurs
+	}
+	inspect, err := c.run(ctx, "docker", "inspect", "-f",
+		"{{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .Mounts}}", nodeName)
+	if err != nil {
+		return false, nil, string(inspect), ErrClusterInspect
+	}
+	running, ports, ok := ownedSettings(string(inspect), string(owner))
+	if !ok {
+		return false, nil, "", ErrClusterNotOurs
+	}
+	return running, ports, "", nil
+}
+
+// Docker alone: works even after our kind copy was deleted.
+func (c *Cluster) Remove(ctx context.Context) (found bool, out string, err error) {
+	nodes, err := c.run(ctx, "docker", "ps", "-a", "-q", "--filter", "label=io.x-k8s.kind.cluster="+ClusterName)
+	if err != nil {
+		return false, string(nodes), ErrClusterInspect
+	}
+	if strings.TrimSpace(string(nodes)) == "" {
+		return false, "", nil
+	}
+	if _, _, why, err := c.owned(ctx); err != nil {
+		return true, why, err
+	}
+	// -v also drops the node's volume: gigabytes of images.
+	if rm, err := c.run(ctx, "docker", "rm", "-f", "-v", nodeName); err != nil {
+		return true, string(rm), ErrClusterRemove
+	}
+	return true, "", nil
 }
 
 // Ours means our saved mark and every browser port on 127.0.0.1.

@@ -27,7 +27,8 @@ type kindFake struct {
 	clusters, running, bindings, mounts string
 	storagePattern, createOut           string
 	applyErr, inspectErr, exportErr     error
-	startErr                            error
+	startErr, rmErr                     error
+	nodes                               string
 	refusedWaits, createFails           int
 	calls                               []string
 }
@@ -42,6 +43,10 @@ func (f *kindFake) run(_ context.Context, name string, args ...string) ([]byte, 
 		return []byte(f.createOut), errExit
 	case name != "docker" && args[0] == "export":
 		return nil, f.exportErr
+	case args[0] == "ps":
+		return []byte(f.nodes), nil
+	case args[0] == "rm":
+		return nil, f.rmErr
 	case args[0] == "inspect":
 		return []byte(f.running + "\n" + f.bindings + "\n" + f.mounts + "\n"), f.inspectErr
 	case args[0] == "start":
@@ -397,4 +402,35 @@ func TestRunCombined_KindNeverPicksUpUsersPodmanSetting(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "docker", strings.TrimSpace(string(out)))
+}
+
+func TestClusterRemove_DeletesOnlyOurCluster(t *testing.T) {
+	rm := "docker rm -f -v testkube-control-plane"
+	tests := map[string]struct {
+		setup   func(dir string, f *kindFake)
+		found   bool
+		wantErr error
+		removed bool
+	}{
+		"ours":                {setup: func(string, *kindFake) {}, found: true, removed: true},
+		"nothing there":       {setup: func(_ string, f *kindFake) { f.nodes = "" }},
+		"no mark of ours":     {setup: func(dir string, _ *kindFake) { require.NoError(t, os.Remove(filepath.Join(dir, "cluster-id"))) }, found: true, wantErr: ErrClusterNotOurs},
+		"someone else's mark": {setup: func(_ string, f *kindFake) { f.mounts = `[{"Destination":"/testkube/owner/THEIRS"}]` }, found: true, wantErr: ErrClusterNotOurs},
+		"docker refuses":      {setup: func(_ string, f *kindFake) { f.rmErr = errExit }, found: true, wantErr: ErrClusterRemove, removed: true},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			fake := ours(t, dir)
+			fake.nodes = "abc123\n"
+			tt.setup(dir, fake)
+			c := &Cluster{kind: "kind", dir: dir, run: fake.run}
+
+			found, _, err := c.Remove(context.Background())
+
+			assert.Equal(t, tt.found, found)
+			assert.ErrorIs(t, err, tt.wantErr)
+			assert.Equal(t, tt.removed, slices.Contains(fake.calls, rm), "removed only when ours")
+		})
+	}
 }
