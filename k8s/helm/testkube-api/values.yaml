@@ -533,6 +533,13 @@ storage:
   ## The bucket-wide rule is unfiltered and so covers cache objects too, and the
   ## earlier expiration wins: this can only bring cache eviction forward, never
   ## postpone it past `expiration`.
+  ##
+  ## Connected to a Control Plane this is not a rule the agent installs - the Control
+  ## Plane owns the bucket there - but one it is told about, so set it to what that
+  ## store actually does. It holds the shared cache volume's sweep to at least this
+  ## long: an entry deleted while the object pointing at it is still being served
+  ## leaves that key restoring nothing until the object goes, and the object is
+  ## immutable, so nothing can repair it meanwhile.
   # -- Days a step dependency cache entry survives, under the .tkcache/v1 prefix. Defaults to 1, the shortest an object store lifecycle can express; 0 disables it and leaves entries to `expiration`. Confined to the cache prefix, so unlike `expiration` it can only ever delete caches.
   cacheExpiration: 1
   ## Toggle whether to enable TLS in the storage client
@@ -893,3 +900,66 @@ podDisruptionBudget:
   minAvailable: ""
   # -- (int/percentage) Number or percentage of pods that can be unavailable.
   maxUnavailable: ""
+
+## Shared volume for step dependency caches.
+##
+## A step's `cache:` entries are normally stored whole in the object store, so every
+## restore downloads the archive over HTTP. Point this at an existing ReadWriteMany
+## claim and the entries live on it instead: a restore becomes a local copy, with no
+## transfer and nothing to unpack. The object store still holds a small pointer to each
+## entry, so it still decides who may store what.
+##
+## Everything on the volume is readable by every execution in the cluster. The object
+## store still decides who may *write* an entry, so a pull request cannot poison the
+## cache a trusted run restores - but every workflow can read what every other workflow
+## cached. Only enable this where that is acceptable.
+##
+## The claim must already exist in this chart's release namespace and in every
+## namespace executions run in; the chart does not create it. Claims in different
+## namespaces must expose the same backing storage.
+##
+## The agent creates each execution's directory on the volume itself, so that a step
+## running as a non-root user can write to it. It must therefore be able to write to
+## the share: an NFS export that squashes the agent's user leaves the cache unusable,
+## and every save falls back to the object store.
+##
+## A WORKFLOW'S OWN COMMAND HOLDS A WRITABLE MOUNT ON THIS VOLUME. The stage that
+## saves an entry runs inside the step's container rather than beside it, so whatever
+## the workflow runs can write into its own directory on the shared claim directly,
+## without going through the cache at all. Two consequences, neither of which the
+## agent can undo:
+##
+##   - It can write past the cache's size and entry limits, because those bound what
+##     the cache copies and not what the step writes. One workflow can fill the claim
+##     for every execution in the cluster.
+##   - It can leave directories only its own user may enter. The agent sweeps as a
+##     different user, is not root, and cannot chown or chmod what it does not own -
+##     and fsGroup is not applied to NFS at all - so that space is never reclaimed.
+##     This one is permanent, and survives the execution that caused it.
+##
+## Enable this only where every workflow that can run in the environment is trusted
+## with the claim. Where they are not, leave it disabled and let caches go to the
+## object store, which grants each upload separately and holds no shared filesystem.
+stepCacheVolume:
+  # -- Store step dependency caches on a shared volume instead of in the object store
+  enabled: false
+  # -- Name of an existing ReadWriteMany PersistentVolumeClaim
+  claimName: ""
+  # -- Where the volume is mounted inside this deployment, for the expiry sweep
+  mountPath: "/var/testkube/step-cache"
+  # -- How long an execution's cached trees survive on the volume.
+  ## Must be at least storage.cacheExpiration: an entry outliving its pointer only
+  ## wastes space, where a pointer outliving its entry is a restore that reports a miss
+  ## it cannot explain.
+  ## Raised automatically to the object store's own cache expiration plus a margin, so
+  ## setting it shorter than that does nothing. The margin allows for a lifecycle rule
+  ## not being a deadline - the store rounds the days up to a UTC midnight and then
+  ## removes asynchronously - but nothing bounds how late that removal may be, so a
+  ## store slow enough can still be serving a pointer after the entry it names has been
+  ## swept. That key then answers every run with a hit that restores nothing until the
+  ## object itself goes, and no run can replace it meanwhile. The window is small and
+  ## the consequence is a cold cache rather than a wrong one, but it is not closed: if
+  ## your store is known to lag, raise this well past its expiration.
+  retentionDays: 7
+  # -- How often to sweep the volume for expired entries
+  sweepInterval: "1h"

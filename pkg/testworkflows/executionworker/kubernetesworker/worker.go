@@ -6,6 +6,8 @@ import (
 	errors2 "errors"
 	"fmt"
 	"maps"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -26,6 +28,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executioncache/volume"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
@@ -41,6 +44,14 @@ import (
 
 const (
 	ResumeRetryOnFailureDelay = 300 * time.Millisecond
+
+	// cacheInboxMode is what an execution's cache inbox is created with.
+	//
+	// Open, because the agent cannot know which user the step will run as, and a step
+	// that cannot write its own inbox silently stops using the cache. Nothing is given
+	// away by it: the directory is reachable only through the subPath mount that names
+	// it, which is one execution's alone - see prepareStepCacheInbox.
+	cacheInboxMode = 0o777
 )
 
 var (
@@ -91,6 +102,7 @@ func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.P
 			EmptyDirSizeLimit:                 config.EmptyDirSizeLimit,
 			DefaultImagePullPolicy:            config.DefaultImagePullPolicy,
 			DefaultRunnerResources:            config.DefaultRunnerResources,
+			StepCacheVolume:                   config.StepCacheVolume,
 		},
 	}
 }
@@ -186,6 +198,9 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 		bundle.SetRunnerId(w.config.RunnerId)
 	}
 
+	// Make this execution's cache inbox before the pod that writes to it starts.
+	w.prepareStepCacheInbox(cfg.Resource.EffectiveRootId())
+
 	// Register namespace information in the cache
 	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
 
@@ -260,6 +275,9 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 	if request.GroupId != "" {
 		bundle.SetGroupId(request.GroupId)
 	}
+
+	// Make this execution's cache inbox before the pod that writes to it starts.
+	w.prepareStepCacheInbox(cfg.Resource.EffectiveRootId())
 
 	// Register namespace information in the cache
 	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
@@ -519,7 +537,14 @@ func (w *worker) List(ctx context.Context, options executionworkertypes.ListOpti
 	listOptions := metav1.ListOptions{
 		Limit: 100000,
 	}
-	labelSelectors := make([]string, 0)
+	// Every execution job carries this, and nothing else in the namespace does. Asked
+	// for server-side rather than sorted out here: without it the request is every Job
+	// in every configured namespace, whose internal annotation is then unmarshalled one
+	// by one only to be discarded, with a warning logged for each one that has none
+	// because it was never an execution. The step cache's lease renewal asks this
+	// question every five minutes, which turned that into a recurring full scan of the
+	// cluster's Jobs.
+	labelSelectors := []string{constants.ResourceIdLabelName}
 	if options.GroupId != "" {
 		labelSelectors = append(labelSelectors, fmt.Sprintf("%s=%s", constants.GroupIdLabelName, options.GroupId))
 	}
@@ -531,36 +556,53 @@ func (w *worker) List(ctx context.Context, options executionworkertypes.ListOpti
 	// TODO: make concurrent calls
 	list := make([]executionworkertypes.ListResultItem, 0)
 	for _, ns := range namespaces {
-		// TODO: retry?
-		jobs, err := w.clientSet.BatchV1().Jobs(ns).List(ctx, listOptions)
-		if err != nil {
-			return nil, err
-		}
-		for _, job := range jobs.Items {
-			if options.Finished != nil && *options.Finished != watchers.IsJobFinished(&job) {
-				continue
-			}
-			if options.Root != nil && *options.Root != (job.Labels[constants.RootResourceIdLabelName] == job.Labels[constants.ResourceIdLabelName]) {
-				continue
-			}
-			var cfg testworkflowconfig.InternalConfig
-			err = json.Unmarshal([]byte(job.Spec.Template.Annotations[constants.InternalAnnotationName]), &cfg)
+		// Paged to the end rather than taking the first response and stopping.
+		//
+		// Limit is a page size, not a bound on what exists, and everything that
+		// narrows this list - finished or not, root or not, the organization, the
+		// environment - is applied below, to whatever came back. A namespace holding
+		// more jobs than one page therefore used to answer with a truncated list that
+		// looked complete, and a caller asking which executions are running would
+		// silently not be told about some of them. The step cache's lease renewal is
+		// one such caller, and an execution missing from its answer has its inbox swept
+		// while its pod is still writing to it.
+		pageOptions := listOptions
+		for {
+			// TODO: retry?
+			jobs, err := w.clientSet.BatchV1().Jobs(ns).List(ctx, pageOptions)
 			if err != nil {
-				log.DefaultLogger.Warnw("detected execution job that have invalid internal configuration", "name", job.Name, "namespace", job.Namespace, "error", err)
-				continue
+				return nil, err
 			}
-			if options.OrganizationId != "" && options.OrganizationId != cfg.Execution.OrganizationId {
-				continue
+			for _, job := range jobs.Items {
+				if options.Finished != nil && *options.Finished != watchers.IsJobFinished(&job) {
+					continue
+				}
+				if options.Root != nil && *options.Root != (job.Labels[constants.RootResourceIdLabelName] == job.Labels[constants.ResourceIdLabelName]) {
+					continue
+				}
+				var cfg testworkflowconfig.InternalConfig
+				err = json.Unmarshal([]byte(job.Spec.Template.Annotations[constants.InternalAnnotationName]), &cfg)
+				if err != nil {
+					log.DefaultLogger.Warnw("detected execution job that have invalid internal configuration", "name", job.Name, "namespace", job.Namespace, "error", err)
+					continue
+				}
+				if options.OrganizationId != "" && options.OrganizationId != cfg.Execution.OrganizationId {
+					continue
+				}
+				if options.EnvironmentId != "" && options.EnvironmentId != cfg.Execution.EnvironmentId {
+					continue
+				}
+				list = append(list, executionworkertypes.ListResultItem{
+					Execution: cfg.Execution,
+					Workflow:  cfg.Workflow,
+					Resource:  cfg.Resource,
+					Namespace: job.Namespace,
+				})
 			}
-			if options.EnvironmentId != "" && options.EnvironmentId != cfg.Execution.EnvironmentId {
-				continue
+			if jobs.Continue == "" {
+				break
 			}
-			list = append(list, executionworkertypes.ListResultItem{
-				Execution: cfg.Execution,
-				Workflow:  cfg.Workflow,
-				Resource:  cfg.Resource,
-				Namespace: job.Namespace,
-			})
+			pageOptions.Continue = jobs.Continue
 		}
 	}
 	return list, nil
@@ -788,4 +830,73 @@ func (w *worker) ResumeMany(ctx context.Context, ids []string, options execution
 	wg.Wait()
 
 	return errs
+}
+
+// prepareStepCacheInbox makes this execution's inbox on the shared cache volume, before
+// the pod that writes to it starts.
+//
+// kubelet would create the subPath directory itself - it creates a missing one, and its
+// parents, when it assembles the mounts. It creates it owned by root, though, with the
+// mode of the volume root and no regard for runAsUser, and fsGroup is not applied to a
+// multi-writer volume at all: the in-tree NFS plugin never reads it, and a CSI driver
+// only does so where its fsGroupPolicy says to. A step running as a non-root user would
+// then be unable to write to its own inbox, and every save would quietly fall back to
+// the object store - the cache would look configured and never once be used.
+//
+// A directory that is already there is taken as it is, so the agent makes it first, with
+// a mode any step can write to. The agent reaches the same storage through its own mount
+// (the claims must share a backing volume, which the chart documents), and it is not
+// root, so an export that squashes root does not take its ownership away.
+//
+// It also keeps the shared "inbox" parent out of kubelet's hands. Creating a subPath is
+// not tolerant of a concurrent creation before Kubernetes v1.37, so two executions
+// starting together on one node while that parent was still missing could fail to start
+// - at first use, which is exactly when somebody is deciding whether this works.
+//
+// Best effort throughout. A cache is an optimization, the pod-side probe already falls
+// back to the object store when the inbox cannot be written to, and kubelet still makes
+// the directory itself if this did not - so there is nothing here worth failing an
+// execution over.
+// Made for every execution the volume is enabled for, not only those whose own bundle
+// mounts the claim.
+//
+// Gating on this bundle looked like a saving and was wrong: a workflow may cache only
+// inside a parallel or service worker, whose spec is bundled later, by a worker running
+// in a pod. That worker is handed StepCacheVolume but no local path - nothing inside a
+// pod can reach the volume root - so it cannot make the inbox either, and the root agent
+// is the only thing that ever can. Skipping it there left kubelet to create the child's
+// subPath as root, and a cached step running as anyone else fell silently back to the
+// object store on every save.
+//
+// The empty directories that costs are the sweep's problem rather than this one's: an
+// inbox holding nothing is removed as soon as its lease goes stale, well before the
+// retention window a real entry gets.
+func (w *worker) prepareStepCacheInbox(resourceId string) {
+	if w.config.StepCacheVolume == nil || w.config.StepCacheVolumeLocalPath == "" || resourceId == "" {
+		return
+	}
+
+	parent := filepath.Join(w.config.StepCacheVolumeLocalPath, volume.InboxDir)
+	dir := filepath.Join(parent, resourceId)
+	if err := os.MkdirAll(dir, cacheInboxMode); err != nil {
+		log.DefaultLogger.Warnw("could not prepare the step cache inbox; the execution will fall back to the object store if its pod cannot write one",
+			"path", dir, "error", err)
+		return
+	}
+
+	// MkdirAll applies the process umask, so the mode is set explicitly - on the shared
+	// parent as well as on this execution's own directory.
+	//
+	// The parent is made once, by whichever agent gets there first, and left at 0755
+	// under the usual umask it belongs to that agent's user alone. Every other agent on
+	// the same backing volume - a runner beside an api deployment, or one running as a
+	// different UID - could then neither add an inbox nor remove an expired one: saves
+	// fall back to the object store and nothing is ever reclaimed, on a volume the
+	// whole cluster shares.
+	for _, name := range []string{parent, dir} {
+		if err := os.Chmod(name, cacheInboxMode); err != nil {
+			log.DefaultLogger.Warnw("could not set the mode of a step cache directory; an agent or step running as another user may not be able to write to it",
+				"path", name, "error", err)
+		}
+	}
 }

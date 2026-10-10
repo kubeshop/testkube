@@ -87,6 +87,15 @@ spec:
       {{- end }}
       securityContext: {{ include "testkube-runner.podSecurityContext" . | nindent 8 }}
       volumes:
+        {{- if and .Values.stepCacheVolume.enabled .Values.stepCacheVolume.claimName }}
+        # Mounted here so the expiry sweep can reach the volume. A runner-only
+        # installation has no api Deployment, so without this the sweep would find no
+        # inbox directory, read that as an empty volume, and let entries accumulate
+        # until the claim filled.
+        - name: step-cache
+          persistentVolumeClaim:
+            claimName: {{ .Values.stepCacheVolume.claimName }}
+        {{- end }}
         - name: tmp
           {{- if .Values.emptyDirSizeLimit }}
           emptyDir:
@@ -164,6 +173,10 @@ spec:
           resources:
             {{- toYaml .Values.pod.resources | nindent 12 }}
           volumeMounts:
+            {{- if and .Values.stepCacheVolume.enabled .Values.stepCacheVolume.claimName }}
+            - name: step-cache
+              mountPath: {{ .Values.stepCacheVolume.mountPath }}
+            {{- end }}
             - name: tmp
               mountPath: /tmp
             - name: nats
@@ -243,6 +256,21 @@ spec:
             {{- if .Values.emptyDirSizeLimit }}
             - name: "TESTKUBE_EMPTYDIR_SIZE_LIMIT"
               value: "{{ .Values.emptyDirSizeLimit }}"
+            {{- end }}
+            {{- if and .Values.stepCacheVolume.enabled .Values.stepCacheVolume.claimName }}
+            - name: "TESTKUBE_STEP_CACHE_VOLUME_CLAIM"
+              value: "{{ .Values.stepCacheVolume.claimName }}"
+            - name: "TESTKUBE_STEP_CACHE_VOLUME_MOUNT_PATH"
+              value: "{{ .Values.stepCacheVolume.mountPath }}"
+            - name: "TESTKUBE_STEP_CACHE_VOLUME_RETENTION_DAYS"
+              value: "{{ .Values.stepCacheVolume.retentionDays }}"
+            - name: "TESTKUBE_STEP_CACHE_VOLUME_SWEEP_INTERVAL"
+              value: "{{ .Values.stepCacheVolume.sweepInterval }}"
+            {{- /* A runner owns no bucket, so it cannot read how long a cache object
+                 lives there and has to be told, or the sweep would hold entries to a
+                 default that has nothing to do with the Control Plane's store. */}}
+            - name: "STORAGE_CACHE_EXPIRATION"
+              value: "{{ .Values.stepCacheVolume.objectExpirationDays }}"
             {{- end }}
             - name: "TESTKUBE_NAMESPACE"
               value: "{{ .Release.Namespace }}"

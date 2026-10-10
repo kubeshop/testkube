@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -19,6 +21,7 @@ import (
 	initdata "github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/pkg/executioncache"
+	"github.com/kubeshop/testkube/pkg/executioncache/volume"
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
@@ -32,14 +35,25 @@ const (
 	// volume is too small to hold.
 	cacheDefaultMaxSize = executioncache.MaxArchiveSize
 
-	// cacheMaxUnpackedSize and cacheMaxEntries bound what a restore may expand into.
-	// The archive was written by an earlier - possibly different - workflow, so its
-	// contents are not this execution's own doing.
+	// cacheMaxUnpackedSize bounds what a restore may expand into. The archive was
+	// written by an earlier - possibly different - workflow, so its contents are not
+	// this execution's own doing.
 	cacheMaxUnpackedSize = 10 << 30 // 10 GiB
-	cacheMaxEntries      = 500_000
 
 	cacheTransferTimeout = 30 * time.Minute
 )
+
+// cacheMaxEntries bounds how many files an entry may hold.
+//
+// It bounds the restore, and for that reason it also bounds the save: an entry over it
+// would store happily and then be refused by every restore of it, under a key that is
+// immutable. One number, read in both places, so the two cannot drift into a cache that
+// can be written and never read.
+//
+// A variable rather than a constant only so a test can lower it; nothing else writes to
+// it. Flipping an unexported seam is how stdinIsInteractive is tested too, and the
+// alternative here is a test that creates half a million files.
+var cacheMaxEntries = 500_000
 
 // NewCacheCmd restores and saves a step's dependency cache.
 //
@@ -244,7 +258,7 @@ func runCacheRestore(ctx context.Context, encoded string, repository executionca
 	if err != nil {
 		return err
 	}
-	if err := executioncache.ValidateKey(spec.Key); err != nil {
+	if err := validateScopedCacheKey(spec.Key); err != nil {
 		// Most often an unmatched hash_files(), which yields "". Caching every such
 		// step under one shared entry would be worse than not caching at all.
 		return err
@@ -254,9 +268,32 @@ func runCacheRestore(ctx context.Context, encoded string, repository executionca
 		return nil
 	}
 
+	// Partitioned by the volume these entries live on, because the scope a key resolves
+	// to carries no runner or volume and an entry on a volume is reachable only from it.
+	// Applied to the restore keys too, and as a prefix, so prefix matching cannot stray
+	// onto another volume's entry. See volume.EnsureID.
+	//
+	// Each one is checked after scoping, as the exact key is: the prefix comes out of
+	// the same budget, so a restore key the author kept inside the limit can be over it
+	// by the time it is sent. One that is dropped here would otherwise take the whole
+	// lookup with it - and a restore key is a fallback, so losing one is a worse cache
+	// rather than a failure. Said out loud, because a silently ignored fallback looks
+	// exactly like one that simply did not match.
+	restoreKeys := make([]string, 0, len(spec.RestoreKeys))
+	for _, k := range spec.RestoreKeys {
+		scoped := scopedCacheKey(k)
+		if scoped != "" {
+			if err := executioncache.ValidateKey(scoped); err != nil {
+				fmt.Fprintf(out, "cache: ignoring the restore key %q: %s\n", k, err.Error())
+				continue
+			}
+		}
+		restoreKeys = append(restoreKeys, scoped)
+	}
+
 	entry, err := repository.Restore(ctx, executioncache.RestoreRequest{
-		Key:         spec.Key,
-		RestoreKeys: spec.RestoreKeys,
+		Key:         scopedCacheKey(spec.Key),
+		RestoreKeys: restoreKeys,
 		Scope:       executioncache.ParseScope(spec.Scope),
 	})
 	if err != nil {
@@ -272,7 +309,19 @@ func runCacheRestore(ctx context.Context, encoded string, repository executionca
 	}
 
 	started := time.Now()
-	if wrote, err := downloadCache(ctx, entry.URL, spec.Paths); err != nil {
+	restored := entry.Size
+	// Closed explicitly: the store holds an open handle on the mount, and a restore is
+	// one of several stages sharing a container.
+	store := cacheStore(out)
+	defer store.Close()
+
+	wrote, size, err := downloadCache(ctx, store, entry.URL, spec.Paths)
+	if size > 0 {
+		// The object was a pointer, so its own size says nothing about what was
+		// restored; the pointer carries what the entry holds.
+		restored = size
+	}
+	if err != nil {
 		// A half-unpacked node_modules is worse than none: an install would find some
 		// of what it needs and skip the rest. Clear what was written and report a miss.
 		//
@@ -296,14 +345,18 @@ func runCacheRestore(ctx context.Context, encoded string, repository executionca
 	if !entry.Exact {
 		state.Hit = executioncache.HitPartial
 	}
-	state.MatchedKey = entry.MatchedKey
+	// Reported as the workflow wrote it. The repository was asked for a key with this
+	// volume's id in front of it, and answers with the same - an internal partition the
+	// author never chose, which has no business in their log line or in the state the
+	// save stage reads back.
+	state.MatchedKey = unscopedCacheKey(entry.MatchedKey)
 
 	if entry.Exact {
 		fmt.Fprintf(out, "cache: hit for %q (%s in %s)\n",
-			spec.Key, humanize.Bytes(uint64(entry.Size)), time.Since(started).Truncate(time.Millisecond))
+			spec.Key, humanize.Bytes(uint64(restored)), time.Since(started).Truncate(time.Millisecond))
 	} else {
 		fmt.Fprintf(out, "cache: partial hit for %q from %q (%s in %s)\n",
-			spec.Key, entry.MatchedKey, humanize.Bytes(uint64(entry.Size)), time.Since(started).Truncate(time.Millisecond))
+			spec.Key, state.MatchedKey, humanize.Bytes(uint64(restored)), time.Since(started).Truncate(time.Millisecond))
 	}
 	return nil
 }
@@ -333,12 +386,34 @@ func runCacheSave(ctx context.Context, encoded string, mounts []string, statePat
 		}
 	}
 
-	if err := executioncache.ValidateKey(key); err != nil {
+	if err := validateScopedCacheKey(key); err != nil {
 		return err
 	}
 	if reason := executioncache.Reason(repository); reason != "" {
 		fmt.Fprintf(out, "cache: not saving %q: %s\n", key, reason)
 		return nil
+	}
+
+	// The shared volume replaces the archive entirely: the tree is copied to it and the
+	// object holds a pointer. Kept in its own function so the object-store path below
+	// is exactly what it was, which is what a pod with no volume - or one whose volume
+	// turned out to be unusable - still runs.
+	if inbox := cacheInbox(out); inbox != nil {
+		done, err := saveToVolume(ctx, inbox, key, spec.Scope, paths, maxSize, repository, out)
+		inbox.Close()
+		if done {
+			return err
+		}
+		// The volume could not take the entry - it filled while the tree was being
+		// copied, or went away mid-write. The probe at open time cannot predict that,
+		// because a volume with room for a probe file can still run out during a copy
+		// that is gigabytes long.
+		//
+		// So fall through to the object store rather than leave the key cold: the step
+		// has already installed what it needed, and a save that lands somewhere is
+		// worth more than one that lands nowhere until an operator notices the volume
+		// is full.
+		fmt.Fprintf(out, "cache: storing %q in the object store instead\n", key)
 	}
 
 	// Timed from here, not from the upload. Packing reads and compresses the whole tree
@@ -371,8 +446,21 @@ func runCacheSave(ctx context.Context, encoded string, mounts []string, statePat
 		return nil
 	}
 
+	// The pack is bounded by size but not by count, where the unpack is bounded by
+	// both. An archive over the entry limit would therefore store happily and then be
+	// refused by every restore of it - and the key is immutable, so no later run could
+	// replace it: the step would reinstall on every execution until the entry expired,
+	// with nothing to say why. Refusing to publish it leaves a plain miss instead,
+	// which is the same outcome without the mystery.
+	if entries > cacheMaxEntries {
+		fmt.Fprintf(out, "cache: not saving %q: it holds more than %d files\n", key, cacheMaxEntries)
+		return nil
+	}
+
+	// Partitioned by volume exactly as the restore is, including on this fallback path:
+	// a key stored here is looked up by a runner that does have the volume.
 	upload, err := repository.Save(ctx, executioncache.SaveRequest{
-		Key:   key,
+		Key:   scopedCacheKey(key),
 		Scope: executioncache.ParseScope(spec.Scope),
 		Size:  size,
 	})
@@ -492,6 +580,38 @@ func cacheTempDir() string {
 	return os.TempDir()
 }
 
+// cacheStore opens the shared cache volume for reading, or returns nil.
+//
+// Nil is not a failure: an entry stored as an archive restores without it, and one
+// stored as a pointer reports a miss that names the reason. The reason is printed here
+// rather than swallowed because a pod that was meant to have the volume and does not is
+// an operator's problem, and an unexplained cold cache would be the only symptom.
+func cacheStore(out io.Writer) *volume.Store {
+	mountPath := os.Getenv(volume.EnvStorePath)
+	if mountPath == "" {
+		return nil
+	}
+	store, reason := volume.OpenStore(mountPath)
+	if store == nil {
+		fmt.Fprintf(out, "cache: not using the shared volume: %s\n", reason)
+	}
+	return store
+}
+
+// cacheInbox opens this execution's own directory on the shared cache volume, or
+// returns nil to save to the object store instead.
+func cacheInbox(out io.Writer) *volume.Inbox {
+	mountPath := os.Getenv(volume.EnvInboxPath)
+	if mountPath == "" {
+		return nil
+	}
+	inbox, reason := volume.OpenInbox(mountPath, os.Getenv(volume.EnvInboxName))
+	if inbox == nil {
+		fmt.Fprintf(out, "cache: not using the shared volume: %s\n", reason)
+	}
+	return inbox
+}
+
 // downloadCache fetches an entry and unpacks it at the root.
 //
 // The archive holds paths relative to "/", because a cache may span several volumes and
@@ -510,14 +630,16 @@ func cacheTempDir() string {
 // transfer can succeed and the archive still be rejected before the first entry is
 // created. It is sticky across retries, because an attempt that wrote part of a tree
 // leaves that tree behind even if a later attempt fails earlier.
-func downloadCache(ctx context.Context, url string, allowedPaths []string) (wrote bool, err error) {
+// size reports how much the entry held, for the line the restore prints. It is zero
+// for an archive, whose compressed size the caller already knows from the grant.
+func downloadCache(ctx context.Context, store *volume.Store, url string, allowedPaths []string) (wrote bool, size int64, err error) {
 	client := &http.Client{Timeout: cacheTransferTimeout}
 
 	var lastErr error
 	for attempt := 1; attempt <= cacheRetryMaxAttempts; attempt++ {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
-			return wrote, err
+			return wrote, 0, err
 		}
 		resp, err := client.Do(req)
 		if err == nil && resp.StatusCode != http.StatusOK {
@@ -526,26 +648,104 @@ func downloadCache(ctx context.Context, url string, allowedPaths []string) (wrot
 			// grant may have expired. Neither is worth retrying.
 			if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusForbidden {
 				resp.Body.Close()
-				return wrote, err
+				return wrote, 0, err
 			}
 		}
 		if err == nil {
-			err = common.UnpackTarball("/", resp.Body,
+			// An object either points at an entry on the shared volume or is the
+			// archive itself. Which one it is, is decided by its first bytes rather
+			// than by configuration, so an entry written before the volume existed -
+			// or by a cluster that has none - restores with nothing to get wrong.
+			body := bufio.NewReaderSize(resp.Body, volume.MaxPointerBytes)
+			head, peekErr := body.Peek(len(volume.Magic))
+			if peekErr == nil && bytes.Equal(head, []byte(volume.Magic)) {
+				wrote, size, err = restoreFromVolume(store, body, allowedPaths)
+				resp.Body.Close()
+
+				// A pointer that was read and could not be followed will not start
+				// working on a retry: the bytes only ever existed on the volume, and
+				// fetching the same few hundred bytes again answers the same.
+				//
+				// Failing to read it is a different thing, though. The magic is only
+				// the first bytes; the rest arrives over the same connection an
+				// archive would, and a reset part-way through is what the retries
+				// around this loop exist for. Treating every pointer outcome as final
+				// gave the pointer path less resilience than the archive path it
+				// replaced, for a failure that has nothing to do with pointers.
+				if !errors.Is(err, errPointerUnread) {
+					return wrote, size, err
+				}
+				lastErr = err
+				continue
+			}
+
+			err = common.UnpackTarball("/", body,
 				common.WithMaxTotalBytes(cacheMaxUnpackedSize),
 				common.WithMaxEntries(cacheMaxEntries),
 				common.WithAllowedRoots(allowedPaths...),
 				common.WithWriteObserver(func() { wrote = true }))
 			resp.Body.Close()
 			if err == nil {
-				return wrote, nil
+				return wrote, 0, nil
 			}
 		} else if resp != nil {
 			resp.Body.Close()
 		}
 		lastErr = err
 	}
-	return wrote, lastErr
+	return wrote, 0, lastErr
 }
+
+// restoreFromVolume copies an entry off the shared volume onto the filesystem.
+//
+// Every failure here is a miss rather than an error the step sees, which is the same
+// contract the archive path has - but the reasons are worth naming separately, because
+// "the pointer is there and the entry is not" is a retention misconfiguration, and a
+// silent miss would hide it behind a cold cache.
+func restoreFromVolume(store *volume.Store, body io.Reader, allowedPaths []string) (bool, int64, error) {
+	head, err := io.ReadAll(io.LimitReader(body, volume.MaxPointerBytes))
+	if err != nil {
+		// Marked retryable: the magic was only the first bytes, and the rest of the
+		// body still arrives over the same connection an archive would. A reset
+		// part-way through is exactly what a second GET recovers from, where
+		// everything below this point is a settled answer about the volume that no
+		// amount of fetching will change.
+		return false, 0, fmt.Errorf("%w: reading the cache pointer: %w", errPointerUnread, err)
+	}
+	pointer, ok := volume.Decode(head)
+	if !ok {
+		// A truncated body can look like this too - the magic matched and what
+		// followed did not parse - so it is retried for the same reason.
+		return false, 0, fmt.Errorf("%w: the entry is a cache pointer this agent cannot read", errPointerUnread)
+	}
+	if store == nil {
+		return false, 0, errors.New("the entry is on a shared cache volume this pod has not mounted")
+	}
+
+	root, err := store.OpenEntry(pointer)
+	if err != nil {
+		return false, 0, fmt.Errorf("opening the cache entry on the shared volume: %w", err)
+	}
+	defer root.Close()
+
+	wrote, err := volume.RestoreTree(root, allowedPaths, volume.CopyLimits{
+		MaxTotalBytes: cacheMaxUnpackedSize,
+		MaxEntries:    cacheMaxEntries,
+	})
+	if err != nil {
+		return wrote, pointer.Size, err
+	}
+	return wrote, pointer.Size, nil
+}
+
+// errPointerUnread marks a pointer whose body could not be read or parsed, as opposed
+// to one that was read and led nowhere.
+//
+// The first is a transport failure like any other - the magic is only the opening bytes
+// and the rest comes over the same connection an archive would - so it is retried. The
+// second is a settled answer about the volume, which fetching the same few hundred
+// bytes again cannot change.
+var errPointerUnread = errors.New("the cache pointer could not be read")
 
 // errCacheEntryWon reports that another execution stored this key first.
 //
@@ -556,13 +756,39 @@ func downloadCache(ctx context.Context, url string, allowedPaths []string) (wrot
 // content-derived key.
 var errCacheEntryWon = errors.New("another execution stored this key first")
 
+// errUploadMayHaveLanded marks a failed upload that is not evidence the object was not
+// stored, so that a caller holding something the object would name does not throw it
+// away.
+//
+// A PUT whose response is lost has still been applied. The retry then finds the object
+// present and the condition refuses it, which is indistinguishable from losing a race
+// to another execution - except that the object now stored is this execution's own, and
+// names this execution's entry. Deleting that entry leaves a pointer to nothing under a
+// key that is immutable, so every later run misses it and no run can replace it.
+//
+// A store that answers an error after applying the write is the same case. Only a
+// refusal on the first attempt, with nothing sent before it, is evidence of nothing
+// stored.
+var errUploadMayHaveLanded = errors.New("the upload may have reached the store")
+
 // uploadCache sends the archive, with whatever headers the grant requires.
 //
 // The headers are covered by the signature, so they are not optional decoration: an
 // upload that omits them is rejected, which is deliberate - it means the condition
 // cannot be dropped to turn the request back into a plain overwrite.
-func uploadCache(ctx context.Context, url string, headers map[string]string, archive *os.File, size int64) error {
+func uploadCache(ctx context.Context, url string, headers map[string]string, archive io.ReadSeeker, size int64) error {
 	client := &http.Client{Timeout: cacheTransferTimeout}
+
+	// Whether an earlier attempt could already have been applied, which decides whether
+	// a refusal below means "another execution stored this" or "we did, and lost the
+	// answer". See errUploadMayHaveLanded.
+	var mayHaveLanded bool
+	ambiguous := func(err error) error {
+		if mayHaveLanded {
+			return fmt.Errorf("%w: %w", err, errUploadMayHaveLanded)
+		}
+		return err
+	}
 
 	var lastErr error
 	for attempt := 1; attempt <= cacheRetryMaxAttempts; attempt++ {
@@ -599,7 +825,7 @@ func uploadCache(ctx context.Context, url string, headers map[string]string, arc
 			// The condition refused the write, so the entry is already there. Retrying
 			// would only be refused again.
 			if executioncache.UploadRefused(status) {
-				return errCacheEntryWon
+				return ambiguous(errCacheEntryWon)
 			}
 			err = fmt.Errorf("status code %d", status)
 			// None of these change on a second attempt: the first two are a grant the
@@ -609,12 +835,19 @@ func uploadCache(ctx context.Context, url string, headers map[string]string, arc
 			switch status {
 			case http.StatusForbidden, http.StatusBadRequest,
 				http.StatusNotImplemented, http.StatusMethodNotAllowed:
-				return err
+				return ambiguous(err)
 			}
+			// Any other status is retried, and the store answering one does not prove
+			// it did not apply the write first - a proxy can turn a stored object into
+			// a 502 on the way back.
+			mayHaveLanded = true
+		} else {
+			// No answer at all: the request may have been applied and the response lost.
+			mayHaveLanded = true
 		}
 		lastErr = err
 	}
-	return lastErr
+	return ambiguous(lastErr)
 }
 
 // clearCachePaths empties the cached directories without removing them, because an
@@ -687,4 +920,201 @@ func readCacheState(path string) (executioncache.State, bool) {
 		return executioncache.State{}, false
 	}
 	return state, true
+}
+
+// saveToVolume copies the cached tree onto the shared volume and stores a pointer to it.
+//
+// The ordering is what keeps an entry from ever being half-published, and it is the
+// same ordering the archive path has, with the copy standing in for the pack:
+//
+//	copy    - into a staging directory under a name no reader follows
+//	Commit  - rename, so the entry appears whole or not at all
+//	Save    - the control plane decides whether this execution may store this key
+//	upload  - the pointer, conditionally, which is what resolves a race on one key
+//
+// Commit comes before Save, unlike the archive path where the pack does, because what
+// gets uploaded here is the pointer and the pointer does not exist until the entry has
+// a published name. SaveRequest.Size is the size about to be uploaded, so it has to be
+// the pointer's few hundred bytes rather than the tree's - a control plane enforcing a
+// quota against the tree would refuse saves that store almost nothing in its bucket.
+// A committed entry no pointer names is invisible either way, and every path below
+// that does not publish discards it.
+//
+// Everything that does not end in a published pointer discards what it staged. An entry
+// is reachable only through its pointer, so one left behind is invisible until the
+// volume fills, and it can be gigabytes.
+//
+// done reports whether the save was settled here. It is false only when the volume
+// itself could not take the entry - it filled mid-copy, or went away - which the caller
+// answers by storing in the object store instead. Every other outcome, including the
+// ordinary ones where nothing is stored, is settled: falling back on those would store
+// a second copy of something the control plane has already ruled on.
+func saveToVolume(
+	ctx context.Context,
+	inbox *volume.Inbox,
+	key, scope string,
+	paths []string,
+	maxSize int64,
+	repository executioncache.Repository,
+	out io.Writer,
+) (done bool, err error) {
+	started := time.Now()
+
+	dir, staged, err := inbox.Stage()
+	if err != nil {
+		fmt.Fprintf(out, "cache: the shared volume would not take %q: %s\n", key, err.Error())
+		return false, nil
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			inbox.DiscardStaged(staged)
+		}
+	}()
+
+	size, entries, err := volume.SaveTree(dir, paths, volume.CopyLimits{
+		MaxTotalBytes: maxSize,
+		MaxEntries:    cacheMaxEntries,
+	})
+	if err != nil {
+		// Both limits measure different things on the two backends, so a tree refused
+		// here can still be one the object store would take.
+		//
+		// The count does: this one counts every directory, where the archive's walker
+		// emits only files and links, so a directory holding two files is three entries
+		// here and two there. The archive path enforces its own count before asking for
+		// a grant, which is what keeps an entry no restore would accept from being
+		// published - so falling back cannot publish one, and settling here would drop
+		// a cache the archive could hold.
+		//
+		// The size does too: this one weighs the tree where the archive weighs the gzip
+		// of it, and a dependency tree of text compresses well.
+		//
+		// The volume filling mid-copy lands here too. The probe at open time cannot
+		// predict it, because a volume with room for a probe file can still run out
+		// during a copy of gigabytes.
+		fmt.Fprintf(out, "cache: the shared volume would not take %q: %s\n", key, err.Error())
+		return false, nil
+	}
+	copied := time.Since(started)
+
+	// Storing nothing under a key is worse than storing nothing at all: an entry is
+	// immutable for its lifetime, so an empty one would answer every later run with a
+	// hit that restores nothing, and no rerun could displace it.
+	if entries == 0 {
+		fmt.Fprintf(out, "cache: not saving %q: nothing was found under %s\n", key, strings.Join(paths, ", "))
+		return true, nil
+	}
+
+	pointer, err := inbox.Commit(staged, size)
+	if err != nil {
+		// A rename within one directory failing means the volume is sick, not that
+		// this entry is unwelcome - so this is the other case worth falling back on.
+		fmt.Fprintf(out, "cache: the shared volume would not take %q: %s\n", key, err.Error())
+		return false, nil
+	}
+	committed = true
+	published := false
+	// Set when an upload failed in a way that does not prove the pointer was not
+	// stored. Keeping an entry nothing names only wastes space until the sweep
+	// collects it; deleting one a stored pointer does name breaks that key for as long
+	// as the object lives, and the object is immutable, so nothing can repair it.
+	mayBePublished := false
+	defer func() {
+		if !published && !mayBePublished {
+			inbox.Discard(pointer)
+		}
+	}()
+
+	// Taken once: bytes.Reader.Len reports what is left to read, not the whole body.
+	body := bytes.NewReader(volume.Encode(pointer))
+	bodyLen := int64(body.Len())
+
+	upload, err := repository.Save(ctx, executioncache.SaveRequest{
+		Key:   scopedCacheKey(key),
+		Scope: executioncache.ParseScope(scope),
+		// The pointer is the object, so this is what the bucket is about to receive.
+		// The tree itself is on a volume the control plane does not provision and
+		// cannot measure; it is bounded by maxSize above and reclaimed by the agent's
+		// sweep, not by a quota.
+		Size: bodyLen,
+	})
+	if err != nil {
+		if reason, degraded := executioncache.Degraded(err); degraded {
+			fmt.Fprintf(out, "cache: not saving %q: %s\n", key, reason)
+			return true, nil
+		}
+		return true, err
+	}
+	if upload.AlreadyExists {
+		fmt.Fprintf(out, "cache: %q is already stored, nothing to save\n", key)
+		return true, nil
+	}
+
+	uploadStarted := time.Now()
+	if err := uploadCache(ctx, upload.URL, upload.Headers, body, bodyLen); err != nil {
+		// The entry stays where it is unless it is certain nothing names it. A refusal
+		// after an attempt that may already have been applied is this execution's own
+		// pointer being refused, not another execution's winning, and that pointer
+		// names this entry.
+		mayBePublished = errors.Is(err, errUploadMayHaveLanded)
+		if errors.Is(err, errCacheEntryWon) {
+			fmt.Fprintf(out, "cache: %q was stored by another execution first, nothing to save\n", key)
+			return true, nil
+		}
+		fmt.Fprintf(out, "cache: not saving %q: %s\n", key, err.Error())
+		return true, nil
+	}
+	published = true
+
+	// Both halves are reported separately for the same reason the archive path reports
+	// them separately: the copy scales with the tree, the upload with the control
+	// plane, and one total hides which of them to do something about.
+	fmt.Fprintf(out, "cache: saved %q to the shared volume (%s in %s, %s copying and %s storing)\n",
+		key, humanize.Bytes(uint64(size)), time.Since(started).Truncate(time.Millisecond),
+		copied.Truncate(time.Millisecond), time.Since(uploadStarted).Truncate(time.Millisecond))
+	return true, nil
+}
+
+// scopedCacheKey is the key as the control plane will see it, partitioned by the volume
+// these entries are stored on. See volume.EnsureID.
+func scopedCacheKey(key string) string {
+	return volume.ScopedKey(os.Getenv(volume.EnvVolumeID), key)
+}
+
+// validateScopedCacheKey checks the key that will actually be sent, not the one the
+// author wrote.
+//
+// The prefix is spent out of the same budget: validating the author's key here and then
+// adding bytes to it left a key of 388 bytes or more passing locally and refused by the
+// API on every restore and save, which is a cache that never works and says so in a
+// place nobody is reading. The limit the author has to meet is therefore smaller when a
+// volume is configured, and the message says so rather than naming a limit their key
+// appears to be inside.
+func validateScopedCacheKey(key string) error {
+	scoped := scopedCacheKey(key)
+	err := executioncache.ValidateKey(scoped)
+	if err == nil || scoped == key {
+		return err
+	}
+	return fmt.Errorf("%w; the shared cache volume prefixes every key with %d bytes naming the volume, so the key itself has that much less room",
+		err, len(scoped)-len(key))
+}
+
+// unscopedCacheKey is a key as the workflow wrote it, with this volume's partition
+// taken back off.
+//
+// Only this volume's own prefix: a key that does not carry it is returned untouched, so
+// an entry stored before the partition existed, or by an installation without a volume,
+// still reads as itself.
+func unscopedCacheKey(key string) string {
+	id := os.Getenv(volume.EnvVolumeID)
+	if id == "" {
+		return key
+	}
+	unscoped, found := strings.CutPrefix(key, id+"/")
+	if !found {
+		return key
+	}
+	return unscoped
 }

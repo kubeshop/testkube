@@ -71,6 +71,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/testworkflowexecutiontelemetry"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
+	"github.com/kubeshop/testkube/pkg/executioncache/volume"
 	gitinformer "github.com/kubeshop/testkube/pkg/git/informer"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -100,11 +101,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
-func init() {
-	flag.Parse()
-}
-
 func main() {
+	// Parsed here rather than from an init, which ran before testing registered its own
+	// flags and so made the whole package refuse to be tested: every `go test` of it
+	// died on "flag provided but not defined: -test.testlogfile". Nothing between init
+	// and here reads a flag, so the binary behaves as it always did.
+	flag.Parse()
+
 	startTime := time.Now()
 	log.DefaultLogger.Info("starting Testkube API Server")
 	log.DefaultLogger.Infow("version info", "version", version.Version, "commit", version.Commit)
@@ -1016,6 +1019,118 @@ func main() {
 		})
 	} else {
 		log.DefaultLogger.Infow("Not configured to handle cronjobs")
+	}
+
+	// The shared step-cache volume needs its own expiry. The object store expires the
+	// pointers through the bucket lifecycle rule the cache prefix already carries, but
+	// a volume has no lifecycle rules and, unlike a bucket, a fixed capacity - so
+	// without this it fills once and then every save fails forever.
+	//
+	// Leader-gated because one agent sweeping is enough and the work is idempotent, and
+	// run here rather than in the control plane because the control plane is not
+	// necessarily in this cluster and so cannot reach the volume at all.
+	//
+	// It runs wherever the volume is mounted, in every mode: the disk is written to in
+	// every mode, so it has to be bounded in every mode. What differs by mode is whether
+	// the objects pointing at these entries are known to expire too, which
+	// StepCacheVolumeEnabled warns about rather than gates on.
+	if commons.StepCacheVolumeEnabled(cfg) {
+		// Retention is raised to however long a pointer can still be served, rather
+		// than warned about and used as given.
+		//
+		// The ordering is not a preference: the object store decides when a pointer
+		// stops being served, and an entry deleted while its pointer is still stored
+		// turns every hit on that key into a miss the restore cannot explain - and the
+		// key is immutable, so no later run can replace it for as long as the pointer
+		// survives. Wasting space until the next sweep is the strictly recoverable
+		// direction, so a misconfiguration is resolved that way instead of being left
+		// to produce a cache that answers wrongly.
+		//
+		// Both lifecycle rules decide that, not just the cache one: the bucket-wide
+		// rule is deliberately left unfiltered and so covers cache objects too, which
+		// SetExpirationPolicies documents. With STORAGE_CACHE_EXPIRATION disabled a
+		// pointer therefore still lives STORAGE_EXPIRATION days, and comparing against
+		// the cache rule alone would sweep entries weeks ahead of their pointers.
+		//
+		// Where nothing expires a pointer at all, there is no lifetime to raise retention
+		// to and PointerLifetime says so by returning zero, which no retention is below.
+		// StepCacheVolumeEnabled has already warned in that case.
+		retention := time.Duration(cfg.TestkubeStepCacheVolumeRetentionDays) * 24 * time.Hour
+
+		// A retention of zero or less disables the sweep outright - Sweeper.Sweep
+		// returns at once for it - and the chart takes this number without validating
+		// it, so one rendering would leave a volume the whole cluster shares growing
+		// with nothing ever reclaiming it. The default is used instead of refusing to
+		// start, because a cache setting is not worth withholding the agent over.
+		if retention <= 0 {
+			log.DefaultLogger.Warnw(
+				"step cache volume retention is not a positive number of days, which would leave the volume unswept; using the default instead",
+				"configuredRetentionDays", cfg.TestkubeStepCacheVolumeRetentionDays,
+				"retention", defaultStepCacheRetention,
+			)
+			retention = defaultStepCacheRetention
+		}
+
+		if pointerTTL, bounded := volume.PointerLifetime(cfg.StorageCacheExpiration, cfg.StorageExpiration); bounded {
+			// The configured days are not a deadline. S3 and the stores that follow it
+			// add them to the object's creation time and then round up to the next UTC
+			// midnight, so a one-day rule keeps an object for up to two days, and the
+			// removal after that is asynchronous and may lag further still. Sweeping on
+			// the configured number alone would take the entry while its pointer was
+			// still being served.
+			served := pointerTTL + stepCacheLifecycleMargin
+			if retention < served {
+				log.DefaultLogger.Warnw(
+					"step cache volume retention is shorter than the object store may go on serving cache pointers for; raising it, because deleting an entry whose pointer is still stored turns hits into unexplained misses",
+					"configuredRetentionDays", cfg.TestkubeStepCacheVolumeRetentionDays,
+					"cacheExpirationDays", cfg.StorageCacheExpiration,
+					"bucketExpirationDays", cfg.StorageExpiration,
+					"retention", served,
+				)
+				retention = served
+			}
+		}
+
+		// Matching the pointer's lifetime is not enough on its own, because the two
+		// clocks do not start together. The sweep ages an inbox from the rename that
+		// commits an entry, while the pointer naming it only exists once the upload
+		// after that rename has succeeded - a grant, then up to five attempts of up to
+		// thirty minutes each. Retention equal to the pointer's lifetime therefore
+		// lets the entry go first, by however long publishing took, and a pointer
+		// naming an entry that is gone is a key that misses until the object expires,
+		// which nothing can shorten because the object is immutable.
+		retention += stepCachePublicationGrace
+
+		// What this agent knows about its own running executions, so that its sweep
+		// does not depend on reading that back out of a lease file the step's own
+		// container may have made unwritable.
+		live := &liveInboxes{}
+
+		sweeper := &volume.Sweeper{
+			Root:      cfg.TestkubeStepCacheVolumeMountPath,
+			Retention: retention,
+			Interval:  cfg.TestkubeStepCacheVolumeSweepInterval,
+			LeaseTTL:  stepCacheLeaseTTL,
+			Protected: live.contains,
+			OnError: func(err error) {
+				log.DefaultLogger.Errorw("failed to sweep the step cache volume", "error", err)
+			},
+		}
+		leaderTasks = append(leaderTasks, leader.Task{
+			Name: "step-cache-volume-sweeper",
+			Start: func(taskCtx context.Context) error {
+				// Renewed before the first sweep, not alongside it, and the sweep does
+				// not start until it succeeds: Sweeper.Run sweeps as soon as it starts,
+				// and an agent that has just taken over holds no leases yet - every live
+				// inbox would look abandoned, and be unlinked from under the pod still
+				// writing to it.
+				if !awaitStepCacheLeases(taskCtx, executionWorker, cfg.TestkubeStepCacheVolumeMountPath, live) {
+					return nil
+				}
+				go runStepCacheLeaseRenewal(taskCtx, executionWorker, cfg.TestkubeStepCacheVolumeMountPath, live)
+				return sweeper.Run(taskCtx)
+			},
+		})
 	}
 
 	g.Go(func() error {

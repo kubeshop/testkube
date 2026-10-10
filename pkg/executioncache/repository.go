@@ -38,6 +38,12 @@ type SaveRequest struct {
 	Scope Scope
 	// Size is the compressed size about to be uploaded, so that a quota can be
 	// refused before the transfer rather than part-way through it.
+	//
+	// It measures the object, not the cached tree, and the two differ by more than
+	// compression where an agent keeps entries on a shared volume: the object is then
+	// a pointer of a few hundred bytes and the tree never reaches the bucket at all.
+	// A quota reading this is therefore counting stored bytes, which is what it is
+	// for - it is not a bound on how large a cache may be. That bound is the agent's.
 	Size int64
 }
 

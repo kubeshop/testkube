@@ -268,6 +268,16 @@ spec:
             - name: TESTKUBE_EMPTYDIR_SIZE_LIMIT
               value: "{{ .Values.emptyDirSizeLimit }}"
             {{- end }}
+            {{- if and .Values.stepCacheVolume.enabled .Values.stepCacheVolume.claimName }}
+            - name: TESTKUBE_STEP_CACHE_VOLUME_CLAIM
+              value: "{{ .Values.stepCacheVolume.claimName }}"
+            - name: TESTKUBE_STEP_CACHE_VOLUME_MOUNT_PATH
+              value: "{{ .Values.stepCacheVolume.mountPath }}"
+            - name: TESTKUBE_STEP_CACHE_VOLUME_RETENTION_DAYS
+              value: "{{ .Values.stepCacheVolume.retentionDays }}"
+            - name: TESTKUBE_STEP_CACHE_VOLUME_SWEEP_INTERVAL
+              value: "{{ .Values.stepCacheVolume.sweepInterval }}"
+            {{- end }}
             - name: ENABLE_K8S_CONTROLLERS
               value: "{{ .Values.next.controllers.enabled }}"
             - name: EXPORT_ARCHIVE_MAX_SIZE
@@ -330,6 +340,12 @@ spec:
           volumeMounts:
             - mountPath: /tmp
               name: testkube-tmp
+            {{- if and .Values.stepCacheVolume.enabled .Values.stepCacheVolume.claimName }}
+            # Mounted here so the expiry sweep can reach the volume. The control plane
+            # is not necessarily in this cluster, so this is the only component that can.
+            - mountPath: {{ .Values.stepCacheVolume.mountPath }}
+              name: testkube-step-cache
+            {{- end }}
             {{- if .Values.nats.embedded }}
             - mountPath: /app/nats
               name: testkube-nats
@@ -368,6 +384,11 @@ spec:
           securityContext: {{ include "testkube-api.containerSecurityContext" . | nindent 12 }}
       securityContext: {{ include "testkube-api.podSecurityContext" . | nindent 8 }}
       volumes:
+        {{- if and .Values.stepCacheVolume.enabled .Values.stepCacheVolume.claimName }}
+        - name: testkube-step-cache
+          persistentVolumeClaim:
+            claimName: {{ .Values.stepCacheVolume.claimName }}
+        {{- end }}
         - name: testkube-tmp
           {{- if .Values.emptyDirSizeLimit }}
           emptyDir:
