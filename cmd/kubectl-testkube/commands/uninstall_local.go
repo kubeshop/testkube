@@ -119,13 +119,23 @@ func runUninstallLocal(cmd *cobra.Command, deleteData, yes bool) {
 		"data_deleted": dataDeleted, "duration_s": int(time.Since(start).Seconds())})
 	defer waitForEvents(tracker)
 	if !found && !removed && !dataDeleted {
-		ui.Printf("  Nothing to uninstall: no local Testkube found.\n")
+		if !localinstall.HasData() {
+			ui.Printf("  Nothing to uninstall: no local Testkube found.\n")
+			return
+		}
+		ui.Printf("  Testkube is already uninstalled.\n")
+		printKeptData("To delete it")
 		return
 	}
 	ui.Printf("\n  Testkube is uninstalled.\n")
+	printKeptData("To delete it too")
+}
+
+// A second run must still point at kept data.
+func printKeptData(lead string) {
 	if localinstall.HasData() {
-		ui.Printf("  Your data is kept in ~/.testkube/data. `testkube install local` uses it again.\n" +
-			"  To delete it too: testkube uninstall local --delete-data\n")
+		ui.Printf("  Your data is kept in ~/.testkube/data. `testkube install local` uses it again.\n"+
+			"  %s: testkube uninstall local --delete-data\n", lead)
 	}
 }
 
