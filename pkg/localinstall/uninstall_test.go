@@ -105,3 +105,15 @@ func TestDeleteData_StuckFilesKeepThePasswordsAndOfferSudo(t *testing.T) {
 	assert.Equal(t, "sudo rm -rf '"+filepath.Join(dir, "data")+"'", sudo)
 	assert.FileExists(t, filepath.Join(dir, "secrets.json"), "kept while data remains")
 }
+
+func TestDeleteData_OnlyLeftoverPasswordsIsNotDataDeleted(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), ".testkube")
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "secrets.json"), []byte("{}"), 0o600))
+
+	removed, _, err := deleteData(context.Background(), dir, nil)
+
+	require.NoError(t, err)
+	assert.False(t, removed, "no data folder, so no \"data deleted\" row")
+	assert.NoFileExists(t, filepath.Join(dir, "secrets.json"))
+}

@@ -63,8 +63,10 @@ func deleteData(ctx context.Context, dir string, run runFunc) (removed bool, sud
 	secrets := filepath.Join(dir, "secrets.json")
 	info, err := os.Lstat(data)
 	switch {
+	// A leftover passwords file goes quietly; there was no data.
 	case errors.Is(err, fs.ErrNotExist):
-		return removeIfThere(secrets), "", nil
+		removeIfThere(secrets)
+		return false, "", nil
 	case err != nil:
 		return false, "", err
 	// Docker follows a symlinked mount source: never delete through one.
