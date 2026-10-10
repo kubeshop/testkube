@@ -541,15 +541,32 @@ func (r *TestWorkflowResult) HealTimestamps(sigSequence []TestWorkflowSignature,
 //
 // The reasonCode is the code for the stop. The step that gets the termination status also gets the code, unless it
 // already holds one. A step that the stop skipped gets no code, because it did not run and has no cause of its own.
-func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSignature, errorStr, defaultErrorStr, terminationCode, reasonCode string) {
+//
+// With causes, the function returns the plain cause of each step that got the termination message, by the
+// reference of the step. The initialization step has an empty reference. The message of these steps is now the
+// termination sentence, so the classifier reads their cause from this map. Without causes, it returns nil.
+func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSignature, errorStr, defaultErrorStr, terminationCode, reasonCode string, causes *StopCauses) map[string]string {
 	// The stored message must stay plain text. The API and telemetry read it without a terminal renderer.
-	stop := termination{code: terminationCode, reason: errorStr, defaultReason: defaultErrorStr, reasonCode: reasonCode}
+	stop := termination{code: terminationCode, reason: errorStr, defaultReason: defaultErrorStr, reasonCode: reasonCode, causes: causes}
 
 	// Create marker to know if there is any step marked as aborted or canceled already
 	aborted := false
 	canceled := false
 	// stepStopped is true when a leaf step before the current one stopped
 	stepStopped := false
+	var ended map[string]string
+	if causes != nil {
+		ended = map[string]string{}
+	}
+	// end writes the termination message into the step, and records its plain cause.
+	end := func(ref string, step *TestWorkflowStepResult) {
+		var plain string
+		step.ErrorMessage, plain = stop.render(step.ErrorMessage, causes.written(ref))
+		step.ErrorReason = stop.reasonWithCause(step.ErrorReason)
+		if ended != nil {
+			ended[ref] = plain
+		}
+	}
 
 	// Check the initialization step
 	if !r.Initialization.Status.Finished() || r.Initialization.Status.Aborted() || r.Initialization.Status.Canceled() {
@@ -560,8 +577,7 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 			aborted = true
 			r.Initialization.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
 		}
-		r.Initialization.ErrorMessage = stop.messageWithCause(r.Initialization.ErrorMessage)
-		r.Initialization.ErrorReason = stop.reasonWithCause(r.Initialization.ErrorReason)
+		end("", r.Initialization)
 	}
 
 	// Check all the executable steps in the sequence
@@ -600,8 +616,7 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 				aborted = true
 				step.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
 			}
-			step.ErrorMessage = stop.messageWithCause(step.ErrorMessage)
-			step.ErrorReason = stop.reasonWithCause(step.ErrorReason)
+			end(ref, &step)
 		}
 		r.Steps[ref] = step
 	}
@@ -659,6 +674,7 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 		}
 		r.Steps[ref] = step
 	}
+	return ended
 }
 
 // termination is the stop that HealAbortedOrCanceled records, with the reason that the caller passed.
@@ -667,6 +683,7 @@ type termination struct {
 	reason        string
 	defaultReason string
 	reasonCode    string
+	causes        *StopCauses
 }
 
 // terminationPrefix starts every termination sentence, for all termination codes.
@@ -683,25 +700,40 @@ func (t termination) message() string {
 	return fmt.Sprintf("%s (%s)", t.sentence(), t.reason)
 }
 
-// messageWithCause puts a cause that the step already holds into the termination message.
-func (t termination) messageWithCause(existing string) string {
+// render returns the termination message for a step that held the existing message, and the plain cause of the step
+// for the status details. Both come from the same values. The written cause is the cause that the runner wrote into
+// the step, so its plain text does not need the words of its code. A held message that the runner did not write keeps
+// its text as written, because its writer chose the words. The plain cause is empty without causes.
+func (t termination) render(existing string, written *Cause) (message, plain string) {
 	switch {
 	case existing == "" || existing == t.defaultReason:
-		return t.message()
+		return t.message(), t.causes.ending()
 	case strings.HasPrefix(existing, terminationPrefix):
 		// An earlier heal already wrote a termination, also with another code. A recovery path can heal the same result again.
-		return existing
+		return existing, existing
 	}
 	// A Kubernetes message can end with a period, and the cause follows the reason after a colon.
 	cause := strings.TrimRight(existing, ". ")
 	if t.reason == "" || t.reason == existing || t.reason == t.defaultReason {
 		// A caller can pass the recorded cause as the reason. The default reason adds no information to a cause.
-		return fmt.Sprintf("%s (%s)", t.sentence(), cause)
+		message = fmt.Sprintf("%s (%s)", t.sentence(), cause)
+	} else {
+		message = fmt.Sprintf("%s (%s: %s)", t.sentence(), t.reason, cause)
 	}
-	return fmt.Sprintf("%s (%s: %s)", t.sentence(), t.reason, cause)
+	held := existing
+	if written != nil && existing == written.String() {
+		held = written.Message
+	}
+	if held == "" || held == t.defaultReason {
+		return message, t.causes.ending()
+	}
+	if lead := t.causes.lead(); lead != "" {
+		return message, lead + ": " + held
+	}
+	return message, held
 }
 
-// reasonWithCause keeps the code of a cause that the step already holds, as messageWithCause keeps
+// reasonWithCause keeps the code of a cause that the step already holds, as render keeps
 // its message. The cause is what the user fixes, and the stop only ended the execution.
 func (t termination) reasonWithCause(existing string) string {
 	if existing != "" {

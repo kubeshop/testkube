@@ -54,3 +54,58 @@ func TestStop_Sentence(t *testing.T) {
 		})
 	}
 }
+
+func TestStopCauses(t *testing.T) {
+	written := &Cause{Reason: string(StopReasonVolumeMountFailed), Message: "secret \"x\" not found"}
+	runnerStop := Stop{Actor: StopActorRunner, Reason: StopReasonInitTimeout}
+	tests := []struct {
+		name        string
+		causes      *StopCauses
+		wantWritten *Cause
+		wantEnding  string
+		wantLead    string
+	}{
+		{
+			name: "no causes give nothing",
+		},
+		{
+			name:        "the cause that the runner wrote into the step",
+			causes:      &StopCauses{Written: map[string]*Cause{"": written}},
+			wantWritten: written,
+		},
+		{
+			name:       "the error that Kubernetes reported ends the execution",
+			causes:     &StopCauses{Stop: runnerStop, Ending: "Job timed out after 60 seconds"},
+			wantEnding: "Job timed out after 60 seconds",
+			wantLead:   "Job timed out after 60 seconds",
+		},
+		{
+			name:       "without an error in its own words, the free text of the stop ends the execution",
+			causes:     &StopCauses{Stop: Stop{Actor: StopActorControlPlane, Reason: StopReasonExecutionTimeout, Detail: "after 1h"}},
+			wantEnding: "after 1h",
+			wantLead:   "after 1h",
+		},
+		{
+			name:       "the error that Kubernetes reported wins over the free text of the stop",
+			causes:     &StopCauses{Stop: Stop{Actor: StopActorControlPlane, Reason: StopReasonExecutionTimeout, Detail: "after 1h"}, Ending: "Job timed out after 3600 seconds"},
+			wantEnding: "Job timed out after 3600 seconds",
+			wantLead:   "Job timed out after 3600 seconds",
+		},
+		{
+			name:     "without an ending, the reason of the stop leads the cause",
+			causes:   &StopCauses{Stop: runnerStop},
+			wantLead: "the first step did not start before the initialization timeout of the workflow",
+		},
+		{
+			name:   "a stop that a person decided adds no lead, because the heading names the cancel",
+			causes: &StopCauses{Stop: Stop{Actor: StopActorUser, Reason: StopReasonUserCancel}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wantWritten, tt.causes.written(""))
+			assert.Equal(t, tt.wantEnding, tt.causes.ending())
+			assert.Equal(t, tt.wantLead, tt.causes.lead())
+		})
+	}
+}

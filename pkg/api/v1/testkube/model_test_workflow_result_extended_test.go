@@ -439,7 +439,7 @@ func TestTestWorkflowResult_HealAbortedOrCanceled(t *testing.T) {
 				Steps:          tt.steps,
 			}
 
-			r.HealAbortedOrCanceled(tt.sigSequence, tt.errorStr, defaultErrorStr, tt.terminationCode, tt.reasonCode)
+			r.HealAbortedOrCanceled(tt.sigSequence, tt.errorStr, defaultErrorStr, tt.terminationCode, tt.reasonCode, nil)
 
 			assert.Equal(t, tt.wantInit, stepWant{*r.Initialization.Status, r.Initialization.ErrorMessage})
 			gotSteps := make(map[string]stepWant, len(r.Steps))
@@ -449,6 +449,91 @@ func TestTestWorkflowResult_HealAbortedOrCanceled(t *testing.T) {
 			}
 			assert.Equal(t, tt.wantSteps, gotSteps)
 			assert.Equal(t, tt.wantInitReason, r.Initialization.ErrorReason)
+		})
+	}
+}
+
+func TestTestWorkflowResult_HealAbortedOrCanceled_Ended(t *testing.T) {
+	aborted := string(ABORTED_TestWorkflowStatus)
+	const defaultErrorStr = "Job has been aborted"
+	step := func(status TestWorkflowStepStatus, message string) TestWorkflowStepResult {
+		return TestWorkflowStepResult{Status: common.Ptr(status), ErrorMessage: message}
+	}
+	unschedulable := &Cause{Reason: string(StopReasonUnschedulable), Message: "0/1 nodes are available"}
+
+	tests := []struct {
+		name           string
+		initialization TestWorkflowStepResult
+		steps          map[string]TestWorkflowStepResult
+		sigSequence    []TestWorkflowSignature
+		errorStr       string
+		causes         *StopCauses
+		want           map[string]string
+	}{
+		{
+			name:           "an initialization step that held a cause gets the ending before it",
+			initialization: step(RUNNING_TestWorkflowStepStatus, "no node can run the pod"),
+			steps:          map[string]TestWorkflowStepResult{"a": step(QUEUED_TestWorkflowStepStatus, "")},
+			sigSequence:    []TestWorkflowSignature{{Ref: "a"}},
+			errorStr:       "OOMKilled",
+			causes:         &StopCauses{Stop: Stop{Code: aborted}, Ending: "OOMKilled"},
+			want:           map[string]string{"": "OOMKilled: no node can run the pod"},
+		},
+		{
+			name:           "a cause that the runner wrote gives its text without the words of its code",
+			initialization: step(RUNNING_TestWorkflowStepStatus, unschedulable.String()),
+			sigSequence:    []TestWorkflowSignature{{Ref: "a"}},
+			errorStr:       defaultErrorStr,
+			causes:         &StopCauses{Stop: Stop{Code: aborted}, Written: map[string]*Cause{"": unschedulable}},
+			want:           map[string]string{"": "0/1 nodes are available"},
+		},
+		{
+			name:           "the first running step without a cause gets the ending, and a later queued step is skipped",
+			initialization: step(PASSED_TestWorkflowStepStatus, ""),
+			steps: map[string]TestWorkflowStepResult{
+				"a": step(RUNNING_TestWorkflowStepStatus, ""),
+				"b": step(QUEUED_TestWorkflowStepStatus, ""),
+			},
+			sigSequence: []TestWorkflowSignature{{Ref: "a"}, {Ref: "b"}},
+			errorStr:    "OOMKilled",
+			causes:      &StopCauses{Stop: Stop{Code: aborted}, Ending: "OOMKilled"},
+			want:        map[string]string{"a": "OOMKilled"},
+		},
+		{
+			name:           "a step without a cause gets an empty plain cause when the error repeats a code",
+			initialization: step(PASSED_TestWorkflowStepStatus, ""),
+			steps:          map[string]TestWorkflowStepResult{"a": step(RUNNING_TestWorkflowStepStatus, "")},
+			sigSequence:    []TestWorkflowSignature{{Ref: "a"}},
+			errorStr:       "OOMKilled",
+			causes:         &StopCauses{Stop: Stop{Code: aborted}},
+			want:           map[string]string{"a": ""},
+		},
+		{
+			name:           "a step that the init process stopped with its own cause is not ended by the heal",
+			initialization: step(PASSED_TestWorkflowStepStatus, ""),
+			steps:          map[string]TestWorkflowStepResult{"a": step(ABORTED_TestWorkflowStepStatus, "the step did not finish within its timeout")},
+			sigSequence:    []TestWorkflowSignature{{Ref: "a"}},
+			errorStr:       "OOMKilled",
+			causes:         &StopCauses{Stop: Stop{Code: aborted}},
+			want:           map[string]string{},
+		},
+		{
+			name:           "without causes the heal returns no plain causes",
+			initialization: step(RUNNING_TestWorkflowStepStatus, "no node can run the pod"),
+			sigSequence:    []TestWorkflowSignature{{Ref: "a"}},
+			errorStr:       "OOMKilled",
+			want:           nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			initialization := tt.initialization
+			r := &TestWorkflowResult{Initialization: &initialization, Steps: tt.steps}
+
+			got := r.HealAbortedOrCanceled(tt.sigSequence, tt.errorStr, defaultErrorStr, aborted, "", tt.causes)
+
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
