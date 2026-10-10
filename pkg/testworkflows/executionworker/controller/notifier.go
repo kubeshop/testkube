@@ -416,6 +416,8 @@ func (n *notifier) End() {
 	// Mark as finished
 	n.ended = true
 
+	n.alignFinalCause()
+
 	// Ensure that the steps without the information are fulfilled and marked as aborted
 	n.fillGaps(true)
 
@@ -442,6 +444,31 @@ func (n *notifier) End() {
 
 	// The classifier reads the final result, so it runs after the reconcile settles the statuses.
 	n.result.StatusDetails = n.result.ClassifyStatus(n.sigSequence, stop)
+}
+
+// alignFinalCause writes the waiting cause that only the final list of events reports. A deleted
+// pod is finished, so CurrentCause reads no cause from it, but its events still hold the cause.
+// Only the initialization step gets it, because a pod that never started holds no other step, and
+// a cause that the step already holds stays.
+func (n *notifier) alignFinalCause() {
+	if n.state == nil || n.waitingStep() != constants.InitStepName {
+		return
+	}
+	step := n.stepResult(constants.InitStepName)
+	if step.ErrorMessage != "" || step.ErrorReason != "" {
+		return
+	}
+	cause := n.state.PodEvents().WaitingCause()
+	if cause == nil && n.state.Pod() == nil {
+		cause = n.state.JobEvents().WaitingCause()
+	}
+	if cause == nil {
+		return
+	}
+	step.ErrorMessage, step.ErrorReason = cause.String(), cause.Reason
+	n.setStepResult(constants.InitStepName, step)
+	// End reads this cause as it reads a cause of alignCause, so the classifier gets its plain text.
+	n.causeRef, n.causeValue = constants.InitStepName, cause
 }
 
 // writtenCauses returns the cause that alignCause wrote, by the reference that the heal and the
