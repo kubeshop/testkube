@@ -307,7 +307,12 @@ func (w *worker) Notifications(ctx context.Context, id string, opts executionwor
 				watcher.Close(n.Error)
 				return
 			}
-			watcher.Send(common.Ptr(n.Value.ToInternal()))
+			// The reader may stop reading once it is done (e.g. the client disconnected),
+			// so the send must give up on cancellation for the deferred cleanup to run.
+			if !watcher.SendWithContext(watchCtx, common.Ptr(n.Value.ToInternal())) {
+				watcher.Close(watchCtx.Err())
+				return
+			}
 		}
 		watcher.Close(nil)
 	}()
