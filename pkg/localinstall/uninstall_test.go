@@ -26,7 +26,7 @@ func TestRemoveFiles_KeepsDataToolsReportsAndConfig(t *testing.T) {
 		mk(rel)
 	}
 
-	removed, err := removeFiles(dir)
+	removed, err := removeFiles(dir, false)
 
 	require.NoError(t, err)
 	assert.True(t, removed)
@@ -39,7 +39,7 @@ func TestRemoveFiles_KeepsDataToolsReportsAndConfig(t *testing.T) {
 }
 
 func TestRemoveFiles_NothingThereIsNotAnError(t *testing.T) {
-	removed, err := removeFiles(t.TempDir())
+	removed, err := removeFiles(t.TempDir(), false)
 
 	assert.NoError(t, err)
 	assert.False(t, removed)
@@ -129,4 +129,16 @@ func TestShellQuote_SurvivesAQuoteInThePath(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, path, string(out))
+}
+
+func TestRemoveFiles_KeepsTheMarkWhenTheClusterCantBeChecked(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "cluster-id"), []byte("OURMARK"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "kind.yaml"), []byte("x"), 0o600))
+
+	_, err := removeFiles(dir, true)
+
+	require.NoError(t, err)
+	assert.FileExists(t, filepath.Join(dir, "cluster-id"), "a hidden cluster must stay ours")
+	assert.NoFileExists(t, filepath.Join(dir, "kind.yaml"))
 }

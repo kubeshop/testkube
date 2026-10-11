@@ -73,15 +73,21 @@ func runUninstallLocal(cmd *cobra.Command, deleteData, yes bool) {
 	}
 	tracker := newInstallTracker()
 	start := time.Now()
-	found := false
+	found, dockerHidden := false, false
 	docker := localinstall.NewChecker().CheckDocker(cmd.Context())
 	switch {
 	case docker.Status != localinstall.StatusFail:
 		found = removeCluster(cmd, tracker)
 	// The cluster went with Docker; only our files are left.
+	// Missing docker may only be hidden, e.g. WSL integration off.
 	case docker.Detail == "not found":
-		printCheckResult(localinstall.Result{Name: "cluster", Status: localinstall.StatusWarn, Detail: "skipped",
-			Hint: "Docker isn't installed, so there's no cluster left"})
+		dockerHidden = true
+		skipped := localinstall.Result{Name: "cluster", Status: localinstall.StatusWarn, Detail: "skipped",
+			Hint: "Docker isn't reachable from here, so it was left alone"}
+		if strings.Contains(docker.Fix, "WSL integration") {
+			skipped.Fix = docker.Fix
+		}
+		printCheckResult(skipped)
 	// Removing the mark now would orphan a cluster still there.
 	default:
 		docker.Fix = strings.Replace(docker.Fix, "Then run the installer again", "Then run `testkube uninstall local` again", 1)
@@ -90,16 +96,23 @@ func runUninstallLocal(cmd *cobra.Command, deleteData, yes bool) {
 		}
 		failUninstall(cmd.Context(), tracker, strings.ReplaceAll(docker.Detail, " ", "_"), docker)
 	}
-	removed, err := localinstall.RemoveFiles()
+	removed, err := localinstall.RemoveFiles(dockerHidden)
 	if err != nil {
 		failUninstall(cmd.Context(), tracker, "remove", localinstall.Result{Name: "files", Status: localinstall.StatusFail, Detail: "could not remove", Fix: err.Error()})
 	}
 	if removed {
-		printCheckResult(localinstall.Result{Name: "files", Status: localinstall.StatusPass, Detail: "removed",
-			Hint: "~/.testkube (cluster settings and caches)"})
+		hint := "~/.testkube (cluster settings and caches)"
+		if dockerHidden {
+			hint = "~/.testkube (caches)"
+		}
+		printCheckResult(localinstall.Result{Name: "files", Status: localinstall.StatusPass, Detail: "removed", Hint: hint})
 	}
 	dataDeleted := false
-	if deleteData {
+	if deleteData && dockerHidden {
+		printCheckResult(localinstall.Result{Name: "data", Status: localinstall.StatusWarn, Detail: "kept", Hint: "~/.testkube/data",
+			Fix: "The cluster may still use it. Run again once Docker is reachable."})
+	}
+	if deleteData && !dockerHidden {
 		var sudo string
 		dataDeleted, sudo, err = localinstall.DeleteData(cmd.Context())
 		if err != nil {
@@ -127,6 +140,10 @@ func runUninstallLocal(cmd *cobra.Command, deleteData, yes bool) {
 		}
 		ui.Printf("  Testkube is already uninstalled.\n")
 		printKeptData("To delete it")
+		return
+	}
+	if dockerHidden {
+		ui.Printf("\n  Not finished: run `testkube uninstall local` again once Docker is reachable.\n")
 		return
 	}
 	ui.Printf("\n  Testkube is uninstalled.\n")
