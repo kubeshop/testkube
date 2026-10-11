@@ -28,7 +28,7 @@ type kindFake struct {
 	storagePattern, createOut           string
 	applyErr, inspectErr, exportErr     error
 	startErr, rmErr                     error
-	nodes                               string
+	nodes, engine                       string
 	refusedWaits, createFails           int
 	calls                               []string
 }
@@ -45,6 +45,8 @@ func (f *kindFake) run(_ context.Context, name string, args ...string) ([]byte, 
 		return nil, f.exportErr
 	case args[0] == "ps":
 		return []byte(f.nodes), nil
+	case args[0] == "info":
+		return []byte(f.engine), nil
 	case args[0] == "rm":
 		return nil, f.rmErr
 	case args[0] == "inspect":
@@ -76,6 +78,7 @@ func TestClusterEnsure_ReusesOursOnly(t *testing.T) {
 	create := "kind create cluster --name testkube --config " + filepath.Join(dir, "kind.yaml") +
 		" --image " + nodeImage + " --kubeconfig " + kubeconfig + " --wait 2m"
 	storage := "docker exec testkube-control-plane kubectl --kubeconfig=/etc/kubernetes/admin.conf get storageclass standard -o jsonpath={.parameters.pathPattern}"
+	engine := "docker info --format {{.ID}} {{.Name}}"
 	tests := []struct {
 		name        string
 		clusters    string
@@ -85,12 +88,13 @@ func TestClusterEnsure_ReusesOursOnly(t *testing.T) {
 		{"our cluster is reused, not recreated", "kind\ntestkube\n", false, []string{
 			"kind get clusters",
 			"docker inspect -f {{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .Mounts}} testkube-control-plane",
+			engine,
 			"docker exec testkube-control-plane kubectl --kubeconfig=/etc/kubernetes/admin.conf wait --for=condition=Ready nodes --all --timeout=10s",
 			storage,
 			"kind export kubeconfig --name testkube --kubeconfig " + kubeconfig,
 		}},
-		{"a similar name is someone else's", "testkube-dev\n", true, []string{"kind get clusters", create, storage}},
-		{"no clusters at all", "No kind clusters found.\n", true, []string{"kind get clusters", create, storage}},
+		{"a similar name is someone else's", "testkube-dev\n", true, []string{"kind get clusters", engine, create, storage}},
+		{"no clusters at all", "No kind clusters found.\n", true, []string{"kind get clusters", engine, create, storage}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -321,8 +325,8 @@ func TestClusterEnsure_StoppedClusterIsStartedBeforeReading(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.True(t, state.Started)
-	assert.Equal(t, "docker start testkube-control-plane", fake.calls[2])
-	assert.Contains(t, fake.calls[3], "wait --for=condition=Ready")
+	assert.Equal(t, "docker start testkube-control-plane", fake.calls[3])
+	assert.Contains(t, fake.calls[4], "wait --for=condition=Ready")
 }
 
 func TestClusterEnsure_WaitsWhileTheAPIIsStillStarting(t *testing.T) {
@@ -433,4 +437,43 @@ func TestClusterRemove_DeletesOnlyOurCluster(t *testing.T) {
 			assert.Equal(t, tt.removed, slices.Contains(fake.calls, rm), "removed only when ours")
 		})
 	}
+}
+
+func TestClusterRemove_NothingHereIsntProofWhenAnotherDockerMadeIt(t *testing.T) {
+	tests := map[string]struct {
+		recorded string
+		wantErr  error
+	}{
+		"another Docker made it": {recorded: "AAA docker-desktop", wantErr: ClusterElsewhereError{Made: "docker-desktop", Active: "orbstack"}},
+		"this Docker made it":    {recorded: "BBB orbstack"},
+		"made before the record": {},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			if tt.recorded != "" {
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "cluster-engine"), []byte(tt.recorded), 0o600))
+			}
+			fake := &kindFake{engine: "BBB orbstack\n"}
+			c := &Cluster{kind: "kind", dir: dir, run: fake.run}
+
+			found, _, err := c.Remove(context.Background())
+
+			assert.False(t, found)
+			assert.Equal(t, tt.wantErr, err)
+		})
+	}
+}
+
+func TestClusterEnsure_RecordsWhichDockerMadeIt(t *testing.T) {
+	dir := t.TempDir()
+	fake := &kindFake{clusters: "No kind clusters found.\n", storagePattern: storagePathPattern, engine: "AAA docker-desktop\n"}
+	c := &Cluster{kind: "kind", dir: dir, kubeconfig: filepath.Join(dir, "kubeconfig"), portFree: allFree, run: fake.run}
+
+	_, _, err := c.Ensure(context.Background())
+
+	require.NoError(t, err)
+	data, err := os.ReadFile(filepath.Join(dir, "cluster-engine"))
+	require.NoError(t, err)
+	assert.Equal(t, "AAA docker-desktop", string(data))
 }

@@ -156,6 +156,7 @@ func (c *Cluster) Ensure(ctx context.Context) (ClusterState, string, error) {
 	if err := os.WriteFile(c.ownerFile(), []byte(owner), 0o600); err != nil {
 		return ClusterState{}, "", err
 	}
+	c.recordEngine(ctx)
 	config := filepath.Join(c.dir, "kind.yaml")
 	for attempt := 1; ; attempt++ {
 		if err := os.WriteFile(config, []byte(kindConfig(ports, data, owner)), 0o644); err != nil {
@@ -186,6 +187,10 @@ func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 	running, ports, why, err := c.owned(ctx)
 	if err != nil {
 		return state, why, err
+	}
+	// Clusters made before the record existed get one now.
+	if _, err := os.Stat(c.engineFile()); err != nil {
+		c.recordEngine(ctx)
 	}
 	state.Ports = ports
 	var out []byte
@@ -234,7 +239,7 @@ func (c *Cluster) Remove(ctx context.Context) (found bool, out string, err error
 		return false, string(nodes), ErrClusterInspect
 	}
 	if strings.TrimSpace(string(nodes)) == "" {
-		return false, "", nil
+		return false, "", c.sameEngine(ctx)
 	}
 	if _, _, why, err := c.owned(ctx); err != nil {
 		return true, why, err
@@ -273,6 +278,48 @@ func ownedSettings(inspect, owner string) (running bool, ports Ports, ok bool) {
 		ports[cp.name] = host
 	}
 	return lines[0] == "true", ports, true
+}
+
+// With two Dockers, the cluster lives in only one.
+type ClusterElsewhereError struct{ Made, Active string }
+
+func (e ClusterElsewhereError) Error() string {
+	return fmt.Sprintf("the cluster was made in Docker %q, but %q is active", e.Made, e.Active)
+}
+
+func (c *Cluster) engineFile() string {
+	return filepath.Join(c.dir, "cluster-engine")
+}
+
+// ID survives restarts; Name is what people recognise.
+func (c *Cluster) engine(ctx context.Context) (id, name string, err error) {
+	out, err := c.run(ctx, "docker", "info", "--format", "{{.ID}} {{.Name}}")
+	if err != nil {
+		return "", "", err
+	}
+	id, name, _ = strings.Cut(strings.TrimSpace(string(out)), " ")
+	return id, name, nil
+}
+
+// Best effort: without it uninstall just can't spot a switch.
+func (c *Cluster) recordEngine(ctx context.Context) {
+	if id, name, err := c.engine(ctx); err == nil && id != "" {
+		_ = os.WriteFile(c.engineFile(), []byte(id+" "+name), 0o600)
+	}
+}
+
+// No cluster here proves nothing if another Docker made it.
+func (c *Cluster) sameEngine(ctx context.Context) error {
+	made, err := os.ReadFile(c.engineFile())
+	if err != nil {
+		return nil
+	}
+	madeID, madeName, _ := strings.Cut(strings.TrimSpace(string(made)), " ")
+	id, name, err := c.engine(ctx)
+	if err != nil || id == madeID {
+		return nil
+	}
+	return ClusterElsewhereError{Made: madeName, Active: name}
 }
 
 func (c *Cluster) ownerFile() string {
