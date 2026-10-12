@@ -453,6 +453,9 @@ func TestClusterRemove_DeletesOnlyOurCluster(t *testing.T) {
 	}
 }
 
+// docker inspect output for our node, as ownedSettings reads it.
+const oursElsewhere = "true\n" + ourBindings + "\n" + `[{"Destination":"/testkube/owner/OURMARK"}]`
+
 func TestClusterRemove_NothingHereStillChecksOtherRunningDockers(t *testing.T) {
 	was := contextSearchTime
 	contextSearchTime = 100 * time.Millisecond
@@ -461,15 +464,18 @@ func TestClusterRemove_NothingHereStillChecksOtherRunningDockers(t *testing.T) {
 		others  map[string]string
 		wantErr error
 	}{
-		"running in another Docker":    {others: map[string]string{"orbstack": "abc123\n"}, wantErr: ClusterElsewhereError{In: "orbstack", Active: "desktop-linux"}},
-		"after a Docker reset":         {others: map[string]string{"default": ""}},
-		"other Docker stopped or gone": {others: map[string]string{"colima": "down"}},
-		"remote Docker never answers":  {others: map[string]string{"remote": "hangs"}},
+		"ours in another Docker":           {others: map[string]string{"orbstack": oursElsewhere}, wantErr: ClusterElsewhereError{In: "orbstack", Active: "desktop-linux"}},
+		"someone else's in another Docker": {others: map[string]string{"orbstack": strings.Replace(oursElsewhere, "OURMARK", "THEIRS", 1)}},
+		"after a Docker reset":             {others: map[string]string{"default": ""}},
+		"other Docker stopped or gone":     {others: map[string]string{"colima": "down"}},
+		"remote Docker never answers":      {others: map[string]string{"remote": "hangs"}},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			fake := &kindFake{active: "desktop-linux", others: tt.others}
-			c := &Cluster{kind: "kind", dir: t.TempDir(), run: fake.run}
+			dir := t.TempDir()
+			fake := ours(t, dir)
+			fake.active, fake.others = "desktop-linux", tt.others
+			c := &Cluster{kind: "kind", dir: dir, run: fake.run}
 
 			found, _, err := c.Remove(context.Background())
 
@@ -482,8 +488,10 @@ func TestClusterRemove_NothingHereStillChecksOtherRunningDockers(t *testing.T) {
 func TestClusterRemove_CtrlCMidSearchIsNotGone(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	fake := &kindFake{active: "desktop-linux", others: map[string]string{"remote": "hangs"}}
-	c := &Cluster{kind: "kind", dir: t.TempDir(), run: fake.run}
+	dir := t.TempDir()
+	fake := ours(t, dir)
+	fake.active, fake.others = "desktop-linux", map[string]string{"remote": "hangs"}
+	c := &Cluster{kind: "kind", dir: dir, run: fake.run}
 
 	_, _, err := c.Remove(ctx)
 

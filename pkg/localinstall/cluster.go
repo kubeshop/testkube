@@ -210,14 +210,16 @@ func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 	return state, "", nil
 }
 
+// Line order must match ownedSettings parsing.
+const nodeInspectFormat = "{{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .Mounts}}"
+
 // Saved settings survive a stop: check before touching it.
 func (c *Cluster) owned(ctx context.Context) (running bool, ports Ports, out string, err error) {
 	owner, err := os.ReadFile(c.ownerFile())
 	if err != nil || len(owner) == 0 {
 		return false, nil, "", ErrClusterNotOurs
 	}
-	inspect, err := c.run(ctx, "docker", "inspect", "-f",
-		"{{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .Mounts}}", nodeName)
+	inspect, err := c.run(ctx, "docker", "inspect", "-f", nodeInspectFormat, nodeName)
 	if err != nil {
 		return false, nil, string(inspect), ErrClusterInspect
 	}
@@ -292,6 +294,10 @@ var contextSearchTime = 2 * time.Second
 
 // An ID record breaks on a Docker reset; search instead.
 func (c *Cluster) findElsewhere(ctx context.Context) error {
+	owner, err := os.ReadFile(c.ownerFile())
+	if err != nil || len(owner) == 0 {
+		return nil
+	}
 	active, err := c.run(ctx, "docker", "context", "show")
 	if err != nil {
 		return nil
@@ -311,8 +317,9 @@ func (c *Cluster) findElsewhere(ctx context.Context) error {
 		}
 		wg.Go(func() {
 			// A silent Docker runs nothing that uses our data.
-			out, err := c.run(search, "docker", "--context", name, "ps", "-a", "-q", "--filter", "label=io.x-k8s.kind.cluster="+ClusterName)
-			if err == nil && strings.TrimSpace(string(out)) != "" {
+			out, err := c.run(search, "docker", "--context", name, "inspect", "-f", nodeInspectFormat, nodeName)
+			// Someone else's "testkube" there must not block our cleanup.
+			if _, _, ours := ownedSettings(string(out), string(owner)); err == nil && ours {
 				mu.Lock()
 				found = append(found, name)
 				mu.Unlock()
