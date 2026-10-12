@@ -178,8 +178,26 @@ func (c *Cluster) Ensure(ctx context.Context) (ClusterState, string, error) {
 		busy[port] = true
 		ports = pickPorts(free)
 	}
+	c.useMirror(ctx)
 	why, err := c.fixStorage(ctx)
 	return ClusterState{Created: true, Ports: ports}, why, err
+}
+
+// Google's Docker Hub copy has no per-network pull limit.
+const dockerHubMirror = `server = "https://registry-1.docker.io"
+
+[host."https://mirror.gcr.io"]
+  capabilities = ["pull", "resolve"]
+  dial_timeout = "3s"
+`
+
+// Best effort: without it, images come from Docker Hub directly.
+func (c *Cluster) useMirror(ctx context.Context) {
+	// A blocked mirror costs a minute per image; probe first.
+	_, _ = c.run(ctx, "docker", "exec", nodeName, "sh", "-c",
+		`curl -s -m 5 -o /dev/null https://mirror.gcr.io/v2/ && mkdir -p /etc/containerd/certs.d/docker.io && `+
+			`printf '%s' "$1" > /etc/containerd/certs.d/docker.io/hosts.toml`,
+		"_", dockerHubMirror)
 }
 
 func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
@@ -449,7 +467,10 @@ func portFree(port int) bool {
 // 127.0.0.1 only: a trial must not be reachable from the network.
 func kindConfig(ports Ports, dataDir, owner string) string {
 	var b strings.Builder
-	b.WriteString("kind: Cluster\napiVersion: kind.x-k8s.io/v1alpha4\nnodes:\n- role: control-plane\n  extraPortMappings:\n")
+	b.WriteString("kind: Cluster\napiVersion: kind.x-k8s.io/v1alpha4\n")
+	// Lets useMirror's file take effect; containerd ignores it otherwise.
+	b.WriteString("containerdConfigPatches:\n- |-\n  [plugins.\"io.containerd.grpc.v1.cri\".registry]\n    config_path = \"/etc/containerd/certs.d\"\n")
+	b.WriteString("nodes:\n- role: control-plane\n  extraPortMappings:\n")
 	for _, cp := range clusterPorts {
 		fmt.Fprintf(&b, "  - containerPort: %d\n    hostPort: %d\n    listenAddress: 127.0.0.1\n", cp.inNodes, ports[cp.name])
 	}

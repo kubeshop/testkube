@@ -39,6 +39,9 @@
 // Re-runs reuse it only when it carries the random
 // mark saved in ~/.testkube/cluster-id at creation,
 // read from its mounts before starting a stopped node.
+// A new cluster pulls Docker Hub images through mirror.gcr.io
+// when it answers, falling back to Docker Hub, to avoid
+// Docker Hub's per-network pull limit.
 //
 // Testkube (see Installer) comes from pinned charts and
 // embedded values, installed by our helm (see Helm).
