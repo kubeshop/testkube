@@ -94,6 +94,7 @@ func TestClusterEnsure_ReusesOursOnly(t *testing.T) {
 	create := "kind create cluster --name testkube --config " + filepath.Join(dir, "kind.yaml") +
 		" --image " + nodeImage + " --kubeconfig " + kubeconfig + " --wait 2m"
 	storage := "docker exec testkube-control-plane kubectl --kubeconfig=/etc/kubernetes/admin.conf get storageclass standard -o jsonpath={.parameters.pathPattern}"
+	mirror := "docker exec testkube-control-plane sh -c curl -s -m 5 -o /dev/null https://mirror.gcr.io/v2/ && mkdir -p /etc/containerd/certs.d/docker.io && printf '%s' \"$1\" > /etc/containerd/certs.d/docker.io/hosts.toml _ " + dockerHubMirror
 	tests := []struct {
 		name        string
 		clusters    string
@@ -107,8 +108,8 @@ func TestClusterEnsure_ReusesOursOnly(t *testing.T) {
 			storage,
 			"kind export kubeconfig --name testkube --kubeconfig " + kubeconfig,
 		}},
-		{"a similar name is someone else's", "testkube-dev\n", true, []string{"kind get clusters", create, storage}},
-		{"no clusters at all", "No kind clusters found.\n", true, []string{"kind get clusters", create, storage}},
+		{"a similar name is someone else's", "testkube-dev\n", true, []string{"kind get clusters", create, mirror, storage}},
+		{"no clusters at all", "No kind clusters found.\n", true, []string{"kind get clusters", create, mirror, storage}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
