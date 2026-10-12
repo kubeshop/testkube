@@ -230,3 +230,30 @@ func withEvents(s clusterSnapshot, events ...corev1.Event) clusterSnapshot {
 	s.events = events
 	return s
 }
+
+func TestProgressOf_CountsWhatUsersWouldCallReady(t *testing.T) {
+	retried := migrationJob(batchv1.JobComplete, installStart.Add(3*time.Minute))
+	retried.Name, retried.CreationTimestamp = "testkube-enterprise-api-migration-2", metav1.NewTime(installStart.Add(2*time.Minute))
+	running := retried
+	running.Status = batchv1.JobStatus{}
+	rerunAPI := testPod("api", func(p *corev1.Pod) { p.Name, p.CreationTimestamp = "api-new", metav1.NewTime(installEnd) })
+	tests := map[string]struct {
+		s    clusterSnapshot
+		want int
+	}{
+		"everything up":                       {s: healthy(), want: 10},
+		"a rerun's new pod isn't ready yet":   {s: withPods(healthy(), rerunAPI), want: 9},
+		"database setup failed, retry passed": {s: withJobs(healthy(), migrationJob(batchv1.JobFailed, installStart), retried), want: 10},
+		"database setup retry still running":  {s: withJobs(healthy(), running), want: 9},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, Progress{Ready: tt.want, Total: 10}, progressOf(tt.s))
+		})
+	}
+}
+
+func withJobs(s clusterSnapshot, jobs ...batchv1.Job) clusterSnapshot {
+	s.jobs = jobs
+	return s
+}

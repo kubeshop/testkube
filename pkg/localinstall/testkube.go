@@ -55,6 +55,8 @@ type Installer struct {
 	// For the failure report; the CLI knows its own version.
 	cliVersion string
 	docker     func(ctx context.Context) DockerResources
+	// Called from the poll goroutine, every few seconds.
+	OnProgress func(Progress)
 }
 
 func NewInstaller(cliVersion string) (*Installer, error) {
@@ -199,7 +201,7 @@ func (i *Installer) watchedHelm(ctx context.Context, since time.Time, args ...st
 			case <-ticker.C:
 			}
 			// Logs only matter for the final message.
-			st, ok := i.diagnose(helmCtx, since, false)
+			st, ok := i.diagnose(helmCtx, since, false, i.OnProgress)
 			switch {
 			case !ok || !stopsEarly[st.Reason]:
 				seen = Stuck{}
@@ -234,14 +236,14 @@ func (i *Installer) explain(ctx context.Context, out string, err error, since ti
 	if ctx.Err() != nil || !errors.Is(err, ErrInstallTimeout) && !strings.Contains(out, " not ready. status: ") {
 		return err
 	}
-	if st, ok := i.diagnose(ctx, since, true); ok {
+	if st, ok := i.diagnose(ctx, since, true, nil); ok {
 		return StuckError{Stuck: st, err: err}
 	}
 	return err
 }
 
 // Bounded, and Ctrl+C stops it: a hung Docker never answers.
-func (i *Installer) diagnose(ctx context.Context, since time.Time, withLogs bool) (Stuck, bool) {
+func (i *Installer) diagnose(ctx context.Context, since time.Time, withLogs bool, progress func(Progress)) (Stuck, bool) {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	data, err := i.read(ctx)
@@ -251,6 +253,9 @@ func (i *Installer) diagnose(ctx context.Context, since time.Time, withLogs bool
 	s, err := parseSnapshot(data)
 	if err != nil {
 		return Stuck{}, false
+	}
+	if progress != nil {
+		progress(progressOf(s))
 	}
 	st, ok := findStuck(s, since, time.Now())
 	if ok && withLogs && st.Pod != "" && (st.Reason == "crashloop" || st.Reason == "job_failed") {

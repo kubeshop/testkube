@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -274,6 +275,21 @@ func fastStuckWatch(t *testing.T) {
 	poll, lasts := stuckPoll, stuckLasts
 	stuckPoll, stuckLasts = 5*time.Millisecond, 500*time.Millisecond
 	t.Cleanup(func() { stuckPoll, stuckLasts = poll, lasts })
+}
+
+func TestInstall_ReportsProgressWhileHelmWaits(t *testing.T) {
+	fastStuckWatch(t)
+	dexReady := `{"items":[{"kind":"Pod","metadata":{"name":"dex-1","labels":{"app.kubernetes.io/name":"dex"}},` +
+		`"status":{"phase":"Running","conditions":[{"type":"Ready","status":"True"}]}}]}`
+	i := newTestInstaller(t, &helmFake{blockFor: 200 * time.Millisecond, cluster: dexReady})
+	var got atomic.Pointer[Progress]
+	i.OnProgress = func(p Progress) { got.Store(&p) }
+
+	_, _, err := i.Install(context.Background(), movedPorts, testSecrets, testLicense)
+
+	require.NoError(t, err)
+	require.NotNil(t, got.Load(), "progress reached the screen")
+	assert.Equal(t, Progress{Ready: 1, Total: 10}, *got.Load())
 }
 
 func TestInstall_StopsEarlyOnlyWhenWaitingCantHelp(t *testing.T) {

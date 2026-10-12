@@ -99,23 +99,7 @@ var imageMissingWords = []string{"not found", "manifest unknown", "denied", "una
 
 // Blames the root cause, never a service waiting on it.
 func findStuck(s clusterSnapshot, since, now time.Time) (Stuck, bool) {
-	jobs := map[string]bool{}
-	for _, svc := range stuckServices {
-		jobs[svc.name] = svc.job
-	}
-	// A rerun keeps the old pod until the new one is ready.
-	pods := map[string]*corev1.Pod{}
-	for i := range s.pods {
-		p := &s.pods[i]
-		name := serviceOf(p)
-		finished := p.Status.Phase == corev1.PodFailed || p.Status.Phase == corev1.PodSucceeded
-		if name == "" || p.DeletionTimestamp != nil || finished && !jobs[name] {
-			continue
-		}
-		if cur := pods[name]; cur == nil || p.CreationTimestamp.After(cur.CreationTimestamp.Time) {
-			pods[name] = p
-		}
-	}
+	pods := currentPods(s)
 	// Waiting can't fix these; a healthy pod's old OOM doesn't count.
 	for _, svc := range stuckServices {
 		if _, ready := serviceReadySince(svc, pods[svc.name], s.jobs); ready {
@@ -180,6 +164,41 @@ func findStuck(s clusterSnapshot, since, now time.Time) (Stuck, bool) {
 		return Stuck{Service: svc.name, Pod: p.Name, Reason: "not_ready", Detail: detail, Restarts: restarts(p, since)}, true
 	}
 	return Stuck{}, false
+}
+
+// Reruns keep the old pod until the new one's ready.
+func currentPods(s clusterSnapshot) map[string]*corev1.Pod {
+	jobs := map[string]bool{}
+	for _, svc := range stuckServices {
+		jobs[svc.name] = svc.job
+	}
+	pods := map[string]*corev1.Pod{}
+	for i := range s.pods {
+		p := &s.pods[i]
+		name := serviceOf(p)
+		finished := p.Status.Phase == corev1.PodFailed || p.Status.Phase == corev1.PodSucceeded
+		if name == "" || p.DeletionTimestamp != nil || finished && !jobs[name] {
+			continue
+		}
+		if cur := pods[name]; cur == nil || p.CreationTimestamp.After(cur.CreationTimestamp.Time) {
+			pods[name] = p
+		}
+	}
+	return pods
+}
+
+// Progress counts services, not pods: users see services.
+type Progress struct{ Ready, Total int }
+
+func progressOf(s clusterSnapshot) Progress {
+	pods := currentPods(s)
+	p := Progress{Total: len(stuckServices)}
+	for _, svc := range stuckServices {
+		if _, ok := serviceReadySince(svc, pods[svc.name], s.jobs); ok {
+			p.Ready++
+		}
+	}
+	return p
 }
 
 func serviceOf(p *corev1.Pod) string {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -314,9 +315,15 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 	if err != nil {
 		failTestkube(tracker, "", err, "")
 	}
+	var progress atomic.Pointer[localinstall.Progress]
+	installer.OnProgress = func(p localinstall.Progress) { progress.Store(&p) }
 	start := time.Now()
 	waiting := func(elapsed time.Duration) string {
-		return "Installing Testkube · " + took(elapsed) + " (first run 3 to 8 minutes)"
+		text := "Installing Testkube · "
+		if p := progress.Load(); p != nil {
+			text += fmt.Sprintf("%d of %d ready · ", p.Ready, p.Total)
+		}
+		return text + took(elapsed) + " (first run 3 to 8 minutes)"
 	}
 	spinner := startSpinnerTimed(waiting(0), false)
 	stopTicking := tickElapsed(spinner, start, waiting)
