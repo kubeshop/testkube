@@ -326,11 +326,19 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 		}
 		return "Installing Testkube · " + downloadedText(p.Downloaded) + fmt.Sprintf("%d/%d ready · ", p.Ready, p.Total) + took(elapsed)
 	}
-	spinner := startSpinnerTimed(waiting(0), false)
-	stopTicking := tickElapsed(spinner, start, waiting)
+	var stop func()
+	if stdoutIsTerminal() {
+		stop = showLive(os.Stdout, start, &progress)
+	} else {
+		spinner := startSpinnerTimed(waiting(0), false)
+		stopTicking := tickElapsed(spinner, start, waiting)
+		stop = func() {
+			stopTicking()
+			_ = spinner.Stop()
+		}
+	}
 	state, out, err := installer.Install(cmd.Context(), ports, secrets, license)
-	stopTicking()
-	_ = spinner.Stop()
+	stop()
 	exitIfCancelled(cmd, tracker, "testkube")
 	if err != nil {
 		failTestkube(tracker, out, err, state.ReportPath)

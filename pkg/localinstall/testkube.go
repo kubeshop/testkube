@@ -260,7 +260,7 @@ func (i *Installer) diagnose(ctx context.Context, since time.Time, withLogs bool
 		return Stuck{}, false
 	}
 	if progress != nil {
-		p := progressOf(s)
+		p := progressOf(s, since)
 		if now := i.receivedNow(ctx); now >= 0 && i.receivedAtStart >= 0 {
 			p.Downloaded = max(0, now-i.receivedAtStart)
 		}

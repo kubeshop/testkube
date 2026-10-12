@@ -305,7 +305,8 @@ func TestInstall_ReportsProgressWhileHelmWaits(t *testing.T) {
 
 			require.NoError(t, err)
 			require.NotNil(t, got.Load(), "progress reached the screen")
-			assert.Equal(t, Progress{Ready: 1, Total: 10, Downloaded: tt.wantDownloaded}, *got.Load())
+			p := *got.Load()
+			assert.Equal(t, []any{1, 10, tt.wantDownloaded}, []any{p.Ready, p.Total, p.Downloaded})
 		})
 	}
 }

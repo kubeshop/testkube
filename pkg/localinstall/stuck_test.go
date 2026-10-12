@@ -248,7 +248,9 @@ func TestProgressOf_CountsWhatUsersWouldCallReady(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, Progress{Ready: tt.want, Total: 10}, progressOf(tt.s))
+			p := progressOf(tt.s, installStart)
+			assert.Equal(t, tt.want, p.Ready)
+			assert.Equal(t, 10, p.Total)
 		})
 	}
 }
@@ -256,4 +258,47 @@ func TestProgressOf_CountsWhatUsersWouldCallReady(t *testing.T) {
 func withJobs(s clusterSnapshot, jobs ...batchv1.Job) clusterSnapshot {
 	s.jobs = jobs
 	return s
+}
+
+func TestProgressOf_ShowsWhatEachServiceIsDoing(t *testing.T) {
+	notReady := func(p *corev1.Pod) { p.Status.Conditions = nil }
+	dbDown := testPod("postgres", notReady)
+	tests := map[string]struct {
+		s    clusterSnapshot
+		role string
+		want ServiceProgress
+	}{
+		"restarts while the database is down": {
+			s:    healthy(dbDown, testPod("api", crashed(3, "Error", installStart.Add(2*time.Minute)))),
+			role: "API", want: ServiceProgress{Role: "API", State: StateWaiting, WaitsFor: "Database"}},
+		"in the download queue": {
+			s:    healthy(testPod("dex", waitingFor("ContainerCreating"))),
+			role: "Login", want: ServiceProgress{Role: "Login", State: StateQueued}},
+		"downloading now": {
+			s:    withEvents(healthy(testPod("dex", waitingFor("ContainerCreating"))), testEvent("Pod", "dex-pod", "Pulling", "Pulling image")),
+			role: "Login", want: ServiceProgress{Role: "Login", State: StateDownloading}},
+		"not enough memory isn't a download": {
+			s:    healthy(testPod("dex", unschedulable("0/1 nodes are available: 1 Insufficient memory."))),
+			role: "Login", want: ServiceProgress{Role: "Login", State: StateStarting}},
+		"ready during this install": {
+			s:    healthy(testPod("dex", readyAt(installStart.Add(41*time.Second)))),
+			role: "Login", want: ServiceProgress{Role: "Login", State: StateReady, ReadyAfter: 41 * time.Second}},
+		"ready before this install": {
+			s:    healthy(testPod("dex", readyAt(installStart.Add(-time.Hour)))),
+			role: "Login", want: ServiceProgress{Role: "Login", State: StateReady}},
+		"no pod yet, its dependency is down": {
+			s:    clusterSnapshot{pods: []corev1.Pod{dbDown}},
+			role: "AI assistant", want: ServiceProgress{Role: "AI assistant", State: StateWaiting, WaitsFor: "Database"}},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			for _, sp := range progressOf(tt.s, installStart).Services {
+				if sp.Role == tt.role {
+					assert.Equal(t, tt.want, sp)
+					return
+				}
+			}
+			t.Fatalf("no row for %s", tt.role)
+		})
+	}
 }
