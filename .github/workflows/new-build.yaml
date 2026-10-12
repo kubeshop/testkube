@@ -10,6 +10,7 @@ on:
     branches:
       - main
       - release/**
+      - sandbox/**
 
 env:
   ALPINE_IMAGE: alpine:3.24.2
