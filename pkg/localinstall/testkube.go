@@ -240,15 +240,16 @@ func (i *Installer) pollProgress(ctx context.Context, since time.Time) (stop fun
 	if i.OnProgress == nil {
 		return func() {}
 	}
-	done := make(chan struct{})
+	// Waited for, so a late sample can't overwrite the next watcher's.
+	ctx, cancel := context.WithCancel(ctx)
+	finished := make(chan struct{})
 	poll := stuckPoll
 	go func() {
+		defer close(finished)
 		ticker := time.NewTicker(poll)
 		defer ticker.Stop()
 		for {
 			select {
-			case <-done:
-				return
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
@@ -256,7 +257,10 @@ func (i *Installer) pollProgress(ctx context.Context, since time.Time) (stop fun
 			}
 		}
 	}()
-	return func() { close(done) }
+	return func() {
+		cancel()
+		<-finished
+	}
 }
 
 func (e StuckError) Error() string { return e.err.Error() }

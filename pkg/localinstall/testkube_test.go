@@ -348,6 +348,34 @@ func TestInstall_ProgressKeepsMovingWhileTheRetryWaits(t *testing.T) {
 	assert.Positive(t, duringWait, "the screen isn't frozen while postgres starts")
 }
 
+func TestPollProgress_NoLateSampleAfterStop(t *testing.T) {
+	fastStuckWatch(t)
+	i := newTestInstaller(t, &helmFake{})
+	reading := make(chan struct{}, 1)
+	i.read = func(ctx context.Context) ([]byte, error) {
+		select {
+		case reading <- struct{}{}:
+		default:
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(100 * time.Millisecond):
+			return []byte(`{"items":[]}`), nil
+		}
+	}
+	var updates atomic.Int32
+	i.OnProgress = func(Progress) { updates.Add(1) }
+
+	stop := i.pollProgress(context.Background(), time.Now())
+	<-reading
+	stop()
+	after := updates.Load()
+	time.Sleep(200 * time.Millisecond)
+
+	assert.Equal(t, after, updates.Load(), "a slow sample landed after stop")
+}
+
 func TestInstall_StopsEarlyOnlyWhenWaitingCantHelp(t *testing.T) {
 	fastStuckWatch(t)
 	tests := map[string]struct {
