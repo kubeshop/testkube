@@ -328,10 +328,15 @@ func nodeReceived(ctx context.Context) (int64, error) {
 	return strconv.ParseInt(strings.TrimSpace(string(out)), 10, 64)
 }
 
+// A hung Docker must not stall the install for a number.
+var receivedWait = 5 * time.Second
+
 func (i *Installer) receivedNow(ctx context.Context) int64 {
 	if i.received == nil {
 		return -1
 	}
+	ctx, cancel := context.WithTimeout(ctx, receivedWait)
+	defer cancel()
 	n, err := i.received(ctx)
 	if err != nil {
 		return -1

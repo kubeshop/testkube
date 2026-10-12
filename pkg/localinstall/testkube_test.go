@@ -311,6 +311,23 @@ func TestInstall_ReportsProgressWhileHelmWaits(t *testing.T) {
 	}
 }
 
+func TestInstall_HungDockerReadDoesNotStallTheInstall(t *testing.T) {
+	was := receivedWait
+	receivedWait = 50 * time.Millisecond
+	t.Cleanup(func() { receivedWait = was })
+	i := newTestInstaller(t, &helmFake{})
+	i.received = func(ctx context.Context) (int64, error) {
+		<-ctx.Done()
+		return 0, ctx.Err()
+	}
+	start := time.Now()
+
+	_, _, err := i.Install(context.Background(), movedPorts, testSecrets, testLicense)
+
+	require.NoError(t, err)
+	assert.Less(t, time.Since(start), time.Second)
+}
+
 func TestInstall_ProgressKeepsMovingWhileTheRetryWaits(t *testing.T) {
 	fastStuckWatch(t)
 	lost := "Error: resource Job/testkube/testkube-enterprise-api-migration-1 not ready. status: Failed, message: Job Failed. failed: 4/1"
