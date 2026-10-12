@@ -342,7 +342,6 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 		"duration_s": int(time.Since(start).Seconds())})
 }
 
-// Long waits need a visible pulse; download ETAs would lie.
 // Hidden on a rerun: cached images download nothing.
 func downloadedText(n int64) string {
 	switch {

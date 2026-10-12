@@ -268,12 +268,13 @@ func containerCreating(p *corev1.Pod) bool {
 			return true
 		}
 	}
-	// Scheduled but no statuses yet: it hasn't started pulling.
+	// Unschedulable means too little CPU or memory, not downloading.
 	for _, c := range p.Status.Conditions {
 		if c.Type == corev1.PodScheduled && c.Status == corev1.ConditionFalse {
 			return false
 		}
 	}
+	// Scheduled but no statuses yet: it hasn't started pulling.
 	return p.Status.Phase == corev1.PodPending && len(p.Status.ContainerStatuses) == 0
 }
 
