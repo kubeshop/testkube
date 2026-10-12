@@ -318,25 +318,11 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 	var progress atomic.Pointer[localinstall.Progress]
 	installer.OnProgress = func(p localinstall.Progress) { progress.Store(&p) }
 	start := time.Now()
-	waiting := func(elapsed time.Duration) string {
-		p := progress.Load()
-		// Real numbers replace the hint, so 80 columns still fit.
-		if p == nil {
-			return "Installing Testkube · " + took(elapsed) + " (first run 3 to 8 minutes)"
-		}
-		return "Installing Testkube · " + downloadedText(p.Downloaded) + fmt.Sprintf("%d/%d ready · ", p.Ready, p.Total) + took(elapsed)
-	}
-	var stop func()
+	show := showPlain
 	if stdoutIsTerminal() {
-		stop = showLive(os.Stdout, start, &progress)
-	} else {
-		spinner := startSpinnerTimed(waiting(0), false)
-		stopTicking := tickElapsed(spinner, start, waiting)
-		stop = func() {
-			stopTicking()
-			_ = spinner.Stop()
-		}
+		show = showLive
 	}
+	stop := show(os.Stdout, start, &progress)
 	state, out, err := installer.Install(cmd.Context(), ports, secrets, license)
 	stop()
 	exitIfCancelled(cmd, tracker, "testkube")
@@ -373,23 +359,6 @@ func byteSize(n int64) string {
 		return fmt.Sprintf("%d MB", n/1_000_000)
 	}
 	return fmt.Sprintf("%.1f GB", float64(n)/1e9)
-}
-
-func tickElapsed(spinner *pterm.SpinnerPrinter, start time.Time, text func(time.Duration) string) (stop func()) {
-	done := make(chan struct{})
-	go func() {
-		ticker := time.NewTicker(time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-done:
-				return
-			case <-ticker.C:
-				spinner.UpdateText(text(time.Since(start)))
-			}
-		}
-	}()
-	return func() { close(done) }
 }
 
 func took(d time.Duration) string {
@@ -547,19 +516,13 @@ func homeRelative(path string) string {
 	return "~" + strings.TrimPrefix(path, home)
 }
 
-func startSpinner(text string) *pterm.SpinnerPrinter {
-	return startSpinnerTimed(text, true)
-}
-
 // pterm's light white text vanishes on light terminals.
 // Removed when done: its success line clashes with our rows.
-// Text with our own timer needs pterm's off.
-func startSpinnerTimed(text string, showTimer bool) *pterm.SpinnerPrinter {
+func startSpinner(text string) *pterm.SpinnerPrinter {
 	spinner, _ := pterm.DefaultSpinner.
 		WithSequence(` ⠋ `, ` ⠹ `, ` ⠼ `, ` ⠦ `, ` ⠇ `).
 		WithMessageStyle(pterm.NewStyle(pterm.FgDefault)).
 		WithRemoveWhenDone(true).
-		WithShowTimer(showTimer).
 		Start(text)
 	return spinner
 }

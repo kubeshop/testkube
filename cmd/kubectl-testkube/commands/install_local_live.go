@@ -75,6 +75,38 @@ func showLive(out io.Writer, start time.Time, progress *atomic.Pointer[localinst
 	}
 }
 
+// Logs and CI keep every line, so print rarely.
+var plainEvery = 30 * time.Second
+
+func showPlain(out io.Writer, start time.Time, progress *atomic.Pointer[localinstall.Progress]) (stop func()) {
+	_, _ = fmt.Fprintln(out, "  First run takes 3 to 8 minutes")
+	done, finished := make(chan struct{}), make(chan struct{})
+	go func() {
+		defer close(finished)
+		ticker := time.NewTicker(plainEvery)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				_, _ = fmt.Fprintln(out, "  "+plainStatus(progress.Load(), time.Since(start)))
+			}
+		}
+	}()
+	return func() {
+		close(done)
+		<-finished
+	}
+}
+
+func plainStatus(p *localinstall.Progress, elapsed time.Duration) string {
+	if p == nil {
+		return "Still installing · " + took(elapsed)
+	}
+	return "Still installing · " + downloadedText(p.Downloaded) + fmt.Sprintf("%d/%d ready · ", p.Ready, p.Total) + took(elapsed)
+}
+
 // Cut before coloring: a wrapped row breaks the redraw.
 func liveRows(p *localinstall.Progress, elapsed time.Duration, frame, width int) []string {
 	spin := ui.LightCyan(liveFrames[frame%len(liveFrames)])
