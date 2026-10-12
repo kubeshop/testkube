@@ -30,7 +30,7 @@ func TestLiveRows_ReadWellAndNeverWrap(t *testing.T) {
 		"  ○ Runner            waiting for API",
 		"  ⠋ 233 MB of ~1.2 GB · 2/10 ready · 1m 1s",
 	}, stripColors(rows))
-	for _, width := range []int{30, 60, 80} {
+	for _, width := range []int{20, 30, 60, 80} {
 		for _, row := range stripColors(liveRows(p, 61*time.Second, 0, width, 50)) {
 			assert.LessOrEqual(t, utf8.RuneCountInString(row), width-1, "%q at width %d", row, width)
 		}

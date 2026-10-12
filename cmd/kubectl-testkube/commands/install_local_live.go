@@ -125,8 +125,8 @@ func liveRows(p *localinstall.Progress, elapsed time.Duration, frame, width, hei
 		rows = append(rows, "  "+icon+" "+fmt.Sprintf("%-*s", roleWidth, s.Role)+text(fit(liveText(s), width-5-roleWidth)))
 	}
 	footer := "  " + spin + " " + fit(downloadedText(p.Downloaded)+fmt.Sprintf("%d/%d ready · ", p.Ready, p.Total)+took(elapsed), width-5)
-	// Taller than the window, each redraw would flood scrollback.
-	if height > 0 && len(rows)+2 > height {
+	// Taller or narrower than the window, rows wrap and flood scrollback.
+	if height > 0 && len(rows)+2 > height || width < 30 {
 		return []string{footer}
 	}
 	return append(rows, footer)
