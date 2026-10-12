@@ -128,7 +128,9 @@ func (i *Installer) install(ctx context.Context, ports Ports, s Secrets, license
 	if err != nil && stuck == nil && migrationLostRace(string(out)) {
 		state.MigrationRetried = true
 		// Best effort: a postgres that never starts fails the retry.
+		stopPolling := i.pollProgress(ctx, began)
 		_, _ = i.wait(ctx)
+		stopPolling()
 		out, stuck, err = install()
 	}
 	if err != nil && stuck != nil {
@@ -231,6 +233,30 @@ func (i *Installer) watchedHelm(ctx context.Context, since time.Time, args ...st
 	default:
 		return out, nil, err
 	}
+}
+
+// The retry waits minutes on postgres; keep the screen moving.
+func (i *Installer) pollProgress(ctx context.Context, since time.Time) (stop func()) {
+	if i.OnProgress == nil {
+		return func() {}
+	}
+	done := make(chan struct{})
+	poll := stuckPoll
+	go func() {
+		ticker := time.NewTicker(poll)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				i.diagnose(ctx, since, false, i.OnProgress)
+			}
+		}
+	}()
+	return func() { close(done) }
 }
 
 func (e StuckError) Error() string { return e.err.Error() }

@@ -311,6 +311,26 @@ func TestInstall_ReportsProgressWhileHelmWaits(t *testing.T) {
 	}
 }
 
+func TestInstall_ProgressKeepsMovingWhileTheRetryWaits(t *testing.T) {
+	fastStuckWatch(t)
+	lost := "Error: resource Job/testkube/testkube-enterprise-api-migration-1 not ready. status: Failed, message: Job Failed. failed: 4/1"
+	i := newTestInstaller(t, &helmFake{failOn: ReleaseName, failOut: lost, failures: 1})
+	var updates atomic.Int32
+	i.OnProgress = func(Progress) { updates.Add(1) }
+	var duringWait int32
+	i.wait = func(context.Context) ([]byte, error) {
+		before := updates.Load()
+		time.Sleep(100 * time.Millisecond)
+		duringWait = updates.Load() - before
+		return nil, nil
+	}
+
+	_, _, err := i.Install(context.Background(), movedPorts, testSecrets, testLicense)
+
+	require.NoError(t, err)
+	assert.Positive(t, duringWait, "the screen isn't frozen while postgres starts")
+}
+
 func TestInstall_StopsEarlyOnlyWhenWaitingCantHelp(t *testing.T) {
 	fastStuckWatch(t)
 	tests := map[string]struct {
