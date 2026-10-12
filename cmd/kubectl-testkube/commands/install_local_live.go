@@ -20,9 +20,11 @@ var liveFrames = []string{"⠋", "⠹", "⠼", "⠦", "⠇"}
 // Fits the widest role, "Background jobs", plus a gap.
 const roleWidth = 18
 
-func stdoutIsTerminal() bool {
+// Dumb terminals print cursor codes; tiny ones can't fit a row.
+func canShowLive() bool {
 	fd := os.Stdout.Fd()
-	return isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd)
+	tty := isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd)
+	return tty && os.Getenv("TERM") != "dumb" && pterm.GetTerminalWidth() >= 30
 }
 
 // pterm's printers race on text and break on wrapped lines.

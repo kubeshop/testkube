@@ -319,7 +319,7 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 	installer.OnProgress = func(p localinstall.Progress) { progress.Store(&p) }
 	start := time.Now()
 	show := showPlain
-	if stdoutIsTerminal() {
+	if canShowLive() {
 		show = showLive
 	}
 	stop := show(os.Stdout, start, &progress)
