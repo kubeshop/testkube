@@ -519,6 +519,8 @@ func homeRelative(path string) string {
 // pterm's light white text vanishes on light terminals.
 // Removed when done: its success line clashes with our rows.
 func startSpinner(text string) *pterm.SpinnerPrinter {
+	// pterm can't redraw a wrapped line; room for icon and timer.
+	text = fit(text, pterm.GetTerminalWidth()-15)
 	spinner, _ := pterm.DefaultSpinner.
 		WithSequence(` ⠋ `, ` ⠹ `, ` ⠼ `, ` ⠦ `, ` ⠇ `).
 		WithMessageStyle(pterm.NewStyle(pterm.FgDefault)).

@@ -153,6 +153,10 @@ func liveText(s localinstall.ServiceProgress) string {
 	case localinstall.StateQueued:
 		return "waiting to download"
 	case localinstall.StateWaiting:
+		// "API" stays an acronym; "Database" reads better lowercase.
+		if s.WaitsFor == strings.ToUpper(s.WaitsFor) {
+			return "waiting for " + s.WaitsFor
+		}
 		return "waiting for " + strings.ToLower(s.WaitsFor)
 	case localinstall.StateNotStarted:
 		return "not started yet"

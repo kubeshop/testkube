@@ -18,6 +18,7 @@ func TestLiveRows_ReadWellAndNeverWrap(t *testing.T) {
 	p := &localinstall.Progress{Ready: 2, Total: 10, Downloaded: 233_000_000, Services: []localinstall.ServiceProgress{
 		{Role: "Background jobs", State: localinstall.StateWaiting, WaitsFor: "Messaging"},
 		{Role: "Database", State: localinstall.StateReady, ReadyAfter: 41 * time.Second},
+		{Role: "Runner", State: localinstall.StateWaiting, WaitsFor: "API"},
 	}}
 
 	rows := liveRows(p, 61*time.Second, 0, 200, 50)
@@ -25,6 +26,7 @@ func TestLiveRows_ReadWellAndNeverWrap(t *testing.T) {
 	assert.Equal(t, []string{
 		"  ○ Background jobs   waiting for messaging",
 		"  ✔ Database          ready in 41s",
+		"  ○ Runner            waiting for API",
 		"  ⠋ 233 MB of ~1.2 GB · 2/10 ready · 1m 1s",
 	}, stripColors(rows))
 	for _, width := range []int{30, 60, 80} {
