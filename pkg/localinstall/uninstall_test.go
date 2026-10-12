@@ -20,7 +20,7 @@ func TestRemoveFiles_KeepsDataToolsReportsAndConfig(t *testing.T) {
 		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o700))
 		require.NoError(t, os.WriteFile(p, []byte("x"), 0o600))
 	}
-	gone := []string{"kind.yaml", "kubeconfig", "helm/cache/index.yaml", "install-123/private.yaml", "cluster-engine", "cluster-id"}
+	gone := []string{"kind.yaml", "kubeconfig", "helm/cache/index.yaml", "install-123/private.yaml", "cluster-id"}
 	kept := []string{"data/testkube/pvc/data/f", "bin/kind", "logs/install-1.txt", "secrets.json", "config.json", "github-app.pem"}
 	for _, rel := range append(gone, kept...) {
 		mk(rel)
@@ -134,13 +134,11 @@ func TestShellQuote_SurvivesAQuoteInThePath(t *testing.T) {
 func TestRemoveFiles_KeepsTheMarkWhenTheClusterCantBeChecked(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "cluster-id"), []byte("OURMARK"), 0o600))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "cluster-engine"), []byte("AAA docker-desktop"), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "kind.yaml"), []byte("x"), 0o600))
 
 	_, err := removeFiles(dir, true)
 
 	require.NoError(t, err)
 	assert.FileExists(t, filepath.Join(dir, "cluster-id"), "a hidden cluster must stay ours")
-	assert.FileExists(t, filepath.Join(dir, "cluster-engine"))
 	assert.NoFileExists(t, filepath.Join(dir, "kind.yaml"))
 }

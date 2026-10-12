@@ -15,6 +15,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -156,7 +157,6 @@ func (c *Cluster) Ensure(ctx context.Context) (ClusterState, string, error) {
 	if err := os.WriteFile(c.ownerFile(), []byte(owner), 0o600); err != nil {
 		return ClusterState{}, "", err
 	}
-	c.recordEngine(ctx)
 	config := filepath.Join(c.dir, "kind.yaml")
 	for attempt := 1; ; attempt++ {
 		if err := os.WriteFile(config, []byte(kindConfig(ports, data, owner)), 0o644); err != nil {
@@ -187,10 +187,6 @@ func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 	running, ports, why, err := c.owned(ctx)
 	if err != nil {
 		return state, why, err
-	}
-	// Clusters made before the record existed get one now.
-	if _, err := os.Stat(c.engineFile()); err != nil {
-		c.recordEngine(ctx)
 	}
 	state.Ports = ports
 	var out []byte
@@ -239,7 +235,11 @@ func (c *Cluster) Remove(ctx context.Context) (found bool, out string, err error
 		return false, string(nodes), ErrClusterInspect
 	}
 	if strings.TrimSpace(string(nodes)) == "" {
-		return false, "", c.sameEngine(ctx)
+		if err := c.findElsewhere(ctx); err != nil {
+			return false, "", err
+		}
+		// Ctrl+C mid-search must not read as "gone".
+		return false, "", ctx.Err()
 	}
 	if _, _, why, err := c.owned(ctx); err != nil {
 		return true, why, err
@@ -281,45 +281,50 @@ func ownedSettings(inspect, owner string) (running bool, ports Ports, ok bool) {
 }
 
 // With two Dockers, the cluster lives in only one.
-type ClusterElsewhereError struct{ Made, Active string }
+type ClusterElsewhereError struct{ In, Active string }
 
 func (e ClusterElsewhereError) Error() string {
-	return fmt.Sprintf("the cluster was made in Docker %q, but %q is active", e.Made, e.Active)
+	return fmt.Sprintf("the cluster is in Docker context %q, but %q is active", e.In, e.Active)
 }
 
-func (c *Cluster) engineFile() string {
-	return filepath.Join(c.dir, "cluster-engine")
-}
+// Dead remote contexts hang 30s; stopped ones fail fast.
+var contextSearchTime = 2 * time.Second
 
-// ID survives restarts; Name is what people recognise.
-func (c *Cluster) engine(ctx context.Context) (id, name string, err error) {
-	out, err := c.run(ctx, "docker", "info", "--format", "{{.ID}} {{.Name}}")
-	if err != nil {
-		return "", "", err
-	}
-	id, name, _ = strings.Cut(strings.TrimSpace(string(out)), " ")
-	return id, name, nil
-}
-
-// Best effort: without it uninstall just can't spot a switch.
-func (c *Cluster) recordEngine(ctx context.Context) {
-	if id, name, err := c.engine(ctx); err == nil && id != "" {
-		_ = os.WriteFile(c.engineFile(), []byte(id+" "+name), 0o600)
-	}
-}
-
-// No cluster here proves nothing if another Docker made it.
-func (c *Cluster) sameEngine(ctx context.Context) error {
-	made, err := os.ReadFile(c.engineFile())
+// An ID record breaks on a Docker reset; search instead.
+func (c *Cluster) findElsewhere(ctx context.Context) error {
+	active, err := c.run(ctx, "docker", "context", "show")
 	if err != nil {
 		return nil
 	}
-	madeID, madeName, _ := strings.Cut(strings.TrimSpace(string(made)), " ")
-	id, name, err := c.engine(ctx)
-	if err != nil || id == madeID {
+	names, err := c.run(ctx, "docker", "context", "ls", "--format", "{{.Name}}")
+	if err != nil {
 		return nil
 	}
-	return ClusterElsewhereError{Made: madeName, Active: name}
+	search, cancel := context.WithTimeout(ctx, contextSearchTime)
+	defer cancel()
+	var mu sync.Mutex
+	var found []string
+	var wg sync.WaitGroup
+	for _, name := range strings.Fields(string(names)) {
+		if name == strings.TrimSpace(string(active)) {
+			continue
+		}
+		wg.Go(func() {
+			// A silent Docker runs nothing that uses our data.
+			out, err := c.run(search, "docker", "--context", name, "ps", "-a", "-q", "--filter", "label=io.x-k8s.kind.cluster="+ClusterName)
+			if err == nil && strings.TrimSpace(string(out)) != "" {
+				mu.Lock()
+				found = append(found, name)
+				mu.Unlock()
+			}
+		})
+	}
+	wg.Wait()
+	if len(found) == 0 {
+		return nil
+	}
+	slices.Sort(found)
+	return ClusterElsewhereError{In: found[0], Active: strings.TrimSpace(string(active))}
 }
 
 func (c *Cluster) ownerFile() string {
@@ -462,6 +467,8 @@ func runCombined(ctx context.Context, name string, args ...string) ([]byte, erro
 	// Our inspect and exec calls only reach Docker nodes.
 	cmd.Env = append(os.Environ(), "KIND_EXPERIMENTAL_PROVIDER=docker")
 	cmd.Stdout, cmd.Stderr = &out, &out
+	// docker's ssh child keeps the pipes open after a cancel.
+	cmd.WaitDelay = time.Second
 	err := cmd.Run()
 	return out.Bytes(), err
 }

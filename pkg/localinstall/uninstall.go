@@ -25,7 +25,7 @@ func removeFiles(dir string, keepOwnerMark bool) (removed bool, err error) {
 	paths = append(paths, temp...)
 	// Last: a rerun after a failure must still see ours.
 	if !keepOwnerMark {
-		paths = append(paths, filepath.Join(dir, "cluster-engine"), filepath.Join(dir, "cluster-id"))
+		paths = append(paths, filepath.Join(dir, "cluster-id"))
 	}
 	for _, p := range paths {
 		if _, err := os.Lstat(p); err != nil {

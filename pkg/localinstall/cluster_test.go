@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"os"
 	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -28,13 +30,18 @@ type kindFake struct {
 	storagePattern, createOut           string
 	applyErr, inspectErr, exportErr     error
 	startErr, rmErr                     error
-	nodes, engine                       string
-	refusedWaits, createFails           int
-	calls                               []string
+	nodes, active                       string
+	// ps output per other Docker context, or "down" or "hangs".
+	others                    map[string]string
+	refusedWaits, createFails int
+	mu                        sync.Mutex
+	calls                     []string
 }
 
-func (f *kindFake) run(_ context.Context, name string, args ...string) ([]byte, error) {
+func (f *kindFake) run(ctx context.Context, name string, args ...string) ([]byte, error) {
+	f.mu.Lock()
 	f.calls = append(f.calls, name+" "+strings.Join(args, " "))
+	f.mu.Unlock()
 	switch {
 	case name != "docker" && args[0] == "get":
 		return []byte(f.clusters), nil
@@ -45,8 +52,17 @@ func (f *kindFake) run(_ context.Context, name string, args ...string) ([]byte, 
 		return nil, f.exportErr
 	case args[0] == "ps":
 		return []byte(f.nodes), nil
-	case args[0] == "info":
-		return []byte(f.engine), nil
+	case args[0] == "context" && args[1] == "show":
+		return []byte(f.active + "\n"), nil
+	case args[0] == "context":
+		return []byte(f.active + "\n" + strings.Join(slices.Sorted(maps.Keys(f.others)), "\n")), nil
+	case args[0] == "--context" && f.others[args[1]] == "down":
+		return []byte("no such file or directory"), errExit
+	case args[0] == "--context" && f.others[args[1]] == "hangs":
+		<-ctx.Done()
+		return nil, ctx.Err()
+	case args[0] == "--context":
+		return []byte(f.others[args[1]]), nil
 	case args[0] == "rm":
 		return nil, f.rmErr
 	case args[0] == "inspect":
@@ -78,7 +94,6 @@ func TestClusterEnsure_ReusesOursOnly(t *testing.T) {
 	create := "kind create cluster --name testkube --config " + filepath.Join(dir, "kind.yaml") +
 		" --image " + nodeImage + " --kubeconfig " + kubeconfig + " --wait 2m"
 	storage := "docker exec testkube-control-plane kubectl --kubeconfig=/etc/kubernetes/admin.conf get storageclass standard -o jsonpath={.parameters.pathPattern}"
-	engine := "docker info --format {{.ID}} {{.Name}}"
 	tests := []struct {
 		name        string
 		clusters    string
@@ -88,13 +103,12 @@ func TestClusterEnsure_ReusesOursOnly(t *testing.T) {
 		{"our cluster is reused, not recreated", "kind\ntestkube\n", false, []string{
 			"kind get clusters",
 			"docker inspect -f {{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .Mounts}} testkube-control-plane",
-			engine,
 			"docker exec testkube-control-plane kubectl --kubeconfig=/etc/kubernetes/admin.conf wait --for=condition=Ready nodes --all --timeout=10s",
 			storage,
 			"kind export kubeconfig --name testkube --kubeconfig " + kubeconfig,
 		}},
-		{"a similar name is someone else's", "testkube-dev\n", true, []string{"kind get clusters", engine, create, storage}},
-		{"no clusters at all", "No kind clusters found.\n", true, []string{"kind get clusters", engine, create, storage}},
+		{"a similar name is someone else's", "testkube-dev\n", true, []string{"kind get clusters", create, storage}},
+		{"no clusters at all", "No kind clusters found.\n", true, []string{"kind get clusters", create, storage}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -325,8 +339,8 @@ func TestClusterEnsure_StoppedClusterIsStartedBeforeReading(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.True(t, state.Started)
-	assert.Equal(t, "docker start testkube-control-plane", fake.calls[3])
-	assert.Contains(t, fake.calls[4], "wait --for=condition=Ready")
+	assert.Equal(t, "docker start testkube-control-plane", fake.calls[2])
+	assert.Contains(t, fake.calls[3], "wait --for=condition=Ready")
 }
 
 func TestClusterEnsure_WaitsWhileTheAPIIsStillStarting(t *testing.T) {
@@ -439,23 +453,23 @@ func TestClusterRemove_DeletesOnlyOurCluster(t *testing.T) {
 	}
 }
 
-func TestClusterRemove_NothingHereIsntProofWhenAnotherDockerMadeIt(t *testing.T) {
+func TestClusterRemove_NothingHereStillChecksOtherRunningDockers(t *testing.T) {
+	was := contextSearchTime
+	contextSearchTime = 100 * time.Millisecond
+	t.Cleanup(func() { contextSearchTime = was })
 	tests := map[string]struct {
-		recorded string
-		wantErr  error
+		others  map[string]string
+		wantErr error
 	}{
-		"another Docker made it": {recorded: "AAA docker-desktop", wantErr: ClusterElsewhereError{Made: "docker-desktop", Active: "orbstack"}},
-		"this Docker made it":    {recorded: "BBB orbstack"},
-		"made before the record": {},
+		"running in another Docker":    {others: map[string]string{"orbstack": "abc123\n"}, wantErr: ClusterElsewhereError{In: "orbstack", Active: "desktop-linux"}},
+		"after a Docker reset":         {others: map[string]string{"default": ""}},
+		"other Docker stopped or gone": {others: map[string]string{"colima": "down"}},
+		"remote Docker never answers":  {others: map[string]string{"remote": "hangs"}},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			dir := t.TempDir()
-			if tt.recorded != "" {
-				require.NoError(t, os.WriteFile(filepath.Join(dir, "cluster-engine"), []byte(tt.recorded), 0o600))
-			}
-			fake := &kindFake{engine: "BBB orbstack\n"}
-			c := &Cluster{kind: "kind", dir: dir, run: fake.run}
+			fake := &kindFake{active: "desktop-linux", others: tt.others}
+			c := &Cluster{kind: "kind", dir: t.TempDir(), run: fake.run}
 
 			found, _, err := c.Remove(context.Background())
 
@@ -465,15 +479,13 @@ func TestClusterRemove_NothingHereIsntProofWhenAnotherDockerMadeIt(t *testing.T)
 	}
 }
 
-func TestClusterEnsure_RecordsWhichDockerMadeIt(t *testing.T) {
-	dir := t.TempDir()
-	fake := &kindFake{clusters: "No kind clusters found.\n", storagePattern: storagePathPattern, engine: "AAA docker-desktop\n"}
-	c := &Cluster{kind: "kind", dir: dir, kubeconfig: filepath.Join(dir, "kubeconfig"), portFree: allFree, run: fake.run}
+func TestClusterRemove_CtrlCMidSearchIsNotGone(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	fake := &kindFake{active: "desktop-linux", others: map[string]string{"remote": "hangs"}}
+	c := &Cluster{kind: "kind", dir: t.TempDir(), run: fake.run}
 
-	_, _, err := c.Ensure(context.Background())
+	_, _, err := c.Remove(ctx)
 
-	require.NoError(t, err)
-	data, err := os.ReadFile(filepath.Join(dir, "cluster-engine"))
-	require.NoError(t, err)
-	assert.Equal(t, "AAA docker-desktop", string(data))
+	assert.ErrorIs(t, err, context.Canceled)
 }

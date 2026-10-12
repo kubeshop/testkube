@@ -168,8 +168,8 @@ func removeCluster(cmd *cobra.Command, tracker *telemetry.InstallTracker) bool {
 	switch {
 	case errors.As(err, &elsewhere):
 		failUninstall(cmd.Context(), tracker, "elsewhere", localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "elsewhere",
-			Fix: fmt.Sprintf("It was made in %q, but %q is active now.\n"+
-				"Switch back (see `docker context ls`), then run `testkube uninstall local` again.", elsewhere.Made, elsewhere.Active)})
+			Fix: fmt.Sprintf("It's in Docker %q, but %q is active now.\n"+
+				"Switch with `docker context use %s`, then run `testkube uninstall local` again.", elsewhere.In, elsewhere.Active, elsewhere.In)})
 	case errors.Is(err, localinstall.ErrClusterNotOurs):
 		failUninstall(cmd.Context(), tracker, "not_ours", localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "not ours",
 			Fix: fmt.Sprintf("%q wasn't created by this installer, so it's left alone.\n"+
