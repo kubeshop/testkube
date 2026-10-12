@@ -174,6 +174,8 @@ func exitIfCancelled(cmd *cobra.Command, tracker *telemetry.InstallTracker, stag
 }
 
 func abortInstall(tracker *telemetry.InstallTracker, stage string) {
+	// Before the event wait, or Ctrl+C looks ignored.
+	ui.Printf("\n  Install cancelled.\n")
 	tracker.Send("install_local_aborted", map[string]any{"stage": stage})
 	waitForEvents(tracker)
 	os.Exit(130)
