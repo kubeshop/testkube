@@ -60,7 +60,11 @@ func showLive(out io.Writer, start time.Time, progress *atomic.Pointer[localinst
 		ticker := time.NewTicker(200 * time.Millisecond)
 		defer ticker.Stop()
 		for frame := 0; ; frame++ {
-			area.draw(liveRows(progress.Load(), time.Since(start), frame, pterm.GetTerminalWidth()))
+			width, height, err := pterm.GetTerminalSize()
+			if err != nil {
+				width, height = pterm.GetTerminalWidth(), 0
+			}
+			area.draw(liveRows(progress.Load(), time.Since(start), frame, width, height))
 			select {
 			case <-done:
 				area.clear()
@@ -108,7 +112,7 @@ func plainStatus(p *localinstall.Progress, elapsed time.Duration) string {
 }
 
 // Cut before coloring: a wrapped row breaks the redraw.
-func liveRows(p *localinstall.Progress, elapsed time.Duration, frame, width int) []string {
+func liveRows(p *localinstall.Progress, elapsed time.Duration, frame, width, height int) []string {
 	spin := ui.LightCyan(liveFrames[frame%len(liveFrames)])
 	if p == nil {
 		return []string{"  " + spin + " " + fit("Installing Testkube · "+took(elapsed)+" (first run 3 to 8 minutes)", width-5)}
@@ -118,8 +122,12 @@ func liveRows(p *localinstall.Progress, elapsed time.Duration, frame, width int)
 		icon, text := liveState(s, spin)
 		rows = append(rows, "  "+icon+" "+fmt.Sprintf("%-*s", roleWidth, s.Role)+text(fit(liveText(s), width-5-roleWidth)))
 	}
-	footer := downloadedText(p.Downloaded) + fmt.Sprintf("%d/%d ready · ", p.Ready, p.Total) + took(elapsed)
-	return append(rows, "  "+spin+" "+fit(footer, width-5))
+	footer := "  " + spin + " " + fit(downloadedText(p.Downloaded)+fmt.Sprintf("%d/%d ready · ", p.Ready, p.Total)+took(elapsed), width-5)
+	// Taller than the window, each redraw would flood scrollback.
+	if height > 0 && len(rows)+2 > height {
+		return []string{footer}
+	}
+	return append(rows, footer)
 }
 
 func liveState(s localinstall.ServiceProgress, spin string) (icon string, color func(...any) string) {

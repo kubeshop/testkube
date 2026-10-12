@@ -20,7 +20,7 @@ func TestLiveRows_ReadWellAndNeverWrap(t *testing.T) {
 		{Role: "Database", State: localinstall.StateReady, ReadyAfter: 41 * time.Second},
 	}}
 
-	rows := liveRows(p, 61*time.Second, 0, 200)
+	rows := liveRows(p, 61*time.Second, 0, 200, 50)
 
 	assert.Equal(t, []string{
 		"  ○ Background jobs   waiting for messaging",
@@ -28,10 +28,18 @@ func TestLiveRows_ReadWellAndNeverWrap(t *testing.T) {
 		"  ⠋ 233 MB of ~1.2 GB · 2/10 ready · 1m 1s",
 	}, stripColors(rows))
 	for _, width := range []int{30, 60, 80} {
-		for _, row := range stripColors(liveRows(p, 61*time.Second, 0, width)) {
+		for _, row := range stripColors(liveRows(p, 61*time.Second, 0, width, 50)) {
 			assert.LessOrEqual(t, utf8.RuneCountInString(row), width-1, "%q at width %d", row, width)
 		}
 	}
+}
+
+func TestLiveRows_ShortWindowGetsOnlyTheFooter(t *testing.T) {
+	p := &localinstall.Progress{Ready: 2, Total: 10, Services: make([]localinstall.ServiceProgress, 10)}
+
+	assert.Len(t, liveRows(p, time.Second, 0, 80, 12), 11, "list plus cursor line fits")
+	assert.Equal(t, []string{"  ⠋ 2/10 ready · 1s"}, stripColors(liveRows(p, time.Second, 0, 80, 11)))
+	assert.Len(t, liveRows(p, time.Second, 0, 80, 0), 11, "unknown height keeps the list")
 }
 
 func TestShowPlain_LogsStatusLinesWithoutTerminalCodes(t *testing.T) {
