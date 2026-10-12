@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 	"unicode/utf8"
@@ -173,9 +174,15 @@ func exitIfCancelled(cmd *cobra.Command, tracker *telemetry.InstallTracker, stag
 	abortInstall(tracker, stage)
 }
 
+var cancelNotice sync.Once
+
+// Before any wait, or Ctrl+C looks ignored; once, from either path.
+func printCancelled() {
+	cancelNotice.Do(func() { ui.Printf("\n  Install cancelled.\n") })
+}
+
 func abortInstall(tracker *telemetry.InstallTracker, stage string) {
-	// Before the event wait, or Ctrl+C looks ignored.
-	ui.Printf("\n  Install cancelled.\n")
+	printCancelled()
 	tracker.Send("install_local_aborted", map[string]any{"stage": stage})
 	waitForEvents(tracker)
 	os.Exit(130)
@@ -324,9 +331,21 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 	if canShowLive() {
 		show = showLive
 	}
+	var stopped sync.Once
 	stop := show(os.Stdout, start, &progress)
+	finished := make(chan struct{})
+	// Helm takes seconds to clean up; say so before it does.
+	go func() {
+		select {
+		case <-cmd.Context().Done():
+			stopped.Do(stop)
+			printCancelled()
+		case <-finished:
+		}
+	}()
 	state, out, err := installer.Install(cmd.Context(), ports, secrets, license)
-	stop()
+	close(finished)
+	stopped.Do(stop)
 	exitIfCancelled(cmd, tracker, "testkube")
 	if err != nil {
 		failTestkube(tracker, out, err, state.ReportPath)
