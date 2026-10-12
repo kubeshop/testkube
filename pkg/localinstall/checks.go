@@ -251,6 +251,11 @@ func (c *Checker) readDockerInfo(ctx context.Context) (dockerInfo, error) {
 	return info, nil
 }
 
+// Uninstall needs only this, not the other tool checks.
+func (c *Checker) CheckDocker(ctx context.Context) Result {
+	return c.checkDocker(ctx)
+}
+
 func (c *Checker) checkDocker(ctx context.Context) Result {
 	if _, err := c.host.LookPath("docker"); err != nil {
 		// Usually Docker Desktop is installed, just not shared here.

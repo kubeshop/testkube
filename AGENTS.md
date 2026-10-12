@@ -199,7 +199,7 @@ contents do.
 
 ## Local laptop install
 
-- Hidden `testkube install local` lives in `pkg/localinstall`; see its `doc.go`.
+- Hidden `testkube install local` and `testkube uninstall local` live in `pkg/localinstall`; see its `doc.go`.
 
 ## Configuration references
 

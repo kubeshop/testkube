@@ -15,6 +15,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -39,6 +40,7 @@ var (
 	ErrClusterStart      = errors.New("the stopped cluster could not start")
 	ErrClusterStorage    = errors.New("the cluster's storage could not be set up")
 	ErrClusterInspect    = errors.New("the existing cluster could not be read")
+	ErrClusterRemove     = errors.New("the cluster could not be removed")
 	ErrClusterKubeconfig = errors.New("the cluster's kubeconfig could not be saved")
 )
 
@@ -182,21 +184,12 @@ func (c *Cluster) Ensure(ctx context.Context) (ClusterState, string, error) {
 
 func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 	var state ClusterState
-	owner, err := os.ReadFile(c.ownerFile())
-	if err != nil || len(owner) == 0 {
-		return state, "", ErrClusterNotOurs
-	}
-	// Saved settings survive a stop: check before touching it.
-	out, err := c.run(ctx, "docker", "inspect", "-f",
-		"{{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .Mounts}}", nodeName)
+	running, ports, why, err := c.owned(ctx)
 	if err != nil {
-		return state, string(out), ErrClusterInspect
-	}
-	running, ports, ok := ownedSettings(string(out), string(owner))
-	if !ok {
-		return state, "", ErrClusterNotOurs
+		return state, why, err
 	}
 	state.Ports = ports
+	var out []byte
 	if !running {
 		if out, err = c.run(ctx, "docker", "start", nodeName); err != nil {
 			return state, string(out), ErrClusterStart
@@ -215,6 +208,49 @@ func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 		return state, string(out), ErrClusterKubeconfig
 	}
 	return state, "", nil
+}
+
+// Line order must match ownedSettings parsing.
+const nodeInspectFormat = "{{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .Mounts}}"
+
+// Saved settings survive a stop: check before touching it.
+func (c *Cluster) owned(ctx context.Context) (running bool, ports Ports, out string, err error) {
+	owner, err := os.ReadFile(c.ownerFile())
+	if err != nil || len(owner) == 0 {
+		return false, nil, "", ErrClusterNotOurs
+	}
+	inspect, err := c.run(ctx, "docker", "inspect", "-f", nodeInspectFormat, nodeName)
+	if err != nil {
+		return false, nil, string(inspect), ErrClusterInspect
+	}
+	running, ports, ok := ownedSettings(string(inspect), string(owner))
+	if !ok {
+		return false, nil, "", ErrClusterNotOurs
+	}
+	return running, ports, "", nil
+}
+
+// Docker alone: works even after our kind copy was deleted.
+func (c *Cluster) Remove(ctx context.Context) (found bool, out string, err error) {
+	nodes, err := c.run(ctx, "docker", "ps", "-a", "-q", "--filter", "label=io.x-k8s.kind.cluster="+ClusterName)
+	if err != nil {
+		return false, string(nodes), ErrClusterInspect
+	}
+	if strings.TrimSpace(string(nodes)) == "" {
+		if err := c.findElsewhere(ctx); err != nil {
+			return false, "", err
+		}
+		// Ctrl+C mid-search must not read as "gone".
+		return false, "", ctx.Err()
+	}
+	if _, _, why, err := c.owned(ctx); err != nil {
+		return true, why, err
+	}
+	// -v also drops the node's volume: gigabytes of images.
+	if rm, err := c.run(ctx, "docker", "rm", "-f", "-v", nodeName); err != nil {
+		return true, string(rm), ErrClusterRemove
+	}
+	return true, "", nil
 }
 
 // Ours means our saved mark and every browser port on 127.0.0.1.
@@ -244,6 +280,58 @@ func ownedSettings(inspect, owner string) (running bool, ports Ports, ok bool) {
 		ports[cp.name] = host
 	}
 	return lines[0] == "true", ports, true
+}
+
+// With two Dockers, the cluster lives in only one.
+type ClusterElsewhereError struct{ In, Active string }
+
+func (e ClusterElsewhereError) Error() string {
+	return fmt.Sprintf("the cluster is in Docker context %q, but %q is active", e.In, e.Active)
+}
+
+// Dead remote contexts hang 30s; stopped ones fail fast.
+var contextSearchTime = 2 * time.Second
+
+// An ID record breaks on a Docker reset; search instead.
+func (c *Cluster) findElsewhere(ctx context.Context) error {
+	owner, err := os.ReadFile(c.ownerFile())
+	if err != nil || len(owner) == 0 {
+		return nil
+	}
+	active, err := c.run(ctx, "docker", "context", "show")
+	if err != nil {
+		return nil
+	}
+	names, err := c.run(ctx, "docker", "context", "ls", "--format", "{{.Name}}")
+	if err != nil {
+		return nil
+	}
+	search, cancel := context.WithTimeout(ctx, contextSearchTime)
+	defer cancel()
+	var mu sync.Mutex
+	var found []string
+	var wg sync.WaitGroup
+	for _, name := range strings.Fields(string(names)) {
+		if name == strings.TrimSpace(string(active)) {
+			continue
+		}
+		wg.Go(func() {
+			// A silent Docker runs nothing that uses our data.
+			out, err := c.run(search, "docker", "--context", name, "inspect", "-f", nodeInspectFormat, nodeName)
+			// Someone else's "testkube" there must not block our cleanup.
+			if _, _, ours := ownedSettings(string(out), string(owner)); err == nil && ours {
+				mu.Lock()
+				found = append(found, name)
+				mu.Unlock()
+			}
+		})
+	}
+	wg.Wait()
+	if len(found) == 0 {
+		return nil
+	}
+	slices.Sort(found)
+	return ClusterElsewhereError{In: found[0], Active: strings.TrimSpace(string(active))}
 }
 
 func (c *Cluster) ownerFile() string {
@@ -386,6 +474,8 @@ func runCombined(ctx context.Context, name string, args ...string) ([]byte, erro
 	// Our inspect and exec calls only reach Docker nodes.
 	cmd.Env = append(os.Environ(), "KIND_EXPERIMENTAL_PROVIDER=docker")
 	cmd.Stdout, cmd.Stderr = &out, &out
+	// docker's ssh child keeps the pipes open after a cancel.
+	cmd.WaitDelay = time.Second
 	err := cmd.Run()
 	return out.Bytes(), err
 }

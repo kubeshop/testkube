@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"os"
 	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -27,13 +29,19 @@ type kindFake struct {
 	clusters, running, bindings, mounts string
 	storagePattern, createOut           string
 	applyErr, inspectErr, exportErr     error
-	startErr                            error
-	refusedWaits, createFails           int
-	calls                               []string
+	startErr, rmErr                     error
+	nodes, active                       string
+	// ps output per other Docker context, or "down" or "hangs".
+	others                    map[string]string
+	refusedWaits, createFails int
+	mu                        sync.Mutex
+	calls                     []string
 }
 
-func (f *kindFake) run(_ context.Context, name string, args ...string) ([]byte, error) {
+func (f *kindFake) run(ctx context.Context, name string, args ...string) ([]byte, error) {
+	f.mu.Lock()
 	f.calls = append(f.calls, name+" "+strings.Join(args, " "))
+	f.mu.Unlock()
 	switch {
 	case name != "docker" && args[0] == "get":
 		return []byte(f.clusters), nil
@@ -42,6 +50,21 @@ func (f *kindFake) run(_ context.Context, name string, args ...string) ([]byte, 
 		return []byte(f.createOut), errExit
 	case name != "docker" && args[0] == "export":
 		return nil, f.exportErr
+	case args[0] == "ps":
+		return []byte(f.nodes), nil
+	case args[0] == "context" && args[1] == "show":
+		return []byte(f.active + "\n"), nil
+	case args[0] == "context":
+		return []byte(f.active + "\n" + strings.Join(slices.Sorted(maps.Keys(f.others)), "\n")), nil
+	case args[0] == "--context" && f.others[args[1]] == "down":
+		return []byte("no such file or directory"), errExit
+	case args[0] == "--context" && f.others[args[1]] == "hangs":
+		<-ctx.Done()
+		return nil, ctx.Err()
+	case args[0] == "--context":
+		return []byte(f.others[args[1]]), nil
+	case args[0] == "rm":
+		return nil, f.rmErr
 	case args[0] == "inspect":
 		return []byte(f.running + "\n" + f.bindings + "\n" + f.mounts + "\n"), f.inspectErr
 	case args[0] == "start":
@@ -397,4 +420,80 @@ func TestRunCombined_KindNeverPicksUpUsersPodmanSetting(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "docker", strings.TrimSpace(string(out)))
+}
+
+func TestClusterRemove_DeletesOnlyOurCluster(t *testing.T) {
+	rm := "docker rm -f -v testkube-control-plane"
+	tests := map[string]struct {
+		setup   func(dir string, f *kindFake)
+		found   bool
+		wantErr error
+		removed bool
+	}{
+		"ours":                {setup: func(string, *kindFake) {}, found: true, removed: true},
+		"nothing there":       {setup: func(_ string, f *kindFake) { f.nodes = "" }},
+		"no mark of ours":     {setup: func(dir string, _ *kindFake) { require.NoError(t, os.Remove(filepath.Join(dir, "cluster-id"))) }, found: true, wantErr: ErrClusterNotOurs},
+		"someone else's mark": {setup: func(_ string, f *kindFake) { f.mounts = `[{"Destination":"/testkube/owner/THEIRS"}]` }, found: true, wantErr: ErrClusterNotOurs},
+		"docker refuses":      {setup: func(_ string, f *kindFake) { f.rmErr = errExit }, found: true, wantErr: ErrClusterRemove, removed: true},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			fake := ours(t, dir)
+			fake.nodes = "abc123\n"
+			tt.setup(dir, fake)
+			c := &Cluster{kind: "kind", dir: dir, run: fake.run}
+
+			found, _, err := c.Remove(context.Background())
+
+			assert.Equal(t, tt.found, found)
+			assert.ErrorIs(t, err, tt.wantErr)
+			assert.Equal(t, tt.removed, slices.Contains(fake.calls, rm), "removed only when ours")
+		})
+	}
+}
+
+// docker inspect output for our node, as ownedSettings reads it.
+const oursElsewhere = "true\n" + ourBindings + "\n" + `[{"Destination":"/testkube/owner/OURMARK"}]`
+
+func TestClusterRemove_NothingHereStillChecksOtherRunningDockers(t *testing.T) {
+	was := contextSearchTime
+	contextSearchTime = 100 * time.Millisecond
+	t.Cleanup(func() { contextSearchTime = was })
+	tests := map[string]struct {
+		others  map[string]string
+		wantErr error
+	}{
+		"ours in another Docker":           {others: map[string]string{"orbstack": oursElsewhere}, wantErr: ClusterElsewhereError{In: "orbstack", Active: "desktop-linux"}},
+		"someone else's in another Docker": {others: map[string]string{"orbstack": strings.Replace(oursElsewhere, "OURMARK", "THEIRS", 1)}},
+		"after a Docker reset":             {others: map[string]string{"default": ""}},
+		"other Docker stopped or gone":     {others: map[string]string{"colima": "down"}},
+		"remote Docker never answers":      {others: map[string]string{"remote": "hangs"}},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			fake := ours(t, dir)
+			fake.active, fake.others = "desktop-linux", tt.others
+			c := &Cluster{kind: "kind", dir: dir, run: fake.run}
+
+			found, _, err := c.Remove(context.Background())
+
+			assert.False(t, found)
+			assert.Equal(t, tt.wantErr, err)
+		})
+	}
+}
+
+func TestClusterRemove_CtrlCMidSearchIsNotGone(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	dir := t.TempDir()
+	fake := ours(t, dir)
+	fake.active, fake.others = "desktop-linux", map[string]string{"remote": "hangs"}
+	c := &Cluster{kind: "kind", dir: dir, run: fake.run}
+
+	_, _, err := c.Remove(ctx)
+
+	assert.ErrorIs(t, err, context.Canceled)
 }
