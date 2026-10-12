@@ -188,7 +188,11 @@ func currentPods(s clusterSnapshot) map[string]*corev1.Pod {
 }
 
 // Progress counts services, not pods: users see services.
-type Progress struct{ Ready, Total int }
+type Progress struct {
+	Ready, Total int
+	// Bytes the cluster received since helm started.
+	Downloaded int64
+}
 
 func progressOf(s clusterSnapshot) Progress {
 	pods := currentPods(s)

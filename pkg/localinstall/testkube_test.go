@@ -281,15 +281,33 @@ func TestInstall_ReportsProgressWhileHelmWaits(t *testing.T) {
 	fastStuckWatch(t)
 	dexReady := `{"items":[{"kind":"Pod","metadata":{"name":"dex-1","labels":{"app.kubernetes.io/name":"dex"}},` +
 		`"status":{"phase":"Running","conditions":[{"type":"Ready","status":"True"}]}}]}`
-	i := newTestInstaller(t, &helmFake{blockFor: 200 * time.Millisecond, cluster: dexReady})
-	var got atomic.Pointer[Progress]
-	i.OnProgress = func(p Progress) { got.Store(&p) }
+	tests := map[string]struct {
+		startErr       error
+		wantDownloaded int64
+	}{
+		"counted from helm's start":   {wantDownloaded: 640_000_000},
+		"start unknown, none claimed": {startErr: errors.New("node not answering")},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			i := newTestInstaller(t, &helmFake{blockFor: 200 * time.Millisecond, cluster: dexReady})
+			var reads atomic.Int32
+			i.received = func(context.Context) (int64, error) {
+				if reads.Add(1) == 1 {
+					return 5_000_000_000, tt.startErr
+				}
+				return 5_640_000_000, nil
+			}
+			var got atomic.Pointer[Progress]
+			i.OnProgress = func(p Progress) { got.Store(&p) }
 
-	_, _, err := i.Install(context.Background(), movedPorts, testSecrets, testLicense)
+			_, _, err := i.Install(context.Background(), movedPorts, testSecrets, testLicense)
 
-	require.NoError(t, err)
-	require.NotNil(t, got.Load(), "progress reached the screen")
-	assert.Equal(t, Progress{Ready: 1, Total: 10}, *got.Load())
+			require.NoError(t, err)
+			require.NotNil(t, got.Load(), "progress reached the screen")
+			assert.Equal(t, Progress{Ready: 1, Total: 10, Downloaded: tt.wantDownloaded}, *got.Load())
+		})
+	}
 }
 
 func TestInstall_StopsEarlyOnlyWhenWaitingCantHelp(t *testing.T) {

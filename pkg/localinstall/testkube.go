@@ -57,6 +57,9 @@ type Installer struct {
 	docker     func(ctx context.Context) DockerResources
 	// Called from the poll goroutine, every few seconds.
 	OnProgress func(Progress)
+	received   func(ctx context.Context) (int64, error)
+	// Before helm starts; negative when it couldn't be read.
+	receivedAtStart int64
 }
 
 func NewInstaller(cliVersion string) (*Installer, error) {
@@ -69,7 +72,8 @@ func NewInstaller(cliVersion string) (*Installer, error) {
 		return nil, err
 	}
 	return &Installer{helm: h.Run, apply: kubectlApply, wait: waitForPostgres, read: readCluster,
-		logs: podLogs, dir: filepath.Dir(kubeconfig), cliVersion: cliVersion, docker: ReadDockerResources}, nil
+		logs: podLogs, dir: filepath.Dir(kubeconfig), cliVersion: cliVersion, docker: ReadDockerResources,
+		received: nodeReceived}, nil
 }
 
 // After Ctrl+C nobody needs a report of the cut-short run.
@@ -111,6 +115,7 @@ func (i *Installer) install(ctx context.Context, ports Ports, s Secrets, license
 		return state, "", err
 	}
 
+	i.receivedAtStart = i.receivedNow(ctx)
 	start := time.Now()
 	began := start
 	install := func() ([]byte, *Stuck, error) {
@@ -255,7 +260,11 @@ func (i *Installer) diagnose(ctx context.Context, since time.Time, withLogs bool
 		return Stuck{}, false
 	}
 	if progress != nil {
-		progress(progressOf(s))
+		p := progressOf(s)
+		if now := i.receivedNow(ctx); now >= 0 && i.receivedAtStart >= 0 {
+			p.Downloaded = max(0, now-i.receivedAtStart)
+		}
+		progress(p)
 	}
 	st, ok := findStuck(s, since, time.Now())
 	if ok && withLogs && st.Pod != "" && (st.Reason == "crashloop" || st.Reason == "job_failed") {
@@ -282,6 +291,26 @@ func (i *Installer) lastLogLines(ctx context.Context, pod string) []string {
 func podLogs(ctx context.Context, pod string, previous bool, tail int) ([]byte, error) {
 	return exec.CommandContext(ctx, "docker", "exec", nodeName, "kubectl", "--kubeconfig=/etc/kubernetes/admin.conf",
 		"--namespace", Namespace, "logs", pod, "--tail="+strconv.Itoa(tail), "--previous="+strconv.FormatBool(previous)).Output()
+}
+
+// Image pulls are nearly all the node's traffic during install.
+func nodeReceived(ctx context.Context) (int64, error) {
+	out, err := exec.CommandContext(ctx, "docker", "exec", nodeName, "cat", "/sys/class/net/eth0/statistics/rx_bytes").Output()
+	if err != nil {
+		return 0, err
+	}
+	return strconv.ParseInt(strings.TrimSpace(string(out)), 10, 64)
+}
+
+func (i *Installer) receivedNow(ctx context.Context) int64 {
+	if i.received == nil {
+		return -1
+	}
+	n, err := i.received(ctx)
+	if err != nil {
+		return -1
+	}
+	return n
 }
 
 // Stdout only: kubectl warnings on stderr would break the JSON.

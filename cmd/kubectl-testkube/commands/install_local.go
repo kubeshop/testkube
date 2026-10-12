@@ -319,11 +319,12 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 	installer.OnProgress = func(p localinstall.Progress) { progress.Store(&p) }
 	start := time.Now()
 	waiting := func(elapsed time.Duration) string {
-		text := "Installing Testkube · "
-		if p := progress.Load(); p != nil {
-			text += fmt.Sprintf("%d of %d ready · ", p.Ready, p.Total)
+		p := progress.Load()
+		// Real numbers replace the hint, so 80 columns still fit.
+		if p == nil {
+			return "Installing Testkube · " + took(elapsed) + " (first run 3 to 8 minutes)"
 		}
-		return text + took(elapsed) + " (first run 3 to 8 minutes)"
+		return "Installing Testkube · " + downloadedText(p.Downloaded) + fmt.Sprintf("%d/%d ready · ", p.Ready, p.Total) + took(elapsed)
 	}
 	spinner := startSpinnerTimed(waiting(0), false)
 	stopTicking := tickElapsed(spinner, start, waiting)
@@ -348,6 +349,24 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 }
 
 // Long waits need a visible pulse; download ETAs would lie.
+// Hidden on a rerun: cached images download nothing.
+func downloadedText(n int64) string {
+	switch {
+	case n < 1_000_000:
+		return ""
+	case n < localinstall.ImagesSize:
+		return byteSize(n) + " of ~" + byteSize(localinstall.ImagesSize) + " · "
+	}
+	return byteSize(n) + " downloaded · "
+}
+
+func byteSize(n int64) string {
+	if n < 1_000_000_000 {
+		return fmt.Sprintf("%d MB", n/1_000_000)
+	}
+	return fmt.Sprintf("%.1f GB", float64(n)/1e9)
+}
+
 func tickElapsed(spinner *pterm.SpinnerPrinter, start time.Time, text func(time.Duration) string) (stop func()) {
 	done := make(chan struct{})
 	go func() {
