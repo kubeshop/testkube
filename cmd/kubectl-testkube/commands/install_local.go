@@ -318,7 +318,7 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 	waiting := func(elapsed time.Duration) string {
 		return "Installing Testkube · " + took(elapsed) + " (first run 3 to 8 minutes)"
 	}
-	spinner := startSpinner(waiting(0))
+	spinner := startSpinnerTimed(waiting(0), false)
 	stopTicking := tickElapsed(spinner, start, waiting)
 	state, out, err := installer.Install(cmd.Context(), ports, secrets, license)
 	stopTicking()
@@ -513,13 +513,19 @@ func homeRelative(path string) string {
 	return "~" + strings.TrimPrefix(path, home)
 }
 
-// pterm's light white text vanishes on light terminals.
-// Removed when done: its success line would clash with our rows.
 func startSpinner(text string) *pterm.SpinnerPrinter {
+	return startSpinnerTimed(text, true)
+}
+
+// pterm's light white text vanishes on light terminals.
+// Removed when done: its success line clashes with our rows.
+// Text with our own timer needs pterm's off.
+func startSpinnerTimed(text string, showTimer bool) *pterm.SpinnerPrinter {
 	spinner, _ := pterm.DefaultSpinner.
 		WithSequence(` ⠋ `, ` ⠹ `, ` ⠼ `, ` ⠦ `, ` ⠇ `).
 		WithMessageStyle(pterm.NewStyle(pterm.FgDefault)).
 		WithRemoveWhenDone(true).
+		WithShowTimer(showTimer).
 		Start(text)
 	return spinner
 }
