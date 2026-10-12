@@ -10,7 +10,7 @@ const (
 	RunnerChartVersion     = "2.14.1"
 	AppVersion             = "v2.14.1"
 
-	// Compressed images of these charts, rounded; shown as "about".
+	// Compressed images of these charts, rounded; remeasure on bump.
 	ImagesSize = 1_200_000_000
 
 	// The demo values' static dex login.

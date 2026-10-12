@@ -49,6 +49,7 @@
 // so a rebuilt cluster can still open its old data.
 // A failed install names the root stuck service (see Stuck);
 // helm stops early when waiting can't help, like a missing image.
+// Meanwhile OnProgress reports each service's state and downloads.
 // It also saves a private report for support (see saveReport),
 // built from picked fields only, with known secrets masked.
 // Uninstall (see Cluster.Remove, RemoveFiles, DeleteData) keeps data
