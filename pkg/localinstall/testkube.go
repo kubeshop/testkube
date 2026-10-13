@@ -55,6 +55,11 @@ type Installer struct {
 	// For the failure report; the CLI knows its own version.
 	cliVersion string
 	docker     func(ctx context.Context) DockerResources
+	// Called from the poll goroutine, every few seconds.
+	OnProgress func(Progress)
+	received   func(ctx context.Context) (int64, error)
+	// Before helm starts; negative when it couldn't be read.
+	receivedAtStart int64
 }
 
 func NewInstaller(cliVersion string) (*Installer, error) {
@@ -67,7 +72,8 @@ func NewInstaller(cliVersion string) (*Installer, error) {
 		return nil, err
 	}
 	return &Installer{helm: h.Run, apply: kubectlApply, wait: waitForPostgres, read: readCluster,
-		logs: podLogs, dir: filepath.Dir(kubeconfig), cliVersion: cliVersion, docker: ReadDockerResources}, nil
+		logs: podLogs, dir: filepath.Dir(kubeconfig), cliVersion: cliVersion, docker: ReadDockerResources,
+		received: nodeReceived}, nil
 }
 
 // After Ctrl+C nobody needs a report of the cut-short run.
@@ -109,6 +115,7 @@ func (i *Installer) install(ctx context.Context, ports Ports, s Secrets, license
 		return state, "", err
 	}
 
+	i.receivedAtStart = i.receivedNow(ctx)
 	start := time.Now()
 	began := start
 	install := func() ([]byte, *Stuck, error) {
@@ -121,7 +128,9 @@ func (i *Installer) install(ctx context.Context, ports Ports, s Secrets, license
 	if err != nil && stuck == nil && migrationLostRace(string(out)) {
 		state.MigrationRetried = true
 		// Best effort: a postgres that never starts fails the retry.
+		stopPolling := i.pollProgress(ctx, began)
 		_, _ = i.wait(ctx)
+		stopPolling()
 		out, stuck, err = install()
 	}
 	if err != nil && stuck != nil {
@@ -199,7 +208,7 @@ func (i *Installer) watchedHelm(ctx context.Context, since time.Time, args ...st
 			case <-ticker.C:
 			}
 			// Logs only matter for the final message.
-			st, ok := i.diagnose(helmCtx, since, false)
+			st, ok := i.diagnose(helmCtx, since, false, i.OnProgress)
 			switch {
 			case !ok || !stopsEarly[st.Reason]:
 				seen = Stuck{}
@@ -226,6 +235,34 @@ func (i *Installer) watchedHelm(ctx context.Context, since time.Time, args ...st
 	}
 }
 
+// The retry waits minutes on postgres; keep the screen moving.
+func (i *Installer) pollProgress(ctx context.Context, since time.Time) (stop func()) {
+	if i.OnProgress == nil {
+		return func() {}
+	}
+	// Waited for, so a late sample can't overwrite the next watcher's.
+	ctx, cancel := context.WithCancel(ctx)
+	finished := make(chan struct{})
+	poll := stuckPoll
+	go func() {
+		defer close(finished)
+		ticker := time.NewTicker(poll)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				i.diagnose(ctx, since, false, i.OnProgress)
+			}
+		}
+	}()
+	return func() {
+		cancel()
+		<-finished
+	}
+}
+
 func (e StuckError) Error() string { return e.err.Error() }
 func (e StuckError) Unwrap() error { return e.err }
 
@@ -234,14 +271,14 @@ func (i *Installer) explain(ctx context.Context, out string, err error, since ti
 	if ctx.Err() != nil || !errors.Is(err, ErrInstallTimeout) && !strings.Contains(out, " not ready. status: ") {
 		return err
 	}
-	if st, ok := i.diagnose(ctx, since, true); ok {
+	if st, ok := i.diagnose(ctx, since, true, nil); ok {
 		return StuckError{Stuck: st, err: err}
 	}
 	return err
 }
 
 // Bounded, and Ctrl+C stops it: a hung Docker never answers.
-func (i *Installer) diagnose(ctx context.Context, since time.Time, withLogs bool) (Stuck, bool) {
+func (i *Installer) diagnose(ctx context.Context, since time.Time, withLogs bool, progress func(Progress)) (Stuck, bool) {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	data, err := i.read(ctx)
@@ -251,6 +288,13 @@ func (i *Installer) diagnose(ctx context.Context, since time.Time, withLogs bool
 	s, err := parseSnapshot(data)
 	if err != nil {
 		return Stuck{}, false
+	}
+	if progress != nil {
+		p := progressOf(s, since)
+		if now := i.receivedNow(ctx); now >= 0 && i.receivedAtStart >= 0 {
+			p.Downloaded = max(0, now-i.receivedAtStart)
+		}
+		progress(p)
 	}
 	st, ok := findStuck(s, since, time.Now())
 	if ok && withLogs && st.Pod != "" && (st.Reason == "crashloop" || st.Reason == "job_failed") {
@@ -277,6 +321,31 @@ func (i *Installer) lastLogLines(ctx context.Context, pod string) []string {
 func podLogs(ctx context.Context, pod string, previous bool, tail int) ([]byte, error) {
 	return exec.CommandContext(ctx, "docker", "exec", nodeName, "kubectl", "--kubeconfig=/etc/kubernetes/admin.conf",
 		"--namespace", Namespace, "logs", pod, "--tail="+strconv.Itoa(tail), "--previous="+strconv.FormatBool(previous)).Output()
+}
+
+// Image pulls are nearly all the node's traffic during install.
+func nodeReceived(ctx context.Context) (int64, error) {
+	out, err := exec.CommandContext(ctx, "docker", "exec", nodeName, "cat", "/sys/class/net/eth0/statistics/rx_bytes").Output()
+	if err != nil {
+		return 0, err
+	}
+	return strconv.ParseInt(strings.TrimSpace(string(out)), 10, 64)
+}
+
+// A hung Docker must not stall the install for a number.
+var receivedWait = 5 * time.Second
+
+func (i *Installer) receivedNow(ctx context.Context) int64 {
+	if i.received == nil {
+		return -1
+	}
+	ctx, cancel := context.WithTimeout(ctx, receivedWait)
+	defer cancel()
+	n, err := i.received(ctx)
+	if err != nil {
+		return -1
+	}
+	return n
 }
 
 // Stdout only: kubectl warnings on stderr would break the JSON.

@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -274,6 +275,105 @@ func fastStuckWatch(t *testing.T) {
 	poll, lasts := stuckPoll, stuckLasts
 	stuckPoll, stuckLasts = 5*time.Millisecond, 500*time.Millisecond
 	t.Cleanup(func() { stuckPoll, stuckLasts = poll, lasts })
+}
+
+func TestInstall_ReportsProgressWhileHelmWaits(t *testing.T) {
+	fastStuckWatch(t)
+	dexReady := `{"items":[{"kind":"Pod","metadata":{"name":"dex-1","labels":{"app.kubernetes.io/name":"dex"}},` +
+		`"status":{"phase":"Running","conditions":[{"type":"Ready","status":"True"}]}}]}`
+	tests := map[string]struct {
+		startErr       error
+		wantDownloaded int64
+	}{
+		"counted from helm's start":   {wantDownloaded: 640_000_000},
+		"start unknown, none claimed": {startErr: errors.New("node not answering")},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			i := newTestInstaller(t, &helmFake{blockFor: 200 * time.Millisecond, cluster: dexReady})
+			var reads atomic.Int32
+			i.received = func(context.Context) (int64, error) {
+				if reads.Add(1) == 1 {
+					return 5_000_000_000, tt.startErr
+				}
+				return 5_640_000_000, nil
+			}
+			var got atomic.Pointer[Progress]
+			i.OnProgress = func(p Progress) { got.Store(&p) }
+
+			_, _, err := i.Install(context.Background(), movedPorts, testSecrets, testLicense)
+
+			require.NoError(t, err)
+			require.NotNil(t, got.Load(), "progress reached the screen")
+			p := *got.Load()
+			assert.Equal(t, []any{1, 10, tt.wantDownloaded}, []any{p.Ready, p.Total, p.Downloaded})
+		})
+	}
+}
+
+func TestInstall_HungDockerReadDoesNotStallTheInstall(t *testing.T) {
+	was := receivedWait
+	receivedWait = 50 * time.Millisecond
+	t.Cleanup(func() { receivedWait = was })
+	i := newTestInstaller(t, &helmFake{})
+	i.received = func(ctx context.Context) (int64, error) {
+		<-ctx.Done()
+		return 0, ctx.Err()
+	}
+	start := time.Now()
+
+	_, _, err := i.Install(context.Background(), movedPorts, testSecrets, testLicense)
+
+	require.NoError(t, err)
+	assert.Less(t, time.Since(start), time.Second)
+}
+
+func TestInstall_ProgressKeepsMovingWhileTheRetryWaits(t *testing.T) {
+	fastStuckWatch(t)
+	lost := "Error: resource Job/testkube/testkube-enterprise-api-migration-1 not ready. status: Failed, message: Job Failed. failed: 4/1"
+	i := newTestInstaller(t, &helmFake{failOn: ReleaseName, failOut: lost, failures: 1})
+	var updates atomic.Int32
+	i.OnProgress = func(Progress) { updates.Add(1) }
+	var duringWait int32
+	i.wait = func(context.Context) ([]byte, error) {
+		before := updates.Load()
+		time.Sleep(100 * time.Millisecond)
+		duringWait = updates.Load() - before
+		return nil, nil
+	}
+
+	_, _, err := i.Install(context.Background(), movedPorts, testSecrets, testLicense)
+
+	require.NoError(t, err)
+	assert.Positive(t, duringWait, "the screen isn't frozen while postgres starts")
+}
+
+func TestPollProgress_NoLateSampleAfterStop(t *testing.T) {
+	fastStuckWatch(t)
+	i := newTestInstaller(t, &helmFake{})
+	reading := make(chan struct{}, 1)
+	i.read = func(ctx context.Context) ([]byte, error) {
+		select {
+		case reading <- struct{}{}:
+		default:
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(100 * time.Millisecond):
+			return []byte(`{"items":[]}`), nil
+		}
+	}
+	var updates atomic.Int32
+	i.OnProgress = func(Progress) { updates.Add(1) }
+
+	stop := i.pollProgress(context.Background(), time.Now())
+	<-reading
+	stop()
+	after := updates.Load()
+	time.Sleep(200 * time.Millisecond)
+
+	assert.Equal(t, after, updates.Load(), "a slow sample landed after stop")
 }
 
 func TestInstall_StopsEarlyOnlyWhenWaitingCantHelp(t *testing.T) {

@@ -28,7 +28,8 @@ const networkFix = "Testkube downloads from these during install. If you use a p
 
 // Any HTTP answer counts: Docker Hub replies 401 to anonymous calls.
 func (realHost) Reachable(ctx context.Context, url string) bool {
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	// A VPN's first connection can take over 3s.
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
 	if err != nil {

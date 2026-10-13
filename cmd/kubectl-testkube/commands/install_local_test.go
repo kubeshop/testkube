@@ -38,3 +38,19 @@ func TestHomeRelative_ShortensOnlyPathsInsideHome(t *testing.T) {
 	assert.Equal(t, "~"+string(os.PathSeparator)+filepath.Join(".testkube", "logs", "install-1.txt"), homeRelative(inside))
 	assert.Equal(t, home+"2/x.txt", homeRelative(home+"2/x.txt"), "a sibling folder isn't home")
 }
+
+func TestDownloadedText_HiddenOnRerunsAndHonestPastTheEstimate(t *testing.T) {
+	tests := map[string]struct {
+		bytes int64
+		want  string
+	}{
+		"rerun, images cached": {bytes: 999_999, want: ""},
+		"mid download":         {bytes: 640_000_000, want: "640 MB of ~1.2 GB · "},
+		"past the estimate":    {bytes: 1_210_000_000, want: "1.2 GB downloaded · "},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.want, downloadedText(tt.bytes))
+		})
+	}
+}

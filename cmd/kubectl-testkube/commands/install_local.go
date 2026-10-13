@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -172,7 +174,15 @@ func exitIfCancelled(cmd *cobra.Command, tracker *telemetry.InstallTracker, stag
 	abortInstall(tracker, stage)
 }
 
+var cancelNotice sync.Once
+
+// Before any wait, or Ctrl+C looks ignored; once, from either path.
+func printCancelled() {
+	cancelNotice.Do(func() { ui.Printf("\n  Install cancelled.\n") })
+}
+
 func abortInstall(tracker *telemetry.InstallTracker, stage string) {
+	printCancelled()
 	tracker.Send("install_local_aborted", map[string]any{"stage": stage})
 	waitForEvents(tracker)
 	os.Exit(130)
@@ -314,15 +324,28 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 	if err != nil {
 		failTestkube(tracker, "", err, "")
 	}
+	var progress atomic.Pointer[localinstall.Progress]
+	installer.OnProgress = func(p localinstall.Progress) { progress.Store(&p) }
 	start := time.Now()
-	waiting := func(elapsed time.Duration) string {
-		return "Installing Testkube · " + took(elapsed) + " (first run 3 to 8 minutes)"
+	show := showPlain
+	if canShowLive() {
+		show = showLive
 	}
-	spinner := startSpinner(waiting(0))
-	stopTicking := tickElapsed(spinner, start, waiting)
+	var stopped sync.Once
+	stop := show(os.Stdout, start, &progress)
+	finished := make(chan struct{})
+	// Helm takes seconds to clean up; say so before it does.
+	go func() {
+		select {
+		case <-cmd.Context().Done():
+			stopped.Do(stop)
+			printCancelled()
+		case <-finished:
+		}
+	}()
 	state, out, err := installer.Install(cmd.Context(), ports, secrets, license)
-	stopTicking()
-	_ = spinner.Stop()
+	close(finished)
+	stopped.Do(stop)
 	exitIfCancelled(cmd, tracker, "testkube")
 	if err != nil {
 		failTestkube(tracker, out, err, state.ReportPath)
@@ -340,22 +363,22 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 		"duration_s": int(time.Since(start).Seconds())})
 }
 
-// Long waits need a visible pulse; download ETAs would lie.
-func tickElapsed(spinner *pterm.SpinnerPrinter, start time.Time, text func(time.Duration) string) (stop func()) {
-	done := make(chan struct{})
-	go func() {
-		ticker := time.NewTicker(time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-done:
-				return
-			case <-ticker.C:
-				spinner.UpdateText(text(time.Since(start)))
-			}
-		}
-	}()
-	return func() { close(done) }
+// Hidden on a rerun: cached images download nothing.
+func downloadedText(n int64) string {
+	switch {
+	case n < 1_000_000:
+		return ""
+	case n < localinstall.ImagesSize:
+		return byteSize(n) + " of ~" + byteSize(localinstall.ImagesSize) + " · "
+	}
+	return byteSize(n) + " downloaded · "
+}
+
+func byteSize(n int64) string {
+	if n < 1_000_000_000 {
+		return fmt.Sprintf("%d MB", n/1_000_000)
+	}
+	return fmt.Sprintf("%.1f GB", float64(n)/1e9)
 }
 
 func took(d time.Duration) string {
@@ -514,8 +537,10 @@ func homeRelative(path string) string {
 }
 
 // pterm's light white text vanishes on light terminals.
-// Removed when done: its success line would clash with our rows.
+// Removed when done: its success line clashes with our rows.
 func startSpinner(text string) *pterm.SpinnerPrinter {
+	// pterm can't redraw a wrapped line; room for icon and timer.
+	text = fit(text, pterm.GetTerminalWidth()-15)
 	spinner, _ := pterm.DefaultSpinner.
 		WithSequence(` ⠋ `, ` ⠹ `, ` ⠼ `, ` ⠦ `, ` ⠇ `).
 		WithMessageStyle(pterm.NewStyle(pterm.FgDefault)).

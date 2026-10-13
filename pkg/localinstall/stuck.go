@@ -64,23 +64,24 @@ type stuckService struct {
 	name, label string
 	// Role first for users, name kept for support.
 	title string
+	role  string
 	job   bool
 	deps  []string
 }
 
 // Root first, so a dependency is blamed before its users.
 var stuckServices = []stuckService{
-	{name: "postgres", label: "postgresql", title: "The database (postgres)"},
-	{name: "nats", label: "nats", title: "Messaging (nats)"},
-	{name: "minio", label: "minio", title: "File storage (minio)"},
-	{name: "dex", label: "dex", title: "Login (dex)"},
-	{name: "ui", label: "testkube-cloud-ui", title: "The dashboard (ui)"},
-	{name: "migration", label: "testkube-enterprise-api-migration", title: "Database setup (migration)", job: true,
+	{name: "postgres", label: "postgresql", title: "The database (postgres)", role: "Database"},
+	{name: "nats", label: "nats", title: "Messaging (nats)", role: "Messaging"},
+	{name: "minio", label: "minio", title: "File storage (minio)", role: "File storage"},
+	{name: "dex", label: "dex", title: "Login (dex)", role: "Login"},
+	{name: "ui", label: "testkube-cloud-ui", title: "The dashboard (ui)", role: "Dashboard"},
+	{name: "migration", label: "testkube-enterprise-api-migration", title: "Database setup (migration)", role: "Database setup", job: true,
 		deps: []string{"postgres"}},
-	{name: "api", label: "testkube-cloud-api", title: "The API (api)", deps: []string{"postgres", "nats", "minio", "migration"}},
-	{name: "worker-service", label: "testkube-worker-service", title: "Background jobs (worker-service)", deps: []string{"nats", "minio"}},
-	{name: "ai-service", label: "testkube-ai-service", title: "The AI assistant (ai-service)", deps: []string{"postgres"}},
-	{name: "runner", label: "testkube-runner", title: "The runner", deps: []string{"api"}},
+	{name: "api", label: "testkube-cloud-api", title: "The API (api)", role: "API", deps: []string{"postgres", "nats", "minio", "migration"}},
+	{name: "worker-service", label: "testkube-worker-service", title: "Background jobs (worker-service)", role: "Background jobs", deps: []string{"nats", "minio"}},
+	{name: "ai-service", label: "testkube-ai-service", title: "The AI assistant (ai-service)", role: "AI assistant", deps: []string{"postgres"}},
+	{name: "runner", label: "testkube-runner", title: "The runner", role: "Runner", deps: []string{"api"}},
 }
 
 func (s Stuck) Title() string {
@@ -99,23 +100,7 @@ var imageMissingWords = []string{"not found", "manifest unknown", "denied", "una
 
 // Blames the root cause, never a service waiting on it.
 func findStuck(s clusterSnapshot, since, now time.Time) (Stuck, bool) {
-	jobs := map[string]bool{}
-	for _, svc := range stuckServices {
-		jobs[svc.name] = svc.job
-	}
-	// A rerun keeps the old pod until the new one is ready.
-	pods := map[string]*corev1.Pod{}
-	for i := range s.pods {
-		p := &s.pods[i]
-		name := serviceOf(p)
-		finished := p.Status.Phase == corev1.PodFailed || p.Status.Phase == corev1.PodSucceeded
-		if name == "" || p.DeletionTimestamp != nil || finished && !jobs[name] {
-			continue
-		}
-		if cur := pods[name]; cur == nil || p.CreationTimestamp.After(cur.CreationTimestamp.Time) {
-			pods[name] = p
-		}
-	}
+	pods := currentPods(s)
 	// Waiting can't fix these; a healthy pod's old OOM doesn't count.
 	for _, svc := range stuckServices {
 		if _, ready := serviceReadySince(svc, pods[svc.name], s.jobs); ready {
@@ -180,6 +165,117 @@ func findStuck(s clusterSnapshot, since, now time.Time) (Stuck, bool) {
 		return Stuck{Service: svc.name, Pod: p.Name, Reason: "not_ready", Detail: detail, Restarts: restarts(p, since)}, true
 	}
 	return Stuck{}, false
+}
+
+// Reruns keep the old pod until the new one's ready.
+func currentPods(s clusterSnapshot) map[string]*corev1.Pod {
+	jobs := map[string]bool{}
+	for _, svc := range stuckServices {
+		jobs[svc.name] = svc.job
+	}
+	pods := map[string]*corev1.Pod{}
+	for i := range s.pods {
+		p := &s.pods[i]
+		name := serviceOf(p)
+		finished := p.Status.Phase == corev1.PodFailed || p.Status.Phase == corev1.PodSucceeded
+		if name == "" || p.DeletionTimestamp != nil || finished && !jobs[name] {
+			continue
+		}
+		if cur := pods[name]; cur == nil || p.CreationTimestamp.After(cur.CreationTimestamp.Time) {
+			pods[name] = p
+		}
+	}
+	return pods
+}
+
+// Progress counts services, not pods: users see services.
+type Progress struct {
+	Ready, Total int
+	// Bytes the cluster received since helm started.
+	Downloaded int64
+	Services   []ServiceProgress
+}
+
+type ServiceProgress struct {
+	Role  string
+	State ServiceState
+	// The role it waits for, when State is StateWaiting.
+	WaitsFor string
+	// Zero when it was ready before this install began.
+	ReadyAfter time.Duration
+}
+
+type ServiceState string
+
+const (
+	StateReady       ServiceState = "ready"
+	StateDownloading ServiceState = "downloading"
+	StateQueued      ServiceState = "queued"
+	StateWaiting     ServiceState = "waiting"
+	StateStarting    ServiceState = "starting"
+	StateNotStarted  ServiceState = "not_started"
+)
+
+func progressOf(s clusterSnapshot, since time.Time) Progress {
+	pods := currentPods(s)
+	p := Progress{Total: len(stuckServices)}
+	roles := map[string]string{}
+	ready := map[string]bool{}
+	for _, svc := range stuckServices {
+		roles[svc.name] = svc.role
+		if t, ok := serviceReadySince(svc, pods[svc.name], s.jobs); ok {
+			ready[svc.name] = true
+			p.Ready++
+			p.Services = append(p.Services, ServiceProgress{Role: svc.role, State: StateReady, ReadyAfter: max(0, t.Sub(since))})
+			continue
+		}
+		p.Services = append(p.Services, serviceProgress(svc, pods[svc.name], s.events))
+	}
+	// Restarts while a dependency is down are normal, not failures.
+	for i, svc := range stuckServices {
+		st := &p.Services[i]
+		if st.State == StateReady || st.State == StateDownloading || st.State == StateQueued {
+			continue
+		}
+		for _, d := range svc.deps {
+			if !ready[d] {
+				st.State, st.WaitsFor = StateWaiting, roles[d]
+				break
+			}
+		}
+	}
+	return p
+}
+
+// Kubelet pulls one image at a time; the rest wait their turn.
+func serviceProgress(svc stuckService, p *corev1.Pod, events []corev1.Event) ServiceProgress {
+	sp := ServiceProgress{Role: svc.role, State: StateStarting}
+	switch {
+	case p == nil:
+		sp.State = StateNotStarted
+	case containerCreating(p) && latestEvent(events, "Pod", p.Name, "Pulled") == "":
+		sp.State = StateQueued
+		if latestEvent(events, "Pod", p.Name, "Pulling") != "" {
+			sp.State = StateDownloading
+		}
+	}
+	return sp
+}
+
+func containerCreating(p *corev1.Pod) bool {
+	for _, c := range p.Status.ContainerStatuses {
+		if w := c.State.Waiting; w != nil && w.Reason == "ContainerCreating" {
+			return true
+		}
+	}
+	// Unschedulable means too little CPU or memory, not downloading.
+	for _, c := range p.Status.Conditions {
+		if c.Type == corev1.PodScheduled && c.Status == corev1.ConditionFalse {
+			return false
+		}
+	}
+	// Scheduled but no statuses yet: it hasn't started pulling.
+	return p.Status.Phase == corev1.PodPending && len(p.Status.ContainerStatuses) == 0
 }
 
 func serviceOf(p *corev1.Pod) string {
