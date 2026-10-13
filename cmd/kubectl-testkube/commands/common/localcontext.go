@@ -59,6 +59,16 @@ func ConnectLocalCLI(ctx context.Context, ports localinstall.Ports, email string
 	return LocalCLIConnected, nil
 }
 
+// Raw errors carry paths and API replies; telemetry gets these.
+func LocalCLIPlainError(err error) error {
+	for _, plain := range []error{localinstall.ErrCLILogin, localinstall.ErrCLIKey, errCLISettings} {
+		if errors.Is(err, plain) {
+			return plain
+		}
+	}
+	return errors.New("the CLI login failed")
+}
+
 // Fixed words for telemetry; raw errors can carry paths.
 func LocalCLIFailure(err error) string {
 	switch {
