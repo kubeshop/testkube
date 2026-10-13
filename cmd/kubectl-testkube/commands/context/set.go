@@ -31,6 +31,10 @@ func setContextLocal(ctx context.Context) {
 	email := localinstall.RememberLoginEmail("")
 	if _, err := common.ConnectLocalCLI(ctx, ports, email, true); err != nil {
 		ui.Debug("testkube CLI login failed", err.Error())
+		if common.LocalCLIFailure(err) == "settings" {
+			ui.Printf("  testkube CLI couldn't save its settings. Check ~/.testkube/config.json is readable and writable.\n")
+			os.Exit(1)
+		}
 		ui.Printf("  testkube CLI couldn't log in to the local install. Check it's ready at http://localhost:%d\n", ports["dashboard"])
 		os.Exit(1)
 	}
