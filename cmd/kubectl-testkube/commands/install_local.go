@@ -577,6 +577,13 @@ func startSpinner(text string) *pterm.SpinnerPrinter {
 	return spinner
 }
 
+// Status shows it too, so the wording lives once.
+func nameTakenFix() string {
+	return fmt.Sprintf("A kind cluster named %q exists that this installer didn't create.\n"+
+		"Delete it if you don't need it:\n  ~/.testkube/bin/kind delete cluster --name %s\nThen run again:\n  %s",
+		localinstall.ClusterName, localinstall.ClusterName, localinstall.InstallCommand)
+}
+
 func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
 	r := localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "could not create"}
 	reason := "create"
@@ -584,9 +591,7 @@ func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
 	switch {
 	case errors.Is(err, localinstall.ErrClusterNotOurs):
 		reason, r.Detail = "not_ours", "name already taken"
-		r.Fix = fmt.Sprintf("A kind cluster named %q exists that this installer didn't create.\n"+
-			"Delete it if you don't need it:\n  ~/.testkube/bin/kind delete cluster --name %s\nThen run again:\n  %s",
-			localinstall.ClusterName, localinstall.ClusterName, localinstall.InstallCommand)
+		r.Fix = nameTakenFix()
 	case errors.Is(err, localinstall.ErrClusterStart):
 		reason, r.Detail = "start", "could not start"
 		r.Fix = lastLines(out, 5) + "\nIf a port is in use, close that program, " + thenRunAgain + "\n" +
@@ -709,6 +714,7 @@ func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports, ema
 		ui.Printf("\n  %s testkube CLI couldn't log in to this install\n"+
 			"      To try again, run:\n        %s\n", ui.LightGray("○"), setContextLocalCommand)
 	}
+	ui.Printf("\n  To see this again:\n    %s\n", statusLocalCommand)
 	ui.Printf("\n  To remove it later:\n    %s\n", uninstallCommand)
 	opened := localinstall.OpenBrowser(url)
 	if opened {
