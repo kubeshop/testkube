@@ -4,7 +4,9 @@ name: Publish images to GAR
 # (no rebuild) and signs them in both registries with cosign keyless. Called
 # for stable tags by new-build.yaml and release.yaml (the agent image is built
 # there); both calls sync and sign the full list, so whichever runs last
-# completes it. Run it manually to backfill or sign a released version.
+# completes it. It also copies the upstream NATS images the chart uses, so the
+# chart can be installed from GAR only. Run it manually to backfill or sign a
+# released version.
 on:
   workflow_call:
     inputs:
@@ -72,3 +74,7 @@ jobs:
 
       - name: Sign images
         run: ./scripts/sign-images.sh "$VERSION" "$GAR_REPOSITORY" $IMAGES
+
+      - name: Push NATS images to GAR
+        # Upstream images, not signed: we only sign images we build
+        run: ./scripts/push-nats-to-gar.sh "$GAR_REPOSITORY"

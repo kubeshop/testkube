@@ -9,6 +9,10 @@
 # remove it. Images whose source tag does not exist are skipped with a warning,
 # since not every image ships in every release line.
 #
+# With KEEP_EXISTING_TAGS=true, a GAR tag with a different digest is kept with
+# a warning instead of failing. Meant for upstream images, which are rebuilt
+# under the same tag.
+#
 # Usage: ./scripts/push-to-gar.sh <version> <gar-repository> <source-image>=<gar-name>...
 # Example: ./scripts/push-to-gar.sh 2.14.1 us-east1-docker.pkg.dev/my-project/testkube \
 #            docker.io/kubeshop/testkube-api-server=api-server
@@ -59,6 +63,10 @@ push_image() {
   gar_digest="$(get_digest "$gar_ref")" || return 1
   if [ "$gar_digest" = "$source_digest" ]; then
     echo "${gar_ref} is already in sync (${source_digest})"
+    return 0
+  fi
+  if [ -n "$gar_digest" ] && [ "${KEEP_EXISTING_TAGS:-false}" = "true" ]; then
+    echo "::warning::${gar_ref} already exists with a different digest (source: ${source_digest}, GAR: ${gar_digest}). Keeping the GAR copy."
     return 0
   fi
   if [ -n "$gar_digest" ]; then
