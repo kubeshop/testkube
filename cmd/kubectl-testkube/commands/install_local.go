@@ -38,7 +38,8 @@ func NewInstallLocalCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			printBanner()
 			tracker := newInstallTracker()
-			segmentError.cmd = cmd
+			var key string
+			tracker.OnError(segmentErrors(cmd, &key))
 			if tracker.Enabled() {
 				ui.Printf("%s\n", ui.LightGray(telemetry.InstallNotice))
 			}
@@ -46,8 +47,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			printPlan()
 
 			printStep(1, "Checking your license")
-			key := runLicenseStep(tracker, licenseKey)
-			segmentError.license = key
+			key = runLicenseStep(tracker, licenseKey)
 			// The login needs it; validate already sent the key there.
 			owner := telemetry.GetEmail(key)
 			if tracker.Enabled() {
@@ -71,7 +71,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			if localinstall.HasFailure(results) {
 				trackChecks(tracker, results, checker.Facts())
 				tracker.Send("install_local_failed", map[string]any{"stage": "tools"})
-				sendSegmentError(tracker, common.TKErrLocalToolsFailed, "tools", failedChecks(results))
+				tracker.Error(string(common.TKErrLocalToolsFailed), "tools", failedChecks(results))
 				waitForEvents(tracker)
 				os.Exit(1)
 			}
@@ -159,20 +159,13 @@ func licenseFailure(err error, expiry time.Time) localinstall.Result {
 	return r
 }
 
-// Set once per run; fail helpers cannot see either.
-var segmentError struct {
-	cmd     *cobra.Command
-	license string
-}
-
 // Segment holds every CLI error; PostHog keeps the install journey.
-func sendSegmentError(tracker *telemetry.InstallTracker, code common.ErrorCode, stage, reason string) {
-	if !tracker.Enabled() || segmentError.cmd == nil {
-		return
+func segmentErrors(cmd *cobra.Command, license *string) func(code, stage, reason string) {
+	return func(code, stage, reason string) {
+		// Fixed words only: raw errors can carry paths or keys.
+		_, _ = telemetry.SendCmdErrorEventWithLicense(cmd, common.Version, stage,
+			stage+": "+reason, *license, stage, code)
 	}
-	// Fixed words only: raw errors can carry paths or keys.
-	_, _ = telemetry.SendCmdErrorEventWithLicense(segmentError.cmd, common.Version, stage,
-		stage+": "+reason, segmentError.license, stage, string(code))
 }
 
 func failedChecks(results []localinstall.Result) string {
@@ -190,7 +183,7 @@ func failLicense(tracker *telemetry.InstallTracker, r localinstall.Result) {
 	tracker.Send("install_local_failed", map[string]any{"stage": "license"})
 	// "expired on <date>" would split grouping by date.
 	reason, _, _ := strings.Cut(r.Detail, " on ")
-	sendSegmentError(tracker, common.TKErrLocalLicenseFailed, "license", reason)
+	tracker.Error(string(common.TKErrLocalLicenseFailed), "license", reason)
 	waitForEvents(tracker)
 	os.Exit(1)
 }
@@ -320,7 +313,7 @@ func failToolInstall(tracker *telemetry.InstallTracker, name string, err error) 
 	}
 	printCheckResult(r)
 	tracker.Send("install_local_failed", map[string]any{"stage": "tool_install", "tool": name, "reason": reason})
-	sendSegmentError(tracker, common.TKErrLocalToolInstallFailed, "tool_install", name+" "+reason)
+	tracker.Error(string(common.TKErrLocalToolInstallFailed), "tool_install", name+" "+reason)
 	waitForEvents(tracker)
 	os.Exit(1)
 }
@@ -493,7 +486,7 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error, repo
 		props["stuck_service"], props["stuck_reason"] = stuck.Service, stuck.Reason
 	}
 	tracker.Send("install_local_failed", props)
-	sendSegmentError(tracker, common.TKErrLocalTestkubeInstallFailed, "testkube", reason)
+	tracker.Error(string(common.TKErrLocalTestkubeInstallFailed), "testkube", reason)
 	waitForEvents(tracker)
 	os.Exit(1)
 }
@@ -644,7 +637,7 @@ func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
 	}
 	printCheckResult(r)
 	tracker.Send("install_local_failed", map[string]any{"stage": "cluster", "reason": reason})
-	sendSegmentError(tracker, common.TKErrLocalClusterFailed, "cluster", reason)
+	tracker.Error(string(common.TKErrLocalClusterFailed), "cluster", reason)
 	waitForEvents(tracker)
 	os.Exit(1)
 }

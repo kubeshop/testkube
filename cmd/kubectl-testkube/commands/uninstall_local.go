@@ -91,7 +91,7 @@ func runUninstallLocal(cmd *cobra.Command, deleteData, yes bool) {
 		rerun += " --delete-data"
 	}
 	tracker := newInstallTracker()
-	segmentError.cmd = cmd
+	tracker.OnError(segmentErrors(cmd, new(string)))
 	start := time.Now()
 	found, dockerHidden := false, false
 	docker := localinstall.NewChecker().CheckDocker(cmd.Context())
@@ -219,7 +219,7 @@ func failUninstall(ctx context.Context, tracker *telemetry.InstallTracker, rerun
 	}
 	printCheckResult(r)
 	tracker.Send("install_local_uninstall_failed", map[string]any{"stage": r.Name, "reason": reason})
-	sendSegmentError(tracker, common.TKErrLocalUninstallFailed, "uninstall_"+r.Name, reason)
+	tracker.Error(string(common.TKErrLocalUninstallFailed), "uninstall_"+r.Name, reason)
 	waitForEvents(tracker)
 	os.Exit(1)
 }

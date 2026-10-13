@@ -40,6 +40,7 @@ type InstallTracker struct {
 	endpoint   string
 	client     *http.Client
 	wg         sync.WaitGroup
+	onError    func(code, stage, reason string)
 }
 
 type InstallTrackerConfig struct {
@@ -129,6 +130,18 @@ func (t *InstallTracker) Identify(email string) {
 }
 
 // Call before exiting; os.Exit skips deferred calls.
+// The CLI adds its own error event; this package can't import it.
+func (t *InstallTracker) OnError(report func(code, stage, reason string)) {
+	t.onError = report
+}
+
+// Opted-out users send nothing, here as in Send.
+func (t *InstallTracker) Error(code, stage, reason string) {
+	if t.enabled && t.onError != nil {
+		t.onError(code, stage, reason)
+	}
+}
+
 func (t *InstallTracker) Wait() {
 	t.wg.Wait()
 }

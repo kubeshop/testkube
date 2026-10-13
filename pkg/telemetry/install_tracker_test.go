@@ -114,3 +114,19 @@ func TestInstallTracker_TagsOnlyLocalBuildsAsDev(t *testing.T) {
 		})
 	}
 }
+
+func TestInstallTracker_ErrorsRespectOptOut(t *testing.T) {
+	for _, enabled := range []bool{true, false} {
+		var got []string
+		tracker := NewInstallTracker(InstallTrackerConfig{Enabled: enabled, MachineID: "m", Version: "v"})
+		tracker.OnError(func(code, stage, reason string) { got = append(got, code+" "+stage+" "+reason) })
+
+		tracker.Error("TKERR-1312", "cluster", "port_taken")
+
+		if enabled {
+			assert.Equal(t, []string{"TKERR-1312 cluster port_taken"}, got)
+		} else {
+			assert.Empty(t, got, "opted-out users send nothing anywhere")
+		}
+	}
+}
