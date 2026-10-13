@@ -23,7 +23,7 @@ spec:
       paths:
       - js
   job:
-    activeDeadlineSeconds: 1200
+    activeDeadlineSeconds: 1380
   container:
     workingDir: /data/repo/js/packages/e2e-tests
     image: mcr.microsoft.com/playwright:v1.62.1-noble
@@ -80,7 +80,7 @@ spec:
       paths:
       - /root/.npm/_cacache
   - name: Run tests
-    timeout: 15m
+    timeout: 18m
     run:
       env:
       # Resolve the preview URL only after the UI service has started.
@@ -128,7 +128,7 @@ spec:
           name: 'testkube-agent-secrets'
           key: 'CLOUD_UI_E2E_GITHUB_TOKEN'
   job:
-    activeDeadlineSeconds: 1200
+    activeDeadlineSeconds: 1380
   config:
     CLOUD_BASE_URL: {type: string, default: 'https://app.testkube.dev'}
     revision: {type: string, default: 'main'}

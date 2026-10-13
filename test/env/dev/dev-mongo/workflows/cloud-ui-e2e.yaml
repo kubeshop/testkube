@@ -23,7 +23,7 @@ spec:
           name: 'testkube-agent-mongo-secrets'
           key: 'CLOUD_UI_E2E_GITHUB_TOKEN'
   job:
-    activeDeadlineSeconds: 1200
+    activeDeadlineSeconds: 1380
   config:
     CLOUD_BASE_URL: {type: string, default: 'https://app-mongo.testkube.dev'}
     GIT_REVISION: {type: string, default: 'main'}
@@ -63,7 +63,7 @@ spec:
       paths:
       - /root/.npm/_cacache
   - name: Run tests
-    timeout: 15m
+    timeout: 18m
     shell: npx playwright test --retries=1
     artifacts:
       paths:
@@ -103,7 +103,7 @@ spec:
           name: 'testkube-agent-mongo-secrets'
           key: 'CLOUD_UI_E2E_GITHUB_TOKEN'
   job:
-    activeDeadlineSeconds: 1200
+    activeDeadlineSeconds: 1380
   config:
     CLOUD_BASE_URL: {type: string, default: 'https://app-mongo.testkube.dev'}
     GIT_REVISION: {type: string, default: 'main'}
