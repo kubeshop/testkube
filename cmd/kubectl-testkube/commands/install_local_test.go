@@ -54,3 +54,13 @@ func TestDownloadedText_HiddenOnRerunsAndHonestPastTheEstimate(t *testing.T) {
 		})
 	}
 }
+
+func TestFailedChecks_NamesOnlyTheFailures(t *testing.T) {
+	results := []localinstall.Result{
+		{Name: "kubectl", Status: localinstall.StatusWarn, Detail: "not found"},
+		{Name: "docker", Status: localinstall.StatusFail, Detail: "not reachable"},
+		{Name: "helm", Status: localinstall.StatusPass, Detail: "ready"},
+	}
+
+	assert.Equal(t, "docker not reachable", failedChecks(results))
+}
