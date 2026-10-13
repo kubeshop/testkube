@@ -689,10 +689,10 @@ func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports) {
 			"  " + label("Dashboard") + url + "\n" +
 			"  " + label("Email") + localinstall.AdminEmail + "\n" +
 			"  " + label("Password") + localinstall.AdminPassword)
-	ui.Printf("\n  %stestkube uninstall local\n", label("Remove it"))
+	ui.Printf("\n  To remove it later:\n    %s\n", uninstallCommand)
 	opened := localinstall.OpenBrowser(url)
 	if opened {
-		ui.Printf("\n  Opening %s in your browser ...\n", url)
+		ui.Printf("\n  Opening %s in your browser...\n", url)
 	} else {
 		ui.Printf("\n  Open %s in your browser.\n", url)
 	}
