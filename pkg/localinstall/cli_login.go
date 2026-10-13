@@ -27,7 +27,10 @@ const dexClientID = "testkube-enterprise"
 // Names must be unique per organization, hence the time.
 const cliKeyName = "Testkube CLI (install local) "
 
-var ErrCLILogin = errors.New("could not log the CLI in")
+var (
+	ErrCLILogin = errors.New("the login was refused")
+	ErrCLIKey   = errors.New("no CLI key was created")
+)
 
 // A password login spares the user a browser round trip.
 func CLIKey(ctx context.Context, ports Ports, email string) (string, error) {
@@ -51,7 +54,7 @@ func cliKey(ctx context.Context, client *http.Client, dex, api, email string) (s
 		IDToken string `json:"id_token"`
 	}
 	if err := call(client, req, &login); err != nil || login.IDToken == "" {
-		return "", fmt.Errorf("%w: login: %v", ErrCLILogin, err)
+		return "", fmt.Errorf("%w: %v", ErrCLILogin, orEmpty(err))
 	}
 
 	scope := func(resource, id string) map[string]string {
@@ -69,7 +72,7 @@ func cliKey(ctx context.Context, client *http.Client, dex, api, email string) (s
 		Token string `json:"token"`
 	}
 	if err := call(client, req, &key); err != nil || key.Token == "" {
-		return "", fmt.Errorf("%w: key: %v", ErrCLILogin, err)
+		return "", fmt.Errorf("%w: %v", ErrCLIKey, orEmpty(err))
 	}
 	return key.Token, nil
 }
@@ -92,6 +95,13 @@ func cliKeyWorks(ctx context.Context, client *http.Client, api, key string) bool
 	return call(client, req, &org) == nil
 }
 
+func orEmpty(err error) error {
+	if err == nil {
+		return errors.New("empty answer")
+	}
+	return err
+}
+
 func call(client *http.Client, req *http.Request, out any) error {
 	ctx, cancel := context.WithTimeout(req.Context(), 10*time.Second)
 	defer cancel()
@@ -102,7 +112,8 @@ func call(client *http.Client, req *http.Request, out any) error {
 	defer resp.Body.Close()
 	data, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if resp.StatusCode/100 != 2 {
-		return fmt.Errorf("%s answered %d", req.URL.Path, resp.StatusCode)
+		// The API explains refusals, e.g. a duplicate key name.
+		return fmt.Errorf("%s answered %d: %s", req.URL.Path, resp.StatusCode, bytes.TrimSpace(data))
 	}
 	return json.Unmarshal(data, out)
 }

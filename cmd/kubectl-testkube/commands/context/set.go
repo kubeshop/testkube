@@ -29,7 +29,8 @@ func setContextLocal(ctx context.Context) {
 	}
 	// Empty owner: the email the last install saved.
 	email := localinstall.RememberLoginEmail("")
-	if common.ConnectLocalCLI(ctx, ports, email, true) != common.LocalCLIConnected {
+	if _, err := common.ConnectLocalCLI(ctx, ports, email, true); err != nil {
+		ui.Debug("testkube CLI login failed", err.Error())
 		ui.Printf("  testkube CLI couldn't log in to the local install. Check it's ready at http://localhost:%d\n", ports["dashboard"])
 		os.Exit(1)
 	}

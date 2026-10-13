@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -28,24 +29,41 @@ func isLocalContext(cfg config.Data) bool {
 		strings.HasPrefix(c.ApiUri, "http://localhost:")
 }
 
-func ConnectLocalCLI(ctx context.Context, ports localinstall.Ports, email string, force bool) LocalCLIState {
+var errCLISettings = errors.New("the CLI settings can't be read or saved")
+
+func ConnectLocalCLI(ctx context.Context, ports localinstall.Ports, email string, force bool) (LocalCLIState, error) {
 	cfg, err := config.Load()
 	if err != nil {
-		return LocalCLIFailed
+		return LocalCLIFailed, fmt.Errorf("%w: %v", errCLISettings, err)
 	}
 	if !force && !canUseLocalContext(cfg, !config.ExistedAtStart()) {
-		return LocalCLIOtherLogin
+		return LocalCLIOtherLogin, nil
 	}
 	key := cfg.CloudContext.ApiKey
 	if !isLocalContext(cfg) || !localinstall.CLIKeyWorks(ctx, ports, key) {
 		if key, err = localinstall.CLIKey(ctx, ports, email); err != nil {
-			return LocalCLIFailed
+			return LocalCLIFailed, err
 		}
 	}
-	if config.Save(localContext(cfg, ports, key)) != nil {
-		return LocalCLIFailed
+	if err := config.Save(localContext(cfg, ports, key)); err != nil {
+		return LocalCLIFailed, fmt.Errorf("%w: %v", errCLISettings, err)
 	}
-	return LocalCLIConnected
+	return LocalCLIConnected, nil
+}
+
+// Fixed words for telemetry; raw errors can carry paths.
+func LocalCLIFailure(err error) string {
+	switch {
+	case err == nil:
+		return ""
+	case errors.Is(err, localinstall.ErrCLILogin):
+		return "login"
+	case errors.Is(err, localinstall.ErrCLIKey):
+		return "key"
+	case errors.Is(err, errCLISettings):
+		return "settings"
+	}
+	return "other"
 }
 
 // A context left pointing at nothing fails every command.

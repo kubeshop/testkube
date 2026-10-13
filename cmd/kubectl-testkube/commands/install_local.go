@@ -86,7 +86,11 @@ func NewInstallLocalCmd() *cobra.Command {
 			installMissingTools(cmd, tracker, checker, results)
 			ports := runClusterStep(cmd, tracker)
 			runTestkubeStep(cmd, tracker, key, email, ports)
-			printReady(tracker, ports, email, common.ConnectLocalCLI(cmd.Context(), ports, email, false))
+			cli, err := common.ConnectLocalCLI(cmd.Context(), ports, email, false)
+			if err != nil {
+				ui.Debug("testkube CLI login failed", err.Error())
+			}
+			printReady(tracker, ports, email, cli, common.LocalCLIFailure(err))
 			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallFinished)
 			waitForEvents(tracker)
 		},
@@ -687,7 +691,7 @@ func waitForEvents(tracker *telemetry.InstallTracker) {
 	waitLicenseEvents()
 }
 
-func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports, email string, cli common.LocalCLIState) {
+func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports, email string, cli common.LocalCLIState, cliFailure string) {
 	url := fmt.Sprintf("http://localhost:%d", ports["dashboard"])
 	label := func(s string) string { return ui.LightGray(fmt.Sprintf("%-12s", s)) }
 	ui.NL()
@@ -713,5 +717,5 @@ func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports, ema
 	} else {
 		ui.Printf("\n  Open %s in your browser.\n", url)
 	}
-	tracker.Send("install_local_ready", map[string]any{"browser_opened": opened, "cli_connected": cli == common.LocalCLIConnected})
+	tracker.Send("install_local_ready", map[string]any{"browser_opened": opened, "cli_connected": cli == common.LocalCLIConnected, "cli_failure": cliFailure})
 }

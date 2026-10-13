@@ -67,17 +67,20 @@ func TestCLIKey_ASecondKeyIsNotRefusedAsADuplicate(t *testing.T) {
 }
 
 func TestCLIKey_NeverReturnsAnEmptyKey(t *testing.T) {
-	tests := map[string]*httptest.Server{
-		"login refused":    fakeLogin(t, http.StatusUnauthorized, "tkcapi_abc"),
-		"no key in answer": fakeLogin(t, http.StatusOK, ""),
+	tests := map[string]struct {
+		server *httptest.Server
+		want   error
+	}{
+		"login refused":    {fakeLogin(t, http.StatusUnauthorized, "tkcapi_abc"), ErrCLILogin},
+		"no key in answer": {fakeLogin(t, http.StatusOK, ""), ErrCLIKey},
 	}
-	for name, s := range tests {
+	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			defer s.Close()
+			defer tt.server.Close()
 
-			key, err := cliKey(context.Background(), s.Client(), s.URL, s.URL, "jane@acme.com")
+			key, err := cliKey(context.Background(), tt.server.Client(), tt.server.URL, tt.server.URL, "jane@acme.com")
 
-			assert.ErrorIs(t, err, ErrCLILogin)
+			assert.ErrorIs(t, err, tt.want)
 			assert.Empty(t, key)
 		})
 	}
