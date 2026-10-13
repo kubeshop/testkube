@@ -27,6 +27,11 @@ func NewInstallLocalCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "local",
 		Short: "Install Testkube on this machine",
+		Long: "Sets up a Testkube trial in its own cluster inside Docker.\n" +
+			"Needs Docker and the license key from your trial email.\n" +
+			"The first run takes 5 to 10 minutes. Your own tools and clusters are not changed.\n\n" +
+			"To remove it later:\n  " + uninstallCommand,
+		Example: "  " + localinstall.InstallCommand + "\n  " + localinstall.InstallCommand + " --license <key>",
 		// Hidden until the guided installer is complete.
 		Hidden: true,
 		Run: func(cmd *cobra.Command, args []string) {

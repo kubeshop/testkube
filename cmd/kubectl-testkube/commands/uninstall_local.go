@@ -21,16 +21,21 @@ import (
 func NewUninstallLocalCmd() *cobra.Command {
 	var deleteData, yes bool
 	cmd := &cobra.Command{
-		Use:    "local",
-		Short:  "Remove the local Testkube trial made by install local",
-		Hidden: true,
-		Args:   cobra.NoArgs,
+		Use:   "local",
+		Short: "Remove the local Testkube trial",
+		Long: "Deletes the cluster and its settings. Your data in ~/.testkube/data is kept,\n" +
+			"so installing again brings back your tests and results.",
+		Example: "  " + uninstallCommand + "\n  " + uninstallCommand + " --delete-data",
+		Hidden:  true,
+		Args:    cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			runUninstallLocal(cmd, deleteData, yes)
 		},
 	}
 	cmd.Flags().BoolVar(&deleteData, "delete-data", false, "also delete your Testkube data in ~/.testkube/data")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the confirmation prompt")
+	// The parent is purge, but users type uninstall.
+	cmd.SetUsageTemplate(strings.Replace(cmd.UsageTemplate(), "{{.UseLine}}", uninstallCommand+" [flags]", 1))
 	return cmd
 }
 
