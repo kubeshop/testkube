@@ -3,9 +3,11 @@ package localinstall
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/mail"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -54,6 +56,7 @@ type Installer struct {
 	dir   string
 	// For the failure report; the CLI knows its own version.
 	cliVersion string
+	LoginEmail string
 	docker     func(ctx context.Context) DockerResources
 	// Called from the poll goroutine, every few seconds.
 	OnProgress func(Progress)
@@ -110,7 +113,7 @@ func (i *Installer) install(ctx context.Context, ports Ports, s Secrets, license
 	}
 	// The license and keys must not outlive the install.
 	defer os.RemoveAll(files)
-	values, err := writeValues(files, ports, s, license)
+	values, err := writeValues(files, ports, s, license, i.LoginEmail)
 	if err != nil {
 		return state, "", err
 	}
@@ -120,7 +123,7 @@ func (i *Installer) install(ctx context.Context, ports Ports, s Secrets, license
 	began := start
 	install := func() ([]byte, *Stuck, error) {
 		return i.watchedHelm(ctx, began, "upgrade", "--install", ReleaseName, EnterpriseChart, "--version", EnterpriseChartVersion,
-			"--namespace", Namespace, "--create-namespace", "-f", values["demo"], "-f", values["ports"], "-f", values["demo-fixes"], "-f", values["private"],
+			"--namespace", Namespace, "--create-namespace", "-f", values["demo"], "-f", values["ports"], "-f", values["demo-fixes"], "-f", values["login"], "-f", values["private"],
 			"--wait", "--wait-for-jobs", "--timeout", "15m")
 	}
 	out, stuck, err := install()
@@ -405,7 +408,7 @@ stringData:
 `, Namespace, s.MasterPassword, s.MinioPassword, s.AIToken) + ServicesManifest()
 }
 
-func writeValues(dir string, ports Ports, s Secrets, license string) (map[string]string, error) {
+func writeValues(dir string, ports Ports, s Secrets, license, email string) (map[string]string, error) {
 	private, err := enterprisePrivateValues(s.RunnerKey, license)
 	if err != nil {
 		return nil, err
@@ -424,9 +427,13 @@ func writeValues(dir string, ports Ports, s Secrets, license string) (map[string
 	if err != nil {
 		return nil, err
 	}
+	login, err := loginValues(loginEmail(email))
+	if err != nil {
+		return nil, err
+	}
 	paths := map[string]string{}
 	for name, data := range map[string][]byte{"demo": EnterpriseDemoValues, "ports": []byte(PortValues(ports)),
-		"demo-fixes": fixes, "private": private, "runner": runner} {
+		"demo-fixes": fixes, "login": login, "private": private, "runner": runner} {
 		paths[name] = filepath.Join(dir, name+".yaml")
 		if err := os.WriteFile(paths[name], data, 0o600); err != nil {
 			return nil, err
@@ -451,6 +458,53 @@ func demoFixValues() ([]byte, error) {
 		// Otherwise built from a domain we don't have.
 		"global": map[string]any{"ai": map[string]any{"serviceUrl": "http://testkube-enterprise-ai-service:9090"}},
 	})
+}
+
+// A failed lookup must not strand the kept account.
+func RememberLoginEmail(owner string) string {
+	kubeconfig, err := KubeconfigPath()
+	if err != nil {
+		return loginEmail(owner)
+	}
+	return rememberLoginEmail(filepath.Dir(kubeconfig), owner)
+}
+
+func rememberLoginEmail(dir, owner string) string {
+	path := filepath.Join(dir, "login-email")
+	if email := loginEmail(owner); email != AdminEmail {
+		_ = writePrivate(path, []byte(email))
+		return email
+	}
+	saved, _ := os.ReadFile(path)
+	return loginEmail(string(saved))
+}
+
+// The lookup can fail or return a non-address.
+func loginEmail(owner string) string {
+	addr, err := mail.ParseAddress(owner)
+	if err != nil || addr.Address != owner {
+		return AdminEmail
+	}
+	return strings.ToLower(owner)
+}
+
+// Dex users sit inside one string, so it's replaced whole.
+func loginValues(email string) ([]byte, error) {
+	var demo map[string]any
+	if err := yaml.Unmarshal(EnterpriseDemoValues, &demo); err != nil {
+		return nil, err
+	}
+	config, _ := dig(demo, "dex", "configTemplate", "additionalConfig").(string)
+	admin := strconv.Quote(AdminEmail)
+	if !strings.Contains(config, admin) {
+		return nil, errors.New("demo values have no login user")
+	}
+	config = strings.Replace(config, admin, strconv.Quote(email), 1)
+	return yaml.Marshal(map[string]any{"dex": map[string]any{
+		"configTemplate": map[string]any{"additionalConfig": config},
+		// Our config secret skips the chart's restart-on-change checksum.
+		"podAnnotations": map[string]any{"checksum/login": fmt.Sprintf("%x", sha256.Sum256([]byte(config)))},
+	}})
 }
 
 // Helm replaces lists whole, so the runner list is copied.

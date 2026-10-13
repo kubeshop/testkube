@@ -187,6 +187,52 @@ func TestInstall_RunnerKeyReachesBothCharts(t *testing.T) {
 	assert.Contains(t, f.files["runner.yaml"], "secret: "+testSecrets.RunnerKey)
 }
 
+func TestInstall_LoginUsesTheLicenseEmail(t *testing.T) {
+	f := &helmFake{}
+	i := newTestInstaller(t, f)
+	i.LoginEmail = "Jane.Doe@Acme.com"
+
+	_, _, err := i.Install(context.Background(), movedPorts, testSecrets, testLicense)
+	require.NoError(t, err)
+	call := slices.IndexFunc(f.calls, func(c []string) bool { return slices.Contains(c, EnterpriseChart) })
+	require.GreaterOrEqual(t, call, 0)
+	args := strings.Join(f.calls[call], " ")
+	assert.Greater(t, strings.Index(args, "login.yaml"), strings.Index(args, "demo.yaml"), "login must override the demo user")
+
+	var login, dex map[string]any
+	require.NoError(t, yaml.Unmarshal([]byte(f.files["login.yaml"]), &login))
+	require.NoError(t, yaml.Unmarshal([]byte(dig(login, "dex", "configTemplate", "additionalConfig").(string)), &dex))
+	user := dig(dex, "staticPasswords").([]any)[0].(map[string]any)
+	assert.Equal(t, "jane.doe@acme.com", user["email"])
+	assert.NotEmpty(t, user["hash"], "the password is kept")
+	assert.Equal(t, true, dex["enablePasswordDB"], "the rest of the dex config is kept")
+}
+
+func TestLoginValues_NewEmailRestartsDex(t *testing.T) {
+	checksum := func(email string) any {
+		data, err := loginValues(email)
+		require.NoError(t, err)
+		var v map[string]any
+		require.NoError(t, yaml.Unmarshal(data, &v))
+		return dig(v, "dex", "podAnnotations", "checksum/login")
+	}
+	assert.NotEqual(t, checksum("a@acme.com"), checksum("b@acme.com"))
+}
+
+func TestLoginEmail_FallsBackToTheDemoUser(t *testing.T) {
+	for _, owner := range []string{"", "Acme Corp", "Jane <jane@acme.com>", "jane@acme.com\nhash: x"} {
+		assert.Equal(t, AdminEmail, loginEmail(owner), "%q", owner)
+	}
+}
+
+func TestRememberLoginEmail_FailedLookupKeepsTheLastGoodEmail(t *testing.T) {
+	dir := t.TempDir()
+	assert.Equal(t, AdminEmail, rememberLoginEmail(dir, ""), "nothing saved yet")
+	assert.Equal(t, "jane@acme.com", rememberLoginEmail(dir, "jane@acme.com"))
+	assert.Equal(t, "jane@acme.com", rememberLoginEmail(dir, ""))
+	assert.Equal(t, "bob@acme.com", rememberLoginEmail(dir, "bob@acme.com"), "a new owner wins")
+}
+
 func TestInstall_WorkerServiceUsesTheAPIsPostgres(t *testing.T) {
 	f := &helmFake{}
 

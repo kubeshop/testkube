@@ -63,11 +63,13 @@ func DeleteData(ctx context.Context) (removed bool, sudo string, err error) {
 func deleteData(ctx context.Context, dir string, run runFunc) (removed bool, sudo string, err error) {
 	data := filepath.Join(dir, "data")
 	secrets := filepath.Join(dir, "secrets.json")
+	login := filepath.Join(dir, "login-email")
 	info, err := os.Lstat(data)
 	switch {
 	// A leftover passwords file goes quietly; there was no data.
 	case errors.Is(err, fs.ErrNotExist):
 		removeIfThere(secrets)
+		removeIfThere(login)
 		return false, "", nil
 	case err != nil:
 		return false, "", err
@@ -93,6 +95,7 @@ func deleteData(ctx context.Context, dir string, run runFunc) (removed bool, sud
 	}
 	// Only now: passwords without data are harmless, the reverse isn't.
 	removeIfThere(secrets)
+	removeIfThere(login)
 	return true, "", nil
 }
 
