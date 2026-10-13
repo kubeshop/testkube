@@ -12,7 +12,7 @@ import (
 )
 
 func TestReadStatus_NamesTheFirstThingInTheWay(t *testing.T) {
-	ports := Ports{"dashboard": 8080, "api": 8090}
+	ports := Ports{"dashboard": 8080, "api": 8090, "login": 5556}
 	up := Result{Status: StatusPass}
 	tests := map[string]struct {
 		docker   Result
@@ -23,7 +23,8 @@ func TestReadStatus_NamesTheFirstThingInTheWay(t *testing.T) {
 		want     TrialState
 		wantData bool
 	}{
-		"ready":                      {docker: up, running: true, answers: map[int]bool{8080: true, 8090: true}, want: TrialReady},
+		"ready":                      {docker: up, running: true, answers: map[int]bool{8080: true, 8090: true, 5556: true}, want: TrialReady},
+		"login not up yet":           {docker: up, running: true, answers: map[int]bool{8080: true, 8090: true}, want: TrialStarting},
 		"dashboard up, API not yet":  {docker: up, running: true, answers: map[int]bool{8080: true}, want: TrialStarting},
 		"stopped":                    {docker: up, want: TrialStopped},
 		"uninstalled, data kept":     {docker: up, ownedErr: ErrClusterNotOurs, data: true, want: TrialNotInstalled, wantData: true},

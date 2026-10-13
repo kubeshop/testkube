@@ -62,8 +62,10 @@ func readStatus(ctx context.Context, docker func(context.Context) Result,
 		s.State, s.DataKept = TrialNotInstalled, hasData()
 	case !running:
 		s.State = TrialStopped
+	// The API doesn't wait for login; check it too.
 	case answers(ctx, fmt.Sprintf("http://localhost:%d", ports["dashboard"])) &&
-		answers(ctx, fmt.Sprintf("http://localhost:%d", ports["api"])):
+		answers(ctx, fmt.Sprintf("http://localhost:%d", ports["api"])) &&
+		answers(ctx, fmt.Sprintf("http://localhost:%d", ports["login"])):
 		s.State, s.Ports = TrialReady, ports
 	default:
 		s.State, s.Ports = TrialStarting, ports
