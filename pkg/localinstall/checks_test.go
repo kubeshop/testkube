@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -158,6 +159,22 @@ func TestCheckTools_MissingDockerInWSLPointsAtDockerDesktop(t *testing.T) {
 			results := checker.CheckTools(context.Background())
 
 			assert.Contains(t, results[0].Fix, tt.wantFix)
+		})
+	}
+}
+
+// Uninstall swaps this line for its own command.
+func TestCheckTools_DockerFixesUninstallReusesEndWithTheInstallCommand(t *testing.T) {
+	tests := map[string]*Checker{
+		"permission denied": {host: fakeHost{}, docker: fakeDocker{err: errors.New("permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock")}},
+		"missing in WSL": {host: fakeHost{missing: map[string]bool{"docker": true},
+			sysctl: map[string]string{"kernel.osrelease": "5.15.167.4-microsoft-standard-WSL2"}}},
+	}
+	for name, checker := range tests {
+		t.Run(name, func(t *testing.T) {
+			results := checker.CheckTools(context.Background())
+
+			assert.True(t, strings.HasSuffix(results[0].Fix, "\n  "+InstallCommand), results[0].Fix)
 		})
 	}
 }

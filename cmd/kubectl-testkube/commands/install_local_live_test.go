@@ -58,7 +58,7 @@ func TestShowPlain_LogsStatusLinesWithoutTerminalCodes(t *testing.T) {
 	stop()
 
 	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
-	assert.Equal(t, "First run takes 3 to 8 minutes", strings.TrimSpace(lines[0]))
+	assert.Equal(t, "Downloads about 1.2 GB the first time · 3 to 8 minutes", strings.TrimSpace(lines[0]))
 	require.GreaterOrEqual(t, len(lines), 2)
 	assert.Contains(t, lines[1], "Still installing · 233 MB of ~1.2 GB · 2/10 ready · ")
 	assert.NotContains(t, out.String(), "\r", "no spinner frames in logs")

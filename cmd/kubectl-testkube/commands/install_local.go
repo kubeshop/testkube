@@ -13,6 +13,7 @@ import (
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
@@ -27,6 +28,11 @@ func NewInstallLocalCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "local",
 		Short: "Install Testkube on this machine",
+		Long: "Sets up a Testkube trial in its own cluster inside Docker.\n" +
+			"Needs Docker and the license key from your trial email.\n" +
+			"The first run takes 5 to 10 minutes. Your own tools and clusters are not changed.\n\n" +
+			"To remove it later:\n  " + uninstallCommand,
+		Example: "  " + localinstall.InstallCommand + "\n  " + localinstall.InstallCommand + " --license <key>",
 		// Hidden until the guided installer is complete.
 		Hidden: true,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -86,7 +92,18 @@ func NewInstallLocalCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&licenseKey, "license", "l", "", "Testkube license key from your trial email (or set TESTKUBE_LICENSE)")
+	hideGlobalFlags(cmd)
 	return cmd
+}
+
+// The API flags do nothing here; --namespace would mislead.
+func hideGlobalFlags(cmd *cobra.Command) {
+	// Help and flag errors both render through usage.
+	usage := cmd.UsageFunc()
+	cmd.SetUsageFunc(func(c *cobra.Command) error {
+		c.InheritedFlags().VisitAll(func(f *pflag.Flag) { f.Hidden = true })
+		return usage(c)
+	})
 }
 
 func runLicenseStep(tracker *telemetry.InstallTracker, flagKey string) string {
@@ -96,7 +113,7 @@ func runLicenseStep(tracker *telemetry.InstallTracker, flagKey string) string {
 	}
 	if flagKey == "" && !ui.StdinIsInteractive() {
 		failLicense(tracker, localinstall.Result{Name: "license", Status: localinstall.StatusFail, Detail: "no key given",
-			Fix: "Pass it with --license <key> or TESTKUBE_LICENSE=<key>. " + localinstall.LicenseHelp})
+			Fix: localinstall.LicenseHelp + "\nThen run again:\n  " + localinstall.InstallCommand + " --license <key>"})
 	}
 	license, attempts, err := localinstall.NewLicenseStep(terminalKeyPrompter{tracker: tracker}).Run(flagKey)
 	for _, a := range attempts {
@@ -115,7 +132,8 @@ func runLicenseStep(tracker *telemetry.InstallTracker, flagKey string) string {
 }
 
 func licenseFailure(err error, expiry time.Time) localinstall.Result {
-	r := localinstall.Result{Name: "license", Status: localinstall.StatusFail, Fix: localinstall.LicenseHelp}
+	then := "\nThen run again:\n  " + localinstall.InstallCommand
+	r := localinstall.Result{Name: "license", Status: localinstall.StatusFail, Fix: localinstall.LicenseHelp + then}
 	switch {
 	case errors.Is(err, localinstall.ErrLicenseUnreachable):
 		r.Detail, r.Fix = "cannot reach license.testkube.io", localinstall.LicenseUnreachableHelp
@@ -124,12 +142,12 @@ func licenseFailure(err error, expiry time.Time) localinstall.Result {
 	case errors.Is(err, localinstall.ErrLicenseInvalid):
 		r.Detail = "not valid"
 	case errors.Is(err, localinstall.ErrLicenseExpired):
-		r.Detail, r.Fix = "expired", "This key has expired. Get a new one at https://testkube.io/get-started/on-prem"
+		r.Detail, r.Fix = "expired", "This key has expired. Get a new one at https://testkube.io/get-started/on-prem"+then
 		if !expiry.IsZero() {
 			r.Detail = "expired on " + expiry.Local().Format("2 Jan 2006")
 		}
 	default:
-		r.Detail, r.Fix = "could not read the key", "Pass it with --license <key>"
+		r.Detail, r.Fix = "could not read the key", "Pass it as a flag instead:\n  "+localinstall.InstallCommand+" --license <key>"
 	}
 	return r
 }
@@ -261,16 +279,16 @@ func failToolInstall(tracker *telemetry.InstallTracker, name string, err error) 
 	switch {
 	case errors.Is(err, localinstall.ErrUnsupportedPlatform):
 		reason, r.Detail = "unsupported_platform", "no download for this system"
-		r.Fix = "Install " + name + " yourself, then run again: " + localinstall.ToolManualURL(name)
+		r.Fix = "Install " + name + " yourself:\n  " + localinstall.ToolManualURL(name) + "\nThen run again:\n  " + localinstall.InstallCommand
 	case errors.Is(err, localinstall.ErrChecksumMismatch):
 		reason, r.Detail = "checksum", "download was damaged"
-		r.Fix = "Run again. If it keeps failing, a proxy may be changing downloads"
+		r.Fix = "If it repeats, a proxy may be changing downloads.\n" + runAgain
 	case errors.Is(err, localinstall.ErrSaveFailed):
 		reason, r.Detail = "save", "could not save"
-		r.Fix = err.Error() + "\nCheck that you can write to ~/.testkube/bin, then run again"
+		r.Fix = err.Error() + "\nCheck that you can write to ~/.testkube/bin, " + thenRunAgain
 	default:
 		reason, r.Detail = "download", "could not download"
-		r.Fix = err.Error() + "\nCheck your network, proxy or firewall, then run again"
+		r.Fix = err.Error() + "\nCheck your network, proxy or firewall, " + thenRunAgain
 	}
 	printCheckResult(r)
 	tracker.Send("install_local_failed", map[string]any{"stage": "tool_install", "tool": name, "reason": reason})
@@ -400,11 +418,12 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error, repo
 	case errors.Is(err, localinstall.ErrSecretsLost):
 		reason, r.Detail = "secrets_lost", "old data can't be opened"
 		r.Fix = "~/.testkube/data holds data from an earlier install whose passwords are gone.\n" +
-			"Delete the cluster and that data to start fresh, then run again:\n" +
-			"  testkube uninstall local --delete-data"
+			"Delete the cluster and that data to start fresh:\n" +
+			"  testkube uninstall local --delete-data\n" +
+			"Then run again:\n  " + localinstall.InstallCommand
 	case errors.Is(err, localinstall.ErrSecretsDamaged):
 		reason, r.Detail = "secrets_damaged", "saved passwords can't be read"
-		r.Fix = "Restore ~/.testkube/secrets.json, or start fresh: testkube uninstall local --delete-data"
+		r.Fix = "Restore ~/.testkube/secrets.json, or start fresh:\n  testkube uninstall local --delete-data"
 	case errors.Is(err, localinstall.ErrStuck):
 		reason, r.Detail = "stuck", "gave up after "+took(stuck.After)
 		if errors.Is(err, localinstall.ErrRunnerInstall) {
@@ -412,21 +431,21 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error, repo
 		}
 	case errors.Is(err, localinstall.ErrRunnerInstall):
 		reason, r.Name = "runner", "runner"
-		r.Fix = withWhy(out, "Testkube is installed; run "+rerunCommand+" again to retry the runner.")
+		r.Fix = withWhy(out, "Testkube is installed; only the runner failed.\n"+runAgain)
 	case errors.Is(err, localinstall.ErrInstallTimeout):
 		reason, r.Detail = "timeout", "timed out after 15 minutes"
-		r.Fix = withWhy(out, "Run "+rerunCommand+" again; finished downloads are kept.")
+		r.Fix = withWhy(out, "Finished downloads are kept.\n"+runAgain)
 	case errors.Is(err, localinstall.ErrChartDownload):
 		reason, r.Detail = "chart_download", "could not download"
-		r.Fix = withWhy(out, "Check your network, proxy or firewall, then run "+rerunCommand+" again.")
+		r.Fix = withWhy(out, "Check your network, proxy or firewall, "+thenRunAgain)
 	case errors.Is(err, localinstall.ErrTestkubePrepare):
 		reason, r.Detail = "prepare", "could not prepare the cluster"
-		r.Fix = withWhy(out, "Run "+rerunCommand+" again.")
+		r.Fix = withWhy(out, runAgain)
 	default:
 		if out == "" {
 			out = err.Error()
 		}
-		r.Fix = withWhy(out, "Run "+rerunCommand+" again.")
+		r.Fix = withWhy(out, runAgain)
 	}
 	if isStuck {
 		var docker localinstall.DockerResources
@@ -450,9 +469,10 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error, repo
 }
 
 const (
-	rerunCommand = "`testkube install local`"
+	runAgain     = localinstall.RunAgain
+	thenRunAgain = localinstall.ThenRunAgain
 	contactFix   = "If it fails again, contact us: https://testkube.io/contact"
-	retryFix     = "Try " + rerunCommand + " once more. " + contactFix
+	retryFix     = runAgain + "\n" + contactFix
 	// A rerun rarely fixes these, so don't pretend it will.
 	bugFix = "This looks like a Testkube problem, not your setup.\n" + retryFix
 )
@@ -462,16 +482,16 @@ func stuckFix(st localinstall.Stuck, docker localinstall.DockerResources) string
 	name := st.Title()
 	switch st.Reason {
 	case "downloading":
-		return fmt.Sprintf("%s is still downloading its image %s\nYour connection may be slow. Run %s again; finished downloads are kept.",
-			name, st.Detail, rerunCommand)
+		return fmt.Sprintf("%s is still downloading its image %s\nYour connection may be slow. Finished downloads are kept.\n%s",
+			name, st.Detail, runAgain)
 	case "image_pull":
-		return fmt.Sprintf("%s can't download its image %s\nCheck your network, proxy or firewall, then run %s again. Finished downloads are kept.",
-			name, st.Detail, rerunCommand)
+		return fmt.Sprintf("%s can't download its image %s\nFinished downloads are kept. Check your network, proxy or firewall, %s",
+			name, st.Detail, thenRunAgain)
 	// No numbers: they change. No docker login: cluster ignores it.
 	case "rate_limit":
 		return fmt.Sprintf("%s can't download its image %s\nDocker Hub's download limit was reached for this network.\n"+
-			"Wait a few hours or switch networks, then run %s again. Finished downloads are kept.\n"+
-			"Details: https://docs.docker.com/docker-hub/usage/", name, st.Detail, rerunCommand)
+			"Details: https://docs.docker.com/docker-hub/usage/\n"+
+			"Finished downloads are kept. Wait a few hours or switch networks, %s", name, st.Detail, thenRunAgain)
 	case "image_missing":
 		return fmt.Sprintf("%s can't download its image %s\nIt doesn't exist or needs a login. %s", name, st.Detail, bugFix)
 	case "no_cpu", "no_memory":
@@ -509,7 +529,7 @@ func resourceFix(cpu bool, docker localinstall.DockerResources) string {
 		colima = fmt.Sprintf("--cpu %d", localinstall.NeededCPUs)
 		other = "Use a machine with more CPUs"
 	}
-	then := ", then run " + rerunCommand + " again."
+	then := ", " + thenRunAgain
 	switch {
 	// Docker is big enough; something else in the cluster took it.
 	case docker.Enough(cpu):
@@ -525,7 +545,7 @@ func resourceFix(cpu bool, docker localinstall.DockerResources) string {
 	case docker.DockerDesktop():
 		return have + "\nOpen Docker Desktop > Settings > Resources, " + desktop + then
 	case docker.Colima():
-		return have + "\nRun `colima stop && colima start " + colima + "`" + then
+		return have + "\nRestart Colima with more:\n  colima stop && colima start " + colima + "\nThen run again:\n  " + localinstall.InstallCommand
 	}
 	return have + "\n" + other + then
 }
@@ -560,30 +580,31 @@ func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
 	case errors.Is(err, localinstall.ErrClusterNotOurs):
 		reason, r.Detail = "not_ours", "name already taken"
 		r.Fix = fmt.Sprintf("A kind cluster named %q exists that this installer didn't create.\n"+
-			"Delete it if you don't need it, then run again:\n  ~/.testkube/bin/kind delete cluster --name %s", localinstall.ClusterName, localinstall.ClusterName)
+			"Delete it if you don't need it:\n  ~/.testkube/bin/kind delete cluster --name %s\nThen run again:\n  %s",
+			localinstall.ClusterName, localinstall.ClusterName, localinstall.InstallCommand)
 	case errors.Is(err, localinstall.ErrClusterStart):
 		reason, r.Detail = "start", "could not start"
-		r.Fix = lastLines(out, 5) + "\nIf a port is in use, close that program and run again.\n" +
-			"Otherwise remove it: testkube uninstall local"
+		r.Fix = lastLines(out, 5) + "\nIf a port is in use, close that program, " + thenRunAgain + "\n" +
+			"Otherwise remove it:\n  testkube uninstall local"
 	case errors.Is(err, localinstall.ErrClusterStorage):
 		reason, r.Detail = "storage", "could not set up storage"
-		r.Fix = lastLines(out, 5) + "\nRun again. If it keeps failing, remove it:\n" +
+		r.Fix = lastLines(out, 5) + "\n" + runAgain + "\nIf it keeps failing, remove it:\n" +
 			"  testkube uninstall local"
 	case errors.Is(err, localinstall.ErrClusterInspect):
 		reason, r.Detail = "inspect", "could not read existing cluster"
-		r.Fix = withWhy(out, "Check that Docker is running, then run again")
+		r.Fix = withWhy(out, "Check that Docker is running, "+thenRunAgain)
 	case errors.Is(err, localinstall.ErrClusterKubeconfig):
 		reason, r.Detail = "kubeconfig", "could not save its settings"
-		r.Fix = withWhy(out, "Check that ~/.testkube is writable, then run again")
+		r.Fix = withWhy(out, "Check that ~/.testkube is writable, "+thenRunAgain)
 	case errors.As(err, &taken):
 		reason, r.Detail = "port_taken", "port taken"
-		r.Fix = fmt.Sprintf("Another program took port %d just now. Close it, then run again", taken.Port)
+		r.Fix = fmt.Sprintf("Another program took port %d just now. Close it, %s", taken.Port, thenRunAgain)
 	default:
 		why := lastLines(out, 5)
 		if why == "" {
 			why = err.Error()
 		}
-		r.Fix = why + "\nCheck that Docker has enough memory and disk, then run again"
+		r.Fix = why + "\nCheck that Docker has enough memory and disk, " + thenRunAgain
 	}
 	printCheckResult(r)
 	tracker.Send("install_local_failed", map[string]any{"stage": "cluster", "reason": reason})
@@ -673,10 +694,10 @@ func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports, ema
 			"  " + label("Dashboard") + url + "\n" +
 			"  " + label("Email") + email + "\n" +
 			"  " + label("Password") + localinstall.AdminPassword)
-	ui.Printf("\n  %stestkube uninstall local\n", label("Remove it"))
+	ui.Printf("\n  To remove it later:\n    %s\n", uninstallCommand)
 	opened := localinstall.OpenBrowser(url)
 	if opened {
-		ui.Printf("\n  Opening %s in your browser ...\n", url)
+		ui.Printf("\n  Opening %s in your browser...\n", url)
 	} else {
 		ui.Printf("\n  Open %s in your browser.\n", url)
 	}

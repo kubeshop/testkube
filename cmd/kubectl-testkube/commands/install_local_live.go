@@ -81,11 +81,14 @@ func showLive(out io.Writer, start time.Time, progress *atomic.Pointer[localinst
 	}
 }
 
+// The size explains the wait and matches the counter.
+var firstRunText = "Downloads about " + byteSize(localinstall.ImagesSize) + " the first time · 3 to 8 minutes"
+
 // Logs and CI keep every line, so print rarely.
 var plainEvery = 30 * time.Second
 
 func showPlain(out io.Writer, start time.Time, progress *atomic.Pointer[localinstall.Progress]) (stop func()) {
-	_, _ = fmt.Fprintln(out, "  First run takes 3 to 8 minutes")
+	_, _ = fmt.Fprintln(out, "  "+firstRunText)
 	done, finished := make(chan struct{}), make(chan struct{})
 	go func() {
 		defer close(finished)
@@ -117,7 +120,7 @@ func plainStatus(p *localinstall.Progress, elapsed time.Duration) string {
 func liveRows(p *localinstall.Progress, elapsed time.Duration, frame, width, height int) []string {
 	spin := ui.LightCyan(liveFrames[frame%len(liveFrames)])
 	if p == nil {
-		return []string{"  " + spin + " " + fit("Installing Testkube · "+took(elapsed)+" (first run 3 to 8 minutes)", width-5)}
+		return []string{"  " + spin + " " + fit(firstRunText+" · "+took(elapsed), width-5)}
 	}
 	var rows []string
 	for _, s := range p.Services {
