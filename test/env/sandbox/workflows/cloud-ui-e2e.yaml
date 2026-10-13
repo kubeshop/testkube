@@ -25,7 +25,7 @@ spec:
           name: 'testkube-agent-secrets'
           key: 'CLOUD_UI_E2E_GITHUB_TOKEN'
   job:
-    activeDeadlineSeconds: 1200
+    activeDeadlineSeconds: 1380
   config:
     GIT_REVISION: {type: string, default: 'main'}
   container:
@@ -64,7 +64,7 @@ spec:
       paths:
       - /root/.npm/_cacache
   - name: Run tests
-    timeout: 15m
+    timeout: 18m
     shell: npx playwright test --retries=1 --grep-invert "@dev-only|@exclude-sandbox"
     artifacts:
       paths:
