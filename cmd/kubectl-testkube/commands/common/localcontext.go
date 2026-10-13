@@ -23,10 +23,13 @@ func canUseLocalContext(cfg config.Data, firstRun bool) bool {
 	return firstRun || isLocalContext(cfg)
 }
 
+// A var, so tests don't touch the real mark file.
+var isOurCLIKey = localinstall.IsOurCLIKey
+
 func isLocalContext(cfg config.Data) bool {
 	c := cfg.CloudContext
 	return cfg.ContextType == config.ContextTypeCloud && c.OrganizationId == localinstall.DemoOrgID &&
-		strings.HasPrefix(c.ApiUri, "http://localhost:")
+		strings.HasPrefix(c.ApiUri, "http://localhost:") && isOurCLIKey(c.ApiKey)
 }
 
 var errCLISettings = errors.New("the CLI settings can't be read or saved")
@@ -48,6 +51,8 @@ func ConnectLocalCLI(ctx context.Context, ports localinstall.Ports, email string
 	if err := config.Save(localContext(cfg, ports, key)); err != nil {
 		return LocalCLIFailed, fmt.Errorf("%w: %v", errCLISettings, err)
 	}
+	// Without it, the next run offers the hint instead.
+	_ = localinstall.MarkCLIKey(key)
 	return LocalCLIConnected, nil
 }
 
@@ -73,7 +78,11 @@ func DisconnectLocalCLI() bool {
 		return false
 	}
 	cfg, ours := withoutLocalContext(cfg)
-	return ours && config.Save(cfg) == nil
+	if !ours || config.Save(cfg) != nil {
+		return false
+	}
+	localinstall.ForgetCLIKey()
+	return true
 }
 
 func withoutLocalContext(cfg config.Data) (config.Data, bool) {

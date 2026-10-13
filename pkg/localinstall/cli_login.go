@@ -3,12 +3,15 @@ package localinstall
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -100,6 +103,43 @@ func orEmpty(err error) error {
 		return errors.New("empty answer")
 	}
 	return err
+}
+
+// Another demo can share org and port; only our key proves it.
+func MarkCLIKey(key string) error {
+	path, err := cliKeyMarkPath()
+	if err != nil {
+		return err
+	}
+	return writePrivate(path, []byte(keyHash(key)))
+}
+
+func IsOurCLIKey(key string) bool {
+	path, err := cliKeyMarkPath()
+	if err != nil || key == "" {
+		return false
+	}
+	mark, err := os.ReadFile(path)
+	return err == nil && string(mark) == keyHash(key)
+}
+
+func ForgetCLIKey() {
+	if path, err := cliKeyMarkPath(); err == nil {
+		_ = os.Remove(path)
+	}
+}
+
+// A hash, so the key isn't copied to a second file.
+func keyHash(key string) string {
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(key)))
+}
+
+func cliKeyMarkPath() (string, error) {
+	kubeconfig, err := KubeconfigPath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(filepath.Dir(kubeconfig), "cli-key-mark"), nil
 }
 
 func call(client *http.Client, req *http.Request, out any) error {

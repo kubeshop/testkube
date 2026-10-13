@@ -9,8 +9,23 @@ import (
 	"github.com/kubeshop/testkube/pkg/localinstall"
 )
 
+func markedKeys(t *testing.T, keys ...string) {
+	saved := isOurCLIKey
+	t.Cleanup(func() { isOurCLIKey = saved })
+	isOurCLIKey = func(key string) bool {
+		for _, k := range keys {
+			if k == key {
+				return true
+			}
+		}
+		return false
+	}
+}
+
 func TestCanUseLocalContext_NeverTakesOverAnotherLogin(t *testing.T) {
-	ours := config.CloudContext{OrganizationId: localinstall.DemoOrgID, ApiUri: "http://localhost:8090"}
+	markedKeys(t, "tkcapi_ours")
+	ours := config.CloudContext{OrganizationId: localinstall.DemoOrgID, ApiUri: "http://localhost:8090", ApiKey: "tkcapi_ours"}
+	otherDemo := config.CloudContext{OrganizationId: localinstall.DemoOrgID, ApiUri: "http://localhost:8090", ApiKey: "tkcapi_theirs"}
 	tests := map[string]struct {
 		cfg      config.Data
 		firstRun bool
@@ -21,6 +36,7 @@ func TestCanUseLocalContext_NeverTakesOverAnotherLogin(t *testing.T) {
 		"our earlier install":         {config.Data{ContextType: config.ContextTypeCloud, CloudContext: ours}, false, true},
 		"Testkube Cloud login":        {config.Data{ContextType: config.ContextTypeCloud, CloudContext: config.CloudContext{OrganizationId: "tkcorg_acme", ApiUri: "https://api.testkube.io"}}, false, false},
 		"chose kubeconfig":            {config.Data{ContextType: config.ContextTypeKubeconfig}, false, false},
+		"other demo on the same port": {config.Data{ContextType: config.ContextTypeCloud, CloudContext: otherDemo}, false, false},
 		"demo org elsewhere":          {config.Data{ContextType: config.ContextTypeCloud, CloudContext: config.CloudContext{OrganizationId: localinstall.DemoOrgID, ApiUri: "https://testkube.acme.com"}}, false, false},
 	}
 	for name, tt := range tests {
@@ -31,6 +47,7 @@ func TestCanUseLocalContext_NeverTakesOverAnotherLogin(t *testing.T) {
 }
 
 func TestWithoutLocalContext_LeavesAnotherLoginAlone(t *testing.T) {
+	markedKeys(t, "tkcapi_x")
 	cloud := config.Data{ContextType: config.ContextTypeCloud, CloudContext: config.CloudContext{OrganizationId: "tkcorg_acme", ApiUri: "https://api.testkube.io", ApiKey: "k"}}
 	ours := localContext(config.Data{TelemetryEnabled: true}, localinstall.Ports{"api": 8090, "dashboard": 8080}, "tkcapi_x")
 
@@ -46,6 +63,7 @@ func TestWithoutLocalContext_LeavesAnotherLoginAlone(t *testing.T) {
 }
 
 func TestLocalContext_FollowsMovedPortsAndKeepsOtherSettings(t *testing.T) {
+	markedKeys(t, "tkcapi_new")
 	cfg := config.Data{TelemetryEnabled: true, Namespace: "testkube",
 		ContextType: config.ContextTypeCloud, CloudContext: config.CloudContext{ApiUri: "http://localhost:8090", ApiKey: "old"}}
 

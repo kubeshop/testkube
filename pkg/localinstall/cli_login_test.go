@@ -101,3 +101,16 @@ func TestCLIKeyWorks_OnlyAnAcceptedKeyCounts(t *testing.T) {
 	assert.False(t, cliKeyWorks(context.Background(), s.Client(), s.URL, "tkcapi_from_wiped_data"))
 	assert.False(t, cliKeyWorks(context.Background(), s.Client(), s.URL, ""))
 }
+
+func TestCLIKeyMark_OnlyTheMarkedKeyIsOurs(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
+	assert.False(t, IsOurCLIKey("tkcapi_a"), "nothing marked yet")
+	require.NoError(t, MarkCLIKey("tkcapi_a"))
+	assert.True(t, IsOurCLIKey("tkcapi_a"))
+	assert.False(t, IsOurCLIKey("tkcapi_other_demo"))
+	ForgetCLIKey()
+	assert.False(t, IsOurCLIKey("tkcapi_a"))
+}
