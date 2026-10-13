@@ -134,7 +134,7 @@ func NewInstallTracker() *telemetry.InstallTracker {
 	})
 }
 
-// For local-trial errors outside step rows: PostHog, Segment, print.
+// One call, so no standalone error misses either system.
 func ExitOnLocalError(cmd *cobra.Command, event, stage string, cliErr *CLIError) {
 	tracker := NewInstallTracker()
 	tracker.Send(event, map[string]any{"stage": stage, "reason": string(cliErr.Code)})

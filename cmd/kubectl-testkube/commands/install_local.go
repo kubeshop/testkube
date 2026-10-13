@@ -159,7 +159,7 @@ func licenseFailure(err error, expiry time.Time) localinstall.Result {
 	return r
 }
 
-// Set once per run; the fail helpers have neither at hand.
+// Set once per run; fail helpers cannot see either.
 var segmentError struct {
 	cmd     *cobra.Command
 	license string
