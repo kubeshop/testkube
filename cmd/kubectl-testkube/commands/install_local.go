@@ -276,7 +276,7 @@ func failToolInstall(tracker *telemetry.InstallTracker, name string, err error) 
 	switch {
 	case errors.Is(err, localinstall.ErrUnsupportedPlatform):
 		reason, r.Detail = "unsupported_platform", "no download for this system"
-		r.Fix = "Install " + name + " yourself from " + localinstall.ToolManualURL(name) + ", " + thenRunAgain
+		r.Fix = "Install " + name + " yourself:\n  " + localinstall.ToolManualURL(name) + "\nThen run again:\n  " + localinstall.InstallCommand
 	case errors.Is(err, localinstall.ErrChecksumMismatch):
 		reason, r.Detail = "checksum", "download was damaged"
 		r.Fix = "If it repeats, a proxy may be changing downloads.\n" + runAgain
