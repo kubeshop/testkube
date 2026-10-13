@@ -28,6 +28,21 @@ func TestCanUseLocalContext_NeverTakesOverAnotherLogin(t *testing.T) {
 	}
 }
 
+func TestWithoutLocalContext_LeavesAnotherLoginAlone(t *testing.T) {
+	cloud := config.Data{ContextType: config.ContextTypeCloud, CloudContext: config.CloudContext{OrganizationId: "tkcorg_acme", ApiUri: "https://api.testkube.io", ApiKey: "k"}}
+	ours := localContext(config.Data{TelemetryEnabled: true}, localinstall.Ports{"api": 8090, "dashboard": 8080}, "tkcapi_x")
+
+	kept, changed := withoutLocalContext(cloud)
+	assert.False(t, changed)
+	assert.Equal(t, cloud, kept)
+
+	cleared, changed := withoutLocalContext(ours)
+	assert.True(t, changed)
+	assert.Empty(t, cleared.CloudContext.ApiKey)
+	assert.True(t, canUseLocalContext(cleared), "a reinstall connects again")
+	assert.True(t, cleared.TelemetryEnabled)
+}
+
 func TestLocalContext_FollowsMovedPortsAndKeepsOtherSettings(t *testing.T) {
 	cfg := config.Data{TelemetryEnabled: true, Namespace: "testkube",
 		ContextType: config.ContextTypeCloud, CloudContext: config.CloudContext{ApiUri: "http://localhost:8090", ApiKey: "old"}}

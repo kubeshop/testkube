@@ -48,6 +48,24 @@ func ConnectLocalCLI(ctx context.Context, ports localinstall.Ports, email string
 	return LocalCLIConnected
 }
 
+// A context left pointing at nothing fails every command.
+func DisconnectLocalCLI() bool {
+	cfg, err := config.Load()
+	if err != nil {
+		return false
+	}
+	cfg, ours := withoutLocalContext(cfg)
+	return ours && config.Save(cfg) == nil
+}
+
+func withoutLocalContext(cfg config.Data) (config.Data, bool) {
+	if !isLocalContext(cfg) {
+		return cfg, false
+	}
+	cfg.ContextType, cfg.CloudContext = "", config.CloudContext{}
+	return cfg, true
+}
+
 // Ports can move between runs, so every run rewrites it.
 func localContext(cfg config.Data, ports localinstall.Ports, key string) config.Data {
 	cfg.ContextType = config.ContextTypeCloud
