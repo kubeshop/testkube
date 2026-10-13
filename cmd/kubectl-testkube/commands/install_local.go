@@ -86,7 +86,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			installMissingTools(cmd, tracker, checker, results)
 			ports := runClusterStep(cmd, tracker)
 			runTestkubeStep(cmd, tracker, key, email, ports)
-			printReady(tracker, ports, email)
+			printReady(tracker, ports, email, connectCLI(cmd.Context(), ports, email))
 			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallFinished)
 			waitForEvents(tracker)
 		},
@@ -685,7 +685,7 @@ func waitForEvents(tracker *telemetry.InstallTracker) {
 	waitLicenseEvents()
 }
 
-func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports, email string) {
+func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports, email string, cliConnected bool) {
 	url := fmt.Sprintf("http://localhost:%d", ports["dashboard"])
 	label := func(s string) string { return ui.LightGray(fmt.Sprintf("%-12s", s)) }
 	ui.NL()
@@ -694,6 +694,9 @@ func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports, ema
 			"  " + label("Dashboard") + url + "\n" +
 			"  " + label("Email") + email + "\n" +
 			"  " + label("Password") + localinstall.AdminPassword)
+	if cliConnected {
+		ui.Printf("\n  %s testkube CLI now uses this local install\n", ui.Green("✔"))
+	}
 	ui.Printf("\n  To remove it later:\n    %s\n", uninstallCommand)
 	opened := localinstall.OpenBrowser(url)
 	if opened {
@@ -701,5 +704,5 @@ func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports, ema
 	} else {
 		ui.Printf("\n  Open %s in your browser.\n", url)
 	}
-	tracker.Send("install_local_ready", map[string]any{"browser_opened": opened})
+	tracker.Send("install_local_ready", map[string]any{"browser_opened": opened, "cli_connected": cliConnected})
 }

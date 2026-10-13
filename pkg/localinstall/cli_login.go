@@ -74,6 +74,24 @@ func cliKey(ctx context.Context, client *http.Client, dex, api, email string) (s
 	return key.Token, nil
 }
 
+// Reruns keep a working key, so keys don't pile up.
+func CLIKeyWorks(ctx context.Context, ports Ports, key string) bool {
+	return cliKeyWorks(ctx, http.DefaultClient, fmt.Sprintf("http://localhost:%d", ports["api"]), key)
+}
+
+func cliKeyWorks(ctx context.Context, client *http.Client, api, key string) bool {
+	if key == "" {
+		return false
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, api+"/organizations/"+DemoOrgID, nil)
+	if err != nil {
+		return false
+	}
+	req.Header.Set("Authorization", "Bearer "+key)
+	var org map[string]any
+	return call(client, req, &org) == nil
+}
+
 func call(client *http.Client, req *http.Request, out any) error {
 	ctx, cancel := context.WithTimeout(req.Context(), 10*time.Second)
 	defer cancel()

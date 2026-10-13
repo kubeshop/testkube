@@ -62,3 +62,18 @@ func TestCLIKey_NeverReturnsAnEmptyKey(t *testing.T) {
 		})
 	}
 }
+
+func TestCLIKeyWorks_ARejectedKeyIsReplaced(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer tkcapi_good" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		_, _ = w.Write([]byte(`{"id":"` + DemoOrgID + `"}`))
+	}))
+	defer s.Close()
+
+	assert.True(t, cliKeyWorks(context.Background(), s.Client(), s.URL, "tkcapi_good"))
+	assert.False(t, cliKeyWorks(context.Background(), s.Client(), s.URL, "tkcapi_from_wiped_data"))
+	assert.False(t, cliKeyWorks(context.Background(), s.Client(), s.URL, ""))
+}
