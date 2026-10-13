@@ -110,7 +110,7 @@ func runLicenseStep(tracker *telemetry.InstallTracker, flagKey string) string {
 	}
 	if flagKey == "" && !ui.StdinIsInteractive() {
 		failLicense(tracker, localinstall.Result{Name: "license", Status: localinstall.StatusFail, Detail: "no key given",
-			Fix: "Pass it with --license <key> or TESTKUBE_LICENSE=<key>. " + localinstall.LicenseHelp})
+			Fix: localinstall.LicenseHelp + "\nThen run again:\n  " + localinstall.InstallCommand + " --license <key>"})
 	}
 	license, attempts, err := localinstall.NewLicenseStep(terminalKeyPrompter{tracker: tracker}).Run(flagKey)
 	for _, a := range attempts {
