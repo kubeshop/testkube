@@ -69,3 +69,19 @@ func TestAnswers_ARefusalStillMeansItsUp(t *testing.T) {
 	assert.True(t, answers(context.Background(), s.URL))
 	assert.False(t, answers(context.Background(), closedURL))
 }
+
+func TestExistingTrial_ACancelledInstallIsNotSetUp(t *testing.T) {
+	ports := Ports{"dashboard": 8080, "api": 8090, "login": 5556}
+	owned := func(running bool, err error) func(context.Context) (bool, Ports, error) {
+		return func(context.Context) (bool, Ports, error) { return running, ports, err }
+	}
+	all := func(context.Context, string) bool { return true }
+	none := func(context.Context, string) bool { return false }
+
+	state, _ := existingTrial(context.Background(), owned(true, nil), all)
+	assert.Equal(t, TrialSetUp, state)
+	state, _ = existingTrial(context.Background(), owned(true, nil), none)
+	assert.Equal(t, TrialUnfinished, state, "cluster up, Testkube never installed: 1.2 GB still ahead")
+	state, _ = existingTrial(context.Background(), owned(false, ErrClusterNotOurs), all)
+	assert.Equal(t, TrialAbsent, state)
+}

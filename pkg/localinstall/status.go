@@ -30,17 +30,47 @@ type LocalStatus struct {
 
 var errClusterNameTaken = errors.New("another cluster has our name")
 
+type ExistingState int
+
+const (
+	TrialAbsent ExistingState = iota
+	TrialSetUp
+	// A node without answering services: a cancelled or failed install.
+	TrialUnfinished
+)
+
 // Before step 1, so a rerun isn't promised a long wait.
-func ExistingTrial(ctx context.Context) (found, running bool) {
+func ExistingTrial(ctx context.Context) (state ExistingState, running bool) {
 	cluster, err := NewCluster()
 	if err != nil {
-		return false, false
+		return TrialAbsent, false
 	}
 	// A stuck Docker must not delay the plan.
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	running, _, _, err = cluster.owned(ctx)
-	return err == nil, running
+	owned := func(ctx context.Context) (bool, Ports, error) {
+		running, ports, _, err := cluster.owned(ctx)
+		return running, ports, err
+	}
+	return existingTrial(ctx, owned, answers)
+}
+
+func existingTrial(ctx context.Context, owned func(context.Context) (bool, Ports, error),
+	answers func(context.Context, string) bool) (ExistingState, bool) {
+	running, ports, err := owned(ctx)
+	switch {
+	case err != nil:
+		return TrialAbsent, false
+	// A stopped node can't be probed; usually it was complete.
+	case !running:
+		return TrialSetUp, false
+	}
+	for _, name := range []string{"dashboard", "api", "login"} {
+		if !answers(ctx, fmt.Sprintf("http://localhost:%d", ports[name])) {
+			return TrialUnfinished, true
+		}
+	}
+	return TrialSetUp, true
 }
 
 // Reads only: a status check must never start anything.
