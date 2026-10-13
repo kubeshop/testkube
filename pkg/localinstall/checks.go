@@ -231,7 +231,7 @@ func (c *Checker) CheckInotify(ctx context.Context) []Result {
 	}
 	return []Result{{Name: "inotify", Status: StatusWarn, Detail: "too low",
 		Hint: fmt.Sprintf("needs %d instances, %d watches", minInotifyInstances, minInotifyWatches),
-		Fix: fmt.Sprintf("Testkube may crash at random. Raise the limits:\nsudo sysctl fs.inotify.max_user_instances=%d fs.inotify.max_user_watches=%d",
+		Fix: fmt.Sprintf("Testkube may crash at random. Raise the limits:\n  sudo sysctl fs.inotify.max_user_instances=%d fs.inotify.max_user_watches=%d",
 			minInotifyInstances, minInotifyWatches)}}
 }
 

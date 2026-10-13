@@ -71,7 +71,7 @@ func runUninstallLocal(cmd *cobra.Command, deleteData, yes bool) {
 	if deleteData {
 		ok, err := shouldDeleteData(yes, ui.StdinIsInteractive(), confirmDataDeletion)
 		if err != nil {
-			ui.Printf("  %s\n", err)
+			ui.Printf("  %s\n", strings.ReplaceAll(err.Error(), "\n", "\n  "))
 			os.Exit(1)
 		}
 		if !ok {
