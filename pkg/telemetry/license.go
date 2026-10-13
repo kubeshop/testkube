@@ -23,6 +23,10 @@ type EmailRequest struct {
 
 // GetEmail returns email
 func GetEmail(license string) string {
+	// No key: skip a lookup that may take 5s.
+	if license == "" {
+		return ""
+	}
 	if LicenseEndpoint != "" {
 		payload := EmailRequest{License: license}
 		jsonPayload, _ := json.Marshal(payload)

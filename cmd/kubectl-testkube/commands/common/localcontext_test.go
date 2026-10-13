@@ -1,6 +1,8 @@
 package common
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -73,4 +75,13 @@ func TestLocalContext_FollowsMovedPortsAndKeepsOtherSettings(t *testing.T) {
 	assert.Equal(t, "tkcapi_new", got.CloudContext.ApiKey)
 	assert.True(t, isLocalContext(got), "the next run recognises it")
 	assert.True(t, got.TelemetryEnabled, "settings outside the context stay")
+}
+
+func TestLocalCLIPlainError_KeepsPathsAndRepliesOut(t *testing.T) {
+	raw := fmt.Errorf("%w: /organizations/x/tokens answered 400: {\"detail\":\"secret reply\"}", localinstall.ErrCLIKey)
+	settings := fmt.Errorf("%w: open /Users/jane/.testkube/config.json: permission denied", errCLISettings)
+
+	assert.Equal(t, localinstall.ErrCLIKey, LocalCLIPlainError(raw))
+	assert.Equal(t, errCLISettings, LocalCLIPlainError(settings))
+	assert.NotContains(t, LocalCLIPlainError(errors.New("/Users/jane")).Error(), "jane")
 }

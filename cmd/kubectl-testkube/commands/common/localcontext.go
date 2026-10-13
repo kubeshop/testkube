@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/localinstall"
+	"github.com/kubeshop/testkube/pkg/telemetry"
 )
 
 type LocalCLIState int
@@ -54,6 +57,16 @@ func ConnectLocalCLI(ctx context.Context, ports localinstall.Ports, email string
 	// Without it, the next run offers the hint instead.
 	_ = localinstall.MarkCLIKey(key)
 	return LocalCLIConnected, nil
+}
+
+// Raw errors carry paths and API replies; telemetry gets these.
+func LocalCLIPlainError(err error) error {
+	for _, plain := range []error{localinstall.ErrCLILogin, localinstall.ErrCLIKey, errCLISettings} {
+		if errors.Is(err, plain) {
+			return plain
+		}
+	}
+	return errors.New("the CLI login failed")
 }
 
 // Fixed words for telemetry; raw errors can carry paths.
@@ -107,4 +120,28 @@ func localContext(cfg config.Data, ports localinstall.Ports, key string) config.
 		EnvironmentName:  "my-first-environment",
 	}
 	return cfg
+}
+
+func NewInstallTracker() *telemetry.InstallTracker {
+	cfg, err := config.Load()
+	if err != nil {
+		cfg = config.DefaultConfig
+	}
+	return telemetry.NewInstallTracker(telemetry.InstallTrackerConfig{
+		Enabled:   cfg.TelemetryEnabled && !telemetry.DoNotTrack(),
+		MachineID: telemetry.GetMachineID(),
+		Version:   Version,
+	})
+}
+
+// One call, so no standalone error misses either system.
+func ExitOnLocalError(cmd *cobra.Command, event, stage string, cliErr *CLIError) {
+	tracker := NewInstallTracker()
+	tracker.Send(event, map[string]any{"stage": stage, "reason": string(cliErr.Code)})
+	tracker.Wait()
+	cfg, err := config.Load()
+	if err != nil {
+		cfg = config.DefaultConfig
+	}
+	ExitOnCLIError(cmd, cfg, stage, cliErr)
 }

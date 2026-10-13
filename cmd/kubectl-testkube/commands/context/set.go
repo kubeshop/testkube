@@ -1,7 +1,6 @@
 package context
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -17,26 +16,42 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func setContextLocal(ctx context.Context) {
+var errNoLocalTrial = errors.New("no running local Testkube was found")
+
+func setContextLocal(cmd *cobra.Command) {
+	const event = "install_local_set_context_failed"
+	// Ctrl+C is the user quitting, not the login failing.
+	fail := func(stage string, cliErr *common.CLIError) {
+		if cmd.Context().Err() != nil {
+			ui.Printf("  Cancelled.\n")
+			os.Exit(130)
+		}
+		common.ExitOnLocalError(cmd, event, stage, cliErr)
+	}
 	cluster, err := localinstall.NewCluster()
 	var ports localinstall.Ports
 	if err == nil {
-		ports, err = cluster.Ports(ctx)
+		ports, err = cluster.Ports(cmd.Context())
 	}
 	if err != nil {
-		ui.Printf("  No local Testkube is running. Start it with:\n    %s\n", localinstall.InstallCommand)
-		os.Exit(1)
+		ui.Debug("local cluster lookup failed", err.Error())
+		fail("cluster", common.NewCLIError(
+			common.TKErrLocalCLILoginFailed, "Error finding a running local Testkube",
+			"Start it with:\n  "+localinstall.InstallCommand, errNoLocalTrial))
 	}
 	// Empty owner: the email the last install saved.
 	email := localinstall.RememberLoginEmail("")
-	if _, err := common.ConnectLocalCLI(ctx, ports, email, true); err != nil {
+	if _, err := common.ConnectLocalCLI(cmd.Context(), ports, email, true); err != nil {
 		ui.Debug("testkube CLI login failed", err.Error())
+		plain := common.LocalCLIPlainError(err)
 		if common.LocalCLIFailure(err) == "settings" {
-			ui.Printf("  testkube CLI couldn't save its settings. Check ~/.testkube/config.json is readable and writable.\n")
-			os.Exit(1)
+			fail("settings", common.NewCLIError(
+				common.TKErrConfigSaveFailed, "Error saving the testkube CLI settings",
+				"Check that ~/.testkube/config.json is readable and writable.", plain))
 		}
-		ui.Printf("  testkube CLI couldn't log in to the local install. Check it's ready at http://localhost:%d\n", ports["dashboard"])
-		os.Exit(1)
+		fail("login", common.NewCLIError(
+			common.TKErrLocalCLILoginFailed, "Error logging the testkube CLI in to the local install",
+			"Check that it's ready:\n  testkube status local", plain))
 	}
 	ui.Printf("  %s testkube CLI now uses the local install\n", ui.Green("✔"))
 }
@@ -78,7 +93,7 @@ func NewSetContextCmd() *cobra.Command {
 			"  testkube set context local",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 1 && args[0] == "local" {
-				setContextLocal(cmd.Context())
+				setContextLocal(cmd)
 				return
 			}
 
