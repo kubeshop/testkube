@@ -3,6 +3,9 @@ package localinstall
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,6 +28,7 @@ func TestReadStatus_NamesTheFirstThingInTheWay(t *testing.T) {
 		"stopped":                    {docker: up, want: TrialStopped},
 		"uninstalled, data kept":     {docker: up, ownedErr: ErrClusterNotOurs, data: true, want: TrialNotInstalled, wantData: true},
 		"in another Docker context":  {docker: up, ownedErr: ClusterElsewhereError{In: "colima", Active: "desktop-linux"}, data: true, want: TrialElsewhere},
+		"mark but no cluster":        {docker: up, ownedErr: ErrClusterInspect, want: TrialNotInstalled},
 		"never installed":            {docker: up, ownedErr: ErrClusterNotOurs, want: TrialNotInstalled},
 		"docker down hides the rest": {docker: Result{Status: StatusFail}, running: true, want: TrialNoDocker},
 	}
@@ -46,4 +50,20 @@ func TestReadStatus_NamesTheFirstThingInTheWay(t *testing.T) {
 			assert.Equal(t, tt.wantData, s.DataKept)
 		})
 	}
+}
+
+func TestAnswers_ARefusalStillMeansItsUp(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer s.Close()
+	closed, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	closedURL := "http://" + closed.Addr().String()
+	closed.Close()
+
+	assert.True(t, answers(context.Background(), s.URL))
+	assert.False(t, answers(context.Background(), closedURL))
 }
