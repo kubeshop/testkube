@@ -10,7 +10,7 @@ import (
 )
 
 func TestLocalHelp_HidesFlagsThatDoNothingHere(t *testing.T) {
-	for _, args := range [][]string{{"install", "local", "--help"}, {"uninstall", "local", "--help"}} {
+	for _, args := range [][]string{{"install", "local", "--help"}, {"uninstall", "local", "--help"}, {"install", "local", "--licence", "x"}} {
 		root := &cobra.Command{Use: "testkube"}
 		root.PersistentFlags().String("namespace", "tk-dev", "")
 		install := &cobra.Command{Use: "install"}
@@ -18,9 +18,10 @@ func TestLocalHelp_HidesFlagsThatDoNothingHere(t *testing.T) {
 		root.AddCommand(install, NewPurgeCmd())
 		var out bytes.Buffer
 		root.SetOut(&out)
+		root.SetErr(&out)
 		root.SetArgs(args)
 
-		require.NoError(t, root.Execute())
+		_ = root.Execute()
 		assert.NotContains(t, out.String(), "--namespace", args[0])
 		assert.Contains(t, out.String(), "Examples:", args[0])
 	}

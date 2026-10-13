@@ -96,10 +96,11 @@ func NewInstallLocalCmd() *cobra.Command {
 
 // The API flags do nothing here; --namespace would mislead.
 func hideGlobalFlags(cmd *cobra.Command) {
-	help := cmd.HelpFunc()
-	cmd.SetHelpFunc(func(c *cobra.Command, args []string) {
+	// Help and flag errors both render through usage.
+	usage := cmd.UsageFunc()
+	cmd.SetUsageFunc(func(c *cobra.Command) error {
 		c.InheritedFlags().VisitAll(func(f *pflag.Flag) { f.Hidden = true })
-		help(c, args)
+		return usage(c)
 	})
 }
 
