@@ -38,6 +38,7 @@ func fakeLogin(t *testing.T, dexStatus int, key string) *httptest.Server {
 				return
 			}
 			names[body.Name] = true
+			require.Len(t, body.Scopes, 2)
 			assert.Equal(t, DemoEnvID, body.Scopes[1]["identifier"], "the key can run the demo environment's workflows")
 			_ = json.NewEncoder(w).Encode(map[string]string{"token": key})
 		}
@@ -86,7 +87,7 @@ func TestCLIKey_NeverReturnsAnEmptyKey(t *testing.T) {
 	}
 }
 
-func TestCLIKeyWorks_ARejectedKeyIsReplaced(t *testing.T) {
+func TestCLIKeyWorks_OnlyAnAcceptedKeyCounts(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer tkcapi_good" {
 			w.WriteHeader(http.StatusUnauthorized)
