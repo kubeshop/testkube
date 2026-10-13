@@ -52,6 +52,8 @@
 // Meanwhile OnProgress reports each service's state and downloads.
 // It also saves a private report for support (see saveReport),
 // built from picked fields only, with known secrets masked.
+// CLIKey logs in like the dashboard and mints a CLI API key,
+// so the testkube CLI can use the install without a browser.
 // Uninstall (see Cluster.Remove, RemoveFiles, DeleteData) keeps data
 // unless asked, and never removes a cluster it did not make.
 //
