@@ -82,6 +82,8 @@ func TestExistingTrial_ACancelledInstallIsNotSetUp(t *testing.T) {
 	assert.Equal(t, TrialSetUp, state)
 	state, _ = existingTrial(context.Background(), owned(true, nil), none)
 	assert.Equal(t, TrialUnfinished, state, "cluster up, Testkube never installed: 1.2 GB still ahead")
+	state, _ = existingTrial(context.Background(), owned(false, nil), all)
+	assert.Equal(t, TrialNodeStopped, state, "a stopped node proves nothing about Testkube")
 	state, _ = existingTrial(context.Background(), owned(false, ErrClusterNotOurs), all)
 	assert.Equal(t, TrialAbsent, state)
 }

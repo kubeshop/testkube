@@ -37,6 +37,8 @@ const (
 	TrialSetUp
 	// A node without answering services: a cancelled or failed install.
 	TrialUnfinished
+	// Stopped by hand; can't tell whether Testkube got installed.
+	TrialNodeStopped
 )
 
 // Before step 1, so a rerun isn't promised a long wait.
@@ -61,9 +63,8 @@ func existingTrial(ctx context.Context, owned func(context.Context) (bool, Ports
 	switch {
 	case err != nil:
 		return TrialAbsent, false
-	// A stopped node can't be probed; usually it was complete.
 	case !running:
-		return TrialSetUp, false
+		return TrialNodeStopped, false
 	}
 	for _, name := range []string{"dashboard", "api", "login"} {
 		if !answers(ctx, fmt.Sprintf("http://localhost:%d", ports[name])) {

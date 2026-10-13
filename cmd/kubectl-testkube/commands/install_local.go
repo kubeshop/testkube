@@ -262,6 +262,9 @@ func printPlan(existing localinstall.ExistingState, running bool) {
 		}
 	case localinstall.TrialUnfinished:
 		note = "A previous install didn't finish. This run continues it.\nFinished downloads are kept."
+	case localinstall.TrialNodeStopped:
+		plan[5] = "install or update Testkube and open it in your browser"
+		note = "Your local cluster is stopped. This run starts it and checks Testkube.\nFinished downloads are kept."
 	}
 	ui.Printf("\nThis installer will\n")
 	for i, step := range plan {
