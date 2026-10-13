@@ -194,6 +194,10 @@ func TestInstall_LoginUsesTheLicenseEmail(t *testing.T) {
 
 	_, _, err := i.Install(context.Background(), movedPorts, testSecrets, testLicense)
 	require.NoError(t, err)
+	call := slices.IndexFunc(f.calls, func(c []string) bool { return slices.Contains(c, EnterpriseChart) })
+	require.GreaterOrEqual(t, call, 0)
+	args := strings.Join(f.calls[call], " ")
+	assert.Greater(t, strings.Index(args, "login.yaml"), strings.Index(args, "demo.yaml"), "login must override the demo user")
 
 	var login, dex map[string]any
 	require.NoError(t, yaml.Unmarshal([]byte(f.files["login.yaml"]), &login))
@@ -217,8 +221,16 @@ func TestLoginValues_NewEmailRestartsDex(t *testing.T) {
 
 func TestLoginEmail_FallsBackToTheDemoUser(t *testing.T) {
 	for _, owner := range []string{"", "Acme Corp", "Jane <jane@acme.com>", "jane@acme.com\nhash: x"} {
-		assert.Equal(t, AdminEmail, LoginEmail(owner), "%q", owner)
+		assert.Equal(t, AdminEmail, loginEmail(owner), "%q", owner)
 	}
+}
+
+func TestRememberLoginEmail_FailedLookupKeepsTheLastGoodEmail(t *testing.T) {
+	dir := t.TempDir()
+	assert.Equal(t, AdminEmail, rememberLoginEmail(dir, ""), "nothing saved yet")
+	assert.Equal(t, "jane@acme.com", rememberLoginEmail(dir, "jane@acme.com"))
+	assert.Equal(t, "jane@acme.com", rememberLoginEmail(dir, ""))
+	assert.Equal(t, "bob@acme.com", rememberLoginEmail(dir, "bob@acme.com"), "a new owner wins")
 }
 
 func TestInstall_WorkerServiceUsesTheAPIsPostgres(t *testing.T) {

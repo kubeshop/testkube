@@ -427,7 +427,7 @@ func writeValues(dir string, ports Ports, s Secrets, license, email string) (map
 	if err != nil {
 		return nil, err
 	}
-	login, err := loginValues(LoginEmail(email))
+	login, err := loginValues(loginEmail(email))
 	if err != nil {
 		return nil, err
 	}
@@ -460,8 +460,27 @@ func demoFixValues() ([]byte, error) {
 	})
 }
 
+// A failed lookup must not strand the kept account.
+func RememberLoginEmail(owner string) string {
+	kubeconfig, err := KubeconfigPath()
+	if err != nil {
+		return loginEmail(owner)
+	}
+	return rememberLoginEmail(filepath.Dir(kubeconfig), owner)
+}
+
+func rememberLoginEmail(dir, owner string) string {
+	path := filepath.Join(dir, "login-email")
+	if email := loginEmail(owner); email != AdminEmail {
+		_ = writePrivate(path, []byte(email))
+		return email
+	}
+	saved, _ := os.ReadFile(path)
+	return loginEmail(string(saved))
+}
+
 // The lookup can fail or return a non-address.
-func LoginEmail(owner string) string {
+func loginEmail(owner string) string {
 	addr, err := mail.ParseAddress(owner)
 	if err != nil || addr.Address != owner {
 		return AdminEmail

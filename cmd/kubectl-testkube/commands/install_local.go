@@ -41,10 +41,11 @@ func NewInstallLocalCmd() *cobra.Command {
 			printStep(1, "Checking your license")
 			key := runLicenseStep(tracker, licenseKey)
 			// The login needs it; validate already sent the key there.
-			email := telemetry.GetEmail(key)
+			owner := telemetry.GetEmail(key)
 			if tracker.Enabled() {
-				tracker.Identify(email)
+				tracker.Identify(owner)
 			}
+			email := localinstall.RememberLoginEmail(owner)
 			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallStarted)
 
 			// Finds tools a previous run installed.
@@ -79,7 +80,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			installMissingTools(cmd, tracker, checker, results)
 			ports := runClusterStep(cmd, tracker)
 			runTestkubeStep(cmd, tracker, key, email, ports)
-			printReady(tracker, ports, localinstall.LoginEmail(email))
+			printReady(tracker, ports, email)
 			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallFinished)
 			waitForEvents(tracker)
 		},

@@ -50,6 +50,7 @@ func dataHome(t *testing.T) string {
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "data", "testkube", "pvc", "data"), 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "data", "testkube", "pvc", "data", "pg"), []byte("x"), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "secrets.json"), []byte("{}"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "login-email"), []byte("jane@acme.com"), 0o600))
 	return dir
 }
 
@@ -68,6 +69,7 @@ func TestDeleteData_ThroughAContainerThenThePasswords(t *testing.T) {
 	assert.Empty(t, sudo)
 	assert.NoDirExists(t, filepath.Join(dir, "data"))
 	assert.NoFileExists(t, filepath.Join(dir, "secrets.json"))
+	assert.NoFileExists(t, filepath.Join(dir, "login-email"), "the account went with the data")
 	require.Len(t, calls, 1)
 	assert.Contains(t, calls[0], "--pull=never", "no download just to delete")
 	assert.Contains(t, calls[0], "/d/testkube")
