@@ -40,9 +40,10 @@ func NewInstallLocalCmd() *cobra.Command {
 
 			printStep(1, "Checking your license")
 			key := runLicenseStep(tracker, licenseKey)
-			// Opted-out users' keys must not reach the owner lookup.
+			// The login needs it; validate already sent the key there.
+			email := telemetry.GetEmail(key)
 			if tracker.Enabled() {
-				tracker.Identify(telemetry.GetEmail(key))
+				tracker.Identify(email)
 			}
 			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallStarted)
 
@@ -77,8 +78,8 @@ func NewInstallLocalCmd() *cobra.Command {
 			tracker.Send("install_local_checks_done", nil)
 			installMissingTools(cmd, tracker, checker, results)
 			ports := runClusterStep(cmd, tracker)
-			runTestkubeStep(cmd, tracker, key, ports)
-			printReady(tracker, ports)
+			runTestkubeStep(cmd, tracker, key, email, ports)
+			printReady(tracker, ports, localinstall.LoginEmail(email))
 			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallFinished)
 			waitForEvents(tracker)
 		},
@@ -314,7 +315,7 @@ func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) local
 	return state.Ports
 }
 
-func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, license string, ports localinstall.Ports) {
+func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, license, email string, ports localinstall.Ports) {
 	printStep(6, "Installing Testkube")
 	secrets, err := localinstall.LoadOrCreateSecrets()
 	if err != nil {
@@ -326,6 +327,7 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 	}
 	var progress atomic.Pointer[localinstall.Progress]
 	installer.OnProgress = func(p localinstall.Progress) { progress.Store(&p) }
+	installer.LoginEmail = email
 	start := time.Now()
 	show := showPlain
 	if canShowLive() {
@@ -661,14 +663,14 @@ func waitForEvents(tracker *telemetry.InstallTracker) {
 	waitLicenseEvents()
 }
 
-func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports) {
+func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports, email string) {
 	url := fmt.Sprintf("http://localhost:%d", ports["dashboard"])
 	label := func(s string) string { return ui.LightGray(fmt.Sprintf("%-12s", s)) }
 	ui.NL()
 	pterm.DefaultBox.WithBoxStyle(pterm.NewStyle(pterm.FgLightMagenta)).Println(
 		ui.Green("✔") + " " + pterm.Bold.Sprint("Testkube is ready") + "\n\n" +
 			"  " + label("Dashboard") + url + "\n" +
-			"  " + label("Email") + localinstall.AdminEmail + "\n" +
+			"  " + label("Email") + email + "\n" +
 			"  " + label("Password") + localinstall.AdminPassword)
 	ui.Printf("\n  %stestkube uninstall local\n", label("Remove it"))
 	opened := localinstall.OpenBrowser(url)

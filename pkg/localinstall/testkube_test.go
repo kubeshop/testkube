@@ -187,6 +187,40 @@ func TestInstall_RunnerKeyReachesBothCharts(t *testing.T) {
 	assert.Contains(t, f.files["runner.yaml"], "secret: "+testSecrets.RunnerKey)
 }
 
+func TestInstall_LoginUsesTheLicenseEmail(t *testing.T) {
+	f := &helmFake{}
+	i := newTestInstaller(t, f)
+	i.LoginEmail = "Jane.Doe@Acme.com"
+
+	_, _, err := i.Install(context.Background(), movedPorts, testSecrets, testLicense)
+	require.NoError(t, err)
+
+	var login, dex map[string]any
+	require.NoError(t, yaml.Unmarshal([]byte(f.files["login.yaml"]), &login))
+	require.NoError(t, yaml.Unmarshal([]byte(dig(login, "dex", "configTemplate", "additionalConfig").(string)), &dex))
+	user := dig(dex, "staticPasswords").([]any)[0].(map[string]any)
+	assert.Equal(t, "jane.doe@acme.com", user["email"])
+	assert.NotEmpty(t, user["hash"], "the password is kept")
+	assert.Equal(t, true, dex["enablePasswordDB"], "the rest of the dex config is kept")
+}
+
+func TestLoginValues_NewEmailRestartsDex(t *testing.T) {
+	checksum := func(email string) any {
+		data, err := loginValues(email)
+		require.NoError(t, err)
+		var v map[string]any
+		require.NoError(t, yaml.Unmarshal(data, &v))
+		return dig(v, "dex", "podAnnotations", "checksum/login")
+	}
+	assert.NotEqual(t, checksum("a@acme.com"), checksum("b@acme.com"))
+}
+
+func TestLoginEmail_FallsBackToTheDemoUser(t *testing.T) {
+	for _, owner := range []string{"", "Acme Corp", "Jane <jane@acme.com>", "jane@acme.com\nhash: x"} {
+		assert.Equal(t, AdminEmail, LoginEmail(owner), "%q", owner)
+	}
+}
+
 func TestInstall_WorkerServiceUsesTheAPIsPostgres(t *testing.T) {
 	f := &helmFake{}
 
