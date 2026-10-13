@@ -46,8 +46,8 @@ spec:
       value: testkube-agent-e2e
     resources:
       requests:
-        cpu: 2
-        memory: 2Gi
+        cpu: 3
+        memory: 3Gi
   services:
     ui:
       count: 'config.revision == "main" ? 0 : 1'
@@ -86,7 +86,7 @@ spec:
       # Resolve the preview URL only after the UI service has started.
       - name: CLOUD_BASE_URL
         value: '{{ config.revision == "main" ? "https://app.testkube.dev" : "http://" + services.ui.0.ip + ":5173" }}'
-      shell: npx playwright test --retries=1
+      shell: npx playwright test --retries=1 --workers=2
     artifacts:
       paths:
       - playwright-report/**
