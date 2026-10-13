@@ -45,6 +45,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			}
 			tracker.Send("install_local_started", nil)
 			printPlan(localinstall.ExistingTrial(cmd.Context()))
+			exitIfCancelled(cmd, tracker, "plan")
 
 			printStep(1, "Checking your license")
 			key = runLicenseStep(tracker, licenseKey)
@@ -220,8 +221,8 @@ var cancelNotice sync.Once
 // Before any wait, or Ctrl+C looks ignored; once, from either path.
 func printCancelled(stage string) {
 	kept := ""
-	// Only these steps download; a rerun skips what finished.
-	if stage == "tool_install" || stage == "testkube" {
+	// Tools, node image and Testkube images; reruns skip finished ones.
+	if stage == "tool_install" || stage == "cluster" || stage == "testkube" {
 		kept = " Finished downloads are kept."
 	}
 	cancelNotice.Do(func() {
@@ -243,19 +244,24 @@ func printBanner() {
 }
 
 // Numbered like the step headers, so [3/6] means line 3.
-func printPlan(found, running bool) {
+func printPlan(existing localinstall.ExistingState, running bool) {
 	plan := []string{"check your license key", "check the tools it needs", "check this machine",
 		"download helm and kind into ~/.testkube/bin (kubectl too, if missing)",
 		"create a local cluster called \"testkube\" in Docker", "install Testkube and open it in your browser"}
 	note := "First run takes 5 to 10 minutes, mostly downloads. Your own tools and clusters are not changed."
 	// Reruns download nothing; promising minutes would mislead.
-	if found {
-		plan[3], plan[4], plan[5] = "check helm and kind in ~/.testkube/bin",
-			"start the local cluster \"testkube\" in Docker", "update Testkube and open it in your browser"
+	if existing != localinstall.TrialAbsent {
+		plan[3], plan[4] = "check helm and kind in ~/.testkube/bin", "start the local cluster \"testkube\" in Docker"
+	}
+	switch existing {
+	case localinstall.TrialSetUp:
+		plan[5] = "update Testkube and open it in your browser"
 		note = "Testkube is already set up here. This run updates it, usually in under a minute.\nYour data is kept."
 		if running {
 			note += " To only check it, run:\n  " + statusLocalCommand
 		}
+	case localinstall.TrialUnfinished:
+		note = "A previous install didn't finish. This run continues it.\nFinished downloads are kept."
 	}
 	ui.Printf("\nThis installer will\n")
 	for i, step := range plan {

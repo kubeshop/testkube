@@ -78,13 +78,13 @@ func NewInstallTracker(cfg InstallTrackerConfig) *InstallTracker {
 	}
 }
 
+// WSL1 kernels say "Microsoft", WSL2 ones lowercase.
 func wslVersion(kernel string) string {
-	kernel = strings.ToLower(kernel)
 	switch {
-	case strings.Contains(kernel, "wsl2"):
-		return "2"
-	case strings.Contains(kernel, "microsoft"):
+	case strings.Contains(kernel, "Microsoft"):
 		return "1"
+	case strings.Contains(kernel, "microsoft"):
+		return "2"
 	}
 	return ""
 }
