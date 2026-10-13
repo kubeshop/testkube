@@ -143,7 +143,7 @@ func licenseFailure(err error, expiry time.Time) localinstall.Result {
 			r.Detail = "expired on " + expiry.Local().Format("2 Jan 2006")
 		}
 	default:
-		r.Detail, r.Fix = "could not read the key", "Pass it with --license <key>"
+		r.Detail, r.Fix = "could not read the key", "Pass it with --license <key>."
 	}
 	return r
 }

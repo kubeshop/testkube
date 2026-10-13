@@ -42,7 +42,7 @@ const (
 	minCPUs       = 4
 	minMemory     = 6 * gigabyte
 	minFreeDisk   = 10 * gigabyte
-	resourcesHint = "Testkube may run slowly or fail to start"
+	resourcesHint = "Testkube may run slowly or fail to start."
 
 	// Docker reports ~3% under its setting: 6 GB shows ~5.8.
 	minMemoryReported = 55 * gigabyte / 10
