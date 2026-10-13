@@ -13,6 +13,7 @@ import (
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
@@ -89,7 +90,17 @@ func NewInstallLocalCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&licenseKey, "license", "l", "", "Testkube license key from your trial email (or set TESTKUBE_LICENSE)")
+	hideGlobalFlags(cmd)
 	return cmd
+}
+
+// The API flags do nothing here; --namespace would mislead.
+func hideGlobalFlags(cmd *cobra.Command) {
+	help := cmd.HelpFunc()
+	cmd.SetHelpFunc(func(c *cobra.Command, args []string) {
+		c.InheritedFlags().VisitAll(func(f *pflag.Flag) { f.Hidden = true })
+		help(c, args)
+	})
 }
 
 func runLicenseStep(tracker *telemetry.InstallTracker, flagKey string) string {

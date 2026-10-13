@@ -36,6 +36,7 @@ func NewUninstallLocalCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the confirmation prompt")
 	// The parent is purge, but users type uninstall.
 	cmd.SetUsageTemplate(strings.Replace(cmd.UsageTemplate(), "{{.UseLine}}", uninstallCommand+" [flags]", 1))
+	hideGlobalFlags(cmd)
 	return cmd
 }
 
