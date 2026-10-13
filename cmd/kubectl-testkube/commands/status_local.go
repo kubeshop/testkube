@@ -70,8 +70,9 @@ func runStatusLocal(ctx context.Context) int {
 	case localinstall.TrialStarting:
 		row(ok, "docker", "running")
 		row(ok, "cluster", "running")
-		row(ui.LightCyan("⠼"), "testkube", "still starting")
-		next("Check again in a minute:", statusLocalCommand)
+		row(ui.LightCyan("⠼"), "testkube", "not answering yet")
+		// A failed or cancelled install looks the same as starting.
+		next("If it just started, check again in a minute.\n  If it stays like this, run:", localinstall.InstallCommand)
 		return statusExitStarting
 	}
 	row(ok, "docker", "running")
