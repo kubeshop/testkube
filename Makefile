@@ -399,6 +399,10 @@ lint-fix: ## Run golangci-lint with automatic fixes
 	@echo "Running golangci-lint with fixes..."
 	@$(GOLANGCI_LINT) run ./... --timeout 10m --fix
 
+.PHONY: security-scan
+security-scan: ## Run the PR security scan (Semgrep, Gitleaks, Trivy) on your changes vs origin/main. Needs Docker; ENFORCE=1 fails on findings
+	@./scripts/security-scan.sh
+
 # ==================== Code Generation ====================
 ##@ Code Generation
 
