@@ -709,6 +709,7 @@ func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports, ema
 		ui.Printf("\n  %s testkube CLI couldn't log in to this install\n"+
 			"      To try again, run:\n        %s\n", ui.LightGray("○"), setContextLocalCommand)
 	}
+	ui.Printf("\n  To see this again:\n    %s\n", statusLocalCommand)
 	ui.Printf("\n  To remove it later:\n    %s\n", uninstallCommand)
 	opened := localinstall.OpenBrowser(url)
 	if opened {
