@@ -23,7 +23,8 @@ spec:
       paths:
       - js
   job:
-    activeDeadlineSeconds: 1200
+    # Include preview startup, the test step, and cleanup in the outer deadline.
+    activeDeadlineSeconds: 1800
   container:
     workingDir: /data/repo/js/packages/e2e-tests
     image: mcr.microsoft.com/playwright:v1.62.1-noble
@@ -80,7 +81,8 @@ spec:
       paths:
       - /root/.npm/_cacache
   - name: Run tests
-    timeout: 15m
+    # Playwright allows 15m; retain time for shutdown and artifact uploads.
+    timeout: 18m
     run:
       env:
       # Resolve the preview URL only after the UI service has started.
