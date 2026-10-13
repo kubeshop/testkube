@@ -171,7 +171,7 @@ func sendSegmentError(tracker *telemetry.InstallTracker, code common.ErrorCode, 
 		return
 	}
 	// Fixed words only: raw errors can carry paths or keys.
-	_, _ = telemetry.SendCmdErrorEventWithLicense(segmentError.cmd, common.Version, reason,
+	_, _ = telemetry.SendCmdErrorEventWithLicense(segmentError.cmd, common.Version, stage,
 		stage+": "+reason, segmentError.license, stage, string(code))
 }
 
@@ -188,7 +188,9 @@ func failedChecks(results []localinstall.Result) string {
 func failLicense(tracker *telemetry.InstallTracker, r localinstall.Result) {
 	printCheckResult(r)
 	tracker.Send("install_local_failed", map[string]any{"stage": "license"})
-	sendSegmentError(tracker, common.TKErrLocalLicenseFailed, "license", r.Detail)
+	// "expired on <date>" would split grouping by date.
+	reason, _, _ := strings.Cut(r.Detail, " on ")
+	sendSegmentError(tracker, common.TKErrLocalLicenseFailed, "license", reason)
 	waitForEvents(tracker)
 	os.Exit(1)
 }
