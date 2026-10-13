@@ -17,9 +17,9 @@ const (
 	LocalCLIFailed
 )
 
-// Never replace a login the user made, unless asked to.
-func canUseLocalContext(cfg config.Data) bool {
-	return cfg.ContextType == "" || isLocalContext(cfg)
+// An empty context may be an OSS user's kubeconfig mode.
+func canUseLocalContext(cfg config.Data, firstRun bool) bool {
+	return firstRun || isLocalContext(cfg)
 }
 
 func isLocalContext(cfg config.Data) bool {
@@ -33,7 +33,7 @@ func ConnectLocalCLI(ctx context.Context, ports localinstall.Ports, email string
 	if err != nil {
 		return LocalCLIFailed
 	}
-	if !force && !canUseLocalContext(cfg) {
+	if !force && !canUseLocalContext(cfg, !config.ExistedAtStart()) {
 		return LocalCLIOtherLogin
 	}
 	key := cfg.CloudContext.ApiKey

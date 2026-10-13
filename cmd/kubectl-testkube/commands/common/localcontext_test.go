@@ -12,18 +12,20 @@ import (
 func TestCanUseLocalContext_NeverTakesOverAnotherLogin(t *testing.T) {
 	ours := config.CloudContext{OrganizationId: localinstall.DemoOrgID, ApiUri: "http://localhost:8090"}
 	tests := map[string]struct {
-		cfg  config.Data
-		want bool
+		cfg      config.Data
+		firstRun bool
+		want     bool
 	}{
-		"fresh config":         {config.Data{}, true},
-		"our earlier install":  {config.Data{ContextType: config.ContextTypeCloud, CloudContext: ours}, true},
-		"Testkube Cloud login": {config.Data{ContextType: config.ContextTypeCloud, CloudContext: config.CloudContext{OrganizationId: "tkcorg_acme", ApiUri: "https://api.testkube.io"}}, false},
-		"chose kubeconfig":     {config.Data{ContextType: config.ContextTypeKubeconfig}, false},
-		"demo org elsewhere":   {config.Data{ContextType: config.ContextTypeCloud, CloudContext: config.CloudContext{OrganizationId: localinstall.DemoOrgID, ApiUri: "https://testkube.acme.com"}}, false},
+		"first CLI run ever":          {config.Data{}, true, true},
+		"OSS user on kubeconfig mode": {config.Data{}, false, false},
+		"our earlier install":         {config.Data{ContextType: config.ContextTypeCloud, CloudContext: ours}, false, true},
+		"Testkube Cloud login":        {config.Data{ContextType: config.ContextTypeCloud, CloudContext: config.CloudContext{OrganizationId: "tkcorg_acme", ApiUri: "https://api.testkube.io"}}, false, false},
+		"chose kubeconfig":            {config.Data{ContextType: config.ContextTypeKubeconfig}, false, false},
+		"demo org elsewhere":          {config.Data{ContextType: config.ContextTypeCloud, CloudContext: config.CloudContext{OrganizationId: localinstall.DemoOrgID, ApiUri: "https://testkube.acme.com"}}, false, false},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, tt.want, canUseLocalContext(tt.cfg))
+			assert.Equal(t, tt.want, canUseLocalContext(tt.cfg, tt.firstRun))
 		})
 	}
 }
@@ -39,7 +41,7 @@ func TestWithoutLocalContext_LeavesAnotherLoginAlone(t *testing.T) {
 	cleared, changed := withoutLocalContext(ours)
 	assert.True(t, changed)
 	assert.Empty(t, cleared.CloudContext.ApiKey)
-	assert.True(t, canUseLocalContext(cleared), "a reinstall connects again")
+	assert.True(t, canUseLocalContext(cleared, true), "a reinstall on a fresh CLI connects again")
 	assert.True(t, cleared.TelemetryEnabled)
 }
 
