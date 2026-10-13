@@ -30,6 +30,19 @@ type LocalStatus struct {
 
 var errClusterNameTaken = errors.New("another cluster has our name")
 
+// Before step 1, so a rerun isn't promised a long wait.
+func ExistingTrial(ctx context.Context) (found, running bool) {
+	cluster, err := NewCluster()
+	if err != nil {
+		return false, false
+	}
+	// A stuck Docker must not delay the plan.
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	running, _, _, err = cluster.owned(ctx)
+	return err == nil, running
+}
+
 // Reads only: a status check must never start anything.
 func ReadStatus(ctx context.Context) LocalStatus {
 	cluster, err := NewCluster()

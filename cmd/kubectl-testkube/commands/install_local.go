@@ -44,7 +44,7 @@ func NewInstallLocalCmd() *cobra.Command {
 				ui.Printf("%s\n", ui.LightGray(telemetry.InstallNotice))
 			}
 			tracker.Send("install_local_started", nil)
-			printPlan()
+			printPlan(localinstall.ExistingTrial(cmd.Context()))
 
 			printStep(1, "Checking your license")
 			key = runLicenseStep(tracker, licenseKey)
@@ -243,16 +243,25 @@ func printBanner() {
 }
 
 // Numbered like the step headers, so [3/6] means line 3.
-func printPlan() {
-	ui.Printf("\nThis installer will\n" +
-		"  1. check your license key\n" +
-		"  2. check the tools it needs\n" +
-		"  3. check this machine\n" +
-		"  4. download helm and kind into ~/.testkube/bin (kubectl too, if missing)\n" +
-		"  5. create a local cluster called \"testkube\" in Docker\n" +
-		"  6. install Testkube and open it in your browser\n\n")
-	ui.Printf("%s\n", ui.LightGray("First run takes 5 to 10 minutes, mostly downloads. Your own tools and clusters are not changed.\n"+
-		"Press Ctrl+C to exit at any time."))
+func printPlan(found, running bool) {
+	plan := []string{"check your license key", "check the tools it needs", "check this machine",
+		"download helm and kind into ~/.testkube/bin (kubectl too, if missing)",
+		"create a local cluster called \"testkube\" in Docker", "install Testkube and open it in your browser"}
+	note := "First run takes 5 to 10 minutes, mostly downloads. Your own tools and clusters are not changed."
+	// Reruns download nothing; promising minutes would mislead.
+	if found {
+		plan[3], plan[4], plan[5] = "check helm and kind in ~/.testkube/bin",
+			"start the local cluster \"testkube\" in Docker", "update Testkube and open it in your browser"
+		note = "Testkube is already set up here. This run checks and updates it,\nusually in under a minute. Your data is kept."
+		if running {
+			note += "\nTo only check it, run:\n  " + statusLocalCommand
+		}
+	}
+	ui.Printf("\nThis installer will\n")
+	for i, step := range plan {
+		ui.Printf("  %d. %s\n", i+1, step)
+	}
+	ui.Printf("\n%s\n", ui.LightGray(note+"\nPress Ctrl+C to exit at any time."))
 }
 
 const installSteps = 6
