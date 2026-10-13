@@ -24,6 +24,7 @@ func TestReadStatus_NamesTheFirstThingInTheWay(t *testing.T) {
 		"dashboard up, API not yet":  {docker: up, running: true, answers: map[int]bool{8080: true}, want: TrialStarting},
 		"stopped":                    {docker: up, want: TrialStopped},
 		"uninstalled, data kept":     {docker: up, ownedErr: ErrClusterNotOurs, data: true, want: TrialNotInstalled, wantData: true},
+		"in another Docker context":  {docker: up, ownedErr: ClusterElsewhereError{In: "colima", Active: "desktop-linux"}, data: true, want: TrialElsewhere},
 		"never installed":            {docker: up, ownedErr: ErrClusterNotOurs, want: TrialNotInstalled},
 		"docker down hides the rest": {docker: Result{Status: StatusFail}, running: true, want: TrialNoDocker},
 	}

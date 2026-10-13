@@ -2,6 +2,7 @@ package localinstall
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -15,13 +16,15 @@ const (
 	TrialStopped
 	TrialNotInstalled
 	TrialNoDocker
+	TrialElsewhere
 )
 
 type LocalStatus struct {
-	State    TrialState
-	Docker   Result
-	Ports    Ports
-	DataKept bool
+	State     TrialState
+	Docker    Result
+	Ports     Ports
+	DataKept  bool
+	Elsewhere ClusterElsewhereError
 }
 
 // Reads only: a status check must never start anything.
@@ -32,6 +35,12 @@ func ReadStatus(ctx context.Context) LocalStatus {
 			return false, nil, err
 		}
 		running, ports, _, err := cluster.owned(ctx)
+		// Our mark without our node: maybe another Docker has it.
+		if errors.Is(err, ErrClusterInspect) {
+			if elsewhere := cluster.findElsewhere(ctx); elsewhere != nil {
+				return false, nil, elsewhere
+			}
+		}
 		return running, ports, err
 	}
 	return readStatus(ctx, NewChecker().CheckDocker, owned, answers, HasData)
@@ -46,6 +55,8 @@ func readStatus(ctx context.Context, docker func(context.Context) Result,
 	}
 	running, ports, err := owned(ctx)
 	switch {
+	case errors.As(err, &s.Elsewhere):
+		s.State = TrialElsewhere
 	// No mark or no node: nothing of ours exists.
 	case err != nil:
 		s.State, s.DataKept = TrialNotInstalled, hasData()

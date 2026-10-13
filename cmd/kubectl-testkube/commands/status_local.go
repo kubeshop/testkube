@@ -68,6 +68,12 @@ func runStatusLocal(ctx context.Context) int {
 		row(ok, "data", "kept in ~/.testkube/data")
 		next("To bring it back, run:", localinstall.InstallCommand)
 		return statusExitNotRunning
+	case localinstall.TrialElsewhere:
+		row(ok, "docker", "running")
+		printCheckResult(localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "in another Docker",
+			Fix: fmt.Sprintf("It's in Docker %q, but %q is active now.\nSwitch to it, then run again:\n  docker context use %s\n  %s",
+				s.Elsewhere.In, s.Elsewhere.Active, s.Elsewhere.In, statusLocalCommand)})
+		return statusExitNotRunning
 	case localinstall.TrialStopped:
 		row(ok, "docker", "running")
 		row(notOk, "cluster", "stopped")
