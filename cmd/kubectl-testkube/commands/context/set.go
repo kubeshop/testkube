@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -19,6 +20,14 @@ var errNoLocalTrial = errors.New("no running local Testkube was found")
 
 func setContextLocal(cmd *cobra.Command) {
 	const event = "install_local_set_context_failed"
+	// Ctrl+C is the user quitting, not the login failing.
+	fail := func(stage string, cliErr *common.CLIError) {
+		if cmd.Context().Err() != nil {
+			ui.Printf("  Cancelled.\n")
+			os.Exit(130)
+		}
+		common.ExitOnLocalError(cmd, event, stage, cliErr)
+	}
 	cluster, err := localinstall.NewCluster()
 	var ports localinstall.Ports
 	if err == nil {
@@ -26,7 +35,7 @@ func setContextLocal(cmd *cobra.Command) {
 	}
 	if err != nil {
 		ui.Debug("local cluster lookup failed", err.Error())
-		common.ExitOnLocalError(cmd, event, "cluster", common.NewCLIError(
+		fail("cluster", common.NewCLIError(
 			common.TKErrLocalCLILoginFailed, "Error finding a running local Testkube",
 			"Start it with:\n  "+localinstall.InstallCommand, errNoLocalTrial))
 	}
@@ -36,11 +45,11 @@ func setContextLocal(cmd *cobra.Command) {
 		ui.Debug("testkube CLI login failed", err.Error())
 		plain := common.LocalCLIPlainError(err)
 		if common.LocalCLIFailure(err) == "settings" {
-			common.ExitOnLocalError(cmd, event, "settings", common.NewCLIError(
+			fail("settings", common.NewCLIError(
 				common.TKErrConfigSaveFailed, "Error saving the testkube CLI settings",
 				"Check that ~/.testkube/config.json is readable and writable.", plain))
 		}
-		common.ExitOnLocalError(cmd, event, "login", common.NewCLIError(
+		fail("login", common.NewCLIError(
 			common.TKErrLocalCLILoginFailed, "Error logging the testkube CLI in to the local install",
 			"Check that it's ready:\n  testkube status local", plain))
 	}
