@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/localinstall"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -30,6 +31,12 @@ func NewStatusLocalCmd() *cobra.Command {
 		Hidden: true,
 		Args:   cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
+			// Install only runs in WSL, so its cluster lives there.
+			if runtime.GOOS == "windows" {
+				common.ExitOnLocalError(cmd, "install_local_status_failed", "platform", common.NewCLIError(
+					common.TKErrLocalUnsupportedPlatform, "Error checking the local trial on Windows",
+					"In your WSL terminal, run:\n  "+statusLocalCommand, errWindowsTrial))
+			}
 			os.Exit(runStatusLocal(cmd.Context()))
 		},
 	}
@@ -38,11 +45,6 @@ func NewStatusLocalCmd() *cobra.Command {
 }
 
 func runStatusLocal(ctx context.Context) int {
-	// Install only runs in WSL, so its cluster lives there.
-	if runtime.GOOS == "windows" {
-		ui.Printf("  On Windows the local trial lives inside WSL. In your WSL terminal, run:\n    %s\n", statusLocalCommand)
-		return 1
-	}
 	s := localinstall.ReadStatus(ctx)
 	ok, notOk := ui.Green("✔"), ui.LightRed("✖")
 	row := func(icon, name, detail string) { ui.Printf("  %s %-10s %s\n", icon, name, detail) }

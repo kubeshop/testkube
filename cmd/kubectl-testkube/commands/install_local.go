@@ -209,15 +209,7 @@ func (p terminalKeyPrompter) Ask(attempt int) (string, error) {
 }
 
 func newInstallTracker() *telemetry.InstallTracker {
-	cfg, err := config.Load()
-	if err != nil {
-		cfg = config.DefaultConfig
-	}
-	return telemetry.NewInstallTracker(telemetry.InstallTrackerConfig{
-		Enabled:   cfg.TelemetryEnabled && !telemetry.DoNotTrack(),
-		MachineID: telemetry.GetMachineID(),
-		Version:   common.Version,
-	})
+	return common.NewInstallTracker()
 }
 
 // Ctrl+C is the user quitting, not a step failing.

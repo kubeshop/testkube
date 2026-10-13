@@ -23,7 +23,7 @@ type EmailRequest struct {
 
 // GetEmail returns email
 func GetEmail(license string) string {
-	// No key, no owner: skip a call that may take 5s.
+	// No key: skip a lookup that may take 5s.
 	if license == "" {
 		return ""
 	}

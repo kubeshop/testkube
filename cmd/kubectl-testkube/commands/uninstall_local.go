@@ -43,7 +43,10 @@ func NewUninstallLocalCmd() *cobra.Command {
 
 const uninstallCommand = "testkube uninstall local"
 
-var errNeedsYes = errors.New("--delete-data needs confirmation. Run again with --yes:\n  " + uninstallCommand + " --delete-data --yes")
+var (
+	errNeedsYes     = errors.New("--delete-data needs a yes, and there's no terminal to ask")
+	errWindowsTrial = errors.New("the local trial lives inside WSL")
+)
 
 // Deleting data can't be undone, so no answer means no.
 func shouldDeleteData(yes, interactive bool, confirm func() bool) (bool, error) {
@@ -66,14 +69,16 @@ func confirmDataDeletion() bool {
 func runUninstallLocal(cmd *cobra.Command, deleteData, yes bool) {
 	// Install only runs in WSL, so its files live there.
 	if runtime.GOOS == "windows" {
-		ui.Printf("  On Windows the local trial lives inside WSL. In your WSL terminal, run:\n    %s\n", uninstallCommand)
-		os.Exit(1)
+		common.ExitOnLocalError(cmd, "install_local_uninstall_failed", "platform", common.NewCLIError(
+			common.TKErrLocalUnsupportedPlatform, "Error removing the local trial on Windows",
+			"In your WSL terminal, run:\n  "+uninstallCommand, errWindowsTrial))
 	}
 	if deleteData {
 		ok, err := shouldDeleteData(yes, ui.StdinIsInteractive(), confirmDataDeletion)
 		if err != nil {
-			ui.Printf("  %s\n", strings.ReplaceAll(err.Error(), "\n", "\n  "))
-			os.Exit(1)
+			common.ExitOnLocalError(cmd, "install_local_uninstall_failed", "confirmation", common.NewCLIError(
+				common.TKErrInvalidRuntimeParameter, "Error deleting data without confirmation",
+				"Run again with --yes:\n  "+uninstallCommand+" --delete-data --yes", err))
 		}
 		if !ok {
 			ui.Printf("  Nothing was removed.\n")

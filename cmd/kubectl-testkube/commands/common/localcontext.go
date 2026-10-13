@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/localinstall"
+	"github.com/kubeshop/testkube/pkg/telemetry"
 )
 
 type LocalCLIState int
@@ -107,4 +110,28 @@ func localContext(cfg config.Data, ports localinstall.Ports, key string) config.
 		EnvironmentName:  "my-first-environment",
 	}
 	return cfg
+}
+
+func NewInstallTracker() *telemetry.InstallTracker {
+	cfg, err := config.Load()
+	if err != nil {
+		cfg = config.DefaultConfig
+	}
+	return telemetry.NewInstallTracker(telemetry.InstallTrackerConfig{
+		Enabled:   cfg.TelemetryEnabled && !telemetry.DoNotTrack(),
+		MachineID: telemetry.GetMachineID(),
+		Version:   Version,
+	})
+}
+
+// For local-trial errors outside step rows: PostHog, Segment, print.
+func ExitOnLocalError(cmd *cobra.Command, event, stage string, cliErr *CLIError) {
+	tracker := NewInstallTracker()
+	tracker.Send(event, map[string]any{"stage": stage, "reason": string(cliErr.Code)})
+	tracker.Wait()
+	cfg, err := config.Load()
+	if err != nil {
+		cfg = config.DefaultConfig
+	}
+	ExitOnCLIError(cmd, cfg, stage, cliErr)
 }
