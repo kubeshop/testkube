@@ -25,6 +25,18 @@ archives:
 checksum:
   name_template: "checksums.txt"
 
+# Keyless cosign signature of checksums.txt, which covers every release
+# artifact. Needs cosign and the id-token: write permission in the job.
+signs:
+  - cmd: cosign
+    artifacts: checksum
+    signature: "${artifact}.sigstore.json"
+    args:
+      - sign-blob
+      - --bundle=${signature}
+      - --yes
+      - ${artifact}
+
 sboms:
   - artifacts: archive
 
