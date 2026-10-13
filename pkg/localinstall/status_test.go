@@ -59,7 +59,7 @@ func TestAnswers_ARefusalStillMeansItsUp(t *testing.T) {
 		w.WriteHeader(http.StatusUnauthorized)
 	}))
 	defer s.Close()
-	closed, err := net.Listen("tcp", "127.0.0.1:0")
+	closed, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
