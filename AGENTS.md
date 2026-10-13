@@ -200,6 +200,7 @@ contents do.
 ## Local laptop install
 
 - Hidden `testkube install local` and `testkube uninstall local` live in `pkg/localinstall`; see its `doc.go`.
+- Pointing the CLI at the local install (after install, `testkube set context local`, and on uninstall) lives in `cmd/kubectl-testkube/commands/common/localcontext.go`.
 
 ## Configuration references
 

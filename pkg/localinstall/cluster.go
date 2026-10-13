@@ -248,6 +248,20 @@ func (c *Cluster) owned(ctx context.Context) (running bool, ports Ports, out str
 	return running, ports, "", nil
 }
 
+var ErrClusterStopped = errors.New("the local cluster isn't running")
+
+// Ports of the running install, for commands after install.
+func (c *Cluster) Ports(ctx context.Context) (Ports, error) {
+	running, ports, _, err := c.owned(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !running {
+		return nil, ErrClusterStopped
+	}
+	return ports, nil
+}
+
 // Docker alone: works even after our kind copy was deleted.
 func (c *Cluster) Remove(ctx context.Context) (found bool, out string, err error) {
 	nodes, err := c.run(ctx, "docker", "ps", "-a", "-q", "--filter", "label=io.x-k8s.kind.cluster="+ClusterName)

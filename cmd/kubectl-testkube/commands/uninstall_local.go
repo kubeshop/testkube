@@ -12,6 +12,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/localinstall"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -120,6 +121,10 @@ func runUninstallLocal(cmd *cobra.Command, deleteData, yes bool) {
 		}
 		printCheckResult(localinstall.Result{Name: "files", Status: localinstall.StatusPass, Detail: "removed", Hint: hint})
 	}
+	cliOut := !dockerHidden && common.DisconnectLocalCLI()
+	if cliOut {
+		printCheckResult(localinstall.Result{Name: "cli", Status: localinstall.StatusPass, Detail: "logged out", Hint: "of the local install"})
+	}
 	dataDeleted := false
 	if deleteData && dockerHidden {
 		printCheckResult(localinstall.Result{Name: "data", Status: localinstall.StatusWarn, Detail: "kept", Hint: "~/.testkube/data",
@@ -144,9 +149,9 @@ func runUninstallLocal(cmd *cobra.Command, deleteData, yes bool) {
 		}
 	}
 	tracker.Send("install_local_uninstall_done", map[string]any{"cluster_found": found, "files_removed": removed,
-		"data_deleted": dataDeleted, "duration_s": int(time.Since(start).Seconds())})
+		"data_deleted": dataDeleted, "cli_logged_out": cliOut, "duration_s": int(time.Since(start).Seconds())})
 	defer waitForEvents(tracker)
-	if !found && !removed && !dataDeleted {
+	if !found && !removed && !dataDeleted && !cliOut {
 		if !localinstall.HasData() {
 			ui.Printf("  Nothing to uninstall: no local Testkube found.\n")
 			return
