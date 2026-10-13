@@ -19,17 +19,17 @@ const (
 )
 
 // An empty context may be an OSS user's kubeconfig mode.
-func canUseLocalContext(cfg config.Data, firstRun bool) bool {
-	return firstRun || isLocalContext(cfg)
+func canUseLocalContext(cfg config.Data, firstRun bool, ours keyCheck) bool {
+	return firstRun || isLocalContext(cfg, ours)
 }
 
-// A var, so tests don't touch the real mark file.
-var isOurCLIKey = localinstall.IsOurCLIKey
+// Passed in, so tests don't touch the real mark file.
+type keyCheck func(key string) bool
 
-func isLocalContext(cfg config.Data) bool {
+func isLocalContext(cfg config.Data, ours keyCheck) bool {
 	c := cfg.CloudContext
 	return cfg.ContextType == config.ContextTypeCloud && c.OrganizationId == localinstall.DemoOrgID &&
-		strings.HasPrefix(c.ApiUri, "http://localhost:") && isOurCLIKey(c.ApiKey)
+		strings.HasPrefix(c.ApiUri, "http://localhost:") && ours(c.ApiKey)
 }
 
 var errCLISettings = errors.New("the CLI settings can't be read or saved")
@@ -39,11 +39,11 @@ func ConnectLocalCLI(ctx context.Context, ports localinstall.Ports, email string
 	if err != nil {
 		return LocalCLIFailed, fmt.Errorf("%w: %v", errCLISettings, err)
 	}
-	if !force && !canUseLocalContext(cfg, !config.ExistedAtStart()) {
+	if !force && !canUseLocalContext(cfg, !config.ExistedAtStart(), localinstall.IsOurCLIKey) {
 		return LocalCLIOtherLogin, nil
 	}
 	key := cfg.CloudContext.ApiKey
-	if !isLocalContext(cfg) || !localinstall.CLIKeyWorks(ctx, ports, key) {
+	if !isLocalContext(cfg, localinstall.IsOurCLIKey) || !localinstall.CLIKeyWorks(ctx, ports, key) {
 		if key, err = localinstall.CLIKey(ctx, ports, email); err != nil {
 			return LocalCLIFailed, err
 		}
@@ -77,7 +77,7 @@ func DisconnectLocalCLI() bool {
 	if err != nil {
 		return false
 	}
-	cfg, ours := withoutLocalContext(cfg)
+	cfg, ours := withoutLocalContext(cfg, localinstall.IsOurCLIKey)
 	if !ours || config.Save(cfg) != nil {
 		return false
 	}
@@ -85,8 +85,8 @@ func DisconnectLocalCLI() bool {
 	return true
 }
 
-func withoutLocalContext(cfg config.Data) (config.Data, bool) {
-	if !isLocalContext(cfg) {
+func withoutLocalContext(cfg config.Data, ours keyCheck) (config.Data, bool) {
+	if !isLocalContext(cfg, ours) {
 		return cfg, false
 	}
 	cfg.ContextType, cfg.CloudContext = "", config.CloudContext{}
