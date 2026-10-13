@@ -473,9 +473,8 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error, repo
 }
 
 const (
-	runAgain     = localinstall.RunAgain
-	thenRunAgain = localinstall.ThenRunAgain
-	// Named here so the hint and the command can't drift.
+	runAgain               = localinstall.RunAgain
+	thenRunAgain           = localinstall.ThenRunAgain
 	setContextLocalCommand = "testkube set context local"
 	contactFix             = "If it fails again, contact us: https://testkube.io/contact"
 	retryFix               = runAgain + "\n" + contactFix
