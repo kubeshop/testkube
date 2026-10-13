@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -48,8 +49,13 @@ func runStatusLocal(ctx context.Context) int {
 	next := func(lead, command string) { ui.Printf("\n  %s\n    %s\n", lead, command) }
 	switch s.State {
 	case localinstall.TrialNoDocker:
-		row(notOk, "docker", s.Docker.Detail)
-		next("Start Docker, then run again:", statusLocalCommand)
+		// Same fix as install's check, rerunning status instead.
+		docker := s.Docker
+		docker.Fix = strings.Replace(docker.Fix, localinstall.InstallCommand, statusLocalCommand, 1)
+		if !strings.Contains(docker.Fix, statusLocalCommand) {
+			docker.Fix += "\nThen run again:\n  " + statusLocalCommand
+		}
+		printCheckResult(docker)
 		return statusExitDockerAbsent
 	case localinstall.TrialNotInstalled:
 		if !s.DataKept {
