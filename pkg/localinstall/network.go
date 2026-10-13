@@ -24,7 +24,7 @@ var networkProbes = []struct{ name, url string }{
 }
 
 const networkFix = "Testkube downloads from these during install. If you use a proxy,\n" +
-	"set HTTPS_PROXY in this shell and in Docker's settings, then run again"
+	"set HTTPS_PROXY in this shell and in Docker's settings, " + ThenRunAgain
 
 // Any HTTP answer counts: Docker Hub replies 401 to anonymous calls.
 func (realHost) Reachable(ctx context.Context, url string) bool {

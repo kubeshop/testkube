@@ -55,7 +55,8 @@ const (
 	dockerPermissionFix = "Your user can't use Docker yet. Run:\n" +
 		"  sudo usermod -aG docker $USER\n" +
 		"  newgrp docker\n" +
-		"Then run the installer again. Details: https://docs.docker.com/engine/install/linux-postinstall/"
+		"Details: https://docs.docker.com/engine/install/linux-postinstall/\n" +
+		"Then run again:\n  " + InstallCommand
 )
 
 // We install these ourselves, so missing is only a warning.
@@ -261,19 +262,19 @@ func (c *Checker) checkDocker(ctx context.Context) Result {
 		// Usually Docker Desktop is installed, just not shared here.
 		if isWSL(c.host.ReadSysctl("kernel.osrelease")) {
 			return Result{Name: "docker", Status: StatusFail, Detail: "not found",
-				Fix: "In Docker Desktop, open Settings > Resources > WSL integration,\nturn on this distro, then run again."}
+				Fix: "In Docker Desktop, open Settings > Resources > WSL integration,\nturn on this distro, " + ThenRunAgain}
 		}
 		return Result{Name: "docker", Status: StatusFail, Detail: "not found", Fix: "Install Docker: https://docs.docker.com/get-docker/"}
 	}
 	if _, err := c.readDockerInfo(ctx); err != nil {
 		if errors.Is(err, errDockerTimeout) {
-			return Result{Name: "docker", Status: StatusFail, Detail: "not answering", Fix: "Docker did not answer within 10 seconds. It may still be starting; wait a moment, then run again"}
+			return Result{Name: "docker", Status: StatusFail, Detail: "not answering", Fix: "Docker did not answer within 10 seconds. It may still be starting; wait a moment, " + ThenRunAgain}
 		}
 		// The docker group only grants access to the system socket.
 		if strings.Contains(err.Error(), "permission denied") && strings.Contains(err.Error(), systemDockerSocket) {
 			return Result{Name: "docker", Status: StatusFail, Detail: "permission denied", Fix: dockerPermissionFix}
 		}
-		return Result{Name: "docker", Status: StatusFail, Detail: "not reachable", Fix: err.Error() + "\nStart Docker, then run the installer again"}
+		return Result{Name: "docker", Status: StatusFail, Detail: "not reachable", Fix: err.Error() + "\nStart Docker, " + ThenRunAgain}
 	}
 	if len(c.info.PodmanHost) > 0 {
 		return Result{Name: "docker", Status: StatusFail, Version: "Podman", Detail: "not supported yet",

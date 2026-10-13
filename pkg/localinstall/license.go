@@ -11,8 +11,13 @@ import (
 const (
 	MaxLicenseAttempts = 3
 
+	InstallCommand = "testkube install local"
+	// Own line, so a triple-click copies it.
+	RunAgain     = "Run again:\n  " + InstallCommand
+	ThenRunAgain = "then run again:\n  " + InstallCommand
+
 	LicenseHelp            = "Find your key in the email from Testkube, or get one at https://testkube.io/get-started/on-prem"
-	LicenseUnreachableHelp = "Testkube checks licenses at license.testkube.io and needs it to run.\nCheck your network, proxy or firewall, then run again"
+	LicenseUnreachableHelp = "Testkube checks licenses at license.testkube.io and needs it to run.\nCheck your network, proxy or firewall, " + ThenRunAgain
 )
 
 var (
