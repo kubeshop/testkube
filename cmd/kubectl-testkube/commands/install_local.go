@@ -44,7 +44,8 @@ func NewInstallLocalCmd() *cobra.Command {
 				ui.Printf("%s\n", ui.LightGray(telemetry.InstallNotice))
 			}
 			tracker.Send("install_local_started", nil)
-			printPlan()
+			printPlan(localinstall.ExistingTrial(cmd.Context()))
+			exitIfCancelled(cmd, tracker, "plan")
 
 			printStep(1, "Checking your license")
 			key = runLicenseStep(tracker, licenseKey)
@@ -218,12 +219,19 @@ func exitIfCancelled(cmd *cobra.Command, tracker *telemetry.InstallTracker, stag
 var cancelNotice sync.Once
 
 // Before any wait, or Ctrl+C looks ignored; once, from either path.
-func printCancelled() {
-	cancelNotice.Do(func() { ui.Printf("\n  Install cancelled.\n") })
+func printCancelled(stage string) {
+	kept := ""
+	// Tools, node image and Testkube images; reruns skip finished ones.
+	if stage == "tool_install" || stage == "cluster" || stage == "testkube" {
+		kept = " Finished downloads are kept."
+	}
+	cancelNotice.Do(func() {
+		ui.Printf("\n  Install cancelled.%s\n  To finish, run again:\n    %s\n", kept, localinstall.InstallCommand)
+	})
 }
 
 func abortInstall(tracker *telemetry.InstallTracker, stage string) {
-	printCancelled()
+	printCancelled(stage)
 	tracker.Send("install_local_aborted", map[string]any{"stage": stage})
 	waitForEvents(tracker)
 	os.Exit(130)
@@ -236,16 +244,33 @@ func printBanner() {
 }
 
 // Numbered like the step headers, so [3/6] means line 3.
-func printPlan() {
-	ui.Printf("\nThis installer will\n" +
-		"  1. check your license key\n" +
-		"  2. check the tools it needs\n" +
-		"  3. check this machine\n" +
-		"  4. download helm and kind into ~/.testkube/bin (kubectl too, if missing)\n" +
-		"  5. create a local cluster called \"testkube\" in Docker\n" +
-		"  6. install Testkube and open it in your browser\n\n")
-	ui.Printf("%s\n", ui.LightGray("First run takes 5 to 10 minutes, mostly downloads. Your own tools and clusters are not changed.\n"+
-		"Press Ctrl+C to exit at any time."))
+func printPlan(existing localinstall.ExistingState, running bool) {
+	plan := []string{"check your license key", "check the tools it needs", "check this machine",
+		"download helm and kind into ~/.testkube/bin (kubectl too, if missing)",
+		"create a local cluster called \"testkube\" in Docker", "install Testkube and open it in your browser"}
+	note := "First run takes 5 to 10 minutes, mostly downloads. Your own tools and clusters are not changed."
+	// Reruns download nothing; promising minutes would mislead.
+	if existing != localinstall.TrialAbsent {
+		plan[3], plan[4] = "check helm and kind in ~/.testkube/bin", "start the local cluster \"testkube\" in Docker"
+	}
+	switch existing {
+	case localinstall.TrialSetUp:
+		plan[5] = "update Testkube and open it in your browser"
+		note = "Testkube is already set up here. This run updates it, usually in under a minute.\nYour data is kept."
+		if running {
+			note += " To only check it, run:\n  " + statusLocalCommand
+		}
+	case localinstall.TrialUnfinished:
+		note = "A previous install didn't finish. This run continues it.\nFinished downloads are kept."
+	case localinstall.TrialNodeStopped:
+		plan[5] = "install or update Testkube and open it in your browser"
+		note = "Your local cluster is stopped. This run starts it and checks Testkube.\nFinished downloads are kept."
+	}
+	ui.Printf("\nThis installer will\n")
+	for i, step := range plan {
+		ui.Printf("  %d. %s\n", i+1, step)
+	}
+	ui.Printf("\n%s\n", ui.LightGray(note+"\nPress Ctrl+C to exit at any time."))
 }
 
 const installSteps = 6
@@ -382,7 +407,7 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 		select {
 		case <-cmd.Context().Done():
 			stopped.Do(stop)
-			printCancelled()
+			printCancelled("testkube")
 		case <-finished:
 		}
 	}()

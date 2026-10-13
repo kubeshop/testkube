@@ -41,6 +41,7 @@ type InstallTracker struct {
 	client     *http.Client
 	wg         sync.WaitGroup
 	onError    func(code, stage, reason string)
+	wsl        string
 }
 
 type InstallTrackerConfig struct {
@@ -49,6 +50,8 @@ type InstallTrackerConfig struct {
 	Version   string
 	// Empty means production; tests point it at a local server.
 	Endpoint string
+	// Empty reads this host's kernel; tests set it.
+	KernelRelease string
 }
 
 func NewInstallTracker(cfg InstallTrackerConfig) *InstallTracker {
@@ -58,7 +61,13 @@ func NewInstallTracker(cfg InstallTrackerConfig) *InstallTracker {
 	}
 	// Machine IDs are shared by owners, so identify would misattribute.
 	sessionID := uuid.NewString()
+	kernel := cfg.KernelRelease
+	if kernel == "" && runtime.GOOS == "linux" {
+		release, _ := os.ReadFile("/proc/sys/kernel/osrelease")
+		kernel = string(release)
+	}
 	return &InstallTracker{
+		wsl:        wslVersion(kernel),
 		enabled:    cfg.Enabled,
 		distinctID: sessionID,
 		sessionID:  sessionID,
@@ -67,6 +76,17 @@ func NewInstallTracker(cfg InstallTrackerConfig) *InstallTracker {
 		endpoint:   endpoint,
 		client:     &http.Client{Timeout: 2 * time.Second},
 	}
+}
+
+// WSL1 kernels say "Microsoft", WSL2 ones lowercase.
+func wslVersion(kernel string) string {
+	switch {
+	case strings.Contains(kernel, "Microsoft"):
+		return "1"
+	case strings.Contains(kernel, "microsoft"):
+		return "2"
+	}
+	return ""
 }
 
 func (t *InstallTracker) Enabled() bool {
@@ -86,6 +106,10 @@ func (t *InstallTracker) Send(event string, props map[string]any) {
 		"arch":               runtime.GOARCH,
 		// Local builds report 999.0.0-*; lets PostHog filter our own runs.
 		"dev_build": strings.HasPrefix(t.version, "999.0.0"),
+	}
+	// WSL reports os "linux"; this keeps Windows users visible.
+	if t.wsl != "" {
+		properties["wsl"] = t.wsl
 	}
 	for k, v := range props {
 		properties[k] = v
