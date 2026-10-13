@@ -130,3 +130,9 @@ func TestInstallTracker_ErrorsRespectOptOut(t *testing.T) {
 		}
 	}
 }
+
+func TestWSLVersion_FromRealKernelStrings(t *testing.T) {
+	assert.Equal(t, "2", wslVersion("5.15.167.4-microsoft-standard-WSL2"))
+	assert.Equal(t, "1", wslVersion("4.4.0-19041-Microsoft"))
+	assert.Equal(t, "", wslVersion("6.8.0-45-generic"))
+}
