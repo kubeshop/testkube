@@ -74,6 +74,8 @@ func NewSetContextCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "context <value>",
 		Short: "Set context data for Testkube Pro",
+		Example: "  # Use the local install from testkube install local\n" +
+			"  testkube set context local",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 1 && args[0] == "local" {
 				setContextLocal(cmd.Context())
