@@ -15,7 +15,7 @@ import (
 
 const statusLocalCommand = "testkube status local"
 
-// Distinct codes let scripts tell the states apart; 1 means error.
+// Scripts tell states apart by code; 1 means error.
 const (
 	statusExitStarting     = 2
 	statusExitNotRunning   = 3

@@ -54,6 +54,7 @@
 // built from picked fields only, with known secrets masked.
 // CLIKey logs in like the dashboard and mints a CLI API key,
 // so the testkube CLI can use the install without a browser.
+// ReadStatus reports the trial's state without starting anything.
 // Uninstall (see Cluster.Remove, RemoveFiles, DeleteData) keeps data
 // unless asked, and never removes a cluster it did not make.
 //
