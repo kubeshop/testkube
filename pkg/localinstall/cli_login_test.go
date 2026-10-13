@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func fakeLogin(t *testing.T, dexStatus int, key string) *httptest.Server {
+	names := map[string]bool{}
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/token":
@@ -27,9 +29,15 @@ func fakeLogin(t *testing.T, dexStatus int, key string) *httptest.Server {
 				return
 			}
 			var body struct {
+				Name   string              `json:"name"`
 				Scopes []map[string]string `json:"scopes"`
 			}
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			if names[body.Name] {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			names[body.Name] = true
 			assert.Equal(t, DemoEnvID, body.Scopes[1]["identifier"], "the key can run the demo environment's workflows")
 			_ = json.NewEncoder(w).Encode(map[string]string{"token": key})
 		}
@@ -44,6 +52,18 @@ func TestCLIKey_LogsInAsTheDashboardUser(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "tkcapi_abc", key)
+}
+
+func TestCLIKey_ASecondKeyIsNotRefusedAsADuplicate(t *testing.T) {
+	s := fakeLogin(t, http.StatusOK, "tkcapi_abc")
+	defer s.Close()
+
+	_, err := cliKey(context.Background(), s.Client(), s.URL, s.URL, "jane@acme.com")
+	require.NoError(t, err)
+	time.Sleep(2 * time.Millisecond)
+	_, err = cliKey(context.Background(), s.Client(), s.URL, s.URL, "jane@acme.com")
+
+	assert.NoError(t, err, "the API refuses a repeated key name")
 }
 
 func TestCLIKey_NeverReturnsAnEmptyKey(t *testing.T) {

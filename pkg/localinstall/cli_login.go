@@ -24,8 +24,8 @@ const (
 // The dashboard's client; the CLI's own one can't use passwords.
 const dexClientID = "testkube-enterprise"
 
-// Shown in the dashboard's API token list.
-const cliKeyName = "Testkube CLI (install local)"
+// Names must be unique per organization, hence the time.
+const cliKeyName = "Testkube CLI (install local) "
 
 var ErrCLILogin = errors.New("could not log the CLI in")
 
@@ -57,7 +57,7 @@ func cliKey(ctx context.Context, client *http.Client, dex, api, email string) (s
 	scope := func(resource, id string) map[string]string {
 		return map[string]string{"resource": resource, "identifier": id, "role": "admin"}
 	}
-	body, _ := json.Marshal(map[string]any{"name": cliKeyName,
+	body, _ := json.Marshal(map[string]any{"name": cliKeyName + time.Now().Format("2006-01-02 15:04:05.000"),
 		"scopes": []map[string]string{scope("org", DemoOrgID), scope("env", DemoEnvID)}})
 	req, err = http.NewRequestWithContext(ctx, http.MethodPost, api+"/organizations/"+DemoOrgID+"/tokens", bytes.NewReader(body))
 	if err != nil {

@@ -1,9 +1,11 @@
 package context
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -11,8 +13,28 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
+	"github.com/kubeshop/testkube/pkg/localinstall"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
+
+func setContextLocal(ctx context.Context) {
+	cluster, err := localinstall.NewCluster()
+	var ports localinstall.Ports
+	if err == nil {
+		ports, err = cluster.Ports(ctx)
+	}
+	if err != nil {
+		ui.Printf("  No local Testkube is running. Start it with:\n    %s\n", localinstall.InstallCommand)
+		os.Exit(1)
+	}
+	// Empty owner: the email the last install saved.
+	email := localinstall.RememberLoginEmail("")
+	if common.ConnectLocalCLI(ctx, ports, email, true) != common.LocalCLIConnected {
+		ui.Printf("  testkube CLI couldn't log in to the local install. Check it's ready at http://localhost:%d\n", ports["dashboard"])
+		os.Exit(1)
+	}
+	ui.Printf("  %s testkube CLI now uses the local install\n", ui.Green("✔"))
+}
 
 // orgEnvLookupHint turns a failed organization or environment lookup into
 // advice. The status code is the only thing separating an id that does not
@@ -48,6 +70,10 @@ func NewSetContextCmd() *cobra.Command {
 		Use:   "context <value>",
 		Short: "Set context data for Testkube Pro",
 		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) == 1 && args[0] == "local" {
+				setContextLocal(cmd.Context())
+				return
+			}
 
 			cfg, err := config.Load()
 			if err != nil {

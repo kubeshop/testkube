@@ -1,4 +1,4 @@
-package commands
+package common
 
 import (
 	"context"
@@ -9,7 +9,15 @@ import (
 	"github.com/kubeshop/testkube/pkg/localinstall"
 )
 
-// Never replace a login the user made themselves.
+type LocalCLIState int
+
+const (
+	LocalCLIConnected LocalCLIState = iota
+	LocalCLIOtherLogin
+	LocalCLIFailed
+)
+
+// Never replace a login the user made, unless asked to.
 func canUseLocalContext(cfg config.Data) bool {
 	return cfg.ContextType == "" || isLocalContext(cfg)
 }
@@ -20,18 +28,24 @@ func isLocalContext(cfg config.Data) bool {
 		strings.HasPrefix(c.ApiUri, "http://localhost:")
 }
 
-func connectCLI(ctx context.Context, ports localinstall.Ports, email string) bool {
+func ConnectLocalCLI(ctx context.Context, ports localinstall.Ports, email string, force bool) LocalCLIState {
 	cfg, err := config.Load()
-	if err != nil || !canUseLocalContext(cfg) {
-		return false
+	if err != nil {
+		return LocalCLIFailed
+	}
+	if !force && !canUseLocalContext(cfg) {
+		return LocalCLIOtherLogin
 	}
 	key := cfg.CloudContext.ApiKey
 	if !isLocalContext(cfg) || !localinstall.CLIKeyWorks(ctx, ports, key) {
 		if key, err = localinstall.CLIKey(ctx, ports, email); err != nil {
-			return false
+			return LocalCLIFailed
 		}
 	}
-	return config.Save(localContext(cfg, ports, key)) == nil
+	if config.Save(localContext(cfg, ports, key)) != nil {
+		return LocalCLIFailed
+	}
+	return LocalCLIConnected
 }
 
 // Ports can move between runs, so every run rewrites it.

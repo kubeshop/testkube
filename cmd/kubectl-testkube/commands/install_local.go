@@ -86,7 +86,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			installMissingTools(cmd, tracker, checker, results)
 			ports := runClusterStep(cmd, tracker)
 			runTestkubeStep(cmd, tracker, key, email, ports)
-			printReady(tracker, ports, email, connectCLI(cmd.Context(), ports, email))
+			printReady(tracker, ports, email, common.ConnectLocalCLI(cmd.Context(), ports, email, false))
 			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallFinished)
 			waitForEvents(tracker)
 		},
@@ -471,8 +471,10 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error, repo
 const (
 	runAgain     = localinstall.RunAgain
 	thenRunAgain = localinstall.ThenRunAgain
-	contactFix   = "If it fails again, contact us: https://testkube.io/contact"
-	retryFix     = runAgain + "\n" + contactFix
+	// Named here so the hint and the command can't drift.
+	setContextLocalCommand = "testkube set context local"
+	contactFix             = "If it fails again, contact us: https://testkube.io/contact"
+	retryFix               = runAgain + "\n" + contactFix
 	// A rerun rarely fixes these, so don't pretend it will.
 	bugFix = "This looks like a Testkube problem, not your setup.\n" + retryFix
 )
@@ -685,7 +687,7 @@ func waitForEvents(tracker *telemetry.InstallTracker) {
 	waitLicenseEvents()
 }
 
-func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports, email string, cliConnected bool) {
+func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports, email string, cli common.LocalCLIState) {
 	url := fmt.Sprintf("http://localhost:%d", ports["dashboard"])
 	label := func(s string) string { return ui.LightGray(fmt.Sprintf("%-12s", s)) }
 	ui.NL()
@@ -694,8 +696,15 @@ func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports, ema
 			"  " + label("Dashboard") + url + "\n" +
 			"  " + label("Email") + email + "\n" +
 			"  " + label("Password") + localinstall.AdminPassword)
-	if cliConnected {
+	switch cli {
+	case common.LocalCLIConnected:
 		ui.Printf("\n  %s testkube CLI now uses this local install\n", ui.Green("✔"))
+	case common.LocalCLIOtherLogin:
+		ui.Printf("\n  %s testkube CLI still uses your other Testkube login\n"+
+			"      To use this local install instead, run:\n        %s\n", ui.LightGray("○"), setContextLocalCommand)
+	default:
+		ui.Printf("\n  %s testkube CLI couldn't log in to this install\n"+
+			"      To try again, run:\n        %s\n", ui.LightGray("○"), setContextLocalCommand)
 	}
 	ui.Printf("\n  To remove it later:\n    %s\n", uninstallCommand)
 	opened := localinstall.OpenBrowser(url)
@@ -704,5 +713,5 @@ func printReady(tracker *telemetry.InstallTracker, ports localinstall.Ports, ema
 	} else {
 		ui.Printf("\n  Open %s in your browser.\n", url)
 	}
-	tracker.Send("install_local_ready", map[string]any{"browser_opened": opened, "cli_connected": cliConnected})
+	tracker.Send("install_local_ready", map[string]any{"browser_opened": opened, "cli_connected": cli == common.LocalCLIConnected})
 }
