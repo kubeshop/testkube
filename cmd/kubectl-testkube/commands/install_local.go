@@ -218,12 +218,19 @@ func exitIfCancelled(cmd *cobra.Command, tracker *telemetry.InstallTracker, stag
 var cancelNotice sync.Once
 
 // Before any wait, or Ctrl+C looks ignored; once, from either path.
-func printCancelled() {
-	cancelNotice.Do(func() { ui.Printf("\n  Install cancelled.\n") })
+func printCancelled(stage string) {
+	kept := ""
+	// Only these steps download; a rerun skips what finished.
+	if stage == "tool_install" || stage == "testkube" {
+		kept = " Finished downloads are kept."
+	}
+	cancelNotice.Do(func() {
+		ui.Printf("\n  Install cancelled.%s\n  To finish, run again:\n    %s\n", kept, localinstall.InstallCommand)
+	})
 }
 
 func abortInstall(tracker *telemetry.InstallTracker, stage string) {
-	printCancelled()
+	printCancelled(stage)
 	tracker.Send("install_local_aborted", map[string]any{"stage": stage})
 	waitForEvents(tracker)
 	os.Exit(130)
@@ -382,7 +389,7 @@ func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, lice
 		select {
 		case <-cmd.Context().Done():
 			stopped.Do(stop)
-			printCancelled()
+			printCancelled("testkube")
 		case <-finished:
 		}
 	}()
