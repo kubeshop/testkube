@@ -252,9 +252,9 @@ func printPlan(found, running bool) {
 	if found {
 		plan[3], plan[4], plan[5] = "check helm and kind in ~/.testkube/bin",
 			"start the local cluster \"testkube\" in Docker", "update Testkube and open it in your browser"
-		note = "Testkube is already set up here. This run checks and updates it,\nusually in under a minute. Your data is kept."
+		note = "Testkube is already set up here. This run updates it, usually in under a minute.\nYour data is kept."
 		if running {
-			note += "\nTo only check it, run:\n  " + statusLocalCommand
+			note += " To only check it, run:\n  " + statusLocalCommand
 		}
 	}
 	ui.Printf("\nThis installer will\n")
