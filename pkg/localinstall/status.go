@@ -17,6 +17,7 @@ const (
 	TrialNotInstalled
 	TrialNoDocker
 	TrialElsewhere
+	TrialNameTaken
 )
 
 type LocalStatus struct {
@@ -27,6 +28,8 @@ type LocalStatus struct {
 	Elsewhere ClusterElsewhereError
 }
 
+var errClusterNameTaken = errors.New("another cluster has our name")
+
 // Reads only: a status check must never start anything.
 func ReadStatus(ctx context.Context) LocalStatus {
 	cluster, err := NewCluster()
@@ -35,6 +38,12 @@ func ReadStatus(ctx context.Context) LocalStatus {
 			return false, nil, err
 		}
 		running, ports, _, err := cluster.owned(ctx)
+		// A foreign node blocks install, so "not installed" would mislead.
+		if errors.Is(err, ErrClusterNotOurs) {
+			if _, inspectErr := cluster.run(ctx, "docker", "inspect", "-f", "{{.Name}}", nodeName); inspectErr == nil {
+				return false, nil, errClusterNameTaken
+			}
+		}
 		// Our mark without our node: maybe another Docker has it.
 		if errors.Is(err, ErrClusterInspect) {
 			if elsewhere := cluster.findElsewhere(ctx); elsewhere != nil {
@@ -57,6 +66,8 @@ func readStatus(ctx context.Context, docker func(context.Context) Result,
 	switch {
 	case errors.As(err, &s.Elsewhere):
 		s.State = TrialElsewhere
+	case errors.Is(err, errClusterNameTaken):
+		s.State = TrialNameTaken
 	// No mark or no node: nothing of ours exists.
 	case err != nil:
 		s.State, s.DataKept = TrialNotInstalled, hasData()

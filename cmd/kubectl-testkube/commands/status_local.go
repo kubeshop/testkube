@@ -74,6 +74,10 @@ func runStatusLocal(ctx context.Context) int {
 			Fix: fmt.Sprintf("It's in Docker %q, but %q is active now.\nSwitch to it, then run again:\n  docker context use %s\n  %s",
 				s.Elsewhere.In, s.Elsewhere.Active, s.Elsewhere.In, statusLocalCommand)})
 		return statusExitNotRunning
+	case localinstall.TrialNameTaken:
+		row(ok, "docker", "running")
+		printCheckResult(localinstall.Result{Name: "cluster", Status: localinstall.StatusFail, Detail: "name already taken", Fix: nameTakenFix()})
+		return statusExitNotRunning
 	case localinstall.TrialStopped:
 		row(ok, "docker", "running")
 		row(notOk, "cluster", "stopped")

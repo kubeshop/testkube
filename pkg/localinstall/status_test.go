@@ -30,6 +30,7 @@ func TestReadStatus_NamesTheFirstThingInTheWay(t *testing.T) {
 		"uninstalled, data kept":     {docker: up, ownedErr: ErrClusterNotOurs, data: true, want: TrialNotInstalled, wantData: true},
 		"in another Docker context":  {docker: up, ownedErr: ClusterElsewhereError{In: "colima", Active: "desktop-linux"}, data: true, want: TrialElsewhere},
 		"mark but no cluster":        {docker: up, ownedErr: ErrClusterInspect, want: TrialNotInstalled},
+		"someone else's testkube":    {docker: up, ownedErr: errClusterNameTaken, want: TrialNameTaken},
 		"never installed":            {docker: up, ownedErr: ErrClusterNotOurs, want: TrialNotInstalled},
 		"docker down hides the rest": {docker: Result{Status: StatusFail}, running: true, want: TrialNoDocker},
 	}
