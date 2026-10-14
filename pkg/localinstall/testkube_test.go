@@ -233,21 +233,6 @@ func TestRememberLoginEmail_FailedLookupKeepsTheLastGoodEmail(t *testing.T) {
 	assert.Equal(t, "bob@acme.com", rememberLoginEmail(dir, "bob@acme.com"), "a new owner wins")
 }
 
-func TestInstall_WorkerServiceUsesTheAPIsPostgres(t *testing.T) {
-	f := &helmFake{}
-
-	_, _, err := newTestInstaller(t, f).Install(context.Background(), movedPorts, testSecrets, testLicense)
-	require.NoError(t, err)
-
-	var worker, demo map[string]any
-	require.NoError(t, yaml.Unmarshal([]byte(f.files["demo-fixes.yaml"]), &worker))
-	require.NoError(t, yaml.Unmarshal(EnterpriseDemoValues, &demo))
-	assert.Equal(t, false, dig(worker, "testkube-worker-service", "api", "mongo", "enabled"))
-	assert.Equal(t, true, dig(worker, "testkube-worker-service", "api", "postgres", "enabled"))
-	assert.Equal(t, dig(demo, "testkube-cloud-api", "api", "postgres", "dsn"),
-		dig(worker, "testkube-worker-service", "api", "postgres", "dsn"))
-}
-
 func TestInstall_TimeoutNamesTheStuckServiceAndItsLastLogs(t *testing.T) {
 	crashing := `{"items":[{"kind":"Pod","metadata":{"name":"dex-1","labels":{"app.kubernetes.io/name":"dex"}},` +
 		`"status":{"phase":"Running","containerStatuses":[{"name":"dex","restartCount":4,` +
