@@ -38,11 +38,12 @@ func NewInstallLocalCmd() *cobra.Command {
 		Hidden: true,
 		Run: func(cmd *cobra.Command, args []string) {
 			printBanner()
+			ui.Printf("%s\n", ui.LightGray(localInstallLead+"\n"+ownClusterHint))
 			tracker := newInstallTracker()
 			var key string
 			tracker.OnError(segmentErrors(cmd, &key))
 			if tracker.Enabled() {
-				ui.Printf("%s\n", ui.LightGray(telemetry.InstallNotice))
+				ui.Printf("\n%s\n", ui.LightGray(telemetry.InstallNotice))
 			}
 			tracker.Send("install_local_started", nil)
 			printPlan(localinstall.ExistingTrial(cmd.Context()))
@@ -247,7 +248,10 @@ func printBanner() {
 			"\nTry Testkube on your own machine.")
 }
 
-const ownClusterHint = "Already have a Kubernetes cluster? To install Testkube there, run:\n  " + localinstall.InitDemoCommand
+const (
+	localInstallLead = "This sets up Testkube locally, in its own cluster inside Docker."
+	ownClusterHint   = "Already have a Kubernetes cluster? To install Testkube there, run:\n  " + localinstall.InitDemoCommand
+)
 
 // Numbered like the step headers, so [3/6] means line 3.
 func printPlan(existing localinstall.ExistingState, running bool) {
@@ -260,9 +264,6 @@ func printPlan(existing localinstall.ExistingState, running bool) {
 		plan[3], plan[4] = "check helm and kind in ~/.testkube/bin", "start the local cluster \"testkube\" in Docker"
 	}
 	switch existing {
-	// Only before anything exists: a rerun has chosen this path.
-	case localinstall.TrialAbsent:
-		note += "\n" + ownClusterHint
 	case localinstall.TrialSetUp:
 		plan[5] = "update Testkube and open it in your browser"
 		note = "Testkube is already set up here. This run updates it, usually in under a minute.\nYour data is kept."
