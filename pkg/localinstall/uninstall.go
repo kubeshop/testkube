@@ -49,6 +49,16 @@ func HasData() bool {
 	return len(entries) > 0
 }
 
+// True even when Docker is down, unlike ExistingTrial.
+func HasInstallMark() bool {
+	kubeconfig, err := KubeconfigPath()
+	if err != nil {
+		return false
+	}
+	_, err = os.Stat(filepath.Join(filepath.Dir(kubeconfig), "cluster-id"))
+	return err == nil
+}
+
 var ErrDataUnsafe = errors.New("the data folder isn't a plain folder we made")
 
 // Run after the cluster is gone: nothing may write meanwhile.

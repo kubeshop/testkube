@@ -42,7 +42,8 @@ func NewInstallLocalCmd() *cobra.Command {
 			existing, running := localinstall.ExistingTrial(cmd.Context())
 			kubeContext, kubeContextLocal := localinstall.CurrentKubeContext()
 			// Reruns already chose; scripts and kubectl-less machines can't.
-			askPath := existing == localinstall.TrialAbsent && kubeContext != "" && ui.StdinIsInteractive()
+			askPath := existing == localinstall.TrialAbsent && !localinstall.HasInstallMark() &&
+				kubeContext != "" && ui.StdinIsInteractive()
 			if !askPath {
 				ui.Printf("%s\n", ui.LightGray(localInstallLead+"\n"+ownClusterHint))
 			}
