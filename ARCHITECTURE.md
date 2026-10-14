@@ -13,6 +13,7 @@ You can read more about the differences between the two deployment modes in the 
 
 - [Core Components](#core-components)
   - [1. API Server](#1-api-server)
+    - [Control Plane Connection](#control-plane-connection)
   - [2. Kubernetes Controllers](#2-kubernetes-controllers)
   - [3. TestWorkflow Execution Runtime](#3-testworkflow-execution-runtime)
   - [4. Storage Layer](#4-storage-layer)
@@ -44,6 +45,21 @@ The API server is the main service that:
 - [`internal/app/api/v1/`](internal/app/api/v1/) - HTTP/gRPC API handlers
 - [`internal/config/`](internal/config/) - Configuration and environment variables
 - [`pkg/server/`](pkg/server/) - HTTP/gRPC server setup
+
+#### Control Plane Connection
+
+**Location**: [`pkg/agent/client/`](pkg/agent/client/)
+
+When running against a Control Plane, the agent opens a single long-lived gRPC connection and multiplexes every stream over it (notifications, service, parallel step, runner requests). Because HTTP/2 multiplexes onto one TCP connection, and kube-proxy or an Ingress only chooses a backend when a new connection is made, that connection determines which Control Plane replica the agent talks to for its whole lifetime.
+
+Two pieces keep an agent from pinning itself to one replica:
+
+- [`client.go`](pkg/agent/client/client.go) sets the `round_robin` load balancing policy, which opens a subchannel per resolved address and hands each new stream to the next one. Pointing `TESTKUBE_PRO_URL` at the Control Plane's headless Service (`dns:///<release>-testkube-cloud-api-headless:<agentPort>`) resolves one address per replica, so streams spread and a dead replica only takes down its own. A single-address target (Ingress hostname, ClusterIP VIP) resolves to one address and behaves like the previous `pick_first`.
+- [`resolver.go`](pkg/agent/client/resolver.go) wraps the stock grpc-go `dns` resolver so it re-resolves periodically. grpc-go's DNS resolver does not poll — after a successful lookup it waits for the load balancing policy to call `ResolveNow`, which only happens when a subchannel fails — so without this a replica added by a scale-up is never dialled. Re-resolution only adds subchannels, so established streams keep running on their current replica.
+
+`client.go` also owns credential selection (plaintext, verified TLS, loopback-local, `InsecureSkipVerify`), where only the verified-TLS mode is attempted unconditionally; the insecure modes require their respective env toggles.
+
+Startup tolerates an unreachable Control Plane: the dial and the `ReadProContext` call retry instead of exiting, and a minimal health server answers the startup probe while they wait so Kubernetes does not restart the container mid-wait.
 
 ### 2. Kubernetes Controllers
 

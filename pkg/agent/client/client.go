@@ -158,12 +158,16 @@ func NewGRPCConnectionWithTracing(
 	creds := credentials.NewClientTLSFromCert(certPool, "")
 
 	// If a CA certificate file is passed then use that CA to verify server certificates.
-	// A leaf/self-signed PEM without CA:TRUE fails AppendCertsFromPEM; keep going so
-	// skipVerify / insecure fallbacks can still connect (typical for Ingress lab certs).
+	// A leaf/self-signed PEM without CA:TRUE fails AppendCertsFromPEM, which is typical
+	// for Ingress lab certs. Keep going so the skipVerify / insecure fallbacks can still
+	// connect, but drop the system-root credentials: an operator who configured a CA
+	// wants that CA enforced, and verifying against the system roots instead would
+	// quietly widen trust while still sending the API key.
 	if caFile != "" {
 		caCreds, caErr := credentials.NewClientTLSFromFile(caFile, "")
 		if caErr != nil {
-			logger.Warnw("failed to load TESTKUBE_PRO_CA_FILE, continuing with TLS fallbacks", "error", caErr)
+			logger.Warnw("failed to load TESTKUBE_PRO_CA_FILE, skipping verified TLS", "error", caErr)
+			creds = nil
 		} else {
 			creds = caCreds
 		}
@@ -182,16 +186,20 @@ func NewGRPCConnectionWithTracing(
 		}
 	}
 
-	// Attempt to use a TLS connection.
-	tlsDialOptions := append(opts, grpc.WithTransportCredentials(creds))
-	// If skipVerify is set, do not accept Connecting here: grpc-go defers the
-	// TLS handshake until the first RPC, so a self-signed Ingress would look
-	// successful and skipVerify would never run. With a real CA, Connecting is
-	// fine — the first RPC completes the handshake.
-	client, err := attemptConnection(ctx, server, !skipVerify, tlsDialOptions...)
-	if err == nil {
-		logger.Info("Using TLS gRPC connection")
-		return client, nil
+	// Attempt to use a TLS connection, unless the configured CA failed to load.
+	var client *grpc.ClientConn
+	err = fmt.Errorf("no usable gRPC connection mode for %s", server)
+	if creds != nil {
+		tlsDialOptions := append(opts, grpc.WithTransportCredentials(creds))
+		// If skipVerify is set, do not accept Connecting here: grpc-go defers the
+		// TLS handshake until the first RPC, so a self-signed Ingress would look
+		// successful and skipVerify would never run. With a real CA, Connecting is
+		// fine — the first RPC completes the handshake.
+		client, err = attemptConnection(ctx, server, !skipVerify, tlsDialOptions...)
+		if err == nil {
+			logger.Info("Using TLS gRPC connection")
+			return client, nil
+		}
 	}
 
 	if isLocalTarget(server) {
