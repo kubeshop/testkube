@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -38,14 +39,27 @@ func NewInstallLocalCmd() *cobra.Command {
 		Hidden: true,
 		Run: func(cmd *cobra.Command, args []string) {
 			printBanner()
+			existing, running := localinstall.ExistingTrial(cmd.Context())
+			kubeContext, kubeContextLocal := localinstall.CurrentKubeContext()
+			// Reruns already chose; scripts and kubectl-less machines can't.
+			askPath := existing == localinstall.TrialAbsent && !localinstall.HasInstallMark() &&
+				kubeContext != "" && ui.StdinIsInteractive()
+			if !askPath {
+				ui.Printf("%s\n", ui.LightGray(localInstallLead+"\n"+ownClusterHint))
+			}
 			tracker := newInstallTracker()
 			var key string
 			tracker.OnError(segmentErrors(cmd, &key))
 			if tracker.Enabled() {
-				ui.Printf("%s\n", ui.LightGray(telemetry.InstallNotice))
+				ui.Printf("\n%s\n", ui.LightGray(telemetry.InstallNotice))
 			}
 			tracker.Send("install_local_started", nil)
-			printPlan(localinstall.ExistingTrial(cmd.Context()))
+			exitIfCancelled(cmd, tracker, "path")
+			if askPath && askOwnCluster(tracker, kubeContext, kubeContextLocal) {
+				runInitDemo(tracker, licenseKey)
+				return
+			}
+			printPlan(existing, running)
 			exitIfCancelled(cmd, tracker, "plan")
 
 			printStep(1, "Checking your license")
@@ -241,13 +255,75 @@ func abortInstall(tracker *telemetry.InstallTracker, stage string) {
 	os.Exit(130)
 }
 
+// The name guards against installing into a work cluster.
+func askOwnCluster(tracker *telemetry.InstallTracker, kubeContext string, local bool) bool {
+	if !local {
+		kubeContext += " (remote)"
+	}
+	thisMachine := "On this machine           Its own cluster in Docker (recommended)"
+	ownCluster := "In my Kubernetes cluster  Current kubectl context: " + kubeContext
+	ui.NL()
+	choice, err := pterm.DefaultInteractiveSelect.
+		WithOptions([]string{thisMachine, ownCluster}).
+		WithDefaultOption(thisMachine).
+		WithFilter(false).
+		WithOnInterruptFunc(func() { abortInstall(tracker, "path") }).
+		Show("Choose where Testkube runs")
+	if err != nil {
+		// Keep the other path visible when the picker can't draw.
+		ui.Printf("%s\n", ui.LightGray(ownClusterHint))
+		tracker.Send("install_local_path", map[string]any{"path": "select_failed", "context_local": local})
+		return false
+	}
+	own := choice == ownCluster
+	path := "docker"
+	if own {
+		path = "cluster"
+	}
+	tracker.Send("install_local_path", map[string]any{"path": path, "context_local": local})
+	return own
+}
+
+// Never -y: its confirm names the target cluster.
+func runInitDemo(tracker *telemetry.InstallTracker, key string) {
+	waitForEvents(tracker)
+	args := []string{"init", "demo"}
+	if key == "" {
+		key = os.Getenv("TESTKUBE_LICENSE")
+	}
+	if key != "" {
+		args = append(args, "--license", key)
+	}
+	self, err := os.Executable()
+	if err == nil {
+		// Own process: init demo needs the root command's flags.
+		// Never cancelled: Ctrl+C reaches it directly; a kill skips cleanup.
+		demo := exec.CommandContext(context.Background(), self, args...)
+		demo.Stdin, demo.Stdout, demo.Stderr = os.Stdin, os.Stdout, os.Stderr
+		err = demo.Run()
+	}
+	var exitErr *exec.ExitError
+	switch {
+	case errors.As(err, &exitErr) && exitErr.ExitCode() < 0:
+		os.Exit(130)
+	case errors.As(err, &exitErr):
+		os.Exit(exitErr.ExitCode())
+	case err != nil:
+		ui.Printf("\nTo install Testkube in your cluster, run:\n  %s\n", localinstall.InitDemoCommand)
+		os.Exit(1)
+	}
+}
+
 func printBanner() {
 	pterm.DefaultBox.WithBoxStyle(pterm.NewStyle(pterm.FgLightMagenta)).Println(
 		pterm.Bold.Sprint("Testkube On-Prem Installer") + "  " + ui.LightGray(common.Version) +
 			"\nTry Testkube on your own machine.")
 }
 
-const ownClusterHint = "Already have a Kubernetes cluster? To install Testkube there, run:\n  " + localinstall.InitDemoCommand
+const (
+	localInstallLead = "This sets up Testkube locally, in its own cluster inside Docker."
+	ownClusterHint   = "Already have a Kubernetes cluster? To install Testkube there, run:\n  " + localinstall.InitDemoCommand
+)
 
 // Numbered like the step headers, so [3/6] means line 3.
 func printPlan(existing localinstall.ExistingState, running bool) {
@@ -260,9 +336,6 @@ func printPlan(existing localinstall.ExistingState, running bool) {
 		plan[3], plan[4] = "check helm and kind in ~/.testkube/bin", "start the local cluster \"testkube\" in Docker"
 	}
 	switch existing {
-	// Only before anything exists: a rerun has chosen this path.
-	case localinstall.TrialAbsent:
-		note += "\n" + ownClusterHint
 	case localinstall.TrialSetUp:
 		plan[5] = "update Testkube and open it in your browser"
 		note = "Testkube is already set up here. This run updates it, usually in under a minute.\nYour data is kept."

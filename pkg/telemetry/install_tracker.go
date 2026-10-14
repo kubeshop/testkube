@@ -30,7 +30,8 @@ const InstallNotice = "Testkube sends install progress, linked to your license, 
 // Sends run in the background with a 2s timeout.
 // DO_NOT_TRACK or telemetryEnabled false sends nothing, hides the notice.
 // Events: install_local_started, install_local_checks (one per run),
-// install_local_failed, install_local_aborted, install_local_checks_done.
+// install_local_failed, install_local_aborted, install_local_checks_done,
+// install_local_path.
 type InstallTracker struct {
 	enabled    bool
 	distinctID string

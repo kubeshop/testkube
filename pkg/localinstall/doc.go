@@ -14,6 +14,7 @@
 //   - Docker missing, unreachable or permission denied blocks the install.
 //   - So does Podman's docker stand-in; kind always uses Docker.
 //   - For those two (not WSL), install also offers init demo.
+//   - First runs with a kube context ask (CurrentKubeContext).
 //   - Missing kubectl only warns; we install it.
 //   - helm and kind are always our pinned copies, never the user's.
 //   - Low Docker CPU, memory or disk only warns.
