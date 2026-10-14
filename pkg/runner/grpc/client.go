@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/oauth"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/proto"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -30,14 +31,29 @@ import (
 const (
 	defaultCallTimeout  = time.Second * 30
 	defaultPollInterval = time.Second
+	// maxPollBackoff caps the wait after a failed poll. A control plane restart breaks every
+	// connection at once, so the failures arrive in a run rather than in isolation. Only a
+	// successful poll clears the wait, and a runner that waits does not poll, so a long wait
+	// outlives the outage that caused it and nothing but a restart ends it.
+	//
+	// Two bounds decide the value. It must be short enough that a runner returns to work
+	// promptly once the control plane answers again, because the runner idles for up to this
+	// long after that moment. It must be long enough to give a saturated control plane room,
+	// which the fleet size makes the weaker of the two. A failed call already waits out
+	// defaultCallTimeout before this applies, so that timeout and not this cap sets the floor
+	// on how fast a runner can retry.
+	maxPollBackoff = time.Second * 15
+	// pollBackoffDecay clears the failure count once a poll succeeds for this long. Without it
+	// the count only ever rises, so isolated failures hours apart still reach the cap.
+	pollBackoffDecay = time.Minute * 5
 )
 
 type runner interface {
 	Execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error)
 	Pause(executionId string) error
 	Resume(executionId string) error
-	Abort(executionId string) error
-	Cancel(executionId string) error
+	Abort(executionId string, actor string, reason string) error
+	Cancel(executionId string, actor string, reason string) error
 }
 
 type workflowStore interface {
@@ -55,9 +71,26 @@ type Client struct {
 	callTimeout   time.Duration
 	runner        runner
 	pollInterval  time.Duration
+	// sleep waits for a duration or until the context ends. A test replaces it to read the
+	// waits without spending them. A zero value means waitBackoff uses the real clock.
+	sleep func(ctx context.Context, d time.Duration) error
 }
 
-func executionConfigFromStart(start *executionv1.ExecutionStart, organizationId string) testworkflowconfig.ExecutionConfig {
+// waitBackoff waits out the backoff of a failed poll. It returns the error of the context when
+// the runner shuts down during the wait, so a shutdown does not sit out a wait it cannot use.
+func (c Client) waitBackoff(ctx context.Context, d time.Duration) error {
+	if c.sleep != nil {
+		return c.sleep(ctx, d)
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(d):
+		return nil
+	}
+}
+
+func executionConfigFromStart(start *executionv1.ExecutionStart, organizationId string, rc *executionv1.ExecutionRunningContext) testworkflowconfig.ExecutionConfig {
 	return testworkflowconfig.ExecutionConfig{
 		Id:              start.GetExecutionId(),
 		GroupId:         start.GetGroupId(),
@@ -70,7 +103,44 @@ func executionConfigFromStart(start *executionv1.ExecutionStart, organizationId 
 		OrganizationId:  organizationId,
 		EnvironmentId:   start.GetEnvironmentId(),
 		ParentIds:       strings.Join(start.AncestorExecutionIds, "/"),
+		RunningContext:  runningContextFromProto(rc),
+		Lineage:         lineageConfigFromProto(start.GetLineage()),
 	}
+}
+
+// lineageConfigFromProto carries the execution's lineage across to the pod, so
+// that the reserved execution("rerun") reference resolves inside it.
+func lineageConfigFromProto(lineage *executionv1.ExecutionLineage) *testworkflowconfig.LineageConfig {
+	if lineage == nil {
+		return nil
+	}
+	return &testworkflowconfig.LineageConfig{
+		BaseId:  lineage.GetBaseExecutionId(),
+		RootId:  lineage.GetRootExecutionId(),
+		Attempt: lineage.GetAttempt(),
+	}
+}
+
+// runningContextFromProto expands the flat proto projection back into the
+// legacy TestWorkflowRunningContext shape the toolkit already knows how to
+// read (parentActorTypeFromRunningContext dereferences Actor.Type_).
+func runningContextFromProto(rc *executionv1.ExecutionRunningContext) *testkube.TestWorkflowRunningContext {
+	if rc == nil {
+		return nil
+	}
+	actorType := rc.GetActorType()
+	actorName := rc.GetActorName()
+	if actorType == "" && actorName == "" {
+		return nil
+	}
+	actor := &testkube.TestWorkflowRunningContextActor{
+		Name: actorName,
+	}
+	if actorType != "" {
+		t := testkube.TestWorkflowRunningContextActorType(actorType)
+		actor.Type_ = &t
+	}
+	return &testkube.TestWorkflowRunningContext{Actor: actor}
 }
 
 // NewClient creates a client for retrieving updates about executions.
@@ -120,7 +190,8 @@ func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, r runne
 // to be received. Whilst this is not a severe issue it could cause executions to become "stuck"
 // in a queue at the Control Plane awaiting them going live on the runner.
 func (c Client) Start(ctx context.Context, environmentId string) error {
-	b := backoff.New(backoff.DefaultMaxDuration, c.pollInterval)
+	b := backoff.New(maxPollBackoff, c.pollInterval)
+	b.SetDecay(pollBackoffDecay)
 	ticker := time.Tick(c.pollInterval)
 	req := &executionv1.GetExecutionUpdatesRequest{}
 	for {
@@ -140,11 +211,15 @@ func (c Client) Start(ctx context.Context, environmentId string) error {
 			response, err := c.client.GetExecutionUpdates(callCtx, req, c.callOpts...)
 			cancel()
 			if err != nil {
+				// Duration advances the attempt counter, so it is read once and both logged
+				// and waited. Reading it twice doubles the counter on every failure.
+				wait := b.Duration()
 				c.logger.Warnw("Failed to get execution updates, backing off before retrying.",
-					"backoff", b.Duration(),
+					"backoff", wait,
 					"error", err)
-				// In the event of an error wait for backoff before trying again.
-				<-time.After(b.Duration())
+				if err := c.waitBackoff(ctx, wait); err != nil {
+					return err
+				}
 				continue
 			}
 			// If request succeeds then backoffs can be reset.
@@ -181,7 +256,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 			})
 		case executionv1.ExecutionState_EXECUTION_STATE_CANCELLED:
 			wg.Go(func() {
-				err := c.runner.Cancel(transition.GetExecutionId())
+				err := c.runner.Cancel(transition.GetExecutionId(), transition.GetActor(), transition.GetReason())
 				switch {
 				case errors.Is(err, registry.ErrResourceNotFound):
 					// Mission failed successfully!
@@ -195,7 +270,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 			})
 		case executionv1.ExecutionState_EXECUTION_STATE_ABORTED:
 			wg.Go(func() {
-				err := c.runner.Abort(transition.GetExecutionId())
+				err := c.runner.Abort(transition.GetExecutionId(), transition.GetActor(), transition.GetReason())
 				switch {
 				case errors.Is(err, registry.ErrResourceNotFound):
 					// Mission failed successfully!
@@ -249,13 +324,18 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 				Runtime: &executionworkertypes.Runtime{
 					Variables: start.GetVariableOverrides(),
 				},
-				Execution:    executionConfigFromStart(start, c.OrganizationId),
+				Execution:    executionConfigFromStart(start, c.OrganizationId, workflowResponse.GetRunningContext()),
 				Workflow:     workflow,
 				ControlPlane: c.ControlPlaneConfig,
 			})
 			if err != nil {
+				reason := executionworkertypes.StartReasonOf(err)
 				c.logger.Errorw("Failed to start execution.",
 					"executionId", start.GetExecutionId(),
+					"organizationId", c.OrganizationId,
+					"environmentId", start.GetEnvironmentId(),
+					"workflowName", start.GetWorkflowName(),
+					"reason", reason,
 					"error", err)
 				// Execute with our own call timeout context to prevent stalling out.
 				callCtx, cancel := context.WithTimeout(ctx, c.callTimeout)
@@ -264,9 +344,12 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 					"organization-id", c.OrganizationId,
 					"environment-id", start.GetEnvironmentId())
 				// Report the error to the control plane to prevent getting the execution on
-				// subsequent calls.
+				// subsequent calls. The reason and message let the control plane store the
+				// cause on the execution, so the user does not need the runner log.
 				_, callErr := c.client.DeclineExecution(callCtx, &executionv1.DeclineExecutionRequest{
 					ExecutionId: start.ExecutionId,
+					Reason:      proto.String(string(reason)),
+					Message:     proto.String(err.Error()),
 				}, c.callOpts...)
 				cancel()
 				if callErr != nil {

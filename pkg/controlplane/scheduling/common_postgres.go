@@ -40,6 +40,7 @@ func mapPgTestWorkflowExecutionPartial(exec sqlc.TestWorkflowExecution, execResu
 		ResolvedWorkflow:     nil,
 
 		SilentMode: exec.SilentMode,
+		Lineage:    mapPgTestWorkflowExecutionLineage(exec),
 	}
 }
 
@@ -72,6 +73,7 @@ func mapPgTestWorkflowExecution(exec sqlc.TestWorkflowExecution, result sqlc.Tes
 		ResolvedWorkflow:     common.Ptr(mapPgTestWorkflow(resolvedWorkflow)),
 
 		SilentMode: exec.SilentMode,
+		Lineage:    mapPgTestWorkflowExecutionLineage(exec),
 	}
 }
 
@@ -187,5 +189,28 @@ func mapPgTestWorkflowResourceResourceAggregation(r sqlc.TestWorkflowResourceAgg
 	return testkube.TestWorkflowExecutionResourceAggregationsReport{
 		Global: r.Global,
 		Step:   r.Step,
+	}
+}
+
+// mapPgTestWorkflowExecutionLineage rebuilds the lineage a row carries, or nil
+// when it carries none.
+//
+// Both mappers feed createExecutionStart, which projects this onto the
+// ExecutionStart. Dropping it sends the pod no lineage, so execution("rerun")
+// stops resolving for every rerun on the Postgres backend with nothing to
+// report it.
+//
+// A row written before lineage existed has all three columns NULL and has to
+// come back nil rather than as a zero-valued record: the default belongs to
+// TestWorkflowExecution.EffectiveLineage(), and a present-but-empty struct here
+// would report an original run as attempt zero.
+func mapPgTestWorkflowExecutionLineage(exec sqlc.TestWorkflowExecution) *testkube.TestWorkflowExecutionLineage {
+	if !exec.LineageBaseID.Valid && !exec.LineageRootID.Valid && !exec.LineageAttempt.Valid {
+		return nil
+	}
+	return &testkube.TestWorkflowExecutionLineage{
+		BaseId:  exec.LineageBaseID.String,
+		RootId:  exec.LineageRootID.String,
+		Attempt: exec.LineageAttempt.Int32,
 	}
 }

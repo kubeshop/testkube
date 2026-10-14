@@ -5,10 +5,12 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
@@ -132,6 +134,71 @@ func TestStepMachine_Outputs(t *testing.T) {
 	}
 }
 
+func TestStepMachine_StatusAndExitCode(t *testing.T) {
+	passed := constants.StepStatusPassed
+	failed := constants.StepStatusFailed
+	skipped := constants.StepStatusSkipped
+	startedAt := time.Now()
+
+	tests := map[string]struct {
+		steps   map[string]*StepData
+		expr    string
+		wantVal string
+		wantOk  bool
+	}{
+		"resolves the status of a step that ran": {
+			steps:   map[string]*StepData{"ref1": {Id: "build", Status: &failed, ExitCode: 3, StartedAt: &startedAt}},
+			expr:    "step.build.status",
+			wantVal: "failed",
+			wantOk:  true,
+		},
+		"resolves the exit code of a step that ran": {
+			steps:   map[string]*StepData{"ref1": {Id: "build", Status: &failed, ExitCode: 3, StartedAt: &startedAt}},
+			expr:    "step.build.exitCode",
+			wantVal: "3",
+			wantOk:  true,
+		},
+		"resolves the exit code of a step that passed": {
+			steps:   map[string]*StepData{"ref1": {Id: "build", Status: &passed, StartedAt: &startedAt}},
+			expr:    "step.build.exitCode",
+			wantVal: "0",
+			wantOk:  true,
+		},
+		"returns nothing for a step that did not run": {
+			steps:  map[string]*StepData{"ref1": {Id: "build"}},
+			expr:   "step.build.exitCode",
+			wantOk: false,
+		},
+		"returns nothing for an unknown step": {
+			steps:  map[string]*StepData{"ref1": {Id: "build", Status: &failed, StartedAt: &startedAt}},
+			expr:   "step.other.status",
+			wantOk: false,
+		},
+		"resolves the status of a step that a condition skipped": {
+			steps:   map[string]*StepData{"ref1": {Id: "build", Status: &skipped}},
+			expr:    "step.build.status",
+			wantVal: "skipped",
+			wantOk:  true,
+		},
+		"returns nothing for the exit code of a step that a condition skipped": {
+			steps:  map[string]*StepData{"ref1": {Id: "build", Status: &skipped}},
+			expr:   "step.build.exitCode",
+			wantOk: false,
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			setupTestState(tc.steps, "ref1")
+
+			val, ok := resolveStepExpr(t, tc.expr)
+			assert.Equal(t, tc.wantOk, ok)
+			if tc.wantOk {
+				assert.Equal(t, tc.wantVal, val)
+			}
+		})
+	}
+}
+
 func TestStepMachine_TemplateExpression(t *testing.T) {
 	setupTestState(map[string]*StepData{"ref1": {Id: "auth"}}, "ref1")
 	GetState().SetStepOutput("auth", "token", "mytoken")
@@ -153,7 +220,9 @@ func TestScanStepOutputs(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "token"), []byte("abc123\n"), 0644))
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "count"), []byte("42"), 0644))
 
-		require.NoError(t, scanStepOutputsFrom(dir, "auth"))
+		values, err := scanStepOutputsFrom(dir, "auth")
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{"token": "abc123", "count": "42"}, values)
 
 		val, ok := resolveStepExpr(t, "step.auth.outputs.token")
 		assert.True(t, ok)
@@ -171,7 +240,8 @@ func TestScanStepOutputs(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(dir, ".hidden"), []byte("secret"), 0644))
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "visible"), []byte("ok"), 0644))
 
-		require.NoError(t, scanStepOutputsFrom(dir, "auth"))
+		_, err := scanStepOutputsFrom(dir, "auth")
+		require.NoError(t, err)
 
 		val, ok := resolveStepExpr(t, "step.auth.outputs.visible")
 		assert.True(t, ok)
@@ -184,15 +254,59 @@ func TestScanStepOutputs(t *testing.T) {
 
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "big"), []byte(strings.Repeat("x", MaxOutputSize+1)), 0644))
 
-		require.NoError(t, scanStepOutputsFrom(dir, "auth"))
+		_, err := scanStepOutputsFrom(dir, "auth")
+		require.NoError(t, err)
 
 		_, ok := resolveStepExpr(t, "step.auth.outputs.big")
 		assert.False(t, ok)
 	})
 
 	t.Run("noop for empty id or missing dir", func(t *testing.T) {
-		assert.NoError(t, scanStepOutputsFrom("/nonexistent", ""))
-		assert.NoError(t, scanStepOutputsFrom("/nonexistent", "build"))
+		values, err := scanStepOutputsFrom("/nonexistent", "")
+		assert.NoError(t, err)
+		assert.Nil(t, values)
+
+		values, err = scanStepOutputsFrom("/nonexistent", "build")
+		assert.NoError(t, err)
+		assert.Nil(t, values)
+	})
+}
+
+func TestPartitionSensitiveOutputs(t *testing.T) {
+	t.Run("withholds values holding a sensitive word", func(t *testing.T) {
+		values := map[string]string{
+			"token":    "Bearer s3cr3t-value",
+			"count":    "42",
+			"endpoint": "https://api.example.com",
+		}
+
+		publishable, withheld := PartitionSensitiveOutputs(values, []string{"s3cr3t-value"})
+		assert.Equal(t, map[string]string{"count": "42", "endpoint": "https://api.example.com"}, publishable)
+		assert.Equal(t, []string{"token"}, withheld,
+			"the whole value is withheld, because publishing it obfuscated would corrupt it")
+	})
+
+	t.Run("publishes everything when nothing is sensitive", func(t *testing.T) {
+		values := map[string]string{"count": "42"}
+
+		publishable, withheld := PartitionSensitiveOutputs(values, []string{"unrelated"})
+		assert.Equal(t, values, publishable)
+		assert.Empty(t, withheld)
+	})
+
+	t.Run("ignores empty sensitive words", func(t *testing.T) {
+		// An empty word matches every string, which would withhold everything.
+		publishable, withheld := PartitionSensitiveOutputs(map[string]string{"count": "42"}, []string{""})
+		assert.Equal(t, map[string]string{"count": "42"}, publishable)
+		assert.Empty(t, withheld)
+	})
+
+	t.Run("reports withheld names in a stable order", func(t *testing.T) {
+		values := map[string]string{"b": "secret", "a": "secret", "c": "fine"}
+
+		publishable, withheld := PartitionSensitiveOutputs(values, []string{"secret"})
+		assert.Equal(t, map[string]string{"c": "fine"}, publishable)
+		assert.Equal(t, []string{"a", "b"}, withheld)
 	})
 }
 

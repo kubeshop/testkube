@@ -1,0 +1,25 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: oss-quality-loop-suite
+  labels:
+    dev-quality-gate: "true"
+    core-tests: workflows-suite
+    type: suite
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: docs-prettier
+      - name: oss-lint-go
+      - name: oss-lint-proto
+      - name: oss-integration-tests
+      - name: oss-unit-tests
+      - name: oss-verify-crds
+      - name: oss-verify-protobuf

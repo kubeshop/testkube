@@ -10,7 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/util/jsonpath"
 
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
@@ -146,6 +147,11 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *internalTrigg
 
 			for _, parameter := range parameters {
 				for key, value := range parameter.s {
+					if parameter.name == "config" && isReservedProvenanceKey(key) {
+						s.logger.Warnf("trigger service: executor component: trigger %s/%s ignoring config key %s: reserved for event provenance",
+							t.Namespace, t.Name, key)
+						continue
+					}
 					if t.Source == triggerSourceV2 {
 						// v2: use expression engine
 						resolved, err := resolveExpressionWithMachine(exprMachine, value)
@@ -462,7 +468,7 @@ func (s *Service) mapTargetKubeToGrpcWithEvent(e *watcherEvent, t *internalTrigg
 		return string(data)
 	}
 
-	target := &cloud.ExecutionTarget{}
+	target := &cloud.ExecutionTarget{SchedulerPolicy: string(src.SchedulerPolicy)}
 
 	// Replicate
 	if len(src.Replicate) > 0 {
@@ -553,19 +559,40 @@ func (s *Service) getTestWorkflowsFromInternal(t *internalTrigger) ([]testworkfl
 	}
 
 	if sel.LabelSelector != nil {
-		if len(sel.LabelSelector.MatchExpressions) > 0 {
-			return nil, errors.New("error creating selector from test resource label selector: MatchExpressions not supported")
-		}
-		s.logger.Debugf("trigger service: executor component: fetching TestWorkflow with label %s", sel.LabelSelector.MatchLabels)
-		testWorkflowsList, err := s.testWorkflowsClient.List(context.Background(), s.getEnvironmentId(), testworkflowclient.ListOptions{
-			Labels: sel.LabelSelector.MatchLabels,
-		})
+		s.logger.Debugf("trigger service: executor component: fetching TestWorkflow with label selector matchLabels=%v matchExpressions=%v",
+			sel.LabelSelector.MatchLabels, sel.LabelSelector.MatchExpressions)
+		k8sSelector, err := v1.LabelSelectorAsSelector(sel.LabelSelector)
 		if err != nil {
 			return nil, err
 		}
+		testWorkflowsList, err := s.testWorkflowsClient.List(context.Background(), s.getEnvironmentId(), testworkflowclient.ListOptions{})
+		if err != nil {
+			s.logger.Errorf("failed to list test workflows for trigger labelSelector filtering: %v", err)
+			return nil, err
+		}
 		for i := range testWorkflowsList {
+			workflowLabelSet := labels.Set(testWorkflowsList[i].Labels)
+			if !k8sSelector.Matches(workflowLabelSet) {
+				continue
+			}
 			testWorkflows = append(testWorkflows, *testworkflows.MapAPIToKube(&testWorkflowsList[i]))
 		}
 	}
 	return testWorkflows, nil
+}
+
+// isReservedProvenanceKey identifies event metadata that trigger configuration must not override.
+// WATCHER_EVENT_* supplies source details used by control-plane metrics.
+//
+// The git keys are provenance, not configuration: they are written from what the informer
+// observed about the event, and the control plane reads them to decide whether a run
+// belongs to a pull request. A trigger that set TESTKUBE_GIT_PR_NUMBER to an empty string
+// would erase that marker, and the run would be classified as trusted - free to write the
+// cache namespace that default-branch executions restore from.
+//
+// Authoring a trigger is already a privileged act, but it is not the same privilege as
+// deciding which runs are trusted, and the override would be silent either way: nothing
+// downstream can tell a blanked marker from an event that never carried one.
+func isReservedProvenanceKey(key string) bool {
+	return strings.HasPrefix(key, testworkflowexecutor.GitMetadataKeyPrefix) || strings.HasPrefix(key, "WATCHER_EVENT_")
 }

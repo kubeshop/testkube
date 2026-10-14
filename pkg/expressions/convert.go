@@ -2,6 +2,7 @@ package expressions
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -60,7 +61,12 @@ func toFloat(s interface{}) (float64, error) {
 	}
 	v, err := strconv.ParseFloat(str, 64)
 	if err != nil {
-		return 0, fmt.Errorf("error while converting value to number: %v: %v", s, err)
+		// The error of strconv repeats the value, so only its cause is kept.
+		var numErr *strconv.NumError
+		if errors.As(err, &numErr) {
+			err = numErr.Err
+		}
+		return 0, fmt.Errorf("error while converting value to number: %q: %v", str, err)
 	}
 	return v, nil
 }
@@ -95,7 +101,7 @@ func toBool(s interface{}) (bool, error) {
 	// Convert
 	value, err := toString(s)
 	if err != nil {
-		return false, fmt.Errorf("error while converting value to bool: %v: %v", value, err)
+		return false, fmt.Errorf("error while converting value to bool: %v", err)
 	}
 	return value != "" && value != "false" && value != "0" && value != "off", nil
 }

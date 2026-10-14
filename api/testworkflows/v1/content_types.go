@@ -6,6 +6,28 @@ import (
 	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 )
 
+// ContentGitVerbosity controls git and toolkit logging during clone.
+// +kubebuilder:validation:Enum=quiet;normal;verbose
+type ContentGitVerbosity string
+
+const (
+	ContentGitVerbosityQuiet   ContentGitVerbosity = "quiet"
+	ContentGitVerbosityNormal  ContentGitVerbosity = "normal"
+	ContentGitVerbosityVerbose ContentGitVerbosity = "verbose"
+)
+
+// ContentGitRetry is an in-process retry policy for transient git failures during clone.
+type ContentGitRetry struct {
+	// max attempts for transient git failures (default 5, max 20)
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=20
+	Count *int32 `json:"count,omitempty"`
+
+	// base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+	// May be an expression template; validated after resolution.
+	Delay string `json:"delay,omitempty" expr:"template"`
+}
+
 type ContentGit struct {
 	// uri for the Git repository
 	Uri string `json:"uri,omitempty" expr:"template"`
@@ -31,6 +53,10 @@ type ContentGit struct {
 	Cone bool `json:"cone,omitempty" expr:"ignore"`
 	// paths to fetch for the sparse checkout
 	Paths []string `json:"paths,omitempty" expr:"template"`
+	// logging level for the clone. Omit defaults to verbose.
+	Verbosity ContentGitVerbosity `json:"verbosity,omitempty" expr:"template"`
+	// in-process retry policy for transient git failures during clone
+	Retry *ContentGitRetry `json:"retry,omitempty" expr:"include"`
 }
 
 type ContentFile struct {

@@ -41,7 +41,7 @@ func NewDashboardCmd() *cobra.Command {
 			if cfg.ContextType != config.ContextTypeCloud {
 				isDashboardRunning, _ := k8sclient.IsPodOfServiceRunning(context.Background(), cfg.Namespace, config.EnterpriseUiName)
 				if isDashboardRunning {
-					openOnPremDashboard(cmd, cfg, verbose, skipBrowser, "")
+					openOnPremDashboard(cmd, cfg, verbose, skipBrowser, "", "")
 				} else {
 					ui.Warn("No dashboard found. Is it running in the " + cfg.Namespace + " namespace?")
 				}
@@ -59,13 +59,17 @@ func NewDashboardCmd() *cobra.Command {
 }
 
 func openCloudDashboard(cfg config.Data) {
+	if cfg.CloudContext.UiUri == "" {
+		ui.Failf("The context has no dashboard URI. Pass `--ui-uri-override <url>` to `testkube set context` or `testkube login`.")
+	}
+
 	// open browser
 	uri := fmt.Sprintf("%s/organization/%s/environment/%s", cfg.CloudContext.UiUri, cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId)
 	err := open.Run(uri)
 	ui.PrintOnError("opening dashboard", err)
 }
 
-func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrowser bool, license string) {
+func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrowser bool, license, email string) {
 	uiLocalPort, err := getDashboardLocalPort(config.EnterpriseApiForwardingPort)
 	ui.PrintOnError("getting an ui forwarding available port", err)
 	uri := fmt.Sprintf("http://localhost:%d", uiLocalPort)
@@ -96,6 +100,11 @@ func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrows
 		sendErrTelemetry(cmd, cfg, "port_forward", license, "port forwarding minio", err)
 	}
 	ui.ExitOnError("port forwarding minio", err)
+	ui.Debug("Port forwarding for ai-service", config.EnterpriseAiServiceName)
+	if err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseAiServiceName, config.EnterpriseAiServicePort, config.EnterpriseAiServiceForwardingPort, verbose); err != nil {
+		sendErrTelemetry(cmd, cfg, "port_forward", license, "port forwarding ai-service", err)
+		ui.Debug("Skipping ai-service port forward, AI copilot may be unavailable", err.Error())
+	}
 
 	if !skipBrowser {
 		ui.Debug("Opening dashboard in browser", uri)
@@ -106,7 +115,7 @@ func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrows
 
 		ui.ExitOnError("opening dashboard in browser", err)
 
-		sendTelemetry(cmd, cfg, license, "dashboard opened successfully")
+		sendTelemetry(cmd, cfg, license, "dashboard opened successfully", email)
 	}
 
 	c := make(chan os.Signal, 1)

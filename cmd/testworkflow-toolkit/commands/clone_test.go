@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -309,7 +310,7 @@ func TestAdjustFilePermissions(t *testing.T) {
 		require.NoError(t, err)
 
 		// Adjust permissions
-		err = adjustFilePermissions(tmpDir)
+		err = adjustFilePermissions(tmpDir, &CloneOptions{})
 		require.NoError(t, err)
 
 		// Check permissions were adjusted
@@ -323,7 +324,7 @@ func TestAdjustFilePermissions(t *testing.T) {
 	})
 
 	t.Run("non-existent directory", func(t *testing.T) {
-		err := adjustFilePermissions("/non/existent/path")
+		err := adjustFilePermissions("/non/existent/path", &CloneOptions{})
 		assert.Error(t, err)
 	})
 
@@ -346,7 +347,7 @@ func TestAdjustFilePermissions(t *testing.T) {
 		defer os.Chmod(tmpDir, 0755) // Restore for cleanup
 
 		// adjustFilePermissions should not fail, just log warnings
-		err = adjustFilePermissions(tmpDir)
+		err = adjustFilePermissions(tmpDir, &CloneOptions{})
 		// The function should complete without error even if chmod fails
 		assert.NoError(t, err)
 	})
@@ -372,7 +373,7 @@ func TestCopyRepositoryContents(t *testing.T) {
 	require.NoError(t, err)
 
 	// Copy contents
-	err = copyRepositoryContents(srcDir, destDir)
+	err = copyRepositoryContents(srcDir, destDir, &CloneOptions{})
 	require.NoError(t, err)
 
 	// Verify files were copied
@@ -392,13 +393,16 @@ func TestCopyRepositoryContents(t *testing.T) {
 
 func TestCloneOptions(t *testing.T) {
 	opts := &CloneOptions{
-		RawPaths: []string{"src", "docs"},
-		Username: "testuser",
-		Token:    "testtoken",
-		SSHKey:   "test-ssh-key",
-		AuthType: "basic",
-		Revision: "main",
-		Cone:     true,
+		RawPaths:   []string{"src", "docs"},
+		Username:   "testuser",
+		Token:      "testtoken",
+		SSHKey:     "test-ssh-key",
+		AuthType:   "basic",
+		Revision:   "main",
+		Cone:       true,
+		Verbosity:  "quiet",
+		RetryCount: 10,
+		RetryDelay: 500 * time.Millisecond,
 	}
 
 	// Verify all fields are accessible
@@ -409,6 +413,30 @@ func TestCloneOptions(t *testing.T) {
 	assert.Equal(t, "basic", opts.AuthType)
 	assert.Equal(t, "main", opts.Revision)
 	assert.True(t, opts.Cone)
+	assert.Equal(t, "quiet", opts.Verbosity)
+	assert.Equal(t, 10, opts.RetryCount)
+	assert.Equal(t, 500*time.Millisecond, opts.RetryDelay)
+}
+
+func TestCloneOptionsGitLogArgs(t *testing.T) {
+	assert.Equal(t, []string{"--quiet"}, (&CloneOptions{Verbosity: "quiet"}).gitLogArgs())
+	assert.Nil(t, (&CloneOptions{Verbosity: "normal"}).gitLogArgs())
+	assert.Equal(t, []string{"--verbose"}, (&CloneOptions{Verbosity: "verbose"}).gitLogArgs())
+	assert.Equal(t, []string{"--verbose"}, (&CloneOptions{}).gitLogArgs())
+}
+
+func TestCloneOptionsRetrySettings(t *testing.T) {
+	count, delay := (&CloneOptions{}).retrySettings()
+	assert.Equal(t, CloneRetryOnFailureMaxAttempts, count)
+	assert.Equal(t, CloneRetryOnFailureBaseDelay, delay)
+
+	count, delay = (&CloneOptions{RetryCount: 10, RetryDelay: 500 * time.Millisecond}).retrySettings()
+	assert.Equal(t, 10, count)
+	assert.Equal(t, 500*time.Millisecond, delay)
+
+	count, delay = (&CloneOptions{RetryCount: 1000, RetryDelay: time.Hour}).retrySettings()
+	assert.Equal(t, CloneRetryCountCap, count)
+	assert.Equal(t, CloneRetryDelayCap, delay)
 }
 
 func TestIsCommitHash(t *testing.T) {

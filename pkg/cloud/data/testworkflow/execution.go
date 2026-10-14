@@ -181,8 +181,12 @@ func (r *CloudRepository) GetTestWorkflowMetrics(ctx context.Context, name strin
 }
 
 // GetPreviousFinishedState gets previous finished execution state by test
-func (r *CloudRepository) GetPreviousFinishedState(ctx context.Context, workflowName string, date time.Time) (testkube.TestWorkflowStatus, error) {
-	req := ExecutionGetPreviousFinishedStateRequest{WorkflowName: workflowName, Date: date}
+func (r *CloudRepository) GetPreviousFinishedState(ctx context.Context, workflowName string, date time.Time, opts testworkflow2.GetPreviousFinishedStateOptions) (testkube.TestWorkflowStatus, error) {
+	req := ExecutionGetPreviousFinishedStateRequest{
+		WorkflowName:                workflowName,
+		Date:                        date,
+		SkipSilentWebhookExecutions: opts.SkipSilentWebhookExecutions,
+	}
 	response, err := r.executor.Execute(ctx, CmdTestWorkflowExecutionGetPreviousFinishedState, req)
 	if err != nil {
 		return "", err

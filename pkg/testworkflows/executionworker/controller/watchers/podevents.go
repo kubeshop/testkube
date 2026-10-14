@@ -7,6 +7,8 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 var (
@@ -30,6 +32,7 @@ type PodEvents interface {
 	Error() bool
 	ErrorReason() string
 	ErrorMessage() string
+	WaitingCause() *testkube.Cause
 	Debug() string
 
 	Container(name string) ContainerEvents
@@ -187,6 +190,23 @@ func (p *podEvents) ErrorMessage() string {
 		// (Failed) Back-off restarting failed container [ONLY NUMERIC CONTAINERS]
 	}
 	return ""
+}
+
+// podWaitingCauses maps the warning events of a pod that waits to the reason codes.
+var podWaitingCauses = map[string]testkube.StopReason{
+	"FailedScheduling":   testkube.StopReasonUnschedulable,
+	"FailedMount":        testkube.StopReasonVolumeMountFailed,
+	"FailedAttachVolume": testkube.StopReasonVolumeMountFailed,
+}
+
+// podProgressEvents are the events that show that the pod passed the causes in podWaitingCauses.
+var podProgressEvents = []string{"Scheduled", "Pulling", "Pulled", "Created", "Started"}
+
+// WaitingCause returns the cause from the latest warning event that keeps the pod from running.
+// It returns nil when a later event shows that the pod passed that cause.
+// It does not change Error, because Kubernetes retries these causes.
+func (p *podEvents) WaitingCause() *testkube.Cause {
+	return latestWaitingCause(p.events, podWaitingCauses, podProgressEvents)
 }
 
 func (p *podEvents) Debug() string {

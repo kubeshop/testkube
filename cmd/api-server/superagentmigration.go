@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strings"
 	"time"
@@ -40,6 +41,23 @@ type superAgentMigrationGRPCClient interface {
 
 type superAgentMigrationKubernetesResourceLister interface {
 	List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error
+}
+
+// skipRejectedResource reports whether the migration must skip a resource that failed to sync.
+// It skips and logs a rejection that no retry clears (see syncagent.IsRejection). Without the skip,
+// the migration retries that resource forever and never completes.
+func skipRejectedResource(log superAgentMigrationLogger, kind, name string, err error) bool {
+	if !syncagent.IsRejection(err) {
+		return false
+	}
+
+	msg := "resource is owned by another GitOps agent, skipping it during SuperAgent migration. It will not be present in the Control Plane until its ownership is resolved."
+	if errors.Is(err, syncagent.ErrInvalidResource) {
+		msg = "the Control Plane rejected the resource as invalid, skipping it during SuperAgent migration. It will not be present in the Control Plane until the resource is fixed."
+	}
+	log.Errorw(msg, kind, name, "error", err.Error())
+
+	return true
 }
 
 type superAgentMigrationSyncStore interface {
@@ -165,6 +183,9 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 			for _, t := range testTriggerList.Items {
 				for {
 					if err := syncStore.UpdateOrCreateTestTrigger(ctx, t); err != nil {
+						if skipRejectedResource(log, "TestTrigger", t.Name, err) {
+							break
+						}
 						retryAfter := b.Duration()
 						log.Errorw("error updating or creating TestTrigger, unable to migrate SuperAgent, will retry after backoff.",
 							"TestTrigger", t.Name,
@@ -182,6 +203,9 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 			for _, t := range testWorkflowTemplateList.Items {
 				for {
 					if err := syncStore.UpdateOrCreateTestWorkflowTemplate(ctx, t); err != nil {
+						if skipRejectedResource(log, "TestWorkflowTemplate", t.Name, err) {
+							break
+						}
 						retryAfter := b.Duration()
 						log.Errorw("error updating or creating TestWorkflowTemplate, unable to migrate SuperAgent, will retry after backoff.",
 							"TestWorkflowTemplate", t.Name,
@@ -197,6 +221,9 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 			for _, t := range testWorkflowList.Items {
 				for {
 					if err := syncStore.UpdateOrCreateTestWorkflow(ctx, t); err != nil {
+						if skipRejectedResource(log, "TestWorkflow", t.Name, err) {
+							break
+						}
 						retryAfter := b.Duration()
 						log.Errorw("error updating or creating TestWorkflow, unable to migrate SuperAgent, will retry after backoff.",
 							"TestWorkflow", t.Name,
@@ -212,6 +239,9 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 			for _, t := range webhookList.Items {
 				for {
 					if err := syncStore.UpdateOrCreateWebhook(ctx, t); err != nil {
+						if skipRejectedResource(log, "Webhook", t.Name, err) {
+							break
+						}
 						retryAfter := b.Duration()
 						log.Errorw("error updating or creating Webhook, unable to migrate SuperAgent, will retry after backoff.",
 							"Webhook", t.Name,
@@ -227,6 +257,9 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 			for _, t := range webhookTemplateList.Items {
 				for {
 					if err := syncStore.UpdateOrCreateWebhookTemplate(ctx, t); err != nil {
+						if skipRejectedResource(log, "WebhookTemplate", t.Name, err) {
+							break
+						}
 						retryAfter := b.Duration()
 						log.Errorw("error updating or creating WebhookTemplate, unable to migrate SuperAgent, will retry after backoff.",
 							"WebhookTemplate", t.Name,

@@ -484,7 +484,7 @@ spec:
     spec:
       containers:
       - name: mc
-        image: minio/mc:latest
+        image: kubeshop/testkube-minio:2025.10
         command:
         - /bin/sh
         - -c

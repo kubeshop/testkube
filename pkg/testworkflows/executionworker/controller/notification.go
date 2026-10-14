@@ -16,6 +16,10 @@ type Notification struct {
 	Log       string                       `json:"log,omitempty"`
 	Output    *instructions.Instruction    `json:"output,omitempty"`
 	Temporary bool                         `json:"temporary,omitempty"`
+	// AbortReason asks the consumer of the watch to abort the execution with this reason. The watch continues and reads
+	// the end of the execution, so the result ends with the termination that the abort writes.
+	// A consumer that reads the execution state must do the abort. Other consumers can ignore the field.
+	AbortReason testkube.StopReason `json:"-"`
 }
 
 func (n *Notification) ToInternal() testkube.TestWorkflowExecutionNotification {

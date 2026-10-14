@@ -406,6 +406,11 @@ func Test_triggeredByBucket(t *testing.T) {
 			want: "automation",
 		},
 		{
+			name: "GitIntegration actor",
+			args: args{actorType: "gitintegration"},
+			want: "git-integration",
+		},
+		{
 			name: "User via CI/CD interface",
 			args: args{actorType: "user", interfaceType: "ci/cd"},
 			want: "ci-cd",

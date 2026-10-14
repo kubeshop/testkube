@@ -1,0 +1,26 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cloud-quality-loop-suite
+  labels:
+    dev-quality-gate: "true"
+    core-tests: workflows-suite
+    type: suite
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: cloud-web-unit
+      - name: cloud-backoffice-unit
+      - name: cloud-runspace-controller-unit
+      - name: cloud-lint-go
+      - name: cloud-lint-js
+      - name: cloud-lint-helm
+      - name: cloud-gomod-codegen
+      - name: cloud-test-app

@@ -100,6 +100,11 @@ sql:
             go_type:
               # Hacky - can only be used in tandem with another column that does the import.
               type: "map[string]testkube.TestWorkflowStepResult"
+          - column: "test_workflow_results.status_details"
+            go_type:
+              type: "TestWorkflowStatusDetails"
+              import: "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+              pointer: true
           # section for test_workflow_outputs
           - column: "test_workflow_outputs.value"
             go_type:

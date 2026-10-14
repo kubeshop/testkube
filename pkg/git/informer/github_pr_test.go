@@ -19,6 +19,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/git/matchers"
 	"github.com/kubeshop/testkube/pkg/log"
+
+	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 )
 
 func TestParseGitHubRepo(t *testing.T) {
@@ -510,4 +512,24 @@ func TestPRInitKeyIncludedInSnapshot(t *testing.T) {
 	assert.Equal(t, "sha1:open", snapshot[prCacheKey(triggerKey, 1)])
 	assert.Equal(t, "sha2:closed", snapshot[prCacheKey(triggerKey, 2)])
 	assert.NotContains(t, snapshot, "unrelated:key"+refSeparator+"pr:99")
+}
+
+func TestIsPullRequestTrigger(t *testing.T) {
+	prEvent := string(testtriggersv1.TestTriggerEventGitPullRequest)
+	tests := []struct {
+		name     string
+		trigger  testkube.TestTrigger
+		expected bool
+	}{
+		{"single pr event", testkube.TestTrigger{Event: prEvent}, true},
+		{"single non-pr event", testkube.TestTrigger{Event: "git-push"}, false},
+		{"events list containing pr", testkube.TestTrigger{Events: []string{"git-push", prEvent}}, true},
+		{"events list without pr", testkube.TestTrigger{Events: []string{"git-push", "git-tag-push"}}, false},
+		{"empty", testkube.TestTrigger{}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, isPullRequestTrigger(tt.trigger))
+		})
+	}
 }

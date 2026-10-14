@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
@@ -396,9 +395,9 @@ func TestBundle_DefaultRunnerResources_DoesNotOverrideExplicitResources(t *testi
 							ContainerConfig: testworkflowsv1.ContainerConfig{
 								Image: "custom-image:latest",
 								Resources: &testworkflowsv1.Resources{
-									Requests: map[corev1.ResourceName]intstr.IntOrString{
-										corev1.ResourceCPU:    intstr.FromString("200m"),
-										corev1.ResourceMemory: intstr.FromString("256Mi"),
+									Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{
+										corev1.ResourceCPU:    "200m",
+										corev1.ResourceMemory: "256Mi",
 									},
 								},
 							},
@@ -461,8 +460,8 @@ func TestBundle_DefaultRunnerResources_AppliesLimitsWhenOnlyRequestsSet(t *testi
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Container: &testworkflowsv1.ContainerConfig{
 					Resources: &testworkflowsv1.Resources{
-						Requests: map[corev1.ResourceName]intstr.IntOrString{
-							corev1.ResourceCPU: intstr.FromString("50m"),
+						Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{
+							corev1.ResourceCPU: "50m",
 						},
 					},
 				},

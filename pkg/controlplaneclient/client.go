@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/internal/config"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 )
 
@@ -40,6 +41,12 @@ type ClientOptions struct {
 	WorkflowName       string
 	ParentExecutionIDs []string
 
+	// ParentActorType is the actor type of the parent execution. It feeds
+	// ChildRunningContextType on the actor type itself, which decides whether
+	// the chained child inherits the parent's actor or falls back to the
+	// default RunningContextType_EXECUTION (mapped to actor.type = testworkflow).
+	ParentActorType testkube.TestWorkflowRunningContextActorType
+
 	Runtime     RuntimeConfig
 	SendTimeout time.Duration
 	RecvTimeout time.Duration
@@ -56,6 +63,7 @@ type Client interface {
 
 	ExecutionClient
 	ExecutionSelfClient
+	ExecutionCacheClient
 	RunnerClient
 	TestWorkflowsClient
 	TestWorkflowTemplatesClient

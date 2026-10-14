@@ -169,9 +169,15 @@ func fetchGitHubPRFiles(ctx context.Context, apiBase, owner, repo, token string,
 	return paths, nil
 }
 
-// isPullRequestTrigger returns true if the trigger is configured for git-pull-request events.
+// isPullRequestTrigger returns true if any of the trigger's effective events
+// is git-pull-request.
 func isPullRequestTrigger(trigger testkube.TestTrigger) bool {
-	return strings.ToLower(trigger.Event) == string(testtriggersv1.TestTriggerEventGitPullRequest)
+	for _, e := range trigger.EffectiveEvents() {
+		if strings.ToLower(e) == string(testtriggersv1.TestTriggerEventGitPullRequest) {
+			return true
+		}
+	}
+	return false
 }
 
 // checkPullRequests polls GitHub for PRs matching the trigger configuration and fires events.

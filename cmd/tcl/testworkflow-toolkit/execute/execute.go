@@ -21,7 +21,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 )
 
-func ExecuteTestWorkflow(workflowName string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error) {
+// ExecuteTestWorkflow schedules a workflow from inside a running execution.
+//
+// baseExecutionId, when set, records the scheduled execution as a rerun of that
+// one, which is what makes execution("rerun") resolve inside it. Only the base
+// travels: the Control Plane derives the chain root and attempt number, and
+// checks that the calling execution may read the base before honouring it.
+func ExecuteTestWorkflow(workflowName string, request testkube.TestWorkflowExecutionRequest, baseExecutionId string) ([]testkube.TestWorkflowExecution, error) {
 	cfg := config.Config()
 	client, err := env.Cloud()
 	if err != nil {
@@ -39,11 +45,18 @@ func ExecuteTestWorkflow(workflowName string, request testkube.TestWorkflowExecu
 		}
 	}
 
-	return client.ScheduleExecution(context.Background(), cfg.Execution.EnvironmentId, &cloud.ScheduleRequest{
+	scheduleRequest := &cloud.ScheduleRequest{
 		Executions:      []*cloud.ScheduleExecution{{Selector: &cloud.ScheduleResourceSelector{Name: workflowName}, Config: request.Config, Runtime: runtime, Targets: targets}},
 		DisableWebhooks: cfg.Execution.DisableWebhooks,
 		Tags:            request.Tags,
-	}).All()
+	}
+	// Left unset rather than sent empty: the scheduler treats a present base as a
+	// rerun to derive lineage from, and an empty one would be an id it cannot find.
+	if baseExecutionId != "" {
+		scheduleRequest.BaseExecutionId = &baseExecutionId
+	}
+
+	return client.ScheduleExecution(context.Background(), cfg.Execution.EnvironmentId, scheduleRequest).All()
 }
 
 func ListTestWorkflows(labels map[string]string) ([]testkube.TestWorkflow, error) {

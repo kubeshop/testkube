@@ -1,6 +1,7 @@
 package agents
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -17,24 +18,24 @@ func NewDeleteAgentCommand() *cobra.Command {
 		deleteAgent, noDeleteAgent bool
 	)
 	cmd := &cobra.Command{
-		Use:     "agent",
-		Aliases: []string{"runner"},
+		Use:     "runner",
+		Aliases: []string{"agent"},
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			if !uninstall && !noUninstall {
-				uninstall = ui.Confirm("should it uninstall agent?")
+				uninstall = ui.Confirm("should it uninstall runner?")
 			}
 			if !deleteAgent && !noDeleteAgent {
-				deleteAgent = ui.Confirm("should it delete agent in the Control Plane?")
+				deleteAgent = ui.Confirm("should it delete runner in the Control Plane?")
 			}
 			UiDeleteAgent(cmd, args[0], uninstall, deleteAgent)
 		},
 	}
 
-	cmd.Flags().BoolVarP(&uninstall, "uninstall", "u", false, "should it uninstall the agent too")
-	cmd.Flags().BoolVarP(&noUninstall, "no-uninstall", "U", false, "should it keep the agent installed")
-	cmd.Flags().BoolVarP(&deleteAgent, "delete", "d", false, "should it delete agent in the Control Plane")
-	cmd.Flags().BoolVarP(&noDeleteAgent, "no-delete", "D", false, "should it keep the agent definition in the Control Plane")
+	cmd.Flags().BoolVarP(&uninstall, "uninstall", "u", false, "should it uninstall the runner too")
+	cmd.Flags().BoolVarP(&noUninstall, "no-uninstall", "U", false, "should it keep the runner installed")
+	cmd.Flags().BoolVarP(&deleteAgent, "delete", "d", false, "should it delete runner in the Control Plane")
+	cmd.Flags().BoolVarP(&noDeleteAgent, "no-delete", "D", false, "should it keep the runner definition in the Control Plane")
 
 	return cmd
 }
@@ -64,13 +65,23 @@ func UiUninstallCRD(cmd *cobra.Command) {
 	spinner := ui.NewSpinner("Fetching current CRDs")
 	currentNamespace, currentReleaseName, installed, err := GetCRDInstallation()
 	if err != nil {
-		spinner.Fail(err)
-		os.Exit(1)
+		spinner.Fail()
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrResourceLookupFailed,
+			"Error getting the installed CRDs",
+			common2.ClusterLookupHint,
+			err,
+		))
 	}
 
 	if installed && currentReleaseName == "" {
-		spinner.Fail("The CRDs are installed, but they are not managed by our Helm Chart")
-		os.Exit(1)
+		spinner.Fail()
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrInvalidInstallConfig,
+			"The CRDs are not managed by the Testkube Helm Chart",
+			"Delete the Testkube CRDs by hand, or install them with `testkube install crd` so that Helm owns them",
+			errors.New("the CRDs are installed, but they carry no Helm release annotation"),
+		))
 	}
 
 	if installed {
@@ -81,30 +92,47 @@ func UiUninstallCRD(cmd *cobra.Command) {
 	}
 
 	spinner = ui.NewSpinner("Uninstalling CRDs")
-	cliErr := common2.HelmUninstall(currentNamespace, currentReleaseName)
-	if cliErr != nil {
-		cliErr.Print()
-		os.Exit(1)
-	}
+	common2.HandleCLIError(common2.HelmUninstall(currentNamespace, currentReleaseName))
 	spinner.Success()
 }
 
 func UiDeleteAgent(cmd *cobra.Command, name string, uninstall, deleteAgent bool) {
 	agent, err := GetControlPlaneAgent(cmd, name)
-	ui.ExitOnError("getting agent", err)
+	if err != nil {
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrRunnerGetFailed,
+			"Error getting the runner",
+			common2.RunnerLookupHint,
+			err,
+		))
+	}
 
-	// Uninstall the Agent
+	// Uninstall the Runner
 	if uninstall {
 		var nses []string
 		if agent.Namespace != "" {
 			nses = append(nses, agent.Namespace)
 		} else {
 			nses, err = GetKubernetesNamespaces()
-			ui.ExitOnError("getting namespaces", err)
+			if err != nil {
+				common2.HandleCLIError(common2.NewCLIError(
+					common2.TKErrResourceLookupFailed,
+					"Error listing the Kubernetes namespaces",
+					common2.ClusterLookupHint,
+					err,
+				))
+			}
 		}
 
 		agents, err := GetKubernetesAgents(nses)
-		ui.ExitOnError("getting agents", err)
+		if err != nil {
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrResourceLookupFailed,
+				"Error getting the runners running in the cluster",
+				common2.ClusterLookupHint,
+				err,
+			))
+		}
 
 		var kubernetesAgent *internalAgent
 		for i := range agents {
@@ -114,24 +142,32 @@ func UiDeleteAgent(cmd *cobra.Command, name string, uninstall, deleteAgent bool)
 			}
 		}
 		if kubernetesAgent == nil {
-			ui.Failf("kubernetes agent not found: namespaces: %s", strings.Join(nses, ", "))
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrResourceNotFound,
+				"Runner not installed in the cluster",
+				"Pass '--no-uninstall' to delete the runner in the Control Plane only, or check that your kubeconfig points at the cluster the runner runs in",
+				fmt.Errorf("kubernetes runner not found: namespaces: %s", strings.Join(nses, ", ")),
+			))
 			return
 		}
 
 		spinner := ui.NewSpinner("Running Helm command...")
-		cliErr := common2.HelmUninstall(kubernetesAgent.Pod.Namespace, fmt.Sprintf("testkube-%s", agent.Name))
-		if cliErr != nil {
-			cliErr.Print()
-			os.Exit(1)
-		}
+		common2.HandleCLIError(common2.HelmUninstall(kubernetesAgent.Pod.Namespace, fmt.Sprintf("testkube-%s", agent.Name)))
 		spinner.Success()
 	}
 
 	// Delete the Agent
 	if deleteAgent {
-		spinner := ui.NewSpinner("Deleting agent in the Control Plane...")
+		spinner := ui.NewSpinner("Deleting runner in the Control Plane...")
 		err := DeleteControlPlaneAgent(cmd, agent.ID)
-		ui.ExitOnError("deleting agent", err)
+		if err != nil {
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrRunnerWriteFailed,
+				"Error deleting the runner",
+				common2.RunnerWriteHint,
+				err,
+			))
+		}
 		spinner.Success()
 	}
 }

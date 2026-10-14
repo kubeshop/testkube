@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"go.uber.org/zap"
@@ -25,6 +26,9 @@ type testSrv struct {
 	TestWorkflowTemplate *syncv1.TestWorkflowTemplate
 	Webhook              *syncv1.Webhook
 	WebhookTemplate      *syncv1.WebhookTemplate
+
+	// Err is returned by both RPCs, to exercise the client's status code translation.
+	Err error
 }
 
 func (t *testSrv) UpdateOrCreate(_ context.Context, req *syncv1.UpdateOrCreateRequest) (*syncv1.UpdateOrCreateResponse, error) {
@@ -42,11 +46,29 @@ func (t *testSrv) UpdateOrCreate(_ context.Context, req *syncv1.UpdateOrCreateRe
 	case *syncv1.UpdateOrCreateRequest_WebhookTemplate:
 		t.WebhookTemplate = v.WebhookTemplate
 	}
-	return nil, nil
+	return nil, t.Err
 }
 
 func (t *testSrv) Delete(_ context.Context, req *syncv1.DeleteRequest) (*syncv1.DeleteResponse, error) {
-	return nil, nil
+	return nil, t.Err
+}
+
+// socketPath derives a listenable socket path from the test name. Slashes from subtest names would
+// be read as directories, and the whole path has to stay inside the ~104 byte limit that macOS
+// imposes on unix socket addresses, so long names are trimmed from the front where they are least
+// distinctive.
+func socketPath(t *testing.T) string {
+	t.Helper()
+
+	dir := os.TempDir()
+	name := strings.ReplaceAll(t.Name(), "/", "_")
+
+	const maxPathLen = 100
+	if budget := maxPathLen - len(dir) - len("/.sock"); budget > 0 && len(name) > budget {
+		name = name[len(name)-budget:]
+	}
+
+	return filepath.Join(dir, name+".sock")
 }
 
 func startGRPCTestConnection(t *testing.T, ts *testSrv) syncgrpc.Client {
@@ -56,7 +78,7 @@ func startGRPCTestConnection(t *testing.T, ts *testSrv) syncgrpc.Client {
 
 	syncv1.RegisterSyncServiceServer(srv, ts)
 
-	socketAddr := filepath.Join(os.TempDir(), t.Name()+".sock")
+	socketAddr := socketPath(t)
 	t.Cleanup(func() {
 		os.Remove(socketAddr)
 	})

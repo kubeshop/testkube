@@ -3,6 +3,7 @@ package testworkflowprocessor
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -229,6 +230,21 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container stage.
 	if len(step.Content.Git.Paths) > 0 {
 		for _, pattern := range step.Content.Git.Paths {
 			args = append(args, "-p", pattern)
+		}
+	}
+
+	// Provide verbosity
+	if step.Content.Git.Verbosity != "" {
+		args = append(args, "--verbosity", string(step.Content.Git.Verbosity))
+	}
+
+	// Provide in-process git retry settings
+	if step.Content.Git.Retry != nil {
+		if step.Content.Git.Retry.Count != nil {
+			args = append(args, "--retry-count", strconv.Itoa(int(*step.Content.Git.Retry.Count)))
+		}
+		if step.Content.Git.Retry.Delay != "" {
+			args = append(args, "--retry-delay", step.Content.Git.Retry.Delay)
 		}
 	}
 

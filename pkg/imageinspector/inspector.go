@@ -40,14 +40,22 @@ func (i *inspector) rawGet(ctx context.Context, registry, image string) *Info {
 	return nil
 }
 
-func (i *inspector) get(ctx context.Context, registry, image string) *Info {
+// resolvedCacheVersion marks the cache key of an image that resolves to another name. Entries
+// stored under the resolved name without it can hold the data of the Docker Hub image, because
+// the fetch did not use the resolved name, so they must not be read.
+const resolvedCacheVersion = "v2"
+
+// cacheKey is the key of the data of an image in the cache.
+func (i *inspector) cacheKey(registry, image string) RequestBase {
 	if resolvedName := i.ResolveName(registry, image); resolvedName != image {
-		v := i.rawGet(ctx, "", resolvedName)
-		if v != nil {
-			return v
-		}
+		return RequestBase{Registry: resolvedCacheVersion, Image: resolvedName}
 	}
-	return i.rawGet(ctx, registry, image)
+	return RequestBase{Registry: registry, Image: image}
+}
+
+func (i *inspector) get(ctx context.Context, registry, image string) *Info {
+	key := i.cacheKey(registry, image)
+	return i.rawGet(ctx, key.Registry, key.Image)
 }
 
 func (i *inspector) fetch(ctx context.Context, registry, image string, pullSecretNames []string) (*Info, error) {
@@ -61,12 +69,12 @@ func (i *inspector) fetch(ctx context.Context, registry, image string, pullSecre
 		secrets[idx] = *secret
 	}
 
-	// Load the image details
+	// Load the image details. Inspect names the image, so an error here keeps only the cause.
 	info, err := i.fetcher.Fetch(ctx, registry, image, secrets)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("fetching '%s' image from '%s' registry", image, registry))
+		return nil, err
 	} else if info == nil {
-		return nil, fmt.Errorf("unknown problem with fetching '%s' image from '%s' registry", image, registry)
+		return nil, errors.New("the registry returned no details")
 	}
 	if info.Shell != "" && !filepath.IsAbs(info.Shell) {
 		info.Shell = ""
@@ -78,13 +86,10 @@ func (i *inspector) save(ctx context.Context, registry, image string, info *Info
 	if info == nil {
 		return
 	}
-	if resolvedName := i.ResolveName(registry, image); resolvedName != image {
-		registry = ""
-		image = resolvedName
-	}
+	key := i.cacheKey(registry, image)
 	for _, s := range i.storage {
-		if err := s.Store(ctx, RequestBase{Registry: registry, Image: image}, *info); err != nil {
-			log.DefaultLogger.Warnw("error while saving image details in the cache", "registry", registry, "image", image, "error", err)
+		if err := s.Store(ctx, key, *info); err != nil {
+			log.DefaultLogger.Warnw("error while saving image details in the cache", "registry", key.Registry, "image", key.Image, "error", err)
 		}
 	}
 }
@@ -111,13 +116,12 @@ func (i *inspector) Inspect(ctx context.Context, registry, image string, pullPol
 		}
 	}
 
-	// Fetch the data
-	value, err := i.fetch(ctx, registry, image, pullSecretNames)
+	// Fetch the data of the resolved name. The pod pulls that name, and the cache stores the data
+	// under it, so an image without a registry must not be read from the Docker Hub instead.
+	resolvedName := i.ResolveName(registry, image)
+	value, err := i.fetch(ctx, "", resolvedName, pullSecretNames)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("inspecting image: '%s' at '%s' registry", image, registry))
-	}
-	if value == nil {
-		return nil, fmt.Errorf("not found image details for: '%s' at '%s' registry", image, registry)
+		return nil, errors.Wrapf(err, "inspecting the image %q", resolvedName)
 	}
 
 	// Save asynchronously

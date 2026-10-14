@@ -128,7 +128,7 @@ type SecretRef struct {
 	Key string `json:"key"`
 }
 
-// +kubebuilder:validation:Enum=start-test;end-test-success;end-test-failed;end-test-aborted;end-test-timeout;become-test-up;become-test-down;become-test-failed;become-test-aborted;become-test-timeout;start-testsuite;end-testsuite-success;end-testsuite-failed;end-testsuite-aborted;end-testsuite-timeout;become-testsuite-up;become-testsuite-down;become-testsuite-failed;become-testsuite-aborted;become-testsuite-timeout;start-testworkflow;queue-testworkflow;end-testworkflow-success;end-testworkflow-failed;end-testworkflow-aborted;end-testworkflow-canceled;end-testworkflow-not-passed;become-testworkflow-up;become-testworkflow-down;become-testworkflow-failed;become-testworkflow-aborted;become-testworkflow-canceled;become-testworkflow-not-passed
+// +kubebuilder:validation:Enum=start-test;end-test-success;end-test-failed;end-test-aborted;end-test-timeout;become-test-up;become-test-down;become-test-failed;become-test-aborted;become-test-timeout;start-testsuite;end-testsuite-success;end-testsuite-failed;end-testsuite-aborted;end-testsuite-timeout;become-testsuite-up;become-testsuite-down;become-testsuite-failed;become-testsuite-aborted;become-testsuite-timeout;start-testworkflow;queue-testworkflow;end-testworkflow-success;end-testworkflow-failed;end-testworkflow-aborted;end-testworkflow-canceled;end-testworkflow-not-passed;end-testworkflow-test-failure;end-testworkflow-infrastructure-failure;end-testworkflow-configuration-error;become-testworkflow-up;become-testworkflow-down;become-testworkflow-failed;become-testworkflow-aborted;become-testworkflow-canceled;become-testworkflow-not-passed
 type EventType string
 
 // List of EventType

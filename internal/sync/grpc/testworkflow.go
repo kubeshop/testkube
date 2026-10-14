@@ -33,7 +33,7 @@ func (c Client) UpdateOrCreateTestWorkflow(ctx context.Context, obj testworkflow
 			},
 		},
 	}, c.callOpts...); err != nil {
-		return fmt.Errorf("send request to update or create testworkflow: %w", err)
+		return fmt.Errorf("send request to update or create testworkflow: %w", translateError(err))
 	}
 
 	return nil
@@ -55,7 +55,7 @@ func (c Client) DeleteTestWorkflow(ctx context.Context, name string) error {
 			},
 		},
 	}, c.callOpts...); err != nil {
-		return fmt.Errorf("send request to delete testworkflow: %w", err)
+		return fmt.Errorf("send request to delete testworkflow: %w", translateError(err))
 	}
 
 	return nil

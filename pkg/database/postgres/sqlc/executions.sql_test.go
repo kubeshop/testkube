@@ -33,6 +33,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionsTotals(t *tes
 		pgtype.Timestamptz{}, // end_date
 		int32(0),             // last_n_days
 		[]string{},           // statuses
+		[]string{},           // status_details_types
 		"",                   // runner_id
 		pgtype.Bool{},        // assigned
 		"",                   // actor_name
@@ -59,6 +60,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionsTotals(t *tes
 		EndDate:            pgtype.Timestamptz{},
 		LastNDays:          0,
 		Statuses:           []string{},
+		StatusDetailsTypes: []string{},
 		RunnerID:           "",
 		Assigned:           pgtype.Bool{},
 		ActorName:          "",
@@ -105,6 +107,7 @@ func TestSQLCTestWorkflowExecutionQueries_CountTestWorkflowExecutions(t *testing
 		pgtype.Timestamptz{}, // end_date
 		int32(0),             // last_n_days
 		[]string{},           // statuses
+		[]string{},           // status_details_types
 		"",                   // runner_id
 		pgtype.Bool{},        // assigned
 		"",                   // actor_name
@@ -131,6 +134,7 @@ func TestSQLCTestWorkflowExecutionQueries_CountTestWorkflowExecutions(t *testing
 		EndDate:            pgtype.Timestamptz{},
 		LastNDays:          0,
 		Statuses:           []string{},
+		StatusDetailsTypes: []string{},
 		RunnerID:           "",
 		Assigned:           pgtype.Bool{},
 		ActorName:          "",

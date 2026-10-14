@@ -60,6 +60,7 @@ func TestAgentCapabilities_Features(t *testing.T) {
 		cfg.FloatingRunner = true
 
 		caps := AgentCapabilities(cfg)
+		assert.Contains(t, caps, "execution")
 		assert.Contains(t, caps, "runner")
 		assert.Contains(t, caps, "floating-runner")
 		assert.Contains(t, caps, "k8s-controllers")
@@ -79,6 +80,7 @@ func TestAgentCapabilities_Features(t *testing.T) {
 		cfg.EnableCronJobs = "false"
 
 		caps := AgentCapabilities(cfg)
+		assert.NotContains(t, caps, "execution")
 		assert.NotContains(t, caps, "runner")
 		assert.NotContains(t, caps, "webhooks")
 		assert.NotContains(t, caps, "cron-jobs")
@@ -96,6 +98,35 @@ func TestAgentCapabilities_Features(t *testing.T) {
 		caps := AgentCapabilities(cfg)
 		assert.Contains(t, caps, "cron-jobs")
 	})
+}
+
+// Testkube-provisioned trial runners must be distinguishable from runners users
+// deployed themselves, since both otherwise report identical heartbeat payloads.
+func TestAgentCapabilities_HostedRunner(t *testing.T) {
+	tests := []struct {
+		name       string
+		runnerName string
+		wantHosted bool
+	}{
+		{"hosted runner", "tkcagent_hr_65fabc123456789012345678", true},
+		{"user-named runner", "my-runner", false},
+		{"unnamed runner", "", false},
+		{"regular agent id as name", "tkcagent_abc123", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.Config{}
+			cfg.RunnerName = tt.runnerName
+
+			caps := AgentCapabilities(cfg)
+			if tt.wantHosted {
+				assert.Contains(t, caps, "hosted-runner")
+			} else {
+				assert.NotContains(t, caps, "hosted-runner")
+			}
+		})
+	}
 }
 
 func TestAgentCapabilities_RunnerPersonaOverrides(t *testing.T) {

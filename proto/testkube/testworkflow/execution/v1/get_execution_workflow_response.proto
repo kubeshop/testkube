@@ -11,4 +11,23 @@ message GetExecutionWorkflowResponse {
   // workflow is the requested workflow with any potential
   // enrichments already applied.
   .testkube.testworkflow.v1.TestWorkflow workflow = 1;
+  // running_context carries the parent execution's actor identity so the
+  // runner can propagate it into the pod config for chained schedules
+  // (used by the sticky-actor family: chained children inherit the parent's
+  // actor when the parent belongs to that set).
+  ExecutionRunningContext running_context = 2;
+}
+
+// ExecutionRunningContext is a minimal projection of the parent execution's
+// running context, carrying only what the runner needs to make sticky-family
+// decisions. Kept flat on purpose; the runner reconstructs the full
+// TestWorkflowRunningContextActor shape when it builds the pod config.
+message ExecutionRunningContext {
+  // actor_type mirrors TestWorkflowRunningContextActor.Type_, e.g.
+  // "gitintegration", "user", "cron". Empty when the parent had no actor.
+  string actor_type = 1;
+  // actor_name mirrors TestWorkflowRunningContextActor.Name. Used to
+  // populate the child's RunningContext.Name so downstream reads stay
+  // consistent with the parent's identity.
+  string actor_name = 2;
 }

@@ -2,6 +2,7 @@ package expressions
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -55,6 +56,11 @@ type testObjWithStringEnums struct {
 
 type testObjWithStringEnumPointers struct {
 	Value *testEnum `expr:"force"`
+	Dummy *testEnum
+}
+
+type testObjWithStringEnumExpressions struct {
+	Value *testEnum `expr:"expression"`
 	Dummy *testEnum
 }
 
@@ -261,6 +267,22 @@ func TestGenericSimplifyWithStringEnumPointers(t *testing.T) {
 	want := testObjWithStringEnumPointers{
 		Value: common.Ptr[testEnum]("55"),
 		Dummy: common.Ptr[testEnum]("{{ 4433 }}"),
+	}
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
+func TestGenericSimplifyWithStringEnumExpressions(t *testing.T) {
+	got := testObjWithStringEnumExpressions{
+		Value: common.Ptr[testEnum]("5 + 3 + ten"),
+		Dummy: common.Ptr[testEnum]("5 + 3 + ten"),
+	}
+	err := Simplify(&got, testMachine)
+
+	want := testObjWithStringEnumExpressions{
+		Value: common.Ptr[testEnum]("18"),
+		Dummy: common.Ptr[testEnum]("5 + 3 + ten"),
 	}
 
 	assert.NoError(t, err)
@@ -498,4 +520,80 @@ func TestInitContainerCommandResolution_CompiledWildcard(t *testing.T) {
 		"-t", "jmeter-executor-smoke.jmx",
 	}
 	assert.Equal(t, expected, expandedCommand)
+}
+
+type PathTestEnv struct {
+	Value string `json:"value" expr:"template"`
+}
+
+type PathTestContainer struct {
+	Env []PathTestEnv `json:"env" expr:"include"`
+}
+
+type PathTestStep struct {
+	PathTestContainer `json:",inline" expr:"include"`
+	Labels            map[string]string `json:"labels" expr:"template,template"`
+}
+
+// PathTestList has its own JSON form, so YAML shows it as one value, as a matrix value.
+type PathTestList struct {
+	Static     []string `expr:"template"`
+	Expression string   `expr:"template"`
+}
+
+func (l *PathTestList) UnmarshalJSON([]byte) error {
+	return nil
+}
+
+type PathTestSpec struct {
+	Steps  []PathTestStep          `json:"steps" expr:"include"`
+	Plain  string                  `expr:"template"`
+	Matrix map[string]PathTestList `json:"matrix" expr:"include"`
+}
+
+type PathTestRoot struct {
+	Spec PathTestSpec `json:"spec" expr:"include"`
+}
+
+func TestFinalize_ErrorPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		root     PathTestRoot
+		wantPath string
+	}{
+		{
+			name: "a field in a slice under an embedded struct",
+			root: PathTestRoot{Spec: PathTestSpec{Steps: []PathTestStep{{
+				PathTestContainer: PathTestContainer{Env: []PathTestEnv{{Value: "ok"}, {Value: "{{config.missing}}"}}},
+			}}}},
+			wantPath: "spec.steps[0].env[1].value: ",
+		},
+		{
+			name: "a value in a map",
+			root: PathTestRoot{Spec: PathTestSpec{Steps: []PathTestStep{{
+				Labels: map[string]string{"app": "{{config.missing}}"},
+			}}}},
+			wantPath: "spec.steps[0].labels[app]: ",
+		},
+		{
+			name: "a value with its own JSON form hides its Go fields",
+			root: PathTestRoot{Spec: PathTestSpec{Matrix: map[string]PathTestList{
+				"browser": {Static: []string{"ok", "{{config.missing}}"}},
+			}}},
+			wantPath: "spec.matrix[browser][1]: ",
+		},
+		{
+			name:     "a field without a json tag keeps its Go name",
+			root:     PathTestRoot{Spec: PathTestSpec{Plain: "{{config.missing}}"}},
+			wantPath: "spec.Plain: ",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := Finalize(&tt.root)
+			if assert.Error(t, err) {
+				assert.True(t, strings.HasPrefix(err.Error(), tt.wantPath), "got %q", err.Error())
+			}
+		})
+	}
 }

@@ -179,6 +179,22 @@ type ControlOptions struct {
 type DestroyOptions struct {
 	// Namespace where it has been deployed.
 	Namespace string
+	// Actor identifies the component that requested the stop. The worker writes it
+	// and the reason into the job annotations, so the result names who stopped it.
+	Actor testkube.StopActor
+	// Reason is the code for the cause of the stop. The result shows its sentence.
+	Reason testkube.StopReason
+	// Detail is free text that follows the reason, for example the error of a failed step.
+	Detail string
+}
+
+// TerminationActor returns the actor for the job annotation, or the default when the
+// caller did not set one.
+func (o DestroyOptions) TerminationActor(defaultActor testkube.StopActor) testkube.StopActor {
+	if o.Actor == "" {
+		return defaultActor
+	}
+	return o.Actor
 }
 
 type StatusNotification struct {

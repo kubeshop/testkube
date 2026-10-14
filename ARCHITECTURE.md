@@ -16,12 +16,13 @@ You can read more about the differences between the two deployment modes in the 
     - [Control Plane Connection](#control-plane-connection)
   - [2. Kubernetes Controllers](#2-kubernetes-controllers)
   - [3. TestWorkflow Execution Runtime](#3-testworkflow-execution-runtime)
-  - [4. Storage Layer](#4-storage-layer)
-  - [5. Event System](#5-event-system)
-  - [6. REST API](#6-rest-api)
-  - [7. Prometheus Metrics Endpoint](#7-prometheus-metrics-endpoint)
-  - [8. Logging and Telemetry](#8-logging-and-telemetry)
-  - [9. Kubernetes Custom Resource Definitions (CRDs)](#9-kubernetes-custom-resource-definitions-crds)
+  - [4. Execution Lineage and Reruns](#4-execution-lineage-and-reruns)
+  - [5. Storage Layer](#5-storage-layer)
+  - [6. Event System](#6-event-system)
+  - [7. REST API](#7-rest-api)
+  - [8. Prometheus Metrics Endpoint](#8-prometheus-metrics-endpoint)
+  - [9. Logging and Telemetry](#9-logging-and-telemetry)
+  - [10. Kubernetes Custom Resource Definitions (CRDs)](#10-kubernetes-custom-resource-definitions-crds)
 - [Kubernetes Deployment](#kubernetes-deployment)
 - [CLI](#cli)
 - [Related Documentation](#related-documentation)
@@ -71,6 +72,8 @@ Controllers watch Kubernetes Custom Resource Definitions (CRDs) and trigger acti
 
 Controllers are enabled via `ENABLE_K8S_CONTROLLERS=true` and use [controller-runtime](https://github.com/kubernetes-sigs/controller-runtime).
 
+**GitOps sync controllers** (Connected Mode only): [`internal/sync/controller/`](internal/sync/controller/) holds a second set of reconcilers — one each for `TestWorkflow`, `TestWorkflowTemplate`, `TestTrigger`, `WorkflowTrigger`, `Webhook`, and `WebhookTemplate` — that push Kubernetes resources into the Control Plane over the gRPC `SyncService` ([`internal/sync/grpc/`](internal/sync/grpc/)). They are registered separately in `cmd/api-server/main.go` behind `GITOPS_KUBERNETES_TO_CLOUD_ENABLED`. Because the Control Plane grants exclusive ownership of a synced resource to a single GitOps agent, a sync it rejects as an ownership conflict is returned as a `reconcile.TerminalError` instead of being retried, so one agent cannot overwrite another's resources and cannot spin on a conflict it has no way to resolve. See [`AGENTS.md`](AGENTS.md) for the full ownership contract.
+
 ### 3. TestWorkflow Execution Runtime
 
 Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows) as an abstraction layer for running any kind of test inside Kubernetes.
@@ -92,8 +95,37 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 - Core TestWorkflow executor (`testworkflowexecutor/`)
 - TestWorkflow processing and step execution
 - Result aggregation and status management
+- Execution worker (`executionworker/`): applies the workflow to Kubernetes, watches the job and pod, and stops executions. When a caller aborts or cancels an execution, it passes an actor code, a reason code, and an optional detail in `DestroyOptions`, and the worker writes them into the job annotations `testkube.io/termination-actor`, `testkube.io/termination-reason`, and `testkube.io/termination-detail`. The result reader renders the words for both codes, so the stored error message names the component that stopped the execution and, when there is one, the cause.
+- Runner gRPC client (`pkg/runner/grpc/`): receives execution starts from the control plane. When the runner cannot start an execution, the client reads the reason code from the `StartError` in the error chain and declines the execution with the code and the error text, so the control plane stores the cause on the execution.
 
-### 4. Storage Layer
+### 4. Execution Lineage and Reruns
+
+A rerun descends from a specific earlier execution, and `TestWorkflowExecutionLineage` (`baseId`, `rootId`, `attempt`) is what records that. It is written for **every** execution, not only reruns: an original run is its own root at attempt 1, so "every execution of chain R" is one predicate and includes the original. In SQL that predicate is `COALESCE(lineage_root_id, id) = R`, not the bare column: a row written before lineage existed carries NULL there and is its own root, so a bare-column query would find a rerun of a legacy execution but not the original it descends from. The chain index is built on the same expression.
+
+**Propagation**: only the base execution id travels on the wire, as `ScheduleRequest.base_execution_id` - a caller able to assert a root or an attempt could forge a chain. The scheduler derives the rest:
+
+```
+ScheduleRequest.base_execution_id
+  -> Enqueuer.deriveLineage         (loads the base; root carried down, attempt + 1)
+  -> execution record               (lineage_base_id / lineage_root_id / lineage_attempt)
+  -> ExecutionStart.lineage         (every writer must read it back off the record)
+  -> ExecutionConfig.Lineage        (the pod's internal config)
+  -> RerunExecutionId()             (resolves the reserved execution("rerun") reference)
+```
+
+Loading the base is also where the Control Plane confirms it belongs to the caller's environment, as `proto/service.proto` requires: the results repository is scoped to the organization and environment, so a base outside them comes back not-found and the request is refused.
+
+The same path exists in the connected-mode scheduler in `testkube-cloud-api`, which keeps its own copy of the `test_workflow_executions` schema and reads executions through its own queries. Both halves have to carry lineage; a writer that omits it sends the pod nothing, `execution("rerun")` stops resolving, and nothing reports it.
+
+**Storage**: three scalar columns rather than JSONB, because they are queried - an ordered range scan behind the organization/environment prefix, which a GIN containment index could neither order nor compose with. Indexed with a non-partial expression index on `COALESCE(lineage_root_id, id)`, so both chained rows and legacy/original rows participate in the same ordered scan, and on `COALESCE(lineage_attempt, 1)` rather than the bare attempt, so a legacy row - NULL attempt, meaning 1 - orders as the chain root it is instead of sorting last. A chain query has to spell both expressions the same way to get the index.
+
+**Legacy rows**: executions written before the columns existed carry NULL, and are never backfilled. They mean exactly what an original run means, and `TestWorkflowExecution.EffectiveLineage()` synthesizes that - no base, itself as the root, attempt 1. That accessor is the single source of the default: the expression machine behind `{{ execution.lineage.* }}` applies the same field-by-field fallbacks, so an old execution cannot report one lineage through the API and a different one to its own workflow.
+
+**Resolved in the pod, not while scheduling**: `IntermediateExecution.Resolve` substitutes `execution.*` into the spec and the result is stored as `ResolvedWorkflow`, which a rerun replays verbatim unless it is asked for the latest definition. So anything resolved there is frozen at the values of the run that produced the snapshot. For an id or a number that is correct - the snapshot is a record of that run - but for lineage it is fatal: the original's "no base, attempt 1" would be baked in, every rerun of that snapshot would take the original branch, and `execution("rerun")` would never be reached. `CreateSchedulingExecutionMachine` therefore omits the accessor, which leaves `{{ execution.lineage.* }}` dynamic rather than empty (an accessor nothing matches resolves to itself), and the pod resolves it against the execution actually running - including in step conditions, which `ResolveCondition` evaluates through `data.Expression`. Do not add lineage back to that machine to make it usable in a pod-spec field; that is the trade-off, not an oversight. `TestResolveLeavesLineageForThePod` is the regression.
+
+**Reserved references**: `execution("parent")` and `execution("rerun")` resolve before the registry of executions a workflow scheduled, so a child aliased - or a workflow named - `parent`/`rerun` cannot shadow them. A collision is refused rather than resolved either way, since preferring the reserved meaning would instead make that child unreachable by name.
+
+### 5. Storage Layer
 
 **PostgreSQL** (Future Primary Database, currently in Preview)
 
@@ -109,18 +141,28 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 - Lease backend: [`pkg/repository/leasebackend/mongo/`](pkg/repository/leasebackend/mongo/)
 - Factory: [`pkg/repository/mongo_factory.go`](pkg/repository/mongo_factory.go)
 
+**MongoDB to PostgreSQL conversion**
+
+- **Entry Point**: [`cmd/convert/main.go`](cmd/convert/main.go). Migrator: [`pkg/convert/`](pkg/convert/)
+- A one-shot tool for an installation moving off MongoDB. It copies `testworkflowresults` into the `test_workflow_*` tables and the Test Workflow counters into `execution_sequences`, so execution history and numbering survive the switch from `API_MONGO_DSN` to `API_POSTGRES_DSN`. Nothing else in MongoDB needs to move: artifacts and logs are in object storage, and definitions are CRDs.
+- It applies the PostgreSQL migrations itself, then streams documents from a Mongo cursor and writes each batch with `COPY`. The batch commits in the same transaction as its progress row in `convert_checkpoints`, so an interrupted run resumes where it stopped and never double-writes. When it finishes, it compares source and target counts.
+- Because it writes rows directly rather than through the repository, any schema change to those tables also needs a change in `pkg/convert/executions_row.go`. See [`AGENTS.md`](AGENTS.md).
+- Shipped as the `kubeshop/testkube-convert` image, and run in-cluster through the chart's optional `convert` Job (see [Kubernetes Deployment](#kubernetes-deployment)).
+
 **MinIO** (Object Storage)
 
 - Stores TestWorkflow execution artifacts (logs, reports, files)
 - Buckets: `testkube-artifacts`, `testkube-logs`
 - Storage interface: [`pkg/storage/`](pkg/storage/)
+- Also stores step dependency caches under the `.tkcache/v1` prefix, keyed and scoped by [`pkg/executioncache/`](pkg/executioncache/) so that a workflow-scoped entry cannot be addressed by another workflow. Retention is a prefix-filtered bucket lifecycle rule; see "Configuration references" in [`AGENTS.md`](AGENTS.md) for why `STORAGE_EXPIRATION` stays opt-in while `STORAGE_CACHE_EXPIRATION` defaults to 1 day.
+- Pods never use the MinIO SDK. The toolkit asks the Control Plane for a presigned URL over gRPC and performs a plain HTTP PUT/GET, so object-store credentials stay out of workflow containers. Dependency caches use their own presign RPCs (`GetExecutionCachePresigned`, `SaveExecutionCachePresigned`), which resolve the cache scope from the execution rather than from the request.
 
 **NATS** (Message Queue)
 
 - Async job processing and event publishing
 - Event bus: [`pkg/event/bus/`](pkg/event/bus/)
 
-### 5. Event System
+### 6. Event System
 
 **Location**: [`pkg/event/`](pkg/event/)
 
@@ -129,7 +171,7 @@ The event system publishes and listens to TestWorkflow execution events:
 - **Event Listeners**: [`pkg/event/kind/`](pkg/event/kind/) - Webhooks, K8s events, CD events, WebSockets
 - **Event Emitter**: [`pkg/event/emitter.go`](pkg/event/emitter.go) - Publishes execution lifecycle events
 
-### 6. REST API
+### 7. REST API
 
 Testkube exposes REST APIs for interacting with core resources and functionality - [Read More](https://docs.testkube.io/openapi/overview).
 
@@ -138,6 +180,7 @@ Testkube exposes REST APIs for interacting with core resources and functionality
 - Defines the complete REST API contract
 - Used for client code generation and documentation
 - Generated models: [`pkg/api/v1/testkube/`](pkg/api/v1/testkube/)
+- The actor codes and the reason codes, with their words, live in the same package as hand-written files, so the worker, the runner, and the control plane share one definition
 
 **Framework**: Uses [Fiber](https://gofiber.io/) web framework for HTTP routing and middleware
 
@@ -156,7 +199,7 @@ Testkube exposes REST APIs for interacting with core resources and functionality
 
 **Port**: HTTP API listens on port 8088 (configurable via environment variables)
 
-### 7. Prometheus Metrics Endpoint
+### 8. Prometheus Metrics Endpoint
 
 **Endpoint**: `GET /metrics`
 
@@ -168,7 +211,7 @@ The API server exposes Prometheus metrics at `/metrics` for monitoring and obser
 
 **Access**: Metrics are accessible at `http://localhost:8088/metrics` (or the configured API server port).
 
-### 8. Logging and Telemetry
+### 9. Logging and Telemetry
 
 #### Logging
 
@@ -209,13 +252,17 @@ Telemetry collects usage analytics to help improve the product. It can be disabl
 - **Segment.io** (`sender_sio.go`) - Primary analytics backend
 - **Google Analytics** (`sender_ga4.go`) - Alternative analytics backend
 - **Testkube Analytics** (`sender_tka.go`) - Internal analytics
+- **PostHog** (`install_tracker.go`) - `testkube install local` step events and `testkube init demo`'s `init_demo_started`/`init_demo_finished` (with `dry_run`), see [Local Install](#local-install)
+
+All sends are skipped when `DO_NOT_TRACK` is set.
 
 **Heartbeat**: [`cmd/api-server/services/telemetry.go`](cmd/api-server/services/telemetry.go)
 
 - Sends a `testkube_api_start` event on startup and a `testkube_api_heartbeat` event every hour
 - Both events include the detected cluster type and agent capabilities
+- Capability tags come from [`cmd/api-server/services/capabilities.go`](cmd/api-server/services/capabilities.go) and cover the agent persona, connection mode, enabled features, and whether this is a Testkube-provisioned hosted runner (`hosted-runner`) rather than a user-deployed one
 
-### 9. Kubernetes Custom Resource Definitions (CRDs)
+### 10. Kubernetes Custom Resource Definitions (CRDs)
 
 **Definition Location**: [`api/`](api/)
 **Generated CRDs**: [`k8s/crd/`](k8s/crd/)
@@ -263,6 +310,7 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
   - **Definition**: [`api/testtriggers/v1/testtrigger_types.go`](api/testtriggers/v1/testtrigger_types.go)
   - **Purpose**: Automatically triggers tests/workflows based on Kubernetes events
   - **Features**: Watches Pods, Deployments, Services, etc. and triggers executions; supports git-content based triggers reconciled by the git informer
+  - **Event forms**: `spec.event` (single) and `spec.events` (list) are mutually exclusive; validation in `api/testtriggers/v1/validation.go` enforces exactly one, and consumers normalize both forms through `EffectiveEvents()` (CRD spec and API model each expose it) — new event consumers must use the normalized list, never read `spec.event` directly
   - **Leader behavior**: Git informer reconciliation is registered as a leader-coordinated task in `cmd/api-server/main.go`, so only the elected leader performs git polling/pulls
 
 #### Deprecated CRDs
@@ -297,6 +345,7 @@ The Helm chart deploys:
 - MinIO (via subchart)
 - NATS (via subchart)
 - Kubernetes RBAC and service accounts
+- Optionally, the one-shot `convert` Job (`convert.enabled`, off by default) that migrates MongoDB data into PostgreSQL. It is not a Helm hook, because an operator triggers the cutover. It takes both DSNs from the `testkube-api` database settings and resumes from its checkpoint when retried.
 
 **Configuration**: See [`k8s/helm/testkube/values.yaml`](k8s/helm/testkube/values.yaml) for deployment configuration.
 
@@ -308,11 +357,18 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 
 ### Architecture
 
+**Completion Command**: [`cmd/kubectl-testkube/commands/completion.go`] (custom implementation that generates zsh completion under the actual binary name `kubectl-testkube` instead of `testkube` to ensure proper shell integration)
+
+
 **Command Structure**: [`cmd/kubectl-testkube/commands/`](cmd/kubectl-testkube/commands/)
 
 - Root command and command groups (testworkflows, webhooks, artifacts, etc.)
 - Common utilities: [`cmd/kubectl-testkube/commands/common/`](cmd/kubectl-testkube/commands/common/)
 - Client abstraction: Works with both standalone API and control plane APIs
+
+**Context Resolution**: Commands that act on a Control Plane environment resolve their target through [`cmd/kubectl-testkube/commands/common/orgenv.go`](cmd/kubectl-testkube/commands/common/orgenv.go). The precedence is an explicit `--org-id`/`--env-id`, then `--org-name`/`--env-name` resolved against the Control Plane's organization and environment listings, then an interactive selector when the terminal allows one. Name matching is exact, with a slug fallback for environments, and an ambiguous name is an error rather than an arbitrary pick. The resolved ids are persisted to `~/.testkube/config.json`, which is the context every later command reads.
+
+**Prompts**: Interactive prompts live in [`pkg/ui`](pkg/ui/) and all pass through the terminal check in [`pkg/ui/interactive.go`](pkg/ui/interactive.go). When stdin is not a terminal the prompt is refused with an actionable message instead of being drawn, which keeps unattended runs (CI, coding agents, containers without a TTY) from blocking on input nobody can supply. `ui.StdinIsInteractive()` exposes the same check so a command can choose a non-interactive path; `GetClient` uses it to refuse an automatic login when a token refresh fails without a terminal.
 
 **Client Layer**:
 
@@ -325,6 +381,55 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 - API server endpoints (standalone or control plane)
 - Authentication tokens
 - Contexts (for multi-environment setups)
+
+### Local Install
+
+**Location**: [`pkg/localinstall/`](pkg/localinstall/), command [`cmd/kubectl-testkube/commands/install_local.go`](cmd/kubectl-testkube/commands/install_local.go)
+
+`testkube install local` (hidden) runs preflight checks before a laptop install. A first run at a terminal with a kubectl context first asks whether to install here or in that context (named, with `(remote)` when it does not look local); the context choice runs `testkube init demo` as its own process, never with `-y`, and every other run shows that alternative under the banner. Missing, unreachable or permission-denied Docker blocks, and so does Podman's `docker` stand-in (kind is always told to use Docker); for those two, and not for Docker missing under WSL, install's fix also offers `testkube init demo` for the user's own cluster, as does `--help`; missing `kubectl`, low Docker CPU, memory or disk, low Linux inotify limits (only when Docker shares this kernel), and unreachable download sites only warn. Resources come from `docker info`, so Docker Desktop's VM limits apply rather than the host's. `helm` and `kind` always use our own pinned copies, and missing tools are downloaded at pinned versions, checksum-verified, into `~/.testkube/bin`; that folder is appended to the CLI's own `PATH`, so the user's versions still win. It then creates (or reuses and starts) a kind cluster named `testkube` with its own kubeconfig at `~/.testkube/kubeconfig`, five browser ports bound to `127.0.0.1`, and storage mounted from `~/.testkube/data` in fixed per-volume folders that a rebuilt cluster finds again and an uninstall keeps. A rerun reuses it only when it carries the random mark saved in `~/.testkube/cluster-id` at creation, checked before a stopped cluster is started. A new cluster pulls Docker Hub images through `mirror.gcr.io` (no per-network pull limit) when the node reaches it within 5 seconds, falling back to Docker Hub. Finally it installs the pinned `testkube-enterprise` and `testkube-runner` charts (OCI, demo values embedded in the binary) with our own helm, isolated from the user's helm, kube and Docker settings under `~/.testkube/helm`. Passwords baked into the kept data (credentials master, MinIO, AI token) and the runner key are generated once into `~/.testkube/secrets.json` (0600); the passwords are pre-created as Secrets, so a rebuilt cluster can still open old data; the license and runner key reach helm only through temporary 0600 values files. Five `testkube-local-*` NodePort Services expose the browser ports, and every browser URL in the values follows the chosen host ports. A release left pending by a killed helm is uninstalled first (data is kept), and a migration Job that loses the race with postgres is retried once after postgres is ready. While helm waits, it reads pods, jobs and events from the node every 5 seconds and stops helm early when a missing image, Docker Hub's download limit, or too little CPU or memory lasts a minute (a cancelled release is cleaned up by the next run); meanwhile a terminal shows one row per service and a footer with bytes downloaded (the node's eth0 since helm started) against the rounded `ImagesSize`, the ready count and elapsed time, and output that is not a terminal gets a `Still installing` line every 30 seconds; when helm fails waiting on pods it names the stuck service by role (the root cause, not services waiting on it), the reason, and a fix matched to the Docker app. A failed step 6 (not Ctrl+C) also saves `~/.testkube/logs/install-<time>.txt` (0600, newest 10 kept, 1 MB cap) for support: versions, Docker size and ports, then only picked pod fields, events and log tails (never pod specs, which carry the license), with the known secrets and secret-looking patterns masked. It ends with a box showing the dashboard URL and the login, then points the CLI at the install (a dex password login mints an API key) only when the CLI had no config file before this run or already points there (its key matches the hash in `~/.testkube/cli-key-mark`); otherwise it prints `testkube set context local`, which does the same on request. Install events carry `wsl` (`1` or `2`, from the kernel release) when run under WSL, which reports `os` as `linux`. Then it opens the dashboard in the browser (the Windows one on WSL; skipped on Linux without a screen). The cluster comes back on its own when Docker restarts (kind's on-failure restart policy). `testkube status local` (a hidden subcommand of `status`) only reads: Docker, our cluster (or ours in another Docker context), whether the dashboard and API answer, and kept data; it prints the login when ready and the next command otherwise, with exit codes 0 ready, 2 not answering yet, 3 stopped or not installed, 4 Docker unusable. `testkube uninstall local` (a hidden subcommand of `purge`, so it never purges the current kube context) removes the cluster only when it carries the owner mark (and, when the active Docker has none, refuses while another Docker context answering within 2 seconds has ours; with `docker` missing, which may only be hidden, it skips the cluster and keeps `cluster-id` and data), then the cluster's files (`kind.yaml`, `kubeconfig`, `helm/`, `install-*`, `cluster-id` last); data, tools, reports and CLI config stay, except that a CLI context pointing at this install is cleared. `--delete-data` (with a `[y/N]` prompt, or `--yes`; no TTY requires `--yes`) also deletes `~/.testkube/data` through a short-lived container from the node image, since containers own those files on Linux, then `secrets.json`; it falls back to printing a `sudo rm` line.
+
+Each step is reported to PostHog (project "On Prem Trials", via the `t.testkube.io` proxy) by [`pkg/telemetry/install_tracker.go`](pkg/telemetry/install_tracker.go), so drop-off can be measured per step. Once the license key is valid, events are linked to the license owner's email (`GetEmail`), merging the earlier anonymous ones. A short notice is printed first; `DO_NOT_TRACK` or the CLI's `telemetryEnabled: false` disables the events and the notice.
+
+### MCP Server
+
+**Location**: [`pkg/mcp/`](pkg/mcp/) (see its [README](pkg/mcp/README.md))
+
+`testkube mcp serve` and the `testkube/mcp-server` image expose Testkube to AI assistants over the Model Context Protocol. The tools in [`pkg/mcp/tools/`](pkg/mcp/tools/) depend on small client interfaces, implemented over HTTP by `APIClient` ([`pkg/mcp/api.go`](pkg/mcp/api.go)) and in-process by the Control Plane's `HandlerClient`, which registers the same tools on its per-environment `/mcp` endpoint.
+
+The Insights board tools keep their shared rules in [`pkg/mcp/boards/`](pkg/mcp/boards/): the report param validation and defaults, the translation of a report into the org-scoped `/insights/*` query that renders it, and the board layout. It is a port of the dashboard's rules, because the Control Plane stores report params opaquely, and both clients use it so that what the MCP writes renders in the dashboard and `render_board` returns the numbers the dashboard shows. Boards are organization-scoped and served only to user sessions, never to API tokens. Board updates are conditional on the board version the tool read (a counter every write increments), so an update built from a stale read is refused and rebuilt rather than overwriting a concurrent edit. Deleting a board is not conditional: it removes the board whatever changed since it was read.
+
+### External Integration: License Event Reporting
+
+The CLI reports installation lifecycle events to the Testkube license service so the
+install funnel can be tracked as telemetry.
+
+**Endpoint**: `POST https://license.testkube.io/events` (the license worker's `/events`
+handler). The URL is defined as `LicenseEventsURL` in
+[`pkg/diagnostics/validators/license/client.go`](pkg/diagnostics/validators/license/client.go).
+
+**Client**: `Client.ReportEvent(license, event)` in the same file marshals
+`{ "license": <key>, "event": <name> }` and POSTs it with a short (5s) request timeout.
+
+**Events** (constants in `client.go`):
+
+- `cli_install_started` — emitted right before the Helm install begins.
+- `cli_install_finished` — emitted right after the install succeeds.
+
+**Flow**: During `testkube init demo`
+([`cmd/kubectl-testkube/commands/init.go`](cmd/kubectl-testkube/commands/init.go)), the
+`reportLicenseEvent` helper wraps `ReportEvent`. It is:
+
+- **Telemetry-gated** — it is a no-op when the user has disabled telemetry
+  (`config.Data.TelemetryEnabled == false`).
+- **Non-blocking** — each call runs in a background goroutine so a slow or unreachable
+  endpoint never stalls the install path.
+- **Best-effort / non-fatal** — failures are logged at debug level only and never abort
+  the installation.
+
+**Authentication**: the license key sent in the request body is itself the credential —
+the license worker validates the key (against Keygen) before recording anything, so no
+separate shared secret ships in the public CLI. Recording is scoped to that license's own
+plan on the worker side.
 
 ## Related Documentation
 

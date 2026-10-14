@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -65,6 +66,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		mockWebhookRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 		mockWebhookRepository.EXPECT().CollectExecutionResult(gomock.Any(), gomock.Any(), "l1", gomock.Any(), http.StatusBadGateway).AnyTimes()
 		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "", nil, false, nil, nil, listenerWithMetrics(v1.NewMetrics()), listenerWithWebhookResultsRepository(mockWebhookRepository))
+		l.sendRetryBaseDelay = time.Millisecond
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -85,6 +87,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		mockWebhookRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 		mockWebhookRepository.EXPECT().CollectExecutionResult(gomock.Any(), gomock.Any(), "l1", gomock.Any(), 0).AnyTimes()
 		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "", "", nil, false, nil, nil, listenerWithMetrics(v1.NewMetrics()), listenerWithWebhookResultsRepository(mockWebhookRepository))
+		s.sendRetryBaseDelay = time.Millisecond
 
 		// when
 		r := s.Notify(testkube.Event{
@@ -190,7 +193,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		// Mock repository to return previous status as PASSED
 		mockTestWorkflowRepo := testworkflow.NewMockRepository(mockCtrl)
 		mockTestWorkflowRepo.EXPECT().
-			GetPreviousFinishedState(gomock.Any(), "test-workflow", gomock.Any()).
+			GetPreviousFinishedState(gomock.Any(), "test-workflow", gomock.Any(), testworkflow.GetPreviousFinishedStateOptions{SkipSilentWebhookExecutions: true}).
 			Return(testkube.PASSED_TestWorkflowStatus, nil).
 			Times(1)
 
@@ -239,7 +242,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		// Mock repository to return previous status as FAILED
 		mockTestWorkflowRepo := testworkflow.NewMockRepository(mockCtrl)
 		mockTestWorkflowRepo.EXPECT().
-			GetPreviousFinishedState(gomock.Any(), "test-workflow", gomock.Any()).
+			GetPreviousFinishedState(gomock.Any(), "test-workflow", gomock.Any(), testworkflow.GetPreviousFinishedStateOptions{SkipSilentWebhookExecutions: true}).
 			Return(testkube.FAILED_TestWorkflowStatus, nil).
 			Times(1)
 

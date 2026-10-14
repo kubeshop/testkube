@@ -2,6 +2,9 @@ package expressions
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	math2 "math"
@@ -299,6 +302,49 @@ var stdFunctions = map[string]StdFunction{
 			return NewValue(words), err
 		}),
 	},
+	"hash": {
+		ReturnType: TypeString,
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
+			if len(value) == 0 {
+				return nil, fmt.Errorf(`"hash" function expects at least 1 argument, 0 provided`)
+			}
+			h := sha256.New()
+			for i := range value {
+				// A string contributes its own bytes, so hash(file("x")) is the hash of
+				// the file's contents. Anything else contributes its canonical JSON,
+				// which sorts map keys and so stays stable between runs - the
+				// expression serialiser makes no such guarantee.
+				var encoded []byte
+				kind := byte('s')
+				if value[i].IsString() {
+					str, _ := value[i].StringValue()
+					encoded = []byte(str)
+				} else {
+					var err error
+					encoded, err = json.Marshal(value[i].Value())
+					if err != nil {
+						return nil, fmt.Errorf(`"hash" function: argument %d: %w`, i+1, err)
+					}
+					kind = 'j'
+				}
+
+				// Framed by length, not by a separator. A separator only works if it
+				// cannot occur inside an argument, and a string here can be the bytes of
+				// a file, so it can contain anything - with a NUL between them,
+				// hash("a", "b") and hash("a\x00b") both came to a\x00b\x00, and two
+				// different dependency sets shared a cache key.
+				//
+				// The kind is folded in as well, so a string is never confused with the
+				// JSON that happens to spell it.
+				var frame [9]byte
+				frame[0] = kind
+				binary.BigEndian.PutUint64(frame[1:], uint64(len(encoded)))
+				_, _ = h.Write(frame[:])
+				_, _ = h.Write(encoded)
+			}
+			return NewValue(hex.EncodeToString(h.Sum(nil))), nil
+		}),
+	},
 	"trim": {
 		ReturnType: TypeString,
 		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
@@ -431,10 +477,14 @@ var stdFunctions = map[string]StdFunction{
 				if err != nil {
 					return nil, fmt.Errorf(`"at" function expects 2nd argument to be number for string, %s provided`, value[1])
 				}
-				if k >= 0 && k < int64(len(v)) {
-					return NewValue(v[int(k)]), nil
+				// Index by rune, so multibyte characters come back whole. Indexing the
+				// string directly would yield a byte, which serializes as a number, and
+				// slicing a single byte would split multibyte characters into invalid UTF-8.
+				runes := []rune(v)
+				if k >= 0 && k < int64(len(runes)) {
+					return NewValue(string(runes[int(k)])), nil
 				}
-				return nil, fmt.Errorf(`"at" function: error: out of bounds (length=%d, index=%d)`, len(v), k)
+				return nil, fmt.Errorf(`"at" function: error: out of bounds (length=%d, index=%d)`, len(runes), k)
 			}
 			return nil, fmt.Errorf(`"at" function can be performed only on lists, maps and strings: %s provided`, value[0])
 		}),

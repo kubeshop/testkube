@@ -921,3 +921,80 @@ func TestEmitterReconcileInterval(t *testing.T) {
 		assert.Equal(t, DefaultReconcileInterval, emitter.reconcileInterval)
 	})
 }
+
+// TestEmitter_CauseEvents checks the delivery of the cause events: each one arrives with its own
+// type, and every subscribed type that matches gets its own call, as for the become events.
+func TestEmitter_CauseEvents(t *testing.T) {
+	eventBus := bus.NewEventBusMock()
+	mockCtrl := gomock.NewController(t)
+	t.Cleanup(mockCtrl.Finish)
+	mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+	mockLeaseRepository.EXPECT().TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+	emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+	t.Cleanup(emitter.eventCache.Stop)
+
+	tests := []struct {
+		name      string
+		types     []testkube.EventType
+		wantTypes []testkube.EventType
+	}{
+		{
+			name:      "a cause event arrives with its own type",
+			types:     []testkube.EventType{testkube.END_TESTWORKFLOW_INFRASTRUCTURE_FAILURE_EventType},
+			wantTypes: []testkube.EventType{testkube.END_TESTWORKFLOW_INFRASTRUCTURE_FAILURE_EventType},
+		},
+		{
+			name:      "a cause event next to not-passed gives one call for each",
+			types:     []testkube.EventType{testkube.END_TESTWORKFLOW_INFRASTRUCTURE_FAILURE_EventType, testkube.END_TESTWORKFLOW_NOT_PASSED_EventType},
+			wantTypes: []testkube.EventType{testkube.END_TESTWORKFLOW_INFRASTRUCTURE_FAILURE_EventType, testkube.END_TESTWORKFLOW_NOT_PASSED_EventType},
+		},
+		{
+			name:      "a status event next to a cause event gives one call for each",
+			types:     []testkube.EventType{testkube.END_TESTWORKFLOW_FAILED_EventType, testkube.END_TESTWORKFLOW_INFRASTRUCTURE_FAILURE_EventType},
+			wantTypes: []testkube.EventType{testkube.END_TESTWORKFLOW_FAILED_EventType, testkube.END_TESTWORKFLOW_INFRASTRUCTURE_FAILURE_EventType},
+		},
+		{
+			name:  "another cause gets no call",
+			types: []testkube.EventType{testkube.END_TESTWORKFLOW_TEST_FAILURE_EventType},
+		},
+	}
+
+	listeners := make([]*dummy.DummyListener, len(tests))
+	for i, tt := range tests {
+		listeners[i] = &dummy.DummyListener{Id: tt.name, Types: tt.types}
+		emitter.Register(listeners[i])
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+	go emitter.Listen(ctx)
+	time.Sleep(50 * time.Millisecond)
+
+	// A failed execution emits its status event and one not-passed event.
+	execution := &testkube.TestWorkflowExecution{
+		Id:       "exec-oom",
+		Workflow: &testkube.TestWorkflow{Name: "tw1"},
+		Result: &testkube.TestWorkflowResult{
+			StatusDetails: &testkube.TestWorkflowStatusDetails{Type_: string(testkube.StatusDetailsTypeExecutionFailure)},
+		},
+	}
+	emitter.Notify(testkube.Event{Id: "event-failed", Type_: testkube.EventEndTestWorkflowFailed, TestWorkflowExecution: execution})
+	emitter.Notify(testkube.Event{Id: "event-not-passed", Type_: testkube.EventEndTestWorkflowNotPassed, TestWorkflowExecution: execution})
+
+	assert.Eventually(t, func() bool {
+		for i, tt := range tests {
+			if listeners[i].GetNotificationCount() < len(tt.wantTypes) {
+				return false
+			}
+		}
+		return true
+	}, 5*time.Second, 20*time.Millisecond)
+	// Give an unexpected extra call the time to arrive.
+	time.Sleep(100 * time.Millisecond)
+
+	for i, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.ElementsMatch(t, tt.wantTypes, listeners[i].GetReceivedEventTypes())
+		})
+	}
+}

@@ -26,10 +26,14 @@ type Instruction struct {
 	Value interface{}
 }
 
-func SprintOutput(ref string, name string, value interface{}) string {
+// SprintOutput formats an output instruction. value must marshal to a JSON object.
+func SprintOutput(ref string, name string, value any) string {
 	j, err := json.Marshal(value)
 	if err != nil {
 		panic(fmt.Sprintf("error while marshalling reference: %v", err))
+	}
+	if len(j) == 0 || j[0] != '{' {
+		panic(fmt.Sprintf("output %q must be a JSON object, got %s", name, j))
 	}
 	var sb strings.Builder
 	sb.WriteString("\n")

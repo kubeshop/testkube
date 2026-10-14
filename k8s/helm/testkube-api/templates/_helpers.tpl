@@ -327,6 +327,8 @@ Define API environment in standalone mode
   value:  "{{ .Values.storage.bucket }}"
 - name: "STORAGE_EXPIRATION"
   value:  "{{ .Values.storage.expiration }}"
+- name: "STORAGE_CACHE_EXPIRATION"
+  value:  "{{ .Values.storage.cacheExpiration }}"
 - name: "STORAGE_ACCESSKEYID"
   {{- if .Values.storage.secretNameAccessKeyId }}
   valueFrom:

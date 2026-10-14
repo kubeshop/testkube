@@ -2,32 +2,22 @@ package mcp
 
 import (
 	"context"
+
+	mcpcontext "github.com/kubeshop/testkube/pkg/mcp/context"
 )
 
-type DebugInfo struct {
-	Source string         `json:"source"` // "http", "file", "database", "cache", etc.
-	Data   map[string]any `json:"data"`   // Source-specific debug data
-}
+// DebugInfo lives in mcpcontext so the tools, which this package imports,
+// can use it too. These keep the existing names working.
+type DebugInfo = mcpcontext.DebugInfo
 
 func NewDebugInfo() *DebugInfo {
-	return &DebugInfo{
-		Data: make(map[string]any),
-	}
+	return mcpcontext.NewDebugInfo()
 }
 
-type contextKey string
-
-const debugInfoKey contextKey = "debug_info"
-
 func WithDebugInfo(ctx context.Context) (context.Context, *DebugInfo) {
-	debugInfo := NewDebugInfo()
-	newCtx := context.WithValue(ctx, debugInfoKey, debugInfo)
-	return newCtx, debugInfo
+	return mcpcontext.WithDebugInfo(ctx)
 }
 
 func GetDebugInfo(ctx context.Context) *DebugInfo {
-	if debugInfo, ok := ctx.Value(debugInfoKey).(*DebugInfo); ok {
-		return debugInfo
-	}
-	return nil
+	return mcpcontext.GetDebugInfo(ctx)
 }

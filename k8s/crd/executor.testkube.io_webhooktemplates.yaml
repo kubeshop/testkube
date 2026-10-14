@@ -102,6 +102,9 @@ spec:
                   - end-testworkflow-aborted
                   - end-testworkflow-canceled
                   - end-testworkflow-not-passed
+                  - end-testworkflow-test-failure
+                  - end-testworkflow-infrastructure-failure
+                  - end-testworkflow-configuration-error
                   - become-testworkflow-up
                   - become-testworkflow-down
                   - become-testworkflow-failed
@@ -174,6 +177,12 @@ spec:
                     items:
                       type: string
                     type: array
+                  schedulerPolicy:
+                    description: SchedulerPolicy controls whether a targeted execution
+                      should be created.
+                    enum:
+                    - OnlyWhenMatches
+                    type: string
                 type: object
               uri:
                 description: Uri is address where webhook should be made (golang template

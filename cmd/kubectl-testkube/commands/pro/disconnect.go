@@ -71,7 +71,7 @@ func NewDisconnectCmd() *cobra.Command {
 			// uninstall the runner chart that was installed by "pro connect";
 			// failures are non-fatal so disconnect can still restore OSS mode
 			if cfg.CloudContext.AgentReleaseName != "" && cfg.CloudContext.AgentNamespace != "" {
-				spinner := ui.NewSpinner("Uninstalling agent runner")
+				spinner := ui.NewSpinner("Uninstalling runner")
 				if cliErr := common.HelmUninstall(cfg.CloudContext.AgentNamespace, cfg.CloudContext.AgentReleaseName); cliErr != nil {
 					spinner.Fail(fmt.Sprintf("Failed to uninstall runner release %s (continuing with disconnect): %s", cfg.CloudContext.AgentReleaseName, cliErr))
 				} else {
@@ -81,9 +81,9 @@ func NewDisconnectCmd() *cobra.Command {
 
 			// Delete the agent record from the control plane that was created by "pro connect"
 			if cfg.CloudContext.AgentName != "" && cfg.CloudContext.ApiUri != "" && cfg.CloudContext.ApiKey != "" && cfg.CloudContext.OrganizationId != "" {
-				spinner := ui.NewSpinner("Deleting agent from control plane")
+				spinner := ui.NewSpinner("Deleting runner from control plane")
 				if err := common.DeleteAgent(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, cfg.CloudContext.AgentName, skipTLS); err != nil {
-					spinner.Fail(fmt.Sprintf("Failed to delete agent %q from control plane (continuing with disconnect): %s", cfg.CloudContext.AgentName, err))
+					spinner.Fail(fmt.Sprintf("Failed to delete runner %q from control plane (continuing with disconnect): %s", cfg.CloudContext.AgentName, err))
 				} else {
 					spinner.Success()
 				}

@@ -5,7 +5,6 @@ metadata:
   labels:
     core-tests: tools-preview-images-suite
     type: suite
-    dev-quality-gate: "true"
 spec:
   container:
     resources:
@@ -17,6 +16,7 @@ spec:
       parallelism: 2
       workflows:
       - name: artillery-workflow-smoke-latest-image
+      - name: artillery-workflow-smoke-template-latest
       - name: k6-workflow-smoke-latest-image
       - name: k6-workflow-smoke-master-image
       - name: locust-workflow-smoke-latest-image

@@ -184,6 +184,9 @@ func SendRunWorkflowEvent(event string, params RunWorkflowParams) (string, error
 
 // sendData sends data to all telemetry storages  in parallel and syncs sending
 func sendData(senders map[string]Sender, payload Payload) (out string, err error) {
+	if DoNotTrack() {
+		return "", nil
+	}
 	var wg sync.WaitGroup
 	wg.Add(len(senders))
 	for name, sender := range senders {

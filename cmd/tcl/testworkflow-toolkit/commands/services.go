@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -30,6 +31,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
+	toolkitcommon "github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -149,7 +151,7 @@ func NewServicesCmd() *cobra.Command {
 
 			executor := NewServicesExecutor(groupRef, base64Encoded, deps)
 			if err := executor.Execute(cmd.Context(), args); err != nil {
-				ui.Fail(err)
+				toolkitcommon.Fail(err)
 			}
 		},
 	}
@@ -207,7 +209,7 @@ func (e *ServicesExecutor) Execute(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	failed := e.runServices(ctx, instances, namespaces, state, svcParams)
+	failed, firstFailure := e.runServices(ctx, instances, namespaces, state, svcParams)
 	e.reportFinalState(state)
 
 	if failed == 0 {
@@ -215,7 +217,7 @@ func (e *ServicesExecutor) Execute(ctx context.Context, args []string) error {
 		return nil
 	}
 	fmt.Printf("Failed to start %d out of %d expected workers.\n", failed, len(instances))
-	return fmt.Errorf("%d services failed to start", failed)
+	return fmt.Errorf("%d services failed to start: %s", failed, firstFailure)
 }
 
 // parseServices supports two input formats:
@@ -421,20 +423,32 @@ func (e *ServicesExecutor) startTransferServer() error {
 	return nil
 }
 
-// runServices executes all service instances in parallel.
+// runServices executes all service instances in parallel. It returns the number of failed
+// services and the cause of the service that failed first.
 func (e *ServicesExecutor) runServices(
 	ctx context.Context,
 	instances []ServiceInstance,
 	namespaces []string,
 	state map[string][]ServiceState,
 	svcParams map[string]*commontcl.ParamsSpec,
-) int64 {
+) (int64, string) {
+	var mu sync.Mutex
+	firstFailure := ""
 	run := func(_ int64, _ string, instance *ServiceInstance) bool {
 		runner := NewServiceRunner(instance, e.groupRef, e.deps, svcParams[instance.Name], state)
-		return runner.Run()
+		if runner.Run() {
+			return true
+		}
+		mu.Lock()
+		if firstFailure == "" {
+			firstFailure = fmt.Sprintf("%s: %s", instance.Name, runner.failure)
+		}
+		mu.Unlock()
+		return false
 	}
 
-	return spawn.ExecuteParallel(ctx, run, instances, namespaces, int64(len(instances)))
+	failed := spawn.ExecuteParallel(ctx, run, instances, namespaces, int64(len(instances)))
+	return failed, firstFailure
 }
 
 // reportFinalState reports the final state of all services.
@@ -453,6 +467,8 @@ type ServiceRunner struct {
 	state    map[string][]ServiceState
 	log      func(...string)
 	info     ServiceInfo
+	// failure is the plain text cause when Run returns false.
+	failure string
 }
 
 func NewServiceRunner(
@@ -502,6 +518,7 @@ func (r *ServiceRunner) Run() bool {
 	result, err := r.deployService(cfg)
 	if err != nil {
 		r.log("failed to prepare resources", err.Error())
+		r.failure = "failed to prepare resources: " + err.Error()
 		return false
 	}
 
@@ -680,21 +697,25 @@ func (r *ServiceRunner) evaluateResult(execResult ServiceExecutionResult) bool {
 	if execResult.Error != nil {
 		r.info.Status = ServiceStatusFailed
 		r.log("error during monitoring")
+		r.failure = "error during monitoring: " + execResult.Error.Error()
 		success = false
 	} else if execResult.Failed {
 		// Service execution finished with non-PASSED status
 		r.info.Status = ServiceStatusFailed
 		r.log("service failed")
+		r.failure = "service failed"
 		success = false
 	} else if !execResult.Started {
 		// Container never started
 		r.info.Status = ServiceStatusFailed
 		r.log("container failed to start")
+		r.failure = "container failed to start"
 		success = false
 	} else if !execResult.Ready && r.instance.ReadinessProbe != nil {
 		// Container started but never became ready (only relevant for services with readiness probes)
 		r.info.Status = ServiceStatusFailed
 		r.log("container did not reach readiness")
+		r.failure = "container did not reach readiness"
 		success = false
 	} else {
 		// All checks passed - service is ready

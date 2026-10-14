@@ -16,10 +16,10 @@ func NewDebugAgentCmd() *cobra.Command {
 	var show common.CommaList
 
 	cmd := &cobra.Command{
-		Use:     "agent",
-		Aliases: []string{"ag", "a"},
-		Short:   "Show Agent debug information",
-		Long:    "Get all the necessary information to debug an issue in Testkube Agent you can fiter through comma separated list of items to show with additional flag `--show " + agentFeaturesStr + "`",
+		Use:     "runner",
+		Aliases: []string{"agent", "ag", "a"},
+		Short:   "Show Runner debug information",
+		Long:    "Get all the necessary information to debug an issue in Testkube Runner you can fiter through comma separated list of items to show with additional flag `--show " + agentFeaturesStr + "`",
 		Run:     RunDebugAgentCmdFunc(&show),
 	}
 
@@ -34,10 +34,10 @@ func RunDebugAgentCmdFunc(show *common.CommaList) func(cmd *cobra.Command, args 
 		ui.ExitOnError("loading config file", err)
 		ui.NL()
 
-		ui.H1("Agent Insights")
+		ui.H1("Runner Insights")
 
 		if cfg.ContextType != config.ContextTypeCloud {
-			ui.Errf("Agent debug is only available for cloud context")
+			ui.Errf("Runner debug is only available for cloud context")
 			ui.NL()
 			ui.ShellCommand("Please try command below to set your context into Cloud mode", `testkube set context -o <org> -e <env> -k <api-key> `)
 			ui.NL()
@@ -73,9 +73,9 @@ func RunDebugAgentCmdFunc(show *common.CommaList) func(cmd *cobra.Command, args 
 		}
 
 		if show.Enabled(showApiLogs) {
-			ui.H2("Agent API Logs")
+			ui.H2("Runner API Logs")
 			err = common.KubectlLogs(namespace, map[string]string{"app.kubernetes.io/name": "api-server"})
-			ui.ExitOnError("getting agent logs", err)
+			ui.ExitOnError("getting runner logs", err)
 			ui.NL(2)
 		}
 
@@ -95,27 +95,27 @@ func RunDebugAgentCmdFunc(show *common.CommaList) func(cmd *cobra.Command, args 
 		ui.ExitOnError("getting client", err)
 
 		if show.Enabled(showRoundtrip) {
-			ui.H2("Agent connection through Control Plane from CLI")
+			ui.H2("Runner connection through Control Plane from CLI")
 
 			i, err := client.GetServerInfo()
 			if err != nil {
-				ui.Errf("Error while doing roundtrip to agent: %v", err)
+				ui.Errf("Error while doing roundtrip to runner: %v", err)
 				ui.NL()
 				ui.Info("Possible reasons:")
-				ui.Warn("- Please check if your agent organization and environment are set correctly")
+				ui.Warn("- Please check if your runner organization and environment are set correctly")
 				ui.Warn("- Please check if your API token is set correctly")
 				ui.NL()
 			} else {
-				ui.Warn("Agent correctly connected to cloud:\n")
+				ui.Warn("Runner correctly connected to cloud:\n")
 				ui.InfoGrid(map[string]string{
-					"Agent version  ": i.Version,
-					"Agent namespace": i.Namespace,
+					"Runner version  ": i.Version,
+					"Runner namespace": i.Namespace,
 				})
 			}
 		}
 
 		if show.Enabled(showCLIToControlPlane) {
-			ui.H2("Agent connection to Control Plane from CLI")
+			ui.H2("Runner connection to Control Plane from CLI")
 
 			debug, err := GetDebugInfo(client)
 			ui.ExitOnError("connecting to Control Plane", err)

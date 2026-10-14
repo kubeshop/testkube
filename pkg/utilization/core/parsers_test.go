@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
@@ -196,4 +197,33 @@ func TestInfluxDBLineProtocolParser(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestParseMetricsUnfinalizedFile(t *testing.T) {
+	metadata := &Metadata{
+		Workflow:  "wf",
+		Step:      Step{Ref: "rabc12"},
+		Execution: "exec1",
+		Format:    FormatInflux,
+	}
+	w, err := NewFileWriter(t.TempDir(), metadata, 1)
+	require.NoError(t, err)
+
+	require.NoError(t, w.Write(context.Background(), "cpu,host=server01 usage_user=0.10 1670000000000000000"))
+	require.NoError(t, w.Write(context.Background(), "cpu,host=server01 usage_user=0.20 1670000001000000000"))
+
+	_, err = w.f.WriteString("cpu,host=server01 usage_u")
+	require.NoError(t, err)
+
+	f, err := os.Open(w.f.Name())
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = f.Close() })
+
+	metrics, parsed, invalid, err := ParseMetrics(context.Background(), f, filepath.Base(w.f.Name()))
+	require.NoError(t, err, "an unfinalized file must not fail the parse")
+	assert.Len(t, metrics, 2, "every complete sample survives")
+	assert.Equal(t, metadata.Step.Ref, parsed.Step.Ref, "metadata falls back to the filename")
+	assert.Equal(t, FormatInflux, parsed.Format)
+	// The reserved header and the half-written line, neither of which is a sample.
+	assert.Len(t, invalid, 2)
 }

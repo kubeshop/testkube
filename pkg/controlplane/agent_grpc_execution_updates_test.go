@@ -31,3 +31,29 @@ func TestCreateExecutionStart_PropagatesTags(t *testing.T) {
 	require.Equal(t, []string{"p1", "p2"}, start.GetAncestorExecutionIds())
 	require.Equal(t, "wf-a", start.GetWorkflowName())
 }
+
+// The scheduler records lineage on the execution rather than handing it to the
+// runner, so every ExecutionStart writer has to read it back off the record.
+// Omitting it does not fail: the pod simply cannot resolve execution("rerun"),
+// and a workflow written against its own previous run loses the reference with
+// nothing to say so.
+func TestCreateExecutionStart_CarriesLineage(t *testing.T) {
+	start := createExecutionStart(testkube.TestWorkflowExecution{
+		Id:      "exec-3",
+		Lineage: &testkube.TestWorkflowExecutionLineage{BaseId: "exec-2", RootId: "exec-1", Attempt: 3},
+	}, scheduling.RunnerInfo{EnvironmentId: "env-1"})
+
+	lineage := start.GetLineage()
+	require.NotNil(t, lineage)
+	require.Equal(t, "exec-2", lineage.GetBaseExecutionId())
+	require.Equal(t, "exec-1", lineage.GetRootExecutionId())
+	require.Equal(t, int32(3), lineage.GetAttempt())
+}
+
+// An execution recorded before lineage existed carries none, and nil stays nil
+// so the pod reads no rerun rather than a zeroed record.
+func TestCreateExecutionStart_LeavesLineageUnsetWithoutARecord(t *testing.T) {
+	start := createExecutionStart(testkube.TestWorkflowExecution{Id: "exec-1"}, scheduling.RunnerInfo{})
+
+	require.Nil(t, start.GetLineage())
+}
