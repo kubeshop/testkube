@@ -254,6 +254,9 @@ func printPlan(existing localinstall.ExistingState, running bool) {
 		plan[3], plan[4] = "check helm and kind in ~/.testkube/bin", "start the local cluster \"testkube\" in Docker"
 	}
 	switch existing {
+	// Only before anything exists: a rerun has chosen this path.
+	case localinstall.TrialAbsent:
+		note += "\nAlready have a Kubernetes cluster? To install Testkube there, run:\n  " + localinstall.InitDemoCommand
 	case localinstall.TrialSetUp:
 		plan[5] = "update Testkube and open it in your browser"
 		note = "Testkube is already set up here. This run updates it, usually in under a minute.\nYour data is kept."
