@@ -31,7 +31,7 @@
 - `pkg/mcp/` implements the Model Context Protocol server for AI assistant integration.
 - Exposes tools across workflows, executions, artifacts, and metadata via `testkube mcp serve` (CLI), Docker image (`testkube/mcp-server`), or Control Plane's `/mcp` endpoint per environment.
 - Uses interface-based tool design; new tools need registration in both `pkg/mcp/server.go` and control plane's `mcp_handler.go`.
-- See `pkg/mcp/README.md` for architecture, tool patterns, and usage examples.
+- See `pkg/mcp/README.md` for architecture, tool patterns, and usage examples. "Verifying a change" below shows how to run the pull request workflows on a branch through these tools.
 - Insights board tools (`pkg/mcp/tools/boards.go`) keep their rules in `pkg/mcp/boards/`: report param validation and defaults, the report-to-`/insights/*` query translation, and the layout. It is a port of the dashboard's TypeScript (`utils/insights.ts`, `DynamicFilters/types.ts`, `reports/*/type.ts` in `testkube-cloud-api/js/packages/web`), since the Control Plane stores report params opaquely. **The Control Plane's `HandlerClient` must use this package rather than reimplement it**, and a dashboard change to those files needs a matching change here; `testdata/translation_cases.json` pins the translation.
 - Boards are organization-scoped and the Control Plane refuses API tokens on every board endpoint, so the board tools need a user session. `APIClient` refuses a `tkcapi_` token before sending anything and returns `tools.ErrBoardsRequireUser`. Every board write reads the board first and resends its description. Current Control Planes keep a description an update omits, but older ones clear it, so resending is what keeps it on those.
 - **Board updates are optimistic-concurrency writes.** Resending a value read earlier (the description, a recomputed layout) would overwrite a concurrent edit, so every update - `update_board` and the three report tools - goes through `writeBoard` in `pkg/mcp/tools/boards.go`: it sends `expectedVersion` (the board `version` it read; every write to a board increments it), the Control Plane refuses a stale write with 409, both clients turn that into `tools.ErrBoardChanged`, and the write is rebuilt from a fresh read, up to `boardWriteAttempts` times. A write's builder must derive everything from the board it is handed, never from an earlier read. The token is a counter, not `updatedAt`: two writes can share a timestamp, and a reused token would let a stale write through. A Control Plane that predates versions returns none, and the write is then unconditional. `delete_board` is deliberately not conditional: it resends nothing it read (the read only resolves a slug to the ID it deletes by), and the Control Plane checks visibility and delete rights against the board as it is at delete time, so deleting removes the board whatever changed since the read, as deleting in the dashboard does.
@@ -197,10 +197,18 @@ contents do.
 - The legacy `values.demo.yaml` profile (bundled agent, MongoDB) is deprecated but kept for older CLIs.
 - Install lifecycle telemetry: `init demo` and `install local` report `cli_install_started` (before Helm install; after the license step for `install local`) and `cli_install_finished` (after success) to the license service at `POST https://license.testkube.io/events`. The client lives in `pkg/diagnostics/validators/license/client.go` (`Client.ReportEvent`, `EventRequest`, the `LicenseEventsURL` and `EventCLIInstall*` constants); the `reportLicenseEvent`/`waitLicenseEvents` helpers in `init.go` make delivery telemetry-gated (`install local` also skips them when its install tracker is off, e.g. `DO_NOT_TRACK`), non-blocking (background goroutine), and flushed before exit with a bounded wait. The license key in the body is the credential (validated worker-side before recording), so no shared secret ships in the CLI. Adding a new lifecycle event: add an `EventCLIInstall*` constant and a `reportLicenseEvent` call, and allowlist it in the license worker's `/events` handler (`testkube-infrastructure`). `init demo` also sends `init_demo_started`/`init_demo_finished` to the PostHog install tracker, joined to `install local` runs by machine id. Keep `ARCHITECTURE.md` in sync.
 
-## Local laptop install
+## Running locally
 
-- Hidden `testkube install local`, `testkube status local` and `testkube uninstall local` live in `pkg/localinstall`; see its `doc.go`.
-- Pointing the CLI at the local install (after install, `testkube set context local`, and on uninstall) lives in `cmd/kubectl-testkube/commands/common/localcontext.go`.
+Pick the smallest setup that exercises the change. Everything past building needs Docker and a local Kubernetes cluster; the Makefile accepts only Linux and macOS, so on Windows use WSL.
+
+- **CLI:** `make build-kubectl-testkube-cli` builds `bin/app/kubectl-testkube`. `make build` builds every binary into `bin/app/`.
+- **Agent alone (OSS, no Control Plane):** the Tilt setup in [`DEVELOPMENT.md`](DEVELOPMENT.md). `./scripts/tilt-cluster.sh` creates the k3d cluster `testkube-dev` with a registry on `localhost:5001`, then `tilt up` builds the API server, `testworkflow-init` and `testworkflow-toolkit` from this checkout and installs `k8s/helm/testkube` into namespace `testkube-dev` with Postgres, MinIO and NATS. The API is on `localhost:8088`. `tilt ci` runs the same setup headless, runs the smoke test and exits non-zero on failure, so it is the one to use without a browser. `tilt up -- --db=mongo` switches the database.
+- **`testworkflow-init` and `testworkflow-toolkit`** only run inside a TestWorkflow pod. Exercise them through the Tilt setup by running a workflow; its `install-sample-workflows` resource applies the smoke workflows from `test/*/crd-workflow/smoke.yaml`.
+- **Agent with a Control Plane (full stack):** this repo cannot start a Control Plane. Use [testkube-workspace](https://github.com/kubeshop/testkube-workspace), which builds this checkout and a `testkube-cloud-api` checkout side by side: `tilt up oss` (agent alone), `tilt up cp` (Control Plane, dashboard and a connected agent) or `tilt up agent` (local agent, remote Control Plane). Its `tilt-local-dev` and `local-e2e-verify` skills cover the bring-up and how to verify a change against the running stack. It replaces `tk-dev`.
+- **MCP server:** `kubectl-testkube mcp serve` needs a CLI context logged in to a Control Plane (organization, environment and a token), or `TK_MCP_ENV_MODE=true` with `TK_ACCESS_TOKEN`, `TK_ORG_ID`, `TK_ENV_ID`, `TK_CONTROL_PLANE_URL` and `TK_DASHBOARD_URL`. It cannot drive the OSS Tilt agent, whose context uses `--client direct`.
+- **Not a dev loop:**
+  - `make dev` and `make run-api` start the API server outside a cluster with no database DSN and no MinIO, so it does not come up usable.
+  - Hidden `testkube install local` (`pkg/localinstall`, see its `doc.go`) installs pinned, published charts and images for trial users, so it never runs the code in this checkout. `testkube status local` and `testkube uninstall local` sit beside it, and pointing the CLI at that install (after install, `testkube set context local`, and on uninstall) lives in `cmd/kubectl-testkube/commands/common/localcontext.go`.
 
 ## Configuration references
 
@@ -210,7 +218,7 @@ contents do.
 - TestTriggers accept `spec.event` or a `spec.events` list (mutually exclusive, validated service-side); always consume them via `EffectiveEvents()` so both forms are honored — classification gates that read the single `event` field directly will silently skip list-form triggers.
 - Git trigger informer behavior is tuned via `TEST_TRIGGER_GIT_INFORMER_RECONCILE_INTERVAL`, `TEST_TRIGGER_GIT_INFORMER_REPO_DEPTH`, `TEST_TRIGGER_GIT_INFORMER_LIST_TIMEOUT`, `TEST_TRIGGER_GIT_INFORMER_MAX_COMMITS_SCAN`, `TEST_TRIGGER_GIT_INFORMER_PULL_RETRIES`, and `TEST_TRIGGER_GIT_INFORMER_PULL_RETRY_DELAY`.
 - Git trigger informer execution is leader-gated in `cmd/api-server/main.go` through the shared `leader` coordinator tasks, so only the active leader performs periodic git pulls/reconciliation.
-- Helm chart values are the source of deployment defaults; `build/_local/values.dev.yaml` (shaped by the `values.dev.tpl.yaml` template) shows the local overrides used by `tk-dev` if you need a concrete reference.
+- Helm chart values are the source of deployment defaults; `tilt-values.yaml` (repo root) shows the local overrides the Tilt setup uses if you need a concrete reference. `build/_local/values.dev.tpl.yaml` is the template for the Skaffold setup, which copies it to the gitignored `values.dev.yaml`.
 - `testkube-api` chart values `jobTolerations`/`jobAffinity`/`jobNodeSelector` (`k8s/helm/testkube-api/values.yaml`) set the `tolerations`/`affinity`/`nodeSelector` applied to the ephemeral pods spawned per test execution (`_job-template.yaml.tpl` for legacy prebuilt/container executors, `_slave-pod-template.yaml.tpl` for test-workflow slave pods). Unset (empty) by default and deliberately does not fall back to `global.tolerations`/`global.affinity`/`global.nodeSelector`, since those already carry a non-empty default (an arm64 toleration) that would otherwise silently change job/slave pod scheduling for every chart consumer.
 - Telemetry opt-out: `DO_NOT_TRACK=1` (any value except empty, `0` or `false`) skips every telemetry send in the CLI and the agent (`pkg/telemetry`).
 - CLI update-check toggle: set `TESTKUBE_DISABLE_UPDATE_CHECK=1` to suppress both the per-command hint and the `testkube version` status block. The CLI persists `lastUpdateCheckAt` and `latestKnownVersion` in `~/.testkube/config.json` to throttle the per-command hint to once per day.
@@ -234,26 +242,58 @@ After completing any code change, check whether `AGENTS.md` or `ARCHITECTURE.md`
 
 When in doubt, err on the side of updating — stale documentation is worse than a small extra commit.
 
-## Pre-commit checks
+## Verifying a change
 
-Before committing, always verify your changes pass linting and build:
+Verification has two loops. Run the inner loop before every commit, and the outer loop before asking for review.
+
+### Inner loop: local commands
 
 ```bash
-make lint          # Run golangci-lint (or `make lint-fix` to auto-fix)
-go build ./...     # Verify compilation
+make lint          # golangci-lint (or `make lint-fix` to auto-fix)
+go build ./...     # compilation
+make unit-tests    # what oss-unit-tests runs; add GOFLAGS=-count=1 to skip cached results
 ```
 
-If your changes include tests, also run `make unit-tests` before pushing.
+Run the narrower checks when the change touches what they cover:
+
+- `make verify-protobuf-generated` after editing `proto/`, and `make verify-crds-generated` after editing `api/` types (see "Regenerating artifacts").
+- `make integration-tests` runs only tests ending in `_Integration`. It expects MongoDB on `:27017`, NATS on `:4222`, MinIO on `:9000` (`minio99`/`minio123`) and Postgres on `:5432` (`API_POSTGRES_URL=postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable`); `make run-mongo run-nats` starts only the first two. The `oss-integration-tests` workflow below starts all four and is usually the simpler way to run them.
+
+`make lint` pins golangci-lint `v2.5.0` while `oss-lint-go` runs `v2.13.1`, so the two can disagree; the workflow is the one that gates the pull request.
+
+### Outer loop: the pull request workflows
+
+Pull request checks are not GitHub Actions. They are Testkube TestWorkflows in `test/testkube/oss-tests/gh-quality-loop.yaml`, started by the Testkube GitHub integration on every pull request. Each takes a `revision` config input (default `main`) and checks out `https://github.com/kubeshop/testkube.git` at that revision, so the branch must be pushed to this repository first.
+
+| Workflow | What it runs |
+| --- | --- |
+| `oss-lint-go` | `golangci-lint run ./...` |
+| `oss-lint-proto` | `buf lint`, `buf format --diff`, and `buf breaking` against `main` |
+| `oss-unit-tests` | `make unit-tests` |
+| `oss-integration-tests` | the `_Integration` tests with MongoDB, NATS, MinIO and Postgres |
+| `oss-verify-crds` | `make verify-crds-generated` |
+| `oss-verify-protobuf` | `make verify-protobuf-generated` |
+| `oss-lint-pr` | the pull request title (see "PR title format"); also needs `PR_NUMBER`, so it only runs once the pull request exists |
+
+The same file also holds `docs-prettier`, which checks testkube-docs, not this repo.
+
+To run them yourself, use the Testkube MCP server (see "MCP integration") connected to the environment that holds these workflows:
+
+1. `run_workflow` with `workflowName` and `config: {"revision": "<branch or commit SHA>"}`. It returns the execution ID.
+2. `wait_for_executions` with `executionIds` (comma-separated, to wait on several runs at once).
+3. On failure, `fetch_execution_logs` with `executionId` (narrow with `step`, `grep` or `tail`), and `list_artifacts` and `read_artifact` (`fileName`) for the JUnit reports such as `unit-tests.xml`.
+
+Without MCP, `testkube run testworkflow <name> --config revision=<branch> --watch` does the same from a CLI logged in to that environment.
 
 ## PR title format
 
-PR titles **must** follow [Conventional Commits](https://www.conventionalcommits.org/) format with a type prefix. CI will reject PRs without one. Examples:
+PR titles **must** follow [Conventional Commits](https://www.conventionalcommits.org/) format with a type prefix. The `oss-lint-pr` workflow rejects PRs without one. Examples:
 
 - `feat: Add soft-delete for workflow executions`
 - `fix: Retry log stream on 502 errors`
 - `chore: Add contextcheck linter`
 
-Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `ci`, `chore`
+Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`. A scope is allowed (`fix(cli): ...`), and `!` marks a breaking change.
 
 ## Tips
 
