@@ -244,6 +244,10 @@ func NewInitCmdDemo() *cobra.Command {
 			spinner := ui.NewSpinner("Running Kubectl command...")
 			sendTelemetry(cmd, cfg, license, "installing started", licenseName)
 			reportLicenseEvent(cfg, license, licensevalidator.EventCLIInstallStarted)
+			// Same project as install local, joined by machine id.
+			tracker := common.NewInstallTracker()
+			defer tracker.Wait()
+			tracker.Send("init_demo_started", map[string]any{"dry_run": dryRun})
 			options := common.HelmOptions{
 				Namespace:     namespace,
 				LicenseKey:    license,
@@ -284,6 +288,7 @@ func NewInitCmdDemo() *cobra.Command {
 			spinner.Success()
 
 			sendTelemetry(cmd, cfg, license, "installing finished", licenseName)
+			tracker.Send("init_demo_finished", map[string]any{"dry_run": dryRun})
 
 			reportLicenseEvent(cfg, license, licensevalidator.EventCLIInstallFinished)
 
