@@ -268,7 +268,13 @@ func askOwnCluster(tracker *telemetry.InstallTracker, kubeContext string, local 
 		WithFilter(false).
 		WithOnInterruptFunc(func() { abortInstall(tracker, "path") }).
 		Show("Choose where Testkube runs")
-	own := err == nil && choice == ownCluster
+	if err != nil {
+		// Keep the other path visible when the picker can't draw.
+		ui.Printf("%s\n", ui.LightGray(ownClusterHint))
+		tracker.Send("install_local_path", map[string]any{"path": "select_failed", "context_local": local})
+		return false
+	}
+	own := choice == ownCluster
 	path := "docker"
 	if own {
 		path = "cluster"
