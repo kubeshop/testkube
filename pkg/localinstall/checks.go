@@ -35,6 +35,8 @@ type Result struct {
 	// Secondary info, shown dimmed after Detail.
 	Hint string
 	Fix  string
+	// Only install offers it; status and uninstall need Docker anyway.
+	Alternative string
 }
 
 const (
@@ -257,6 +259,9 @@ func (c *Checker) CheckDocker(ctx context.Context) Result {
 	return c.checkDocker(ctx)
 }
 
+// init demo needs no Docker, only a cluster.
+const ownClusterAlternative = "Or, to install Testkube in your own Kubernetes cluster, run:\n  " + InitDemoCommand
+
 func (c *Checker) checkDocker(ctx context.Context) Result {
 	if _, err := c.host.LookPath("docker"); err != nil {
 		// Usually Docker Desktop is installed, just not shared here.
@@ -264,7 +269,8 @@ func (c *Checker) checkDocker(ctx context.Context) Result {
 			return Result{Name: "docker", Status: StatusFail, Detail: "not found",
 				Fix: "In Docker Desktop, open Settings > Resources > WSL integration,\nturn on this distro, " + ThenRunAgain}
 		}
-		return Result{Name: "docker", Status: StatusFail, Detail: "not found", Fix: "Install Docker: https://docs.docker.com/get-docker/"}
+		return Result{Name: "docker", Status: StatusFail, Detail: "not found", Fix: "Install Docker: https://docs.docker.com/get-docker/",
+			Alternative: ownClusterAlternative}
 	}
 	if _, err := c.readDockerInfo(ctx); err != nil {
 		if errors.Is(err, errDockerTimeout) {
@@ -278,7 +284,7 @@ func (c *Checker) checkDocker(ctx context.Context) Result {
 	}
 	if len(c.info.PodmanHost) > 0 {
 		return Result{Name: "docker", Status: StatusFail, Version: "Podman", Detail: "not supported yet",
-			Fix: "Testkube needs Docker for now. Install Docker:\nhttps://docs.docker.com/get-docker/"}
+			Fix: "Testkube needs Docker for now. Install Docker:\nhttps://docs.docker.com/get-docker/", Alternative: ownClusterAlternative}
 	}
 	version := ""
 	if c.info.ServerVersion != "" {

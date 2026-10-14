@@ -67,6 +67,9 @@ func NewInstallLocalCmd() *cobra.Command {
 				if r.Status == localinstall.StatusWarn {
 					r.Hint = "will be installed in step 4"
 				}
+				if r.Alternative != "" {
+					r.Fix += "\n" + r.Alternative
+				}
 				printCheckResult(r)
 			}
 			if localinstall.HasFailure(results) {
