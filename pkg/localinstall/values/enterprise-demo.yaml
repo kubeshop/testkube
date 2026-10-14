@@ -1,8 +1,10 @@
-# Verbatim copy of kubeshop/testkube-cloud-charts@78de7b61f0
+# Verbatim copy of kubeshop/testkube-cloud-charts@d4a6cee271
 # charts/testkube-enterprise/profiles/values.demo.v2.yaml; bump with the chart pins.
 global:
   ingress:
     enabled: false
+  ai:
+    serviceUrl: http://testkube-enterprise-ai-service:9090
   dex:
     issuer: http://localhost:5556
   storage:
@@ -100,10 +102,17 @@ testkube-cloud-ui:
 testkube-worker-service:
   additionalEnv:
     USE_MINIO: true
+  api:
+    mongo:
+      enabled: false
+    postgres:
+      enabled: true
+      dsn: "postgresql://testkube:postgres5432@testkube-enterprise-postgresql:5432/backend?sslmode=disable"
 
 testkube-ai-service:
   enabled: true
   controlPlaneRestApiUri: "http://testkube-enterprise-api:8088"
+  dashboardUrl: "http://localhost:8080"
   llmApi:
     url: https://llm.testkube.io
   tls:
@@ -111,6 +120,9 @@ testkube-ai-service:
 
 postgresql:
   enabled: true
+  primary:
+    service:
+      type: ClusterIP
 mongodb:
   enabled: false
 

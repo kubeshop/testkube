@@ -123,7 +123,7 @@ func (i *Installer) install(ctx context.Context, ports Ports, s Secrets, license
 	began := start
 	install := func() ([]byte, *Stuck, error) {
 		return i.watchedHelm(ctx, began, "upgrade", "--install", ReleaseName, EnterpriseChart, "--version", EnterpriseChartVersion,
-			"--namespace", Namespace, "--create-namespace", "-f", values["demo"], "-f", values["ports"], "-f", values["demo-fixes"], "-f", values["login"], "-f", values["private"],
+			"--namespace", Namespace, "--create-namespace", "-f", values["demo"], "-f", values["ports"], "-f", values["login"], "-f", values["private"],
 			"--wait", "--wait-for-jobs", "--timeout", "15m")
 	}
 	out, stuck, err := install()
@@ -423,41 +423,19 @@ func writeValues(dir string, ports Ports, s Secrets, license, email string) (map
 	if err != nil {
 		return nil, err
 	}
-	fixes, err := demoFixValues()
-	if err != nil {
-		return nil, err
-	}
 	login, err := loginValues(loginEmail(email))
 	if err != nil {
 		return nil, err
 	}
 	paths := map[string]string{}
 	for name, data := range map[string][]byte{"demo": EnterpriseDemoValues, "ports": []byte(PortValues(ports)),
-		"demo-fixes": fixes, "login": login, "private": private, "runner": runner} {
+		"login": login, "private": private, "runner": runner} {
 		paths[name] = filepath.Join(dir, name+".yaml")
 		if err := os.WriteFile(paths[name], data, 0o600); err != nil {
 			return nil, err
 		}
 	}
 	return paths, nil
-}
-
-// Upstream demo values miss these; drop each once fixed there.
-func demoFixValues() ([]byte, error) {
-	var demo map[string]any
-	if err := yaml.Unmarshal(EnterpriseDemoValues, &demo); err != nil {
-		return nil, err
-	}
-	api, _ := dig(demo, "testkube-cloud-api", "api").(map[string]any)
-	if api["mongo"] == nil || api["postgres"] == nil {
-		return nil, errors.New("demo values have no API database")
-	}
-	return yaml.Marshal(map[string]any{
-		// Otherwise it waits for Mongo, which isn't installed.
-		"testkube-worker-service": map[string]any{"api": map[string]any{"mongo": api["mongo"], "postgres": api["postgres"]}},
-		// Otherwise built from a domain we don't have.
-		"global": map[string]any{"ai": map[string]any{"serviceUrl": "http://testkube-enterprise-ai-service:9090"}},
-	})
 }
 
 // A failed lookup must not strand the kept account.
