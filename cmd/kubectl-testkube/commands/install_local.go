@@ -31,6 +31,7 @@ func NewInstallLocalCmd() *cobra.Command {
 		Long: "Sets up a Testkube trial in its own cluster inside Docker.\n" +
 			"Needs Docker and the license key from your trial email.\n" +
 			"The first run takes 5 to 10 minutes. Your own tools and clusters are not changed.\n\n" +
+			ownClusterHint + "\n\n" +
 			"To remove it later:\n  " + uninstallCommand,
 		Example: "  " + localinstall.InstallCommand + "\n  " + localinstall.InstallCommand + " --license <key>",
 		// Hidden until the guided installer is complete.
@@ -246,6 +247,8 @@ func printBanner() {
 			"\nTry Testkube on your own machine.")
 }
 
+const ownClusterHint = "Already have a Kubernetes cluster? To install Testkube there, run:\n  " + localinstall.InitDemoCommand
+
 // Numbered like the step headers, so [3/6] means line 3.
 func printPlan(existing localinstall.ExistingState, running bool) {
 	plan := []string{"check your license key", "check the tools it needs", "check this machine",
@@ -259,7 +262,7 @@ func printPlan(existing localinstall.ExistingState, running bool) {
 	switch existing {
 	// Only before anything exists: a rerun has chosen this path.
 	case localinstall.TrialAbsent:
-		note += "\nAlready have a Kubernetes cluster? To install Testkube there, run:\n  " + localinstall.InitDemoCommand
+		note += "\n" + ownClusterHint
 	case localinstall.TrialSetUp:
 		plan[5] = "update Testkube and open it in your browser"
 		note = "Testkube is already set up here. This run updates it, usually in under a minute.\nYour data is kept."
