@@ -290,7 +290,7 @@ func runInitDemo(tracker *telemetry.InstallTracker) {
 	if err == nil {
 		// Own process: init demo needs the root command's flags.
 		// No context: Ctrl+C reaches it directly; a kill skips cleanup.
-		demo := exec.Command(self, "init", "demo")
+		demo := exec.CommandContext(context.Background(), self, "init", "demo")
 		demo.Stdin, demo.Stdout, demo.Stderr = os.Stdin, os.Stdout, os.Stderr
 		err = demo.Run()
 	}
