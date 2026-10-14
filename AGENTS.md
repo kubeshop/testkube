@@ -54,7 +54,7 @@ A synced resource in the Control Plane is exclusively owned by one GitOps agent,
 
 `skipUnownedResource` in `cmd/api-server/superagentmigration.go` applies the same rule outside the reconcilers, during SuperAgent migration. That migration retries sync failures forever by design, so a conflict has to break the loop or a single unowned resource wedges the migration indefinitely.
 
-Still to come: Control Plane persistence and enforcement of the owner, and the `testkube.io/gitops-owner` annotation for declaring or transferring ownership from Git. Until those land the agent handles a rejection that nothing yet sends.
+The Control Plane side lives in `testkube-cloud-api`: it persists the owner on the six syncable tables and enforces it in `internal/sync/ownership.go`, on every Upsert and Delete path. Enforcement is opt-in per organization (the `gitOpsOwnership` setting), so with it off an agent never sees a conflict. Ownership is transferred from Git by setting the `testkube.io/gitops-owner` annotation on the Kubernetes resource to the new owner's agent ID. The agent sends the annotation with the resource, and the Control Plane reads it, so the agent needs no code for it. The agent name is display-only and never authorizes anything.
 
 ## Regenerating artifacts
 
@@ -277,7 +277,9 @@ Pull request checks are not GitHub Actions. They are Testkube TestWorkflows in `
 
 The same file also holds `docs-prettier`, which checks testkube-docs, not this repo.
 
-To run them yourself, use the Testkube MCP server (see "MCP integration") connected to the environment that holds these workflows:
+To run them yourself, use the Testkube MCP server (see "MCP integration") connected to the environment that holds these workflows. That is the dev Control Plane (`app.testkube.dev`), organization `tkcorg_9deb42dda2197657`, environment `tkcenv_03e3ff499f13ccba`, whose MCP endpoint is `https://api.testkube.dev/organizations/tkcorg_9deb42dda2197657/environments/tkcenv_03e3ff499f13ccba/mcp`. Argo CD syncs the workflows there from `test/testkube/oss-tests/gh-quality-loop.yaml` on `main` (testkube-deployment `envs/dev/apps/testkube-dev-agent.yaml`), so a merged change to them applies to every pull request at once.
+
+Then:
 
 1. `run_workflow` with `workflowName` and `config: {"revision": "<branch or commit SHA>"}`. It returns the execution ID.
 2. `wait_for_executions` with `executionIds` (comma-separated, to wait on several runs at once).
