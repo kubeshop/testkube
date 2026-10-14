@@ -53,6 +53,7 @@ func NewInstallLocalCmd() *cobra.Command {
 				ui.Printf("\n%s\n", ui.LightGray(telemetry.InstallNotice))
 			}
 			tracker.Send("install_local_started", nil)
+			exitIfCancelled(cmd, tracker, "path")
 			if askPath && askOwnCluster(tracker, kubeContext, kubeContextLocal) {
 				runInitDemo(tracker)
 				return
