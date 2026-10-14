@@ -56,7 +56,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			tracker.Send("install_local_started", nil)
 			exitIfCancelled(cmd, tracker, "path")
 			if askPath && askOwnCluster(tracker, kubeContext, kubeContextLocal) {
-				runInitDemo(tracker)
+				runInitDemo(tracker, licenseKey)
 				return
 			}
 			printPlan(existing, running)
@@ -285,13 +285,20 @@ func askOwnCluster(tracker *telemetry.InstallTracker, kubeContext string, local 
 }
 
 // Never -y: its confirm names the target cluster.
-func runInitDemo(tracker *telemetry.InstallTracker) {
+func runInitDemo(tracker *telemetry.InstallTracker, key string) {
 	waitForEvents(tracker)
+	args := []string{"init", "demo"}
+	if key == "" {
+		key = os.Getenv("TESTKUBE_LICENSE")
+	}
+	if key != "" {
+		args = append(args, "--license", key)
+	}
 	self, err := os.Executable()
 	if err == nil {
 		// Own process: init demo needs the root command's flags.
-		// No context: Ctrl+C reaches it directly; a kill skips cleanup.
-		demo := exec.CommandContext(context.Background(), self, "init", "demo")
+		// Never cancelled: Ctrl+C reaches it directly; a kill skips cleanup.
+		demo := exec.CommandContext(context.Background(), self, args...)
 		demo.Stdin, demo.Stdout, demo.Stderr = os.Stdin, os.Stdout, os.Stderr
 		err = demo.Run()
 	}
