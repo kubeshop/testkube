@@ -248,6 +248,8 @@ func NewInitCmdDemo() *cobra.Command {
 			tracker := common.NewInstallTracker()
 			defer tracker.Wait()
 			tracker.Send("init_demo_started", map[string]any{"dry_run": dryRun})
+			// Error exits skip the deferred Wait.
+			tracker.Wait()
 			options := common.HelmOptions{
 				Namespace:     namespace,
 				LicenseKey:    license,
