@@ -200,6 +200,29 @@ func TestCheckTools_PodmanStandInIsRefused(t *testing.T) {
 	}
 }
 
+// Starting or sharing Docker beats switching to another install.
+func TestCheckTools_OwnClusterOfferedOnlyWhenDockerCantBeUsed(t *testing.T) {
+	var podman dockerInfo
+	require.NoError(t, json.Unmarshal([]byte(`{"host":{"arch":"arm64","cpus":8},"version":{"Version":"5.4.2"}}`), &podman))
+	wsl := map[string]string{"kernel.osrelease": "5.15.167.4-microsoft-standard-WSL2"}
+	tests := map[string]struct {
+		checker *Checker
+		want    bool
+	}{
+		"not installed":          {&Checker{host: fakeHost{missing: map[string]bool{"docker": true}}}, true},
+		"podman":                 {&Checker{host: fakeHost{}, docker: fakeDocker{info: podman}}, true},
+		"not shared with WSL":    {&Checker{host: fakeHost{missing: map[string]bool{"docker": true}, sysctl: wsl}}, false},
+		"installed, not running": {&Checker{host: fakeHost{}, docker: fakeDocker{err: errors.New("Cannot connect to the Docker daemon")}}, false},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			results := tt.checker.CheckTools(context.Background())
+
+			assert.Equal(t, tt.want, strings.Contains(results[0].Alternative, InitDemoCommand), results[0].Alternative)
+		})
+	}
+}
+
 func TestCheckInotify_WarnsOnlyWhenThisKernelRunsDocker(t *testing.T) {
 	tests := map[string]struct {
 		dockerKernel string

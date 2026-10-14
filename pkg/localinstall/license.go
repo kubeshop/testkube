@@ -11,7 +11,8 @@ import (
 const (
 	MaxLicenseAttempts = 3
 
-	InstallCommand = "testkube install local"
+	InstallCommand  = "testkube install local"
+	InitDemoCommand = "testkube init demo"
 	// Own line, so a triple-click copies it.
 	RunAgain     = "Run again:\n  " + InstallCommand
 	ThenRunAgain = "then run again:\n  " + InstallCommand
