@@ -44,6 +44,7 @@ type InstallTracker struct {
 	onError    func(code, stage, reason string)
 	wsl        string
 	email      string
+	license    string
 }
 
 type InstallTrackerConfig struct {
@@ -169,15 +170,21 @@ func (t *InstallTracker) Error(code, stage, reason string) {
 	}
 }
 
+// Cancels and failures happen far from the license step.
+func (t *InstallTracker) SetLicense(key string) {
+	t.license = key
+}
+
 // Funnel copies a trial funnel step to Segment, for Mixpanel.
-func (t *InstallTracker) Funnel(name, license string, props map[string]any) {
+func (t *InstallTracker) Funnel(name string, props map[string]any) {
 	if !t.enabled {
 		return
 	}
+	license, email := t.license, t.email
 	t.wg.Add(1)
 	go func() {
 		defer t.wg.Done()
-		_, _ = SendInstallLocalEvent(t.version, name, license, t.email, props)
+		_, _ = SendInstallLocalEvent(t.version, name, license, email, props)
 	}()
 }
 

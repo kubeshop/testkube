@@ -48,8 +48,7 @@ func NewInstallLocalCmd() *cobra.Command {
 				ui.Printf("%s\n", ui.LightGray(localInstallLead+"\n"+ownClusterHint))
 			}
 			tracker := newInstallTracker()
-			var key string
-			tracker.OnError(segmentErrors(cmd, &key))
+			tracker.OnError(funnelErrors(tracker))
 			if tracker.Enabled() {
 				ui.Printf("\n%s\n", ui.LightGray(telemetry.InstallNotice))
 			}
@@ -58,18 +57,19 @@ func NewInstallLocalCmd() *cobra.Command {
 
 			// Both paths need it; first ties either to the owner.
 			ui.NL()
-			key = runLicenseStep(tracker, licenseKey)
+			key := runLicenseStep(tracker, licenseKey)
+			tracker.SetLicense(key)
 			// The login needs it; validate already sent the key there.
 			owner := telemetry.GetEmail(key)
 			if tracker.Enabled() {
 				tracker.Identify(owner)
 			}
 			if askPath && askOwnCluster(tracker, kubeContext, kubeContextLocal) {
-				tracker.Funnel(installAttemptEvent, key, map[string]any{"path": "cluster", "rerun": false})
+				tracker.Funnel(installAttemptEvent, map[string]any{"path": "cluster", "rerun": false})
 				runInitDemo(tracker, key)
 				return
 			}
-			tracker.Funnel(installAttemptEvent, key, map[string]any{"path": "docker", "rerun": rerun})
+			tracker.Funnel(installAttemptEvent, map[string]any{"path": "docker", "rerun": rerun})
 			email := localinstall.RememberLoginEmail(owner)
 			// After the path: init demo reports its own install start.
 			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallStarted)
@@ -118,7 +118,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			}
 			printReady(tracker, ports, email, cli, common.LocalCLIFailure(err))
 			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallFinished)
-			tracker.Funnel(installSuccessEvent, key, map[string]any{"rerun": rerun})
+			tracker.Funnel(installSuccessEvent, map[string]any{"rerun": rerun})
 			waitForEvents(tracker)
 		},
 	}
@@ -192,6 +192,51 @@ func segmentErrors(cmd *cobra.Command, license *string) func(code, stage, reason
 	}
 }
 
+// By the owner's email, so failures join the trial funnel.
+func funnelErrors(tracker *telemetry.InstallTracker) func(code, stage, reason string) {
+	return func(code, stage, reason string) {
+		tracker.Funnel(installErrorEvent, map[string]any{"category": failureCategory(stage, reason),
+			"stage": stage, "reason": reason, "errorCode": code})
+	}
+}
+
+// Few buckets to chart; stage and reason keep the detail.
+func failureCategory(stage, reason string) string {
+	switch stage {
+	case "license":
+		if strings.HasPrefix(reason, "cannot reach") {
+			return "network"
+		}
+		return "license"
+	case "tools":
+		return "docker"
+	case "tool_install":
+		switch {
+		case strings.HasSuffix(reason, " save"):
+			return "machine_resources"
+		case strings.HasSuffix(reason, " unsupported_platform"):
+			return "other"
+		}
+		return "network"
+	case "cluster":
+		if reason == "storage" || reason == "kubeconfig" {
+			return "machine_resources"
+		}
+		return "docker"
+	case "testkube":
+		switch reason {
+		case "chart_download", "stuck image_pull", "stuck downloading", "stuck rate_limit":
+			return "network"
+		case "stuck no_cpu", "stuck no_memory", "stuck storage", "stuck unschedulable":
+			return "machine_resources"
+		case "secrets_lost", "secrets_damaged":
+			return "other"
+		}
+		return "install_stuck"
+	}
+	return "other"
+}
+
 func failedChecks(results []localinstall.Result) string {
 	var failed []string
 	for _, r := range results {
@@ -256,6 +301,7 @@ func printCancelled(stage string) {
 func abortInstall(tracker *telemetry.InstallTracker, stage string) {
 	printCancelled(stage)
 	tracker.Send("install_local_aborted", map[string]any{"stage": stage})
+	tracker.Funnel(installErrorEvent, map[string]any{"category": "user_cancelled", "stage": stage})
 	waitForEvents(tracker)
 	os.Exit(130)
 }
@@ -329,6 +375,7 @@ func printBanner() {
 const (
 	installAttemptEvent = "testkube_install_local_attempt"
 	installSuccessEvent = "testkube_install_local_success"
+	installErrorEvent   = "testkube_install_local_error"
 )
 
 const (
@@ -604,6 +651,10 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error, repo
 		props["stuck_service"], props["stuck_reason"] = stuck.Service, stuck.Reason
 	}
 	tracker.Send("install_local_failed", props)
+	if isStuck {
+		// The category needs why; "stuck" alone can't tell.
+		reason += " " + stuck.Reason
+	}
 	tracker.Error(string(common.TKErrLocalTestkubeInstallFailed), "testkube", reason)
 	waitForEvents(tracker)
 	os.Exit(1)
