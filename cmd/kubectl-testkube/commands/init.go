@@ -385,7 +385,10 @@ func exitOnInstallError(cmd *cobra.Command, clientCfg config.Data, step, errType
 		_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
 	}
 	category := "install_stuck"
-	if strings.Contains(errType, "license") {
+	// Ctrl+C kills helm too, which then looks like a failure.
+	if cmd.Context() != nil && cmd.Context().Err() != nil {
+		category = "user_cancelled"
+	} else if strings.Contains(errType, "license") {
 		category = "license"
 	} else if errType == "kubeconfig_not_found" {
 		category = "other"
