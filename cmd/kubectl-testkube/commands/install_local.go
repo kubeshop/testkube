@@ -118,6 +118,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			}
 			printReady(tracker, ports, email, cli, common.LocalCLIFailure(err))
 			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallFinished)
+			tracker.Funnel(installSuccessEvent, key, map[string]any{"rerun": rerun})
 			waitForEvents(tracker)
 		},
 	}
@@ -325,7 +326,10 @@ func printBanner() {
 }
 
 // Names match the CLI's other Segment events, for Mixpanel funnels.
-const installAttemptEvent = "testkube_install_local_attempt"
+const (
+	installAttemptEvent = "testkube_install_local_attempt"
+	installSuccessEvent = "testkube_install_local_success"
+)
 
 const (
 	localInstallLead = "This sets up Testkube locally, in its own cluster inside Docker."
