@@ -67,7 +67,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			exitIfCancelled(cmd, tracker, "license")
 			if askPath && askOwnCluster(tracker, kubeContext, kubeContextLocal) {
 				tracker.Funnel(installAttemptEvent, map[string]any{"path": "cluster", "rerun": false})
-				runInitDemo(tracker, key)
+				runInitDemo(tracker, key, owner)
 				return
 			}
 			tracker.Funnel(installAttemptEvent, map[string]any{"path": "docker", "rerun": rerun})
@@ -119,7 +119,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			}
 			printReady(tracker, ports, email, cli, common.LocalCLIFailure(err))
 			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallFinished)
-			tracker.Funnel(installSuccessEvent, map[string]any{"rerun": rerun})
+			tracker.Funnel(installSuccessEvent, map[string]any{"path": "docker", "rerun": rerun})
 			waitForEvents(tracker)
 		},
 	}
@@ -338,7 +338,7 @@ func askOwnCluster(tracker *telemetry.InstallTracker, kubeContext string, local 
 }
 
 // Never -y: its confirm names the target cluster.
-func runInitDemo(tracker *telemetry.InstallTracker, key string) {
+func runInitDemo(tracker *telemetry.InstallTracker, key, owner string) {
 	waitForEvents(tracker)
 	args := []string{"init", "demo"}
 	if key == "" {
@@ -353,6 +353,9 @@ func runInitDemo(tracker *telemetry.InstallTracker, key string) {
 		// Never cancelled: Ctrl+C reaches it directly; a kill skips cleanup.
 		demo := exec.CommandContext(context.Background(), self, args...)
 		demo.Stdin, demo.Stdout, demo.Stderr = os.Stdin, os.Stdout, os.Stderr
+		if tracker.Enabled() {
+			demo.Env = append(os.Environ(), installLocalOwnerEnv+"="+owner)
+		}
 		err = demo.Run()
 	}
 	var exitErr *exec.ExitError
@@ -378,6 +381,8 @@ const (
 	installAttemptEvent = "testkube_install_local_attempt"
 	installSuccessEvent = "testkube_install_local_success"
 	installErrorEvent   = "testkube_install_local_error"
+	// Exit codes can't tell init demo's "no" from success.
+	installLocalOwnerEnv = "TESTKUBE_INSTALL_LOCAL_OWNER"
 )
 
 const (
