@@ -32,6 +32,8 @@ const InstallNotice = "Testkube sends install progress, linked to your license, 
 // Events: install_local_started, install_local_checks (one per run),
 // install_local_failed, install_local_aborted, install_local_checks_done,
 // install_local_path.
+// Funnel copies attempt, success and error to Segment by email
+// (3s cap), for the Mixpanel trial funnel.
 type InstallTracker struct {
 	enabled    bool
 	distinctID string
@@ -184,7 +186,16 @@ func (t *InstallTracker) Funnel(name string, props map[string]any) {
 	t.wg.Add(1)
 	go func() {
 		defer t.wg.Done()
-		_, _ = SendInstallLocalEvent(t.version, name, license, email, props)
+		sent := make(chan struct{})
+		go func() {
+			_, _ = SendInstallLocalEvent(t.version, name, license, email, props)
+			close(sent)
+		}()
+		// Segment's client waits 10s; a blocked network mustn't delay exit.
+		select {
+		case <-sent:
+		case <-time.After(3 * time.Second):
+		}
 	}()
 }
 
