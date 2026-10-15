@@ -17,6 +17,8 @@ import (
 
 var _ common.ListenerLoader = (*Agent)(nil)
 
+// HealthcheckInterval is how often the event loop sends a health check. The Control Plane imports
+// it to size the window in which it considers an agent online, so changing it changes that too.
 const HealthcheckInterval = 5 * time.Second
 
 func (ag *Agent) Kind() string {
@@ -83,7 +85,7 @@ func (ag *Agent) runEventLoop(ctx context.Context) error {
 		return errors.Wrap(err, "failed to setup stream")
 	}
 
-	ticker := time.NewTicker(HealthcheckInterval)
+	ticker := time.NewTicker(ag.healthInterval)
 	defer ticker.Stop()
 
 	for {
