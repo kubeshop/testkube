@@ -79,8 +79,10 @@ func TestFailureCategory_SortsByWhatTheUserMustFix(t *testing.T) {
 		"cluster create":        {"cluster", "create", "docker"},
 		"too little memory":     {"testkube", "stuck no_memory", "machine_resources"},
 		"docker hub limit":      {"testkube", "stuck rate_limit", "network"},
-		"service crashloops":    {"testkube", "stuck crashloop", "install_stuck"},
-		"timeout":               {"testkube", "timeout", "install_stuck"},
+		"timeout, no disk":      {"testkube", "timeout storage", "machine_resources"},
+		"helm failed, no image": {"testkube", "install image_pull", "network"},
+		"timeout, crashloop":    {"testkube", "timeout crashloop", "install_stuck"},
+		"timeout, no diagnosis": {"testkube", "timeout", "install_stuck"},
 		"unknown stage":         {"later", "x", "other"},
 	}
 	for name, tt := range tests {

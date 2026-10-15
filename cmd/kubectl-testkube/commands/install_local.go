@@ -224,10 +224,11 @@ func failureCategory(stage, reason string) string {
 		}
 		return "docker"
 	case "testkube":
-		switch reason {
-		case "chart_download", "stuck image_pull", "stuck downloading", "stuck rate_limit":
+		// Timeouts carry the stuck service's reason last too.
+		switch reason[strings.LastIndex(reason, " ")+1:] {
+		case "chart_download", "image_pull", "downloading", "rate_limit":
 			return "network"
-		case "stuck no_cpu", "stuck no_memory", "stuck storage", "stuck unschedulable":
+		case "no_cpu", "no_memory", "storage", "unschedulable":
 			return "machine_resources"
 		case "secrets_lost", "secrets_damaged":
 			return "other"
