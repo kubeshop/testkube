@@ -43,6 +43,7 @@ type InstallTracker struct {
 	wg         sync.WaitGroup
 	onError    func(code, stage, reason string)
 	wsl        string
+	email      string
 }
 
 type InstallTrackerConfig struct {
@@ -147,6 +148,7 @@ func (t *InstallTracker) Identify(email string) {
 	}
 	anonymousID := t.distinctID
 	t.distinctID = email
+	t.email = email
 	t.Send("$identify", map[string]any{
 		// PostHog merges this run's anonymous events into this person.
 		"$anon_distinct_id": anonymousID,
@@ -165,6 +167,18 @@ func (t *InstallTracker) Error(code, stage, reason string) {
 	if t.enabled && t.onError != nil {
 		t.onError(code, stage, reason)
 	}
+}
+
+// Funnel copies a trial funnel step to Segment, for Mixpanel.
+func (t *InstallTracker) Funnel(name, license string, props map[string]any) {
+	if !t.enabled {
+		return
+	}
+	t.wg.Add(1)
+	go func() {
+		defer t.wg.Done()
+		_, _ = SendInstallLocalEvent(t.version, name, license, t.email, props)
+	}()
 }
 
 func (t *InstallTracker) Wait() {

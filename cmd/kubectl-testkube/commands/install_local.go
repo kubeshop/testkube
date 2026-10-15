@@ -41,9 +41,9 @@ func NewInstallLocalCmd() *cobra.Command {
 			printBanner()
 			existing, running := localinstall.ExistingTrial(cmd.Context())
 			kubeContext, kubeContextLocal := localinstall.CurrentKubeContext()
+			rerun := existing != localinstall.TrialAbsent || localinstall.HasInstallMark()
 			// Reruns already chose; scripts and kubectl-less machines can't.
-			askPath := existing == localinstall.TrialAbsent && !localinstall.HasInstallMark() &&
-				kubeContext != "" && ui.StdinIsInteractive()
+			askPath := !rerun && kubeContext != "" && ui.StdinIsInteractive()
 			if !askPath {
 				ui.Printf("%s\n", ui.LightGray(localInstallLead+"\n"+ownClusterHint))
 			}
@@ -65,9 +65,11 @@ func NewInstallLocalCmd() *cobra.Command {
 				tracker.Identify(owner)
 			}
 			if askPath && askOwnCluster(tracker, kubeContext, kubeContextLocal) {
+				tracker.Funnel(installAttemptEvent, key, map[string]any{"path": "cluster", "rerun": false})
 				runInitDemo(tracker, key)
 				return
 			}
+			tracker.Funnel(installAttemptEvent, key, map[string]any{"path": "docker", "rerun": rerun})
 			email := localinstall.RememberLoginEmail(owner)
 			// After the path: init demo reports its own install start.
 			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallStarted)
@@ -321,6 +323,9 @@ func printBanner() {
 		pterm.Bold.Sprint("Testkube On-Prem Installer") + "  " + ui.LightGray(common.Version) +
 			"\nTry Testkube on your own machine.")
 }
+
+// Names match the CLI's other Segment events, for Mixpanel funnels.
+const installAttemptEvent = "testkube_install_local_attempt"
 
 const (
 	localInstallLead = "This sets up Testkube locally, in its own cluster inside Docker."
