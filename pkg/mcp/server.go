@@ -105,6 +105,18 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.GetInsightMetricSeries(client))
 	mcpServer.AddTool(tools.ListInsightExecutions(client))
 
+	// Insights board tools. Registered unconditionally, like the insight tools:
+	// the board routes do not answer HEAD, so SupportsEndpoint cannot probe them.
+	mcpServer.AddTool(tools.ListBoards(client))
+	mcpServer.AddTool(tools.GetBoard(client))
+	mcpServer.AddTool(tools.CreateBoard(client))
+	mcpServer.AddTool(tools.UpdateBoard(client))
+	mcpServer.AddTool(tools.AddBoardReport(client))
+	mcpServer.AddTool(tools.UpdateBoardReport(client))
+	mcpServer.AddTool(tools.RemoveBoardReport(client))
+	mcpServer.AddTool(tools.DeleteBoard(client))
+	mcpServer.AddTool(tools.RenderBoard(client))
+
 	return mcpServer, nil
 }
 

@@ -1,6 +1,7 @@
 package expressions
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -34,6 +35,54 @@ func hasUnexportedFields(v reflect.Value) bool {
 		}
 	}
 	return false
+}
+
+// fieldPathError names the place of an error in the walked value with the field names that
+// YAML shows, for example spec.steps[0].run.env[0].value.
+type fieldPathError struct {
+	path string
+	err  error
+}
+
+func (e *fieldPathError) Error() string {
+	return strings.TrimPrefix(e.path, ".") + ": " + e.err.Error()
+}
+
+func (e *fieldPathError) Unwrap() error {
+	return e.err
+}
+
+var jsonUnmarshalerType = reflect.TypeOf((*json.Unmarshaler)(nil)).Elem()
+
+// wrapField puts the name of the field in front of the path. An embedded field adds nothing,
+// because YAML shows its fields inline. A field of a type with its own JSON form adds nothing
+// either, because YAML shows that type as one value.
+func wrapField(err error, parent reflect.Type, f reflect.StructField) error {
+	name, _, _ := strings.Cut(f.Tag.Get("json"), ",")
+	if (f.Anonymous && name == "") || reflect.PointerTo(parent).Implements(jsonUnmarshalerType) {
+		return err
+	}
+	if name == "" || name == "-" {
+		name = f.Name
+	}
+	return wrapPath(err, "."+name)
+}
+
+func wrapIndex(err error, i int) error {
+	return wrapPath(err, fmt.Sprintf("[%d]", i))
+}
+
+func wrapKey(err error, key string) error {
+	return wrapPath(err, "["+key+"]")
+}
+
+// wrapPath extends the path of the outermost error only. An error that another message wraps
+// starts a new path, so the message stays next to the place that it describes.
+func wrapPath(err error, segment string) error {
+	if pathErr, ok := err.(*fieldPathError); ok {
+		return &fieldPathError{path: segment + pathErr.path, err: pathErr.err}
+	}
+	return &fieldPathError{path: segment, err: err}
 }
 
 func clone(v reflect.Value) reflect.Value {
@@ -129,7 +178,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 					changed = true
 				}
 				if err != nil {
-					return changed, errors.Wrap(err, f.Name)
+					return changed, wrapField(err, tt, f)
 				}
 			}
 		}
@@ -185,7 +234,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 					changed = true
 				}
 				if err != nil {
-					return changed, errors.Wrap(err, fmt.Sprintf("%d", i))
+					return changed, wrapIndex(err, i)
 				}
 				newItems = append(newItems, elemCopy)
 			}
@@ -224,7 +273,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 				changed = true
 			}
 			if err != nil {
-				return changed, errors.Wrap(err, fmt.Sprintf("%d", i))
+				return changed, wrapIndex(err, i)
 			}
 		}
 		return
@@ -243,7 +292,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 					changed = true
 				}
 				if err != nil {
-					return changed, errors.Wrap(err, k.String())
+					return changed, wrapKey(err, k.String())
 				}
 				v.SetMapIndex(k, item)
 			}
@@ -255,7 +304,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 					changed = true
 				}
 				if err != nil {
-					return changed, errors.Wrap(err, "key("+k.String()+")")
+					return changed, wrapKey(err, k.String())
 				}
 				if !key.Equal(k) {
 					item := clone(v.MapIndex(k))

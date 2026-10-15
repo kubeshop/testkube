@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -237,6 +238,8 @@ func NewInitCmdDemo() *cobra.Command {
 				if ok := ui.Confirm("Do you want to continue"); !ok {
 					sendErrTelemetry(cmd, cfg, "install_cancelled", license, "user install confirmation",
 						errors.New("user cancelled installation"))
+					sendInstallLocalFunnel(cfg, license, installErrorEvent,
+						map[string]any{"category": "user_cancelled", "stage": "init_demo"})
 					return
 				}
 			}
@@ -244,6 +247,12 @@ func NewInitCmdDemo() *cobra.Command {
 			spinner := ui.NewSpinner("Running Kubectl command...")
 			sendTelemetry(cmd, cfg, license, "installing started", licenseName)
 			reportLicenseEvent(cfg, license, licensevalidator.EventCLIInstallStarted)
+			// Same project as install local, joined by machine id.
+			tracker := common.NewInstallTracker()
+			defer tracker.Wait()
+			tracker.Send("init_demo_started", map[string]any{"dry_run": dryRun})
+			// Error exits skip the deferred Wait.
+			tracker.Wait()
 			options := common.HelmOptions{
 				Namespace:     namespace,
 				LicenseKey:    license,
@@ -284,6 +293,8 @@ func NewInitCmdDemo() *cobra.Command {
 			spinner.Success()
 
 			sendTelemetry(cmd, cfg, license, "installing finished", licenseName)
+			sendInstallLocalFunnel(cfg, license, installSuccessEvent, map[string]any{})
+			tracker.Send("init_demo_finished", map[string]any{"dry_run": dryRun})
 
 			reportLicenseEvent(cfg, license, licensevalidator.EventCLIInstallFinished)
 
@@ -373,8 +384,37 @@ func exitOnInstallError(cmd *cobra.Command, clientCfg config.Data, step, errType
 		cliErr.AddTelemetry(cmd, step, errType, license)
 		_, _ = handleCLIErrorTelemetry(common.Version, cliErr)
 	}
+	category := "install_stuck"
+	// Ctrl+C kills helm too, which then looks like a failure.
+	if cmd.Context() != nil && cmd.Context().Err() != nil {
+		category = "user_cancelled"
+	} else if strings.Contains(errType, "license") {
+		category = "license"
+	} else if errType == "kubeconfig_not_found" {
+		category = "other"
+	}
+	sendInstallLocalFunnel(clientCfg, license, installErrorEvent,
+		map[string]any{"category": category, "stage": "init_demo", "reason": errType})
 
 	common.HandleCLIError(cliErr)
+}
+
+// Install local's own-cluster path ends here; its funnel needs how.
+func sendInstallLocalFunnel(clientCfg config.Data, license, name string, props map[string]any) {
+	owner, fromInstallLocal := os.LookupEnv(installLocalOwnerEnv)
+	if !clientCfg.TelemetryEnabled || !fromInstallLocal {
+		return
+	}
+	props["path"] = "cluster"
+	sent := make(chan struct{})
+	go func() {
+		_, _ = telemetry.SendInstallLocalEvent(common.Version, name, license, owner, props)
+		close(sent)
+	}()
+	select {
+	case <-sent:
+	case <-time.After(3 * time.Second):
+	}
 }
 
 func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType, license, step string, errorLogs error) {

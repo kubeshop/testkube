@@ -79,6 +79,10 @@ func (c *Client) ValidateLicense(licenseRequest LicenseRequest) (*LicenseRespons
 		return nil, err
 	}
 
+	// Our outage must not tell users their key is wrong.
+	if resp.StatusCode >= 500 {
+		return nil, fmt.Errorf("license service error: status %d", resp.StatusCode)
+	}
 	if resp.StatusCode >= 400 {
 		return &LicenseResponse{
 			Valid:   false,

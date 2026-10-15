@@ -62,6 +62,10 @@ func (s *server) handler(conn net.Conn) {
 				stdoutUnsafe.Warnf("warn: failed to resume: %s\n", err.Error())
 				conn.Write([]byte{FailPacket})
 			}
+		default:
+			// Not a command: the peer is not a Testkube client (e.g. a TLS or HTTP probe).
+			// Drop it, so that bytes inside its payload cannot be read as pause/resume.
+			return
 		}
 	}
 }

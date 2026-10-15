@@ -1,9 +1,11 @@
 package triggers
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.uber.org/mock/gomock"
 	"go.uber.org/zap"
@@ -260,6 +262,11 @@ func TestReservedProvenanceKeys(t *testing.T) {
 	// Every key the informer records has to be covered, or the one it misses is the one
 	// a trigger can blank.
 	for _, key := range []string{
+		"WATCHER_EVENT_RESOURCE",
+		"WATCHER_EVENT_NAME",
+		"WATCHER_EVENT_NAMESPACE",
+		"WATCHER_EVENT_EVENT_TYPE",
+		"WATCHER_EVENT_FUTURE_KEY",
 		informer.GitMetaKeyCommit,
 		informer.GitMetaKeyRef,
 		informer.GitMetaKeyBranch,
@@ -285,5 +292,58 @@ func TestReservedProvenanceKeys(t *testing.T) {
 	// Ordinary configuration is untouched - a trigger's whole purpose is to set it.
 	for _, key := range []string{"SUITE", "TESTKUBE_SUITE", "GIT_BRANCH", "", "testkube_git_pr_number"} {
 		assert.False(t, isReservedProvenanceKey(key), "%q is ordinary configuration", key)
+	}
+}
+
+// Trigger configuration cannot replace or erase observed source metadata in scheduled executions.
+func TestExecutePreservesEventProvenance(t *testing.T) {
+	for _, source := range []string{triggerSourceV1, triggerSourceV2} {
+		for _, override := range []string{"forged", ""} {
+			t.Run(source+"/override="+override, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				workflows := testworkflowclient.NewMockTestWorkflowClient(ctrl)
+				workflows.EXPECT().Get(gomock.Any(), "", "smoke").Return(&testkube.TestWorkflow{Name: "smoke"}, nil)
+				executor := testworkflowexecutor.NewMockTestWorkflowExecutor(ctrl)
+				executor.EXPECT().Execute(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, request *cloud.ScheduleRequest) ([]testkube.TestWorkflowExecution, error) {
+						require.Len(t, request.Executions, 1)
+						assert.Equal(t, map[string]string{
+							"WATCHER_EVENT_RESOURCE":   "pod",
+							"WATCHER_EVENT_NAME":       "backend-123",
+							"WATCHER_EVENT_NAMESPACE":  "production",
+							"WATCHER_EVENT_EVENT_TYPE": "modified",
+							"TESTKUBE_GIT_COMMIT":      "actual-commit",
+							"SUITE":                    "smoke",
+						}, request.Executions[0].Config)
+						assert.Equal(t, "tag-value", request.Executions[0].Tags["WATCHER_EVENT_NAME"])
+						return nil, nil
+					})
+				trigger := &internalTrigger{
+					Name: "on-change", Namespace: "testkube", Source: source,
+					WorkflowSelector: internalTriggerSelector{Name: "smoke"},
+					Config: map[string]string{
+						"WATCHER_EVENT_RESOURCE":   override,
+						"WATCHER_EVENT_NAME":       override,
+						"WATCHER_EVENT_NAMESPACE":  override,
+						"WATCHER_EVENT_EVENT_TYPE": override,
+						"WATCHER_EVENT_FUTURE_KEY": override,
+						"TESTKUBE_GIT_COMMIT":      override,
+						"SUITE":                    "smoke",
+					},
+					Tags: map[string]string{"WATCHER_EVENT_NAME": "tag-value"},
+				}
+				s := &Service{
+					logger: zap.NewNop().Sugar(), testWorkflowsClient: workflows, testWorkflowExecutor: executor,
+					triggerStatus: map[statusKey]*triggerStatus{
+						newStatusKey(source, trigger.Namespace, trigger.Name): {trigger: trigger},
+					},
+				}
+				event := &watcherEvent{
+					resource: "pod", name: "backend-123", Namespace: "production", eventType: "modified",
+					GitMetadata: &GitMetadata{Commit: "actual-commit"},
+				}
+				require.NoError(t, s.execute(context.Background(), event, trigger))
+			})
+		}
 	}
 }

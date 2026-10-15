@@ -14,6 +14,9 @@
 //   - Reason is a code for the cause. The codes live in stop_reason.go and start_reason.go, each
 //     with a sentence for a message. The values are stable, because filters and telemetry use them.
 //   - Message and Step name the step that holds the cause. They stay inside the deployment.
+//     The message holds only the cause, because the type, the reason and the status already have
+//     their own place. The step message keeps the full termination sentence. So the runner gives
+//     the classifier the plain cause of each step that a stop ended, from the values it saw.
 //   - Actor is the component that decided a stop. The codes live in stop_actor.go.
 //   - User is the person who canceled. The control plane fills it, and the runner never does.
 //
@@ -23,10 +26,9 @@
 // # Display labels
 //
 // Label gives the raw type and reason, for tables such as the CLI. StatusDetailsType.DisplayName
-// gives the display name that the dashboard shows for a type, and DisplayLabel adds the reason code
-// to it, for text outside the product, such as a GitHub check. Neither one carries the message or
-// the user. A new type needs a display name in statusDetailsTypeNames and in the dashboard
-// constants, else it shows as its code.
+// gives the display name of a type, and DisplayLabel adds the reason code to it, for a short
+// summary such as a CI check. Both hold only the type and the reason. A new type needs a display
+// name in statusDetailsTypeNames, else it shows as its code.
 //
 // # The stop
 //

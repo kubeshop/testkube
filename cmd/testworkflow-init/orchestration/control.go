@@ -39,9 +39,9 @@ func FinishExecution(step *data.StepData, result constants.ExecutionResult) {
 // aborted process, so an earlier attempt does not leave its exit code.
 func FinishTimedOutExecution(step *data.StepData) {
 	step.SetExitCode(constants.CodeAborted)
+	// The code alone says what happened, so the result has no details. The runner writes the sentence of the code.
 	FinishExecution(step, constants.ExecutionResult{
 		ExitCode:  step.ExitCode,
-		Details:   testkube.StopReasonStepTimeout.Sentence(),
 		Reason:    string(testkube.StopReasonStepTimeout),
 		Iteration: int(step.Iteration),
 	})

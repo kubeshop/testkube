@@ -213,7 +213,7 @@ type RunnerConfig struct {
 	// all.
 	RunnerPollInterval   time.Duration `envconfig:"RUNNER_POLL_INTERVAL" default:"1s"`
 	RunnerCallTimeout    time.Duration `envconfig:"RUNNER_CALL_TIMEOUT" default:"30s"`
-	RunnerPollMaxBackoff time.Duration `envconfig:"RUNNER_POLL_MAX_BACKOFF" default:"30s"`
+	RunnerPollMaxBackoff time.Duration `envconfig:"RUNNER_POLL_MAX_BACKOFF" default:"15s"`
 	// RunnerStartConcurrency bounds how many executions from one batch start at once.
 	RunnerStartConcurrency int `envconfig:"RUNNER_START_CONCURRENCY" default:"4"`
 	// RunnerPollStaleAfter is how long without a successful poll before the

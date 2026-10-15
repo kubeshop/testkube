@@ -86,6 +86,7 @@ func TestTestWorkflowStatusDetails_DisplayLabel(t *testing.T) {
 		{name: "no object gives no label", want: ""},
 		{name: "the display name of the type and the reason", details: &TestWorkflowStatusDetails{Type_: "execution-failure", Reason: "oom-killed", Message: "OOMKilled"}, want: "Infrastructure failure, oom-killed"},
 		{name: "a type without a reason", details: &TestWorkflowStatusDetails{Type_: "step-failure"}, want: "Test failure"},
+		{name: "a user cancel names the type once", details: &TestWorkflowStatusDetails{Type_: "user-cancel", Reason: "user-cancel"}, want: "Canceled by the user"},
 		{name: "a reason without a type", details: &TestWorkflowStatusDetails{Reason: "exit-code"}, want: "exit-code"},
 		{name: "a type without a display name keeps the type", details: &TestWorkflowStatusDetails{Type_: "a-newer-type", Reason: "x"}, want: "a-newer-type, x"},
 	}

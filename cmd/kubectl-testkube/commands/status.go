@@ -45,6 +45,7 @@ func NewStatusCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(telemetry.NewStatusTelemetryCmd())
+	cmd.AddCommand(NewStatusLocalCmd())
 
 	return cmd
 }

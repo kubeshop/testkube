@@ -1,0 +1,210 @@
+package telemetry
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"net/http"
+	"os"
+	"runtime"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+const (
+	// Client-side project key, public by design like the dashboard's.
+	postHogKey      = "phc_zNRKh8Ph9Y6JcSoSNQhZuM7BmQPVyGxiwUYbRaC6VYdA"
+	postHogEndpoint = "https://t.testkube.io/capture/"
+)
+
+const InstallNotice = "Testkube sends install progress, linked to your license, to help us fix setup problems.\n" +
+	"Opt out: DO_NOT_TRACK=1. Details: docs.testkube.io/articles/telemetry"
+
+// InstallTracker reports `testkube install local` steps to PostHog
+// project "On Prem Trials" through https://t.testkube.io/capture/,
+// keyed by a per-run install_session_id, with machine_id as a property.
+// Identify switches to the license owner's email, merging earlier events.
+// Sends run in the background with a 2s timeout.
+// DO_NOT_TRACK or telemetryEnabled false sends nothing, hides the notice.
+// Events: install_local_started, install_local_checks (one per run),
+// install_local_failed, install_local_aborted, install_local_checks_done,
+// install_local_path.
+// Funnel copies attempt, success and error to Segment by email
+// (3s cap), for the Mixpanel trial funnel.
+type InstallTracker struct {
+	enabled    bool
+	distinctID string
+	sessionID  string
+	machineID  string
+	version    string
+	endpoint   string
+	client     *http.Client
+	wg         sync.WaitGroup
+	onError    func(code, stage, reason string)
+	wsl        string
+	email      string
+	license    string
+}
+
+type InstallTrackerConfig struct {
+	Enabled   bool
+	MachineID string
+	Version   string
+	// Empty means production; tests point it at a local server.
+	Endpoint string
+	// Empty reads this host's kernel; tests set it.
+	KernelRelease string
+}
+
+func NewInstallTracker(cfg InstallTrackerConfig) *InstallTracker {
+	endpoint := cfg.Endpoint
+	if endpoint == "" {
+		endpoint = postHogEndpoint
+	}
+	// Machine IDs are shared by owners, so identify would misattribute.
+	sessionID := uuid.NewString()
+	kernel := cfg.KernelRelease
+	if kernel == "" && runtime.GOOS == "linux" {
+		release, _ := os.ReadFile("/proc/sys/kernel/osrelease")
+		kernel = string(release)
+	}
+	return &InstallTracker{
+		wsl:        wslVersion(kernel),
+		enabled:    cfg.Enabled,
+		distinctID: sessionID,
+		sessionID:  sessionID,
+		machineID:  cfg.MachineID,
+		version:    cfg.Version,
+		endpoint:   endpoint,
+		client:     &http.Client{Timeout: 2 * time.Second},
+	}
+}
+
+// WSL1 kernels say "Microsoft", WSL2 ones lowercase.
+func wslVersion(kernel string) string {
+	switch {
+	case strings.Contains(kernel, "Microsoft"):
+		return "1"
+	case strings.Contains(kernel, "microsoft"):
+		return "2"
+	}
+	return ""
+}
+
+func (t *InstallTracker) Enabled() bool {
+	return t.enabled
+}
+
+// Background send: a slow network must never stall the install.
+func (t *InstallTracker) Send(event string, props map[string]any) {
+	if !t.enabled {
+		return
+	}
+	properties := map[string]any{
+		"install_session_id": t.sessionID,
+		"machine_id":         t.machineID,
+		"installer_version":  t.version,
+		"os":                 runtime.GOOS,
+		"arch":               runtime.GOARCH,
+		// Local builds report 999.0.0-*; lets PostHog filter our own runs.
+		"dev_build": strings.HasPrefix(t.version, "999.0.0"),
+	}
+	// WSL reports os "linux"; this keeps Windows users visible.
+	if t.wsl != "" {
+		properties["wsl"] = t.wsl
+	}
+	for k, v := range props {
+		properties[k] = v
+	}
+	body, err := json.Marshal(map[string]any{
+		"api_key":     postHogKey,
+		"event":       event,
+		"distinct_id": t.distinctID,
+		"timestamp":   time.Now().UTC().Format(time.RFC3339Nano),
+		"properties":  properties,
+	})
+	if err != nil {
+		return
+	}
+	t.wg.Add(1)
+	go func() {
+		defer t.wg.Done()
+		// Not the command context: aborted events must send after Ctrl+C.
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, t.endpoint, bytes.NewReader(body))
+		if err != nil {
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := t.client.Do(req)
+		if err == nil {
+			resp.Body.Close()
+		}
+	}()
+}
+
+func (t *InstallTracker) Identify(email string) {
+	if email == "" {
+		return
+	}
+	anonymousID := t.distinctID
+	t.distinctID = email
+	t.email = email
+	t.Send("$identify", map[string]any{
+		// PostHog merges this run's anonymous events into this person.
+		"$anon_distinct_id": anonymousID,
+		"$set":              map[string]any{"email": email},
+	})
+}
+
+// Call before exiting; os.Exit skips deferred calls.
+// The CLI adds its own error event; this package can't import it.
+func (t *InstallTracker) OnError(report func(code, stage, reason string)) {
+	t.onError = report
+}
+
+// Opted-out users send nothing, here as in Send.
+func (t *InstallTracker) Error(code, stage, reason string) {
+	if t.enabled && t.onError != nil {
+		t.onError(code, stage, reason)
+	}
+}
+
+// Cancels and failures happen far from the license step.
+func (t *InstallTracker) SetLicense(key string) {
+	t.license = key
+}
+
+// Funnel copies a trial funnel step to Segment, for Mixpanel.
+func (t *InstallTracker) Funnel(name string, props map[string]any) {
+	if !t.enabled {
+		return
+	}
+	license, email := t.license, t.email
+	t.wg.Add(1)
+	go func() {
+		defer t.wg.Done()
+		sent := make(chan struct{})
+		go func() {
+			_, _ = SendInstallLocalEvent(t.version, name, license, email, props)
+			close(sent)
+		}()
+		// Segment's client waits 10s; a blocked network mustn't delay exit.
+		select {
+		case <-sent:
+		case <-time.After(3 * time.Second):
+		}
+	}()
+}
+
+func (t *InstallTracker) Wait() {
+	t.wg.Wait()
+}
+
+// DO_NOT_TRACK is the cross-tool opt-out convention.
+func DoNotTrack() bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv("DO_NOT_TRACK")))
+	return v != "" && v != "0" && v != "false"
+}

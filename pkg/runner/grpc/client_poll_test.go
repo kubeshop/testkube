@@ -49,14 +49,11 @@ type sleepRecorder struct {
 	durations []time.Duration
 }
 
-func (r *sleepRecorder) sleep(d time.Duration) <-chan time.Time {
+func (r *sleepRecorder) sleep(_ context.Context, d time.Duration) error {
 	r.mu.Lock()
 	r.durations = append(r.durations, d)
 	r.mu.Unlock()
-
-	ch := make(chan time.Time, 1)
-	ch <- time.Now()
-	return ch
+	return nil
 }
 
 func (r *sleepRecorder) recorded() []time.Duration {
@@ -201,7 +198,10 @@ func TestStart_ResetsBackoffAfterSuccess(t *testing.T) {
 func TestStart_ReturnsPromptlyDuringBackoff(t *testing.T) {
 	stub := &stubUpdatesClient{failUntil: -1}
 	// A sleep that never fires, standing in for a long backoff.
-	blocking := func(time.Duration) <-chan time.Time { return make(chan time.Time) }
+	blocking := func(ctx context.Context, _ time.Duration) error {
+		<-ctx.Done()
+		return ctx.Err()
+	}
 
 	c := &Client{
 		client:           stub,

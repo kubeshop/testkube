@@ -38,6 +38,7 @@ func NewPurgeCmd() *cobra.Command {
 	cmd.Flags().StringVar(&name, "name", "testkube", "installation name")
 	cmd.Flags().StringVar(&namespace, "namespace", "testkube", "namespace from where to uninstall")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the confirmation prompt")
+	cmd.AddCommand(NewUninstallLocalCmd())
 
 	return cmd
 }

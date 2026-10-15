@@ -17,6 +17,7 @@ func NewInstallCmd() *cobra.Command {
 
 	cmd.AddCommand(agents.NewInstallAgentCommand())
 	cmd.AddCommand(agents.NewInstallCRDCommand())
+	cmd.AddCommand(NewInstallLocalCmd())
 
 	return cmd
 }

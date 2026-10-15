@@ -823,8 +823,9 @@ func main() {
 
 	shouldRunAgent := shouldRunDefaultAgent(cfg, proContext)
 	shouldRunEventReader := shouldRunAgent || shouldRunWebhookEventReader(cfg, proContext)
+	shouldRunHealthcheck := shouldRunGitOpsHealthcheck(cfg, shouldRunAgent)
 	var agentHandle *agent.Agent
-	if shouldRunAgent || shouldRunEventReader {
+	if shouldRunAgent || shouldRunEventReader || shouldRunHealthcheck {
 		var err error
 		agentHandle, err = agent.NewAgent(
 			log.DefaultLogger,
@@ -850,6 +851,18 @@ func main() {
 			},
 		})
 		eventsEmitter.Register(agentHandle)
+	}
+	if shouldRunHealthcheck {
+		leaderTasks = append(leaderTasks, leader.Task{
+			Name: "agent-healthcheck",
+			Start: func(taskCtx context.Context) error {
+				err := agentHandle.RunHealthcheck(taskCtx)
+				if err != nil && !errors.Is(err, context.Canceled) {
+					commons.ExitOnError("running agent healthcheck", err)
+				}
+				return err
+			},
+		})
 	}
 	if shouldRunEventReader {
 		leaderTasks = append(leaderTasks, leader.Task{
@@ -1215,6 +1228,13 @@ func shouldRunDefaultAgent(cfg *intconfig.Config, proContext intconfig.ProContex
 		return false
 	}
 	return !proContext.HasSourceOfTruthCapability || proContext.Agent.IsSuperAgent
+}
+
+// The Control Plane shows an agent offline once it stops receiving traffic from it. Execution and
+// webhooks call it every few seconds, but GitOps sync calls it only when a resource changes, so a
+// GitOps-only runner sends health checks of its own.
+func shouldRunGitOpsHealthcheck(cfg *intconfig.Config, runsDefaultAgent bool) bool {
+	return cfg.GitOpsSyncKubernetesToCloudEnabled && cfg.DisableRunner && cfg.DisableWebhooks && !runsDefaultAgent
 }
 
 func shouldRunWebhookEventReader(cfg *intconfig.Config, proContext intconfig.ProContext) bool {

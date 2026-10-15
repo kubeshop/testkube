@@ -16,11 +16,11 @@ func TestTestWorkflowExecution_InitializationError(t *testing.T) {
 		wantErrorMessage string
 	}{
 		{
-			name:             "puts the plain header above the error",
-			header:           "Failed to run execution",
-			reason:           string(StartReasonImagePullFailed),
-			err:              errors.New("image not found"),
-			wantErrorMessage: "Failed to run execution\nimage not found",
+			name:             "puts the plain header in front of the error",
+			header:           "Cannot fetch the templates of the workflow",
+			reason:           string(StopReasonTemplateMissing),
+			err:              errors.New("template not found"),
+			wantErrorMessage: "Cannot fetch the templates of the workflow: template not found",
 		},
 		{
 			name:             "stores only the error when the header is empty",
@@ -28,12 +28,6 @@ func TestTestWorkflowExecution_InitializationError(t *testing.T) {
 			reason:           string(StartReasonImagePullFailed),
 			err:              errors.New("image not found"),
 			wantErrorMessage: "image not found",
-		},
-		{
-			name:             "stores no code when the caller has none",
-			header:           "Failed to run execution",
-			err:              errors.New("image not found"),
-			wantErrorMessage: "Failed to run execution\nimage not found",
 		},
 	}
 

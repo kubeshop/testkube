@@ -107,8 +107,8 @@ func (e *TestWorkflowExecution) InitializationError(header, reason string, err e
 	e.Result.Initialization.ErrorMessage = err.Error()
 	e.Result.Initialization.ErrorReason = reason
 	if header != "" {
-		// The stored message must stay plain text. The API and telemetry read it without a terminal renderer.
-		e.Result.Initialization.ErrorMessage = fmt.Sprintf("%s\n%s", header, e.Result.Initialization.ErrorMessage)
+		// The stored message must stay plain text on one line. The API, the CLI and telemetry read it without a renderer.
+		e.Result.Initialization.ErrorMessage = fmt.Sprintf("%s: %s", header, e.Result.Initialization.ErrorMessage)
 	}
 	for ref, step := range e.Result.Steps {
 		step.Status = common.Ptr(SKIPPED_TestWorkflowStepStatus)

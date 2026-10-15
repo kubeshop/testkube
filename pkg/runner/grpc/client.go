@@ -39,15 +39,21 @@ const (
 	// defaultPollInterval is how often the control plane is asked for work. It is
 	// a latency floor, not a throughput cap: one poll can return a whole batch.
 	defaultPollInterval = time.Second
-	// defaultMaxPollBackoff caps the retry delay after a failed poll.
+	// defaultMaxPollBackoff caps the wait after a failed poll. A control plane restart breaks
+	// every connection at once, so the failures arrive in a run rather than in isolation. Only a
+	// successful poll clears the wait, and a runner that waits does not poll, so a long wait
+	// outlives the outage that caused it and nothing but a restart ends it.
 	//
-	// The library default is six hours. Combined with a Duration() that was called
-	// twice per failure, nine consecutive failures were enough to put a runner to
-	// sleep for hours and stop it consuming its backlog entirely - which is what
-	// turned one slow query into a permanent stall. The ladder here is
-	// 1s, 2s, 4s, 8s, 16s, 30s, so a runner rejoins within about a minute of the
-	// control plane recovering.
-	defaultMaxPollBackoff = time.Second * 30
+	// Two bounds decide the value. It must be short enough that a runner returns to work
+	// promptly once the control plane answers again, because the runner idles for up to this
+	// long after that moment. It must be long enough to give a saturated control plane room,
+	// which the fleet size makes the weaker of the two. A failed call already waits out
+	// defaultCallTimeout before this applies, so that timeout and not this cap sets the floor
+	// on how fast a runner can retry.
+	defaultMaxPollBackoff = time.Second * 15
+	// pollBackoffDecay clears the failure count once a poll succeeds for this long. Without it
+	// the count only ever rises, so isolated failures hours apart still reach the cap.
+	pollBackoffDecay = time.Minute * 5
 	// defaultStartConcurrency bounds how many executions from one batch are
 	// started at once. Each one is a control plane round trip plus a
 	// runner.Execute that creates Jobs, secrets and config maps - and in
@@ -85,9 +91,9 @@ type Client struct {
 	// the readiness check from another goroutine, so it is atomic.
 	lastPollOK atomic.Int64
 
-	// sleep exists so tests can observe the backoff ladder. Full jitter makes any
-	// assertion on real elapsed time flaky.
-	sleep func(time.Duration) <-chan time.Time
+	// sleep waits for a duration or until the context ends. A test replaces it to read the
+	// waits without spending them. A zero value means waitBackoff uses the real clock.
+	sleep func(ctx context.Context, d time.Duration) error
 }
 
 // Option overrides a Client default.
@@ -126,6 +132,20 @@ func WithStartConcurrency(n int) Option {
 		if n > 0 {
 			c.startConcurrency = n
 		}
+	}
+}
+
+// waitBackoff waits out the backoff of a failed poll. It returns the error of the context when
+// the runner shuts down during the wait, so a shutdown does not sit out a wait it cannot use.
+func (c *Client) waitBackoff(ctx context.Context, d time.Duration) error {
+	if c.sleep != nil {
+		return c.sleep(ctx, d)
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(d):
+		return nil
 	}
 }
 
@@ -221,7 +241,6 @@ func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, r runne
 		pollInterval:     defaultPollInterval,
 		maxPollBackoff:   defaultMaxPollBackoff,
 		startConcurrency: defaultStartConcurrency,
-		sleep:            time.After,
 	}
 	for _, opt := range options {
 		opt(c)
@@ -240,6 +259,7 @@ func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, r runne
 // in a queue at the Control Plane awaiting them going live on the runner.
 func (c *Client) Start(ctx context.Context, environmentId string) error {
 	b := backoff.New(c.maxPollBackoff, c.pollInterval)
+	b.SetDecay(pollBackoffDecay)
 	ticker := time.NewTicker(c.pollInterval)
 	defer ticker.Stop()
 	req := &executionv1.GetExecutionUpdatesRequest{}
@@ -250,21 +270,14 @@ func (c *Client) Start(ctx context.Context, environmentId string) error {
 		case <-ticker.C:
 			response, err := c.getUpdates(ctx, environmentId, req)
 			if err != nil {
-				// Duration() advances the attempt counter, so it has to be called
-				// exactly once per failure. Calling it again for the log field
-				// doubled the exponent on every failure and logged a number that
-				// was not the one slept.
-				retryAfter := b.Duration()
+				// Duration advances the attempt counter, so it is read once and both logged
+				// and waited. Reading it twice doubles the counter on every failure.
+				wait := b.Duration()
 				c.logger.Warnw("Failed to get execution updates, backing off before retrying.",
-					"backoff", retryAfter,
+					"backoff", wait,
 					"error", err)
-				// Wait for the backoff, but stay cancellable: without this a
-				// shutdown during a long backoff blocks here, and the errgroup
-				// waiting on this goroutine blocks with it.
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				case <-c.sleep(retryAfter):
+				if err := c.waitBackoff(ctx, wait); err != nil {
+					return err
 				}
 				continue
 			}

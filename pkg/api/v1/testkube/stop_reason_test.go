@@ -15,7 +15,7 @@ func TestStopReason_Sentence(t *testing.T) {
 		{name: "abort all", reason: StopReasonAbortAll, want: "all executions of the workflow were stopped"},
 		{name: "superseded", reason: StopReasonSuperseded, want: "a newer commit superseded this run"},
 		{name: "queue timeout", reason: StopReasonQueueTimeout, want: "the execution exceeded the queue timeout of the workflow"},
-		{name: "queued too long", reason: StopReasonQueuedTooLong, want: "the execution stayed queued for too long"},
+		{name: "queued too long", reason: StopReasonQueuedTooLong, want: "no runner started the execution before the queue time limit"},
 		{name: "transition timeout", reason: StopReasonTransitionTimeout, want: "the execution stayed in a transitional state for too long"},
 		{name: "stop not confirmed", reason: StopReasonStopNotConfirmed, want: "the runner did not confirm the stop in time"},
 		{name: "execution timeout", reason: StopReasonExecutionTimeout, want: "the execution ran for too long"},
@@ -53,6 +53,26 @@ func TestStopReason_Sentence(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.want, tt.reason.Sentence())
+		})
+	}
+}
+
+func TestStopReason_Phrase(t *testing.T) {
+	tests := []struct {
+		name   string
+		reason StopReason
+		want   string
+	}{
+		{name: "out of memory", reason: StopReasonOOMKilled, want: "ran out of memory"},
+		{name: "step timeout", reason: StopReasonStepTimeout, want: "did not finish within its timeout"},
+		{name: "process killed", reason: StopReasonProcessKilled, want: "was killed, possibly by an out-of-memory kill"},
+		{name: "container error", reason: StopReasonContainerError, want: "could not run its container"},
+		{name: "a code that one step does not hold has no phrase", reason: StopReasonUnschedulable, want: ""},
+		{name: "an unknown code has no phrase", reason: StopReason("later-added"), want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.reason.Phrase())
 		})
 	}
 }

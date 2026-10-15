@@ -67,7 +67,7 @@ func (r StopReason) Sentence() string {
 	case StopReasonQueueTimeout:
 		return "the execution exceeded the queue timeout of the workflow"
 	case StopReasonQueuedTooLong:
-		return "the execution stayed queued for too long"
+		return "no runner started the execution before the queue time limit"
 	case StopReasonTransitionTimeout:
 		return "the execution stayed in a transitional state for too long"
 	case StopReasonStopNotConfirmed:
@@ -132,6 +132,24 @@ func (r StopReason) Sentence() string {
 		return "a step of the test failed"
 	case StopReasonUnknown:
 		return "the cause is not known"
+	default:
+		return ""
+	}
+}
+
+// Phrase returns the words for what happened to one step, for a sentence that names the step,
+// for example "ran out of memory". It returns an empty string for a reason that does not end
+// one step.
+func (r StopReason) Phrase() string {
+	switch r {
+	case StopReasonOOMKilled:
+		return "ran out of memory"
+	case StopReasonStepTimeout:
+		return "did not finish within its timeout"
+	case StopReasonProcessKilled:
+		return "was killed, possibly by an out-of-memory kill"
+	case StopReasonContainerError:
+		return "could not run its container"
 	default:
 		return ""
 	}

@@ -298,7 +298,7 @@ func GetPodError(pod *corev1.Pod) string {
 		return ""
 	}
 	if pod.Status.Reason == ReasonDeadlineExceeded && pod.Spec.ActiveDeadlineSeconds != nil {
-		return fmt.Sprintf("Pod timed out after %d seconds", *pod.Spec.ActiveDeadlineSeconds)
+		return "Pod timed out after " + seconds(*pod.Spec.ActiveDeadlineSeconds)
 	}
 	if reason, message := GetPodDisruption(pod); reason != "" {
 		if message == "" {
@@ -329,16 +329,50 @@ func GetJobStop(job *batchv1.Job) testkube.Stop {
 // IsJobDeadlineExceeded reports whether the job failed because it passed activeDeadlineSeconds.
 // The condition of the job carries this signal, and the event stream of the job carries it too. The
 // watch can read the condition before the event arrives, so the reader of the code reads both.
+// Kubernetes sets the condition FailureTarget first, deletes the pod, and sets Failed only after the
+// pod stops. The deletion of the pod ends the watch, so FailureTarget is often the only condition.
 func IsJobDeadlineExceeded(job *batchv1.Job) bool {
 	if job == nil || job.Spec.ActiveDeadlineSeconds == nil {
 		return false
 	}
 	for _, c := range job.Status.Conditions {
-		if c.Type == batchv1.JobFailed && c.Status == corev1.ConditionTrue && c.Reason == ReasonDeadlineExceeded {
+		isFailureCondition := c.Type == batchv1.JobFailed || c.Type == batchv1.JobFailureTarget
+		isConditionTrue := c.Status == corev1.ConditionTrue
+		isDeadlineReason := c.Reason == ReasonDeadlineExceeded
+		if isFailureCondition && isConditionTrue && isDeadlineReason {
 			return true
 		}
 	}
 	return false
+}
+
+// jobDeadlinePassed reports whether the job deleted its pod at or after the end of
+// activeDeadlineSeconds. Kubernetes deletes the pod before it sets the condition, and the deletion
+// ends the watch, so the time is the only sure signal. Both times have a precision of one second,
+// so the comparison needs no tolerance.
+func jobDeadlinePassed(job *batchv1.Job, deletedAt time.Time) bool {
+	if job == nil || deletedAt.IsZero() {
+		return false
+	}
+	deadline, started := job.Spec.ActiveDeadlineSeconds, job.Status.StartTime
+	if deadline == nil || started == nil {
+		return false
+	}
+	end := started.Add(time.Duration(*deadline) * time.Second)
+	return !deletedAt.Before(end)
+}
+
+// jobTimeoutMessage returns the words for a job that its deadline ended.
+func jobTimeoutMessage(job *batchv1.Job) string {
+	return "Job timed out after " + seconds(*job.Spec.ActiveDeadlineSeconds)
+}
+
+// seconds returns the duration in words, with the singular for one second.
+func seconds(n int64) string {
+	if n == 1 {
+		return "1 second"
+	}
+	return fmt.Sprintf("%d seconds", n)
 }
 
 // GetJobError returns the words for the stop that GetJobStop reports, so the message and the codes
@@ -348,7 +382,7 @@ func GetJobError(job *batchv1.Job) string {
 		return ""
 	}
 	if IsJobDeadlineExceeded(job) {
-		return fmt.Sprintf("Job timed out after %d seconds", *job.Spec.ActiveDeadlineSeconds)
+		return jobTimeoutMessage(job)
 	}
 	return GetJobStop(job).Sentence()
 }
