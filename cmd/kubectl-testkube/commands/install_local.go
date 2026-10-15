@@ -311,10 +311,10 @@ func abortInstall(tracker *telemetry.InstallTracker, stage string) {
 // The name guards against installing into a work cluster.
 func askOwnCluster(tracker *telemetry.InstallTracker, kubeContext string, local bool) bool {
 	if !local {
-		kubeContext += " (remote)"
+		kubeContext += ", remote"
 	}
-	thisMachine := "On this machine           Its own cluster in Docker (recommended)"
-	ownCluster := "In my Kubernetes cluster  Current kubectl context: " + kubeContext
+	thisMachine := "On this machine (recommended, creates a new cluster in Docker)"
+	ownCluster := "In my Kubernetes cluster (current kubectl context: " + kubeContext + ")"
 	ui.NL()
 	choice, err := pterm.DefaultInteractiveSelect.
 		WithOptions([]string{thisMachine, ownCluster}).
