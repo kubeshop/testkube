@@ -160,6 +160,41 @@ func TestRegistryLookupAmbiguity(t *testing.T) {
 		assert.ErrorContains(t, err, `ambiguous execution "a"`)
 	})
 
+	t.Run("two unaliased entries running the same workflow", func(t *testing.T) {
+		// The runs share the key "a" and so one group, positioned in scheduling order.
+		// No index says which entry was meant, so every position is refused.
+		registry := NewRegistry()
+		registry.Add(Execution{Id: "first-0", Name: "a-1", Workflow: "a", Index: 0, Declaration: 0})
+		registry.Add(Execution{Id: "second-0", Name: "a-2", Workflow: "a", Index: 1, Declaration: 1})
+
+		for _, index := range []int64{0, 1} {
+			_, ok, err := registry.Lookup("a", index)
+			assert.False(t, ok)
+			require.Error(t, err)
+			assert.ErrorContains(t, err, `ambiguous execution "a"`)
+			assert.ErrorContains(t, err, `executions "a-1" and "a-2"`)
+			assert.ErrorContains(t, err, "set a unique 'as'")
+		}
+
+		t.Run("their ids still resolve", func(t *testing.T) {
+			execution, ok, err := registry.Lookup("second-0", 0)
+			require.NoError(t, err)
+			require.True(t, ok)
+			assert.Equal(t, "second-0", execution.Id)
+		})
+	})
+
+	t.Run("a fan-out of one unaliased entry is not ambiguous", func(t *testing.T) {
+		registry := NewRegistry()
+		registry.Add(Execution{Id: "a-0", Workflow: "a", Index: 0, Declaration: 2})
+		registry.Add(Execution{Id: "a-1", Workflow: "a", Index: 1, Declaration: 2})
+
+		execution, ok, err := registry.Lookup("a", 1)
+		require.NoError(t, err)
+		require.True(t, ok)
+		assert.Equal(t, "a-1", execution.Id)
+	})
+
 	t.Run("a fan-out group is not ambiguous with itself", func(t *testing.T) {
 		// Same workflow at several indexes: each position answers on its own.
 		registry := NewRegistry()

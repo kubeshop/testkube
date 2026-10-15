@@ -39,7 +39,8 @@ func (r *Registry) Add(execution Execution) {
 // to the same reference. An aliased selector covering workflow "a" and a separate entry
 // running "a" without an alias both answer to execution("a", 0). Returning either would
 // hand the caller data from an arbitrary child, so that is reported as an error instead
-// of resolved by insertion order.
+// of resolved by insertion order. Two unaliased entries running the same workflow are
+// reported the same way, whatever the index.
 //
 // An execution id is matched before anything else and without regard to the index. An id
 // names one execution outright, whereas an alias or a workflow name names a group whose
@@ -67,6 +68,24 @@ func (r *Registry) Lookup(ref string, index int64) (Execution, bool, error) {
 	}
 	if foundById {
 		return byId, true, nil
+	}
+
+	// Unaliased entries running the same workflow share it as their key, so their runs
+	// form one group, positioned in the order they happened to be scheduled. No index can
+	// say which entry was meant, so the workflow name is refused at every position.
+	var first Execution
+	seen := false
+	for _, execution := range r.executions {
+		if execution.Alias != "" || execution.Workflow != ref {
+			continue
+		}
+		if !seen {
+			first, seen = execution, true
+			continue
+		}
+		if execution.Declaration != first.Declaration {
+			return Execution{}, false, DuplicateDeclarationRefError(ref, first, execution)
+		}
 	}
 
 	var found Execution
@@ -168,6 +187,13 @@ func AmbiguousRefError(ref string, index int64, first, second Execution) error {
 	}
 	return fmt.Errorf("ambiguous execution %q%s: it addresses both %s and %s - address them by their own 'as' alias, or set a unique 'as' on one of them",
 		ref, position, describeExecution(first), describeExecution(second))
+}
+
+// DuplicateDeclarationRefError explains that a workflow name addresses runs of more than
+// one unaliased entry, and how to say which one was meant.
+func DuplicateDeclarationRefError(ref string, first, second Execution) error {
+	return fmt.Errorf("ambiguous execution %q: more than one entry runs that workflow without an alias (executions %q and %q) - set a unique 'as' on each of them and address them by alias",
+		ref, first.Name, second.Name)
 }
 
 // describeExecution names an execution the way its author would recognise it.

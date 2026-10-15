@@ -82,15 +82,16 @@ func newExecutionRecorder(registry *executiondata.Registry) *executionRecorder {
 
 // schedule records a freshly scheduled execution and assigns it a position within
 // its group, so that fan-out instances can be addressed as execution("name", index).
-func (r *executionRecorder) schedule(alias, workflowName string, exec testkube.TestWorkflowExecution) executiondata.Execution {
+func (r *executionRecorder) schedule(alias, workflowName string, declaration int64, exec testkube.TestWorkflowExecution) executiondata.Execution {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	entry := executiondata.Execution{
-		Id:       exec.Id,
-		Name:     exec.Name,
-		Workflow: workflowName,
-		Alias:    alias,
+		Id:          exec.Id,
+		Name:        exec.Name,
+		Workflow:    workflowName,
+		Alias:       alias,
+		Declaration: declaration,
 	}
 
 	// An earlier step may have run the same workflow. This step redefines what the
@@ -139,8 +140,10 @@ type workflowExecutionRequest struct {
 	spec     *testworkflowsv1.StepExecuteWorkflow
 	machines []expressions.Machine
 	alias    string
-	async    bool
-	recorder *executionRecorder
+	// declaration is the position of the entry within the step
+	declaration int64
+	async       bool
+	recorder    *executionRecorder
 }
 
 // executionOutcome is the result of one execution that the step started or tried to start.
@@ -256,7 +259,7 @@ func buildWorkflowExecution(req workflowExecutionRequest) func() operationResult
 			})
 
 			// Register it, so the following executions and steps may read its data
-			entries[i] = req.recorder.schedule(req.alias, exec.Workflow.Name, exec)
+			entries[i] = req.recorder.schedule(req.alias, exec.Workflow.Name, req.declaration, exec)
 			outcomes[i] = executionOutcome{name: exec.Name}
 
 			description := ""
@@ -374,28 +377,42 @@ func notScheduled(workflowName string, err error) operationResult {
 	return operationResult{outcomes: []executionOutcome{{name: workflowName, err: err}}}
 }
 
-// claimExecutionRefs reserves the references an entry will be addressed by. Two
-// entries answering to the same reference would make execution() ambiguous, so ask
-// for an explicit alias instead of silently picking a winner.
+// refClaim is the entry that first claimed an execution() reference.
+type refClaim struct {
+	workflow string
+	aliased  bool
+}
+
+// claimExecutionRefs reserves the references an entry will be addressed by.
 //
 // An aliased entry claims one reference no matter how many workflows its selector
 // matched - they form a single group, told apart by execution("<alias>", index).
 // An entry without an alias claims each matched workflow by name.
 //
+// A reference claimed by an alias is refused to any other entry: entries sharing a key
+// are merged into one group, so execution() could not tell them apart. Two unaliased
+// entries may still run the same workflow, as they could before execution() existed -
+// a workflow that never addresses that name has nothing ambiguous to resolve, and
+// Registry.Lookup refuses the name when it is used.
+//
 // An aliased entry stays addressable by the workflow it ran, which this does not claim:
 // two aliased entries may legitimately run the same workflow and be told apart by their
 // aliases. That leaves the workflow name itself able to address more than one execution,
 // which Registry.Lookup reports when it is used rather than forbidding here.
-func claimExecutionRefs(claimed map[string]string, alias string, workflowNames []string) error {
+func claimExecutionRefs(claimed map[string]refClaim, alias string, workflowNames []string) error {
 	refs := workflowNames
 	if alias != "" {
 		refs = []string{alias}
 	}
 	for _, ref := range refs {
-		if previous, ok := claimed[ref]; ok {
-			return fmt.Errorf("duplicated execution reference %q, already used by %q: set a unique 'as' on one of them", ref, previous)
+		previous, ok := claimed[ref]
+		if !ok {
+			claimed[ref] = refClaim{workflow: workflowNames[0], aliased: alias != ""}
+			continue
 		}
-		claimed[ref] = workflowNames[0]
+		if previous.aliased || alias != "" {
+			return fmt.Errorf("duplicated execution reference %q, already used by %q: set a unique 'as' on one of them", ref, previous.workflow)
+		}
 	}
 	return nil
 }
@@ -538,8 +555,8 @@ func NewExecuteCmd() *cobra.Command {
 			// Build operations to run
 			operations := make([]func() operationResult, 0)
 			// aliases guards against two entries claiming the same execution() reference
-			aliases := make(map[string]string)
-			for _, s := range workflows {
+			aliases := make(map[string]refClaim)
+			for declaration, s := range workflows {
 				var w testworkflowsv1.StepExecuteWorkflow
 				err := json.Unmarshal([]byte(s), &w)
 				if err != nil {
@@ -618,11 +635,12 @@ func NewExecuteCmd() *cobra.Command {
 						// operation starts, so that its configuration may reference the
 						// executions scheduled before it.
 						operations = append(operations, buildWorkflowExecution(workflowExecutionRequest{
-							spec:     spec,
-							machines: []expressions.Machine{baseMachine, tarballMachine, params.MachineAt(i)},
-							alias:    alias,
-							async:    async,
-							recorder: recorder,
+							spec:        spec,
+							machines:    []expressions.Machine{baseMachine, tarballMachine, params.MachineAt(i)},
+							alias:       alias,
+							declaration: int64(declaration),
+							async:       async,
+							recorder:    recorder,
 						}))
 					}
 				}
