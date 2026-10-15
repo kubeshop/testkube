@@ -64,6 +64,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			if tracker.Enabled() {
 				tracker.Identify(owner)
 			}
+			exitIfCancelled(cmd, tracker, "license")
 			if askPath && askOwnCluster(tracker, kubeContext, kubeContextLocal) {
 				tracker.Funnel(installAttemptEvent, map[string]any{"path": "cluster", "rerun": false})
 				runInitDemo(tracker, key)
