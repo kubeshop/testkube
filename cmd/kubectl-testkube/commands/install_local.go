@@ -54,33 +54,35 @@ func NewInstallLocalCmd() *cobra.Command {
 				ui.Printf("\n%s\n", ui.LightGray(telemetry.InstallNotice))
 			}
 			tracker.Send("install_local_started", nil)
-			exitIfCancelled(cmd, tracker, "path")
-			if askPath && askOwnCluster(tracker, kubeContext, kubeContextLocal) {
-				runInitDemo(tracker, licenseKey)
-				return
-			}
-			printPlan(existing, running)
-			exitIfCancelled(cmd, tracker, "plan")
+			exitIfCancelled(cmd, tracker, "license")
 
-			printStep(1, "Checking your license")
+			// Both paths need it; first ties either to the owner.
+			ui.NL()
 			key = runLicenseStep(tracker, licenseKey)
 			// The login needs it; validate already sent the key there.
 			owner := telemetry.GetEmail(key)
 			if tracker.Enabled() {
 				tracker.Identify(owner)
 			}
+			if askPath && askOwnCluster(tracker, kubeContext, kubeContextLocal) {
+				runInitDemo(tracker, key)
+				return
+			}
 			email := localinstall.RememberLoginEmail(owner)
+			// After the path: init demo reports its own install start.
 			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallStarted)
+			printPlan(existing, running)
+			exitIfCancelled(cmd, tracker, "plan")
 
 			// Finds tools a previous run installed.
 			_ = localinstall.AddToolsDirToPath()
-			printStep(2, "Checking required tools")
+			printStep(1, "Checking required tools")
 			checker := localinstall.NewChecker()
 			results := checker.CheckTools(cmd.Context())
 			exitIfCancelled(cmd, tracker, "tools")
 			for _, r := range results {
 				if r.Status == localinstall.StatusWarn {
-					r.Hint = "will be installed in step 4"
+					r.Hint = "will be installed in step 3"
 				}
 				if r.Alternative != "" {
 					r.Fix += "\n" + r.Alternative
@@ -94,7 +96,7 @@ func NewInstallLocalCmd() *cobra.Command {
 				waitForEvents(tracker)
 				os.Exit(1)
 			}
-			printStep(3, "Checking this machine")
+			printStep(2, "Checking this machine")
 			// Not tracked: "os" would overwrite the event's os property.
 			printCheckResult(checker.CheckOS())
 			machine := append(checker.CheckMachine(cmd.Context()), checker.CheckInotify(cmd.Context())...)
@@ -325,19 +327,19 @@ const (
 	ownClusterHint   = "Already have a Kubernetes cluster? To install Testkube there, run:\n  " + localinstall.InitDemoCommand
 )
 
-// Numbered like the step headers, so [3/6] means line 3.
+// Numbered like the step headers, so [3/5] means line 3.
 func printPlan(existing localinstall.ExistingState, running bool) {
-	plan := []string{"check your license key", "check the tools it needs", "check this machine",
+	plan := []string{"check the tools it needs", "check this machine",
 		"download helm and kind into ~/.testkube/bin (kubectl too, if missing)",
 		"create a local cluster called \"testkube\" in Docker", "install Testkube and open it in your browser"}
 	note := "First run takes 5 to 10 minutes, mostly downloads. Your own tools and clusters are not changed."
 	// Reruns download nothing; promising minutes would mislead.
 	if existing != localinstall.TrialAbsent {
-		plan[3], plan[4] = "check helm and kind in ~/.testkube/bin", "start the local cluster \"testkube\" in Docker"
+		plan[2], plan[3] = "check helm and kind in ~/.testkube/bin", "start the local cluster \"testkube\" in Docker"
 	}
 	switch existing {
 	case localinstall.TrialSetUp:
-		plan[5] = "update Testkube and open it in your browser"
+		plan[4] = "update Testkube and open it in your browser"
 		note = "Testkube is already set up here. This run updates it, usually in under a minute.\nYour data is kept."
 		if running {
 			note += " To only check it, run:\n  " + statusLocalCommand
@@ -345,7 +347,7 @@ func printPlan(existing localinstall.ExistingState, running bool) {
 	case localinstall.TrialUnfinished:
 		note = "A previous install didn't finish. This run continues it.\nFinished downloads are kept."
 	case localinstall.TrialNodeStopped:
-		plan[5] = "install or update Testkube and open it in your browser"
+		plan[4] = "install or update Testkube and open it in your browser"
 		note = "Your local cluster is stopped. This run starts it and checks Testkube.\nFinished downloads are kept."
 	}
 	ui.Printf("\nThis installer will\n")
@@ -355,14 +357,14 @@ func printPlan(existing localinstall.ExistingState, running bool) {
 	ui.Printf("\n%s\n", ui.LightGray(note+"\nPress Ctrl+C to exit at any time."))
 }
 
-const installSteps = 6
+const installSteps = 5
 
 func printStep(n int, title string) {
 	ui.Printf("\n%s %s\n", ui.LightGray(fmt.Sprintf("[%d/%d]", n, installSteps)), title)
 }
 
 func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, checker *localinstall.Checker, results []localinstall.Result) {
-	printStep(4, "Preparing Testkube's tools")
+	printStep(3, "Preparing Testkube's tools")
 	ui.Printf("  %s\n", ui.LightGray("Testkube uses its own copies in ~/.testkube/bin. Yours are not changed."))
 	var missing []string
 	for _, r := range results {
@@ -426,7 +428,7 @@ func failToolInstall(tracker *telemetry.InstallTracker, name string, err error) 
 }
 
 func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) localinstall.Ports {
-	printStep(5, "Creating the cluster")
+	printStep(4, "Creating the cluster")
 	cluster, err := localinstall.NewCluster()
 	if err != nil {
 		failCluster(tracker, "", err)
@@ -464,7 +466,7 @@ func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) local
 }
 
 func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, license, email string, ports localinstall.Ports) {
-	printStep(6, "Installing Testkube")
+	printStep(5, "Installing Testkube")
 	secrets, err := localinstall.LoadOrCreateSecrets()
 	if err != nil {
 		failTestkube(tracker, "", err, "")
