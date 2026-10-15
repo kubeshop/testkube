@@ -101,6 +101,40 @@ func SendCmdWithLicenseEvent(cmd *cobra.Command, version, userID, license, step 
 	return sendData(senders, payload)
 }
 
+// SendInstallLocalEvent sends a trial funnel step for `testkube install local`.
+func SendInstallLocalEvent(version, name, license, email string, props map[string]any) (string, error) {
+	// Not GA: an email user ID is personal data there.
+	return sendData(map[string]Sender{"segmentio": SegmentioSender}, installLocalPayload(version, name, license, email, props))
+}
+
+// Mixpanel keys license requests by email; matching joins the funnel.
+func installLocalPayload(version, name, license, email string, props map[string]any) Payload {
+	userID := email
+	if userID == "" {
+		userID = GetMachineID()
+	}
+	return Payload{
+		ClientID: userID,
+		UserID:   userID,
+		Events: []Event{{
+			Name: name,
+			Params: Params{
+				EventCount:      1,
+				EventCategory:   "cli_command_execution",
+				AppVersion:      version,
+				AppName:         "kubectl-testkube",
+				MachineID:       GetMachineID(),
+				OperatingSystem: runtime.GOOS,
+				Architecture:    runtime.GOARCH,
+				CliContext:      GetCliRunContext(),
+				License:         license,
+				Email:           email,
+				Extra:           props,
+			},
+		}},
+	}
+}
+
 // SendCmdInitEvent will send CLI event to GA
 func SendCmdInitEvent(cmd *cobra.Command, version, userID string) (string, error) {
 	payload := NewCLIPayload(getCurrentContext(), userID, "init", version, "cli_command_execution", GetClusterType())

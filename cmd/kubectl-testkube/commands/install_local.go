@@ -41,46 +41,51 @@ func NewInstallLocalCmd() *cobra.Command {
 			printBanner()
 			existing, running := localinstall.ExistingTrial(cmd.Context())
 			kubeContext, kubeContextLocal := localinstall.CurrentKubeContext()
+			rerun := existing != localinstall.TrialAbsent || localinstall.HasInstallMark()
 			// Reruns already chose; scripts and kubectl-less machines can't.
-			askPath := existing == localinstall.TrialAbsent && !localinstall.HasInstallMark() &&
-				kubeContext != "" && ui.StdinIsInteractive()
+			askPath := !rerun && kubeContext != "" && ui.StdinIsInteractive()
 			if !askPath {
 				ui.Printf("%s\n", ui.LightGray(localInstallLead+"\n"+ownClusterHint))
 			}
 			tracker := newInstallTracker()
-			var key string
-			tracker.OnError(segmentErrors(cmd, &key))
+			tracker.OnError(funnelErrors(tracker))
 			if tracker.Enabled() {
 				ui.Printf("\n%s\n", ui.LightGray(telemetry.InstallNotice))
 			}
 			tracker.Send("install_local_started", nil)
-			exitIfCancelled(cmd, tracker, "path")
-			if askPath && askOwnCluster(tracker, kubeContext, kubeContextLocal) {
-				runInitDemo(tracker, licenseKey)
-				return
-			}
-			printPlan(existing, running)
-			exitIfCancelled(cmd, tracker, "plan")
+			exitIfCancelled(cmd, tracker, "license")
 
-			printStep(1, "Checking your license")
-			key = runLicenseStep(tracker, licenseKey)
+			// Both paths need it; first ties either to the owner.
+			ui.NL()
+			key := runLicenseStep(tracker, licenseKey)
+			tracker.SetLicense(key)
 			// The login needs it; validate already sent the key there.
 			owner := telemetry.GetEmail(key)
 			if tracker.Enabled() {
 				tracker.Identify(owner)
 			}
+			exitIfCancelled(cmd, tracker, "license")
+			if askPath && askOwnCluster(tracker, kubeContext, kubeContextLocal) {
+				tracker.Funnel(installAttemptEvent, map[string]any{"path": "cluster", "rerun": false})
+				runInitDemo(tracker, key, owner)
+				return
+			}
+			tracker.Funnel(installAttemptEvent, map[string]any{"path": "docker", "rerun": rerun})
 			email := localinstall.RememberLoginEmail(owner)
+			// After the path: init demo reports its own install start.
 			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallStarted)
+			printPlan(existing, running)
+			exitIfCancelled(cmd, tracker, "plan")
 
 			// Finds tools a previous run installed.
 			_ = localinstall.AddToolsDirToPath()
-			printStep(2, "Checking required tools")
+			printStep(1, "Checking required tools")
 			checker := localinstall.NewChecker()
 			results := checker.CheckTools(cmd.Context())
 			exitIfCancelled(cmd, tracker, "tools")
 			for _, r := range results {
 				if r.Status == localinstall.StatusWarn {
-					r.Hint = "will be installed in step 4"
+					r.Hint = "will be installed in step 3"
 				}
 				if r.Alternative != "" {
 					r.Fix += "\n" + r.Alternative
@@ -94,7 +99,7 @@ func NewInstallLocalCmd() *cobra.Command {
 				waitForEvents(tracker)
 				os.Exit(1)
 			}
-			printStep(3, "Checking this machine")
+			printStep(2, "Checking this machine")
 			// Not tracked: "os" would overwrite the event's os property.
 			printCheckResult(checker.CheckOS())
 			machine := append(checker.CheckMachine(cmd.Context()), checker.CheckInotify(cmd.Context())...)
@@ -114,6 +119,7 @@ func NewInstallLocalCmd() *cobra.Command {
 			}
 			printReady(tracker, ports, email, cli, common.LocalCLIFailure(err))
 			reportInstallLicenseEvent(tracker, key, licensevalidator.EventCLIInstallFinished)
+			tracker.Funnel(installSuccessEvent, map[string]any{"path": "docker", "rerun": rerun})
 			waitForEvents(tracker)
 		},
 	}
@@ -187,6 +193,52 @@ func segmentErrors(cmd *cobra.Command, license *string) func(code, stage, reason
 	}
 }
 
+// By the owner's email, so failures join the trial funnel.
+func funnelErrors(tracker *telemetry.InstallTracker) func(code, stage, reason string) {
+	return func(code, stage, reason string) {
+		tracker.Funnel(installErrorEvent, map[string]any{"category": failureCategory(stage, reason),
+			"stage": stage, "reason": reason, "errorCode": code})
+	}
+}
+
+// Few buckets to chart; stage and reason keep the detail.
+func failureCategory(stage, reason string) string {
+	switch stage {
+	case "license":
+		if strings.HasPrefix(reason, "cannot reach") {
+			return "network"
+		}
+		return "license"
+	case "tools":
+		return "docker"
+	case "tool_install":
+		switch {
+		case strings.HasSuffix(reason, " save"):
+			return "machine_resources"
+		case strings.HasSuffix(reason, " unsupported_platform"):
+			return "other"
+		}
+		return "network"
+	case "cluster":
+		if reason == "storage" || reason == "kubeconfig" {
+			return "machine_resources"
+		}
+		return "docker"
+	case "testkube":
+		// Timeouts carry the stuck service's reason last too.
+		switch reason[strings.LastIndex(reason, " ")+1:] {
+		case "chart_download", "image_pull", "downloading", "rate_limit":
+			return "network"
+		case "no_cpu", "no_memory", "storage", "unschedulable":
+			return "machine_resources"
+		case "secrets_lost", "secrets_damaged":
+			return "other"
+		}
+		return "install_stuck"
+	}
+	return "other"
+}
+
 func failedChecks(results []localinstall.Result) string {
 	var failed []string
 	for _, r := range results {
@@ -251,6 +303,7 @@ func printCancelled(stage string) {
 func abortInstall(tracker *telemetry.InstallTracker, stage string) {
 	printCancelled(stage)
 	tracker.Send("install_local_aborted", map[string]any{"stage": stage})
+	tracker.Funnel(installErrorEvent, map[string]any{"category": "user_cancelled", "stage": stage})
 	waitForEvents(tracker)
 	os.Exit(130)
 }
@@ -258,10 +311,10 @@ func abortInstall(tracker *telemetry.InstallTracker, stage string) {
 // The name guards against installing into a work cluster.
 func askOwnCluster(tracker *telemetry.InstallTracker, kubeContext string, local bool) bool {
 	if !local {
-		kubeContext += " (remote)"
+		kubeContext += ", remote"
 	}
-	thisMachine := "On this machine           Its own cluster in Docker (recommended)"
-	ownCluster := "In my Kubernetes cluster  Current kubectl context: " + kubeContext
+	thisMachine := "On this machine (recommended, creates a new cluster in Docker)"
+	ownCluster := "In my Kubernetes cluster (current kubectl context: " + kubeContext + ")"
 	ui.NL()
 	choice, err := pterm.DefaultInteractiveSelect.
 		WithOptions([]string{thisMachine, ownCluster}).
@@ -285,7 +338,7 @@ func askOwnCluster(tracker *telemetry.InstallTracker, kubeContext string, local 
 }
 
 // Never -y: its confirm names the target cluster.
-func runInitDemo(tracker *telemetry.InstallTracker, key string) {
+func runInitDemo(tracker *telemetry.InstallTracker, key, owner string) {
 	waitForEvents(tracker)
 	args := []string{"init", "demo"}
 	if key == "" {
@@ -300,6 +353,9 @@ func runInitDemo(tracker *telemetry.InstallTracker, key string) {
 		// Never cancelled: Ctrl+C reaches it directly; a kill skips cleanup.
 		demo := exec.CommandContext(context.Background(), self, args...)
 		demo.Stdin, demo.Stdout, demo.Stderr = os.Stdin, os.Stdout, os.Stderr
+		if tracker.Enabled() {
+			demo.Env = append(os.Environ(), installLocalOwnerEnv+"="+owner)
+		}
 		err = demo.Run()
 	}
 	var exitErr *exec.ExitError
@@ -320,24 +376,33 @@ func printBanner() {
 			"\nTry Testkube on your own machine.")
 }
 
+// Names match the CLI's other Segment events, for Mixpanel funnels.
+const (
+	installAttemptEvent = "testkube_install_local_attempt"
+	installSuccessEvent = "testkube_install_local_success"
+	installErrorEvent   = "testkube_install_local_error"
+	// Exit codes can't tell init demo's "no" from success.
+	installLocalOwnerEnv = "TESTKUBE_INSTALL_LOCAL_OWNER"
+)
+
 const (
 	localInstallLead = "This sets up Testkube locally, in its own cluster inside Docker."
 	ownClusterHint   = "Already have a Kubernetes cluster? To install Testkube there, run:\n  " + localinstall.InitDemoCommand
 )
 
-// Numbered like the step headers, so [3/6] means line 3.
+// Numbered like the step headers, so [3/5] means line 3.
 func printPlan(existing localinstall.ExistingState, running bool) {
-	plan := []string{"check your license key", "check the tools it needs", "check this machine",
+	plan := []string{"check the tools it needs", "check this machine",
 		"download helm and kind into ~/.testkube/bin (kubectl too, if missing)",
 		"create a local cluster called \"testkube\" in Docker", "install Testkube and open it in your browser"}
 	note := "First run takes 5 to 10 minutes, mostly downloads. Your own tools and clusters are not changed."
 	// Reruns download nothing; promising minutes would mislead.
 	if existing != localinstall.TrialAbsent {
-		plan[3], plan[4] = "check helm and kind in ~/.testkube/bin", "start the local cluster \"testkube\" in Docker"
+		plan[2], plan[3] = "check helm and kind in ~/.testkube/bin", "start the local cluster \"testkube\" in Docker"
 	}
 	switch existing {
 	case localinstall.TrialSetUp:
-		plan[5] = "update Testkube and open it in your browser"
+		plan[4] = "update Testkube and open it in your browser"
 		note = "Testkube is already set up here. This run updates it, usually in under a minute.\nYour data is kept."
 		if running {
 			note += " To only check it, run:\n  " + statusLocalCommand
@@ -345,7 +410,7 @@ func printPlan(existing localinstall.ExistingState, running bool) {
 	case localinstall.TrialUnfinished:
 		note = "A previous install didn't finish. This run continues it.\nFinished downloads are kept."
 	case localinstall.TrialNodeStopped:
-		plan[5] = "install or update Testkube and open it in your browser"
+		plan[4] = "install or update Testkube and open it in your browser"
 		note = "Your local cluster is stopped. This run starts it and checks Testkube.\nFinished downloads are kept."
 	}
 	ui.Printf("\nThis installer will\n")
@@ -355,14 +420,14 @@ func printPlan(existing localinstall.ExistingState, running bool) {
 	ui.Printf("\n%s\n", ui.LightGray(note+"\nPress Ctrl+C to exit at any time."))
 }
 
-const installSteps = 6
+const installSteps = 5
 
 func printStep(n int, title string) {
 	ui.Printf("\n%s %s\n", ui.LightGray(fmt.Sprintf("[%d/%d]", n, installSteps)), title)
 }
 
 func installMissingTools(cmd *cobra.Command, tracker *telemetry.InstallTracker, checker *localinstall.Checker, results []localinstall.Result) {
-	printStep(4, "Preparing Testkube's tools")
+	printStep(3, "Preparing Testkube's tools")
 	ui.Printf("  %s\n", ui.LightGray("Testkube uses its own copies in ~/.testkube/bin. Yours are not changed."))
 	var missing []string
 	for _, r := range results {
@@ -426,7 +491,7 @@ func failToolInstall(tracker *telemetry.InstallTracker, name string, err error) 
 }
 
 func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) localinstall.Ports {
-	printStep(5, "Creating the cluster")
+	printStep(4, "Creating the cluster")
 	cluster, err := localinstall.NewCluster()
 	if err != nil {
 		failCluster(tracker, "", err)
@@ -464,7 +529,7 @@ func runClusterStep(cmd *cobra.Command, tracker *telemetry.InstallTracker) local
 }
 
 func runTestkubeStep(cmd *cobra.Command, tracker *telemetry.InstallTracker, license, email string, ports localinstall.Ports) {
-	printStep(6, "Installing Testkube")
+	printStep(5, "Installing Testkube")
 	secrets, err := localinstall.LoadOrCreateSecrets()
 	if err != nil {
 		failTestkube(tracker, "", err, "")
@@ -593,6 +658,10 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error, repo
 		props["stuck_service"], props["stuck_reason"] = stuck.Service, stuck.Reason
 	}
 	tracker.Send("install_local_failed", props)
+	if isStuck {
+		// The category needs why; "stuck" alone can't tell.
+		reason += " " + stuck.Reason
+	}
 	tracker.Error(string(common.TKErrLocalTestkubeInstallFailed), "testkube", reason)
 	waitForEvents(tracker)
 	os.Exit(1)

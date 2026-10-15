@@ -32,6 +32,8 @@ const InstallNotice = "Testkube sends install progress, linked to your license, 
 // Events: install_local_started, install_local_checks (one per run),
 // install_local_failed, install_local_aborted, install_local_checks_done,
 // install_local_path.
+// Funnel copies attempt, success and error to Segment by email
+// (3s cap), for the Mixpanel trial funnel.
 type InstallTracker struct {
 	enabled    bool
 	distinctID string
@@ -43,6 +45,8 @@ type InstallTracker struct {
 	wg         sync.WaitGroup
 	onError    func(code, stage, reason string)
 	wsl        string
+	email      string
+	license    string
 }
 
 type InstallTrackerConfig struct {
@@ -147,6 +151,7 @@ func (t *InstallTracker) Identify(email string) {
 	}
 	anonymousID := t.distinctID
 	t.distinctID = email
+	t.email = email
 	t.Send("$identify", map[string]any{
 		// PostHog merges this run's anonymous events into this person.
 		"$anon_distinct_id": anonymousID,
@@ -165,6 +170,33 @@ func (t *InstallTracker) Error(code, stage, reason string) {
 	if t.enabled && t.onError != nil {
 		t.onError(code, stage, reason)
 	}
+}
+
+// Cancels and failures happen far from the license step.
+func (t *InstallTracker) SetLicense(key string) {
+	t.license = key
+}
+
+// Funnel copies a trial funnel step to Segment, for Mixpanel.
+func (t *InstallTracker) Funnel(name string, props map[string]any) {
+	if !t.enabled {
+		return
+	}
+	license, email := t.license, t.email
+	t.wg.Add(1)
+	go func() {
+		defer t.wg.Done()
+		sent := make(chan struct{})
+		go func() {
+			_, _ = SendInstallLocalEvent(t.version, name, license, email, props)
+			close(sent)
+		}()
+		// Segment's client waits 10s; a blocked network mustn't delay exit.
+		select {
+		case <-sent:
+		case <-time.After(3 * time.Second):
+		}
+	}()
 }
 
 func (t *InstallTracker) Wait() {
