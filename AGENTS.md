@@ -1,5 +1,19 @@
 # Working with Testkube Core (testkube)
 
+Owner: `@kubeshop/testkube-backend`, per `.github/CODEOWNERS`. `test/` is shared with `@kubeshop/testkube-qa`; CI, release and lint configuration (`.github/`, `goreleaser_files/`, `.goreleaser*.yml`, `.golangci.yml`, `.builds-*`) belong to `@kubeshop/testkube-devops`.
+
+## Never do these
+
+- **Do not hand-edit generated code.** Change the source and run the generator (see "Regenerating artifacts"); the `oss-verify-*` workflows fail on any difference.
+  - `pkg/api/v1/testkube/model_*.go`, from `api/v1/testkube.yaml` (`make generate-openapi`). The `model_*_extended.go` and `model_*_aliases.go` files, and the files without the `model_` prefix, are hand-written.
+  - `pkg/proto/`, from `proto/` (`make generate-protobuf`).
+  - `k8s/crd/` and `zz_generated.deepcopy.go` under `api/`, from the `api/` types (`make generate-crds`).
+  - The `sqlc/` packages (`pkg/database/postgres/sqlc/`, `pkg/controlplane/scheduling/sqlc/`), from the queries (`make generate-sqlc`).
+  - `mock_*.go`, from the `//go:generate mockgen` lines (`make generate-mocks`).
+- **Do not edit `.golangci.yml` to silence a finding.** Fix the code; the file belongs to devops.
+- **Do not run** `make dev`/`make run-api` expecting a working agent (see "Running locally"), `testkube install local` to test this checkout (it installs published images), or anything that publishes a release (`goreleaser`, the version and release tooling in `cmd/tools`).
+- **Do not run the `oss-*` workflows against a revision that is not pushed to `kubeshop/testkube`.** They check the revision out from GitHub, so a local-only commit fails to resolve.
+
 ## Deprecated components — DO NOT reference
 
 - **testkube-operator** (`k8s/helm/testkube-operator/`, `testkube-operator` Helm values): The Kubernetes operator is deprecated and disabled by default. Do not suggest enabling it, reference it in documentation, or add new code that depends on it. The Helm chart still carries it as a dependency for backwards compatibility only.
@@ -204,6 +218,7 @@ Pick the smallest setup that exercises the change. Everything past building need
 - **CLI:** `make build-kubectl-testkube-cli` builds `bin/app/kubectl-testkube`. `make build` builds every binary into `bin/app/`.
 - **Agent alone (OSS, no Control Plane):** the Tilt setup in [`DEVELOPMENT.md`](DEVELOPMENT.md). `./scripts/tilt-cluster.sh` creates the k3d cluster `testkube-dev` with a registry on `localhost:5001`, then `tilt up` builds the API server, `testworkflow-init` and `testworkflow-toolkit` from this checkout and installs `k8s/helm/testkube` into namespace `testkube-dev` with Postgres, MinIO and NATS. The API is on `localhost:8088`. `tilt ci` runs the same setup headless, runs the smoke test and exits non-zero on failure, so it is the one to use without a browser. `tilt up -- --db=mongo` switches the database.
 - **`testworkflow-init` and `testworkflow-toolkit`** only run inside a TestWorkflow pod. Exercise them through the Tilt setup by running a workflow; its `install-sample-workflows` resource applies the smoke workflows from `test/*/crd-workflow/smoke.yaml`.
+- **Skills:** the stack skills are in testkube-workspace (below). For writing or running the TestWorkflows under `test/`, the public skills in [testkube-skills](https://github.com/kubeshop/testkube-skills) (`testworkflow-author`, `testworkflow-runner`) know the schema and the CLI.
 - **Agent with a Control Plane (full stack):** this repo cannot start a Control Plane. Use [testkube-workspace](https://github.com/kubeshop/testkube-workspace), which builds this checkout and a `testkube-cloud-api` checkout side by side: `tilt up oss` (agent alone), `tilt up cp` (Control Plane, dashboard and a connected agent) or `tilt up agent` (local agent, remote Control Plane). Its `tilt-local-dev` and `local-e2e-verify` skills cover the bring-up and how to verify a change against the running stack. It replaces `tk-dev`.
 - **MCP server:** `kubectl-testkube mcp serve` needs a CLI context logged in to a Control Plane (organization, environment and a token), or `TK_MCP_ENV_MODE=true` with `TK_ACCESS_TOKEN`, `TK_ORG_ID`, `TK_ENV_ID`, `TK_CONTROL_PLANE_URL` and `TK_DASHBOARD_URL`. It cannot drive the OSS Tilt agent, whose context uses `--client direct`.
 - **Not a dev loop:**
@@ -231,16 +246,34 @@ Pick the smallest setup that exercises the change. Everything past building need
 
 ## Keeping documentation in sync
 
-After completing any code change, check whether `AGENTS.md` or `ARCHITECTURE.md` need updates. Apply changes when any of the following are true:
+A package documents its own behaviour in its `doc.go`. Reviewers ask for that instead of a new `AGENTS.md` or `ARCHITECTURE.md` section, so write or update the `doc.go` first. After a code change, update these two files only when one of the following is true:
 
 - **New or removed entry points** (`cmd/` binaries, API routes, controllers) → update both files.
-- **New or changed packages / key files** (e.g. adding a file like `pkg/telemetry/cluster_type.go`) → add or update the relevant section in `AGENTS.md` so future agents know where to look, and in `ARCHITECTURE.md` so the system description stays accurate.
-- **Changed detection / identification logic** (cluster type, CLI run context, Docker context, etc.) → update the corresponding section in `ARCHITECTURE.md` and any guidance in `AGENTS.md`.
+- **A contract with another repository or component changes** (a proto, the OpenAPI schema, something the Control Plane imports) → update the section that names both ends here.
 - **New storage backends, event listeners, CRDs, or external integrations** → update `ARCHITECTURE.md`.
 - **New configuration knobs or environment variables** → mention them in `AGENTS.md` under "Configuration references" if they affect agent behavior.
 - **New code-generation or build steps** → add them under "Regenerating artifacts" in `AGENTS.md`.
+- **A new package an agent would not find by its name** → one line in `AGENTS.md` pointing to its `doc.go`, as the `pkg/localinstall` line under "Running locally" does.
 
-When in doubt, err on the side of updating — stale documentation is worse than a small extra commit.
+## Reproducing a bug
+
+Write the failing test first, at the lowest level that shows the bug, then fix it.
+
+- **Unit tests** sit next to the code (`foo_test.go`) and use `testify` (`require` for preconditions, `assert` for checks), usually as a table of cases. Fakes go in through interfaces; reviewers ask for that instead of package-level function variables that tests swap. Generated `gomock` mocks (`mock_*.go`) exist for the larger interfaces. Run one test with `go test ./pkg/<pkg>/ -run '^TestName$' -count=1`.
+- **Fixtures** live in a `testdata/` folder beside the test (for example `pkg/mcp/boards/testdata/`, `cmd/testworkflow-init/orchestration/testdata/`). Test Workflow specs for smoke tests are under `test/*/crd-workflow/`.
+- **Tests against a real service** end in `_Integration` and start with `test.IntegrationTest(t)` (`pkg/utils/test`), which skips unless `INTEGRATION` is set. For Postgres, `testpostgres.PreparePostgresTestDatabase(t, "<name>")` (`pkg/test/postgres`) creates a database per test from `API_POSTGRES_URL` and drops it on cleanup. The Mongo tests connect to `mongodb://localhost:27017`. Start the services as "Verifying a change" describes, then run `INTEGRATION=true go test ./pkg/<pkg>/ -run '^TestName_Integration$' -count=1`.
+- **`testworkflow-init` and `testworkflow-toolkit` behaviour** is tested in `test/integration/components/`, which needs `make build-init build-toolkit` first.
+- **A bug that needs a cluster** (pod scheduling, a workflow that runs wrong): bring up the Tilt agent ("Running locally"), apply a minimal TestWorkflow that shows it with `kubectl apply -n testkube-dev -f`, and run it with `kubectl-testkube run testworkflow <name> --watch`. Turn the result into a unit test on the processor (`pkg/testworkflows/testworkflowprocessor`) or the runner where you can, so the fix stays covered without a cluster.
+- **A bug that needs the Control Plane** reproduces only on the full stack in testkube-workspace.
+
+## Conventions reviewers enforce
+
+- Package behaviour goes in the package's `doc.go` (see "Keeping documentation in sync").
+- Dependencies are injected through small interfaces, with the real implementation in the code and a fake in the test, not through package-level variables.
+- Parse structured output (`--format json`) rather than the lines a tool happens to print; the line format changes between versions.
+- Name constants for durations and limits (`const shutdownTimeout = 10 * time.Second`) rather than inlining them.
+- A change in behaviour that a user or operator sees says in the pull request whether it is breaking, what to migrate, and whether the Helm chart needs a matching change (a new Secret, value or permission).
+- `make lint` enforces the rest: `govet`, `revive`, `staticcheck`, `unused`, `ineffassign`, `noctx` (an HTTP request carries a context) and `goimports` formatting. `unused` is what catches a helper that was written but never called.
 
 ## Verifying a change
 
@@ -249,9 +282,9 @@ Verification has two loops. Run the inner loop before every commit, and the oute
 ### Inner loop: local commands
 
 ```bash
-make lint          # golangci-lint (or `make lint-fix` to auto-fix)
+make lint          # golangci-lint (or `make lint-fix` to auto-fix); about 2m in CI
 go build ./...     # compilation
-make unit-tests    # what oss-unit-tests runs; add GOFLAGS=-count=1 to skip cached results
+make unit-tests    # what oss-unit-tests runs, about 2m in CI; add GOFLAGS=-count=1 to skip cached results
 ```
 
 Run the narrower checks when the change touches what they cover:
@@ -265,15 +298,18 @@ Run the narrower checks when the change touches what they cover:
 
 Pull request checks are not GitHub Actions. They are Testkube TestWorkflows in `test/testkube/oss-tests/gh-quality-loop.yaml`, started by the Testkube GitHub integration on every pull request. Each takes a `revision` config input (default `main`) and checks out `https://github.com/kubeshop/testkube.git` at that revision, so the branch must be pushed to this repository first.
 
-| Workflow | What it runs |
-| --- | --- |
-| `oss-lint-go` | `golangci-lint run ./...` |
-| `oss-lint-proto` | `buf lint`, `buf format --diff`, and `buf breaking` against `main` |
-| `oss-unit-tests` | `make unit-tests` |
-| `oss-integration-tests` | the `_Integration` tests with MongoDB, NATS, MinIO and Postgres |
-| `oss-verify-crds` | `make verify-crds-generated` |
-| `oss-verify-protobuf` | `make verify-protobuf-generated` |
-| `oss-lint-pr` | the pull request title (see "PR title format"); also needs `PR_NUMBER`, so it only runs once the pull request exists |
+| Workflow | What it runs | Time |
+| --- | --- | --- |
+| `oss-lint-go` | `golangci-lint run ./...` | 1m45s |
+| `oss-lint-proto` | `buf lint`, `buf format --diff`, and `buf breaking` against `main` | 40s |
+| `oss-unit-tests` | `make unit-tests` | 2m15s |
+| `oss-integration-tests` | the `_Integration` tests with MongoDB, NATS, MinIO and Postgres | 2m55s |
+| `oss-verify-crds` | `make verify-crds-generated` | 1m05s |
+| `oss-verify-protobuf` | `make verify-protobuf-generated` | 35s |
+| `oss-lint-pr` | the pull request title (see "PR title format"); also needs `PR_NUMBER`, so it only runs once the pull request exists | 45s |
+| `security-pr-scan` | Semgrep, Gitleaks and Trivy on the changed files; `make security-scan` runs the same locally (needs Docker). Its definition is not in this repository, and it reports as the `testkube-dev` GitHub App rather than `testkubebot` | 40s |
+
+Times are the median wall-clock time of each check on the last 12 merged pull requests (October 2026), including pod start-up. They run in parallel, so a full pass takes about as long as `oss-integration-tests`.
 
 The same file also holds `docs-prettier`, which checks testkube-docs, not this repo.
 
