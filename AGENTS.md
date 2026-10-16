@@ -189,6 +189,12 @@ contents do.
 - Adding a new prompt: use the `ui` helpers rather than pterm directly, and it inherits the guard. Adding a command that must not prompt at all: branch on `ui.StdinIsInteractive()`.
 - Tests flip the unexported `stdinIsInteractive` seam rather than allocating a pseudo terminal.
 
+## CLI diagnostics
+
+- `testkube diagnostics` runs validator groups from `pkg/diagnostics`; the commands live in `cmd/kubectl-testkube/commands/diagnostics/`. Groups: `install` (`validators/deps`), `agent` (`validators/agent`, API server pods ready) and `license`.
+- Adding a check: implement `validators.Validator` in a package under `pkg/diagnostics/validators/`, register it in the group's `Register*Validators`, and build commands through `diagnostics.New(cmd)` in that package so `--output json` applies.
+- A validator that needs the cluster takes a connect function rather than a client, so an unreachable cluster is reported as a result (`WithBreak()`) instead of aborting the run. Do not add checks for the deprecated operator.
+
 ## On-prem demo install
 
 - `testkube init demo` (`cmd/kubectl-testkube/commands/init.go`) installs the On-Prem demo on the new architecture: the Control Plane (enterprise chart + `values.demo.v2.yaml`) plus a **separate** listener-enabled runner (`kubeshop/testkube-runner`). The bundled agent is gone.

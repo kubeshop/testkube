@@ -90,7 +90,7 @@ func RunLicenseCheckFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 		ui.H1("Check licensing issues")
 
-		d := diagnostics.New()
+		d := New(cmd)
 		RegisterLicenseValidators(cmd, d)
 
 		err := d.Run()

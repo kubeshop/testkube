@@ -30,6 +30,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
+// APIServerSelector selects the pods of the Testkube API server.
+const APIServerSelector = apiServerDeploymentSelector
+
 const (
 	apiServerDeploymentSelector = "app.kubernetes.io/name=api-server"
 	operatorDeploymentSelector  = "control-plane=controller-manager"
