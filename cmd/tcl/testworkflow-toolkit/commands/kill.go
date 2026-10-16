@@ -11,6 +11,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -26,6 +27,7 @@ import (
 	toolkitcommon "github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/credentials"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
@@ -62,8 +64,9 @@ func NewKillCmd() *cobra.Command {
 			worker := spawn.ExecutionWorker()
 			namespace := config.Namespace()
 
-			err := RunKill(cmd.Context(), worker, namespace, config.Ref(), groupRef, conditions, machine)
-			toolkitcommon.ExitOnError("stopping services", err)
+			if err := RunKill(cmd.Context(), worker, namespace, config.Ref(), groupRef, conditions, machine); err != nil {
+				toolkitcommon.Fail(err)
+			}
 		},
 	}
 
@@ -101,7 +104,13 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, namespace 
 		}
 	}
 
-	var healthErrors []string
+	instanceCounts := make(map[string]int64)
+	for _, item := range items {
+		service, _ := spawn.GetServiceByResourceId(item.Resource.Id)
+		instanceCounts[service]++
+	}
+
+	unhealthy := &UnhealthyServicesError{}
 	clientSet := env.Kubernetes()
 	fmt.Printf("checking health of %d services\n", len(items))
 	for _, item := range items {
@@ -114,7 +123,9 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, namespace 
 		}
 
 		if issues := getServiceHealth(ctx, clientSet, item.Namespace, item.Resource.Id); len(issues) > 0 {
-			healthErrors = append(healthErrors, fmt.Sprintf("%s (index %d): %s", commontcl.ServiceLabel(service), index, strings.Join(issues, "; ")))
+			name := instanceName(service, index, instanceCounts[service])
+			fmt.Printf("%s: not healthy: %s\n", commontcl.ServiceLabel(name), strings.Join(issues, ", "))
+			unhealthy.add(name, issues)
 		}
 	}
 
@@ -177,12 +188,70 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, namespace 
 		return fmt.Errorf("cleaning up resources: %w", err)
 	}
 
-	if len(healthErrors) > 0 {
-		return fmt.Errorf("unhealthy services detected: %s", strings.Join(healthErrors, "; "))
+	if len(unhealthy.services) > 0 {
+		return unhealthy
 	}
 
 	return nil
 }
+
+// UnhealthyServicesError names each service instance that was not healthy when the step stopped
+// the services, with the reasons that Kubernetes reported for it.
+type UnhealthyServicesError struct {
+	// OOMKilled is true when Kubernetes stopped a container of a service for its memory.
+	OOMKilled bool
+	services  []string
+}
+
+func (e *UnhealthyServicesError) add(name string, issues []string) {
+	e.services = append(e.services, fmt.Sprintf("The service %q %s.", name, healthPhrase(issues)))
+	e.OOMKilled = e.OOMKilled || slices.Contains(issues, oomKilledReason)
+}
+
+// healthReasonPhrases put the reasons that Kubernetes gives a container in words.
+var healthReasonPhrases = map[string]string{
+	oomKilledReason:    "ran out of memory",
+	"CrashLoopBackOff": "kept restarting",
+	"Error":            "stopped with an error",
+}
+
+// healthPhrase says how a service was not healthy. A reason without words keeps its text from
+// Kubernetes, because a guess would hide the cause.
+func healthPhrase(issues []string) string {
+	phrases := make([]string, 0, len(issues))
+	var other []string
+	for _, issue := range issues {
+		if phrase, ok := healthReasonPhrases[issue]; ok {
+			phrases = append(phrases, phrase)
+		} else {
+			other = append(other, issue)
+		}
+	}
+	if len(other) > 0 {
+		phrases = append(phrases, "is not healthy: "+strings.Join(other, ", "))
+	}
+	if len(phrases) < 2 {
+		return strings.Join(phrases, "")
+	}
+	return strings.Join(phrases[:len(phrases)-1], ", ") + " and " + phrases[len(phrases)-1]
+}
+
+func (e *UnhealthyServicesError) Error() string {
+	return strings.Join(e.services, " ")
+}
+
+// Reason returns oom-killed when Kubernetes stopped a container of a service for its memory, and
+// service-not-ready for other health issues. A service that does not stay healthy is an
+// infrastructure failure and not a failure of the test, the same as a service that does not start.
+func (e *UnhealthyServicesError) Reason() testkube.StopReason {
+	if e.OOMKilled {
+		return testkube.StopReasonOOMKilled
+	}
+	return testkube.StopReasonServiceNotReady
+}
+
+// oomKilledReason is the reason that Kubernetes gives a container that it stopped for its memory.
+const oomKilledReason = "OOMKilled"
 
 func getServiceHealth(ctx context.Context, clientSet kubernetes.Interface, namespace, resourceId string) []string {
 	pods, err := clientSet.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
@@ -198,26 +267,37 @@ func getServiceHealth(ctx context.Context, clientSet kubernetes.Interface, names
 		return nil
 	}
 
-	pod := &pods.Items[0]
+	return podHealthIssues(&pods.Items[0])
+}
+
+// podHealthIssues returns the reasons that Kubernetes reported for a pod of a service that is not
+// healthy, each one time. The names of the containers are indexes of internal groups, so the
+// reasons do not name them.
+func podHealthIssues(pod *corev1.Pod) []string {
 	var issues []string
-	for _, cs := range pod.Status.ContainerStatuses {
-		if term := cs.LastTerminationState.Terminated; term != nil && term.Reason != "Completed" && term.Reason != "" {
-			issues = append(issues, fmt.Sprintf("container %q previously terminated: %s", cs.Name, term.Reason))
+	add := func(reason string) {
+		if reason != "" && !slices.Contains(issues, reason) {
+			issues = append(issues, reason)
 		}
-		if term := cs.State.Terminated; term != nil && term.Reason != "Completed" && term.Reason != "" {
-			issues = append(issues, fmt.Sprintf("container %q terminated: %s", cs.Name, term.Reason))
+	}
+	for _, cs := range pod.Status.ContainerStatuses {
+		if term := cs.LastTerminationState.Terminated; term != nil && term.Reason != "Completed" {
+			add(term.Reason)
+		}
+		if term := cs.State.Terminated; term != nil && term.Reason != "Completed" {
+			add(term.Reason)
 		}
 		if waiting := cs.State.Waiting; waiting != nil && (waiting.Reason == "CrashLoopBackOff" || waiting.Reason == "Error") {
-			issues = append(issues, fmt.Sprintf("container %q in state: %s", cs.Name, waiting.Reason))
+			add(waiting.Reason)
 		}
 	}
 
 	if pod.Status.Phase == corev1.PodFailed {
 		reason := pod.Status.Reason
 		if reason == "" {
-			reason = "pod failed"
+			reason = "the pod failed"
 		}
-		issues = append(issues, reason)
+		add(reason)
 	}
 
 	return issues
