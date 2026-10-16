@@ -2,12 +2,17 @@ package mcp
 
 import (
 	"context"
+	"crypto/subtle"
+	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
+	"time"
 
 	"github.com/mark3labs/mcp-go/server"
 
@@ -160,65 +165,87 @@ func ServeStdioMCP(cfg MCPServerConfig, client Client) error {
 	}
 }
 
-// ServeSHTTPMCP creates and starts an MCP server with the given configuration,
-// serving over Streamable HTTP. This provides HTTP-based access to the MCP server.
-func ServeSHTTPMCP(cfg MCPServerConfig, client Client) error {
+// newSHTTPServer constructs the same authenticated transport used by the CLI and tests.
+func newSHTTPServer(cfg MCPServerConfig, client Client) (*server.StreamableHTTPServer, *http.Server, error) {
+	// Direct callers must validate HTTP configuration even if Transport was omitted.
+	cfg.Transport = TransportSHTTP
+	if cfg.SHTTPConfig.Host == "" {
+		cfg.SHTTPConfig.Host = "localhost"
+	}
 	mcpServer, err := NewMCPServer(cfg, client)
 	if err != nil {
-		return fmt.Errorf("failed to create MCP server: %v", err)
+		return nil, nil, fmt.Errorf("failed to create MCP server: %w", err)
 	}
-
-	// Create StreamableHTTP server
-	httpServer := server.NewStreamableHTTPServer(mcpServer)
-
-	// Set up signal handling for graceful shutdown
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-
-	// Build the address
-	addr := net.JoinHostPort(cfg.SHTTPConfig.Host, strconv.Itoa(cfg.SHTTPConfig.Port))
-
-	// Start the server in a goroutine
-	serverErrCh := make(chan error, 1)
-	go func() {
-		defer close(serverErrCh)
-
-		// Start HTTP server (mcp-go handles both HTTP and HTTPS)
-		// The server will be available at http://addr/mcp by default
-		if err := httpServer.Start(addr); err != nil {
-			serverErrCh <- fmt.Errorf("failed to start MCP HTTP server: %v", err)
-		}
-	}()
-
-	// Log server startup information
-	protocol := "http"
+	httpServer := &http.Server{
+		Addr:              net.JoinHostPort(cfg.SHTTPConfig.Host, strconv.Itoa(cfg.SHTTPConfig.Port)),
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	opts := []server.StreamableHTTPOption{server.WithStreamableHTTPServer(httpServer)}
 	if cfg.SHTTPConfig.EnableTLS {
-		protocol = "https"
+		opts = append(opts, server.WithTLSCert(cfg.SHTTPConfig.CertFile, cfg.SHTTPConfig.KeyFile))
 	}
+	transport := server.NewStreamableHTTPServer(mcpServer, opts...)
+	mux := http.NewServeMux()
+	mux.Handle("/mcp", transport)
+	httpServer.Handler = authenticateSHTTP(cfg.SHTTPConfig.AuthToken, mux)
+	return transport, httpServer, nil
+}
+
+// authenticateSHTTP runs before routing or reading the MCP request body.
+func authenticateSHTTP(token string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		values := r.Header.Values("Authorization")
+		if len(values) == 1 {
+			scheme, credential, ok := strings.Cut(values[0], " ")
+			if ok && strings.EqualFold(scheme, "Bearer") && token != "" &&
+				subtle.ConstantTimeCompare([]byte(credential), []byte(token)) == 1 {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+		w.Header().Set("WWW-Authenticate", "Bearer")
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	})
+}
+
+// ServeSHTTPMCP serves authenticated Streamable HTTP until interrupted.
+func ServeSHTTPMCP(cfg MCPServerConfig, client Client) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	return serveSHTTP(ctx, cfg, client)
+}
+
+func serveSHTTP(ctx context.Context, cfg MCPServerConfig, client Client) error {
+	transport, httpServer, err := newSHTTPServer(cfg, client)
+	if err != nil {
+		return err
+	}
+	serverErrCh := make(chan error, 1)
+	go func() { serverErrCh <- transport.Start(httpServer.Addr) }()
 
 	if ui.IsVerbose() {
-		fmt.Fprintf(os.Stderr, "Testkube MCP server starting on %s://%s\n", protocol, addr)
-		fmt.Fprintf(os.Stderr, "MCP endpoint available at: %s://%s/mcp\n", protocol, addr)
-		fmt.Fprintf(os.Stderr, "Use 'testkube mcp serve --transport=shttp --help' for more options\n")
+		protocol := "http"
+		if cfg.SHTTPConfig.EnableTLS {
+			protocol = "https"
+		}
+		fmt.Fprintf(os.Stderr, "Testkube MCP endpoint starting on %s://%s/mcp\n", protocol, httpServer.Addr)
 	}
 
-	// Wait for either server error or interrupt signal
 	select {
-	case <-sigCh:
-		// Signal received, shutdown gracefully
-		if ui.IsVerbose() {
-			fmt.Fprintf(os.Stderr, "\nShutting down MCP server...\n")
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := transport.Shutdown(shutdownCtx); err != nil {
+			_ = httpServer.Close()
+			return fmt.Errorf("failed to shut down MCP HTTP server: %w", err)
 		}
-
-		// Graceful shutdown handled by the mcp-go library
-		// The server will stop when the context is cancelled
-		return nil
-	case err := <-serverErrCh:
-		if err != nil {
-			return err
-		}
-		return nil
+		err = <-serverErrCh
+	case err = <-serverErrCh:
 	}
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("failed to serve MCP HTTP server: %w", err)
+	}
+	return nil
 }
 
 // ServeMCP starts the MCP server using the configured transport type
