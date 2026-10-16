@@ -73,6 +73,19 @@ type ResourceConfig struct {
 	FsPrefix string `json:"f,omitempty"`
 }
 
+// EffectiveRootId names the execution this resource belongs to, falling back to the
+// resource's own id where nothing set a root - a resource that is its own root.
+//
+// It is what to key anything shared by a whole execution on, rather than by one pod.
+// A parallel or service worker runs in its own pod with its own Id and carries the
+// parent's RootId, so the two agree on this and on nothing else.
+func (r ResourceConfig) EffectiveRootId() string {
+	if r.RootId != "" {
+		return r.RootId
+	}
+	return r.Id
+}
+
 type SignatureConfig struct {
 	Signature
 	Children []Signature `json:"children,omitempty"`
@@ -117,6 +130,29 @@ type WorkerConfig struct {
 
 	DefaultImagePullPolicy string                  `json:"Y,omitempty"`
 	DefaultRunnerResources ContainerResourceConfig `json:"D,omitempty"`
+
+	// StepCacheVolume is the operator's shared cache volume, or nil when step
+	// dependency caches go to the object store whole.
+	//
+	// One field, read by both halves: the processor mounts it when it builds the cache
+	// stages, and the toolkit inside the pod finds it in this same serialized config.
+	// There is deliberately no second channel for the two to disagree through - a
+	// processor that mounted a volume the toolkit did not look for, or the reverse,
+	// would produce a cache that silently did nothing.
+	StepCacheVolume *StepCacheVolumeConfig `json:"V,omitempty"`
+}
+
+// StepCacheVolumeConfig describes the shared volume step dependency cache archives are
+// kept on.
+type StepCacheVolumeConfig struct {
+	// ClaimName is a ReadWriteMany PersistentVolumeClaim that must already exist in
+	// every namespace executions run in.
+	ClaimName string `json:"c,omitempty"`
+	// ID identifies the volume itself, and prefixes every cache key stored on it.
+	//
+	// A key is shared by every runner in an environment, where an entry on a volume is
+	// reachable only from that volume - see volume.EnsureID.
+	ID string `json:"d,omitempty"`
 }
 
 type WorkerConnectionConfig struct {
