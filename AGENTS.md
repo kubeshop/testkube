@@ -167,6 +167,7 @@ contents do.
 - `pkg/telemetry/` contains all telemetry event construction, sending, and cluster identification logic.
 - `pkg/telemetry/cluster_type.go` implements Kubernetes cluster type detection using a layered approach (node providerID → node labels → server version → kube-system pod names). The result is cached with `sync.Once`.
 - When adding support for a new cluster type, add detection entries to the appropriate layer(s) in `cluster_type.go` and add corresponding test cases in `cluster_type_test.go`.
+- Every `Sender` returns the body it transmitted (Segment: the queued `Track` events as JSON), and `sendData` returns them one sender per line, so users can inspect telemetry before consenting: the CLI prints it as "telemetry send event response" under `--verbose`. A new sender must return what it sends, not a response status alone.
 - `cmd/api-server/services/telemetry.go` drives the heartbeat loop that sends `testkube_api_heartbeat` events hourly, including the detected cluster type and agent capabilities.
 - `cmd/api-server/services/capabilities.go` extracts agent capability tags (persona, mode, feature flags) from the runtime config for inclusion in telemetry events. When adding new agent features/toggles that should be tracked, add them here and in `capabilities_test.go`.
 - The `hosted-runner` tag marks runners that Testkube provisions for trial users, detected from the `tkcagent_hr_` prefix the control plane assigns to `RUNNER_NAME`. Keep `hostedRunnerNamePrefix` in sync with `naming.HostedRunnerAgentName` in `testkube-cloud-api`.

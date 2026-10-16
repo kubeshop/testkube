@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"errors"
 	"net/http"
 	"sync/atomic"
 	"testing"
@@ -29,6 +30,24 @@ func TestSendData_SendsToAllSenders(t *testing.T) {
 
 	// then
 	assert.Equal(t, int32(2), called)
+}
+
+// The CLI prints this output with --verbose, so that users can inspect what is sent (#3886).
+func TestSendData_ReturnsWhatEachSenderSent(t *testing.T) {
+	t.Setenv("DO_NOT_TRACK", "")
+	senders := map[string]Sender{
+		"s2": func(client *http.Client, payload Payload) (out string, err error) {
+			return `{"b":2}`, errors.New("unavailable")
+		},
+		"s1": func(client *http.Client, payload Payload) (out string, err error) {
+			return `{"a":1}`, nil
+		},
+	}
+
+	out, err := sendData(senders, NewAPIPayload("cluster", "name", "v1", "host", "test-cluster", nil))
+
+	assert.NoError(t, err)
+	assert.Equal(t, "s1: {\"a\":1}\ns2: {\"b\":2} (error: unavailable)", out)
 }
 
 func TestSendData_DoNotTrackSendsNothing(t *testing.T) {

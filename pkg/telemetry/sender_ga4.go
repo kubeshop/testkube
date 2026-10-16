@@ -47,9 +47,9 @@ func GoogleAnalyticsSender(client *http.Client, payload Payload) (out string, er
 	b, err := io.ReadAll(resp.Body)
 
 	if resp.StatusCode > 300 {
-		return out, fmt.Errorf("could not POST, statusCode: %d", resp.StatusCode)
+		return string(jsonData), fmt.Errorf("could not POST, statusCode: %d", resp.StatusCode)
 	}
-	return fmt.Sprintf("status: %d - %s", resp.StatusCode, b), err
+	return fmt.Sprintf("%s (status: %d - %s)", jsonData, resp.StatusCode, b), err
 }
 
 func sendValidationRequest(payload Payload) (out string, err error) {
