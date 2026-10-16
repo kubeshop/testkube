@@ -102,22 +102,22 @@ func TestWithheldOutputStopsTheExecution(t *testing.T) {
 func TestClaimExecutionRefs(t *testing.T) {
 	t.Run("an entry is addressed by its workflow name", func(t *testing.T) {
 		claimed := map[string]refClaim{}
-		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}))
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}, 1))
 		assert.Equal(t, map[string]refClaim{"producer": {workflow: "producer"}}, claimed)
 	})
 
 	t.Run("an alias takes precedence over the workflow name", func(t *testing.T) {
 		claimed := map[string]refClaim{}
-		require.NoError(t, claimExecutionRefs(claimed, "p", []string{"producer"}))
+		require.NoError(t, claimExecutionRefs(claimed, "p", []string{"producer"}, 1))
 		assert.Equal(t, map[string]refClaim{"p": {workflow: "producer", aliased: true}}, claimed)
 
-		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}),
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}, 1),
 			"the unaliased entry still claims the workflow name, so both stay addressable")
 	})
 
 	t.Run("a selector claims every workflow it matched", func(t *testing.T) {
 		claimed := map[string]refClaim{}
-		require.NoError(t, claimExecutionRefs(claimed, "", []string{"a", "b", "c"}))
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"a", "b", "c"}, 1))
 		assert.Equal(t, map[string]refClaim{"a": {workflow: "a"}, "b": {workflow: "a"}, "c": {workflow: "a"}}, claimed)
 	})
 
@@ -125,7 +125,7 @@ func TestClaimExecutionRefs(t *testing.T) {
 		// The matched workflows form a single group addressed by execution("all", i),
 		// so the alias must not be claimed once per match.
 		claimed := map[string]refClaim{}
-		require.NoError(t, claimExecutionRefs(claimed, "all", []string{"a", "b", "c"}))
+		require.NoError(t, claimExecutionRefs(claimed, "all", []string{"a", "b", "c"}, 1))
 		assert.Equal(t, map[string]refClaim{"all": {workflow: "a", aliased: true}}, claimed)
 	})
 
@@ -133,18 +133,31 @@ func TestClaimExecutionRefs(t *testing.T) {
 		// Valid before execution() existed, so kept for backwards compatibility. The claim
 		// is marked ambiguous, so that the step refuses the name before scheduling.
 		claimed := map[string]refClaim{}
-		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}))
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}, 1))
 		assert.False(t, claimed["producer"].ambiguous)
-		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}))
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}, 1))
 		assert.Equal(t, refClaim{workflow: "producer", ambiguous: true}, claimed["producer"])
+	})
+
+	t.Run("an entry scheduling nothing claims nothing", func(t *testing.T) {
+		// count: 0 creates no execution, so it cannot make the name ambiguous or collide
+		// with an alias - the other entry's group is the only one answering to it.
+		claimed := map[string]refClaim{}
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}, 0))
+		assert.Empty(t, claimed)
+
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}, 1))
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}, 0))
+		require.NoError(t, claimExecutionRefs(claimed, "producer", []string{"consumer"}, 0))
+		assert.Equal(t, map[string]refClaim{"producer": {workflow: "producer"}}, claimed)
 	})
 
 	t.Run("rejects an alias naming a workflow an unaliased entry runs", func(t *testing.T) {
 		// Both would share the key "producer", and so one group.
 		claimed := map[string]refClaim{}
-		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}))
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}, 1))
 
-		err := claimExecutionRefs(claimed, "producer", []string{"consumer"})
+		err := claimExecutionRefs(claimed, "producer", []string{"consumer"}, 1)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), `duplicated execution reference "producer"`)
 		assert.Contains(t, err.Error(), "set a unique 'as'")
@@ -152,26 +165,26 @@ func TestClaimExecutionRefs(t *testing.T) {
 
 	t.Run("rejects an unaliased entry running a workflow named like an alias", func(t *testing.T) {
 		claimed := map[string]refClaim{}
-		require.NoError(t, claimExecutionRefs(claimed, "producer", []string{"consumer"}))
+		require.NoError(t, claimExecutionRefs(claimed, "producer", []string{"consumer"}, 1))
 
-		err := claimExecutionRefs(claimed, "", []string{"producer"})
+		err := claimExecutionRefs(claimed, "", []string{"producer"}, 1)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), `already used by "consumer"`)
 	})
 
 	t.Run("rejects two entries sharing an alias", func(t *testing.T) {
 		claimed := map[string]refClaim{}
-		require.NoError(t, claimExecutionRefs(claimed, "shared", []string{"producer"}))
+		require.NoError(t, claimExecutionRefs(claimed, "shared", []string{"producer"}, 1))
 
-		err := claimExecutionRefs(claimed, "shared", []string{"consumer"})
+		err := claimExecutionRefs(claimed, "shared", []string{"consumer"}, 1)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), `already used by "producer"`)
 	})
 
 	t.Run("accepts two unaliased selectors overlapping on a workflow", func(t *testing.T) {
 		claimed := map[string]refClaim{}
-		require.NoError(t, claimExecutionRefs(claimed, "", []string{"a", "b"}))
-		require.NoError(t, claimExecutionRefs(claimed, "", []string{"b", "c"}))
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"a", "b"}, 1))
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"b", "c"}, 1))
 		assert.Equal(t, refClaim{workflow: "b"}, claimed["c"])
 		assert.True(t, claimed["b"].ambiguous, "only the overlapping workflow is ambiguous")
 		assert.False(t, claimed["a"].ambiguous)

@@ -401,6 +401,10 @@ type refClaim struct {
 
 // claimExecutionRefs reserves the references an entry will be addressed by.
 //
+// An entry whose count resolved to zero schedules nothing, so it claims nothing: it
+// leaves no execution for a reference to address, and claiming its workflow name would
+// make another entry running that workflow look ambiguous when its group is the only one.
+//
 // An aliased entry claims one reference no matter how many workflows its selector
 // matched - they form a single group, told apart by execution("<alias>", index).
 // An entry without an alias claims each matched workflow by name.
@@ -417,7 +421,10 @@ type refClaim struct {
 // two aliased entries may legitimately run the same workflow and be told apart by their
 // aliases. That leaves the workflow name itself able to address more than one execution,
 // which Registry.Lookup reports when it is used rather than forbidding here.
-func claimExecutionRefs(claimed map[string]refClaim, alias string, workflowNames []string) error {
+func claimExecutionRefs(claimed map[string]refClaim, alias string, workflowNames []string, count int64) error {
+	if count <= 0 {
+		return nil
+	}
 	refs := workflowNames
 	if alias != "" {
 		refs = []string{alias}
@@ -630,7 +637,7 @@ func NewExecuteCmd() *cobra.Command {
 					toolkitcommon.Fail(errors.Wrapf(err, "'%s' workflow: computing the 'as' reference", w.Name))
 				}
 
-				if err := claimExecutionRefs(aliases, alias, testWorkflowNames); err != nil {
+				if err := claimExecutionRefs(aliases, alias, testWorkflowNames, params.Count); err != nil {
 					toolkitcommon.Fail(err)
 				}
 
