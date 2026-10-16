@@ -21,27 +21,31 @@ var (
 	TestkubeMeasurementSecret = ""
 )
 
+// GoogleAnalyticsSender returns the body it sends on every path past marshalling, failures
+// included: a request can fail after its body is written, and the user inspecting telemetry
+// should still see what may have left the machine.
 func GoogleAnalyticsSender(client *http.Client, payload Payload) (out string, err error) {
-	out, err = sendValidationRequest(payload)
+	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		return "", err
 	}
 
-	jsonData, err := json.Marshal(payload)
+	// The validation request posts the same body.
+	_, err = sendValidationRequest(payload)
 	if err != nil {
-		return out, err
+		return string(jsonData), err
 	}
 
 	request, err := http.NewRequestWithContext(context.Background(), http.MethodPost, fmt.Sprintf(gaUrl, TestkubeMeasurementID, TestkubeMeasurementSecret), bytes.NewBuffer(jsonData))
 	if err != nil {
-		return out, err
+		return string(jsonData), err
 	}
 
 	request.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.Do(request)
 	if err != nil {
-		return out, err
+		return string(jsonData), err
 	}
 	defer resp.Body.Close()
 	b, err := io.ReadAll(resp.Body)

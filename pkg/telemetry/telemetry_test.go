@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSendData_SendsToAllSenders(t *testing.T) {
@@ -82,4 +83,25 @@ func TestInstallLocalPayload_UserIsTheLicenseOwner(t *testing.T) {
 			assert.Equal(t, "docker", mapProperties(payload.Events[0].Name, payload.Events[0].Params)["path"])
 		})
 	}
+}
+
+type failingTransport struct{}
+
+func (failingTransport) RoundTrip(*http.Request) (*http.Response, error) {
+	return nil, errors.New("connection reset")
+}
+
+// A request can fail after its body is written, so a failure still shows what was sent.
+func TestGoogleAnalyticsSender_ReturnsThePayloadOnNetworkErrors(t *testing.T) {
+	failing := &http.Client{Transport: failingTransport{}}
+	previous := client
+	client = failing
+	t.Cleanup(func() { client = previous })
+	payload := NewAPIPayload("cluster", "testkube_api_heartbeat", "v1", "host", "test-cluster", nil)
+
+	out, err := GoogleAnalyticsSender(failing, payload)
+
+	require.Error(t, err)
+	assert.Contains(t, out, `"testkube_api_heartbeat"`)
+	assert.Contains(t, out, `"cluster"`)
 }
