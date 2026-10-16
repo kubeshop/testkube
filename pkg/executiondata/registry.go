@@ -11,6 +11,9 @@ import (
 type Registry struct {
 	mu         sync.RWMutex
 	executions []Execution
+	// ambiguous holds the workflow names more than one unaliased entry of an execute
+	// step runs. See MarkAmbiguous.
+	ambiguous map[string]struct{}
 }
 
 // NewRegistry creates an empty registry.
@@ -32,6 +35,37 @@ func (r *Registry) Add(execution Execution) {
 	r.executions = append(r.executions, execution)
 }
 
+// MarkAmbiguous refuses a workflow name as an execution() reference, because more than
+// one unaliased entry of an execute step runs that workflow.
+//
+// Such a step was valid before execution() existed, and is still accepted so that those
+// workflows keep running - only addressing the name is refused. Their runs share the
+// workflow name as their key, and so one group positioned in scheduling order, which no
+// index can tell apart.
+//
+// The step marks the name before any of its entries is scheduled, rather than Lookup
+// inferring it from the runs registered so far: while one of the entries is still
+// pending, the other would be the only run answering to the name, and a sibling entry
+// resolving it would get whichever happened to be scheduled first.
+func (r *Registry) MarkAmbiguous(workflow string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.ambiguous == nil {
+		r.ambiguous = make(map[string]struct{})
+	}
+	r.ambiguous[workflow] = struct{}{}
+}
+
+// IsAmbiguous reports whether a workflow name was marked by MarkAmbiguous.
+func (r *Registry) IsAmbiguous(workflow string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	_, ok := r.ambiguous[workflow]
+	return ok
+}
+
 // Lookup finds the execution a reference addresses at a position.
 //
 // A reference may be a group key, a workflow name or an execution id, and an aliased
@@ -39,8 +73,8 @@ func (r *Registry) Add(execution Execution) {
 // to the same reference. An aliased selector covering workflow "a" and a separate entry
 // running "a" without an alias both answer to execution("a", 0). Returning either would
 // hand the caller data from an arbitrary child, so that is reported as an error instead
-// of resolved by insertion order. Two unaliased entries running the same workflow are
-// reported the same way, whatever the index.
+// of resolved by insertion order. A workflow name marked by MarkAmbiguous is reported the
+// same way, whatever the index and whether or not its runs were scheduled yet.
 //
 // An execution id is matched before anything else and without regard to the index. An id
 // names one execution outright, whereas an alias or a workflow name names a group whose
@@ -70,22 +104,8 @@ func (r *Registry) Lookup(ref string, index int64) (Execution, bool, error) {
 		return byId, true, nil
 	}
 
-	// Unaliased entries running the same workflow share it as their key, so their runs
-	// form one group, positioned in the order they happened to be scheduled. No index can
-	// say which entry was meant, so the workflow name is refused at every position.
-	var first Execution
-	seen := false
-	for _, execution := range r.executions {
-		if execution.Alias != "" || execution.Workflow != ref {
-			continue
-		}
-		if !seen {
-			first, seen = execution, true
-			continue
-		}
-		if execution.Declaration != first.Declaration {
-			return Execution{}, false, DuplicateDeclarationRefError(ref, first, execution)
-		}
+	if _, ok := r.ambiguous[ref]; ok {
+		return Execution{}, false, DuplicateDeclarationRefError(ref)
 	}
 
 	var found Execution
@@ -128,7 +148,8 @@ func (r *Registry) Refs() []string {
 	return refs
 }
 
-// Reset drops every execution registered under a primary reference.
+// Reset drops every execution registered under a primary reference, and the ambiguity
+// of that reference: a later step running the workflow again redefines what it means.
 func (r *Registry) Reset(key string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -140,6 +161,7 @@ func (r *Registry) Reset(key string) {
 		}
 	}
 	r.executions = kept
+	delete(r.ambiguous, key)
 }
 
 // Group returns every execution sharing a primary reference, ordered by index.
@@ -191,9 +213,9 @@ func AmbiguousRefError(ref string, index int64, first, second Execution) error {
 
 // DuplicateDeclarationRefError explains that a workflow name addresses runs of more than
 // one unaliased entry, and how to say which one was meant.
-func DuplicateDeclarationRefError(ref string, first, second Execution) error {
-	return fmt.Errorf("ambiguous execution %q: more than one entry runs that workflow without an alias (executions %q and %q) - set a unique 'as' on each of them and address them by alias",
-		ref, first.Name, second.Name)
+func DuplicateDeclarationRefError(ref string) error {
+	return fmt.Errorf("ambiguous execution %q: more than one entry runs that workflow without an alias - set a unique 'as' on each of them and address them by alias",
+		ref)
 }
 
 // describeExecution names an execution the way its author would recognise it.

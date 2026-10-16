@@ -72,10 +72,6 @@ type Execution struct {
 	Alias string `json:"alias,omitempty"`
 	// Index is the position within a fan-out (matrix/shards/count), 0 when single.
 	Index int64 `json:"index"`
-	// Declaration is the position of the entry within the execute step that ran this
-	// execution. It tells apart unaliased entries running the same workflow, which share
-	// a key and so a group.
-	Declaration int64 `json:"declaration,omitempty"`
 	// Status is the final execution status.
 	Status string `json:"status,omitempty"`
 	// Outputs are the values the execution published in its outputs directory.
@@ -104,6 +100,9 @@ type Execution struct {
 // ExecutionGroup is one fan-out group as an output instruction value.
 type ExecutionGroup struct {
 	Executions []Execution `json:"executions"`
+	// Ambiguous carries Registry.MarkAmbiguous over to the following steps, so that they
+	// refuse the workflow name too - even when only one of its entries got scheduled.
+	Ambiguous bool `json:"ambiguous,omitempty"`
 }
 
 // Key is the primary reference of the execution - its alias when the parent gave

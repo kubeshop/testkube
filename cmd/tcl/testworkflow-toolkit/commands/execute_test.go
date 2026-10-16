@@ -130,10 +130,13 @@ func TestClaimExecutionRefs(t *testing.T) {
 	})
 
 	t.Run("accepts the same workflow listed twice without an alias", func(t *testing.T) {
-		// Valid before execution() existed. Registry.Lookup refuses the name if it is used.
+		// Valid before execution() existed, so kept for backwards compatibility. The claim
+		// is marked ambiguous, so that the step refuses the name before scheduling.
 		claimed := map[string]refClaim{}
 		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}))
+		assert.False(t, claimed["producer"].ambiguous)
 		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}))
+		assert.Equal(t, refClaim{workflow: "producer", ambiguous: true}, claimed["producer"])
 	})
 
 	t.Run("rejects an alias naming a workflow an unaliased entry runs", func(t *testing.T) {
@@ -170,6 +173,8 @@ func TestClaimExecutionRefs(t *testing.T) {
 		require.NoError(t, claimExecutionRefs(claimed, "", []string{"a", "b"}))
 		require.NoError(t, claimExecutionRefs(claimed, "", []string{"b", "c"}))
 		assert.Equal(t, refClaim{workflow: "b"}, claimed["c"])
+		assert.True(t, claimed["b"].ambiguous, "only the overlapping workflow is ambiguous")
+		assert.False(t, claimed["a"].ambiguous)
 	})
 }
 
@@ -214,7 +219,7 @@ func TestExecutionRecorder_Complete(t *testing.T) {
 			registry := executiondata.NewRegistry()
 			recorder := newExecutionRecorder(registry)
 			exec := testkube.TestWorkflowExecution{Id: "exec-1", Name: "child-1"}
-			entry := recorder.schedule("child", "child-workflow", 0, exec)
+			entry := recorder.schedule("child", "child-workflow", exec)
 
 			exec.Result = tt.result
 			recorder.complete(entry, exec)
@@ -293,4 +298,33 @@ func TestFailureSummary(t *testing.T) {
 			assert.Equal(t, tt.want, failureSummary(tt.results))
 		})
 	}
+}
+
+func TestExecutionRecorder_DeclareAmbiguous(t *testing.T) {
+	// An earlier step ran "producer", and this step runs it from two unaliased entries.
+	registry := executiondata.NewRegistry()
+	registry.Add(executiondata.Execution{Id: "earlier", Workflow: "producer"})
+	recorder := newExecutionRecorder(registry)
+	recorder.declareAmbiguous("producer")
+
+	assertRefused := func(t *testing.T) {
+		t.Helper()
+		_, ok, err := registry.Lookup("producer", 0)
+		assert.False(t, ok)
+		assert.ErrorContains(t, err, `ambiguous execution "producer"`)
+	}
+
+	t.Run("before either entry is scheduled", assertRefused)
+
+	recorder.schedule("", "producer", testkube.TestWorkflowExecution{Id: "first", Name: "producer-1"})
+	t.Run("while the other entry is still pending", assertRefused)
+
+	t.Run("the earlier step's run no longer answers to the name", func(t *testing.T) {
+		group := registry.Group("producer")
+		require.Len(t, group, 1)
+		assert.Equal(t, "first", group[0].Id)
+	})
+
+	recorder.schedule("", "producer", testkube.TestWorkflowExecution{Id: "second", Name: "producer-2"})
+	t.Run("once both are scheduled", assertRefused)
 }

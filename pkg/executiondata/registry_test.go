@@ -160,21 +160,31 @@ func TestRegistryLookupAmbiguity(t *testing.T) {
 		assert.ErrorContains(t, err, `ambiguous execution "a"`)
 	})
 
-	t.Run("two unaliased entries running the same workflow", func(t *testing.T) {
-		// The runs share the key "a" and so one group, positioned in scheduling order.
-		// No index says which entry was meant, so every position is refused.
+	t.Run("a workflow name marked ambiguous", func(t *testing.T) {
+		// Two unaliased entries running "a" share the key "a" and so one group, positioned
+		// in scheduling order. No index says which entry was meant, so every position is
+		// refused - including before either was scheduled, or with only one of them.
 		registry := NewRegistry()
-		registry.Add(Execution{Id: "first-0", Name: "a-1", Workflow: "a", Index: 0, Declaration: 0})
-		registry.Add(Execution{Id: "second-0", Name: "a-2", Workflow: "a", Index: 1, Declaration: 1})
+		registry.MarkAmbiguous("a")
 
-		for _, index := range []int64{0, 1} {
-			_, ok, err := registry.Lookup("a", index)
-			assert.False(t, ok)
-			require.Error(t, err)
-			assert.ErrorContains(t, err, `ambiguous execution "a"`)
-			assert.ErrorContains(t, err, `executions "a-1" and "a-2"`)
-			assert.ErrorContains(t, err, "set a unique 'as'")
+		assertRefused := func(t *testing.T) {
+			t.Helper()
+			for _, index := range []int64{0, 1} {
+				_, ok, err := registry.Lookup("a", index)
+				assert.False(t, ok)
+				require.Error(t, err)
+				assert.ErrorContains(t, err, `ambiguous execution "a"`)
+				assert.ErrorContains(t, err, "set a unique 'as'")
+			}
 		}
+
+		t.Run("before any run is scheduled", assertRefused)
+
+		registry.Add(Execution{Id: "first-0", Name: "a-1", Workflow: "a", Index: 0})
+		t.Run("with one run scheduled", assertRefused)
+
+		registry.Add(Execution{Id: "second-0", Name: "a-2", Workflow: "a", Index: 1})
+		t.Run("with both runs scheduled", assertRefused)
 
 		t.Run("their ids still resolve", func(t *testing.T) {
 			execution, ok, err := registry.Lookup("second-0", 0)
@@ -182,12 +192,23 @@ func TestRegistryLookupAmbiguity(t *testing.T) {
 			require.True(t, ok)
 			assert.Equal(t, "second-0", execution.Id)
 		})
+
+		t.Run("a reset clears the mark", func(t *testing.T) {
+			registry.Reset("a")
+			assert.False(t, registry.IsAmbiguous("a"))
+
+			registry.Add(Execution{Id: "later-0", Workflow: "a", Index: 0})
+			execution, ok, err := registry.Lookup("a", 0)
+			require.NoError(t, err)
+			require.True(t, ok)
+			assert.Equal(t, "later-0", execution.Id)
+		})
 	})
 
 	t.Run("a fan-out of one unaliased entry is not ambiguous", func(t *testing.T) {
 		registry := NewRegistry()
-		registry.Add(Execution{Id: "a-0", Workflow: "a", Index: 0, Declaration: 2})
-		registry.Add(Execution{Id: "a-1", Workflow: "a", Index: 1, Declaration: 2})
+		registry.Add(Execution{Id: "a-0", Workflow: "a", Index: 0})
+		registry.Add(Execution{Id: "a-1", Workflow: "a", Index: 1})
 
 		execution, ok, err := registry.Lookup("a", 1)
 		require.NoError(t, err)
