@@ -15,12 +15,16 @@ import (
 )
 
 func apiServerPod(name, namespace string, ready bool, waitingReason string) *corev1.Pod {
+	return agentPod("api-server", name, namespace, ready, waitingReason)
+}
+
+func agentPod(label, name, namespace string, ready bool, waitingReason string) *corev1.Pod {
 	status := corev1.ConditionFalse
 	if ready {
 		status = corev1.ConditionTrue
 	}
 	pod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace, Labels: map[string]string{"app.kubernetes.io/name": "api-server"}},
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace, Labels: map[string]string{"app.kubernetes.io/name": label}},
 		Status: corev1.PodStatus{
 			Phase:      corev1.PodRunning,
 			Conditions: []corev1.PodCondition{{Type: corev1.PodReady, Status: status}},
@@ -32,7 +36,7 @@ func apiServerPod(name, namespace string, ready bool, waitingReason string) *cor
 	return pod
 }
 
-func TestAPIServerValidator(t *testing.T) {
+func TestValidator(t *testing.T) {
 	tests := []struct {
 		name        string
 		pods        []*corev1.Pod
@@ -43,9 +47,11 @@ func TestAPIServerValidator(t *testing.T) {
 		wantBreak   bool
 	}{
 		{name: "valid when every pod is ready", pods: []*corev1.Pod{apiServerPod("api-1", "testkube", true, ""), apiServerPod("api-2", "testkube", true, "")}, wantValid: true},
-		{name: "invalid when there is no API server in the namespace", pods: []*corev1.Pod{apiServerPod("api-1", "other", true, "")}, wantMessage: ErrAPIServerNotFound.Message, wantDetails: "namespace testkube"},
-		{name: "names the reason of a crashing pod", pods: []*corev1.Pod{apiServerPod("api-1", "testkube", true, ""), apiServerPod("api-2", "testkube", false, "CrashLoopBackOff")}, wantMessage: ErrAPIServerNotReady.Message, wantDetails: "api-2: container api is CrashLoopBackOff"},
-		{name: "invalid when a pod is not ready", pods: []*corev1.Pod{apiServerPod("api-1", "testkube", false, "")}, wantMessage: ErrAPIServerNotReady.Message, wantDetails: "api-1: not ready"},
+		{name: "finds a runner and an agent installed from the testkube-api chart", pods: []*corev1.Pod{agentPod("testkube-runner", "runner-1", "testkube", true, ""), agentPod("testkube-api", "api-1", "testkube", true, "")}, wantValid: true},
+		{name: "ignores pods of other applications", pods: []*corev1.Pod{agentPod("nats", "nats-1", "testkube", true, "")}, wantMessage: ErrAgentNotFound.Message, wantDetails: "namespace testkube"},
+		{name: "invalid when there is no agent in the namespace", pods: []*corev1.Pod{apiServerPod("api-1", "other", true, "")}, wantMessage: ErrAgentNotFound.Message, wantDetails: "namespace testkube"},
+		{name: "names the reason of a crashing pod", pods: []*corev1.Pod{apiServerPod("api-1", "testkube", true, ""), apiServerPod("api-2", "testkube", false, "CrashLoopBackOff")}, wantMessage: ErrAgentNotReady.Message, wantDetails: "1/2 pods ready: api-2: container api is CrashLoopBackOff"},
+		{name: "invalid when a pod is not ready", pods: []*corev1.Pod{apiServerPod("api-1", "testkube", false, "")}, wantMessage: ErrAgentNotReady.Message, wantDetails: "api-1: not ready"},
 		{name: "stops the chain when the cluster is unreachable", connectErr: errors.New("no kubeconfig"), wantMessage: ErrClusterUnreachable.Message, wantDetails: "no kubeconfig", wantBreak: true},
 	}
 
@@ -58,7 +64,7 @@ func TestAPIServerValidator(t *testing.T) {
 			}
 			connect := func() (kubernetes.Interface, error) { return client, tt.connectErr }
 
-			result := NewAPIServerValidator(connect, "testkube").Validate(nil)
+			result := NewValidator(connect, "testkube").Validate(nil)
 
 			if tt.wantValid {
 				assert.Equal(t, validators.StatusValid, result.Status)

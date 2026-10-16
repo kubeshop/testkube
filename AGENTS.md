@@ -191,7 +191,7 @@ contents do.
 
 ## CLI diagnostics
 
-- `testkube diagnostics` runs validator groups from `pkg/diagnostics`; the commands live in `cmd/kubectl-testkube/commands/diagnostics/`. Groups: `install` (`validators/deps`), `agent` (`validators/agent`, API server pods ready) and `license`.
+- `testkube diagnostics` runs validator groups from `pkg/diagnostics`; the commands live in `cmd/kubectl-testkube/commands/diagnostics/`. Groups: `install` (`validators/deps`), `agent` (`validators/agent`, the agent pods are ready: `api-server`, `testkube-api` or `testkube-runner`) and `license`.
 - Adding a check: implement `validators.Validator` in a package under `pkg/diagnostics/validators/`, register it in the group's `Register*Validators`, and build commands through `diagnostics.New(cmd)` in that package so `--output json` applies.
 - A validator that needs the cluster takes a connect function rather than a client, so an unreachable cluster is reported as a result (`WithBreak()`) instead of aborting the run. Do not add checks for the deprecated operator.
 

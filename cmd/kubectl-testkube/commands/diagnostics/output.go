@@ -10,6 +10,8 @@ import (
 )
 
 // New creates the diagnostics service with the renderer that the `--output` flag asks for.
+// JSON results are the only thing written to stdout, so every other line of the command
+// (headers, prompts, errors) goes to stderr and the output stays readable as JSON lines.
 func New(cmd *cobra.Command) diagnostics.Diagnostics {
 	d := diagnostics.New()
 	output := render.OutputPretty
@@ -20,6 +22,7 @@ func New(cmd *cobra.Command) diagnostics.Diagnostics {
 	case render.OutputPretty:
 	case render.OutputJSON:
 		d.Renderer = renderer.NewJSONRenderer()
+		ui.UseStderr()
 	default:
 		ui.Failf("unsupported output %q, use one of: pretty|json", output)
 	}

@@ -16,22 +16,23 @@ import (
 
 const listTimeout = 10 * time.Second
 
-// NewAPIServerValidator checks that the pods of the Testkube API server in the namespace are ready.
+// NewValidator checks that the pods of the Testkube agent in the namespace are ready:
+// the API server of a standalone agent, or a runner.
 // The client is created on validation, so that an unreachable cluster is reported as a result.
-func NewAPIServerValidator(connect func() (kubernetes.Interface, error), namespace string) APIServerValidator {
-	return APIServerValidator{connect: connect, namespace: namespace}
+func NewValidator(connect func() (kubernetes.Interface, error), namespace string) Validator {
+	return Validator{connect: connect, namespace: namespace}
 }
 
-type APIServerValidator struct {
+type Validator struct {
 	connect   func() (kubernetes.Interface, error)
 	namespace string
 }
 
-func (v APIServerValidator) Name() string {
-	return "Testkube API server"
+func (v Validator) Name() string {
+	return "Testkube agent"
 }
 
-func (v APIServerValidator) Validate(_ any) (r validators.ValidationResult) {
+func (v Validator) Validate(_ any) (r validators.ValidationResult) {
 	client, err := v.connect()
 	if err != nil {
 		return r.WithError(ErrClusterUnreachable.WithDetails(err.Error())).WithBreak()
@@ -39,22 +40,25 @@ func (v APIServerValidator) Validate(_ any) (r validators.ValidationResult) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), listTimeout)
 	defer cancel()
-	pods, err := client.CoreV1().Pods(v.namespace).List(ctx, metav1.ListOptions{LabelSelector: k8sclient.APIServerSelector})
+	pods, err := client.CoreV1().Pods(v.namespace).List(ctx, metav1.ListOptions{LabelSelector: k8sclient.AgentSelector})
 	if err != nil {
 		return r.WithError(ErrClusterUnreachable.WithDetails(err.Error())).WithBreak()
 	}
 	if len(pods.Items) == 0 {
-		return r.WithError(ErrAPIServerNotFound.WithDetails(fmt.Sprintf("no pods with label %s in namespace %s", k8sclient.APIServerSelector, v.namespace)))
+		return r.WithError(ErrAgentNotFound.WithDetails(fmt.Sprintf("no pods with label %s in namespace %s", k8sclient.AgentSelector, v.namespace)))
 	}
 
 	var notReady []string
+	ready := 0
 	for _, pod := range pods.Items {
 		if reason := notReadyReason(pod); reason != "" {
 			notReady = append(notReady, fmt.Sprintf("%s: %s", pod.Name, reason))
+		} else {
+			ready++
 		}
 	}
 	if len(notReady) > 0 {
-		return r.WithError(ErrAPIServerNotReady.WithDetails(strings.Join(notReady, "; ")))
+		return r.WithError(ErrAgentNotReady.WithDetails(fmt.Sprintf("%d/%d pods ready: %s", ready, len(pods.Items), strings.Join(notReady, "; "))))
 	}
 
 	return r.WithValidStatus().WithAdditionalInfo(fmt.Sprintf("%d/%d pods ready in namespace %s", len(pods.Items), len(pods.Items), v.namespace))

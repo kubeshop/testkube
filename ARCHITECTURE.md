@@ -354,7 +354,7 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 
 **Prompts**: Interactive prompts live in [`pkg/ui`](pkg/ui/) and all pass through the terminal check in [`pkg/ui/interactive.go`](pkg/ui/interactive.go). When stdin is not a terminal the prompt is refused with an actionable message instead of being drawn, which keeps unattended runs (CI, coding agents, containers without a TTY) from blocking on input nobody can supply. `ui.StdinIsInteractive()` exposes the same check so a command can choose a non-interactive path; `GetClient` uses it to refuse an automatic login when a token refresh fails without a terminal.
 
-**Diagnostics**: `testkube diagnostics` ([`cmd/kubectl-testkube/commands/diagnostics/`](cmd/kubectl-testkube/commands/diagnostics/)) runs groups of validators from [`pkg/diagnostics`](pkg/diagnostics/): `install` (kubectl, Helm and Kubernetes versions), `agent` (the API server pods in `--namespace` are ready) and `license`. Each group is also a subcommand, and `--output json` swaps the CLI renderer for one JSON result per line.
+**Diagnostics**: `testkube diagnostics` ([`cmd/kubectl-testkube/commands/diagnostics/`](cmd/kubectl-testkube/commands/diagnostics/)) runs groups of validators from [`pkg/diagnostics`](pkg/diagnostics/): `install` (kubectl, Helm and Kubernetes versions), `agent` (the agent pods in `--namespace` are ready, whether installed by the `testkube`, `testkube-api` or `testkube-runner` chart) and `license`. Each group is also a subcommand, and `--output json` swaps the CLI renderer for one JSON result per line on stdout and moves every other line of the command to stderr.
 
 **Client Layer**:
 

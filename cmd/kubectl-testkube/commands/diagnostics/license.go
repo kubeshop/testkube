@@ -88,9 +88,9 @@ func NewLicenseCheckCmd() *cobra.Command {
 
 func RunLicenseCheckFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
-		ui.H1("Check licensing issues")
-
+		// New first: with --output json it moves the header to stderr.
 		d := New(cmd)
+		ui.H1("Check licensing issues")
 		RegisterLicenseValidators(cmd, d)
 
 		err := d.Run()

@@ -15,7 +15,7 @@ func RegisterAgentValidators(cmd *cobra.Command, d diagnostics.Diagnostics) {
 	connect := func() (kubernetes.Interface, error) { return k8sclient.ConnectToK8s() }
 
 	agentGroup := d.AddValidatorGroup("agent", nil)
-	agentGroup.AddValidator(agent.NewAPIServerValidator(connect, namespace))
+	agentGroup.AddValidator(agent.NewValidator(connect, namespace))
 }
 
 func NewAgentCheckCmd() *cobra.Command {
