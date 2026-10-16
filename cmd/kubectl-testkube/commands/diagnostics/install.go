@@ -27,7 +27,7 @@ func NewInstallCheckCmd() *cobra.Command {
 
 func RunInstallCheckFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
-		d := diagnostics.New()
+		d := New(cmd)
 		RegisterInstallValidators(cmd, d)
 
 		err := d.Run()
