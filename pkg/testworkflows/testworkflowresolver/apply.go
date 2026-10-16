@@ -11,6 +11,7 @@ package testworkflowresolver
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -40,6 +41,16 @@ func (e *pathError) Unwrap() error { return e.err }
 // for example .template "x", so the joined path reads correctly.
 func wrapPath(err error, format string, args ...any) error {
 	return &pathError{path: fmt.Sprintf(format, args...), err: err}
+}
+
+// wrapNestedSpecPath puts the path of a nested spec, for example .parallel, before an error of
+// applyTemplatesToSpec. That function names its paths from the root "spec", so the outer path
+// takes the place of the root.
+func wrapNestedSpecPath(err error, path string) error {
+	if inner, ok := err.(*pathError); ok {
+		err = &pathError{path: strings.TrimPrefix(inner.path, "spec"), err: inner.err}
+	}
+	return wrapPath(err, "%s", path)
 }
 
 func buildTemplate(template *testworkflowsv1.TestWorkflowTemplate, cfg map[string]testworkflowsv1.ConfigValue,
@@ -240,7 +251,7 @@ func applyTemplatesToStep(step testworkflowsv1.Step, spec *testworkflowsv1.TestW
 		testWorkflowSpec := step.Parallel.NewTestWorkflowSpec()
 		err := applyTemplatesToSpec(testWorkflowSpec, templates, externalize)
 		if err != nil {
-			return step, wrapPath(err, ".parallel")
+			return step, wrapNestedSpecPath(err, ".parallel")
 		}
 		step.Parallel.Use = testWorkflowSpec.Use
 		step.Parallel.Events = testWorkflowSpec.Events
@@ -337,10 +348,10 @@ func applyTemplatesToSpec(spec *testworkflowsv1.TestWorkflowSpec, templates map[
 				return wrapPath(err, "spec.services[%s].use[%d] %q", name, i, ref.Name)
 			}
 			if len(tpl.Spec.Setup) > 0 || len(tpl.Spec.Steps) > 0 || len(tpl.Spec.After) > 0 {
-				return fmt.Errorf("spec.services[%s].use[%d]: steps in template used for the service are not supported", name, i)
+				return wrapPath(errors.New("steps in template used for the service are not supported"), "spec.services[%s].use[%d]", name, i)
 			}
 			if len(tpl.Spec.Services) > 0 {
-				return fmt.Errorf("spec.services[%s].use[%d]: additional services in template used for the service are not supported", name, i)
+				return wrapPath(errors.New("additional services in template used for the service are not supported"), "spec.services[%s].use[%d]", name, i)
 			}
 			err = InjectServiceTemplate(&svc, tpl)
 			if err != nil {
