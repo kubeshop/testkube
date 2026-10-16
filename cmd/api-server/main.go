@@ -592,6 +592,10 @@ func main() {
 			CDEventsTarget: cfg.CDEventsTarget,
 		},
 		testWorkflowsClient,
+		runnergrpc.WithPollInterval(cfg.RunnerPollInterval),
+		runnergrpc.WithCallTimeout(cfg.RunnerCallTimeout),
+		runnergrpc.WithMaxPollBackoff(cfg.RunnerPollMaxBackoff),
+		runnergrpc.WithStartConcurrency(cfg.RunnerStartConcurrency),
 	)
 
 	if !cfg.DisableRunner {
@@ -751,6 +755,16 @@ func main() {
 	log.DefaultLogger.Infow("creating HTTP server...", "port", cfg.APIServerPort)
 	httpServer := server.NewServer(server.Config{Port: cfg.APIServerPort, EnableTracing: cfg.TracingEnabled})
 	httpServer.Routes.Use(cors.New())
+
+	// Report a stalled execution poll loop through readiness. /health answers
+	// unconditionally, so a runner that has stopped consuming work looks healthy
+	// to Kubernetes for as long as the process stays up - which is exactly how a
+	// burst-induced stall went unnoticed for hours.
+	if !cfg.DisableRunner {
+		httpServer.AddReadinessCheck("runner-execution-updates", func() error {
+			return runnerClient.Healthy(time.Now(), cfg.RunnerPollStaleAfter)
+		})
+	}
 
 	isStandalone := mode == common.ModeStandalone
 	var executionController scheduling.Controller

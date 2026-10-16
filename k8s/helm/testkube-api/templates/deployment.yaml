@@ -302,7 +302,7 @@ spec:
           {{- else if .Values.readinessProbe.enabled }}
           readinessProbe:
             httpGet:
-              path: /health
+              path: /ready
               port: {{ .Values.service.port }}
               scheme: HTTP
             initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
