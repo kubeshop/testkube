@@ -223,6 +223,11 @@ func TestApplyTemplates_Errors(t *testing.T) {
 		wf.Spec.Use = []testworkflowsv1.TemplateRef{ref}
 		return wf
 	}
+	parallelWithTemplate := func(ref testworkflowsv1.TemplateRef) *testworkflowsv1.TestWorkflow {
+		wf := workflowSteps.DeepCopy()
+		wf.Spec.Steps[0].Parallel = &testworkflowsv1.StepParallel{Use: []testworkflowsv1.TemplateRef{ref}}
+		return wf
+	}
 	tests := []struct {
 		name     string
 		workflow *testworkflowsv1.TestWorkflow
@@ -247,6 +252,11 @@ func TestApplyTemplates_Errors(t *testing.T) {
 			name:     "a step names the template that needs a config value",
 			workflow: stepWithTemplate(tplPodConfigRefEmpty),
 			want:     `spec.steps[0].template "podConfig": the config value "department" is not set`,
+		},
+		{
+			name:     "a parallel step continues the path into its own templates",
+			workflow: parallelWithTemplate(tplPodConfigRefEmpty),
+			want:     `spec.steps[0].parallel.use[0] "podConfig": the config value "department" is not set`,
 		},
 	}
 	for _, tt := range tests {
