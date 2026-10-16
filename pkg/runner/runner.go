@@ -542,7 +542,8 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 	}
 
 	res, err := r.worker.Execute(context.Background(), request)
-	if err == nil {
+	// A redundant start is monitored by the runner that started the execution first.
+	if err == nil && !res.Redundant {
 		go func() {
 			// The full execution object isn't available here (only the ExecuteRequest), so we
 			// scope with the fields we do have. Env / org make it possible to route the incident
