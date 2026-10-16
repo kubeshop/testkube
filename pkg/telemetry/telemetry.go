@@ -1,8 +1,10 @@
 package telemetry
 
 import (
+	"fmt"
 	"net/http"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 
@@ -216,28 +218,37 @@ func SendRunWorkflowEvent(event string, params RunWorkflowParams) (string, error
 	return sendData(senders, payload)
 }
 
-// sendData sends data to all telemetry storages  in parallel and syncs sending
+// sendData sends data to all telemetry storages in parallel and syncs sending.
+// It returns what each sender transmitted, one sender per line, so that a user can
+// inspect the data before consenting to it (`--verbose` in the CLI prints it).
 func sendData(senders map[string]Sender, payload Payload) (out string, err error) {
 	if DoNotTrack() {
 		return "", nil
 	}
 	var wg sync.WaitGroup
+	var mu sync.Mutex
+	outputs := make([]string, 0, len(senders))
 	wg.Add(len(senders))
 	for name, sender := range senders {
 		go func(sender Sender, name string) {
 			defer wg.Done()
 			o, err := sender(client, payload)
+			mu.Lock()
+			defer mu.Unlock()
 			if err != nil {
 				log.DefaultLogger.Debugw("sending telemetry data error", "payload", payload, "error", err.Error())
+				outputs = append(outputs, fmt.Sprintf("%s: %s (error: %s)", name, o, err))
 				return
 			}
 			log.DefaultLogger.Debugw("sending telemetry data", "payload", payload, "output", o, "sender", name)
+			outputs = append(outputs, fmt.Sprintf("%s: %s", name, o))
 		}(sender, name)
 	}
 
 	wg.Wait()
+	slices.Sort(outputs)
 
-	return out, nil
+	return strings.Join(outputs, "\n"), nil
 }
 
 func getCommand(cmd *cobra.Command) string {
