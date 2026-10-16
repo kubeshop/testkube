@@ -9,7 +9,7 @@ import (
 )
 
 func TestAccessor_Resolve_Errors(t *testing.T) {
-	failing := NewMachine().RegisterAccessorExt(func(name string) (interface{}, bool, error) {
+	failing := NewMachine().RegisterAccessorExt(func(name string) (any, bool, error) {
 		return nil, true, errors.New("boom")
 	})
 	tests := []struct {
