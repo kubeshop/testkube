@@ -190,6 +190,10 @@ contents do.
 - Adding a new prompt: use the `ui` helpers rather than pterm directly, and it inherits the guard. Adding a command that must not prompt at all: branch on `ui.StdinIsInteractive()`.
 - Tests flip the unexported `stdinIsInteractive` seam rather than allocating a pseudo terminal.
 
+## CLI upgrade
+
+- `testkube upgrade --reuse-values` passes Helm's `--reuse-values`. Helm applies `--set` over reused values, so in that mode `prepareCommonHelmArgs` sends only the settings of flags the user passed (`HelmOptions.ExplicitFlags`, `sendsFlag`/`sendsValue` in `common/helper.go`): a flag default such as `--no-postgres=true` would otherwise silently turn off what the release had enabled. A new flag-derived Helm setting must go through `sendsFlag`. A runner's disabled MinIO/MongoDB/PostgreSQL is always sent.
+
 ## CLI diagnostics
 
 - `testkube diagnostics` runs validator groups from `pkg/diagnostics`; the commands live in `cmd/kubectl-testkube/commands/diagnostics/`. Groups: `install` (`validators/deps`), `agent` (`validators/agent`, the agent pods are ready: `api-server`, `testkube-api` or `testkube-runner`) and `license`.
