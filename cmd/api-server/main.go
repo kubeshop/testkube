@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -198,6 +199,10 @@ func main() {
 		event.WithReconcileInterval(eventEmitterReconcileInterval),
 		event.WithLeaderElectionDisabled(cfg.LeaderElectionDisabled))
 
+	// Answer the startup probe while we wait for the Control Plane, otherwise the
+	// retries below just postpone the restart instead of preventing it.
+	stopStartupHealth := startStartupHealthServer(cfg.APIServerPort)
+
 	// Connect to the Control Plane
 	var grpcConn *grpc.ClientConn
 	var controlPlane *controlplane.Server
@@ -218,15 +223,7 @@ func main() {
 	} else {
 		log.DefaultLogger.Infow("connecting to remote control plane...", "url", cfg.TestkubeProURL)
 		var err error
-		grpcConn, err = agentclient.NewGRPCConnectionWithTracing(
-			ctx,
-			cfg.TestkubeProTLSInsecure,
-			cfg.TestkubeProSkipVerify,
-			cfg.TestkubeProURL,
-			cfg.TestkubeProCAFile, //nolint
-			log.DefaultLogger,
-			cfg.TracingEnabled,
-		)
+		grpcConn, err = connectToRemoteControlPlane(ctx, cfg)
 		commons.ExitOnError("connecting to remote Control Plane", err)
 		log.DefaultLogger.Infow("connected to remote control plane successfully", "url", cfg.TestkubeProURL)
 	}
@@ -329,8 +326,21 @@ func main() {
 	envs := commons.GetEnvironmentVariables()
 
 	inspector := commons.CreateImageInspector(&cfg.ImageInspectorConfig, configmap.NewClientFor(clientset, cfg.TestkubeNamespace), secret.NewClientFor(clientset, cfg.TestkubeNamespace))
-	proContext, err := commons.ReadProContext(ctx, cfg, grpcClient)
-	commons.ExitOnError("cannot connect to control plane", err)
+	var proContext intconfig.ProContext
+	for {
+		proContext, err = commons.ReadProContext(ctx, cfg, grpcClient)
+		if err == nil {
+			break
+		}
+		log.DefaultLogger.Errorw("cannot fetch pro-context from Control Plane, retrying", "error", err)
+		timer := time.NewTimer(5 * time.Second)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			commons.ExitOnError("cannot connect to control plane", ctx.Err())
+		case <-timer.C:
+		}
+	}
 
 	// Scope the emitter lease to the AgentID so that agents for different
 	// environments sharing the same namespace each get their own emitter leader.
@@ -1045,6 +1055,9 @@ func main() {
 		log.DefaultLogger.Infow("Not configured to handle cronjobs")
 	}
 
+	// Release the port before the real server binds it.
+	stopStartupHealth()
+
 	g.Go(func() error {
 		log.DefaultLogger.Infow("http server starting...", "port", cfg.APIServerPort)
 		return httpServer.Run(ctx)
@@ -1085,6 +1098,78 @@ func main() {
 }
 
 const defaultLeaseCheckInterval = 5 * time.Second
+const remoteControlPlaneRetryDelay = 5 * time.Second
+
+// startStartupHealthServer answers /health on the API port while the agent waits
+// for the Control Plane, and must be stopped before the real API server binds the
+// same port.
+//
+// Without it, retrying instead of exiting only delays the crash: the Helm startup
+// probe polls /health on this port and restarts the container once it runs out of
+// attempts (200 x 3s in the testkube-api chart, 100 x 1s in testkube-runner), so a
+// Control Plane outage longer than that still restarts an agent that is
+// deliberately waiting.
+//
+// Note that all three chart probes share this one endpoint, so answering the
+// startup probe also marks the Pod ready before startup has finished. Everything
+// other than /health returns 503 so a client that gets routed here sees why.
+func startStartupHealthServer(port int) func() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "testkube agent is starting up", http.StatusServiceUnavailable)
+	})
+
+	srv := &http.Server{
+		Addr:              fmt.Sprintf(":%d", port),
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.DefaultLogger.Warnw("startup health server stopped", "error", err)
+		}
+	}()
+
+	return func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			log.DefaultLogger.Warnw("cannot shut down startup health server", "error", err)
+		}
+	}
+}
+
+func connectToRemoteControlPlane(ctx context.Context, cfg *intconfig.Config) (*grpc.ClientConn, error) {
+	for {
+		conn, err := agentclient.NewGRPCConnectionWithTracing(
+			ctx,
+			cfg.TestkubeProTLSInsecure,
+			cfg.TestkubeProSkipVerify,
+			cfg.TestkubeProURL,
+			cfg.TestkubeProCAFile, //nolint
+			log.DefaultLogger,
+			cfg.TracingEnabled,
+		)
+		if err == nil {
+			return conn, nil
+		}
+		log.DefaultLogger.Errorw("connecting to remote Control Plane failed, retrying",
+			"url", cfg.TestkubeProURL,
+			"error", err,
+			"retryIn", remoteControlPlaneRetryDelay,
+		)
+		timer := time.NewTimer(remoteControlPlaneRetryDelay)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil, ctx.Err()
+		case <-timer.C:
+		}
+	}
+}
 
 // resolveLeaseCheckInterval validates the configured lease check interval. The lease
 // expires after leasebackend.DefaultMaxLeaseDuration, so checking/renewing less often
