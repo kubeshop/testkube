@@ -58,18 +58,65 @@ func TestPrepareTestkubeHelmArgs_ReuseValues(t *testing.T) {
 }
 
 func TestPrepareTestkubeProHelmArgs_ReuseValues(t *testing.T) {
-	options := upgradeOptions()
-	options.ReuseValues = true
-	options.NoMinio, options.NoMongo, options.NoPostgres = true, true, true
-	options.Master = config.Master{AgentToken: "tkcagnt_key", URIs: config.MasterURIs{Agent: "agent.testkube.io:443"}}
+	runnerOptions := func(explicit ...string) HelmOptions {
+		options := upgradeOptions()
+		options.ReuseValues = true
+		options.NoMinio, options.NoMongo, options.NoPostgres = true, true, true
+		// ProcessMasterFlags always composes the addresses, from the default prefixes and
+		// root domain when no flag is passed
+		options.Master = config.Master{
+			AgentToken: "tkcagnt_key",
+			URIs:       config.MasterURIs{Agent: "agent.testkube.io:443", Ui: "https://app.testkube.io"},
+		}
+		options.ExplicitFlags = map[string]bool{}
+		for _, name := range explicit {
+			options.ExplicitFlags[name] = true
+		}
+		return options
+	}
 
-	args := prepareTestkubeProHelmArgs(options, false)
+	t.Run("keeps the control plane of the release when no endpoint flag is passed", func(t *testing.T) {
+		args := prepareTestkubeProHelmArgs(runnerOptions(), false)
 
-	assert.Contains(t, args, "--reuse-values")
-	assert.Contains(t, args, "testkube-api.minio.enabled=false", "a runner disables its storage on purpose")
-	assert.Contains(t, args, "mongodb.enabled=false")
-	assert.Contains(t, args, "postgresql.enabled=false")
-	assert.Contains(t, args, "testkube-api.cloud.key=tkcagnt_key")
-	assert.Contains(t, args, "testkube-api.cloud.url=agent.testkube.io:443")
-	assert.NotContains(t, args, "testkube-api.cloud.uiUrl=", "an unknown value must not clear the release's")
+		assert.Contains(t, args, "--reuse-values")
+		assert.Contains(t, args, "testkube-api.minio.enabled=false", "a runner disables its storage on purpose")
+		assert.Contains(t, args, "mongodb.enabled=false")
+		assert.Contains(t, args, "postgresql.enabled=false")
+		for _, arg := range args {
+			assert.NotContains(t, arg, "testkube-api.cloud.", "a default address would disconnect a runner of a custom control plane")
+		}
+	})
+
+	t.Run("sends the addresses composed from a passed root domain", func(t *testing.T) {
+		args := prepareTestkubeProHelmArgs(runnerOptions("root-domain"), false)
+
+		assert.Contains(t, args, "testkube-api.cloud.url=agent.testkube.io:443")
+		assert.Contains(t, args, "testkube-api.cloud.uiUrl=https://app.testkube.io")
+		assert.NotContains(t, args, "testkube-api.cloud.key=tkcagnt_key")
+	})
+
+	t.Run("sends only the runner address for --runner-uri", func(t *testing.T) {
+		args := prepareTestkubeProHelmArgs(runnerOptions("runner-uri"), false)
+
+		assert.Contains(t, args, "testkube-api.cloud.url=agent.testkube.io:443")
+		assert.NotContains(t, args, "testkube-api.cloud.uiUrl=https://app.testkube.io")
+	})
+
+	t.Run("sends the key for --runner-token", func(t *testing.T) {
+		args := prepareTestkubeProHelmArgs(runnerOptions("runner-token"), false)
+
+		assert.Contains(t, args, "testkube-api.cloud.key=tkcagnt_key")
+	})
+
+	t.Run("sends everything without --reuse-values", func(t *testing.T) {
+		options := runnerOptions()
+		options.ReuseValues = false
+
+		args := prepareTestkubeProHelmArgs(options, false)
+
+		assert.NotContains(t, args, "--reuse-values")
+		assert.Contains(t, args, "testkube-api.cloud.url=agent.testkube.io:443")
+		assert.Contains(t, args, "testkube-api.cloud.key=tkcagnt_key")
+		assert.Contains(t, args, "testkube-api.cloud.uiUrl=https://app.testkube.io")
+	})
 }

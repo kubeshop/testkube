@@ -192,7 +192,7 @@ contents do.
 
 ## CLI upgrade
 
-- `testkube upgrade --reuse-values` passes Helm's `--reuse-values`. Helm applies `--set` over reused values, so in that mode `prepareCommonHelmArgs` sends only the settings of flags the user passed (`HelmOptions.ExplicitFlags`, `sendsFlag`/`sendsValue` in `common/helper.go`): a flag default such as `--no-postgres=true` would otherwise silently turn off what the release had enabled. A new flag-derived Helm setting must go through `sendsFlag`. A runner's disabled MinIO/MongoDB/PostgreSQL is always sent.
+- `testkube upgrade --reuse-values` passes Helm's `--reuse-values`. Helm applies `--set` over reused values, so in that mode `prepareCommonHelmArgs` sends only the settings of flags the user passed (`HelmOptions.ExplicitFlags`, `sendsFlag`/`sendsAnyFlag` in `common/helper.go`): a flag default such as `--no-postgres=true` would otherwise silently turn off what the release had enabled. A new flag-derived Helm setting must go through `sendsFlag`. Never gate on a value being non-empty: `ProcessMasterFlags` composes a runner's control plane addresses from default prefixes and root domain, so they always are, and sending them would point a runner of a custom control plane at SaaS. A runner's disabled MinIO/MongoDB/PostgreSQL is always sent.
 
 ## CLI diagnostics
 

@@ -59,10 +59,35 @@ func (o HelmOptions) sendsFlag(name string) bool {
 	return !o.ReuseValues || o.ExplicitFlags[name]
 }
 
-// sendsValue says whether a setting the CLI fills from its own context is sent: unless
-// the release's values are reused and the CLI has no value to replace them with.
-func (o HelmOptions) sendsValue(value string) bool {
-	return !o.ReuseValues || value != ""
+// sendsAnyFlag is sendsFlag for a setting composed from several flags: it is sent when the
+// user passed any of them. A composed value is never empty on its own, since the CLI fills
+// the missing parts with defaults, so its presence says nothing about what the user asked for.
+func (o HelmOptions) sendsAnyFlag(names ...string) bool {
+	if !o.ReuseValues {
+		return true
+	}
+	for _, name := range names {
+		if o.ExplicitFlags[name] {
+			return true
+		}
+	}
+	return false
+}
+
+// The flags each control plane address of a runner is composed from.
+var (
+	rootDomainFlags = []string{"root-domain", "pro-root-domain", "cloud-root-domain"}
+	agentURIFlags   = append([]string{"runner-uri", "agent-uri", "runner-prefix", "agent-prefix", "cloud-agent-prefix"}, rootDomainFlags...)
+	uiURIFlags      = append([]string{"ui-prefix", "cloud-ui-prefix"}, rootDomainFlags...)
+	agentTokenFlags = []string{"runner-token", "agent-token"}
+)
+
+// RunnerEndpointFlags lists the flags that the control plane address and key of a runner are
+// composed from, so that a test can check the upgrade command defines every one of them.
+func RunnerEndpointFlags() []string {
+	flags := append([]string{}, agentURIFlags...)
+	flags = append(flags, uiURIFlags...)
+	return append(flags, agentTokenFlags...)
 }
 
 type HelmGenericOptions struct {
@@ -518,13 +543,13 @@ func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string 
 
 	args, settings := prepareCommonHelmArgs(options)
 
-	if options.sendsValue(options.Master.URIs.Agent) {
+	if options.sendsAnyFlag(agentURIFlags...) {
 		settings["testkube-api.cloud.url"] = options.Master.URIs.Agent
 	}
-	if options.sendsValue(options.Master.AgentToken) {
+	if options.sendsAnyFlag(agentTokenFlags...) {
 		settings["testkube-api.cloud.key"] = options.Master.AgentToken
 	}
-	if options.sendsValue(options.Master.URIs.Ui) {
+	if options.sendsAnyFlag(uiURIFlags...) {
 		settings["testkube-api.cloud.uiUrl"] = options.Master.URIs.Ui
 	}
 
