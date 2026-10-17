@@ -16,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/runtime"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executiondata"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
@@ -104,8 +105,8 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 		output.ExitErrorf(constants.CodeInputError, "%s", executiondata.WithheldError("the command of this step", markers).Error())
 	}
 
-	// Remove the message of an earlier step or attempt. When the file stays, its message can be old, so the step does not read it.
-	stepErrorFresh := removeStepError(constants.StepErrorPath)
+	// Remove the message and the code of an earlier step or attempt. When a file stays, its content can be old, so the step does not read it.
+	stepErrorFresh := removeStepError(constants.StepErrorPath) && removeStepError(constants.StepReasonPath)
 
 	// Run the operation with context
 	execution := orchestration.Executions.CreateWithContext(ctx, command[0], command[1:])
@@ -147,8 +148,8 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 		if orchestration.Setup != nil {
 			sensitiveValues = orchestration.Setup.GetSensitiveValues()
 		}
-		// A command writes the words of its failure, and it has no reason code.
-		details, reason = readStepError(constants.StepErrorPath, sensitiveValues), ""
+		// A toolkit step writes the words of its failure, and a code next to them when it has one.
+		details, reason = readStepError(constants.StepErrorPath, sensitiveValues), readStepReason(constants.StepReasonPath)
 	}
 
 	// Notify about the status
@@ -160,6 +161,25 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 func removeStepError(path string) bool {
 	err := os.Remove(path)
 	return err == nil || errors.Is(err, os.ErrNotExist)
+}
+
+// readStepReason returns the first line of the step reason file, which holds a reason code.
+// A code is short and holds no sensitive value, so it needs no masking. Only a code that has a
+// type counts, so a bad write cannot become a code that misleads the reader.
+func readStepReason(path string) string {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	reason := string(content)
+	if i := strings.IndexAny(reason, "\r\n"); i >= 0 {
+		reason = reason[:i]
+	}
+	reason = strings.TrimSpace(reason)
+	if testkube.StatusDetailsTypeOf("", reason) == testkube.StatusDetailsTypeUnknown {
+		return ""
+	}
+	return reason
 }
 
 // readStepError returns the first line of the step message file as plain text, with a size limit.
