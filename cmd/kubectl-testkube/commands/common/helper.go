@@ -77,8 +77,8 @@ func (o HelmOptions) sendsAnyFlag(names ...string) bool {
 // The flags each control plane address of a runner is composed from.
 var (
 	rootDomainFlags = []string{"root-domain", "pro-root-domain", "cloud-root-domain"}
-	agentURIFlags   = append([]string{"runner-uri", "agent-uri", "runner-prefix", "agent-prefix", "cloud-agent-prefix"}, rootDomainFlags...)
-	uiURIFlags      = append([]string{"ui-prefix", "cloud-ui-prefix"}, rootDomainFlags...)
+	agentURIFlags   = append([]string{"runner-uri-override", "agent-uri-override", "runner-uri", "agent-uri", "runner-prefix", "agent-prefix", "cloud-agent-prefix"}, rootDomainFlags...)
+	uiURIFlags      = append([]string{"ui-uri-override", "ui-prefix", "cloud-ui-prefix"}, rootDomainFlags...)
 	agentTokenFlags = []string{"runner-token", "agent-token"}
 )
 

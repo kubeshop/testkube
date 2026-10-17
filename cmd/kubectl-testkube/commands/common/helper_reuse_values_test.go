@@ -3,7 +3,10 @@ package common
 import (
 	"testing"
 
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 )
@@ -119,4 +122,63 @@ func TestPrepareTestkubeProHelmArgs_ReuseValues(t *testing.T) {
 		assert.Contains(t, args, "testkube-api.cloud.key=tkcagnt_key")
 		assert.Contains(t, args, "testkube-api.cloud.uiUrl=https://app.testkube.io")
 	})
+}
+
+// Runs the flags through ProcessMasterFlags, so that every flag the composed addresses honour
+// is checked, overrides included.
+func TestPrepareTestkubeProHelmArgs_ReuseValuesWithParsedFlags(t *testing.T) {
+	argsFor := func(t *testing.T, flags ...string) []string {
+		options := upgradeOptions()
+		cmd := &cobra.Command{Use: "upgrade"}
+		PopulateMasterFlags(cmd, &options, false)
+		require.NoError(t, cmd.ParseFlags(flags))
+		ProcessMasterFlags(cmd, &options, nil)
+		options.ReuseValues = true
+		options.NoMinio, options.NoMongo, options.NoPostgres = true, true, true
+		options.ExplicitFlags = map[string]bool{}
+		cmd.Flags().Visit(func(f *pflag.Flag) { options.ExplicitFlags[f.Name] = true })
+		return prepareTestkubeProHelmArgs(options, false)
+	}
+
+	tests := map[string]struct {
+		flags  []string
+		want   []string
+		unsent []string
+	}{
+		"no endpoint flag": {
+			unsent: []string{"testkube-api.cloud.url", "testkube-api.cloud.uiUrl", "testkube-api.cloud.key"},
+		},
+		"--runner-uri-override": {
+			flags:  []string{"--runner-uri-override", "agent.example.com:443"},
+			want:   []string{"testkube-api.cloud.url=agent.example.com:443"},
+			unsent: []string{"testkube-api.cloud.uiUrl"},
+		},
+		"--agent-uri-override": {
+			flags: []string{"--agent-uri-override", "agent.example.com:443"},
+			want:  []string{"testkube-api.cloud.url=agent.example.com:443"},
+		},
+		"--ui-uri-override": {
+			flags:  []string{"--ui-uri-override", "https://ui.example.com"},
+			want:   []string{"testkube-api.cloud.uiUrl=https://ui.example.com"},
+			unsent: []string{"testkube-api.cloud.url"},
+		},
+		"--root-domain": {
+			flags: []string{"--root-domain", "example.com"},
+			want:  []string{"testkube-api.cloud.url=agent.example.com:443", "testkube-api.cloud.uiUrl=https://app.example.com"},
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			args := argsFor(t, tt.flags...)
+
+			for _, want := range tt.want {
+				assert.Contains(t, args, want)
+			}
+			for _, unsent := range tt.unsent {
+				for _, arg := range args {
+					assert.NotContains(t, arg, unsent+"=")
+				}
+			}
+		})
+	}
 }
