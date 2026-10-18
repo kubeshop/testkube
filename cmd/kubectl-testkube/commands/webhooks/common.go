@@ -2,7 +2,6 @@ package webhooks
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -26,7 +25,7 @@ func NewCreateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.CreateW
 	payloadTemplate := cmd.Flag("payload-template").Value.String()
 	payloadTemplateContent := ""
 	if payloadTemplate != "" {
-		b, err := os.ReadFile(payloadTemplate)
+		b, err := cmdcommon.ReadFileOrStdin(cmd, payloadTemplate)
 		if err != nil {
 			return options, fmt.Errorf("reading payload template: %w", err)
 		}
@@ -141,7 +140,7 @@ func NewUpdateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.UpdateW
 
 	if cmd.Flag("payload-template").Changed {
 		payloadTemplate := cmd.Flag("payload-template").Value.String()
-		b, err := os.ReadFile(payloadTemplate)
+		b, err := cmdcommon.ReadFileOrStdin(cmd, payloadTemplate)
 		if err != nil {
 			return options, fmt.Errorf("reading payload template: %w", err)
 		}

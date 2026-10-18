@@ -3,7 +3,6 @@ package agents
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
@@ -136,7 +135,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 	var globalTemplate []byte
 	if globalTemplatePath != "" {
 		var err error
-		globalTemplate, err = os.ReadFile(globalTemplatePath)
+		globalTemplate, err = common2.ReadFileOrStdin(cmd, globalTemplatePath)
 		if err != nil {
 			common2.HandleCLIError(common2.NewCLIError(
 				common2.TKErrInvalidRuntimeParameter,

@@ -388,7 +388,7 @@ func PopulateRunnerFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool("dry-run", false, "display helm commands only")
 
 	// Installation > Runner
-	cmd.Flags().StringP("global-template-path", "g", "", "include global template")
+	cmd.Flags().StringP("global-template-path", "g", "", "include global template, or - to read it from stdin")
 	cmd.Flags().Bool("global", false, "make it global runner")
 	cmd.Flags().String("group", "", "make it grouped runner")
 
