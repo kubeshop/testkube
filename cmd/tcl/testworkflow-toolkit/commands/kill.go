@@ -184,7 +184,7 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, clientSet 
 		})
 	})
 	if err != nil {
-		if !isTransientCleanupError(err) {
+		if !isFullyTransientCleanupError(err) {
 			return fmt.Errorf("cleaning up resources: %w", err)
 		}
 		fmt.Printf("warning: cleaning up resources: %s\n", err.Error())

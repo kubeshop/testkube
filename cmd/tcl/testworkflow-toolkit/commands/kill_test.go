@@ -9,10 +9,13 @@
 package commands
 
 import (
+	"bytes"
 	"context"
+	"crypto/x509"
 	"errors"
 	"io"
 	"net"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -55,21 +58,33 @@ func shortenCleanupRetryDelay(t *testing.T) {
 }
 
 // captureStdout collects what the command prints, because the warnings are plain fmt.Printf.
+// The pipe is drained concurrently: output larger than the pipe buffer would otherwise block the
+// subject forever instead of failing the test.
 func captureStdout(t *testing.T, fn func()) string {
 	t.Helper()
 	reader, writer, err := os.Pipe()
 	require.NoError(t, err)
 
+	drained := make(chan string, 1)
+	go func() {
+		var buf bytes.Buffer
+		_, copyErr := io.Copy(&buf, reader)
+		if copyErr != nil {
+			buf.WriteString("\n[capture error: " + copyErr.Error() + "]")
+		}
+		drained <- buf.String()
+	}()
+
 	previous := os.Stdout
 	os.Stdout = writer
-	defer func() { os.Stdout = previous }()
 
 	fn()
 
+	os.Stdout = previous
 	require.NoError(t, writer.Close())
-	out, err := io.ReadAll(reader)
-	require.NoError(t, err)
-	return string(out)
+	out := <-drained
+	require.NoError(t, reader.Close())
+	return out
 }
 
 func oneService() []executionworkertypes.ListResultItem {
@@ -129,7 +144,11 @@ func TestIsTransientCleanupError(t *testing.T) {
 		{"too many requests 429", apierrors.NewTooManyRequests("slow down", 1), true},
 		{"server timeout", apierrors.NewServerTimeout(podsResource, "delete", 1), true},
 		{"request timeout", apierrors.NewTimeoutError("timed out", 1), true},
-		{"bare network error", &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection refused")}, true},
+		{"connection refused", &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection refused")}, true},
+		// A 502 carries the InternalError reason, so it only matches by status code. It comes
+		// from whatever fronts the API server, which a rolling control-plane upgrade produces.
+		{"bad gateway 502", apierrors.NewGenericServerResponse(502, "delete", podsResource, "", "", 0, true), true},
+		{"gateway timeout 504", apierrors.NewGenericServerResponse(504, "delete", podsResource, "", "", 0, true), true},
 		{"forbidden 403", forbidden(), false},
 		{"not found 404", apierrors.NewNotFound(podsResource, "svc-pod"), false},
 		{"bad request 400", apierrors.NewBadRequest("malformed"), false},
@@ -138,6 +157,13 @@ func TestIsTransientCleanupError(t *testing.T) {
 		// which is persistent and must stay loud.
 		{"conflict 409", apierrors.NewConflict(podsResource, "svc-pod", errors.New("conflict")), false},
 		{"internal error 500", apierrors.NewInternalError(errors.New("webhook refused")), false},
+		// These satisfy net.Error but name a broken endpoint the operator has to fix, so the
+		// catch-all must not swallow them.
+		{"dns name does not exist", &net.DNSError{Err: "no such host", IsNotFound: true}, false},
+		{"untrusted certificate", &url.Error{Op: "Get", URL: "https://api", Err: x509.UnknownAuthorityError{}}, false},
+		// Context errors mean the caller is going away, not that the server is briefly unwell.
+		{"context canceled", context.Canceled, false},
+		{"context deadline exceeded", context.DeadlineExceeded, false},
 	}
 
 	for _, tt := range tests {
@@ -147,25 +173,33 @@ func TestIsTransientCleanupError(t *testing.T) {
 	}
 }
 
-// The group cleanup joins the errors of its concurrent deletes, so the verdict must not depend on
-// which of them happened to finish first.
-func TestIsTransientCleanupErrorOnAggregates(t *testing.T) {
+// The group cleanup joins the errors of its concurrent deletes, so neither verdict may depend on
+// which of them happened to finish first. Retrying needs one transient branch to be worth it,
+// while downgrading needs every branch to be transient — a mixed aggregate must stay fatal, or a
+// permanent misconfiguration would only be reported when no blip co-occurred with it.
+func TestCleanupErrorAggregates(t *testing.T) {
+	notFound := apierrors.NewNotFound(podsResource, "svc-pod")
+
 	tests := []struct {
-		name string
-		err  error
-		want bool
+		name          string
+		err           error
+		wantRetry     bool
+		wantDowngrade bool
 	}{
-		{"single transient branch", errors.Join(serviceUnavailable()), true},
-		{"every branch transient", errors.Join(serviceUnavailable(), serviceUnavailable()), true},
-		{"permanent then transient", errors.Join(forbidden(), serviceUnavailable()), true},
-		{"transient then permanent", errors.Join(serviceUnavailable(), forbidden()), true},
-		{"no transient branch", errors.Join(forbidden(), apierrors.NewNotFound(podsResource, "svc-pod")), false},
-		{"nested aggregate", errors.Join(errors.Join(forbidden()), errors.Join(serviceUnavailable())), true},
+		{"single transient branch", errors.Join(serviceUnavailable()), true, true},
+		{"every branch transient", errors.Join(serviceUnavailable(), serviceUnavailable()), true, true},
+		{"permanent then transient", errors.Join(forbidden(), serviceUnavailable()), true, false},
+		{"transient then permanent", errors.Join(serviceUnavailable(), forbidden()), true, false},
+		{"no transient branch", errors.Join(forbidden(), notFound), false, false},
+		{"nested mixed aggregate", errors.Join(errors.Join(forbidden()), errors.Join(serviceUnavailable())), true, false},
+		{"nested all transient", errors.Join(errors.Join(serviceUnavailable()), errors.Join(serviceUnavailable())), true, true},
+		{"transient plus cancellation", errors.Join(serviceUnavailable(), context.Canceled), true, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, isTransientCleanupError(tt.err))
+			assert.Equal(t, tt.wantRetry, shouldRetryCleanupError(tt.err), "retry decision")
+			assert.Equal(t, tt.wantDowngrade, isFullyTransientCleanupError(tt.err), "downgrade decision")
 		})
 	}
 }
@@ -312,7 +346,11 @@ func TestRunKillTeardown(t *testing.T) {
 		assert.Equal(t, 1, attempts, "a permanent error must not consume the retry budget")
 	})
 
-	t.Run("treats a mixed aggregate as transient", func(t *testing.T) {
+	// The group cleanup deletes each resource kind concurrently, so one permanent failure can
+	// arrive joined with an unrelated blip. It is retried, because the blip might clear, but the
+	// permanent branch still fails the step: otherwise a missing RBAC rule would be reported
+	// only on the runs where nothing else happened to go wrong.
+	t.Run("fails when an aggregate mixes a permanent error with a transient one", func(t *testing.T) {
 		shortenCleanupRetryDelay(t)
 		ctrl := gomock.NewController(t)
 		worker := executionworkertypes.NewMockWorker(ctrl)
@@ -330,9 +368,58 @@ func TestRunKillTeardown(t *testing.T) {
 			err = RunKill(context.Background(), worker, healthyClientSet(), "testkube", "ref", "svc-group", nil, nil)
 		})
 
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cleaning up resources")
+		assert.Equal(t, cleanupRetryCount, attempts, "the transient branch still earns the retries")
+		assert.NotContains(t, out, "warning: cleaning up resources")
+	})
+
+	t.Run("recovers from a bad gateway", func(t *testing.T) {
+		shortenCleanupRetryDelay(t)
+		ctrl := gomock.NewController(t)
+		worker := executionworkertypes.NewMockWorker(ctrl)
+		worker.EXPECT().List(gomock.Any(), gomock.Any()).Return(oneService(), nil).Times(1)
+
+		attempts := 0
+		worker.EXPECT().DestroyGroup(gomock.Any(), "svc-group", gomock.Any()).
+			DoAndReturn(func(context.Context, string, executionworkertypes.DestroyOptions) error {
+				attempts++
+				if attempts < 2 {
+					return apierrors.NewGenericServerResponse(502, "delete", podsResource, "", "", 0, true)
+				}
+				return nil
+			}).AnyTimes()
+
+		var err error
+		_ = captureStdout(t, func() {
+			err = RunKill(context.Background(), worker, healthyClientSet(), "testkube", "ref", "svc-group", nil, nil)
+		})
+
 		assert.NoError(t, err)
-		assert.Equal(t, cleanupRetryCount, attempts)
-		assert.Contains(t, out, "warning: cleaning up resources")
+		assert.Equal(t, 2, attempts)
+	})
+
+	// A cancelled teardown is not a passed teardown: the step keeps failing as it did before.
+	t.Run("fails when the context is cancelled mid-teardown", func(t *testing.T) {
+		shortenCleanupRetryDelay(t)
+		ctrl := gomock.NewController(t)
+		worker := executionworkertypes.NewMockWorker(ctrl)
+		worker.EXPECT().List(gomock.Any(), gomock.Any()).Return(oneService(), nil).Times(1)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		worker.EXPECT().DestroyGroup(gomock.Any(), "svc-group", gomock.Any()).
+			DoAndReturn(func(context.Context, string, executionworkertypes.DestroyOptions) error {
+				cancel()
+				return serviceUnavailable()
+			}).AnyTimes()
+
+		var err error
+		_ = captureStdout(t, func() {
+			err = RunKill(ctx, worker, healthyClientSet(), "testkube", "ref", "svc-group", nil, nil)
+		})
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cleaning up resources")
 	})
 }
 
