@@ -40,6 +40,12 @@ func cleanupRetryBudget() time.Duration {
 // call's budget on purpose: the point is to stop a many-service suite from paying the allowance
 // once per service, not to cut the first service short — a deadline that fires inside the first
 // read would report its transient cause as a deadline instead.
+//
+// The multiplication is worth bounding because client-go retries underneath this loop as well:
+// every request defaults to maxRetries 10 and retries a 429 or 5xx that carries a Retry-After
+// header, which the API server's priority-and-fairness filter always sets on a 429. Without a
+// shared ceiling a many-service teardown could outlive the pod's termination grace period and be
+// killed before it ever reaches the warning this file exists to produce.
 func healthPhaseBudget() time.Duration {
 	return 2 * cleanupRetryBudget()
 }
@@ -116,7 +122,13 @@ func isTransientCleanupError(err error) bool {
 }
 
 // branches returns the joined errors when err is an aggregate. The group cleanup deletes its
-// resource kinds concurrently and joins whatever failed, so most cleanup errors are aggregates.
+// resource kinds concurrently and joins whatever failed, so most cleanup errors are aggregates —
+// even a single failed delete arrives as a one-branch join. Walking the tree is what makes the
+// verdict deterministic: the apierrors helpers resolve through errors.As and so read only the
+// first status they find, which in a mixed aggregate is whichever goroutine appended first.
+//
+// An aggregate is recognised only through Unwrap() []error. An apimachinery utilerrors.Aggregate
+// does not implement it and would read as one opaque leaf.
 func branches(err error) ([]error, bool) {
 	var joined interface{ Unwrap() []error }
 	if errors.As(err, &joined) {
