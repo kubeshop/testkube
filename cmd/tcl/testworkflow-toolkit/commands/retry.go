@@ -13,17 +13,36 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	utilnet "k8s.io/apimachinery/pkg/util/net"
 )
 
 const cleanupRetryCount = 5
 
 // cleanupRetryDelay is a var so tests can shorten it, matching pkg/runner's overridable delay.
 var cleanupRetryDelay = 500 * time.Millisecond
+
+// cleanupRetryBudget is the wall time one retryTransient call can spend sleeping.
+func cleanupRetryBudget() time.Duration {
+	var total time.Duration
+	for attempt := 0; attempt < cleanupRetryCount-1; attempt++ {
+		total += time.Duration(attempt+1) * cleanupRetryDelay
+	}
+	return total
+}
+
+// healthPhaseBudget bounds every per-service health read together. It carries headroom over one
+// call's budget on purpose: the point is to stop a many-service suite from paying the allowance
+// once per service, not to cut the first service short — a deadline that fires inside the first
+// read would report its transient cause as a deadline instead.
+func healthPhaseBudget() time.Duration {
+	return 2 * cleanupRetryBudget()
+}
 
 // isTransientCleanupError reports whether a single error is worth another attempt.
 func isTransientCleanupError(err error) bool {
@@ -34,6 +53,10 @@ func isTransientCleanupError(err error) bool {
 	// A cancelled or expired context means the caller is going away, not that the API server is
 	// briefly unwell, so it never counts as transient. It is checked first because
 	// DeadlineExceeded also satisfies net.Error.
+	//
+	// This is only safe while env.KubernetesConfig() leaves rest.Config.Timeout at zero. Setting
+	// a client timeout there would surface a slow API server as DeadlineExceeded, which this
+	// treats as permanent, and the reported symptom would come back.
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return false
 	}
@@ -42,6 +65,21 @@ func isTransientCleanupError(err error) bool {
 		apierrors.IsTooManyRequests(err) ||
 		apierrors.IsServerTimeout(err) ||
 		apierrors.IsTimeout(err) {
+		return true
+	}
+
+	// A connection cut mid-response carries no status, so it has to be matched before the status
+	// branch below returns. client-go wraps these as "unexpected error when reading response
+	// body. Please retry." — its own wording says what to do with them. A sidecar shutting down
+	// at the end of a run produces exactly this.
+	//
+	// utilnet's helpers compare the sentinels with == and only unwrap url.Error, so they miss
+	// the fmt.Errorf wrapping client-go actually applies. errors.Is covers that; the helpers
+	// still earn their place for the message-matched cases (GOAWAY, reset, closed connection).
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+	if utilnet.IsProbableEOF(err) || utilnet.IsConnectionReset(err) {
 		return true
 	}
 
@@ -87,50 +125,51 @@ func branches(err error) ([]error, bool) {
 	return nil, false
 }
 
-// shouldRetryCleanupError reports whether another attempt could change the outcome. One transient
-// branch is enough, because the delete calls are idempotent and a later attempt only has to clear
-// the branch that was failing.
-func shouldRetryCleanupError(err error) bool {
+// cleanupErrorLeaves counts the transient and the total leaves of a cleanup error. Both verdicts
+// below are quantifiers over the same walk, so they cannot drift apart.
+func cleanupErrorLeaves(err error) (transient, total int) {
 	if err == nil {
-		return false
+		return 0, 0
 	}
 	if parts, ok := branches(err); ok {
 		for _, part := range parts {
-			if shouldRetryCleanupError(part) {
-				return true
-			}
+			partTransient, partTotal := cleanupErrorLeaves(part)
+			transient += partTransient
+			total += partTotal
 		}
-		return false
+		return transient, total
 	}
-	return isTransientCleanupError(err)
+	if isTransientCleanupError(err) {
+		return 1, 1
+	}
+	return 0, 1
 }
 
-// isFullyTransientCleanupError reports whether every branch is transient. This is the stricter
+// shouldRetryCleanupError reports whether another attempt could change the outcome. One transient
+// leaf is enough, because the delete calls are idempotent and a later attempt only has to clear
+// the one that was failing.
+func shouldRetryCleanupError(err error) bool {
+	transient, _ := cleanupErrorLeaves(err)
+	return transient > 0
+}
+
+// isFullyTransientCleanupError reports whether every leaf is transient. This is the stricter
 // question the final verdict needs: an aggregate that mixes a permanent failure with a transient
 // one must not be downgraded, or a real misconfiguration would be reported only when no blip
 // happens to co-occur with it.
 func isFullyTransientCleanupError(err error) bool {
-	if err == nil {
-		return false
-	}
-	if parts, ok := branches(err); ok {
-		if len(parts) == 0 {
-			return false
-		}
-		for _, part := range parts {
-			if !isFullyTransientCleanupError(part) {
-				return false
-			}
-		}
-		return true
-	}
-	return isTransientCleanupError(err)
+	transient, total := cleanupErrorLeaves(err)
+	return total > 0 && transient == total
 }
 
 // retryTransient calls fn until it succeeds, until no attempt could help, or until the attempts
 // run out. A cancelled context stops the loop and joins its cause onto the last error, so the
 // caller still sees what actually failed.
 func retryTransient(ctx context.Context, count int, delayBase time.Duration, fn func() error) error {
+	if count < 1 {
+		count = 1
+	}
+
 	var err error
 	for attempt := 0; attempt < count; attempt++ {
 		if ctxErr := ctx.Err(); ctxErr != nil {

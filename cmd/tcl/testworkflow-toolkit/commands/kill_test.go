@@ -13,6 +13,7 @@ import (
 	"context"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/url"
@@ -79,14 +80,19 @@ func captureStdout(t *testing.T, fn func()) string {
 
 	previous := os.Stdout
 	os.Stdout = writer
+	// Restore on the way out whatever happens: a panic or a failed require inside fn would
+	// otherwise leave every later test in the package writing into this pipe.
+	defer func() {
+		os.Stdout = previous
+		_ = writer.Close()
+		_ = reader.Close()
+	}()
 
 	fn()
 
 	os.Stdout = previous
 	require.NoError(t, writer.Close())
-	out := <-drained
-	require.NoError(t, reader.Close())
-	return out
+	return <-drained
 }
 
 func oneService() []executionworkertypes.ListResultItem {
@@ -583,7 +589,7 @@ func TestRunKillHealthReadIsRetried(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, cleanupRetryCount, *reads)
-		assert.Contains(t, out, "service health not verified")
+		assert.Contains(t, out, "service health not verified (transient)")
 	})
 
 	t.Run("a permanent read error is not retried", func(t *testing.T) {
@@ -602,6 +608,118 @@ func TestRunKillHealthReadIsRetried(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, *reads, "forbidden cannot clear, so it must not burn the budget")
-		assert.Contains(t, out, "service health not verified")
+		assert.Contains(t, out, "service health not verified (permanent)",
+			"a denied read disables the check on every run, so it must not read like a blip")
 	})
+}
+
+// A connection cut mid-response carries no status at all. client-go wraps it as "unexpected
+// error when reading response body. Please retry." — a draining sidecar at the end of a run
+// produces exactly this, so it has to count as transient or the reported bug survives in a
+// shape the status-based cases never reach.
+func TestIsTransientCleanupErrorOnSeveredConnections(t *testing.T) {
+	clientGoWrapped := func(cause error) error {
+		return fmt.Errorf("unexpected error when reading response body. Please retry. Original error: %w", cause)
+	}
+
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"unexpected eof mid-body", clientGoWrapped(io.ErrUnexpectedEOF), true},
+		{"plain eof", clientGoWrapped(io.EOF), true},
+		{"connection reset by peer", clientGoWrapped(errors.New("read tcp 10.0.0.1:443: connection reset by peer")), true},
+		{"http2 goaway", clientGoWrapped(errors.New("http2: server sent GOAWAY and closed the connection")), true},
+		{"use of closed network connection", clientGoWrapped(errors.New("use of closed network connection")), true},
+		// Still permanent: the body read is irrelevant when the endpoint itself is misconfigured.
+		{"untrusted certificate while reading", clientGoWrapped(x509.UnknownAuthorityError{}), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isTransientCleanupError(tt.err))
+			// The verdict must survive the join the group cleanup wraps everything in.
+			assert.Equal(t, tt.want, isFullyTransientCleanupError(errors.Join(tt.err)))
+		})
+	}
+}
+
+func TestRetryTransientHonoursAnAlreadyCancelledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	called := false
+	err := retryTransient(ctx, cleanupRetryCount, time.Millisecond, func() error {
+		called = true
+		return nil
+	})
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.False(t, called, "a cancelled caller must not spend an API request")
+}
+
+// cleanupRetryCount is a const today, so this guards a caller that passes a configured zero
+// rather than a reachable path: without it the helper reports success without ever running fn,
+// and the caller then reads a result fn was supposed to set.
+func TestRetryTransientAlwaysMakesOneAttempt(t *testing.T) {
+	for _, count := range []int{0, -1} {
+		t.Run(fmt.Sprintf("count %d", count), func(t *testing.T) {
+			attempts := 0
+			err := retryTransient(context.Background(), count, time.Millisecond, func() error {
+				attempts++
+				return forbidden()
+			})
+			require.Error(t, err)
+			assert.Equal(t, 1, attempts)
+		})
+	}
+}
+
+// The health read finding no pod is not a problem: the pod may legitimately already be gone by
+// the time the step runs, so it fails open without claiming the service was unhealthy.
+func TestRunKillHealthWithNoPod(t *testing.T) {
+	shortenCleanupRetryDelay(t)
+	ctrl := gomock.NewController(t)
+	worker := executionworkertypes.NewMockWorker(ctrl)
+	worker.EXPECT().List(gomock.Any(), gomock.Any()).Return(oneService(), nil).Times(1)
+	worker.EXPECT().DestroyGroup(gomock.Any(), "svc-group", gomock.Any()).Return(nil).Times(1)
+
+	var err error
+	out := captureStdout(t, func() {
+		err = RunKill(context.Background(), worker, k8sfake.NewSimpleClientset(), "testkube", "ref", "svc-group", nil, nil)
+	})
+
+	assert.NoError(t, err)
+	assert.Contains(t, out, "no pod found for service health check")
+	assert.NotContains(t, out, "service health not verified")
+}
+
+// The per-service reads share one deadline, so a many-service suite cannot multiply the retry
+// allowance by the service count and outlive the pod's grace period.
+func TestRunKillHealthSharesOneRetryBudget(t *testing.T) {
+	shortenCleanupRetryDelay(t)
+	ctrl := gomock.NewController(t)
+	worker := executionworkertypes.NewMockWorker(ctrl)
+
+	items := []executionworkertypes.ListResultItem{
+		{Resource: testworkflowconfig.ResourceConfig{Id: "test-exec-db-0"}, Namespace: "testkube"},
+		{Resource: testworkflowconfig.ResourceConfig{Id: "test-exec-db-1"}, Namespace: "testkube"},
+		{Resource: testworkflowconfig.ResourceConfig{Id: "test-exec-db-2"}, Namespace: "testkube"},
+		{Resource: testworkflowconfig.ResourceConfig{Id: "test-exec-db-3"}, Namespace: "testkube"},
+	}
+	worker.EXPECT().List(gomock.Any(), gomock.Any()).Return(items, nil).Times(1)
+	worker.EXPECT().DestroyGroup(gomock.Any(), "svc-group", gomock.Any()).Return(nil).Times(1)
+
+	cs, reads := flakyHealthClientSet(99, serviceUnavailable(), oomKilledPod())
+
+	var err error
+	_ = captureStdout(t, func() {
+		err = RunKill(context.Background(), worker, cs, "testkube", "ref", "svc-group", nil, nil)
+	})
+
+	assert.NoError(t, err)
+	assert.Less(t, *reads, cleanupRetryCount*len(items),
+		"the shared deadline must stop every service from re-arming the whole budget")
 }

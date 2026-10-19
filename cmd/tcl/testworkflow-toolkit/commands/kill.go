@@ -10,6 +10,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -110,6 +111,12 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, clientSet 
 
 	var healthErrors []string
 	fmt.Printf("checking health of %d services\n", len(items))
+	// One budget for the whole phase. Each read retries, so without a shared deadline a suite
+	// with many services would pay the whole allowance once per service, and client-go adds its
+	// own Retry-After loop underneath. Once the deadline passes the remaining reads fail open
+	// immediately rather than extending the step.
+	healthCtx, cancelHealth := context.WithTimeout(ctx, healthPhaseBudget())
+	defer cancelHealth()
 	for _, item := range items {
 		service, index := spawn.GetServiceByResourceId(item.Resource.Id)
 
@@ -119,7 +126,7 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, clientSet 
 			}
 		}
 
-		if issues := getServiceHealth(ctx, clientSet, item.Namespace, item.Resource.Id); len(issues) > 0 {
+		if issues := getServiceHealth(healthCtx, clientSet, ref, item.Namespace, item.Resource.Id); len(issues) > 0 {
 			healthErrors = append(healthErrors, fmt.Sprintf("%s (index %d): %s", commontcl.ServiceLabel(service), index, strings.Join(issues, "; ")))
 		}
 	}
@@ -187,7 +194,12 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, clientSet 
 		if !isFullyTransientCleanupError(err) {
 			return fmt.Errorf("cleaning up resources: %w", err)
 		}
+		// The run reports success from here, so the warning also goes out as a structured
+		// output: a consumer reading execution state would otherwise have no way to tell a
+		// clean teardown from a downgraded one.
 		fmt.Printf("warning: cleaning up resources: %s\n", err.Error())
+		instructions.PrintOutput(ref, "service-cleanup-warning", instructions.NewExecutionWarning(
+			"service-cleanup", "Service cleanup incomplete", err.Error()))
 	}
 
 	if len(healthErrors) > 0 {
@@ -200,9 +212,11 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, clientSet 
 // getServiceHealth reports the problems of a service's pod. It returns no issues when it cannot
 // read the pod: an API error is not evidence that a service misbehaved, and failing the step on
 // one would let an infrastructure problem overturn a passed test — the very thing the teardown
-// retry exists to prevent. The read is retried so a brief blip does not skip the check, and the
-// warning says plainly that health went unverified.
-func getServiceHealth(ctx context.Context, clientSet kubernetes.Interface, namespace, resourceId string) []string {
+// retry exists to prevent. The read is retried so a brief blip does not skip the check, and both
+// the log and the structured output say plainly that health went unverified, naming whether the
+// cause could clear on its own. A permanent cause means the check is disabled on every run until
+// an operator fixes it, so it reads differently from a blip.
+func getServiceHealth(ctx context.Context, clientSet kubernetes.Interface, ref, namespace, resourceId string) []string {
 	var pods *corev1.PodList
 	err := retryTransient(ctx, cleanupRetryCount, cleanupRetryDelay, func() error {
 		var listErr error
@@ -213,7 +227,19 @@ func getServiceHealth(ctx context.Context, clientSet kubernetes.Interface, names
 		return listErr
 	})
 	if err != nil {
-		fmt.Printf("warning: service health not verified, could not list pods in namespace %s: %v\n", namespace, err)
+		// Name the cause: a blip, a misconfiguration that disables the check on every run until
+		// someone fixes it, or the shared phase budget running out on an earlier service. They
+		// call for different responses, so they must not all read the same.
+		cause := "permanent"
+		switch {
+		case errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled):
+			cause = "deadline"
+		case isFullyTransientCleanupError(err):
+			cause = "transient"
+		}
+		fmt.Printf("warning: service health not verified (%s), could not list pods in namespace %s: %v\n", cause, namespace, err)
+		instructions.PrintOutput(ref, "service-health-warning", instructions.NewExecutionWarning(
+			"service-health", "Service health not verified ("+cause+")", err.Error()))
 		return nil
 	}
 	if len(pods.Items) == 0 {
