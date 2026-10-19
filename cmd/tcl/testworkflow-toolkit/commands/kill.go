@@ -62,7 +62,7 @@ func NewKillCmd() *cobra.Command {
 			worker := spawn.ExecutionWorker()
 			namespace := config.Namespace()
 
-			err := RunKill(cmd.Context(), worker, namespace, config.Ref(), groupRef, conditions, machine)
+			err := RunKill(cmd.Context(), worker, env.Kubernetes(), namespace, config.Ref(), groupRef, conditions, machine)
 			toolkitcommon.ExitOnError("stopping services", err)
 		},
 	}
@@ -77,15 +77,22 @@ func NewKillCmd() *cobra.Command {
 func RunKillWithOptions(ctx context.Context, cfg *config.ConfigV2, groupRef string) error {
 	worker := spawn.ParallelExecutionWorker(cfg)
 	namespace := cfg.Namespace()
-	return RunKill(ctx, worker, namespace, cfg.Internal().Resource.Id, groupRef, nil, nil)
+	return RunKill(ctx, worker, env.Kubernetes(), namespace, cfg.Internal().Resource.Id, groupRef, nil, nil)
 }
 
 // RunKill is the core kill logic, separated from the Cobra command for testability.
 // It lists service instances, checks their health, fetches logs for matching
 // services, destroys the group, and returns an error if any service has failed.
-func RunKill(ctx context.Context, worker executionworkertypes.Worker, namespace string, ref string, groupRef string, conditions map[string]expressions.Expression, machine expressions.Machine) error {
-	items, err := worker.List(ctx, executionworkertypes.ListOptions{
-		GroupId: groupRef,
+// Destroying the group tolerates a transient API error: it is retried, and an exhausted retry
+// is a warning rather than a step failure, so a teardown blip does not overturn a passed test.
+func RunKill(ctx context.Context, worker executionworkertypes.Worker, clientSet kubernetes.Interface, namespace string, ref string, groupRef string, conditions map[string]expressions.Expression, machine expressions.Machine) error {
+	var items []executionworkertypes.ListResultItem
+	err := retryTransient(ctx, cleanupRetryCount, cleanupRetryDelay, func() error {
+		var listErr error
+		items, listErr = worker.List(ctx, executionworkertypes.ListOptions{
+			GroupId: groupRef,
+		})
+		return listErr
 	})
 	if err != nil {
 		return fmt.Errorf("listing service instances: %w", err)
@@ -102,7 +109,6 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, namespace 
 	}
 
 	var healthErrors []string
-	clientSet := env.Kubernetes()
 	fmt.Printf("checking health of %d services\n", len(items))
 	for _, item := range items {
 		service, index := spawn.GetServiceByResourceId(item.Resource.Id)
@@ -170,11 +176,18 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, namespace 
 		}
 	}
 
-	err = worker.DestroyGroup(ctx, groupRef, executionworkertypes.DestroyOptions{
-		Namespace: namespace,
+	// A permanent error recurs on every run with no self-healing path, so it stays fatal rather
+	// than leaking service pods behind a green status.
+	err = retryTransient(ctx, cleanupRetryCount, cleanupRetryDelay, func() error {
+		return worker.DestroyGroup(ctx, groupRef, executionworkertypes.DestroyOptions{
+			Namespace: namespace,
+		})
 	})
 	if err != nil {
-		return fmt.Errorf("cleaning up resources: %w", err)
+		if !isTransientCleanupError(err) {
+			return fmt.Errorf("cleaning up resources: %w", err)
+		}
+		fmt.Printf("warning: cleaning up resources: %s\n", err.Error())
 	}
 
 	if len(healthErrors) > 0 {
