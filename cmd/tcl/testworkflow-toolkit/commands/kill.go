@@ -197,13 +197,23 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, clientSet 
 	return nil
 }
 
+// getServiceHealth reports the problems of a service's pod. It returns no issues when it cannot
+// read the pod: an API error is not evidence that a service misbehaved, and failing the step on
+// one would let an infrastructure problem overturn a passed test — the very thing the teardown
+// retry exists to prevent. The read is retried so a brief blip does not skip the check, and the
+// warning says plainly that health went unverified.
 func getServiceHealth(ctx context.Context, clientSet kubernetes.Interface, namespace, resourceId string) []string {
-	pods, err := clientSet.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: "testkube.io/resource=" + resourceId,
-		Limit:         1,
+	var pods *corev1.PodList
+	err := retryTransient(ctx, cleanupRetryCount, cleanupRetryDelay, func() error {
+		var listErr error
+		pods, listErr = clientSet.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+			LabelSelector: "testkube.io/resource=" + resourceId,
+			Limit:         1,
+		})
+		return listErr
 	})
 	if err != nil {
-		fmt.Printf("warning: could not list pods for service health check in namespace %s: %v\n", namespace, err)
+		fmt.Printf("warning: service health not verified, could not list pods in namespace %s: %v\n", namespace, err)
 		return nil
 	}
 	if len(pods.Items) == 0 {

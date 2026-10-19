@@ -27,9 +27,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
@@ -503,5 +505,103 @@ func TestRunKillList(t *testing.T) {
 
 		require.Error(t, err)
 		assert.True(t, strings.Contains(err.Error(), "listing service instances"))
+	})
+}
+
+// flakyHealthClientSet fails the pod List with err for the first failures reads, then serves the
+// seeded pod. It reports how many reads were attempted.
+func flakyHealthClientSet(failures int, err error, pod *corev1.Pod) (kubernetes.Interface, *int) {
+	cs := k8sfake.NewSimpleClientset(pod)
+	attempts := 0
+	cs.PrependReactor("list", "pods", func(k8stesting.Action) (bool, runtime.Object, error) {
+		attempts++
+		if attempts <= failures {
+			return true, nil, err
+		}
+		return false, nil, nil
+	})
+	return cs, &attempts
+}
+
+func oomKilledPod() *corev1.Pod {
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "svc-pod",
+			Namespace: "testkube",
+			Labels:    map[string]string{"testkube.io/resource": testResourceID},
+		},
+		Status: corev1.PodStatus{
+			Phase: corev1.PodRunning,
+			ContainerStatuses: []corev1.ContainerStatus{{
+				Name: "main",
+				State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{
+					Reason: "OOMKilled",
+				}},
+			}},
+		},
+	}
+}
+
+func TestRunKillHealthReadIsRetried(t *testing.T) {
+	// The regression this closes: a single blip reading the pod used to skip the check entirely,
+	// so an OOMKilled service was reported as healthy and the step passed.
+	t.Run("a blip does not hide an unhealthy service", func(t *testing.T) {
+		shortenCleanupRetryDelay(t)
+		ctrl := gomock.NewController(t)
+		worker := executionworkertypes.NewMockWorker(ctrl)
+		worker.EXPECT().List(gomock.Any(), gomock.Any()).Return(oneService(), nil).Times(1)
+		worker.EXPECT().DestroyGroup(gomock.Any(), "svc-group", gomock.Any()).Return(nil).Times(1)
+
+		cs, reads := flakyHealthClientSet(2, serviceUnavailable(), oomKilledPod())
+
+		var err error
+		_ = captureStdout(t, func() {
+			err = RunKill(context.Background(), worker, cs, "testkube", "ref", "svc-group", nil, nil)
+		})
+
+		require.Error(t, err, "the OOMKill must still fail the step")
+		assert.Contains(t, err.Error(), "unhealthy services detected")
+		assert.Contains(t, err.Error(), "OOMKilled")
+		assert.Equal(t, 3, *reads, "the read is retried until it succeeds")
+	})
+
+	// A sustained outage leaves health unverified. That stays non-fatal on purpose — failing here
+	// would let an infrastructure problem overturn a passed test — but it must say so.
+	t.Run("a sustained outage leaves health unverified and says so", func(t *testing.T) {
+		shortenCleanupRetryDelay(t)
+		ctrl := gomock.NewController(t)
+		worker := executionworkertypes.NewMockWorker(ctrl)
+		worker.EXPECT().List(gomock.Any(), gomock.Any()).Return(oneService(), nil).Times(1)
+		worker.EXPECT().DestroyGroup(gomock.Any(), "svc-group", gomock.Any()).Return(nil).Times(1)
+
+		cs, reads := flakyHealthClientSet(99, serviceUnavailable(), oomKilledPod())
+
+		var err error
+		out := captureStdout(t, func() {
+			err = RunKill(context.Background(), worker, cs, "testkube", "ref", "svc-group", nil, nil)
+		})
+
+		assert.NoError(t, err)
+		assert.Equal(t, cleanupRetryCount, *reads)
+		assert.Contains(t, out, "service health not verified")
+	})
+
+	t.Run("a permanent read error is not retried", func(t *testing.T) {
+		shortenCleanupRetryDelay(t)
+		ctrl := gomock.NewController(t)
+		worker := executionworkertypes.NewMockWorker(ctrl)
+		worker.EXPECT().List(gomock.Any(), gomock.Any()).Return(oneService(), nil).Times(1)
+		worker.EXPECT().DestroyGroup(gomock.Any(), "svc-group", gomock.Any()).Return(nil).Times(1)
+
+		cs, reads := flakyHealthClientSet(99, forbidden(), oomKilledPod())
+
+		var err error
+		out := captureStdout(t, func() {
+			err = RunKill(context.Background(), worker, cs, "testkube", "ref", "svc-group", nil, nil)
+		})
+
+		assert.NoError(t, err)
+		assert.Equal(t, 1, *reads, "forbidden cannot clear, so it must not burn the budget")
+		assert.Contains(t, out, "service health not verified")
 	})
 }
