@@ -183,7 +183,7 @@ func TestIsTransientCleanupError(t *testing.T) {
 
 // The group cleanup joins the errors of its concurrent deletes, so neither verdict may depend on
 // which of them happened to finish first. Retrying needs one transient branch to be worth it,
-// while downgrading needs every branch to be transient — a mixed aggregate must stay fatal, or a
+// while downgrading needs every branch to be transient. A mixed aggregate must stay fatal, or a
 // permanent misconfiguration would only be reported when no blip co-occurred with it.
 func TestCleanupErrorAggregates(t *testing.T) {
 	notFound := apierrors.NewNotFound(podsResource, "svc-pod")
@@ -571,8 +571,8 @@ func TestRunKillHealthReadIsRetried(t *testing.T) {
 		assert.Equal(t, 3, *reads, "the read is retried until it succeeds")
 	})
 
-	// A sustained outage leaves health unverified. That stays non-fatal on purpose — failing here
-	// would let an infrastructure problem overturn a passed test — but it must say so.
+	// A sustained outage leaves health unverified. That stays non-fatal on purpose, because failing here
+	// would let an infrastructure problem overturn a passed test, but it must say so.
 	t.Run("a sustained outage leaves health unverified and says so", func(t *testing.T) {
 		shortenCleanupRetryDelay(t)
 		ctrl := gomock.NewController(t)
@@ -614,7 +614,7 @@ func TestRunKillHealthReadIsRetried(t *testing.T) {
 }
 
 // A connection cut mid-response carries no status at all. client-go wraps it as "unexpected
-// error when reading response body. Please retry." — a draining sidecar at the end of a run
+// error when reading response body. Please retry." A draining sidecar at the end of a run
 // produces exactly this, so it has to count as transient or the reported bug survives in a
 // shape the status-based cases never reach.
 func TestIsTransientCleanupErrorOnSeveredConnections(t *testing.T) {

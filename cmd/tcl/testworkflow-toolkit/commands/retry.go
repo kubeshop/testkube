@@ -38,7 +38,7 @@ func cleanupRetryBudget() time.Duration {
 
 // healthPhaseBudget bounds every per-service health read together. It carries headroom over one
 // call's budget on purpose: the point is to stop a many-service suite from paying the allowance
-// once per service, not to cut the first service short — a deadline that fires inside the first
+// once per service, not to cut the first service short. A deadline that fires inside the first
 // read would report its transient cause as a deadline instead.
 //
 // The multiplication is worth bounding because client-go retries underneath this loop as well:
@@ -76,7 +76,7 @@ func isTransientCleanupError(err error) bool {
 
 	// A connection cut mid-response carries no status, so it has to be matched before the status
 	// branch below returns. client-go wraps these as "unexpected error when reading response
-	// body. Please retry." — its own wording says what to do with them. A sidecar shutting down
+	// body. Please retry." Its own wording says what to do with them. A sidecar shutting down
 	// at the end of a run produces exactly this.
 	//
 	// utilnet's helpers compare the sentinels with == and only unwrap url.Error, so they miss
@@ -122,7 +122,7 @@ func isTransientCleanupError(err error) bool {
 }
 
 // branches returns the joined errors when err is an aggregate. The group cleanup deletes its
-// resource kinds concurrently and joins whatever failed, so most cleanup errors are aggregates —
+// resource kinds concurrently and joins whatever failed, so most cleanup errors are aggregates,
 // even a single failed delete arrives as a one-branch join. Walking the tree is what makes the
 // verdict deterministic: the apierrors helpers resolve through errors.As and so read only the
 // first status they find, which in a mixed aggregate is whichever goroutine appended first.

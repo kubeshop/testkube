@@ -211,7 +211,7 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, clientSet 
 
 // getServiceHealth reports the problems of a service's pod. It returns no issues when it cannot
 // read the pod: an API error is not evidence that a service misbehaved, and failing the step on
-// one would let an infrastructure problem overturn a passed test — the very thing the teardown
+// one would let an infrastructure problem overturn a passed test, the very thing the teardown
 // retry exists to prevent. The read is retried so a brief blip does not skip the check, and both
 // the log and the structured output say plainly that health went unverified, naming whether the
 // cause could clear on its own. A permanent cause means the check is disabled on every run until
