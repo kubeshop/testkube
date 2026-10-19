@@ -27,7 +27,6 @@ func NewUninstallLocalCmd() *cobra.Command {
 		Long: "Deletes the cluster and its settings. Your data in ~/.testkube/data is kept,\n" +
 			"so installing again brings back your tests and results.",
 		Example: "  " + uninstallCommand + "\n  " + uninstallCommand + " --delete-data",
-		Hidden:  true,
 		Args:    cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			runUninstallLocal(cmd, deleteData, yes)

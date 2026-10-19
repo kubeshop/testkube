@@ -1,8 +1,8 @@
-// Package localinstall powers the hidden `testkube install local` command.
+// Package localinstall powers the `testkube install local` command.
 //
 // It prepares a laptop for a local Testkube trial.
-// Today it checks the machine, prepares tools and creates the cluster;
-// the Testkube install comes later.
+// It checks the machine, prepares tools, creates the cluster
+// and installs Testkube.
 //
 // The license key comes first (see LicenseStep):
 // --license or TESTKUBE_LICENSE gets one try, a masked prompt gets three.

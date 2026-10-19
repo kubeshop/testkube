@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -35,9 +36,13 @@ func NewInstallLocalCmd() *cobra.Command {
 			ownClusterHint + "\n\n" +
 			"To remove it later:\n  " + uninstallCommand,
 		Example: "  " + localinstall.InstallCommand + "\n  " + localinstall.InstallCommand + " --license <key>",
-		// Hidden until the guided installer is complete.
-		Hidden: true,
 		Run: func(cmd *cobra.Command, args []string) {
+			// kind's Docker, ports and paths only work inside WSL.
+			if runtime.GOOS == "windows" {
+				common.ExitOnLocalError(cmd, "install_local_failed", "platform", common.NewCLIError(
+					common.TKErrLocalUnsupportedPlatform, "Error installing the local trial on Windows",
+					"In your WSL terminal, run:\n  "+localinstall.InstallCommand+"\n"+ownClusterHint, errWindowsTrial))
+			}
 			printBanner()
 			existing, running := localinstall.ExistingTrial(cmd.Context())
 			kubeContext, kubeContextLocal := localinstall.CurrentKubeContext()

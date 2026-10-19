@@ -27,9 +27,7 @@ func NewStatusLocalCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "local",
 		Short: "Show whether the local Testkube trial runs, and its login",
-		// Hidden until the guided installer is complete.
-		Hidden: true,
-		Args:   cobra.NoArgs,
+		Args:  cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			// Install only runs in WSL, so its cluster lives there.
 			if runtime.GOOS == "windows" {
