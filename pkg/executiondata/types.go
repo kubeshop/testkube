@@ -100,6 +100,9 @@ type Execution struct {
 // ExecutionGroup is one fan-out group as an output instruction value.
 type ExecutionGroup struct {
 	Executions []Execution `json:"executions"`
+	// Ambiguous carries Registry.MarkAmbiguous over to the following steps, so that they
+	// refuse the workflow name too - even when only one of its entries got scheduled.
+	Ambiguous bool `json:"ambiguous,omitempty"`
 }
 
 // Key is the primary reference of the execution - its alias when the parent gave

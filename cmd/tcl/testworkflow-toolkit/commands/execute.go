@@ -108,6 +108,22 @@ func (r *executionRecorder) schedule(alias, workflowName string, exec testkube.T
 	return entry
 }
 
+// declareAmbiguous refuses a workflow name more than one unaliased entry of this step
+// runs. It must be called before any operation starts, so that no sibling entry can
+// resolve the name while one of those entries is still pending.
+//
+// The step takes the reference over right away, dropping what an earlier step recorded
+// under it: this step redefines the name as ambiguous, so the earlier run must not keep
+// answering to it, and the reset schedule would do later must not drop the mark.
+func (r *executionRecorder) declareAmbiguous(workflowName string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.claimed[workflowName] = struct{}{}
+	r.registry.Reset(workflowName)
+	r.registry.MarkAmbiguous(workflowName)
+}
+
 // complete refreshes an entry from the finished execution.
 func (r *executionRecorder) complete(entry executiondata.Execution, exec testkube.TestWorkflowExecution) {
 	r.mu.Lock()
@@ -129,6 +145,7 @@ func (r *executionRecorder) store(entry executiondata.Execution) {
 	r.registry.Add(entry)
 	instructions.PrintOutput(config.Ref(), executiondata.ExecutionInstructionName(entry.Key()), executiondata.ExecutionGroup{
 		Executions: r.registry.Group(entry.Key()),
+		Ambiguous:  r.registry.IsAmbiguous(entry.Key()),
 	})
 }
 
@@ -374,28 +391,55 @@ func notScheduled(workflowName string, err error) operationResult {
 	return operationResult{outcomes: []executionOutcome{{name: workflowName, err: err}}}
 }
 
-// claimExecutionRefs reserves the references an entry will be addressed by. Two
-// entries answering to the same reference would make execution() ambiguous, so ask
-// for an explicit alias instead of silently picking a winner.
+// refClaim is the entry that first claimed an execution() reference.
+type refClaim struct {
+	workflow string
+	aliased  bool
+	// ambiguous is set once a second unaliased entry claims the same workflow name
+	ambiguous bool
+}
+
+// claimExecutionRefs reserves the references an entry will be addressed by.
+//
+// An entry whose count resolved to zero schedules nothing, so it claims nothing: it
+// leaves no execution for a reference to address, and claiming its workflow name would
+// make another entry running that workflow look ambiguous when its group is the only one.
 //
 // An aliased entry claims one reference no matter how many workflows its selector
 // matched - they form a single group, told apart by execution("<alias>", index).
 // An entry without an alias claims each matched workflow by name.
 //
+// A reference claimed by an alias is refused to any other entry: entries sharing a key
+// are merged into one group, so execution() could not tell them apart. Two unaliased
+// entries may still run the same workflow, for backwards compatibility: that was valid
+// before execution() existed, and a workflow that never addresses the name has nothing
+// ambiguous to resolve. The claim is marked ambiguous instead, and the step passes it to
+// executionRecorder.declareAmbiguous before any operation starts, so that Registry.Lookup
+// refuses the name whichever of those entries has been scheduled.
+//
 // An aliased entry stays addressable by the workflow it ran, which this does not claim:
 // two aliased entries may legitimately run the same workflow and be told apart by their
 // aliases. That leaves the workflow name itself able to address more than one execution,
 // which Registry.Lookup reports when it is used rather than forbidding here.
-func claimExecutionRefs(claimed map[string]string, alias string, workflowNames []string) error {
+func claimExecutionRefs(claimed map[string]refClaim, alias string, workflowNames []string, count int64) error {
+	if count <= 0 {
+		return nil
+	}
 	refs := workflowNames
 	if alias != "" {
 		refs = []string{alias}
 	}
 	for _, ref := range refs {
-		if previous, ok := claimed[ref]; ok {
-			return fmt.Errorf("duplicated execution reference %q, already used by %q: set a unique 'as' on one of them", ref, previous)
+		previous, ok := claimed[ref]
+		if !ok {
+			claimed[ref] = refClaim{workflow: workflowNames[0], aliased: alias != ""}
+			continue
 		}
-		claimed[ref] = workflowNames[0]
+		if previous.aliased || alias != "" {
+			return fmt.Errorf("duplicated execution reference %q, already used by %q: set a unique 'as' on one of them", ref, previous.workflow)
+		}
+		previous.ambiguous = true
+		claimed[ref] = previous
 	}
 	return nil
 }
@@ -538,7 +582,7 @@ func NewExecuteCmd() *cobra.Command {
 			// Build operations to run
 			operations := make([]func() operationResult, 0)
 			// aliases guards against two entries claiming the same execution() reference
-			aliases := make(map[string]string)
+			aliases := make(map[string]refClaim)
 			for _, s := range workflows {
 				var w testworkflowsv1.StepExecuteWorkflow
 				err := json.Unmarshal([]byte(s), &w)
@@ -593,7 +637,7 @@ func NewExecuteCmd() *cobra.Command {
 					toolkitcommon.Fail(errors.Wrapf(err, "'%s' workflow: computing the 'as' reference", w.Name))
 				}
 
-				if err := claimExecutionRefs(aliases, alias, testWorkflowNames); err != nil {
+				if err := claimExecutionRefs(aliases, alias, testWorkflowNames, params.Count); err != nil {
 					toolkitcommon.Fail(err)
 				}
 
@@ -625,6 +669,16 @@ func NewExecuteCmd() *cobra.Command {
 							recorder: recorder,
 						}))
 					}
+				}
+			}
+
+			// Refuse the workflow names several unaliased entries run before any of them is
+			// scheduled. Those entries are kept rather than rejected for backwards
+			// compatibility, but a sibling resolving the name must not get whichever of them
+			// happened to be scheduled first.
+			for ref, claim := range aliases {
+				if claim.ambiguous {
+					recorder.declareAmbiguous(ref)
 				}
 			}
 
