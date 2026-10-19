@@ -104,6 +104,14 @@ func TestRunKillOverTheWire(t *testing.T) {
 			wantAttempts: cleanupRetryCount, wantWarning: true,
 		},
 		{
+			// The reported incident's shape: a draining Envoy sidecar answers 503 with its own
+			// body rather than a k8s Status. client-go renders this as the exact message the
+			// customer saw, "the server is currently unable to handle the request (delete pods)".
+			name:     "bare 503 from a draining sidecar: retried, downgraded, step passes",
+			statuses: map[string]int{"pods": 503}, bareBody: true,
+			wantAttempts: cleanupRetryCount, wantWarning: true,
+		},
+		{
 			name:     "403 is permanent: one attempt, step fails",
 			statuses: map[string]int{"pods": 403}, wantAttempts: 1, wantErr: true,
 			wantErrParts: []string{"cleaning up resources", "is forbidden"},
@@ -163,4 +171,36 @@ func TestRunKillOverTheWire(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Once the sidecar is gone there is nothing to answer at all, so the delete never reaches the API
+// server. That is still the test's result rather than its verdict.
+func TestRunKillWhenTheSidecarIsGone(t *testing.T) {
+	shortenCleanupRetryDelay(t)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	url := srv.URL
+	srv.Close()
+	cs := realClientSet(t, url)
+
+	ctrl := gomock.NewController(t)
+	worker := executionworkertypes.NewMockWorker(ctrl)
+	worker.EXPECT().List(gomock.Any(), gomock.Any()).Return(oneService(), nil).Times(1)
+
+	attempts := 0
+	worker.EXPECT().DestroyGroup(gomock.Any(), "svc-group", gomock.Any()).
+		DoAndReturn(func(c context.Context, groupID string, _ executionworkertypes.DestroyOptions) error {
+			attempts++
+			return controller.CleanupGroup(c, cs, "tk-dev", groupID)
+		}).AnyTimes()
+
+	var err error
+	out := captureStdout(t, func() {
+		err = RunKill(context.Background(), worker, healthyClientSet(), "tk-dev", "ref", "svc-group", nil, nil)
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, cleanupRetryCount, attempts)
+	assert.Contains(t, out, "warning: cleaning up resources")
+	assert.Contains(t, out, "connection refused")
 }
