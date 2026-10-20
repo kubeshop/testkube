@@ -4,6 +4,9 @@ import (
 	"errors"
 )
 
+// ErrUnknownVariable is the error of a finalizer that fails on a variable that no machine resolves.
+var ErrUnknownVariable = errors.New("unknown variable")
+
 type finalizer struct {
 	handler FinalizerFn
 }
@@ -36,7 +39,7 @@ func (f *finalizer) Get(name string) (Expression, bool, error) {
 	result := f.handler(finalizerItem{name: name})
 	switch result {
 	case FinalizerResultFail:
-		return nil, true, errors.New("unknown variable")
+		return nil, true, ErrUnknownVariable
 	case FinalizerResultNone:
 		return None, true, nil
 	}

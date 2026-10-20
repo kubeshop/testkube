@@ -74,7 +74,7 @@ jobs:
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           distribution: goreleaser-pro
-          version: 'v2.18.2' # 2.4.4 fails with "no such file or directory"
+          version: 'v2.18.3' # 2.4.4 fails with "no such file or directory"
           args: release -f ${{ matrix.path }} --skip=publish,validate
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
@@ -89,7 +89,7 @@ jobs:
           BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
           DOCKER_IMAGE_TAG: ${{steps.tag.outputs.tag}}
       - name: Upload Artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: testkube_${{ matrix.name }}
           path: |
@@ -147,19 +147,19 @@ jobs:
           git config --global user.name "${APP_SLUG}[bot]"
           git config --global user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
           git config --global url."https://x-access-token:${APP_TOKEN}@github.com/".insteadOf "https://github.com/"
-      - uses: anchore/sbom-action/download-syft@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+      - uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
       - name: Download Artifacts for Linux
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: testkube_linux
           path: linux
       - name: Download Artifacts for Windows
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: testkube_windows
           path: windows
       - name: Download Artifacts for Darwin
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: testkube_darwin
           path: darwin
@@ -205,7 +205,7 @@ jobs:
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           distribution: goreleaser-pro
-          version: 'v2.18.2' # 2.4.4 fails with "no such file or directory"
+          version: 'v2.18.3' # 2.4.4 fails with "no such file or directory"
           args: release -f .release-config/.goreleaser.yml --skip=validate${{ steps.release-check.outputs.skip_publish == 'true' && ',publish' || '' }}
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}

@@ -64,6 +64,8 @@ type Params struct {
 	PreviewSkipArtifacts       bool       `json:"preview_skip_artifacts,omitempty"`
 	PreviewError               string     `json:"preview_error,omitempty"`
 	AgentCapabilities          []string   `json:"agent_capabilities,omitempty"`
+
+	Extra map[string]any `json:"-"`
 }
 
 type Event struct {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshop/testkube/pkg/cache"
@@ -51,10 +50,10 @@ func (s *secretFetcher) Get(ctx context.Context, name string) (*corev1.Secret, e
 		}
 	}
 
-	// Load secret from the Kubernetes
+	// Load the secret from Kubernetes. The inspector names the secret, so the error keeps only the cause.
 	obj, err := s.client.GetObject(name)
 	if err != nil {
-		return nil, errors.Wrap(err, "fetching image pull secret")
+		return nil, err
 	}
 
 	if s.ttl > 0 {

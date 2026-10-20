@@ -2,10 +2,12 @@ package testworkflowexecutor
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
@@ -47,11 +49,29 @@ func (r *testWorkflowTemplateFetcher) Prefetch(name string) error {
 	}
 	template, err := r.client.Get(context.Background(), r.environmentId, name)
 	if err != nil {
-		return errors.Wrapf(err, "cannot fetch Test Workflow Template by name: %s", name)
+		display := testworkflowresolver.GetDisplayTemplateName(name)
+		// The Kubernetes error names the template again, so a missing template gets one sentence.
+		if k8serrors.IsNotFound(err) {
+			return &templateNotFoundError{name: display, err: err}
+		}
+		return errors.Wrapf(err, "the template %q", display)
 	}
 	r.SetCache(name, template)
 	return nil
 }
+
+// templateNotFoundError names a template that does not exist. It keeps the error of the client
+// for errors.Is.
+type templateNotFoundError struct {
+	name string
+	err  error
+}
+
+func (e *templateNotFoundError) Error() string {
+	return fmt.Sprintf("the template %q does not exist", e.name)
+}
+
+func (e *templateNotFoundError) Unwrap() error { return e.err }
 
 func (r *testWorkflowTemplateFetcher) PrefetchMany(namesSet map[string]struct{}) error {
 	// Internalize and dedupe names

@@ -33,3 +33,26 @@ func TestExecutionRegistryReadsObjectAndArray(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, "old", legacy.Id)
 }
+
+func TestExecutionRegistryCarriesAmbiguity(t *testing.T) {
+	ClearState()
+	t.Cleanup(ClearState)
+
+	// Only one of the two unaliased "producer" entries was scheduled, so the group holds
+	// a single run. The name must stay refused in the following steps all the same.
+	GetState().SetOutput("step", executiondata.ExecutionInstructionName("producer"), executiondata.ExecutionGroup{
+		Executions: []executiondata.Execution{{Id: "only", Workflow: "producer"}},
+		Ambiguous:  true,
+	})
+
+	registry := ExecutionRegistry()
+
+	_, ok, err := registry.Lookup("producer", 0)
+	assert.False(t, ok)
+	assert.ErrorContains(t, err, `ambiguous execution "producer"`)
+
+	byId, ok, err := registry.Lookup("only", 0)
+	require.NoError(t, err)
+	require.True(t, ok)
+	assert.Equal(t, "only", byId.Id)
+}

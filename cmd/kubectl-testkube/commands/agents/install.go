@@ -24,6 +24,7 @@ func NewInstallAgentCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "runner <name>",
 		Aliases: []string{"agent"},
+		Short:   "Install a Testkube runner in your current kubectl context",
 		Args:    cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			// Check for deprecated --type flag usage
@@ -55,8 +56,9 @@ func NewInstallCRDCommand() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:  "crd",
-		Args: cobra.MaximumNArgs(0),
+		Use:   "crd",
+		Short: "Install the Testkube CRDs in your current kubectl context",
+		Args:  cobra.MaximumNArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			UiInstallCRD(cmd, namespace, releaseName, dryRun)
 		},

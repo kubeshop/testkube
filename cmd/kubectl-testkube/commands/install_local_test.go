@@ -64,3 +64,30 @@ func TestFailedChecks_NamesOnlyTheFailures(t *testing.T) {
 
 	assert.Equal(t, "docker not reachable", failedChecks(results))
 }
+
+// Wrong buckets would send the PM chasing the wrong problem.
+func TestFailureCategory_SortsByWhatTheUserMustFix(t *testing.T) {
+	tests := map[string]struct {
+		stage, reason, want string
+	}{
+		"bad key":               {"license", "not valid", "license"},
+		"license server down":   {"license", "cannot reach license.testkube.io", "network"},
+		"docker missing":        {"tools", "docker not found", "docker"},
+		"tool download":         {"tool_install", "helm download", "network"},
+		"tools folder unusable": {"tool_install", "kind save", "machine_resources"},
+		"cluster storage":       {"cluster", "storage", "machine_resources"},
+		"cluster create":        {"cluster", "create", "docker"},
+		"too little memory":     {"testkube", "stuck no_memory", "machine_resources"},
+		"docker hub limit":      {"testkube", "stuck rate_limit", "network"},
+		"timeout, no disk":      {"testkube", "timeout storage", "machine_resources"},
+		"helm failed, no image": {"testkube", "install image_pull", "network"},
+		"timeout, crashloop":    {"testkube", "timeout crashloop", "install_stuck"},
+		"timeout, no diagnosis": {"testkube", "timeout", "install_stuck"},
+		"unknown stage":         {"later", "x", "other"},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.want, failureCategory(tt.stage, tt.reason))
+		})
+	}
+}

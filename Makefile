@@ -128,7 +128,7 @@ DEVBOX_NAMESPACE ?= devbox
 # ==================== External Tool Versions ====================
 GOTESTSUM_VERSION := v1.12.3
 GORELEASER_VERSION := v2.11.0
-GOLANGCI_LINT_VERSION := v2.5.0
+GOLANGCI_LINT_VERSION := v2.15.0
 SQLC_VERSION := v1.30.0
 BUF_VERSION := v1.68.1
 
@@ -385,6 +385,18 @@ cover: unit-tests ## Generate and open test coverage report
 	@echo "Generating coverage report..."
 	@$(GO) tool cover -html=coverage.out -o coverage.html
 	@$(OPEN_CMD) coverage.html
+
+.PHONY: bench
+bench: ## Run benchmarks that need no external services
+	@echo "Running benchmarks..."
+	@$(GO) test -run '^$$' -bench . -benchmem ./internal/... ./pkg/...
+
+.PHONY: bench-integration
+bench-integration: ## Run benchmarks that need Postgres (same env as integration-tests)
+	@echo "Running integration benchmarks..."
+	@INTEGRATION="true" \
+		TESTKUBE_PROJECT_ROOT="$(PWD)" \
+		$(GO) test -run '^$$' -bench '_Integration$$' -benchmem -benchtime 10x ./internal/... ./pkg/...
 
 # ==================== Linting ====================
 ##@ Linting

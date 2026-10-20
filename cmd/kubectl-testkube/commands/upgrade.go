@@ -2,6 +2,7 @@ package commands
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
@@ -31,6 +32,7 @@ func NewUpgradeCmd() *cobra.Command {
 			ui.NL()
 
 			common.ProcessMasterFlags(cmd, &options, &cfg)
+			options.ExplicitFlags = changedFlags(cmd)
 
 			// set to cloud context explicitly when user pass agent key and store the key later
 			if options.Master.AgentToken != "" {
@@ -123,6 +125,14 @@ func NewUpgradeCmd() *cobra.Command {
 	common.PopulateMasterFlags(cmd, &options, false)
 
 	cmd.Flags().StringVar(&dockerContainerName, "docker-container", "testkube-agent", "Docker container name for Testkube Docker Runner")
+	cmd.Flags().BoolVar(&options.ReuseValues, "reuse-values", false, "keep the Helm values of the installed release, and only override the ones passed as flags")
 
 	return cmd
+}
+
+// changedFlags returns the names of the flags the user passed.
+func changedFlags(cmd *cobra.Command) map[string]bool {
+	changed := map[string]bool{}
+	cmd.Flags().Visit(func(f *pflag.Flag) { changed[f.Name] = true })
+	return changed
 }

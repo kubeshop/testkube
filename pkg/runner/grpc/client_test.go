@@ -98,10 +98,11 @@ func pollUntilWaits(t *testing.T, count int) (asked []time.Duration, logged []ti
 	t.Cleanup(cancel)
 
 	c := Client{
-		client:       alwaysFailingExecutionService{},
-		logger:       zap.New(core).Sugar(),
-		callTimeout:  defaultCallTimeout,
-		pollInterval: time.Millisecond,
+		client:         alwaysFailingExecutionService{},
+		logger:         zap.New(core).Sugar(),
+		callTimeout:    defaultCallTimeout,
+		pollInterval:   time.Millisecond,
+		maxPollBackoff: defaultMaxPollBackoff,
 	}
 	c.sleep = func(_ context.Context, d time.Duration) error {
 		asked = append(asked, d)
@@ -127,7 +128,7 @@ func TestClient_Start_CapsTheWaitAfterConsecutiveFailures(t *testing.T) {
 	asked, _ := pollUntilWaits(t, 25)
 
 	for i, d := range asked {
-		assert.LessOrEqual(t, d, maxPollBackoff, "wait %d of a run of failures exceeded the cap", i+1)
+		assert.LessOrEqual(t, d, defaultMaxPollBackoff, "wait %d of a run of failures exceeded the cap", i+1)
 	}
 	assert.Greater(t, asked[len(asked)-1], time.Duration(0), "the wait must still grow with failures")
 }
@@ -144,7 +145,7 @@ func TestClient_waitBackoff_ReturnsWhenTheContextEnds(t *testing.T) {
 	cancel()
 
 	start := time.Now()
-	err := Client{}.waitBackoff(ctx, time.Hour)
+	err := (&Client{}).waitBackoff(ctx, time.Hour)
 
 	require.ErrorIs(t, err, context.Canceled)
 	assert.Less(t, time.Since(start), time.Second, "a shutdown must not sit out the remaining wait")

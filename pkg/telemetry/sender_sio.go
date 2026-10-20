@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -36,8 +37,8 @@ func (l stdLogger) Errorf(format string, args ...interface{}) {
 	log.DefaultLogger.Debugw("sending telemetry data", "error", fmt.Sprintf(format, args...))
 }
 
-// SegmentioSender sends ananymous telemetry data to segment.io
-// TODO refactor Sender func as out is not needed (use debug loggers to log output)
+// SegmentioSender sends ananymous telemetry data to segment.io.
+// It returns the events it queued as JSON, so the data sent can be inspected.
 func SegmentioSender(client *http.Client, payload Payload) (out string, err error) {
 
 	// TODO consider removing this as CLI has fixed key and API overrides it in build time
@@ -55,14 +56,18 @@ func SegmentioSender(client *http.Client, payload Payload) (out string, err erro
 	}
 	defer segmentio.Close()
 
+	tracks := make([]analytics.Track, 0, len(payload.Events))
 	for _, event := range payload.Events {
-		err := segmentio.Enqueue(mapEvent(payload.UserID, event))
+		track := mapEvent(payload.UserID, event)
+		err := segmentio.Enqueue(track)
 		if err != nil {
 			return out, err
 		}
+		tracks = append(tracks, track)
 	}
 
-	return
+	b, err := json.Marshal(tracks)
+	return string(b), err
 }
 
 // TODO refactor Event model to be more generic not GA4 like after removoing debug and GA4
@@ -144,6 +149,10 @@ func mapProperties(name string, params Params) analytics.Properties {
 
 	if params.Source != "" {
 		properties = properties.Set("source", params.Source)
+	}
+
+	for k, v := range params.Extra {
+		properties = properties.Set(k, v)
 	}
 
 	if name == "testkube_api_run_test_workflow" {

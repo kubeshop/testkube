@@ -399,6 +399,13 @@ spec:
       apk add --no-cache git make bash
       make helm-vendor-check
       make helm-lint
+  - name: Unit tests
+    shell: |-
+      set -euo pipefail
+      apk add --no-cache git make bash
+      # Keep the version in step with the install hint in the cloud-api Makefile's helm-unittest target.
+      helm plugin install https://github.com/helm-unittest/helm-unittest.git --version v1.0.3
+      make helm-unittest
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1

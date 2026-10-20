@@ -63,6 +63,7 @@ type Agent struct {
 	events         chan testkube.Event
 	sendTimeout    time.Duration
 	receiveTimeout time.Duration
+	healthInterval time.Duration
 
 	clusterID          string
 	clusterName        string
@@ -93,6 +94,7 @@ func NewAgent(logger *zap.SugaredLogger,
 		responseBuffer:     make(chan *cloud.ExecuteResponse, bufferSizePerWorker*proContext.WorkerCount),
 		receiveTimeout:     5 * time.Minute,
 		sendTimeout:        30 * time.Second,
+		healthInterval:     HealthcheckInterval,
 		clusterID:          clusterID,
 		clusterName:        clusterName,
 		proContext:         proContext,
@@ -117,6 +119,15 @@ func (ag *Agent) Run(ctx context.Context) error {
 
 	// We can only return here if the context has been cancelled.
 	return ctx.Err()
+}
+
+// RunHealthcheck sends only the health checks of Run's event loop, for an agent that does not
+// run the default agent. The Control Plane derives whether an agent is online from the traffic
+// it receives, and nothing else this agent runs is guaranteed to send any: a GitOps-only runner
+// calls the Control Plane only when a resource changes, so it would otherwise show offline.
+// No events are forwarded, because the agent is not registered as an event listener.
+func (ag *Agent) RunHealthcheck(ctx context.Context) error {
+	return ag.runWithReconnect(ctx, "healthcheck loop", ag.runEventLoop)
 }
 
 func (ag *Agent) RunEventReader(ctx context.Context) error {
