@@ -128,7 +128,7 @@ DEVBOX_NAMESPACE ?= devbox
 # ==================== External Tool Versions ====================
 GOTESTSUM_VERSION := v1.12.3
 GORELEASER_VERSION := v2.11.0
-GOLANGCI_LINT_VERSION := v2.5.0
+GOLANGCI_LINT_VERSION := v2.15.0
 SQLC_VERSION := v1.30.0
 BUF_VERSION := v1.68.1
 
