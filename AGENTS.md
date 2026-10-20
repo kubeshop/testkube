@@ -19,7 +19,8 @@ make unit-tests    # what oss-unit-tests runs, about 2m in CI; add GOFLAGS=-coun
 Run the narrower checks when the change touches what they cover:
 
 - `make verify-protobuf-generated` after editing `proto/`, and `make verify-crds-generated` after editing `api/` types (see "Regenerating artifacts").
-- `make integration-tests` runs only tests ending in `_Integration`. It expects MongoDB on `:27017`, NATS on `:4222`, MinIO on `:9000` (`minio99`/`minio123`) and Postgres on `:5432` (`API_POSTGRES_URL=postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable`); `make run-mongo run-nats` starts only the first two. The `oss-integration-tests` workflow (section 6) starts all four and is usually the simpler way to run them.
+- `make integration-tests` runs only tests ending in `_Integration`. It expects MongoDB on `:27017`, NATS on `:4222`, MinIO on `:9000` (`minio99`/`minio123`) and Postgres on `:5432` (`API_POSTGRES_URL=postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable`); `make run-mongo run-nats` starts only the first two.
+- `make integration-tests` also runs `test/integration/components/toolkit`, and `oss-integration-tests` (section 6) does not: it runs only `components/init`, because the toolkit tests create cluster-scoped namespaces. So the workflow covers everything except those, and the four services alone are not enough locally. The toolkit tests need a Kubernetes cluster in the current kube context (`KUBECONFIG` or `~/.kube/config`), permission to create, watch and delete namespaces and pods there, and nodes that can pull `busybox`, `python` and `golang` images. Each test creates and deletes its own `testkube-test-<n>` namespace (`TESTKUBE_NAMESPACE` changes the prefix). Point the context at a disposable cluster, such as the Tilt `k3d-testkube-dev` ("Starting a component", section 7), never a shared one. Run only them with `INTEGRATION=true TESTKUBE_PROJECT_ROOT="$PWD" go test ./test/integration/components/toolkit/ -run '_Integration$' -count=1` after `make build-init build-toolkit`; a change to the toolkit's Kubernetes side is not covered by any pull request check.
 
 `make lint` pins golangci-lint `v2.5.0` while `oss-lint-go` runs `v2.13.1`, so the two can disagree; the workflow is the one that gates the pull request.
 
@@ -33,7 +34,14 @@ Write the failing test first, at the lowest level that shows the bug, then fix i
 - **Fixtures** live in a `testdata/` folder beside the test (for example `pkg/mcp/boards/testdata/`, `cmd/testworkflow-init/orchestration/testdata/`). Test Workflow specs for smoke tests are under `test/*/crd-workflow/`.
 - **Tests against a real service** end in `_Integration` and start with `test.IntegrationTest(t)` (`pkg/utils/test`), which skips unless `INTEGRATION` is set. For Postgres, `testpostgres.PreparePostgresTestDatabase(t, "<name>")` (`pkg/test/postgres`) creates a database per test from `API_POSTGRES_URL` and drops it on cleanup. The Mongo tests connect to `mongodb://localhost:27017`. Start the services as "Verifying a change" describes, then run `INTEGRATION=true go test ./pkg/<pkg>/ -run '^TestName_Integration$' -count=1`.
 - **`testworkflow-init` and `testworkflow-toolkit` behaviour** is tested in `test/integration/components/`, which needs `make build-init build-toolkit` first.
-- **A bug that needs a cluster** (pod scheduling, a workflow that runs wrong): bring up the Tilt agent ("Running locally"), apply a minimal TestWorkflow that shows it with `kubectl apply -n testkube-dev -f`, and run it with `kubectl-testkube run testworkflow <name> --watch`. Turn the result into a unit test on the processor (`pkg/testworkflows/testworkflowprocessor`) or the runner where you can, so the fix stays covered without a cluster.
+- **A bug that needs a cluster** (pod scheduling, a workflow that runs wrong): bring up the Tilt agent ("Starting a component", section 7), then point the CLI at it. Starting Tilt does not change the CLI's saved context, so a context left on a Control Plane would send the run there instead. Use the CLI Tilt builds from this checkout (`compile:cli`), and set the same context Tilt's `run-cli-command` Configure button does:
+  ```bash
+  ./build/_local/kubectl-testkube set context --kubeconfig --namespace testkube-dev \
+    --api-uri http://localhost:8088 --client direct
+  kubectl apply -n testkube-dev -f <workflow>.yaml
+  ./build/_local/kubectl-testkube run testworkflow <name> --watch
+  ```
+  `set context` replaces the saved context in `~/.testkube/config.json`; run `testkube pro login` to return to a Control Plane. The run goes through the current kube context, so it must be `k3d-testkube-dev`. Turn the result into a unit test on the processor (`pkg/testworkflows/testworkflowprocessor`) or the runner where you can, so the fix stays covered without a cluster.
 - **A bug that needs the Control Plane** reproduces only on the full stack in testkube-workspace.
 
 ## 3. Repository map
