@@ -63,24 +63,8 @@ spec:
     timeout: 10m
     workingDir: /data/repo/js/packages/web
     shell: |
-      # E2E needs runnable assets without type checking or minification.
-      node --input-type=module <<'NODE'
-      import { build } from 'vite';
-
-      await build({
-        mode: 'production',
-        build: {
-          reportCompressedSize: false,
-          minify: false,
-          cssMinify: false,
-          rolldownOptions: {
-            output: {
-              minify: false,
-            },
-          },
-        },
-      });
-      NODE
+      # Build performance optimisation: minification disabled; e2e mode skips production-only minifier settings
+      npx vite build --mode e2e --minify false
       test -s dist/index.html
   - name: Prepare UI preview
     condition: 'passed && config.revision != "main"'
