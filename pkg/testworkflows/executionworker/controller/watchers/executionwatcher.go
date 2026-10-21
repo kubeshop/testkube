@@ -201,6 +201,9 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 		<-watcher.jobEventsWatcher.Done()
 	}()
 
+	// loaded closes when the loop that commits the state ends.
+	loaded := make(chan struct{})
+
 	// Close updates channel when all individual watchers are complete
 	go func() {
 		<-watcher.jobWatcher.Done()
@@ -209,8 +212,11 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 		if watcher.podEventsInitialized.Load() {
 			<-watcher.podEventsWatcher.Done()
 		}
-		watcher.update.Close()
+		// The loop commits once more after its updates close, and the last list of the events can
+		// take a while. So the update of the watcher closes only after the loop ends.
 		update.Close()
+		<-loaded
+		watcher.update.Close()
 		if watcher.podEventsInitialized.CompareAndSwap(false, true) {
 			close(watcher.podEventsOptsCh)
 		}
@@ -241,6 +247,7 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 	go func() {
 		defer func() {
 			ctxCancel()
+			close(loaded)
 		}()
 		var next func(bool)
 		next = func(force bool) {

@@ -18,7 +18,8 @@ import (
 
 // fakeEventsClient lists the events that the test sets, and watches through a fake watcher. The
 // list and the watch return the queued errors first, one for each call. A list that succeeds
-// takes the next queued list, and keeps the last one.
+// takes the next queued list, and keeps the last one. A list on a canceled context fails, as it
+// does on a real client.
 type fakeEventsClient struct {
 	mu        sync.Mutex
 	list      corev1.EventList
@@ -34,7 +35,10 @@ func (c *fakeEventsClient) setList(list corev1.EventList) {
 	c.list = list
 }
 
-func (c *fakeEventsClient) List(_ context.Context, _ metav1.ListOptions) (*corev1.EventList, error) {
+func (c *fakeEventsClient) List(ctx context.Context, _ metav1.ListOptions) (*corev1.EventList, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if len(c.listErrs) > 0 {
@@ -371,6 +375,10 @@ func TestEventsWatcher_RetryUntil(t *testing.T) {
 					}
 				}, 2*time.Second, time.Millisecond)
 				assert.Error(t, watcher.Err())
+
+				count, err := watcher.Update(time.Second)
+				require.NoError(t, err, "the last list works after the watcher ended")
+				assert.Equal(t, 1, count)
 				return
 			}
 			require.Eventually(t, func() bool { return len(recorder.received()) == 1 }, 2*time.Second, time.Millisecond)

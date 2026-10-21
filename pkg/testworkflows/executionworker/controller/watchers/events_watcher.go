@@ -50,10 +50,13 @@ type eventsWatcher struct {
 	// retryUntil closes when no other watcher observes the execution. After that, an error ends
 	// the watcher instead of a retry, so the caller learns that it cannot observe the execution.
 	retryUntil <-chan struct{}
-	ctx        context.Context
-	cancel     context.CancelCauseFunc
-	mu         sync.Mutex
-	lastTs     time.Time
+	// parentCtx outlives the watcher. A read with a limit uses it, so the last list of an execution
+	// still works after an error ended the watcher.
+	parentCtx context.Context
+	ctx       context.Context
+	cancel    context.CancelCauseFunc
+	mu        sync.Mutex
+	lastTs    time.Time
 	// sent holds each version of an event that the listener received. A list can return a version
 	// that the watch already sent, and the version of an event is the only way to know it. The set
 	// lives as long as the watcher, which watches the events of one execution.
@@ -78,6 +81,7 @@ func NewEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.
 		retryUntil: retryUntil,
 		optsCh:     make(chan struct{}),
 		startedCh:  make(chan struct{}),
+		parentCtx:  parentCtx,
 		ctx:        ctx,
 		cancel:     ctxCancel,
 		sent:       make(map[string]struct{}),
@@ -95,6 +99,7 @@ func NewAsyncEventsWatcher(parentCtx context.Context, client kubernetesClient[co
 		retryUntil: retryUntil,
 		optsCh:     make(chan struct{}),
 		startedCh:  make(chan struct{}),
+		parentCtx:  parentCtx,
 		ctx:        ctx,
 		cancel:     ctxCancel,
 		sent:       make(map[string]struct{}),
@@ -157,7 +162,7 @@ func (e *eventsWatcher) read(tsInPast time.Time, t time.Duration) (<-chan readSt
 		ctx := e.ctx
 		if t != 0 {
 			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(e.ctx, t)
+			ctx, cancel = context.WithTimeout(e.parentCtx, t)
 			defer cancel()
 		}
 		list, err := e.client.List(ctx, opts)
