@@ -13,7 +13,7 @@ dependencies:
   version: 0.29.0
 - name: cluster
   repository: https://cloudnative-pg.github.io/charts
-  version: 0.8.1
+  version: 0.9.0
 - name: nats
   repository: file://./charts/nats
   version: 1.2.6-4
@@ -23,5 +23,5 @@ dependencies:
 - name: global
   repository: file://../global
   version: 0.1.3
-digest: sha256:04241242945f1abbb591fe82ed60b72770b3f725216bacb58d37180f519a4f0f
-generated: "2026-10-12T15:53:10.896365+03:00"
+digest: sha256:23b13095f7c44cabd46d76ceb5325ad013bc043810403dfd22bb16fac6755337
+generated: "2026-10-21T10:06:16.403933756Z"
