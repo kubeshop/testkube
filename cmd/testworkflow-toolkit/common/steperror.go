@@ -19,9 +19,10 @@ type ReasonError interface {
 
 // WithReason gives the error the code of the failure, so Fail and ExitOnError write that code. The
 // message stays the message of the error. A nil error stays nil, so ExitOnError still sees no error.
+// An empty code returns the error as it is, so it does not hide a code that the error already holds.
 func WithReason(reason testkube.StopReason, err error) error {
-	if err == nil {
-		return nil
+	if err == nil || reason == "" {
+		return err
 	}
 	return &reasonError{reason: reason, err: err}
 }
