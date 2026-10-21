@@ -8,10 +8,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/retry"
 )
 
-// kubeReadPolicy retries a read of the k8s API after a transient failure (network hiccups, api-server
-// unavailable). Terminal errors that will not resolve by retrying (NotFound, Forbidden,
-// Unauthorized) short-circuit. The wait aborts as soon as ctx is cancelled, so callers that fan out
-// over many namespaces do not eat several seconds of dead wait on shutdown.
+// kubeReadPolicy retries a read of the Kubernetes API after a transient failure. A missing
+// object, a forbidden read and an unauthorized read do not change on a retry, so they return at
+// once. A cancel stops the wait, so a caller that reads many namespaces stops at once on shutdown.
 var kubeReadPolicy = retry.Policy{
 	Attempts: 3,
 	Delay:    200 * time.Millisecond,

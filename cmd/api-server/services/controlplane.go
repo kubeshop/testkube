@@ -139,8 +139,8 @@ func ensureBucketsWithRetry(ctx context.Context, storageClient domainstorage.Cli
 	}
 }
 
-// ensureBucketsPolicy waits for the storage to come up next to the agent, which can take a while,
-// so the wait doubles up to half a minute.
+// ensureBucketsPolicy waits for a storage that starts next to the agent and can be late, so the
+// wait doubles after each attempt.
 var ensureBucketsPolicy = retry.Policy{Attempts: 10, Delay: time.Second, Growth: retry.Exponential, MaxDelay: 30 * time.Second}
 
 // errBucketsNotReady is the error of an attempt that left a bucket that does not exist.
