@@ -338,14 +338,21 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 		commit := func() {
 			if !finalized && watcher.uncommitted.Completed() {
 				finalized = true
-				if _, err := watcher.jobEventsWatcher.Update(finalEventsTimeout); err != nil {
-					log.DefaultLogger.Warnw("listing the events of the job failed", "executionId", id, "error", err)
-				}
-				if watcher.podEventsInitialized.Load() {
-					if _, err := watcher.podEventsWatcher.Update(finalEventsTimeout); err != nil {
-						log.DefaultLogger.Warnw("listing the events of the pod failed", "executionId", id, "error", err)
+				// The two lists run in parallel, so a slow API delays the commit once, not twice.
+				var lists sync.WaitGroup
+				lists.Go(func() {
+					if _, err := watcher.jobEventsWatcher.Update(finalEventsTimeout); err != nil {
+						log.DefaultLogger.Warnw("listing the events of the job failed", "executionId", id, "error", err)
 					}
+				})
+				if watcher.podEventsInitialized.Load() {
+					lists.Go(func() {
+						if _, err := watcher.podEventsWatcher.Update(finalEventsTimeout); err != nil {
+							log.DefaultLogger.Warnw("listing the events of the pod failed", "executionId", id, "error", err)
+						}
+					})
 				}
+				lists.Wait()
 				readLatestData()
 			}
 			watcher.Commit()

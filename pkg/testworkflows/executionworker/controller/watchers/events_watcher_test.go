@@ -218,6 +218,33 @@ func TestEventsWatcher_Retry(t *testing.T) {
 	}
 }
 
+// closingEventsClient answers every watch with a watch that is already closed, as a proxy that drops
+// each connection does, and counts the watches.
+type closingEventsClient struct {
+	fakeEventsClient
+	watches atomic.Int32
+}
+
+func (c *closingEventsClient) Watch(_ context.Context, _ metav1.ListOptions) (watch.Interface, error) {
+	c.watches.Add(1)
+	return watch.NewEmptyWatch(), nil
+}
+
+func TestEventsWatcher_ClosedWatchWaits(t *testing.T) {
+	delay, maxDelay := eventsRetryDelay, eventsRetryMaxDelay
+	t.Cleanup(func() { eventsRetryDelay, eventsRetryMaxDelay = delay, maxDelay })
+	eventsRetryDelay, eventsRetryMaxDelay = 50*time.Millisecond, 50*time.Millisecond
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	client := &closingEventsClient{}
+	startedAt := time.Now()
+	NewEventsWatcher(ctx, client, metav1.ListOptions{}, nil, (&eventRecorder{}).listen)
+
+	require.Eventually(t, func() bool { return client.watches.Load() >= 3 }, 2*time.Second, time.Millisecond)
+	assert.GreaterOrEqual(t, time.Since(startedAt), 2*eventsRetryDelay, "each watch that closes with no event waits for the retry delay")
+}
+
 func TestBackoff(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -374,7 +401,7 @@ func TestEventsWatcher_RetryUntil(t *testing.T) {
 						return false
 					}
 				}, 2*time.Second, time.Millisecond)
-				assert.Error(t, watcher.Err())
+				assert.True(t, apierrors.IsTooManyRequests(watcher.Err()), "the watcher reports the error of the API: %v", watcher.Err())
 
 				count, err := watcher.Update(time.Second)
 				require.NoError(t, err, "the last list works after the watcher ended")

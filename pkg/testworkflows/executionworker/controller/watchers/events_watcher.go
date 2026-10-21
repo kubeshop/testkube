@@ -2,6 +2,7 @@ package watchers
 
 import (
 	"context"
+	"errors"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -48,7 +49,7 @@ type eventsWatcher struct {
 	startedCh chan struct{} // TODO: Ensure there is no memory leak
 	listener  func(*corev1.Event)
 	// retryUntil closes when no other watcher observes the execution. After that, an error ends
-	// the watcher instead of a retry, so the caller learns that it cannot observe the execution.
+	// the watcher instead of a retry, and Err returns that error.
 	retryUntil <-chan struct{}
 	// parentCtx outlives the watcher. A read with a limit uses it, so the last list of an execution
 	// still works after an error ended the watcher.
@@ -296,15 +297,13 @@ func (e *eventsWatcher) watch() (bool, error) {
 			if event.Type == watch.Bookmark {
 				continue
 			}
+			// The listener runs under the lock, as in a read, so a final list cannot skip an event that
+			// is marked as sent but is not in the store yet.
 			e.mu.Lock()
-			fresh := e.markSent(object)
-			e.mu.Unlock()
-			if !fresh {
-				continue
+			if e.markSent(object) {
+				e.listener(object)
 			}
-
-			// Send the item immediately to the listener aside of all the other processing
-			e.listener(object)
+			e.mu.Unlock()
 		}
 	}
 }
@@ -355,9 +354,13 @@ func (e *eventsWatcher) cycle() {
 	e.cancel(context.Cause(e.ctx))
 }
 
+// errWatchClosed is the error of a watch that the API closed with no event. The watch has no
+// timeout of its own, so a proxy or a busy API server closed it, and a retry waits first.
+var errWatchClosed = errors.New("the watch closed with no event")
+
 // listAndWatch lists the events, then watches them until the watch fails. A watch that the API
-// closes without an error starts again from the last version. It reports whether a watch worked:
-// it delivered an event, or the API closed it without an error.
+// closes without an error after it delivered an event starts again from the last version. It
+// reports whether a watch delivered an event.
 func (e *eventsWatcher) listAndWatch() (bool, error) {
 	started, finished := e.read(time.Time{}, 0)
 	if result := <-started; result.err != nil {
@@ -371,7 +374,9 @@ func (e *eventsWatcher) listAndWatch() (bool, error) {
 		if err != nil {
 			return watched, err
 		}
-		watched = true
+		if !delivered {
+			return watched, errWatchClosed
+		}
 	}
 }
 
@@ -394,8 +399,12 @@ func (e *eventsWatcher) markSent(event *corev1.Event) bool {
 	return true
 }
 
+// Err returns the error that ended the watcher, or nil while it runs.
 func (e *eventsWatcher) Err() error {
-	return e.ctx.Err()
+	if e.ctx.Err() == nil {
+		return nil
+	}
+	return context.Cause(e.ctx)
 }
 
 func (e *eventsWatcher) Done() <-chan struct{} {
