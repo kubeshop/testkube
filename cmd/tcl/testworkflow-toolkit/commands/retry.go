@@ -20,6 +20,8 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	utilnet "k8s.io/apimachinery/pkg/util/net"
+
+	"github.com/kubeshop/testkube/pkg/retry"
 )
 
 const cleanupRetryCount = 5
@@ -178,35 +180,6 @@ func isFullyTransientCleanupError(err error) bool {
 // run out. A cancelled context stops the loop and joins its cause onto the last error, so the
 // caller still sees what actually failed.
 func retryTransient(ctx context.Context, count int, delayBase time.Duration, fn func() error) error {
-	if count < 1 {
-		count = 1
-	}
-
-	var err error
-	for attempt := 0; attempt < count; attempt++ {
-		if ctxErr := ctx.Err(); ctxErr != nil {
-			if err == nil {
-				return ctxErr
-			}
-			return errors.Join(err, ctxErr)
-		}
-
-		err = fn()
-		if err == nil {
-			return nil
-		}
-		if !shouldRetryCleanupError(err) {
-			return err
-		}
-		if attempt == count-1 {
-			break
-		}
-
-		select {
-		case <-ctx.Done():
-			return errors.Join(err, ctx.Err())
-		case <-time.After(time.Duration(attempt+1) * delayBase):
-		}
-	}
-	return err
+	policy := retry.Policy{Attempts: count, Delay: delayBase, RetryIf: shouldRetryCleanupError}
+	return policy.Do(ctx, func(int) error { return fn() })
 }

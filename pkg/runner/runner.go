@@ -347,7 +347,7 @@ func (r *runner) destroyResources(ctx context.Context, executionID string) error
 	if delay == 0 {
 		delay = CleanupResourcesRetryDelay
 	}
-	return retry(CleanupResourcesRetryCount, delay, func(int) error {
+	return retry(ctx, CleanupResourcesRetryCount, delay, func(int) error {
 		return r.worker.Destroy(ctx, executionID, executionworkertypes.DestroyOptions{})
 	})
 }
@@ -487,7 +487,7 @@ func (r *runner) Monitor(ctx context.Context, organizationId string, environment
 		"environmentId", environmentId,
 	)
 	var execution *testkube.TestWorkflowExecution
-	err := retry(GetExecutionRetryCount, GetExecutionRetryDelay, func(_ int) (err error) {
+	err := retry(ctx, GetExecutionRetryCount, GetExecutionRetryDelay, func(_ int) (err error) {
 		execution, err = r.client.GetExecution(ctx, environmentId, id)
 		if err != nil {
 			logger.Warnw("failed to get execution for monitoring, retrying...", "error", err)
@@ -554,7 +554,7 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 				"organizationId", request.Execution.OrganizationId,
 				"environmentId", request.Execution.EnvironmentId,
 			)
-			err := retry(MonitorRetryCount, MonitorRetryDelay, func(_ int) error {
+			err := retry(context.Background(), MonitorRetryCount, MonitorRetryDelay, func(_ int) error {
 				err := r.Monitor(context.Background(), request.Execution.OrganizationId, request.Execution.EnvironmentId, request.Execution.Id)
 				if err != nil {
 					logger.Warnw("failed to monitor execution, retrying...", "error", err)
@@ -604,7 +604,7 @@ func (r *runner) abortExecution(ctx context.Context, environmentID, executionID 
 	if delay == 0 {
 		delay = AbortExecutionRetryDelay
 	}
-	err := retry(AbortExecutionRetryCount, delay, func(_ int) error {
+	err := retry(ctx, AbortExecutionRetryCount, delay, func(_ int) error {
 		var e error
 		execution, e = r.client.GetExecution(context.Background(), environmentID, executionID)
 		return e
@@ -623,21 +623,21 @@ func (r *runner) abortExecution(ctx context.Context, environmentID, executionID 
 		Actor:  testkube.StopActorRunner,
 		Reason: testkube.StopReasonExecutionStuck,
 	})
-	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
+	err = retry(ctx, AbortExecutionRetryCount, delay, func(_ int) error {
 		return r.client.UpdateExecutionResult(ctx, environmentID, executionID, execution.Result)
 	})
 	if err != nil {
 		return errors.Wrapf(err, "failed to update execution result '%s' to aborted", executionID)
 	}
 
-	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
+	err = retry(ctx, AbortExecutionRetryCount, delay, func(_ int) error {
 		return r.client.FinishExecutionResult(ctx, environmentID, executionID, execution.Result)
 	})
 	if err != nil {
 		return errors.Wrapf(err, "failed to finish execution result '%s'", executionID)
 	}
 
-	err = retry(AbortExecutionRetryCount, delay, func(_ int) error {
+	err = retry(ctx, AbortExecutionRetryCount, delay, func(_ int) error {
 		return r.worker.Abort(context.Background(), executionID, executionworkertypes.DestroyOptions{
 			Actor:  testkube.StopActorRunner,
 			Reason: testkube.StopReasonExecutionStuck,

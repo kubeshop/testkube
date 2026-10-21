@@ -1,16 +1,14 @@
 package runner
 
 import (
+	"context"
 	"time"
+
+	retrypkg "github.com/kubeshop/testkube/pkg/retry"
 )
 
-func retry(count int, delayBase time.Duration, fn func(retryCount int) error) (err error) {
-	for i := 0; i < count; i++ {
-		err = fn(i)
-		if err == nil {
-			return nil
-		}
-		time.Sleep(time.Duration(i) * delayBase)
-	}
-	return err
+// retry calls fn up to count times. The wait before attempt n+1 is n times delayBase, no wait
+// follows the last attempt, and a context that ends stops the wait.
+func retry(ctx context.Context, count int, delayBase time.Duration, fn func(retryCount int) error) error {
+	return retrypkg.Policy{Attempts: count, Delay: delayBase}.Do(ctx, fn)
 }

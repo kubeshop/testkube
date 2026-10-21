@@ -33,7 +33,7 @@ func TestKubeReadRetry_GivesUpAfterBudget(t *testing.T) {
 		return transient
 	})
 	assert.ErrorIs(t, err, transient)
-	assert.Equal(t, kubeReadRetryCount, calls)
+	assert.Equal(t, kubeReadPolicy.Attempts, calls)
 }
 
 func TestKubeReadRetry_NotFoundShortCircuits(t *testing.T) {
@@ -59,7 +59,7 @@ func TestKubeReadRetry_ForbiddenShortCircuits(t *testing.T) {
 }
 
 // Exhausting the budget must not sleep after the final attempt.
-// With kubeReadRetryCount=3 and kubeReadRetryDelay=200ms the only real waits
+// With 3 attempts and a delay of 200ms the only real waits
 // are before attempts 2 and 3 (200ms + 400ms). A stray sleep after attempt 3
 // would push wall-clock past ~600ms.
 func TestKubeReadRetry_DoesNotSleepAfterLastAttempt(t *testing.T) {
@@ -92,5 +92,5 @@ func TestKubeReadRetry_ContextCancelledInterruptsBackoff(t *testing.T) {
 	elapsed := time.Since(start)
 	assert.ErrorIs(t, err, context.Canceled)
 	assert.Less(t, elapsed, 500*time.Millisecond, "elapsed=%s", elapsed)
-	assert.LessOrEqual(t, calls, kubeReadRetryCount)
+	assert.LessOrEqual(t, calls, kubeReadPolicy.Attempts)
 }

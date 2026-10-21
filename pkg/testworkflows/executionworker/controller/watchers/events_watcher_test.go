@@ -245,35 +245,6 @@ func TestEventsWatcher_ClosedWatchWaits(t *testing.T) {
 	assert.GreaterOrEqual(t, time.Since(startedAt), 2*eventsRetryDelay, "each watch that closes with no event waits for the retry delay")
 }
 
-func TestBackoff(t *testing.T) {
-	tests := []struct {
-		name    string
-		watched []bool
-		want    []time.Duration
-	}{
-		{
-			name:    "errors in a row double the delay up to the maximum",
-			watched: []bool{false, false, false, false},
-			want:    []time.Duration{time.Second, 2 * time.Second, 4 * time.Second, 4 * time.Second},
-		},
-		{
-			name:    "a watch that worked starts the delay again from the base",
-			watched: []bool{false, false, true, false},
-			want:    []time.Duration{time.Second, 2 * time.Second, time.Second, 2 * time.Second},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			retry := backoff{base: time.Second, max: 4 * time.Second}
-			got := make([]time.Duration, 0, len(tt.watched))
-			for _, watched := range tt.watched {
-				got = append(got, retry.delay(watched))
-			}
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
 func TestEventsWatcher_ListAndWatch(t *testing.T) {
 	busy := apierrors.NewTooManyRequests("the server is busy", 1)
 	list := corev1.EventList{

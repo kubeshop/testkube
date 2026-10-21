@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"github.com/kubeshop/testkube/pkg/grpcutils"
+	"github.com/kubeshop/testkube/pkg/retry"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -59,27 +60,17 @@ func callWithRetry[Request any, Response any](
 	fn func(context.Context, Request, ...grpc.CallOption) (Response, error),
 	req Request,
 ) (Response, error) {
-	var (
-		v       Response
-		lastErr error
-	)
-	for attempt := 0; attempt < callRetryCount; attempt++ {
-		if attempt > 0 {
-			select {
-			case <-ctx.Done():
-				return v, ctx.Err()
-			case <-time.After(time.Duration(attempt) * callRetryBaseDelay):
-			}
-		}
-		v, lastErr = call(ctx, md, fn, req)
-		if lastErr == nil {
-			return v, nil
-		}
-		if !isRetryableGrpcCode(getGrpcErrorCode(lastErr)) {
-			return v, lastErr
-		}
+	var v Response
+	policy := retry.Policy{
+		Attempts: callRetryCount,
+		Delay:    callRetryBaseDelay,
+		RetryIf:  func(err error) bool { return isRetryableGrpcCode(getGrpcErrorCode(err)) },
 	}
-	return v, lastErr
+	err := policy.Do(ctx, func(int) (err error) {
+		v, err = call(ctx, md, fn, req)
+		return err
+	})
+	return v, err
 }
 
 func isRetryableGrpcCode(code codes.Code) bool {

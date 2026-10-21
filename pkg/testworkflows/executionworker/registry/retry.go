@@ -5,38 +5,23 @@ import (
 	"time"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+
+	"github.com/kubeshop/testkube/pkg/retry"
 )
 
-const (
-	kubeReadRetryCount = 3
-	kubeReadRetryDelay = 200 * time.Millisecond
-)
+// kubeReadPolicy retries a read of the k8s API after a transient failure (network hiccups, api-server
+// unavailable). Terminal errors that will not resolve by retrying (NotFound, Forbidden,
+// Unauthorized) short-circuit. The wait aborts as soon as ctx is cancelled, so callers that fan out
+// over many namespaces do not eat several seconds of dead wait on shutdown.
+var kubeReadPolicy = retry.Policy{
+	Attempts: 3,
+	Delay:    200 * time.Millisecond,
+	RetryIf: func(err error) bool {
+		return !k8serrors.IsNotFound(err) && !k8serrors.IsForbidden(err) && !k8serrors.IsUnauthorized(err)
+	},
+}
 
-// kubeReadRetry runs fn against the k8s API and retries transient failures
-// (network hiccups, api-server unavailable). Terminal errors that will not
-// resolve by retrying (NotFound, Forbidden, Unauthorized) short-circuit.
-//
-// The backoff only runs between attempts, never after the last one, and it
-// aborts as soon as ctx is cancelled so callers that fan out over many
-// namespaces do not eat several seconds of dead wait on shutdown.
+// kubeReadRetry runs fn against the k8s API under kubeReadPolicy.
 func kubeReadRetry(ctx context.Context, fn func() error) error {
-	var err error
-	for i := 0; i < kubeReadRetryCount; i++ {
-		err = fn()
-		if err == nil {
-			return nil
-		}
-		if k8serrors.IsNotFound(err) || k8serrors.IsForbidden(err) || k8serrors.IsUnauthorized(err) {
-			return err
-		}
-		if i == kubeReadRetryCount-1 {
-			break
-		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(time.Duration(i+1) * kubeReadRetryDelay):
-		}
-	}
-	return err
+	return kubeReadPolicy.Do(ctx, func(int) error { return fn() })
 }
