@@ -44,6 +44,9 @@ func NewInstallAgentCommand() *cobra.Command {
 
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the runner")
 	common2.PopulateRunnerFlags(cmd)
+	// Only here: `pro connect` shares the flag but always asks for confirmation, which needs
+	// the terminal that piped input takes.
+	cmd.Flags().Lookup("global-template-path").Usage = "include global template, or - to read it from stdin"
 	return cmd
 }
 
