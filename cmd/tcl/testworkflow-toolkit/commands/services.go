@@ -151,11 +151,7 @@ func NewServicesCmd() *cobra.Command {
 
 			executor := NewServicesExecutor(groupRef, base64Encoded, deps)
 			if err := executor.Execute(cmd.Context(), args); err != nil {
-				if reason := servicesFailureReason(err); reason != "" {
-					toolkitcommon.Fail(toolkitcommon.WithReason(reason, err))
-				} else {
-					toolkitcommon.Fail(err)
-				}
+				toolkitcommon.Fail(toolkitcommon.WithReason(servicesFailureReason(err), err))
 			}
 		},
 	}

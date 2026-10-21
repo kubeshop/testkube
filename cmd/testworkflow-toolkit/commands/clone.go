@@ -66,7 +66,9 @@ var gitAuthErrors = []string{
 // a transport failure, so a list of network texts can never be complete.
 var gitCloneErrors = []string{
 	"invalid repository URI",
-	"not found",
+	"Repository not found",
+	"' not found",
+	"not found in upstream",
 	"does not appear to be a git repository",
 	"couldn't find remote ref",
 	"did not match any file(s) known to git",

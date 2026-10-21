@@ -148,6 +148,12 @@ func TestWithReason(t *testing.T) {
 			wantReason:  testkube.StopReasonArtifactUploadFailed,
 		},
 		{
+			name:        "an empty code keeps the code that the error already holds",
+			err:         WithReason("", fmt.Errorf("clone: %w", WithReason(testkube.StopReasonArtifactUploadFailed, cause))),
+			wantMessage: "clone: could not create cloud client: no token",
+			wantReason:  testkube.StopReasonArtifactUploadFailed,
+		},
+		{
 			name:        "a wrapped error with a code still gives the code",
 			err:         fmt.Errorf("artifacts: %w", WithReason(testkube.StopReasonArtifactUploadFailed, cause)),
 			wantMessage: "artifacts: could not create cloud client: no token",

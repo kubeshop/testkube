@@ -620,6 +620,16 @@ func TestCloneReason(t *testing.T) {
 			want: "",
 		},
 		{
+			name: "a branch that the remote does not have",
+			err:  errors.New("fatal: Remote branch absent not found in upstream origin"),
+			want: testkube.StopReasonGitCloneFailed,
+		},
+		{
+			name: "a toolkit image without git has no code",
+			err:  errors.New("error cloning repository: exec: \"git\": executable file not found in $PATH"),
+			want: "",
+		},
+		{
 			name: "a certificate that git does not trust has no code",
 			err:  errors.New("fatal: unable to access 'https://git.example.com/org/repo.git/': SSL certificate problem: unable to get local issuer certificate"),
 			want: "",
