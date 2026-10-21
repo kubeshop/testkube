@@ -30,22 +30,20 @@ func NewCreateTestWorkflowTemplateCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, _ []string) {
 			namespace := cmd.Flag("namespace").Value.String()
 
-			var input io.Reader
+			var bytes []byte
+			var err error
 			if filePath == "" {
 				fi, err := os.Stdin.Stat()
 				ui.ExitOnError("reading stdin", err)
 				if fi.Mode()&os.ModeDevice != 0 {
 					ui.Failf("you need to pass stdin or --file argument with file path")
 				}
-				input = cmd.InOrStdin()
+				bytes, err = io.ReadAll(cmd.InOrStdin())
+				ui.ExitOnError("reading input", err)
 			} else {
-				file, err := os.Open(filePath)
+				bytes, err = common.ReadFileOrStdin(cmd, filePath)
 				ui.ExitOnError("reading "+filePath+" file", err)
-				input = file
 			}
-
-			bytes, err := io.ReadAll(input)
-			ui.ExitOnError("reading input", err)
 
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
@@ -84,7 +82,7 @@ func NewCreateTestWorkflowTemplateCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&name, "name", "", "test workflow template name")
 	cmd.Flags().BoolVar(&update, "update", false, "update, if test workflow template already exists")
-	cmd.Flags().StringVarP(&filePath, "file", "f", "", "file path to get the test workflow template specification")
+	cmd.Flags().StringVarP(&filePath, "file", "f", "", "file path to get the test workflow template specification, or - to read it from stdin")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "validate test workflow template specification yaml")
 
 	return cmd

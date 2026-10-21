@@ -191,6 +191,10 @@ contents do.
 - Adding a new prompt: use the `ui` helpers rather than pterm directly, and it inherits the guard. Adding a command that must not prompt at all: branch on `ui.StdinIsInteractive()`.
 - Tests flip the unexported `stdinIsInteractive` seam rather than allocating a pseudo terminal.
 
+## CLI file input
+
+- A flag that names a file to read takes `-` for the command's standard input (`common.ReadFileOrStdin` in `cmd/kubectl-testkube/commands/common/input.go`), so content can be piped: `cat payload.json | testkube create webhook --payload-template -`. Read new file flags through it, and use `cmd.InOrStdin()` rather than `os.Stdin` so tests can supply the input.
+
 ## CLI upgrade
 
 - `testkube upgrade --reuse-values` passes Helm's `--reuse-values`. Helm applies `--set` over reused values, so in that mode `prepareCommonHelmArgs` sends only the settings of flags the user passed (`HelmOptions.ExplicitFlags`, `sendsFlag`/`sendsAnyFlag` in `common/helper.go`): a flag default such as `--no-postgres=true` would otherwise silently turn off what the release had enabled. A new flag-derived Helm setting must go through `sendsFlag`. Never gate on a value being non-empty: `ProcessMasterFlags` composes a runner's control plane addresses from default prefixes and root domain, so they always are, and sending them would point a runner of a custom control plane at SaaS. The flag lists (`agentURIFlags`, `uiURIFlags`) must name every flag `ProcessMasterFlags` reads for an address, the `--*-uri-override` flags included, or that flag is silently ignored. A runner's disabled MinIO/MongoDB/PostgreSQL is always sent.
