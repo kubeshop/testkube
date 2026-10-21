@@ -585,6 +585,11 @@ func TestCloneReason(t *testing.T) {
 			want: testkube.StopReasonGitAuthFailed,
 		},
 		{
+			name: "a token that the server refuses with 403",
+			err:  errors.New("fatal: unable to access 'https://github.com/org/private.git/': The requested URL returned error: 403"),
+			want: testkube.StopReasonGitAuthFailed,
+		},
+		{
 			name: "a repository that does not exist",
 			err:  errors.New("fatal: repository 'https://github.com/org/absent.git/' not found"),
 			want: testkube.StopReasonGitCloneFailed,

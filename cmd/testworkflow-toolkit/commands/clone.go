@@ -59,6 +59,8 @@ var gitAuthErrors = []string{
 	"Authentication failed",
 	"Permission denied (publickey)",
 	"HTTP 403",
+	"returned error: 403",
+	"returned error: 401",
 }
 
 // gitCloneErrors are the texts that git writes when the repository, the revision or the path in
