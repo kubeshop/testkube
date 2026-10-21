@@ -61,28 +61,31 @@ var gitAuthErrors = []string{
 	"HTTP 403",
 }
 
-// gitNetworkErrors are the texts that git writes when it cannot reach the server. The network is
-// not part of the workflow, so these failures get no code of a configuration error.
-var gitNetworkErrors = []string{
-	"Could not resolve host",
-	"Connection refused",
-	"Connection timed out",
-	"Operation timed out",
-	"Failed to connect to",
+// gitCloneErrors are the texts that git writes when the repository, the revision or the path in
+// the workflow does not exist. Only these texts prove a configuration error. Git has many texts for
+// a transport failure, so a list of network texts can never be complete.
+var gitCloneErrors = []string{
+	"invalid repository URI",
+	"not found",
+	"does not appear to be a git repository",
+	"couldn't find remote ref",
+	"did not match any file(s) known to git",
+	"invalid reference",
+	"unknown revision",
 }
 
 // cloneReason returns the code for a clone failure. A credential that git refuses is a different
 // problem from a repository or a revision that does not exist, and the user fixes each one apart.
-// A server that git cannot reach gives no code.
+// Any other failure, for example a server that git cannot reach, gives no code.
 func cloneReason(err error) testkube.StopReason {
 	text := err.Error()
 	switch {
 	case containsAny(text, gitAuthErrors):
 		return testkube.StopReasonGitAuthFailed
-	case containsAny(text, gitNetworkErrors):
-		return ""
+	case containsAny(text, gitCloneErrors):
+		return testkube.StopReasonGitCloneFailed
 	}
-	return testkube.StopReasonGitCloneFailed
+	return ""
 }
 
 // containsAny reports whether the text holds one of the parts.

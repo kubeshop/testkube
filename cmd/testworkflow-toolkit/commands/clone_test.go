@@ -595,6 +595,21 @@ func TestCloneReason(t *testing.T) {
 			want: testkube.StopReasonGitCloneFailed,
 		},
 		{
+			name: "a repository that GitHub does not find over SSH",
+			err:  errors.New("ERROR: Repository not found. fatal: Could not read from remote repository."),
+			want: testkube.StopReasonGitCloneFailed,
+		},
+		{
+			name: "a revision that checkout does not know",
+			err:  errors.New("checking out revision: error: pathspec 'absent' did not match any file(s) known to git"),
+			want: testkube.StopReasonGitCloneFailed,
+		},
+		{
+			name: "a URI that does not parse",
+			err:  errors.New("invalid repository URI: parse \"://bad\": missing protocol scheme"),
+			want: testkube.StopReasonGitCloneFailed,
+		},
+		{
 			name: "a host that does not resolve has no code",
 			err:  errors.New("fatal: unable to access 'https://git.invalid/': Could not resolve host: git.invalid"),
 			want: "",
@@ -602,6 +617,21 @@ func TestCloneReason(t *testing.T) {
 		{
 			name: "a server that refuses the connection has no code",
 			err:  errors.New("fatal: unable to access 'https://git.example.com/org/repo.git/': Failed to connect to git.example.com port 443: Connection refused"),
+			want: "",
+		},
+		{
+			name: "a certificate that git does not trust has no code",
+			err:  errors.New("fatal: unable to access 'https://git.example.com/org/repo.git/': SSL certificate problem: unable to get local issuer certificate"),
+			want: "",
+		},
+		{
+			name: "a connection that the network resets has no code",
+			err:  errors.New("error: RPC failed; curl 56 Recv failure: Connection reset by peer. fatal: early EOF"),
+			want: "",
+		},
+		{
+			name: "a server error from a proxy has no code",
+			err:  errors.New("fatal: unable to access 'https://git.example.com/org/repo.git/': The requested URL returned error: 502"),
 			want: "",
 		},
 	}
