@@ -1,7 +1,6 @@
 package registry
 
 import (
-	"context"
 	"time"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -19,9 +18,4 @@ var kubeReadPolicy = retry.Policy{
 	RetryIf: func(err error) bool {
 		return !k8serrors.IsNotFound(err) && !k8serrors.IsForbidden(err) && !k8serrors.IsUnauthorized(err)
 	},
-}
-
-// kubeReadRetry runs fn against the k8s API under kubeReadPolicy.
-func kubeReadRetry(ctx context.Context, fn func() error) error {
-	return kubeReadPolicy.Do(ctx, func(int) error { return fn() })
 }

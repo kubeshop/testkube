@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"time"
-
-	retrygo "github.com/avast/retry-go/v5"
 )
 
 // Growth is how the wait changes from one attempt to the next.
@@ -38,44 +36,48 @@ type Policy struct {
 }
 
 // Do calls fn until it succeeds, until RetryIf rejects its error, until the attempts run out, or
-// until the context ends. The attempt that fn gets starts at 0.
-func (p Policy) Do(ctx context.Context, fn func(attempt int) error) error {
+// until the context ends.
+func (p Policy) Do(ctx context.Context, fn func() error) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	attempts := max(p.Attempts, 1)
-	retryIf := func(err error) bool { return p.RetryIf == nil || p.RetryIf(err) }
-
-	var last error
-	attempt := 0
-	err := retrygo.New(
-		retrygo.Context(ctx),
-		retrygo.Attempts(uint(attempts)),
-		retrygo.Delay(p.Delay),
-		retrygo.DelayType(func(n uint, _ error, _ retrygo.DelayContext) time.Duration { return p.wait(int(n)) }),
-		retrygo.RetryIf(retryIf),
-		retrygo.LastErrorOnly(true),
-		retrygo.OnRetry(func(n uint, err error) {
-			if p.OnRetry != nil && int(n)+1 < attempts {
-				p.OnRetry(int(n), err, p.wait(int(n)+1))
-			}
-		}),
-	).Do(func() error {
-		last = fn(attempt)
-		attempt++
-		return last
-	})
-
-	// retry-go returns only the cause of the context when it ends during a wait.
-	if err != nil && last != nil && ctx.Err() != nil && !errors.Is(err, last) {
-		return errors.Join(last, err)
+	var err error
+	for attempt := range attempts {
+		if err = fn(); err == nil {
+			return nil
+		}
+		if attempt == attempts-1 || (p.RetryIf != nil && !p.RetryIf(err)) {
+			return err
+		}
+		wait := p.wait(attempt + 1)
+		if p.OnRetry != nil {
+			p.OnRetry(attempt, err, wait)
+		}
+		timer := time.NewTimer(wait)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return errors.Join(err, context.Cause(ctx))
+		case <-timer.C:
+		}
 	}
 	return err
 }
+
+// maxShift keeps an exponential wait inside time.Duration.
+const maxShift = 62
 
 // wait returns the wait before attempt n+1, for n from 1.
 func (p Policy) wait(n int) time.Duration {
 	var d time.Duration
 	switch p.Growth {
 	case Exponential:
-		d = p.Delay << (n - 1)
+		shift := min(n-1, maxShift)
+		d = p.Delay << shift
+		if d>>shift != p.Delay {
+			d = time.Duration(1<<63 - 1)
+		}
 	case Fixed:
 		d = p.Delay
 	default:

@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
+	"github.com/kubeshop/testkube/pkg/retry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -101,29 +102,25 @@ func (d *cloudUploader) putObject(url string, path string, file io.Reader, size 
 	}
 	seeker, canRewind := file.(io.Seeker)
 
+	retryable := false
+	attempt := 0
+	policy := retry.Policy{Attempts: uploadRetryCount, Delay: uploadRetryBaseDelay, RetryIf: func(error) bool { return retryable }}
 	var lastErr error
-	for attempt := 0; attempt < uploadRetryCount; attempt++ {
-		if attempt > 0 {
-			if file != nil {
-				if !canRewind {
-					return lastErr
-				}
-				if _, e := seeker.Seek(0, io.SeekStart); e != nil {
-					return errors.Wrapf(lastErr, "cannot rewind body for retry: %v", e)
-				}
+	return policy.Do(context.Background(), func() error {
+		if attempt > 0 && file != nil {
+			// A retry sends the body again, so it must start from the beginning.
+			retryable = false
+			if !canRewind {
+				return lastErr
 			}
-			time.Sleep(time.Duration(attempt) * uploadRetryBaseDelay)
+			if _, e := seeker.Seek(0, io.SeekStart); e != nil {
+				return errors.Wrapf(lastErr, "cannot rewind body for retry: %v", e)
+			}
 		}
-		retryable, err := d.putObjectOnce(url, path, file, size)
-		if err == nil {
-			return nil
-		}
-		lastErr = err
-		if !retryable {
-			return err
-		}
-	}
-	return lastErr
+		attempt++
+		retryable, lastErr = d.putObjectOnce(url, path, file, size)
+		return lastErr
+	})
 }
 
 func (d *cloudUploader) putObjectOnce(url string, path string, file io.Reader, size int64) (retryable bool, err error) {

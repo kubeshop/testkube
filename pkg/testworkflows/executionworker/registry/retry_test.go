@@ -14,7 +14,7 @@ import (
 func TestKubeReadRetry_TransientErrorRetriedThenSucceeds(t *testing.T) {
 	var calls int
 	transient := stderrors.New("kube-apiserver unavailable")
-	err := kubeReadRetry(context.Background(), func() error {
+	err := kubeReadPolicy.Do(context.Background(), func() error {
 		calls++
 		if calls < 2 {
 			return transient
@@ -28,7 +28,7 @@ func TestKubeReadRetry_TransientErrorRetriedThenSucceeds(t *testing.T) {
 func TestKubeReadRetry_GivesUpAfterBudget(t *testing.T) {
 	var calls int
 	transient := stderrors.New("kube-apiserver unavailable")
-	err := kubeReadRetry(context.Background(), func() error {
+	err := kubeReadPolicy.Do(context.Background(), func() error {
 		calls++
 		return transient
 	})
@@ -39,7 +39,7 @@ func TestKubeReadRetry_GivesUpAfterBudget(t *testing.T) {
 func TestKubeReadRetry_NotFoundShortCircuits(t *testing.T) {
 	var calls int
 	nf := k8serrors.NewNotFound(schema.GroupResource{Resource: "pods"}, "x")
-	err := kubeReadRetry(context.Background(), func() error {
+	err := kubeReadPolicy.Do(context.Background(), func() error {
 		calls++
 		return nf
 	})
@@ -50,7 +50,7 @@ func TestKubeReadRetry_NotFoundShortCircuits(t *testing.T) {
 func TestKubeReadRetry_ForbiddenShortCircuits(t *testing.T) {
 	var calls int
 	f := k8serrors.NewForbidden(schema.GroupResource{Resource: "pods"}, "x", stderrors.New("nope"))
-	err := kubeReadRetry(context.Background(), func() error {
+	err := kubeReadPolicy.Do(context.Background(), func() error {
 		calls++
 		return f
 	})
@@ -65,7 +65,7 @@ func TestKubeReadRetry_ForbiddenShortCircuits(t *testing.T) {
 func TestKubeReadRetry_DoesNotSleepAfterLastAttempt(t *testing.T) {
 	transient := stderrors.New("kube-apiserver unavailable")
 	start := time.Now()
-	err := kubeReadRetry(context.Background(), func() error {
+	err := kubeReadPolicy.Do(context.Background(), func() error {
 		return transient
 	})
 	elapsed := time.Since(start)
@@ -85,7 +85,7 @@ func TestKubeReadRetry_ContextCancelledInterruptsBackoff(t *testing.T) {
 		cancel()
 	}()
 	start := time.Now()
-	err := kubeReadRetry(ctx, func() error {
+	err := kubeReadPolicy.Do(ctx, func() error {
 		calls++
 		return transient
 	})

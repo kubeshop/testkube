@@ -149,5 +149,5 @@ func RunWithRetry(retries int, delay time.Duration, final func(error) bool, diag
 			fmt.Printf("error, trying again in %s (attempt %d/%d): %s\n", wait.String(), attempt+2, retries, err.Error())
 		},
 	}
-	return policy.Do(context.Background(), func(int) error { return Run(diagnostics, c, args...) })
+	return policy.Do(context.Background(), func() error { return Run(diagnostics, c, args...) })
 }

@@ -111,7 +111,7 @@ func NewNATSConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.Conn, e
 
 	var nc *nats.Conn
 	policy := retry.Policy{Attempts: int(NATS_RETRY_ATTEMPTS), Delay: utils.DefaultRetryDelay, Growth: retry.Fixed}
-	err := policy.Do(context.Background(), func(int) (err error) {
+	err := policy.Do(context.Background(), func() (err error) {
 		nc, err = nats.Connect(cfg.NatsURI, opts...)
 		return err
 	})

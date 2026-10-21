@@ -64,17 +64,13 @@ func callWithRetry[Request any, Response any](
 	policy := retry.Policy{
 		Attempts: callRetryCount,
 		Delay:    callRetryBaseDelay,
-		RetryIf:  func(err error) bool { return isRetryableGrpcCode(getGrpcErrorCode(err)) },
+		RetryIf:  grpcutils.IsTransient,
 	}
-	err := policy.Do(ctx, func(int) (err error) {
+	err := policy.Do(ctx, func() (err error) {
 		v, err = call(ctx, md, fn, req)
 		return err
 	})
 	return v, err
-}
-
-func isRetryableGrpcCode(code codes.Code) bool {
-	return grpcutils.IsRetryableCode(code)
 }
 
 // TODO: add timeout?

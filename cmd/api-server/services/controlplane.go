@@ -124,14 +124,12 @@ func ensureBucketsWithRetry(ctx context.Context, storageClient domainstorage.Cli
 		return
 	}
 
-	err := ensureBucketsPolicy.Do(ctx, func(int) error {
-		remaining := 0
+	err := ensureBucketsPolicy.Do(ctx, func() error {
+		ready := true
 		for _, bucket := range active {
-			if !ensureBucket(ctx, storageClient, bucket) {
-				remaining++
-			}
+			ready = ensureBucket(ctx, storageClient, bucket) && ready
 		}
-		if remaining > 0 {
+		if !ready {
 			return errBucketsNotReady
 		}
 		return nil

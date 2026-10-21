@@ -21,7 +21,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/repository/channels"
-	retrypkg "github.com/kubeshop/testkube/pkg/retry"
+	"github.com/kubeshop/testkube/pkg/retry"
 	testworkflowutils "github.com/kubeshop/testkube/pkg/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
@@ -145,7 +145,7 @@ func (a *agentLoop) logFields(environmentId string, execution *testkube.TestWork
 }
 
 func (a *agentLoop) saveEmptyLogs(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
-	err := retry(ctx, saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func(_ int) error {
+	err := retry.Policy{Attempts: saveResultRetryMaxAttempts, Delay: saveResultRetryBaseDelay}.Do(ctx, func() error {
 		return a._saveEmptyLogs(ctx, environmentId, execution)
 	})
 	if err != nil {
@@ -155,7 +155,7 @@ func (a *agentLoop) saveEmptyLogs(ctx context.Context, environmentId string, exe
 }
 
 func (a *agentLoop) finishExecution(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
-	err := retry(ctx, saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func(_ int) error {
+	err := retry.Policy{Attempts: saveResultRetryMaxAttempts, Delay: saveResultRetryBaseDelay}.Do(ctx, func() error {
 		err := a.client.FinishExecutionResult(ctx, environmentId, execution.Id, execution.Result)
 		if err != nil {
 			a.logger.Warnw("failed to finish the TestWorkflow execution in database", append(a.logFields(environmentId, execution), "recoverable", true, "error", err)...)
@@ -170,8 +170,10 @@ func (a *agentLoop) finishExecution(ctx context.Context, environmentId string, e
 }
 
 func (a *agentLoop) init(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
-	err := retry(ctx, saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func(retryCount int) (err error) {
-		a.logger.Infow("Initializing execution", append(a.logFields(environmentId, execution), "attempt", retryCount)...)
+	attempt := 0
+	err := retry.Policy{Attempts: saveResultRetryMaxAttempts, Delay: saveResultRetryBaseDelay}.Do(ctx, func() (err error) {
+		a.logger.Infow("Initializing execution", append(a.logFields(environmentId, execution), "attempt", attempt)...)
+		attempt++
 		err = a.client.InitExecution(ctx, environmentId, execution.Id, execution.Signature, execution.Namespace)
 		if err != nil {
 			a.logger.Warnw("failed to initialize the TestWorkflow execution in database", append(a.logFields(environmentId, execution), "recoverable", true, "error", err)...)
@@ -198,17 +200,17 @@ func (a *agentLoop) summaryWithJobRetry(ctx context.Context, executionId string,
 	jobNotVisible := func(err error) bool { return errors.Is(err, controller.ErrJobTimeout) }
 
 	var status *executionworkertypes.SummaryResult
-	policy := retrypkg.Policy{
+	policy := retry.Policy{
 		Attempts: GetNotificationsRetryCount,
 		Delay:    delay,
-		Growth:   retrypkg.Fixed,
+		Growth:   retry.Fixed,
 		RetryIf:  jobNotVisible,
 		OnRetry: func(attempt int, _ error, _ time.Duration) {
 			a.logger.Infow("job not visible yet, retrying summary for live notifications",
 				"executionId", executionId, "attempt", attempt+1)
 		},
 	}
-	err := policy.Do(ctx, func(int) (err error) {
+	err := policy.Do(ctx, func() (err error) {
 		status, err = a.worker.Summary(ctx, executionId, opts)
 		return err
 	})

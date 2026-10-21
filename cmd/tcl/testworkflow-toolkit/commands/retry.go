@@ -29,7 +29,7 @@ const cleanupRetryCount = 5
 // cleanupRetryDelay is a var so tests can shorten it, matching pkg/runner's overridable delay.
 var cleanupRetryDelay = 500 * time.Millisecond
 
-// cleanupRetryBudget is the wall time one retryTransient call can spend sleeping.
+// cleanupRetryBudget is the wall time one cleanupPolicy call can spend sleeping.
 func cleanupRetryBudget() time.Duration {
 	var total time.Duration
 	for attempt := 0; attempt < cleanupRetryCount-1; attempt++ {
@@ -176,10 +176,8 @@ func isFullyTransientCleanupError(err error) bool {
 	return total > 0 && transient == total
 }
 
-// retryTransient calls fn until it succeeds, until no attempt could help, or until the attempts
-// run out. A cancelled context stops the loop and joins its cause onto the last error, so the
-// caller still sees what actually failed.
-func retryTransient(ctx context.Context, count int, delayBase time.Duration, fn func() error) error {
-	policy := retry.Policy{Attempts: count, Delay: delayBase, RetryIf: shouldRetryCleanupError}
-	return policy.Do(ctx, func(int) error { return fn() })
+// cleanupPolicy retries a call of the services cleanup while another attempt could help. It reads
+// cleanupRetryDelay on each call, so a test can shorten the delay.
+func cleanupPolicy() retry.Policy {
+	return retry.Policy{Attempts: cleanupRetryCount, Delay: cleanupRetryDelay, RetryIf: shouldRetryCleanupError}
 }

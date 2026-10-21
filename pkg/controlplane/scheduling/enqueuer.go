@@ -404,7 +404,7 @@ func (e *Enqueuer) persistExecution(ctx context.Context, executions []*testworkf
 
 		// Insert the execution
 		err := retry.Policy{Attempts: 5, Delay: 300 * time.Millisecond, Growth: retry.Fixed}.Do(ctx,
-			func(int) error {
+			func() error {
 				err := e.executionRepository.Insert(ctx, *exec.Execution())
 				if err != nil {
 					logger.Warnw("failed to insert the TestWorkflow exec in database", append(exec.Execution().LogFields(), "recoverable", true, "error", err)...)
