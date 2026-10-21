@@ -11,86 +11,40 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func TestKubeReadRetry_TransientErrorRetriedThenSucceeds(t *testing.T) {
-	var calls int
+func TestKubeReadPolicy(t *testing.T) {
 	transient := stderrors.New("kube-apiserver unavailable")
-	err := kubeReadPolicy.Do(context.Background(), func() error {
-		calls++
-		if calls < 2 {
-			return transient
-		}
-		return nil
-	})
-	assert.NoError(t, err)
-	assert.Equal(t, 2, calls)
-}
+	pods := schema.GroupResource{Resource: "pods"}
+	tests := []struct {
+		name         string
+		err          error
+		failures     int
+		wantAttempts int
+	}{
+		{name: "a transient error is retried until the read works", err: transient, failures: 1, wantAttempts: 2},
+		{name: "a transient error that stays uses every attempt", err: transient, failures: 10, wantAttempts: kubeReadPolicy.Attempts},
+		{name: "a missing object is not retried", err: k8serrors.NewNotFound(pods, "x"), failures: 10, wantAttempts: 1},
+		{name: "a forbidden read is not retried", err: k8serrors.NewForbidden(pods, "x", stderrors.New("nope")), failures: 10, wantAttempts: 1},
+		{name: "an unauthorized read is not retried", err: k8serrors.NewUnauthorized("no token"), failures: 10, wantAttempts: 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			policy := kubeReadPolicy
+			policy.Delay = time.Millisecond
+			calls := 0
+			err := policy.Do(context.Background(), func() error {
+				calls++
+				if calls <= tt.failures {
+					return tt.err
+				}
+				return nil
+			})
 
-func TestKubeReadRetry_GivesUpAfterBudget(t *testing.T) {
-	var calls int
-	transient := stderrors.New("kube-apiserver unavailable")
-	err := kubeReadPolicy.Do(context.Background(), func() error {
-		calls++
-		return transient
-	})
-	assert.ErrorIs(t, err, transient)
-	assert.Equal(t, kubeReadPolicy.Attempts, calls)
-}
-
-func TestKubeReadRetry_NotFoundShortCircuits(t *testing.T) {
-	var calls int
-	nf := k8serrors.NewNotFound(schema.GroupResource{Resource: "pods"}, "x")
-	err := kubeReadPolicy.Do(context.Background(), func() error {
-		calls++
-		return nf
-	})
-	assert.True(t, k8serrors.IsNotFound(err))
-	assert.Equal(t, 1, calls)
-}
-
-func TestKubeReadRetry_ForbiddenShortCircuits(t *testing.T) {
-	var calls int
-	f := k8serrors.NewForbidden(schema.GroupResource{Resource: "pods"}, "x", stderrors.New("nope"))
-	err := kubeReadPolicy.Do(context.Background(), func() error {
-		calls++
-		return f
-	})
-	assert.True(t, k8serrors.IsForbidden(err))
-	assert.Equal(t, 1, calls)
-}
-
-// Exhausting the budget must not sleep after the final attempt.
-// With 3 attempts and a delay of 200ms the only real waits
-// are before attempts 2 and 3 (200ms + 400ms). A stray sleep after attempt 3
-// would push wall-clock past ~600ms.
-func TestKubeReadRetry_DoesNotSleepAfterLastAttempt(t *testing.T) {
-	transient := stderrors.New("kube-apiserver unavailable")
-	start := time.Now()
-	err := kubeReadPolicy.Do(context.Background(), func() error {
-		return transient
-	})
-	elapsed := time.Since(start)
-	assert.ErrorIs(t, err, transient)
-	// Expected total wait between attempts: (1+2) * 200ms = 600ms. Allow slack
-	// but reject the buggy behaviour where a terminal sleep pushes past 800ms.
-	assert.Less(t, elapsed, 800*time.Millisecond, "elapsed=%s", elapsed)
-}
-
-// A cancelled context must abort the backoff instead of eating the full delay.
-func TestKubeReadRetry_ContextCancelledInterruptsBackoff(t *testing.T) {
-	transient := stderrors.New("kube-apiserver unavailable")
-	ctx, cancel := context.WithCancel(context.Background())
-	var calls int
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		cancel()
-	}()
-	start := time.Now()
-	err := kubeReadPolicy.Do(ctx, func() error {
-		calls++
-		return transient
-	})
-	elapsed := time.Since(start)
-	assert.ErrorIs(t, err, context.Canceled)
-	assert.Less(t, elapsed, 500*time.Millisecond, "elapsed=%s", elapsed)
-	assert.LessOrEqual(t, calls, kubeReadPolicy.Attempts)
+			assert.Equal(t, tt.wantAttempts, calls)
+			if tt.failures < tt.wantAttempts {
+				assert.NoError(t, err)
+				return
+			}
+			assert.ErrorIs(t, err, tt.err)
+		})
+	}
 }

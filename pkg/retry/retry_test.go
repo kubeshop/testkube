@@ -46,6 +46,13 @@ func TestPolicy_Do(t *testing.T) {
 			wantErr:      permanent,
 		},
 		{
+			name:         "no wait follows the last attempt",
+			policy:       Policy{Attempts: 1, Delay: time.Hour},
+			failures:     []error{errBusy},
+			wantAttempts: 1,
+			wantErr:      errBusy,
+		},
+		{
 			name:         "a policy without attempts calls one time",
 			policy:       Policy{},
 			failures:     []error{errBusy},
