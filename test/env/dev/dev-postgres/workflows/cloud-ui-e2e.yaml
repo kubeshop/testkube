@@ -24,9 +24,17 @@ spec:
       - js
   job:
     activeDeadlineSeconds: 1380
+  pod:
+    volumes:
+    - name: npm-cache
+      emptyDir: {}
   container:
     workingDir: /data/repo/js/packages/e2e-tests
     image: mcr.microsoft.com/playwright:v1.62.1-noble
+    # Keep the restored npm cache available to the later service transfer.
+    volumeMounts:
+    - name: npm-cache
+      mountPath: /root/.npm/_cacache
     env:
     - name: npm_config_cache
       value: /root/.npm
@@ -48,29 +56,13 @@ spec:
       requests:
         cpu: 3
         memory: 3Gi
-  services:
-    ui:
-      count: 'config.revision == "main" ? 0 : 1'
-      image: node:24-bookworm
-      transfer:
-      - from: /data/repo
-      workingDir: /data/repo/js
-      shell: |
-        npm ci
-        npm run build --workspace=@testkube/web
-        (cd packages/web && npm run env:vercel)
-        (cd packages/web && npx vite preview --host 0.0.0.0 --port 5173)
-      resources:
-        requests:
-          cpu: 2
-          memory: 2Gi
-      timeout: 10m
-      readinessProbe:
-        httpGet:
-          path: /
-          port: 5173
-        periodSeconds: 2
   steps:
+  - name: Prepare UI sources
+    condition: 'config.revision != "main"'
+    shell: |
+      # Snapshot the clean checkout before npm ci creates node_modules.
+      mkdir -p /data/ui-repo
+      cp -a /data/repo/js /data/ui-repo/
   - name: Install dependencies
     shell: npm ci --prefer-offline
     cache:
@@ -80,17 +72,48 @@ spec:
       paths:
       - /root/.npm/_cacache
   - name: Run tests
-    timeout: 18m
-    run:
-      env:
-      # Resolve the preview URL only after the UI service has started.
-      - name: CLOUD_BASE_URL
-        value: '{{ config.revision == "main" ? "https://app.testkube.dev" : "http://" + services.ui.0.ip + ":5173" }}'
-      shell: npx playwright test --retries=1 --workers=2
-    artifacts:
-      paths:
-      - playwright-report/**
-      - test-results/**
+    services:
+      ui:
+        count: 'config.revision == "main" ? 0 : 1'
+        image: node:24-bookworm
+        env:
+        - name: npm_config_cache
+          value: /root/.npm
+        transfer:
+        - from: /data/ui-repo
+          to: /data/repo
+        # The preceding install restores and populates this cache, even on a cold run.
+        - from: /root/.npm/_cacache
+          to: /root/.npm/_cacache
+        workingDir: /data/repo/js
+        shell: |
+          npm ci --prefer-offline
+          npm run build --workspace=@testkube/web
+          (cd packages/web && npm run env:vercel)
+          (cd packages/web && npx vite preview --host 0.0.0.0 --port 5173)
+        resources:
+          requests:
+            cpu: 2
+            memory: 2Gi
+        timeout: 10m
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5173
+          periodSeconds: 2
+    steps:
+    - name: Run Playwright tests
+      timeout: 18m
+      run:
+        env:
+        # Resolve the preview URL only after the UI service has started.
+        - name: CLOUD_BASE_URL
+          value: '{{ config.revision == "main" ? "https://app.testkube.dev" : "http://" + services.ui.0.ip + ":5173" }}'
+        shell: npx playwright test --retries=1 --workers=2
+      artifacts:
+        paths:
+        - playwright-report/**
+        - test-results/**
   - name: E2E Test Coverage report
     optional: true
     shell: npm run scenario-coverage
