@@ -26,6 +26,7 @@ const (
 	EventGitPush                      EventType = "git-push"
 	EventGitTagPush                   EventType = "git-tag-push"
 	EventGitPullRequest               EventType = "git-pull-request"
+	EventHTTPChanged                  EventType = "http-changed"
 	CauseDeploymentScaleUpdate        Cause     = "deployment-scale-update"
 	CauseDeploymentImageUpdate        Cause     = "deployment-image-update"
 	CauseDeploymentEnvUpdate          Cause     = "deployment-env-update"

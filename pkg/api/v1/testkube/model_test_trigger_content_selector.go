@@ -10,5 +10,6 @@
 package testkube
 
 type TestTriggerContentSelector struct {
-	Git *TestTriggerContentGit `json:"git,omitempty"`
+	Git  *TestTriggerContentGit  `json:"git,omitempty"`
+	Http *TestTriggerContentHttp `json:"http,omitempty"`
 }
