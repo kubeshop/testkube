@@ -487,7 +487,7 @@ verify-crds-generated: generate-crds verify-helm-libraries-synced ## Regenerate 
 docker-build: docker-build-api docker-build-cli ## Run docker-build-api and docker-build-cli
 
 .PHONY: docker-build-api
-docker-build-api: ## Build the API server image (linux/amd64) with goreleaser --snapshot (needs Docker)
+docker-build-api: ## Build the API server images for linux/amd64 and linux/arm64/v8 with goreleaser --snapshot (needs Docker buildx able to build both platforms)
 	@echo "Building API server Docker image..."
 	@env ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** \
 		SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** \
