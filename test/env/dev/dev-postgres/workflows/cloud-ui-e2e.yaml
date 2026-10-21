@@ -63,16 +63,33 @@ spec:
     timeout: 10m
     workingDir: /data/repo/js/packages/web
     shell: |
-      # E2E needs runnable assets; skip the package build script's type checking.
-      npx vite build
+      # E2E needs runnable assets without type checking or minification.
+      node --input-type=module <<'NODE'
+      import { build } from 'vite';
+
+      await build({
+        mode: 'production',
+        build: {
+          reportCompressedSize: false,
+          minify: false,
+          cssMinify: false,
+          rolldownOptions: {
+            output: {
+              minify: false,
+            },
+          },
+        },
+      });
+      NODE
       test -s dist/index.html
   - name: Prepare UI preview
     condition: 'passed && config.revision != "main"'
     workingDir: /data/repo/js/packages/web
     shell: |
       npm run env:vercel
-      # Preserve npm's workspace and executable symlinks during the service transfer.
-      tar -czf /data/ui-preview.tar.gz -C /data/repo js
+
+      # Fast compression preserves npm's workspace and executable symlinks.
+      bash -o pipefail -c 'tar -cf - -C /data/repo js | gzip -1 > /data/ui-preview.tar.gz'
   - name: Run tests
     services:
       ui:
