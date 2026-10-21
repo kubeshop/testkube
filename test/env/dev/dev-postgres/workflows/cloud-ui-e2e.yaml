@@ -24,17 +24,9 @@ spec:
       - js
   job:
     activeDeadlineSeconds: 1380
-  pod:
-    volumes:
-    - name: npm-cache
-      emptyDir: {}
   container:
     workingDir: /data/repo/js/packages/e2e-tests
     image: mcr.microsoft.com/playwright:v1.62.1-noble
-    # Keep the restored npm cache available to the later service transfer.
-    volumeMounts:
-    - name: npm-cache
-      mountPath: /root/.npm/_cacache
     env:
     - name: npm_config_cache
       value: /root/.npm
@@ -57,13 +49,8 @@ spec:
         cpu: 3
         memory: 3Gi
   steps:
-  - name: Prepare UI sources
-    condition: 'config.revision != "main"'
-    shell: |
-      # Snapshot the clean checkout before npm ci creates node_modules.
-      mkdir -p /data/ui-repo
-      cp -a /data/repo/js /data/ui-repo/
   - name: Install dependencies
+    workingDir: /data/repo/js
     shell: npm ci --prefer-offline
     cache:
       key: cloud-ui-e2e-v1-npm-{{hash_files("/data/repo/js/package-lock.json")}}
@@ -71,26 +58,38 @@ spec:
       - cloud-ui-e2e-v1-npm-
       paths:
       - /root/.npm/_cacache
+  - name: Build UI
+    condition: 'passed && config.revision != "main"'
+    timeout: 10m
+    workingDir: /data/repo/js/packages/web
+    shell: |
+      # E2E needs runnable assets; skip the package build script's type checking.
+      npx vite build
+      test -s dist/index.html
+  - name: Prepare UI preview
+    condition: 'passed && config.revision != "main"'
+    workingDir: /data/repo/js/packages/web
+    shell: |
+      npm run env:vercel
+      # Preserve npm's workspace and executable symlinks during the service transfer.
+      tar -czf /data/ui-preview.tar.gz -C /data/repo js
   - name: Run tests
     services:
       ui:
         count: 'config.revision == "main" ? 0 : 1'
-        image: node:24-bookworm
-        env:
-        - name: npm_config_cache
-          value: /root/.npm
+        # Match the install/build runtime when reusing its node_modules.
+        image: mcr.microsoft.com/playwright:v1.62.1-noble
         transfer:
-        - from: /data/ui-repo
-          to: /data/repo
-        # The preceding install restores and populates this cache, even on a cold run.
-        - from: /root/.npm/_cacache
-          to: /root/.npm/_cacache
-        workingDir: /data/repo/js
+        - from: /data
+          files:
+          - ui-preview.tar.gz
+          to: /data/ui-preview
+        workingDir: /data/ui-preview
         shell: |
-          npm ci --prefer-offline
-          npm run build --workspace=@testkube/web
-          (cd packages/web && npm run env:vercel)
-          (cd packages/web && npx vite preview --host 0.0.0.0 --port 5173)
+          mkdir -p /data/repo
+          tar -xzf /data/ui-preview/ui-preview.tar.gz -C /data/repo
+          cd /data/repo/js/packages/web
+          npx vite preview --host 0.0.0.0 --port 5173
         resources:
           requests:
             cpu: 2
