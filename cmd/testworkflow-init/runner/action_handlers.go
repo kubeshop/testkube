@@ -121,10 +121,12 @@ func handleExecuteAction(action *lite.ActionExecute, ctx *ExecutionContext) Acti
 		serialized, _ := json.Marshal(ctx.InternalConfig)
 		_ = os.Setenv("TK_CFG", string(serialized))
 		_ = os.Setenv(constants.EnvStepErrorFile, constants.StepErrorPath)
+		_ = os.Setenv(constants.EnvStepReasonFile, constants.StepReasonPath)
 	} else {
 		_ = os.Unsetenv("TK_REF")
 		_ = os.Unsetenv("TK_CFG")
 		_ = os.Unsetenv(constants.EnvStepErrorFile)
+		_ = os.Unsetenv(constants.EnvStepReasonFile)
 	}
 
 	leaf := []*data.StepData{step}

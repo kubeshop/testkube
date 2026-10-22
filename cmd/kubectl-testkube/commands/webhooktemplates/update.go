@@ -57,7 +57,7 @@ func UpdateWebhookTemplateCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&selector, "selector", "", "", "expression to select tests, test suites, test workflows for webhook template events: --selector app=backend")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringVarP(&payloadObjectField, "payload-field", "", "", "field to use for notification object payload")
-	cmd.Flags().StringVarP(&payloadTemplate, "payload-template", "", "", "if webhook template needs to send a custom notification, then a path to template file should be provided")
+	cmd.Flags().StringVarP(&payloadTemplate, "payload-template", "", "", "if webhook template needs to send a custom notification, then a path to template file should be provided, or - to read it from stdin")
 	cmd.Flags().StringToStringVarP(&headers, "header", "", nil, "webhook template header value pair (golang template supported): --header Content-Type=application/xml")
 	cmd.Flags().StringVar(&payloadTemplateReference, "payload-template-reference", "", "reference to payload template to use for the webhook template")
 	cmd.Flags().StringToStringVarP(&config, "config", "", nil, "webhook template config variable with csv coluums (value=data or secret=namespace;name;key): --config var1=\"value=data\" or --config var2=\"secret=ns1;name1;key1\"")

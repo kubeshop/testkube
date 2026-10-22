@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"net/url"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -51,6 +53,184 @@ type CloneOptions struct {
 	RetryDelay time.Duration
 }
 
+// gitFailureKind tells a refusal of access from a server that git cannot reach.
+type gitFailureKind int
+
+const (
+	// gitRefusal is a server that refuses access. A retry cannot fix it.
+	gitRefusal gitFailureKind = iota + 1
+	// gitNetwork is a server that git cannot reach. The network is not part of the workflow, so this
+	// failure gets an infrastructure code, not a configuration code.
+	gitNetwork
+)
+
+// gitFailure is a text that git or SSH writes for a known failure, with the words for the user. Git
+// reports every clone failure with the exit code 128, so the text is the only signal that tells them
+// apart.
+type gitFailure struct {
+	kind  gitFailureKind
+	text  string
+	cause string
+}
+
+// gitFailures hold the failures that the clone step knows, compared without case.
+var gitFailures = []gitFailure{
+	{kind: gitRefusal, text: "Permission denied (publickey)", cause: "the server refused the SSH key"},
+	{kind: gitRefusal, text: "could not read Username", cause: "the repository needs credentials, and git received none"},
+	{kind: gitRefusal, text: "terminal prompts disabled", cause: "the repository needs credentials, and git received none"},
+	{kind: gitRefusal, text: "Authentication failed", cause: "the server refused the credentials"},
+	{kind: gitRefusal, text: "invalid username or password", cause: "the server refused the credentials"},
+	{kind: gitRefusal, text: "HTTP 403", cause: "the server refused the credentials"},
+	{kind: gitRefusal, text: "returned error: 403", cause: "the server refused the credentials"},
+	{kind: gitRefusal, text: "returned error: 401", cause: "the server refused the credentials"},
+	{kind: gitNetwork, text: "could not resolve host"},
+	{kind: gitNetwork, text: "connection refused"},
+	{kind: gitNetwork, text: "connection timed out"},
+	{kind: gitNetwork, text: "operation timed out"},
+	{kind: gitNetwork, text: "failed to connect to"},
+}
+
+// findGitFailure returns the first failure of the kind in the text. The found value is false when
+// the text holds none.
+func findGitFailure(kind gitFailureKind, text string) (gitFailure, bool) {
+	text = strings.ToLower(text)
+	for _, failure := range gitFailures {
+		if failure.kind == kind && strings.Contains(text, strings.ToLower(failure.text)) {
+			return failure, true
+		}
+	}
+	return gitFailure{}, false
+}
+
+// gitDiagnostics keep the "fatal:" line, where git writes the cause of a failure before its hints,
+// and a line that refuses access, which SSH writes before the "fatal:" line.
+var gitDiagnostics = Diagnostics{
+	Cause: func(line string) bool { return strings.HasPrefix(line, "fatal:") },
+	Note: func(line string) bool {
+		_, found := findGitFailure(gitRefusal, line)
+		return found
+	},
+}
+
+func runGit(args ...interface{}) error {
+	return Run(gitDiagnostics, "git", args...)
+}
+
+// runGitWithRetry runs git again after a failure, except after a refusal of access, because a retry
+// cannot fix a credential that the server refused.
+func runGitWithRetry(retries int, delay time.Duration, args ...interface{}) error {
+	return RunWithRetry(retries, delay, isGitAuthError, gitDiagnostics, "git", args...)
+}
+
+// isGitAuthError reports whether the server refused access. Only the output of git tells it, so an
+// error that git did not write is never a refusal.
+func isGitAuthError(err error) bool {
+	var cmdErr *CommandError
+	return errors.As(err, &cmdErr) && cmdErr.Note != ""
+}
+
+// cloneError is the failure of a clone. A credential that git refuses is a different problem from a
+// repository or a revision that does not exist, and the user fixes each one apart, so each gets its
+// own code.
+type cloneError struct {
+	uri string
+	err error
+}
+
+func (e *cloneError) Error() string {
+	return cloneMessage(e.uri, e.err)
+}
+
+func (e *cloneError) Unwrap() error {
+	return e.err
+}
+
+// Reason reads only the output of git, so a text of our own never selects the code of a git failure.
+// An error that git did not write gets git-clone-failed only for an input of the workflow that the
+// step cannot use, such as a bad URI.
+func (e *cloneError) Reason() testkube.StopReason {
+	var cmdErr *CommandError
+	switch {
+	case !errors.As(e.err, &cmdErr):
+		if containsAnyFold(e.err.Error(), cloneInputErrors) {
+			return testkube.StopReasonGitCloneFailed
+		}
+		return ""
+	case isGitAuthError(e.err):
+		return testkube.StopReasonGitAuthFailed
+	case isGitNetworkError(e.err):
+		return testkube.StopReasonGitUnreachable
+	case containsAnyFold(cmdErr.Line, gitMissingErrors):
+		return testkube.StopReasonGitCloneFailed
+	}
+	return ""
+}
+
+// gitMissingErrors are the texts that git writes when the repository, the revision or the path in
+// the workflow does not exist. Only these texts prove a configuration error. Git has many texts for
+// a transport failure, so a failure that none of the lists names gets no code.
+var gitMissingErrors = []string{
+	"repository not found",
+	"' not found",
+	"not found in upstream",
+	"does not appear to be a git repository",
+	"couldn't find remote ref",
+	"did not match any file(s) known to git",
+	"invalid reference",
+	"unknown revision",
+}
+
+// cloneInputErrors are the errors that the clone step returns for an input of the workflow that it
+// cannot use, before git runs.
+var cloneInputErrors = []string{
+	"invalid repository URI",
+	"invalid output path",
+	"setting up authentication",
+	"setting up SSH key",
+}
+
+// containsAnyFold reports whether the text holds one of the parts, compared without case.
+func containsAnyFold(text string, parts []string) bool {
+	text = strings.ToLower(text)
+	for _, part := range parts {
+		if strings.Contains(text, strings.ToLower(part)) {
+			return true
+		}
+	}
+	return false
+}
+
+// isGitNetworkError reports whether git could not reach the server. It reads only the lines that git
+// wrote, so a text in a wrapper of the error does not count.
+func isGitNetworkError(err error) bool {
+	var cmdErr *CommandError
+	if !errors.As(err, &cmdErr) {
+		return false
+	}
+	_, inLine := findGitFailure(gitNetwork, cmdErr.Line)
+	_, inNote := findGitFailure(gitNetwork, cmdErr.Note)
+	return inLine || inNote
+}
+
+// cloneMessage returns the step message for a clone failure. The diagnostic line of git names the
+// cause, so the message drops the steps of the clone and the exit status. A refusal of access gets
+// a sentence that says what the user fixes. The log keeps the full output of git.
+func cloneMessage(rawURI string, err error) string {
+	var cmdErr *CommandError
+	if !errors.As(err, &cmdErr) {
+		return err.Error()
+	}
+	refusal, found := findGitFailure(gitRefusal, cmdErr.Note)
+	if !found {
+		return strings.TrimPrefix(cmdErr.Line, "fatal: ")
+	}
+	host := "the repository"
+	if uri, uriErr := normalizeGitURI(rawURI); uriErr == nil && uri.Hostname() != "" {
+		host = uri.Hostname()
+	}
+	return fmt.Sprintf("Git cannot authenticate to %s: %s.", host, refusal.cause)
+}
+
 // NewCloneCmd creates a new clone command
 func NewCloneCmd() *cobra.Command {
 	opts := &CloneOptions{}
@@ -61,7 +241,8 @@ func NewCloneCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := RunClone(cmd.Context(), args[0], args[1], opts); err != nil {
-				common.Fail(err)
+				fmt.Println(err.Error())
+				common.Fail(&cloneError{uri: args[0], err: err})
 			}
 		},
 	}
@@ -319,14 +500,14 @@ func setupCredentialStore(uri *url.URL) func() {
 	}
 
 	// Configure git to use the credential store
-	if err := Run("git", "config", "--global", "credential.helper", shellquote.Join("store", "--file", credPath)); err != nil {
+	if err := runGit("config", "--global", "credential.helper", shellquote.Join("store", "--file", credPath)); err != nil {
 		fmt.Printf("warn: could not configure credential helper: %s\n", err)
 		_ = os.Remove(credPath)
 		return noop
 	}
 
 	return func() {
-		if err := Run("git", "config", "--global", "--unset", "credential.helper"); err != nil {
+		if err := runGit("config", "--global", "--unset", "credential.helper"); err != nil {
 			fmt.Printf("warn: could not unset credential helper: %s\n", err)
 		}
 
@@ -368,7 +549,7 @@ func performFullClone(uri, outputPath string, configArgs, authArgs []string, opt
 	// using the same fetch+checkout logic as the sparse path.
 	args = append(args, configArgs, authArgs, "--depth", "1", "--no-checkout", opts.gitLogArgs(), uri, outputPath)
 
-	if err := RunWithRetry(retryCount, retryDelay, "git", args...); err != nil {
+	if err := runGitWithRetry(retryCount, retryDelay, args...); err != nil {
 		return err
 	}
 
@@ -410,7 +591,7 @@ func initializeSparseRepo(uri, outputPath string, configArgs, authArgs []string,
 		opts.gitLogArgs(),
 		uri, outputPath)
 
-	return RunWithRetry(retryCount, retryDelay, "git", args...)
+	return runGitWithRetry(retryCount, retryDelay, args...)
 }
 
 // configureSparseCheckout sets up sparse checkout patterns
@@ -425,7 +606,7 @@ func configureSparseCheckout(repoPath string, configArgs, paths []string, opts *
 
 	sparseArgs = append(sparseArgs, paths)
 
-	return RunWithRetry(retryCount, retryDelay, "git", sparseArgs...)
+	return runGitWithRetry(retryCount, retryDelay, sparseArgs...)
 }
 
 // checkoutRevision checks out a specific revision or the default branch
@@ -433,21 +614,21 @@ func checkoutRevision(repoPath string, configArgs, authArgs []string, opts *Clon
 	if opts.Revision == "" {
 		// For sparse checkout, we need to populate the working directory
 		// The sparse-checkout configuration will control which files are checked out
-		return Run("git", "-C", repoPath, configArgs, "read-tree", "-m", "-u", "HEAD")
+		return runGit("-C", repoPath, configArgs, "read-tree", "-m", "-u", "HEAD")
 	}
 
 	if err := fetchRevision(repoPath, configArgs, authArgs, opts); err != nil {
 		return fmt.Errorf("fetching revision: %w", err)
 	}
 
-	if err := Run("git", "-C", repoPath, configArgs, "checkout", "FETCH_HEAD"); err != nil {
+	if err := runGit("-C", repoPath, configArgs, "checkout", "FETCH_HEAD"); err != nil {
 		return fmt.Errorf("checking out FETCH_HEAD: %w", err)
 	}
 
 	// Create branch for non-commit references
 	// Skip branch creation if revision looks like a commit hash (40 hex chars)
 	if !isCommitHash(opts.Revision) {
-		if err := Run("git", "-C", repoPath, configArgs, "checkout", "-B", opts.Revision); err != nil {
+		if err := runGit("-C", repoPath, configArgs, "checkout", "-B", opts.Revision); err != nil {
 			return fmt.Errorf("creating branch: %w", err)
 		}
 	}
@@ -461,7 +642,7 @@ func fetchRevision(repoPath string, configArgs, authArgs []string, opts *CloneOp
 	fetchArgs := []interface{}{"-C", repoPath}
 	fetchArgs = append(fetchArgs, configArgs, "fetch", authArgs, "--depth", "1", opts.gitLogArgs(), "origin", opts.Revision)
 
-	return RunWithRetry(retryCount, retryDelay, "git", fetchArgs...)
+	return runGitWithRetry(retryCount, retryDelay, fetchArgs...)
 }
 
 // isCommitHash checks if a string looks like a git commit hash

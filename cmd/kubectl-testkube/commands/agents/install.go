@@ -3,7 +3,6 @@ package agents
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
@@ -45,6 +44,9 @@ func NewInstallAgentCommand() *cobra.Command {
 
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the runner")
 	common2.PopulateRunnerFlags(cmd)
+	// Only here: `pro connect` shares the flag but always asks for confirmation, which needs
+	// the terminal that piped input takes.
+	cmd.Flags().Lookup("global-template-path").Usage = "include global template, or - to read it from stdin"
 	return cmd
 }
 
@@ -136,7 +138,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 	var globalTemplate []byte
 	if globalTemplatePath != "" {
 		var err error
-		globalTemplate, err = os.ReadFile(globalTemplatePath)
+		globalTemplate, err = common2.ReadFileOrStdin(cmd, globalTemplatePath)
 		if err != nil {
 			common2.HandleCLIError(common2.NewCLIError(
 				common2.TKErrInvalidRuntimeParameter,

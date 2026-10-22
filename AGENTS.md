@@ -122,9 +122,9 @@ A synced resource in the Control Plane is exclusively owned by one GitOps agent,
 1. **Schema** — `Syncable.gitOpsOwner` in `api/v1/testkube.yaml`, a `GitOpsOwner` holding the authoritative `agentId` plus a display-only `agentName` that may be stale after a rename. Run `make generate-openapi` after editing.
 2. **Wire** — the Control Plane rejects a sync from a non-owning agent with the gRPC status `codes.FailedPrecondition`. That code is reserved for ownership conflicts on the sync API; do not reuse it there for other validation failures, or agents will misreport the cause.
 3. **Agent translation** — `translateError` in `internal/sync/grpc/errors.go` maps `FailedPrecondition` onto the `ErrOwnershipConflict` sentinel in `internal/sync/errors.go`, keeping the original status in the error chain because its message names the current owner. Callers match on the sentinel so that no layer above the client depends on gRPC.
-4. **Reconciliation** — `terminalOnOwnershipConflict` in `internal/sync/controller/errors.go` wraps a conflict in `reconcile.TerminalError` so controller-runtime stops requeueing something no retry can fix, while every other error stays retryable with backoff. Conflicts are deliberately not logged there: controller-runtime already logs whatever a reconciler returns, along with the kind and name of the resource.
+4. **Reconciliation** — `terminalOnRejection` in `internal/sync/controller/errors.go` wraps a rejection (an ownership conflict or an invalid resource, see `syncagent.IsRejection`) in `reconcile.TerminalError` so controller-runtime stops requeueing something no retry can fix, while every other error stays retryable with backoff. Rejections are deliberately not logged there: controller-runtime already logs whatever a reconciler returns, along with the kind and name of the resource.
 
-`skipUnownedResource` in `cmd/api-server/superagentmigration.go` applies the same rule outside the reconcilers, during SuperAgent migration. That migration retries sync failures forever by design, so a conflict has to break the loop or a single unowned resource wedges the migration indefinitely.
+`skipRejectedResource` in `cmd/api-server/superagentmigration.go` applies the same rule outside the reconcilers, during SuperAgent migration. That migration retries sync failures forever by design, so a rejection has to break the loop or a single unowned or invalid resource wedges the migration indefinitely.
 
 The Control Plane side lives in `testkube-cloud-api`: it persists the owner on the six syncable tables and enforces it in `internal/sync/ownership.go`, on every Upsert and Delete path. Enforcement is opt-in per organization (the `gitOpsOwnership` setting), so with it off an agent never sees a conflict. Ownership is transferred from Git by setting the `testkube.io/gitops-owner` annotation on the Kubernetes resource to the new owner's agent ID. The agent sends the annotation with the resource, and the Control Plane reads it, so the agent needs no code for it. The agent name is display-only and never authorizes anything.
 
@@ -254,6 +254,10 @@ contents do.
 - `GetClient` (`cmd/kubectl-testkube/commands/common/client.go`) uses `ui.StdinIsInteractive()` to refuse starting a login when a token refresh fails with no terminal present, the same way the email-link branch beside it already does.
 - Adding a new prompt: use the `ui` helpers rather than pterm directly, and it inherits the guard. Adding a command that must not prompt at all: branch on `ui.StdinIsInteractive()`.
 - Tests flip the unexported `stdinIsInteractive` seam rather than allocating a pseudo terminal.
+
+### CLI file input
+
+- A flag that names a file to read takes `-` for the command's standard input (`common.ReadFileOrStdin` in `cmd/kubectl-testkube/commands/common/input.go`), so content can be piped: `cat payload.json | testkube create webhook --payload-template -`. Read new file flags through it, and use `cmd.InOrStdin()` rather than `os.Stdin` so tests can supply the input.
 
 ### CLI upgrade
 
