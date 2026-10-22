@@ -79,6 +79,28 @@ func TestFromExecution(t *testing.T) {
 			},
 		},
 		{
+			name: "gives the id of a group to the child that runs its operation",
+			execution: &testkube.TestWorkflowExecution{
+				Signature: []testkube.TestWorkflowSignature{
+					{Ref: "rgroup", Id: "build", Name: "Build", Children: []testkube.TestWorkflowSignature{
+						{Ref: "rshell", Id: "build"},
+						{Ref: "rartifacts", Category: "Upload artifacts"},
+					}},
+				},
+				Result: &testkube.TestWorkflowResult{
+					Steps: map[string]testkube.TestWorkflowStepResult{
+						"rgroup": {ErrorMessage: "a child step failed"},
+						"rshell": {ErrorMessage: "the command failed", Attempts: 2},
+					},
+				},
+			},
+			want: Execution{
+				Outputs:      map[string]string{},
+				StepErrors:   map[string]string{"rgroup": "a child step failed", "build": "the command failed"},
+				StepAttempts: map[string]int64{"build": 2},
+			},
+		},
+		{
 			name: "fills the status fields from the object, keys the step by id, and leaves the message out",
 			execution: &testkube.TestWorkflowExecution{
 				Id:        "exec-2",
