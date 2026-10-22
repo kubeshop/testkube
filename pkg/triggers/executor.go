@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -227,6 +228,18 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *internalTrigg
 	executions, err := s.testWorkflowExecutor.Execute(ctx, request)
 	if err != nil {
 		s.logger.Errorw(fmt.Sprintf("trigger service: error executing testworkflow for trigger %s/%s (source %s)", t.Namespace, t.Name, t.Source), "error", err)
+		// A broken reply stream does not mean nothing was scheduled, so repeating the request could
+		// start the workflows twice. Keep what was received and let the caller treat it as handled.
+		var interrupted *testworkflowexecutor.ScheduleInterruptedError
+		if errors.As(err, &interrupted) {
+			for _, exec := range executions {
+				status.addTestWorkflowExecutionID(exec.Id)
+			}
+			if len(executions) > 0 {
+				status.start()
+			}
+			return nil
+		}
 		if reportsScheduleErrors(ctx) {
 			return fmt.Errorf("scheduling testworkflow executions: %w", err)
 		}

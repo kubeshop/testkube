@@ -426,3 +426,57 @@ func TestHTTPContentWatcher_RetriesAfterASchedulingFailure(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	assert.EqualValues(t, 2, attempts.Load(), "a scheduled change is not fired again")
 }
+
+func TestHTTPContentWatcher_DoesNotRetryAnInterruptedSchedule(t *testing.T) {
+	server := newVersionServer("1.0.0")
+	defer server.Close()
+	trigger := httpContentTrigger(server.URL)
+	internal := convertV1ToInternal(trigger)
+	internal.WorkflowSelector = internalTriggerSelector{Name: "smoke"}
+
+	ctrl := gomock.NewController(t)
+	workflows := testworkflowclient.NewMockTestWorkflowClient(ctrl)
+	workflows.EXPECT().Get(gomock.Any(), "", "smoke").Return(&testkube.TestWorkflow{Name: "smoke"}, nil).AnyTimes()
+	var attempts atomic.Int32
+	executor := testworkflowexecutor.NewMockTestWorkflowExecutor(ctrl)
+	executor.EXPECT().Execute(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(context.Context, *cloud.ScheduleRequest) ([]testkube.TestWorkflowExecution, error) {
+			attempts.Add(1)
+			// The scheduler saved the execution, but the reply stream broke.
+			return []testkube.TestWorkflowExecution{{Id: "exec-1"}},
+				&testworkflowexecutor.ScheduleInterruptedError{Err: errors.New("stream reset")}
+		}).AnyTimes()
+
+	key := newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name)
+	status := &triggerStatus{trigger: internal}
+	s := &Service{
+		triggerStatus:        map[statusKey]*triggerStatus{key: status},
+		testWorkflowsClient:  workflows,
+		testWorkflowExecutor: executor,
+		logger:               log.DefaultLogger,
+		metrics:              metrics.NewMetrics(),
+	}
+	s.triggerExecutor = s.execute
+	w := newHTTPContentWatcher(s)
+	w.reconcileInterval = 10 * time.Millisecond
+	w.minInterval = 0
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		w.run(ctx)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		<-done
+	})
+
+	time.Sleep(100 * time.Millisecond)
+	server.version.Store("1.1.0")
+
+	require.Eventually(t, func() bool { return attempts.Load() >= 1 }, 5*time.Second, 10*time.Millisecond,
+		"the change is scheduled")
+	time.Sleep(200 * time.Millisecond)
+	assert.EqualValues(t, 1, attempts.Load(), "an interrupted schedule is not repeated, it could start the workflows twice")
+	assert.Contains(t, status.getTestWorkflowExecutionIDs(), "exec-1", "the executions that were received are tracked")
+}

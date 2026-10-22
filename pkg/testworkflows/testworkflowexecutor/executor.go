@@ -57,6 +57,17 @@ func New(
 	}
 }
 
+// ScheduleInterruptedError reports that the reply stream of a schedule request broke after the
+// request was accepted. Executions may have been created even though the reply is incomplete, so
+// callers must not repeat the request.
+type ScheduleInterruptedError struct {
+	Err error
+}
+
+func (e *ScheduleInterruptedError) Error() string { return e.Err.Error() }
+
+func (e *ScheduleInterruptedError) Unwrap() error { return e.Err }
+
 func (e *executor) Execute(ctx context.Context, req *cloud.ScheduleRequest) ([]testkube.TestWorkflowExecution, error) {
 	environmentId := e.defaultEnvironmentId
 
@@ -99,7 +110,9 @@ func (e *executor) Execute(ctx context.Context, req *cloud.ScheduleRequest) ([]t
 	}
 
 	if resultStream.Error() != nil {
-		return nil, resultStream.Error()
+		// The scheduler saves the executions before it replies, so a broken reply stream does not
+		// mean that nothing was scheduled. Return what was received and tag the error.
+		return results, &ScheduleInterruptedError{Err: resultStream.Error()}
 	}
 
 	return results, nil
