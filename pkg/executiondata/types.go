@@ -245,20 +245,36 @@ func stepStrings(execution *testkube.TestWorkflowExecution, field func(step test
 func stepKeys(execution *testkube.TestWorkflowExecution) map[string]string {
 	keys := make(map[string]string)
 	used := make(map[string]bool)
-	for i := range execution.Signature {
-		for _, sig := range execution.Signature[i].Sequence() {
+	var walk func(signatures []testkube.TestWorkflowSignature)
+	walk = func(signatures []testkube.TestWorkflowSignature) {
+		for _, sig := range signatures {
 			key := sig.Id
 			if key == "" {
 				key = sig.Label()
 			}
-			if key == "" || used[key] {
-				continue
+			if key != "" && !used[key] && !givesIdToChild(sig) {
+				keys[sig.Ref] = key
+				used[key] = true
 			}
-			keys[sig.Ref] = key
-			used[key] = true
+			walk(sig.Children)
 		}
 	}
+	walk(execution.Signature)
 	return keys
+}
+
+// givesIdToChild reports whether the group gives its id to a child. The processor gives the id of
+// a step to the stage that runs its operation, and that stage reports the errors and the attempts.
+func givesIdToChild(sig testkube.TestWorkflowSignature) bool {
+	if sig.Id == "" {
+		return false
+	}
+	for _, child := range sig.Children {
+		if child.Id == sig.Id {
+			return true
+		}
+	}
+	return false
 }
 
 // stepKey returns the key of the step ref, and the ref when the step has no key.
