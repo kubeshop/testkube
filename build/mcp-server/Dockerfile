@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-ARG ALPINE_IMAGE=alpine:3.24.2
+ARG ALPINE_IMAGE=alpine:3.24.3
 
 # Build stage
 FROM --platform=$BUILDPLATFORM golang:1.27.2-alpine AS build
