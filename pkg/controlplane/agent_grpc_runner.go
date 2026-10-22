@@ -143,9 +143,9 @@ func (s *Server) abortExecution(ctx context.Context, executionId string, cause a
 	return nil
 }
 
-// endEvents returns the events of an execution that ended: the event of its status, and then the
-// not-passed event for every end that is not a pass. A webhook on a failure type reads the
-// not-passed event, so an execution that a runner declines sends it too.
+// endEvents returns the events of an execution that ended, the event of its status first.
+// Every end that is not a pass also sends the not-passed event. A webhook on a failure type
+// reads that event.
 func endEvents(execution *testkube.TestWorkflowExecution, envID string) []testkube.Event {
 	var events []testkube.Event
 	switch {
