@@ -79,6 +79,7 @@ Write the failing test first, at the lowest level that shows the bug, then fix i
 ### Configuration references
 
 - Agent behavior is driven by env vars defined in `internal/config/config.go` (scan for `envconfig:"..."` tags when researching a toggle).
+- Helm chart values are the source of deployment defaults. For concrete local overrides, see `build/_local/values.dev.tpl.yaml`: `tk-dev` (in testkube-cloud-api, `js/scripts/tk-dev`) deploys the agent with a copy of it at `build/_local/values.dev.yaml`, which is gitignored.
 - The convert tool does not use `internal/config`. Each flag in `cmd/convert/main.go` falls back to an env var: it reuses the API server's `API_MONGO_*`, `API_POSTGRES_DSN`, `SKIP_DB_CREATION` and `DISABLE_POSTGRES_MIGRATIONS`, and adds its own `CONVERT_BATCH_SIZE`, `CONVERT_READ_BATCH_SIZE`, `CONVERT_DRY_RUN`, `CONVERT_RESET`, `CONVERT_RESET_CONFIRMED`, `CONVERT_SKIP_ERRORS`, `CONVERT_SKIP` and `CONVERT_VERIFY`. MongoDB TLS material is passed as file paths, because the tool has no cluster client to read a Secret with.
 - GitOps sync of Kubernetes resources into the Control Plane is gated by `GITOPS_KUBERNETES_TO_CLOUD_ENABLED` (default `false`), and additionally requires the Control Plane to report cloud storage support.
 - TestTriggers accept `spec.event` or a `spec.events` list (mutually exclusive, validated service-side); always consume them via `EffectiveEvents()` so both forms are honored — classification gates that read the single `event` field directly will silently skip list-form triggers.
@@ -291,6 +292,7 @@ contents do.
 A package documents its own behaviour in its `doc.go`. Reviewers ask for that instead of a new `AGENTS.md` or `ARCHITECTURE.md` section, so write or update the `doc.go` first. After a code change, update these two files only when one of the following is true:
 
 - **New or removed entry points** (`cmd/` binaries, API routes, controllers) → update both files.
+- **Changed detection or identification logic** (cluster type, CLI run context, Docker context, AI tool) → update its section here ("Telemetry and cluster detection", "CLI update check") and anything `ARCHITECTURE.md` says about it.
 - **A contract with another repository or component changes** (a proto, the OpenAPI schema, something the Control Plane imports) → update the section that names both ends here.
 - **New storage backends, event listeners, CRDs, or external integrations** → update `ARCHITECTURE.md`.
 - **New configuration knobs or environment variables** → mention them in `AGENTS.md` under "Configuration references" if they affect agent behavior.
