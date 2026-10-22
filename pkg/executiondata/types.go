@@ -81,13 +81,13 @@ type Execution struct {
 	Outputs map[string]string `json:"outputs,omitempty"`
 	// ErrorMessage is the message of the initialization step, empty when it has none.
 	ErrorMessage string `json:"errorMessage,omitempty"`
-	// StepErrors are the messages of the steps that have one, keyed by step key.
+	// StepErrors are the messages of the steps that have one, keyed by the step key of stepKeys.
 	StepErrors map[string]string `json:"stepErrors,omitempty"`
-	// StepAttempts are the numbers of attempts of the steps that report one, keyed by step key.
+	// StepAttempts are the numbers of attempts of the steps that report one, keyed by the step key of stepKeys.
 	StepAttempts map[string]int64 `json:"stepAttempts,omitempty"`
 	// ErrorReason is the reason code of the initialization step, empty when it has none.
 	ErrorReason string `json:"errorReason,omitempty"`
-	// StepReasons are the reason codes of the steps that have one, keyed by step key.
+	// StepReasons are the reason codes of the steps that have one, keyed by the step key of stepKeys.
 	StepReasons map[string]string `json:"stepReasons,omitempty"`
 	// StatusType is the layer that made the execution fail, empty when it passed.
 	StatusType string `json:"statusType,omitempty"`
@@ -214,7 +214,7 @@ func ReasonsOf(execution *testkube.TestWorkflowExecution) (string, map[string]st
 }
 
 // stepStrings returns the field of the initialization step and the same field of every step that
-// holds a value, keyed by step key. It returns a nil map when no step holds one.
+// holds a value, keyed by the step key of stepKeys. It returns a nil map when no step holds one.
 func stepStrings(execution *testkube.TestWorkflowExecution, field func(step testkube.TestWorkflowStepResult) string) (string, map[string]string) {
 	if execution == nil || execution.Result == nil {
 		return "", nil
@@ -239,9 +239,9 @@ func stepStrings(execution *testkube.TestWorkflowExecution, field func(step test
 }
 
 // stepKeys maps the ref of each step to its key. The ref is random, so the key is the id of the
-// step, and the name or the category of the step when it has no id. A toolkit step, for example
-// the clone of a repository, has only a category. A step keeps its ref when an earlier step uses
-// its key, because a name or a parallel id can repeat in one signature.
+// step. A step without an id uses its name or its category. A toolkit step, for example a clone,
+// has only a category. A step keeps its ref when an earlier step uses its key, because names and
+// parallel ids can repeat.
 func stepKeys(execution *testkube.TestWorkflowExecution) map[string]string {
 	keys := make(map[string]string)
 	used := make(map[string]bool)
@@ -263,8 +263,8 @@ func stepKeys(execution *testkube.TestWorkflowExecution) map[string]string {
 	return keys
 }
 
-// givesIdToChild reports whether the group gives its id to a child. The processor gives the id of
-// a step to the stage that runs its operation, and that stage reports the errors and the attempts.
+// givesIdToChild reports whether the group gives its id to a child. The processor gives the id of a
+// step to the stage that runs its operation. That stage reports the errors and the attempts.
 func givesIdToChild(sig testkube.TestWorkflowSignature) bool {
 	if sig.Id == "" {
 		return false
