@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -18,7 +20,11 @@ import (
 	v1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 func TestSelectHTTPContent(t *testing.T) {
@@ -330,4 +336,93 @@ func TestHTTPContentTargets_SkipsOtherTriggers(t *testing.T) {
 
 	assert.Len(t, targets, 1)
 	assert.Contains(t, targets, newStatusKey(triggerSourceV1, "testkube", "on-version"))
+}
+
+func TestHTTPContentWatcher_DoesNotForwardHeadersToAnotherOrigin(t *testing.T) {
+	var leaked atomic.Bool
+	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-API-Key") != "" {
+			leaked.Store(true)
+		}
+	}))
+	defer other.Close()
+	var sameOrigin atomic.Int32
+	server := httptest.NewServer(nil)
+	defer server.Close()
+	server.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/elsewhere":
+			http.Redirect(w, r, other.URL, http.StatusFound)
+		case "/final":
+			sameOrigin.Add(1)
+			_, _ = w.Write([]byte(`ok`))
+		default:
+			http.Redirect(w, r, "/final", http.StatusFound)
+		}
+	})
+
+	w := newHTTPContentWatcher(&Service{logger: log.DefaultLogger})
+	spec := v1.TestTriggerContentHTTPSpec{URL: server.URL + "/elsewhere", Headers: map[string]string{"X-API-Key": "s3cret"}}
+
+	_, err := w.fetch(context.Background(), "testkube", spec)
+	assert.ErrorContains(t, err, "another origin")
+	assert.False(t, leaked.Load(), "a custom header must not reach another origin")
+
+	spec.URL = server.URL + "/start"
+	_, err = w.fetch(context.Background(), "testkube", spec)
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, sameOrigin.Load(), "a redirect within the origin is followed")
+}
+
+// A scheduling failure from the real executor reaches the poller, which retries the change on
+// the next poll, rather than recording the new value as handled.
+func TestHTTPContentWatcher_RetriesAfterASchedulingFailure(t *testing.T) {
+	server := newVersionServer("1.0.0")
+	defer server.Close()
+	trigger := httpContentTrigger(server.URL)
+	internal := convertV1ToInternal(trigger)
+	internal.WorkflowSelector = internalTriggerSelector{Name: "smoke"}
+
+	ctrl := gomock.NewController(t)
+	workflows := testworkflowclient.NewMockTestWorkflowClient(ctrl)
+	workflows.EXPECT().Get(gomock.Any(), "", "smoke").Return(&testkube.TestWorkflow{Name: "smoke"}, nil).AnyTimes()
+	var attempts atomic.Int32
+	executor := testworkflowexecutor.NewMockTestWorkflowExecutor(ctrl)
+	executor.EXPECT().Execute(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(context.Context, *cloud.ScheduleRequest) ([]testkube.TestWorkflowExecution, error) {
+			if attempts.Add(1) == 1 {
+				return nil, errors.New("scheduler unavailable")
+			}
+			return []testkube.TestWorkflowExecution{{Id: "exec-1"}}, nil
+		}).AnyTimes()
+
+	s := &Service{
+		triggerStatus:        map[statusKey]*triggerStatus{newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name): {trigger: internal}},
+		testWorkflowsClient:  workflows,
+		testWorkflowExecutor: executor,
+		logger:               log.DefaultLogger,
+		metrics:              metrics.NewMetrics(),
+	}
+	s.triggerExecutor = s.execute
+	w := newHTTPContentWatcher(s)
+	w.reconcileInterval = 10 * time.Millisecond
+	w.minInterval = 0
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		w.run(ctx)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		<-done
+	})
+
+	time.Sleep(100 * time.Millisecond)
+	server.version.Store("1.1.0")
+
+	require.Eventually(t, func() bool { return attempts.Load() >= 2 }, 5*time.Second, 10*time.Millisecond,
+		"the change is retried after the scheduling failure")
+	time.Sleep(100 * time.Millisecond)
+	assert.EqualValues(t, 2, attempts.Load(), "a scheduled change is not fired again")
 }

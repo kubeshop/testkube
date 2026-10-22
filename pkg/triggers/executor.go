@@ -49,6 +49,20 @@ func newTriggerRunningContext(triggerName string) *testkube.TestWorkflowRunningC
 	}
 }
 
+type scheduleErrorsKey struct{}
+
+// withScheduleErrors makes execute return a scheduling failure instead of only logging it, for
+// callers that can retry the event, such as the HTTP content poller. Event handlers that cannot
+// retry keep the logged-only behavior, so that one failure does not stop the other triggers.
+func withScheduleErrors(ctx context.Context) context.Context {
+	return context.WithValue(ctx, scheduleErrorsKey{}, true)
+}
+
+func reportsScheduleErrors(ctx context.Context) bool {
+	reported, _ := ctx.Value(scheduleErrorsKey{}).(bool)
+	return reported
+}
+
 func (s *Service) execute(ctx context.Context, e *watcherEvent, t *internalTrigger) error {
 	// If the trigger was removed between match() and execute() (concurrent
 	// DeleteFunc), the status entry is gone — don't fire executions for a
@@ -213,6 +227,9 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *internalTrigg
 	executions, err := s.testWorkflowExecutor.Execute(ctx, request)
 	if err != nil {
 		s.logger.Errorw(fmt.Sprintf("trigger service: error executing testworkflow for trigger %s/%s (source %s)", t.Namespace, t.Name, t.Source), "error", err)
+		if reportsScheduleErrors(ctx) {
+			return fmt.Errorf("scheduling testworkflow executions: %w", err)
+		}
 		return nil
 	}
 	executionIDs := make([]string, 0, len(executions))

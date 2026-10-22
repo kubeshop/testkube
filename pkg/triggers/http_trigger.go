@@ -29,6 +29,8 @@ const (
 	httpContentReconcileInterval = 5 * time.Second
 	// maxHTTPContentBody bounds the response a poll reads; a larger one is a failed poll.
 	maxHTTPContentBody = 10 << 20
+	// maxHTTPContentRedirects bounds the redirects a poll follows, as the default policy does.
+	maxHTTPContentRedirects = 10
 )
 
 var errHTTPTriggerTargetNotReady = errors.New("http trigger target not ready")
@@ -94,10 +96,23 @@ func newHTTPContentWatcher(s *Service) *httpContentWatcher {
 		service:           s,
 		reconcileInterval: httpContentReconcileInterval,
 		minInterval:       v1.MinHTTPContentInterval,
-		client:            &http.Client{Transport: http.DefaultTransport.(*http.Transport).Clone()},
-		insecureClient:    &http.Client{Transport: insecure},
+		client:            &http.Client{Transport: http.DefaultTransport.(*http.Transport).Clone(), CheckRedirect: sameOriginRedirect},
+		insecureClient:    &http.Client{Transport: insecure, CheckRedirect: sameOriginRedirect},
 		pollers:           map[statusKey]*httpContentPoller{},
 	}
+}
+
+// sameOriginRedirect follows a redirect only within the origin the trigger was configured with.
+// The request carries the trigger's headers, including values read from a Secret, and Go would
+// forward custom headers to any host a redirect points at.
+func sameOriginRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) >= maxHTTPContentRedirects {
+		return fmt.Errorf("stopped after %d redirects", maxHTTPContentRedirects)
+	}
+	if first := via[0].URL; req.URL.Scheme != first.Scheme || req.URL.Host != first.Host {
+		return fmt.Errorf("refusing to follow a redirect to another origin (%s://%s)", req.URL.Scheme, req.URL.Host)
+	}
+	return nil
 }
 
 // runHTTPContentWatcher polls the HTTP content triggers until ctx is done. It runs as a leader
@@ -178,7 +193,7 @@ func (w *httpContentWatcher) poll(ctx context.Context, key statusKey, namespace 
 			}
 			failing = false
 			if fire, previous := state.observe(observation.Value, spec.FireOnFirstObservation); fire {
-				if err := w.service.matchHTTPTrigger(ctx, key, spec.URL, observation, previous); err != nil {
+				if err := w.service.matchHTTPTrigger(withScheduleErrors(ctx), key, spec.URL, observation, previous); err != nil {
 					logger.Errorw("trigger service: firing http content trigger failed, retrying on the next poll", "error", err)
 					state.restore(previous)
 				}
