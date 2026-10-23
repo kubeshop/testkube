@@ -49,8 +49,9 @@ const (
 	StopReasonJobDeleted       StopReason = "job-deleted"
 
 	// Another component of the execution decided the stop.
-	StopReasonFailFast     StopReason = "fail-fast"
-	StopReasonTriggerAbort StopReason = "trigger-abort"
+	StopReasonFailFast      StopReason = "fail-fast"
+	StopReasonTriggerAbort  StopReason = "trigger-abort"
+	StopReasonParentAborted StopReason = "parent-aborted"
 
 	// The test itself failed, and no other signal explains the result.
 	StopReasonExitCode StopReason = "exit-code"
@@ -131,6 +132,8 @@ func (r StopReason) Sentence() string {
 		return "another parallel worker failed"
 	case StopReasonTriggerAbort:
 		return "the trigger of the execution was deleted"
+	case StopReasonParentAborted:
+		return "the parent execution was aborted"
 	case StopReasonExitCode:
 		return "a step of the test failed"
 	case StopReasonUnknown:
