@@ -13,7 +13,7 @@ import (
 // same number.
 func freePort(t *testing.T) int {
 	t.Helper()
-	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	lis, err := listen(t, "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("cannot reserve a port: %v", err)
 	}
@@ -47,10 +47,18 @@ func get(t *testing.T, port int, path string) *http.Response {
 	}
 }
 
+// listen opens a listener tied to the test's lifetime.
+func listen(t *testing.T, addr string) (net.Listener, error) {
+	t.Helper()
+	var lc net.ListenConfig
+	return lc.Listen(t.Context(), "tcp", addr)
+}
+
 // bind reports whether the port can be listened on, which is what the real API
 // server does right after the startup health server is stopped.
-func bind(port int) error {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+func bind(t *testing.T, port int) error {
+	t.Helper()
+	lis, err := listen(t, fmt.Sprintf(":%d", port))
 	if err != nil {
 		return err
 	}
@@ -89,13 +97,13 @@ func TestStopReleasesThePort(t *testing.T) {
 	// this would pass against a server that never started.
 	resp := get(t, port, "/health")
 	resp.Body.Close()
-	if err := bind(port); err == nil {
+	if err := bind(t, port); err == nil {
 		t.Fatal("port was bindable while the startup health server was running")
 	}
 
 	stop()
 
-	if err := bind(port); err != nil {
+	if err := bind(t, port); err != nil {
 		t.Fatalf("API port still held after stop: %v", err)
 	}
 }
@@ -121,7 +129,7 @@ func TestStopBeforeTheListenerBinds(t *testing.T) {
 	// Give a late ListenAndServe a chance to bind after Shutdown, which is the
 	// failure this guards against.
 	time.Sleep(200 * time.Millisecond)
-	if err := bind(port); err != nil {
+	if err := bind(t, port); err != nil {
 		t.Fatalf("API port held after an immediate stop: %v", err)
 	}
 }
@@ -131,7 +139,7 @@ func TestStopBeforeTheListenerBinds(t *testing.T) {
 // but it must not panic or stall the caller.
 func TestStartOnABusyPortDoesNotBlockStartup(t *testing.T) {
 	port := freePort(t)
-	squatter, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	squatter, err := listen(t, fmt.Sprintf(":%d", port))
 	if err != nil {
 		t.Fatalf("cannot occupy the port: %v", err)
 	}
