@@ -204,6 +204,14 @@ Define API environment in agent mode
   {{- else }}
   value:  ""
   {{- end }}
+{{/* In this mode the Control Plane owns the bucket, so this is not a rule the agent
+     installs but one it is told about: the shared cache volume's sweep is held to at
+     least this long, because deleting an entry while the object pointing at it is
+     still served leaves that key restoring nothing until the object goes. Without it
+     the agent falls back to its own one-day default, which has nothing to do with the
+     store the pointers are actually written to. */}}
+- name: "STORAGE_CACHE_EXPIRATION"
+  value:  "{{ .Values.storage.cacheExpiration }}"
 {{- end }}
 
 {{/*
