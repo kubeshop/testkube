@@ -29,7 +29,7 @@ const cleanupRetryCount = 5
 // cleanupRetryDelay is a var so tests can shorten it, matching pkg/runner's overridable delay.
 var cleanupRetryDelay = 500 * time.Millisecond
 
-// cleanupRetryBudget is the wall time one cleanupPolicy call can spend sleeping.
+// cleanupRetryBudget is the longest time that one call under cleanupPolicy waits between attempts.
 func cleanupRetryBudget() time.Duration {
 	var total time.Duration
 	for attempt := 0; attempt < cleanupRetryCount-1; attempt++ {
