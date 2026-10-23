@@ -8344,6 +8344,90 @@ components:
       properties:
         git:
           $ref: "#/components/schemas/TestTriggerContentGit"
+        http:
+          $ref: "#/components/schemas/TestTriggerContentHttp"
+
+    TestTriggerContentHttp:
+      type: object
+      description: An HTTP endpoint that a content trigger polls. The trigger fires its http-changed event when the selected value of the response changes.
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          description: URL of the endpoint to poll (http or https).
+        method:
+          type: string
+          description: HTTP method of the request, GET by default.
+          enum:
+            - GET
+            - HEAD
+            - POST
+            - PUT
+            - PATCH
+            - DELETE
+            - OPTIONS
+        headers:
+          type: object
+          description: "Headers sent with every request. Warning: these are stored in plain text in the trigger spec; prefer headersFrom for credentials."
+          additionalProperties:
+            type: string
+        headersFrom:
+          type: array
+          description: Headers whose values are read from a Secret or ConfigMap in the trigger's namespace on every poll.
+          items:
+            $ref: "#/components/schemas/TestTriggerContentHttpHeaderSource"
+        body:
+          type: string
+          description: Body sent with every request, e.g. for a POST or GraphQL endpoint.
+        interval:
+          type: string
+          format: duration
+          example: 1m
+          description: Interval between polls, 1m by default and at least 10s.
+        timeout:
+          type: string
+          format: duration
+          example: 10s
+          description: Timeout of one request, 10s by default.
+        insecureSkipVerify:
+          type: boolean
+          description: Skip the verification of the server's TLS certificate.
+        expectedStatus:
+          type: array
+          description: Status codes of a successful poll, 200 by default. A response with any other code is a failed poll, never a change.
+          items:
+            type: integer
+            format: int32
+        select:
+          $ref: "#/components/schemas/TestTriggerContentHttpSelect"
+        fireOnFirstObservation:
+          type: boolean
+          description: Fire the trigger on the first successful poll. By default the first poll only records the value to compare later polls against.
+
+    TestTriggerContentHttpHeaderSource:
+      type: object
+      description: A request header whose value is read from a Secret or ConfigMap.
+      required:
+        - name
+        - valueFrom
+      properties:
+        name:
+          type: string
+          description: Name of the header.
+        valueFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+
+    TestTriggerContentHttpSelect:
+      type: object
+      description: The part of an HTTP response that a content trigger watches. At most one field can be set; when none is, the whole body is watched.
+      properties:
+        jsonPath:
+          type: string
+          description: Dot-path into the JSON response body (e.g. .data.version). An object or array is compared by its JSON encoding.
+        header:
+          type: string
+          description: Name of a response header whose value is watched (e.g. ETag).
 
     TestTriggerContentGit:
       type: object

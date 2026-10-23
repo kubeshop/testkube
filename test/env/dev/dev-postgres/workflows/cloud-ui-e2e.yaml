@@ -48,30 +48,9 @@ spec:
       requests:
         cpu: 3
         memory: 3Gi
-  services:
-    ui:
-      count: 'config.revision == "main" ? 0 : 1'
-      image: node:24-bookworm
-      transfer:
-      - from: /data/repo
-      workingDir: /data/repo/js
-      shell: |
-        npm ci
-        npm run build --workspace=@testkube/web
-        (cd packages/web && npm run env:vercel)
-        (cd packages/web && npx vite preview --host 0.0.0.0 --port 5173)
-      resources:
-        requests:
-          cpu: 2
-          memory: 2Gi
-      timeout: 10m
-      readinessProbe:
-        httpGet:
-          path: /
-          port: 5173
-        periodSeconds: 2
   steps:
   - name: Install dependencies
+    workingDir: /data/repo/js
     shell: npm ci --prefer-offline
     cache:
       key: cloud-ui-e2e-v1-npm-{{hash_files("/data/repo/js/package-lock.json")}}
@@ -79,18 +58,62 @@ spec:
       - cloud-ui-e2e-v1-npm-
       paths:
       - /root/.npm/_cacache
+  - name: Build UI
+    condition: 'passed && config.revision != "main"'
+    timeout: 10m
+    workingDir: /data/repo/js/packages/web
+    shell: |
+      # Build performance optimisation: minification disabled; e2e mode skips production-only minifier settings
+      npx vite build --mode e2e --minify false
+      test -s dist/index.html
+  - name: Prepare UI preview
+    condition: 'passed && config.revision != "main"'
+    workingDir: /data/repo/js/packages/web
+    shell: |
+      npm run env:vercel
+
+      # Fast compression preserves npm's workspace and executable symlinks.
+      bash -o pipefail -c 'tar -cf - -C /data/repo js | gzip -1 > /data/ui-preview.tar.gz'
   - name: Run tests
-    timeout: 18m
-    run:
-      env:
-      # Resolve the preview URL only after the UI service has started.
-      - name: CLOUD_BASE_URL
-        value: '{{ config.revision == "main" ? "https://app.testkube.dev" : "http://" + services.ui.0.ip + ":5173" }}'
-      shell: npx playwright test --retries=1 --workers=2
-    artifacts:
-      paths:
-      - playwright-report/**
-      - test-results/**
+    services:
+      ui:
+        count: 'config.revision == "main" ? 0 : 1'
+        # Match the install/build runtime when reusing its node_modules.
+        image: mcr.microsoft.com/playwright:v1.62.1-noble
+        transfer:
+        - from: /data
+          files:
+          - ui-preview.tar.gz
+          to: /data/ui-preview
+        workingDir: /data/ui-preview
+        shell: |
+          mkdir -p /data/repo
+          tar -xzf /data/ui-preview/ui-preview.tar.gz -C /data/repo
+          cd /data/repo/js/packages/web
+          npx vite preview --host 0.0.0.0 --port 5173
+        resources:
+          requests:
+            cpu: 2
+            memory: 2Gi
+        timeout: 10m
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5173
+          periodSeconds: 2
+    steps:
+    - name: Run Playwright tests
+      timeout: 18m
+      run:
+        env:
+        # Resolve the preview URL only after the UI service has started.
+        - name: CLOUD_BASE_URL
+          value: '{{ config.revision == "main" ? "https://app.testkube.dev" : "http://" + services.ui.0.ip + ":5173" }}'
+        shell: npx playwright test --retries=1 --workers=2
+      artifacts:
+        paths:
+        - playwright-report/**
+        - test-results/**
   - name: E2E Test Coverage report
     optional: true
     shell: npm run scenario-coverage

@@ -95,6 +95,7 @@ Write the failing test first, at the lowest level that shows the bug, then fix i
 - GitOps sync of Kubernetes resources into the Control Plane is gated by `GITOPS_KUBERNETES_TO_CLOUD_ENABLED` (default `false`), and additionally requires the Control Plane to report cloud storage support.
 - TestTriggers accept `spec.event` or a `spec.events` list (mutually exclusive, validated service-side); always consume them via `EffectiveEvents()` so both forms are honored — classification gates that read the single `event` field directly will silently skip list-form triggers.
 - `TEST_TRIGGER_GIT_INFORMER_*` tune the Git trigger informer, which only the leader runs (the `leader` coordinator tasks in `cmd/api-server/main.go`).
+- HTTP content triggers (`contentSelector.http`, event `http-changed`): `pkg/triggers/doc.go`.
 - Standalone execution dispatch (`EXECUTION_*`): `pkg/controlplane/doc.go`.
 - Runner polling (`RUNNER_*`), and health versus readiness: `pkg/runner/grpc/doc.go`.
 - `testkube-api` chart values `jobTolerations`/`jobAffinity`/`jobNodeSelector` schedule the pods of each execution; `k8s/helm/testkube-api/values.yaml` explains why they do not fall back to the `global.*` values.

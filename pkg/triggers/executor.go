@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -47,6 +48,20 @@ func newTriggerRunningContext(triggerName string) *testkube.TestWorkflowRunningC
 			Type_: common.Ptr(testkube.TESTTRIGGER_TestWorkflowRunningContextActorType),
 		},
 	}
+}
+
+type scheduleErrorsKey struct{}
+
+// withScheduleErrors makes execute return a scheduling failure instead of only logging it, for
+// callers that can retry the event, such as the HTTP content poller. Event handlers that cannot
+// retry keep the logged-only behavior, so that one failure does not stop the other triggers.
+func withScheduleErrors(ctx context.Context) context.Context {
+	return context.WithValue(ctx, scheduleErrorsKey{}, true)
+}
+
+func reportsScheduleErrors(ctx context.Context) bool {
+	reported, _ := ctx.Value(scheduleErrorsKey{}).(bool)
+	return reported
 }
 
 func (s *Service) execute(ctx context.Context, e *watcherEvent, t *internalTrigger) error {
@@ -213,6 +228,21 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *internalTrigg
 	executions, err := s.testWorkflowExecutor.Execute(ctx, request)
 	if err != nil {
 		s.logger.Errorw(fmt.Sprintf("trigger service: error executing testworkflow for trigger %s/%s (source %s)", t.Namespace, t.Name, t.Source), "error", err)
+		// A broken reply stream does not mean nothing was scheduled, so repeating the request could
+		// start the workflows twice. Keep what was received and let the caller treat it as handled.
+		var interrupted *testworkflowexecutor.ScheduleInterruptedError
+		if errors.As(err, &interrupted) {
+			for _, exec := range executions {
+				status.addTestWorkflowExecutionID(exec.Id)
+			}
+			if len(executions) > 0 {
+				status.start()
+			}
+			return nil
+		}
+		if reportsScheduleErrors(ctx) {
+			return fmt.Errorf("scheduling testworkflow executions: %w", err)
+		}
 		return nil
 	}
 	executionIDs := make([]string, 0, len(executions))
