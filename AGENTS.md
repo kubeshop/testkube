@@ -2,7 +2,7 @@
 
 Testkube Core: the agent services that run in a cluster, the `kubectl-testkube` CLI, and the shared Go packages and API contract the Control Plane builds on.
 
-Owner: `@kubeshop/testkube-backend`, per `.github/CODEOWNERS`. `test/` is shared with `@kubeshop/testkube-qa`; CI, release and lint configuration (`.github/`, `goreleaser_files/`, `.goreleaser*.yml`, `.golangci.yml`, `.builds-*`) belong to `@kubeshop/testkube-devops`.
+Owner: `.github/CODEOWNERS` names the owning team of each path; ask the owner of the path you change.
 
 ## 1. Verifying a change
 
