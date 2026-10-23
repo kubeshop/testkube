@@ -218,6 +218,14 @@ contents do.
 - `testkube install local`, `testkube status local` and `testkube uninstall local` live in `pkg/localinstall`; see its `doc.go`.
 - Pointing the CLI at the local install (after install, `testkube set context local`, and on uninstall) lives in `cmd/kubectl-testkube/commands/common/localcontext.go`.
 
+## Control Plane connection
+
+- `pkg/agent/client/client.go` dials the Control Plane and picks the transport credentials. It tries, in order, plaintext (only when `TESTKUBE_PRO_TLS_INSECURE` is set), verified TLS, local credentials for a loopback target, and finally `InsecureSkipVerify` (only when `TESTKUBE_PRO_SKIP_VERIFY` is set). A `TESTKUBE_PRO_CA_FILE` that fails to load drops verified TLS entirely rather than falling back to the system roots, so a configured CA is never silently widened.
+- The connection uses the `round_robin` load balancing policy, so a `dns:///` target spreads the agent's long-lived streams (notifications, service, parallel step, runner requests) across every address it resolves. Point `TESTKUBE_PRO_URL` at the Control Plane's headless Service to get one address per replica; a single-address target behaves like the old `pick_first`.
+- `pkg/agent/client/resolver.go` wraps the stock grpc-go `dns` resolver so it re-resolves on a timer (`GRPCResolveInterval`). This is required, not an optimization: grpc-go's DNS resolver does not poll, so a replica added by a scale-up is otherwise never dialled. Re-resolution only grows the subchannel set, leaving established streams in place. The wrapper is registered per connection with `grpc.WithResolvers`, so the global resolver registry is untouched; the stock resolver rate-limits itself to `dns.MinResolutionInterval`, so a shorter interval has no effect.
+- `GRPCMaxConnectionAge` on the server side is a fallback for agents that cannot see the replicas (behind an Ingress, or pointed at a ClusterIP VIP). It recycles connections so the load balancer chooses again, which interrupts live notification streams, so it is deliberately long.
+- Startup does not exit when the Control Plane is unreachable: `connectToRemoteControlPlane` and the `ReadProContext` loop in `cmd/api-server/main.go` retry. `startStartupHealthServer` answers `/health` on the API port while they wait, because the chart's startup probe would otherwise restart the container anyway.
+
 ## Configuration references
 
 - Agent behavior is driven by env vars defined in `internal/config/config.go` (scan for `envconfig:"..."` tags when researching a toggle).
