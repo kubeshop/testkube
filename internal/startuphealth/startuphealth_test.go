@@ -1,6 +1,7 @@
 package startuphealth
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -28,13 +29,18 @@ func freePort(t *testing.T) int {
 func get(t *testing.T, port int, path string) *http.Response {
 	t.Helper()
 	url := fmt.Sprintf("http://127.0.0.1:%d%s", port, path)
-	deadline := time.Now().Add(5 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	for {
-		resp, err := http.Get(url)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			t.Fatalf("cannot build request for %s: %v", path, err)
+		}
+		resp, err := http.DefaultClient.Do(req)
 		if err == nil {
 			return resp
 		}
-		if time.Now().After(deadline) {
+		if ctx.Err() != nil {
 			t.Fatalf("GET %s never succeeded: %v", path, err)
 		}
 		time.Sleep(10 * time.Millisecond)
