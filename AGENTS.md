@@ -348,6 +348,8 @@ Without MCP, `testkube run testworkflow <name> --config revision=<branch> --watc
 
 Pick the smallest setup that exercises the change. Everything past building needs Docker and a local Kubernetes cluster; the Makefile accepts only Linux and macOS, so on Windows use WSL.
 
+In a `tk-sbx` sandbox, Testkube is already running and there is no Docker: build there (`make build`), then deploy with the `testkube-hot-reload` skill.
+
 - **CLI:** `make build-kubectl-testkube-cli` builds `bin/app/kubectl-testkube`. `make build` builds every binary into `bin/app/`.
 - **Agent alone (OSS, no Control Plane):** the Tilt setup in [`DEVELOPMENT.md`](DEVELOPMENT.md). `./scripts/tilt-cluster.sh` creates the k3d cluster `testkube-dev` with a registry on `localhost:5001`, then `tilt up` builds the API server, `testworkflow-init` and `testworkflow-toolkit` from this checkout and installs `k8s/helm/testkube` into namespace `testkube-dev` with Postgres, MinIO and NATS. The API is on `localhost:8088`. `tilt ci` runs the same setup headless, runs the smoke test and exits non-zero on failure, so it is the one to use without a browser. `tilt up -- --db=mongo` switches the database.
 - **`testworkflow-init` and `testworkflow-toolkit`** only run inside a TestWorkflow pod. Exercise them through the Tilt setup by running a workflow; its `install-sample-workflows` resource applies the smoke workflows from `test/*/crd-workflow/smoke.yaml`.
