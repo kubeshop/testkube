@@ -110,29 +110,34 @@ func TestPolicy_Do_Context(t *testing.T) {
 
 func TestPolicy_Wait(t *testing.T) {
 	tests := []struct {
-		name   string
-		policy Policy
-		want   []time.Duration
+		name     string
+		policy   Policy
+		want     []time.Duration
+		wantLate time.Duration
 	}{
 		{
-			name:   "a linear wait grows by the delay",
-			policy: Policy{Delay: time.Second},
-			want:   []time.Duration{time.Second, 2 * time.Second, 3 * time.Second},
+			name:     "a linear wait grows by the delay",
+			policy:   Policy{Delay: time.Second},
+			want:     []time.Duration{time.Second, 2 * time.Second, 3 * time.Second},
+			wantLate: 100 * time.Second,
 		},
 		{
-			name:   "an exponential wait doubles up to the maximum",
-			policy: Policy{Delay: time.Second, Growth: Exponential, MaxDelay: 3 * time.Second},
-			want:   []time.Duration{time.Second, 2 * time.Second, 3 * time.Second},
+			name:     "an exponential wait doubles up to the maximum",
+			policy:   Policy{Delay: time.Second, Growth: Exponential, MaxDelay: 3 * time.Second},
+			want:     []time.Duration{time.Second, 2 * time.Second, 3 * time.Second},
+			wantLate: 3 * time.Second,
 		},
 		{
-			name:   "an exponential wait that would overflow stops at the longest duration",
-			policy: Policy{Delay: time.Hour, Growth: Exponential},
-			want:   []time.Duration{time.Hour, 2 * time.Hour},
+			name:     "an exponential wait that would overflow stops at the longest duration",
+			policy:   Policy{Delay: time.Hour, Growth: Exponential},
+			want:     []time.Duration{time.Hour, 2 * time.Hour},
+			wantLate: time.Duration(1<<63 - 1),
 		},
 		{
-			name:   "a fixed wait stays at the delay",
-			policy: Policy{Delay: time.Second, Growth: Fixed},
-			want:   []time.Duration{time.Second, time.Second, time.Second},
+			name:     "a fixed wait stays at the delay",
+			policy:   Policy{Delay: time.Second, Growth: Fixed},
+			want:     []time.Duration{time.Second, time.Second, time.Second},
+			wantLate: time.Second,
 		},
 	}
 	for _, tt := range tests {
@@ -142,18 +147,23 @@ func TestPolicy_Wait(t *testing.T) {
 				got = append(got, tt.policy.wait(n))
 			}
 			assert.Equal(t, tt.want, got)
-			assert.Positive(t, tt.policy.wait(100), "a late wait never wraps to a negative duration")
+			assert.Equal(t, tt.wantLate, tt.policy.wait(100), "the wait before attempt 101")
 		})
 	}
 }
 
 func TestPolicy_Do_OnRetry(t *testing.T) {
+	var attempts []int
 	var waits []time.Duration
-	policy := Policy{Attempts: 3, Delay: time.Millisecond, OnRetry: func(_ int, _ error, wait time.Duration) {
+	policy := Policy{Attempts: 3, Delay: time.Millisecond, OnRetry: func(attempt int, err error, wait time.Duration) {
+		assert.Equal(t, errBusy, err)
+		attempts = append(attempts, attempt)
 		waits = append(waits, wait)
 	}}
 
-	_ = policy.Do(context.Background(), func() error { return errBusy })
+	err := policy.Do(context.Background(), func() error { return errBusy })
 
-	assert.Equal(t, []time.Duration{time.Millisecond, 2 * time.Millisecond}, waits, "OnRetry runs before each wait and not after the last attempt")
+	assert.Equal(t, errBusy, err)
+	assert.Equal(t, []int{0, 1}, attempts, "OnRetry runs after each attempt that gets another one, and not after the last")
+	assert.Equal(t, []time.Duration{time.Millisecond, 2 * time.Millisecond}, waits)
 }

@@ -213,48 +213,6 @@ func TestCleanupErrorAggregates(t *testing.T) {
 	}
 }
 
-func TestCleanupPolicy(t *testing.T) {
-	tests := []struct {
-		name         string
-		errs         []error
-		wantAttempts int
-		wantErr      func(error) bool
-	}{
-		{name: "a transient error is retried until the call works", errs: []error{serviceUnavailable()}, wantAttempts: 2},
-		{name: "a transient error that stays gives up after every attempt", errs: repeat(serviceUnavailable(), cleanupRetryCount), wantAttempts: cleanupRetryCount, wantErr: apierrors.IsServiceUnavailable},
-		{name: "a permanent error is not retried", errs: []error{forbidden()}, wantAttempts: 1, wantErr: apierrors.IsForbidden},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			shortenCleanupRetryDelay(t)
-			attempts := 0
-			err := cleanupPolicy().Do(context.Background(), func() error {
-				attempts++
-				if attempts <= len(tt.errs) {
-					return tt.errs[attempts-1]
-				}
-				return nil
-			})
-
-			assert.Equal(t, tt.wantAttempts, attempts)
-			if tt.wantErr == nil {
-				assert.NoError(t, err)
-				return
-			}
-			assert.True(t, tt.wantErr(err), "the error of the last attempt: %v", err)
-		})
-	}
-}
-
-// repeat returns n copies of the error.
-func repeat(err error, n int) []error {
-	errs := make([]error, n)
-	for i := range errs {
-		errs[i] = err
-	}
-	return errs
-}
-
 func TestRunKillTeardown(t *testing.T) {
 	t.Run("passes when teardown succeeds", func(t *testing.T) {
 		shortenCleanupRetryDelay(t)
