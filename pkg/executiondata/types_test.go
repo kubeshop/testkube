@@ -50,7 +50,7 @@ func TestFromExecution(t *testing.T) {
 			},
 		},
 		{
-			name: "keys a step without an id by its category, and by its ref when the key is empty or taken",
+			name: "keys a step by its ref when it has no id or an earlier step has its id",
 			execution: &testkube.TestWorkflowExecution{
 				Signature: []testkube.TestWorkflowSignature{
 					{Ref: "rgroup", Id: "build", Children: []testkube.TestWorkflowSignature{
@@ -71,10 +71,10 @@ func TestFromExecution(t *testing.T) {
 			want: Execution{
 				Outputs: map[string]string{},
 				StepErrors: map[string]string{
-					"build":                "a child step failed",
-					"Clone Git repository": "the repository does not exist",
-					"rbare":                "the step has no name",
-					"rparallel":            "a parallel step failed",
+					"build":     "a child step failed",
+					"rclone":    "the repository does not exist",
+					"rbare":     "the step has no name",
+					"rparallel": "a parallel step failed",
 				},
 			},
 		},

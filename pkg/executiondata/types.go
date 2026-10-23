@@ -81,13 +81,13 @@ type Execution struct {
 	Outputs map[string]string `json:"outputs,omitempty"`
 	// ErrorMessage is the message of the initialization step, empty when it has none.
 	ErrorMessage string `json:"errorMessage,omitempty"`
-	// StepErrors are the messages of the steps that have one, keyed by the id, the label, or the ref of the step.
+	// StepErrors are the messages of the steps that have one, keyed by the id of the step, or by its ref when it has no id.
 	StepErrors map[string]string `json:"stepErrors,omitempty"`
-	// StepAttempts are the numbers of attempts of the steps that report one, keyed by the id, the label, or the ref of the step.
+	// StepAttempts are the numbers of attempts of the steps that report one, keyed by the id of the step, or by its ref when it has no id.
 	StepAttempts map[string]int64 `json:"stepAttempts,omitempty"`
 	// ErrorReason is the reason code of the initialization step, empty when it has none.
 	ErrorReason string `json:"errorReason,omitempty"`
-	// StepReasons are the reason codes of the steps that have one, keyed by the id, the label, or the ref of the step.
+	// StepReasons are the reason codes of the steps that have one, keyed by the id of the step, or by its ref when it has no id.
 	StepReasons map[string]string `json:"stepReasons,omitempty"`
 	// StatusType is the layer that made the execution fail, empty when it passed.
 	StatusType string `json:"statusType,omitempty"`
@@ -238,24 +238,19 @@ func stepStrings(execution *testkube.TestWorkflowExecution, field func(step test
 	return initialization, steps
 }
 
-// stepKeys maps the ref of each step to its key. The ref is random, so the key is the id of the
-// step. A step without an id uses its name or its category. A toolkit step, for example a clone,
-// has only a category. A step keeps its ref when an earlier step uses its key, because names and
-// parallel ids can repeat.
+// stepKeys maps the ref of each step to its id. The ref is random, and the id comes from the
+// workflow, so the id is the key. A step without an id keeps its ref. A step also keeps its ref when
+// an earlier step has the same id, because the ids of parallel workers can repeat.
 func stepKeys(execution *testkube.TestWorkflowExecution) map[string]string {
 	keys := make(map[string]string)
 	used := make(map[string]bool)
 	for i := range execution.Signature {
 		for _, sig := range execution.Signature[i].Sequence() {
-			key := sig.Id
-			if key == "" {
-				key = sig.Label()
-			}
-			if key == "" || used[key] || givesIdToChild(sig) {
+			if sig.Id == "" || used[sig.Id] || givesIdToChild(sig) {
 				continue
 			}
-			keys[sig.Ref] = key
-			used[key] = true
+			keys[sig.Ref] = sig.Id
+			used[sig.Id] = true
 		}
 	}
 	return keys
@@ -275,7 +270,7 @@ func givesIdToChild(sig testkube.TestWorkflowSignature) bool {
 	return false
 }
 
-// stepKey returns the key of the step ref, and the ref when the step has no key.
+// stepKey returns the id of the step ref, and the ref when the step has no key.
 func stepKey(keys map[string]string, ref string) string {
 	if key, ok := keys[ref]; ok {
 		return key
