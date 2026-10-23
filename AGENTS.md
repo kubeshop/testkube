@@ -4,8 +4,6 @@ Testkube Core: the agent services that run in a cluster, the `kubectl-testkube` 
 
 Owner: `@kubeshop/testkube-backend`, per `.github/CODEOWNERS`. `test/` is shared with `@kubeshop/testkube-qa`; CI, release and lint configuration (`.github/`, `goreleaser_files/`, `.goreleaser*.yml`, `.golangci.yml`, `.builds-*`) belong to `@kubeshop/testkube-devops`.
 
-The seven sections below are: verifying a change, reproducing a bug, the repository map, the conventions reviewers enforce, what never to do, the pull request checks and the MCP tools, and the skills and how to start a component.
-
 ## 1. Verifying a change
 
 Verification has two loops. Run these local commands before every commit, and the pull request workflows in section 6 before asking for review.
