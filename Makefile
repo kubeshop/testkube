@@ -237,6 +237,11 @@ version-bump-dev: ## Tag the next -betaNNN prerelease and push all tags
 .PHONY: build
 build: build-api-server build-testkube-cli build-toolkit build-init build-convert ## Build api-server, testkube CLI, toolkit, init and convert into bin/app
 
+.PHONY: compile
+compile: ## Check that every package compiles (go build ./...), writing no binaries
+	@echo "Compiling all packages..."
+	@$(GO) build ./...
+
 .PHONY: build-api-server
 build-api-server: ## Build the API server binary (bin/app/api-server)
 	@echo "Building API server ($(GOOS)/$(GOARCH))..."
@@ -367,21 +372,29 @@ dev: run-mongo run-nats run-api ## Start MongoDB and NATS containers, then run t
 .PHONY: test
 test: unit-tests ## Run the unit tests (same as unit-tests)
 
+# Narrow unit-tests and integration-tests to some packages and tests, e.g.
+#   make unit-tests PKG=./pkg/mcp/... RUN='^TestName$'
+# RUN is a go test -run pattern; integration-tests defaults it to _Integration$.
+PKG ?=
+RUN ?=
+
 .PHONY: unit-tests
-unit-tests: ## Run unit tests; writes unit-tests.xml, unit-tests.json and coverage.out
+unit-tests: ## Run unit tests (narrow with PKG=, RUN=); writes unit-tests.xml, unit-tests.json and coverage.out
 	@echo "Running unit tests..."
 	@$(GOTESTSUM) --format short-verbose --junitfile unit-tests.xml --jsonfile unit-tests.json -- \
-		-coverprofile=coverage.out -covermode=atomic ./cmd/... ./internal/... ./pkg/...
+		-coverprofile=coverage.out -covermode=atomic $(if $(value RUN),-run '$(value RUN)') \
+		$(or $(PKG),./cmd/... ./internal/... ./pkg/...)
 
 .PHONY: integration-tests
-integration-tests: build-init build-toolkit ## Run *_Integration tests against their backing services (e.g. Postgres, MinIO); writes integration-tests.xml/.json and integration-coverage.out
+integration-tests: build-init build-toolkit ## Run *_Integration tests against their backing services (e.g. Postgres, MinIO; narrow with PKG=, RUN=); writes integration-tests.xml/.json and integration-coverage.out
 	@echo "Running integration tests (only tests ending with _Integration)..."
 	@INTEGRATION="true" \
 		TESTKUBE_PROJECT_ROOT="$(PWD)" \
 		STORAGE_ACCESSKEYID=$(ROOT_MINIO_USER) \
 		STORAGE_SECRETACCESSKEY=$(ROOT_MINIO_PASSWORD) \
 		$(GOTESTSUM) --format short-verbose --junitfile integration-tests.xml --jsonfile integration-tests.json -- \
-		-coverprofile=integration-coverage.out -covermode=atomic -run "_Integration$$" ./internal/... ./pkg/... ./test/integration/components/...
+		-coverprofile=integration-coverage.out -covermode=atomic -run '$(or $(value RUN),_Integration$$)' \
+		$(or $(PKG),./internal/... ./pkg/... ./test/integration/components/...)
 
 .PHONY: cover
 cover: unit-tests ## Run unit tests, write coverage.html and open it in a browser
