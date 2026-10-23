@@ -9,9 +9,9 @@ Owner: `@kubeshop/testkube-backend`, per `.github/CODEOWNERS`. `test/` is shared
 Verification has two loops. Run these local commands before every commit, and the pull request workflows in section 6 before asking for review.
 
 ```bash
-make lint          # golangci-lint (or `make lint-fix` to auto-fix); about 2m in CI
+make lint          # golangci-lint (or `make lint-fix` to auto-fix)
 make compile       # go build ./..., compilation only
-make unit-tests    # what oss-unit-tests runs, about 2m in CI; add GOFLAGS=-count=1 to skip cached results
+make unit-tests    # what oss-unit-tests runs; add GOFLAGS=-count=1 to skip cached results
 ```
 
 Use these make targets rather than calling `go build` or `go test` directly: `oss-unit-tests` runs `make unit-tests`, and the test targets carry the pinned `gotestsum` and the environment the integration tests expect (`INTEGRATION`, `TESTKUBE_PROJECT_ROOT`, the MinIO credentials). `make unit-tests` and `make integration-tests` take `PKG=` (packages) and `RUN=` (a `go test -run` pattern) to narrow a run.
@@ -319,18 +319,16 @@ Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`
 
 Pull request checks are not GitHub Actions. They are Testkube TestWorkflows in `test/testkube/oss-tests/gh-quality-loop.yaml`, started by the Testkube GitHub integration on every pull request. Each takes a `revision` config input (default `main`) and checks out `https://github.com/kubeshop/testkube.git` at that revision, so the branch must be pushed to this repository first.
 
-| Workflow | What it runs | Time |
-| --- | --- | --- |
-| `oss-lint-go` | `golangci-lint run ./...` | 1m45s |
-| `oss-lint-proto` | `buf lint`, `buf format --diff`, and `buf breaking` against `main` | 40s |
-| `oss-unit-tests` | `make unit-tests` | 2m15s |
-| `oss-integration-tests` | the `_Integration` tests with MongoDB, NATS, MinIO and Postgres | 2m55s |
-| `oss-verify-crds` | `make verify-crds-generated` | 1m05s |
-| `oss-verify-protobuf` | `make verify-protobuf-generated` | 35s |
-| `oss-lint-pr` | the pull request title (see "PR title format"); also needs `PR_NUMBER`, so it only runs once the pull request exists | 45s |
-| `security-pr-scan` | Semgrep, Gitleaks and Trivy on the changed files; `make security-scan` runs the same locally (needs Docker). Its definition is not in this repository, and it reports as the `testkube-dev` GitHub App rather than `testkubebot` | 40s |
-
-Times are the median wall-clock time of each check on the last 12 merged pull requests (October 2026), including pod start-up. They run in parallel, so a full pass takes about as long as `oss-integration-tests`.
+| Workflow | What it runs |
+| --- | --- |
+| `oss-lint-go` | `golangci-lint run ./...` |
+| `oss-lint-proto` | `buf lint`, `buf format --diff`, and `buf breaking` against `main` |
+| `oss-unit-tests` | `make unit-tests` |
+| `oss-integration-tests` | the `_Integration` tests with MongoDB, NATS, MinIO and Postgres |
+| `oss-verify-crds` | `make verify-crds-generated` |
+| `oss-verify-protobuf` | `make verify-protobuf-generated` |
+| `oss-lint-pr` | the pull request title (see "PR title format"); also needs `PR_NUMBER`, so it only runs once the pull request exists |
+| `security-pr-scan` | Semgrep, Gitleaks and Trivy on the changed files; `make security-scan` runs the same locally (needs Docker). Its definition is not in this repository, and it reports as the `testkube-dev` GitHub App rather than `testkubebot` |
 
 The same file also holds `docs-prettier`, which checks testkube-docs, not this repo.
 
