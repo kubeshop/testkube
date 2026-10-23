@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 	"slices"
 	"time"
@@ -17,7 +18,10 @@ const (
 )
 
 // HTTPContentMethods are the request methods an HTTP content trigger accepts.
-var HTTPContentMethods = []string{"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+var HTTPContentMethods = []string{
+	http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut,
+	http.MethodPatch, http.MethodDelete, http.MethodOptions,
+}
 
 // validateContentSelector checks that a content trigger watches exactly one source and only
 // fires the events of that source.
