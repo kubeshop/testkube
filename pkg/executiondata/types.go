@@ -81,13 +81,13 @@ type Execution struct {
 	Outputs map[string]string `json:"outputs,omitempty"`
 	// ErrorMessage is the message of the initialization step, empty when it has none.
 	ErrorMessage string `json:"errorMessage,omitempty"`
-	// StepErrors are the messages of the steps that have one, keyed by the step key of stepKeys.
+	// StepErrors are the messages of the steps that have one, keyed by the id, the label, or the ref of the step.
 	StepErrors map[string]string `json:"stepErrors,omitempty"`
-	// StepAttempts are the numbers of attempts of the steps that report one, keyed by the step key of stepKeys.
+	// StepAttempts are the numbers of attempts of the steps that report one, keyed by the id, the label, or the ref of the step.
 	StepAttempts map[string]int64 `json:"stepAttempts,omitempty"`
 	// ErrorReason is the reason code of the initialization step, empty when it has none.
 	ErrorReason string `json:"errorReason,omitempty"`
-	// StepReasons are the reason codes of the steps that have one, keyed by the step key of stepKeys.
+	// StepReasons are the reason codes of the steps that have one, keyed by the id, the label, or the ref of the step.
 	StepReasons map[string]string `json:"stepReasons,omitempty"`
 	// StatusType is the layer that made the execution fail, empty when it passed.
 	StatusType string `json:"statusType,omitempty"`
@@ -214,7 +214,7 @@ func ReasonsOf(execution *testkube.TestWorkflowExecution) (string, map[string]st
 }
 
 // stepStrings returns the field of the initialization step and the same field of every step that
-// holds a value, keyed by the step key of stepKeys. It returns a nil map when no step holds one.
+// holds a value, keyed by the key that stepKeys gives the step. It returns a nil map when no step holds one.
 func stepStrings(execution *testkube.TestWorkflowExecution, field func(step testkube.TestWorkflowStepResult) string) (string, map[string]string) {
 	if execution == nil || execution.Result == nil {
 		return "", nil
@@ -245,21 +245,19 @@ func stepStrings(execution *testkube.TestWorkflowExecution, field func(step test
 func stepKeys(execution *testkube.TestWorkflowExecution) map[string]string {
 	keys := make(map[string]string)
 	used := make(map[string]bool)
-	var walk func(signatures []testkube.TestWorkflowSignature)
-	walk = func(signatures []testkube.TestWorkflowSignature) {
-		for _, sig := range signatures {
+	for i := range execution.Signature {
+		for _, sig := range execution.Signature[i].Sequence() {
 			key := sig.Id
 			if key == "" {
 				key = sig.Label()
 			}
-			if key != "" && !used[key] && !givesIdToChild(sig) {
-				keys[sig.Ref] = key
-				used[key] = true
+			if key == "" || used[key] || givesIdToChild(sig) {
+				continue
 			}
-			walk(sig.Children)
+			keys[sig.Ref] = key
+			used[key] = true
 		}
 	}
-	walk(execution.Signature)
 	return keys
 }
 
