@@ -5,12 +5,26 @@ metadata:
 spec:
   events:
   - end-testworkflow-failed
-  - end-testworkflow-aborted
   uri: '{{credential("webhook-slack-prod-healthcheck-alerts-url")}}'
   selector: environment=prod
   payloadTemplate: |-
     {
       "text": ":alert: *Prod healthcheck {{ .TestWorkflowExecution.Workflow.Name }} failed*\n*Execution*: {{.TestWorkflowExecution.Name}}\n*Status*: {{ .Type_ }}\n*Possible Severity*: Critical\n*Possible Impact*: Production connectivity issue, production agent/control plane issue, or an execution issue in a `.dev` environment.\n*Logs*: {{ .ExecutionURL }}"
+    }
+
+---
+apiVersion: executor.testkube.io/v1
+kind: Webhook
+metadata:
+  name: prod-healthcheck-alert-aborted
+spec:
+  events:
+  - end-testworkflow-aborted
+  uri: '{{credential("webhook-slack-prod-healthcheck-alerts-url")}}'
+  selector: environment=prod
+  payloadTemplate: |-
+    {
+      "text": ":alert: *Prod healthcheck {{ .TestWorkflowExecution.Workflow.Name }} workflow was aborted*\n*Execution*: {{.TestWorkflowExecution.Name}}\n*Status*: {{ .Type_ }}\n*Impact*: The .dev workflow has been aborted, so the healthcheck hasn't run - the actual healthcheck alert may not be emitted\n*Logs*: {{ .ExecutionURL }}"
     }
 
 ---
