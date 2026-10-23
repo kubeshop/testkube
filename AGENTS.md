@@ -24,8 +24,6 @@ Run the narrower checks when the change touches what they cover:
 
 `make lint` and `oss-lint-go` both run golangci-lint `v2.15.0`: `GOLANGCI_LINT_VERSION` in the `Makefile`, and the image in `test/testkube/oss-tests/gh-quality-loop.yaml`. Bump both together, along with the version in that workflow's cache key, or the two can disagree; the workflow is the one that gates the pull request.
 
-- Review the Makefile for additional helper targets when unfamiliar tasks come up.
-
 ## 2. Reproducing a bug
 
 Write the failing test first, at the lowest level that shows the bug, then fix it.
