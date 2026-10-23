@@ -34,14 +34,7 @@ Write the failing test first, at the lowest level that shows the bug, then fix i
 - **Fixtures** live in a `testdata/` folder beside the test (for example `pkg/mcp/boards/testdata/`, `cmd/testworkflow-init/orchestration/testdata/`). Test Workflow specs for smoke tests are under `test/*/crd-workflow/`.
 - **Tests against a real service** end in `_Integration` and start with `test.IntegrationTest(t)` (`pkg/utils/test/integration.go`), which skips unless `INTEGRATION` is set. For Postgres, `testpostgres.PreparePostgresTestDatabase(t, "<name>")` (`pkg/test/postgres/helpers.go`) creates a database per test from `API_POSTGRES_URL` and drops it on cleanup. The Mongo tests connect to `mongodb://localhost:27017`. Start the services as "Verifying a change" describes, then run `make integration-tests PKG=./pkg/<pkg>/ RUN='^TestName_Integration$' GOFLAGS=-count=1`.
 - **`testworkflow-init` and `testworkflow-toolkit` behaviour** is tested in `test/integration/components/`; `make integration-tests PKG=./test/integration/components/...` builds both binaries before running them.
-- **A bug that needs a cluster** (pod scheduling, a workflow that runs wrong): bring up the Tilt agent ("Starting a component", section 7), then point the CLI at it. Starting Tilt does not change the CLI's saved context, so a context left on a Control Plane would send the run there instead. Use the CLI Tilt builds from this checkout (`compile:cli`), and set the same context Tilt's `run-cli-command` Configure button does:
-  ```bash
-  ./build/_local/kubectl-testkube set context --kubeconfig --namespace testkube-dev \
-    --api-uri http://localhost:8088 --client direct
-  kubectl apply -n testkube-dev -f <workflow>.yaml
-  ./build/_local/kubectl-testkube run testworkflow <name> --watch
-  ```
-  `set context` replaces the saved context in `~/.testkube/config.json`; run `testkube pro login` to return to a Control Plane. The run goes through the current kube context, so it must be `k3d-testkube-dev`. Turn the result into a unit test on the processor (`pkg/testworkflows/testworkflowprocessor`) or the runner where you can, so the fix stays covered without a cluster.
+- **A bug that needs a cluster** (pod scheduling, a workflow that runs wrong): start the Tilt agent and point its CLI at it, as [`DEVELOPMENT.md`](DEVELOPMENT.md#testkube-cli) describes (`run-cli-command` → Configure). Starting Tilt does not switch the CLI's saved context, so skip that step and the run goes to whatever Control Plane the CLI was last on. With the kube context on `k3d-testkube-dev`, run `kubectl apply -n testkube-dev -f <workflow>.yaml` and `./build/_local/kubectl-testkube run testworkflow <name> --watch`; `testkube pro login` switches back. Turn the result into a unit test on the processor (`pkg/testworkflows/testworkflowprocessor`) or the runner where you can, so the fix stays covered without a cluster.
 - **A bug that needs the Control Plane** reproduces only on the full stack in testkube-workspace.
 
 ## 3. Repository map
