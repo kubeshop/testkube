@@ -139,7 +139,7 @@ type TestTriggerResourceRef struct {
 }
 
 // TestTriggerEvent defines event for test triggers
-// +kubebuilder:validation:Enum=created;modified;deleted;git-push;git-tag-push;git-pull-request;deployment-scale-update;deployment-image-update;deployment-env-update;deployment-containers-modified;deployment-generation-modified;deployment-resource-modified;event-start-test;event-end-test-success;event-end-test-failed;event-end-test-aborted;event-end-test-timeout;event-start-testsuite;event-end-testsuite-success;event-end-testsuite-failed;event-end-testsuite-aborted;event-end-testsuite-timeout;event-queue-testworkflow;event-start-testworkflow;event-end-testworkflow-success;event-end-testworkflow-failed;event-end-testworkflow-aborted;event-end-testworkflow-canceled;event-end-testworkflow-not-passed;event-created;event-updated;event-deleted
+// +kubebuilder:validation:Enum=created;modified;deleted;git-push;git-tag-push;git-pull-request;http-changed;deployment-scale-update;deployment-image-update;deployment-env-update;deployment-containers-modified;deployment-generation-modified;deployment-resource-modified;event-start-test;event-end-test-success;event-end-test-failed;event-end-test-aborted;event-end-test-timeout;event-start-testsuite;event-end-testsuite-success;event-end-testsuite-failed;event-end-testsuite-aborted;event-end-testsuite-timeout;event-queue-testworkflow;event-start-testworkflow;event-end-testworkflow-success;event-end-testworkflow-failed;event-end-testworkflow-aborted;event-end-testworkflow-canceled;event-end-testworkflow-not-passed;event-created;event-updated;event-deleted
 type TestTriggerEvent string
 
 // List of TestTriggerEvents
@@ -150,6 +150,7 @@ const (
 	TestTriggerEventGitPush                       TestTriggerEvent = "git-push"
 	TestTriggerEventGitTagPush                    TestTriggerEvent = "git-tag-push"
 	TestTriggerEventGitPullRequest                TestTriggerEvent = "git-pull-request"
+	TestTriggerEventHTTPChanged                   TestTriggerEvent = "http-changed"
 	TestTriggerCauseDeploymentScaleUpdate         TestTriggerEvent = "deployment-scale-update"
 	TestTriggerCauseDeploymentImageUpdate         TestTriggerEvent = "deployment-image-update"
 	TestTriggerCauseDeploymentEnvUpdate           TestTriggerEvent = "deployment-env-update"
@@ -299,6 +300,62 @@ type TestTriggerActionParameters struct {
 type TestTriggerContentSelector struct {
 	// Git specifies a git repository to watch for changes
 	Git *TestTriggerContentGitSpec `json:"git,omitempty"`
+	// HTTP specifies an HTTP endpoint to poll for changes. Mutually exclusive with Git.
+	HTTP *TestTriggerContentHTTPSpec `json:"http,omitempty"`
+}
+
+// TestTriggerContentHTTPSpec defines an HTTP endpoint that a content trigger polls. The trigger
+// fires its http-changed event when the selected value of the response changes.
+type TestTriggerContentHTTPSpec struct {
+	// URL of the endpoint to poll (http or https)
+	URL string `json:"url"`
+	// Method is the HTTP method of the request, GET by default
+	// +kubebuilder:validation:Enum=GET;HEAD;POST;PUT;PATCH;DELETE;OPTIONS
+	Method string `json:"method,omitempty"`
+	// Headers sent with every request.
+	// Warning: these are stored in plain text in the trigger spec. Prefer HeadersFrom for credentials.
+	Headers map[string]string `json:"headers,omitempty"`
+	// HeadersFrom sends headers whose values are read from a Secret or ConfigMap in the trigger's
+	// namespace on every poll. Preferred for credentials.
+	HeadersFrom []TestTriggerContentHTTPHeaderSource `json:"headersFrom,omitempty"`
+	// Body sent with every request, e.g. for a POST or GraphQL endpoint
+	Body string `json:"body,omitempty"`
+	// Interval between polls, 1m by default and at least 10s
+	// +kubebuilder:validation:Type:=string
+	// +kubebuilder:validation:Format:=duration
+	Interval *metav1.Duration `json:"interval,omitempty"`
+	// Timeout of one request, 10s by default
+	// +kubebuilder:validation:Type:=string
+	// +kubebuilder:validation:Format:=duration
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
+	// InsecureSkipVerify skips the verification of the server's TLS certificate
+	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
+	// ExpectedStatus lists the status codes of a successful poll, 200 by default.
+	// A response with any other code is a failed poll, never a change.
+	ExpectedStatus []int32 `json:"expectedStatus,omitempty"`
+	// Select chooses the part of the response that is watched. When omitted, the whole body is.
+	Select *TestTriggerContentHTTPSelect `json:"select,omitempty"`
+	// FireOnFirstObservation fires the trigger on the first successful poll. By default the first
+	// poll only records the value to compare later polls against.
+	FireOnFirstObservation bool `json:"fireOnFirstObservation,omitempty"`
+}
+
+// TestTriggerContentHTTPHeaderSource is a request header whose value is read from a Secret or ConfigMap
+type TestTriggerContentHTTPHeaderSource struct {
+	// Name of the header
+	Name string `json:"name"`
+	// ValueFrom is the source of the header value
+	ValueFrom corev1.EnvVarSource `json:"valueFrom"`
+}
+
+// TestTriggerContentHTTPSelect chooses the part of an HTTP response that a content trigger watches.
+// At most one field can be set.
+type TestTriggerContentHTTPSelect struct {
+	// JSONPath is a dot-path into the JSON response body (e.g. ".data.version").
+	// An object or array is compared by its JSON encoding.
+	JSONPath string `json:"jsonPath,omitempty"`
+	// Header is the name of a response header whose value is watched (e.g. ETag)
+	Header string `json:"header,omitempty"`
 }
 
 // TestTriggerContentGitSpec defines git repository configuration for content triggers

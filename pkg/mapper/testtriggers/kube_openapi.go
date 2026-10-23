@@ -256,7 +256,8 @@ func mapContentSelectorFromCRD(selector *testsv1.TestTriggerContentSelector) *te
 		return nil
 	}
 	return &testkube.TestTriggerContentSelector{
-		Git: mapContentGitFromCRD(selector.Git),
+		Git:  mapContentGitFromCRD(selector.Git),
+		Http: mapContentHTTPFromCRD(selector.HTTP),
 	}
 }
 

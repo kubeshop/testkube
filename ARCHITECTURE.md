@@ -310,6 +310,7 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
   - **Features**: Watches Pods, Deployments, Services, etc. and triggers executions; supports git-content based triggers reconciled by the git informer
   - **Event forms**: `spec.event` (single) and `spec.events` (list) are mutually exclusive; validation in `api/testtriggers/v1/validation.go` enforces exactly one, and consumers normalize both forms through `EffectiveEvents()` (CRD spec and API model each expose it) — new event consumers must use the normalized list, never read `spec.event` directly
   - **Leader behavior**: Git informer reconciliation is registered as a leader-coordinated task in `cmd/api-server/main.go`, so only the elected leader performs git polling/pulls
+  - **HTTP content triggers**: the `trigger-http-watcher` leader task (`pkg/triggers/http_trigger.go`) polls the endpoint of each TestTrigger with `contentSelector.http` and fires its `http-changed` event when the selected value (a JSON field, a response header, or the body digest) changes
 
 #### Deprecated CRDs
 
