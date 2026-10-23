@@ -53,7 +53,7 @@ Write the failing test first, at the lowest level that shows the bug, then fix i
 - `cmd/testworkflow-toolkit` provides runtime utilities and commands for TestWorkflow containers (artifacts, services, parallel execution, etc.).
 - `cmd/tcl/devbox-mutating-webhook` is a Kubernetes mutating webhook for injecting devbox containers into pods.
 - `cmd/tcl/devbox-binary-storage` serves as a binary storage server for devbox dependencies and cached files.
-- `cmd/convert` is a one-shot tool that migrates control-plane data from MongoDB to PostgreSQL (see "Mongo to Postgres conversion" below).
+- `cmd/convert` is a one-shot tool that migrates control-plane data from MongoDB to PostgreSQL (see `pkg/convert/doc.go`).
 - `cmd/debug-server` is a simple HTTP server that dumps incoming requests for debugging purposes.
 - `cmd/proxy` proxies HTTP requests to the Testkube API server for local development and debugging.
 - `cmd/choco-stub` displays a deprecation message for the old Chocolatey package location.
@@ -71,7 +71,7 @@ Write the failing test first, at the lowest level that shows the bug, then fix i
 
 - Agent behavior is driven by env vars defined in `internal/config/config.go` (scan for `envconfig:"..."` tags when researching a toggle).
 - Helm chart values are the source of deployment defaults. For concrete local overrides, see `tilt-values.yaml` (repo root), which the Tilt setup uses; personal overrides go in the gitignored `tilt-values.local.yaml`. `build/_local/values.dev.tpl.yaml` is the template that Skaffold and `tk-dev` (in testkube-cloud-api, `js/scripts/tk-dev`) copy to the gitignored `build/_local/values.dev.yaml`.
-- The convert tool does not use `internal/config`. Each flag in `cmd/convert/main.go` falls back to an env var: it reuses the API server's `API_MONGO_*`, `API_POSTGRES_DSN`, `SKIP_DB_CREATION` and `DISABLE_POSTGRES_MIGRATIONS`, and adds its own `CONVERT_BATCH_SIZE`, `CONVERT_READ_BATCH_SIZE`, `CONVERT_DRY_RUN`, `CONVERT_RESET`, `CONVERT_RESET_CONFIRMED`, `CONVERT_SKIP_ERRORS`, `CONVERT_SKIP` and `CONVERT_VERIFY`. MongoDB TLS material is passed as file paths, because the tool has no cluster client to read a Secret with.
+- The convert tool reads its own env vars, not `internal/config`; `pkg/convert/doc.go` lists them.
 - GitOps sync of Kubernetes resources into the Control Plane is gated by `GITOPS_KUBERNETES_TO_CLOUD_ENABLED` (default `false`), and additionally requires the Control Plane to report cloud storage support.
 - TestTriggers accept `spec.event` or a `spec.events` list (mutually exclusive, validated service-side); always consume them via `EffectiveEvents()` so both forms are honored — classification gates that read the single `event` field directly will silently skip list-form triggers.
 - Git trigger informer behavior is tuned via `TEST_TRIGGER_GIT_INFORMER_RECONCILE_INTERVAL`, `TEST_TRIGGER_GIT_INFORMER_REPO_DEPTH`, `TEST_TRIGGER_GIT_INFORMER_LIST_TIMEOUT`, `TEST_TRIGGER_GIT_INFORMER_MAX_COMMITS_SCAN`, `TEST_TRIGGER_GIT_INFORMER_PULL_RETRIES`, and `TEST_TRIGGER_GIT_INFORMER_PULL_RETRY_DELAY`.
@@ -82,191 +82,29 @@ Write the failing test first, at the lowest level that shows the bug, then fix i
 - `testkube-api` chart values `jobTolerations`/`jobAffinity`/`jobNodeSelector` (`k8s/helm/testkube-api/values.yaml`) set the `tolerations`/`affinity`/`nodeSelector` applied to the ephemeral pods spawned per test execution (`_job-template.yaml.tpl` for legacy prebuilt/container executors, `_slave-pod-template.yaml.tpl` for test-workflow slave pods). Unset (empty) by default and deliberately does not fall back to `global.tolerations`/`global.affinity`/`global.nodeSelector`, since those already carry a non-empty default (an arm64 toleration) that would otherwise silently change job/slave pod scheduling for every chart consumer.
 - Telemetry opt-out: `DO_NOT_TRACK=1` (any value except empty, `0` or `false`) skips every telemetry send in the CLI and the agent (`pkg/telemetry`).
 - CLI update-check toggle: set `TESTKUBE_DISABLE_UPDATE_CHECK=1` to suppress both the per-command hint and the `testkube version` status block. The CLI persists `lastUpdateCheckAt` and `latestKnownVersion` in `~/.testkube/config.json` to throttle the per-command hint to once per day.
-- Object retention is driven by `STORAGE_EXPIRATION` (whole bucket, in days) and `STORAGE_CACHE_EXPIRATION` (step dependency caches under the `.tkcache/v1` prefix, in days). **`STORAGE_CACHE_EXPIRATION` defaults to 1 day; `STORAGE_EXPIRATION` stays opt-in.** The difference is the filter, not taste: the cache rule is confined to the cache prefix and can only delete caches, where the bucket-wide rule is unfiltered and governs artifacts and logs too, so a default there would delete a deployment's results on an upgrade. `TestExpirationDefaults` pins both. `SetExpirationPolicies` in `pkg/storage/minio/minio.go` applies them with `SetBucketLifecycle`, which replaces the bucket lifecycle wholesale - so it reads the existing configuration first and carries through every rule Testkube does not own, matched by ID (`mergeLifecycleRules`). That merge is what makes a default safe at all: without it, defaulting either setting would drop the rules of installations whose bucket lifecycle is managed elsewhere, purely by upgrading. It fails closed - if the existing lifecycle cannot be read, nothing is written. That read is a permission earlier versions did not need (`s3:GetLifecycleConfiguration` on S3 and MinIO, `storage.buckets.get` on GCS), and because `STORAGE_CACHE_EXPIRATION` now defaults to 1 the call happens on every installation rather than only those configuring an expiration - so an upgrade can need permissions the deployment never granted. The error names them. Note also that the bucket-wide rule is unfiltered and so covers cache objects too, and the earlier expiration wins — a cache TTL can only bring eviction forward, never postpone it, and `MustGetMinioClient` warns when it is set longer than the bucket-wide one.
+- Object retention: `STORAGE_EXPIRATION` (whole bucket, opt-in) and `STORAGE_CACHE_EXPIRATION` (step dependency caches, default 1 day); `pkg/storage/minio/doc.go` explains the defaults and the permission the lifecycle read needs.
 
 ### Architecture reference
 
 - See [`ARCHITECTURE.md`](ARCHITECTURE.md) for a detailed description of the agent's components, storage layer, event system, CRDs, CLI, and Kubernetes deployment.
 - When making changes that affect the architecture (new entry points, storage backends, event listeners, CRDs, API routes, etc.), update `ARCHITECTURE.md` to keep it in sync.
 
-### MCP integration
+### Package documentation
 
-- `pkg/mcp/` implements the Model Context Protocol server for AI assistant integration.
-- Exposes tools across workflows, executions, artifacts, and metadata via `testkube mcp serve` (CLI), Docker image (`testkube/mcp-server`), or Control Plane's `/mcp` endpoint per environment.
-- Uses interface-based tool design; new tools need registration in both `pkg/mcp/server.go` and control plane's `mcp_handler.go`.
-- See `pkg/mcp/README.md` for architecture, tool patterns, and usage examples. Section 6 shows how to run the pull request workflows on a branch through these tools.
-- Insights board tools (`pkg/mcp/tools/boards.go`) keep their rules in `pkg/mcp/boards/`: report param validation and defaults, the report-to-`/insights/*` query translation, and the layout. It is a port of the dashboard's TypeScript (`utils/insights.ts`, `DynamicFilters/types.ts`, `reports/*/type.ts` in `testkube-cloud-api/js/packages/web`), since the Control Plane stores report params opaquely. **The Control Plane's `HandlerClient` must use this package rather than reimplement it**, and a dashboard change to those files needs a matching change here; `testdata/translation_cases.json` pins the translation.
-- Boards are organization-scoped and the Control Plane refuses API tokens on every board endpoint, so the board tools need a user session. `APIClient` refuses a `tkcapi_` token before sending anything and returns `tools.ErrBoardsRequireUser`. Every board write reads the board first and resends its description. Current Control Planes keep a description an update omits, but older ones clear it, so resending is what keeps it on those.
-- **Board updates are optimistic-concurrency writes.** Resending a value read earlier (the description, a recomputed layout) would overwrite a concurrent edit, so every update - `update_board` and the three report tools - goes through `writeBoard` in `pkg/mcp/tools/boards.go`: it sends `expectedVersion` (the board `version` it read; every write to a board increments it), the Control Plane refuses a stale write with 409, both clients turn that into `tools.ErrBoardChanged`, and the write is rebuilt from a fresh read, up to `boardWriteAttempts` times. A write's builder must derive everything from the board it is handed, never from an earlier read. The token is a counter, not `updatedAt`: two writes can share a timestamp, and a reused token would let a stale write through. A Control Plane that predates versions returns none, and the write is then unconditional. `delete_board` is deliberately not conditional: it resends nothing it read (the read only resolves a slug to the ID it deletes by), and the Control Plane checks visibility and delete rights against the board as it is at delete time, so deleting removes the board whatever changed since the read, as deleting in the dashboard does.
-- **Relative report ranges are anchored in a time zone.** The dashboard ends a `day`/`week`/`month`/`quarter` range at the viewer's local midnight, so `render_board` takes an IANA `timeZone` (default UTC) and passes it as `boards.QueryOptions.Location`; `boards` embeds `time/tzdata` because the MCP also runs from images without a zoneinfo database.
+Each area below documents itself in the `doc.go` of its package; read that before changing it. A line that names another repository is a contract both ends change together.
 
-### GitOps resource sync
-
-- `internal/sync/` implements the agent side of the GitOps (Kubernetes → Control Plane) sync capability. Reconcilers live in `internal/sync/controller/`, one per syncable kind, and the Control Plane client lives in `internal/sync/grpc/`.
-- The syncable kinds are `TestWorkflow`, `TestWorkflowTemplate`, `TestTrigger`, `WorkflowTrigger`, `Webhook`, and `WebhookTemplate`. Adding a kind means touching `internal/sync/controller/`, `internal/sync/grpc/`, the `SyncService` proto, and the Control Plane together.
-- The sync controllers are registered in `cmd/api-server/main.go` behind `proContext.CloudStorageSupportedInControlPlane` and `GITOPS_KUBERNETES_TO_CLOUD_ENABLED`, so they only run for a GitOps-persona agent connected to a Control Plane.
-
-#### Resource ownership contract
-
-A synced resource in the Control Plane is exclusively owned by one GitOps agent, so that agents syncing from different namespaces cannot silently overwrite each other's resources. The contract spans four layers, and a change to one usually needs a matching change in the others:
-
-1. **Schema** — `Syncable.gitOpsOwner` in `api/v1/testkube.yaml`, a `GitOpsOwner` holding the authoritative `agentId` plus a display-only `agentName` that may be stale after a rename. Run `make generate-openapi` after editing.
-2. **Wire** — the Control Plane rejects a sync from a non-owning agent with the gRPC status `codes.FailedPrecondition`. That code is reserved for ownership conflicts on the sync API; do not reuse it there for other validation failures, or agents will misreport the cause.
-3. **Agent translation** — `translateError` in `internal/sync/grpc/errors.go` maps `FailedPrecondition` onto the `ErrOwnershipConflict` sentinel in `internal/sync/errors.go`, keeping the original status in the error chain because its message names the current owner. Callers match on the sentinel so that no layer above the client depends on gRPC.
-4. **Reconciliation** — `terminalOnRejection` in `internal/sync/controller/errors.go` wraps a rejection (an ownership conflict or an invalid resource, see `syncagent.IsRejection`) in `reconcile.TerminalError` so controller-runtime stops requeueing something no retry can fix, while every other error stays retryable with backoff. Rejections are deliberately not logged there: controller-runtime already logs whatever a reconciler returns, along with the kind and name of the resource.
-
-`skipRejectedResource` in `cmd/api-server/superagentmigration.go` applies the same rule outside the reconcilers, during SuperAgent migration. That migration retries sync failures forever by design, so a rejection has to break the loop or a single unowned or invalid resource wedges the migration indefinitely.
-
-The Control Plane side lives in `testkube-cloud-api`: it persists the owner on the six syncable tables and enforces it in `internal/sync/ownership.go`, on every Upsert and Delete path. Enforcement is opt-in per organization (the `gitOpsOwnership` setting), so with it off an agent never sees a conflict. Ownership is transferred from Git by setting the `testkube.io/gitops-owner` annotation on the Kubernetes resource to the new owner's agent ID. The agent sends the annotation with the resource, and the Control Plane reads it, so the agent needs no code for it. The agent name is display-only and never authorizes anything.
-
-### Mongo to Postgres conversion
-
-`cmd/convert` (the CLI and flags) and `pkg/convert` (the migrator) move an OSS installation's
-data from MongoDB to PostgreSQL, so that switching the API server from `API_MONGO_DSN` to
-`API_POSTGRES_DSN` keeps execution history and numbering instead of starting empty and
-restarting execution numbers at 1, which would collide with the names of old executions.
-
-- **Two tasks, and nothing else.** `executions` copies `testworkflowresults` into the seven
-  `test_workflow_*` tables (`executions.go`, `executions_row.go`). `sequences` copies Test
-  Workflow counters into `execution_sequences` (`sequences.go`), and never moves a counter
-  backwards. Logs, outputs and artifacts are in object storage, definitions and triggers are
-  CRDs, and the `triggers` collection holds only a short-lived leader lease, so none of them
-  are migrated.
-- **Rows are written by hand as COPY text**, not through the repository. That makes every
-  schema migration touching `test_workflow_executions` or its child tables a change here
-  too: add the column to the matching `*Columns` list and `write*Row` serializer in
-  `executions_row.go`, projected the way `pkg/repository/testworkflow/postgres` writes it. A
-  column the converter leaves out is silently NULL for every migrated row.
-  `TestConvertExecutions_Integration` reads each execution back through both repositories and
-  compares them, which catches the omission **only if the fixture in `buildExecution` sets
-  the field**. Both repositories synthesize some fields on read (lineage through
-  `EffectiveLineage()`), so a fixture that leaves such a field unset round-trips even when
-  the column was dropped.
-- **Resumable and exactly-once.** Each batch commits in the same transaction as its row in
-  `convert_checkpoints` (migration `20260826120000_convert_checkpoints.sql`, written only by
-  this tool), so an interrupted run resumes after the last committed batch. `--reset --yes`
-  truncates the target and clears the checkpoints. `--dry-run` serializes everything and
-  writes nothing, but still applies schema migrations, because the checkpoint lookup and the
-  verification read those tables.
-- **The tool migrates the schema itself**, with goose's `WithAllowOutofOrder(true)` like
-  the API server, and an out-of-date schema is fatal here rather than a warning: the COPY
-  statements name columns that may not exist yet.
-- **Exit status.** After the summary, the tool exits non-zero if any document failed or the
-  run raised a warning, such as a verification count mismatch (`ErrIncomplete`), so a Job is marked failed.
-- **Deployment.** The `testkube` chart runs it as the `convert` Job
-  (`templates/convert-job.yaml`, `convert.*` values), disabled by default. It is deliberately
-  not a Helm hook: the operator triggers the cutover. The Job reads both DSNs from
-  `testkube-api.mongodb` and `testkube-api.postgresql`, and a retry resumes from the
-  checkpoint.
-
-### Execution lineage and reruns
-
-- `TestWorkflowExecutionLineage` (`baseId`, `rootId`, `attempt`) records what an execution is a rerun of. It is written for **every** execution, not only reruns: an original run is its own root at attempt 1, so "every execution of chain R" is one predicate and includes the original - in SQL `COALESCE(lineage_root_id, id) = R`, matching the chain index, because a legacy row carries NULL there and is its own root. `TestWorkflowExecution.EffectiveLineage()` synthesizes that default for rows written before the columns existed, which is why nothing has to be backfilled - derive it there and nowhere else, or the two repositories will disagree.
-- It travels `ScheduleRequest.base_execution_id` -> `Enqueuer.deriveLineage` -> the execution record -> `ExecutionStart.lineage` -> `ExecutionConfig.Lineage` -> `RerunExecutionId()` in the pod, which is what makes the reserved `execution("rerun")` reference resolve. **Every path that builds an `ExecutionStart` must set it from the execution record**, in this repo and in `testkube-cloud-api`: a writer that forgets sends the pod no lineage, `execution("rerun")` silently stops resolving, and nothing reports it. That has already happened once - `go build` cannot catch it, because an unused helper function is not a compile error; the `unused` linter is the guard.
-- Only the base id travels on the wire. The Control Plane derives the root and attempt by loading the base through the environment-scoped results repository, which is also where it confirms the base belongs to the caller's environment - `proto/service.proto` requires that, and the load is what enforces it. A caller able to assert a root or an attempt could forge a chain.
-- **An original run has an empty `baseId` and must resolve to no rerun.** Returning `rootId` there would make every execution a rerun of itself.
-- **Reserved references win over the registry.** `execution("parent")` and `execution("rerun")` are resolved before the executions the workflow scheduled, so a child aliased - or a workflow named - `parent`/`rerun` cannot shadow them. A collision is refused rather than resolved either way, because preferring the reserved meaning would instead make that child unreachable by name. `IsReservedRef` is the list.
-
-### Transient-failure retries
-
-- `pkg/runner/runner.go` runs `worker.Destroy` (cleanup of the execution's Secrets/Pods after the workflow ends) through the shared `retry()` helper via `destroyResources`. Bounded by `CleanupResourcesRetryCount` and `CleanupResourcesRetryDelay`; a brief `kube-apiserver` blip during teardown should not leave orphan resources in the customer namespace.
-- `pkg/event/kind/webhook/listener.go` retries the outbound `HttpClient.Do` for `sendRetryCount` attempts with a linear `sendRetryBaseDelay`. Retryable outcomes: network errors, `5xx`, and `429`. Other `4xx` short-circuit so a bad URL / auth failure is not spammed at the subscriber. Delivery is intentionally at-least-once (subscribers own dedupe, matching Stripe/GitHub/Slack convention).
-- `cmd/tcl/testworkflow-toolkit/commands/kill.go` runs the services cleanup of the `kill` step: `worker.List`, each `getServiceHealth` pod read, and `worker.DestroyGroup`, through the `retryTransient` helper and the classifiers in `retry.go`, bounded by `cleanupRetryCount` and `cleanupRetryDelay`. Only a failure whose every branch is transient is downgraded to a warning; the test steps already have their result, so a teardown blip is not the test's verdict. Anything else still fails the step. `retry.go` documents which error classes count as transient and why.
-
-### Step dependency cache
-
-A step's `cache` block (`api/testworkflows/v1/step_types.go`, `StepCache`) restores
-directories from object storage before the step runs and saves them back once it passes,
-so dependency installs survive between executions.
-
-- `pkg/executioncache/` is the transport-free core: the object-key derivation
-  (`objectkey.go`), the restore-key match policy (`match.go`), the payload and handshake
-  shapes both sides share (`args.go`), and the repository interface plus its
-  degrade-to-miss classification (`repository.go`). **The Control Plane must import this
-  package rather than reimplement it** — a disagreement produces entries the other side
-  can never find, so every run silently misses its own cache.
-- `ProcessCacheRestore` / `ProcessCacheSave` in
-  `pkg/testworkflows/testworkflowprocessor/operations_cache.go`, registered in **both**
-  presets. Restore sits after the content operations so the repository is checked out
-  when the key is resolved; save sits after the step's work and before artifacts.
-- `cmd/testworkflow-toolkit/commands/cache.go` is the pod-side half. It never exits
-  non-zero: a cache is an optimization, so a miss, an unreachable Control Plane, a
-  missing capability, a corrupt archive or a refused upload all leave the step to install
-  from the network.
-
-Three constraints are easy to break and worth knowing before editing any of it:
-
-- **The specification travels base64-encoded in one argument.** `testworkflow-init`
-  resolves every container argument with `expressions.FinalizerFail` and exits the step
-  on failure, so a key holding `hash_files()` over an absent lockfile would kill the step
-  rather than miss the cache. `TestProcessCache_KeyTemplateStaysOpaque` guards this.
-- **The two stages hand the resolved key over through `TK_CACHE_STATE`** on the shared
-  `/testkube` volume instead of each computing it. They are separate containers, and an
-  install may rewrite the very lockfile the key hashes (`npm ci` does), so a recomputed
-  key could store the entry where nothing later searches for it.
-- **Cached paths are mounted automatically.** Each stage is its own container, and
-  containers share volumes but not their root filesystems, so a path outside every volume
-  is restored where the container running the install cannot see it. `mount: false` on an
-  uncovered path is refused at bundle time rather than silently doing nothing.
-
-The save stage sets no condition, inheriting `passed` — deliberately unlike the artifacts
-stage, which is `always`: publishing a failed install under a content-hash key would
-poison every later run with no way for a user to invalidate it.
-
-`hash()` (`pkg/expressions/stdlib.go`) and `hash_files()`
-(`pkg/expressions/libs/fs.go`) exist for building keys. Prefer `hash_files`:
-`hash(glob(...))` digests the matched **paths**, so it does not change when a file's
-contents do.
-
-### Telemetry and cluster detection
-
-- `pkg/telemetry/` contains all telemetry event construction, sending, and cluster identification logic.
-- `pkg/telemetry/cluster_type.go` implements Kubernetes cluster type detection using a layered approach (node providerID → node labels → server version → kube-system pod names). The result is cached with `sync.Once`.
-- When adding support for a new cluster type, add detection entries to the appropriate layer(s) in `cluster_type.go` and add corresponding test cases in `cluster_type_test.go`.
-- Every `Sender` returns the body it transmitted (Segment: the queued `Track` events as JSON), and `sendData` returns them one sender per line, so users can inspect telemetry before consenting: the CLI prints it as "telemetry send event response" under `--verbose`. A new sender must return what it sends, not a response status alone.
-- `cmd/api-server/services/telemetry.go` drives the heartbeat loop that sends `testkube_api_heartbeat` events hourly, including the detected cluster type and agent capabilities.
-- `cmd/api-server/services/capabilities.go` extracts agent capability tags (persona, mode, feature flags) from the runtime config for inclusion in telemetry events. When adding new agent features/toggles that should be tracked, add them here and in `capabilities_test.go`.
-- The `hosted-runner` tag marks runners that Testkube provisions for trial users, detected from the `tkcagent_hr_` prefix the control plane assigns to `RUNNER_NAME`. Keep `hostedRunnerNamePrefix` in sync with `naming.HostedRunnerAgentName` in `testkube-cloud-api`.
-- `pkg/cliruntime/context.go` is a leaf package containing the CLI runtime-context helpers (`IsRunningInDocker`, `DockerContext`, `CliRunContext`, `DetectAITool`). `pkg/telemetry` and `cmd/kubectl-testkube/commands/common` both depend on it; placing it in its own package avoids an import cycle between common and telemetry.
-- `DetectAITool` reports the AI coding agent that invoked the CLI (`claude-code`, `codex`, `cursor`, `gemini-cli`, or `""`) purely from env vars the agents set in their subprocesses. Telemetry surfaces it as the `ai_tool` param (Segment property `aiTool`) across all CLI-origin payloads (`NewCLIPayload`, `NewCLIWithLicensePayload`, the inline error/preview payloads in `telemetry.go`, and the MCP tool payload in `mcp.go`).
-
-### CLI update check
-
-- `cmd/kubectl-testkube/commands/common/update_check.go` implements `MaybeNotifyNewerRelease` (per-command post-run hint) and `CheckComponentsStatus` (richer per-component report rendered by `testkube version`). Both consult `pkg/cliruntime` to skip in CI/Docker/Kubernetes contexts and honor the `--output` flag and `TESTKUBE_DISABLE_UPDATE_CHECK` env opt-out.
-- `cmd/kubectl-testkube/commands/common/install_source.go` classifies how the running CLI binary was installed (Homebrew, Chocolatey, APT, install.sh, Docker, `go install`, unknown) by inspecting the resolved `os.Executable` path and the Docker context. The classification drives the install-source-specific upgrade command surfaced in the hint.
-- Adding a new install channel: extend `DetectInstallSource` and add a test case to `install_source_test.go` that exercises the new path under the relevant `goos`.
-- Adding a new CI/runtime detection: extend `pkg/cliruntime/context.go` so both telemetry and the update-check feature stay in sync.
-- Adding a new AI-tool detection: extend `DetectAITool` in `pkg/cliruntime/context.go` (add the env-var check and a `TestDetectAITool` case in `context_test.go`); no telemetry wiring changes are needed since payloads already read the `AITool` field.
-
-### CLI prompts and non-interactive runs
-
-- `pkg/ui/interactive.go` holds the terminal check every prompt goes through. `ui.Select`, `ui.Confirm` and `ui.TextInput` call `requireInteractive` first and exit with an actionable message when stdin is not a terminal, so no call site has to guard itself. `ui.StdinIsInteractive()` exposes the same check for callers that want to take a different path instead of failing.
-- The guard exists because a prompt with nobody to answer it used to spin: `atomicgo.dev/keyboard` cannot open a non-terminal stdin, reports every failed read as an empty keypress with a nil error, and pterm has no case for an empty keypress, so its listener loops forever and burns more than a core.
-- `GetClient` (`cmd/kubectl-testkube/commands/common/client.go`) uses `ui.StdinIsInteractive()` to refuse starting a login when a token refresh fails with no terminal present, the same way the email-link branch beside it already does.
-- Adding a new prompt: use the `ui` helpers rather than pterm directly, and it inherits the guard. Adding a command that must not prompt at all: branch on `ui.StdinIsInteractive()`.
-- Tests flip the unexported `stdinIsInteractive` seam rather than allocating a pseudo terminal.
-
-### CLI file input
-
-- A flag that names a file to read takes `-` for the command's standard input (`common.ReadFileOrStdin` in `cmd/kubectl-testkube/commands/common/input.go`), so content can be piped: `cat payload.json | testkube create webhook --payload-template -`. Read new file flags through it, and use `cmd.InOrStdin()` rather than `os.Stdin` so tests can supply the input.
-
-### CLI upgrade
-
-- `testkube upgrade --reuse-values` passes Helm's `--reuse-values`. Helm applies `--set` over reused values, so in that mode `prepareCommonHelmArgs` sends only the settings of flags the user passed (`HelmOptions.ExplicitFlags`, `sendsFlag`/`sendsAnyFlag` in `common/helper.go`): a flag default such as `--no-postgres=true` would otherwise silently turn off what the release had enabled. A new flag-derived Helm setting must go through `sendsFlag`. Never gate on a value being non-empty: `ProcessMasterFlags` composes a runner's control plane addresses from default prefixes and root domain, so they always are, and sending them would point a runner of a custom control plane at SaaS. The flag lists (`agentURIFlags`, `uiURIFlags`) must name every flag `ProcessMasterFlags` reads for an address, the `--*-uri-override` flags included, or that flag is silently ignored. A runner's disabled MinIO/MongoDB/PostgreSQL is always sent.
-
-### CLI diagnostics
-
-- `testkube diagnostics` runs validator groups from `pkg/diagnostics`; the commands live in `cmd/kubectl-testkube/commands/diagnostics/`. Groups: `install` (`validators/deps`), `agent` (`validators/agent`, the agent pods are ready: `api-server`, `testkube-api` or `testkube-runner`) and `license`.
-- Adding a check: implement `validators.Validator` in a package under `pkg/diagnostics/validators/`, register it in the group's `Register*Validators`, and build commands through `diagnostics.New(cmd)` in that package so `--output json` applies.
-- A validator that needs the cluster takes a connect function rather than a client, so an unreachable cluster is reported as a result (`WithBreak()`) instead of aborting the run. Do not add checks for the deprecated operator.
-
-### On-prem demo install
-
-- `testkube init demo` (`cmd/kubectl-testkube/commands/init.go`) installs the On-Prem demo on the new architecture: the Control Plane (enterprise chart + `values.demo.v2.yaml`) plus a **separate** listener-enabled runner (`kubeshop/testkube-runner`). The bundled agent is gone.
-- The CLI generates one agent secret key per install (`common.GenerateDemoAgentSecretKey`) and passes the *same* key to both sides — injected into the Control Plane's `bootstrapConfig` runner so the CP provisions it, and into the runner install (`common.HelmUpgradeOrInstallTestkubeOnPremDemoRunner` → `demoRunnerHelmOptions`). No secret is baked into the binary or chart.
-- The runner identity (`demoRunnerID`/`OrgID`/`EnvID`) must stay in sync with the runner declared under `bootstrapConfig` in `values.demo.v2.yaml` (in `testkube-cloud-charts`).
-- The legacy `values.demo.yaml` profile (bundled agent, MongoDB) is deprecated but kept for older CLIs.
-- Install lifecycle telemetry: `init demo` and `install local` report `cli_install_started` (before Helm install; after the license step for `install local`) and `cli_install_finished` (after success) to the license service at `POST https://license.testkube.io/events`. The client lives in `pkg/diagnostics/validators/license/client.go` (`Client.ReportEvent`, `EventRequest`, the `LicenseEventsURL` and `EventCLIInstall*` constants); the `reportLicenseEvent`/`waitLicenseEvents` helpers in `init.go` make delivery telemetry-gated (`install local` also skips them when its install tracker is off, e.g. `DO_NOT_TRACK`), non-blocking (background goroutine), and flushed before exit with a bounded wait. The license key in the body is the credential (validated worker-side before recording), so no shared secret ships in the CLI. Adding a new lifecycle event: add an `EventCLIInstall*` constant and a `reportLicenseEvent` call, and allowlist it in the license worker's `/events` handler (`testkube-infrastructure`). `init demo` also sends `init_demo_started`/`init_demo_finished` to the PostHog install tracker, joined to `install local` runs by machine id. Keep `ARCHITECTURE.md` in sync.
+- **MCP integration:** `pkg/mcp/doc.go`, with the Insights board rules in `pkg/mcp/boards/doc.go` and how the board tools write in `pkg/mcp/tools/doc.go`. A new tool is also registered in the Control Plane's `mcp_handler.go`, the Control Plane's `HandlerClient` uses `pkg/mcp/boards` rather than reimplementing it, and a dashboard change to the ported report files needs a matching change in `pkg/mcp/boards`.
+- **GitOps resource sync** and its resource ownership contract: `internal/sync/doc.go`. The Control Plane enforces ownership in testkube-cloud-api's `internal/sync/ownership.go`.
+- **Mongo to Postgres conversion** (`cmd/convert`): `pkg/convert/doc.go`. A schema migration touching `test_workflow_executions` or its child tables is a change there too.
+- **Execution lineage and reruns:** `pkg/api/v1/testkube/doc.go`. Every path that builds an `ExecutionStart`, here and in testkube-cloud-api, sets the lineage from the execution record.
+- **Step dependency cache:** `pkg/executioncache/doc.go`. The Control Plane imports `pkg/executioncache` rather than reimplementing it.
+- **Object retention** (`STORAGE_EXPIRATION`, `STORAGE_CACHE_EXPIRATION`): `pkg/storage/minio/doc.go`.
+- **Transient-failure retries:** `pkg/runner/doc.go` (resource cleanup), `pkg/event/kind/webhook/doc.go` (webhook delivery) and `cmd/tcl/testworkflow-toolkit/commands/doc.go` (services cleanup in the kill step).
+- **Telemetry and cluster detection:** `pkg/telemetry/doc.go`, with the CLI runtime context and AI-tool detection in `pkg/cliruntime/doc.go`. `hostedRunnerNamePrefix` stays in sync with `naming.HostedRunnerAgentName` in testkube-cloud-api.
+- **CLI update check, file input and `upgrade --reuse-values`:** `cmd/kubectl-testkube/commands/common/doc.go`.
+- **CLI prompts and non-interactive runs:** `pkg/ui/doc.go`.
+- **CLI diagnostics:** `pkg/diagnostics/doc.go`.
+- **On-prem demo install** (`testkube init demo`) and the install lifecycle events: `cmd/kubectl-testkube/commands/doc.go`. The demo runner's identity matches the runner under `bootstrapConfig` in `values.demo.v2.yaml` (testkube-cloud-charts), and a new lifecycle event is allowlisted in the license worker's `/events` handler (testkube-infrastructure).
 
 ## 4. Conventions reviewers enforce
 
@@ -282,8 +120,8 @@ contents do.
 A package documents its own behaviour in its `doc.go`. Reviewers ask for that instead of a new `AGENTS.md` or `ARCHITECTURE.md` section, so write or update the `doc.go` first. After a code change, update these two files only when one of the following is true:
 
 - **New or removed entry points** (`cmd/` binaries, API routes, controllers) → update both files.
-- **Changed detection or identification logic** (cluster type, CLI run context, Docker context, AI tool) → update its section here ("Telemetry and cluster detection", "CLI update check") and anything `ARCHITECTURE.md` says about it.
-- **A contract with another repository or component changes** (a proto, the OpenAPI schema, something the Control Plane imports) → update the section that names both ends here.
+- **Changed detection or identification logic** (cluster type, CLI run context, Docker context, AI tool) → update the package's `doc.go` (`pkg/telemetry`, `pkg/cliruntime`, `cmd/kubectl-testkube/commands/common`) and anything `ARCHITECTURE.md` says about it.
+- **A contract with another repository or component changes** (a proto, the OpenAPI schema, something the Control Plane imports) → update both packages' `doc.go` and the line that names both ends under "Package documentation".
 - **New storage backends, event listeners, CRDs, or external integrations** → update `ARCHITECTURE.md`.
 - **New configuration knobs or environment variables** → mention them in `AGENTS.md` under "Configuration references" if they affect agent behavior.
 - **New code-generation or build steps** → add them under "Regenerating artifacts" in `AGENTS.md`.
@@ -332,7 +170,7 @@ Pull request checks are not GitHub Actions. They are Testkube TestWorkflows in `
 
 The same file also holds `docs-prettier`, which checks testkube-docs, not this repo.
 
-To run them yourself, use the Testkube MCP server (see "MCP integration") connected to the environment that runs these checks: the "GitHub Advanced Integration" environment of the Testkube OSS organization on Prod US (`app.testkube.io`). Either run `testkube mcp serve` from a CLI logged in to that environment, or use its remote endpoint, `https://api.testkube.io/organizations/<organization ID>/environments/<environment ID>/mcp`, taking the IDs from the environment's dashboard URL (`/organization/<organization ID>/environment/<environment ID>/`). Both need a member of that organization. Argo CD syncs `test/testkube/oss-tests/gh-quality-loop.yaml` there from `main` (testkube-deployment `envs/prd-agents/apps/testkube-runner-github-advanced-integration.yaml`), so a merged change to it applies to every pull request at once; the checks report as `testkubebot`. The dev Control Plane's agent syncs a copy of the same file, and `security-pr-scan` runs from there, reporting as `testkube-dev`.
+To run them yourself, use the Testkube MCP server (see "Package documentation") connected to the environment that runs these checks: the "GitHub Advanced Integration" environment of the Testkube OSS organization on Prod US (`app.testkube.io`). Either run `testkube mcp serve` from a CLI logged in to that environment, or use its remote endpoint, `https://api.testkube.io/organizations/<organization ID>/environments/<environment ID>/mcp`, taking the IDs from the environment's dashboard URL (`/organization/<organization ID>/environment/<environment ID>/`). Both need a member of that organization. Argo CD syncs `test/testkube/oss-tests/gh-quality-loop.yaml` there from `main` (testkube-deployment `envs/prd-agents/apps/testkube-runner-github-advanced-integration.yaml`), so a merged change to it applies to every pull request at once; the checks report as `testkubebot`. The dev Control Plane's agent syncs a copy of the same file, and `security-pr-scan` runs from there, reporting as `testkube-dev`.
 
 Then:
 

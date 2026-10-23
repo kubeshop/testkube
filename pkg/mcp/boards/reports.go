@@ -1,13 +1,3 @@
-// Package boards holds the transport-free logic behind the Insights board MCP
-// tools: the shape of a report's params, the translation of a report into the
-// insight query that renders it, and the board layout.
-//
-// Report params have no backend schema - the Control Plane stores them as an
-// opaque JSON object and only the dashboard interprets them. The rules here are
-// a port of the dashboard's report types and filter mapping, so a report the
-// MCP writes renders and edits in the UI, and render_board shows the numbers
-// the UI shows. Both the CLI client and the Control Plane's hosted MCP use this
-// package; neither side should reimplement it.
 package boards
 
 import (
