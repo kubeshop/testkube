@@ -410,6 +410,47 @@ spec:
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
+  name: cloud-skills-drift
+  labels:
+    category: static-analysis
+    quality-loop: "true"
+    core-tests: cloud-api
+    team: backend
+    tool: git
+description: The runspace skill files listed in js/packages/runspace-controller/shared-skills.txt
+  are identical to kubeshop/testkube-skills at the pinned commit.
+spec:
+  config:
+    revision:
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube-cloud-api.git
+      revision: '{{config.revision}}'
+      authType: github
+      cone: true
+      paths:
+      - js/packages/runspace-controller
+  container:
+    workingDir: /data/repo
+    image: alpine:3.21
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Compare with testkube-skills
+    shell: |-
+      set -eu
+      apk add --no-cache git >/dev/null
+      sh js/packages/runspace-controller/scripts/skills-drift.sh check
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
   name: cloud-gomod-codegen
   labels:
     category: build-integration
