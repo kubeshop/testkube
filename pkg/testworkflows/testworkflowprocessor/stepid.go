@@ -155,12 +155,9 @@ func resolveAndValidateStep(step *testworkflowsv1.Step, seen map[string]bool) er
 	return nil
 }
 
-// AssignStageIds gives an id to each stage under the root that has none, so every step of an
-// execution has a stable key. A stage without a name, a stage whose name gives no valid id, and a
-// stage that an operation adds, for example a clone or an artifact upload, have no id until here.
-// The id is the id of the parent, then the name or the category of the stage, with an index suffix
-// when the id is taken. The function keeps every id that the workflow or the processor gave. The root
-// group is the workflow itself and gets no id.
+// AssignStageIds gives an id to each stage that has none, so every step of an execution has a stable
+// key. The id is the id of the parent, then the name or the category of the stage, with an index
+// suffix when the id is taken. The root group is the workflow itself and gets no id.
 func AssignStageIds(root stage.Stage) {
 	used := make(map[string]bool)
 	collectStageIds(root, used)
