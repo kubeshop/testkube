@@ -21,11 +21,12 @@ func TestFromExecution(t *testing.T) {
 			want:      Execution{Id: "exec-1", Name: "wf-1", Outputs: map[string]string{}},
 		},
 		{
-			name: "fills the messages, the reason codes, and the step attempts keyed by ref",
+			name: "fills the messages, the reason codes, and the step attempts keyed by step id",
 			execution: &testkube.TestWorkflowExecution{
-				Id:       "exec-1",
-				Name:     "wf-1",
-				Workflow: &testkube.TestWorkflow{Name: "wf"},
+				Id:        "exec-1",
+				Name:      "wf-1",
+				Workflow:  &testkube.TestWorkflow{Name: "wf"},
+				Signature: []testkube.TestWorkflowSignature{{Ref: "rstep1", Id: "run_test"}, {Ref: "rstep2", Id: "report"}},
 				Result: &testkube.TestWorkflowResult{
 					Status:         common.Ptr(testkube.ABORTED_TestWorkflowStatus),
 					Initialization: &testkube.TestWorkflowStepResult{ErrorMessage: "the pod cannot be scheduled", ErrorReason: "unschedulable"},
@@ -42,17 +43,69 @@ func TestFromExecution(t *testing.T) {
 				Status:       "aborted",
 				Outputs:      map[string]string{},
 				ErrorMessage: "the pod cannot be scheduled",
-				StepErrors:   map[string]string{"rstep1": "the step timed out"},
-				StepAttempts: map[string]int64{"rstep1": 3},
+				StepErrors:   map[string]string{"run_test": "the step timed out"},
+				StepAttempts: map[string]int64{"run_test": 3},
 				ErrorReason:  "unschedulable",
-				StepReasons:  map[string]string{"rstep1": "step-timeout"},
+				StepReasons:  map[string]string{"run_test": "step-timeout"},
 			},
 		},
 		{
-			name: "fills the status fields from the object and leaves the message out",
+			name: "keys a step by its ref when it has no id or an earlier step has its id",
 			execution: &testkube.TestWorkflowExecution{
-				Id:   "exec-2",
-				Name: "wf-2",
+				Signature: []testkube.TestWorkflowSignature{
+					{Ref: "rgroup", Id: "build", Children: []testkube.TestWorkflowSignature{
+						{Ref: "rclone", Category: "Clone Git repository"},
+						{Ref: "rbare"},
+					}},
+					{Ref: "rparallel", Id: "build"},
+				},
+				Result: &testkube.TestWorkflowResult{
+					Steps: map[string]testkube.TestWorkflowStepResult{
+						"rgroup":    {ErrorMessage: "a child step failed"},
+						"rclone":    {ErrorMessage: "the repository does not exist"},
+						"rbare":     {ErrorMessage: "the step has no name"},
+						"rparallel": {ErrorMessage: "a parallel step failed"},
+					},
+				},
+			},
+			want: Execution{
+				Outputs: map[string]string{},
+				StepErrors: map[string]string{
+					"build":     "a child step failed",
+					"rclone":    "the repository does not exist",
+					"rbare":     "the step has no name",
+					"rparallel": "a parallel step failed",
+				},
+			},
+		},
+		{
+			name: "gives the id of a group to the child that runs its operation",
+			execution: &testkube.TestWorkflowExecution{
+				Signature: []testkube.TestWorkflowSignature{
+					{Ref: "rgroup", Id: "build", Name: "Build", Children: []testkube.TestWorkflowSignature{
+						{Ref: "rshell", Id: "build"},
+						{Ref: "rartifacts", Category: "Upload artifacts"},
+					}},
+				},
+				Result: &testkube.TestWorkflowResult{
+					Steps: map[string]testkube.TestWorkflowStepResult{
+						"rgroup": {ErrorMessage: "a child step failed"},
+						"rshell": {ErrorMessage: "the command failed", Attempts: 2},
+					},
+				},
+			},
+			want: Execution{
+				Outputs:      map[string]string{},
+				StepErrors:   map[string]string{"rgroup": "a child step failed", "build": "the command failed"},
+				StepAttempts: map[string]int64{"build": 2},
+			},
+		},
+		{
+			name: "fills the status fields from the object, keys the step by id, and leaves the message out",
+			execution: &testkube.TestWorkflowExecution{
+				Id:        "exec-2",
+				Name:      "wf-2",
+				Signature: []testkube.TestWorkflowSignature{{Ref: "rstep1", Id: "run_test"}},
 				Result: &testkube.TestWorkflowResult{
 					Status:         common.Ptr(testkube.ABORTED_TestWorkflowStatus),
 					Initialization: &testkube.TestWorkflowStepResult{},
@@ -73,7 +126,7 @@ func TestFromExecution(t *testing.T) {
 				Outputs:      map[string]string{},
 				StatusType:   string(testkube.StatusDetailsTypeExecutionFailure),
 				StatusReason: string(testkube.StopReasonOOMKilled),
-				StatusStep:   "rstep1",
+				StatusStep:   "run_test",
 			},
 		},
 	}
