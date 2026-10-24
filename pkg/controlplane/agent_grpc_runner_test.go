@@ -9,6 +9,7 @@ import (
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	signaturev1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/signature/v1"
 )
 
 func TestWriteDeclineCause(t *testing.T) {
@@ -81,4 +82,17 @@ func TestEndEvents(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestTranslateSignature(t *testing.T) {
+	str := func(v string) *string { return &v }
+	sigs := []*signaturev1.Signature{{
+		Ref: str("rgroup"), Id: str("build"), Name: str("Build"),
+		Children: []*signaturev1.Signature{{Ref: str("rshell"), Id: str("build_run_shell_command"), Category: str("Run shell command")}},
+	}}
+
+	assert.Equal(t, []testkube.TestWorkflowSignature{{
+		Ref: "rgroup", Id: "build", Name: "Build",
+		Children: []testkube.TestWorkflowSignature{{Ref: "rshell", Id: "build_run_shell_command", Category: "Run shell command"}},
+	}}, translateSignature(sigs))
 }
