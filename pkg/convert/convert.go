@@ -1,23 +1,3 @@
-// Package convert migrates Testkube control-plane data from MongoDB to
-// PostgreSQL.
-//
-// It exists because an OSS installation that switches API_MONGO_DSN for
-// API_POSTGRES_DSN otherwise starts from an empty database: historical Test
-// Workflow executions vanish, and execution numbering restarts at 1 so new
-// executions collide with the names of old ones.
-//
-// Two collections carry data worth moving:
-//
-//   - testworkflowresults, into the seven test_workflow_* tables
-//   - sequences, into execution_sequences
-//
-// Everything else is deliberately out of scope. Execution logs, outputs and
-// artifacts live in object storage, not Mongo -- only their references travel
-// with the execution. Test workflow and template definitions are Kubernetes
-// custom resources. Cluster configuration lives in a ConfigMap. The triggers
-// collection holds a leader-election lease with a one-minute lifetime that the
-// API server reacquires on startup, so copying it across would move a stale row
-// and nothing else.
 package convert
 
 import (
