@@ -168,7 +168,7 @@ func TestProcessBasic(t *testing.T) {
 			return list.
 				Setup(false, false, false).
 				Declare(constants.RootOperationName, "", "true").
-				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[0].Ref(), sig[0].Id(), "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -292,7 +292,7 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 			return list.
 				Setup(true, false, true).
 				Declare(constants.RootOperationName, "", "true").
-				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[0].Ref(), sig[0].Id(), "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -531,7 +531,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 			return list.
 				Setup(false, false, false).
 				Declare(constants.RootOperationName, "", "true").
-				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[0].Ref(), sig[0].Id(), "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -614,8 +614,8 @@ func TestProcessMultipleSteps(t *testing.T) {
 			return list.
 				Setup(false, false, false).
 				Declare(constants.RootOperationName, "", "true").
-				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), "", sig[0].Ref(), constants.RootOperationName).
+				Declare(sig[0].Ref(), sig[0].Id(), "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), sig[1].Id(), sig[0].Ref(), constants.RootOperationName).
 				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -1086,7 +1086,7 @@ func TestProcessShell(t *testing.T) {
 			return list.
 				Setup(false, false, false).
 				Declare(constants.RootOperationName, "", "true").
-				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[0].Ref(), sig[0].Id(), "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -1238,8 +1238,8 @@ func TestProcessConsecutiveAlways(t *testing.T) {
 			return list.
 				Setup(false, false, false).
 				Declare(constants.RootOperationName, "", "true").
-				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[0].Ref(), sig[0].Id(), "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), sig[1].Id(), "true", constants.RootOperationName).
 				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -1298,8 +1298,8 @@ func TestProcessNestedCondition(t *testing.T) {
 			return list.
 				Setup(false, false, false).
 				Declare(constants.RootOperationName, "", "true").
-				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), "", sig[0].Ref(), constants.RootOperationName).
+				Declare(sig[0].Ref(), sig[0].Id(), "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), sig[1].Id(), sig[0].Ref(), constants.RootOperationName).
 				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -1360,10 +1360,10 @@ func TestProcessConditionWithMultipleOperations(t *testing.T) {
 			return list.
 				Setup(false, false, false).
 				Declare(constants.RootOperationName, "", "true").
-				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
-				Declare(virtual.Ref(), "", "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), "", "true", constants.RootOperationName, virtual.Ref()).
-				Declare(sig[2].Ref(), "", "true", constants.RootOperationName, virtual.Ref()).
+				Declare(sig[0].Ref(), sig[0].Id(), "true", constants.RootOperationName).
+				Declare(virtual.Ref(), virtual.Id(), "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), sig[1].Id(), "true", constants.RootOperationName, virtual.Ref()).
+				Declare(sig[2].Ref(), sig[2].Id(), "true", constants.RootOperationName, virtual.Ref()).
 				Result(virtual.Ref(), and(sig[1].Ref(), sig[2].Ref())).
 				Result(constants.RootOperationName, and(sig[0].Ref(), virtual.Ref())).
 				Result("", constants.RootOperationName).
@@ -1501,8 +1501,8 @@ func TestProcess_ConditionAlways(t *testing.T) {
 				// configure
 				Setup(false, false, false).
 				Declare(constants.RootOperationName, "", "true").
-				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[0].Ref(), sig[0].Id(), "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), sig[1].Id(), "true", constants.RootOperationName).
 				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
 				Result("", constants.RootOperationName).
 
@@ -1567,8 +1567,8 @@ func TestProcess_PureShellAtTheEnd(t *testing.T) {
 				// configure
 				Setup(true, false, true).
 				Declare(constants.RootOperationName, "", "true").
-				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), "", sig[0].Ref(), constants.RootOperationName).
+				Declare(sig[0].Ref(), sig[0].Id(), "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), sig[1].Id(), sig[0].Ref(), constants.RootOperationName).
 				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
 				Result("", constants.RootOperationName).
 
@@ -1630,8 +1630,8 @@ func TestProcess_MergingActions(t *testing.T) {
 				// configure
 				Setup(true, false, true).
 				Declare(constants.RootOperationName, "", "true").
-				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), "", sig[0].Ref(), constants.RootOperationName).
+				Declare(sig[0].Ref(), sig[0].Id(), "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), sig[1].Id(), sig[0].Ref(), constants.RootOperationName).
 				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
 				Result("", constants.RootOperationName).
 

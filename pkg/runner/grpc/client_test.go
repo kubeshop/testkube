@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	executionv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1"
 )
 
@@ -149,4 +150,17 @@ func TestClient_waitBackoff_ReturnsWhenTheContextEnds(t *testing.T) {
 
 	require.ErrorIs(t, err, context.Canceled)
 	assert.Less(t, time.Since(start), time.Second, "a shutdown must not sit out the remaining wait")
+}
+
+func TestTranslateSignature(t *testing.T) {
+	sigs := translateSignature([]testkube.TestWorkflowSignature{{
+		Ref: "rgroup", Id: "build", Name: "Build",
+		Children: []testkube.TestWorkflowSignature{{Ref: "rshell", Id: "build_run_shell_command", Category: "Run shell command"}},
+	}})
+
+	require.Len(t, sigs, 1)
+	assert.Equal(t, "build", sigs[0].GetId())
+	require.Len(t, sigs[0].GetChildren(), 1)
+	child := sigs[0].GetChildren()[0]
+	assert.Equal(t, []string{"rshell", "build_run_shell_command", "Run shell command"}, []string{child.GetRef(), child.GetId(), child.GetCategory()})
 }
