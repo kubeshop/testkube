@@ -225,6 +225,9 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		return nil, errors.New("test workflow has nothing to run")
 	}
 
+	// Give every stage an id, so each step of the execution has a stable key.
+	AssignStageIds(root)
+
 	// Finalize ConfigMaps
 	configMaps := layer.ConfigMaps()
 	for i := range configMaps {
