@@ -163,6 +163,7 @@ func translateSignature(sigs []*signaturev1.Signature) []testkube.TestWorkflowSi
 	for _, sig := range sigs {
 		ret = append(ret, testkube.TestWorkflowSignature{
 			Ref:      sig.GetRef(),
+			Id:       sig.GetId(),
 			Name:     sig.GetName(),
 			Category: sig.GetCategory(),
 			Optional: sig.GetOptional(),

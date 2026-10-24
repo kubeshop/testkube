@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	signaturev1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/signature/v1"
 )
 
 func TestWriteDeclineCause(t *testing.T) {
@@ -57,4 +58,17 @@ func TestWriteDeclineCause(t *testing.T) {
 			assert.Equal(t, finished, tt.result.Initialization.FinishedAt)
 		})
 	}
+}
+
+func TestTranslateSignature(t *testing.T) {
+	str := func(v string) *string { return &v }
+	sigs := []*signaturev1.Signature{{
+		Ref: str("rgroup"), Id: str("build"), Name: str("Build"),
+		Children: []*signaturev1.Signature{{Ref: str("rshell"), Id: str("build_run_shell_command"), Category: str("Run shell command")}},
+	}}
+
+	assert.Equal(t, []testkube.TestWorkflowSignature{{
+		Ref: "rgroup", Id: "build", Name: "Build",
+		Children: []testkube.TestWorkflowSignature{{Ref: "rshell", Id: "build_run_shell_command", Category: "Run shell command"}},
+	}}, translateSignature(sigs))
 }
