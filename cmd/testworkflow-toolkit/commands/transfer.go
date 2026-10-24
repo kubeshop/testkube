@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
+	"github.com/kubeshop/testkube/pkg/retry"
 )
 
 const (
@@ -69,23 +70,27 @@ func ProcessTransferPair(pair string, output io.Writer) int {
 	}
 	fmt.Fprintf(output, "Packing and sending %s to %s...\n", dirPath, url)
 
-	var lastErr error
-	for attempt := 0; attempt < transferRetryCount; attempt++ {
-		if attempt > 0 {
-			time.Sleep(time.Duration(attempt) * transferRetryBaseDelay)
-			fmt.Fprintf(output, "retrying tarball transfer (attempt %d/%d)...\n", attempt+1, transferRetryCount)
-		}
-		retryable, err := sendTarballOnce(dirPath, patterns, url)
-		if err == nil {
-			return 0
-		}
-		lastErr = err
-		if !retryable {
-			fmt.Fprintf(output, "error: %s\n", err.Error())
-			return 1
-		}
+	retryable := false
+	policy := retry.Policy{
+		Attempts: transferRetryCount,
+		Delay:    transferRetryBaseDelay,
+		RetryIf:  func(error) bool { return retryable },
+		OnRetry: func(attempt int, _ error, _ time.Duration) {
+			fmt.Fprintf(output, "retrying tarball transfer (attempt %d/%d)...\n", attempt+2, transferRetryCount)
+		},
 	}
-	fmt.Fprintf(output, "error: tarball transfer failed after %d attempts: %s\n", transferRetryCount, lastErr.Error())
+	err := policy.Do(context.Background(), func() (err error) {
+		retryable, err = sendTarballOnce(dirPath, patterns, url)
+		return err
+	})
+	switch {
+	case err == nil:
+		return 0
+	case retryable:
+		fmt.Fprintf(output, "error: tarball transfer failed after %d attempts: %s\n", transferRetryCount, err.Error())
+	default:
+		fmt.Fprintf(output, "error: %s\n", err.Error())
+	}
 	return 1
 }
 

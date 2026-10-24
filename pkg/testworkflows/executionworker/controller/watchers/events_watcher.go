@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/cloudflare/backoff"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,22 +24,6 @@ var (
 	eventsRetryDelay    = time.Second
 	eventsRetryMaxDelay = 30 * time.Second
 )
-
-// backoff gives the delay before the next list after an error. A watch that worked starts the
-// delay again from the base, because a later error does not follow the earlier ones. A list alone
-// does not, because the API can accept every list and refuse every watch.
-type backoff struct {
-	base, max, next time.Duration
-}
-
-func (b *backoff) delay(watched bool) time.Duration {
-	if watched || b.next == 0 {
-		b.next = b.base
-	}
-	d := b.next
-	b.next = min(2*b.next, b.max)
-	return d
-}
 
 type eventsWatcher struct {
 	client    kubernetesClient[corev1.EventList, *corev1.Event]
@@ -323,7 +308,10 @@ func (e *eventsWatcher) cycle() {
 	// A busy Kubernetes API can fail a list or a watch. The events keep the cause of a waiting pod,
 	// so the watcher lists them again after a delay instead of stopping, while other watchers still
 	// observe the execution.
-	retry := backoff{base: eventsRetryDelay, max: eventsRetryMaxDelay}
+	// A watch that delivered an event resets the delay, because a later error does not follow the
+	// earlier ones. A list alone does not, because the API can accept every list and refuse every
+	// watch. The delay has no jitter, so a retry never comes at once.
+	retry := backoff.NewWithoutJitter(eventsRetryMaxDelay, eventsRetryDelay)
 	for e.ctx.Err() == nil {
 		watched, err := e.listAndWatch()
 		if e.ctx.Err() != nil {
@@ -335,7 +323,10 @@ func (e *eventsWatcher) cycle() {
 			close(e.startedCh)
 		}
 
-		delay := retry.delay(watched)
+		if watched {
+			retry.Reset()
+		}
+		delay := retry.Duration()
 		select {
 		case <-e.retryUntil:
 			e.cancel(err)

@@ -2,6 +2,7 @@
 package bus
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -9,12 +10,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/avast/retry-go/v5"
 	"github.com/nats-io/nats.go"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/retry"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
@@ -50,7 +51,7 @@ func optsFromConfig(cfg ConnectionConfig) (opts []nats.Option) {
 		// due to a transient NATS outage.
 		// Note: RetryOnFailedConnect is intentionally omitted. It would make
 		// nats.Connect() return nil on an unreachable server, silently disabling
-		// the retry.DoWithData startup loop and removing crash-on-startup behaviour.
+		// the startup retry loop and removing crash-on-startup behaviour.
 		// MaxReconnects(-1) covers all runtime reconnection; startup retries are
 		// handled by the caller's retry loop.
 		nats.MaxReconnects(natsMaxReconnects),
@@ -108,12 +109,11 @@ func NewNATSConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.Conn, e
 		}),
 	)
 
-	nc, err := retry.NewWithData[*nats.Conn](
-		retry.DelayType(retry.FixedDelay),
-		retry.Delay(utils.DefaultRetryDelay),
-		retry.Attempts(NATS_RETRY_ATTEMPTS),
-	).Do(func() (*nats.Conn, error) {
-		return nats.Connect(cfg.NatsURI, opts...)
+	var nc *nats.Conn
+	policy := retry.Policy{Attempts: int(NATS_RETRY_ATTEMPTS), Delay: utils.DefaultRetryDelay, Growth: retry.Fixed}
+	err := policy.Do(context.Background(), func() (err error) {
+		nc, err = nats.Connect(cfg.NatsURI, opts...)
+		return err
 	})
 	if err != nil {
 		return nil, err
