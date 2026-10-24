@@ -420,6 +420,7 @@ func (r *PostgresRepository) buildSignatureTreeFromJSON(signatures []map[string]
 
 		twSig := &testkube.TestWorkflowSignature{
 			Ref:      getStringFromMap(sig, "ref"),
+			Id:       getStringFromMap(sig, "step_id"),
 			Name:     getStringFromMap(sig, "name"),
 			Category: getStringFromMap(sig, "category"),
 			Optional: getBoolFromMap(sig, "optional"),
@@ -1101,6 +1102,7 @@ func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx sqlc.Test
 		id, err := qtx.InsertTestWorkflowSignature(ctx, sqlc.InsertTestWorkflowSignatureParams{
 			ExecutionID: executionId,
 			Ref:         toPgText(sig.Ref),
+			StepID:      toPgText(sig.Id),
 			Name:        toPgText(sig.Name),
 			Category:    toPgText(sig.Category),
 			Optional:    toPgBool(sig.Optional),
