@@ -173,8 +173,10 @@ registry_running = str(local(
 registry_ip = ''
 
 if registry_running:
+    # The registry's address on the cluster's network, not on Docker's default bridge:
+    # the registry container is attached to both, and pods can only reach the first.
     registry_ip = str(local(
-        "docker inspect " + REGISTRY_NAME + " 2>/dev/null | grep -m1 '\"IPAddress\"' | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+'",
+        "docker inspect -f '{{with index .NetworkSettings.Networks \"" + EXPECTED_KUBE_CONTEXT + "\"}}{{.IPAddress}}{{end}}' " + REGISTRY_NAME + " 2>/dev/null",
         quiet=True,
     )).strip()
 
@@ -472,31 +474,14 @@ local_resource(
         kubectl rollout status deployment/""" + MINIO_RESOURCE_NAME + """ -n """ + NAMESPACE + """ --timeout=120s
         sleep 3
         echo "Creating MinIO buckets..."
-        kubectl delete job minio-bucket-setup -n """ + NAMESPACE + """ --ignore-not-found=true
-        kubectl apply -n """ + NAMESPACE + """ -f - <<'YAML'
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: minio-bucket-setup
-spec:
-  ttlSecondsAfterFinished: 60
-  template:
-    spec:
-      containers:
-      - name: mc
-        image: minio/mc:latest
-        command:
-        - /bin/sh
-        - -c
-        - |
-          mc alias set minio http://""" + MINIO_SERVICE_HOST + """:9000 """ + minio_user + " " + minio_pass + """
+        # The MinIO image ships mc, so run it there: minio/mc:latest is no longer
+        # served from Docker Hub without authentication.
+        kubectl exec -n """ + NAMESPACE + """ deployment/""" + MINIO_RESOURCE_NAME + """ -- sh -c '
+          export MC_CONFIG_DIR=/tmp/.mc
+          mc alias set minio http://localhost:9000 """ + minio_user + " " + minio_pass + """ >/dev/null
           mc mb minio/testkube-artifacts --ignore-existing
           mc mb minio/testkube-logs --ignore-existing
-          echo "Buckets created successfully"
-      restartPolicy: Never
-  backoffLimit: 3
-YAML
-        kubectl wait --for=condition=complete job/minio-bucket-setup -n """ + NAMESPACE + """ --timeout=60s
+        '
         echo "MinIO buckets setup complete."
     """,
     labels=["setup"],
