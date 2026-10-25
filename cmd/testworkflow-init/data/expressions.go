@@ -151,6 +151,8 @@ var RefNotFailedMachine = expressions.NewMachine().
 	})
 
 func Expression(expr string, m ...expressions.Machine) (expressions.StaticValue, error) {
-	m = append(m, AliasMachine, GetBaseTestWorkflowMachine(), ExecutionMachine())
+	// parallel() reads only the state of this pod, so unlike execution() it can resolve
+	// in a step condition and a result expression.
+	m = append(m, AliasMachine, GetBaseTestWorkflowMachine(), ExecutionMachine(), ParallelDataMachine())
 	return expressions.EvalExpression(expr, m...)
 }

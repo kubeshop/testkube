@@ -16,10 +16,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executiondata"
+	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/paralleldata"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
@@ -83,4 +85,42 @@ func TestProcessWorkerNotificationsCollectsOutputs(t *testing.T) {
 	group := executor.outputs.group(1)
 	require.Len(t, group.Workers, 1)
 	assert.Equal(t, map[string]string{"duration": "12"}, group.Workers[0].Outputs)
+}
+
+func TestDeclaredParallelIds(t *testing.T) {
+	spec := testworkflowsv1.StepParallel{
+		Steps: []testworkflowsv1.Step{
+			{StepMeta: testworkflowsv1.StepMeta{Id: "inner"}, Parallel: &testworkflowsv1.StepParallel{
+				Steps: []testworkflowsv1.Step{
+					{StepMeta: testworkflowsv1.StepMeta{Name: "Deep shards"}, Parallel: &testworkflowsv1.StepParallel{}},
+				},
+			}},
+			{StepMeta: testworkflowsv1.StepMeta{Name: "Group"}, Steps: []testworkflowsv1.Step{
+				{StepMeta: testworkflowsv1.StepMeta{Name: "Nested shards"}, Parallel: &testworkflowsv1.StepParallel{}},
+			}},
+			{StepMeta: testworkflowsv1.StepMeta{Name: "Not parallel"}},
+		},
+	}
+	assert.Equal(t, map[string]bool{"inner": true, "deep_shards": true, "nested_shards": true}, declaredParallelIds(spec.NewTestWorkflowSpec()))
+}
+
+func TestWorkerSpecKeepsItsOwnParallelReferences(t *testing.T) {
+	spec := testworkflowsv1.StepParallel{
+		Steps: []testworkflowsv1.Step{
+			{StepMeta: testworkflowsv1.StepMeta{Id: "inner"}, Parallel: &testworkflowsv1.StepParallel{}},
+			{StepMeta: testworkflowsv1.StepMeta{Name: "Read"}, StepOperations: testworkflowsv1.StepOperations{
+				Shell: `echo {{ parallel("inner", 0).outputs.seed }} {{ parallel("outer", 0).outputs.seed }}`,
+			}},
+		},
+	}
+	machine := paralleldata.NewScopedMachine(map[string]paralleldata.Group{
+		"outer": {Count: 1, Workers: []paralleldata.Worker{{Index: 0, Outputs: map[string]string{"seed": "from-parent"}}}},
+		"inner": {Count: 1, Workers: []paralleldata.Worker{{Index: 0, Outputs: map[string]string{"seed": "parent-inner"}}}},
+	}, declaredParallelIds(spec.NewTestWorkflowSpec()))
+
+	require.NoError(t, expressions.Simplify(&spec, machine))
+	shell := spec.Steps[1].Shell
+	assert.Contains(t, shell, "from-parent")
+	assert.Contains(t, shell, `parallel("inner",0)`)
+	assert.NotContains(t, shell, "parent-inner")
 }

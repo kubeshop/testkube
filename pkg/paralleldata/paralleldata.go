@@ -87,13 +87,38 @@ func InstructionName(stepId string) string {
 // NewMachine registers the parallel() function over the groups, keyed by the id of the
 // parallel step.
 func NewMachine(groups map[string]Group) expressions.Machine {
+	return newMachine(groups, nil)
+}
+
+// NewScopedMachine registers parallel() for a specification that runs in another pod, such as
+// the workers of a parallel step. It resolves the groups that finished in this pod, and leaves the
+// call for the specification to resolve itself when the reference is unknown here, or when it names
+// a parallel step the specification declares: inside the worker, its own step shadows a group of
+// this pod with the same id.
+func NewScopedMachine(groups map[string]Group, declared map[string]bool) expressions.Machine {
+	if declared == nil {
+		declared = map[string]bool{}
+	}
+	return newMachine(groups, declared)
+}
+
+// newMachine resolves strictly when declared is nil, and in scope of a specification otherwise.
+func newMachine(groups map[string]Group, declared map[string]bool) expressions.Machine {
+	scoped := declared != nil
 	return expressions.NewMachine().
 		RegisterFunction(ParallelFn, func(values ...expressions.StaticValue) (interface{}, bool, error) {
 			ref, index, err := parseArgs(values)
+			if scoped && (err != nil || declared[ref]) {
+				// The arguments may still hold expressions the specification resolves
+				return nil, false, nil
+			}
 			if err != nil {
 				return nil, true, err
 			}
 			group, ok := groups[ref]
+			if !ok && scoped {
+				return nil, false, nil
+			}
 			if !ok {
 				return nil, true, unknownRefError(ref, groups)
 			}

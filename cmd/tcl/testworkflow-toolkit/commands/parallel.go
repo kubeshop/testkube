@@ -41,6 +41,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -364,7 +365,11 @@ func RunParallelWithOptions(ctx context.Context, specContent string, cfg *config
 	}
 	fmt.Println("Parallelism: " + params.String(parallelism))
 
-	workers, transferSrv, err := prepareWorkers(parallel, params, cfg, stateMachine, credentialMachine)
+	// The workers resolve parallel() against the parallel steps that finished in this pod, except the
+	// parallel steps a worker declares itself, which it resolves in its own pod.
+	parallelMachine := paralleldata.NewScopedMachine(data.ParallelGroups(), declaredParallelIds(parallel.NewTestWorkflowSpec()))
+
+	workers, transferSrv, err := prepareWorkers(parallel, params, cfg, stateMachine, parallelMachine, credentialMachine)
 	if err != nil {
 		return err
 	}
@@ -379,7 +384,7 @@ func RunParallelWithOptions(ctx context.Context, specContent string, cfg *config
 		return nil
 	}
 
-	result, err := executeWorkersWithStorage(ctx, workers, params, parallelism, parallel.FailFast, cfg, opts.Storage, stateMachine, credentialMachine)
+	result, err := executeWorkersWithStorage(ctx, workers, params, parallelism, parallel.FailFast, cfg, opts.Storage, stateMachine, parallelMachine, credentialMachine)
 	if err != nil {
 		return err
 	}
@@ -407,6 +412,40 @@ func publishWorkers(cfg *config.ConfigV2, stepId string, group paralleldata.Grou
 		group.Workers = []paralleldata.Worker{}
 	}
 	instructions.PrintHintDetails(cfg.Ref(), paralleldata.InstructionName(stepId), group)
+}
+
+// declaredParallelIds returns the ids of the parallel steps a worker specification declares, at any
+// depth, so parallel() leaves them for the worker to resolve. A step without an explicit id gets the
+// id the processor derives from its name. The ids are resolved on a copy, and a definition error is
+// left for the processor of the worker to report.
+func declaredParallelIds(spec *testworkflowsv1.TestWorkflowSpec) map[string]bool {
+	ids := make(map[string]bool)
+	if spec == nil {
+		return ids
+	}
+	spec = spec.DeepCopy()
+	_ = testworkflowprocessor.ResolveAndValidateStepIds(spec)
+	var walk func(steps []testworkflowsv1.Step)
+	walk = func(steps []testworkflowsv1.Step) {
+		for i := range steps {
+			step := &steps[i]
+			if step.Parallel != nil {
+				if id := testworkflowprocessor.ResolveStepId(step.StepMeta); id != "" {
+					ids[id] = true
+				}
+				// A nested parallel step has an id namespace of its own, in the pod of each worker
+				for id := range declaredParallelIds(step.Parallel.NewTestWorkflowSpec()) {
+					ids[id] = true
+				}
+			}
+			walk(step.Setup)
+			walk(step.Steps)
+		}
+	}
+	walk(spec.Setup)
+	walk(spec.Steps)
+	walk(spec.After)
+	return ids
 }
 
 // workerOutputs collects what the workers published while they run. Workers run concurrently, so
@@ -494,11 +533,11 @@ const parallelSubject = "The parallel step"
 // Creates a transfer server for file sharing between parent and workers.
 // Uses expression machine without env resolution to preserve environment expressions.
 // Returns worker specs and initialized transfer server.
-func prepareWorkers(parallel *testworkflowsv1.StepParallel, params *commontcl.ParamsSpec, cfg *config.ConfigV2, stateMachine expressions.Machine, credentialMachine expressions.Machine) ([]WorkerSpec, transfer.Server, error) {
+func prepareWorkers(parallel *testworkflowsv1.StepParallel, params *commontcl.ParamsSpec, cfg *config.ConfigV2, stateMachine expressions.Machine, parallelMachine expressions.Machine, credentialMachine expressions.Machine) ([]WorkerSpec, transfer.Server, error) {
 	transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, cfg.IP(), constants.DefaultTransferPort)
 
 	// Preserve env.* expressions for parallel workers
-	baseMachine := spawn.ParallelCreateBaseMachineWithoutEnv(cfg, stateMachine, data.ExecutionDataMachine(), data.ParallelDataMachine(), credentialMachine)
+	baseMachine := spawn.ParallelCreateBaseMachineWithoutEnv(cfg, stateMachine, data.ExecutionDataMachine(), parallelMachine, credentialMachine)
 
 	builder := NewParallelWorkersBuilder(transferSrv, baseMachine, params, cfg)
 	workers, err := builder.BuildWorkerSpecs(parallel)
@@ -1076,7 +1115,7 @@ func (o *ResumeOrchestrator) resumeAllWorkers(ctx context.Context) {
 }
 
 // executeWorkersWithStorage is like executeWorkers but accepts storage as parameter
-func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params *commontcl.ParamsSpec, parallelism int64, failFast bool, cfg *config.ConfigV2, storage artifacts.InternalArtifactStorage, stateMachine expressions.Machine, credentialMachine expressions.Machine) (*ParallelExecutionResult, error) {
+func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params *commontcl.ParamsSpec, parallelism int64, failFast bool, cfg *config.ConfigV2, storage artifacts.InternalArtifactStorage, stateMachine expressions.Machine, parallelMachine expressions.Machine, credentialMachine expressions.Machine) (*ParallelExecutionResult, error) {
 	for _, worker := range workers {
 		instructions.PrintOutput(cfg.Ref(), "parallel", ParallelStatus{
 			Index:       int(worker.Index),
@@ -1100,7 +1139,7 @@ func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params
 	resumeOrchestrator := NewResumeOrchestrator(registry, updates, namespaces, descriptions, cfg)
 	go resumeOrchestrator.Start(execCtx)
 
-	fullBaseMachine := spawn.ParallelCreateBaseMachine(cfg, stateMachine, data.ExecutionDataMachine(), data.ParallelDataMachine(), credentialMachine)
+	fullBaseMachine := spawn.ParallelCreateBaseMachine(cfg, stateMachine, data.ExecutionDataMachine(), parallelMachine, credentialMachine)
 	executor := NewWorkerExecutor(storage, registry, updates, fullBaseMachine, cfg)
 	executor.outputs = newWorkerOutputs()
 

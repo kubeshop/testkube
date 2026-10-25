@@ -97,3 +97,36 @@ func TestParallelFunction(t *testing.T) {
 		assert.Contains(t, err.Error(), "expects the reference to be a string")
 	})
 }
+
+func TestScopedParallelFunction(t *testing.T) {
+	groups := map[string]Group{
+		"outer": {Count: 1, Workers: []Worker{{Index: 0, Outputs: map[string]string{"seed": "from-parent"}}}},
+		"inner": {Count: 1, Workers: []Worker{{Index: 0, Outputs: map[string]string{"seed": "parent-inner"}}}},
+	}
+	machine := NewScopedMachine(groups, map[string]bool{"inner": true})
+
+	t.Run("resolves a group that finished here", func(t *testing.T) {
+		value, err := resolve(t, `parallel("outer", 0).outputs.seed`, machine)
+		require.NoError(t, err)
+		assert.Equal(t, "from-parent", value)
+	})
+
+	t.Run("leaves a step the specification declares to the specification", func(t *testing.T) {
+		compiled, err := expressions.CompileAndResolve(`parallel("inner", 0).outputs.seed`, machine)
+		require.NoError(t, err)
+		assert.Nil(t, compiled.Static())
+		assert.Contains(t, compiled.String(), `parallel("inner",0)`)
+	})
+
+	t.Run("leaves an unknown step to the specification", func(t *testing.T) {
+		compiled, err := expressions.CompileAndResolve(`parallel("later", 0).outputs.seed`, machine)
+		require.NoError(t, err)
+		assert.Nil(t, compiled.Static())
+	})
+
+	t.Run("still refuses an index outside a group that finished here", func(t *testing.T) {
+		_, err := resolve(t, `parallel("outer", 1).outputs.seed`, machine)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "there is no worker 1")
+	})
+}
