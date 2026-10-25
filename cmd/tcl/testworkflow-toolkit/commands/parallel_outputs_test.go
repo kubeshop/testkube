@@ -88,79 +88,109 @@ func TestProcessWorkerNotificationsCollectsOutputs(t *testing.T) {
 	assert.Equal(t, map[string]string{"duration": "12"}, group.Workers[0].Outputs)
 }
 
-func TestDeclaredParallelIds(t *testing.T) {
-	spec := testworkflowsv1.StepParallel{
-		Steps: []testworkflowsv1.Step{
-			{StepMeta: testworkflowsv1.StepMeta{Id: "inner"}, Parallel: &testworkflowsv1.StepParallel{
-				Steps: []testworkflowsv1.Step{
-					{StepMeta: testworkflowsv1.StepMeta{Name: "Deep shards"}, Parallel: &testworkflowsv1.StepParallel{}},
-				},
-			}},
-			{StepMeta: testworkflowsv1.StepMeta{Name: "Group"}, Steps: []testworkflowsv1.Step{
-				{StepMeta: testworkflowsv1.StepMeta{Name: "Nested shards"}, Parallel: &testworkflowsv1.StepParallel{}},
-			}},
-			{StepMeta: testworkflowsv1.StepMeta{Name: "Not parallel"}},
-		},
-	}
-	assert.Equal(t, map[string]bool{"inner": true, "deep_shards": true, "nested_shards": true}, declaredParallelIds(spec.NewTestWorkflowSpec()))
+// parentGroups are the parallel steps that finished in the pod of the parallel step.
+var parentGroups = map[string]paralleldata.Group{
+	"seed":    {Count: 1, Workers: []paralleldata.Worker{{Index: 0, Outputs: map[string]string{"value": "from-parent", "label": "seed"}}}},
+	"shard_0": {Count: 1, Workers: []paralleldata.Worker{{Index: 0, Outputs: map[string]string{"value": "from-parent"}}}},
 }
 
-func TestWorkerSpecKeepsItsOwnParallelReferences(t *testing.T) {
-	spec := testworkflowsv1.StepParallel{
-		Steps: []testworkflowsv1.Step{
-			{StepMeta: testworkflowsv1.StepMeta{Id: "inner"}, Parallel: &testworkflowsv1.StepParallel{}},
-			{StepMeta: testworkflowsv1.StepMeta{Name: "Read"}, StepOperations: testworkflowsv1.StepOperations{
-				Shell: `echo {{ parallel("inner", 0).outputs.seed }} {{ parallel("outer", 0).outputs.seed }}`,
-			}},
-		},
-	}
-	machine := paralleldata.NewScopedMachine(map[string]paralleldata.Group{
-		"outer": {Count: 1, Workers: []paralleldata.Worker{{Index: 0, Outputs: map[string]string{"seed": "from-parent"}}}},
-		"inner": {Count: 1, Workers: []paralleldata.Worker{{Index: 0, Outputs: map[string]string{"seed": "parent-inner"}}}},
-	}, declaredParallelIds(spec.NewTestWorkflowSpec()))
-
-	require.NoError(t, expressions.Simplify(&spec, machine))
-	shell := spec.Steps[1].Shell
-	assert.Contains(t, shell, "from-parent")
-	assert.Contains(t, shell, `parallel("inner",0)`)
-	assert.NotContains(t, shell, "parent-inner")
+func parallelStep(name, id string, steps ...testworkflowsv1.Step) testworkflowsv1.Step {
+	return testworkflowsv1.Step{StepMeta: testworkflowsv1.StepMeta{Name: name, Id: id}, Parallel: &testworkflowsv1.StepParallel{Steps: steps}}
 }
 
-func TestWorkerParallelMachineDerivesIdsFromResolvedNames(t *testing.T) {
-	groups := map[string]paralleldata.Group{
-		"shard_0": {Count: 1, Workers: []paralleldata.Worker{{Index: 0, Outputs: map[string]string{"seed": "parent"}}}},
-	}
-	read := `echo {{ parallel("shard_0", 0).outputs.seed }}`
-	newSpec := func(name string) *testworkflowsv1.TestWorkflowSpec {
-		return &testworkflowsv1.TestWorkflowSpec{Steps: []testworkflowsv1.Step{
-			{StepMeta: testworkflowsv1.StepMeta{Name: name}, Parallel: &testworkflowsv1.StepParallel{}},
-			{StepMeta: testworkflowsv1.StepMeta{Name: "Read"}, StepOperations: testworkflowsv1.StepOperations{Shell: read}},
-		}}
-	}
+func shellStep(name, shell string) testworkflowsv1.Step {
+	return testworkflowsv1.Step{StepMeta: testworkflowsv1.StepMeta{Name: name}, StepOperations: testworkflowsv1.StepOperations{Shell: shell}}
+}
+
+const readSeed = `echo {{ parallel("seed", 0).outputs.value }}`
+
+func TestResolveWorkerSpec(t *testing.T) {
 	worker0 := expressions.NewMachine().Register("index", 0)
 
-	t.Run("the worker's own step shadows the parent group of its resolved id", func(t *testing.T) {
-		spec := newSpec("Shard {{ index }}")
-		require.NoError(t, expressions.Simplify(spec, worker0, workerParallelMachine(groups, spec, false, worker0)))
-		assert.Contains(t, spec.Steps[1].Shell, `parallel("shard_0",0)`)
-		assert.NotContains(t, spec.Steps[1].Shell, "parent")
+	t.Run("reads a parent group the worker does not declare", func(t *testing.T) {
+		spec := &testworkflowsv1.StepParallel{Steps: []testworkflowsv1.Step{shellStep("Read", readSeed)}}
+		require.NoError(t, resolveWorkerSpec(spec, parentGroups, false, worker0))
+		assert.Equal(t, "echo from-parent", spec.Steps[0].Shell)
 	})
 
-	t.Run("a step of another id reads the parent group", func(t *testing.T) {
-		spec := newSpec("Other {{ index }}")
-		require.NoError(t, expressions.Simplify(spec, worker0, workerParallelMachine(groups, spec, false, worker0)))
-		assert.Equal(t, "echo parent", spec.Steps[1].Shell)
+	t.Run("the worker's own step shadows the parent group", func(t *testing.T) {
+		spec := &testworkflowsv1.StepParallel{Steps: []testworkflowsv1.Step{
+			parallelStep("", "seed"),
+			shellStep("Read", readSeed),
+		}}
+		require.NoError(t, resolveWorkerSpec(spec, parentGroups, false, worker0))
+		assert.Contains(t, spec.Steps[1].Shell, `parallel("seed",0)`)
+	})
+
+	t.Run("the id is derived from the name as the worker resolves it", func(t *testing.T) {
+		spec := &testworkflowsv1.StepParallel{Steps: []testworkflowsv1.Step{
+			parallelStep("Shard {{ index }}", ""),
+			shellStep("Read", `echo {{ parallel("shard_0", 0).outputs.value }}`),
+		}}
+		require.NoError(t, resolveWorkerSpec(spec, parentGroups, false, worker0))
+		assert.Equal(t, "Shard 0", spec.Steps[0].Name)
+		assert.Contains(t, spec.Steps[1].Shell, `parallel("shard_0",0)`)
+	})
+
+	t.Run("a name that reads a parent group is saved before the ids are read", func(t *testing.T) {
+		spec := &testworkflowsv1.StepParallel{Steps: []testworkflowsv1.Step{
+			parallelStep(`{{ parallel("seed", 0).outputs.label }}`, ""),
+			shellStep("Read", readSeed),
+		}}
+		require.NoError(t, resolveWorkerSpec(spec, parentGroups, false, worker0))
+		assert.Equal(t, "seed", spec.Steps[0].Name)
+		assert.Contains(t, spec.Steps[1].Shell, `parallel("seed",0)`)
+	})
+
+	t.Run("a step of a nested worker does not shadow the parent group around it", func(t *testing.T) {
+		spec := &testworkflowsv1.StepParallel{Steps: []testworkflowsv1.Step{
+			parallelStep("", "inner",
+				parallelStep("", "seed"),
+				shellStep("Read in the nested worker", readSeed),
+			),
+			shellStep("Read", readSeed),
+		}}
+		require.NoError(t, resolveWorkerSpec(spec, parentGroups, false, worker0))
+		assert.Equal(t, "echo from-parent", spec.Steps[1].Shell)
+		assert.Contains(t, spec.Steps[0].Parallel.Steps[1].Shell, `parallel("seed",0)`)
+	})
+
+	t.Run("a step of a grandchild worker does not shadow the parent group around it", func(t *testing.T) {
+		spec := &testworkflowsv1.StepParallel{Steps: []testworkflowsv1.Step{
+			parallelStep("", "inner",
+				parallelStep("", "deeper", parallelStep("", "seed")),
+				shellStep("Read in the nested worker", readSeed),
+			),
+			shellStep("Read", readSeed),
+		}}
+		require.NoError(t, resolveWorkerSpec(spec, parentGroups, false, worker0))
+		assert.Equal(t, "echo from-parent", spec.Steps[1].Shell)
+		assert.Equal(t, "echo from-parent", spec.Steps[0].Parallel.Steps[1].Shell)
+	})
+
+	t.Run("a step of the worker shadows the parent group in its nested workers", func(t *testing.T) {
+		spec := &testworkflowsv1.StepParallel{Steps: []testworkflowsv1.Step{
+			parallelStep("", "seed"),
+			parallelStep("", "inner", shellStep("Read in the nested worker", readSeed)),
+		}}
+		require.NoError(t, resolveWorkerSpec(spec, parentGroups, false, worker0))
+		assert.Contains(t, spec.Steps[1].Parallel.Steps[0].Shell, `parallel("seed",0)`)
 	})
 
 	t.Run("an unresolved name defers parallel() to the final resolution", func(t *testing.T) {
-		spec := newSpec("Shard {{ later }}")
-		require.NoError(t, expressions.Simplify(spec, worker0, workerParallelMachine(groups, spec, false, worker0)))
-		assert.Contains(t, spec.Steps[1].Shell, `parallel("shard_0",0)`)
+		spec := &testworkflowsv1.StepParallel{Steps: []testworkflowsv1.Step{
+			parallelStep("Shard {{ later }}", ""),
+			shellStep("Read", `echo {{ parallel("shard_0", 0).outputs.value }} {{ parallel("seed", 0).outputs.value }}`),
+		}}
+		require.NoError(t, resolveWorkerSpec(spec, parentGroups, false, worker0))
+		assert.Contains(t, spec.Steps[1].Shell, `parallel("seed",0)`)
 
 		final := expressions.NewMachine().Register("later", 0)
-		require.NoError(t, expressions.Simplify(spec, final, workerParallelMachine(groups, spec, true, final)))
-		assert.Equal(t, "Shard 0", spec.Steps[0].Name)
-		assert.Contains(t, spec.Steps[1].Shell, `parallel("shard_0",0)`)
+		workflow := spec.NewTestWorkflowSpec()
+		require.NoError(t, resolveWorkerSpec(workflow, parentGroups, true, final))
+		assert.Equal(t, "Shard 0", workflow.Steps[0].Name)
+		assert.Contains(t, workflow.Steps[1].Shell, `parallel("shard_0",0)`)
+		assert.Contains(t, workflow.Steps[1].Shell, "from-parent")
 	})
 }
 
@@ -190,4 +220,20 @@ func TestInterruptedWatchLeavesANonterminalStatus(t *testing.T) {
 	// The watch error returns before the fallback, which is why the status is normalized before it is recorded
 	assert.Equal(t, testkube.RUNNING_TestWorkflowStatus, *lastResult.Status)
 	assert.Equal(t, testkube.ABORTED_TestWorkflowStatus, *finishedStatus(lastResult))
+}
+
+func TestResolveWorkerSpecSharesTheNamespaceOfANestedWorker(t *testing.T) {
+	// The setup and the steps of the nested worker share one namespace, so the second "Shards" is shards_1
+	spec := &testworkflowsv1.StepParallel{Steps: []testworkflowsv1.Step{
+		{StepMeta: testworkflowsv1.StepMeta{Id: "inner"}, Parallel: &testworkflowsv1.StepParallel{
+			Setup: []testworkflowsv1.Step{parallelStep("Shards", "")},
+			Steps: []testworkflowsv1.Step{
+				parallelStep("Shards", ""),
+				shellStep("Read", `echo {{ parallel("shards_1", 0).outputs.value }}`),
+			},
+		}},
+	}}
+	groups := map[string]paralleldata.Group{"shards_1": {Count: 1, Workers: []paralleldata.Worker{{Index: 0, Outputs: map[string]string{"value": "from-parent"}}}}}
+	require.NoError(t, resolveWorkerSpec(spec, groups, false))
+	assert.Contains(t, spec.Steps[0].Parallel.Steps[1].Shell, `parallel("shards_1",0)`)
 }

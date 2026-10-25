@@ -366,7 +366,7 @@ func RunParallelWithOptions(ctx context.Context, specContent string, cfg *config
 	fmt.Println("Parallelism: " + params.String(parallelism))
 
 	// The workers resolve parallel() against the parallel steps that finished in this pod, except the
-	// parallel steps a worker declares itself, which it resolves in its own pod (see workerParallelMachine).
+	// parallel steps a worker declares itself, which it resolves in its own pod (see resolveWorkerSpec).
 	groups := data.ParallelGroups()
 
 	workers, transferSrv, err := prepareWorkers(parallel, params, cfg, stateMachine, groups, credentialMachine)
@@ -414,88 +414,169 @@ func publishWorkers(cfg *config.ConfigV2, stepId string, group paralleldata.Grou
 	instructions.PrintHintDetails(cfg.Ref(), paralleldata.InstructionName(stepId), group)
 }
 
-// workerParallelMachine returns the parallel() machine that resolves the specification of a worker. It
-// resolves the parallel steps that finished in this pod, except the parallel steps the worker declares,
-// which the worker resolves in its own pod.
+// resolveWorkerSpec resolves the specification of a worker in place: a *testworkflowsv1.StepParallel
+// while the workers are built, and the *testworkflowsv1.TestWorkflowSpec of one worker in the final
+// resolution. parallel() reads the parallel steps that finished in this pod, except the ones the worker
+// resolves in a pod of its own.
 //
-// The processor of the worker derives the id of a step from its resolved name - `Shard {{ index }}` is
-// `shard_0` in the first worker - so the names are resolved with the machines of the worker before the
-// ids are read. A name that still holds an expression has an id nobody knows yet: before the final
-// resolution, the machine then resolves nothing and leaves parallel() to it. The final resolution is the
-// last one, so it takes the id from the name as it is, which is what the processor of the worker does.
-func workerParallelMachine(groups map[string]paralleldata.Group, spec *testworkflowsv1.TestWorkflowSpec, final bool, machines ...expressions.Machine) expressions.Machine {
-	spec = spec.DeepCopy()
-	// A name can read the parallel steps that finished here, never the steps of the worker, which have not run
-	nameMachines := append([]expressions.Machine{paralleldata.NewScopedMachine(groups, nil)}, machines...)
-	if !resolveStepNames(spec, final, nameMachines...) {
-		return paralleldata.NewScopedMachine(nil, nil)
+// Every nested parallel step runs its steps in pods of its own, so each level of nesting is a scope. A
+// parallel step a level declares shadows a group of this pod with the same id in that level and in the
+// levels nested in it, never in the levels around it, which run in other pods. So the specification is
+// resolved level by level, outermost first:
+//
+//  1. The names of the steps of the level are resolved, and saved on the specification. The processor
+//     of the worker derives the id of a step from its name as it is then - `Shard {{ index }}` is
+//     `shard_0` in the first worker - so the ids can only be read once the names are resolved.
+//  2. The ids of the parallel steps the level declares are added to those of the levels around it.
+//  3. The level is resolved with those ids shadowed, without the steps of its nested parallel steps.
+//     The rest of a nested parallel step is resolved here, because this level runs it.
+//  4. The steps of each nested parallel step are resolved as a level of their own.
+//
+// A name that still holds an expression has an id nobody knows yet. Before the final resolution, the
+// level, and the levels nested in it, then leave parallel() to it. The final resolution is the last
+// one, so it takes the id from the name as it is, which is what the processor of the worker does.
+func resolveWorkerSpec(spec interface{}, groups map[string]paralleldata.Group, final bool, machines ...expressions.Machine) error {
+	var lists []*[]testworkflowsv1.Step
+	switch v := spec.(type) {
+	case *testworkflowsv1.StepParallel:
+		lists = []*[]testworkflowsv1.Step{&v.Setup, &v.Steps, &v.After}
+	case *testworkflowsv1.TestWorkflowSpec:
+		lists = []*[]testworkflowsv1.Step{&v.Setup, &v.Steps, &v.After}
+	default:
+		return fmt.Errorf("unsupported worker specification %T", spec)
 	}
-	return paralleldata.NewScopedMachine(groups, declaredParallelIds(spec))
+	scope := workerScope{groups: groups, final: final, machines: machines}
+	return scope.resolve([]interface{}{spec}, lists, map[string]bool{}, false)
 }
 
-// resolveStepNames resolves the names of the steps in place, including the steps of nested parallel
-// steps, which the specification resolves with the same machines. It reports false when a name could not
-// be resolved, unless final is set, in which case such a name is kept as it is.
-func resolveStepNames(spec *testworkflowsv1.TestWorkflowSpec, final bool, machines ...expressions.Machine) bool {
-	resolved := true
-	var walk func(steps []testworkflowsv1.Step)
-	walk = func(steps []testworkflowsv1.Step) {
-		for i := range steps {
-			step := &steps[i]
-			if strings.Contains(step.Name, "{{") {
-				name, err := expressions.EvalTemplate(step.Name, machines...)
-				if err == nil {
-					step.Name = name
-				} else if !final {
-					resolved = false
-				}
-			}
-			walk(step.Setup)
-			walk(step.Steps)
-			if step.Parallel != nil {
-				walk(step.Parallel.Setup)
-				walk(step.Parallel.Steps)
-				walk(step.Parallel.After)
-			}
+type workerScope struct {
+	groups   map[string]paralleldata.Group
+	final    bool
+	machines []expressions.Machine
+}
+
+// resolve resolves one level: the targets, whose steps are lists, inside the levels that declared the
+// ids in shadowed. With unknown set, a level around it has an id nobody knows yet, so parallel() is left.
+func (w workerScope) resolve(targets []interface{}, lists []*[]testworkflowsv1.Step, shadowed map[string]bool, unknown bool) error {
+	// A name reads the scope of its own level: it cannot read a step of the level, which has not run yet
+	if !w.resolveNames(lists, w.parallelMachine(shadowed, unknown)) {
+		unknown = true
+	}
+
+	declared := make(map[string]bool, len(shadowed))
+	for id := range shadowed {
+		declared[id] = true
+	}
+	for _, id := range levelParallelIds(lists) {
+		declared[id] = true
+	}
+
+	nested := levelParallelSteps(lists)
+	bodies := make([][3][]testworkflowsv1.Step, len(nested))
+	for i, parallel := range nested {
+		bodies[i] = [3][]testworkflowsv1.Step{parallel.Setup, parallel.Steps, parallel.After}
+		parallel.Setup, parallel.Steps, parallel.After = nil, nil, nil
+	}
+	machines := append(append([]expressions.Machine{}, w.machines...), w.parallelMachine(declared, unknown))
+	var err error
+	for _, target := range targets {
+		if err = expressions.Simplify(target, machines...); err != nil {
+			break
 		}
 	}
-	walk(spec.Setup)
-	walk(spec.Steps)
-	walk(spec.After)
+	for i, parallel := range nested {
+		parallel.Setup, parallel.Steps, parallel.After = bodies[i][0], bodies[i][1], bodies[i][2]
+	}
+	if err != nil {
+		return err
+	}
+
+	// The setup, steps and after steps of a parallel step share the id namespace of its workers
+	for _, parallel := range nested {
+		body := []*[]testworkflowsv1.Step{&parallel.Setup, &parallel.Steps, &parallel.After}
+		if err := w.resolve([]interface{}{body[0], body[1], body[2]}, body, declared, unknown); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// parallelMachine resolves parallel() against the groups of this pod with the ids shadowed. With unknown
+// set, it resolves nothing.
+func (w workerScope) parallelMachine(shadowed map[string]bool, unknown bool) expressions.Machine {
+	if unknown {
+		return paralleldata.NewScopedMachine(nil, nil)
+	}
+	return paralleldata.NewScopedMachine(w.groups, shadowed)
+}
+
+// resolveNames resolves the names of the steps of the level in place. It reports false when a name could
+// not be resolved, unless this is the final resolution, which keeps such a name as it is.
+func (w workerScope) resolveNames(lists []*[]testworkflowsv1.Step, parallelMachine expressions.Machine) bool {
+	machines := append([]expressions.Machine{parallelMachine}, w.machines...)
+	resolved := true
+	walkLevel(lists, func(step *testworkflowsv1.Step) {
+		if !strings.Contains(step.Name, "{{") {
+			return
+		}
+		name, err := expressions.EvalTemplate(step.Name, machines...)
+		if err == nil {
+			step.Name = name
+		} else if !w.final {
+			resolved = false
+		}
+	})
 	return resolved
 }
 
-// declaredParallelIds returns the ids of the parallel steps a worker specification declares, at any
-// depth, so parallel() leaves them for the worker to resolve. A step without an explicit id gets the
-// id the processor derives from its name. The ids are resolved on a copy, and a definition error is
-// left for the processor of the worker to report.
-func declaredParallelIds(spec *testworkflowsv1.TestWorkflowSpec) map[string]bool {
-	ids := make(map[string]bool)
-	if spec == nil {
-		return ids
-	}
-	spec = spec.DeepCopy()
-	_ = testworkflowprocessor.ResolveAndValidateStepIds(spec)
+// walkLevel calls fn for every step of the level, including the steps of its groups, but not the steps
+// of its nested parallel steps, which are levels of their own.
+func walkLevel(lists []*[]testworkflowsv1.Step, fn func(step *testworkflowsv1.Step)) {
 	var walk func(steps []testworkflowsv1.Step)
 	walk = func(steps []testworkflowsv1.Step) {
 		for i := range steps {
-			step := &steps[i]
-			if step.Parallel != nil {
-				if id := testworkflowprocessor.ResolveStepId(step.StepMeta); id != "" {
-					ids[id] = true
-				}
-				// A nested parallel step has an id namespace of its own, in the pod of each worker
-				for id := range declaredParallelIds(step.Parallel.NewTestWorkflowSpec()) {
-					ids[id] = true
-				}
-			}
-			walk(step.Setup)
-			walk(step.Steps)
+			fn(&steps[i])
+			walk(steps[i].Setup)
+			walk(steps[i].Steps)
 		}
 	}
-	walk(spec.Setup)
-	walk(spec.Steps)
-	walk(spec.After)
+	for _, list := range lists {
+		walk(*list)
+	}
+}
+
+// levelParallelSteps returns the nested parallel steps of the level.
+func levelParallelSteps(lists []*[]testworkflowsv1.Step) []*testworkflowsv1.StepParallel {
+	var steps []*testworkflowsv1.StepParallel
+	walkLevel(lists, func(step *testworkflowsv1.Step) {
+		if step.Parallel != nil {
+			steps = append(steps, step.Parallel)
+		}
+	})
+	return steps
+}
+
+// levelParallelIds returns the ids of the parallel steps the level declares. A step without an explicit id
+// gets the id the processor derives from its name, with the suffix that tells apart steps with the same
+// name. The ids are resolved on a copy, and a definition error is left for the processor of the worker.
+func levelParallelIds(lists []*[]testworkflowsv1.Step) []string {
+	spec := &testworkflowsv1.TestWorkflowSpec{}
+	copies := []*[]testworkflowsv1.Step{&spec.Setup, &spec.Steps, &spec.After}
+	for i, list := range lists {
+		for _, step := range *list {
+			*copies[i] = append(*copies[i], *step.DeepCopy())
+		}
+	}
+	_ = testworkflowprocessor.ResolveAndValidateStepIds(spec)
+	var ids []string
+	walkLevel(copies, func(step *testworkflowsv1.Step) {
+		if step.Parallel == nil {
+			return
+		}
+		if id := testworkflowprocessor.ResolveStepId(step.StepMeta); id != "" {
+			ids = append(ids, id)
+		}
+	})
 	return ids
 }
 
@@ -728,8 +809,7 @@ func (b *ParallelWorkersBuilder) buildSingleWorkerSpec(parallel *testworkflowsv1
 	}
 
 	spec := parallel.DeepCopy()
-	specMachines := append(machines, workerParallelMachine(b.parallelGroups, spec.NewTestWorkflowSpec(), false, machines...))
-	if err := expressions.Simplify(&spec, specMachines...); err != nil {
+	if err := resolveWorkerSpec(spec, b.parallelGroups, false, machines...); err != nil {
 		return WorkerSpec{}, &spawn.ExpressionError{Err: err}
 	}
 
@@ -823,7 +903,7 @@ func (e *WorkerExecutor) ExecuteWorker(ctx context.Context, worker WorkerSpec, p
 	)
 
 	// Apply final expression resolution with all context (resource, worker, PVC, params)
-	_ = expressions.Simplify(&worker.Spec, machine, workerParallelMachine(e.parallelGroups, &worker.Spec, true, machine))
+	_ = resolveWorkerSpec(&worker.Spec, e.parallelGroups, true, machine)
 
 	// The log condition is evaluated in this pod, where parallel() reads only the steps that finished here
 	machine = expressions.CombinedMachines(machine, paralleldata.NewScopedMachine(e.parallelGroups, nil))
