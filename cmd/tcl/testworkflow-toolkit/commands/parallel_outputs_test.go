@@ -124,3 +124,41 @@ func TestWorkerSpecKeepsItsOwnParallelReferences(t *testing.T) {
 	assert.Contains(t, shell, `parallel("inner",0)`)
 	assert.NotContains(t, shell, "parent-inner")
 }
+
+func TestWorkerParallelMachineDerivesIdsFromResolvedNames(t *testing.T) {
+	groups := map[string]paralleldata.Group{
+		"shard_0": {Count: 1, Workers: []paralleldata.Worker{{Index: 0, Outputs: map[string]string{"seed": "parent"}}}},
+	}
+	read := `echo {{ parallel("shard_0", 0).outputs.seed }}`
+	newSpec := func(name string) *testworkflowsv1.TestWorkflowSpec {
+		return &testworkflowsv1.TestWorkflowSpec{Steps: []testworkflowsv1.Step{
+			{StepMeta: testworkflowsv1.StepMeta{Name: name}, Parallel: &testworkflowsv1.StepParallel{}},
+			{StepMeta: testworkflowsv1.StepMeta{Name: "Read"}, StepOperations: testworkflowsv1.StepOperations{Shell: read}},
+		}}
+	}
+	worker0 := expressions.NewMachine().Register("index", 0)
+
+	t.Run("the worker's own step shadows the parent group of its resolved id", func(t *testing.T) {
+		spec := newSpec("Shard {{ index }}")
+		require.NoError(t, expressions.Simplify(spec, worker0, workerParallelMachine(groups, spec, false, worker0)))
+		assert.Contains(t, spec.Steps[1].Shell, `parallel("shard_0",0)`)
+		assert.NotContains(t, spec.Steps[1].Shell, "parent")
+	})
+
+	t.Run("a step of another id reads the parent group", func(t *testing.T) {
+		spec := newSpec("Other {{ index }}")
+		require.NoError(t, expressions.Simplify(spec, worker0, workerParallelMachine(groups, spec, false, worker0)))
+		assert.Equal(t, "echo parent", spec.Steps[1].Shell)
+	})
+
+	t.Run("an unresolved name defers parallel() to the final resolution", func(t *testing.T) {
+		spec := newSpec("Shard {{ later }}")
+		require.NoError(t, expressions.Simplify(spec, worker0, workerParallelMachine(groups, spec, false, worker0)))
+		assert.Contains(t, spec.Steps[1].Shell, `parallel("shard_0",0)`)
+
+		final := expressions.NewMachine().Register("later", 0)
+		require.NoError(t, expressions.Simplify(spec, final, workerParallelMachine(groups, spec, true, final)))
+		assert.Equal(t, "Shard 0", spec.Steps[0].Name)
+		assert.Contains(t, spec.Steps[1].Shell, `parallel("shard_0",0)`)
+	})
+}
