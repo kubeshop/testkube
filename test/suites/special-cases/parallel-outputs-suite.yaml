@@ -78,6 +78,112 @@ spec:
       [ "{{ parallel("flaky", 1).status }}" = "failed" ] || { echo "unexpected status of worker 1"; exit 1; }
       [ "{{ parallel("flaky", 1).outputs.progress }}" = "reached-1" ] || { echo "unexpected progress of worker 1"; exit 1; }
 
+
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-parallel-outputs-scope
+  labels:
+    core-tests: parallel-outputs
+spec:
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+  # Each nested parallel step runs in pods of its own, so it is a scope of its own: a step it
+  # declares hides a group of the parent with the same id there and in the scopes nested in
+  # it, never in the scopes around it.
+  - name: Seed in the parent
+    id: seed
+    parallel:
+      count: 1
+      steps:
+      - name: Publish the seed
+        shell: |
+          echo -n from-parent > /testkube/outputs/value
+          echo -n seed > /testkube/outputs/label
+
+  - name: A parent step with the id a worker step derives
+    id: shard_0
+    parallel:
+      count: 1
+      steps:
+      - name: Publish
+        shell: echo -n from-parent > /testkube/outputs/value
+
+  # parallel() reads only the state of the pod, so unlike execution() it resolves in a condition.
+  - name: Runs only when the seed passed
+    condition: 'parallel("seed", 0).status == "passed"'
+    shell: echo "condition read parallel()"
+
+  - name: Skipped when the condition reads a failure
+    id: skipped_check
+    condition: 'parallel("seed", 0).status == "failed"'
+    shell: exit 1
+
+  - name: Outer
+    id: outer
+    parallel:
+      count: 1
+      container:
+        resources:
+          requests:
+            cpu: 32m
+            memory: 32Mi
+      steps:
+      - name: Inner
+        id: inner
+        parallel:
+          count: 1
+          steps:
+          - name: Grandchild seed
+            id: seed
+            parallel:
+              count: 1
+              steps:
+              - name: Publish
+                shell: echo -n from-grandchild > /testkube/outputs/value
+          - name: Read in the nested worker
+            shell: |
+              echo "nested worker reads: {{ parallel("seed", 0).outputs.value }}"
+              [ "{{ parallel("seed", 0).outputs.value }}" = "from-grandchild" ] || exit 1
+      - name: Read the parent seed in the outer worker
+        shell: |
+          echo "outer worker reads: {{ parallel("seed", 0).outputs.value }}"
+          [ "{{ parallel("seed", 0).outputs.value }}" = "from-parent" ] || exit 1
+      # The worker derives the id from the resolved name: shard_0, not shard_index.
+      - name: Shard {{ index }}
+        parallel:
+          count: 1
+          steps:
+          - name: Publish
+            shell: echo -n own > /testkube/outputs/value
+      - name: Read the own step with the derived id
+        shell: |
+          echo "outer worker reads shard_0: {{ parallel("shard_0", 0).outputs.value }}"
+          [ "{{ parallel("shard_0", 0).outputs.value }}" = "own" ] || exit 1
+
+  - name: Named from the parent
+    id: named
+    parallel:
+      count: 1
+      steps:
+      # The name resolves to "seed" from the parent, so the step is the worker's own "seed".
+      - name: '{{ parallel("seed", 0).outputs.label }}'
+        parallel:
+          count: 1
+          steps:
+          - name: Publish
+            shell: echo -n own-seed > /testkube/outputs/value
+      - name: Read the own step named from the parent
+        shell: |
+          echo "worker reads: {{ parallel("seed", 0).outputs.value }}"
+          [ "{{ parallel("seed", 0).outputs.value }}" = "own-seed" ] || exit 1
+
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
@@ -98,6 +204,7 @@ spec:
       workflows:
       - name: tw-parallel-outputs
         as: sharded
+      - name: tw-parallel-outputs-scope
 
   - name: Read the aggregate it re-exported
     shell: |
