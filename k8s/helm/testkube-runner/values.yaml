@@ -324,10 +324,15 @@ defaultRunnerResources:
 ## namespace executions run in; the chart does not create it. Claims in different
 ## namespaces must expose the same backing storage.
 ##
-## The agent creates each execution's directory on the volume itself, so that a step
-## running as a non-root user can write to it. It must therefore be able to write to
-## the share: an NFS export that squashes the agent's user leaves the cache unusable,
-## and every save falls back to the object store.
+## The agent creates each execution's directory on the volume itself, mode 0777, so
+## that a step running as any user can write to it. The volume's root directory must
+## therefore be writable by the identity the agent's writes arrive as, and readable by
+## everyone. On NFS that is the UID/GID the server maps the request to, not the pod's:
+## a squashed export works once the directory is writable by the mapped user. If the
+## agent cannot write there, it logs so at startup and caches go to the object store.
+##
+## A claim missing from a namespace keeps the pods that mount it Pending - the agent's
+## own as well as executions - so look at pod events rather than step logs for it.
 ##
 ## A WORKFLOW'S OWN COMMAND HOLDS A WRITABLE MOUNT ON THIS VOLUME. The stage that
 ## saves an entry runs inside the step's container rather than beside it, so whatever
