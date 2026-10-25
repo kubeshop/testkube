@@ -1,0 +1,274 @@
+# End-to-end coverage for keeping step dependency caches on a shared volume.
+#
+# Needs an agent with the volume enabled (stepCacheVolume.enabled and claimName), so it
+# carries a label of its own rather than joining dependency-cache: an agent without
+# the volume fails these on purpose. The claim does not have to be ReadWriteMany:
+# dependency-cache-volume-claim.yaml beside this file is an ordinary ReadWriteOnce
+# claim on the default StorageClass, which serves every pod on a single-node cluster.
+#
+# A hit alone does not show that the volume was used - a save that cannot use it falls
+# back to the object store, and that restores too. So every hit is checked against the
+# volume itself: both cache stages are merged into the step's container, the step
+# therefore holds the read-only mount of the whole volume, and the entry it restored has
+# to be found there, under the inbox of the execution that saved it.
+#
+# Each child gets a key derived from the suite execution, so a rerun starts cold.
+#
+# The suite's execute steps and tw-cache-volume-parallel need an agent connected to a
+# Control Plane; a standalone OSS agent refuses both operations. There, run each of the
+# other children twice by hand with one cacheKey, expectHit "false" and then "true":
+#   testkube run testworkflow tw-cache-volume-roundtrip -f --config cacheKey=k1 --config expectHit=false
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-cache-volume-roundtrip
+  labels:
+    core-tests: dependency-cache-volume
+description: "Cache on a shared volume - saves to the volume, restores from it with modes and links intact"
+spec:
+  config:
+    cacheKey:
+      type: string
+      default: ""
+    expectHit:
+      type: string
+      default: "false"
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+    workingDir: /data
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Restore, check, populate
+    cache:
+      key: '{{ config.cacheKey }}'
+      paths:
+      - cache-probe
+    shell: |
+      set -e
+      store=/.tktw-cachestore
+      inbox=/.tktw-cacheinbox
+      probe=/data/cache-probe
+
+      # The mounts the cache stages bring with them when the agent has the volume.
+      # Without them every assertion below would pass against the object store, so
+      # their absence is a failure rather than a skip.
+      [ -d "$store" ] || { echo "FAIL: $store is not mounted - is stepCacheVolume enabled on the agent?"; exit 1; }
+      [ -d "$inbox" ] || { echo "FAIL: $inbox is not mounted"; exit 1; }
+
+      # The confinement: the whole volume is read-only, and only this execution's own
+      # directory on it is writable.
+      if touch "$store/.e2e-write-probe" 2>/dev/null; then
+        echo "FAIL: the shared volume is writable through $store"; exit 1
+      fi
+      touch "$inbox/.e2e-write-probe" || { echo "FAIL: this execution's inbox is not writable"; exit 1; }
+      rm -f "$inbox/.e2e-write-probe"
+      echo "the volume is mounted read-only, and the inbox read-write"
+
+      if [ "{{ config.expectHit }}" = "true" ]; then
+        [ -f "$probe/marker" ] || { echo "FAIL: expected a cache hit, but the marker is missing"; exit 1; }
+        [ "$(cat "$probe/marker")" = "{{ config.cacheKey }}" ] || { echo "FAIL: marker content is wrong"; exit 1; }
+
+        # Modes are stored beside the tree, not on it, and a link stays a link.
+        [ "$(stat -c %a "$probe/private")" = "600" ] || { echo "FAIL: private came back as $(stat -c %a "$probe/private"), not 600"; exit 1; }
+        [ "$(stat -c %a "$probe/bin/tool")" = "755" ] || { echo "FAIL: bin/tool came back as $(stat -c %a "$probe/bin/tool"), not 755"; exit 1; }
+        [ -L "$probe/link" ] || { echo "FAIL: link was not restored as a symlink"; exit 1; }
+        [ "$(readlink "$probe/link")" = "marker" ] || { echo "FAIL: link points at $(readlink "$probe/link")"; exit 1; }
+
+        # The entry this restore came from, on the volume itself.
+        entry=""
+        for f in $(find "$store/inbox" -path '*/root/data/cache-probe/marker' -type f 2>/dev/null); do
+          if [ "$(cat "$f")" = "{{ config.cacheKey }}" ]; then entry="$f"; fi
+        done
+        [ -n "$entry" ] || { echo "FAIL: the entry is not on the shared volume, so the save went to the object store"; exit 1; }
+        echo "restored from the shared volume: ${entry#$store/}"
+      else
+        [ ! -e "$probe/marker" ] || { echo "FAIL: expected a cache miss, but a marker was already there"; exit 1; }
+        mkdir -p "$probe/bin"
+        echo -n "{{ config.cacheKey }}" > "$probe/marker"
+        echo "not for everyone" > "$probe/private"
+        chmod 600 "$probe/private"
+        printf '#!/bin/sh\necho tool\n' > "$probe/bin/tool"
+        chmod 755 "$probe/bin/tool"
+        ln -s marker "$probe/link"
+        echo "populated the cache"
+      fi
+
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-cache-volume-nonroot
+  labels:
+    core-tests: dependency-cache-volume
+description: "Cache on a shared volume - a step running as a non-root user saves to it"
+spec:
+  config:
+    cacheKey:
+      type: string
+      default: ""
+    expectHit:
+      type: string
+      default: "false"
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+    # The agent makes each execution's inbox before the pod starts, mode 0777, because
+    # kubelet would otherwise create it owned by root and a step running as anyone
+    # else could not write to it - every save would fall back to the object store and
+    # the cache would look configured without ever being used.
+    securityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Restore, check, populate as user 1000
+    cache:
+      key: '{{ config.cacheKey }}'
+      paths:
+      # Outside every volume the step has, so it gets one of its own.
+      - /cache-probe-nonroot
+    shell: |
+      set -e
+      store=/.tktw-cachestore
+      probe=/cache-probe-nonroot
+      [ -d "$store" ] || { echo "FAIL: $store is not mounted - is stepCacheVolume enabled on the agent?"; exit 1; }
+      [ "$(id -u)" = "1000" ] || { echo "FAIL: running as $(id -u), not 1000"; exit 1; }
+
+      if [ "{{ config.expectHit }}" = "true" ]; then
+        [ "$(cat "$probe/marker" 2>/dev/null)" = "{{ config.cacheKey }}" ] || { echo "FAIL: expected a cache hit"; exit 1; }
+        entry=""
+        for f in $(find "$store/inbox" -path '*/root/cache-probe-nonroot/marker' -type f 2>/dev/null); do
+          if [ "$(cat "$f")" = "{{ config.cacheKey }}" ]; then entry="$f"; fi
+        done
+        [ -n "$entry" ] || { echo "FAIL: a non-root step's entry is not on the shared volume"; exit 1; }
+        echo "restored, as user 1000, from the shared volume: ${entry#$store/}"
+      else
+        [ ! -e "$probe/marker" ] || { echo "FAIL: expected a cache miss"; exit 1; }
+        echo -n "{{ config.cacheKey }}" > "$probe/marker"
+        echo "populated the cache as user 1000"
+      fi
+
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-cache-volume-parallel
+  labels:
+    core-tests: dependency-cache-volume
+description: "Cache on a shared volume - parallel workers save into the inbox the agent made for their execution"
+spec:
+  config:
+    cacheKey:
+      type: string
+      default: ""
+    expectHit:
+      type: string
+      default: "false"
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Two workers on one key
+    parallel:
+      count: 2
+      # A worker builds its pod from inside a pod, where nothing can reach the volume
+      # root to make an inbox. It writes into the one the agent made for the execution
+      # it belongs to, which this checks by finding its entry there afterwards.
+      container:
+        workingDir: /data
+      cache:
+        key: '{{ config.cacheKey }}'
+        paths:
+        - cache-probe
+      shell: |
+        set -e
+        store=/.tktw-cachestore
+        probe=/data/cache-probe
+        [ -d "$store" ] || { echo "FAIL: $store is not mounted in the worker"; exit 1; }
+        if [ "{{ config.expectHit }}" = "true" ]; then
+          [ "$(cat "$probe/marker" 2>/dev/null)" = "{{ config.cacheKey }}" ] || { echo "FAIL: worker {{ index }} expected a cache hit"; exit 1; }
+          entry=""
+          for f in $(find "$store/inbox" -path '*/root/data/cache-probe/marker' -type f 2>/dev/null); do
+            if [ "$(cat "$f")" = "{{ config.cacheKey }}" ]; then entry="$f"; fi
+          done
+          [ -n "$entry" ] || { echo "FAIL: the workers' entry is not on the shared volume"; exit 1; }
+          echo "worker {{ index }} restored from the shared volume: ${entry#$store/}"
+        else
+          # Both workers miss and both save; one wins and the other reports that the
+          # key was stored first, which is not a failure.
+          mkdir -p "$probe"
+          echo -n "{{ config.cacheKey }}" > "$probe/marker"
+          echo "worker {{ index }} populated the cache"
+        fi
+
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-cache-volume-suite
+  labels:
+    core-tests: dependency-cache-volume
+    type: suite
+description: "Drives the shared-volume dependency cache assertions, which need two executions each"
+spec:
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  job:
+    activeDeadlineSeconds: 1800
+  steps:
+  - name: Populate the volume
+    execute:
+      workflows:
+      - name: tw-cache-volume-roundtrip
+        config:
+          cacheKey: 'e2e-volume-roundtrip-{{ execution.id }}'
+          expectHit: "false"
+      - name: tw-cache-volume-nonroot
+        config:
+          cacheKey: 'e2e-volume-nonroot-{{ execution.id }}'
+          expectHit: "false"
+      - name: tw-cache-volume-parallel
+        config:
+          cacheKey: 'e2e-volume-parallel-{{ execution.id }}'
+          expectHit: "false"
+
+  - name: Run each again, which must now restore from the volume
+    execute:
+      workflows:
+      - name: tw-cache-volume-roundtrip
+        config:
+          cacheKey: 'e2e-volume-roundtrip-{{ execution.id }}'
+          expectHit: "true"
+      - name: tw-cache-volume-nonroot
+        config:
+          cacheKey: 'e2e-volume-nonroot-{{ execution.id }}'
+          expectHit: "true"
+      - name: tw-cache-volume-parallel
+        config:
+          cacheKey: 'e2e-volume-parallel-{{ execution.id }}'
+          expectHit: "true"
+
+  # Everything the object-store suite asserts - scopes, isolation, an unresolvable
+  # key - has to hold unchanged when the bytes live on the volume.
+  - name: The object-store assertions hold on the volume
+    execute:
+      workflows:
+      - name: tw-cache-suite
