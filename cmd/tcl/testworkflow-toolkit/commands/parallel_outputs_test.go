@@ -10,6 +10,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -161,4 +162,32 @@ func TestWorkerParallelMachineDerivesIdsFromResolvedNames(t *testing.T) {
 		assert.Equal(t, "Shard 0", spec.Steps[0].Name)
 		assert.Contains(t, spec.Steps[1].Shell, `parallel("shard_0",0)`)
 	})
+}
+
+func TestFinishedStatus(t *testing.T) {
+	assert.Equal(t, testkube.PASSED_TestWorkflowStatus, *finishedStatus(testkube.TestWorkflowResult{Status: common.Ptr(testkube.PASSED_TestWorkflowStatus)}))
+	assert.Equal(t, testkube.FAILED_TestWorkflowStatus, *finishedStatus(testkube.TestWorkflowResult{Status: common.Ptr(testkube.FAILED_TestWorkflowStatus)}))
+	assert.Equal(t, testkube.ABORTED_TestWorkflowStatus, *finishedStatus(testkube.TestWorkflowResult{Status: common.Ptr(testkube.RUNNING_TestWorkflowStatus)}))
+	assert.Equal(t, testkube.ABORTED_TestWorkflowStatus, *finishedStatus(testkube.TestWorkflowResult{}))
+}
+
+func TestInterruptedWatchLeavesANonterminalStatus(t *testing.T) {
+	cfg := config.NewConfigV2ForTest(testworkflowconfig.InternalConfig{
+		Resource: testworkflowconfig.ResourceConfig{Id: "test", RootId: "/tmp", FsPrefix: "test"},
+	})
+	executor := NewWorkerExecutor(nil, NewMockRegistry(), make(chan Update, 10), nil, cfg)
+
+	watcher := executionworkertypes.NewStatusNotificationsWatcher()
+	go func() {
+		watcher.Send(executionworkertypes.StatusNotification{Result: &testkube.TestWorkflowResult{Status: common.Ptr(testkube.RUNNING_TestWorkflowStatus), Initialization: &testkube.TestWorkflowStepResult{}}})
+		watcher.Close(errors.New("watch interrupted"))
+	}()
+
+	var lastResult testkube.TestWorkflowResult
+	passed, err := executor.processWorkerNotifications(context.Background(), watcher, WorkerSpec{Index: 0}, nil, func(...string) {}, &lastResult)
+	require.Error(t, err)
+	assert.False(t, passed)
+	// The watch error returns before the fallback, which is why the status is normalized before it is recorded
+	assert.Equal(t, testkube.RUNNING_TestWorkflowStatus, *lastResult.Status)
+	assert.Equal(t, testkube.ABORTED_TestWorkflowStatus, *finishedStatus(lastResult))
 }

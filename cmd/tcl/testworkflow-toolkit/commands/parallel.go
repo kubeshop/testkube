@@ -892,19 +892,30 @@ func (e *WorkerExecutor) monitorWorkerExecution(ctx context.Context, worker Work
 
 	if notifications.Err() != nil {
 		log("error", "failed to connect to the parallel worker", notifications.Err().Error())
+		e.outputs.finish(worker.Index, finishedStatus(lastResult))
 		return false, notifications.Err()
 	}
 
 	log("created")
 
 	passed, err := e.processWorkerNotifications(ctx, notifications, worker, result.Signature, log, &lastResult)
-	e.outputs.finish(worker.Index, lastResult.Status)
+	e.outputs.finish(worker.Index, finishedStatus(lastResult))
 	// Notify caller of pass/fail BEFORE cleanup runs (which may take 25+ seconds).
 	// This allows failFast to cancel other workers promptly.
 	for _, cb := range onResult {
 		cb(passed, lastResult.Clone(), err)
 	}
 	return passed, err
+}
+
+// finishedStatus is the status parallel() reads for a worker whose monitoring ended. A watch that was
+// interrupted can leave a status that is not terminal, such as running, but the cleanup destroys the
+// worker and the parallel step finishes, so the worker ended aborted.
+func finishedStatus(result testkube.TestWorkflowResult) *testkube.TestWorkflowStatus {
+	if result.Status != nil && result.Status.Finished() {
+		return result.Status
+	}
+	return common.Ptr(testkube.ABORTED_TestWorkflowStatus)
 }
 
 // processWorkerNotifications processes status updates from a worker.
