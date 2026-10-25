@@ -26,6 +26,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executiondata"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
@@ -395,6 +396,12 @@ func (w *worker) StatusNotifications(ctx context.Context, id string, opts execut
 			if n.Error != nil {
 				watcher.Close(n.Error)
 				return
+			}
+
+			// Forward the outputs of the steps, so a parallel step can read what its workers published
+			if opts.Outputs && n.Value.Output != nil && n.Value.Output.Name == executiondata.OutputsInstructionName {
+				watcher.Send(executionworkertypes.StatusNotification{Output: controller.InstructionToInternal(n.Value.Output)})
+				continue
 			}
 
 			// Check the readiness

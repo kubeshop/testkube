@@ -164,6 +164,9 @@ type StatusNotificationsOptions struct {
 	Hints Hints
 	// NoFollow gives a hint to ignore following the further actions.
 	NoFollow bool
+	// Outputs asks to forward the outputs instructions of the steps as notifications with Output.
+	// Consumers that read every notification as a status change leave it off.
+	Outputs bool
 }
 
 type GetOptions struct {
@@ -208,6 +211,10 @@ type StatusNotification struct {
 	Ref string
 	// Result stores the latest result change.
 	Result *testkube.TestWorkflowResult
+	// Output is the outputs instruction of a step, which carries the values the step wrote to its outputs
+	// directory. It is sent only when StatusNotificationsOptions.Outputs is set, and a notification with
+	// Output carries nothing else.
+	Output *testkube.TestWorkflowOutput
 }
 
 type IdentifiableError struct {

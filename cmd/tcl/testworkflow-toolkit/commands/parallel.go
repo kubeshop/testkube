@@ -37,6 +37,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/credentials"
 	"github.com/kubeshop/testkube/pkg/executiondata"
 	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/paralleldata"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
@@ -47,6 +48,9 @@ import (
 // ParallelOptions contains all dependencies for parallel execution
 type ParallelOptions struct {
 	Storage artifacts.InternalArtifactStorage
+	// StepId is the id of the parallel step. When it is set, the step records what its workers
+	// published, so the later steps can read it with parallel().
+	StepId string
 }
 
 // DefaultParallelOptions creates options with production dependencies
@@ -128,6 +132,7 @@ type Update struct {
 
 func NewParallelCmd() *cobra.Command {
 	var base64Encoded bool
+	var stepId string
 
 	cmd := &cobra.Command{
 		Use:   "parallel <spec>",
@@ -140,7 +145,7 @@ func NewParallelCmd() *cobra.Command {
 				toolkitcommon.ExitOnError("loading configuration", err)
 			}
 
-			err = RunParallel(cmd.Context(), args[0], cfg, base64Encoded)
+			err = RunParallel(cmd.Context(), args[0], cfg, base64Encoded, stepId)
 			if err != nil {
 				toolkitcommon.Fail(err)
 			}
@@ -149,6 +154,7 @@ func NewParallelCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&base64Encoded, "base64", false, "spec is base64 encoded")
+	cmd.Flags().StringVar(&stepId, "id", "", "id of the step, which names the workers in parallel()")
 
 	return cmd
 }
@@ -162,6 +168,8 @@ type ParallelExecutionResult struct {
 	// StoppedWorkers counts the workers that fail-fast stopped or did not start.
 	StoppedWorkers int64
 	FirstFailure   *WorkerFailure // The worker that failed first, nil when no worker failed
+	// Workers holds what the workers published.
+	Workers paralleldata.Group
 }
 
 // WorkerFailure is the cause of a worker that did not pass.
@@ -322,11 +330,12 @@ func endSentence(text string) string {
 // The base64Encoded flag indicates the spec was encoded to prevent testworkflow-init
 // from prematurely resolving expressions like {{ matrix.* }} or {{ shard.* }}.
 // Returns nil if all workers succeed, error if any fail or on configuration errors.
-func RunParallel(ctx context.Context, specContent string, cfg *config.ConfigV2, base64Encoded bool) error {
+func RunParallel(ctx context.Context, specContent string, cfg *config.ConfigV2, base64Encoded bool, stepId string) error {
 	opts, err := DefaultParallelOptions(cfg)
 	if err != nil {
 		return err
 	}
+	opts.StepId = stepId
 	return RunParallelWithOptions(ctx, specContent, cfg, base64Encoded, opts)
 }
 
@@ -345,6 +354,7 @@ func RunParallelWithOptions(ctx context.Context, specContent string, cfg *config
 
 	if params.Count == 0 {
 		fmt.Printf("0 instances requested (combinations=%d, count=%d), skipping\n", params.MatrixCount, params.ShardCount)
+		publishWorkers(cfg, opts.StepId, paralleldata.Group{})
 		return nil
 	}
 
@@ -365,6 +375,7 @@ func RunParallelWithOptions(ctx context.Context, specContent string, cfg *config
 
 	if len(workers) == 0 {
 		fmt.Println("nothing to run")
+		publishWorkers(cfg, opts.StepId, paralleldata.Group{Count: params.Count})
 		return nil
 	}
 
@@ -372,6 +383,8 @@ func RunParallelWithOptions(ctx context.Context, specContent string, cfg *config
 	if err != nil {
 		return err
 	}
+	// Failed workers are recorded too, so an aggregate can read what each shard got to
+	publishWorkers(cfg, opts.StepId, result.Workers)
 
 	if result.FailedWorkers == 0 && result.StoppedWorkers == 0 {
 		fmt.Printf("Successfully finished %d workers.\n", result.TotalWorkers)
@@ -381,6 +394,74 @@ func RunParallelWithOptions(ctx context.Context, specContent string, cfg *config
 	}
 
 	return nil
+}
+
+// publishWorkers records what the workers published for the later steps of the pod. It is a hint, so
+// it is stored in the state of the pod and not saved on the execution record. A step with no id cannot
+// be addressed, so it records nothing.
+func publishWorkers(cfg *config.ConfigV2, stepId string, group paralleldata.Group) {
+	if stepId == "" {
+		return
+	}
+	if group.Workers == nil {
+		group.Workers = []paralleldata.Worker{}
+	}
+	instructions.PrintHintDetails(cfg.Ref(), paralleldata.InstructionName(stepId), group)
+}
+
+// workerOutputs collects what the workers published while they run. Workers run concurrently, so
+// it is guarded by a mutex.
+type workerOutputs struct {
+	mu      sync.Mutex
+	workers map[int64]*paralleldata.Worker
+}
+
+func newWorkerOutputs() *workerOutputs {
+	return &workerOutputs{workers: make(map[int64]*paralleldata.Worker)}
+}
+
+func (w *workerOutputs) get(index int64) *paralleldata.Worker {
+	if w.workers[index] == nil {
+		w.workers[index] = &paralleldata.Worker{Index: index, Outputs: make(map[string]string)}
+	}
+	return w.workers[index]
+}
+
+// merge adds an outputs instruction of the worker. The instructions arrive in the order the steps
+// emitted them, so a later step wins, and a replayed instruction changes nothing.
+func (w *workerOutputs) merge(index int64, output testkube.TestWorkflowOutput) {
+	if w == nil {
+		return
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	executiondata.MergeOutputs(w.get(index).Outputs, output)
+}
+
+// finish records the final status of the worker.
+func (w *workerOutputs) finish(index int64, status *testkube.TestWorkflowStatus) {
+	if w == nil || status == nil {
+		return
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.get(index).Status = *status
+}
+
+// group returns the workers ordered by index.
+func (w *workerOutputs) group(count int64) paralleldata.Group {
+	group := paralleldata.Group{Count: count, Workers: []paralleldata.Worker{}}
+	if w == nil {
+		return group
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	for index := int64(0); index < count; index++ {
+		if worker, ok := w.workers[index]; ok {
+			group.Workers = append(group.Workers, *worker)
+		}
+	}
+	return group
 }
 
 // parseAndValidateSpec parses the input spec and calculates execution parameters.
@@ -396,7 +477,7 @@ func parseAndValidateSpec(specContent string, cfg *config.ConfigV2, base64Encode
 	parser.NormalizeParallelSpec(parallel)
 
 	// Preserve env.* expressions for parallel workers
-	baseMachine := spawn.ParallelCreateBaseMachineWithoutEnv(cfg, stateMachine, data.ExecutionDataMachine(), credentialMachine)
+	baseMachine := spawn.ParallelCreateBaseMachineWithoutEnv(cfg, stateMachine, data.ExecutionDataMachine(), data.ParallelDataMachine(), credentialMachine)
 
 	params, err := commontcl.GetParamsSpec(parallel.Matrix, parallel.Shards, parallel.Count, parallel.MaxCount, baseMachine)
 	if err != nil {
@@ -417,7 +498,7 @@ func prepareWorkers(parallel *testworkflowsv1.StepParallel, params *commontcl.Pa
 	transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, cfg.IP(), constants.DefaultTransferPort)
 
 	// Preserve env.* expressions for parallel workers
-	baseMachine := spawn.ParallelCreateBaseMachineWithoutEnv(cfg, stateMachine, data.ExecutionDataMachine(), credentialMachine)
+	baseMachine := spawn.ParallelCreateBaseMachineWithoutEnv(cfg, stateMachine, data.ExecutionDataMachine(), data.ParallelDataMachine(), credentialMachine)
 
 	builder := NewParallelWorkersBuilder(transferSrv, baseMachine, params, cfg)
 	workers, err := builder.BuildWorkerSpecs(parallel)
@@ -602,6 +683,8 @@ type WorkerExecutor struct {
 	updates         chan<- Update
 	fullBaseMachine expressions.Machine
 	cfg             *config.ConfigV2
+	// outputs collects what the workers published. When it is nil, the outputs are not read.
+	outputs *workerOutputs
 }
 
 // NewWorkerExecutor creates a new worker executor
@@ -702,6 +785,7 @@ func (e *WorkerExecutor) monitorWorkerExecution(ctx context.Context, worker Work
 			Signature:   result.Signature,
 			ScheduledAt: &result.ScheduledAt,
 		},
+		Outputs: e.outputs != nil,
 	})
 
 	if notifications.Err() != nil {
@@ -712,6 +796,7 @@ func (e *WorkerExecutor) monitorWorkerExecution(ctx context.Context, worker Work
 	log("created")
 
 	passed, err := e.processWorkerNotifications(ctx, notifications, worker, result.Signature, log, &lastResult)
+	e.outputs.finish(worker.Index, lastResult.Status)
 	// Notify caller of pass/fail BEFORE cleanup runs (which may take 25+ seconds).
 	// This allows failFast to cancel other workers promptly.
 	for _, cb := range onResult {
@@ -750,6 +835,10 @@ func (e *WorkerExecutor) processWorkerNotifications(ctx context.Context, notific
 			if !ok {
 				// Channel closed — fall through to error/abnormal handling below
 				goto done
+			}
+			if v.Output != nil {
+				e.outputs.merge(worker.Index, *v.Output)
+				continue
 			}
 			if !scheduled && v.NodeName != "" {
 				scheduled = true
@@ -1011,8 +1100,9 @@ func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params
 	resumeOrchestrator := NewResumeOrchestrator(registry, updates, namespaces, descriptions, cfg)
 	go resumeOrchestrator.Start(execCtx)
 
-	fullBaseMachine := spawn.ParallelCreateBaseMachine(cfg, stateMachine, data.ExecutionDataMachine(), credentialMachine)
+	fullBaseMachine := spawn.ParallelCreateBaseMachine(cfg, stateMachine, data.ExecutionDataMachine(), data.ParallelDataMachine(), credentialMachine)
 	executor := NewWorkerExecutor(storage, registry, updates, fullBaseMachine, cfg)
+	executor.outputs = newWorkerOutputs()
 
 	failures := &workerFailures{}
 
@@ -1076,7 +1166,9 @@ func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params
 	// Signal orchestrator to exit by closing updates channel
 	close(updates)
 
-	return failures.result(params.Count, failFast), nil
+	result := failures.result(params.Count, failFast)
+	result.Workers = executor.outputs.group(params.Count)
+	return result, nil
 }
 
 // result counts the workers that failed on their own apart from the workers that fail-fast stopped

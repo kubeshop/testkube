@@ -112,6 +112,12 @@ restarting execution numbers at 1, which would collide with the names of old exe
 - **An original run has an empty `baseId` and must resolve to no rerun.** Returning `rootId` there would make every execution a rerun of itself.
 - **Reserved references win over the registry.** `execution("parent")` and `execution("rerun")` are resolved before the executions the workflow scheduled, so a child aliased - or a workflow named - `parent`/`rerun` cannot shadow them. A collision is refused rather than resolved either way, because preferring the reserved meaning would instead make that child unreachable by name. `IsReservedRef` is the list.
 
+## Parallel worker outputs
+
+- `parallel("<step id>", <index>)` (`pkg/paralleldata`) returns `{index, status, outputs}` for a worker of an earlier `parallel` step. The ref is the step's id, explicit or derived from its name, and `ProcessParallel` passes it to the toolkit as `--id`. A step with neither an id nor a name records nothing. The index is required, and an index outside the expected worker count is an error. A worker that never started resolves with no status and no outputs.
+- Transport: `StatusNotifications` forwards a worker's `outputs` instructions only when `StatusNotificationsOptions.Outputs` is set. Leave it off for other consumers: the `services` step reads every notification as a readiness change. `parallel.go` merges them per worker (`workerOutputs`, through `executiondata.MergeOutputs`) and prints the hint `paralleldata.<id>` on every exit path, failures included.
+- The hint is pod-local (init state, read by `data.ParallelDataMachine()`), and it is wired next to every `data.ExecutionDataMachine()` use. It is not saved on the execution record or exposed through `execution()`. The name avoids `parallel`, the output that reports worker status to the UI and runner.
+
 ## Transient-failure retries
 
 - `pkg/runner/runner.go` runs `worker.Destroy` (cleanup of the execution's Secrets/Pods after the workflow ends) through the shared `retry()` helper via `destroyResources`. Bounded by `CleanupResourcesRetryCount` and `CleanupResourcesRetryDelay`; a brief `kube-apiserver` blip during teardown should not leave orphan resources in the customer namespace.
