@@ -1,0 +1,106 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-parallel-outputs
+  labels:
+    core-tests: parallel-outputs
+spec:
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+  - name: Run the shards
+    id: shard
+    parallel:
+      matrix:
+        name: [alpha, beta, gamma]
+      container:
+        resources:
+          requests:
+            cpu: 32m
+            memory: 32Mi
+      steps:
+      - name: Publish a value per shard
+        shell: |
+          # A worker publishes through /testkube/outputs like any step does.
+          echo -n "{{ matrix.name }}" > /testkube/outputs/name
+          echo -n "$(( {{ index }} * 10 ))" > /testkube/outputs/duration
+      - name: A later step of the worker wins
+        shell: |
+          echo -n "{{ matrix.name }}-final" > /testkube/outputs/name
+
+  - name: Read each worker's outputs and status
+    shell: |
+      set -e
+      for pair in \
+        '{{ parallel("shard", 0).outputs.name }}=alpha-final' \
+        '{{ parallel("shard", 1).outputs.name }}=beta-final' \
+        '{{ parallel("shard", 2).outputs.name }}=gamma-final' \
+        '{{ parallel("shard", 0).outputs.duration }}=0' \
+        '{{ parallel("shard", 2).outputs.duration }}=20' \
+        '{{ parallel("shard", 1).status }}=passed' \
+        '{{ parallel("shard", 2).index }}=2'; do
+        echo "$pair"
+        [ "${pair%%=*}" = "${pair#*=}" ] || { echo "unexpected value"; exit 1; }
+      done
+
+  - name: Aggregate the shards
+    id: aggregate
+    shell: |
+      total=$(( {{ parallel("shard", 0).outputs.duration }} + {{ parallel("shard", 1).outputs.duration }} + {{ parallel("shard", 2).outputs.duration }} ))
+      echo "total duration: $total"
+      [ "$total" = "30" ] || { echo "unexpected total"; exit 1; }
+      # Worker outputs stay in this pod; re-export the aggregate for the parent.
+      echo -n "$total" > /testkube/outputs/total
+
+  - name: A failing worker
+    id: flaky
+    optional: true
+    parallel:
+      count: 2
+      steps:
+      # A step needs a name or an id to get an outputs directory, so the
+      # `parallel: {shell: ...}` shorthand cannot publish anything.
+      - name: Publish, then fail on the second worker
+        shell: |
+          echo -n "reached-{{ index }}" > /testkube/outputs/progress
+          [ "{{ index }}" = "0" ]
+
+  - name: A failed worker keeps what it published
+    shell: |
+      set -e
+      echo "worker 0: {{ parallel("flaky", 0).status }} {{ parallel("flaky", 0).outputs.progress }}"
+      echo "worker 1: {{ parallel("flaky", 1).status }} {{ parallel("flaky", 1).outputs.progress }}"
+      [ "{{ parallel("flaky", 0).status }}" = "passed" ] || { echo "unexpected status of worker 0"; exit 1; }
+      [ "{{ parallel("flaky", 1).status }}" = "failed" ] || { echo "unexpected status of worker 1"; exit 1; }
+      [ "{{ parallel("flaky", 1).outputs.progress }}" = "reached-1" ] || { echo "unexpected progress of worker 1"; exit 1; }
+
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-parallel-outputs-suite
+  labels:
+    core-tests: parallel-outputs
+    type: suite
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+  - name: Run the sharded workflow
+    execute:
+      workflows:
+      - name: tw-parallel-outputs
+        as: sharded
+
+  - name: Read the aggregate it re-exported
+    shell: |
+      set -e
+      echo "total: {{ execution("sharded").outputs.total }}"
+      [ "{{ execution("sharded").outputs.total }}" = "30" ] || { echo "unexpected total"; exit 1; }
