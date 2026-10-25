@@ -216,3 +216,35 @@ func TestRestoreLeavesTheFirstPathWritableWhenALaterOneFails(t *testing.T) {
 	assert.NotZero(t, info.Mode().Perm()&0o200,
 		"a failed restore must leave behind nothing its caller cannot clear")
 }
+
+// A declared directory is often a mount point the step does not own: the cache mounts
+// an emptyDir at every path no other volume covers, and kubelet makes it owned by root,
+// mode 0777. A step running as anyone else may write inside it but may not chmod it,
+// and that refusal failed the whole restore - so a non-root step saved to the volume on
+// every run and never once restored from it.
+//
+// /dev/shm stands in for that mount point: owned by root, writable by everyone.
+func TestRestoreIntoADeclaredDirectoryItCannotChmod(t *testing.T) {
+	const declared = "/dev/shm"
+	info, err := os.Stat(declared)
+	if err != nil || os.Getuid() == 0 || info.Sys().(*syscall.Stat_t).Uid == uint32(os.Getuid()) || info.Mode().Perm()&0o002 == 0 {
+		t.Skip("needs a world-writable directory owned by another user, and a non-root test")
+	}
+
+	name := "tkcache-" + filepath.Base(t.TempDir())
+	entry := t.TempDir()
+	write(t, filepath.Join(entry, EntryRoot, "dev", "shm", name), "restored")
+	t.Cleanup(func() { os.Remove(filepath.Join(declared, name)) })
+	root, err := os.OpenRoot(entry)
+	require.NoError(t, err)
+	defer root.Close()
+
+	wrote, err := RestoreTree(root, []string{declared}, CopyLimits{})
+	require.NoError(t, err, "the mount point's own mode is not the entry's to set")
+	assert.True(t, wrote)
+
+	body, err := os.ReadFile(filepath.Join(declared, name))
+	require.NoError(t, err)
+	assert.Equal(t, "restored", string(body))
+	assert.Equal(t, info.Mode().Perm(), func() fs.FileMode { i, _ := os.Stat(declared); return i.Mode().Perm() }())
+}

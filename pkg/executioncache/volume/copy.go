@@ -827,7 +827,7 @@ func applyModes(dst *os.Root, within, rootName string, modes Modes) error {
 	// Only when dst is that directory. Where the declared path is a single file or
 	// link, dst is its parent, which belongs to the workflow rather than to the entry.
 	if rootName == "" {
-		if err := dst.Chmod(".", DefaultDirMode); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		if err := dst.Chmod(".", DefaultDirMode); err != nil && !declaredModeRefused(err) {
 			return err
 		}
 	}
@@ -838,13 +838,27 @@ func applyModes(dst *os.Root, within, rootName string, modes Modes) error {
 			continue
 		}
 		if err := dst.Chmod(rel, modes[key]); err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
+			if errors.Is(err, fs.ErrNotExist) || (rel == "." && declaredModeRefused(err)) {
 				continue
 			}
 			return err
 		}
 	}
 	return nil
+}
+
+// declaredModeRefused reports whether setting the declared directory's own mode can be
+// skipped: it is gone, or this process may not change it.
+//
+// The second is the usual case for a step that is not root. The cache mounts a volume
+// at every declared path no other volume covers, and kubelet makes that mount point
+// owned by root, mode 0777 - writable by the step, and not its to chmod. Its mode then
+// belongs to the mount rather than to the entry, and failing on it threw away a restore
+// that had already written everything beneath it. Only the declared directory is
+// excused: everything below it was created by this restore, so a refusal there is a
+// real failure.
+func declaredModeRefused(err error) bool {
+	return errors.Is(err, fs.ErrNotExist) || errors.Is(err, fs.ErrPermission)
 }
 
 // relativeToDeclared turns a key recorded against the entry into the name to chmod
