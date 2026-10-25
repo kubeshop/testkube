@@ -39,7 +39,7 @@ func NewDirectAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI,
 		WebhookTemplateClient: NewWebhookTemplateClient(NewDirectClient[testkube.WebhookTemplate](httpClient, apiURI, apiPathPrefix)),
 		ConfigClient:          NewConfigClient(NewDirectClient[testkube.Config](httpClient, apiURI, apiPathPrefix)),
 		TestWorkflowClient: NewTestWorkflowClient(
-			NewDirectClient[testkube.TestWorkflow](httpClient, apiURI, apiPathPrefix),
+			NewDirectClient[testkube.TestWorkflow](httpClient, apiURI, apiPathPrefix).WithSSEClient(sseClient),
 			NewDirectClient[testkube.TestWorkflowWithExecution](httpClient, apiURI, apiPathPrefix),
 			NewDirectClient[testkube.TestWorkflowExecution](httpClient, apiURI, apiPathPrefix),
 			NewDirectClient[testkube.TestWorkflowExecutionsResult](httpClient, apiURI, apiPathPrefix),

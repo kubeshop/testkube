@@ -262,7 +262,7 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | testkube-api.additionalNamespaces | list | `[]` | Watch namespaces. In this case, a Role and a RoleBinding will be created for each specified namespace. |
 | testkube-api.additionalVolumeMounts | list | `[]` | Additional volume mounts to be added |
 | testkube-api.additionalVolumes | list | `[]` | Additional volumes to be added |
-| testkube-api.allowLowSecurityFields |  bool | `false` | Allow to use low securiy fields for test workflow pod and container configurations
+| testkube-api.allowLowSecurityFields |  bool | `false` | Allow to use low security fields for test workflow pod and container configurations
 | testkube-api.analyticsEnabled | bool | `true` | Enable analytics for Testkube |
 | testkube-api.cdeventsTarget | string | `""` | target for cdevents emission via http(s) |
 | testkube-api.cliIngress.annotations | object | `{}` | Additional annotations for the Ingress resource. |
@@ -325,7 +325,7 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | testkube-api.minio.extraEnvVars | list | `[]` | Minio extra vars |
 | testkube-api.minio.extraVolumeMounts | list | `[]` |  |
 | testkube-api.minio.extraVolumes | list | `[]` |  |
-| testkube-api.minio.image | object | `{"pullSecrets":[],"registry":"docker.io","repository":"minio/minio","tag":"RELEASE.2025-07-18T21-56-31Z"}` | Minio image from DockerHub |
+| testkube-api.minio.image | object | `{"pullSecrets":[],"registry":"docker.io","repository":"kubeshop/testkube-minio","tag":"2025.10"}` | Minio image from DockerHub |
 | testkube-api.minio.minioRootPassword | string | `"minio123"` | Root password |
 | testkube-api.minio.minioRootUser | string | `"minio"` | Root username |
 | testkube-api.minio.nodeSelector | object | `{}` | Node labels for pod assignment. |

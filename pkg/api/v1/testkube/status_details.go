@@ -67,6 +67,7 @@ var statusDetailsTypes = map[string]StatusDetailsType{
 	string(StopReasonStepTimeout):          StatusDetailsTypeExecutionFailure,
 	string(StopReasonServiceNotReady):      StatusDetailsTypeExecutionFailure,
 	string(StopReasonArtifactUploadFailed): StatusDetailsTypeExecutionFailure,
+	string(StopReasonGitUnreachable):       StatusDetailsTypeExecutionFailure,
 	string(StopReasonExecutionStuck):       StatusDetailsTypeExecutionFailure,
 	string(StopReasonExecutionTimeout):     StatusDetailsTypeExecutionFailure,
 	string(StopReasonTransitionTimeout):    StatusDetailsTypeExecutionFailure,
@@ -77,6 +78,7 @@ var statusDetailsTypes = map[string]StatusDetailsType{
 	string(StopReasonSuperseded):           StatusDetailsTypeExecutionFailure,
 	string(StopReasonFailFast):             StatusDetailsTypeExecutionFailure,
 	string(StopReasonTriggerAbort):         StatusDetailsTypeExecutionFailure,
+	string(StopReasonParentAborted):        StatusDetailsTypeExecutionFailure,
 	string(StopReasonJobDeleted):           StatusDetailsTypeExecutionFailure,
 	string(StopReasonAbortAll):             StatusDetailsTypeExecutionFailure,
 

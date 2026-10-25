@@ -9,7 +9,8 @@ import (
 
 func NewInstallCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "install",
+		Use:   "install",
+		Short: "Install a local Testkube trial, a runner, or the CRDs",
 		Run: func(cmd *cobra.Command, args []string) {
 			err := cmd.Help()
 			ui.PrintOnError("Displaying help", err)
@@ -17,6 +18,7 @@ func NewInstallCmd() *cobra.Command {
 
 	cmd.AddCommand(agents.NewInstallAgentCommand())
 	cmd.AddCommand(agents.NewInstallCRDCommand())
+	cmd.AddCommand(NewInstallLocalCmd())
 
 	return cmd
 }

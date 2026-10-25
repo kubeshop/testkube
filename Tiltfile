@@ -474,14 +474,31 @@ local_resource(
         kubectl rollout status deployment/""" + MINIO_RESOURCE_NAME + """ -n """ + NAMESPACE + """ --timeout=120s
         sleep 3
         echo "Creating MinIO buckets..."
-        # The MinIO image ships mc, so run it there: minio/mc:latest is no longer
-        # served from Docker Hub without authentication.
-        kubectl exec -n """ + NAMESPACE + """ deployment/""" + MINIO_RESOURCE_NAME + """ -- sh -c '
-          export MC_CONFIG_DIR=/tmp/.mc
-          mc alias set minio http://localhost:9000 """ + minio_user + " " + minio_pass + """ >/dev/null
+        kubectl delete job minio-bucket-setup -n """ + NAMESPACE + """ --ignore-not-found=true
+        kubectl apply -n """ + NAMESPACE + """ -f - <<'YAML'
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-bucket-setup
+spec:
+  ttlSecondsAfterFinished: 60
+  template:
+    spec:
+      containers:
+      - name: mc
+        image: kubeshop/testkube-minio:2025.10
+        command:
+        - /bin/sh
+        - -c
+        - |
+          mc alias set minio http://""" + MINIO_SERVICE_HOST + """:9000 """ + minio_user + " " + minio_pass + """
           mc mb minio/testkube-artifacts --ignore-existing
           mc mb minio/testkube-logs --ignore-existing
-        '
+          echo "Buckets created successfully"
+      restartPolicy: Never
+  backoffLimit: 3
+YAML
+        kubectl wait --for=condition=complete job/minio-bucket-setup -n """ + NAMESPACE + """ --timeout=60s
         echo "MinIO buckets setup complete."
     """,
     labels=["setup"],

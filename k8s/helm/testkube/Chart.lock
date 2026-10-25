@@ -1,27 +1,27 @@
 dependencies:
 - name: testkube-operator
   repository: file://../testkube-operator
-  version: 2.12.0-rc.0
+  version: 2.13.0-rc.0
 - name: mongodb
   repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
-  version: 8.3.8-0
+  version: 9.0.2-0
 - name: postgresql
   repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
   version: 18.6-0
 - name: cloudnative-pg
   repository: https://cloudnative-pg.github.io/charts
-  version: 0.29.1
+  version: 0.29.0
 - name: cluster
   repository: https://cloudnative-pg.github.io/charts
-  version: 0.8.1
+  version: 0.9.0
 - name: nats
   repository: file://./charts/nats
   version: 1.2.6-4
 - name: testkube-api
   repository: file://../testkube-api
-  version: 2.14.0-rc.0
+  version: 2.15.0-rc.0
 - name: global
   repository: file://../global
   version: 0.1.3
-digest: sha256:81b85d4bd6dde573d94050376d6c445baf6ec40e2d7ab2b5172a7d025980280e
-generated: "2026-09-24T04:12:57.849380098Z"
+digest: sha256:23b13095f7c44cabd46d76ceb5325ad013bc043810403dfd22bb16fac6755337
+generated: "2026-10-21T10:06:16.403933756Z"

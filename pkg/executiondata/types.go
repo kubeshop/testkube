@@ -97,6 +97,14 @@ type Execution struct {
 	StatusStep string `json:"statusStep,omitempty"`
 }
 
+// ExecutionGroup is one fan-out group as an output instruction value.
+type ExecutionGroup struct {
+	Executions []Execution `json:"executions"`
+	// Ambiguous carries Registry.MarkAmbiguous over to the following steps, so that they
+	// refuse the workflow name too - even when only one of its entries got scheduled.
+	Ambiguous bool `json:"ambiguous,omitempty"`
+}
+
 // Key is the primary reference of the execution - its alias when the parent gave
 // one, otherwise the name of the workflow it ran. Executions sharing a key form a
 // single fan-out group addressed by index.

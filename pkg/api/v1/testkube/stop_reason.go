@@ -34,6 +34,7 @@ const (
 	// A toolkit step reported the cause.
 	StopReasonGitAuthFailed        StopReason = "git-auth-failed"
 	StopReasonGitCloneFailed       StopReason = "git-clone-failed"
+	StopReasonGitUnreachable       StopReason = "git-unreachable"
 	StopReasonServiceNotReady      StopReason = "service-not-ready"
 	StopReasonArtifactUploadFailed StopReason = "artifact-upload-failed"
 	StopReasonChildWorkflowFailed  StopReason = "child-workflow-failed"
@@ -48,8 +49,9 @@ const (
 	StopReasonJobDeleted       StopReason = "job-deleted"
 
 	// Another component of the execution decided the stop.
-	StopReasonFailFast     StopReason = "fail-fast"
-	StopReasonTriggerAbort StopReason = "trigger-abort"
+	StopReasonFailFast      StopReason = "fail-fast"
+	StopReasonTriggerAbort  StopReason = "trigger-abort"
+	StopReasonParentAborted StopReason = "parent-aborted"
 
 	// The test itself failed, and no other signal explains the result.
 	StopReasonExitCode StopReason = "exit-code"
@@ -104,6 +106,8 @@ func (r StopReason) Sentence() string {
 		return "the credential for the repository was refused"
 	case StopReasonGitCloneFailed:
 		return "the repository could not be cloned"
+	case StopReasonGitUnreachable:
+		return "the server of the repository could not be reached"
 	case StopReasonServiceNotReady:
 		return "a service of the step did not become ready"
 	case StopReasonArtifactUploadFailed:
@@ -128,10 +132,30 @@ func (r StopReason) Sentence() string {
 		return "another parallel worker failed"
 	case StopReasonTriggerAbort:
 		return "the trigger of the execution was deleted"
+	case StopReasonParentAborted:
+		return "the parent execution was aborted"
 	case StopReasonExitCode:
 		return "a step of the test failed"
 	case StopReasonUnknown:
 		return "the cause is not known"
+	default:
+		return ""
+	}
+}
+
+// Phrase returns the words for what happened to one step, for a sentence that names the step,
+// for example "ran out of memory". It returns an empty string for a reason that does not end
+// one step.
+func (r StopReason) Phrase() string {
+	switch r {
+	case StopReasonOOMKilled:
+		return "ran out of memory"
+	case StopReasonStepTimeout:
+		return "did not finish within its timeout"
+	case StopReasonProcessKilled:
+		return "was killed, possibly by an out-of-memory kill"
+	case StopReasonContainerError:
+		return "could not run its container"
 	default:
 		return ""
 	}

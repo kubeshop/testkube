@@ -16,13 +16,25 @@ import (
 func ExecutionRegistry() *executiondata.Registry {
 	registry := executiondata.NewRegistry()
 	for _, raw := range GetState().GetOutputsWithPrefix(executiondata.ExecutionInstructionPrefix) {
-		var entries []executiondata.Execution
-		if err := json.Unmarshal([]byte(raw), &entries); err != nil {
+		// Writers emit {"executions":[...]}. A previous version emitted a bare array and we still
+		// parse that here in case there is a pod running the previous binary.
+		trimmed := strings.TrimSpace(raw)
+		var group executiondata.ExecutionGroup
+		var err error
+		if trimmed != "" && trimmed[0] == '[' {
+			err = json.Unmarshal([]byte(trimmed), &group.Executions)
+		} else {
+			err = json.Unmarshal([]byte(trimmed), &group)
+		}
+		if err != nil {
 			output.Std.Warnf("warn: could not read executed test workflow: %s\n", err.Error())
 			continue
 		}
-		for _, entry := range entries {
+		for _, entry := range group.Executions {
 			registry.Add(entry)
+		}
+		if group.Ambiguous && len(group.Executions) > 0 {
+			registry.MarkAmbiguous(group.Executions[0].Key())
 		}
 	}
 	return registry

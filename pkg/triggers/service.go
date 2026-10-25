@@ -179,6 +179,14 @@ func NewService(
 		},
 	})
 
+	s.coordinator.Register(leader.Task{
+		Name: "trigger-http-watcher",
+		Start: func(taskCtx context.Context) error {
+			s.runHTTPContentWatcher(taskCtx)
+			return nil
+		},
+	})
+
 	return s
 }
 

@@ -80,12 +80,13 @@ func ValidateMatchConditions(conditions []workflowtriggersv1.WorkflowTriggerFiel
 			errs = append(errs, matchErr(MatchReasonUnknownOp, "match[%d]: unknown operator %q", i, cond.Operator))
 		}
 
-		// change-based operators require the modified event
+		// change-based operators require an event that carries the previous object: modified,
+		// or http-changed, which carries the previous response
 		switch cond.Operator {
 		case workflowtriggersv1.FieldOperatorChanged,
 			workflowtriggersv1.FieldOperatorChangedTo,
 			workflowtriggersv1.FieldOperatorChangedFrom:
-			if event != TestTriggerEventModified {
+			if event != TestTriggerEventModified && event != TestTriggerEventHTTPChanged {
 				errs = append(errs, matchErr(MatchReasonEventMismatch, "match[%d]: operator %q requires event to be %q", i, cond.Operator, TestTriggerEventModified))
 			}
 		}
@@ -120,13 +121,10 @@ func (s *TestTriggerSpec) Validate() []error {
 
 	isContentResource := s.Resource == TestTriggerResourceContent || (s.ResourceRef != nil && s.ResourceRef.Kind == string(TestTriggerResourceContent))
 
+	isHTTPContent := isContentResource && s.ContentSelector != nil && s.ContentSelector.HTTP != nil
+
 	if isContentResource {
-		for _, event := range effectiveEvents {
-			if event != TestTriggerEventGitPush && event != TestTriggerEventGitTagPush && event != TestTriggerEventGitPullRequest {
-				errs = append(errs, fmt.Errorf("resource %q requires event to be one of %q, %q, or %q", TestTriggerResourceContent, TestTriggerEventGitPush, TestTriggerEventGitTagPush, TestTriggerEventGitPullRequest))
-				break
-			}
-		}
+		errs = append(errs, validateContentSelector(s.ContentSelector, effectiveEvents)...)
 	}
 	if isContentResource && s.ConditionSpec != nil && len(s.ConditionSpec.Conditions) > 0 {
 		errs = append(errs, fmt.Errorf("resource %q does not support conditionSpec.conditions", TestTriggerResourceContent))
@@ -134,12 +132,11 @@ func (s *TestTriggerSpec) Validate() []error {
 	if isContentResource && s.ProbeSpec != nil && len(s.ProbeSpec.Probes) > 0 {
 		errs = append(errs, fmt.Errorf("resource %q does not support probeSpec.probes", TestTriggerResourceContent))
 	}
-	if isContentResource && (s.ContentSelector == nil || s.ContentSelector.Git == nil || s.ContentSelector.Git.Uri == "") {
-		errs = append(errs, fmt.Errorf("resource %q requires contentSelector.git.uri", TestTriggerResourceContent))
-	}
-	if isContentResource && len(s.Match) > 0 {
+	// match[] on an HTTP content trigger evaluates the polled response, not a cluster object, so
+	// there is no listener-specific schema it has to be validated against.
+	if isContentResource && !isHTTPContent && len(s.Match) > 0 {
 		errs = append(errs, fmt.Errorf("resource %q does not support match", TestTriggerResourceContent))
-	} else if len(s.Match) > 0 {
+	} else if len(s.Match) > 0 && !isHTTPContent {
 		if s.Listener == nil || len(s.Listener.Match["id"]) == 0 {
 			errs = append(errs, fmt.Errorf("match conditions require listener.match.id to pin the trigger to one or more listener agents"))
 		}

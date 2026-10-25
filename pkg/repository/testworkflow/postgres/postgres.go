@@ -1445,7 +1445,7 @@ func (r *PostgresRepository) UpdateResultStrict(ctx context.Context, id, runnerI
 	qtx := r.queries.WithTx(tx)
 
 	// Get current status for comparison
-	currentExecution, err := r.queries.GetTestWorkflowExecution(ctx, sqlc.GetTestWorkflowExecutionParams{
+	currentExecution, err := qtx.GetTestWorkflowExecution(ctx, sqlc.GetTestWorkflowExecutionParams{
 		ID:             id,
 		OrganizationID: r.organizationID,
 		EnvironmentID:  r.environmentID,
@@ -1549,7 +1549,7 @@ func (r *PostgresRepository) FinishResultStrict(ctx context.Context, id, runnerI
 	qtx := r.queries.WithTx(tx)
 
 	// Get current status for comparison
-	currentExecution, err := r.queries.GetTestWorkflowExecution(ctx, sqlc.GetTestWorkflowExecutionParams{
+	currentExecution, err := qtx.GetTestWorkflowExecution(ctx, sqlc.GetTestWorkflowExecutionParams{
 		ID:             id,
 		OrganizationID: r.organizationID,
 		EnvironmentID:  r.environmentID,

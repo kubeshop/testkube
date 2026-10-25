@@ -120,6 +120,17 @@ func FormatInsightMetricSeries(raw string, maxSamples int) (string, error) {
 	if isEmpty || len(data) == 0 {
 		return "No metric data found for the given query.", nil
 	}
+
+	total, segments := summarizeInsightSeries(data, maxSamples)
+	return FormatJSON(struct {
+		PointCount int                       `json:"pointCount"`
+		Series     []formattedInsightSegment `json:"series"`
+	}{PointCount: total, Series: segments})
+}
+
+// summarizeInsightSeries groups a time series by segment and summarizes each
+// with downsampled points. maxSamples <= 0 uses the default.
+func summarizeInsightSeries(data []insightSeriesDatum, maxSamples int) (int, []formattedInsightSegment) {
 	if maxSamples <= 0 {
 		maxSamples = defaultInsightSeriesSamples
 	}
@@ -189,15 +200,12 @@ func FormatInsightMetricSeries(raw string, maxSamples int) (string, error) {
 		})
 	}
 
-	return FormatJSON(struct {
-		PointCount int                       `json:"pointCount"`
-		Series     []formattedInsightSegment `json:"series"`
-	}{PointCount: total, Series: segments})
+	return total, segments
 }
 
 // downsampleInsightPoints evenly reduces a series to at most maxPoints.
 // For maxPoints >= 2 it always keeps the first and last point.
-func downsampleInsightPoints(values []insightSeriesPoint, maxPoints int) []insightSeriesPoint {
+func downsampleInsightPoints[T any](values []T, maxPoints int) []T {
 	if maxPoints <= 0 || len(values) <= maxPoints {
 		return values
 	}
@@ -205,7 +213,7 @@ func downsampleInsightPoints(values []insightSeriesPoint, maxPoints int) []insig
 		return values[len(values)-1:]
 	}
 
-	result := make([]insightSeriesPoint, 0, maxPoints)
+	result := make([]T, 0, maxPoints)
 	result = append(result, values[0])
 	step := float64(len(values)-1) / float64(maxPoints-1)
 	for i := 1; i < maxPoints-1; i++ {

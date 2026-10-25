@@ -30,6 +30,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
+// AgentSelector selects the pods of a Testkube agent, whichever chart installed it: the
+// `testkube` chart overrides the API server's name to `api-server`, while the `testkube-api`
+// chart installed directly and the `testkube-runner` chart keep their chart names.
+const AgentSelector = "app.kubernetes.io/name in (api-server,testkube-api,testkube-runner)"
+
 const (
 	apiServerDeploymentSelector = "app.kubernetes.io/name=api-server"
 	operatorDeploymentSelector  = "control-plane=controller-manager"

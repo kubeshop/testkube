@@ -50,4 +50,15 @@ func TestValidateLicense(t *testing.T) {
 		assert.NoError(t, err)
 		assert.False(t, resp.Valid)
 	})
+
+	t.Run("ServerErrorIsNotAnInvalidKey", func(t *testing.T) {
+		mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "boom", http.StatusInternalServerError)
+		}))
+		defer mockServer.Close()
+
+		resp, err := NewClient().WithURL(mockServer.URL).ValidateLicense(LicenseRequest{License: "any"})
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+	})
 }

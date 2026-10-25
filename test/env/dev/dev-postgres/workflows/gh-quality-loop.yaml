@@ -39,7 +39,7 @@ spec:
         cpu: 4
         memory: 6Gi
       requests:
-        cpu: 2
+        cpu: 4
         memory: 4Gi
   job:
     activeDeadlineSeconds: 1200
@@ -47,12 +47,11 @@ spec:
   - name: Install
     shell: corepack enable npm && npm ci --prefer-offline
     cache:
-      key: cloud-quality-loop-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      key: cloud-web-unit-v1-npm-{{hash_files("/data/repo/js/package-lock.json")}}
       restoreKeys:
-      - cloud-quality-loop-npm-
+      - cloud-web-unit-v1-npm-
       paths:
       - /root/.npm/_cacache
-      scope: environment
   - name: Test
     shell: |
       mkdir -p /data/artifacts
@@ -114,12 +113,11 @@ spec:
   - name: Install
     shell: corepack enable npm && npm ci --prefer-offline
     cache:
-      key: cloud-quality-loop-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      key: cloud-backoffice-unit-v1-npm-{{hash_files("/data/repo/js/package-lock.json")}}
       restoreKeys:
-      - cloud-quality-loop-npm-
+      - cloud-backoffice-unit-v1-npm-
       paths:
       - /root/.npm/_cacache
-      scope: environment
   - name: Test
     shell: |
       mkdir -p /data/artifacts
@@ -181,12 +179,11 @@ spec:
   - name: Install
     shell: corepack enable npm && npm ci --prefer-offline
     cache:
-      key: cloud-quality-loop-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      key: cloud-runspace-controller-unit-v1-npm-{{hash_files("/data/repo/js/package-lock.json")}}
       restoreKeys:
-      - cloud-quality-loop-npm-
+      - cloud-runspace-controller-unit-v1-npm-
       paths:
       - /root/.npm/_cacache
-      scope: environment
   - name: Test
     shell: |
       mkdir -p /data/artifacts
@@ -240,24 +237,39 @@ spec:
       shell: spectral lint api/v1/base.yaml
   - name: Lint Golang
     cache:
-      key: cloud-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      key: cloud-lint-go-v1-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
       restoreKeys:
-      - cloud-quality-loop-gomod-
+      - cloud-lint-go-v1-gomod-
       paths:
       - /root/go/pkg/mod/cache/download
-      scope: environment
-    run:
-      image: golangci/golangci-lint:v2.12.2
-      env:
-      - name: GOPROXY
-        value: https://proxy.golang.org,direct
-      shell: |-
-        golangci-lint run -c ./.golangci.yml \
-          --verbose \
-          --timeout=20m \
-          --issues-exit-code=1 \
-          --max-issues-per-linter=0 \
-          ./...
+    steps:
+    - name: Analyze Go packages
+      cache:
+        # Keyed on the modules and lint config, never the sources: both caches address
+        # their own contents, so one entry serves every commit until dependencies change.
+        key: cloud-lint-go-v2-golangci-2.12.2-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum", "/data/repo/.golangci.yml")}}
+        restoreKeys:
+        - cloud-lint-go-v2-golangci-2.12.2-
+        paths:
+        - /root/.cache/go-build
+        - /root/.cache/golangci-lint
+        scope: workflow
+      run:
+        image: golangci/golangci-lint:v2.12.2
+        env:
+        - name: GOPROXY
+          value: https://proxy.golang.org,direct
+        - name: GOCACHE
+          value: /root/.cache/go-build
+        - name: GOLANGCI_LINT_CACHE
+          value: /root/.cache/golangci-lint
+        shell: |-
+          golangci-lint run -c ./.golangci.yml \
+            --verbose \
+            --timeout=20m \
+            --issues-exit-code=1 \
+            --max-issues-per-linter=0 \
+            ./...
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
@@ -320,18 +332,29 @@ spec:
   - name: Install
     shell: corepack enable npm && npm ci --prefer-offline
     cache:
-      key: cloud-quality-loop-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      key: cloud-lint-js-v1-npm-{{hash_files("/data/repo/js/package-lock.json")}}
       restoreKeys:
-      - cloud-quality-loop-npm-
+      - cloud-lint-js-v1-npm-
       paths:
       - /root/.npm/_cacache
-      scope: environment
-  - name: Check TypeScript types
-    shell: npx turbo run ts-check --cache-dir=.turbo
-  - name: Check formatting
-    shell: npx turbo run format:check --cache-dir=.turbo
-  - name: Check linters
-    shell: npx turbo run lint --cache-dir=.turbo
+  - name: Checks
+    cache:
+      # Turbo's task cache, kept between runs: a package whose inputs are unchanged
+      # skips its type check, format check and lint. Each run saves a new entry and
+      # restores the newest, so the cache follows main rather than staying at the first
+      # run's sources; entries hold only task logs, so one per run stays small.
+      key: cloud-lint-js-v1-turbo-{{execution.id}}
+      restoreKeys:
+      - cloud-lint-js-v1-turbo-
+      paths:
+      - /data/repo/js/.turbo
+    steps:
+    - name: Check TypeScript types
+      shell: npx turbo run ts-check --cache-dir=.turbo
+    - name: Check formatting
+      shell: npx turbo run format:check --cache-dir=.turbo
+    - name: Check linters
+      shell: npx turbo run lint --cache-dir=.turbo
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
@@ -376,6 +399,13 @@ spec:
       apk add --no-cache git make bash
       make helm-vendor-check
       make helm-lint
+  - name: Unit tests
+    shell: |-
+      set -euo pipefail
+      apk add --no-cache git make bash
+      # Keep the version in step with the install hint in the cloud-api Makefile's helm-unittest target.
+      helm plugin install https://github.com/helm-unittest/helm-unittest.git --version v1.0.3
+      make helm-unittest
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
@@ -405,6 +435,8 @@ spec:
       value: /root/go/pkg/mod
     - name: GOPROXY
       value: https://proxy.golang.org,direct
+    - name: GOCACHE
+      value: /root/.cache/go-build
     resources:
       limits:
         cpu: 4
@@ -417,16 +449,19 @@ spec:
   steps:
   - name: Check go.mod, go.sum, and OpenAPI
     cache:
-      key: cloud-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      # The build cache too: the OpenAPI generation builds cmd/openapi-merge and runs
+      # ogen through `go tool`, each from source unless the build cache already holds
+      # it. Keyed on the modules, which declare ogen, and the image's Go, whose outputs
+      # only it can reuse.
+      key: cloud-gomod-codegen-v2-golang-1.26.6-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
       restoreKeys:
-      - cloud-quality-loop-gomod-
+      - cloud-gomod-codegen-v2-golang-1.26.6-
       paths:
       - /root/go/pkg/mod/cache/download
-      scope: environment
+      - /root/.cache/go-build
     shell: |-
       set -euo pipefail
-      apt-get update -qq
-      apt-get install -y -qq git make
+      # git and make come with the golang image.
       git config --global --add safe.directory /data/repo
 
       go mod tidy
@@ -657,46 +692,66 @@ spec:
   steps:
   - name: Run tests
     cache:
-      key: cloud-quality-loop-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      key: cloud-test-app-v1-gomod-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
       restoreKeys:
-      - cloud-quality-loop-gomod-
+      - cloud-test-app-v1-gomod-
       paths:
       - /root/go/pkg/mod/cache/download
-      scope: environment
-    shell: |
-      set -euo pipefail
-      apt-get update -qq
-      apt-get install -y -qq socat curl
-      git config --global --add safe.directory /data/repo
-      mkdir -p /data/artifacts
+    steps:
+    - name: Run test suite
+      cache:
+        # Keyed on the modules only: the build cache addresses its own contents, so it
+        # stays correct across commits, where a key per commit would grow storage
+        # without bound. go.mod carries the toolchain directive, and the image tag covers
+        # an image newer than it: build outputs only serve the toolchain that made them.
+        key: cloud-test-app-v1-golang-1.26.6-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+        restoreKeys:
+        - cloud-test-app-v1-golang-1.26.6-
+        paths:
+        - /root/.cache/go-build
+        scope: workflow
+      run:
+        env:
+        - name: GOCACHE
+          value: /root/.cache/go-build
+        # GOCACHE also holds test results, which do not track the services these
+        # tests talk to; always run the tests.
+        - name: GOFLAGS
+          value: -count=1
+        shell: |
+          set -euo pipefail
+          apt-get update -qq
+          apt-get install -y -qq socat curl
+          git config --global --add safe.directory /data/repo
+          mkdir -p /data/artifacts
 
-      forward() {{"{"}}
-        local port="$1" dest="$2"
-        socat TCP-LISTEN:${{"{"}}port},bind=127.0.0.1,fork,reuseaddr TCP:${{"{"}}dest} &
-      }
-      forward 27017 "{{services.mongo.0.ip}}:27017"
-      forward 4222 "{{services.nats.0.ip}}:4222"
-      forward 9000 "{{services.minio.0.ip}}:9000"
-      forward 5432 "{{services.postgres.0.ip}}:5432"
-      forward 8200 "{{services.vault.0.ip}}:8200"
-      forward 2525 "{{services.smtp.0.ip}}:25"
-      forward 4443 "{{services.gcs.0.ip}}:4443"
-      sleep 1
+          forward() {{"{"}}
+            local port="$1" dest="$2"
+            socat TCP-LISTEN:${{"{"}}port},bind=127.0.0.1,fork,reuseaddr TCP:${{"{"}}dest} &
+          }
+          forward 27017 "{{services.mongo.0.ip}}:27017"
+          forward 4222 "{{services.nats.0.ip}}:4222"
+          forward 9000 "{{services.minio.0.ip}}:9000"
+          forward 5432 "{{services.postgres.0.ip}}:5432"
+          forward 8200 "{{services.vault.0.ip}}:8200"
+          forward 2525 "{{services.smtp.0.ip}}:25"
+          forward 4443 "{{services.gcs.0.ip}}:4443"
+          sleep 1
 
-      curl -sS -X POST "http://127.0.0.1:4443/storage/v1/b?project=test" \
-        -H "Content-Type: application/json" \
-        -d '{{"{"}}"name":"testkube_integration_tests"}' \
-        || true
+          curl -sS -X POST "http://127.0.0.1:4443/storage/v1/b?project=test" \
+            -H "Content-Type: application/json" \
+            -d '{{"{"}}"name":"testkube_integration_tests"}' \
+            || true
 
-      set +e
-      go tool gotestsum --format pkgname --hide-summary skipped \
-        --junitfile /data/artifacts/junit.xml \
-        -- -coverprofile=/data/artifacts/coverage.out -covermode=atomic ./...
-      code=$?
-      echo "gotestsum_exit=${{"{"}}code}"
-      kill $(jobs -p) 2>/dev/null
-      wait
-      exit "${{"{"}}code}"
-    artifacts:
-      paths:
-      - /data/artifacts/**
+          set +e
+          go tool gotestsum --format pkgname --hide-summary skipped \
+            --junitfile /data/artifacts/junit.xml \
+            -- -coverprofile=/data/artifacts/coverage.out -covermode=atomic ./...
+          code=$?
+          echo "gotestsum_exit=${{"{"}}code}"
+          kill $(jobs -p) 2>/dev/null
+          wait
+          exit "${{"{"}}code}"
+      artifacts:
+        paths:
+        - /data/artifacts/**

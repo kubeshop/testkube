@@ -23,4 +23,6 @@ const (
 
 	// EnvStepErrorFile gives a toolkit step the path of the file for the cause of its failure.
 	EnvStepErrorFile = "TK_ERR_FILE"
+	// EnvStepReasonFile gives a toolkit step the path of the file for the code of its failure.
+	EnvStepReasonFile = "TK_REASON_FILE"
 )

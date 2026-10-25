@@ -3,6 +3,16 @@
   "extends": [
     "config:recommended"
   ],
+  "packageRules": [
+    {
+      "description": "Projects under test/ are fixtures with pinned framework versions, not product dependencies.",
+      "matchFileNames": [
+        "**/test/**",
+        "**/tests/**"
+      ],
+      "enabled": false
+    }
+  ],
   "customManagers": [
     {
       "customType": "regex",

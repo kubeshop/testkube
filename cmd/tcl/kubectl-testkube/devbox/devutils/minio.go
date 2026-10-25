@@ -27,16 +27,28 @@ func NewMinio(pod *PodObject) *Minio {
 	}
 }
 
-func (r *Minio) Create(ctx context.Context) error {
-	err := r.pod.Create(ctx, &corev1.Pod{
+// minioImage is the image the testkube chart deploys MinIO with. MinIO no longer
+// publishes public images, so minio/minio and quay.io/minio/minio do not pull.
+// It runs as a non-root user, so the data directory has to be a mounted volume.
+const minioImage = "kubeshop/testkube-minio:2025.10"
+
+func minioPod() *corev1.Pod {
+	return &corev1.Pod{
 		Spec: corev1.PodSpec{
 			TerminationGracePeriodSeconds: common.Ptr(int64(1)),
+			Volumes: []corev1.Volume{
+				{Name: "data", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}},
+			},
 			Containers: []corev1.Container{
 				{
 					Name:            "minio",
-					Image:           "minio/minio:RELEASE.2024-10-13T13-34-11Z",
+					Image:           minioImage,
 					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command:         []string{"minio"},
 					Args:            []string{"server", "/data", "--console-address", ":9090"},
+					VolumeMounts: []corev1.VolumeMount{
+						{Name: "data", MountPath: "/data"},
+					},
 					ReadinessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
 							TCPSocket: &corev1.TCPSocketAction{
@@ -48,7 +60,11 @@ func (r *Minio) Create(ctx context.Context) error {
 				},
 			},
 		},
-	})
+	}
+}
+
+func (r *Minio) Create(ctx context.Context) error {
+	err := r.pod.Create(ctx, minioPod())
 	if err != nil {
 		return err
 	}

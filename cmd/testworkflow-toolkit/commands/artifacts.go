@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -8,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/filesystem"
@@ -47,10 +50,10 @@ func NewArtifactsCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, paths []string) {
 			root, _ := os.Getwd()
 			walker, err := artifacts.CreateWalker(paths, mounts, root)
-			common.ExitOnError("building a walker", err)
+			common.ExitOnError("building a walker", common.WithReason(patternReason, err))
 
 			if len(walker.Patterns()) == 0 || len(walker.SearchPaths()) == 0 {
-				common.Failf("error: did not found any valid path pattern in the mounted directories")
+				common.Fail(common.WithReason(patternReason, errors.New("did not find any valid path pattern in the mounted directories")))
 			}
 
 			fmt.Printf("Root: %s\nPatterns:\n", ui.LightCyan(walker.Root()))
@@ -79,7 +82,7 @@ func NewArtifactsCmd() *cobra.Command {
 			cfg := config.Config()
 			client, err := env.Cloud()
 			if err != nil {
-				common.Failf("could not create cloud client: %v", err)
+				common.Fail(common.WithReason(testkube.StopReasonArtifactUploadFailed, fmt.Errorf("could not create cloud client: %w", err)))
 			}
 
 			postProcessors := make([]artifacts.PostProcessor, 0, 5)
@@ -139,9 +142,14 @@ func NewArtifactsCmd() *cobra.Command {
 	return cmd
 }
 
+// patternReason is the code of path patterns that do not build a walker or that match no mounted
+// directory. The user fixes the patterns in the workflow, so it is a configuration error and not
+// an upload failure.
+const patternReason = testkube.StopReason(testkube.StartReasonDefinitionInvalid)
+
 func run(handler artifacts.Handler, walker artifacts.Walker, dirFS fs.FS) {
 	err := handler.Start()
-	common.ExitOnError("initializing uploader", err)
+	common.ExitOnError("initializing uploader", common.WithReason(testkube.StopReasonArtifactUploadFailed, err))
 
 	started := time.Now()
 	err = walker.Walk(dirFS, func(path string, file fs.File, _ fs.FileInfo, err error) error {
@@ -157,10 +165,10 @@ func run(handler artifacts.Handler, walker artifacts.Walker, dirFS fs.FS) {
 		}
 		return handler.Add(path, file, stat)
 	})
-	common.ExitOnError("reading the file system", err)
+	common.ExitOnError("reading the file system", common.WithReason(testkube.StopReasonArtifactUploadFailed, err))
 	err = handler.End()
 
 	// TODO: Emit information about artifacts
-	common.ExitOnError("finishing upload", err)
+	common.ExitOnError("finishing upload", common.WithReason(testkube.StopReasonArtifactUploadFailed, err))
 	fmt.Printf("Took %s.\n", time.Since(started).Truncate(time.Millisecond))
 }

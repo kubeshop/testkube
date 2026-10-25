@@ -34,6 +34,7 @@ func TestStopReason_Sentence(t *testing.T) {
 		{name: "queue limit exceeded", reason: StopReasonQueueLimitExceeded, want: "the environment reached its queue limit"},
 		{name: "git auth failed", reason: StopReasonGitAuthFailed, want: "the credential for the repository was refused"},
 		{name: "git clone failed", reason: StopReasonGitCloneFailed, want: "the repository could not be cloned"},
+		{name: "git server unreachable", reason: StopReasonGitUnreachable, want: "the server of the repository could not be reached"},
 		{name: "service not ready", reason: StopReasonServiceNotReady, want: "a service of the step did not become ready"},
 		{name: "artifact upload failed", reason: StopReasonArtifactUploadFailed, want: "the artifacts could not be uploaded"},
 		{name: "child workflow failed", reason: StopReasonChildWorkflowFailed, want: "a workflow that this step ran did not pass"},
@@ -46,6 +47,7 @@ func TestStopReason_Sentence(t *testing.T) {
 		{name: "job deleted", reason: StopReasonJobDeleted, want: "the job of the execution was deleted"},
 		{name: "fail fast", reason: StopReasonFailFast, want: "another parallel worker failed"},
 		{name: "trigger abort", reason: StopReasonTriggerAbort, want: "the trigger of the execution was deleted"},
+		{name: "parent aborted", reason: StopReasonParentAborted, want: "the parent execution was aborted"},
 		{name: "exit code", reason: StopReasonExitCode, want: "a step of the test failed"},
 		{name: "unknown", reason: StopReasonUnknown, want: "the cause is not known"},
 		{name: "token from a newer control plane has no words yet", reason: StopReason("later-added"), want: ""},
@@ -53,6 +55,26 @@ func TestStopReason_Sentence(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.want, tt.reason.Sentence())
+		})
+	}
+}
+
+func TestStopReason_Phrase(t *testing.T) {
+	tests := []struct {
+		name   string
+		reason StopReason
+		want   string
+	}{
+		{name: "out of memory", reason: StopReasonOOMKilled, want: "ran out of memory"},
+		{name: "step timeout", reason: StopReasonStepTimeout, want: "did not finish within its timeout"},
+		{name: "process killed", reason: StopReasonProcessKilled, want: "was killed, possibly by an out-of-memory kill"},
+		{name: "container error", reason: StopReasonContainerError, want: "could not run its container"},
+		{name: "a code that one step does not hold has no phrase", reason: StopReasonUnschedulable, want: ""},
+		{name: "an unknown code has no phrase", reason: StopReason("later-added"), want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.reason.Phrase())
 		})
 	}
 }

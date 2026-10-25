@@ -1,6 +1,9 @@
 package channels
 
-import "sync/atomic"
+import (
+	"context"
+	"sync/atomic"
+)
 
 type watcher[T any] struct {
 	ch       chan T
@@ -17,11 +20,23 @@ type Watcher[T any] interface {
 type WritableWatcher[T any] interface {
 	Watcher[T]
 	Send(value T)
+	SendWithContext(ctx context.Context, value T) bool
 	Close(err error)
 }
 
 func (n *watcher[T]) Send(value T) {
 	n.ch <- value
+}
+
+// SendWithContext sends value unless ctx is done first, and reports whether it was sent.
+// Unlike Send, it cannot block forever when the reader has stopped reading.
+func (n *watcher[T]) SendWithContext(ctx context.Context, value T) bool {
+	select {
+	case n.ch <- value:
+		return true
+	case <-ctx.Done():
+		return false
+	}
 }
 
 func (n *watcher[T]) Close(err error) {
