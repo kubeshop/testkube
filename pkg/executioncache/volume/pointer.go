@@ -1,27 +1,3 @@
-// Package volume stores a cache archive on a shared ReadWriteMany volume instead of in
-// the object store, leaving the object store holding a pointer to it.
-//
-// The split is deliberate. Everything that decides *who may read or write an entry*
-// stays in the object store, where the control plane mediates it from the stored
-// execution; the volume only holds bytes, under a path kubelet confines each pod to. An
-// execution can therefore never publish an entry that another execution's scope would
-// restore, however it behaves inside its pod - which is the property the presigned
-// layout provides and the one a plain shared mount would lose.
-//
-// Two consequences worth stating, because they are what make the arrangement cheap:
-//
-// The race is still resolved by the conditional write on the pointer object, so an
-// entry is immutable for exactly the reason it already was. Nothing here has to
-// reproduce that against a filesystem.
-//
-// A key never becomes a path segment. The object layout budgets a key against the
-// object store's 1024-byte limit, which is three times what a POSIX filename may hold;
-// naming files on the volume after keys would have broken for long keys only, which is
-// the worst way to find out.
-//
-// Like the rest of executioncache, this format is shared with the commercial control
-// plane rather than restated there. A disagreement about it would not fail loudly - it
-// would produce entries the other side reads as archives and cannot unpack.
 package volume
 
 import (
