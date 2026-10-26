@@ -9,8 +9,6 @@ metadata:
     junit: "true"
     playwright-traces: "on"
     category: e2e-api-testing
-    dev-quality-gate: "true"
-    team-backend: "true"
 spec:
   config:
     revision:
