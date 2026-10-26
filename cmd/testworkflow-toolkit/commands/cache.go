@@ -683,6 +683,7 @@ func downloadCache(ctx context.Context, store *volume.Store, url string, allowed
 				common.WithMaxTotalBytes(cacheMaxUnpackedSize),
 				common.WithMaxEntries(cacheMaxEntries),
 				common.WithAllowedRoots(allowedPaths...),
+				common.WithModTimes(),
 				common.WithWriteObserver(func() { wrote = true }))
 			resp.Body.Close()
 			if err == nil {

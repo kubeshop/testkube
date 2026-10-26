@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 )
 
 // CopyLimits bound what a copy will move, so a malformed or hostile entry cannot fill
@@ -664,7 +665,28 @@ func copyIntoRoot(src *os.Root, name string, dst *os.Root, rel string, info fs.F
 	// Not the entry's own mode, which was widened when it was stored and says nothing
 	// about the source's. What differed - an executable among them - is in the manifest
 	// and replaces this once the tree is written.
-	return n, dst.Chmod(rel, DefaultFileMode)
+	if err := dst.Chmod(rel, DefaultFileMode); err != nil {
+		return n, err
+	}
+	keepModTime(func(mtime time.Time) error { return dst.Chtimes(rel, time.Time{}, mtime) }, info)
+	return n, nil
+}
+
+// keepModTime gives a copied file the modification time of the one it was copied from.
+//
+// The tools whose caches these are use that time to tell what is still in use: Go's
+// build cache, and golangci-lint's fork of it, move an entry's time forward whenever it
+// is used and trim whatever has not moved in five days. A copy stamped with the moment
+// it was made looks freshly used, so a restored cache would never be trimmed, and every
+// save after a partial hit would carry everything the previous entry held into the next.
+// Kept on both sides: the entry has to hold the source's time for a restore to hand it on.
+//
+// Best effort, because a file whose time could not be set is still the right file. The
+// zero access time leaves that one alone.
+func keepModTime(chtimes func(mtime time.Time) error, info fs.FileInfo) {
+	if mtime := info.ModTime(); !mtime.IsZero() {
+		_ = chtimes(mtime)
+	}
 }
 
 // copyOut writes one regular file from the filesystem into the staged entry, reporting
@@ -708,7 +730,11 @@ func copyOut(name, target string, info os.FileInfo, budget int64) (n int64, stag
 	if n == budget && info.Size() > n {
 		return n, true, ErrTooLarge
 	}
-	return n, true, os.Chmod(target, info.Mode().Perm()|0o666)
+	if err := os.Chmod(target, info.Mode().Perm()|0o666); err != nil {
+		return n, true, err
+	}
+	keepModTime(func(mtime time.Time) error { return os.Chtimes(target, time.Time{}, mtime) }, info)
+	return n, true, nil
 }
 
 // SharedDirMode is what every directory written onto the shared volume is set to.

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -752,4 +753,29 @@ func TestRestoreStopsAtTheEntryLimitPartWayThrough(t *testing.T) {
 // counted twice against both limits, which is exactly what this is here to prevent.
 func TestCoverDropsADescendantASiblingSortsBetween(t *testing.T) {
 	assert.Equal(t, []string{"/a-", "/a"}, coverPaths([]string{"/a", "/a-", "/a/b"}))
+}
+
+// Go's build cache trims what has not been used in five days, and tells that from the
+// modification time. A restore stamping every file with the current time makes the whole
+// cache look freshly used, so it is never trimmed and grows with every partial hit.
+func TestSaveAndRestoreKeepModificationTimes(t *testing.T) {
+	src := posixDir(t)
+	name := filepath.FromSlash(src + "/go-build/ab/abcdef-d")
+	write(t, name, "object")
+	old := time.Now().Add(-10 * 24 * time.Hour).Truncate(time.Second)
+	require.NoError(t, os.Chtimes(name, time.Time{}, old))
+
+	entry := entryFrom(t, []string{src})
+
+	staged, err := os.Stat(filepath.Join(entryPath(t, entry), EntryRoot, filepath.FromSlash(strings.TrimPrefix(src, "/")+"/go-build/ab/abcdef-d")))
+	require.NoError(t, err)
+	assert.True(t, old.Equal(staged.ModTime()), "the entry has to carry the source's time, got %s", staged.ModTime())
+
+	require.NoError(t, os.RemoveAll(filepath.FromSlash(src)))
+	_, err = RestoreTree(entry, []string{src}, CopyLimits{})
+	require.NoError(t, err)
+
+	restored, err := os.Stat(name)
+	require.NoError(t, err)
+	assert.True(t, old.Equal(restored.ModTime()), "a restored file has to keep its time, got %s", restored.ModTime())
 }
