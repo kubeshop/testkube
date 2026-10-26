@@ -63,6 +63,11 @@ type Config struct {
 	Logger                           *zap.SugaredLogger
 	StorageBucket                    string
 	FeatureTestWorkflowsCloudStorage bool
+	// MaxConnectionAge recycles agent connections with GOAWAY so the load balancer
+	// chooses a replica again. Zero leaves connections alive indefinitely, which is
+	// gRPC's default.
+	MaxConnectionAge      time.Duration
+	MaxConnectionAgeGrace time.Duration
 }
 
 func New(
@@ -143,8 +148,8 @@ func (s *Server) Start(ctx context.Context, ln net.Listener) error {
 		grpc.KeepaliveParams(keepalive.ServerParameters{
 			Time:                  client.GRPCKeepaliveTime,
 			Timeout:               client.GRPCKeepaliveTimeout,
-			MaxConnectionAge:      client.GRPCMaxConnectionAge,
-			MaxConnectionAgeGrace: client.GRPCMaxConnectionAgeGrace,
+			MaxConnectionAge:      s.cfg.MaxConnectionAge,
+			MaxConnectionAgeGrace: s.cfg.MaxConnectionAgeGrace,
 		}))
 	grpcServer := grpc.NewServer(opts...)
 

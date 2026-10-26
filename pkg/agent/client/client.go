@@ -44,13 +44,6 @@ const (
 	GRPCKeepaliveTime                = 10 * time.Second
 	GRPCKeepaliveTimeout             = GRPCKeepaliveTime / 2
 	GRPCKeepalivePermitWithoutStream = true
-	// Last-resort recycle of long-lived agent streams, for targets where the client
-	// cannot see the individual replicas (an Ingress, or a plain ClusticIP Service).
-	// Recycling breaks live notification streams, which then resume from the agent's
-	// seqNo replay buffer, so keep it rare: prefer resolving replicas via
-	// GRPCLoadBalancingPolicy below, which spreads streams without breaking any.
-	GRPCMaxConnectionAge      = 30 * time.Minute
-	GRPCMaxConnectionAgeGrace = 30 * time.Second
 	// How long to stay in TransientFailure before giving up on this dial
 	// attempt so the next credential mode (or retry) can run.
 	transientFailureTimeout = 2 * time.Second

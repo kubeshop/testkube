@@ -98,6 +98,8 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 		Verbose:                          false,
 		StorageBucket:                    cfg.StorageBucket,
 		FeatureTestWorkflowsCloudStorage: cfg.FeatureCloudStorage,
+		MaxConnectionAge:                 cfg.GRPCMaxConnectionAge,
+		MaxConnectionAgeGrace:            cfg.GRPCMaxConnectionAgeGrace,
 	}, enqueuer, scheduler, executionController, executionQuerier, eventsEmitter, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
 		testWorkflowResultsRepository, testWorkflowOutputRepository, repoManager, envID, commands...)
 }
