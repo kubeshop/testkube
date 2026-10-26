@@ -65,10 +65,12 @@ npx @modelcontextprotocol/inspector docker run --rm -i \
 
 ## Authenticated HTTP
 
-Provision a random inbound secret (at least 32 bytes of entropy) independently of
-`TK_ACCESS_TOKEN`, and pass both through your secret manager or environment. For local
-HTTP testing, the container needs an explicit external bind, while the published port
-is restricted to host loopback:
+The operator deploying this container must create and securely store a random inbound
+secret (at least 32 bytes of entropy) independently of `TK_ACCESS_TOKEN`, and distribute
+it to authorized MCP clients. The server does not provision the token. Inject the stored
+value through your secret manager or environment and reuse it on container restarts.
+For local HTTP testing, the container needs an explicit external bind, while the
+published port is restricted to host loopback:
 
 ```bash
 docker run --rm \

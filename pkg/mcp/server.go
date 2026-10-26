@@ -21,6 +21,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
+const shttpReadHeaderTimeout = 10 * time.Second
+
 // NewMCPServer creates and configures a new Testkube MCP server
 func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error) {
 	if err := cfg.Validate(); err != nil {
@@ -178,7 +180,7 @@ func newSHTTPServer(cfg MCPServerConfig, client Client) (*server.StreamableHTTPS
 	}
 	httpServer := &http.Server{
 		Addr:              net.JoinHostPort(cfg.SHTTPConfig.Host, strconv.Itoa(cfg.SHTTPConfig.Port)),
-		ReadHeaderTimeout: 10 * time.Second,
+		ReadHeaderTimeout: shttpReadHeaderTimeout,
 	}
 	opts := []server.StreamableHTTPOption{server.WithStreamableHTTPServer(httpServer)}
 	if cfg.SHTTPConfig.EnableTLS {
