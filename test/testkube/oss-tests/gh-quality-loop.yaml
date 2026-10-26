@@ -90,7 +90,7 @@ spec:
       if [ -z "$v" ]; then echo "AGENTS.md names no typos version (pip install typos==<version>)."; exit 2; fi
       curl -sSfL "https://github.com/crate-ci/typos/releases/download/v$v/typos-v$v-x86_64-unknown-linux-musl.tar.gz" \
         | tar -xzf - -C /usr/local/bin ./typos
-      typos --format brief
+      npm run lint:typos
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
@@ -144,7 +144,7 @@ spec:
         if [ "$n" -gt 10 ]; then echo "No merge base with main in the last 1,000 commits."; exit 2; fi
         git fetch -q --no-tags --deepen=100 origin main:refs/remotes/origin/main "{{config.revision}}"
       done
-      node scripts/vale-changed-lines.mjs origin/main
+      npm run lint:vale
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
