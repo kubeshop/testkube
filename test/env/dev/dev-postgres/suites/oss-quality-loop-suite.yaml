@@ -17,6 +17,8 @@ spec:
       parallelism: 2
       workflows:
       - name: docs-prettier
+      - name: docs-typos
+      - name: docs-vale
       - name: oss-lint-go
       - name: oss-lint-proto
       - name: oss-integration-tests
