@@ -144,7 +144,7 @@ spec:
         if [ "$n" -gt 10 ]; then echo "No merge base with main in the last 1,000 commits."; exit 2; fi
         git fetch -q --no-tags --deepen=100 origin main:refs/remotes/origin/main "{{config.revision}}"
       done
-      npm run lint:vale
+      npm run lint:vale -- origin/main
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
