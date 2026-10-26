@@ -25,6 +25,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: '{{config.revision}}'
       authType: github
+      verbosity: quiet
       cone: true
       paths:
       - js
@@ -91,6 +92,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: '{{config.revision}}'
       authType: github
+      verbosity: quiet
       cone: true
       paths:
       - js
@@ -157,6 +159,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: '{{config.revision}}'
       authType: github
+      verbosity: quiet
       cone: true
       paths:
       - js
@@ -216,6 +219,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: '{{config.revision}}'
       authType: github
+      verbosity: quiet
   container:
     workingDir: /data/repo
     env:
@@ -293,6 +297,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: '{{config.revision}}'
       authType: github
+      verbosity: quiet
       cone: true
       paths:
       - js
@@ -376,6 +381,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: '{{config.revision}}'
       authType: github
+      verbosity: quiet
       cone: true
       paths:
       - helm
@@ -427,6 +433,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: '{{config.revision}}'
       authType: github
+      verbosity: quiet
   container:
     workingDir: /data/repo
     image: golang:1.26.6-bookworm
@@ -504,6 +511,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: '{{config.revision}}'
       authType: github
+      verbosity: quiet
   container:
     workingDir: /data/repo
     image: golang:1.26.6-bookworm
