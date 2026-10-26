@@ -534,7 +534,6 @@ func downloadCache(ctx context.Context, url string, allowedPaths []string) (wrot
 				common.WithMaxTotalBytes(cacheMaxUnpackedSize),
 				common.WithMaxEntries(cacheMaxEntries),
 				common.WithAllowedRoots(allowedPaths...),
-				common.WithModTimes(),
 				common.WithWriteObserver(func() { wrote = true }))
 			resp.Body.Close()
 			if err == nil {

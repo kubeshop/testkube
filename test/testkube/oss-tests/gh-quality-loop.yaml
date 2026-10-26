@@ -102,9 +102,9 @@ spec:
       cache:
         # Keyed on the modules and lint config, never the sources: both caches address
         # their own contents, so one entry serves every commit until dependencies change.
-        key: oss-lint-go-v3-golangci-2.15.0-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum", "/data/repo/.golangci.yml")}}
+        key: oss-lint-go-v2-golangci-2.15.0-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum", "/data/repo/.golangci.yml")}}
         restoreKeys:
-        - oss-lint-go-v3-golangci-2.15.0-
+        - oss-lint-go-v2-golangci-2.15.0-
         paths:
         - /root/.cache/go-build
         - /root/.cache/golangci-lint
