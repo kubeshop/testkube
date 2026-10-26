@@ -47,11 +47,11 @@ spec:
       - /root/.npm/_cacache
   - name: Run API tests
     timeout: 18m
-    shell: npx playwright test --project=api --retries=1 --workers=2
+    shell: npm run playwright:api -- --retries=1 --workers=2
     artifacts:
       paths:
       - playwright-report/**
       - test-results/**
   - name: API Test Coverage report
     optional: true
-    shell: npm run scenario-coverage -- --project=api
+    shell: npm run scenario-coverage -- --config=playwright.api.config.ts --project=api
