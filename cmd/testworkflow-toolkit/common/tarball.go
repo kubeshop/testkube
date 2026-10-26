@@ -184,14 +184,8 @@ func WithWriteObserver(fn func()) UnpackOption {
 	return func(o *UnpackOptions) { o.OnWrite = fn }
 }
 
-// WithModTimes keeps the modification times the archive carries.
-//
-// A dependency cache needs it. Go's build cache, and golangci-lint's fork of it, record
-// that an entry was used by moving its modification time forward, and trim whatever has
-// not moved in five days. Extracting every file at the current time makes the whole
-// restored cache look freshly used, so nothing is ever trimmed, and each save after a
-// partial hit stores everything the previous entry held plus whatever the step just
-// built: the entry grows on every key change, forever.
+// WithModTimes keeps the modification times the archive carries, which the tools that
+// use a dependency cache may rely on.
 //
 // Opt-in, because the pod-to-pod transfer has never done it and nothing there asks for it.
 func WithModTimes() UnpackOption {
