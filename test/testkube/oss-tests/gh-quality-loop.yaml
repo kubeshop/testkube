@@ -84,7 +84,11 @@ spec:
   - name: Check spelling
     timeout: 5m
     shell: |
-      curl -sSfL https://github.com/crate-ci/typos/releases/download/v1.50.2/typos-v1.50.2-x86_64-unknown-linux-musl.tar.gz \
+      set -eu
+      # The docs repository's AGENTS.md pins the version, so a local run matches this check.
+      v=$(sed -n 's/.*pip install typos==\([0-9][0-9.]*\).*/\1/p' AGENTS.md | head -n1)
+      if [ -z "$v" ]; then echo "AGENTS.md names no typos version (pip install typos==<version>)."; exit 2; fi
+      curl -sSfL "https://github.com/crate-ci/typos/releases/download/v$v/typos-v$v-x86_64-unknown-linux-musl.tar.gz" \
         | tar -xzf - -C /usr/local/bin ./typos
       typos --format brief
 ---
@@ -124,7 +128,10 @@ spec:
     timeout: 10m
     shell: |
       set -eu
-      curl -sSfL https://github.com/vale-cli/vale/releases/download/v3.22.0/vale_3.22.0_Linux_64-bit.tar.gz \
+      # The docs repository's AGENTS.md pins the version, so a local run matches this check.
+      v=$(sed -n 's/.*vale\/v3\/cmd\/vale@v\([0-9][0-9.]*\).*/\1/p' AGENTS.md | head -n1)
+      if [ -z "$v" ]; then echo "AGENTS.md names no Vale version (vale@v<version>)."; exit 2; fi
+      curl -sSfL "https://github.com/vale-cli/vale/releases/download/v$v/vale_${v}_Linux_64-bit.tar.gz" \
         | tar -xzf - -C /usr/local/bin vale
       vale sync
       # The checkout is a depth-1 clone. Fetch main, then deepen both it and the branch until
