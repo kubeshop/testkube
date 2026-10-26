@@ -2,10 +2,12 @@ package localinstall
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,6 +30,7 @@ type fakeHost struct {
 	diskErr     error
 	blocked     map[string]bool
 	versions    map[string]string
+	sysctl      map[string]string
 }
 
 func (f fakeHost) LookPath(name string) (string, error) {
@@ -50,6 +53,10 @@ func (f fakeHost) ToolVersion(_ context.Context, path string, _ ...string) strin
 
 func (f fakeHost) Reachable(_ context.Context, url string) bool {
 	return !f.blocked[url]
+}
+
+func (f fakeHost) ReadSysctl(name string) string {
+	return f.sysctl[name]
 }
 
 func (f fakeHost) OSVersion() string {
@@ -132,6 +139,115 @@ func TestCheckTools_DockerBlocksButMissingToolsOnlyWarn(t *testing.T) {
 
 			assert.Equal(t, tt.wantFailure, HasFailure(results))
 			assert.Equal(t, tt.wantDockerDetail, results[0].Detail)
+		})
+	}
+}
+
+func TestCheckTools_MissingDockerInWSLPointsAtDockerDesktop(t *testing.T) {
+	tests := map[string]struct {
+		kernel  string
+		wantFix string
+	}{
+		"WSL":   {"5.15.167.4-microsoft-standard-WSL2", "WSL integration"},
+		"Linux": {"6.8.0-45-generic", "https://docs.docker.com/get-docker/"},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			checker := &Checker{host: fakeHost{missing: map[string]bool{"docker": true},
+				sysctl: map[string]string{"kernel.osrelease": tt.kernel}}}
+
+			results := checker.CheckTools(context.Background())
+
+			assert.Contains(t, results[0].Fix, tt.wantFix)
+		})
+	}
+}
+
+// Uninstall swaps this line for its own command.
+func TestCheckTools_DockerFixesUninstallReusesEndWithTheInstallCommand(t *testing.T) {
+	tests := map[string]*Checker{
+		"permission denied": {host: fakeHost{}, docker: fakeDocker{err: errors.New("permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock")}},
+		"missing in WSL": {host: fakeHost{missing: map[string]bool{"docker": true},
+			sysctl: map[string]string{"kernel.osrelease": "5.15.167.4-microsoft-standard-WSL2"}}},
+	}
+	for name, checker := range tests {
+		t.Run(name, func(t *testing.T) {
+			results := checker.CheckTools(context.Background())
+
+			assert.True(t, strings.HasSuffix(results[0].Fix, "\n  "+InstallCommand), results[0].Fix)
+		})
+	}
+}
+
+func TestCheckTools_PodmanStandInIsRefused(t *testing.T) {
+	tests := map[string]struct {
+		info     string
+		wantFail bool
+	}{
+		"podman-docker": {`{"host":{"arch":"arm64","cpus":8},"version":{"Version":"5.4.2"}}`, true},
+		"docker":        {`{"ServerVersion":"28.0.1","NCPU":8,"HttpProxy":"","Name":"docker-desktop"}`, false},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			var info dockerInfo
+			require.NoError(t, json.Unmarshal([]byte(tt.info), &info))
+			checker := &Checker{host: fakeHost{}, docker: fakeDocker{info: info}}
+
+			results := checker.CheckTools(context.Background())
+
+			assert.Equal(t, tt.wantFail, HasFailure(results))
+		})
+	}
+}
+
+// Starting or sharing Docker beats switching to another install.
+func TestCheckTools_OwnClusterOfferedOnlyWhenDockerCantBeUsed(t *testing.T) {
+	var podman dockerInfo
+	require.NoError(t, json.Unmarshal([]byte(`{"host":{"arch":"arm64","cpus":8},"version":{"Version":"5.4.2"}}`), &podman))
+	wsl := map[string]string{"kernel.osrelease": "5.15.167.4-microsoft-standard-WSL2"}
+	tests := map[string]struct {
+		checker *Checker
+		want    bool
+	}{
+		"not installed":          {&Checker{host: fakeHost{missing: map[string]bool{"docker": true}}}, true},
+		"podman":                 {&Checker{host: fakeHost{}, docker: fakeDocker{info: podman}}, true},
+		"not shared with WSL":    {&Checker{host: fakeHost{missing: map[string]bool{"docker": true}, sysctl: wsl}}, false},
+		"installed, not running": {&Checker{host: fakeHost{}, docker: fakeDocker{err: errors.New("Cannot connect to the Docker daemon")}}, false},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			results := tt.checker.CheckTools(context.Background())
+
+			assert.Equal(t, tt.want, strings.Contains(results[0].Alternative, InitDemoCommand), results[0].Alternative)
+		})
+	}
+}
+
+func TestCheckInotify_WarnsOnlyWhenThisKernelRunsDocker(t *testing.T) {
+	tests := map[string]struct {
+		dockerKernel string
+		instances    string
+		watches      string
+		wantWarn     bool
+	}{
+		"low limits":          {"6.8.0-45-generic", "128", "8192", true},
+		"one below instances": {"6.8.0-45-generic", "511", "524288", true},
+		"one below watches":   {"6.8.0-45-generic", "512", "524287", true},
+		"at the limits":       {"6.8.0-45-generic", "512", "524288", false},
+		"Docker Desktop VM":   {"6.10.14-linuxkit", "128", "8192", false},
+		"unreadable limits":   {"6.8.0-45-generic", "", "", false},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			checker := &Checker{
+				host: fakeHost{sysctl: map[string]string{"kernel.osrelease": "6.8.0-45-generic",
+					"fs.inotify.max_user_instances": tt.instances, "fs.inotify.max_user_watches": tt.watches}},
+				docker: fakeDocker{info: dockerInfo{KernelVersion: tt.dockerKernel}},
+			}
+
+			results := checker.CheckInotify(context.Background())
+
+			assert.Equal(t, tt.wantWarn, len(results) == 1)
 		})
 	}
 }

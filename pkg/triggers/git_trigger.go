@@ -109,6 +109,12 @@ func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, name
 			return nil
 		}
 	}
+	return s.fireContentTrigger(ctx, event, trigger, status)
+}
+
+// fireContentTrigger runs a matched synthetic content event: it applies the trigger's
+// concurrency policy, counts the event and hands it to the executor.
+func (s *Service) fireContentTrigger(ctx context.Context, event *watcherEvent, trigger *internalTrigger, status *triggerStatus) error {
 	if trigger.ConcurrencyPolicy == concurrencyPolicyForbid && status.hasActiveTests() {
 		return nil
 	}
@@ -128,7 +134,6 @@ func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, name
 	}
 	s.metrics.IncTestTriggerEventCount(trigger.Name, string(event.resource), string(event.eventType), causes)
 	return s.triggerExecutor(ctx, event, trigger)
-
 }
 
 func isGitSyntheticTargetReady(trigger *internalTrigger) bool {

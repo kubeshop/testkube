@@ -62,6 +62,7 @@ type ExecutionState interface {
 	InitializationTimeout() time.Duration
 
 	ExecutionError() string
+	EndingError() string
 	CurrentCause() *testkube.Cause
 	TerminationCause() *testkube.Cause
 	JobExecutionError() string
@@ -412,47 +413,75 @@ func (e *executionState) Completed() bool {
 	return !e.CompletionTimestamp().IsZero()
 }
 
+// errorText is one text of ExecutionError. A coded text only repeats what a code already names:
+// the sentence of the stop of the job, or the bare termination reason of a container.
+type errorText struct {
+	text  string
+	coded bool
+}
+
 func (e *executionState) JobExecutionError() string {
+	return e.jobError().text
+}
+
+func (e *executionState) jobError() errorText {
+	// The deadline text names the limit that ended the job, so no code repeats it.
+	if e.deadlineExceeded() {
+		return errorText{text: jobTimeoutMessage(e.job.Original())}
+	}
 	if e.job != nil && e.job.ExecutionError() != "" {
-		return e.job.ExecutionError()
+		// Without a deadline, the text of the job is the sentence of the stop.
+		return errorText{text: e.job.ExecutionError(), coded: true}
 	}
 
 	if e.jobEvents.Error() {
 		reason := e.jobEvents.ErrorReason()
 		message := e.jobEvents.ErrorMessage()
 		if message == "" {
-			return reason
+			return errorText{text: reason}
 		}
-		return fmt.Sprintf("%s: %s", reason, message)
+		return errorText{text: fmt.Sprintf("%s: %s", reason, message)}
 	}
 
-	return ""
+	return errorText{}
 }
 
 func (e *executionState) PodExecutionError() string {
-	errorStr := ""
-	if e.pod != nil && e.pod.ExecutionError() != "" {
-		errorStr = e.pod.ExecutionError()
+	return e.podError().text
+}
+
+func (e *executionState) podError() errorText {
+	// The same order as the ExecutionError of the pod, but it keeps the source of the text.
+	var err errorText
+	if e.pod != nil {
+		if text := GetPodError(e.pod.Original()); text != "" && text != "Error" {
+			err = errorText{text: text}
+		} else {
+			err = errorText{text: e.pod.ContainerError(), coded: true}
+		}
 	}
 
-	if (errorStr == "" || errorStr == "Error") && e.podEvents.Error() {
+	if (err.text == "" || err.text == "Error") && e.podEvents.Error() {
 		reason := e.podEvents.ErrorReason()
 		message := e.podEvents.ErrorMessage()
 		if message == "" {
-			return reason
+			return errorText{text: reason}
 		}
-		return fmt.Sprintf("%s: %s", reason, message)
+		return errorText{text: fmt.Sprintf("%s: %s", reason, message)}
 	}
 
-	if errorStr == "Error" {
-		return "Fatal Error"
+	if err.text == "Error" {
+		return errorText{text: "Fatal Error"}
 	}
 
-	return errorStr
+	return err
 }
 
 // imagePullWaitingReasons are the waiting reasons of a container whose image Kubernetes cannot pull.
-var imagePullWaitingReasons = []string{"ErrImagePull", "ImagePullBackOff", "InvalidImageName"}
+var imagePullWaitingReasons = []string{"ErrImagePull", waitingReasonImagePullBackOff, "InvalidImageName"}
+
+// waitingReasonImagePullBackOff is the waiting reason while Kubernetes waits to pull the image again.
+const waitingReasonImagePullBackOff = "ImagePullBackOff"
 
 // CurrentCause returns the cause that keeps the pod from running, or nil when there is none.
 // Kubernetes retries these causes, so the cause does not stop the execution.
@@ -469,7 +498,11 @@ func (e *executionState) CurrentCause() *testkube.Cause {
 		return &testkube.Cause{Reason: string(testkube.StopReasonUnschedulable), Message: message}
 	}
 	if reason, message := e.pod.WaitingReason(imagePullWaitingReasons...); reason != "" {
-		return &testkube.Cause{Reason: string(testkube.StartReasonImagePullFailed), Message: message}
+		return &testkube.Cause{
+			Reason:  string(testkube.StartReasonImagePullFailed),
+			Message: message,
+			Retry:   reason == waitingReasonImagePullBackOff,
+		}
 	}
 	if reason, message := e.pod.WaitingReason("CreateContainerConfigError"); reason != "" {
 		return &testkube.Cause{Reason: string(testkube.StopReasonConfigMissing), Message: message}
@@ -515,9 +548,7 @@ func (e *executionState) TerminationCause() *testkube.Cause {
 // decides which signal wins when Kubernetes reports more than one.
 func (e *executionState) terminationReason() testkube.StopReason {
 	var containerReason, disruption string
-	// The condition of the job and the event of the job both report the deadline, and the watch can
-	// read one before the other. The message reads the condition, so the code reads it too.
-	deadline := e.job != nil && IsJobDeadlineExceeded(e.job.Original())
+	deadline := e.deadlineExceeded()
 	if e.pod != nil {
 		original := e.pod.Original()
 		containerReason = e.pod.ContainerError()
@@ -549,13 +580,64 @@ func (e *executionState) terminationReason() testkube.StopReason {
 	return ""
 }
 
-func (e *executionState) ExecutionError() string {
-	podErr := e.PodExecutionError()
-	jobErr := e.JobExecutionError()
-	if podErr == "" && strings.HasPrefix(jobErr, "BackoffLimitExceeded") {
-		return "Fatal Error"
+// deadlineExceeded reports whether the deadline of the job ended the execution. The message and the
+// code both read it, so they agree. The condition, the event and the time of the pod deletion all
+// report the deadline, and the watch can end before the condition or the event arrives.
+func (e *executionState) deadlineExceeded() bool {
+	if e.job == nil {
+		return false
 	}
-	if podErr == "" || (podErr == "Fatal Error" && jobErr != "" && !strings.HasPrefix(jobErr, "BackoffLimitExceeded")) {
+	job := e.job.Original()
+	return IsJobDeadlineExceeded(job) || jobDeadlinePassed(job, e.podDeleteRequestTimestamp())
+}
+
+// podDeleteRequestTimestamp returns the time when the job asked to delete the pod. A graceful
+// deletion sets the deletion time of the pod to the request time plus the grace period, so the
+// function removes the grace period.
+func (e *executionState) podDeleteRequestTimestamp() time.Time {
+	if ts := e.jobEvents.PodDeletionTimestamp(); !ts.IsZero() {
+		return ts
+	}
+	if e.pod == nil {
+		return time.Time{}
+	}
+	original := e.pod.Original()
+	if original == nil || original.DeletionTimestamp == nil {
+		return time.Time{}
+	}
+	ts := original.DeletionTimestamp.Time
+	if original.DeletionGracePeriodSeconds != nil {
+		ts = ts.Add(-time.Duration(*original.DeletionGracePeriodSeconds) * time.Second)
+	}
+	return ts
+}
+
+func (e *executionState) ExecutionError() string {
+	return e.executionError().text
+}
+
+// EndingError returns the text of ExecutionError when the text names the cause in its own words,
+// for example the deadline of the job or the message of a pod failure. It returns an empty string
+// for the sentence of the stop and for a bare container reason such as OOMKilled, because the stop
+// and the termination code already name them.
+func (e *executionState) EndingError() string {
+	if err := e.executionError(); !err.coded {
+		return err.text
+	}
+	return ""
+}
+
+func (e *executionState) executionError() errorText {
+	podErr := e.podError()
+	jobErr := e.jobError()
+	isPodErrorEmpty := podErr.text == ""
+	isBackoffLimitExceeded := strings.HasPrefix(jobErr.text, "BackoffLimitExceeded")
+	if isPodErrorEmpty && isBackoffLimitExceeded {
+		return errorText{text: "Fatal Error"}
+	}
+	isPodErrorGeneric := podErr.text == "Fatal Error"
+	isJobErrorSpecific := jobErr.text != "" && !isBackoffLimitExceeded
+	if isPodErrorEmpty || (isPodErrorGeneric && isJobErrorSpecific) {
 		return jobErr
 	}
 	return podErr

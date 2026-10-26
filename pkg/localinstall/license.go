@@ -11,13 +11,20 @@ import (
 const (
 	MaxLicenseAttempts = 3
 
+	InstallCommand  = "testkube install local"
+	InitDemoCommand = "testkube init demo"
+	// Own line, so a triple-click copies it.
+	RunAgain     = "Run again:\n  " + InstallCommand
+	ThenRunAgain = "then run again:\n  " + InstallCommand
+
 	LicenseHelp            = "Find your key in the email from Testkube, or get one at https://testkube.io/get-started/on-prem"
-	LicenseUnreachableHelp = "Testkube checks licenses at license.testkube.io and needs it to run.\nCheck your network, proxy or firewall, then run again"
+	LicenseUnreachableHelp = "Testkube checks licenses at license.testkube.io and needs it to run.\nCheck your network, proxy or firewall, " + ThenRunAgain
 )
 
 var (
 	ErrLicenseMissing     = errors.New("no license key entered")
 	ErrLicenseInvalid     = errors.New("license key is not valid")
+	ErrLicenseExpired     = errors.New("license key has expired")
 	ErrLicenseUnreachable = errors.New("cannot reach license.testkube.io")
 )
 
@@ -70,6 +77,9 @@ func (s *LicenseStep) Run(flagKey string) (license License, attempts []LicenseAt
 		}
 		valid, expiry, err := s.validator.Validate(key)
 		switch {
+		// The right key, just too old: another try can't help.
+		case errors.Is(err, ErrLicenseExpired):
+			return License{Expiry: expiry}, append(attempts, LicenseAttempt{Number: n, Status: "expired"}), err
 		case err != nil:
 			// Retrying won't help; the cluster would fail the same way.
 			return License{}, append(attempts, LicenseAttempt{Number: n, Status: "unreachable"}), ErrLicenseUnreachable
@@ -92,5 +102,8 @@ func (s licenseService) Validate(key string) (bool, time.Time, error) {
 	}
 	// Display only: an odd format must not fail validation.
 	expiry, _ := time.Parse(time.RFC3339, resp.License.Expiry)
+	if !resp.Valid && resp.Code == "EXPIRED" {
+		return false, expiry, ErrLicenseExpired
+	}
 	return resp.Valid, expiry, nil
 }

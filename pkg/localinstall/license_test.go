@@ -27,6 +27,9 @@ type fakeValidator struct {
 
 func (f *fakeValidator) Validate(key string) (bool, time.Time, error) {
 	f.calls++
+	if key == "expired" {
+		return false, time.Time{}, ErrLicenseExpired
+	}
 	return f.valid[key], time.Time{}, f.err
 }
 
@@ -46,6 +49,7 @@ func TestLicenseStep_Run(t *testing.T) {
 		{"three wrong keys stop", "", []string{"a", "b", "c"}, nil, "", ErrLicenseInvalid, []string{"invalid", "invalid", "invalid"}, 3, 3},
 		{"right key on second try", "", []string{"bad", " good "}, nil, "good", nil, []string{"invalid", "valid"}, 2, 2},
 		{"unreachable service does not retry", "", []string{"good"}, errors.New("dial tcp: timeout"), "", ErrLicenseUnreachable, []string{"unreachable"}, 1, 1},
+		{"expired key stops at once", "", []string{"expired", "good"}, nil, "", ErrLicenseExpired, []string{"expired"}, 1, 1},
 		{"wrong flag key is not retried by prompting", "bad", nil, nil, "", ErrLicenseInvalid, []string{"invalid"}, 0, 1},
 	}
 

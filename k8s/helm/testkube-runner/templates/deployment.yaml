@@ -137,7 +137,7 @@ spec:
           {{- else if .Values.pod.readinessProbe.enabled }}
           readinessProbe:
             httpGet:
-              path: /health
+              path: /ready
               port: 8088
               scheme: HTTP
             initialDelaySeconds: {{ .Values.pod.readinessProbe.initialDelaySeconds }}
@@ -147,7 +147,7 @@ spec:
             failureThreshold: {{ .Values.pod.readinessProbe.failureThreshold }}
           {{- end }}
           {{- if .Values.pod.customLivenessProbe }}
-          readinessProbe:
+          livenessProbe:
             {{- toYaml .Values.pod.customLivenessProbe | nindent 12 }}
           {{- else if .Values.pod.livenessProbe.enabled }}
           livenessProbe:

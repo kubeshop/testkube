@@ -6,6 +6,9 @@ type Cause struct {
 	Reason string
 	// Message is the text that Kubernetes reported, empty when it reported none.
 	Message string
+	// Retry is true when Kubernetes only waits to try the same action again, so an earlier
+	// message of the same code names the cause better than this one.
+	Retry bool
 }
 
 // String returns the words for the reason and the reported text.

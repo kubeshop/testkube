@@ -70,17 +70,17 @@ func TestInitProcessStepDetails_Integration(t *testing.T) {
 			wantExitCode: constants.CodeAborted,
 		},
 		{
-			name:   "a step that runs longer than its timeout reports the step-timeout message",
+			name:   "a step that runs longer than its timeout reports only the step-timeout code",
 			script: "#!/bin/sh\nsleep 5\n",
 			groups: func(script string) [][]map[string]any {
 				return [][]map[string]any{step("step", script, "1s", false, false)}
 			},
-			wantDetails:  "the step did not finish within its timeout",
+			wantDetails:  "",
 			wantReason:   "step-timeout",
 			wantExitCode: constants.CodeAborted,
 		},
 		{
-			name:   "a step whose group timeout ended before the step started reports the step-timeout message",
+			name:   "a step whose group timeout ended before the step started reports only the step-timeout code",
 			script: "#!/bin/sh\nexit 0\n",
 			groups: func(script string) [][]map[string]any {
 				first := append([]map[string]any{
@@ -93,7 +93,7 @@ func TestInitProcessStepDetails_Integration(t *testing.T) {
 			},
 			// The second container group starts after the group timeout ended.
 			pause:        1500 * time.Millisecond,
-			wantDetails:  "the step did not finish within its timeout",
+			wantDetails:  "",
 			wantReason:   "step-timeout",
 			wantExitCode: constants.CodeAborted,
 		},

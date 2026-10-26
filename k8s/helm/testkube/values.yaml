@@ -121,7 +121,7 @@ mongodb:
     # -- MongoDB image repository
     repository: kubeshop/bitnami-mongodb
     # -- MongoDB image tag
-    tag: 8.3.11
+    tag: 9.0.2
     # -- MongoDB image pull Secret
     pullSecrets: []
   # -- Target MongoDB Feature Compatibility Version used by the FCV hook jobs.
@@ -1205,7 +1205,7 @@ testkube-api:
   # -- docker image versionof Testkube Agent
   dockerImageVersion: ""
 
-  # -- allow to use low securiy fields for test workflow pod and container configurations
+  # -- allow to use low security fields for test workflow pod and container configurations
   allowLowSecurityFields: false
 
   # Testkube log server parameters

@@ -20,8 +20,9 @@ You can read more about the differences between the two deployment modes in the 
   - [6. Event System](#6-event-system)
   - [7. REST API](#7-rest-api)
   - [8. Prometheus Metrics Endpoint](#8-prometheus-metrics-endpoint)
-  - [9. Logging and Telemetry](#9-logging-and-telemetry)
-  - [10. Kubernetes Custom Resource Definitions (CRDs)](#10-kubernetes-custom-resource-definitions-crds)
+  - [9. Health and Readiness Endpoints](#9-health-and-readiness-endpoints)
+  - [10. Logging and Telemetry](#10-logging-and-telemetry)
+  - [11. Kubernetes Custom Resource Definitions (CRDs)](#11-kubernetes-custom-resource-definitions-crds)
 - [Kubernetes Deployment](#kubernetes-deployment)
 - [CLI](#cli)
 - [Related Documentation](#related-documentation)
@@ -195,7 +196,20 @@ The API server exposes Prometheus metrics at `/metrics` for monitoring and obser
 
 **Access**: Metrics are accessible at `http://localhost:8088/metrics` (or the configured API server port).
 
-### 9. Logging and Telemetry
+
+### 9. Health and Readiness Endpoints
+
+**Endpoints**: `GET /health`, `GET /ready`
+
+`/health` answers `OK 👋!` unconditionally and is what the startup and liveness probes use. It reports that the process is serving HTTP, nothing more.
+
+`/ready` evaluates the readiness checks registered on the server and returns 503 with the failing check names when any fails. The api-server registers one check, `runner-execution-updates`, which reports the time since the runner's last successful `GetExecutionUpdates` poll, so a runner whose poll loop has stalled stops being Ready instead of looking healthy while it consumes no work.
+
+**Implementation**: [`pkg/server/readiness.go`](pkg/server/readiness.go); both endpoints are registered in [`pkg/server/httpserver.go`](pkg/server/httpserver.go).
+
+**Probes**: the `testkube-api` and `testkube-runner` charts point their readiness probes at `/ready`. Liveness stays on `/health` deliberately — a stalled poll loop usually means the control plane is unreachable, and restarting every runner in the fleet over that is worse than the stall.
+
+### 10. Logging and Telemetry
 
 #### Logging
 
@@ -236,7 +250,7 @@ Telemetry collects usage analytics to help improve the product. It can be disabl
 - **Segment.io** (`sender_sio.go`) - Primary analytics backend
 - **Google Analytics** (`sender_ga4.go`) - Alternative analytics backend
 - **Testkube Analytics** (`sender_tka.go`) - Internal analytics
-- **PostHog** (`install_tracker.go`) - `testkube install local` step events, see [Local Install](#local-install)
+- **PostHog** (`install_tracker.go`) - `testkube install local` step events and `testkube init demo`'s `init_demo_started`/`init_demo_finished` (with `dry_run`), see [Local Install](#local-install)
 
 All sends are skipped when `DO_NOT_TRACK` is set.
 
@@ -246,7 +260,7 @@ All sends are skipped when `DO_NOT_TRACK` is set.
 - Both events include the detected cluster type and agent capabilities
 - Capability tags come from [`cmd/api-server/services/capabilities.go`](cmd/api-server/services/capabilities.go) and cover the agent persona, connection mode, enabled features, and whether this is a Testkube-provisioned hosted runner (`hosted-runner`) rather than a user-deployed one
 
-### 10. Kubernetes Custom Resource Definitions (CRDs)
+### 11. Kubernetes Custom Resource Definitions (CRDs)
 
 **Definition Location**: [`api/`](api/)
 **Generated CRDs**: [`k8s/crd/`](k8s/crd/)
@@ -296,6 +310,7 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
   - **Features**: Watches Pods, Deployments, Services, etc. and triggers executions; supports git-content based triggers reconciled by the git informer
   - **Event forms**: `spec.event` (single) and `spec.events` (list) are mutually exclusive; validation in `api/testtriggers/v1/validation.go` enforces exactly one, and consumers normalize both forms through `EffectiveEvents()` (CRD spec and API model each expose it) — new event consumers must use the normalized list, never read `spec.event` directly
   - **Leader behavior**: Git informer reconciliation is registered as a leader-coordinated task in `cmd/api-server/main.go`, so only the elected leader performs git polling/pulls
+  - **HTTP content triggers**: the `trigger-http-watcher` leader task (`pkg/triggers/http_trigger.go`) polls the endpoint of each TestTrigger with `contentSelector.http` and fires its `http-changed` event when the selected value (a JSON field, a response header, or the body digest) changes
 
 #### Deprecated CRDs
 
@@ -354,6 +369,8 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 
 **Prompts**: Interactive prompts live in [`pkg/ui`](pkg/ui/) and all pass through the terminal check in [`pkg/ui/interactive.go`](pkg/ui/interactive.go). When stdin is not a terminal the prompt is refused with an actionable message instead of being drawn, which keeps unattended runs (CI, coding agents, containers without a TTY) from blocking on input nobody can supply. `ui.StdinIsInteractive()` exposes the same check so a command can choose a non-interactive path; `GetClient` uses it to refuse an automatic login when a token refresh fails without a terminal.
 
+**Diagnostics**: `testkube diagnostics` ([`cmd/kubectl-testkube/commands/diagnostics/`](cmd/kubectl-testkube/commands/diagnostics/)) runs groups of validators from [`pkg/diagnostics`](pkg/diagnostics/): `install` (kubectl, Helm and Kubernetes versions), `agent` (the agent pods in `--namespace` are ready, whether installed by the `testkube`, `testkube-api` or `testkube-runner` chart) and `license`. Each group is also a subcommand, and `--output json` swaps the CLI renderer for one JSON result per line on stdout and moves every other line of the command to stderr.
+
 **Client Layer**:
 
 - [`pkg/newclients/`](pkg/newclients/) - API clients for tests, testworkflows, webhooks
@@ -370,9 +387,9 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 
 **Location**: [`pkg/localinstall/`](pkg/localinstall/), command [`cmd/kubectl-testkube/commands/install_local.go`](cmd/kubectl-testkube/commands/install_local.go)
 
-`testkube install local` (hidden) runs preflight checks before a laptop install. Missing, unreachable or permission-denied Docker blocks; missing `kubectl`, low Docker CPU, memory or disk, and unreachable download sites only warn. Resources come from `docker info`, so Docker Desktop's VM limits apply rather than the host's. `helm` and `kind` always use our own pinned copies, and missing tools are downloaded at pinned versions, checksum-verified, into `~/.testkube/bin`; that folder is appended to the CLI's own `PATH`, so the user's versions still win. It then creates (or reuses and starts) a kind cluster named `testkube` with its own kubeconfig at `~/.testkube/kubeconfig`, five browser ports bound to `127.0.0.1`, and storage mounted from `~/.testkube/data`. A rerun reuses it only when it carries the random mark saved in `~/.testkube/cluster-id` at creation, checked before a stopped cluster is started.
+`testkube install local` runs preflight checks before a laptop install. On native Windows it stops at once and points to WSL or `testkube init demo`, as `status local` and `uninstall local` do. The license key comes first, so both paths are tied to its owner. A first run at a terminal with a kubectl context then asks whether to install here or in that context (named, with `remote` when it does not look local); the context choice runs `testkube init demo` as its own process, never with `-y`, and every other run shows that alternative under the banner. Missing, unreachable or permission-denied Docker blocks, and so does Podman's `docker` stand-in (kind is always told to use Docker); for those two, and not for Docker missing under WSL, install's fix also offers `testkube init demo` for the user's own cluster, as does `--help`; missing `kubectl`, low Docker CPU, memory or disk, low Linux inotify limits (only when Docker shares this kernel), and unreachable download sites only warn. Resources come from `docker info`, so Docker Desktop's VM limits apply rather than the host's. `helm` and `kind` always use our own pinned copies, and missing tools are downloaded at pinned versions, checksum-verified, into `~/.testkube/bin`; that folder is appended to the CLI's own `PATH`, so the user's versions still win. It then creates (or reuses and starts) a kind cluster named `testkube` with its own kubeconfig at `~/.testkube/kubeconfig`, five browser ports bound to `127.0.0.1`, and storage mounted from `~/.testkube/data` in fixed per-volume folders that a rebuilt cluster finds again and an uninstall keeps. A rerun reuses it only when it carries the random mark saved in `~/.testkube/cluster-id` at creation, checked before a stopped cluster is started. A new cluster pulls Docker Hub images through `mirror.gcr.io` (no per-network pull limit) when the node reaches it within 5 seconds, falling back to Docker Hub. Finally it installs the pinned `testkube-enterprise` and `testkube-runner` charts (OCI, demo values embedded in the binary) with our own helm, isolated from the user's helm, kube and Docker settings under `~/.testkube/helm`. Passwords baked into the kept data (credentials master, MinIO, AI token) and the runner key are generated once into `~/.testkube/secrets.json` (0600); the passwords are pre-created as Secrets, so a rebuilt cluster can still open old data; the license and runner key reach helm only through temporary 0600 values files. Five `testkube-local-*` NodePort Services expose the browser ports, and every browser URL in the values follows the chosen host ports. A release left pending by a killed helm is uninstalled first (data is kept), and a migration Job that loses the race with postgres is retried once after postgres is ready. While helm waits, it reads pods, jobs and events from the node every 5 seconds and stops helm early when a missing image, Docker Hub's download limit, or too little CPU or memory lasts a minute (a cancelled release is cleaned up by the next run); meanwhile a terminal shows one row per service and a footer with bytes downloaded (the node's eth0 since helm started) against the rounded `ImagesSize`, the ready count and elapsed time, and output that is not a terminal gets a `Still installing` line every 30 seconds; when helm fails waiting on pods it names the stuck service by role (the root cause, not services waiting on it), the reason, and a fix matched to the Docker app. A failed Testkube step (not Ctrl+C) also saves `~/.testkube/logs/install-<time>.txt` (0600, newest 10 kept, 1 MB cap) for support: versions, Docker size and ports, then only picked pod fields, events and log tails (never pod specs, which carry the license), with the known secrets and secret-looking patterns masked. It ends with a box showing the dashboard URL and the login, then points the CLI at the install (a dex password login mints an API key) only when the CLI had no config file before this run or already points there (its key matches the hash in `~/.testkube/cli-key-mark`); otherwise it prints `testkube set context local`, which does the same on request. Install events carry `wsl` (`1` or `2`, from the kernel release) when run under WSL, which reports `os` as `linux`. Then it opens the dashboard in the browser (the Windows one on WSL; skipped on Linux without a screen). The cluster comes back on its own when Docker restarts (kind's on-failure restart policy). `testkube status local` (a subcommand of `status`) only reads: Docker, our cluster (or ours in another Docker context), whether the dashboard and API answer, and kept data; it prints the login when ready and the next command otherwise, with exit codes 0 ready, 2 not answering yet, 3 stopped or not installed, 4 Docker unusable. `testkube uninstall local` (a subcommand of `purge`, so it never purges the current kube context) removes the cluster only when it carries the owner mark (and, when the active Docker has none, refuses while another Docker context answering within 2 seconds has ours; with `docker` missing, which may only be hidden, it skips the cluster and keeps `cluster-id` and data), then the cluster's files (`kind.yaml`, `kubeconfig`, `helm/`, `install-*`, `cluster-id` last); data, tools, reports and CLI config stay, except that a CLI context pointing at this install is cleared. `--delete-data` (with a `[y/N]` prompt, or `--yes`; no TTY requires `--yes`) also deletes `~/.testkube/data` through a short-lived container from the node image, since containers own those files on Linux, then `secrets.json`; it falls back to printing a `sudo rm` line.
 
-Each step is reported to PostHog (project "On Prem Trials", via the `t.testkube.io` proxy) by [`pkg/telemetry/install_tracker.go`](pkg/telemetry/install_tracker.go), so drop-off can be measured per step. Once the license key is valid, events are linked to the license owner's email (`GetEmail`), merging the earlier anonymous ones. A short notice is printed first; `DO_NOT_TRACK` or the CLI's `telemetryEnabled: false` disables the events and the notice.
+Each step is reported to PostHog (project "On Prem Trials", via the `t.testkube.io` proxy) by [`pkg/telemetry/install_tracker.go`](pkg/telemetry/install_tracker.go), so drop-off can be measured per step. Once the license key is valid, events are linked to the license owner's email (`GetEmail`), merging the earlier anonymous ones. A short notice is printed first; `DO_NOT_TRACK` or the CLI's `telemetryEnabled: false` disables the events and the notice. The attempt (with `path` and `rerun`), success and failure (with a `category`; Ctrl+C is `user_cancelled`) also go to Segment only, as `testkube_install_local_attempt`, `_success` and `_error`, with the owner's email as the user so Mixpanel joins them to the license request; each send is capped at 3 seconds. On the own-cluster path, `init demo` sends the success or failure itself, only when started with `TESTKUBE_INSTALL_LOCAL_OWNER` (the email), since its exit code can't tell a declined confirm from success.
 
 ### MCP Server
 

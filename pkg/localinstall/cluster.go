@@ -11,9 +11,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -34,9 +36,33 @@ const (
 )
 
 var (
-	ErrClusterNotOurs = errors.New("a cluster with our name exists that this installer did not create")
-	ErrClusterStart   = errors.New("the stopped cluster could not start")
+	ErrClusterNotOurs    = errors.New("a cluster with our name exists that this installer did not create")
+	ErrClusterStart      = errors.New("the stopped cluster could not start")
+	ErrClusterStorage    = errors.New("the cluster's storage could not be set up")
+	ErrClusterInspect    = errors.New("the existing cluster could not be read")
+	ErrClusterRemove     = errors.New("the cluster could not be removed")
+	ErrClusterKubeconfig = errors.New("the cluster's kubeconfig could not be saved")
 )
+
+// Another program bound the port between our check and kind's.
+type PortTakenError struct{ Port int }
+
+func (e PortTakenError) Error() string {
+	return fmt.Sprintf("port %d was taken before the cluster could use it", e.Port)
+}
+
+// Linux and macOS wording, then Docker Desktop on Windows.
+var portTakenLine = regexp.MustCompile(`127\.0\.0\.1:(\d+).*(port is already allocated|address already in use|` +
+	`Only one usage of each socket address|forbidden by its access permissions)`)
+
+func portTaken(out string) (int, bool) {
+	m := portTakenLine.FindStringSubmatch(out)
+	if m == nil {
+		return 0, false
+	}
+	port, err := strconv.Atoi(m[1])
+	return port, err == nil
+}
 
 // Browser-facing; Testkube's settings embed these exact addresses.
 var clusterPorts = []struct {
@@ -115,7 +141,9 @@ func (c *Cluster) Ensure(ctx context.Context) (ClusterState, string, error) {
 		return c.reuse(ctx)
 	}
 
-	ports := pickPorts(c.portFree)
+	busy := map[int]bool{}
+	free := func(port int) bool { return !busy[port] && c.portFree(port) }
+	ports := pickPorts(free)
 	data := filepath.Join(c.dir, "data")
 	if err := os.MkdirAll(data, 0o755); err != nil {
 		return ClusterState{}, "", err
@@ -130,31 +158,56 @@ func (c *Cluster) Ensure(ctx context.Context) (ClusterState, string, error) {
 		return ClusterState{}, "", err
 	}
 	config := filepath.Join(c.dir, "kind.yaml")
-	if err := os.WriteFile(config, []byte(kindConfig(ports, data, owner)), 0o644); err != nil {
-		return ClusterState{}, "", err
+	for attempt := 1; ; attempt++ {
+		if err := os.WriteFile(config, []byte(kindConfig(ports, data, owner)), 0o644); err != nil {
+			return ClusterState{}, "", err
+		}
+		out, err = c.run(ctx, c.kind, "create", "cluster", "--name", ClusterName, "--config", config,
+			"--image", nodeImage, "--kubeconfig", c.kubeconfig, "--wait", "2m")
+		if err == nil {
+			break
+		}
+		port, taken := portTaken(string(out))
+		if !taken {
+			return ClusterState{Ports: ports}, string(out), err
+		}
+		if attempt == 2 {
+			return ClusterState{Ports: ports}, string(out), PortTakenError{Port: port}
+		}
+		// kind removes the failed node, so the retry starts clean.
+		busy[port] = true
+		ports = pickPorts(free)
 	}
-	out, err = c.run(ctx, c.kind, "create", "cluster", "--name", ClusterName, "--config", config,
-		"--image", nodeImage, "--kubeconfig", c.kubeconfig, "--wait", "2m")
-	return ClusterState{Created: err == nil, Ports: ports}, string(out), err
+	c.useMirror(ctx)
+	why, err := c.fixStorage(ctx)
+	return ClusterState{Created: true, Ports: ports}, why, err
+}
+
+// Google's Docker Hub copy has no per-network pull limit.
+const dockerHubMirror = `server = "https://registry-1.docker.io"
+
+[host."https://mirror.gcr.io"]
+  capabilities = ["pull", "resolve"]
+  dial_timeout = "3s"
+`
+
+// Best effort: without it, images come from Docker Hub directly.
+func (c *Cluster) useMirror(ctx context.Context) {
+	// A blocked mirror costs a minute per image; probe first.
+	_, _ = c.run(ctx, "docker", "exec", nodeName, "sh", "-c",
+		`curl -s -m 5 -o /dev/null https://mirror.gcr.io/v2/ && mkdir -p /etc/containerd/certs.d/docker.io && `+
+			`printf '%s' "$1" > /etc/containerd/certs.d/docker.io/hosts.toml`,
+		"_", dockerHubMirror)
 }
 
 func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 	var state ClusterState
-	owner, err := os.ReadFile(c.ownerFile())
-	if err != nil || len(owner) == 0 {
-		return state, "", ErrClusterNotOurs
-	}
-	// Saved settings survive a stop: check before touching it.
-	out, err := c.run(ctx, "docker", "inspect", "-f",
-		"{{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .Mounts}}", nodeName)
+	running, ports, why, err := c.owned(ctx)
 	if err != nil {
-		return state, string(out), err
-	}
-	running, ports, ok := ownedSettings(string(out), string(owner))
-	if !ok {
-		return state, "", ErrClusterNotOurs
+		return state, why, err
 	}
 	state.Ports = ports
+	var out []byte
 	if !running {
 		if out, err = c.run(ctx, "docker", "start", nodeName); err != nil {
 			return state, string(out), ErrClusterStart
@@ -165,11 +218,71 @@ func (c *Cluster) reuse(ctx context.Context) (ClusterState, string, error) {
 	if out, err = c.waitReady(ctx); err != nil {
 		return ClusterState{}, string(out), ErrClusterStart
 	}
+	if why, err := c.fixStorage(ctx); err != nil {
+		return state, why, err
+	}
 	// Rewrites our kubeconfig in case it was deleted.
 	if out, err = c.run(ctx, c.kind, "export", "kubeconfig", "--name", ClusterName, "--kubeconfig", c.kubeconfig); err != nil {
-		return state, string(out), err
+		return state, string(out), ErrClusterKubeconfig
 	}
 	return state, "", nil
+}
+
+// Line order must match ownedSettings parsing.
+const nodeInspectFormat = "{{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .Mounts}}"
+
+// Saved settings survive a stop: check before touching it.
+func (c *Cluster) owned(ctx context.Context) (running bool, ports Ports, out string, err error) {
+	owner, err := os.ReadFile(c.ownerFile())
+	if err != nil || len(owner) == 0 {
+		return false, nil, "", ErrClusterNotOurs
+	}
+	inspect, err := c.run(ctx, "docker", "inspect", "-f", nodeInspectFormat, nodeName)
+	if err != nil {
+		return false, nil, string(inspect), ErrClusterInspect
+	}
+	running, ports, ok := ownedSettings(string(inspect), string(owner))
+	if !ok {
+		return false, nil, "", ErrClusterNotOurs
+	}
+	return running, ports, "", nil
+}
+
+var ErrClusterStopped = errors.New("the local cluster isn't running")
+
+// Ports of the running install, for commands after install.
+func (c *Cluster) Ports(ctx context.Context) (Ports, error) {
+	running, ports, _, err := c.owned(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !running {
+		return nil, ErrClusterStopped
+	}
+	return ports, nil
+}
+
+// Docker alone: works even after our kind copy was deleted.
+func (c *Cluster) Remove(ctx context.Context) (found bool, out string, err error) {
+	nodes, err := c.run(ctx, "docker", "ps", "-a", "-q", "--filter", "label=io.x-k8s.kind.cluster="+ClusterName)
+	if err != nil {
+		return false, string(nodes), ErrClusterInspect
+	}
+	if strings.TrimSpace(string(nodes)) == "" {
+		if err := c.findElsewhere(ctx); err != nil {
+			return false, "", err
+		}
+		// Ctrl+C mid-search must not read as "gone".
+		return false, "", ctx.Err()
+	}
+	if _, _, why, err := c.owned(ctx); err != nil {
+		return true, why, err
+	}
+	// -v also drops the node's volume: gigabytes of images.
+	if rm, err := c.run(ctx, "docker", "rm", "-f", "-v", nodeName); err != nil {
+		return true, string(rm), ErrClusterRemove
+	}
+	return true, "", nil
 }
 
 // Ours means our saved mark and every browser port on 127.0.0.1.
@@ -201,8 +314,98 @@ func ownedSettings(inspect, owner string) (running bool, ports Ports, ok bool) {
 	return lines[0] == "true", ports, true
 }
 
+// With two Dockers, the cluster lives in only one.
+type ClusterElsewhereError struct{ In, Active string }
+
+func (e ClusterElsewhereError) Error() string {
+	return fmt.Sprintf("the cluster is in Docker context %q, but %q is active", e.In, e.Active)
+}
+
+// Dead remote contexts hang 30s; stopped ones fail fast.
+var contextSearchTime = 2 * time.Second
+
+// An ID record breaks on a Docker reset; search instead.
+func (c *Cluster) findElsewhere(ctx context.Context) error {
+	owner, err := os.ReadFile(c.ownerFile())
+	if err != nil || len(owner) == 0 {
+		return nil
+	}
+	active, err := c.run(ctx, "docker", "context", "show")
+	if err != nil {
+		return nil
+	}
+	names, err := c.run(ctx, "docker", "context", "ls", "--format", "{{.Name}}")
+	if err != nil {
+		return nil
+	}
+	search, cancel := context.WithTimeout(ctx, contextSearchTime)
+	defer cancel()
+	var mu sync.Mutex
+	var found []string
+	var wg sync.WaitGroup
+	for _, name := range strings.Fields(string(names)) {
+		if name == strings.TrimSpace(string(active)) {
+			continue
+		}
+		wg.Go(func() {
+			// A silent Docker runs nothing that uses our data.
+			out, err := c.run(search, "docker", "--context", name, "inspect", "-f", nodeInspectFormat, nodeName)
+			// Someone else's "testkube" there must not block our cleanup.
+			if _, _, ours := ownedSettings(string(out), string(owner)); err == nil && ours {
+				mu.Lock()
+				found = append(found, name)
+				mu.Unlock()
+			}
+		})
+	}
+	wg.Wait()
+	if len(found) == 0 {
+		return nil
+	}
+	slices.Sort(found)
+	return ClusterElsewhereError{In: found[0], Active: strings.TrimSpace(string(active))}
+}
+
 func (c *Cluster) ownerFile() string {
 	return filepath.Join(c.dir, "cluster-id")
+}
+
+// kind's default folders are random; a rebuilt cluster loses data.
+const storagePathPattern = "{{ .PVC.Namespace }}/{{ .PVC.Name }}/data"
+
+// Retain: helm uninstall must not wipe the user's data folder.
+const storageClass = `apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: standard
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: rancher.io/local-path
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+parameters:
+  pathPattern: "` + storagePathPattern + `"
+`
+
+func (c *Cluster) fixStorage(ctx context.Context) (string, error) {
+	out, err := c.nodeKubectl(ctx, "get", "storageclass", "standard", "-o", "jsonpath={.parameters.pathPattern}")
+	if err == nil && string(out) == storagePathPattern {
+		return "", nil
+	}
+	// Parameters can't change in place, so the class is replaced.
+	if out, err = c.nodeKubectl(ctx, "delete", "storageclass", "standard", "--ignore-not-found"); err != nil {
+		return string(out), ErrClusterStorage
+	}
+	out, err = c.run(ctx, "docker", "exec", nodeName, "sh", "-c",
+		`printf '%s' "$1" | kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f -`, "_", storageClass)
+	if err != nil {
+		return string(out), ErrClusterStorage
+	}
+	return "", nil
+}
+
+func (c *Cluster) nodeKubectl(ctx context.Context, args ...string) ([]byte, error) {
+	return c.run(ctx, "docker", append([]string{"exec", nodeName, "kubectl", "--kubeconfig=/etc/kubernetes/admin.conf"}, args...)...)
 }
 
 func (c *Cluster) waitReady(ctx context.Context) ([]byte, error) {
@@ -264,13 +467,24 @@ func portFree(port int) bool {
 		return false
 	}
 	l.Close()
+	// Binding succeeds beside a wildcard listener the browser may reach.
+	for _, host := range []string{"127.0.0.1", "::1"} {
+		dialer := net.Dialer{Timeout: 300 * time.Millisecond}
+		if c, err := dialer.DialContext(context.Background(), "tcp", net.JoinHostPort(host, strconv.Itoa(port))); err == nil {
+			c.Close()
+			return false
+		}
+	}
 	return true
 }
 
 // 127.0.0.1 only: a trial must not be reachable from the network.
 func kindConfig(ports Ports, dataDir, owner string) string {
 	var b strings.Builder
-	b.WriteString("kind: Cluster\napiVersion: kind.x-k8s.io/v1alpha4\nnodes:\n- role: control-plane\n  extraPortMappings:\n")
+	b.WriteString("kind: Cluster\napiVersion: kind.x-k8s.io/v1alpha4\n")
+	// Lets useMirror's file take effect; containerd ignores it otherwise.
+	b.WriteString("containerdConfigPatches:\n- |-\n  [plugins.\"io.containerd.grpc.v1.cri\".registry]\n    config_path = \"/etc/containerd/certs.d\"\n")
+	b.WriteString("nodes:\n- role: control-plane\n  extraPortMappings:\n")
 	for _, cp := range clusterPorts {
 		fmt.Fprintf(&b, "  - containerPort: %d\n    hostPort: %d\n    listenAddress: 127.0.0.1\n", cp.inNodes, ports[cp.name])
 	}
@@ -292,7 +506,11 @@ func hasLine(out, want string) bool {
 func runCombined(ctx context.Context, name string, args ...string) ([]byte, error) {
 	var out bytes.Buffer
 	cmd := exec.CommandContext(ctx, name, args...)
+	// Our inspect and exec calls only reach Docker nodes.
+	cmd.Env = append(os.Environ(), "KIND_EXPERIMENTAL_PROVIDER=docker")
 	cmd.Stdout, cmd.Stderr = &out, &out
+	// docker's ssh child keeps the pipes open after a cancel.
+	cmd.WaitDelay = time.Second
 	err := cmd.Run()
 	return out.Bytes(), err
 }

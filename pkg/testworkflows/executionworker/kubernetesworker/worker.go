@@ -172,8 +172,9 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 		AllowLowSecurityFields: w.baseWorkerConfig.AllowLowSecurityFields,
 		Runtime:                runtimeOptions,
 	})
+	// The start reason names the stage that failed, so the message keeps only the cause.
 	if err != nil {
-		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to process test workflow"), testkube.StartReasonDefinitionInvalid)
+		return nil, executionworkertypes.WithStartReason(err, testkube.StartReasonDefinitionInvalid)
 	}
 
 	// Annotate the group ID
@@ -192,7 +193,12 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	// Deploy required resources
 	err = bundle.Deploy(ctx, w.clientSet, cfg.Worker.Namespace)
 	if err != nil {
-		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to deploy test workflow"), testkube.StartReasonJobCreateFailed)
+		if apierrors.IsAlreadyExists(err) {
+			if result := w.redundantStart(ctx, bundle.Job.Name, bundle.Job.Namespace, cfg.Worker.Namespace); result != nil {
+				return result, nil
+			}
+		}
+		return nil, executionworkertypes.WithStartReason(err, testkube.StartReasonJobCreateFailed)
 	}
 
 	return &executionworkertypes.ExecuteResult{
@@ -200,6 +206,38 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 		ScheduledAt: scheduledAt,
 		Namespace:   bundle.Job.Namespace,
 	}, nil
+}
+
+// redundantStart reports a start that lost the race to another start of the same execution.
+// Every API server replica runs its own runner, and the Control Plane offers an execution on
+// every poll until one of them accepts it, so two replicas can start it at once. The Job is
+// named after the resource, so the second create fails with AlreadyExists while the first
+// Job runs normally. That is not a failure of the execution, and declining it would mark a
+// running execution as failed.
+//
+// It returns nil, leaving the error to stand, unless the Job exists and belongs to this
+// runner: an AlreadyExists from another resource of the bundle, or a Job of a different
+// runner, is a real conflict.
+func (w *worker) redundantStart(ctx context.Context, name, namespace, defaultNamespace string) *executionworkertypes.ExecuteResult {
+	if namespace == "" {
+		namespace = defaultNamespace
+	}
+	existing, err := w.clientSet.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil
+	}
+	job := watchers.NewJob(existing)
+	if job.RunnerId() != w.config.RunnerId {
+		return nil
+	}
+	result := &executionworkertypes.ExecuteResult{Namespace: namespace, Redundant: true}
+	if sig, err := job.Signature(); err == nil {
+		result.Signature = stage.MapSignatureListToInternal(sig)
+	}
+	if scheduledAt, err := job.ScheduledAt(); err == nil {
+		result.ScheduledAt = scheduledAt
+	}
+	return result
 }
 
 func (w *worker) Service(ctx context.Context, request executionworkertypes.ServiceRequest) (*executionworkertypes.ServiceResult, error) {
@@ -239,7 +277,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 		Runtime:                runtimeOptions,
 	})
 	if err != nil {
-		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to process test workflow"), testkube.StartReasonDefinitionInvalid)
+		return nil, executionworkertypes.WithStartReason(err, testkube.StartReasonDefinitionInvalid)
 	}
 
 	// Apply the service setup
@@ -267,7 +305,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 	// Deploy required resources
 	err = bundle.Deploy(ctx, w.clientSet, cfg.Worker.Namespace)
 	if err != nil {
-		return nil, executionworkertypes.WithStartReason(errors.Wrap(err, "failed to deploy test workflow"), testkube.StartReasonJobCreateFailed)
+		return nil, executionworkertypes.WithStartReason(err, testkube.StartReasonJobCreateFailed)
 	}
 
 	return &executionworkertypes.ServiceResult{
@@ -307,7 +345,12 @@ func (w *worker) Notifications(ctx context.Context, id string, opts executionwor
 				watcher.Close(n.Error)
 				return
 			}
-			watcher.Send(common.Ptr(n.Value.ToInternal()))
+			// The reader may stop reading once it is done (e.g. the client disconnected),
+			// so the send must give up on cancellation for the deferred cleanup to run.
+			if !watcher.SendWithContext(watchCtx, common.Ptr(n.Value.ToInternal())) {
+				watcher.Close(watchCtx.Err())
+				return
+			}
 		}
 		watcher.Close(nil)
 	}()

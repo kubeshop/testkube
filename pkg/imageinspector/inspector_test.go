@@ -132,35 +132,48 @@ func TestInspector_Inspect_Error(t *testing.T) {
 		wantFetched     string
 		info            *Info
 		err             error
+		secretErr       error
 		want            string
 	}{
 		{
 			name:        "an image without a default registry keeps its name",
 			wantFetched: "imgname",
 			err:         errors.New("no such host"),
-			want:        `inspecting the image "imgname": no such host`,
+			want:        `the image "imgname" cannot be read: no such host`,
 		},
 		{
 			name:            "the image is fetched from the default registry that the pod pulls from",
 			defaultRegistry: "default.io",
 			wantFetched:     "default.io/imgname",
 			err:             errors.New("no such host"),
-			want:            `inspecting the image "default.io/imgname": no such host`,
+			want:            `the image "default.io/imgname" cannot be read: no such host`,
 		},
 		{
 			name:        "no details from the registry",
 			wantFetched: "imgname",
-			want:        `inspecting the image "imgname": the registry returned no details`,
+			want:        `the image "imgname" cannot be read: the registry returned no details`,
+		},
+		{
+			name:      "a pull secret that cannot be read names the secret",
+			secretErr: errors.New(`secrets "regcred" not found`),
+			want:      `the image "imgname" cannot be read: the pull secret "regcred" cannot be read: secrets "regcred" not found`,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			infos := NewMockInfoFetcher(ctrl)
-			inspector := NewInspector(tt.defaultRegistry, infos, NewMockSecretFetcher(ctrl))
-			infos.EXPECT().Fetch(gomock.Any(), "", tt.wantFetched, gomock.Any()).Return(tt.info, tt.err)
+			secrets := NewMockSecretFetcher(ctrl)
+			inspector := NewInspector(tt.defaultRegistry, infos, secrets)
+			var secretNames []string
+			if tt.secretErr != nil {
+				secretNames = []string{"regcred"}
+				secrets.EXPECT().Get(gomock.Any(), "regcred").Return(nil, tt.secretErr)
+			} else {
+				infos.EXPECT().Fetch(gomock.Any(), "", tt.wantFetched, gomock.Any()).Return(tt.info, tt.err)
+			}
 
-			_, err := inspector.Inspect(context.Background(), "", "imgname", corev1.PullAlways, nil)
+			_, err := inspector.Inspect(context.Background(), "", "imgname", corev1.PullAlways, secretNames)
 			assert.EqualError(t, err, tt.want)
 		})
 	}

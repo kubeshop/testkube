@@ -592,6 +592,10 @@ func main() {
 			CDEventsTarget: cfg.CDEventsTarget,
 		},
 		testWorkflowsClient,
+		runnergrpc.WithPollInterval(cfg.RunnerPollInterval),
+		runnergrpc.WithCallTimeout(cfg.RunnerCallTimeout),
+		runnergrpc.WithMaxPollBackoff(cfg.RunnerPollMaxBackoff),
+		runnergrpc.WithStartConcurrency(cfg.RunnerStartConcurrency),
 	)
 
 	if !cfg.DisableRunner {
@@ -752,6 +756,16 @@ func main() {
 	httpServer := server.NewServer(server.Config{Port: cfg.APIServerPort, EnableTracing: cfg.TracingEnabled})
 	httpServer.Routes.Use(cors.New())
 
+	// Report a stalled execution poll loop through readiness. /health answers
+	// unconditionally, so a runner that has stopped consuming work looks healthy
+	// to Kubernetes for as long as the process stays up - which is exactly how a
+	// burst-induced stall went unnoticed for hours.
+	if !cfg.DisableRunner {
+		httpServer.AddReadinessCheck("runner-execution-updates", func() error {
+			return runnerClient.Healthy(time.Now(), cfg.RunnerPollStaleAfter)
+		})
+	}
+
 	isStandalone := mode == common.ModeStandalone
 	var executionController scheduling.Controller
 	if isStandalone && controlPlane != nil {
@@ -809,8 +823,9 @@ func main() {
 
 	shouldRunAgent := shouldRunDefaultAgent(cfg, proContext)
 	shouldRunEventReader := shouldRunAgent || shouldRunWebhookEventReader(cfg, proContext)
+	shouldRunHealthcheck := shouldRunGitOpsHealthcheck(cfg, shouldRunAgent)
 	var agentHandle *agent.Agent
-	if shouldRunAgent || shouldRunEventReader {
+	if shouldRunAgent || shouldRunEventReader || shouldRunHealthcheck {
 		var err error
 		agentHandle, err = agent.NewAgent(
 			log.DefaultLogger,
@@ -836,6 +851,18 @@ func main() {
 			},
 		})
 		eventsEmitter.Register(agentHandle)
+	}
+	if shouldRunHealthcheck {
+		leaderTasks = append(leaderTasks, leader.Task{
+			Name: "agent-healthcheck",
+			Start: func(taskCtx context.Context) error {
+				err := agentHandle.RunHealthcheck(taskCtx)
+				if err != nil && !errors.Is(err, context.Canceled) {
+					commons.ExitOnError("running agent healthcheck", err)
+				}
+				return err
+			},
+		})
 	}
 	if shouldRunEventReader {
 		leaderTasks = append(leaderTasks, leader.Task{
@@ -1201,6 +1228,13 @@ func shouldRunDefaultAgent(cfg *intconfig.Config, proContext intconfig.ProContex
 		return false
 	}
 	return !proContext.HasSourceOfTruthCapability || proContext.Agent.IsSuperAgent
+}
+
+// The Control Plane shows an agent offline once it stops receiving traffic from it. Execution and
+// webhooks call it every few seconds, but GitOps sync calls it only when a resource changes, so a
+// GitOps-only runner sends health checks of its own.
+func shouldRunGitOpsHealthcheck(cfg *intconfig.Config, runsDefaultAgent bool) bool {
+	return cfg.GitOpsSyncKubernetesToCloudEnabled && cfg.DisableRunner && cfg.DisableWebhooks && !runsDefaultAgent
 }
 
 func shouldRunWebhookEventReader(cfg *intconfig.Config, proContext intconfig.ProContext) bool {

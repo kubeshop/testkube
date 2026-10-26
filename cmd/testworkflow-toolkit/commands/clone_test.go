@@ -2,11 +2,15 @@ package commands
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -553,4 +557,181 @@ func TestSetupCredentialStore(t *testing.T) {
 		_, err := os.Stat(filepath.Join(tmpDir, ".gitconfig"))
 		assert.True(t, os.IsNotExist(err), "git config should not be created without credentials")
 	})
+}
+
+func TestCloneError_Reason(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want testkube.StopReason
+	}{
+		{
+			name: "a repository without a credential",
+			err:  fmt.Errorf("error cloning repository: %w", gitOutputError("fatal: could not read Username for 'https://github.com': terminal prompts disabled")),
+			want: testkube.StopReasonGitAuthFailed,
+		},
+		{
+			name: "a credential that the server refused",
+			err:  gitOutputError("remote: Invalid username or token.", "fatal: Authentication failed for 'https://github.com/org/private.git/'"),
+			want: testkube.StopReasonGitAuthFailed,
+		},
+		{
+			name: "an SSH key that the server refused",
+			err:  gitOutputError("git@github.com: Permission denied (publickey).", "fatal: Could not read from remote repository."),
+			want: testkube.StopReasonGitAuthFailed,
+		},
+		{
+			name: "a token without access to the repository",
+			err:  gitOutputError("fatal: unable to access 'https://github.com/org/private.git/': The requested URL returned error: HTTP 403"),
+			want: testkube.StopReasonGitAuthFailed,
+		},
+		{
+			name: "a repository that does not exist",
+			err:  gitOutputError("fatal: repository 'https://github.com/org/absent.git/' not found"),
+			want: testkube.StopReasonGitCloneFailed,
+		},
+		{
+			name: "a revision that does not exist",
+			err:  gitOutputError("fatal: couldn't find remote ref refs/heads/absent"),
+			want: testkube.StopReasonGitCloneFailed,
+		},
+		{
+			name: "a host that does not resolve is unreachable",
+			err:  gitOutputError("fatal: unable to access 'https://git.invalid/': Could not resolve host: git.invalid"),
+			want: testkube.StopReasonGitUnreachable,
+		},
+		{
+			name: "a server that refuses the connection is unreachable",
+			err:  gitOutputError("fatal: unable to access 'https://git.example.com/org/repo.git/': Failed to connect to git.example.com port 443: Connection refused"),
+			want: testkube.StopReasonGitUnreachable,
+		},
+		{
+			name: "an error that git did not write is a clone failure, even with the text of a refusal",
+			err:  errors.New("setting up authentication: GitHub App token: Authentication failed"),
+			want: testkube.StopReasonGitCloneFailed,
+		},
+		{
+			name: "a token that git sends and the server refuses with 403",
+			err:  gitOutputError("fatal: unable to access 'https://github.com/org/private.git/': The requested URL returned error: 403"),
+			want: testkube.StopReasonGitAuthFailed,
+		},
+		{
+			name: "a branch that the remote does not have",
+			err:  gitOutputError("warning: Could not find remote branch absent to clone.", "fatal: Remote branch absent not found in upstream origin"),
+			want: testkube.StopReasonGitCloneFailed,
+		},
+		{
+			name: "a revision that checkout does not know",
+			err:  fmt.Errorf("checking out revision: %w", gitOutputError("error: pathspec 'absent' did not match any file(s) known to git")),
+			want: testkube.StopReasonGitCloneFailed,
+		},
+		{
+			name: "a URI that does not parse",
+			err:  errors.New("invalid repository URI: parse \"://bad\": missing protocol scheme"),
+			want: testkube.StopReasonGitCloneFailed,
+		},
+		{
+			name: "a toolkit image without git has no code",
+			err:  fmt.Errorf("error cloning repository: %w", errors.New("exec: \"git\": executable file not found in $PATH")),
+			want: "",
+		},
+		{
+			name: "a certificate that git does not trust has no code",
+			err:  gitOutputError("fatal: unable to access 'https://git.example.com/org/repo.git/': SSL certificate problem: unable to get local issuer certificate"),
+			want: "",
+		},
+		{
+			name: "a server error from a proxy has no code",
+			err:  gitOutputError("fatal: unable to access 'https://git.example.com/org/repo.git/': The requested URL returned error: 502"),
+			want: "",
+		},
+		{
+			name: "a text of a refusal outside the output of git does not count",
+			err:  fmt.Errorf("Authentication failed: %w", gitOutputError("fatal: repository 'https://github.com/org/absent.git/' not found")),
+			want: testkube.StopReasonGitCloneFailed,
+		},
+		{
+			name: "a text of the network outside the output of git does not count",
+			err:  fmt.Errorf("connection refused: %w", gitOutputError("fatal: couldn't find remote ref refs/heads/absent")),
+			want: testkube.StopReasonGitCloneFailed,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, (&cloneError{err: tt.err}).Reason())
+		})
+	}
+}
+
+// gitOutputError builds the error that runGit returns when git writes the lines to its standard error
+// and exits with the code 128.
+func gitOutputError(lines ...string) error {
+	diagnostic := &diagnosticLine{diagnostics: gitDiagnostics}
+	for _, line := range lines {
+		_, _ = diagnostic.Write([]byte(line + "\n"))
+	}
+	return &CommandError{Err: errors.New("exit status 128"), Line: diagnostic.Line(), Note: diagnostic.note}
+}
+
+func TestCloneMessage(t *testing.T) {
+	tests := []struct {
+		name string
+		uri  string
+		err  error
+		want string
+	}{
+		{
+			name: "a repository without credentials says that git received none",
+			uri:  "https://github.com/org/private.git",
+			err:  fmt.Errorf("error cloning repository: initializing sparse repository: %w", gitOutputError("fatal: could not read Username for 'https://github.com': terminal prompts disabled")),
+			want: "Git cannot authenticate to github.com: the repository needs credentials, and git received none.",
+		},
+		{
+			name: "refused credentials say that the server refused them",
+			uri:  "https://github.com/org/private.git",
+			err:  fmt.Errorf("error cloning repository: %w", gitOutputError("fatal: Authentication failed for 'https://github.com/org/private.git/'")),
+			want: "Git cannot authenticate to github.com: the server refused the credentials.",
+		},
+		{
+			name: "a token without access says that the server refused the credentials",
+			uri:  "https://github.com/org/private.git",
+			err:  fmt.Errorf("error cloning repository: %w", gitOutputError("fatal: unable to access 'https://github.com/org/private.git/': The requested URL returned error: HTTP 403")),
+			want: "Git cannot authenticate to github.com: the server refused the credentials.",
+		},
+		{
+			name: "a refusal in another case of letters is found",
+			uri:  "https://github.com/org/private.git",
+			err:  fmt.Errorf("error cloning repository: %w", gitOutputError("remote: Invalid username or password.")),
+			want: "Git cannot authenticate to github.com: the server refused the credentials.",
+		},
+		{
+			name: "a refused SSH key in the line of git says that the server refused the key",
+			uri:  "git@gitlab.com:org/private.git",
+			err:  fmt.Errorf("error cloning repository: %w", gitOutputError("fatal: Could not read from remote repository. Permission denied (publickey).")),
+			want: "Git cannot authenticate to gitlab.com: the server refused the SSH key.",
+		},
+		{
+			name: "a refused SSH key on its own line says that the server refused the key",
+			uri:  "git@github.com:org/private.git",
+			err:  fmt.Errorf("error cloning repository: %w", gitOutputError("git@github.com: Permission denied (publickey).", "fatal: Could not read from remote repository.")),
+			want: "Git cannot authenticate to github.com: the server refused the SSH key.",
+		},
+		{
+			name: "another failure keeps the line of git without its severity",
+			uri:  "https://github.com/org/absent.git",
+			err:  fmt.Errorf("error cloning repository: %w", gitOutputError("fatal: repository 'https://github.com/org/absent.git/' not found")),
+			want: "repository 'https://github.com/org/absent.git/' not found",
+		},
+		{
+			name: "a failure without a line of git keeps the error",
+			uri:  "https://github.com/org/repo.git",
+			err:  errors.New("setting up SSH key: invalid key"),
+			want: "setting up SSH key: invalid key",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, cloneMessage(tt.uri, tt.err))
+		})
+	}
 }

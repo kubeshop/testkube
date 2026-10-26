@@ -3,7 +3,6 @@ package agents
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
@@ -24,6 +23,7 @@ func NewInstallAgentCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "runner <name>",
 		Aliases: []string{"agent"},
+		Short:   "Install a Testkube runner in your current kubectl context",
 		Args:    cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			// Check for deprecated --type flag usage
@@ -44,6 +44,9 @@ func NewInstallAgentCommand() *cobra.Command {
 
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the runner")
 	common2.PopulateRunnerFlags(cmd)
+	// Only here: `pro connect` shares the flag but always asks for confirmation, which needs
+	// the terminal that piped input takes.
+	cmd.Flags().Lookup("global-template-path").Usage = "include global template, or - to read it from stdin"
 	return cmd
 }
 
@@ -55,8 +58,9 @@ func NewInstallCRDCommand() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:  "crd",
-		Args: cobra.MaximumNArgs(0),
+		Use:   "crd",
+		Short: "Install the Testkube CRDs in your current kubectl context",
+		Args:  cobra.MaximumNArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			UiInstallCRD(cmd, namespace, releaseName, dryRun)
 		},
@@ -134,7 +138,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 	var globalTemplate []byte
 	if globalTemplatePath != "" {
 		var err error
-		globalTemplate, err = os.ReadFile(globalTemplatePath)
+		globalTemplate, err = common2.ReadFileOrStdin(cmd, globalTemplatePath)
 		if err != nil {
 			common2.HandleCLIError(common2.NewCLIError(
 				common2.TKErrInvalidRuntimeParameter,

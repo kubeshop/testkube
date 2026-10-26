@@ -30,7 +30,10 @@ const InstallNotice = "Testkube sends install progress, linked to your license, 
 // Sends run in the background with a 2s timeout.
 // DO_NOT_TRACK or telemetryEnabled false sends nothing, hides the notice.
 // Events: install_local_started, install_local_checks (one per run),
-// install_local_failed, install_local_aborted, install_local_checks_done.
+// install_local_failed, install_local_aborted, install_local_checks_done,
+// install_local_path.
+// Funnel copies attempt, success and error to Segment by email
+// (3s cap), for the Mixpanel trial funnel.
 type InstallTracker struct {
 	enabled    bool
 	distinctID string
@@ -40,6 +43,10 @@ type InstallTracker struct {
 	endpoint   string
 	client     *http.Client
 	wg         sync.WaitGroup
+	onError    func(code, stage, reason string)
+	wsl        string
+	email      string
+	license    string
 }
 
 type InstallTrackerConfig struct {
@@ -48,6 +55,8 @@ type InstallTrackerConfig struct {
 	Version   string
 	// Empty means production; tests point it at a local server.
 	Endpoint string
+	// Empty reads this host's kernel; tests set it.
+	KernelRelease string
 }
 
 func NewInstallTracker(cfg InstallTrackerConfig) *InstallTracker {
@@ -57,7 +66,13 @@ func NewInstallTracker(cfg InstallTrackerConfig) *InstallTracker {
 	}
 	// Machine IDs are shared by owners, so identify would misattribute.
 	sessionID := uuid.NewString()
+	kernel := cfg.KernelRelease
+	if kernel == "" && runtime.GOOS == "linux" {
+		release, _ := os.ReadFile("/proc/sys/kernel/osrelease")
+		kernel = string(release)
+	}
 	return &InstallTracker{
+		wsl:        wslVersion(kernel),
 		enabled:    cfg.Enabled,
 		distinctID: sessionID,
 		sessionID:  sessionID,
@@ -66,6 +81,17 @@ func NewInstallTracker(cfg InstallTrackerConfig) *InstallTracker {
 		endpoint:   endpoint,
 		client:     &http.Client{Timeout: 2 * time.Second},
 	}
+}
+
+// WSL1 kernels say "Microsoft", WSL2 ones lowercase.
+func wslVersion(kernel string) string {
+	switch {
+	case strings.Contains(kernel, "Microsoft"):
+		return "1"
+	case strings.Contains(kernel, "microsoft"):
+		return "2"
+	}
+	return ""
 }
 
 func (t *InstallTracker) Enabled() bool {
@@ -85,6 +111,10 @@ func (t *InstallTracker) Send(event string, props map[string]any) {
 		"arch":               runtime.GOARCH,
 		// Local builds report 999.0.0-*; lets PostHog filter our own runs.
 		"dev_build": strings.HasPrefix(t.version, "999.0.0"),
+	}
+	// WSL reports os "linux"; this keeps Windows users visible.
+	if t.wsl != "" {
+		properties["wsl"] = t.wsl
 	}
 	for k, v := range props {
 		properties[k] = v
@@ -121,6 +151,7 @@ func (t *InstallTracker) Identify(email string) {
 	}
 	anonymousID := t.distinctID
 	t.distinctID = email
+	t.email = email
 	t.Send("$identify", map[string]any{
 		// PostHog merges this run's anonymous events into this person.
 		"$anon_distinct_id": anonymousID,
@@ -129,6 +160,45 @@ func (t *InstallTracker) Identify(email string) {
 }
 
 // Call before exiting; os.Exit skips deferred calls.
+// The CLI adds its own error event; this package can't import it.
+func (t *InstallTracker) OnError(report func(code, stage, reason string)) {
+	t.onError = report
+}
+
+// Opted-out users send nothing, here as in Send.
+func (t *InstallTracker) Error(code, stage, reason string) {
+	if t.enabled && t.onError != nil {
+		t.onError(code, stage, reason)
+	}
+}
+
+// Cancels and failures happen far from the license step.
+func (t *InstallTracker) SetLicense(key string) {
+	t.license = key
+}
+
+// Funnel copies a trial funnel step to Segment, for Mixpanel.
+func (t *InstallTracker) Funnel(name string, props map[string]any) {
+	if !t.enabled {
+		return
+	}
+	license, email := t.license, t.email
+	t.wg.Add(1)
+	go func() {
+		defer t.wg.Done()
+		sent := make(chan struct{})
+		go func() {
+			_, _ = SendInstallLocalEvent(t.version, name, license, email, props)
+			close(sent)
+		}()
+		// Segment's client waits 10s; a blocked network mustn't delay exit.
+		select {
+		case <-sent:
+		case <-time.After(3 * time.Second):
+		}
+	}()
+}
+
 func (t *InstallTracker) Wait() {
 	t.wg.Wait()
 }

@@ -45,6 +45,49 @@ type HelmOptions struct {
 	MultiNamespace bool
 	NoCRDs         bool
 	EmbeddedNATS   bool
+
+	// ReuseValues keeps the values of the installed release (`helm upgrade --reuse-values`).
+	// Helm applies --set over reused values, so the CLI then sends only the settings of the
+	// flags in ExplicitFlags; a flag default would otherwise overwrite what the user set.
+	ReuseValues   bool
+	ExplicitFlags map[string]bool
+}
+
+// sendsFlag says whether the Helm setting derived from a flag is sent: always, unless the
+// release's values are reused and the user did not pass the flag.
+func (o HelmOptions) sendsFlag(name string) bool {
+	return !o.ReuseValues || o.ExplicitFlags[name]
+}
+
+// sendsAnyFlag is sendsFlag for a setting composed from several flags: it is sent when the
+// user passed any of them. A composed value is never empty on its own, since the CLI fills
+// the missing parts with defaults, so its presence says nothing about what the user asked for.
+func (o HelmOptions) sendsAnyFlag(names ...string) bool {
+	if !o.ReuseValues {
+		return true
+	}
+	for _, name := range names {
+		if o.ExplicitFlags[name] {
+			return true
+		}
+	}
+	return false
+}
+
+// The flags each control plane address of a runner is composed from.
+var (
+	rootDomainFlags = []string{"root-domain", "pro-root-domain", "cloud-root-domain"}
+	agentURIFlags   = append([]string{"runner-uri-override", "agent-uri-override", "runner-uri", "agent-uri", "runner-prefix", "agent-prefix", "cloud-agent-prefix"}, rootDomainFlags...)
+	uiURIFlags      = append([]string{"ui-uri-override", "ui-prefix", "cloud-ui-prefix"}, rootDomainFlags...)
+	agentTokenFlags = []string{"runner-token", "agent-token"}
+)
+
+// RunnerEndpointFlags lists the flags that the control plane address and key of a runner are
+// composed from, so that a test can check the upgrade command defines every one of them.
+func RunnerEndpointFlags() []string {
+	flags := append([]string{}, agentURIFlags...)
+	flags = append(flags, uiURIFlags...)
+	return append(flags, agentTokenFlags...)
 }
 
 type HelmGenericOptions struct {
@@ -490,11 +533,25 @@ func prepareTestkubeOnPremDemoArgs(options HelmOptions) []string {
 
 // prepareTestkubeProHelmArgs prepares Helm arguments for Testkube Pro installation.
 func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string {
+	// a runner disables MinIO, MongoDB and PostgreSQL on purpose, so they are sent even when
+	// the release's values are reused
+	explicit := map[string]bool{"no-minio": true, "no-mongo": true, "no-postgres": true}
+	for name := range options.ExplicitFlags {
+		explicit[name] = true
+	}
+	options.ExplicitFlags = explicit
+
 	args, settings := prepareCommonHelmArgs(options)
 
-	settings["testkube-api.cloud.url"] = options.Master.URIs.Agent
-	settings["testkube-api.cloud.key"] = options.Master.AgentToken
-	settings["testkube-api.cloud.uiUrl"] = options.Master.URIs.Ui
+	if options.sendsAnyFlag(agentURIFlags...) {
+		settings["testkube-api.cloud.url"] = options.Master.URIs.Agent
+	}
+	if options.sendsAnyFlag(agentTokenFlags...) {
+		settings["testkube-api.cloud.key"] = options.Master.AgentToken
+	}
+	if options.sendsAnyFlag(uiURIFlags...) {
+		settings["testkube-api.cloud.uiUrl"] = options.Master.URIs.Ui
+	}
 
 	if isMigration {
 		settings["testkube-api.cloud.migrate"] = "true"
@@ -514,7 +571,9 @@ func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string 
 // prepareTestkubeHelmArgs prepares Helm arguments for Testkube OS installation.
 func prepareTestkubeHelmArgs(options HelmOptions) []string {
 	args, settings := prepareCommonHelmArgs(options)
-	settings["testkube-api.logs.storage"] = "minio"
+	if !options.ReuseValues {
+		settings["testkube-api.logs.storage"] = "minio"
+	}
 	return appendHelmArgs(args, options, settings)
 }
 
@@ -525,12 +584,22 @@ func prepareCommonHelmArgs(options HelmOptions) ([]string, map[string]string) {
 		"--namespace", options.Namespace,
 	}
 
-	settings := map[string]string{
-		"testkube-api.multinamespace.enabled": fmt.Sprintf("%t", options.MultiNamespace),
-		"testkube-api.minio.enabled":          fmt.Sprintf("%t", !options.NoMinio),
-		"testkube-operator.installCRD":        fmt.Sprintf("%t", !options.NoCRDs),
-		"mongodb.enabled":                     fmt.Sprintf("%t", !options.NoMongo),
-		"postgresql.enabled":                  fmt.Sprintf("%t", !options.NoPostgres),
+	if options.ReuseValues {
+		args = append(args, "--reuse-values")
+	}
+
+	settings := map[string]string{}
+	flagSettings := []struct{ flag, key, value string }{
+		{"multi-namespace", "testkube-api.multinamespace.enabled", fmt.Sprintf("%t", options.MultiNamespace)},
+		{"no-minio", "testkube-api.minio.enabled", fmt.Sprintf("%t", !options.NoMinio)},
+		{"no-crds", "testkube-operator.installCRD", fmt.Sprintf("%t", !options.NoCRDs)},
+		{"no-mongo", "mongodb.enabled", fmt.Sprintf("%t", !options.NoMongo)},
+		{"no-postgres", "postgresql.enabled", fmt.Sprintf("%t", !options.NoPostgres)},
+	}
+	for _, s := range flagSettings {
+		if options.sendsFlag(s.flag) {
+			settings[s.key] = s.value
+		}
 	}
 
 	if options.MinioReplicas > 0 {
@@ -550,7 +619,7 @@ func prepareCommonHelmArgs(options HelmOptions) ([]string, map[string]string) {
 	}
 
 	// if embedded nats is enabled disable nats chart
-	if options.EmbeddedNATS {
+	if options.EmbeddedNATS && options.sendsFlag("embedded-nats") {
 		settings["testkube-api.nats.enabled"] = "false"
 		settings["testkube-api.nats.embedded"] = "true"
 	}

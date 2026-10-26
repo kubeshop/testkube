@@ -1,8 +1,10 @@
 package telemetry
 
 import (
+	"fmt"
 	"net/http"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 
@@ -101,6 +103,40 @@ func SendCmdWithLicenseEvent(cmd *cobra.Command, version, userID, license, step 
 	return sendData(senders, payload)
 }
 
+// SendInstallLocalEvent sends a trial funnel step for `testkube install local`.
+func SendInstallLocalEvent(version, name, license, email string, props map[string]any) (string, error) {
+	// Not GA: an email user ID is personal data there.
+	return sendData(map[string]Sender{"segmentio": SegmentioSender}, installLocalPayload(version, name, license, email, props))
+}
+
+// Mixpanel keys license requests by email; matching joins the funnel.
+func installLocalPayload(version, name, license, email string, props map[string]any) Payload {
+	userID := email
+	if userID == "" {
+		userID = GetMachineID()
+	}
+	return Payload{
+		ClientID: userID,
+		UserID:   userID,
+		Events: []Event{{
+			Name: name,
+			Params: Params{
+				EventCount:      1,
+				EventCategory:   "cli_command_execution",
+				AppVersion:      version,
+				AppName:         "kubectl-testkube",
+				MachineID:       GetMachineID(),
+				OperatingSystem: runtime.GOOS,
+				Architecture:    runtime.GOARCH,
+				CliContext:      GetCliRunContext(),
+				License:         license,
+				Email:           email,
+				Extra:           props,
+			},
+		}},
+	}
+}
+
 // SendCmdInitEvent will send CLI event to GA
 func SendCmdInitEvent(cmd *cobra.Command, version, userID string) (string, error) {
 	payload := NewCLIPayload(getCurrentContext(), userID, "init", version, "cli_command_execution", GetClusterType())
@@ -182,28 +218,37 @@ func SendRunWorkflowEvent(event string, params RunWorkflowParams) (string, error
 	return sendData(senders, payload)
 }
 
-// sendData sends data to all telemetry storages  in parallel and syncs sending
+// sendData sends data to all telemetry storages in parallel and syncs sending.
+// It returns what each sender transmitted, one sender per line, so that a user can
+// inspect the data before consenting to it (`--verbose` in the CLI prints it).
 func sendData(senders map[string]Sender, payload Payload) (out string, err error) {
 	if DoNotTrack() {
 		return "", nil
 	}
 	var wg sync.WaitGroup
+	var mu sync.Mutex
+	outputs := make([]string, 0, len(senders))
 	wg.Add(len(senders))
 	for name, sender := range senders {
 		go func(sender Sender, name string) {
 			defer wg.Done()
 			o, err := sender(client, payload)
+			mu.Lock()
+			defer mu.Unlock()
 			if err != nil {
 				log.DefaultLogger.Debugw("sending telemetry data error", "payload", payload, "error", err.Error())
+				outputs = append(outputs, fmt.Sprintf("%s: %s (error: %s)", name, o, err))
 				return
 			}
 			log.DefaultLogger.Debugw("sending telemetry data", "payload", payload, "output", o, "sender", name)
+			outputs = append(outputs, fmt.Sprintf("%s: %s", name, o))
 		}(sender, name)
 	}
 
 	wg.Wait()
+	slices.Sort(outputs)
 
-	return out, nil
+	return strings.Join(outputs, "\n"), nil
 }
 
 func getCommand(cmd *cobra.Command) string {

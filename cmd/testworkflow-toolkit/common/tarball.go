@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/klauspost/compress/gzip"
 	"github.com/pkg/errors"
@@ -171,6 +172,9 @@ type UnpackOptions struct {
 	// can be rejected after the transfer succeeded, by a body that is not gzip at all or
 	// a first entry that lands outside AllowedRoots, having written nothing.
 	OnWrite func()
+	// ModTimes sets each regular file's modification time to the one the archive
+	// carries, rather than leaving it at the moment of extraction.
+	ModTimes bool
 }
 
 type UnpackOption func(*UnpackOptions)
@@ -178,6 +182,14 @@ type UnpackOption func(*UnpackOptions)
 // WithWriteObserver reports the moment extraction starts creating entries.
 func WithWriteObserver(fn func()) UnpackOption {
 	return func(o *UnpackOptions) { o.OnWrite = fn }
+}
+
+// WithModTimes keeps the modification times the archive carries, which the tools that
+// use a dependency cache may rely on.
+//
+// Opt-in, because the pod-to-pod transfer has never done it and nothing there asks for it.
+func WithModTimes() UnpackOption {
+	return func(o *UnpackOptions) { o.ModTimes = true }
 }
 
 func WithMaxTotalBytes(n int64) UnpackOption {
@@ -438,6 +450,12 @@ func UnpackTarball(dirPath string, stream io.Reader, opts ...UnpackOption) error
 			}
 			written += copied
 			_ = outFile.Close()
+			// Best effort: a time that cannot be set leaves the file as it would have
+			// been without the option, which is not worth losing the restore over. The
+			// zero access time leaves that one alone.
+			if options.ModTimes && !header.ModTime.IsZero() {
+				_ = root.Chtimes(name, time.Time{}, header.ModTime)
+			}
 		case tar.TypeSymlink:
 			err := ensureDir(path.Dir(name))
 			if err != nil {

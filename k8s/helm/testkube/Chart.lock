@@ -4,7 +4,7 @@ dependencies:
   version: 2.13.0-rc.0
 - name: mongodb
   repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
-  version: 8.3.11-0
+  version: 9.0.2-0
 - name: postgresql
   repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
   version: 18.6-0
@@ -13,7 +13,7 @@ dependencies:
   version: 0.29.0
 - name: cluster
   repository: https://cloudnative-pg.github.io/charts
-  version: 0.8.1
+  version: 0.9.0
 - name: nats
   repository: file://./charts/nats
   version: 1.2.6-4
@@ -23,5 +23,5 @@ dependencies:
 - name: global
   repository: file://../global
   version: 0.1.3
-digest: sha256:65c53aa5e8d7f523806be1ba5ab0a9b501253448e39d820fb0b4475ad97fa657
-generated: "2026-10-07T11:22:56.453294812Z"
+digest: sha256:23b13095f7c44cabd46d76ceb5325ad013bc043810403dfd22bb16fac6755337
+generated: "2026-10-21T10:06:16.403933756Z"

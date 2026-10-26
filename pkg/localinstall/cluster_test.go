@@ -4,10 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -23,23 +27,55 @@ const ourBindings = `{"30080/tcp":[{"HostIp":"127.0.0.1","HostPort":"8080"}],` +
 
 type kindFake struct {
 	clusters, running, bindings, mounts string
-	startErr                            error
-	refusedWaits                        int
-	calls                               []string
+	storagePattern, createOut           string
+	applyErr, inspectErr, exportErr     error
+	startErr, rmErr                     error
+	nodes, active                       string
+	// ps output per other Docker context, or "down" or "hangs".
+	others                    map[string]string
+	refusedWaits, createFails int
+	mu                        sync.Mutex
+	calls                     []string
 }
 
-func (f *kindFake) run(_ context.Context, name string, args ...string) ([]byte, error) {
+func (f *kindFake) run(ctx context.Context, name string, args ...string) ([]byte, error) {
+	f.mu.Lock()
 	f.calls = append(f.calls, name+" "+strings.Join(args, " "))
+	f.mu.Unlock()
 	switch {
 	case name != "docker" && args[0] == "get":
 		return []byte(f.clusters), nil
+	case name != "docker" && args[0] == "create" && f.createFails > 0:
+		f.createFails--
+		return []byte(f.createOut), errExit
+	case name != "docker" && args[0] == "export":
+		return nil, f.exportErr
+	case args[0] == "ps":
+		return []byte(f.nodes), nil
+	case args[0] == "context" && args[1] == "show":
+		return []byte(f.active + "\n"), nil
+	case args[0] == "context":
+		return []byte(f.active + "\n" + strings.Join(slices.Sorted(maps.Keys(f.others)), "\n")), nil
+	case args[0] == "--context" && f.others[args[1]] == "down":
+		return []byte("no such file or directory"), errExit
+	case args[0] == "--context" && f.others[args[1]] == "hangs":
+		<-ctx.Done()
+		return nil, ctx.Err()
+	case args[0] == "--context":
+		return []byte(f.others[args[1]]), nil
+	case args[0] == "rm":
+		return nil, f.rmErr
 	case args[0] == "inspect":
-		return []byte(f.running + "\n" + f.bindings + "\n" + f.mounts + "\n"), nil
+		return []byte(f.running + "\n" + f.bindings + "\n" + f.mounts + "\n"), f.inspectErr
 	case args[0] == "start":
 		return []byte("Bind for 127.0.0.1:9000 failed: port is already allocated"), f.startErr
 	case args[0] == "exec" && f.refusedWaits > 0:
 		f.refusedWaits--
 		return []byte("The connection to the server testkube-control-plane:6443 was refused"), errors.New("exit status 1")
+	case args[0] == "exec" && slices.Contains(args, "get") && slices.Contains(args, "storageclass"):
+		return []byte(f.storagePattern), nil
+	case args[0] == "exec" && args[2] == "sh":
+		return []byte("error: storageclasses.storage.k8s.io is forbidden"), f.applyErr
 	}
 	return nil, nil
 }
@@ -47,7 +83,7 @@ func (f *kindFake) run(_ context.Context, name string, args ...string) ([]byte, 
 func ours(t *testing.T, dir string) *kindFake {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "cluster-id"), []byte("OURMARK"), 0o600))
 	mounts := `[{"Destination":"/lib/modules"},{"Destination":"/var/local-path-provisioner"},{"Destination":"/testkube/owner/OURMARK"}]`
-	return &kindFake{clusters: "testkube\n", running: "true", bindings: ourBindings, mounts: mounts}
+	return &kindFake{clusters: "testkube\n", running: "true", bindings: ourBindings, mounts: mounts, storagePattern: storagePathPattern}
 }
 
 func allFree(int) bool { return true }
@@ -57,6 +93,8 @@ func TestClusterEnsure_ReusesOursOnly(t *testing.T) {
 	kubeconfig := filepath.Join(dir, "kubeconfig")
 	create := "kind create cluster --name testkube --config " + filepath.Join(dir, "kind.yaml") +
 		" --image " + nodeImage + " --kubeconfig " + kubeconfig + " --wait 2m"
+	storage := "docker exec testkube-control-plane kubectl --kubeconfig=/etc/kubernetes/admin.conf get storageclass standard -o jsonpath={.parameters.pathPattern}"
+	mirror := "docker exec testkube-control-plane sh -c curl -s -m 5 -o /dev/null https://mirror.gcr.io/v2/ && mkdir -p /etc/containerd/certs.d/docker.io && printf '%s' \"$1\" > /etc/containerd/certs.d/docker.io/hosts.toml _ " + dockerHubMirror
 	tests := []struct {
 		name        string
 		clusters    string
@@ -67,10 +105,11 @@ func TestClusterEnsure_ReusesOursOnly(t *testing.T) {
 			"kind get clusters",
 			"docker inspect -f {{.State.Running}}\n{{json .HostConfig.PortBindings}}\n{{json .Mounts}} testkube-control-plane",
 			"docker exec testkube-control-plane kubectl --kubeconfig=/etc/kubernetes/admin.conf wait --for=condition=Ready nodes --all --timeout=10s",
+			storage,
 			"kind export kubeconfig --name testkube --kubeconfig " + kubeconfig,
 		}},
-		{"a similar name is someone else's", "testkube-dev\n", true, []string{"kind get clusters", create}},
-		{"no clusters at all", "No kind clusters found.\n", true, []string{"kind get clusters", create}},
+		{"a similar name is someone else's", "testkube-dev\n", true, []string{"kind get clusters", create, mirror, storage}},
+		{"no clusters at all", "No kind clusters found.\n", true, []string{"kind get clusters", create, mirror, storage}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -125,6 +164,68 @@ func TestClusterEnsure_SomeoneElsesClusterIsNeverStarted(t *testing.T) {
 	}
 }
 
+var errExit = errors.New("exit status 1")
+
+func TestClusterEnsure_TakenPortIsNamed(t *testing.T) {
+	tests := map[string]struct {
+		out  string
+		want error
+	}{
+		"docker": {"Error response from daemon: Bind for 127.0.0.1:9001 failed: port is already allocated", PortTakenError{Port: 9001}},
+		"podman": {"Error: rootlessport listen tcp 127.0.0.1:8090: bind: address already in use", PortTakenError{Port: 8090}},
+		"windows in use": {"Error response from daemon: Ports are not available: exposing port TCP 127.0.0.1:8080 -> 0.0.0.0:0: " +
+			"listen tcp 127.0.0.1:8080: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.",
+			PortTakenError{Port: 8080}},
+		"windows reserved": {"Error response from daemon: Ports are not available: exposing port TCP 127.0.0.1:5556 -> 0.0.0.0:0: " +
+			"listen tcp 127.0.0.1:5556: bind: An attempt was made to access a socket in a way forbidden by its access permissions.",
+			PortTakenError{Port: 5556}},
+		"another failure": {"ERROR: failed to create cluster: no space left on device", errExit},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			fake := &kindFake{createOut: tt.out, createFails: 2}
+			c := &Cluster{kind: "kind", dir: t.TempDir(), portFree: allFree, run: fake.run}
+
+			_, _, err := c.Ensure(context.Background())
+
+			assert.Equal(t, tt.want, err)
+		})
+	}
+}
+
+func TestClusterEnsure_PortTakenDuringCreateMovesToAFreeOne(t *testing.T) {
+	fake := &kindFake{createOut: "Bind for 127.0.0.1:9000 failed: port is already allocated", createFails: 1}
+	c := &Cluster{kind: "kind", dir: t.TempDir(), portFree: allFree, run: fake.run}
+
+	state, _, err := c.Ensure(context.Background())
+
+	require.NoError(t, err)
+	assert.True(t, state.Created)
+	assert.Equal(t, []string{"storage 9000→9001"}, state.Ports.Moved())
+}
+
+func TestClusterEnsure_ReuseFailuresAreNamed(t *testing.T) {
+	tests := map[string]struct {
+		change func(f *kindFake)
+		want   error
+	}{
+		"cluster can't be read":     {func(f *kindFake) { f.inspectErr = errExit }, ErrClusterInspect},
+		"kubeconfig can't be saved": {func(f *kindFake) { f.exportErr = errExit }, ErrClusterKubeconfig},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			fake := ours(t, dir)
+			tt.change(fake)
+			c := &Cluster{kind: "kind", dir: dir, run: fake.run}
+
+			_, _, err := c.Ensure(context.Background())
+
+			assert.ErrorIs(t, err, tt.want)
+		})
+	}
+}
+
 func TestPickPorts_MovesBusyPortsWithoutCollisions(t *testing.T) {
 	busy := map[int]bool{8080: true, 8081: true, 8082: true, 8083: true, 8084: true,
 		8085: true, 8086: true, 8087: true, 8088: true, 8089: true, 9000: true}
@@ -132,6 +233,21 @@ func TestPickPorts_MovesBusyPortsWithoutCollisions(t *testing.T) {
 	ports := pickPorts(func(p int) bool { return !busy[p] })
 
 	assert.Equal(t, Ports{"dashboard": 8090, "api": 8091, "login": 5556, "storage": 9001, "ai": 9090}, ports)
+}
+
+// A dev server on [::] shared its port; localhost hit it.
+func TestPortFree_AnotherAppAnsweringLocalhostIsBusy(t *testing.T) {
+	for _, addr := range []string{"[::1]:0", "[::]:0", "0.0.0.0:0"} {
+		t.Run(addr, func(t *testing.T) {
+			l, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", addr)
+			if err != nil {
+				t.Skip("no IPv6 here:", err)
+			}
+			defer l.Close()
+
+			assert.False(t, portFree(l.Addr().(*net.TCPAddr).Port))
+		})
+	}
 }
 
 func TestClusterEnsure_PortsListenOnThisMachineOnly(t *testing.T) {
@@ -175,6 +291,43 @@ func TestClusterEnsure_NewClusterCarriesTheMarkWeSaved(t *testing.T) {
 	require.NotEmpty(t, owner)
 	config, _ := os.ReadFile(filepath.Join(dir, "kind.yaml"))
 	assert.Contains(t, string(config), "containerPath: /testkube/owner/"+string(owner)+"\n    readOnly: true")
+}
+
+func TestClusterEnsure_DataFoldersSurviveARebuild(t *testing.T) {
+	tests := map[string]*kindFake{
+		"new cluster":                   {},
+		"cluster from an older install": nil,
+	}
+	for name, fake := range tests {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			if fake == nil {
+				fake = ours(t, dir)
+				fake.storagePattern = ""
+			}
+			c := &Cluster{kind: "kind", dir: dir, portFree: allFree, run: fake.run}
+
+			_, _, err := c.Ensure(context.Background())
+			require.NoError(t, err)
+
+			i := slices.IndexFunc(fake.calls, func(c string) bool { return strings.Contains(c, "apply -f -") })
+			require.NotEqual(t, -1, i)
+			apply := fake.calls[i]
+			assert.Contains(t, fake.calls, "docker exec testkube-control-plane kubectl --kubeconfig=/etc/kubernetes/admin.conf delete storageclass standard --ignore-not-found")
+			assert.Contains(t, apply, `pathPattern: "`+storagePathPattern+`"`)
+			assert.Contains(t, apply, "reclaimPolicy: Retain")
+		})
+	}
+}
+
+func TestClusterEnsure_StorageFailureIsNamed(t *testing.T) {
+	fake := &kindFake{applyErr: errors.New("exit status 1")}
+	c := &Cluster{kind: "kind", dir: t.TempDir(), portFree: allFree, run: fake.run}
+
+	_, out, err := c.Ensure(context.Background())
+
+	assert.ErrorIs(t, err, ErrClusterStorage)
+	assert.Contains(t, out, "forbidden")
 }
 
 func TestClusterEnsure_StoppedClusterIsStartedBeforeReading(t *testing.T) {
@@ -256,4 +409,92 @@ func TestCheckDisk_WarnsWhenLowOrUnreadable(t *testing.T) {
 			assert.Equal(t, tt.status, r.Status)
 		})
 	}
+}
+
+func TestRunCombined_KindNeverPicksUpUsersPodmanSetting(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("needs sh")
+	}
+	t.Setenv("KIND_EXPERIMENTAL_PROVIDER", "podman")
+
+	out, err := runCombined(context.Background(), "sh", "-c", "echo $KIND_EXPERIMENTAL_PROVIDER")
+
+	require.NoError(t, err)
+	assert.Equal(t, "docker", strings.TrimSpace(string(out)))
+}
+
+func TestClusterRemove_DeletesOnlyOurCluster(t *testing.T) {
+	rm := "docker rm -f -v testkube-control-plane"
+	tests := map[string]struct {
+		setup   func(dir string, f *kindFake)
+		found   bool
+		wantErr error
+		removed bool
+	}{
+		"ours":                {setup: func(string, *kindFake) {}, found: true, removed: true},
+		"nothing there":       {setup: func(_ string, f *kindFake) { f.nodes = "" }},
+		"no mark of ours":     {setup: func(dir string, _ *kindFake) { require.NoError(t, os.Remove(filepath.Join(dir, "cluster-id"))) }, found: true, wantErr: ErrClusterNotOurs},
+		"someone else's mark": {setup: func(_ string, f *kindFake) { f.mounts = `[{"Destination":"/testkube/owner/THEIRS"}]` }, found: true, wantErr: ErrClusterNotOurs},
+		"docker refuses":      {setup: func(_ string, f *kindFake) { f.rmErr = errExit }, found: true, wantErr: ErrClusterRemove, removed: true},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			fake := ours(t, dir)
+			fake.nodes = "abc123\n"
+			tt.setup(dir, fake)
+			c := &Cluster{kind: "kind", dir: dir, run: fake.run}
+
+			found, _, err := c.Remove(context.Background())
+
+			assert.Equal(t, tt.found, found)
+			assert.ErrorIs(t, err, tt.wantErr)
+			assert.Equal(t, tt.removed, slices.Contains(fake.calls, rm), "removed only when ours")
+		})
+	}
+}
+
+// docker inspect output for our node, as ownedSettings reads it.
+const oursElsewhere = "true\n" + ourBindings + "\n" + `[{"Destination":"/testkube/owner/OURMARK"}]`
+
+func TestClusterRemove_NothingHereStillChecksOtherRunningDockers(t *testing.T) {
+	was := contextSearchTime
+	contextSearchTime = 100 * time.Millisecond
+	t.Cleanup(func() { contextSearchTime = was })
+	tests := map[string]struct {
+		others  map[string]string
+		wantErr error
+	}{
+		"ours in another Docker":           {others: map[string]string{"orbstack": oursElsewhere}, wantErr: ClusterElsewhereError{In: "orbstack", Active: "desktop-linux"}},
+		"someone else's in another Docker": {others: map[string]string{"orbstack": strings.Replace(oursElsewhere, "OURMARK", "THEIRS", 1)}},
+		"after a Docker reset":             {others: map[string]string{"default": ""}},
+		"other Docker stopped or gone":     {others: map[string]string{"colima": "down"}},
+		"remote Docker never answers":      {others: map[string]string{"remote": "hangs"}},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			fake := ours(t, dir)
+			fake.active, fake.others = "desktop-linux", tt.others
+			c := &Cluster{kind: "kind", dir: dir, run: fake.run}
+
+			found, _, err := c.Remove(context.Background())
+
+			assert.False(t, found)
+			assert.Equal(t, tt.wantErr, err)
+		})
+	}
+}
+
+func TestClusterRemove_CtrlCMidSearchIsNotGone(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	dir := t.TempDir()
+	fake := ours(t, dir)
+	fake.active, fake.others = "desktop-linux", map[string]string{"remote": "hangs"}
+	c := &Cluster{kind: "kind", dir: dir, run: fake.run}
+
+	_, _, err := c.Remove(ctx)
+
+	assert.ErrorIs(t, err, context.Canceled)
 }

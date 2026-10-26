@@ -26,6 +26,13 @@
 //   - The process-killed and step-timeout messages have priority over the file. An aborted step does
 //     not read the file, because the abort is the cause. A negative step that passes has no message.
 //
+// A toolkit step can also give the reason code of its failure. The init process sets TK_REASON_FILE
+// to constants.StepReasonPath for a toolkit step, next to TK_ERR_FILE, and unsets it for the other
+// steps. TESTKUBE_TW_STEP_REASON_PATH changes the path. The run command removes the file before each
+// attempt, and it reads the first line as the code only when it reads the step message. A second
+// file keeps the first-line contract of the message file, so a toolkit and an init process from
+// different releases work together.
+//
 // The step message does not go through the obfuscated log stream, so the run command masks each
 // sensitive value of the file, also a short value. It masks before it cuts the text, because a part
 // of a sensitive value does not match the masking.

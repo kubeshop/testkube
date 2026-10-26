@@ -217,3 +217,37 @@ WHERE e.id = @execution_id
     'queued', 'assigned', 'starting', 'scheduling', 'running', 
     'pausing', 'paused', 'resuming', 'stopping'
   );
+
+-- name: ClaimExecutionsToStart :many
+-- Claims a dispatched batch, moving it from ASSIGNED to STARTING.
+--
+-- Returns the ids it actually claimed. The guard on status is what makes this
+-- safe: an execution aborted between the dispatch read and this write is left
+-- alone, and because the caller dispatches only what comes back here, the runner
+-- is never handed a row that is no longer startable.
+UPDATE test_workflow_results
+SET status = 'starting'
+WHERE execution_id = ANY(@execution_ids::text[])
+  AND status = 'assigned'
+RETURNING execution_id;
+
+-- name: StampExecutionsDispatched :exec
+-- Starts the dispatch lease on rows the claim above accepted.
+UPDATE test_workflow_executions
+SET status_at = @status_at
+WHERE id = ANY(@execution_ids::text[]);
+
+-- name: RefreshStartingExecutions :many
+-- Renews the dispatch lease on rows that were re-offered to the runner, so a row
+-- being retried is not offered again on the very next poll. Without this the
+-- retry interval collapses to the poll interval the moment the lease expires.
+--
+-- Returns the ids it renewed, for the same reason the claim does: a row that
+-- left STARTING in the meantime must not be dispatched.
+UPDATE test_workflow_executions
+SET status_at = @status_at
+FROM test_workflow_results r
+WHERE test_workflow_executions.id = ANY(@execution_ids::text[])
+  AND test_workflow_executions.id = r.execution_id
+  AND r.status = 'starting'
+RETURNING test_workflow_executions.id;

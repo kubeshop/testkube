@@ -1,0 +1,85 @@
+package common
+
+import (
+	"errors"
+	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	"github.com/kubeshop/testkube/pkg/localinstall"
+)
+
+func markedKeys(keys ...string) keyCheck {
+	return func(key string) bool {
+		for _, k := range keys {
+			if k == key {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+func TestCanUseLocalContext_NeverTakesOverAnotherLogin(t *testing.T) {
+	marked := markedKeys("tkcapi_ours")
+	ours := config.CloudContext{OrganizationId: localinstall.DemoOrgID, ApiUri: "http://localhost:8090", ApiKey: "tkcapi_ours"}
+	otherDemo := config.CloudContext{OrganizationId: localinstall.DemoOrgID, ApiUri: "http://localhost:8090", ApiKey: "tkcapi_theirs"}
+	tests := map[string]struct {
+		cfg      config.Data
+		firstRun bool
+		want     bool
+	}{
+		"first CLI run ever":          {config.Data{}, true, true},
+		"OSS user on kubeconfig mode": {config.Data{}, false, false},
+		"our earlier install":         {config.Data{ContextType: config.ContextTypeCloud, CloudContext: ours}, false, true},
+		"Testkube Cloud login":        {config.Data{ContextType: config.ContextTypeCloud, CloudContext: config.CloudContext{OrganizationId: "tkcorg_acme", ApiUri: "https://api.testkube.io"}}, false, false},
+		"chose kubeconfig":            {config.Data{ContextType: config.ContextTypeKubeconfig}, false, false},
+		"other demo on the same port": {config.Data{ContextType: config.ContextTypeCloud, CloudContext: otherDemo}, false, false},
+		"demo org elsewhere":          {config.Data{ContextType: config.ContextTypeCloud, CloudContext: config.CloudContext{OrganizationId: localinstall.DemoOrgID, ApiUri: "https://testkube.acme.com"}}, false, false},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.want, canUseLocalContext(tt.cfg, tt.firstRun, marked))
+		})
+	}
+}
+
+func TestWithoutLocalContext_LeavesAnotherLoginAlone(t *testing.T) {
+	marked := markedKeys("tkcapi_x")
+	cloud := config.Data{ContextType: config.ContextTypeCloud, CloudContext: config.CloudContext{OrganizationId: "tkcorg_acme", ApiUri: "https://api.testkube.io", ApiKey: "k"}}
+	ours := localContext(config.Data{TelemetryEnabled: true}, localinstall.Ports{"api": 8090, "dashboard": 8080}, "tkcapi_x")
+
+	kept, changed := withoutLocalContext(cloud, marked)
+	assert.False(t, changed)
+	assert.Equal(t, cloud, kept)
+
+	cleared, changed := withoutLocalContext(ours, marked)
+	assert.True(t, changed)
+	assert.Empty(t, cleared.CloudContext.ApiKey)
+	assert.True(t, canUseLocalContext(cleared, true, marked), "a reinstall on a fresh CLI connects again")
+	assert.True(t, cleared.TelemetryEnabled)
+}
+
+func TestLocalContext_FollowsMovedPortsAndKeepsOtherSettings(t *testing.T) {
+	marked := markedKeys("tkcapi_new")
+	cfg := config.Data{TelemetryEnabled: true, Namespace: "testkube",
+		ContextType: config.ContextTypeCloud, CloudContext: config.CloudContext{ApiUri: "http://localhost:8090", ApiKey: "old"}}
+
+	got := localContext(cfg, localinstall.Ports{"api": 8091, "dashboard": 8081}, "tkcapi_new")
+
+	assert.Equal(t, "http://localhost:8091", got.CloudContext.ApiUri)
+	assert.Equal(t, "tkcapi_new", got.CloudContext.ApiKey)
+	assert.True(t, isLocalContext(got, marked), "the next run recognises it")
+	assert.True(t, got.TelemetryEnabled, "settings outside the context stay")
+}
+
+func TestLocalCLIPlainError_KeepsPathsAndRepliesOut(t *testing.T) {
+	raw := fmt.Errorf("%w: /organizations/x/tokens answered 400: {\"detail\":\"secret reply\"}", localinstall.ErrCLIKey)
+	settings := fmt.Errorf("%w: open /Users/jane/.testkube/config.json: permission denied", errCLISettings)
+
+	assert.Equal(t, localinstall.ErrCLIKey, LocalCLIPlainError(raw))
+	assert.Equal(t, errCLISettings, LocalCLIPlainError(settings))
+	assert.NotContains(t, LocalCLIPlainError(errors.New("/Users/jane")).Error(), "jane")
+}

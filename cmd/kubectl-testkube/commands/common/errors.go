@@ -55,6 +55,22 @@ const (
 	TKErrLatestVersionFetchFailed ErrorCode = "TKERR-1307"
 	// TKErrValuesExportFailed is returned when the installation values file can't be fetched or written out.
 	TKErrValuesExportFailed ErrorCode = "TKERR-1308"
+	// TKErrLocalLicenseFailed is returned when the local trial's license fails.
+	TKErrLocalLicenseFailed ErrorCode = "TKERR-1309"
+	// TKErrLocalToolsFailed is returned when Docker can't run the trial.
+	TKErrLocalToolsFailed ErrorCode = "TKERR-1310"
+	// TKErrLocalToolInstallFailed is returned when a trial tool can't download.
+	TKErrLocalToolInstallFailed ErrorCode = "TKERR-1311"
+	// TKErrLocalClusterFailed is returned when the trial's cluster fails.
+	TKErrLocalClusterFailed ErrorCode = "TKERR-1312"
+	// TKErrLocalTestkubeInstallFailed is returned when Testkube's trial install fails.
+	TKErrLocalTestkubeInstallFailed ErrorCode = "TKERR-1313"
+	// TKErrLocalUninstallFailed is returned when removing the trial fails.
+	TKErrLocalUninstallFailed ErrorCode = "TKERR-1314"
+	// TKErrLocalCLILoginFailed is returned when the CLI can't use the trial.
+	TKErrLocalCLILoginFailed ErrorCode = "TKERR-1315"
+	// TKErrLocalUnsupportedPlatform is returned on systems the trial can't run.
+	TKErrLocalUnsupportedPlatform ErrorCode = "TKERR-1316"
 
 	// TKErrCleanOldMigrationJobFailed is returned in case of issues with old migration jobs.
 	TKErrCleanOldMigrationJobFailed ErrorCode = "TKERR-1401"
