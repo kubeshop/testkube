@@ -672,14 +672,9 @@ func copyIntoRoot(src *os.Root, name string, dst *os.Root, rel string, info fs.F
 	return n, nil
 }
 
-// keepModTime gives a copied file the modification time of the one it was copied from.
-//
-// The tools whose caches these are use that time to tell what is still in use: Go's
-// build cache, and golangci-lint's fork of it, move an entry's time forward whenever it
-// is used and trim whatever has not moved in five days. A copy stamped with the moment
-// it was made looks freshly used, so a restored cache would never be trimmed, and every
-// save after a partial hit would carry everything the previous entry held into the next.
-// Kept on both sides: the entry has to hold the source's time for a restore to hand it on.
+// keepModTime gives a copied file the modification time of the one it was copied from,
+// which the tools that use a dependency cache may rely on. Kept on both sides: the entry
+// has to hold the source's time for a restore to hand it on.
 //
 // Best effort, because a file whose time could not be set is still the right file. The
 // zero access time leaves that one alone.

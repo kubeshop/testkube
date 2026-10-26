@@ -755,9 +755,6 @@ func TestCoverDropsADescendantASiblingSortsBetween(t *testing.T) {
 	assert.Equal(t, []string{"/a-", "/a"}, coverPaths([]string{"/a", "/a-", "/a/b"}))
 }
 
-// Go's build cache trims what has not been used in five days, and tells that from the
-// modification time. A restore stamping every file with the current time makes the whole
-// cache look freshly used, so it is never trimmed and grows with every partial hit.
 func TestSaveAndRestoreKeepModificationTimes(t *testing.T) {
 	src := posixDir(t)
 	name := filepath.FromSlash(src + "/go-build/ab/abcdef-d")

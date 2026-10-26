@@ -154,12 +154,6 @@ Three constraints are easy to break and worth knowing before editing any of it:
   is restored where the container running the install cannot see it. `mount: false` on an
   uncovered path is refused at bundle time rather than silently doing nothing.
 
-Both restore paths keep each file's modification time (`common.WithModTimes` for the
-archive, `keepModTime` in `pkg/executioncache/volume/copy.go` on save and restore). Go's
-build cache and golangci-lint's trim what has not been used in five days by that time, so
-a restore stamping everything "now" makes nothing trimmable and the entry grows with every
-partial hit.
-
 The save stage sets no condition, inheriting `passed` — deliberately unlike the artifacts
 stage, which is `always`: publishing a failed install under a content-hash key would
 poison every later run with no way for a user to invalidate it.

@@ -645,8 +645,6 @@ func TestUnpackTarballReportsWhenItStartsWriting(t *testing.T) {
 	})
 }
 
-// See WithModTimes: a dependency cache restored at the current time is never trimmed by
-// the tools that own it, and grows with every partial hit.
 func TestUnpackTarball_ModTimes(t *testing.T) {
 	old := time.Now().Add(-10 * 24 * time.Hour).Truncate(time.Second)
 	archive := func() *bytes.Buffer {
