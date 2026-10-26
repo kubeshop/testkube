@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"runtime"
 	"sort"
@@ -33,6 +34,23 @@ import (
 
 type craneFetcher struct {
 	insecureRegistries map[string]struct{}
+}
+
+type acrCredentialsHelper struct {
+	authn.Helper
+}
+
+func (h acrCredentialsHelper) Get(serverURL string) (string, string, error) {
+	u, err := url.Parse("https://" + serverURL)
+	if err != nil || u.User != nil || u.Path != "" || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" {
+		return "", "", fmt.Errorf("invalid Azure registry address")
+	}
+	host := strings.ToLower(u.Hostname())
+	// The upstream helper's unanchored regex can send Azure tokens to attacker-owned hosts.
+	if host == "mcr.microsoft.com" || strings.HasSuffix(host, ".azurecr.io") || strings.HasSuffix(host, ".azurecr.cn") || strings.HasSuffix(host, ".azurecr.de") || strings.HasSuffix(host, ".azurecr.us") {
+		return h.Helper.Get(serverURL)
+	}
+	return "", "", fmt.Errorf("server is not an Azure registry")
 }
 
 func NewCraneFetcher(insecureRegistries ...string) InfoFetcher {
@@ -65,7 +83,7 @@ func (c *craneFetcher) Fetch(ctx context.Context, registry, image string, pullSe
 	}
 
 	amazonKeychain := authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogger(io.Discard)))
-	azureKeychain := authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper())
+	azureKeychain := authn.NewKeychainFromHelper(acrCredentialsHelper{credhelper.NewACRCredentialsHelper()})
 	keychain := authn.NewMultiKeychain(
 		authn.DefaultKeychain,
 		google.Keychain,
