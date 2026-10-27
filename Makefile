@@ -16,7 +16,7 @@ MAKEFLAGS += --no-print-directory
 # Tell Make to not search in subdirectories for prerequisites
 VPATH =
 
-# Prevent Make from doing parallel execution and implicit rule searches
+# Run targets one at a time, even when make is invoked with -j
 .NOTPARALLEL:
 
 # Default shell configuration for consistent behavior across platforms
@@ -96,7 +96,8 @@ LOCALBIN_APP ?= $(LOCALBIN)/app
 $(LOCALBIN_APP):
 	mkdir -p $(LOCALBIN_APP)
 
-# Legacy support - point to new locations
+# Legacy variable: no build recipe reads it (build-all-platforms still passes
+# it), so binaries always go to LOCALBIN_APP
 BIN_DIR ?= $(LOCALBIN_APP)
 
 # Ensure other directories exist
@@ -193,7 +194,7 @@ help: ## Show this help message
 				printf "\n\033[1m%s\033[0m\n", group; \
 			} \
 		} \
-		/^[a-zA-Z_-]+:.*?##/ { \
+		/^[a-zA-Z0-9_%\/-][a-zA-Z0-9_.%\/-]*:.*##/ { \
 			target = $$1; \
 			desc = $$2; \
 			gsub(/^[ \t]+|[ \t]+$$/, "", desc); \
@@ -204,38 +205,45 @@ help: ## Show this help message
 ##@ Quick Start
 
 .PHONY: all
-all: clean build test ## Clean, build, and test everything
+all: clean build test ## Run clean, build and test (clean also deletes the tracked build/ directory)
 
 # ==================== Release  ====================
 ##@ Release
+# Each bump creates a v-prefixed git tag from the newest existing tag and runs
+# 'git push --tags' (pushes every local tag to the default remote).
 
 .PHONY: version-bump
-version-bump: version-bump-patch
+version-bump: version-bump-patch ## Same as version-bump-patch
 
 .PHONY: version-bump-patch
-version-bump-patch:
+version-bump-patch: ## Tag the next patch version and push all tags
 	go run cmd/tools/main.go bump -k patch
 
 .PHONY: version-bump-minor
-version-bump-minor:
+version-bump-minor: ## Tag the next minor version and push all tags
 	go run cmd/tools/main.go bump -k minor
 
 .PHONY: version-bump-major
-version-bump-major:
+version-bump-major: ## Tag the next major version and push all tags
 	go run cmd/tools/main.go bump -k major
 
 .PHONY: version-bump-dev
-version-bump-dev:
+version-bump-dev: ## Tag the next -betaNNN prerelease and push all tags
 	go run cmd/tools/main.go bump --dev
 
 # ==================== Primary Build Targets ====================
 ##@ Build
 
 .PHONY: build
-build: build-api-server build-testkube-cli build-toolkit build-init build-convert ## Build all binaries
+build: build-api-server build-testkube-cli build-toolkit build-init build-convert ## Build api-server, testkube CLI, toolkit, init and convert into bin/app
+
+.PHONY: compile
+compile: ## Check that every package compiles (go build ./...), writing no binaries
+	@echo "Compiling all packages..."
+	@$(GO) build ./...
 
 .PHONY: build-api-server
-build-api-server: ## Build API server binary
+build-api-server: ## Build the API server binary (bin/app/api-server)
 	@echo "Building API server ($(GOOS)/$(GOARCH))..."
 	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build \
 		$(GOFLAGS) \
@@ -245,7 +253,7 @@ build-api-server: ## Build API server binary
 	@echo "API server built: $(API_SERVER_BIN)"
 
 .PHONY: build-testkube-cli $(CLI_BIN)
-build-testkube-cli: $(CLI_BIN) ## Build CLI binary (testkube)
+build-testkube-cli: $(CLI_BIN) ## Build the CLI as bin/app/testkube (rebuilds every time)
 $(CLI_BIN): $(LOCALBIN_APP)
 	@echo "Building testkube CLI ($(GOOS)/$(GOARCH))..."
 	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build \
@@ -256,7 +264,7 @@ $(CLI_BIN): $(LOCALBIN_APP)
 	@echo "testkube CLI built: $(CLI_BIN)"
 
 .PHONY: build-kubectl-testkube-cli $(KUBECTL_TESTKUBE_CLI_BIN)
-build-kubectl-testkube-cli: $(KUBECTL_TESTKUBE_CLI_BIN) ## Build CLI binary (kubectl-testkube)
+build-kubectl-testkube-cli: $(KUBECTL_TESTKUBE_CLI_BIN) ## Build the CLI as bin/app/kubectl-testkube (rebuilds every time)
 $(KUBECTL_TESTKUBE_CLI_BIN): $(LOCALBIN_APP)
 	@echo "Building kubectl-testkube CLI ($(GOOS)/$(GOARCH))..."
 	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build \
@@ -267,13 +275,13 @@ $(KUBECTL_TESTKUBE_CLI_BIN): $(LOCALBIN_APP)
 	@echo "kubectl-testkube CLI built: $(KUBECTL_TESTKUBE_CLI_BIN)"
 
 .PHONY: rebuild-kubectl-testkube-cli
-rebuild-kubectl-testkube-cli: ## Delete and rebuild kubectl-testkube CLI binary
+rebuild-kubectl-testkube-cli: ## Delete bin/app/kubectl-testkube and build it again
 	@echo "Removing existing kubectl-testkube CLI binary..."
 	@rm -f $(KUBECTL_TESTKUBE_CLI_BIN)
 	@$(MAKE) build-kubectl-testkube-cli
 
 .PHONY: build-toolkit
-build-toolkit: ## Build testworkflow toolkit
+build-toolkit: ## Build the testworkflow-toolkit binary (bin/app/testworkflow-toolkit)
 	@echo "Building testworkflow toolkit..."
 	@CGO_ENABLED=0 $(GO) build \
 		$(GOFLAGS) \
@@ -283,7 +291,7 @@ build-toolkit: ## Build testworkflow toolkit
 	@echo "Toolkit built: $(TOOLKIT_BIN)"
 
 .PHONY: build-init
-build-init: ## Build testworkflow init
+build-init: ## Build the testworkflow-init binary (bin/app/testworkflow-init)
 	@echo "Building testworkflow init..."
 	@CGO_ENABLED=0 $(GO) build \
 		$(GOFLAGS) \
@@ -293,7 +301,7 @@ build-init: ## Build testworkflow init
 	@echo "Init built: $(INIT_BIN)"
 
 .PHONY: build-convert
-build-convert: ## Build the Mongo -> Postgres convert tool
+build-convert: ## Build the Mongo -> Postgres convert tool (bin/app/convert)
 	@echo "Building convert tool ($(GOOS)/$(GOARCH))..."
 	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build \
 		$(GOFLAGS) \
@@ -303,7 +311,7 @@ build-convert: ## Build the Mongo -> Postgres convert tool
 	@echo "Convert tool built: $(CONVERT_BIN)"
 
 .PHONY: build-all-platforms
-build-all-platforms: ## Build binaries for all supported platforms
+build-all-platforms: ## Run build for linux/darwin/windows on amd64/arm64; each pass overwrites bin/app, so only the last platform's binaries remain
 	@echo "Building for all platforms..."
 	@for os in linux darwin windows; do \
 		for arch in amd64 arm64; do \
@@ -316,72 +324,80 @@ build-all-platforms: ## Build binaries for all supported platforms
 ##@ Development
 
 .PHONY: run-api
-run-api: ## Run API server locally
+run-api: ## Run the API server from source (go run)
 	@echo "Starting API server..."
 	$(GO) run -ldflags='$(LD_FLAGS_API)' ./cmd/api-server/
 
 .PHONY: run-api-race
-run-api-race: ## Run API server with race detector
+run-api-race: ## Run the API server from source with the race detector
 	@echo "Starting API server with race detector..."
 	$(GO) run -race -ldflags='$(LD_FLAGS_API)' cmd/api-server/main.go
 
 .PHONY: run-mongo
-run-mongo: ## Run MongoDB in Docker for development (detached)
+run-mongo: ## Start a detached MongoDB container named mongodb on port 27017 (needs Docker)
 	@echo "Starting MongoDB container..."
 	@$(DOCKER) run --name mongodb -p 27017:27017 --rm --detach mongo
 
 .PHONY: run-nats
-run-nats: ## Run NATS server in Docker for development (detached)
+run-nats: ## Start a detached NATS container named nats on port 4222 (needs Docker)
 	@echo "Starting NATS server container..."
 	@$(DOCKER) run --name nats -p 4222:4222 --rm --detach nats:latest
 
 .PHONY: stop-mongo
-stop-mongo: ## Stop MongoDB Docker container
+stop-mongo: ## Stop the mongodb container started by run-mongo
 	@echo "Stopping MongoDB container..."
 	@$(DOCKER) stop mongodb || true
 
 .PHONY: stop-nats
-stop-nats: ## Stop NATS Docker container
+stop-nats: ## Stop the nats container started by run-nats
 	@echo "Stopping NATS server container..."
 	@$(DOCKER) stop nats || true
 
 .PHONY: login-local
-login-local: $(CLI_BIN) ## Login to local Control Plane instance for CLI operations
+login-local: $(CLI_BIN) ## Build the CLI and log it in to a local Control Plane (localhost:8099, tk-dev namespace)
 	@echo "Logging in to local Control Plane instance..."
 	@$(CLI_BIN) login --api-uri-override=http://localhost:8099 --agent-uri-override=http://testkube-enterprise-api.tk-dev.svc.cluster.local:8089 --auth-uri-override=http://localhost:5556 --custom-auth
 
 .PHONY: devbox
-devbox: $(CLI_BIN) ## Start development environment using devbox (Control Plane needs to be running and also you need to be logged in via CLI, see 'make login-local' target)
+devbox: $(CLI_BIN) ## Build the CLI and start a devbox agent in DEVBOX_NAMESPACE (needs a running Control Plane and 'make login-local' first)
 	@echo "Starting development agent with in $${DEVBOX_NAMESPACE} namespace..."
 	@$(CLI_BIN) devbox --namespace $${DEVBOX_NAMESPACE}
 
 .PHONY: dev
-dev: run-mongo run-nats run-api ## Start development environment
+dev: run-mongo run-nats run-api ## Start MongoDB and NATS containers, then run the API server (needs Docker)
 
 # ==================== Testing ====================
 ##@ Testing
 
 .PHONY: test
-test: unit-tests ## Run all tests
+test: unit-tests ## Run the unit tests (same as unit-tests)
+
+# Narrow unit-tests and integration-tests to some packages and tests, e.g.
+#   make unit-tests PKG=./pkg/mcp/... RUN='^TestName$'
+# RUN is a go test -run pattern; integration-tests defaults it to _Integration$.
+PKG ?=
+RUN ?=
 
 .PHONY: unit-tests
-unit-tests: ## Run unit tests with coverage
+unit-tests: ## Run unit tests (narrow with PKG=, RUN=); writes unit-tests.xml, unit-tests.json and coverage.out
 	@echo "Running unit tests..."
 	@$(GOTESTSUM) --format short-verbose --junitfile unit-tests.xml --jsonfile unit-tests.json -- \
-		-coverprofile=coverage.out -covermode=atomic ./cmd/... ./internal/... ./pkg/...
+		-coverprofile=coverage.out -covermode=atomic $(if $(value RUN),-run '$(value RUN)') \
+		$(or $(PKG),./cmd/... ./internal/... ./pkg/...)
 
 .PHONY: integration-tests
-integration-tests: build-init build-toolkit ## Run integration tests (only tests ending with _Integration)
+integration-tests: build-init build-toolkit ## Run *_Integration tests against their backing services (e.g. Postgres, MinIO; narrow with PKG=, RUN=); writes integration-tests.xml/.json and integration-coverage.out
 	@echo "Running integration tests (only tests ending with _Integration)..."
 	@INTEGRATION="true" \
 		TESTKUBE_PROJECT_ROOT="$(PWD)" \
 		STORAGE_ACCESSKEYID=$(ROOT_MINIO_USER) \
 		STORAGE_SECRETACCESSKEY=$(ROOT_MINIO_PASSWORD) \
 		$(GOTESTSUM) --format short-verbose --junitfile integration-tests.xml --jsonfile integration-tests.json -- \
-		-coverprofile=integration-coverage.out -covermode=atomic -run "_Integration$$" ./internal/... ./pkg/... ./test/integration/components/...
+		-coverprofile=integration-coverage.out -covermode=atomic -run '$(or $(value RUN),_Integration$$)' \
+		$(or $(PKG),./internal/... ./pkg/... ./test/integration/components/...)
 
 .PHONY: cover
-cover: unit-tests ## Generate and open test coverage report
+cover: unit-tests ## Run unit tests, write coverage.html and open it in a browser
 	@echo "Generating coverage report..."
 	@$(GO) tool cover -html=coverage.out -o coverage.html
 	@$(OPEN_CMD) coverage.html
@@ -419,39 +435,30 @@ security-scan: ## Run the PR security scan (Semgrep, Gitleaks, Trivy) on your ch
 ##@ Code Generation
 
 .PHONY: generate
-generate: generate-protobuf generate-openapi generate-mocks generate-sqlc generate-crds ## Generate all code
-
-.PHONY: buf
-buf: $(BUF) ## Install buf binary for protobuf generation
-$(BUF):
-	@mkdir -p $(dir $(BUF))
-	@echo "Downloading buf $(BUF_VERSION)..."
-	@curl --fail -sSL "https://github.com/bufbuild/buf/releases/download/$(BUF_VERSION)/buf-$(shell uname -s)-$(shell uname -m)" -o $(BUF)
-	@chmod +x $(BUF)
-	@echo "buf $(BUF_VERSION) installed to $(BUF)"
+generate: generate-protobuf generate-openapi generate-mocks generate-sqlc generate-crds ## Run all generators: protobuf, OpenAPI, mocks, sqlc and CRDs (needs Docker and node)
 
 .PHONY: generate-protobuf
-generate-protobuf: $(BUF) ## Generate protobuf code
+generate-protobuf: $(BUF) ## Regenerate protobuf code from proto/ with buf
 	@echo "Generating protobuf code..."
 	@cd proto && $(abspath $(BUF)) generate --exclude-path service.proto --exclude-path logs.proto
 	@cd proto && $(abspath $(BUF)) generate --template buf.gen.old.yaml
 
 .PHONY: generate-openapi
-generate-openapi: ## Generate OpenAPI models (requires Docker)
+generate-openapi: ## Regenerate OpenAPI models from api/v1/testkube.yaml (needs Docker)
 	@bash scripts/generate-openapi.sh
 
 .PHONY: generate-mocks
-generate-mocks: ## Generate mock files using mockgen only in ./cmd, ./internal, and ./pkg
+generate-mocks: ## Regenerate mocks (go generate -run mockgen ./...)
 	@echo "Generating mock files..."
 	@go generate -run mockgen -x ./...
 
 .PHONY: generate-sqlc
-generate-sqlc: ## Generate sqlc package with sql queries
+generate-sqlc: ## Regenerate sqlc query code
 	@echo "Generating sqlc queries..."
 	@$(SQLC) generate
 
 .PHONY: generate-crds
-generate-crds: ## Generate Kubernetes CRDs from kubebuilder Golang structs.
+generate-crds: ## Regenerate CRDs in k8s/crd, the Helm CRD templates and vendored Helm libraries (needs node)
 	# Generate CRDs
 	go tool controller-gen crd:allowDangerousTypes=true object paths="./api/..." output:crd:dir=k8s/crd
 
@@ -471,29 +478,29 @@ generate-crds: ## Generate Kubernetes CRDs from kubebuilder Golang structs.
 	bash scripts/sync-helm-libraries.sh
 
 .PHONY: sync-helm-libraries
-sync-helm-libraries: ## Sync shared Helm library charts into consumer chart dependencies.
+sync-helm-libraries: ## Sync shared Helm library charts into consumer chart dependencies
 	bash scripts/sync-helm-libraries.sh
 
 .PHONY: verify-helm-libraries-synced
-verify-helm-libraries-synced: ## Verify vendored Helm library charts match the canonical sources.
+verify-helm-libraries-synced: ## Fail if vendored Helm library charts differ from the canonical sources
 	bash scripts/check-helm-libraries.sh
 
 .PHONY: verify-protobuf-generated
-verify-protobuf-generated: generate-protobuf ## Verify generated protobuf code is up to date.
+verify-protobuf-generated: generate-protobuf ## Regenerate protobuf code and fail if that changes tracked files
 	git diff --exit-code -- pkg/proto/ pkg/cloud/ pkg/logs/pb/
 
 .PHONY: verify-crds-generated
-verify-crds-generated: generate-crds verify-helm-libraries-synced ## Verify generated CRD artifacts are up to date.
+verify-crds-generated: generate-crds verify-helm-libraries-synced ## Regenerate CRDs, check Helm libraries, and fail if that changes tracked files
 	git diff --exit-code -- k8s/crd k8s/helm/testkube-crds/templates/_generated_crds.tpl k8s/helm/testkube-operator/charts/testkube-crds/templates/_generated_crds.tpl k8s/helm/testkube-runner/charts/testkube-crds/templates/_generated_crds.tpl
 
 # ==================== Docker ====================
 ##@ Docker
 
 .PHONY: docker-build
-docker-build: docker-build-api docker-build-cli ## Build all Docker images
+docker-build: docker-build-api docker-build-cli ## Run docker-build-api and docker-build-cli
 
 .PHONY: docker-build-api
-docker-build-api: ## Build API server Docker image
+docker-build-api: ## Build the API server images for linux/amd64 and linux/arm64/v8 with goreleaser --snapshot (needs Docker buildx able to build both platforms)
 	@echo "Building API server Docker image..."
 	@env ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** \
 		SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** \
@@ -502,7 +509,7 @@ docker-build-api: ## Build API server Docker image
 		$(GORELEASER) release -f goreleaser_files/.goreleaser-docker-build-api.yml --clean --snapshot
 
 .PHONY: docker-build-cli
-docker-build-cli: ## Build CLI Docker image
+docker-build-cli: ## Build linux kubectl-testkube binaries into linux/ with goreleaser --snapshot; no image is built (needs KEYGEN_PUBLIC_KEY set)
 	@echo "Building CLI Docker image..."
 	@env ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** \
 		SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** \
@@ -514,17 +521,17 @@ docker-build-cli: ## Build CLI Docker image
 ##@ Kubernetes
 
 .PHONY: port-forward-api
-port-forward-api: ## Port forward to API server
+port-forward-api: ## Forward port 8088 to svc/testkube-api-server in NAMESPACE (needs a cluster)
 	@echo "Port forwarding to API server..."
 	@kubectl port-forward svc/testkube-api-server 8088 -n$(NAMESPACE)
 
 .PHONY: port-forward-mongo
-port-forward-mongo: ## Port forward to MongoDB
+port-forward-mongo: ## Forward port 27017 to svc/testkube-mongodb in NAMESPACE (needs a cluster)
 	@echo "Port forwarding to MongoDB..."
 	@kubectl port-forward svc/testkube-mongodb 27017 -n$(NAMESPACE)
 
 .PHONY: port-forward-minio
-port-forward-minio: ## Port forward to MinIO
+port-forward-minio: ## Forward port 9090 to svc/testkube-minio-service-testkube in NAMESPACE (needs a cluster)
 	@echo "Port forwarding to MinIO..."
 	@kubectl port-forward svc/testkube-minio-service-testkube 9090:9090 -n$(NAMESPACE)
 
@@ -532,10 +539,10 @@ port-forward-minio: ## Port forward to MinIO
 ##@ Documentation
 
 .PHONY: docs
-docs: commands-reference ## Generate documentation
+docs: commands-reference ## Generate the CLI reference (same as commands-reference)
 
 .PHONY: commands-reference
-commands-reference: ## Generate CLI command reference
+commands-reference: ## Generate the CLI command reference as Markdown in gen/docs/cli
 	@echo "Generating command reference..."
 	@mkdir -p gen/docs/cli
 	@$(GO) run cmd/kubectl-testkube/main.go generate doc
@@ -544,7 +551,7 @@ commands-reference: ## Generate CLI command reference
 ##@ Maintenance
 
 .PHONY: clean
-clean: ## Clean build artifacts
+clean: ## Delete build/ (including its tracked files), dist/, tmp/ and test and coverage outputs
 	@echo "Cleaning build artifacts..."
 	@rm -rf $(BUILD_DIR) $(DIST_DIR) $(TMP_DIR)
 	@rm -f coverage.html coverage.out integration-coverage.out
@@ -553,7 +560,7 @@ clean: ## Clean build artifacts
 	@echo "Clean complete"
 
 .PHONY: clean-all
-clean-all: clean ## Deep clean including Go cache
+clean-all: clean ## Run clean, then clear the Go build, test and module caches
 	@echo "Performing deep clean..."
 	@go clean -cache -testcache -modcache
 	@echo "Deep clean complete"
@@ -561,41 +568,11 @@ clean-all: clean ## Deep clean including Go cache
 # ==================== Tool Installation ====================
 ##@ Tools
 
-# ==================== Utility Functions ====================
-# Color output helpers
-define print_info
-	@printf "\033[36m%s\033[0m\n" "$(1)"
-endef
-
-define print_success
-	@printf "\033[32m✓ %s\033[0m\n" "$(1)"
-endef
-
-define print_error
-	@printf "\033[31m✗ %s\033[0m\n" "$(1)"
-endef
-
-# ==================== Special/Experimental ====================
-##@ Special
-
-.PHONY: video
-video: ## Generate project activity video using gource
-	@echo "Generating project activity video..."
-	@gource \
-		-s .5 \
-		-1280x720 \
-		--auto-skip-seconds .1 \
-		--multi-sampling \
-		--stop-at-end \
-		--key \
-		--highlight-users \
-		--date-format "%d/%m/%y" \
-		--hide mouse,filenames \
-		--file-idle-time 0 \
-		--max-files 0 \
-		--background-colour 000000 \
-		--font-size 25 \
-		--output-ppm-stream stream.out \
-		--output-framerate 30
-	@ffmpeg -y -r 30 -f image2pipe -vcodec ppm -i stream.out -b 65536K movie.mp4
-	@rm stream.out
+.PHONY: buf
+buf: $(BUF) ## Download buf to bin/tooling/buf (used by generate-protobuf)
+$(BUF):
+	@mkdir -p $(dir $(BUF))
+	@echo "Downloading buf $(BUF_VERSION)..."
+	@curl --fail -sSL "https://github.com/bufbuild/buf/releases/download/$(BUF_VERSION)/buf-$(shell uname -s)-$(shell uname -m)" -o $(BUF)
+	@chmod +x $(BUF)
+	@echo "buf $(BUF_VERSION) installed to $(BUF)"
