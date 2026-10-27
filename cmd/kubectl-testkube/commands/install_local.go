@@ -319,7 +319,7 @@ func askOwnCluster(tracker *telemetry.InstallTracker, kubeContext string, local 
 		kubeContext += ", remote"
 	}
 	thisMachine := "On this machine (recommended, creates a new cluster in Docker)"
-	ownCluster := "In my Kubernetes cluster (current kubectl context: " + kubeContext + ")"
+	ownCluster := "In a Kubernetes cluster (current kubectl context: " + kubeContext + ")"
 	ui.NL()
 	choice, err := pterm.DefaultInteractiveSelect.
 		WithOptions([]string{thisMachine, ownCluster}).
