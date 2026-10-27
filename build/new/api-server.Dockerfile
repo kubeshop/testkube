@@ -31,7 +31,7 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
     -o /app -mod mod .
 
 FROM ${ALPINE_IMAGE}
-RUN apk --no-cache upgrade && apk --no-cache add ca-certificates libssl3 git "libexpat>=2.9.0-r0" "zlib>=1.3.2-r1" "brotli-libs>=1.2.1-r0" "libcurl>=8.23.0-r0"
+RUN apk --no-cache upgrade && apk --no-cache add 'ca-certificates>=20261020-r0' libssl3 git "libexpat>=2.9.0-r0" "zlib>=1.3.2-r1" "brotli-libs>=1.2.1-r0" "libcurl>=8.23.0-r0"
 WORKDIR /root/
 COPY --from=build /app /bin/app
 USER 1001

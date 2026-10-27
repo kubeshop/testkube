@@ -13,7 +13,7 @@ on:
       - sandbox/**
 
 env:
-  ALPINE_IMAGE: alpine:3.24.2
+  ALPINE_IMAGE: alpine:3.24.3
   BUSYBOX_IMAGE: busybox:1.37.0-musl
 
 permissions:
