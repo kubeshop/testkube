@@ -619,7 +619,7 @@ spec:
     nats:
       logs: always
       timeout: 180s
-      image: nats:2.9.11
+      image: kubeshop/testkube-nats:2.14.9
       resources:
         requests:
           cpu: 100m
