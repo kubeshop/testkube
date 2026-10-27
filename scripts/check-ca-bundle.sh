@@ -2,7 +2,8 @@
 # Report which emSign / eMudhra root CAs a container image still trusts.
 #
 # Works on images without a shell: the image is instantiated with `docker create`
-# (never started) and files are read with `docker cp`. For each image it prints
+# (not started) and files are read with `docker cp`. Only Node images are run once,
+# with `--network none`, to read the roots compiled into the binary. For each image it prints
 #   - entrypoint, cmd and TLS-related env (NODE_OPTIONS, NODE_EXTRA_CA_CERTS, SSL_CERT_*),
 #   - OS, ca-certificates package version (apk or dpkg) and Go version of the entrypoint,
 #   - the CA bundle file Go would load (SSL_CERT_FILE, else the default bundle paths),
@@ -36,7 +37,13 @@ if [ $# -lt 1 ]; then
 fi
 
 tmp=$(mktemp -d)
-trap 'rm -rf "$tmp"' EXIT
+cid=""
+# shellcheck disable=SC2329  # invoked by the EXIT trap
+cleanup() {
+  [ -n "$cid" ] && "$DOCKER" rm -v "$cid" >/dev/null 2>&1
+  rm -rf "$tmp"
+}
+trap cleanup EXIT
 summary=()
 failed=0
 
@@ -59,7 +66,7 @@ judge() {
 }
 
 check_image() {
-  local img=$1 cid status=PASS flavor=debian strict=${STRICT:-0} count=0
+  local img=$1 status=PASS flavor=debian strict=${STRICT:-0} count=0
   echo "=== $img"
   if [ -z "${NO_PULL:-}" ]; then
     if ! "$DOCKER" pull -q ${PLATFORM_ARGS[@]+"${PLATFORM_ARGS[@]}"} "$img" >/dev/null 2>&1; then
@@ -70,8 +77,8 @@ check_image() {
     echo "  ERROR: docker create failed"; summary+=("$img|ERROR|create failed"); failed=1; return
   fi
 
-  # How the service starts.
-  echo "  entrypoint: $("$DOCKER" inspect --format '{{json .Config.Entrypoint}}' "$cid")  cmd: $("$DOCKER" inspect --format '{{json .Config.Cmd}}' "$cid")"
+  # How the service starts (from the image: the container's cmd is the /nonexistent placeholder).
+  echo "  entrypoint: $("$DOCKER" image inspect --format '{{json .Config.Entrypoint}}' "$img")  cmd: $("$DOCKER" image inspect --format '{{json .Config.Cmd}}' "$img")"
   local env
   env=$("$DOCKER" inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$cid" \
     | grep -E '^(NODE_OPTIONS|NODE_EXTRA_CA_CERTS|NODE_USE_SYSTEM_CA|SSL_CERT_FILE|SSL_CERT_DIR|NODE_VERSION)=|use-(openssl|system)-ca' || true)
@@ -135,7 +142,7 @@ const hit=l=>l.map(subj).filter(s=>/emSign|eMudhra/i.test(s));
 console.log("node "+process.version+", bundled roots: "+tls.rootCertificates.length);
 for(const s of hit(tls.rootCertificates))console.log("NODEHIT "+s);
 if(tls.getCACertificates){const d=tls.getCACertificates("default");console.log("tls.getCACertificates(default): "+d.length);for(const s of hit(d))console.log("NODEHIT "+s)}'
-    out=$("$DOCKER" run --rm ${PLATFORM_ARGS[@]+"${PLATFORM_ARGS[@]}"} --entrypoint node "$img" -e "$js" 2>&1 || true)
+    out=$("$DOCKER" run --rm --network none ${PLATFORM_ARGS[@]+"${PLATFORM_ARGS[@]}"} --entrypoint node "$img" -e "$js" 2>&1 || true)
     printf '%s\n' "$out" | grep -v '^NODEHIT ' | sed 's/^/  /'
     nodehits=$(printf '%s\n' "$out" | sed -n 's/^NODEHIT //p' | sort -u)
     if [ -n "$nodehits" ]; then
@@ -146,6 +153,7 @@ if(tls.getCACertificates){const d=tls.getCACertificates("default");console.log("
   fi
 
   "$DOCKER" rm -v "$cid" >/dev/null
+  cid=""
   echo "  result: $status"
   [ "$status" = FAIL ] && failed=1
   local pkg=${apk%; }
