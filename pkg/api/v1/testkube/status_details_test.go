@@ -49,6 +49,7 @@ func TestStatusDetailsTypeOf(t *testing.T) {
 		{name: "superseded", reason: string(StopReasonSuperseded), want: StatusDetailsTypeExecutionFailure},
 		{name: "fail fast", reason: string(StopReasonFailFast), want: StatusDetailsTypeExecutionFailure},
 		{name: "trigger abort", reason: string(StopReasonTriggerAbort), want: StatusDetailsTypeExecutionFailure},
+		{name: "parent aborted", reason: string(StopReasonParentAborted), want: StatusDetailsTypeExecutionFailure},
 		{name: "job deleted", reason: string(StopReasonJobDeleted), want: StatusDetailsTypeExecutionFailure},
 		{name: "abort all without a person", reason: string(StopReasonAbortAll), want: StatusDetailsTypeExecutionFailure},
 

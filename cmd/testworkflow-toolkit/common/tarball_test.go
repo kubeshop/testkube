@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -641,5 +642,38 @@ func TestUnpackTarballReportsWhenItStartsWriting(t *testing.T) {
 		require.NoError(t, UnpackTarball(t.TempDir(), buildMixedTarball(t, "hello"),
 			WithWriteObserver(func() { wrote = true })))
 		assert.True(t, wrote)
+	})
+}
+
+func TestUnpackTarball_ModTimes(t *testing.T) {
+	old := time.Now().Add(-10 * 24 * time.Hour).Truncate(time.Second)
+	archive := func() *bytes.Buffer {
+		buf := &bytes.Buffer{}
+		gz := gzip.NewWriter(buf)
+		tw := tar.NewWriter(gz)
+		require.NoError(t, tw.WriteHeader(&tar.Header{
+			Name: "go-build/ab/abcdef-d", Typeflag: tar.TypeReg, Mode: 0o644, Size: 6, ModTime: old,
+		}))
+		_, err := tw.Write([]byte("object"))
+		require.NoError(t, err)
+		require.NoError(t, tw.Close())
+		require.NoError(t, gz.Close())
+		return buf
+	}
+
+	t.Run("kept when asked for", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, UnpackTarball(dir, archive(), WithModTimes()))
+		info, err := os.Stat(filepath.Join(dir, "go-build", "ab", "abcdef-d"))
+		require.NoError(t, err)
+		assert.True(t, old.Equal(info.ModTime()), "got %s", info.ModTime())
+	})
+
+	t.Run("left at extraction time otherwise", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, UnpackTarball(dir, archive()))
+		info, err := os.Stat(filepath.Join(dir, "go-build", "ab", "abcdef-d"))
+		require.NoError(t, err)
+		assert.True(t, info.ModTime().After(old.Add(time.Hour)), "got %s", info.ModTime())
 	})
 }

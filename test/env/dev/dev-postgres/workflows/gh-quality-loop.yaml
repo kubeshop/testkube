@@ -8,7 +8,7 @@ metadata:
     core-tests: cloud-ui
     artifacts: "true"
     junit: "true"
-    team: frontend
+    team-frontend: "true"
     package: web
     tool: vitest
 spec:
@@ -25,6 +25,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: '{{config.revision}}'
       authType: github
+      verbosity: quiet
       cone: true
       paths:
       - js
@@ -74,7 +75,7 @@ metadata:
     core-tests: backoffice
     artifacts: "true"
     junit: "true"
-    team: frontend
+    team-frontend: "true"
     package: backoffice
     tool: vitest
 spec:
@@ -91,6 +92,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: '{{config.revision}}'
       authType: github
+      verbosity: quiet
       cone: true
       paths:
       - js
@@ -140,7 +142,7 @@ metadata:
     core-tests: cloud-api
     artifacts: "true"
     junit: "true"
-    team: backend
+    team-backend: "true"
     package: runspace-controller
     tool: vitest
 spec:
@@ -157,6 +159,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: '{{config.revision}}'
       authType: github
+      verbosity: quiet
       cone: true
       paths:
       - js
@@ -204,7 +207,7 @@ metadata:
     category: static-analysis
     quality-loop: "true"
     core-tests: cloud-api
-    team: backend
+    team-backend: "true"
     tool: golangci-lint
 spec:
   config:
@@ -216,6 +219,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: '{{config.revision}}'
       authType: github
+      verbosity: quiet
   container:
     workingDir: /data/repo
     env:
@@ -247,9 +251,9 @@ spec:
       cache:
         # Keyed on the modules and lint config, never the sources: both caches address
         # their own contents, so one entry serves every commit until dependencies change.
-        key: cloud-lint-go-v2-golangci-2.12.2-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum", "/data/repo/.golangci.yml")}}
+        key: cloud-lint-go-v3-golangci-2.12.2-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum", "/data/repo/.golangci.yml")}}
         restoreKeys:
-        - cloud-lint-go-v2-golangci-2.12.2-
+        - cloud-lint-go-v3-golangci-2.12.2-
         paths:
         - /root/.cache/go-build
         - /root/.cache/golangci-lint
@@ -279,7 +283,8 @@ metadata:
     category: static-analysis
     quality-loop: "true"
     core-tests: cloud-ui
-    team: frontend
+    team-frontend: "true"
+    team-backend: "true"
     tool: turbo
 spec:
   system:
@@ -293,6 +298,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: '{{config.revision}}'
       authType: github
+      verbosity: quiet
       cone: true
       paths:
       - js
@@ -364,7 +370,8 @@ metadata:
     category: static-analysis
     quality-loop: "true"
     core-tests: cloud-api
-    team: backend
+    team-backend: "true"
+    team-frontend: "true"
     tool: helm
 spec:
   config:
@@ -376,6 +383,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: '{{config.revision}}'
       authType: github
+      verbosity: quiet
       cone: true
       paths:
       - helm
@@ -415,7 +423,7 @@ metadata:
     category: build-integration
     quality-loop: "true"
     core-tests: cloud-api
-    team: backend
+    team-backend: "true"
     tool: go
 spec:
   config:
@@ -427,6 +435,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: '{{config.revision}}'
       authType: github
+      verbosity: quiet
   container:
     workingDir: /data/repo
     image: golang:1.26.6-bookworm
@@ -492,7 +501,7 @@ metadata:
     core-tests: cloud-api
     artifacts: "true"
     junit: "true"
-    team: backend
+    team-backend: "true"
     tool: go
 spec:
   config:
@@ -504,6 +513,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: '{{config.revision}}'
       authType: github
+      verbosity: quiet
   container:
     workingDir: /data/repo
     image: golang:1.26.6-bookworm

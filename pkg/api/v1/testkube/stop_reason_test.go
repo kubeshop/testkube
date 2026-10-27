@@ -47,6 +47,7 @@ func TestStopReason_Sentence(t *testing.T) {
 		{name: "job deleted", reason: StopReasonJobDeleted, want: "the job of the execution was deleted"},
 		{name: "fail fast", reason: StopReasonFailFast, want: "another parallel worker failed"},
 		{name: "trigger abort", reason: StopReasonTriggerAbort, want: "the trigger of the execution was deleted"},
+		{name: "parent aborted", reason: StopReasonParentAborted, want: "the parent execution was aborted"},
 		{name: "exit code", reason: StopReasonExitCode, want: "a step of the test failed"},
 		{name: "unknown", reason: StopReasonUnknown, want: "the cause is not known"},
 		{name: "token from a newer control plane has no words yet", reason: StopReason("later-added"), want: ""},

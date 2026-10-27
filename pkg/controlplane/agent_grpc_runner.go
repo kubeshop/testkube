@@ -136,10 +136,32 @@ func (s *Server) abortExecution(ctx context.Context, executionId string, cause a
 	// Update in-memory properties which we know has been updated by the query.
 	execution.StatusAt = result.FinishedAt
 	execution.Result = result
-	// Emit the aborted event.
-	s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution, s.envID))
+	for _, e := range endEvents(&execution, s.envID) {
+		s.emitter.Notify(e)
+	}
 
 	return nil
+}
+
+// endEvents returns the events of an execution that ended, the event of its status first.
+// Every end that is not a pass also sends the not-passed event. A webhook on a failure type
+// reads that event.
+func endEvents(execution *testkube.TestWorkflowExecution, envID string) []testkube.Event {
+	var events []testkube.Event
+	switch {
+	case execution.Result.IsPassed():
+		events = append(events, testkube.NewEventEndTestWorkflowSuccess(execution, envID))
+	case execution.Result.IsAborted():
+		events = append(events, testkube.NewEventEndTestWorkflowAborted(execution, envID))
+	case execution.Result.IsCanceled():
+		events = append(events, testkube.NewEventEndTestWorkflowCanceled(execution, envID))
+	default:
+		events = append(events, testkube.NewEventEndTestWorkflowFailed(execution, envID))
+	}
+	if execution.Result.IsNotPassed() {
+		events = append(events, testkube.NewEventEndTestWorkflowNotPassed(execution, envID))
+	}
+	return events
 }
 
 // writeDeclineCause records why the runner declined the execution. The reason code has its own
@@ -349,18 +371,8 @@ func (s *Server) FinishExecution(ctx context.Context, req *cloud.FinishExecution
 	execution.StatusAt = result.FinishedAt
 	execution.Result = &result
 
-	switch {
-	case execution.Result.IsPassed():
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution, s.envID))
-	case execution.Result.IsAborted():
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution, s.envID))
-	case execution.Result.IsCanceled():
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution, s.envID))
-	default:
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution, s.envID))
-	}
-	if execution.Result.IsNotPassed() {
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(&execution, s.envID))
+	for _, e := range endEvents(&execution, s.envID) {
+		s.emitter.Notify(e)
 	}
 
 	return &cloud.FinishExecutionResponse{}, nil
