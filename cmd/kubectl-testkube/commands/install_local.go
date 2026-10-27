@@ -320,9 +320,10 @@ func askOwnCluster(tracker *telemetry.InstallTracker, kubeContext string, local 
 	}
 	thisMachine := "On this machine (recommended, creates a new cluster in Docker)"
 	ownCluster := "In a Kubernetes cluster (current kubectl context: " + kubeContext + ")"
+	sharedCluster := "In a shared cluster for your team (link to the Helm guide)"
 	ui.NL()
 	choice, err := pterm.DefaultInteractiveSelect.
-		WithOptions([]string{thisMachine, ownCluster}).
+		WithOptions([]string{thisMachine, ownCluster, sharedCluster}).
 		WithDefaultOption(thisMachine).
 		WithFilter(false).
 		WithOnInterruptFunc(func() { abortInstall(tracker, "path") }).
@@ -332,6 +333,13 @@ func askOwnCluster(tracker *telemetry.InstallTracker, kubeContext string, local 
 		ui.Printf("%s\n", ui.LightGray(ownClusterHint))
 		tracker.Send("install_local_path", map[string]any{"path": "select_failed", "context_local": local})
 		return false
+	}
+	// Init demo is single-user; teams need the Helm install.
+	if choice == sharedCluster {
+		ui.Printf("\n  To install Testkube for your team, follow the Helm guide:\n    %s\n  Your license key works there too.\n", teamGuideURL)
+		tracker.Send("install_local_path", map[string]any{"path": "shared", "context_local": local})
+		waitForEvents(tracker)
+		os.Exit(0)
 	}
 	own := choice == ownCluster
 	path := "docker"
@@ -392,6 +400,7 @@ const (
 
 const (
 	localInstallLead = "This sets up Testkube locally, in its own cluster inside Docker."
+	teamGuideURL     = "https://docs.testkube.io/articles/tutorial/quickstart/team-evaluation"
 	ownClusterHint   = "Already have a Kubernetes cluster? To install Testkube there, run:\n  " + localinstall.InitDemoCommand
 )
 
