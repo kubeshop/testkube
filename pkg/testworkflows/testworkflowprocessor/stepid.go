@@ -1,6 +1,8 @@
 package testworkflowprocessor
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"regexp"
 	"strings"
@@ -215,10 +217,25 @@ func newStageId(s stage.Stage, parentId string, used map[string]bool) string {
 	if parentId != "" {
 		base = parentId + "_" + base
 	}
-	id := base
+	id := limitStageId(base)
 	for n := 1; used[id]; n++ {
-		id = fmt.Sprintf("%s_%d", base, n)
+		id = limitStageId(fmt.Sprintf("%s_%d", base, n))
 	}
 	used[id] = true
 	return id
+}
+
+// maxStageIdLength is the maximum length of a generated id. The runner uses the id in the name of a
+// directory, and a file name has a limit of 255 bytes. The limit leaves room for a prefix or a suffix.
+const maxStageIdLength = 128
+
+// limitStageId cuts an id that is too long and adds a hash of the full id. The hash keeps the id stable
+// for the same workflow, and different long ids stay different.
+func limitStageId(id string) string {
+	if len(id) <= maxStageIdLength {
+		return id
+	}
+	sum := sha256.Sum256([]byte(id))
+	hash := hex.EncodeToString(sum[:])[:8]
+	return strings.TrimRight(id[:maxStageIdLength-len(hash)-1], "_") + "_" + hash
 }
