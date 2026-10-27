@@ -338,6 +338,7 @@ func askOwnCluster(tracker *telemetry.InstallTracker, kubeContext string, local 
 	if choice == sharedCluster {
 		ui.Printf("\n  To install Testkube for your team, follow the Helm guide:\n    %s\n  Your license key works there too.\n", teamGuideURL)
 		tracker.Send("install_local_path", map[string]any{"path": "shared", "context_local": local})
+		tracker.Funnel(installAttemptEvent, map[string]any{"path": "shared", "rerun": false})
 		waitForEvents(tracker)
 		os.Exit(0)
 	}
