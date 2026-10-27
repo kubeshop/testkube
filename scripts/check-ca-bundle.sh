@@ -23,7 +23,7 @@
 #   NO_PULL=1                    use the local image, do not pull
 #   DOCKER=docker                docker binary
 #
-# Exit code: 1 when any image fails, 0 otherwise.
+# Exit code: 1 when any image fails or could not be inspected (ERROR), 0 otherwise.
 set -euo pipefail
 
 DOCKER=${DOCKER:-docker}
@@ -65,6 +65,9 @@ judge() {
   fi
 }
 
+# mark_fail: a BAD root sets FAIL unless the image already hit an ERROR (status is check_image's).
+mark_fail() { [ "$status" = ERROR ] || status=FAIL; }
+
 check_image() {
   local img=$1 status=PASS flavor=debian strict=${STRICT:-0} count=0
   echo "=== $img"
@@ -77,11 +80,9 @@ check_image() {
     echo "  ERROR: docker create failed"; summary+=("$img|ERROR|create failed"); failed=1; return
   fi
 
-  # How the service starts, read from the container's own image (the container cmd is the
-  # /nonexistent placeholder, and inspecting by image id keeps PLATFORM honoured).
-  local iid
-  iid=$("$DOCKER" inspect --format '{{.Image}}' "$cid")
-  echo "  entrypoint: $("$DOCKER" image inspect --format '{{json .Config.Entrypoint}}' "$iid")  cmd: $("$DOCKER" image inspect --format '{{json .Config.Cmd}}' "$iid")"
+  # How the service starts, read from the image for the requested platform (the container's
+  # cmd is the /nonexistent placeholder; `image inspect --platform` needs Docker 28.1+).
+  echo "  entrypoint: $("$DOCKER" image inspect ${PLATFORM_ARGS[@]+"${PLATFORM_ARGS[@]}"} --format '{{json .Config.Entrypoint}}' "$img")  cmd: $("$DOCKER" image inspect ${PLATFORM_ARGS[@]+"${PLATFORM_ARGS[@]}"} --format '{{json .Config.Cmd}}' "$img")"
   local env
   env=$("$DOCKER" inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$cid" \
     | grep -E '^(NODE_OPTIONS|NODE_EXTRA_CA_CERTS|NODE_USE_SYSTEM_CA|SSL_CERT_FILE|SSL_CERT_DIR|NODE_VERSION)=|use-(openssl|system)-ca' || true)
@@ -115,15 +116,23 @@ check_image() {
   if [ -n "$found" ]; then
     count=$(grep -c 'BEGIN CERTIFICATE' "$tmp/bundle.pem" || true)
     echo "  bundle: $found ($count certs)"
-    hits=$(openssl crl2pkcs7 -nocrl -certfile "$tmp/bundle.pem" 2>/dev/null \
-      | openssl pkcs7 -print_certs -noout 2>/dev/null \
-      | sed -n 's/^subject=//p' | grep -iE 'emSign|eMudhra' | sort -u || true)
+    # A parse failure must not look like a clean bundle: report ERROR instead.
+    local subjects parsed=1
+    subjects=$(openssl crl2pkcs7 -nocrl -certfile "$tmp/bundle.pem" 2>"$tmp/openssl.err" \
+      | openssl pkcs7 -print_certs -noout 2>>"$tmp/openssl.err" \
+      | sed -n 's/^subject=//p') || parsed=0
+    if [ "$parsed" = 0 ] || { [ "$count" -gt 0 ] && [ -z "$subjects" ]; }; then
+      echo "  ERROR: openssl could not parse the bundle: $(tr '\n' ' ' <"$tmp/openssl.err")"
+      status=ERROR
+    else
+      hits=$(printf '%s\n' "$subjects" | grep -iE 'emSign|eMudhra' | sort -u || true)
+    fi
   else
     echo "  bundle: none (no CA bundle in this image)"
   fi
   if [ -n "$hits" ]; then
-    while IFS= read -r s; do judge "$s" "$strict" || status=FAIL; done <<<"$hits"
-  elif [ -n "$found" ]; then
+    while IFS= read -r s; do judge "$s" "$strict" || mark_fail; done <<<"$hits"
+  elif [ -n "$found" ] && [ "$status" != ERROR ]; then
     echo "  ok    no emSign/eMudhra subjects in the bundle"
   fi
 
@@ -132,7 +141,7 @@ check_image() {
   dirhits=$("$DOCKER" cp "$cid:/etc/ssl/certs" - 2>/dev/null | tar -t 2>/dev/null | grep -iE 'emsign|emudhra' | sed 's#^certs/##' | sort -u || true)
   if [ -n "$dirhits" ]; then
     while IFS= read -r f; do
-      judge "$(printf '%s' "$f" | sed 's/\.pem$//; s/\.crt$//; s/_/ /g') (/etc/ssl/certs/$f)" "$strict" || status=FAIL
+      judge "$(printf '%s' "$f" | sed 's/\.pem$//; s/\.crt$//; s/_/ /g') (/etc/ssl/certs/$f)" "$strict" || mark_fail
     done <<<"$dirhits"
   fi
 
@@ -145,20 +154,27 @@ const hit=l=>l.map(subj).filter(s=>/emSign|eMudhra/i.test(s));
 console.log("node "+process.version+", bundled roots: "+tls.rootCertificates.length);
 for(const s of hit(tls.rootCertificates))console.log("NODEHIT "+s);
 if(tls.getCACertificates){const d=tls.getCACertificates("default");console.log("tls.getCACertificates(default): "+d.length);for(const s of hit(d))console.log("NODEHIT "+s)}'
-    out=$("$DOCKER" run --rm --network none ${PLATFORM_ARGS[@]+"${PLATFORM_ARGS[@]}"} --entrypoint node "$img" -e "$js" 2>&1 || true)
-    printf '%s\n' "$out" | grep -v '^NODEHIT ' | sed 's/^/  /'
-    nodehits=$(printf '%s\n' "$out" | sed -n 's/^NODEHIT //p' | sort -u)
-    if [ -n "$nodehits" ]; then
-      while IFS= read -r s; do judge "$s (node built-in store)" 1 || status=FAIL; done <<<"$nodehits"
+    local noderc=0
+    out=$("$DOCKER" run --rm --network none ${PLATFORM_ARGS[@]+"${PLATFORM_ARGS[@]}"} --entrypoint node "$img" -e "$js" 2>&1) || noderc=$?
+    # A probe that did not run (wrong PLATFORM, broken image) is an ERROR, not a clean store.
+    if [ "$noderc" != 0 ] || ! printf '%s\n' "$out" | grep -q 'bundled roots: '; then
+      echo "  ERROR: node probe failed (rc=$noderc): $(printf '%s' "$out" | head -3 | tr '\n' ' ')"
+      status=ERROR
     else
-      echo "  ok    no emSign/eMudhra roots in the Node store"
+      printf '%s\n' "$out" | grep -v '^NODEHIT ' | sed 's/^/  /'
+      nodehits=$(printf '%s\n' "$out" | sed -n 's/^NODEHIT //p' | sort -u)
+      if [ -n "$nodehits" ]; then
+        while IFS= read -r s; do judge "$s (node built-in store)" 1 || mark_fail; done <<<"$nodehits"
+      else
+        echo "  ok    no emSign/eMudhra roots in the Node store"
+      fi
     fi
   fi
 
   "$DOCKER" rm -v "$cid" >/dev/null
   cid=""
   echo "  result: $status"
-  [ "$status" = FAIL ] && failed=1
+  [ "$status" != PASS ] && failed=1
   local pkg=${apk%; }
   [ -z "$pkg" ] && pkg=${deb:+ca-certificates $deb}
   [ -z "$pkg" ] && pkg="no ca-certificates package"
