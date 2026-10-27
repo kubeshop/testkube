@@ -50,54 +50,89 @@ func TestFromExecution(t *testing.T) {
 			},
 		},
 		{
-			name: "keys a step by its ref when it has no id or an earlier step has its id",
+			name: "keys a step by its ref when it has no id, repeats the id of an unrelated step, or has no signature",
 			execution: &testkube.TestWorkflowExecution{
 				Signature: []testkube.TestWorkflowSignature{
 					{Ref: "rgroup", Id: "build", Children: []testkube.TestWorkflowSignature{
 						{Ref: "rclone", Category: "Clone Git repository"},
 						{Ref: "rbare"},
 					}},
-					{Ref: "rparallel", Id: "build"},
+					{Ref: "rrepeat", Id: "build", Children: []testkube.TestWorkflowSignature{
+						{Ref: "rrepeatshell", Id: "build"},
+					}},
 				},
 				Result: &testkube.TestWorkflowResult{
 					Steps: map[string]testkube.TestWorkflowStepResult{
-						"rgroup":    {ErrorMessage: "a child step failed"},
-						"rclone":    {ErrorMessage: "the repository does not exist"},
-						"rbare":     {ErrorMessage: "the step has no name"},
-						"rparallel": {ErrorMessage: "a parallel step failed"},
+						"rgroup":       {ErrorMessage: "a child step failed"},
+						"rclone":       {ErrorMessage: "the repository does not exist"},
+						"rbare":        {ErrorMessage: "the step has no name"},
+						"rrepeat":      {ErrorMessage: "another step failed"},
+						"rrepeatshell": {ErrorMessage: "its command failed"},
+						"rnosignature": {ErrorMessage: "the signature does not hold the step"},
 					},
 				},
 			},
 			want: Execution{
 				Outputs: map[string]string{},
 				StepErrors: map[string]string{
-					"build":     "a child step failed",
-					"rclone":    "the repository does not exist",
-					"rbare":     "the step has no name",
-					"rparallel": "a parallel step failed",
+					"build":        "a child step failed",
+					"rclone":       "the repository does not exist",
+					"rbare":        "the step has no name",
+					"rrepeat":      "another step failed",
+					"rrepeatshell": "its command failed",
+					"rnosignature": "the signature does not hold the step",
 				},
 			},
 		},
 		{
-			name: "gives the id of a group to the child that runs its operation",
+			name: "keys a group and the stage that runs its operation by the id of the step, and the stage wins",
 			execution: &testkube.TestWorkflowExecution{
 				Signature: []testkube.TestWorkflowSignature{
 					{Ref: "rgroup", Id: "build", Name: "Build", Children: []testkube.TestWorkflowSignature{
 						{Ref: "rshell", Id: "build"},
-						{Ref: "rartifacts", Category: "Upload artifacts"},
+						{Ref: "rartifacts", Id: "build_upload_artifacts", Category: "Upload artifacts"},
 					}},
 				},
 				Result: &testkube.TestWorkflowResult{
 					Steps: map[string]testkube.TestWorkflowStepResult{
-						"rgroup": {ErrorMessage: "a child step failed"},
+						"rgroup": {ErrorMessage: "a child step failed", Attempts: 1},
 						"rshell": {ErrorMessage: "the command failed", Attempts: 2},
 					},
 				},
 			},
 			want: Execution{
 				Outputs:      map[string]string{},
-				StepErrors:   map[string]string{"rgroup": "a child step failed", "build": "the command failed"},
+				StepErrors:   map[string]string{"build": "the command failed"},
 				StepAttempts: map[string]int64{"build": 2},
+			},
+		},
+		{
+			name: "keys the value of a group by the id of the step when the stage that runs its operation has none",
+			execution: &testkube.TestWorkflowExecution{
+				Signature: []testkube.TestWorkflowSignature{
+					{Ref: "rgroup", Id: "build", Name: "Build", Children: []testkube.TestWorkflowSignature{
+						{Ref: "rshell", Id: "build"},
+					}},
+				},
+				Result: &testkube.TestWorkflowResult{
+					Steps: map[string]testkube.TestWorkflowStepResult{
+						"rgroup": {ErrorMessage: "the step timed out", ErrorReason: "step-timeout"},
+						"rshell": {},
+					},
+					StatusDetails: &testkube.TestWorkflowStatusDetails{
+						Type_:  string(testkube.StatusDetailsTypeStepFailure),
+						Reason: "step-timeout",
+						Step:   "rgroup",
+					},
+				},
+			},
+			want: Execution{
+				Outputs:      map[string]string{},
+				StepErrors:   map[string]string{"build": "the step timed out"},
+				StepReasons:  map[string]string{"build": "step-timeout"},
+				StatusType:   string(testkube.StatusDetailsTypeStepFailure),
+				StatusReason: "step-timeout",
+				StatusStep:   "build",
 			},
 		},
 		{

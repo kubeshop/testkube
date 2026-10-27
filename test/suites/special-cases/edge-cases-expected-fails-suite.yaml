@@ -145,10 +145,10 @@ spec:
         as: step-retry
   - name: assert-step-retry-attempts
     shell: |
-      # The child step fails on the third attempt. Testkube generates the step ref, so the check accepts any ref.
+      # The child step fails on the third attempt. The key is the id of the step. A runner that sends no id gives the random ref.
       attempts={{ shellquote(tojson(execution("step-retry").stepAttempts)) }}
       echo "$attempts"
-      echo "$attempts" | grep -Eq '^\{"r[a-z0-9]+":3\}$' || { echo "unexpected attempts: $attempts"; exit 1; }
+      echo "$attempts" | grep -Eq '^\{"(pass_twice_then_fail|r[a-z0-9]+)":3\}$' || { echo "unexpected attempts: $attempts"; exit 1; }
   - name: expected-fail-step-retry-timeout
     negative: true
     execute:
@@ -160,7 +160,7 @@ spec:
       # Every attempt ends with the step timeout, so the last attempt also reports its number.
       attempts={{ shellquote(tojson(execution("step-retry-timeout").stepAttempts)) }}
       echo "$attempts"
-      echo "$attempts" | grep -Eq '^\{"r[a-z0-9]+":3\}$' || { echo "unexpected attempts: $attempts"; exit 1; }
+      echo "$attempts" | grep -Eq '^\{"(time_out_three_times|r[a-z0-9]+)":3\}$' || { echo "unexpected attempts: $attempts"; exit 1; }
       [ {{ shellquote(execution("step-retry-timeout").status) }} = "aborted" ] || { echo "unexpected status"; exit 1; }
   - name: expected-fail-negative-step
     negative: true
