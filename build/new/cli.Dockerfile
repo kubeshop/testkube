@@ -1,6 +1,6 @@
 ARG ALPINE_IMAGE
 
-FROM --platform=$BUILDPLATFORM golang:1.27.1-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine AS build
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -25,6 +25,8 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
     -o /app/kubectl-testkube cmd/kubectl-testkube/main.go
 
 FROM ${ALPINE_IMAGE}
+# Refresh the base CA bundle; the constraint fails the build if the eMudhra fix (20261020-r0) is missing
+RUN apk --no-cache upgrade && apk --no-cache add 'ca-certificates-bundle>=20261020-r0'
 COPY --from=build /app/kubectl-testkube /bin/kubectl-testkube
 
 # Create symbolic links for 'testkube' and 'tk' as aliases for 'kubectl-testkube'

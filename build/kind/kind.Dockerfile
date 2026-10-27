@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1
 # Step 1: Use a base image with Docker installed
-FROM docker:29.8.1-dind
+FROM docker:29.9.2-dind
 
 ENV TINI_SUBREAPER=true
 
 # Step 2: Install necessary dependencies (curl, bash, tini, jq)
-RUN apk add --no-cache bash curl tini jq
+RUN apk upgrade --no-cache && apk add --no-cache bash curl tini jq 'ca-certificates-bundle>=20261020-r0'
 
 # Step 3: Install Kind (Kubernetes in Docker)
 RUN curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64 && \
