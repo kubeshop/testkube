@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -977,6 +978,7 @@ func TestPostgresRepositorySignature_Integration(t *testing.T) {
 			{Ref: "rartifacts", Id: "build_upload_artifacts", Category: "Upload artifacts", Optional: true},
 		}},
 		{Ref: "rold", Name: "A step from a runner that sends no id"},
+		{Ref: "rlong", Id: strings.Repeat("a", 300), Name: "A step with an explicit id that is longer than a name column"},
 	}
 	require.NoError(t, repo.Insert(ctx, testkube.TestWorkflowExecution{
 		Id:        "exec-1",

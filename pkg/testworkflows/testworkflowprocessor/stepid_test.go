@@ -1,6 +1,7 @@
 package testworkflowprocessor
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -274,6 +275,7 @@ func TestAssignStageIds(t *testing.T) {
 		s.SetCategory(category)
 		return s
 	}
+	longId := strings.Repeat("a", 120)
 	group := func(ref, id, name string, children ...stage.Stage) stage.Stage {
 		g := stage.NewGroupStage(ref, false)
 		g.SetId(id)
@@ -334,6 +336,20 @@ func TestAssignStageIds(t *testing.T) {
 				"rgroup":     "run_shell_command",
 				"rshell":     "run_shell_command",
 				"rartifacts": "run_shell_command_upload_artifacts",
+			},
+		},
+		{
+			name: "a long id is cut to the limit and ends with a hash of the full id, so long ids stay different",
+			stages: []stage.Stage{group("rgroup", longId, "",
+				container("rshell", "", "", "Run shell command"),
+				container("rfirst", "", "", "Upload artifacts"),
+				container("rsecond", "", "", "Upload artifacts"),
+			)},
+			want: map[string]string{
+				"rgroup":  longId,
+				"rshell":  longId,
+				"rfirst":  longId[:119] + "_2b2ebd34",
+				"rsecond": longId[:119] + "_c0b2cf24",
 			},
 		},
 	}
