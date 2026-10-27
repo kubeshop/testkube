@@ -20,6 +20,7 @@ spec:
     git:
       uri: https://github.com/kubeshop/testkube-docs.git
       revision: '{{config.revision}}'
+      verbosity: quiet
   container:
     workingDir: /data/repo
     env:
@@ -71,6 +72,7 @@ spec:
     git:
       uri: https://github.com/kubeshop/testkube.git
       revision: '{{config.revision}}'
+      verbosity: quiet
   container:
     workingDir: /data/repo
     env:
@@ -139,6 +141,7 @@ spec:
     git:
       uri: https://github.com/kubeshop/testkube.git
       revision: '{{config.revision}}'
+      verbosity: quiet
   container:
     workingDir: /data/repo/proto
     image: bufbuild/buf:1.68.1
@@ -181,6 +184,7 @@ spec:
     git:
       uri: https://github.com/kubeshop/testkube.git
       revision: '{{config.revision}}'
+      verbosity: quiet
   container:
     workingDir: /data/repo
     env:
@@ -385,6 +389,7 @@ spec:
     git:
       uri: https://github.com/kubeshop/testkube.git
       revision: '{{config.revision}}'
+      verbosity: quiet
   container:
     workingDir: /data/repo
     env:
@@ -463,6 +468,7 @@ spec:
     git:
       uri: https://github.com/kubeshop/testkube.git
       revision: '{{config.revision}}'
+      verbosity: quiet
   container:
     workingDir: /data/repo
     env:
@@ -522,6 +528,7 @@ spec:
     git:
       uri: https://github.com/kubeshop/testkube.git
       revision: '{{config.revision}}'
+      verbosity: quiet
   container:
     workingDir: /data/repo
     image: golang:1.27.0-bookworm
@@ -568,6 +575,7 @@ spec:
     git:
       uri: https://github.com/kubeshop/testkube.git
       revision: '{{config.revision}}'
+      verbosity: quiet
   container:
     image: alpine:3.21
     resources:
