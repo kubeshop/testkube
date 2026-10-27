@@ -32,7 +32,7 @@ PLATFORM_ARGS=()
 [ -n "${PLATFORM:-}" ] && PLATFORM_ARGS=(--platform "$PLATFORM")
 
 if [ $# -lt 1 ]; then
-  sed -n '2,24p' "$0"
+  sed -n '2,26p' "$0"
   exit 2
 fi
 
@@ -40,7 +40,7 @@ tmp=$(mktemp -d)
 cid=""
 # shellcheck disable=SC2329  # invoked by the EXIT trap
 cleanup() {
-  [ -n "$cid" ] && "$DOCKER" rm -v "$cid" >/dev/null 2>&1
+  if [ -n "$cid" ]; then "$DOCKER" rm -v "$cid" >/dev/null 2>&1 || true; fi
   rm -rf "$tmp"
 }
 trap cleanup EXIT
@@ -77,8 +77,11 @@ check_image() {
     echo "  ERROR: docker create failed"; summary+=("$img|ERROR|create failed"); failed=1; return
   fi
 
-  # How the service starts (from the image: the container's cmd is the /nonexistent placeholder).
-  echo "  entrypoint: $("$DOCKER" image inspect --format '{{json .Config.Entrypoint}}' "$img")  cmd: $("$DOCKER" image inspect --format '{{json .Config.Cmd}}' "$img")"
+  # How the service starts, read from the container's own image (the container cmd is the
+  # /nonexistent placeholder, and inspecting by image id keeps PLATFORM honoured).
+  local iid
+  iid=$("$DOCKER" inspect --format '{{.Image}}' "$cid")
+  echo "  entrypoint: $("$DOCKER" image inspect --format '{{json .Config.Entrypoint}}' "$iid")  cmd: $("$DOCKER" image inspect --format '{{json .Config.Cmd}}' "$iid")"
   local env
   env=$("$DOCKER" inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$cid" \
     | grep -E '^(NODE_OPTIONS|NODE_EXTRA_CA_CERTS|NODE_USE_SYSTEM_CA|SSL_CERT_FILE|SSL_CERT_DIR|NODE_VERSION)=|use-(openssl|system)-ca' || true)
