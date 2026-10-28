@@ -1,19 +1,3 @@
-// Package executioncache derives where a step's dependency cache lives in object
-// storage, and picks which stored entry a restore should use.
-//
-// Entries are separated by namespace as well as by scope. A run for a pull request writes
-// only into its own namespace and may read the base one; every trusted run - a push, a
-// tag, a schedule, a manual run - reads and writes the base namespace. Without that, a
-// pull request could store an entry that a later run for the default branch restored by
-// way of a restoreKeys prefix, and for a build cache that is code that then runs. The
-// author of a pull request controls what executes in its run, so the identity of the
-// namespace has to be derived from what the trigger recorded, never from the request.
-//
-// Both halves live here, away from any transport, for one reason: the control plane in
-// this repository and the commercial one must agree on them exactly. A disagreement
-// would not fail loudly - it would produce entries that the other plane can never find,
-// so every run would miss its own cache and quietly reinstall everything. The
-// commercial plane is expected to import this package rather than reimplement it.
 package executioncache
 
 import (
