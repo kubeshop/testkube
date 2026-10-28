@@ -26,7 +26,7 @@ spec:
           port: 27017
         periodSeconds: 1
     nats:
-      image: bitnami/nats
+      image: nats:2.15.2-alpine
       readinessProbe:
         tcpSocket:
           port: 4222
