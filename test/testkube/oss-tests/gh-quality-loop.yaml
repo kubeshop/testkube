@@ -235,7 +235,7 @@ spec:
     nats:
       logs: always
       timeout: 5m
-      image: nats:2
+      image: nats:2.15.2-alpine
       resources:
         requests:
           cpu: 100m
