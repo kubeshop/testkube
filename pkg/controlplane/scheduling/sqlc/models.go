@@ -147,4 +147,5 @@ type TestWorkflowSignature struct {
 	SigOrder    int32              `db:"sig_order" json:"sig_order"`
 	ID          pgtype.UUID        `db:"id" json:"id"`
 	ParentID    pgtype.UUID        `db:"parent_id" json:"parent_id"`
+	StepID      pgtype.Text        `db:"step_id" json:"step_id"`
 }
