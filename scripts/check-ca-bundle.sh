@@ -195,7 +195,7 @@ if(tls.getCACertificates){const d=tls.getCACertificates("default");console.log("
     fi
   fi
 
-  "$DOCKER" rm -v "$cid" >/dev/null
+  "$DOCKER" rm -v "$cid" >/dev/null 2>&1 || echo "  warn  could not remove container $cid (the EXIT trap retries)"
   cid=""
   echo "  result: $status"
   [ "$status" != PASS ] && failed=1
