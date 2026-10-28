@@ -110,6 +110,8 @@ The same path exists in the connected-mode scheduler in `testkube-cloud-api`, wh
 
 **Reserved references**: `execution("parent")` and `execution("rerun")` resolve before the registry of executions a workflow scheduled, so a child aliased - or a workflow named - `parent`/`rerun` cannot shadow them. A collision is refused rather than resolved either way, since preferring the reserved meaning would instead make that child unreachable by name.
 
+**Parallel worker outputs**: `parallel("<step id>", <index>)` reads what a worker of an earlier `parallel` step published - `{index, status, outputs}` - so a sharded run can aggregate per-shard values. A worker writes to `/testkube/outputs` like any step, and its own init prints the outputs instruction. The parent toolkit asks `StatusNotifications` to forward those instructions (`StatusNotificationsOptions.Outputs`), merges them per worker with the later step winning (`executiondata.MergeOutputs`), and when the workers end prints one hint, `paralleldata.<step id>`. The processor passes the step id as `--id`. The hint lives in the parent pod's init state, which `data.ParallelDataMachine()` reads, and it is deliberately not saved on the execution record. A workflow that wants to publish an aggregate writes it to its own outputs. The types and the function are in `pkg/paralleldata`.
+
 ### 5. Storage Layer
 
 **PostgreSQL** (Future Primary Database, currently in Preview)

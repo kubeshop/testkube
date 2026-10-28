@@ -26,6 +26,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executiondata"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
@@ -387,6 +388,15 @@ func (w *worker) StatusNotifications(ctx context.Context, id string, opts execut
 		prevStatus := testkube.QUEUED_TestWorkflowStatus
 		prevStepStatus := testkube.QUEUED_TestWorkflowStepStatus
 		prevReady := false
+		// The reader may stop reading once it is done (e.g. fail-fast stopped the parallel step),
+		// so every send must give up on cancellation for the deferred cleanup to run.
+		send := func(notification executionworkertypes.StatusNotification) bool {
+			if watcher.SendWithContext(watchCtx, notification) {
+				return true
+			}
+			watcher.Close(watchCtx.Err())
+			return false
+		}
 		for n := range ch {
 			if n.Error == nil && n.Value.AbortReason != "" {
 				w.abortRequested(id, opts.Hints.Namespace, n.Value.AbortReason)
@@ -395,6 +405,14 @@ func (w *worker) StatusNotifications(ctx context.Context, id string, opts execut
 			if n.Error != nil {
 				watcher.Close(n.Error)
 				return
+			}
+
+			// Forward the outputs of the steps, so a parallel step can read what its workers published
+			if opts.Outputs && n.Value.Output != nil && n.Value.Output.Name == executiondata.OutputsInstructionName {
+				if !send(executionworkertypes.StatusNotification{Output: controller.InstructionToInternal(n.Value.Output)}) {
+					return
+				}
+				continue
 			}
 
 			// Check the readiness
@@ -425,13 +443,15 @@ func (w *worker) StatusNotifications(ctx context.Context, id string, opts execut
 				prevStatus = status
 				prevStepStatus = stepStatus
 				prevStep = current
-				watcher.Send(executionworkertypes.StatusNotification{
+				if !send(executionworkertypes.StatusNotification{
 					Ref:      current,
 					NodeName: nodeName,
 					PodIp:    podIp,
 					Ready:    ready,
 					Result:   n.Value.Result,
-				})
+				}) {
+					return
+				}
 			} else if nodeName != prevNodeName || podIp != prevIp || ready != prevReady {
 				prevNodeName = nodeName
 				prevIp = podIp
@@ -439,12 +459,14 @@ func (w *worker) StatusNotifications(ctx context.Context, id string, opts execut
 				prevStatus = status
 				prevStepStatus = stepStatus
 				prevStep = current
-				watcher.Send(executionworkertypes.StatusNotification{
+				if !send(executionworkertypes.StatusNotification{
 					Ref:      current,
 					NodeName: nodeName,
 					PodIp:    podIp,
 					Ready:    ready,
-				})
+				}) {
+					return
+				}
 			}
 		}
 		watcher.Close(nil)

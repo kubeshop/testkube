@@ -37,9 +37,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/credentials"
 	"github.com/kubeshop/testkube/pkg/executiondata"
 	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/paralleldata"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -47,6 +49,9 @@ import (
 // ParallelOptions contains all dependencies for parallel execution
 type ParallelOptions struct {
 	Storage artifacts.InternalArtifactStorage
+	// StepId is the id of the parallel step. When it is set, the step records what its workers
+	// published, so the later steps can read it with parallel().
+	StepId string
 }
 
 // DefaultParallelOptions creates options with production dependencies
@@ -128,6 +133,7 @@ type Update struct {
 
 func NewParallelCmd() *cobra.Command {
 	var base64Encoded bool
+	var stepId string
 
 	cmd := &cobra.Command{
 		Use:   "parallel <spec>",
@@ -140,7 +146,7 @@ func NewParallelCmd() *cobra.Command {
 				toolkitcommon.ExitOnError("loading configuration", err)
 			}
 
-			err = RunParallel(cmd.Context(), args[0], cfg, base64Encoded)
+			err = RunParallel(cmd.Context(), args[0], cfg, base64Encoded, stepId)
 			if err != nil {
 				toolkitcommon.Fail(err)
 			}
@@ -149,6 +155,7 @@ func NewParallelCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&base64Encoded, "base64", false, "spec is base64 encoded")
+	cmd.Flags().StringVar(&stepId, "id", "", "id of the step, which names the workers in parallel()")
 
 	return cmd
 }
@@ -162,6 +169,8 @@ type ParallelExecutionResult struct {
 	// StoppedWorkers counts the workers that fail-fast stopped or did not start.
 	StoppedWorkers int64
 	FirstFailure   *WorkerFailure // The worker that failed first, nil when no worker failed
+	// Workers holds what the workers published.
+	Workers paralleldata.Group
 }
 
 // WorkerFailure is the cause of a worker that did not pass.
@@ -322,11 +331,12 @@ func endSentence(text string) string {
 // The base64Encoded flag indicates the spec was encoded to prevent testworkflow-init
 // from prematurely resolving expressions like {{ matrix.* }} or {{ shard.* }}.
 // Returns nil if all workers succeed, error if any fail or on configuration errors.
-func RunParallel(ctx context.Context, specContent string, cfg *config.ConfigV2, base64Encoded bool) error {
+func RunParallel(ctx context.Context, specContent string, cfg *config.ConfigV2, base64Encoded bool, stepId string) error {
 	opts, err := DefaultParallelOptions(cfg)
 	if err != nil {
 		return err
 	}
+	opts.StepId = stepId
 	return RunParallelWithOptions(ctx, specContent, cfg, base64Encoded, opts)
 }
 
@@ -345,6 +355,7 @@ func RunParallelWithOptions(ctx context.Context, specContent string, cfg *config
 
 	if params.Count == 0 {
 		fmt.Printf("0 instances requested (combinations=%d, count=%d), skipping\n", params.MatrixCount, params.ShardCount)
+		publishWorkers(cfg, opts.StepId, paralleldata.Group{})
 		return nil
 	}
 
@@ -354,7 +365,11 @@ func RunParallelWithOptions(ctx context.Context, specContent string, cfg *config
 	}
 	fmt.Println("Parallelism: " + params.String(parallelism))
 
-	workers, transferSrv, err := prepareWorkers(parallel, params, cfg, stateMachine, credentialMachine)
+	// The workers resolve parallel() against the parallel steps that finished in this pod, except the
+	// parallel steps a worker declares itself, which it resolves in its own pod (see resolveWorkerSpec).
+	groups := data.ParallelGroups()
+
+	workers, transferSrv, err := prepareWorkers(parallel, params, cfg, stateMachine, groups, credentialMachine)
 	if err != nil {
 		return err
 	}
@@ -365,13 +380,16 @@ func RunParallelWithOptions(ctx context.Context, specContent string, cfg *config
 
 	if len(workers) == 0 {
 		fmt.Println("nothing to run")
+		publishWorkers(cfg, opts.StepId, paralleldata.Group{Count: params.Count})
 		return nil
 	}
 
-	result, err := executeWorkersWithStorage(ctx, workers, params, parallelism, parallel.FailFast, cfg, opts.Storage, stateMachine, credentialMachine)
+	result, err := executeWorkersWithStorage(ctx, workers, params, parallelism, parallel.FailFast, cfg, opts.Storage, stateMachine, groups, credentialMachine)
 	if err != nil {
 		return err
 	}
+	// Failed workers are recorded too, so an aggregate can read what each shard got to
+	publishWorkers(cfg, opts.StepId, result.Workers)
 
 	if result.FailedWorkers == 0 && result.StoppedWorkers == 0 {
 		fmt.Printf("Successfully finished %d workers.\n", result.TotalWorkers)
@@ -381,6 +399,240 @@ func RunParallelWithOptions(ctx context.Context, specContent string, cfg *config
 	}
 
 	return nil
+}
+
+// publishWorkers records what the workers published for the later steps of the pod. It is a hint, so
+// it is stored in the state of the pod and not saved on the execution record. A step with no id cannot
+// be addressed, so it records nothing.
+func publishWorkers(cfg *config.ConfigV2, stepId string, group paralleldata.Group) {
+	if stepId == "" {
+		return
+	}
+	if group.Workers == nil {
+		group.Workers = []paralleldata.Worker{}
+	}
+	instructions.PrintHintDetails(cfg.Ref(), paralleldata.InstructionName(stepId), group)
+}
+
+// resolveWorkerSpec resolves the specification of a worker in place: a *testworkflowsv1.StepParallel
+// while the workers are built, and the *testworkflowsv1.TestWorkflowSpec of one worker in the final
+// resolution. parallel() reads the parallel steps that finished in this pod, except the ones the worker
+// resolves in a pod of its own.
+//
+// Every nested parallel step runs its steps in pods of its own, so each level of nesting is a scope. A
+// parallel step a level declares shadows a group of this pod with the same id in that level and in the
+// levels nested in it, never in the levels around it, which run in other pods. So the specification is
+// resolved level by level, outermost first:
+//
+//  1. The names of the steps of the level are resolved, and saved on the specification. The processor
+//     of the worker derives the id of a step from its name as it is then - `Shard {{ index }}` is
+//     `shard_0` in the first worker - so the ids can only be read once the names are resolved.
+//  2. The ids of the parallel steps the level declares are added to those of the levels around it.
+//  3. The level is resolved with those ids shadowed, without the steps of its nested parallel steps.
+//     The rest of a nested parallel step is resolved here, because this level runs it.
+//  4. The steps of each nested parallel step are resolved as a level of their own.
+//
+// A name that still holds an expression has an id nobody knows yet. Before the final resolution, the
+// level, and the levels nested in it, then leave parallel() to it. The final resolution is the last
+// one, so it takes the id from the name as it is, which is what the processor of the worker does.
+func resolveWorkerSpec(spec interface{}, groups map[string]paralleldata.Group, final bool, machines ...expressions.Machine) error {
+	var lists []*[]testworkflowsv1.Step
+	switch v := spec.(type) {
+	case *testworkflowsv1.StepParallel:
+		lists = []*[]testworkflowsv1.Step{&v.Setup, &v.Steps, &v.After}
+	case *testworkflowsv1.TestWorkflowSpec:
+		lists = []*[]testworkflowsv1.Step{&v.Setup, &v.Steps, &v.After}
+	default:
+		return fmt.Errorf("unsupported worker specification %T", spec)
+	}
+	scope := workerScope{groups: groups, final: final, machines: machines}
+	return scope.resolve([]interface{}{spec}, lists, map[string]bool{}, false)
+}
+
+type workerScope struct {
+	groups   map[string]paralleldata.Group
+	final    bool
+	machines []expressions.Machine
+}
+
+// resolve resolves one level: the targets, whose steps are lists, inside the levels that declared the
+// ids in shadowed. With unknown set, a level around it has an id nobody knows yet, so parallel() is left.
+func (w workerScope) resolve(targets []interface{}, lists []*[]testworkflowsv1.Step, shadowed map[string]bool, unknown bool) error {
+	// A name reads the scope of its own level: it cannot read a step of the level, which has not run yet
+	if !w.resolveNames(lists, w.parallelMachine(shadowed, unknown)) {
+		unknown = true
+	}
+
+	declared := make(map[string]bool, len(shadowed))
+	for id := range shadowed {
+		declared[id] = true
+	}
+	for _, id := range levelParallelIds(lists) {
+		declared[id] = true
+	}
+
+	nested := levelParallelSteps(lists)
+	bodies := make([][3][]testworkflowsv1.Step, len(nested))
+	for i, parallel := range nested {
+		bodies[i] = [3][]testworkflowsv1.Step{parallel.Setup, parallel.Steps, parallel.After}
+		parallel.Setup, parallel.Steps, parallel.After = nil, nil, nil
+	}
+	machines := append(append([]expressions.Machine{}, w.machines...), w.parallelMachine(declared, unknown))
+	var err error
+	for _, target := range targets {
+		if err = expressions.Simplify(target, machines...); err != nil {
+			break
+		}
+	}
+	for i, parallel := range nested {
+		parallel.Setup, parallel.Steps, parallel.After = bodies[i][0], bodies[i][1], bodies[i][2]
+	}
+	if err != nil {
+		return err
+	}
+
+	// The setup, steps and after steps of a parallel step share the id namespace of its workers
+	for _, parallel := range nested {
+		body := []*[]testworkflowsv1.Step{&parallel.Setup, &parallel.Steps, &parallel.After}
+		if err := w.resolve([]interface{}{body[0], body[1], body[2]}, body, declared, unknown); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// parallelMachine resolves parallel() against the groups of this pod with the ids shadowed. With unknown
+// set, it resolves nothing.
+func (w workerScope) parallelMachine(shadowed map[string]bool, unknown bool) expressions.Machine {
+	if unknown {
+		return paralleldata.NewScopedMachine(nil, nil)
+	}
+	return paralleldata.NewScopedMachine(w.groups, shadowed)
+}
+
+// resolveNames resolves the names of the steps of the level in place. It reports false when a name could
+// not be resolved, unless this is the final resolution, which keeps such a name as it is.
+func (w workerScope) resolveNames(lists []*[]testworkflowsv1.Step, parallelMachine expressions.Machine) bool {
+	machines := append([]expressions.Machine{parallelMachine}, w.machines...)
+	resolved := true
+	walkLevel(lists, func(step *testworkflowsv1.Step) {
+		if !strings.Contains(step.Name, "{{") {
+			return
+		}
+		name, err := expressions.EvalTemplate(step.Name, machines...)
+		if err == nil {
+			step.Name = name
+		} else if !w.final {
+			resolved = false
+		}
+	})
+	return resolved
+}
+
+// walkLevel calls fn for every step of the level, including the steps of its groups, but not the steps
+// of its nested parallel steps, which are levels of their own.
+func walkLevel(lists []*[]testworkflowsv1.Step, fn func(step *testworkflowsv1.Step)) {
+	var walk func(steps []testworkflowsv1.Step)
+	walk = func(steps []testworkflowsv1.Step) {
+		for i := range steps {
+			fn(&steps[i])
+			walk(steps[i].Setup)
+			walk(steps[i].Steps)
+		}
+	}
+	for _, list := range lists {
+		walk(*list)
+	}
+}
+
+// levelParallelSteps returns the nested parallel steps of the level.
+func levelParallelSteps(lists []*[]testworkflowsv1.Step) []*testworkflowsv1.StepParallel {
+	var steps []*testworkflowsv1.StepParallel
+	walkLevel(lists, func(step *testworkflowsv1.Step) {
+		if step.Parallel != nil {
+			steps = append(steps, step.Parallel)
+		}
+	})
+	return steps
+}
+
+// levelParallelIds returns the ids of the parallel steps the level declares. A step without an explicit id
+// gets the id the processor derives from its name, with the suffix that tells apart steps with the same
+// name. The ids are resolved on a copy, and a definition error is left for the processor of the worker.
+func levelParallelIds(lists []*[]testworkflowsv1.Step) []string {
+	spec := &testworkflowsv1.TestWorkflowSpec{}
+	copies := []*[]testworkflowsv1.Step{&spec.Setup, &spec.Steps, &spec.After}
+	for i, list := range lists {
+		for _, step := range *list {
+			*copies[i] = append(*copies[i], *step.DeepCopy())
+		}
+	}
+	_ = testworkflowprocessor.ResolveAndValidateStepIds(spec)
+	var ids []string
+	walkLevel(copies, func(step *testworkflowsv1.Step) {
+		if step.Parallel == nil {
+			return
+		}
+		if id := testworkflowprocessor.ResolveStepId(step.StepMeta); id != "" {
+			ids = append(ids, id)
+		}
+	})
+	return ids
+}
+
+// workerOutputs collects what the workers published while they run. Workers run concurrently, so
+// it is guarded by a mutex.
+type workerOutputs struct {
+	mu      sync.Mutex
+	workers map[int64]*paralleldata.Worker
+}
+
+func newWorkerOutputs() *workerOutputs {
+	return &workerOutputs{workers: make(map[int64]*paralleldata.Worker)}
+}
+
+func (w *workerOutputs) get(index int64) *paralleldata.Worker {
+	if w.workers[index] == nil {
+		w.workers[index] = &paralleldata.Worker{Index: index, Outputs: make(map[string]string)}
+	}
+	return w.workers[index]
+}
+
+// merge adds an outputs instruction of the worker. The instructions arrive in the order the steps
+// emitted them, so a later step wins, and a replayed instruction changes nothing.
+func (w *workerOutputs) merge(index int64, output testkube.TestWorkflowOutput) {
+	if w == nil {
+		return
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	executiondata.MergeOutputs(w.get(index).Outputs, output)
+}
+
+// finish records the final status of the worker.
+func (w *workerOutputs) finish(index int64, status *testkube.TestWorkflowStatus) {
+	if w == nil || status == nil {
+		return
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.get(index).Status = *status
+}
+
+// group returns the workers ordered by index.
+func (w *workerOutputs) group(count int64) paralleldata.Group {
+	group := paralleldata.Group{Count: count, Workers: []paralleldata.Worker{}}
+	if w == nil {
+		return group
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	for index := int64(0); index < count; index++ {
+		if worker, ok := w.workers[index]; ok {
+			group.Workers = append(group.Workers, *worker)
+		}
+	}
+	return group
 }
 
 // parseAndValidateSpec parses the input spec and calculates execution parameters.
@@ -396,7 +648,7 @@ func parseAndValidateSpec(specContent string, cfg *config.ConfigV2, base64Encode
 	parser.NormalizeParallelSpec(parallel)
 
 	// Preserve env.* expressions for parallel workers
-	baseMachine := spawn.ParallelCreateBaseMachineWithoutEnv(cfg, stateMachine, data.ExecutionDataMachine(), credentialMachine)
+	baseMachine := spawn.ParallelCreateBaseMachineWithoutEnv(cfg, stateMachine, data.ExecutionDataMachine(), data.ParallelDataMachine(), credentialMachine)
 
 	params, err := commontcl.GetParamsSpec(parallel.Matrix, parallel.Shards, parallel.Count, parallel.MaxCount, baseMachine)
 	if err != nil {
@@ -413,13 +665,14 @@ const parallelSubject = "The parallel step"
 // Creates a transfer server for file sharing between parent and workers.
 // Uses expression machine without env resolution to preserve environment expressions.
 // Returns worker specs and initialized transfer server.
-func prepareWorkers(parallel *testworkflowsv1.StepParallel, params *commontcl.ParamsSpec, cfg *config.ConfigV2, stateMachine expressions.Machine, credentialMachine expressions.Machine) ([]WorkerSpec, transfer.Server, error) {
+func prepareWorkers(parallel *testworkflowsv1.StepParallel, params *commontcl.ParamsSpec, cfg *config.ConfigV2, stateMachine expressions.Machine, groups map[string]paralleldata.Group, credentialMachine expressions.Machine) ([]WorkerSpec, transfer.Server, error) {
 	transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, cfg.IP(), constants.DefaultTransferPort)
 
 	// Preserve env.* expressions for parallel workers
 	baseMachine := spawn.ParallelCreateBaseMachineWithoutEnv(cfg, stateMachine, data.ExecutionDataMachine(), credentialMachine)
 
 	builder := NewParallelWorkersBuilder(transferSrv, baseMachine, params, cfg)
+	builder.parallelGroups = groups
 	workers, err := builder.BuildWorkerSpecs(parallel)
 	if err != nil {
 		return nil, nil, definitionOrRuntime(parallelSubject, err)
@@ -506,6 +759,8 @@ type ParallelWorkersBuilder struct {
 	baseMachine expressions.Machine
 	paramsSpec  *commontcl.ParamsSpec
 	cfg         *config.ConfigV2
+	// parallelGroups are the parallel steps that finished in this pod, which the workers read with parallel().
+	parallelGroups map[string]paralleldata.Group
 }
 
 // NewParallelWorkersBuilder creates a new workers builder
@@ -554,9 +809,12 @@ func (b *ParallelWorkersBuilder) buildSingleWorkerSpec(parallel *testworkflowsv1
 	}
 
 	spec := parallel.DeepCopy()
-	if err := expressions.Simplify(&spec, machines...); err != nil {
+	if err := resolveWorkerSpec(spec, b.parallelGroups, false, machines...); err != nil {
 		return WorkerSpec{}, &spawn.ExpressionError{Err: err}
 	}
+
+	// Transfer and fetch run in this pod, where parallel() reads only the steps that finished here
+	machines = append(machines, paralleldata.NewScopedMachine(b.parallelGroups, nil))
 
 	// An output another workflow withheld resolves to a marker instead of the value it
 	// was meant to carry. The worker would receive it baked into its specification, so
@@ -602,6 +860,10 @@ type WorkerExecutor struct {
 	updates         chan<- Update
 	fullBaseMachine expressions.Machine
 	cfg             *config.ConfigV2
+	// parallelGroups are the parallel steps that finished in this pod, which the workers read with parallel().
+	parallelGroups map[string]paralleldata.Group
+	// outputs collects what the workers published. When it is nil, the outputs are not read.
+	outputs *workerOutputs
 }
 
 // NewWorkerExecutor creates a new worker executor
@@ -641,7 +903,10 @@ func (e *WorkerExecutor) ExecuteWorker(ctx context.Context, worker WorkerSpec, p
 	)
 
 	// Apply final expression resolution with all context (resource, worker, PVC, params)
-	_ = expressions.Simplify(&worker.Spec, machine)
+	_ = resolveWorkerSpec(&worker.Spec, e.parallelGroups, true, machine)
+
+	// The log condition is evaluated in this pod, where parallel() reads only the steps that finished here
+	machine = expressions.CombinedMachines(machine, paralleldata.NewScopedMachine(e.parallelGroups, nil))
 
 	// Register worker with nil status to indicate it's queued but not yet started
 	e.registry.SetStatus(worker.Index, nil)
@@ -702,22 +967,35 @@ func (e *WorkerExecutor) monitorWorkerExecution(ctx context.Context, worker Work
 			Signature:   result.Signature,
 			ScheduledAt: &result.ScheduledAt,
 		},
+		Outputs: e.outputs != nil,
 	})
 
 	if notifications.Err() != nil {
 		log("error", "failed to connect to the parallel worker", notifications.Err().Error())
+		e.outputs.finish(worker.Index, finishedStatus(lastResult))
 		return false, notifications.Err()
 	}
 
 	log("created")
 
 	passed, err := e.processWorkerNotifications(ctx, notifications, worker, result.Signature, log, &lastResult)
+	e.outputs.finish(worker.Index, finishedStatus(lastResult))
 	// Notify caller of pass/fail BEFORE cleanup runs (which may take 25+ seconds).
 	// This allows failFast to cancel other workers promptly.
 	for _, cb := range onResult {
 		cb(passed, lastResult.Clone(), err)
 	}
 	return passed, err
+}
+
+// finishedStatus is the status parallel() reads for a worker whose monitoring ended. A watch that was
+// interrupted can leave a status that is not terminal, such as running, but the cleanup destroys the
+// worker and the parallel step finishes, so the worker ended aborted.
+func finishedStatus(result testkube.TestWorkflowResult) *testkube.TestWorkflowStatus {
+	if result.Status != nil && result.Status.Finished() {
+		return result.Status
+	}
+	return common.Ptr(testkube.ABORTED_TestWorkflowStatus)
 }
 
 // processWorkerNotifications processes status updates from a worker.
@@ -750,6 +1028,10 @@ func (e *WorkerExecutor) processWorkerNotifications(ctx context.Context, notific
 			if !ok {
 				// Channel closed — fall through to error/abnormal handling below
 				goto done
+			}
+			if v.Output != nil {
+				e.outputs.merge(worker.Index, *v.Output)
+				continue
 			}
 			if !scheduled && v.NodeName != "" {
 				scheduled = true
@@ -987,7 +1269,7 @@ func (o *ResumeOrchestrator) resumeAllWorkers(ctx context.Context) {
 }
 
 // executeWorkersWithStorage is like executeWorkers but accepts storage as parameter
-func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params *commontcl.ParamsSpec, parallelism int64, failFast bool, cfg *config.ConfigV2, storage artifacts.InternalArtifactStorage, stateMachine expressions.Machine, credentialMachine expressions.Machine) (*ParallelExecutionResult, error) {
+func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params *commontcl.ParamsSpec, parallelism int64, failFast bool, cfg *config.ConfigV2, storage artifacts.InternalArtifactStorage, stateMachine expressions.Machine, groups map[string]paralleldata.Group, credentialMachine expressions.Machine) (*ParallelExecutionResult, error) {
 	for _, worker := range workers {
 		instructions.PrintOutput(cfg.Ref(), "parallel", ParallelStatus{
 			Index:       int(worker.Index),
@@ -1013,6 +1295,8 @@ func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params
 
 	fullBaseMachine := spawn.ParallelCreateBaseMachine(cfg, stateMachine, data.ExecutionDataMachine(), credentialMachine)
 	executor := NewWorkerExecutor(storage, registry, updates, fullBaseMachine, cfg)
+	executor.parallelGroups = groups
+	executor.outputs = newWorkerOutputs()
 
 	failures := &workerFailures{}
 
@@ -1076,7 +1360,9 @@ func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params
 	// Signal orchestrator to exit by closing updates channel
 	close(updates)
 
-	return failures.result(params.Count, failFast), nil
+	result := failures.result(params.Count, failFast)
+	result.Workers = executor.outputs.group(params.Count)
+	return result, nil
 }
 
 // result counts the workers that failed on their own apart from the workers that fail-fast stopped
