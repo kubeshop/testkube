@@ -40,6 +40,10 @@ service TestKubeCloudAPI {
     rpc SaveExecutionLogsPresigned(SaveExecutionLogsPresignedRequest) returns (SaveExecutionLogsPresignedResponse);
     rpc FinishExecution(FinishExecutionRequest) returns (FinishExecutionResponse);
     rpc GetGitHubToken(GetGitHubTokenRequest) returns (GetGitHubTokenResponse);
+    // GetIdentityToken mints a short-lived, signed identity token for the execution,
+    // scoped to the requested audience, so a workflow can exchange it with a cloud
+    // provider (federated identity) instead of storing long-lived credentials.
+    rpc GetIdentityToken(GetIdentityTokenRequest) returns (GetIdentityTokenResponse);
 
     // Execution
     rpc SaveExecutionArtifactPresigned(SaveExecutionArtifactPresignedRequest) returns (SaveExecutionArtifactPresignedResponse);
@@ -586,6 +590,17 @@ message GetGitHubTokenRequest {
 }
 
 message GetGitHubTokenResponse {
+  string token = 1;
+}
+
+message GetIdentityTokenRequest {
+  string execution_id = 1;
+  // audience is the "aud" claim of the token, e.g. "sts.amazonaws.com".
+  string audience = 2;
+}
+
+message GetIdentityTokenResponse {
+  // token is a signed JWT whose subject identifies the execution.
   string token = 1;
 }
 
