@@ -12,7 +12,10 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,6 +24,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/kubeshop/testkube/pkg/executioncache"
+	"github.com/kubeshop/testkube/pkg/executioncache/volume"
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
@@ -32,13 +36,17 @@ type fakeCacheRepository struct {
 	saveErr    error
 
 	restoreCalls int
+	restoredKey  string
+	restoredKeys []string
 	saveCalls    int
 	savedKey     string
 	savedSize    int64
 }
 
-func (f *fakeCacheRepository) Restore(context.Context, executioncache.RestoreRequest) (executioncache.RestoreResult, error) {
+func (f *fakeCacheRepository) Restore(_ context.Context, req executioncache.RestoreRequest) (executioncache.RestoreResult, error) {
 	f.restoreCalls++
+	f.restoredKey = req.Key
+	f.restoredKeys = req.RestoreKeys
 	return f.restore, f.restoreErr
 }
 
@@ -891,4 +899,657 @@ func TestRunCacheRestore_AcceptsAKeyWhoseComponentsResolve(t *testing.T) {
 		}), repository, out), "%s", key)
 		assert.Equal(t, 1, repository.restoreCalls, "%s should have been looked up", key)
 	}
+}
+
+// mountCacheVolume wires a pod's two views of a shared cache volume the way the
+// processor does, and returns the volume root.
+func mountCacheVolume(t *testing.T, resourceID string) string {
+	t.Helper()
+	mount := t.TempDir()
+	inbox := filepath.Join(mount, volume.InboxDir, resourceID)
+	require.NoError(t, os.MkdirAll(inbox, 0o777))
+	t.Setenv(volume.EnvStorePath, mount)
+	t.Setenv(volume.EnvInboxPath, inbox)
+	t.Setenv(volume.EnvInboxName, volume.InboxFor(resourceID))
+	return mount
+}
+
+// writeEntry puts a committed entry on the volume holding one file at an absolute path,
+// and returns the pointer naming it.
+func writeEntry(t *testing.T, mount, resourceID, absPath, contents string) volume.Pointer {
+	t.Helper()
+	name := "entry"
+	dir := filepath.Join(mount, volume.InboxDir, resourceID, name, volume.EntryRoot)
+	target := filepath.Join(dir, filepath.FromSlash(strings.TrimPrefix(absPath, "/")))
+	require.NoError(t, os.MkdirAll(filepath.Dir(target), 0o777))
+	require.NoError(t, os.WriteFile(target, []byte(contents), 0o666))
+	return volume.Pointer{
+		Path: volume.InboxDir + "/" + resourceID + "/" + name,
+		Size: int64(len(contents)),
+	}
+}
+
+// pointerServer serves a cache object whose body is a pointer rather than an archive.
+func pointerServer(t *testing.T, p volume.Pointer) *httptest.Server {
+	t.Helper()
+	body := volume.Encode(p)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(body)
+	}))
+	t.Cleanup(server.Close)
+	return server
+}
+
+func TestRunCacheRestore_FollowsAPointerToTheSharedVolume(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	mount := mountCacheVolume(t, "exec-1")
+	pointer := writeEntry(t, mount, "exec-1", posix+"/restored.txt", "from-volume")
+	server := pointerServer(t, pointer)
+
+	statePath := filepath.Join(t.TempDir(), "state.json")
+	out := &bytes.Buffer{}
+
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+		State: statePath,
+	}), &fakeCacheRepository{
+		restore: executioncache.RestoreResult{
+			Hit: true, Exact: true, MatchedKey: "npm-abc", URL: server.URL, Size: 128,
+		},
+	}, out)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "cache: hit")
+	restored, readErr := os.ReadFile(filepath.Join(root, "restored.txt"))
+	require.NoError(t, readErr)
+	assert.Equal(t, "from-volume", string(restored))
+
+	// The object is a few hundred bytes now, so the size reported has to come from the
+	// pointer or the line would describe the pointer rather than the entry.
+	assert.Contains(t, out.String(), "11 B")
+	assert.Equal(t, executioncache.HitExact, readState(t, statePath).Hit)
+}
+
+// An entry written before the volume existed, or by a cluster that has none, is the
+// archive itself - and must keep restoring even where a volume is mounted.
+func TestRunCacheRestore_StillRestoresAnArchiveWithAVolumeMounted(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	mountCacheVolume(t, "exec-1")
+	archive := cacheTarball(t, strings.TrimPrefix(posix+"/restored.txt", "/"), "from-archive")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(archive)
+	}))
+	defer server.Close()
+
+	out := &bytes.Buffer{}
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+		State: filepath.Join(t.TempDir(), "state.json"),
+	}), &fakeCacheRepository{
+		restore: executioncache.RestoreResult{Hit: true, Exact: true, MatchedKey: "npm-abc", URL: server.URL},
+	}, out)
+
+	require.NoError(t, err)
+	restored, readErr := os.ReadFile(filepath.Join(root, "restored.txt"))
+	require.NoError(t, readErr)
+	assert.Equal(t, "from-archive", string(restored))
+}
+
+// The bytes only ever existed on the volume, so a pod without it has nothing to fall
+// back to. That is a miss - and one that says why, because the likeliest cause is an
+// operator misconfiguration rather than a cold cache.
+func TestRunCacheRestore_PointerWithoutAVolumeIsAnExplainedMiss(t *testing.T) {
+	server := pointerServer(t, volume.Pointer{Path: "inbox/exec-1/entry", Size: 10})
+	out := &bytes.Buffer{}
+
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{"/data/node_modules"},
+		State: filepath.Join(t.TempDir(), "state.json"),
+	}), &fakeCacheRepository{
+		restore: executioncache.RestoreResult{Hit: true, Exact: true, MatchedKey: "npm-abc", URL: server.URL},
+	}, out)
+
+	require.NoError(t, err, "a pointer that cannot be followed must never fail the step")
+	assert.Contains(t, out.String(), "cache: miss")
+	assert.Contains(t, out.String(), "has not mounted")
+}
+
+// A pointer outliving the entry it names is the shape a retention misconfiguration
+// takes, so it has to be a miss that says so rather than a silent one.
+func TestRunCacheRestore_PointerToAMissingEntryIsAMiss(t *testing.T) {
+	mountCacheVolume(t, "exec-1")
+	server := pointerServer(t, volume.Pointer{Path: "inbox/exec-1/swept-away", Size: 10})
+	out := &bytes.Buffer{}
+
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{"/data/node_modules"},
+		State: filepath.Join(t.TempDir(), "state.json"),
+	}), &fakeCacheRepository{
+		restore: executioncache.RestoreResult{Hit: true, Exact: true, MatchedKey: "npm-abc", URL: server.URL},
+	}, out)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "cache: miss")
+}
+
+// A pointer is written by a pod, so one naming something outside an inbox must be
+// refused - and must leave the declared paths alone, because a miss is meant to leave
+// the step exactly as it would have been with no cache at all.
+func TestRunCacheRestore_RefusesAPointerThatEscapesTheInbox(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	require.NoError(t, os.WriteFile(filepath.Join(root, "theirs.txt"), []byte("untouched"), 0o666))
+	mountCacheVolume(t, "exec-1")
+	server := pointerServer(t, volume.Pointer{Path: "../../etc/passwd", Size: 10})
+
+	out := &bytes.Buffer{}
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+		State: filepath.Join(t.TempDir(), "state.json"),
+	}), &fakeCacheRepository{
+		restore: executioncache.RestoreResult{Hit: true, Exact: true, MatchedKey: "npm-abc", URL: server.URL},
+	}, out)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "cache: miss")
+	body, readErr := os.ReadFile(filepath.Join(root, "theirs.txt"))
+	require.NoError(t, readErr)
+	assert.Equal(t, "untouched", string(body), "a refused pointer must not disturb the declared paths")
+}
+
+func TestRunCacheSave_CopiesToTheVolumeAndStoresAPointer(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	require.NoError(t, os.WriteFile(filepath.Join(root, "dep.txt"), []byte("installed"), 0o666))
+	mount := mountCacheVolume(t, "exec-1")
+
+	var uploaded []byte
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		uploaded, _ = io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	repo := &fakeCacheRepository{save: executioncache.SaveResult{URL: server.URL}}
+	out := &bytes.Buffer{}
+	err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+	}), nil, "", 1<<20, repo, out)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "cache: saved")
+
+	// What was stored is a pointer, not the tree.
+	pointer, ok := volume.Decode(uploaded)
+	require.True(t, ok, "the object must hold a pointer: %q", string(uploaded))
+	require.NoError(t, volume.ValidatePath(pointer.Path))
+	assert.EqualValues(t, len("installed"), pointer.Size)
+
+	// SaveRequest.Size is what the bucket is about to receive, which here is the
+	// pointer rather than the tree - the tree is on a volume the control plane neither
+	// provisions nor can measure. Sending the tree's size would let a quota refuse a
+	// save that stores a few hundred bytes in it.
+	assert.EqualValues(t, len(uploaded), repo.savedSize)
+	assert.Less(t, repo.savedSize, int64(volume.MaxPointerBytes))
+
+	// And the tree really is on the volume, under the path the pointer names.
+	stored, readErr := os.ReadFile(filepath.Join(
+		mount, filepath.FromSlash(pointer.Path), volume.EntryRoot,
+		filepath.FromSlash(strings.TrimPrefix(posix, "/")), "dep.txt"))
+	require.NoError(t, readErr)
+	assert.Equal(t, "installed", string(stored))
+}
+
+// An entry is reachable only through its pointer, so one left behind after a lost race
+// is invisible until the volume fills - and it can be gigabytes.
+func TestRunCacheSave_DiscardsTheEntryWhenAnotherExecutionWon(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	require.NoError(t, os.WriteFile(filepath.Join(root, "dep.txt"), []byte("installed"), 0o666))
+	mount := mountCacheVolume(t, "exec-1")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusPreconditionFailed)
+	}))
+	defer server.Close()
+
+	out := &bytes.Buffer{}
+	err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+	}), nil, "", 1<<20, &fakeCacheRepository{save: executioncache.SaveResult{URL: server.URL}}, out)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "stored by another execution first")
+	assertInboxEmpty(t, mount, "exec-1")
+}
+
+func TestRunCacheSave_DiscardsTheEntryWhenTheKeyAlreadyExists(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	require.NoError(t, os.WriteFile(filepath.Join(root, "dep.txt"), []byte("installed"), 0o666))
+	mount := mountCacheVolume(t, "exec-1")
+
+	out := &bytes.Buffer{}
+	err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+	}), nil, "", 1<<20, &fakeCacheRepository{save: executioncache.SaveResult{AlreadyExists: true}}, out)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "already stored")
+	assertInboxEmpty(t, mount, "exec-1")
+}
+
+// Storing nothing under a key is worse than storing nothing at all: an entry is
+// immutable, so an empty one answers every later run with a hit that restores nothing.
+func TestRunCacheSave_RefusesToStoreAnEmptyEntry(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	mount := mountCacheVolume(t, "exec-1")
+
+	repo := &fakeCacheRepository{}
+	out := &bytes.Buffer{}
+	err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+	}), nil, "", 1<<20, repo, out)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "nothing was found")
+	assert.Zero(t, repo.saveCalls, "an empty entry must not even ask for a grant")
+	assertInboxEmpty(t, mount, "exec-1")
+}
+
+func assertInboxEmpty(t *testing.T, mount, resourceID string) {
+	t.Helper()
+	entries, err := os.ReadDir(filepath.Join(mount, volume.InboxDir, resourceID))
+	require.NoError(t, err)
+	assert.Empty(t, entries, "an entry whose pointer was never published must not be left behind")
+}
+
+// The two backends measure different things - the volume weighs the tree, the archive
+// weighs the gzip of it - so a tree the volume refuses can still fit as an archive, and
+// a dependency tree of text compresses well. Settling the save on the volume's refusal
+// would drop a cache the object store would have taken, and every later run would
+// reinstall.
+//
+// This also covers the volume filling mid-copy, which arrives at the same branch: the
+// probe at open time cannot predict a volume that runs out during a copy of gigabytes.
+func TestRunCacheSave_FallsBackWhenTheVolumeRefusesTheTree(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	// Highly compressible, so it is over the raw limit but well under it once gzipped.
+	require.NoError(t, os.WriteFile(filepath.Join(root, "big.txt"), bytes.Repeat([]byte("a"), 4096), 0o666))
+	mountCacheVolume(t, "exec-1")
+
+	var uploaded []byte
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		uploaded, _ = io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	repo := &fakeCacheRepository{save: executioncache.SaveResult{URL: server.URL}}
+	out := &bytes.Buffer{}
+	err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+	}), []string{posix}, "", 2048, repo, out)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "would not take", "the volume must refuse the tree")
+	assert.Contains(t, out.String(), "object store instead", "and the save must not stop there")
+
+	if runtime.GOOS == "windows" {
+		// What the archive half then does cannot be exercised here: its walker needs
+		// the host's own absolute form, where the volume half needs the POSIX one a
+		// cached path actually is, and on Windows those are not the same string. The
+		// decision above - the finding this test exists for - is checked either way.
+		return
+	}
+
+	// The archive was stored, not a pointer: the volume never took the entry.
+	_, isPointer := volume.Decode(uploaded)
+	assert.False(t, isPointer, "the fallback must store the archive itself")
+	assert.NotEmpty(t, uploaded)
+	assert.Less(t, len(uploaded), 2048, "the tree compresses to well under the limit the volume refused")
+}
+
+// withEntryLimit lowers the entry bound for one test, because the alternative is
+// creating half a million files.
+func withEntryLimit(t *testing.T, n int) {
+	t.Helper()
+	previous := cacheMaxEntries
+	cacheMaxEntries = n
+	t.Cleanup(func() { cacheMaxEntries = previous })
+}
+
+// An entry holding more files than a restore will accept must not reach either backend.
+//
+// The pack bounds size but not count, where the unpack bounds both, so such an archive
+// would store happily and then be refused by every restore of it - under a key that is
+// immutable, so no later run could replace it. The step would reinstall on every
+// execution until the entry expired, with nothing to say why.
+//
+// Tested through the object-store path, which is where the archive is built. The volume
+// path refuses the same count before it gets there, and settles rather than falling
+// back for exactly this reason - the next test pins that.
+func TestRunCacheSave_RefusesATreeWithTooManyFilesToRestore(t *testing.T) {
+	withEntryLimit(t, 2)
+
+	root := t.TempDir()
+	requireContainerPaths(t, root)
+	for i := 0; i < 3; i++ {
+		require.NoError(t, os.WriteFile(filepath.Join(root, "f"+strconv.Itoa(i)), []byte("x"), 0o666))
+	}
+
+	repo := &fakeCacheRepository{}
+	out := &bytes.Buffer{}
+	err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{root},
+	}), []string{root}, "", cacheDefaultMaxSize, repo, out)
+
+	require.NoError(t, err, "refusing to publish must never fail the step")
+	assert.Contains(t, out.String(), "more than 2 files")
+	assert.Zero(t, repo.saveCalls, "an entry nothing could restore must not even ask for a grant")
+}
+
+// The count does change between the backends - the volume counts every directory,
+// where the archive's walker emits only files and links - so a tree refused here can be
+// one the archive would hold, and settling on it would drop a cache the object store
+// had room for.
+//
+// Falling back is safe because the archive path enforces its own count before asking
+// for a grant, which is what keeps an entry no restore would accept out of the store.
+// Here that second count refuses it too, so nothing is published either way.
+func TestRunCacheSave_FallsBackWhenTheVolumeRefusesTheEntryCount(t *testing.T) {
+	withEntryLimit(t, 2)
+
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	for i := 0; i < 3; i++ {
+		require.NoError(t, os.WriteFile(filepath.Join(root, "f"+strconv.Itoa(i)), []byte("x"), 0o666))
+	}
+	mountCacheVolume(t, "exec-1")
+
+	repo := &fakeCacheRepository{}
+	out := &bytes.Buffer{}
+	err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+	}), []string{posix}, "", cacheDefaultMaxSize, repo, out)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "object store instead",
+		"the archive counts differently, so it gets its own say")
+
+	// What the archive then decides is its own business, and
+	// TestRunCacheSave_RefusesATreeWithTooManyFilesToRestore pins it. Asserting the
+	// outcome here as well would tie this test to whether the walker can see the
+	// declared path, which is a different thing and platform-dependent.
+	assert.Zero(t, repo.saveCalls, "an entry nothing could restore must not even ask for a grant")
+}
+
+// A PUT whose response is lost has still been applied, and the retry then finds the
+// object present and is refused - which is indistinguishable from losing a race, except
+// that the object now stored is this execution's own and names this execution's entry.
+//
+// Discarding the entry there would leave a pointer to nothing under a key that is
+// immutable: every later run would hit it, restore nothing, and be unable to replace
+// it. Keeping an entry nothing names only wastes space until the sweep collects it, so
+// that is the direction to err in.
+func TestRunCacheSave_KeepsTheEntryWhenTheUploadMayHaveLanded(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	require.NoError(t, os.WriteFile(filepath.Join(root, "dep.txt"), []byte("installed"), 0o666))
+	mount := mountCacheVolume(t, "exec-1")
+
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if atomic.AddInt32(&calls, 1) == 1 {
+			// Applied, and the answer lost on the way back.
+			if conn, _, err := w.(http.Hijacker).Hijack(); err == nil {
+				_ = conn.Close()
+			}
+			return
+		}
+		// The retry meets this execution's own object, already in place.
+		w.WriteHeader(http.StatusPreconditionFailed)
+	}))
+	defer server.Close()
+
+	out := &bytes.Buffer{}
+	err := runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+	}), nil, "", 1<<20, &fakeCacheRepository{save: executioncache.SaveResult{URL: server.URL}}, out)
+
+	require.NoError(t, err)
+	entries, readErr := os.ReadDir(filepath.Join(mount, volume.InboxDir, "exec-1"))
+	require.NoError(t, readErr)
+	assert.NotEmpty(t, entries, "the pointer that may be stored names this entry")
+}
+
+// A cache key is shared by every runner in an environment, but an entry on a volume is
+// reachable only from that volume - executions pick a runner through spec.target, and
+// the scope a key resolves to carries no runner or volume.
+//
+// Unpartitioned, whichever runner saved first owned the key for its whole lifetime:
+// every runner on a different volume got an exact hit it could not follow, and could
+// not publish a replacement either, because the object is immutable. In a two-runner
+// environment that is about half of all runs caching nothing, silently, because an
+// unfollowable pointer degrades to a plain miss.
+func TestRunCacheRestore_AsksForAKeyPartitionedByVolume(t *testing.T) {
+	t.Setenv(volume.EnvVolumeID, "vol1234")
+
+	repo := &fakeCacheRepository{}
+	out := &bytes.Buffer{}
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:         "npm-abc",
+		RestoreKeys: []string{"npm-", ""},
+		Paths:       []string{t.TempDir()},
+	}), repo, out)
+
+	require.NoError(t, err)
+	assert.Equal(t, "vol1234/npm-abc", repo.restoredKey)
+
+	// A prefix, not a suffix: "npm-" must not match another volume's "npm-abc".
+	//
+	// The empty one reaches the repository as nothing at all. It must never arrive as
+	// "vol1234/", which is a prefix every entry on this volume matches - a workflow
+	// carrying an empty restore key would then restore whichever entry happened to be
+	// newest. Resolution drops it first (see the `str != ""` filter in
+	// resolveCacheSpec) and volume.ScopedKey refuses to scope one even if it did not,
+	// so this holds if either changes.
+	assert.Equal(t, []string{"vol1234/npm-"}, repo.restoredKeys)
+	assert.NotContains(t, repo.restoredKeys, "vol1234/")
+}
+
+func TestRunCacheSave_PublishesUnderAKeyPartitionedByVolume(t *testing.T) {
+	t.Setenv(volume.EnvVolumeID, "vol1234")
+
+	root := t.TempDir()
+	requireContainerPaths(t, root)
+	require.NoError(t, os.WriteFile(filepath.Join(root, "dep.txt"), []byte("installed"), 0o644))
+
+	statePath := filepath.Join(t.TempDir(), "state.json")
+	writeState(t, statePath, executioncache.State{
+		Key: "npm-abc", Hit: executioncache.HitMiss, Paths: []string{root},
+	})
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	repo := &fakeCacheRepository{save: executioncache.SaveResult{URL: server.URL}}
+	out := &bytes.Buffer{}
+	require.NoError(t, runCacheSave(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{root},
+	}), []string{root}, statePath, cacheDefaultMaxSize, repo, out))
+
+	assert.Equal(t, "vol1234/npm-abc", repo.savedKey,
+		"a save has to publish under the key a restore on this volume will ask for")
+}
+
+// With no volume the keys are untouched, so an installation that never enables one -
+// and every entry stored before this existed - behaves exactly as before.
+func TestRunCacheRestore_LeavesTheKeyAloneWithoutAVolume(t *testing.T) {
+	repo := &fakeCacheRepository{}
+	out := &bytes.Buffer{}
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:         "npm-abc",
+		RestoreKeys: []string{"npm-"},
+		Paths:       []string{t.TempDir()},
+	}), repo, out)
+
+	require.NoError(t, err)
+	assert.Equal(t, "npm-abc", repo.restoredKey)
+	assert.Equal(t, []string{"npm-"}, repo.restoredKeys)
+}
+
+// The volume prefix is spent out of the same budget the author's key is checked
+// against, and the API checks what it is actually sent. Validating the author's key and
+// then adding bytes to it left a key just inside the limit passing here and refused
+// there, on every restore and every save - a cache that never works, failing in a place
+// nobody is reading.
+func TestValidateScopedCacheKey_CountsTheVolumePrefix(t *testing.T) {
+	t.Setenv(volume.EnvVolumeID, "vol1234abcd")
+	justInside := strings.Repeat("k", executioncache.MaxKeyBytes)
+
+	require.NoError(t, executioncache.ValidateKey(justInside), "the author's key is inside the limit")
+	err := validateScopedCacheKey(justInside)
+
+	require.Error(t, err, "but the key the API is sent is not")
+	assert.Contains(t, err.Error(), "prefixes every key")
+}
+
+func TestValidateScopedCacheKey_AcceptsWhatFitsWithThePrefix(t *testing.T) {
+	t.Setenv(volume.EnvVolumeID, "vol1234abcd")
+
+	assert.NoError(t, validateScopedCacheKey(strings.Repeat("k", 300)))
+}
+
+// Without a volume the budget is the author's whole limit, as it always was.
+func TestValidateScopedCacheKey_LeavesTheLimitAloneWithoutAVolume(t *testing.T) {
+	assert.NoError(t, validateScopedCacheKey(strings.Repeat("k", executioncache.MaxKeyBytes)))
+}
+
+// The magic is only the opening bytes of a pointer; the rest arrives over the same
+// connection an archive would, so a reset part-way through is an ordinary transport
+// failure and a second GET recovers from it.
+//
+// Treating every pointer outcome as final gave the pointer path less resilience than
+// the archive path it replaced, for a failure that has nothing to do with pointers.
+func TestRunCacheRestore_RetriesAPointerBodyItCouldNotRead(t *testing.T) {
+	root := t.TempDir()
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	mount := mountCacheVolume(t, "exec-1")
+
+	// A real entry, so the retry has something to find.
+	entryDir := filepath.Join(mount, volume.InboxDir, "exec-1", "entry")
+	stored := filepath.Join(entryDir, volume.EntryRoot, filepath.FromSlash(strings.TrimPrefix(posix, "/")))
+	require.NoError(t, os.MkdirAll(stored, 0o777))
+	require.NoError(t, os.WriteFile(filepath.Join(stored, "dep.txt"), []byte("cached"), 0o666))
+	pointer := volume.Encode(volume.Pointer{Path: volume.InboxFor("exec-1") + "/entry", Size: 6})
+
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if atomic.AddInt32(&calls, 1) == 1 {
+			// The magic arrives and what follows it does not parse, which is what a
+			// body cut short delivers once the length happens to line up. The
+			// connection-reset form of this is the same branch, reached by the same
+			// sentinel; it just cannot be staged deterministically, because the reset
+			// usually lands before the client has buffered the magic at all and then
+			// the transport retry below catches it instead.
+			_, _ = w.Write([]byte(volume.Magic))
+			_, _ = w.Write([]byte("not a pointer"))
+			return
+		}
+		_, _ = w.Write(pointer)
+	}))
+	defer server.Close()
+
+	out := &bytes.Buffer{}
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:   "npm-abc",
+		Paths: []string{posix},
+	}), &fakeCacheRepository{
+		restore: executioncache.RestoreResult{Hit: true, Exact: true, MatchedKey: "npm-abc", URL: server.URL},
+	}, out)
+
+	require.NoError(t, err)
+	assert.Greater(t, atomic.LoadInt32(&calls), int32(1), "the truncated body must be fetched again")
+	body, readErr := os.ReadFile(filepath.Join(root, "dep.txt"))
+	require.NoError(t, readErr, "and the second attempt restores it")
+	assert.Equal(t, "cached", string(body))
+}
+
+// The volume prefix comes out of the same budget the author's keys are checked against,
+// so a restore key they kept inside the limit can be over it by the time it is sent.
+// Unchecked it would take the whole lookup with it - including the exact key, which
+// passed - so the one that no longer fits is dropped and the rest still go.
+func TestRunCacheRestore_DropsARestoreKeyTheVolumePrefixPushesOverTheLimit(t *testing.T) {
+	t.Setenv(volume.EnvVolumeID, "vol1234abcd")
+	tooLong := strings.Repeat("k", executioncache.MaxKeyBytes)
+	require.NoError(t, executioncache.ValidateKey(tooLong), "the author's own key is inside the limit")
+
+	repo := &fakeCacheRepository{}
+	out := &bytes.Buffer{}
+	err := runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:         "npm-abc",
+		RestoreKeys: []string{tooLong, "npm-"},
+		Paths:       []string{t.TempDir()},
+	}), repo, out)
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"vol1234abcd/npm-"}, repo.restoredKeys,
+		"the fallback that still fits must survive the one that does not")
+	assert.Contains(t, out.String(), "ignoring the restore key",
+		"a silently dropped fallback looks exactly like one that did not match")
+}
+
+// The repository is asked for a key with this volume's id in front of it and answers
+// with the same. That partition is internal - the author never chose it - so it has no
+// business in their log line, nor in the state the save stage reads back, where
+// MatchedKey means the key as it was written.
+func TestRunCacheRestore_ReportsTheMatchedKeyAsItWasAuthored(t *testing.T) {
+	t.Setenv(volume.EnvVolumeID, "vol1234")
+
+	root := t.TempDir()
+	statePath := filepath.Join(t.TempDir(), "state.json")
+	posix := filepath.ToSlash(root[len(filepath.VolumeName(root)):])
+	archive := cacheTarball(t, strings.TrimPrefix(posix+"/restored.txt", "/"), "older")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(archive)
+	}))
+	defer server.Close()
+
+	out := &bytes.Buffer{}
+	require.NoError(t, runCacheRestore(context.Background(), encodeCacheArgs(t, executioncache.Args{
+		Key:         "npm-abc",
+		RestoreKeys: []string{"npm-"},
+		Paths:       []string{posix},
+		State:       statePath,
+	}), &fakeCacheRepository{
+		restore: executioncache.RestoreResult{
+			Hit: true, Exact: false, MatchedKey: "vol1234/npm-older", URL: server.URL,
+		},
+	}, out))
+
+	assert.Contains(t, out.String(), `from "npm-older"`, "the volume's id is not part of the key")
+	assert.NotContains(t, out.String(), "vol1234")
+	assert.Equal(t, "npm-older", readState(t, statePath).MatchedKey)
 }

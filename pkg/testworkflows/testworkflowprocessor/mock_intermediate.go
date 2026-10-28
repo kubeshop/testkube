@@ -13,6 +13,7 @@ import (
 	reflect "reflect"
 
 	v1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	testworkflowconfig "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	stage "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	gomock "go.uber.org/mock/gomock"
 	v10 "k8s.io/api/core/v1"
@@ -170,6 +171,20 @@ func (mr *MockIntermediateMockRecorder) AppendPvcs(cfg any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendPvcs", reflect.TypeOf((*MockIntermediate)(nil).AppendPvcs), cfg)
 }
 
+// AppendStepCacheVolume mocks base method.
+func (m *MockIntermediate) AppendStepCacheVolume(cfg *testworkflowconfig.StepCacheVolumeConfig, rootID string) Intermediate {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AppendStepCacheVolume", cfg, rootID)
+	ret0, _ := ret[0].(Intermediate)
+	return ret0
+}
+
+// AppendStepCacheVolume indicates an expected call of AppendStepCacheVolume.
+func (mr *MockIntermediateMockRecorder) AppendStepCacheVolume(cfg, rootID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendStepCacheVolume", reflect.TypeOf((*MockIntermediate)(nil).AppendStepCacheVolume), cfg, rootID)
+}
+
 // ConfigMaps mocks base method.
 func (m *MockIntermediate) ConfigMaps() []v10.ConfigMap {
 	m.ctrl.T.Helper()
@@ -266,6 +281,49 @@ func (m *MockIntermediate) Secrets() []v10.Secret {
 func (mr *MockIntermediateMockRecorder) Secrets() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Secrets", reflect.TypeOf((*MockIntermediate)(nil).Secrets))
+}
+
+// StepCacheInboxName mocks base method.
+func (m *MockIntermediate) StepCacheInboxName() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StepCacheInboxName")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// StepCacheInboxName indicates an expected call of StepCacheInboxName.
+func (mr *MockIntermediateMockRecorder) StepCacheInboxName() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StepCacheInboxName", reflect.TypeOf((*MockIntermediate)(nil).StepCacheInboxName))
+}
+
+// StepCacheVolumeID mocks base method.
+func (m *MockIntermediate) StepCacheVolumeID() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StepCacheVolumeID")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// StepCacheVolumeID indicates an expected call of StepCacheVolumeID.
+func (mr *MockIntermediateMockRecorder) StepCacheVolumeID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StepCacheVolumeID", reflect.TypeOf((*MockIntermediate)(nil).StepCacheVolumeID))
+}
+
+// StepCacheVolumeMount mocks base method.
+func (m *MockIntermediate) StepCacheVolumeMount(mountPath, subPath string, readOnly bool) (v10.VolumeMount, bool) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StepCacheVolumeMount", mountPath, subPath, readOnly)
+	ret0, _ := ret[0].(v10.VolumeMount)
+	ret1, _ := ret[1].(bool)
+	return ret0, ret1
+}
+
+// StepCacheVolumeMount indicates an expected call of StepCacheVolumeMount.
+func (mr *MockIntermediateMockRecorder) StepCacheVolumeMount(mountPath, subPath, readOnly any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StepCacheVolumeMount", reflect.TypeOf((*MockIntermediate)(nil).StepCacheVolumeMount), mountPath, subPath, readOnly)
 }
 
 // Volumes mocks base method.

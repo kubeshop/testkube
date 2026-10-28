@@ -173,8 +173,10 @@ registry_running = str(local(
 registry_ip = ''
 
 if registry_running:
+    # The registry's address on the cluster's network, not on Docker's default bridge:
+    # the registry container is attached to both, and pods can only reach the first.
     registry_ip = str(local(
-        "docker inspect " + REGISTRY_NAME + " 2>/dev/null | grep -m1 '\"IPAddress\"' | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+'",
+        "docker inspect -f '{{with index .NetworkSettings.Networks \"" + EXPECTED_KUBE_CONTEXT + "\"}}{{.IPAddress}}{{end}}' " + REGISTRY_NAME + " 2>/dev/null",
         quiet=True,
     )).strip()
 
