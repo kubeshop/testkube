@@ -16,12 +16,12 @@ dependencies:
   version: 0.9.0
 - name: nats
   repository: file://./charts/nats
-  version: 1.2.6-4
+  version: 1.2.6-5
 - name: testkube-api
   repository: file://../testkube-api
   version: 2.15.0-rc.0
 - name: global
   repository: file://../global
   version: 0.1.3
-digest: sha256:23b13095f7c44cabd46d76ceb5325ad013bc043810403dfd22bb16fac6755337
-generated: "2026-10-21T10:06:16.403933756Z"
+digest: sha256:6e22697bcde41a1ce13dfcd3d980dfba7645fd9b6086c13dc9c22b18e1c2845e
+generated: "2026-10-27T17:51:27.63924-03:00"

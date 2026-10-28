@@ -1,5 +1,5 @@
-# Verbatim copy of kubeshop/testkube-cloud-charts@d4a6cee271
-# charts/testkube-enterprise/profiles/values.demo.v2.yaml; bump with the chart pins.
+# Based on kubeshop/testkube-cloud-charts@d4a6cee271
+# charts/testkube-enterprise/profiles/values.demo.v2.yaml, with patched Dex/NATS images.
 global:
   ingress:
     enabled: false
@@ -127,6 +127,9 @@ mongodb:
   enabled: false
 
 nats:
+  container:
+    image:
+      tag: 2.14.9
   config:
     cluster:
       enabled: false
@@ -136,6 +139,8 @@ minio:
     existingSecret: testkube-minio-credentials
 
 dex:
+  image:
+    tag: "2.46.1"
   ingress:
     enabled: false
   configSecret:

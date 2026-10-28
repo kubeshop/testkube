@@ -27,7 +27,7 @@ dependencies:
     condition: postgresqlOperatorCluster.enabled
   - name: nats
     condition: testkube-api.nats.enabled
-    version: 1.2.6-4
+    version: 1.2.6-5
     repository: "file://./charts/nats"
   - name: testkube-api
     version: 2.x.x-x
