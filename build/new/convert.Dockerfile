@@ -1,7 +1,7 @@
 # this arg has to be defined before the first FROM otherwise the value will be empty
 ARG ALPINE_IMAGE
 
-FROM --platform=$BUILDPLATFORM golang:1.27.2-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine AS build
 ARG TARGETOS
 ARG TARGETARCH
 ARG GOCACHE="/root/.cache/go-build"
@@ -24,7 +24,7 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 # alpine rather than scratch: the tool needs a writable /tmp for its scratch
 # space, and CA certificates to reach a TLS-enabled MongoDB or DocumentDB.
 FROM ${ALPINE_IMAGE}
-RUN apk --no-cache upgrade && apk --no-cache add ca-certificates libssl3
+RUN apk --no-cache upgrade && apk --no-cache add 'ca-certificates>=20261020-r0' libssl3
 WORKDIR /tmp
 COPY --from=build /app /bin/app
 USER 1001
