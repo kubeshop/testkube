@@ -4,6 +4,7 @@ metadata:
   name: cloud-api-e2e
   labels:
     core-tests: cloud-api-e2e
+    dev-quality-loop: "true"
     tool: playwright
     artifacts: "true"
     junit: "true"
