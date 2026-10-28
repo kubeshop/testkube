@@ -47,10 +47,17 @@ trap cleanup EXIT
 summary=()
 failed=0
 
-# cp_file <cid> <path>: print the file content, non-zero when absent.
+# cp_file <cid> <path>: print the file content; returns 1 when absent, 2 when the read failed.
 cp_file() {
-  "$DOCKER" cp -L "$1:$2" - 2>/dev/null | tar -xO 2>/dev/null
+  local rc=0
+  "$DOCKER" cp -L "$1:$2" - 2>"$tmp/cp.err" | tar -xO 2>/dev/null || rc=$?
+  [ "$rc" = 0 ] && return 0
+  cp_missing && return 1
+  return 2
 }
+
+# cp_missing: true when the last docker cp failed only because the path does not exist.
+cp_missing() { grep -q 'Could not find the file' "$tmp/cp.err"; }
 
 # judge <subject> <strict 0|1>: prints ok/warn/BAD and returns 1 for BAD.
 judge() {
@@ -108,11 +115,18 @@ check_image() {
   fi
 
   # Bundle file, the way Go picks it: SSL_CERT_FILE first, then the default list.
-  local file found="" p hits=""
+  local file found="" p hits="" rc unread=""
   file=$(printf '%s\n' "$env" | sed -n 's/^SSL_CERT_FILE=//p')
   for p in ${file:+"$file"} /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt /etc/ssl/ca-bundle.pem /etc/pki/tls/cacert.pem /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem /etc/ssl/cert.pem; do
-    if cp_file "$cid" "$p" >"$tmp/bundle.pem" && [ -s "$tmp/bundle.pem" ]; then found=$p; break; fi
+    rc=0; cp_file "$cid" "$p" >"$tmp/bundle.pem" || rc=$?
+    if [ "$rc" = 0 ] && [ -s "$tmp/bundle.pem" ]; then found=$p; break; fi
+    [ "$rc" = 2 ] && unread+=" $p"
   done
+  # A path that exists but could not be copied must not read as "no bundle".
+  if [ -n "$unread" ]; then
+    echo "  ERROR: could not read$unread: $(tr '\n' ' ' <"$tmp/cp.err")"
+    status=ERROR
+  fi
   if [ -n "$found" ]; then
     count=$(grep -c 'BEGIN CERTIFICATE' "$tmp/bundle.pem" || true)
     echo "  bundle: $found ($count certs)"
@@ -127,7 +141,7 @@ check_image() {
     else
       hits=$(printf '%s\n' "$subjects" | grep -iE 'emSign|eMudhra' | sort -u || true)
     fi
-  else
+  elif [ -z "$unread" ]; then
     echo "  bundle: none (no CA bundle in this image)"
   fi
   if [ -n "$hits" ]; then
@@ -137,8 +151,14 @@ check_image() {
   fi
 
   # Per-certificate entries in /etc/ssl/certs (Go loads every file there too).
-  local dirhits
-  dirhits=$("$DOCKER" cp "$cid:/etc/ssl/certs" - 2>/dev/null | tar -t 2>/dev/null | grep -iE 'emsign|emudhra' | sed 's#^certs/##' | sort -u || true)
+  local dirlist dirhits="" dirrc=0
+  dirlist=$("$DOCKER" cp "$cid:/etc/ssl/certs" - 2>"$tmp/cp.err" | tar -t 2>/dev/null) || dirrc=$?
+  if [ "$dirrc" != 0 ] && ! cp_missing; then
+    echo "  ERROR: could not read /etc/ssl/certs: $(tr '\n' ' ' <"$tmp/cp.err")"
+    status=ERROR
+  elif [ "$dirrc" = 0 ]; then
+    dirhits=$(printf '%s\n' "$dirlist" | grep -iE 'emsign|emudhra' | sed 's#^certs/##' | sort -u || true)
+  fi
   if [ -n "$dirhits" ]; then
     while IFS= read -r f; do
       judge "$(printf '%s' "$f" | sed 's/\.pem$//; s/\.crt$//; s/_/ /g') (/etc/ssl/certs/$f)" "$strict" || mark_fail
@@ -146,7 +166,11 @@ check_image() {
   fi
 
   # Node: roots compiled into the binary (PEM text never contains "emSign", parse the subject).
-  if cp_file "$cid" /usr/local/bin/node >/dev/null 2>&1; then
+  rc=0; cp_file "$cid" /usr/local/bin/node >/dev/null 2>&1 || rc=$?
+  if [ "$rc" = 2 ]; then
+    echo "  ERROR: could not read /usr/local/bin/node"
+    status=ERROR
+  elif [ "$rc" = 0 ]; then
     local js out nodehits
     js='const {X509Certificate}=require("crypto");const tls=require("tls");
 const subj=c=>{try{return new X509Certificate(c).subject.replace(/\n/g,", ")}catch(e){return "?"}};
