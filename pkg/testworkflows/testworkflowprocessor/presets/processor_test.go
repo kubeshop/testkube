@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	constants2 "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
@@ -25,6 +26,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
@@ -1809,4 +1811,107 @@ func TestProcessor_Bundle(t *testing.T) {
 			assert.Equal(t, tt.wantAnnotation, annotation)
 		})
 	}
+}
+
+// TestProcessor_Bundle_GivesEveryStageAnId compiles real workflow shapes, so a stage that a later
+// change adds after the id pass fails here. Only the stage that runs the operation of a group can
+// repeat the id of the group, because that stage writes the outputs of the step.
+func TestProcessor_Bundle_GivesEveryStageAnId(t *testing.T) {
+	tests := []struct {
+		name string
+		spec string
+	}{
+		{name: "unnamed steps", spec: `
+steps:
+- shell: echo a
+- shell: echo b
+- run: {shell: echo c}`},
+		{name: "a step with an operation and artifacts", spec: `
+steps:
+- name: Build
+  shell: echo a
+  artifacts: {paths: [report.txt]}`},
+		{name: "nested groups with a timeout, a retry and a pause", spec: `
+steps:
+- name: Outer
+  timeout: 1m
+  steps:
+  - name: Inner
+    paused: true
+    steps:
+    - shell: echo a
+      retry: {count: 2}
+    - shell: echo b
+  - shell: echo c`},
+		{name: "setup and after steps with a condition and an optional step", spec: `
+setup:
+- shell: echo setup
+steps:
+- shell: exit 1
+  optional: true
+after:
+- condition: always
+  shell: echo after`},
+		{name: "an explicit id that a generated id must avoid", spec: `
+steps:
+- shell: echo a
+- id: run_shell_command
+  shell: echo b`},
+		{name: "a parallel step and services", spec: `
+services:
+  db:
+    image: postgres:16
+steps:
+- name: Workers
+  parallel:
+    count: 2
+    shell: echo worker`},
+		{name: "content from Git", spec: `
+content:
+  git: {uri: "https://github.com/kubeshop/testkube"}
+steps:
+- shell: ls`},
+		{name: "a long name inside nested groups", spec: `
+steps:
+- name: ` + strings.Repeat("Long ", 30) + `
+  steps:
+  - name: ` + strings.Repeat("Name ", 30) + `
+    shell: echo a
+    artifacts: {paths: [report.txt]}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wf := &testworkflowsv1.TestWorkflow{}
+			require.NoError(t, yaml.UnmarshalStrict([]byte("container: {image: alpine:3.22.0}\n"+tt.spec), &wf.Spec))
+
+			res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig, ScheduledAt: dummyTime})
+			require.NoError(t, err)
+
+			assert.Equal(t, []string(nil), stageIdProblems(res.Signature))
+		})
+	}
+}
+
+// stageIdProblems returns each stage of the signature that has no id, a repeated id, or an id that
+// is too long for a directory name.
+func stageIdProblems(sigs []stage.Signature) []string {
+	used := map[string]bool{}
+	var problems []string
+	var walk func(sigs []stage.Signature, groupId string)
+	walk = func(sigs []stage.Signature, groupId string) {
+		for i, sig := range sigs {
+			switch {
+			case sig.Id() == "":
+				problems = append(problems, fmt.Sprintf("%s has no id", sig.Ref()))
+			case len(sig.Id()) > 255:
+				problems = append(problems, fmt.Sprintf("%s has an id of %d characters", sig.Ref(), len(sig.Id())))
+			case used[sig.Id()] && !(i == 0 && sig.Id() == groupId):
+				problems = append(problems, fmt.Sprintf("%s repeats the id %s", sig.Ref(), sig.Id()))
+			}
+			used[sig.Id()] = true
+			walk(sig.Children(), sig.Id())
+		}
+	}
+	walk(sigs, "")
+	return problems
 }
