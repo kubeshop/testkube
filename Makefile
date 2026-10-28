@@ -505,7 +505,7 @@ docker-build-api: ## Build the API server images for linux/amd64 and linux/arm64
 	@env ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** \
 		SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** \
 		DOCKER_BUILDX_CACHE_FROM=type=registry,ref=$(DOCKER_REGISTRY)/testkube-api-server:latest \
-		ALPINE_IMAGE=alpine:3.24.2 \
+		ALPINE_IMAGE=alpine:3.24.3 \
 		$(GORELEASER) release -f goreleaser_files/.goreleaser-docker-build-api.yml --clean --snapshot
 
 .PHONY: docker-build-cli
@@ -514,7 +514,7 @@ docker-build-cli: ## Build linux kubectl-testkube binaries into linux/ with gore
 	@env ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** \
 		SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** \
 		DOCKER_BUILDX_CACHE_FROM=type=registry,ref=$(DOCKER_REGISTRY)/testkube-cli:latest \
-		ALPINE_IMAGE=alpine:3.24.2 \
+		ALPINE_IMAGE=alpine:3.24.3 \
 		$(GORELEASER) release -f .builds-linux.goreleaser.yml --clean --snapshot
 
 # ==================== Kubernetes ====================
