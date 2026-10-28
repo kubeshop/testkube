@@ -50,7 +50,7 @@ func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.T
 			mcp.Description("1-based line number of the whole log to stop reading at (inclusive). Use with startLine for a range."),
 		),
 		mcp.WithString("grep",
-			mcp.Description("Filter to lines containing this substring (e.g., grep=ERROR)."),
+			mcp.Description("Filter to lines containing this text, in any case (e.g., grep=error)."),
 		),
 		mcp.WithString("step",
 			mcp.Description("Filter to logs from one workflow step by its ref (e.g., 'rljcn6k'), such as statusDetails.step from get_execution_info. Step names are not accepted."),
