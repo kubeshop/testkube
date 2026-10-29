@@ -108,10 +108,14 @@ resolve_version() {
     return
   fi
   if command -v curl >/dev/null 2>&1; then
-    url=$(curl -fsS --retry 3 -o /dev/null -w '%{redirect_url}' "$base_url/latest" 2>/dev/null) || url=''
+    url=$(curl -fsSIL --retry 3 -o /dev/null -w '%{url_effective}' "$base_url/latest" 2>/dev/null) || url=''
   else
     url=$(wget -S --spider "$base_url/latest" 2>&1 | sed -n 's/^ *[Ll]ocation: *//p' | tail -n 1 | tr -d '\r') || url=''
   fi
+  case "$url" in
+    */tag/*) ;;
+    *) url='' ;;
+  esac
   if [ -z "$url" ]; then
     fail version "could not find the latest version" "Check your network, proxy or firewall, then run again:\n  $RERUN"
   fi
