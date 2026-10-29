@@ -40,7 +40,7 @@ func NewUninstallLocalCmd() *cobra.Command {
 	return cmd
 }
 
-const uninstallCommand = "testkube uninstall local"
+var uninstallCommand = localinstall.Self + " uninstall local"
 
 var (
 	errNeedsYes     = errors.New("--delete-data needs a yes, and there's no terminal to ask")
