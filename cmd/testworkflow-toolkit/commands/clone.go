@@ -19,6 +19,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -251,7 +252,7 @@ func NewCloneCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.Username, "username", "u", "", "git username for authentication")
 	cmd.Flags().StringVarP(&opts.Token, "token", "t", "", "git token for authentication")
 	cmd.Flags().StringVarP(&opts.SSHKey, "sshKey", "s", "", "SSH private key for authentication")
-	cmd.Flags().StringVarP(&opts.AuthType, "authType", "a", "basic", "authentication type (allowed: basic, header, github)")
+	cmd.Flags().StringVarP(&opts.AuthType, "authType", "a", "basic", "authentication type (allowed: basic, header, github, gitlab)")
 	cmd.Flags().StringVarP(&opts.Revision, "revision", "r", "", "commit hash, branch name or tag")
 	cmd.Flags().BoolVar(&opts.Cone, "cone", false, "enable cone mode for sparse checkout")
 	cmd.Flags().StringVar(&opts.Verbosity, "verbosity", "verbose", "logging level (allowed: quiet, normal, verbose)")
@@ -283,7 +284,16 @@ func RunClone(ctx context.Context, rawURI string, outputPath string, opts *Clone
 	}
 
 	// Setup credential store for reliable auth across redirects (best-effort)
-	cleanupCreds := setupCredentialStore(uri)
+	var cleanupCreds func()
+	if opts.AuthType == "gitlab" {
+		cleanupCreds, err = setupGitLabCredentialStore(uri)
+		if err != nil {
+			return fmt.Errorf("setting up GitLab credential store: %w", err)
+		}
+		uri.User = nil
+	} else {
+		cleanupCreds = setupCredentialStore(uri)
+	}
 	defer cleanupCreds()
 
 	// Setup SSH if provided
@@ -398,6 +408,15 @@ func setupAuthentication(ctx context.Context, uri *url.URL, opts *CloneOptions) 
 			uri.User = url.User(opts.Username)
 		}
 
+	case "gitlab":
+		client, err := env.Cloud()
+		if err != nil {
+			return nil, fmt.Errorf("could not create cloud client: %w", err)
+		}
+		if err := setupGitLabAuthentication(ctx, uri, opts, client); err != nil {
+			return nil, err
+		}
+
 	case "github":
 		ui.Debug("auth type: github")
 		client, err := env.Cloud()
@@ -451,6 +470,46 @@ func setupSSHKey(sshKey string) (func(), error) {
 	os.Setenv("GIT_SSH_COMMAND", sshCmd)
 
 	return func() { _ = os.Remove(sshKeyPath) }, nil
+}
+
+// GitLab runs in a non-root toolkit container whose HOME may be read-only.
+// Keep credentials and configuration in private temporary files, and point Git
+// at that configuration for this process. No credential is saved in the remote
+// URL or repository configuration, and no write to HOME is required.
+func setupGitLabCredentialStore(uri *url.URL) (func(), error) {
+	if uri.User == nil {
+		return nil, fmt.Errorf("GitLab checkout credentials are missing")
+	}
+	dir, err := os.MkdirTemp(constants.DefaultTmpDirPath, "gitlab-auth-*")
+	if err != nil {
+		return nil, err
+	}
+	previous, existed := os.LookupEnv("GIT_CONFIG_GLOBAL")
+	cleanup := func() {
+		if existed {
+			_ = os.Setenv("GIT_CONFIG_GLOBAL", previous)
+		} else {
+			_ = os.Unsetenv("GIT_CONFIG_GLOBAL")
+		}
+		_ = os.RemoveAll(dir)
+	}
+	credentialURL := &url.URL{Scheme: uri.Scheme, Host: uri.Host, User: uri.User}
+	credentials := filepath.Join(dir, "credentials")
+	config := filepath.Join(dir, "config")
+	if err = os.WriteFile(credentials, []byte(credentialURL.String()+"\n"), 0600); err != nil {
+		cleanup()
+		return nil, err
+	}
+	content := "[credential]\n\thelper = store --file " + shellquote.Join(credentials) + "\n"
+	if err = os.WriteFile(config, []byte(content), 0600); err != nil {
+		cleanup()
+		return nil, err
+	}
+	if err = os.Setenv("GIT_CONFIG_GLOBAL", config); err != nil {
+		cleanup()
+		return nil, err
+	}
+	return cleanup, nil
 }
 
 // setupCredentialStore configures a git credential store file so that credentials
@@ -727,4 +786,22 @@ func listDirectoryContents(path string, opts *CloneOptions) error {
 		}
 		return nil
 	})
+}
+
+type gitLabAccessClient interface {
+	GetGitAccess(context.Context, string, string) (*cloud.GetGitAccessResponse, error)
+}
+
+func setupGitLabAuthentication(ctx context.Context, uri *url.URL, opts *CloneOptions, client gitLabAccessClient) error {
+	access, err := client.GetGitAccess(ctx, uri.String(), opts.Revision)
+	if err != nil {
+		return fmt.Errorf("GitLab checkout access is unavailable; check the connection and update the control plane and Runner: %w", err)
+	}
+	relay, err := url.Parse(access.Url)
+	if err != nil || relay.Host == "" || (relay.Scheme != "https" && relay.Scheme != "http") || access.Token == "" {
+		return fmt.Errorf("invalid GitLab checkout access")
+	}
+	*uri = *relay
+	uri.User = url.UserPassword(access.Username, access.Token)
+	return nil
 }
