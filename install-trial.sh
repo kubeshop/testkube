@@ -63,8 +63,17 @@ detect_system() {
   case "$(uname -s)" in
     Darwin) os=Darwin os_label=macOS ;;
     Linux) os=Linux os_label=Linux ;;
+    MINGW* | MSYS* | CYGWIN*)
+      fail system "Windows is not supported here" "In your WSL terminal, run:\n  $RERUN"
+      ;;
     *)
       fail system "$(uname -s) is not supported" "The trial runs on macOS and Linux."
+      ;;
+  esac
+  # WSL 1 reports a capital M; WSL 2 a lowercase one.
+  case "$(uname -r)" in
+    *Microsoft*)
+      fail system "WSL 1 can't run Docker" "Switch this distro to WSL 2. In PowerShell, run:\n  wsl --set-version ${WSL_DISTRO_NAME:-<distro>} 2\nThen run again:\n  $RERUN"
       ;;
   esac
   case "$(uname -m)" in
@@ -74,6 +83,10 @@ detect_system() {
       fail system "$(uname -m) is not supported" "The trial runs on x86_64 and arm64 machines."
       ;;
   esac
+  # Rosetta shells report x86_64 on Apple silicon.
+  if [ "$os" = Darwin ] && [ "$(/usr/sbin/sysctl -n sysctl.proc_translated 2>/dev/null)" = 1 ]; then
+    arch=arm64
+  fi
 }
 
 check_tools() {
