@@ -22,6 +22,7 @@ type ExecutionSelfClient interface {
 	GetExecution(ctx context.Context, environmentId, executionId string) (*testkube.TestWorkflowExecution, error)
 	GetCredential(ctx context.Context, environmentId, executionId, name string) ([]byte, error)
 	GetCredentialWithSource(ctx context.Context, environmentId, executionId, name, source string) ([]byte, error)
+	GetGitAccess(ctx context.Context, url, revision string) (*cloud.GetGitAccessResponse, error)
 	GetGitHubToken(ctx context.Context, url string) (string, error)
 }
 
@@ -139,4 +140,8 @@ func (c *client) GetGitHubToken(ctx context.Context, url string) (string, error)
 		return "", err
 	}
 	return res.Token, nil
+}
+
+func (c *client) GetGitAccess(ctx context.Context, url, revision string) (*cloud.GetGitAccessResponse, error) {
+	return call(ctx, c.metadata().GRPC(), c.client.GetGitAccess, &cloud.GetGitAccessRequest{Url: url, Revision: revision})
 }
