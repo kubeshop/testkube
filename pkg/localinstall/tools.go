@@ -88,7 +88,7 @@ func ToolsDir() (string, error) {
 	return filepath.Join(home, ".testkube", "bin"), nil
 }
 
-// Run before AddToolsDirToPath, or our folder would count as PATH.
+// Script installs land off PATH, so hints need the path.
 func selfCommand(exe string) string {
 	dir, err := ToolsDir()
 	if err != nil || !sameFile(filepath.Dir(exe), dir) {

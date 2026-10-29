@@ -9,7 +9,7 @@ import (
 	licensevalidator "github.com/kubeshop/testkube/pkg/diagnostics/validators/license"
 )
 
-// Script installs land off PATH, so hints need the full path.
+// At load, before AddToolsDirToPath puts our folder on PATH.
 var Self = func() string {
 	exe, _ := os.Executable()
 	return selfCommand(exe)
