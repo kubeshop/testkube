@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -85,6 +86,24 @@ func ToolsDir() (string, error) {
 		return "", err
 	}
 	return filepath.Join(home, ".testkube", "bin"), nil
+}
+
+// Run before AddToolsDirToPath, or our folder would count as PATH.
+func selfCommand(exe string) string {
+	dir, err := ToolsDir()
+	if err != nil || !sameFile(filepath.Dir(exe), dir) {
+		return "testkube"
+	}
+	if onPath, err := exec.LookPath("testkube"); err == nil && sameFile(onPath, exe) {
+		return "testkube"
+	}
+	return "~/.testkube/bin/testkube"
+}
+
+func sameFile(a, b string) bool {
+	ra, errA := filepath.EvalSymlinks(a)
+	rb, errB := filepath.EvalSymlinks(b)
+	return errA == nil && errB == nil && ra == rb
 }
 
 // Appended, not prepended: the user's own tools still win.

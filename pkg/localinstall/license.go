@@ -2,17 +2,24 @@ package localinstall
 
 import (
 	"errors"
+	"os"
 	"strings"
 	"time"
 
 	licensevalidator "github.com/kubeshop/testkube/pkg/diagnostics/validators/license"
 )
 
-const (
+// Script installs land off PATH, so hints need the full path.
+var Self = func() string {
+	exe, _ := os.Executable()
+	return selfCommand(exe)
+}()
+
+var (
 	MaxLicenseAttempts = 3
 
-	InstallCommand  = "testkube install local"
-	InitDemoCommand = "testkube init demo"
+	InstallCommand  = Self + " install local"
+	InitDemoCommand = Self + " init demo"
 	// Own line, so a triple-click copies it.
 	RunAgain     = "Run again:\n  " + InstallCommand
 	ThenRunAgain = "then run again:\n  " + InstallCommand
