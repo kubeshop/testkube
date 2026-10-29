@@ -39,6 +39,7 @@ main() {
   ok installed "~/.testkube/bin/testkube"
 
   path_hint
+  start_installer
 }
 
 setup_colors() {
@@ -53,7 +54,7 @@ ok() {
 }
 
 fail() {
-  printf '  %s✘%s %-10s %s\n\n' "$red" "$reset" "$1" "$2" >&2
+  printf '  %s✖%s %-10s %s\n\n' "$red" "$reset" "$1" "$2" >&2
   printf '%b\n' "$3" >&2
   exit 1
 }
@@ -177,6 +178,17 @@ path_hint() {
   fi
   # shellcheck disable=SC2016
   printf '  export PATH="$HOME/.testkube/bin:$PATH"\n'
+}
+
+# Under curl | bash, stdin is the script, not the keyboard.
+start_installer() {
+  printf '\nStarting the installer...\n\n'
+  rm -rf "$tmp"
+  trap - EXIT
+  if (: </dev/tty) 2>/dev/null; then
+    exec "$bin_dir/testkube" install local </dev/tty
+  fi
+  exec "$bin_dir/testkube" install local </dev/null
 }
 
 main "$@"
