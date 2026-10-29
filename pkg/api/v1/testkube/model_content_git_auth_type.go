@@ -17,4 +17,5 @@ const (
 	BASIC_ContentGitAuthType  ContentGitAuthType = "basic"
 	HEADER_ContentGitAuthType ContentGitAuthType = "header"
 	GITHUB_ContentGitAuthType ContentGitAuthType = "github"
+	GITLAB_ContentGitAuthType ContentGitAuthType = "gitlab"
 )
