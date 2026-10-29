@@ -27,10 +27,14 @@ main() {
   trap 'exit 130' INT TERM
 
   archive="testkube_${version}_${os}_${arch}.tar.gz"
+  fix="Check your network, proxy or firewall, then run again:\n  $RERUN"
+  if [ -n "${TESTKUBE_VERSION:-}" ]; then
+    fix="Check that version $version exists at https://github.com/kubeshop/testkube/releases,\nor unset TESTKUBE_VERSION, then run again:\n  $RERUN"
+  fi
   fetch "$base_url/download/$version/$archive" "$tmp/$archive" ||
-    fail download "could not download $archive" "Check your network, proxy or firewall, then run again:\n  $RERUN"
+    fail download "could not download $archive" "$fix"
   fetch "$base_url/download/$version/checksums.txt" "$tmp/checksums.txt" ||
-    fail download "could not download checksums.txt" "Check your network, proxy or firewall, then run again:\n  $RERUN"
+    fail download "could not download checksums.txt" "$fix"
   verify_checksum "$tmp" "$archive"
   ok download "checksum verified"
 
