@@ -165,6 +165,7 @@ Pull request checks are not GitHub Actions. They are Testkube TestWorkflows in `
 | --- | --- |
 | `oss-lint-go` | `golangci-lint run ./...` |
 | `oss-lint-proto` | `buf lint`, `buf format --diff`, and `buf breaking` against `main` |
+| `oss-lint-shell` | `shellcheck --shell=dash` on `install-trial.sh` |
 | `oss-unit-tests` | `make unit-tests` |
 | `oss-integration-tests` | the `_Integration` tests with MongoDB, NATS, MinIO and Postgres |
 | `oss-verify-crds` | `make verify-crds-generated` |
