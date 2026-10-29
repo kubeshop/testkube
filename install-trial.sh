@@ -24,7 +24,8 @@ main() {
 
   tmp=$(mktemp -d)
   trap 'rm -rf "$tmp"' EXIT
-  trap 'exit 130' INT TERM
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
 
   archive="testkube_${version}_${os}_${arch}.tar.gz"
   fix="Check your network, proxy or firewall, then run again:\n  $RERUN"
