@@ -582,6 +582,26 @@ func (mr *MockTestKubeCloudAPIClientMockRecorder) GetExecutionCachePresigned(ctx
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecutionCachePresigned", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).GetExecutionCachePresigned), varargs...)
 }
 
+// GetGitAccess mocks base method.
+func (m *MockTestKubeCloudAPIClient) GetGitAccess(ctx context.Context, in *GetGitAccessRequest, opts ...grpc.CallOption) (*GetGitAccessResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetGitAccess", varargs...)
+	ret0, _ := ret[0].(*GetGitAccessResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetGitAccess indicates an expected call of GetGitAccess.
+func (mr *MockTestKubeCloudAPIClientMockRecorder) GetGitAccess(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGitAccess", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).GetGitAccess), varargs...)
+}
+
 // GetGitHubToken mocks base method.
 func (m *MockTestKubeCloudAPIClient) GetGitHubToken(ctx context.Context, in *GetGitHubTokenRequest, opts ...grpc.CallOption) (*GetGitHubTokenResponse, error) {
 	m.ctrl.T.Helper()

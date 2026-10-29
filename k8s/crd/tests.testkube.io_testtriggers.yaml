@@ -164,6 +164,7 @@ spec:
                         - basic
                         - header
                         - github
+                        - gitlab
                         type: string
                       branches:
                         description: |-

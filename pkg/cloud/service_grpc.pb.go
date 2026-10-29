@@ -51,6 +51,7 @@ type TestKubeCloudAPIClient interface {
 	SaveExecutionLogsPresigned(ctx context.Context, in *SaveExecutionLogsPresignedRequest, opts ...grpc.CallOption) (*SaveExecutionLogsPresignedResponse, error)
 	FinishExecution(ctx context.Context, in *FinishExecutionRequest, opts ...grpc.CallOption) (*FinishExecutionResponse, error)
 	GetGitHubToken(ctx context.Context, in *GetGitHubTokenRequest, opts ...grpc.CallOption) (*GetGitHubTokenResponse, error)
+	GetGitAccess(ctx context.Context, in *GetGitAccessRequest, opts ...grpc.CallOption) (*GetGitAccessResponse, error)
 	// Execution
 	SaveExecutionArtifactPresigned(ctx context.Context, in *SaveExecutionArtifactPresignedRequest, opts ...grpc.CallOption) (*SaveExecutionArtifactPresignedResponse, error)
 	ListExecutionArtifactsPresigned(ctx context.Context, in *ListExecutionArtifactsPresignedRequest, opts ...grpc.CallOption) (*ListExecutionArtifactsPresignedResponse, error)
@@ -584,6 +585,15 @@ func (c *testKubeCloudAPIClient) FinishExecution(ctx context.Context, in *Finish
 func (c *testKubeCloudAPIClient) GetGitHubToken(ctx context.Context, in *GetGitHubTokenRequest, opts ...grpc.CallOption) (*GetGitHubTokenResponse, error) {
 	out := new(GetGitHubTokenResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetGitHubToken", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) GetGitAccess(ctx context.Context, in *GetGitAccessRequest, opts ...grpc.CallOption) (*GetGitAccessResponse, error) {
+	out := new(GetGitAccessResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetGitAccess", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1273,6 +1283,7 @@ type TestKubeCloudAPIServer interface {
 	SaveExecutionLogsPresigned(context.Context, *SaveExecutionLogsPresignedRequest) (*SaveExecutionLogsPresignedResponse, error)
 	FinishExecution(context.Context, *FinishExecutionRequest) (*FinishExecutionResponse, error)
 	GetGitHubToken(context.Context, *GetGitHubTokenRequest) (*GetGitHubTokenResponse, error)
+	GetGitAccess(context.Context, *GetGitAccessRequest) (*GetGitAccessResponse, error)
 	// Execution
 	SaveExecutionArtifactPresigned(context.Context, *SaveExecutionArtifactPresignedRequest) (*SaveExecutionArtifactPresignedResponse, error)
 	ListExecutionArtifactsPresigned(context.Context, *ListExecutionArtifactsPresignedRequest) (*ListExecutionArtifactsPresignedResponse, error)
@@ -1420,6 +1431,9 @@ func (UnimplementedTestKubeCloudAPIServer) FinishExecution(context.Context, *Fin
 }
 func (UnimplementedTestKubeCloudAPIServer) GetGitHubToken(context.Context, *GetGitHubTokenRequest) (*GetGitHubTokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetGitHubToken not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetGitAccess(context.Context, *GetGitAccessRequest) (*GetGitAccessResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetGitAccess not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) SaveExecutionArtifactPresigned(context.Context, *SaveExecutionArtifactPresignedRequest) (*SaveExecutionArtifactPresignedResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SaveExecutionArtifactPresigned not implemented")
@@ -2061,6 +2075,24 @@ func _TestKubeCloudAPI_GetGitHubToken_Handler(srv interface{}, ctx context.Conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(TestKubeCloudAPIServer).GetGitHubToken(ctx, req.(*GetGitHubTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_GetGitAccess_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetGitAccessRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).GetGitAccess(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/GetGitAccess",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).GetGitAccess(ctx, req.(*GetGitAccessRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3010,6 +3042,10 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetGitHubToken",
 			Handler:    _TestKubeCloudAPI_GetGitHubToken_Handler,
+		},
+		{
+			MethodName: "GetGitAccess",
+			Handler:    _TestKubeCloudAPI_GetGitAccess_Handler,
 		},
 		{
 			MethodName: "SaveExecutionArtifactPresigned",
