@@ -53,6 +53,103 @@ spec:
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
+  name: docs-typos
+  labels:
+    category: static-analysis
+    quality-loop: "true"
+    core-tests: docs
+    tool: typos
+  annotations:
+    testkube.io/git-integration-managed: "false"
+description: typos spell check of the whole docs repository, using _typos.toml. Runs
+  on all PRs and on push to main.
+spec:
+  config:
+    revision:
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube-docs.git
+      revision: '{{config.revision}}'
+  container:
+    workingDir: /data/repo
+    image: node:20-bookworm
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Check spelling
+    timeout: 5m
+    shell: |
+      set -eu
+      # The docs repository's AGENTS.md pins the version, so a local run matches this check.
+      v=$(sed -n 's/.*pip install typos==\([0-9][0-9.]*\).*/\1/p' AGENTS.md | head -n1)
+      if [ -z "$v" ]; then echo "AGENTS.md names no typos version (pip install typos==<version>)."; exit 2; fi
+      curl -sSfL "https://github.com/crate-ci/typos/releases/download/v$v/typos-v$v-x86_64-unknown-linux-musl.tar.gz" \
+        | tar -xzf - -C /usr/local/bin ./typos
+      npm run lint:typos
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: docs-vale
+  labels:
+    category: static-analysis
+    quality-loop: "true"
+    core-tests: docs
+    tool: vale
+  annotations:
+    testkube.io/git-integration-managed: "false"
+description: Vale prose lint of the lines a branch adds to the docs, using .vale.ini.
+  Fails on error-level alerts only. Runs on all PRs.
+spec:
+  config:
+    revision:
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube-docs.git
+      revision: '{{config.revision}}'
+  container:
+    workingDir: /data/repo
+    image: node:20-bookworm
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Lint added lines
+    timeout: 10m
+    shell: |
+      set -eu
+      # The docs repository's AGENTS.md pins the version, so a local run matches this check.
+      v=$(sed -n 's/.*vale\/v3\/cmd\/vale@v\([0-9][0-9.]*\).*/\1/p' AGENTS.md | head -n1)
+      if [ -z "$v" ]; then echo "AGENTS.md names no Vale version (vale@v<version>)."; exit 2; fi
+      curl -sSfL "https://github.com/vale-cli/vale/releases/download/v$v/vale_${v}_Linux_64-bit.tar.gz" \
+        | tar -xzf - -C /usr/local/bin vale
+      vale sync
+      # The checkout is a depth-1 clone. Fetch main, then deepen both it and the branch until
+      # their merge base is present, rather than downloading the whole history.
+      git config --global --add safe.directory /data/repo
+      git fetch -q --no-tags --depth=50 origin main:refs/remotes/origin/main
+      n=0
+      until git merge-base origin/main HEAD >/dev/null 2>&1; do
+        n=$((n + 1))
+        if [ "$n" -gt 10 ]; then echo "No merge base with main in the last 1,000 commits."; exit 2; fi
+        git fetch -q --no-tags --deepen=100 origin main:refs/remotes/origin/main "{{config.revision}}"
+      done
+      npm run lint:vale -- origin/main
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
   name: oss-lint-go
   labels:
     category: static-analysis
