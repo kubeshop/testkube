@@ -19,6 +19,7 @@ type bufferedStream struct {
 type BufferedStream interface {
 	io.Reader
 	Len() int
+	Rewind() error
 	Cleanup() error
 	Err() error
 	Ready() <-chan struct{}
@@ -60,6 +61,12 @@ func (b *bufferedStream) Ready() <-chan struct{} {
 func (b *bufferedStream) Len() int {
 	<-b.ctx.Done()
 	return b.size
+}
+
+func (b *bufferedStream) Rewind() error {
+	<-b.ctx.Done()
+	_, err := b.file.Seek(0, io.SeekStart)
+	return err
 }
 
 func (b *bufferedStream) Cleanup() error {
