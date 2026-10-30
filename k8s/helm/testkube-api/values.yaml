@@ -246,6 +246,17 @@ next:
     ## Should it manage Kubernetes resources
     enabled: true
 
+## identity_token() of the standalone agent (no Control Plane): short-lived signed tokens a workflow
+## exchanges with a cloud provider. A Control Plane signs its own and ignores these values.
+identityToken:
+  ## Public URL of this API, which cloud providers fetch /.well-known/openid-configuration and
+  ## /.well-known/jwks.json from. Required with privateKeySecretRef.
+  issuer: ""
+  ## Secret holding a PEM RSA private key (2048 bits or more); empty turns identity tokens off
+  privateKeySecretRef: ""
+  ## Key of the private key in that Secret
+  privateKeySecretKey: "private-key.pem"
+
 ## Testkube API Deployment parameters
 ## Running Testkube in Agent mode
 cloud:

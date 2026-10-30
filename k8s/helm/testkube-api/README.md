@@ -91,6 +91,9 @@ A Helm chart for Testkube api
 | global.volumes.additionalVolumes | list | `[]` |  |
 | hostNetwork | string | `""` |  |
 | httpReadBufferSize | int | `8192` |  |
+| identityToken.issuer | string | `""` |  |
+| identityToken.privateKeySecretKey | string | `"private-key.pem"` |  |
+| identityToken.privateKeySecretRef | string | `""` |  |
 | image.digest | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.pullSecrets | list | `[]` |  |

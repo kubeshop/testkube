@@ -1,0 +1,58 @@
+suite: testkube-api identity tokens
+templates:
+  - templates/deployment.yaml
+release:
+  name: testkube
+  namespace: testkube
+tests:
+  - it: leaves identity tokens off by default
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: IDENTITY_TOKEN_PRIVATE_KEY_FILE
+          any: true
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: identity-token-key
+          any: true
+
+  - it: mounts the signing key and sets the issuer
+    set:
+      identityToken.issuer: https://testkube.example.com
+      identityToken.privateKeySecretRef: testkube-identity-token
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: IDENTITY_TOKEN_ISSUER
+            value: https://testkube.example.com
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: IDENTITY_TOKEN_PRIVATE_KEY_FILE
+            value: /etc/testkube/identity-token/private-key.pem
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /etc/testkube/identity-token
+            name: identity-token-key
+            readOnly: true
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: identity-token-key
+            secret:
+              secretName: testkube-identity-token
+              defaultMode: 0400
+              items:
+                - key: private-key.pem
+                  path: private-key.pem
+
+  - it: requires the issuer with the signing key
+    set:
+      identityToken.privateKeySecretRef: testkube-identity-token
+    asserts:
+      - failedTemplate:
+          errorMessage: identityToken.issuer is required with identityToken.privateKeySecretRef

@@ -30,7 +30,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
-func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *event.Emitter, envID string) *controlplane.Server {
+// CreateControlPlane builds the standalone control plane. identityTokens is nil
+// when identity tokens are off.
+func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *event.Emitter, envID string, identityTokens controlplane.IdentityTokenSigner) *controlplane.Server {
 	// Connect to the cluster
 	kubeConfig, err := k8sclient.GetK8sClientConfig()
 	commons.ExitOnError("Getting kubernetes config", err)
@@ -102,6 +104,8 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 		RedispatchAfter:                  cfg.ExecutionRedispatchAfter,
 		StartTimeout:                     cfg.ExecutionStartTimeout,
 		ReaperInterval:                   cfg.ExecutionReaperInterval,
+		IdentityTokens:                   identityTokens,
+		OrganizationID:                   cfg.TestkubeProOrgID,
 	}, enqueuer, executionController, executionQuerier, eventsEmitter, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
 		testWorkflowResultsRepository, testWorkflowOutputRepository, repoManager, envID, commands...)
 }

@@ -381,7 +381,3 @@ func (s *Server) FinishExecution(ctx context.Context, req *cloud.FinishExecution
 func (s *Server) GetGitHubToken(_ context.Context, _ *cloud.GetGitHubTokenRequest) (*cloud.GetGitHubTokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "github integration is not supported")
 }
-
-func (s *Server) GetIdentityToken(_ context.Context, _ *cloud.GetIdentityTokenRequest) (*cloud.GetIdentityTokenResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "identity tokens are not supported in the standalone version")
-}

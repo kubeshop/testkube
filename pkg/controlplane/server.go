@@ -75,6 +75,11 @@ type Config struct {
 	StartTimeout time.Duration
 	// ReaperInterval is how often the reaper runs.
 	ReaperInterval time.Duration
+
+	// IdentityTokens mints the tokens of identity_token(); nil turns them off.
+	IdentityTokens IdentityTokenSigner
+	// OrganizationID is the organization in identity token subjects.
+	OrganizationID string
 }
 
 // Defaults for the dispatch knobs.

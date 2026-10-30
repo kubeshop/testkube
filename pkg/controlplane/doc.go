@@ -13,4 +13,13 @@
 // executions before they are retried; the server clamps it if it is not. Raising the batch size
 // trades a bounded poll for a larger one: the bound is what keeps a burst of workflows sharing a
 // cron minute from exceeding the runner's call deadline.
+//
+// # Identity tokens
+//
+// With a signing key (IDENTITY_TOKEN_PRIVATE_KEY_FILE), GetIdentityToken mints identity_token() tokens
+// (pkg/identitytoken). Nothing else on this gRPC port authenticates the caller, so dispatch hands each
+// execution an execution token derived from the key, the runner passes it to the execution's pods as their
+// api-key, and GetIdentityToken mints a token only for the execution whose token it is. Without the key the
+// execution token stays empty, the pods keep the agent key as before, and GetIdentityToken returns
+// FailedPrecondition.
 package controlplane

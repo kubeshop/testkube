@@ -209,6 +209,8 @@ The API server exposes Prometheus metrics at `/metrics` for monitoring and obser
 
 **Probes**: the `testkube-api` and `testkube-runner` charts point their readiness probes at `/ready`. Liveness stays on `/health` deliberately — a stalled poll loop usually means the control plane is unreachable, and restarting every runner in the fleet over that is worse than the stall.
 
+**Identity token issuer** (standalone only, when `IDENTITY_TOKEN_PRIVATE_KEY_FILE` is set): `GET /.well-known/openid-configuration` and `GET /.well-known/jwks.json`, at the API root rather than under `/v1`, so cloud providers can verify the tokens of `identity_token()`. Registered in [`cmd/api-server/services/identitytoken.go`](cmd/api-server/services/identitytoken.go); see [`pkg/identitytoken/doc.go`](pkg/identitytoken/doc.go).
+
 ### 10. Logging and Telemetry
 
 #### Logging

@@ -74,6 +74,7 @@ func (s *Server) GetExecutionUpdates(ctx context.Context, _ *executionv1.GetExec
 			continue
 		}
 		executionStart := createExecutionStart(exe, info)
+		executionStart.ExecutionToken = common.Ptr(s.executionToken(info.EnvironmentId, exe.Id))
 		start = append(start, &executionStart)
 	}
 
@@ -188,14 +189,16 @@ func createExecutionStart(exe testkube.TestWorkflowExecution, info scheduling.Ru
 	}
 
 	return executionv1.ExecutionStart{
-		ExecutionId:          common.Ptr(exe.Id),
-		GroupId:              common.Ptr(exe.GroupId),
-		Name:                 common.Ptr(exe.Name),
-		Number:               common.Ptr(exe.Number),
-		QueuedAt:             timestamppb.New(exe.ScheduledAt),
-		DisableWebhooks:      common.Ptr(exe.DisableWebhooks),
-		EnvironmentId:        common.Ptr(info.EnvironmentId),
-		ExecutionToken:       common.Ptr(""), //TODO currently build-in control plane is insecure. Add auth and generate execution tokens.
+		ExecutionId:     common.Ptr(exe.Id),
+		GroupId:         common.Ptr(exe.GroupId),
+		Name:            common.Ptr(exe.Name),
+		Number:          common.Ptr(exe.Number),
+		QueuedAt:        timestamppb.New(exe.ScheduledAt),
+		DisableWebhooks: common.Ptr(exe.DisableWebhooks),
+		EnvironmentId:   common.Ptr(info.EnvironmentId),
+		// GetExecutionUpdates fills it in; only GetIdentityToken checks it so far,
+		// the other RPCs of the built-in control plane do not authenticate callers.
+		ExecutionToken:       common.Ptr(""),
 		AncestorExecutionIds: ancestorIds,
 		WorkflowName:         common.Ptr(workflowName),
 		VariableOverrides:    variableOverrides,

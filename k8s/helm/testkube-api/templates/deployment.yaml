@@ -77,6 +77,12 @@ spec:
               value: "{{ .Values.service.port }}"
             - name: GRPCSERVER_PORT
               value: "{{ .Values.service.grpcPort }}"
+            {{- if .Values.identityToken.privateKeySecretRef }}
+            - name: IDENTITY_TOKEN_ISSUER
+              value: {{ required "identityToken.issuer is required with identityToken.privateKeySecretRef" .Values.identityToken.issuer | quote }}
+            - name: IDENTITY_TOKEN_PRIVATE_KEY_FILE
+              value: /etc/testkube/identity-token/{{ .Values.identityToken.privateKeySecretKey }}
+            {{- end }}
             - name: TESTKUBE_ANALYTICS_ENABLED
               value: "{{ .Values.analyticsEnabled }}"
             {{- if .Values.templates.job }}
@@ -359,6 +365,11 @@ spec:
               readOnly: true
               subPath: {{ .Values.cloud.tls.customCaSecretKey }}
             {{- end }}
+            {{- if .Values.identityToken.privateKeySecretRef }}
+            - mountPath: /etc/testkube/identity-token
+              name: identity-token-key
+              readOnly: true
+            {{- end }}
             {{- with .Values.additionalVolumeMounts }}
             {{- toYaml . | nindent 12 -}}
             {{- end }}
@@ -409,6 +420,15 @@ spec:
           secret:
             defaultMode: 420
             secretName: {{ .Values.cloud.tls.customCaSecretRef }}
+        {{- end }}
+        {{- if .Values.identityToken.privateKeySecretRef }}
+        - name: identity-token-key
+          secret:
+            secretName: {{ .Values.identityToken.privateKeySecretRef }}
+            defaultMode: 0400
+            items:
+              - key: {{ .Values.identityToken.privateKeySecretKey }}
+                path: {{ .Values.identityToken.privateKeySecretKey }}
         {{- end }}
         {{- with .Values.additionalVolumes }}
         {{- toYaml . | nindent 8 -}}

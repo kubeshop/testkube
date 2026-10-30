@@ -23,9 +23,10 @@
 //
 // # Contract with the Control Plane
 //
-// The Control Plane (testkube-cloud-api) implements both RPCs: it signs identity tokens with its own key and
-// publishes the matching JWKS. The standalone control plane (pkg/controlplane) supports neither and returns
-// Unimplemented, which fails the expression.
+// The Control Plane (testkube-cloud-api) implements both RPCs. The standalone control plane (pkg/controlplane)
+// returns Unimplemented for GetCredential, and implements GetIdentityToken when it has a signing key
+// (IDENTITY_TOKEN_PRIVATE_KEY_FILE); without one it returns FailedPrecondition. Either failure fails the
+// expression. Both sign identity tokens with pkg/identitytoken, which also serves the issuer documents.
 //
 // Resolved values are handed to observers, which the init process uses to mask them in the logs.
 package credentials

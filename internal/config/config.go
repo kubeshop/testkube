@@ -84,6 +84,12 @@ type OSSControlPlaneConfig struct {
 	ExecutionStartTimeout time.Duration `envconfig:"EXECUTION_START_TIMEOUT" default:"10m"`
 	// How often the reaper looks for executions that were never acknowledged.
 	ExecutionReaperInterval time.Duration `envconfig:"EXECUTION_REAPER_INTERVAL" default:"1m"`
+	// The identity_token() signing key of the standalone control plane, a PEM RSA
+	// private key; empty turns identity tokens off. See pkg/identitytoken.
+	IdentityTokenPrivateKeyFile string `envconfig:"IDENTITY_TOKEN_PRIVATE_KEY_FILE" default:""`
+	// The public URL of this API, which cloud providers fetch the issuer documents
+	// from. Required with IdentityTokenPrivateKeyFile.
+	IdentityTokenIssuer string `envconfig:"IDENTITY_TOKEN_ISSUER" default:""`
 }
 
 type LegacyExecutorConfig struct {

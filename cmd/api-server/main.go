@@ -72,6 +72,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	gitinformer "github.com/kubeshop/testkube/pkg/git/informer"
+	"github.com/kubeshop/testkube/pkg/identitytoken"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
@@ -201,10 +202,17 @@ func main() {
 	// Connect to the Control Plane
 	var grpcConn *grpc.ClientConn
 	var controlPlane *controlplane.Server
+	var identityTokens *identitytoken.Signer
 	if mode == common.ModeStandalone {
 		log.DefaultLogger.Info("starting embedded Control Plane service...")
 		// In standalone mode, use environment ID from config (empty if not set)
-		controlPlane = services.CreateControlPlane(ctx, cfg, eventsEmitter, cfg.TestkubeProEnvID)
+		identityTokens = services.CreateIdentityTokenSigner(cfg)
+		var identityTokenSigner controlplane.IdentityTokenSigner
+		if identityTokens != nil {
+			// A typed nil *Signer in the interface would read as configured.
+			identityTokenSigner = identityTokens
+		}
+		controlPlane = services.CreateControlPlane(ctx, cfg, eventsEmitter, cfg.TestkubeProEnvID, identityTokenSigner)
 
 		var lc net.ListenConfig
 		ln, err := lc.Listen(ctx, "tcp", fmt.Sprintf(":%d", cfg.GRPCServerPort))
@@ -755,6 +763,9 @@ func main() {
 	log.DefaultLogger.Infow("creating HTTP server...", "port", cfg.APIServerPort)
 	httpServer := server.NewServer(server.Config{Port: cfg.APIServerPort, EnableTracing: cfg.TracingEnabled})
 	httpServer.Routes.Use(cors.New())
+	if identityTokens != nil {
+		services.RegisterIdentityTokenRoutes(httpServer.Mux, identityTokens)
+	}
 
 	// Report a stalled execution poll loop through readiness. /health answers
 	// unconditionally, so a runner that has stopped consuming work looks healthy
