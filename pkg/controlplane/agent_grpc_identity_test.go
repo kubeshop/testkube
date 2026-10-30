@@ -67,6 +67,9 @@ func TestGetIdentityToken(t *testing.T) {
 	noStatus.Result = &testkube.TestWorkflowResult{}
 	noWorkflow := running
 	noWorkflow.Workflow = nil
+	// Get also matches by name, so "exec-1" can resolve to another execution named exec-1.
+	matchedByName := running
+	matchedByName.Id = "exec-other"
 
 	tests := []struct {
 		name      string
@@ -86,6 +89,7 @@ func TestGetIdentityToken(t *testing.T) {
 		{name: "another execution's token", ctx: withAPIKey(base.ExecutionToken(common.StandaloneEnvironment, "exec-2")), req: &cloud.GetIdentityTokenRequest{ExecutionId: "exec-1", Audience: "aud"}, wantCode: codes.PermissionDenied},
 		{name: "unknown execution", ctx: withAPIKey(validToken), req: &cloud.GetIdentityTokenRequest{ExecutionId: "exec-1", Audience: "aud"}, lookupErr: errors.New("not found"), wantCode: codes.Unknown},
 		{name: "finished execution", ctx: withAPIKey(validToken), req: &cloud.GetIdentityTokenRequest{ExecutionId: "exec-1", Audience: "aud"}, execution: &finished, wantCode: codes.NotFound},
+		{name: "execution matched by name only", ctx: withAPIKey(validToken), req: &cloud.GetIdentityTokenRequest{ExecutionId: "exec-1", Audience: "aud"}, execution: &matchedByName, wantCode: codes.NotFound},
 		{name: "execution without workflow", ctx: withAPIKey(validToken), req: &cloud.GetIdentityTokenRequest{ExecutionId: "exec-1", Audience: "aud"}, execution: &noWorkflow, wantCode: codes.FailedPrecondition},
 		{name: "invalid audience", ctx: withAPIKey(validToken), req: &cloud.GetIdentityTokenRequest{ExecutionId: "exec-1"}, execution: &running, signErr: identitytoken.ErrInvalidAudience, wantCode: codes.InvalidArgument},
 		{name: "signing failure", ctx: withAPIKey(validToken), req: &cloud.GetIdentityTokenRequest{ExecutionId: "exec-1", Audience: "aud"}, execution: &running, signErr: errors.New("boom"), wantCode: codes.Internal},

@@ -58,6 +58,11 @@ func (s *Server) GetIdentityToken(ctx context.Context, req *cloud.GetIdentityTok
 	if err != nil {
 		return nil, err
 	}
+	// Get also matches by name, and the execution token only covers the requested
+	// string, so a name match could mint a token for another workflow.
+	if execution.Id != req.ExecutionId {
+		return nil, status.Error(codes.NotFound, "execution not found")
+	}
 	if execution.Result != nil && execution.Result.Status != nil && execution.Result.IsFinished() {
 		return nil, status.Error(codes.NotFound, "execution is expired")
 	}
