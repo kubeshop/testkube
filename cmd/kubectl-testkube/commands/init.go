@@ -91,7 +91,7 @@ func NewInitCmdStandalone() *cobra.Command {
 			ui.NL()
 			common.ShowOperatorDeprecationWarning("Testkube API Server", options.NoCRDs)
 
-			if !isContextApproved(options.NoConfirm, standaloneInstallationName) {
+			if !isContextApproved(options, standaloneInstallationName) {
 				return
 			}
 
@@ -350,23 +350,31 @@ func NewInitCmdDemo() *cobra.Command {
 	return cmd
 }
 
-func isContextApproved(isNoConfirm bool, installedComponent string) bool {
-	if !isNoConfirm {
-		ui.Warn("This will install " + installedComponent + " to the latest version. This may take a few minutes.")
-		ui.Warn("Please be sure you're on valid kubectl context before continuing!")
-		ui.NL()
+// isContextApproved shows where the installation goes (the kubectl context, the namespace and the release name) and
+// asks for confirmation, unless --no-confirm is set. The namespace and release are shown either way, also when they
+// are the defaults, so it is clear where Testkube is installed.
+func isContextApproved(options common.HelmOptions, installedComponent string) bool {
+	if options.NoConfirm {
+		ui.Info(fmt.Sprintf("Installing %s as the Helm release %q in namespace %q.", installedComponent, options.Name, options.Namespace))
+		return true
+	}
 
-		currentContext, err := common.GetCurrentKubernetesContext()
-		common.HandleCLIError(err)
+	ui.Warn("This will install " + installedComponent + " to the latest version. This may take a few minutes.")
+	ui.Warn("Please be sure you're on valid kubectl context before continuing!")
+	ui.NL()
 
-		ui.Alert("Current kubectl context:", currentContext)
-		ui.NL()
+	currentContext, err := common.GetCurrentKubernetesContext()
+	common.HandleCLIError(err)
 
-		ok := ui.Confirm("Do you want to continue?")
-		if !ok {
-			ui.Errf("Installation cancelled")
-			return false
-		}
+	ui.Alert("Current kubectl context:", currentContext)
+	ui.Alert("Namespace:", options.Namespace)
+	ui.Alert("Helm release:", options.Name)
+	ui.NL()
+
+	ok := ui.Confirm("Do you want to continue?")
+	if !ok {
+		ui.Errf("Installation cancelled")
+		return false
 	}
 	return true
 }
