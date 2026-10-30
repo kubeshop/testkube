@@ -91,7 +91,7 @@ func RunKillWithOptions(ctx context.Context, cfg *config.ConfigV2, groupRef stri
 // is a warning rather than a step failure, so a teardown blip does not overturn a passed test.
 func RunKill(ctx context.Context, worker executionworkertypes.Worker, clientSet kubernetes.Interface, namespace string, ref string, groupRef string, conditions map[string]expressions.Expression, machine expressions.Machine) error {
 	var items []executionworkertypes.ListResultItem
-	err := retryTransient(ctx, cleanupRetryCount, cleanupRetryDelay, func() error {
+	err := cleanupPolicy().Do(ctx, func() error {
 		var listErr error
 		items, listErr = worker.List(ctx, executionworkertypes.ListOptions{
 			GroupId: groupRef,
@@ -196,7 +196,7 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, clientSet 
 
 	// A permanent error recurs on every run with no self-healing path, so it stays fatal rather
 	// than leaking service pods behind a green status.
-	err = retryTransient(ctx, cleanupRetryCount, cleanupRetryDelay, func() error {
+	err = cleanupPolicy().Do(ctx, func() error {
 		return worker.DestroyGroup(ctx, groupRef, executionworkertypes.DestroyOptions{
 			Namespace: namespace,
 		})
@@ -287,7 +287,7 @@ const oomKilledReason = "OOMKilled"
 
 func getServiceHealth(ctx context.Context, clientSet kubernetes.Interface, ref, namespace, resourceId string) []string {
 	var pods *corev1.PodList
-	err := retryTransient(ctx, cleanupRetryCount, cleanupRetryDelay, func() error {
+	err := cleanupPolicy().Do(ctx, func() error {
 		var listErr error
 		pods, listErr = clientSet.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 			LabelSelector: "testkube.io/resource=" + resourceId,

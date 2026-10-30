@@ -1,0 +1,169 @@
+package retry
+
+import (
+	"context"
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+)
+
+var errBusy = errors.New("busy")
+
+func TestPolicy_Do(t *testing.T) {
+	permanent := errors.New("permanent")
+	tests := []struct {
+		name         string
+		policy       Policy
+		failures     []error
+		wantAttempts int
+		wantErr      error
+	}{
+		{
+			name:         "a call that works at once runs one time",
+			policy:       Policy{Attempts: 3},
+			wantAttempts: 1,
+		},
+		{
+			name:         "a call that fails two times runs again until it works",
+			policy:       Policy{Attempts: 3, Delay: time.Millisecond},
+			failures:     []error{errBusy, errBusy},
+			wantAttempts: 3,
+		},
+		{
+			name:         "the last error returns when the attempts run out",
+			policy:       Policy{Attempts: 2, Delay: time.Millisecond},
+			failures:     []error{errBusy, permanent, errBusy},
+			wantAttempts: 2,
+			wantErr:      permanent,
+		},
+		{
+			name:         "an error that RetryIf rejects returns at once",
+			policy:       Policy{Attempts: 5, Delay: time.Millisecond, RetryIf: func(err error) bool { return errors.Is(err, errBusy) }},
+			failures:     []error{permanent},
+			wantAttempts: 1,
+			wantErr:      permanent,
+		},
+		{
+			name:         "no wait follows the last attempt",
+			policy:       Policy{Attempts: 1, Delay: time.Hour},
+			failures:     []error{errBusy},
+			wantAttempts: 1,
+			wantErr:      errBusy,
+		},
+		{
+			name:         "a policy without attempts calls one time",
+			policy:       Policy{},
+			failures:     []error{errBusy},
+			wantAttempts: 1,
+			wantErr:      errBusy,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			calls := 0
+			err := tt.policy.Do(context.Background(), func() error {
+				calls++
+				if calls <= len(tt.failures) {
+					return tt.failures[calls-1]
+				}
+				return nil
+			})
+
+			assert.Equal(t, tt.wantAttempts, calls)
+			assert.Equal(t, tt.wantErr, err)
+		})
+	}
+}
+
+func TestPolicy_Do_Context(t *testing.T) {
+	tests := []struct {
+		name         string
+		cancelBefore bool
+		wantAttempts int
+		wantBusy     bool
+	}{
+		{name: "a context that ended before the call makes no attempt", cancelBefore: true, wantAttempts: 0},
+		{name: "a context that ends during a wait keeps the last error", wantAttempts: 1, wantBusy: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			t.Cleanup(cancel)
+			if tt.cancelBefore {
+				cancel()
+			}
+			calls := 0
+			err := Policy{Attempts: 3, Delay: time.Hour}.Do(ctx, func() error {
+				calls++
+				cancel()
+				return errBusy
+			})
+
+			assert.Equal(t, tt.wantAttempts, calls)
+			assert.ErrorIs(t, err, context.Canceled)
+			assert.Equal(t, tt.wantBusy, errors.Is(err, errBusy))
+		})
+	}
+}
+
+func TestPolicy_Wait(t *testing.T) {
+	tests := []struct {
+		name     string
+		policy   Policy
+		want     []time.Duration
+		wantLate time.Duration
+	}{
+		{
+			name:     "a linear wait grows by the delay",
+			policy:   Policy{Delay: time.Second},
+			want:     []time.Duration{time.Second, 2 * time.Second, 3 * time.Second},
+			wantLate: 100 * time.Second,
+		},
+		{
+			name:     "an exponential wait doubles up to the maximum",
+			policy:   Policy{Delay: time.Second, Growth: Exponential, MaxDelay: 3 * time.Second},
+			want:     []time.Duration{time.Second, 2 * time.Second, 3 * time.Second},
+			wantLate: 3 * time.Second,
+		},
+		{
+			name:     "an exponential wait that would overflow stops at the longest duration",
+			policy:   Policy{Delay: time.Hour, Growth: Exponential},
+			want:     []time.Duration{time.Hour, 2 * time.Hour},
+			wantLate: time.Duration(1<<63 - 1),
+		},
+		{
+			name:     "a fixed wait stays at the delay",
+			policy:   Policy{Delay: time.Second, Growth: Fixed},
+			want:     []time.Duration{time.Second, time.Second, time.Second},
+			wantLate: time.Second,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := make([]time.Duration, 0, len(tt.want))
+			for n := 1; n <= len(tt.want); n++ {
+				got = append(got, tt.policy.wait(n))
+			}
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.wantLate, tt.policy.wait(100), "the wait before attempt 101")
+		})
+	}
+}
+
+func TestPolicy_Do_OnRetry(t *testing.T) {
+	var attempts []int
+	var waits []time.Duration
+	policy := Policy{Attempts: 3, Delay: time.Millisecond, OnRetry: func(attempt int, err error, wait time.Duration) {
+		assert.Equal(t, errBusy, err)
+		attempts = append(attempts, attempt)
+		waits = append(waits, wait)
+	}}
+
+	err := policy.Do(context.Background(), func() error { return errBusy })
+
+	assert.Equal(t, errBusy, err)
+	assert.Equal(t, []int{0, 1}, attempts, "OnRetry runs after each attempt that gets another one, and not after the last")
+	assert.Equal(t, []time.Duration{time.Millisecond, 2 * time.Millisecond}, waits)
+}

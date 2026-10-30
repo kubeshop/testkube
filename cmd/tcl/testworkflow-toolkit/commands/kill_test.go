@@ -213,56 +213,6 @@ func TestCleanupErrorAggregates(t *testing.T) {
 	}
 }
 
-func TestRetryTransient(t *testing.T) {
-	t.Run("stops as soon as it succeeds", func(t *testing.T) {
-		attempts := 0
-		err := retryTransient(context.Background(), cleanupRetryCount, time.Millisecond, func() error {
-			attempts++
-			if attempts < 2 {
-				return serviceUnavailable()
-			}
-			return nil
-		})
-		assert.NoError(t, err)
-		assert.Equal(t, 2, attempts)
-	})
-
-	t.Run("gives up after the full budget", func(t *testing.T) {
-		attempts := 0
-		err := retryTransient(context.Background(), cleanupRetryCount, time.Millisecond, func() error {
-			attempts++
-			return serviceUnavailable()
-		})
-		require.Error(t, err)
-		assert.True(t, apierrors.IsServiceUnavailable(err))
-		assert.Equal(t, cleanupRetryCount, attempts)
-	})
-
-	t.Run("does not retry a permanent error", func(t *testing.T) {
-		attempts := 0
-		err := retryTransient(context.Background(), cleanupRetryCount, time.Millisecond, func() error {
-			attempts++
-			return forbidden()
-		})
-		require.Error(t, err)
-		assert.True(t, apierrors.IsForbidden(err))
-		assert.Equal(t, 1, attempts)
-	})
-
-	t.Run("returns promptly when the context is cancelled", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		attempts := 0
-		err := retryTransient(ctx, cleanupRetryCount, time.Hour, func() error {
-			attempts++
-			cancel()
-			return serviceUnavailable()
-		})
-		require.Error(t, err)
-		assert.ErrorIs(t, err, context.Canceled)
-		assert.Equal(t, 1, attempts, "must not sleep through the remaining budget")
-	})
-}
-
 func TestRunKillTeardown(t *testing.T) {
 	t.Run("passes when teardown succeeds", func(t *testing.T) {
 		shortenCleanupRetryDelay(t)
@@ -642,38 +592,6 @@ func TestIsTransientCleanupErrorOnSeveredConnections(t *testing.T) {
 			assert.Equal(t, tt.want, isTransientCleanupError(tt.err))
 			// The verdict must survive the join the group cleanup wraps everything in.
 			assert.Equal(t, tt.want, isFullyTransientCleanupError(errors.Join(tt.err)))
-		})
-	}
-}
-
-func TestRetryTransientHonoursAnAlreadyCancelledContext(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-
-	called := false
-	err := retryTransient(ctx, cleanupRetryCount, time.Millisecond, func() error {
-		called = true
-		return nil
-	})
-
-	require.Error(t, err)
-	assert.ErrorIs(t, err, context.Canceled)
-	assert.False(t, called, "a cancelled caller must not spend an API request")
-}
-
-// cleanupRetryCount is a const today, so this guards a caller that passes a configured zero
-// rather than a reachable path: without it the helper reports success without ever running fn,
-// and the caller then reads a result fn was supposed to set.
-func TestRetryTransientAlwaysMakesOneAttempt(t *testing.T) {
-	for _, count := range []int{0, -1} {
-		t.Run(fmt.Sprintf("count %d", count), func(t *testing.T) {
-			attempts := 0
-			err := retryTransient(context.Background(), count, time.Millisecond, func() error {
-				attempts++
-				return forbidden()
-			})
-			require.Error(t, err)
-			assert.Equal(t, 1, attempts)
 		})
 	}
 }

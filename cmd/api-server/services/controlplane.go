@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	testworkflowrepo "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	miniorepo "github.com/kubeshop/testkube/pkg/repository/testworkflow/minio"
 	nonerepo "github.com/kubeshop/testkube/pkg/repository/testworkflow/none"
+	"github.com/kubeshop/testkube/pkg/retry"
 	"github.com/kubeshop/testkube/pkg/secret"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
@@ -122,37 +124,27 @@ func ensureBucketsWithRetry(ctx context.Context, storageClient domainstorage.Cli
 		return
 	}
 
-	delay := 1 * time.Second
-	maxDelay := 30 * time.Second
-	maxAttempts := 10
-
-	for attempt := 0; attempt < maxAttempts; attempt++ {
-		remaining := 0
+	err := ensureBucketsPolicy.Do(ctx, func() error {
+		ready := true
 		for _, bucket := range active {
-			if !ensureBucket(ctx, storageClient, bucket) {
-				remaining++
-			}
+			ready = ensureBucket(ctx, storageClient, bucket) && ready
 		}
-
-		if remaining == 0 {
-			return
+		if !ready {
+			return errBucketsNotReady
 		}
-
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(delay):
-		}
-
-		if delay < maxDelay {
-			delay *= 2
-			if delay > maxDelay {
-				delay = maxDelay
-			}
-		}
+		return nil
+	})
+	if err != nil && ctx.Err() == nil {
+		log.DefaultLogger.Errorw("Failed to ensure buckets after max retries", "attempts", ensureBucketsPolicy.Attempts)
 	}
-	log.DefaultLogger.Errorw("Failed to ensure buckets after max retries", "attempts", maxAttempts)
 }
+
+// ensureBucketsPolicy waits for a storage that starts next to the agent and can be late, so the
+// wait doubles after each attempt.
+var ensureBucketsPolicy = retry.Policy{Attempts: 10, Delay: time.Second, Growth: retry.Exponential, MaxDelay: 30 * time.Second}
+
+// errBucketsNotReady is the error of an attempt that left a bucket that does not exist.
+var errBucketsNotReady = errors.New("a bucket is not ready")
 
 func ensureBucket(ctx context.Context, storageClient domainstorage.Client, bucket bucketSpec) bool {
 	exists, err := storageClient.BucketExists(ctx, bucket.name)

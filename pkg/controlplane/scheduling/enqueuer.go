@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/avast/retry-go/v5"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.uber.org/zap"
 
@@ -18,6 +17,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/retry"
 	"github.com/kubeshop/testkube/pkg/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
@@ -403,11 +403,7 @@ func (e *Enqueuer) persistExecution(ctx context.Context, executions []*testworkf
 		exec := executions[i]
 
 		// Insert the execution
-		err := retry.New(
-			retry.DelayType(retry.FixedDelay),
-			retry.Delay(300*time.Millisecond),
-			retry.Attempts(5),
-		).Do(
+		err := retry.Policy{Attempts: 5, Delay: 300 * time.Millisecond, Growth: retry.Fixed}.Do(ctx,
 			func() error {
 				err := e.executionRepository.Insert(ctx, *exec.Execution())
 				if err != nil {

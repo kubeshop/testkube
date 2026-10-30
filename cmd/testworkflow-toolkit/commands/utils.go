@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/kubeshop/testkube/pkg/retry"
 )
 
 func concat(args ...interface{}) []string {
@@ -138,20 +140,14 @@ func (d *diagnosticLine) Line() string {
 
 // RunWithRetry runs the command up to the given number of times. It stops early when final reports
 // an error that a retry cannot fix.
-func RunWithRetry(retries int, delay time.Duration, final func(error) bool, diagnostics Diagnostics, c string, args ...interface{}) (err error) {
-	for i := 0; i < retries; i++ {
-		err = Run(diagnostics, c, args...)
-		if err == nil {
-			return nil
-		}
-		if final != nil && final(err) {
-			return err
-		}
-		if i+1 < retries {
-			nextDelay := time.Duration(i+1) * delay
-			fmt.Printf("error, trying again in %s (attempt %d/%d): %s\n", nextDelay.String(), i+2, retries, err.Error())
-			time.Sleep(nextDelay)
-		}
+func RunWithRetry(retries int, delay time.Duration, final func(error) bool, diagnostics Diagnostics, c string, args ...interface{}) error {
+	policy := retry.Policy{
+		Attempts: retries,
+		Delay:    delay,
+		RetryIf:  func(err error) bool { return final == nil || !final(err) },
+		OnRetry: func(attempt int, err error, wait time.Duration) {
+			fmt.Printf("error, trying again in %s (attempt %d/%d): %s\n", wait.String(), attempt+2, retries, err.Error())
+		},
 	}
-	return err
+	return policy.Do(context.Background(), func() error { return Run(diagnostics, c, args...) })
 }
