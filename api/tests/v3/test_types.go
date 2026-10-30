@@ -108,7 +108,7 @@ type Repository struct {
 }
 
 // GitAuthType defines git auth type
-// +kubebuilder:validation:Enum=basic;header;github
+// +kubebuilder:validation:Enum=basic;header;github;gitlab
 type GitAuthType string
 
 const (
@@ -118,6 +118,8 @@ const (
 	GitAuthTypeHeader GitAuthType = "header"
 	// GitAuthTypeGitHub for GitHub App auth requests
 	GitAuthTypeGitHub GitAuthType = "github"
+	// GitAuthTypeGitLab obtains an execution-scoped read-only relay lease.
+	GitAuthTypeGitLab GitAuthType = "gitlab"
 )
 
 // artifact request body with test artifacts

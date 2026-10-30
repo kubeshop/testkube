@@ -40,6 +40,7 @@ service TestKubeCloudAPI {
     rpc SaveExecutionLogsPresigned(SaveExecutionLogsPresignedRequest) returns (SaveExecutionLogsPresignedResponse);
     rpc FinishExecution(FinishExecutionRequest) returns (FinishExecutionResponse);
     rpc GetGitHubToken(GetGitHubTokenRequest) returns (GetGitHubTokenResponse);
+    rpc GetGitAccess(GetGitAccessRequest) returns (GetGitAccessResponse);
 
     // Execution
     rpc SaveExecutionArtifactPresigned(SaveExecutionArtifactPresignedRequest) returns (SaveExecutionArtifactPresignedResponse);
@@ -1127,3 +1128,14 @@ message MigrateSuperAgentRequest {
 }
 
 message MigrateSuperAgentResponse {}
+
+// Checkout access is authorized from the execution token, never from request tenant IDs.
+message GetGitAccessRequest {
+ string url = 1;
+ string revision = 2;
+}
+message GetGitAccessResponse {
+ string url = 1;
+ string username = 2;
+ string token = 3;
+}
