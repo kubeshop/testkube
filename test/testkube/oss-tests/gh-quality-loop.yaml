@@ -181,8 +181,6 @@ spec:
       uri: https://github.com/kubeshop/testkube.git
       revision: '{{config.revision}}'
       verbosity: quiet
-      paths:
-      - install-trial.sh
   container:
     workingDir: /data/repo
     image: koalaman/shellcheck-alpine:v0.10.0
@@ -194,7 +192,8 @@ spec:
     activeDeadlineSeconds: 300
   steps:
   - name: ShellCheck
-    shell: shellcheck --shell=dash install-trial.sh
+    # Branches cut before the script have no file to check.
+    shell: '[ ! -f install-trial.sh ] || shellcheck --shell=dash install-trial.sh'
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
