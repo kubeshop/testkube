@@ -25,7 +25,11 @@
 // workflows as a secret.
 package executiondata
 
-import "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+import (
+	"sort"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+)
 
 const (
 	// ParentRef is the reserved reference pointing at the execution that scheduled
@@ -81,19 +85,19 @@ type Execution struct {
 	Outputs map[string]string `json:"outputs,omitempty"`
 	// ErrorMessage is the message of the initialization step, empty when it has none.
 	ErrorMessage string `json:"errorMessage,omitempty"`
-	// StepErrors are the messages of the steps that have one, keyed by step ref.
+	// StepErrors are the messages of the steps that have one, keyed by the id of the step, or by its ref when it has no id.
 	StepErrors map[string]string `json:"stepErrors,omitempty"`
-	// StepAttempts are the numbers of attempts of the steps that report one, keyed by step ref.
+	// StepAttempts are the numbers of attempts of the steps that report one, keyed by the id of the step, or by its ref when it has no id.
 	StepAttempts map[string]int64 `json:"stepAttempts,omitempty"`
 	// ErrorReason is the reason code of the initialization step, empty when it has none.
 	ErrorReason string `json:"errorReason,omitempty"`
-	// StepReasons are the reason codes of the steps that have one, keyed by step ref.
+	// StepReasons are the reason codes of the steps that have one, keyed by the id of the step, or by its ref when it has no id.
 	StepReasons map[string]string `json:"stepReasons,omitempty"`
 	// StatusType is the layer that made the execution fail, empty when it passed.
 	StatusType string `json:"statusType,omitempty"`
 	// StatusReason is the code of the cause that made the execution fail.
 	StatusReason string `json:"statusReason,omitempty"`
-	// StatusStep is the ref of the step that holds the cause, empty when no step holds it.
+	// StatusStep is the key of the step that holds the cause, empty when no step holds it.
 	StatusStep string `json:"statusStep,omitempty"`
 }
 
@@ -196,7 +200,9 @@ func (e *Execution) SetStatusDetails(execution *testkube.TestWorkflowExecution) 
 	}
 	e.StatusType = execution.Result.StatusDetails.Type_
 	e.StatusReason = execution.Result.StatusDetails.Reason
-	e.StatusStep = execution.Result.StatusDetails.Step
+	if step := execution.Result.StatusDetails.Step; step != "" {
+		e.StatusStep = stepKey(execution, step)
+	}
 }
 
 // ErrorsOf collects the message of the initialization step and the messages of the
@@ -211,8 +217,8 @@ func ReasonsOf(execution *testkube.TestWorkflowExecution) (string, map[string]st
 	return stepStrings(execution, func(step testkube.TestWorkflowStepResult) string { return step.ErrorReason })
 }
 
-// stepStrings returns the field of the initialization step and the same field of every step that
-// holds a value, keyed by step ref. It returns a nil map when no step holds one.
+// stepStrings returns the field of the initialization step and the same field of the steps, keyed as
+// byStepKey keys them. It returns a nil map when no step holds a value.
 func stepStrings(execution *testkube.TestWorkflowExecution, field func(step testkube.TestWorkflowStepResult) string) (string, map[string]string) {
 	if execution == nil || execution.Result == nil {
 		return "", nil
@@ -221,18 +227,88 @@ func stepStrings(execution *testkube.TestWorkflowExecution, field func(step test
 	if execution.Result.Initialization != nil {
 		initialization = field(*execution.Result.Initialization)
 	}
-	var steps map[string]string
-	for ref, step := range execution.Result.Steps {
-		value := field(step)
-		if value == "" {
+	return initialization, byStepKey(execution, field)
+}
+
+// byStepKey returns the field of every step that holds a value, keyed by the key that stepKeys gives
+// the step, and nil when no step holds one. A group and the stage that runs its operation share a key.
+// The stage comes after the group in the order of stepKeys, so the value of the stage wins. This is the
+// order that the classifier uses to find the cause step.
+func byStepKey[T comparable](execution *testkube.TestWorkflowExecution, field func(step testkube.TestWorkflowStepResult) T) map[string]T {
+	var zero T
+	var values map[string]T
+	for _, step := range stepKeys(execution) {
+		value := field(execution.Result.Steps[step.ref])
+		if value == zero {
 			continue
 		}
-		if steps == nil {
-			steps = make(map[string]string)
+		if values == nil {
+			values = make(map[string]T)
 		}
-		steps[ref] = value
+		values[step.key] = value
 	}
-	return initialization, steps
+	return values
+}
+
+// keyedStep is a step of the result and the key that the record gives it.
+type keyedStep struct {
+	ref string
+	key string
+}
+
+// stepKeys returns the key of each step: first the steps of the signature in their order, then the
+// other steps of the result in the order of their refs. A fixed order makes the record the same for
+// each read. The key is the id of the step, because the ref is random and the id comes from the
+// workflow. A step without an id keeps its ref.
+//
+// The processor gives the id of a step to the stage that runs its operation, so that stage shares the
+// key of its group. A stage that repeats any other id keeps its ref, so its value does not replace the
+// value of an unrelated step.
+func stepKeys(execution *testkube.TestWorkflowExecution) []keyedStep {
+	var steps []keyedStep
+	inSignature := make(map[string]bool)
+	used := make(map[string]bool)
+	var walk func(sig testkube.TestWorkflowSignature, groupKey string)
+	walk = func(sig testkube.TestWorkflowSignature, groupKey string) {
+		key := sig.Ref
+		if sig.Id != "" && (sig.Id == groupKey || !used[sig.Id]) {
+			key = sig.Id
+			used[key] = true
+		}
+		steps = append(steps, keyedStep{ref: sig.Ref, key: key})
+		inSignature[sig.Ref] = true
+		childGroupKey := ""
+		if key == sig.Id {
+			childGroupKey = key
+		}
+		for _, child := range sig.Children {
+			walk(child, childGroupKey)
+		}
+	}
+	for _, sig := range execution.Signature {
+		walk(sig, "")
+	}
+	var others []string
+	for ref := range execution.Result.Steps {
+		if !inSignature[ref] {
+			others = append(others, ref)
+		}
+	}
+	sort.Strings(others)
+	for _, ref := range others {
+		steps = append(steps, keyedStep{ref: ref, key: ref})
+	}
+	return steps
+}
+
+// stepKey returns the key of the step ref, and the ref when the result does not hold the step.
+func stepKey(execution *testkube.TestWorkflowExecution, ref string) string {
+	for _, step := range stepKeys(execution) {
+		if step.ref == ref {
+			return step.key
+		}
+	}
+	return ref
 }
 
 // AttemptsOf collects the number of attempts of each step, so a workflow can assert
@@ -242,17 +318,7 @@ func AttemptsOf(execution *testkube.TestWorkflowExecution) map[string]int64 {
 	if execution == nil || execution.Result == nil {
 		return nil
 	}
-	var stepAttempts map[string]int64
-	for ref, step := range execution.Result.Steps {
-		if step.Attempts == 0 {
-			continue
-		}
-		if stepAttempts == nil {
-			stepAttempts = make(map[string]int64)
-		}
-		stepAttempts[ref] = int64(step.Attempts)
-	}
-	return stepAttempts
+	return byStepKey(execution, func(step testkube.TestWorkflowStepResult) int64 { return int64(step.Attempts) })
 }
 
 // OutputsOf collects the values an execution published through its steps.
