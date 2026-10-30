@@ -116,6 +116,17 @@ func TestSign_RejectsInvalidAudience(t *testing.T) {
 	}
 }
 
+// An issuer with a path keeps the well-known documents under that path.
+func TestNewSigner_IssuerWithPath(t *testing.T) {
+	signer, err := NewSigner("https://api.example.com/tenant", newTestKey(t, 2048))
+	require.NoError(t, err)
+	body, err := signer.Discovery()
+	require.NoError(t, err)
+	var doc map[string]any
+	require.NoError(t, json.Unmarshal(body, &doc))
+	assert.Equal(t, "https://api.example.com/tenant/.well-known/jwks.json", doc["jwks_uri"])
+}
+
 func TestNewSigner_Validation(t *testing.T) {
 	key := newTestKey(t, 2048)
 	tests := []struct {
@@ -126,6 +137,10 @@ func TestNewSigner_Validation(t *testing.T) {
 		{name: "empty issuer", issuer: "", key: key},
 		{name: "relative issuer", issuer: "api.example.com", key: key},
 		{name: "non-http issuer", issuer: "ftp://api.example.com", key: key},
+		{name: "issuer with query", issuer: "https://api.example.com?tenant=1", key: key},
+		{name: "issuer with empty query", issuer: "https://api.example.com?", key: key},
+		{name: "issuer with fragment", issuer: "https://api.example.com#issuer", key: key},
+		{name: "issuer with empty fragment", issuer: "https://api.example.com/#", key: key},
 		{name: "missing key", issuer: testIssuer, key: nil},
 		{name: "short key", issuer: testIssuer, key: newTestKey(t, 1024)},
 	}

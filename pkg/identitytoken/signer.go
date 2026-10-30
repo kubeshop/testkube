@@ -90,6 +90,11 @@ func NewSigner(issuer string, key *rsa.PrivateKey) (*Signer, error) {
 	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
 		return nil, fmt.Errorf("identity token issuer must be an absolute URL, got %q", issuer)
 	}
+	// Discovery appends the well-known paths to the issuer, which would land
+	// inside a query or fragment; even an empty "?" or "#" breaks jwks_uri.
+	if strings.ContainsAny(issuer, "?#") {
+		return nil, fmt.Errorf("identity token issuer must not have a query or fragment, got %q", issuer)
+	}
 	if key == nil || key.N.BitLen() < minKeyBits {
 		return nil, fmt.Errorf("identity token private key must be RSA with at least %d bits", minKeyBits)
 	}
