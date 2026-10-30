@@ -258,6 +258,43 @@ spec:
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
+  name: oss-lint-shell
+  labels:
+    category: static-analysis
+    quality-loop: "true"
+    core-tests: testkube-oss
+    tool: shellcheck
+  annotations:
+    testkube.io/git-integration-managed: "false"
+description: ShellCheck on the trial install script, as dash, since users pipe it
+  to any sh. Runs on PRs to main and on feature-branch pushes.
+spec:
+  config:
+    revision:
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube.git
+      revision: '{{config.revision}}'
+      verbosity: quiet
+  container:
+    workingDir: /data/repo
+    image: koalaman/shellcheck-alpine:v0.10.0
+    resources:
+      requests:
+        cpu: 100m
+        memory: 64Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: ShellCheck
+    # Branches cut before the script have no file to check.
+    shell: '[ ! -f install-trial.sh ] || shellcheck --shell=dash install-trial.sh'
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
   name: oss-integration-tests
   labels:
     category: api-testing
