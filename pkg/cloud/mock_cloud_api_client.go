@@ -602,6 +602,26 @@ func (mr *MockTestKubeCloudAPIClientMockRecorder) GetGitHubToken(ctx, in any, op
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGitHubToken", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).GetGitHubToken), varargs...)
 }
 
+// GetIdentityToken mocks base method.
+func (m *MockTestKubeCloudAPIClient) GetIdentityToken(ctx context.Context, in *GetIdentityTokenRequest, opts ...grpc.CallOption) (*GetIdentityTokenResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetIdentityToken", varargs...)
+	ret0, _ := ret[0].(*GetIdentityTokenResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetIdentityToken indicates an expected call of GetIdentityToken.
+func (mr *MockTestKubeCloudAPIClientMockRecorder) GetIdentityToken(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIdentityToken", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).GetIdentityToken), varargs...)
+}
+
 // GetLogsStream mocks base method.
 func (m *MockTestKubeCloudAPIClient) GetLogsStream(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetLogsStreamClient, error) {
 	m.ctrl.T.Helper()

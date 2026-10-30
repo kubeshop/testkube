@@ -70,3 +70,8 @@ func Credentials() credentials.CredentialRepository {
 	cfg := GetState().InternalConfig
 	return credentials.NewCredentialRepository(CloudClient, cfg.Execution.EnvironmentId, cfg.Execution.Id)
 }
+
+func IdentityTokens() credentials.IdentityTokenRepository {
+	cfg := GetState().InternalConfig
+	return credentials.NewIdentityTokenRepository(CloudClient, cfg.Execution.EnvironmentId, cfg.Execution.Id)
+}
