@@ -148,7 +148,7 @@ func (i *Informer) prProviderFor(
 	gitConfig *testkube.TestTriggerContentGit,
 	cache *reconcileCache,
 ) (prProvider, error) {
-	host, repoPath, ok := splitGitURI(gitConfig.Uri)
+	_, repoPath, ok := splitGitURI(gitConfig.Uri)
 	if !ok {
 		return nil, fmt.Errorf("git-pull-request trigger requires a repository URL with a host and project path, got: %s",
 			sanitizeTokenURI(gitConfig.Uri))
@@ -158,7 +158,7 @@ func (i *Informer) prProviderFor(
 		return nil, err
 	}
 
-	kind, err := i.resolveProviderKind(ctx, namespace, host, gitConfig)
+	kind, err := i.resolveProviderKind(ctx, gitConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -199,37 +199,48 @@ func splitGitHubRepoPath(repoPath string) (owner, repo string, ok bool) {
 	return segments[0], segments[1], true
 }
 
-// resolveProviderKind determines the provider for a host, consulting the process
-// lifetime cache first and probing only for hosts whose name does not identify the
-// provider.
+// prProviderCacheKey is the process-lifetime cache key for a detected provider.
+// It is the API authority: the host, plus the port when the URI is http or https.
+// An SSH port is not included, because REST calls never reuse it. Two HTTPS ports
+// on one host are different keys so a GitLab probe on :8443 is not reused for a
+// GitHub Enterprise Server on :9443.
+func prProviderCacheKey(uri string) string {
+	_, authority := gitAPIHostPort(uri)
+	return authority
+}
+
+// resolveProviderKind determines the provider for a repository, consulting the
+// process lifetime cache first and probing only for hosts whose name does not
+// identify the provider.
 func (i *Informer) resolveProviderKind(
 	ctx context.Context,
-	namespace, host string,
 	gitConfig *testkube.TestTriggerContentGit,
 ) (providerKind, error) {
-	if kind, ok := i.lookupPRProviderKind(host); ok {
+	cacheKey := prProviderCacheKey(gitConfig.Uri)
+	if kind, ok := i.lookupPRProviderKind(cacheKey); ok {
 		return kind, nil
 	}
 
+	host, _, _ := splitGitURI(gitConfig.Uri)
 	if kind, ok := providerKindFromHost(host); ok {
-		i.storePRProviderKind(host, kind)
+		i.storePRProviderKind(cacheKey, kind)
 		return kind, nil
 	}
 
 	// The GitHub App auth type can only ever mean GitHub, so an unrecognized host
 	// using it needs no probe.
 	if strings.EqualFold(gitConfig.AuthType, string(testkube.GITHUB_ContentGitAuthType)) {
-		i.storePRProviderKind(host, providerGitHub)
+		i.storePRProviderKind(cacheKey, providerGitHub)
 		return providerGitHub, nil
 	}
 
 	kind, err := i.probeProviderKind(ctx, gitConfig)
 	if err != nil {
-		// Leave the host uncached so a transient failure does not pin it to the
-		// wrong provider for the process lifetime.
+		// Leave the authority uncached so a transient failure does not pin it to
+		// the wrong provider for the process lifetime.
 		return providerUnknown, err
 	}
-	i.storePRProviderKind(host, kind)
+	i.storePRProviderKind(cacheKey, kind)
 	return kind, nil
 }
 

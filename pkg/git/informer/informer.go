@@ -154,10 +154,13 @@ type Informer struct {
 	// functions are used. Tests can override this to point at a mock HTTP server.
 	prAPIBaseFunc func(uri string) string
 
-	// prProviders caches the detected git provider per repository host for the
-	// process lifetime, so the detection probe for self-managed hosts runs once
-	// rather than on every reconcile pass. Guarded by mu like commits/revisions:
-	// it is only reachable from updateRepositories, which holds the lock.
+	// prProviders caches the detected git provider per API authority (host, plus
+	// the HTTP/HTTPS port when the URI has one) for the process lifetime, so the
+	// detection probe for self-managed hosts runs once rather than on every
+	// reconcile pass. The port is part of the key because one host can serve
+	// GitHub and GitLab on different ports, and API calls keep that port.
+	// Guarded by mu like commits/revisions: it is only reachable from
+	// updateRepositories, which holds the lock.
 	prProviders map[string]providerKind
 }
 

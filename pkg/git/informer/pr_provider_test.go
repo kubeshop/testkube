@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -251,9 +252,46 @@ func TestPRProviderFor_ProbesUnknownHost(t *testing.T) {
 			provider, err = inf.prProviderFor(context.Background(), "default", gitConfig, newReconcileCache())
 			require.NoError(t, err)
 			assert.Equal(t, tt.expected, provider.kind())
-			assert.Equal(t, int32(1), atomic.LoadInt32(&requests), "the probe result must be cached per host")
+			assert.Equal(t, int32(1), atomic.LoadInt32(&requests), "the probe result must be cached per API authority")
 		})
 	}
+
+	t.Run("different https ports on one host are probed separately", func(t *testing.T) {
+		var gitlabProbes, githubProbes int32
+		gitlabServer := newProbeServer(http.StatusOK, &gitlabProbes)
+		defer gitlabServer.Close()
+		githubServer := newProbeServer(http.StatusNotFound, &githubProbes)
+		defer githubServer.Close()
+
+		inf := &Informer{
+			prAPIBaseFunc: func(uri string) string {
+				if strings.Contains(uri, ":8443") {
+					return gitlabServer.URL
+				}
+				return githubServer.URL
+			},
+			options: Options{AllowedGitHosts: []string{allowAnyGitHostWildcard}},
+		}
+		gitlabConfig := &testkube.TestTriggerContentGit{Uri: "https://git.example.com:8443/group/project.git"}
+		githubConfig := &testkube.TestTriggerContentGit{Uri: "https://git.example.com:9443/owner/repo.git"}
+
+		gitlabProvider, err := inf.prProviderFor(context.Background(), "default", gitlabConfig, newReconcileCache())
+		require.NoError(t, err)
+		assert.Equal(t, providerGitLab, gitlabProvider.kind())
+
+		githubProvider, err := inf.prProviderFor(context.Background(), "default", githubConfig, newReconcileCache())
+		require.NoError(t, err)
+		assert.Equal(t, providerGitHub, githubProvider.kind(), "a different port must not reuse the GitLab probe")
+		assert.Equal(t, int32(1), atomic.LoadInt32(&gitlabProbes))
+		assert.Equal(t, int32(1), atomic.LoadInt32(&githubProbes))
+
+		_, err = inf.prProviderFor(context.Background(), "default", gitlabConfig, newReconcileCache())
+		require.NoError(t, err)
+		_, err = inf.prProviderFor(context.Background(), "default", githubConfig, newReconcileCache())
+		require.NoError(t, err)
+		assert.Equal(t, int32(1), atomic.LoadInt32(&gitlabProbes), "each port is cached on its own")
+		assert.Equal(t, int32(1), atomic.LoadInt32(&githubProbes), "each port is cached on its own")
+	})
 
 	t.Run("unexpected status is not cached", func(t *testing.T) {
 		var requests int32
