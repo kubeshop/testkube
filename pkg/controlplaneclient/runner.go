@@ -197,7 +197,7 @@ func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, proce
 	// the agent lifetime today, but rebuilding it on a dead context avoids silently
 	// running with sources and a sweeper that can never start.
 	if c.workflowNotifManager == nil || c.workflowNotifManager.ctx.Err() != nil {
-		c.workflowNotifManager = newNotificationStreamSessionManager(ctx, workflowNotificationSessionKey, process)
+		c.workflowNotifManager = newNotificationStreamSessionManager(ctx, "workflow", workflowNotificationSessionKey, process)
 	}
 	manager := c.workflowNotifManager
 	c.notifMu.Unlock()
@@ -219,7 +219,7 @@ func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, proce
 func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowParallelStepNotificationsRequest) NotificationWatcher) error {
 	c.notifMu.Lock()
 	if c.parallelNotifManager == nil || c.parallelNotifManager.ctx.Err() != nil {
-		c.parallelNotifManager = newNotificationStreamSessionManager(ctx, parallelWorkerNotificationSessionKey, process)
+		c.parallelNotifManager = newNotificationStreamSessionManager(ctx, "parallel", parallelWorkerNotificationSessionKey, process)
 	}
 	manager := c.parallelNotifManager
 	c.notifMu.Unlock()
@@ -241,7 +241,7 @@ func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.
 func (c *client) ProcessExecutionServiceNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) NotificationWatcher) error {
 	c.notifMu.Lock()
 	if c.serviceNotifManager == nil || c.serviceNotifManager.ctx.Err() != nil {
-		c.serviceNotifManager = newNotificationStreamSessionManager(ctx, serviceNotificationSessionKey, process)
+		c.serviceNotifManager = newNotificationStreamSessionManager(ctx, "service", serviceNotificationSessionKey, process)
 	}
 	manager := c.serviceNotifManager
 	c.notifMu.Unlock()

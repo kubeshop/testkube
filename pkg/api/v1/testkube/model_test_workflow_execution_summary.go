@@ -38,4 +38,5 @@ type TestWorkflowExecutionSummary struct {
 	Reports              []TestWorkflowReport                             `json:"reports,omitempty"`
 	ResourceAggregations *TestWorkflowExecutionResourceAggregationsReport `json:"resourceAggregations,omitempty"`
 	SilentMode           *SilentMode                                      `json:"silentMode,omitempty"`
+	Lineage              *TestWorkflowExecutionLineage                    `json:"lineage,omitempty"`
 }

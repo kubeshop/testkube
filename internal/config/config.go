@@ -36,9 +36,24 @@ type OSSControlPlaneConfig struct {
 	APIPostgresDSN string `envconfig:"API_POSTGRES_DSN" default:""`
 
 	// Minio
-	StorageEndpoint              string `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
-	StorageBucket                string `envconfig:"STORAGE_BUCKET" default:"testkube-logs"`
-	StorageExpiration            int    `envconfig:"STORAGE_EXPIRATION"`
+	StorageEndpoint   string `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
+	StorageBucket     string `envconfig:"STORAGE_BUCKET" default:"testkube-logs"`
+	StorageExpiration int    `envconfig:"STORAGE_EXPIRATION"`
+	// StorageCacheExpiration expires step dependency caches, in days. 0 disables it.
+	//
+	// One day, because a cache entry is disposable by construction: it is keyed on the
+	// contents of a lockfile, so an entry that is still wanted is rewritten by the next
+	// run that misses it, and one that is not wanted is dead weight in the bucket. Days
+	// are the finest granularity an object store's lifecycle offers, so 1 is the
+	// shortest expiry that can be expressed - it is 24 hours, not a rounding of one.
+	//
+	// A default is only safe because SetExpirationPolicies merges rather than replaces.
+	// Applying a lifecycle rewrites the bucket's configuration wholesale, so before that
+	// merge existed, defaulting this would have dropped the rules of any installation
+	// managing its bucket lifecycle elsewhere, by nothing but an upgrade. Do not give
+	// StorageExpiration a default on this reasoning: that rule is unfiltered and governs
+	// every object in the bucket, where this one is confined to the cache prefix.
+	StorageCacheExpiration       int    `envconfig:"STORAGE_CACHE_EXPIRATION" default:"1"`
 	StorageAccessKeyID           string `envconfig:"STORAGE_ACCESSKEYID" default:""`
 	StorageSecretAccessKey       string `envconfig:"STORAGE_SECRETACCESSKEY" default:""`
 	StorageRegion                string `envconfig:"STORAGE_REGION" default:""`
@@ -53,6 +68,22 @@ type OSSControlPlaneConfig struct {
 	LogsBucket       string `envconfig:"LOGS_BUCKET" default:""`
 	LogsStorage      string `envconfig:"LOGS_STORAGE" default:""`
 	ArtifactsStorage string `envconfig:"ARTIFACTS_STORAGE" default:""`
+
+	// Execution dispatch
+	//
+	// The batch size bounds what one GetExecutionUpdates poll returns. Unbounded,
+	// a burst of workflows sharing a cron minute made a single poll exceed the
+	// runner's call deadline, and the resulting backoff stopped the backlog ever
+	// draining.
+	ExecutionDispatchBatchSize int `envconfig:"EXECUTION_DISPATCH_BATCH_SIZE" default:"25"`
+	// How long a dispatched execution may sit in STARTING before it is offered to
+	// a runner again. Must be shorter than ExecutionStartTimeout.
+	ExecutionRedispatchAfter time.Duration `envconfig:"EXECUTION_REDISPATCH_AFTER" default:"60s"`
+	// How long a dispatched execution may sit in STARTING before it is failed
+	// explicitly rather than left stuck while the control plane reports healthy.
+	ExecutionStartTimeout time.Duration `envconfig:"EXECUTION_START_TIMEOUT" default:"10m"`
+	// How often the reaper looks for executions that were never acknowledged.
+	ExecutionReaperInterval time.Duration `envconfig:"EXECUTION_REAPER_INTERVAL" default:"1m"`
 }
 
 type LegacyExecutorConfig struct {
@@ -173,6 +204,22 @@ type RunnerConfig struct {
 	IsGlobal                  bool              `envconfig:"RUNNER_IS_GLOBAL" default:"false"`
 	RunnerGroup               string            `envconfig:"RUNNER_GROUP" default:""`
 	RunnerLabelsPrefix        string            `envconfig:"RUNNER_LABELS_PREFIX" default:"runner.testkube.io/"`
+
+	// Execution update polling
+	//
+	// PollInterval is a latency floor, not a throughput cap: one poll returns a
+	// whole batch. PollMaxBackoff is the ceiling on the retry delay after a failed
+	// poll - unbounded, it reached hours and stopped the runner consuming work at
+	// all.
+	RunnerPollInterval   time.Duration `envconfig:"RUNNER_POLL_INTERVAL" default:"1s"`
+	RunnerCallTimeout    time.Duration `envconfig:"RUNNER_CALL_TIMEOUT" default:"30s"`
+	RunnerPollMaxBackoff time.Duration `envconfig:"RUNNER_POLL_MAX_BACKOFF" default:"15s"`
+	// RunnerStartConcurrency bounds how many executions from one batch start at once.
+	RunnerStartConcurrency int `envconfig:"RUNNER_START_CONCURRENCY" default:"4"`
+	// RunnerPollStaleAfter is how long without a successful poll before the
+	// readiness check reports the runner as not ready. It must exceed
+	// RunnerCallTimeout + RunnerPollMaxBackoff so one slow poll cannot flap it.
+	RunnerPollStaleAfter time.Duration `envconfig:"RUNNER_POLL_STALE_AFTER" default:"2m"`
 }
 
 type GitOpsSyncConfig struct {

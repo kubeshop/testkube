@@ -22,9 +22,9 @@ func NewClient(insecure ...bool) *http.Client {
 	}
 
 	var netTransport = &http.Transport{
-		Dial: (&net.Dialer{
+		DialContext: (&net.Dialer{
 			Timeout: NetDialTimeout,
-		}).Dial,
+		}).DialContext,
 		TLSHandshakeTimeout: TLSHandshakeTimeout,
 		Proxy:               http.ProxyFromEnvironment,
 		TLSClientConfig:     tlsConfig,

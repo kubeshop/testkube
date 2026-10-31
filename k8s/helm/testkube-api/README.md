@@ -128,8 +128,8 @@ A Helm chart for Testkube api
 | minio.image.pullPolicy | string | `"IfNotPresent"` |  |
 | minio.image.pullSecrets | list | `[]` |  |
 | minio.image.registry | string | `"docker.io"` |  |
-| minio.image.repository | string | `"minio/minio"` |  |
-| minio.image.tag | string | `"RELEASE.2025-07-18T21-56-31Z"` |  |
+| minio.image.repository | string | `"kubeshop/testkube-minio"` |  |
+| minio.image.tag | string | `"2025.10"` |  |
 | minio.livenessProbe.initialDelaySeconds | int | `3` |  |
 | minio.livenessProbe.periodSeconds | int | `10` |  |
 | minio.matchLabels | list | `[]` |  |
@@ -200,6 +200,7 @@ A Helm chart for Testkube api
 | storage.accessKey | string | `""` |  |
 | storage.accessKeyId | string | `""` |  |
 | storage.bucket | string | `"testkube-artifacts"` |  |
+| storage.cacheExpiration | int | `1` | Days a step dependency cache entry survives, under the .tkcache/v1 prefix. Defaults to 1, the shortest an object store lifecycle can express; 0 disables it and leaves entries to `expiration`. Confined to the cache prefix, so unlike `expiration` it can only ever delete caches. |
 | storage.certSecret.baseMountPath | string | `"/etc/client-certs/storage"` |  |
 | storage.certSecret.caFile | string | `"ca.crt"` |  |
 | storage.certSecret.certFile | string | `"cert.crt"` |  |
@@ -209,7 +210,7 @@ A Helm chart for Testkube api
 | storage.compressArtifacts | bool | `true` |  |
 | storage.endpoint | string | `""` |  |
 | storage.endpoint_port | string | `"9000"` |  |
-| storage.expiration | int | `0` |  |
+| storage.expiration | int | `0` | Days any object in the bucket survives, artifacts and logs included. 0 disables it, and is the default: this rule is unfiltered, so a non-zero value expires everything in the bucket rather than only caches. |
 | storage.mountCACertificate | bool | `false` |  |
 | storage.region | string | `""` |  |
 | storage.scrapperEnabled | bool | `true` |  |

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -28,6 +28,7 @@ const (
 	SignatureAnnotationName         = "testkube.io/signature"
 	SignatureAnnotationFieldPath    = "metadata.annotations['" + SignatureAnnotationName + "']"
 	ScheduledAtAnnotationName       = "testkube.io/at"
+	InitializationTimeoutAnnotation = "testkube.io/timeouts.init"
 	SpecAnnotationName              = "testkube.io/spec"
 	SpecAnnotationFieldPath         = "metadata.annotations['" + SpecAnnotationName + "']"
 	InternalAnnotationName          = "testkube.io/config"
@@ -36,14 +37,21 @@ const (
 	RootOperationName               = "root"
 	AnnotationTerminationCode       = "testkube.io/termination-code"
 	AnnotationTerminationReason     = "testkube.io/termination-reason"
+	AnnotationTerminationActor      = "testkube.io/termination-actor"
+	AnnotationTerminationDetail     = "testkube.io/termination-detail"
 )
 
 var (
-	InternalBinPath        = filepath.Join(DefaultInternalPath, "bin")
-	DefaultShellPath       = filepath.Join(InternalBinPath, "sh")
-	DefaultInitPath        = filepath.Join(DefaultInternalPath, "init")
-	DefaultToolkitPath     = filepath.Join(DefaultInternalPath, "toolkit")
-	DefaultTransferDirPath = filepath.Join(DefaultInternalPath, "transfer")
+	// These name locations inside a Linux container, so they are joined with `path` and
+	// not `filepath`. filepath answers for the host the processor runs on: on Windows it
+	// would build "\.tktw\bin\sh", which is not a path any container can execute, and
+	// which also stops the command rewiring in action/optimize.go from recognising the
+	// prefix it is meant to replace.
+	InternalBinPath        = path.Join(DefaultInternalPath, "bin")
+	DefaultShellPath       = path.Join(InternalBinPath, "sh")
+	DefaultInitPath        = path.Join(DefaultInternalPath, "init")
+	DefaultToolkitPath     = path.Join(DefaultInternalPath, "toolkit")
+	DefaultTransferDirPath = path.Join(DefaultInternalPath, "transfer")
 	DefaultTmpDirPath      = "/tmp"
 	DefaultTransferPort    = 60433
 	DefaultShellHeader     = "set -e\n"

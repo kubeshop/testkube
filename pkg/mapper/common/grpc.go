@@ -24,6 +24,9 @@ func MapTargetApiToGrpc(t *testkube.ExecutionTarget) *cloud.ExecutionTarget {
 	target := cloud.ExecutionTarget{
 		Replicate: t.Replicate,
 	}
+	if t.SchedulerPolicy != nil {
+		target.SchedulerPolicy = string(*t.SchedulerPolicy)
+	}
 
 	if t.Match != nil {
 		target.Match = make(map[string]*cloud.ExecutionTargetLabels)
@@ -57,7 +60,8 @@ func MapAllTargetsKubeToGrpc(ts []commonv1.Target) []*cloud.ExecutionTarget {
 
 func MapTargetKubeToGrpc(t *commonv1.Target) *cloud.ExecutionTarget {
 	target := cloud.ExecutionTarget{
-		Replicate: t.Replicate,
+		Replicate:       t.Replicate,
+		SchedulerPolicy: string(t.SchedulerPolicy),
 	}
 
 	if t.Match != nil {

@@ -1,4 +1,3 @@
-# TODO: directory structure - move out of cron triggers directory (TKC-3807)
 apiVersion: executor.testkube.io/v1
 kind: Webhook
 metadata:

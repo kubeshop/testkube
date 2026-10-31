@@ -5,7 +5,7 @@ package testkube.testworkflow.execution.v1;
 // GetExecutionWorkflowRequest is a call to a server to request
 // an enriched workflow specifically for the execution that a
 // client wishes to execute.
-message GetExecutionWorkflowRequest{
+message GetExecutionWorkflowRequest {
   // execution_id is the unique identifier of the execution for
   // which the workflow should be retrieved.
   string execution_id = 1;

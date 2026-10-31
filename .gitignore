@@ -62,3 +62,6 @@ depot-build-meta.json
 # GitHub Actions temporary Google credentials
 gha-creds-*.json
 .cursor/settings.json
+
+# Local security scan reports (make security-scan)
+.security-scan/

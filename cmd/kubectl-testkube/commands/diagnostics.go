@@ -4,7 +4,6 @@ import (
 	"github.com/spf13/cobra"
 
 	commands "github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/diagnostics"
-	"github.com/kubeshop/testkube/pkg/diagnostics"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -21,17 +20,21 @@ func NewDiagnosticsCmd() *cobra.Command {
 	cmd.Flags().StringP("key-override", "k", "", "Pass License key manually (we will not try to locate it automatically)")
 	cmd.Flags().StringP("file-override", "f", "", "Pass License file manually (we will not try to locate it automatically)")
 
+	cmd.PersistentFlags().StringP("output", "o", "pretty", "output type can be one of pretty|json")
+
 	cmd.AddCommand(commands.NewLicenseCheckCmd())
 	cmd.AddCommand(commands.NewInstallCheckCmd())
+	cmd.AddCommand(commands.NewAgentCheckCmd())
 
 	return cmd
 }
 
 func NewRunDiagnosticsCmdFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
-		d := diagnostics.New()
+		d := commands.New(cmd)
 
 		commands.RegisterInstallValidators(cmd, d)
+		commands.RegisterAgentValidators(cmd, d)
 		commands.RegisterLicenseValidators(cmd, d)
 
 		err := d.Run()

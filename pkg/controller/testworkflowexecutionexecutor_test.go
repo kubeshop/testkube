@@ -116,6 +116,7 @@ func TestWorkflowExecutionExecutorController(t *testing.T) {
 						TestWorkflow: &v1.LocalObjectReference{Name: "test-workflow"},
 						ExecutionRequest: &testworkflowsv1.TestWorkflowExecutionRequest{
 							Target: &commonv1.Target{
+								SchedulerPolicy: commonv1.SchedulerPolicyOnlyWhenMatches,
 								Match: map[string][]string{
 									"foo": {"bar"},
 									"baz": {"qux", "quux"},
@@ -140,6 +141,7 @@ func TestWorkflowExecutionExecutorController(t *testing.T) {
 				Executions: []*cloud.ScheduleExecution{{
 					Selector: &cloud.ScheduleResourceSelector{Name: "test-workflow"},
 					Targets: []*cloud.ExecutionTarget{{
+						SchedulerPolicy: string(commonv1.SchedulerPolicyOnlyWhenMatches),
 						Match: map[string]*cloud.ExecutionTargetLabels{
 							"foo": {Labels: []string{"bar"}},
 							"baz": {Labels: []string{"qux", "quux"}},

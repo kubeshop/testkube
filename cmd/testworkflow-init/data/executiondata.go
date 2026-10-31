@@ -1,0 +1,117 @@
+package data
+
+import (
+	"encoding/json"
+	"net/http"
+	"strings"
+
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
+	"github.com/kubeshop/testkube/pkg/executiondata"
+	"github.com/kubeshop/testkube/pkg/expressions"
+)
+
+// ExecutionRegistry rebuilds the registry of test workflows this workflow has
+// executed. Each entry was recorded as an output instruction by the `execute`
+// step, so it survives across steps and across processes.
+func ExecutionRegistry() *executiondata.Registry {
+	registry := executiondata.NewRegistry()
+	for _, raw := range GetState().GetOutputsWithPrefix(executiondata.ExecutionInstructionPrefix) {
+		// Writers emit {"executions":[...]}. A previous version emitted a bare array and we still
+		// parse that here in case there is a pod running the previous binary.
+		trimmed := strings.TrimSpace(raw)
+		var group executiondata.ExecutionGroup
+		var err error
+		if trimmed != "" && trimmed[0] == '[' {
+			err = json.Unmarshal([]byte(trimmed), &group.Executions)
+		} else {
+			err = json.Unmarshal([]byte(trimmed), &group)
+		}
+		if err != nil {
+			output.Std.Warnf("warn: could not read executed test workflow: %s\n", err.Error())
+			continue
+		}
+		for _, entry := range group.Executions {
+			registry.Add(entry)
+		}
+		if group.Ambiguous && len(group.Executions) > 0 {
+			registry.MarkAmbiguous(group.Executions[0].Key())
+		}
+	}
+	return registry
+}
+
+// ExecutionDataMachine resolves data produced by other executions - the ones this
+// workflow scheduled, and the one that scheduled this workflow.
+func ExecutionDataMachine() expressions.Machine {
+	return ExecutionDataMachineFor(ExecutionRegistry())
+}
+
+// ExecutionDataMachineFor is ExecutionDataMachine over a caller-owned registry.
+// The `execute` step uses it to keep resolving against a registry it keeps growing
+// as it schedules more test workflows.
+func ExecutionDataMachineFor(registry *executiondata.Registry) expressions.Machine {
+	return executiondata.NewMachine(executiondata.MachineOptions{
+		Registry:       registry,
+		Repository:     ExecutionDataRepository(),
+		ParentIds:      ParentExecutionIds(),
+		RerunId:        RerunExecutionId(),
+		ArtifactClient: ArtifactClient(),
+	})
+}
+
+// ArtifactClient downloads artifacts of other executions from object storage, following
+// the same certificate decision the control plane client was given.
+func ArtifactClient() *http.Client {
+	return artifactClient
+}
+
+// artifactClient is built once: it holds a connection pool, and every download in this
+// process talks to the same object storage.
+var artifactClient = executiondata.NewArtifactClient(storageSkipVerify)
+
+// ExecutionResolver resolves a reference to an execution the way an expression does -
+// against a caller-owned registry first, then the control plane. The `fetch` block uses it
+// so that a reference means the same thing there as it does in execution().
+func ExecutionResolver(registry *executiondata.Registry) executiondata.Resolver {
+	return executiondata.Resolver{
+		Registry:   registry,
+		Repository: ExecutionDataRepository(),
+		ParentIds:  ParentExecutionIds(),
+		RerunId:    RerunExecutionId(),
+	}
+}
+
+// ExecutionDataRepository reads executions and their artifacts from the control plane.
+func ExecutionDataRepository() executiondata.ExecutionRepository {
+	cfg := GetState().InternalConfig.Execution
+	return executiondata.NewExecutionRepository(CloudClient, cfg.EnvironmentId)
+}
+
+// ParentExecutionIds returns the chain of executions that led to this one, oldest
+// first. The internal config stores it as a slash-joined string.
+func ParentExecutionIds() []string {
+	raw := GetState().InternalConfig.Execution.ParentIds
+	if raw == "" {
+		return nil
+	}
+	ids := make([]string, 0)
+	for _, id := range strings.Split(raw, "/") {
+		if id != "" {
+			ids = append(ids, id)
+		}
+	}
+	return ids
+}
+
+// RerunExecutionId is the execution this one is a rerun of, empty when it is not
+// one. It is what the reserved "rerun" reference resolves to.
+//
+// An original run records a lineage whose BaseId is empty and must return ""
+// here: returning RootId instead would make every execution a rerun of itself.
+func RerunExecutionId() string {
+	lineage := GetState().InternalConfig.Execution.Lineage
+	if lineage == nil {
+		return ""
+	}
+	return lineage.BaseId
+}

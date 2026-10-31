@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	stderrors "errors"
 	"io"
 	"net/http"
 	"sync"
@@ -87,6 +88,20 @@ func (e *executionLogsWriter) Save(ctx context.Context) error {
 	if url == "" {
 		e.cleanup()
 		return nil
+	}
+
+	// Rewind before every attempt: the runner retries Save() on failure and the
+	// buffer is read-once, so without this a retry sends a 0-byte body while
+	// still declaring the full ContentLength.
+	if err := e.buffer.Rewind(); err != nil {
+		return errors.Wrap(err, "failed to rewind log buffer for upload")
+	}
+
+	// Guard against uploading a silently-truncated log: if the buffer's fill
+	// failed (e.g. the temp file ran out of space), Len() reports the partial
+	// size and the body would match it, hiding the loss behind a 200.
+	if cause := e.buffer.Err(); cause != nil && !stderrors.Is(cause, io.EOF) {
+		return errors.Wrap(cause, "log buffer failed before upload")
 	}
 
 	contentLen := e.buffer.Len()

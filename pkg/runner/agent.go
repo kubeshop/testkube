@@ -133,12 +133,23 @@ func (a *agentLoop) _saveEmptyLogs(ctx context.Context, environmentId string, ex
 	return a.client.SaveExecutionLogs(ctx, environmentId, execution.Id, workflowName, strings.NewReader(""))
 }
 
+// logFields returns the execution's LogFields plus the tenant coordinates
+// (org / env) so every Errorw / Warnw carries enough context for on-call to
+// route the incident to the right customer without cross-referencing the log
+// with the DB (TKC-6551).
+func (a *agentLoop) logFields(environmentId string, execution *testkube.TestWorkflowExecution) []any {
+	return append(execution.LogFields(),
+		"organizationId", a.organizationId,
+		"environmentId", environmentId,
+	)
+}
+
 func (a *agentLoop) saveEmptyLogs(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
 	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func(_ int) error {
 		return a._saveEmptyLogs(ctx, environmentId, execution)
 	})
 	if err != nil {
-		a.logger.Errorw("failed to save empty log", append(execution.LogFields(), "error", err)...)
+		a.logger.Errorw("failed to save empty log", append(a.logFields(environmentId, execution), "error", err)...)
 	}
 	return err
 }
@@ -147,28 +158,28 @@ func (a *agentLoop) finishExecution(ctx context.Context, environmentId string, e
 	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func(_ int) error {
 		err := a.client.FinishExecutionResult(ctx, environmentId, execution.Id, execution.Result)
 		if err != nil {
-			a.logger.Warnw("failed to finish the TestWorkflow execution in database", append(execution.LogFields(), "recoverable", true, "error", err)...)
+			a.logger.Warnw("failed to finish the TestWorkflow execution in database", append(a.logFields(environmentId, execution), "recoverable", true, "error", err)...)
 			return err
 		}
 		return nil
 	})
 	if err != nil {
-		a.logger.Errorw("failed to finish the TestWorkflow execution in database", append(execution.LogFields(), "recoverable", false, "error", err)...)
+		a.logger.Errorw("failed to finish the TestWorkflow execution in database", append(a.logFields(environmentId, execution), "recoverable", false, "error", err)...)
 	}
 	return err
 }
 
 func (a *agentLoop) init(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
 	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func(retryCount int) (err error) {
-		a.logger.Infow("Initializing execution", append(execution.LogFields(), "attempt", retryCount)...)
+		a.logger.Infow("Initializing execution", append(a.logFields(environmentId, execution), "attempt", retryCount)...)
 		err = a.client.InitExecution(ctx, environmentId, execution.Id, execution.Signature, execution.Namespace)
 		if err != nil {
-			a.logger.Warnw("failed to initialize the TestWorkflow execution in database", append(execution.LogFields(), "recoverable", true, "error", err)...)
+			a.logger.Warnw("failed to initialize the TestWorkflow execution in database", append(a.logFields(environmentId, execution), "recoverable", true, "error", err)...)
 		}
 		return err
 	})
 	if err != nil {
-		a.logger.Errorw("failed to initialize the TestWorkflow execution in database", append(execution.LogFields(), "recoverable", false, "error", err)...)
+		a.logger.Errorw("failed to initialize the TestWorkflow execution in database", append(a.logFields(environmentId, execution), "recoverable", false, "error", err)...)
 	}
 	return err
 }
@@ -287,7 +298,7 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 				}
 			case cloud.RunnerRequestType_CANCEL:
 				a.logger.Infow("received cancel request for execution", "environmentId", req.EnvironmentID(), "executionId", req.ExecutionID())
-				originalError := a.runner.Cancel(req.ExecutionID())
+				originalError := a.runner.Cancel(req.ExecutionID(), "", "")
 				if originalError != nil {
 					err := req.SendError(originalError)
 					if err != nil {
@@ -301,7 +312,7 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 				}
 			case cloud.RunnerRequestType_ABORT:
 				a.logger.Infow("received abort request for execution", "environmentId", req.EnvironmentID(), "executionId", req.ExecutionID())
-				originalError := a.runner.Abort(req.ExecutionID())
+				originalError := a.runner.Abort(req.ExecutionID(), "", "")
 				if originalError != nil {
 					err := req.SendError(originalError)
 					if err != nil {
@@ -364,7 +375,11 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, ex
 
 func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId string, executionToken string, runtime *cloud.TestWorkflowRuntime) error {
 	ctx := context.Background()
-	logger := a.logger.With("environmentId", environmentId)
+	logger := a.logger.With(
+		"executionId", executionId,
+		"organizationId", a.organizationId,
+		"environmentId", environmentId,
+	)
 
 	// Get the execution details
 	execution, err := a.client.GetExecution(ctx, environmentId, executionId)
@@ -424,13 +439,15 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 			EnvironmentSlug:  a.proContext.GetEnvSlug(environmentId),
 			ParentIds:        parentIds,
 			RunningContext:   execution.RunningContext,
+			Lineage:          lineageConfigFromExecution(execution.Lineage),
 		},
 		Workflow:     testworkflowmappers.MapTestWorkflowAPIToKube(*execution.ResolvedWorkflow),
 		ControlPlane: a.controlPlaneConfig, // TODO: fetch it from the control plane?
 	})
 	// TODO: define "revoke" error by runner (?)
 	if err != nil {
-		execution.InitializationError("Failed to run execution", err)
+		// The reason code names the failed start, so the message holds only the error.
+		execution.InitializationError("", string(executionworkertypes.StartReasonOf(err)), err)
 		_ = a.saveEmptyLogs(context.Background(), environmentId, execution)
 		err2 := a.finishExecution(context.Background(), environmentId, execution)
 		err = errors.Join(err, err2)
@@ -455,4 +472,22 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 	}
 
 	return nil
+}
+
+// lineageConfigFromExecution carries the execution's lineage from the record
+// across to the pod, so that execution("rerun") resolves inside it.
+//
+// The scheduler records it on the execution rather than handing it straight to
+// the runner, because this path reconstructs the pod's config from the record
+// when it picks the execution up. The typed runner path does the same from its
+// own proto - see lineageConfigFromProto in pkg/runner/grpc.
+func lineageConfigFromExecution(lineage *testkube.TestWorkflowExecutionLineage) *testworkflowconfig.LineageConfig {
+	if lineage == nil {
+		return nil
+	}
+	return &testworkflowconfig.LineageConfig{
+		BaseId:  lineage.BaseId,
+		RootId:  lineage.RootId,
+		Attempt: lineage.Attempt,
+	}
 }

@@ -1,14 +1,21 @@
 package triggers
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"go.uber.org/mock/gomock"
+	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/git/informer"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
@@ -157,5 +164,186 @@ func TestGetTemplateData_SimpleFields(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, string(result))
 		})
+	}
+}
+
+// TestGetTestWorkflowsFromInternal_LabelSelectorMatchExpressions verifies that
+// TestTrigger workflow selection supports Kubernetes labelSelector.matchExpressions
+// and returns only the workflows whose labels satisfy the selector across the
+// standard Kubernetes operators supported for label selectors.
+func TestGetTestWorkflowsFromInternal_LabelSelectorMatchExpressions(t *testing.T) {
+	workflowsFixture := []testkube.TestWorkflow{
+		{Name: "alpha-workflow", Labels: map[string]string{"automation": "team-a"}},
+		{Name: "beta-workflow", Labels: map[string]string{"automation": "team-b"}},
+		{Name: "gamma-workflow", Labels: map[string]string{"region": "us-east-1"}},
+		{Name: "other-workflow", Labels: map[string]string{"automation": "other"}},
+	}
+
+	tests := []struct {
+		name         string
+		requirement  metav1.LabelSelectorRequirement
+		expectedName []string
+	}{
+		{
+			name: "in_operator",
+			requirement: metav1.LabelSelectorRequirement{
+				Key:      "automation",
+				Operator: metav1.LabelSelectorOpIn,
+				Values:   []string{"team-a", "team-b"},
+			},
+			expectedName: []string{"alpha-workflow", "beta-workflow"},
+		},
+		{
+			name: "notin_operator",
+			requirement: metav1.LabelSelectorRequirement{
+				Key:      "automation",
+				Operator: metav1.LabelSelectorOpNotIn,
+				Values:   []string{"other"},
+			},
+			expectedName: []string{"alpha-workflow", "beta-workflow", "gamma-workflow"},
+		},
+		{
+			name: "exists_operator",
+			requirement: metav1.LabelSelectorRequirement{
+				Key:      "automation",
+				Operator: metav1.LabelSelectorOpExists,
+			},
+			expectedName: []string{"alpha-workflow", "beta-workflow", "other-workflow"},
+		},
+		{
+			name: "does_not_exist_operator",
+			requirement: metav1.LabelSelectorRequirement{
+				Key:      "automation",
+				Operator: metav1.LabelSelectorOpDoesNotExist,
+			},
+			expectedName: []string{"gamma-workflow"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockTestWorkflowsClient := testworkflowclient.NewMockTestWorkflowClient(ctrl)
+			mockTestWorkflowsClient.EXPECT().
+				List(gomock.Any(), "", testworkflowclient.ListOptions{}).
+				Return(workflowsFixture, nil).
+				Times(1)
+
+			s := &Service{
+				testWorkflowsClient: mockTestWorkflowsClient,
+				logger:              zap.NewNop().Sugar(),
+			}
+
+			trigger := &internalTrigger{
+				WorkflowSelector: internalTriggerSelector{
+					LabelSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{tt.requirement},
+					},
+				},
+			}
+
+			workflows, err := s.getTestWorkflowsFromInternal(trigger)
+
+			assert.NoError(t, err)
+			assert.Len(t, workflows, len(tt.expectedName))
+			actualNames := make([]string, 0, len(workflows))
+			for i := range workflows {
+				actualNames = append(actualNames, workflows[i].Name)
+			}
+			assert.ElementsMatch(t, tt.expectedName, actualNames)
+		})
+	}
+}
+
+// TestReservedProvenanceKeys pins which configuration keys a trigger may not set.
+func TestReservedProvenanceKeys(t *testing.T) {
+	// Every key the informer records has to be covered, or the one it misses is the one
+	// a trigger can blank.
+	for _, key := range []string{
+		"WATCHER_EVENT_RESOURCE",
+		"WATCHER_EVENT_NAME",
+		"WATCHER_EVENT_NAMESPACE",
+		"WATCHER_EVENT_EVENT_TYPE",
+		"WATCHER_EVENT_FUTURE_KEY",
+		informer.GitMetaKeyCommit,
+		informer.GitMetaKeyRef,
+		informer.GitMetaKeyBranch,
+		informer.GitMetaKeyTag,
+		informer.GitMetaKeyPRNumber,
+		informer.GitMetaKeyPRAction,
+		informer.GitMetaKeyPRBaseRef,
+		informer.GitMetaKeyPRHeadRef,
+		informer.GitMetaKeyPRHeadSHA,
+		informer.GitMetaKeyPRURL,
+		informer.GitMetaKeyPRTitle,
+		informer.GitMetaKeyPRAuthor,
+	} {
+		assert.True(t, isReservedProvenanceKey(key), "%s is provenance and must not be settable", key)
+	}
+
+	// The keys the cache actually decides on, named directly so that a rename of either
+	// constant does not quietly unprotect them.
+	assert.True(t, isReservedProvenanceKey("TESTKUBE_GIT_PR_NUMBER"))
+	assert.True(t, isReservedProvenanceKey("TESTKUBE_GIT_PR_HEAD_REF"))
+	assert.True(t, isReservedProvenanceKey("TESTKUBE_GIT_PR_URL"))
+
+	// Ordinary configuration is untouched - a trigger's whole purpose is to set it.
+	for _, key := range []string{"SUITE", "TESTKUBE_SUITE", "GIT_BRANCH", "", "testkube_git_pr_number"} {
+		assert.False(t, isReservedProvenanceKey(key), "%q is ordinary configuration", key)
+	}
+}
+
+// Trigger configuration cannot replace or erase observed source metadata in scheduled executions.
+func TestExecutePreservesEventProvenance(t *testing.T) {
+	for _, source := range []string{triggerSourceV1, triggerSourceV2} {
+		for _, override := range []string{"forged", ""} {
+			t.Run(source+"/override="+override, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				workflows := testworkflowclient.NewMockTestWorkflowClient(ctrl)
+				workflows.EXPECT().Get(gomock.Any(), "", "smoke").Return(&testkube.TestWorkflow{Name: "smoke"}, nil)
+				executor := testworkflowexecutor.NewMockTestWorkflowExecutor(ctrl)
+				executor.EXPECT().Execute(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, request *cloud.ScheduleRequest) ([]testkube.TestWorkflowExecution, error) {
+						require.Len(t, request.Executions, 1)
+						assert.Equal(t, map[string]string{
+							"WATCHER_EVENT_RESOURCE":   "pod",
+							"WATCHER_EVENT_NAME":       "backend-123",
+							"WATCHER_EVENT_NAMESPACE":  "production",
+							"WATCHER_EVENT_EVENT_TYPE": "modified",
+							"TESTKUBE_GIT_COMMIT":      "actual-commit",
+							"SUITE":                    "smoke",
+						}, request.Executions[0].Config)
+						assert.Equal(t, "tag-value", request.Executions[0].Tags["WATCHER_EVENT_NAME"])
+						return nil, nil
+					})
+				trigger := &internalTrigger{
+					Name: "on-change", Namespace: "testkube", Source: source,
+					WorkflowSelector: internalTriggerSelector{Name: "smoke"},
+					Config: map[string]string{
+						"WATCHER_EVENT_RESOURCE":   override,
+						"WATCHER_EVENT_NAME":       override,
+						"WATCHER_EVENT_NAMESPACE":  override,
+						"WATCHER_EVENT_EVENT_TYPE": override,
+						"WATCHER_EVENT_FUTURE_KEY": override,
+						"TESTKUBE_GIT_COMMIT":      override,
+						"SUITE":                    "smoke",
+					},
+					Tags: map[string]string{"WATCHER_EVENT_NAME": "tag-value"},
+				}
+				s := &Service{
+					logger: zap.NewNop().Sugar(), testWorkflowsClient: workflows, testWorkflowExecutor: executor,
+					triggerStatus: map[statusKey]*triggerStatus{
+						newStatusKey(source, trigger.Namespace, trigger.Name): {trigger: trigger},
+					},
+				}
+				event := &watcherEvent{
+					resource: "pod", name: "backend-123", Namespace: "production", eventType: "modified",
+					GitMetadata: &GitMetadata{Commit: "actual-commit"},
+				}
+				require.NoError(t, s.execute(context.Background(), event, trigger))
+			})
+		}
 	}
 }

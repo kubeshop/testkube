@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"maps"
-	"os"
 	"strings"
 	"time"
 
@@ -88,9 +87,9 @@ func (list internalAgents) Table() (header []string, output [][]string) {
 
 func (list internalAgents) TableWithEnvironments(showEnvironments bool) (header []string, output [][]string) {
 	if showEnvironments {
-		header = []string{"Name", "Environment", "Capabilities", "Labels", "Runner Mode", "License", "Agent ID", "Version", "Last Seen"}
+		header = []string{"Name", "Environment", "Capabilities", "Labels", "Runner Mode", "License", "Runner ID", "Version", "Last Seen"}
 	} else {
-		header = []string{"Name", "Capabilities", "Labels", "Runner Mode", "License", "Agent ID", "Version", "Last Seen"}
+		header = []string{"Name", "Capabilities", "Labels", "Runner Mode", "License", "Runner ID", "Version", "Last Seen"}
 	}
 
 	for _, e := range list {
@@ -133,8 +132,8 @@ func (list internalAgents) TableWithEnvironments(showEnvironments bool) (header 
 				agentLabels = strings.Join(agentLabelsEntries, " ")
 			}
 
-			// Runner Mode and License (only for runner capability)
-			if hasCapability(e.Registered, cloudclient.AgentCapabilityRunner) {
+			// Runner Mode and License (only for execution-capable agents)
+			if hasExecutionCapability(e.Registered) {
 				agentRunnerMode = getAgentRunnerMode(e.Registered)
 				agentLicense = getAgentLicenseType(e.Registered)
 			}
@@ -195,7 +194,7 @@ type unknownAgentsTable struct {
 
 // Table implements ui.TableData interface for unknown agents with simplified columns
 func (t unknownAgentsTable) Table() (header []string, output [][]string) {
-	header = []string{"Pod Name", "Namespace", "Agent ID", "Org ID", "Env ID", "Ready"}
+	header = []string{"Pod Name", "Namespace", "Runner ID", "Org ID", "Env ID", "Ready"}
 	for _, e := range t.agents {
 		podName := e.Pod.Name
 		namespace := e.Pod.Namespace
@@ -254,6 +253,11 @@ func hasCapability(agent *cloudclient.Agent, capability cloudclient.AgentCapabil
 		}
 	}
 	return false
+}
+
+func hasExecutionCapability(agent *cloudclient.Agent) bool {
+	return hasCapability(agent, cloudclient.AgentCapabilityExecution) ||
+		hasCapability(agent, cloudclient.AgentCapabilityRunner)
 }
 
 // getAgentRunnerMode returns the runner mode based on runnerPolicy
@@ -613,6 +617,7 @@ func normalizeLegacySuperAgent(agent *cloudclient.Agent) {
 	}
 	if len(agent.Capabilities) == 0 {
 		agent.Capabilities = []cloudclient.AgentCapability{
+			cloudclient.AgentCapabilityExecution,
 			cloudclient.AgentCapabilityRunner,
 			cloudclient.AgentCapabilityListener,
 			cloudclient.AgentCapabilityGitops,
@@ -821,21 +826,31 @@ func UiCreateAgent(
 	isGlobalRunner bool,
 	runnerGroup string,
 	floating bool,
-	enableRunner bool,
+	enableExecution bool,
 	enableListener bool,
 	enableGitops bool,
 	enableWebhooks bool,
 ) *cloudclient.Agent {
 	if name == "" {
-		name = ui.TextInput("agent name")
+		name = ui.TextInput("runner name")
 		if name == "" {
-			ui.Failf("agent name is required")
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrInvalidRuntimeParameter,
+				"No runner name provided",
+				"Pass the runner name as an argument, for example `testkube create runner my-runner`",
+				errors.New("runner name is required"),
+			))
 		}
 	}
 
 	// Get existing agent of that name
 	if existing, err := GetControlPlaneAgent(cmd, name); err == nil {
-		ui.Failf("agent '%s' already exists", existing.Name)
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrInvalidRuntimeParameter,
+			"Runner already exists",
+			"Choose a name that is free, or change the existing runner with `testkube update runner`",
+			errors.Errorf("runner '%s' already exists", existing.Name),
+		))
 	}
 
 	input := cloudclient.AgentInput{
@@ -847,8 +862,8 @@ func UiCreateAgent(
 	}
 
 	// Set capabilities based on resolved flags
-	if enableRunner {
-		input.Capabilities = append(input.Capabilities, cloudclient.AgentCapabilityRunner)
+	if enableExecution {
+		input.Capabilities = append(input.Capabilities, cloudclient.AgentCapabilityExecution, cloudclient.AgentCapabilityRunner)
 	}
 	if enableListener {
 		input.Capabilities = append(input.Capabilities, cloudclient.AgentCapabilityListener)
@@ -877,11 +892,25 @@ func UiCreateAgent(
 	}
 
 	envs, err := GetControlPlaneEnvironments(cmd)
-	ui.ExitOnError("getting environments", err)
+	if err != nil {
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrEnvResolutionFailed,
+			"Error getting the environments",
+			"Check that your credentials are valid and that your user can read the environments of this organization",
+			err,
+		))
+	}
 
 	if len(input.Environments) == 0 {
 		cfg, err := config.Load()
-		ui.ExitOnError("loading config", err)
+		if err != nil {
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrConfigInitFailed,
+				"Error loading testkube config file",
+				common2.ConfigFileHint,
+				err,
+			))
+		}
 		envOpts := []string{envs[cfg.CloudContext.EnvironmentId].Slug}
 		for id := range envs {
 			if id != cfg.CloudContext.EnvironmentId {
@@ -907,16 +936,32 @@ func UiCreateAgent(
 	for _, envId := range input.Environments {
 		env, ok := envs[envId]
 		if !ok {
-			ui.Failf("unknown environment: %s", envId)
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrInvalidRuntimeParameter,
+				"Unknown environment",
+				"Pass an environment id or slug of the current organization with '--env', or select one with `testkube set context --env-id <id>`",
+				errors.Errorf("unknown environment: %s", envId),
+			))
 		}
 		if !env.NewArchitecture {
-			ui.Warn(fmt.Sprintf("Environment '%s' (%s) does not support new architecture. Please upgrade your control plane.", env.Name, env.Id))
-			os.Exit(1)
+			common2.HandleCLIError(common2.NewCLIError(
+				common2.TKErrInvalidRuntimeParameter,
+				"Environment does not support the new architecture",
+				"Upgrade the control plane of this environment, or pass an environment that runs the new architecture with '--env'",
+				errors.Errorf("environment '%s' (%s) does not support the new architecture", env.Name, env.Id),
+			))
 		}
 	}
 
 	agent, err := CreateAgent(cmd, input)
-	ui.ExitOnError("creating agent", err)
+	if err != nil {
+		common2.HandleCLIError(common2.NewCLIError(
+			common2.TKErrRunnerWriteFailed,
+			"Error creating the runner",
+			common2.RunnerWriteHint,
+			err,
+		))
+	}
 
 	PrintControlPlaneAgent(*agent)
 

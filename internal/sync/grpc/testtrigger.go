@@ -32,7 +32,7 @@ func (c Client) UpdateOrCreateTestTrigger(ctx context.Context, obj testtriggersv
 			},
 		},
 	}, c.callOpts...); err != nil {
-		return fmt.Errorf("send request to update or create testtrigger: %w", err)
+		return fmt.Errorf("send request to update or create testtrigger: %w", translateError(err))
 	}
 
 	return nil
@@ -54,7 +54,7 @@ func (c Client) DeleteTestTrigger(ctx context.Context, name string) error {
 			},
 		},
 	}, c.callOpts...); err != nil {
-		return fmt.Errorf("send request to delete testtrigger: %w", err)
+		return fmt.Errorf("send request to delete testtrigger: %w", translateError(err))
 	}
 
 	return nil

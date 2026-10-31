@@ -2,7 +2,6 @@ package webhooks
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -11,7 +10,6 @@ import (
 	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	webhooksmapper "github.com/kubeshop/testkube/pkg/mapper/webhooks"
-	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 // NewCreateWebhookOptionsFromFlags creates create webhook options from command flags
@@ -27,8 +25,10 @@ func NewCreateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.CreateW
 	payloadTemplate := cmd.Flag("payload-template").Value.String()
 	payloadTemplateContent := ""
 	if payloadTemplate != "" {
-		b, err := os.ReadFile(payloadTemplate)
-		ui.ExitOnError("reading payload template", err)
+		b, err := cmdcommon.ReadFileOrStdin(cmd, payloadTemplate)
+		if err != nil {
+			return options, fmt.Errorf("reading payload template: %w", err)
+		}
 		payloadTemplateContent = string(b)
 	}
 
@@ -140,9 +140,9 @@ func NewUpdateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.UpdateW
 
 	if cmd.Flag("payload-template").Changed {
 		payloadTemplate := cmd.Flag("payload-template").Value.String()
-		b, err := os.ReadFile(payloadTemplate)
+		b, err := cmdcommon.ReadFileOrStdin(cmd, payloadTemplate)
 		if err != nil {
-			return options, fmt.Errorf("reading payload template %w", err)
+			return options, fmt.Errorf("reading payload template: %w", err)
 		}
 
 		value := string(b)

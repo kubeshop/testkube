@@ -6,6 +6,7 @@ metadata:
     core-tests: special-cases-suite
     type: suite
     dev-quality-gate: "true"
+    release-quality-gate: "true"
 spec:
   container:
     resources:

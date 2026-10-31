@@ -33,6 +33,22 @@
       "url": "https://testkube.io"
     }
   ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://api.testkube.io/organizations/{organization_id}/environments/{environment_id}/mcp",
+      "variables": {
+        "organization_id": {
+          "description": "Testkube organization ID (e.g., tkcorg_xxxxxxx)",
+          "isRequired": true
+        },
+        "environment_id": {
+          "description": "Testkube environment ID (e.g., tkcenv_xxxxxxx)",
+          "isRequired": true
+        }
+      }
+    }
+  ],
   "packages": [
     {
       "registryType": "oci",
@@ -84,25 +100,11 @@
           "isSecret": false
         },
         {
-          "name": "TK_MCP_TRANSPORT",
-          "description": "MCP transport type: stdio or shttp (default: stdio)",
+          "name": "TK_MCP_SHTTP_AUTH_TOKEN",
+          "description": "Separate inbound bearer token, required only when explicitly using --transport=shttp; not needed for default stdio",
           "isRequired": false,
           "format": "string",
-          "isSecret": false
-        },
-        {
-          "name": "TK_MCP_SHTTP_HOST",
-          "description": "SHTTP host when using shttp transport",
-          "isRequired": false,
-          "format": "string",
-          "isSecret": false
-        },
-        {
-          "name": "TK_MCP_SHTTP_PORT",
-          "description": "SHTTP port when using shttp transport",
-          "isRequired": false,
-          "format": "string",
-          "isSecret": false
+          "isSecret": true
         }
       ]
     }

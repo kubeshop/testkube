@@ -10,6 +10,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/cloudlogin"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 const UserAgentCLI = "Testkube-CLI"
@@ -78,6 +79,13 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 						hint = fmt.Sprintf("testkube pro login --email-link %s", stored)
 					}
 					return nil, "", fmt.Errorf("email-link token refresh failed; re-run `%s`: %w", hint, err)
+				}
+				if !ui.StdinIsInteractive() {
+					// Same reasoning as the email-link branch above, for the rest of the
+					// login methods: an unattended run cannot answer the method selector,
+					// so say what to re-run instead of asking a question nobody will see.
+					return nil, "", fmt.Errorf("token refresh failed and there is no terminal to log in from; "+
+						"re-run `testkube pro login` in an interactive shell: %w", err)
 				}
 				authURI := cfg.CloudContext.AuthUri
 				if authURI == "" {

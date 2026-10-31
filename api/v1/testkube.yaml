@@ -4183,6 +4183,7 @@ paths:
         - $ref: "#/components/parameters/TagSelector"
         - $ref: "#/components/parameters/ActorName"
         - $ref: "#/components/parameters/ActorType"
+        - $ref: "#/components/parameters/StatusDetailsTypeFilter"
       summary: List test workflow executions
       description: List test workflow executions
       operationId: listTestWorkflowExecutionsByTestWorkflow
@@ -4448,8 +4449,12 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/executionID"
+        - $ref: "#/components/parameters/Latest"
       summary: Rerun test workflow execution
-      description: Rerun test workflow execution
+      description: |
+        Rerun test workflow execution using the previous execution's parameters.
+        By default the resolved workflow snapshot from the original execution is reused.
+        When `latest=true`, the current workflow definition is used instead while keeping the original parameter set.
       operationId: rerunTestWorkflowExecutionByTestWorkflow
       requestBody:
         description: test workflow running context
@@ -4543,6 +4548,7 @@ paths:
         - $ref: "#/components/parameters/TagSelector"
         - $ref: "#/components/parameters/ActorName"
         - $ref: "#/components/parameters/ActorType"
+        - $ref: "#/components/parameters/StatusDetailsTypeFilter"
       summary: List test workflow executions
       description: List test workflow executions
       operationId: listTestWorkflowExecutions
@@ -4817,8 +4823,12 @@ paths:
         - api
       parameters:
         - $ref: "#/components/parameters/executionID"
+        - $ref: "#/components/parameters/Latest"
       summary: Rerun test workflow execution
-      description: Rerun test workflow execution
+      description: |
+        Rerun test workflow execution using the previous execution's parameters.
+        By default the resolved workflow snapshot from the original execution is reused.
+        When `latest=true`, the current workflow definition is used instead while keeping the original parameter set.
       operationId: rerunTestWorkflowExecution
       requestBody:
         description: test workflow running context
@@ -7442,7 +7452,6 @@ components:
       description: test trigger create or update request body
       type: object
       required:
-        - event
         - action
         - execution
         - testSelector
@@ -7802,6 +7811,7 @@ components:
         - testworkflow
         - testworkflowexecution
         - program
+        - gitintegration
 
     Webhook:
       description: CRD based webhook data
@@ -8019,6 +8029,9 @@ components:
 
     EventType:
       type: string
+      description: >-
+        The type of an event. The events end-testworkflow-test-failure, end-testworkflow-infrastructure-failure
+        and end-testworkflow-configuration-error select executions by the cause of the failure.
       enum:
         - queue-testworkflow
         - start-testworkflow
@@ -8027,6 +8040,9 @@ components:
         - end-testworkflow-aborted
         - end-testworkflow-canceled
         - end-testworkflow-not-passed
+        - end-testworkflow-test-failure
+        - end-testworkflow-infrastructure-failure
+        - end-testworkflow-configuration-error
         - become-testworkflow-up
         - become-testworkflow-down
         - become-testworkflow-failed
@@ -8140,7 +8156,6 @@ components:
     TestTrigger:
       type: object
       required:
-        - event
         - action
         - execution
         - testSelector
@@ -8180,8 +8195,16 @@ components:
           $ref: "#/components/schemas/TestTriggerSelector"
         event:
           type: string
-          description: listen for event for selected resource
+          description: listen for event for selected resource; exactly one of event and events must be specified
           example: modified
+        events:
+          type: array
+          description: listen for any of the listed events for selected resource; exactly one of event and events must be specified
+          items:
+            type: string
+          example:
+            - created
+            - modified
         match:
           type: array
           description: Match filters which object changes fire the trigger (ANDed).
@@ -8321,6 +8344,90 @@ components:
       properties:
         git:
           $ref: "#/components/schemas/TestTriggerContentGit"
+        http:
+          $ref: "#/components/schemas/TestTriggerContentHttp"
+
+    TestTriggerContentHttp:
+      type: object
+      description: An HTTP endpoint that a content trigger polls. The trigger fires its http-changed event when the selected value of the response changes.
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          description: URL of the endpoint to poll (http or https).
+        method:
+          type: string
+          description: HTTP method of the request, GET by default.
+          enum:
+            - GET
+            - HEAD
+            - POST
+            - PUT
+            - PATCH
+            - DELETE
+            - OPTIONS
+        headers:
+          type: object
+          description: "Headers sent with every request. Warning: these are stored in plain text in the trigger spec; prefer headersFrom for credentials."
+          additionalProperties:
+            type: string
+        headersFrom:
+          type: array
+          description: Headers whose values are read from a Secret or ConfigMap in the trigger's namespace on every poll.
+          items:
+            $ref: "#/components/schemas/TestTriggerContentHttpHeaderSource"
+        body:
+          type: string
+          description: Body sent with every request, e.g. for a POST or GraphQL endpoint.
+        interval:
+          type: string
+          format: duration
+          example: 1m
+          description: Interval between polls, 1m by default and at least 10s.
+        timeout:
+          type: string
+          format: duration
+          example: 10s
+          description: Timeout of one request, 10s by default.
+        insecureSkipVerify:
+          type: boolean
+          description: Skip the verification of the server's TLS certificate.
+        expectedStatus:
+          type: array
+          description: Status codes of a successful poll, 200 by default. A response with any other code is a failed poll, never a change.
+          items:
+            type: integer
+            format: int32
+        select:
+          $ref: "#/components/schemas/TestTriggerContentHttpSelect"
+        fireOnFirstObservation:
+          type: boolean
+          description: Fire the trigger on the first successful poll. By default the first poll only records the value to compare later polls against.
+
+    TestTriggerContentHttpHeaderSource:
+      type: object
+      description: A request header whose value is read from a Secret or ConfigMap.
+      required:
+        - name
+        - valueFrom
+      properties:
+        name:
+          type: string
+          description: Name of the header.
+        valueFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+
+    TestTriggerContentHttpSelect:
+      type: object
+      description: The part of an HTTP response that a content trigger watches. At most one field can be set; when none is, the whole body is watched.
+      properties:
+        jsonPath:
+          type: string
+          description: Dot-path into the JSON response body (e.g. .data.version). An object or array is compared by its JSON encoding.
+        header:
+          type: string
+          description: Name of a response header whose value is watched (e.g. ETag).
 
     TestTriggerContentGit:
       type: object
@@ -8922,6 +9029,8 @@ components:
     ExecutionTarget:
       type: object
       properties:
+        schedulerPolicy:
+          $ref: "#/components/schemas/SchedulerPolicy"
         match:
           type: object
           description: runner labels to match
@@ -8941,6 +9050,11 @@ components:
           description: list of runner labels to replicate the executions
           items:
             type: string
+
+    SchedulerPolicy:
+      type: string
+      enum:
+        - OnlyWhenMatches
 
     TestWorkflowWithExecution:
       type: object
@@ -9061,10 +9175,38 @@ components:
           $ref: "#/components/schemas/TestWorkflowExecutionConfig"
         runtime:
           $ref: "#/components/schemas/TestWorkflowExecutionRuntime"
+        lineage:
+          $ref: "#/components/schemas/TestWorkflowExecutionLineage"
       required:
         - id
         - name
         - workflow
+
+    TestWorkflowExecutionLineage:
+      type: object
+      description: |
+        records where a rerun came from, so that a workflow can read the run it
+        descends from and a reader can follow the chain back to its origin.
+
+        Recorded on every execution, which is what makes the reserved
+        `execution("rerun")` reference resolve inside the pod after any rerun.
+
+        Derived by the scheduler from the base execution: a caller supplies the
+        base and nothing else, because a client able to assert a root or an
+        attempt number could forge a chain.
+      properties:
+        baseId:
+          type: string
+          description: the execution this one is a rerun of; empty for an original run
+        rootId:
+          type: string
+          description: |
+            the first execution in the chain. An original run is its own root,
+            so that every execution of a chain shares one rootId.
+        attempt:
+          type: integer
+          format: int32
+          description: 1 for an original run, one more than the base for a rerun
 
     TestWorkflowExecutionSummary:
       type: object
@@ -9120,6 +9262,8 @@ components:
         silentMode:
           description: execution mode to determine which events to skip
           $ref: "#/components/schemas/SilentMode"
+        lineage:
+          $ref: "#/components/schemas/TestWorkflowExecutionLineage"
       required:
         - id
         - name
@@ -9177,6 +9321,8 @@ components:
         pausedMs:
           type: integer
           description: Pause duration in milliseconds
+        statusDetails:
+          $ref: "#/components/schemas/TestWorkflowStatusDetails"
       required:
         - status
         - predictedStatus
@@ -9413,12 +9559,56 @@ components:
           type: object
           additionalProperties:
             $ref: "#/components/schemas/TestWorkflowStepResult"
+        statusDetails:
+          $ref: "#/components/schemas/TestWorkflowStatusDetails"
       required:
         - status
         - predictedStatus
         - durationMs
         - pausedMs
         - totalDurationMs
+
+    TestWorkflowStatusDetails:
+      type: object
+      description: |
+        Why an execution did not pass. Present on every terminal status except passed.
+        The type names the layer that failed and the reason names the cause.
+      properties:
+        type:
+          type: string
+          enum:
+            - init-failure
+            - execution-failure
+            - step-failure
+            - user-cancel
+            - unknown
+          description: the layer that failed
+        reason:
+          type: string
+          description: code of the cause, for example unschedulable or oom-killed
+        message:
+          type: string
+          description: the message of the step that holds the cause, verbatim
+        step:
+          type: string
+          description: reference of the step that holds the cause; empty when the initialization step holds it
+        actor:
+          type: string
+          description: code of the component that decided the stop, for example user or control-plane
+        user:
+          $ref: "#/components/schemas/TestWorkflowStatusDetailsUser"
+      required:
+        - type
+        - reason
+
+    TestWorkflowStatusDetailsUser:
+      type: object
+      description: the person who canceled the execution; the control plane fills it
+      properties:
+        name:
+          type: string
+        email:
+          type: string
 
     TestWorkflowPause:
       type: object
@@ -9443,10 +9633,16 @@ components:
       properties:
         errorMessage:
           type: string
+        errorReason:
+          type: string
+          description: code of the cause in the error message, for example unschedulable; empty when the message has no known cause
         status:
           $ref: "#/components/schemas/TestWorkflowStepStatus"
         exitCode:
           type: number
+        attempts:
+          type: integer
+          description: number of attempts that the step started, empty when the init process reported none
         queuedAt:
           type: string
           format: date-time
@@ -9866,6 +10062,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowStepExecute"
         artifacts:
           $ref: "#/components/schemas/TestWorkflowStepArtifacts"
+        cache:
+          $ref: "#/components/schemas/TestWorkflowStepCache"
 
     TestWorkflowIndependentStep:
       type: object
@@ -9918,6 +10116,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowStepExecute"
         artifacts:
           $ref: "#/components/schemas/TestWorkflowStepArtifacts"
+        cache:
+          $ref: "#/components/schemas/TestWorkflowStepCache"
         parallel:
           $ref: "#/components/schemas/TestWorkflowIndependentStepParallel"
         setup:
@@ -9989,6 +10189,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowStepExecute"
         artifacts:
           $ref: "#/components/schemas/TestWorkflowStepArtifacts"
+        cache:
+          $ref: "#/components/schemas/TestWorkflowStepCache"
         parallel:
           $ref: "#/components/schemas/TestWorkflowStepParallel"
         setup:
@@ -10030,6 +10232,9 @@ components:
           name:
             type: string
             description: TestWorkflow name to include
+          as:
+            type: string
+            description: name to reference this execution by in the execution() expression, defaults to the TestWorkflow name
           description:
             type: string
             description: TestWorkflow execution description to display
@@ -10042,11 +10247,36 @@ components:
               $ref: "#/components/schemas/TestWorkflowTarballRequest"
           config:
             $ref: "#/components/schemas/TestWorkflowConfigValue"
+          fetch:
+            type: array
+            description: instructions for downloading artifacts produced by executed test workflows
+            items:
+              $ref: "#/components/schemas/TestWorkflowStepExecuteFetch"
+          baseExecutionId:
+            type: string
+            description: id of the execution to record this one as a rerun of, so that it resolves execution("rerun"). Runs the current definition, not the base's snapshot. The base must be one the scheduling execution may itself read.
           selector:
             $ref: "#/components/schemas/LabelSelector"
             description: label selector for test workflow
           target:
             $ref: "#/components/schemas/ExecutionTarget"
+
+    TestWorkflowStepExecuteFetch:
+      type: object
+      required:
+      - to
+      properties:
+        from:
+          type: string
+          description: execution to download the artifacts from, defaults to the one being executed
+        paths:
+          type: array
+          description: artifact paths to download, relative to the artifact root of the execution
+          items:
+            type: string
+        to:
+          type: string
+          description: directory to download the artifacts to; when the entry fans out over a matrix or shards, include {{ index }} to keep each instance's artifacts apart
 
     TestWorkflowStepExecuteTestRef:
       type: object
@@ -10231,6 +10461,40 @@ components:
       required:
         - paths
 
+    TestWorkflowStepCache:
+      type: object
+      properties:
+        key:
+          type: string
+          description: key to store the cache entry under, usually derived from a lockfile
+          minLength: 1
+          maxLength: 512
+        restoreKeys:
+          type: array
+          description: key prefixes to fall back to when there is no entry for the exact key
+          items:
+            type: string
+          maxItems: 10
+        paths:
+          type: array
+          description: paths to store in the cache, relative to the working directory
+          items:
+            type: string
+          minItems: 1
+        workingDir:
+          $ref: "#/components/schemas/BoxedString"
+        scope:
+          type: string
+          description: how widely the cache entry is shared
+          enum:
+            - workflow
+            - environment
+        mount:
+          $ref: "#/components/schemas/BoxedBoolean"
+      required:
+        - key
+        - paths
+
     TestWorkflowStepArtifactsCompression:
       type: object
       properties:
@@ -10324,6 +10588,33 @@ components:
           description: paths to fetch for the sparse checkout
           items:
             type: string
+        verbosity:
+          $ref: "#/components/schemas/ContentGitVerbosity"
+        retry:
+          $ref: "#/components/schemas/TestWorkflowContentGitRetry"
+
+    ContentGitVerbosity:
+      type: string
+      description: logging level for the clone. Omit defaults to verbose.
+      enum:
+        - quiet
+        - normal
+        - verbose
+
+    TestWorkflowContentGitRetry:
+      type: object
+      description: in-process retry policy for transient git failures during clone.
+      properties:
+        count:
+          type: integer
+          minimum: 1
+          maximum: 20
+          description: max attempts for transient git failures (default 5, max 20)
+        delay:
+          type: string
+          description: |
+            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+            May be an expression template; validated after resolution.
 
     TestWorkflowContentFile:
       type: object
@@ -12138,6 +12429,28 @@ components:
         lastModificationSource:
           description: the source from which the last modification of the resource originated
           $ref: "#/components/schemas/Source"
+        gitOpsOwner:
+          description: the GitOps agent that owns this resource, if any
+          $ref: "#/components/schemas/GitOpsOwner"
+
+    GitOpsOwner:
+      description: |
+        The GitOps agent that exclusively owns a resource. Ownership is claimed by the first
+        GitOps agent to sync the resource, and can be reassigned by declaring the
+        testkube.io/gitops-owner annotation on the Kubernetes resource. While an owner is set,
+        syncs from any other GitOps agent are rejected instead of overwriting the resource.
+      type: object
+      required:
+        - agentId
+      properties:
+        agentId:
+          type: string
+          description: ID of the owning GitOps agent. Authoritative for ownership comparisons.
+          example: "tkcsync_1a2b3c4d5e6f"
+        agentName:
+          type: string
+          description: Name of the owning GitOps agent at the time of the last sync, for display purposes only. May be stale if the agent has since been renamed.
+          example: "team-a-gitops"
 
     #
     # Errors
@@ -12280,6 +12593,13 @@ components:
         $ref: "#/components/schemas/ExecutionStatus"
       description: optional status filter containing multiple values separated by comma
       required: false
+    StatusDetailsTypeFilter:
+      in: query
+      name: statusDetailsType
+      schema:
+        type: string
+      description: optional filter for the layer that failed, containing multiple values separated by comma
+      required: false
     Selector:
       in: query
       name: selector
@@ -12365,6 +12685,14 @@ components:
         type: boolean
         default: false
       description: should inline templates in the resolved workflow
+      required: false
+    Latest:
+      in: query
+      name: latest
+      schema:
+        type: boolean
+        default: false
+      description: when rerunning, use the latest workflow definition instead of the original resolved snapshot while keeping the original parameter set
       required: false
     All:
       in: query

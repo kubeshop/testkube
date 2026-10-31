@@ -141,9 +141,16 @@ func paginatePRList(ctx context.Context, p prProvider, cutoff time.Time) ([]pull
 	return all, nil
 }
 
-// isPullRequestTrigger returns true if the trigger is configured for git-pull-request events.
+// isPullRequestTrigger returns true if any of the trigger's effective events
+// is git-pull-request. Event and Events are mutually exclusive; EffectiveEvents
+// normalizes both forms.
 func isPullRequestTrigger(trigger testkube.TestTrigger) bool {
-	return strings.ToLower(trigger.Event) == string(testtriggersv1.TestTriggerEventGitPullRequest)
+	for _, e := range trigger.EffectiveEvents() {
+		if strings.ToLower(e) == string(testtriggersv1.TestTriggerEventGitPullRequest) {
+			return true
+		}
+	}
+	return false
 }
 
 // sanitizeTokenURI strips userinfo from repository URIs before they are sent to a

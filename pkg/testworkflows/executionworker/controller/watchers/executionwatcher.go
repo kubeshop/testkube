@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/log"
 	store2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/store"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -20,6 +21,8 @@ import (
 const (
 	ReadLatestBufferingTimeframe = 5 * time.Millisecond
 	ReadCriticalGracefullyTime   = 750 * time.Millisecond
+	// finalEventsTimeout limits the last list of the events when the execution ends.
+	finalEventsTimeout = 5 * time.Second
 )
 
 type executionWatcher struct {
@@ -169,12 +172,20 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 	watcher.podWatcher = NewPodWatcher(ctx, clientSet.CoreV1().Pods(namespace), metav1.ListOptions{
 		LabelSelector: constants.ResourceIdLabelName + "=" + id,
 	}, pod.Put)
+	// The event watchers retry an error only while the job or the pod watcher observes the execution.
+	// The updates close when all watchers are done, so a retry without an end would keep them open.
+	observed := make(chan struct{})
+	go func() {
+		<-watcher.jobWatcher.Done()
+		<-watcher.podWatcher.Done()
+		close(observed)
+	}()
 	watcher.jobEventsWatcher = NewEventsWatcher(ctx, clientSet.CoreV1().Events(namespace), metav1.ListOptions{
 		FieldSelector: "involvedObject.name=" + id,
 		TypeMeta:      metav1.TypeMeta{Kind: "Job"},
-	}, jobEvents.Put)
+	}, observed, jobEvents.Put)
 
-	watcher.podEventsWatcher = NewAsyncEventsWatcher(ctx, clientSet.CoreV1().Events(namespace), watcher.podEventsOptsCh, podEvents.Put)
+	watcher.podEventsWatcher = NewAsyncEventsWatcher(ctx, clientSet.CoreV1().Events(namespace), watcher.podEventsOptsCh, observed, podEvents.Put)
 
 	// Watch for errors
 	go func() {
@@ -190,6 +201,9 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 		<-watcher.jobEventsWatcher.Done()
 	}()
 
+	// loaded closes when the loop that commits the state ends.
+	loaded := make(chan struct{})
+
 	// Close updates channel when all individual watchers are complete
 	go func() {
 		<-watcher.jobWatcher.Done()
@@ -198,8 +212,11 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 		if watcher.podEventsInitialized.Load() {
 			<-watcher.podEventsWatcher.Done()
 		}
-		watcher.update.Close()
+		// The loop commits once more after its updates close, and the last list of the events can
+		// take a while. So the update of the watcher closes only after the loop ends.
 		update.Close()
+		<-loaded
+		watcher.update.Close()
 		if watcher.podEventsInitialized.CompareAndSwap(false, true) {
 			close(watcher.podEventsOptsCh)
 		}
@@ -209,9 +226,8 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 		}
 	}()
 
-	// Create helper to read the latest data
-	podEventsCh := podEvents.Channel(ctx)
-	jobEventsCh := jobEvents.Channel(ctx)
+	// Create helper to read the latest data.
+	// It copies all the events that each list holds. Many events can arrive in one update, and the next update can come much later.
 	readLatestData := func() {
 		time.Sleep(ReadLatestBufferingTimeframe)
 
@@ -221,21 +237,8 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 		if pod.Latest() != nil {
 			watcher.uncommitted.pod = NewPod(pod.Latest())
 		}
-		for ok := true; ok; {
-			var event *corev1.Event
-			select {
-			case event, ok = <-podEventsCh:
-				if ok {
-					watcher.uncommitted.podEvents = NewPodEvents(append(watcher.uncommitted.podEvents.Original(), event))
-				}
-			case event, ok = <-jobEventsCh:
-				if ok {
-					watcher.uncommitted.jobEvents = NewJobEvents(append(watcher.uncommitted.jobEvents.Original(), event))
-				}
-			default:
-				ok = false
-			}
-		}
+		watcher.uncommitted.podEvents = NewPodEvents(podEvents.Latest())
+		watcher.uncommitted.jobEvents = NewJobEvents(jobEvents.Latest())
 		watcher.initializePodEventsWatcher()
 	}
 
@@ -244,6 +247,7 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 	go func() {
 		defer func() {
 			ctxCancel()
+			close(loaded)
 		}()
 		var next func(bool)
 		next = func(force bool) {
@@ -326,6 +330,34 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 			}
 		}
 
+		// commit lists the events one more time before it commits the first state of an ended
+		// execution. A busy API server can deliver no watch event for a long time while a list
+		// still works, and the watchers stop when the execution ends, so this is the last chance
+		// to get the cause of a pod that waited.
+		finalized := false
+		commit := func() {
+			if !finalized && watcher.uncommitted.Completed() {
+				finalized = true
+				// The two lists run in parallel, so a slow API delays the commit once, not twice.
+				var lists sync.WaitGroup
+				lists.Go(func() {
+					if _, err := watcher.jobEventsWatcher.Update(finalEventsTimeout); err != nil {
+						log.DefaultLogger.Warnw("listing the events of the job failed", "executionId", id, "error", err)
+					}
+				})
+				if watcher.podEventsInitialized.Load() {
+					lists.Go(func() {
+						if _, err := watcher.podEventsWatcher.Update(finalEventsTimeout); err != nil {
+							log.DefaultLogger.Warnw("listing the events of the pod failed", "executionId", id, "error", err)
+						}
+					})
+				}
+				lists.Wait()
+				readLatestData()
+			}
+			watcher.Commit()
+		}
+
 		<-watcher.baseStarted()
 
 		next(false)
@@ -333,7 +365,7 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 			<-watcher.podEventsWatcher.Started()
 			next(false)
 		}
-		watcher.Commit()
+		commit()
 		for {
 			_, ok := <-update.Channel(ctx)
 			if !ok {
@@ -341,14 +373,14 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 			}
 
 			next(false)
-			watcher.Commit()
+			commit()
 
 			if watcher.State().Completed() {
 				return
 			}
 		}
 		next(false)
-		watcher.Commit()
+		commit()
 	}()
 
 	return watcher

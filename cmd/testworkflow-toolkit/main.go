@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/commands"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -14,7 +15,7 @@ func main() {
 
 	// Validate provided data
 	if config.Namespace() == "" || config.Ref() == "" {
-		ui.Fail(errors.New("environment is misconfigured"))
+		common.Fail(errors.New("environment is misconfigured"))
 	}
 
 	commands.Execute()

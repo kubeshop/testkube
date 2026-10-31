@@ -22,13 +22,3 @@ const (
 	CHANGED_TO_TestTriggerFieldOperator   TestTriggerFieldOperator = "changed_to"
 	CHANGED_FROM_TestTriggerFieldOperator TestTriggerFieldOperator = "changed_from"
 )
-
-const (
-	TestTriggerFieldOperatorEquals      = EQUALS_TestTriggerFieldOperator
-	TestTriggerFieldOperatorNotEquals   = NOT_EQUALS_TestTriggerFieldOperator
-	TestTriggerFieldOperatorExists      = EXISTS_TestTriggerFieldOperator
-	TestTriggerFieldOperatorNotExists   = NOT_EXISTS_TestTriggerFieldOperator
-	TestTriggerFieldOperatorChanged     = CHANGED_TestTriggerFieldOperator
-	TestTriggerFieldOperatorChangedTo   = CHANGED_TO_TestTriggerFieldOperator
-	TestTriggerFieldOperatorChangedFrom = CHANGED_FROM_TestTriggerFieldOperator
-)

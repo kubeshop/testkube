@@ -2,6 +2,7 @@ package imageinspector
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -20,13 +21,13 @@ func TestInspectorInspect(t *testing.T) {
 
 	sec := corev1.Secret{StringData: map[string]string{"foo": "bar"}}
 	req := RequestBase{Registry: "regname.io", Image: "imgname"}
-	resolvedReq := RequestBase{Image: "regname.io/imgname"}
+	// Only the versioned key is read, so a stale entry under the resolved name or the image alone
+	// is never used.
+	resolvedReq := RequestBase{Registry: resolvedCacheVersion, Image: "regname.io/imgname"}
 	storage1.EXPECT().Get(gomock.Any(), resolvedReq).Return(nil, nil)
 	storage2.EXPECT().Get(gomock.Any(), resolvedReq).Return(nil, nil)
-	storage1.EXPECT().Get(gomock.Any(), req).Return(nil, nil)
-	storage2.EXPECT().Get(gomock.Any(), req).Return(nil, nil)
 	secrets.EXPECT().Get(gomock.Any(), "secname").Return(&sec, nil)
-	infos.EXPECT().Fetch(gomock.Any(), req.Registry, req.Image, []corev1.Secret{sec}).Return(&info1, nil)
+	infos.EXPECT().Fetch(gomock.Any(), "", resolvedReq.Image, []corev1.Secret{sec}).Return(&info1, nil)
 
 	storage1.EXPECT().Store(gomock.Any(), resolvedReq, info1).Return(nil)
 	storage2.EXPECT().Store(gomock.Any(), resolvedReq, info1).Return(nil)
@@ -48,7 +49,7 @@ func TestInspectorInspectWithCache(t *testing.T) {
 	inspector := NewInspector("default.io", infos, secrets, storage1, storage2)
 
 	req := RequestBase{Registry: "regname.io", Image: "imgname"}
-	resolvedReq := RequestBase{Image: "regname.io/imgname"}
+	resolvedReq := RequestBase{Registry: resolvedCacheVersion, Image: "regname.io/imgname"}
 	storage1.EXPECT().Get(gomock.Any(), resolvedReq).Return(&info1, nil)
 
 	v, err := inspector.Inspect(context.Background(), req.Registry, req.Image, corev1.PullIfNotPresent, []string{"secname"})
@@ -122,4 +123,58 @@ func TestInspector_ResolveName_CustomDefault_NoOverride(t *testing.T) {
 	inspector := NewInspector("custom-registry:443", infos, secrets)
 
 	assert.Equal(t, "custom-registry:443/repo/image:1.2.3", inspector.ResolveName("", "custom-registry:443/repo/image:1.2.3"))
+}
+
+func TestInspector_Inspect_Error(t *testing.T) {
+	tests := []struct {
+		name            string
+		defaultRegistry string
+		wantFetched     string
+		info            *Info
+		err             error
+		secretErr       error
+		want            string
+	}{
+		{
+			name:        "an image without a default registry keeps its name",
+			wantFetched: "imgname",
+			err:         errors.New("no such host"),
+			want:        `the image "imgname" cannot be read: no such host`,
+		},
+		{
+			name:            "the image is fetched from the default registry that the pod pulls from",
+			defaultRegistry: "default.io",
+			wantFetched:     "default.io/imgname",
+			err:             errors.New("no such host"),
+			want:            `the image "default.io/imgname" cannot be read: no such host`,
+		},
+		{
+			name:        "no details from the registry",
+			wantFetched: "imgname",
+			want:        `the image "imgname" cannot be read: the registry returned no details`,
+		},
+		{
+			name:      "a pull secret that cannot be read names the secret",
+			secretErr: errors.New(`secrets "regcred" not found`),
+			want:      `the image "imgname" cannot be read: the pull secret "regcred" cannot be read: secrets "regcred" not found`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			infos := NewMockInfoFetcher(ctrl)
+			secrets := NewMockSecretFetcher(ctrl)
+			inspector := NewInspector(tt.defaultRegistry, infos, secrets)
+			var secretNames []string
+			if tt.secretErr != nil {
+				secretNames = []string{"regcred"}
+				secrets.EXPECT().Get(gomock.Any(), "regcred").Return(nil, tt.secretErr)
+			} else {
+				infos.EXPECT().Fetch(gomock.Any(), "", tt.wantFetched, gomock.Any()).Return(tt.info, tt.err)
+			}
+
+			_, err := inspector.Inspect(context.Background(), "", "imgname", corev1.PullAlways, secretNames)
+			assert.EqualError(t, err, tt.want)
+		})
+	}
 }

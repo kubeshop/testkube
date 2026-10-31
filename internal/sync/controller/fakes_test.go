@@ -56,70 +56,72 @@ type fakeStore struct {
 	WebhookTemplate      executorv1.WebhookTemplate
 	Deleted              string
 	UpdateCalls          int
+	// Err is returned by every store method, to exercise the reconcilers' error paths.
+	Err error
 }
 
 func (t *fakeStore) UpdateOrCreateTestTrigger(_ context.Context, trigger testtriggersv1.TestTrigger) error {
 	t.UpdateCalls++
 	trigger.DeepCopyInto(&t.TestTrigger)
-	return nil
+	return t.Err
 }
 
 func (t *fakeStore) DeleteTestTrigger(_ context.Context, s string) error {
 	t.Deleted = s
-	return nil
+	return t.Err
 }
 
 func (t *fakeStore) UpdateOrCreateWorkflowTrigger(_ context.Context, trigger workflowtriggersv1.WorkflowTrigger) error {
 	t.UpdateCalls++
 	trigger.DeepCopyInto(&t.WorkflowTrigger)
-	return nil
+	return t.Err
 }
 
 func (t *fakeStore) DeleteWorkflowTrigger(_ context.Context, s string) error {
 	t.Deleted = s
-	return nil
+	return t.Err
 }
 
 func (t *fakeStore) UpdateOrCreateTestWorkflow(_ context.Context, workflow testworkflowsv1.TestWorkflow) error {
 	t.UpdateCalls++
 	workflow.DeepCopyInto(&t.TestWorkflow)
-	return nil
+	return t.Err
 }
 
 func (t *fakeStore) DeleteTestWorkflow(_ context.Context, s string) error {
 	t.Deleted = s
-	return nil
+	return t.Err
 }
 
 func (t *fakeStore) UpdateOrCreateTestWorkflowTemplate(_ context.Context, template testworkflowsv1.TestWorkflowTemplate) error {
 	t.UpdateCalls++
 	template.DeepCopyInto(&t.TestWorkflowTemplate)
-	return nil
+	return t.Err
 }
 
 func (t *fakeStore) DeleteTestWorkflowTemplate(_ context.Context, s string) error {
 	t.Deleted = s
-	return nil
+	return t.Err
 }
 
 func (t *fakeStore) UpdateOrCreateWebhook(_ context.Context, webhook executorv1.Webhook) error {
 	t.UpdateCalls++
 	webhook.DeepCopyInto(&t.Webhook)
-	return nil
+	return t.Err
 }
 
 func (t *fakeStore) DeleteWebhook(_ context.Context, s string) error {
 	t.Deleted = s
-	return nil
+	return t.Err
 }
 
 func (t *fakeStore) UpdateOrCreateWebhookTemplate(_ context.Context, template executorv1.WebhookTemplate) error {
 	t.UpdateCalls++
 	template.DeepCopyInto(&t.WebhookTemplate)
-	return nil
+	return t.Err
 }
 
 func (t *fakeStore) DeleteWebhookTemplate(_ context.Context, s string) error {
 	t.Deleted = s
-	return nil
+	return t.Err
 }

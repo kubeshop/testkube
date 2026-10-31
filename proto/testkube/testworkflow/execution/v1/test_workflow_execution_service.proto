@@ -22,7 +22,7 @@ service TestWorkflowExecutionService {
   // SetExecutionScheduling is deprecated, clients and servers should transition to AcceptExecution.
   rpc SetExecutionScheduling(SetExecutionSchedulingRequest) returns (SetExecutionSchedulingResponse) {
     option deprecated = true;
-  };
+  }
   // AcceptExecution informs the server that the execution has been successfully applied to
   // Kubernetes. This should be initiated by a client immediately after an execution has been
   // successfully applied to Kubernetes in order to prevent the execution from being sent in

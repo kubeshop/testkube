@@ -1,0 +1,22 @@
+edition = "2023";
+
+package testkube.testworkflow.execution.v1;
+
+// ExecutionLineage records where a rerun came from, so that a workflow can read
+// the run it descends from and a reader can follow the chain back to its origin.
+//
+// Recorded on every execution, which is what makes the reserved
+// `execution("rerun")` reference resolve inside the pod after any rerun.
+//
+// Derived by the Control Plane from the base execution rather than supplied: a
+// caller able to assert a root or an attempt number could forge a chain.
+message ExecutionLineage {
+  // base_execution_id is the execution this one is a rerun of. Empty for an
+  // original run.
+  string base_execution_id = 1;
+  // root_execution_id is the first execution in the chain. An original run is
+  // its own root, so that every execution of a chain shares one value here.
+  string root_execution_id = 2;
+  // attempt is 1 for an original run, and one more than the base's for a rerun.
+  int32 attempt = 3;
+}

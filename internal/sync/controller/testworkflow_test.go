@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -9,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	syncagent "github.com/kubeshop/testkube/internal/sync"
 )
 
 func TestTestWorkflowSyncReconcilerUpdateOrCreate(t *testing.T) {
@@ -106,5 +109,30 @@ func TestTestWorkflowSyncReconcilerDeleteWhenMarkedForDeletion(t *testing.T) {
 
 	if store.UpdateCalls != 0 {
 		t.Errorf("TestWorkflowSyncReconcilerDeleteWhenMarkedForDeletion: expected 0 update calls, got %d", store.UpdateCalls)
+	}
+}
+
+// When the Control Plane rejects a sync because another GitOps agent owns the resource, the
+// reconciler must give up rather than requeue the same doomed request forever.
+func TestTestWorkflowSyncReconcilerOwnershipConflictIsTerminal(t *testing.T) {
+	name := "smoke"
+	store := &fakeStore{Err: fmt.Errorf("rejected: %w", syncagent.ErrOwnershipConflict)}
+
+	reconciler := testWorkflowSyncReconciler(
+		fakeKubernetesClient{
+			TestWorkflow: testworkflowsv1.TestWorkflow{
+				ObjectMeta: metav1.ObjectMeta{Name: name},
+			},
+		},
+		store,
+	)
+
+	_, err := reconciler.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}})
+
+	if !errors.Is(err, reconcile.TerminalError(nil)) {
+		t.Errorf("expected a terminal error, got %v", err)
+	}
+	if !errors.Is(err, syncagent.ErrOwnershipConflict) {
+		t.Errorf("expected the ownership conflict to stay in the error chain, got %v", err)
 	}
 }

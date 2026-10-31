@@ -75,7 +75,7 @@ func TestConvertV1ToInternal(t *testing.T) {
 	assert.Equal(t, "api-.*", it.Selector.NameRegex)
 
 	// Event
-	assert.Equal(t, "modified", it.Event)
+	assert.Equal(t, []string{"modified"}, it.Events)
 
 	// Field conditions (match) passthrough
 	require.Len(t, it.FieldConditions, 2)
@@ -191,7 +191,7 @@ func TestConvertV2ToInternal(t *testing.T) {
 	assert.Equal(t, "true", it.Selector.LabelSelector.MatchLabels["critical"])
 
 	// When
-	assert.Equal(t, "created", it.Event)
+	assert.Equal(t, []string{"created"}, it.Events)
 	assert.Nil(t, it.ContentSelector)
 
 	// Match

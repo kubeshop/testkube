@@ -7,21 +7,24 @@ import (
 )
 
 const (
-	APIServerName                    string = "testkube-api-server"
-	APIServerPort                    int    = 8088
-	DashboardName                    string = "testkube-dashboard"
-	DashboardPort                    int    = 8080
-	EnterpriseUiName                 string = "testkube-enterprise-ui"
-	EnterpriseUiPort                 int    = 8080
-	EnterpriseApiName                string = "testkube-enterprise-api"
-	EnterpriseApiPort                int    = 8088
-	EnterpriseApiForwardingPort      int    = 8090
-	EnterpriseDexName                string = "testkube-enterprise-dex"
-	EnterpriseDexPort                int    = 5556
-	EnterpriseDexForwardingPort      int    = 5556
-	EnterpriseMinioName              string = "testkube-enterprise-minio"
-	EnterpriseMinioPort              int    = 9000
-	EnterpriseMinioPortFrwardingPort int    = 9000
+	APIServerName                     string = "testkube-api-server"
+	APIServerPort                     int    = 8088
+	DashboardName                     string = "testkube-dashboard"
+	DashboardPort                     int    = 8080
+	EnterpriseUiName                  string = "testkube-enterprise-ui"
+	EnterpriseUiPort                  int    = 8080
+	EnterpriseApiName                 string = "testkube-enterprise-api"
+	EnterpriseApiPort                 int    = 8088
+	EnterpriseApiForwardingPort       int    = 8090
+	EnterpriseDexName                 string = "testkube-enterprise-dex"
+	EnterpriseDexPort                 int    = 5556
+	EnterpriseDexForwardingPort       int    = 5556
+	EnterpriseMinioName               string = "testkube-enterprise-minio"
+	EnterpriseMinioPort               int    = 9000
+	EnterpriseMinioPortFrwardingPort  int    = 9000
+	EnterpriseAiServiceName           string = "testkube-enterprise-ai-service"
+	EnterpriseAiServicePort           int    = 9090
+	EnterpriseAiServiceForwardingPort int    = 9090
 
 	configDirName = ".testkube"
 	configFile    = "config.json"

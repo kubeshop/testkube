@@ -20,12 +20,19 @@ func NewRotateKeyCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "rotate-key <nameOrId>",
-		Short: "Rotate the secret key for an agent",
-		Long:  "Rotate the secret key for an agent with a configurable grace period during which the old key remains valid",
+		Short: "Rotate the secret key for a runner",
+		Long:  "Rotate the secret key for a runner with a configurable grace period during which the old key remains valid",
 		Args:  cobra.ExactArgs(1),
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			cfg, err := config.Load()
-			ui.ExitOnError("loading config", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrConfigInitFailed,
+					"Error loading testkube config file",
+					common.ConfigFileHint,
+					err,
+				))
+			}
 			common.UiContextHeader(cmd, cfg)
 			validator.PersistentPreRunVersionCheck(cmd, common.Version)
 		},
@@ -36,9 +43,9 @@ func NewRotateKeyCommand() *cobra.Command {
 			agent, err := GetControlPlaneAgent(cmd, nameOrID)
 			if err != nil {
 				common.HandleCLIError(common.NewCLIError(
-					common.TKErrAgentGetFailed,
-					"Failed to get agent",
-					"Verify the agent name or ID is correct and your credentials are valid",
+					common.TKErrRunnerGetFailed,
+					"Error getting the runner",
+					common.RunnerLookupHint,
 					err,
 				))
 				return
@@ -46,7 +53,7 @@ func NewRotateKeyCommand() *cobra.Command {
 
 			// Confirm unless --yes
 			if !yes {
-				ok := ui.Confirm(fmt.Sprintf("Rotate secret key for agent '%s'?", agent.Name))
+				ok := ui.Confirm(fmt.Sprintf("Rotate secret key for runner '%s'?", agent.Name))
 				if !ok {
 					return
 				}
@@ -56,9 +63,9 @@ func NewRotateKeyCommand() *cobra.Command {
 			result, err := RotateControlPlaneAgentKey(cmd, agent.ID, gracePeriod)
 			if err != nil {
 				common.HandleCLIError(common.NewCLIError(
-					common.TKErrAgentRotateKeyFailed,
-					"Failed to rotate agent secret key",
-					"Verify the agent exists and your credentials are valid",
+					common.TKErrRunnerRotateKeyFailed,
+					"Error rotating the runner secret key",
+					"Check that your credentials are valid and that the '--grace-period' value is one the control plane accepts, for example 24h or 0s",
 					err,
 				))
 				return
@@ -67,7 +74,7 @@ func NewRotateKeyCommand() *cobra.Command {
 			// Display results
 			ui.Success("Secret key rotated successfully")
 			fmt.Println()
-			ui.Warn("Agent:         ", agent.Name)
+			ui.Warn("Runner:        ", agent.Name)
 			ui.Warn("New Secret Key:", result.SecretKey)
 			if result.GracePeriod != "" {
 				ui.Warn("Grace Period:  ", result.GracePeriod)
@@ -79,7 +86,7 @@ func NewRotateKeyCommand() *cobra.Command {
 			}
 
 			fmt.Println()
-			ui.Info("To update the agent's Kubernetes secret, run:")
+			ui.Info("To update the runner's Kubernetes secret, run:")
 			fmt.Printf("  kubectl create secret generic testkube-agent-secret --from-literal=TESTKUBE_PRO_API_KEY=%s --dry-run=client -o yaml | kubectl apply -f -\n", result.SecretKey)
 			fmt.Println()
 		},

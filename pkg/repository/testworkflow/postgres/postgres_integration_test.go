@@ -3,11 +3,15 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"sort"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/database/postgres/sqlc"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	testpostgres "github.com/kubeshop/testkube/pkg/test/postgres"
@@ -793,4 +797,169 @@ func TestPostgresGetLatestTestWorkflowExecutionByTestWorkflow_AmbiguousFlags_Int
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "ambig-sched", row.ID, "(false, false) must use scheduled_at")
+}
+
+func TestPostgresRepositoryStatusDetails_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "repo_status_details")
+	t.Cleanup(cleanup)
+
+	ctx := context.Background()
+	orgID := "test-org"
+	envID := "test-env"
+	repo := NewPostgresRepository(testDB.Pool, WithOrganizationID(orgID), WithEnvironmentID(envID))
+
+	details := func(detailsType testkube.StatusDetailsType, reason testkube.StopReason) *testkube.TestWorkflowStatusDetails {
+		return &testkube.TestWorkflowStatusDetails{
+			Type_:   string(detailsType),
+			Reason:  string(reason),
+			Message: "no node can run the pod: 0/2 nodes are available",
+			Step:    "rstep1",
+			Actor:   string(testkube.StopActorRunner),
+			User:    &testkube.TestWorkflowStatusDetailsUser{Name: "Ada", Email: "ada@example.com"},
+		}
+	}
+
+	executions := []struct {
+		id      string
+		number  int32
+		details *testkube.TestWorkflowStatusDetails
+	}{
+		{id: "init-1", number: 1, details: details(testkube.StatusDetailsTypeInitFailure, testkube.StopReasonUnschedulable)},
+		{id: "exec-1", number: 2, details: details(testkube.StatusDetailsTypeExecutionFailure, testkube.StopReasonOOMKilled)},
+		{id: "step-1", number: 3, details: details(testkube.StatusDetailsTypeStepFailure, testkube.StopReasonExitCode)},
+		{id: "passed-1", number: 4, details: nil},
+	}
+	for _, e := range executions {
+		require.NoError(t, repo.Insert(ctx, testkube.TestWorkflowExecution{
+			Id:        e.id,
+			Name:      e.id,
+			Namespace: "default",
+			Number:    e.number,
+			Workflow:  &testkube.TestWorkflow{Name: e.id, Spec: &testkube.TestWorkflowSpec{}},
+			Result: &testkube.TestWorkflowResult{
+				Status:        common.Ptr(testkube.ABORTED_TestWorkflowStatus),
+				StatusDetails: e.details,
+			},
+		}))
+	}
+
+	t.Run("the insert stores every field of the status details", func(t *testing.T) {
+		got, err := repo.Get(ctx, "init-1")
+		require.NoError(t, err)
+		require.NotNil(t, got.Result.StatusDetails)
+		assert.Equal(t, *details(testkube.StatusDetailsTypeInitFailure, testkube.StopReasonUnschedulable), *got.Result.StatusDetails)
+	})
+
+	t.Run("an execution without status details reads none", func(t *testing.T) {
+		got, err := repo.Get(ctx, "passed-1")
+		require.NoError(t, err)
+		assert.Nil(t, got.Result.StatusDetails)
+	})
+
+	t.Run("an update replaces the status details", func(t *testing.T) {
+		replaced := details(testkube.StatusDetailsTypeUserCancel, testkube.StopReasonForceCancel)
+		require.NoError(t, repo.UpdateResult(ctx, "exec-1", &testkube.TestWorkflowResult{
+			Status:        common.Ptr(testkube.CANCELED_TestWorkflowStatus),
+			StatusDetails: replaced,
+		}))
+
+		got, err := repo.Get(ctx, "exec-1")
+		require.NoError(t, err)
+		require.NotNil(t, got.Result.StatusDetails)
+		assert.Equal(t, *replaced, *got.Result.StatusDetails)
+	})
+
+	t.Run("the summary carries the status details", func(t *testing.T) {
+		summaries, err := repo.GetExecutionsSummary(ctx, testworkflow.NewExecutionsFilter().WithName("init-1"))
+		require.NoError(t, err)
+		require.Len(t, summaries, 1)
+		require.NotNil(t, summaries[0].Result.StatusDetails)
+		assert.Equal(t, string(testkube.StatusDetailsTypeInitFailure), summaries[0].Result.StatusDetails.Type_)
+	})
+
+	t.Run("the strict finish of the runner stores the object", func(t *testing.T) {
+		// FinishResultStrict is the path that the runner takes when it reports a finished execution,
+		// so a gap here leaves every normal execution without the object.
+		// The execution is its own, so the filter table below keeps the fixtures it expects.
+		require.NoError(t, repo.Insert(ctx, testkube.TestWorkflowExecution{
+			Id: "strict-1", Name: "strict-1", Namespace: "default", Number: 5,
+			Workflow: &testkube.TestWorkflow{Name: "strict-1", Spec: &testkube.TestWorkflowSpec{}},
+			Result:   &testkube.TestWorkflowResult{Status: common.Ptr(testkube.RUNNING_TestWorkflowStatus)},
+		}))
+		require.NoError(t, repo.Init(ctx, "strict-1", testworkflow.InitData{RunnerID: "runner-1"}))
+		finished := details(testkube.StatusDetailsTypeExecutionFailure, testkube.StopReasonOOMKilled)
+		updated, err := repo.FinishResultStrict(ctx, "strict-1", "runner-1", &testkube.TestWorkflowResult{
+			Status:        common.Ptr(testkube.ABORTED_TestWorkflowStatus),
+			FinishedAt:    time.Now(),
+			StatusDetails: finished,
+		})
+		require.NoError(t, err)
+		require.True(t, updated, "the strict finish must apply")
+
+		got, err := repo.Get(ctx, "strict-1")
+		require.NoError(t, err)
+		require.NotNil(t, got.Result.StatusDetails, "the strict finish must store the object")
+		assert.Equal(t, *finished, *got.Result.StatusDetails)
+	})
+
+	t.Run("the strict update of the runner stores the object", func(t *testing.T) {
+		// UpdateResultStrict takes the same fix as FinishResultStrict, so it needs its own guard.
+		// The two are separate queries, and a fix to one does not reach the other.
+		require.NoError(t, repo.Insert(ctx, testkube.TestWorkflowExecution{
+			Id: "strict-2", Name: "strict-2", Namespace: "default", Number: 6,
+			Workflow: &testkube.TestWorkflow{Name: "strict-2", Spec: &testkube.TestWorkflowSpec{}},
+			Result:   &testkube.TestWorkflowResult{Status: common.Ptr(testkube.RUNNING_TestWorkflowStatus)},
+		}))
+		require.NoError(t, repo.Init(ctx, "strict-2", testworkflow.InitData{RunnerID: "runner-2"}))
+		running := details(testkube.StatusDetailsTypeExecutionFailure, testkube.StopReasonEvicted)
+		updated, err := repo.UpdateResultStrict(ctx, "strict-2", "runner-2", &testkube.TestWorkflowResult{
+			Status:        common.Ptr(testkube.RUNNING_TestWorkflowStatus),
+			StatusDetails: running,
+		})
+		require.NoError(t, err)
+		require.True(t, updated, "the strict update must apply")
+
+		got, err := repo.Get(ctx, "strict-2")
+		require.NoError(t, err)
+		require.NotNil(t, got.Result.StatusDetails, "the strict update must store the object")
+		assert.Equal(t, *running, *got.Result.StatusDetails)
+	})
+
+	t.Run("the count honours the type filter", func(t *testing.T) {
+		// The list and the count must agree, or a filtered page shows a total of the whole list.
+		// The count must agree with the list, so it reads both and compares them. That holds
+		// whatever the subtests above leave in the database.
+		filter := testworkflow.NewExecutionsFilter().WithStatusDetailsTypes("step-failure")
+		listed, err := repo.GetExecutions(ctx, filter)
+		require.NoError(t, err)
+		count, err := repo.Count(ctx, filter)
+		require.NoError(t, err)
+		assert.Equal(t, int64(len(listed)), count)
+		assert.NotZero(t, count, "the fixtures must hold at least one execution of this type")
+	})
+
+	filterTests := []struct {
+		name    string
+		types   string
+		wantIDs []string
+	}{
+		{name: "one type", types: "init-failure", wantIDs: []string{"init-1"}},
+		{name: "two types", types: "init-failure,step-failure", wantIDs: []string{"init-1", "step-1"}},
+		{name: "the type of the updated execution", types: "user-cancel", wantIDs: []string{"exec-1"}},
+		{name: "a type that no execution carries", types: "unknown", wantIDs: []string{}},
+	}
+	for _, tt := range filterTests {
+		t.Run("filters by "+tt.name, func(t *testing.T) {
+			got, err := repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithStatusDetailsTypes(tt.types))
+			require.NoError(t, err)
+
+			ids := make([]string, 0, len(got))
+			for _, e := range got {
+				ids = append(ids, e.Id)
+			}
+			sort.Strings(ids)
+			assert.Equal(t, tt.wantIDs, ids)
+		})
+	}
 }

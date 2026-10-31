@@ -10,11 +10,10 @@ package testworkflowresolver
 
 import (
 	"fmt"
-	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -22,12 +21,8 @@ import (
 
 var configFinalizer = expressions.PrefixMachine("config.", expressions.FinalizerFail)
 
-func castParameter(value intstr.IntOrString, schema testworkflowsv1.ParameterSchema) (expressions.Expression, error) {
-	v := value.StrVal
-	if value.Type == intstr.Int {
-		v = strconv.Itoa(int(value.IntVal))
-	}
-	expr, err := expressions.CompileTemplate(v)
+func castParameter(value testworkflowsv1.ConfigValue, schema testworkflowsv1.ParameterSchema) (expressions.Expression, error) {
+	expr, err := expressions.CompileTemplate(value.String())
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +37,7 @@ func castParameter(value intstr.IntOrString, schema testworkflowsv1.ParameterSch
 	return expressions.CastToString(expr).Resolve()
 }
 
-func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]testworkflowsv1.ParameterSchema,
+func createConfigMachine(cfg map[string]testworkflowsv1.ConfigValue, schema map[string]testworkflowsv1.ParameterSchema,
 	externalize func(key, value string) (expressions.Expression, error)) (expressions.Machine, error) {
 	machine := expressions.NewMachine()
 	for k, v := range cfg {
@@ -91,7 +86,7 @@ func EnvVarSourceToSecretExpression(fn func(key, value string) (*corev1.EnvVarSo
 	}
 }
 
-func ApplyWorkflowConfig(t *testworkflowsv1.TestWorkflow, cfg map[string]intstr.IntOrString,
+func ApplyWorkflowConfig(t *testworkflowsv1.TestWorkflow, cfg map[string]testworkflowsv1.ConfigValue,
 	externalize func(key, value string) (expressions.Expression, error)) (*testworkflowsv1.TestWorkflow, error) {
 	if t == nil {
 		return t, nil
@@ -101,10 +96,36 @@ func ApplyWorkflowConfig(t *testworkflowsv1.TestWorkflow, cfg map[string]intstr.
 		return nil, err
 	}
 	err = expressions.Simplify(&t, machine, configFinalizer)
-	return t, err
+	return t, configError(err)
 }
 
-func ApplyWorkflowTemplateConfig(t *testworkflowsv1.TestWorkflowTemplate, cfg map[string]intstr.IntOrString,
+// configNotSetError names a config value that an expression reads and that nothing sets. The path
+// of the expression can be a path in a template, not in the workflow, so it stays out.
+type configNotSetError struct {
+	name string
+	err  error
+}
+
+func (e *configNotSetError) Error() string {
+	return fmt.Sprintf("the config value %q is not set", e.name)
+}
+
+func (e *configNotSetError) Unwrap() error { return e.err }
+
+// configError gives a config value that is not set its own words, and keeps other errors.
+func configError(err error) error {
+	var undefined *expressions.UndefinedError
+	if !errors.As(err, &undefined) {
+		return err
+	}
+	name, ok := strings.CutPrefix(undefined.Name, "config.")
+	if !ok {
+		return err
+	}
+	return &configNotSetError{name: name, err: err}
+}
+
+func ApplyWorkflowTemplateConfig(t *testworkflowsv1.TestWorkflowTemplate, cfg map[string]testworkflowsv1.ConfigValue,
 	externalize func(key, value string) (expressions.Expression, error)) (*testworkflowsv1.TestWorkflowTemplate, error) {
 	if t == nil {
 		return t, nil
@@ -114,5 +135,5 @@ func ApplyWorkflowTemplateConfig(t *testworkflowsv1.TestWorkflowTemplate, cfg ma
 		return nil, err
 	}
 	err = expressions.Simplify(&t, machine, configFinalizer)
-	return t, err
+	return t, configError(err)
 }

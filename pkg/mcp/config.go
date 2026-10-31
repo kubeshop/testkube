@@ -60,6 +60,9 @@ type MCPServerConfig struct {
 
 // SHTTPConfig holds configuration for Streamable HTTP transport
 type SHTTPConfig struct {
+	// AuthToken authenticates inbound HTTP requests, independently of AccessToken.
+	AuthToken string `json:"-"`
+
 	// Host to bind the HTTP server to (default: "localhost")
 	Host string
 
@@ -101,6 +104,7 @@ func LoadConfigFromEnv() MCPServerConfig {
 
 	// Parse SHTTP configuration
 	shttpConfig := SHTTPConfig{
+		AuthToken: os.Getenv("TK_MCP_SHTTP_AUTH_TOKEN"),
 		Host:      getEnvOrDefault("TK_MCP_SHTTP_HOST", "localhost"),
 		Port:      getEnvOrDefaultAsInt("TK_MCP_SHTTP_PORT", 8080),
 		EnableTLS: os.Getenv("TK_MCP_SHTTP_TLS") == "true",
@@ -139,6 +143,9 @@ func (c *MCPServerConfig) Validate() error {
 
 	// Validate SHTTP configuration if using SHTTP transport
 	if c.Transport == TransportSHTTP {
+		if c.SHTTPConfig.AuthToken == c.AccessToken {
+			return fmt.Errorf("TK_MCP_SHTTP_AUTH_TOKEN must differ from the Testkube API access token")
+		}
 		if err := c.SHTTPConfig.Validate(); err != nil {
 			return fmt.Errorf("SHTTP configuration error: %v", err)
 		}
@@ -147,8 +154,13 @@ func (c *MCPServerConfig) Validate() error {
 	return nil
 }
 
+var bearerTokenPattern = regexp.MustCompile(`^[A-Za-z0-9._~+/-]+=*$`)
+
 // Validate checks SHTTP-specific configuration
 func (c *SHTTPConfig) Validate() error {
+	if !bearerTokenPattern.MatchString(c.AuthToken) {
+		return fmt.Errorf("TK_MCP_SHTTP_AUTH_TOKEN is required and must contain a valid Bearer credential without whitespace")
+	}
 	if c.EnableTLS {
 		if c.CertFile == "" {
 			return fmt.Errorf("TK_MCP_SHTTP_CERT_FILE is required when TLS is enabled")

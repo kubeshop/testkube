@@ -12,7 +12,7 @@ import (
 
 type ListAgentsParams struct {
 	Type           string `json:"type,omitempty"`           // Filter by agent type (e.g., "runner")
-	Capability     string `json:"capability,omitempty"`     // Filter by capability (e.g., "runner")
+	Capability     string `json:"capability,omitempty"`     // Filter by capability (e.g., "execution")
 	PageSize       int    `json:"pageSize,omitempty"`       // Number of items per page (default: 20)
 	Page           int    `json:"page,omitempty"`           // Page number (default: 0)
 	IncludeDeleted bool   `json:"includeDeleted,omitempty"` // Include deleted agents (default: false)
@@ -26,7 +26,7 @@ func ListAgents(client AgentsLister) (tool mcp.Tool, handler server.ToolHandlerF
 	tool = mcp.NewTool("list_agents",
 		mcp.WithDescription(ListAgentsDescription),
 		mcp.WithString("type", mcp.Description("Filter by agent type (e.g., 'runner')")),
-		mcp.WithString("capability", mcp.Description("Filter by capability (e.g., 'runner')")),
+		mcp.WithString("capability", mcp.Description("Filter by capability (e.g., 'execution')")),
 		mcp.WithString("pageSize", mcp.Description("Number of items per page (default: 20)")),
 		mcp.WithString("page", mcp.Description("Page number (default: 0)")),
 	)

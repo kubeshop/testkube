@@ -561,6 +561,10 @@ func setupEnvWithMetrics(t *testing.T, testDir string, scriptPath string) {
 }
 
 func updateConstants(testDir string) {
+	// Ephemeral port: Quality Loop (and any TestWorkflow) already binds 60434
+	// in this network namespace for pause/resume. Same as InitTestFramework.
+	constants.ControlServerPort = 0
+
 	// Update constants to use test paths
 	constants.InternalPath = filepath.Join(testDir, ".tktw")
 	constants.StatePath = filepath.Join(testDir, ".tktw", "state")
@@ -568,6 +572,7 @@ func updateConstants(testDir string) {
 	constants.InternalBinPath = filepath.Join(constants.InternalPath, "bin")
 	constants.InitPath = filepath.Join(constants.InternalPath, "init")
 	constants.ToolkitPath = filepath.Join(constants.InternalPath, "toolkit")
+	constants.StepErrorPath = filepath.Join(constants.InternalPath, "error")
 }
 
 type TestState struct {

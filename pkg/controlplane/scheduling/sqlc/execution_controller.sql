@@ -134,60 +134,70 @@ WHERE execution_id = @execution_id
 -- name: ForceCancelExecutionSteps :exec
 -- Cancels all steps that are not already terminated (passed/failed)
 -- Sets missing timestamps (queuedat, startedat, finishedat) to the provided time
-UPDATE test_workflow_results 
-SET steps = (
+UPDATE test_workflow_results
+-- jsonb_object_agg returns NULL over zero rows, so a result that holds an
+-- empty steps object would lose the object. The COALESCE keeps it.
+SET steps = COALESCE((
     SELECT jsonb_object_agg(
         key,
-        CASE 
+        CASE
             -- If step is already passed or failed, keep it as is
             WHEN value->>'status' IN ('passed', 'failed') THEN value
-            -- Otherwise, cancel it and update timestamps
-            ELSE jsonb_build_object(
+            -- Otherwise, cancel it and update timestamps.
+            -- Both COALESCE branches must be jsonb; a text branch makes
+            -- Postgres reject the query with SQLSTATE 42804.
+            -- The new values go on the right side of || so they override
+            -- the old ones.
+            ELSE value || jsonb_build_object(
                 'status', 'canceled',
                 'queuedAt', COALESCE(
-                    NULLIF(value->>'queuedAt', '0001-01-01T00:00:00Z'),
+                    to_jsonb(NULLIF(value->>'queuedAt', '0001-01-01T00:00:00Z')),
                     to_jsonb(@finished_at::timestamptz)
                 ),
                 'startedAt', COALESCE(
-                    NULLIF(value->>'startedAt', '0001-01-01T00:00:00Z'),
+                    to_jsonb(NULLIF(value->>'startedAt', '0001-01-01T00:00:00Z')),
                     to_jsonb(@finished_at::timestamptz)
                 ),
                 'finishedAt', COALESCE(
-                    NULLIF(value->>'finishedAt', '0001-01-01T00:00:00Z'),
+                    to_jsonb(NULLIF(value->>'finishedAt', '0001-01-01T00:00:00Z')),
                     to_jsonb(@finished_at::timestamptz)
                 )
-            ) || (value - ARRAY['status', 'queuedat', 'startedat', 'finishedat'])
+            )
         END
     )
     FROM jsonb_each(COALESCE(steps, '{}'::jsonb))
-)
+), '{}'::jsonb)
 WHERE execution_id = @execution_id
   AND steps IS NOT NULL
   AND jsonb_typeof(steps) = 'object';
 
 -- name: ForceCancelExecutionInitialization :exec
 -- Cancels the initialization step if it's not already terminated
-UPDATE test_workflow_results 
+UPDATE test_workflow_results
 SET initialization = (
-    CASE 
+    CASE
         -- If initialization is already passed or failed, keep it as is
         WHEN initialization->>'status' IN ('passed', 'failed') THEN initialization
-        -- Otherwise, cancel it and update timestamps
-        ELSE jsonb_build_object(
+        -- Otherwise, cancel it and update timestamps.
+        -- Both COALESCE branches must be jsonb; a text branch makes
+        -- Postgres reject the query with SQLSTATE 42804.
+        -- The new values go on the right side of || so they override
+        -- the old ones.
+        ELSE initialization || jsonb_build_object(
             'status', 'canceled',
             'queuedAt', COALESCE(
-                NULLIF(initialization->>'queuedAt', '0001-01-01T00:00:00Z'),
+                to_jsonb(NULLIF(initialization->>'queuedAt', '0001-01-01T00:00:00Z')),
                 to_jsonb(@finished_at::timestamptz)
             ),
             'startedAt', COALESCE(
-                NULLIF(initialization->>'startedAt', '0001-01-01T00:00:00Z'),
+                to_jsonb(NULLIF(initialization->>'startedAt', '0001-01-01T00:00:00Z')),
                 to_jsonb(@finished_at::timestamptz)
             ),
-            'finishedaAt', COALESCE(
-                NULLIF(initialization->>'finishedAt', '0001-01-01T00:00:00Z'),
+            'finishedAt', COALESCE(
+                to_jsonb(NULLIF(initialization->>'finishedAt', '0001-01-01T00:00:00Z')),
                 to_jsonb(@finished_at::timestamptz)
             )
-        ) || (initialization - ARRAY['status', 'queuedat', 'startedat', 'finishedat'])
+        )
     END
 )
 WHERE execution_id = @execution_id
@@ -207,3 +217,37 @@ WHERE e.id = @execution_id
     'queued', 'assigned', 'starting', 'scheduling', 'running', 
     'pausing', 'paused', 'resuming', 'stopping'
   );
+
+-- name: ClaimExecutionsToStart :many
+-- Claims a dispatched batch, moving it from ASSIGNED to STARTING.
+--
+-- Returns the ids it actually claimed. The guard on status is what makes this
+-- safe: an execution aborted between the dispatch read and this write is left
+-- alone, and because the caller dispatches only what comes back here, the runner
+-- is never handed a row that is no longer startable.
+UPDATE test_workflow_results
+SET status = 'starting'
+WHERE execution_id = ANY(@execution_ids::text[])
+  AND status = 'assigned'
+RETURNING execution_id;
+
+-- name: StampExecutionsDispatched :exec
+-- Starts the dispatch lease on rows the claim above accepted.
+UPDATE test_workflow_executions
+SET status_at = @status_at
+WHERE id = ANY(@execution_ids::text[]);
+
+-- name: RefreshStartingExecutions :many
+-- Renews the dispatch lease on rows that were re-offered to the runner, so a row
+-- being retried is not offered again on the very next poll. Without this the
+-- retry interval collapses to the poll interval the moment the lease expires.
+--
+-- Returns the ids it renewed, for the same reason the claim does: a row that
+-- left STARTING in the meantime must not be dispatched.
+UPDATE test_workflow_executions
+SET status_at = @status_at
+FROM test_workflow_results r
+WHERE test_workflow_executions.id = ANY(@execution_ids::text[])
+  AND test_workflow_executions.id = r.execution_id
+  AND r.status = 'starting'
+RETURNING test_workflow_executions.id;

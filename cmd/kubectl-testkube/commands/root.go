@@ -81,6 +81,7 @@ func init() {
 	RootCmd.AddCommand(devbox.NewDevBoxCommand())
 
 	RootCmd.SetHelpCommand(NewHelpCmd())
+	RootCmd.AddCommand(NewCompletionCmd())
 }
 
 var RootCmd = &cobra.Command{

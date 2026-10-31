@@ -41,6 +41,24 @@ func (s *Server) AcceptExecution(ctx context.Context, req *executionv1.AcceptExe
 			fmt.Errorf("retrieve execution to set scheduling: %w", err),
 		)
 	}
+
+	// Refuse to resurrect an execution that is already over.
+	//
+	// Init sets SCHEDULING unconditionally, so without this guard a late
+	// acceptance turns a terminal execution back into a running one. That is
+	// reachable: the reaper fails a dispatch whose lease expired, while the
+	// runner's Kubernetes setup is still in flight, and the runner acknowledges
+	// only once deployment returns. The result would be an aborted event followed
+	// by a live execution and a contradictory final result.
+	//
+	// FailedPrecondition rather than a silent success, because the runner has
+	// created resources by this point and has to tear them down.
+	if execution.Result.IsFinished() {
+		return nil, status.Errorf(codes.FailedPrecondition,
+			"execution %q already finished as %s and cannot be started",
+			req.GetExecutionId(), *execution.Result.Status)
+	}
+
 	if err := s.resultsRepository.Init(ctx, req.GetExecutionId(), testworkflow.InitData{
 		RunnerID:   execution.RunnerId,
 		Namespace:  req.GetNamespace(),
@@ -57,10 +75,39 @@ func (s *Server) AcceptExecution(ctx context.Context, req *executionv1.AcceptExe
 }
 
 func (s *Server) DeclineExecution(ctx context.Context, req *executionv1.DeclineExecutionRequest) (*executionv1.DeclineExecutionResponse, error) {
-	// Running in Standalone mode so the only option here is to immediately enter an ABORTED state without passing through other transitional states.
-	execution, err := s.resultsRepository.GetWithRunner(ctx, req.GetExecutionId(), common.StandaloneRunner)
+	// The runner declined it, so the runner is the actor of the stop and the code
+	// it sent is the cause.
+	if err := s.abortExecution(ctx, req.GetExecutionId(), abortCause{
+		reason:  testkube.StartReason(req.GetReason()),
+		message: req.GetMessage(),
+		actor:   testkube.StopActorRunner,
+	}); err != nil {
+		return nil, err
+	}
+	return &executionv1.DeclineExecutionResponse{}, nil
+}
+
+// abortCause is why an execution is being recorded as aborted, and by whom.
+type abortCause struct {
+	reason  testkube.StartReason
+	message string
+	actor   testkube.StopActor
+}
+
+// abortExecution records an execution as aborted and tells the listeners.
+//
+// Shared with the stale-dispatch reaper, so a runner that reports it cannot start
+// an execution and one that never reports at all land in the same state rather
+// than the latter sitting in STARTING forever. The cause is a parameter because
+// those two differ: one is the code the runner sent, the other is a dispatch the
+// control plane gave up on.
+//
+// Running in Standalone mode, so the only option is to enter ABORTED immediately
+// without passing through the transitional states.
+func (s *Server) abortExecution(ctx context.Context, executionId string, cause abortCause) error {
+	execution, err := s.resultsRepository.GetWithRunner(ctx, executionId, common.StandaloneRunner)
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, "execution %q could not be retrieved: %v", req.GetExecutionId(), err)
+		return status.Errorf(codes.FailedPrecondition, "execution %q could not be retrieved: %v", executionId, err)
 	}
 
 	result := execution.Result
@@ -72,19 +119,65 @@ func (s *Server) DeclineExecution(ctx context.Context, req *executionv1.DeclineE
 	// Update the result to be aborted immediately.
 	result.FinishedAt = time.Now().UTC()
 	result.Status = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
-
-	updated, err := s.resultsRepository.FinishResultStrict(ctx, req.GetExecutionId(), common.StandaloneRunner, result)
+	// The code of the decline is the cause of the stop, so the message and the object read the same code.
+	writeDeclineCause(result, cause.reason, cause.message)
+	// The classifier needs no signature, because no step of a declined execution
+	// ran and the cause is on the initialization step.
+	result.StatusDetails = result.ClassifyStatus(nil, testkube.Stop{
+		Code:   string(testkube.ABORTED_TestWorkflowStatus),
+		Actor:  cause.actor,
+		Reason: testkube.StopReason(cause.reason),
+	})
+	updated, err := s.resultsRepository.FinishResultStrict(ctx, executionId, common.StandaloneRunner, result)
 	if err != nil || !updated {
-		return nil, status.Errorf(codes.Unknown, "cannot update execution %q result: %v", req.GetExecutionId(), err)
+		return status.Errorf(codes.Unknown, "cannot update execution %q result: %v", executionId, err)
 	}
 
 	// Update in-memory properties which we know has been updated by the query.
 	execution.StatusAt = result.FinishedAt
 	execution.Result = result
-	// Emit the aborted event.
-	s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution, s.envID))
+	for _, e := range endEvents(&execution, s.envID) {
+		s.emitter.Notify(e)
+	}
 
-	return &executionv1.DeclineExecutionResponse{}, nil
+	return nil
+}
+
+// endEvents returns the events of an execution that ended, the event of its status first.
+// Every end that is not a pass also sends the not-passed event. A webhook on a failure type
+// reads that event.
+func endEvents(execution *testkube.TestWorkflowExecution, envID string) []testkube.Event {
+	var events []testkube.Event
+	switch {
+	case execution.Result.IsPassed():
+		events = append(events, testkube.NewEventEndTestWorkflowSuccess(execution, envID))
+	case execution.Result.IsAborted():
+		events = append(events, testkube.NewEventEndTestWorkflowAborted(execution, envID))
+	case execution.Result.IsCanceled():
+		events = append(events, testkube.NewEventEndTestWorkflowCanceled(execution, envID))
+	default:
+		events = append(events, testkube.NewEventEndTestWorkflowFailed(execution, envID))
+	}
+	if execution.Result.IsNotPassed() {
+		events = append(events, testkube.NewEventEndTestWorkflowNotPassed(execution, envID))
+	}
+	return events
+}
+
+// writeDeclineCause records why the runner declined the execution. The reason code has its own
+// field, so the message holds only the cause that the runner sent. Only a runner that is older
+// than the decline fields sends no cause.
+func writeDeclineCause(result *testkube.TestWorkflowResult, reason testkube.StartReason, message string) {
+	if result.Initialization == nil {
+		result.Initialization = &testkube.TestWorkflowStepResult{}
+	}
+	if message == "" {
+		message = "The runner did not send the cause. Upgrade the agent to see the cause here."
+	}
+	result.Initialization.ErrorMessage = message
+	result.Initialization.ErrorReason = string(reason)
+	result.Initialization.Status = common.Ptr(testkube.ABORTED_TestWorkflowStepStatus)
+	result.Initialization.FinishedAt = result.FinishedAt
 }
 
 func translateSignature(sigs []*signaturev1.Signature) []testkube.TestWorkflowSignature {
@@ -124,7 +217,24 @@ func (s *Server) GetExecutionWorkflow(ctx context.Context, req *executionv1.GetE
 		Workflow: &testworkflowv1.TestWorkflow{
 			Json: data,
 		},
+		RunningContext: projectRunningContext(execution.RunningContext),
 	}, nil
+}
+
+// projectRunningContext extracts the parent execution's actor identity into
+// the minimal shape the runner needs to make sticky-family decisions. Returns
+// nil when there is nothing meaningful to propagate.
+func projectRunningContext(rc *testkube.TestWorkflowRunningContext) *executionv1.ExecutionRunningContext {
+	if rc == nil || rc.Actor == nil {
+		return nil
+	}
+	out := &executionv1.ExecutionRunningContext{
+		ActorName: common.Ptr(rc.Actor.Name),
+	}
+	if rc.Actor.Type_ != nil {
+		out.ActorType = common.Ptr(string(*rc.Actor.Type_))
+	}
+	return out
 }
 
 func (s *Server) Register(ctx context.Context, request *cloud.RegisterRequest) (*cloud.RegisterResponse, error) {
@@ -261,18 +371,8 @@ func (s *Server) FinishExecution(ctx context.Context, req *cloud.FinishExecution
 	execution.StatusAt = result.FinishedAt
 	execution.Result = &result
 
-	switch {
-	case execution.Result.IsPassed():
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution, s.envID))
-	case execution.Result.IsAborted():
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution, s.envID))
-	case execution.Result.IsCanceled():
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution, s.envID))
-	default:
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution, s.envID))
-	}
-	if execution.Result.IsNotPassed() {
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(&execution, s.envID))
+	for _, e := range endEvents(&execution, s.envID) {
+		s.emitter.Notify(e)
 	}
 
 	return &cloud.FinishExecutionResponse{}, nil

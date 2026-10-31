@@ -1,0 +1,157 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-data-exchange-producer
+  labels:
+    core-tests: data-exchange
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+    workingDir: /data
+  steps:
+  - name: Publish an output and an artifact
+    id: publish
+    # One step doing both: the output is written by the shell container and the
+    # artifacts container runs after it, which is where the step's id used to get
+    # lost and take the outputs directory with it.
+    shell: |
+      # /testkube/outputs is the same channel used between steps of a single
+      # workflow - here it also crosses the workflow boundary. Values holding a
+      # credential stay workflow-local; pass those with credential() instead.
+      echo -n "token-from-producer" > /testkube/outputs/token
+
+      mkdir -p /data/results
+      echo -n '{"passed":true}' > /data/results/summary.json
+      echo -n 'a large payload' > /data/results/payload.txt
+    artifacts:
+      workingDir: /data
+      paths:
+      - 'results/**'
+
+  - name: Read the output back within this workflow
+    shell: |
+      set -e
+      echo "own output: {{ step.publish.outputs.token }}"
+      [ "{{ step.publish.outputs.token }}" = "token-from-producer" ] || { echo "unexpected own output"; exit 1; }
+
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-data-exchange-consumer
+  labels:
+    core-tests: data-exchange
+spec:
+  config:
+    token:
+      type: string
+      default: ""
+    producerId:
+      type: string
+      default: ""
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+  - name: Read what the parent passed down
+    shell: |
+      set -e
+      echo "received token: {{ config.token }}"
+      [ "{{ config.token }}" = "token-from-producer" ] || { echo "unexpected token"; exit 1; }
+
+  - name: Read a value the parent published
+    shell: |
+      set -e
+      echo "parent seed: {{ execution("parent").outputs.seed }}"
+      [ "{{ execution("parent").outputs.seed }}" = "seed-from-parent" ] || { echo "unexpected seed"; exit 1; }
+
+  - name: Read a file the parent produced
+    shell: |
+      set -e
+      # read_artifact reaches into the artifacts of another execution - here the
+      # suite that scheduled this one, addressed by the reserved "parent" reference.
+      echo "parent fixture: {{ read_artifact("parent", "fixtures/data.json") }}"
+      [ '{{ read_artifact("parent", "fixtures/data.json") }}' = '{"cases":3}' ] || { echo "unexpected fixture"; exit 1; }
+
+  - name: Read a sibling's values and files
+    shell: |
+      set -e
+      # A workflow only knows the test workflows it ran itself, and this one ran none.
+      # A sibling of the same suite is addressed by execution id, which the parent
+      # passed down; the control plane allows it because both share a parent.
+      echo "sibling token: {{ execution(config.producerId).outputs.token }}"
+      [ "{{ execution(config.producerId).outputs.token }}" = "token-from-producer" ] || { echo "unexpected sibling token"; exit 1; }
+
+      echo "sibling summary: {{ read_artifact(config.producerId, "results/summary.json") }}"
+      [ '{{ read_artifact(config.producerId, "results/summary.json") }}' = '{"passed":true}' ] || { echo "unexpected sibling summary"; exit 1; }
+
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-data-exchange-suite
+  labels:
+    core-tests: data-exchange
+    type: suite
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+  - name: Publish a value and a file for the children to read
+    id: seed
+    shell: |
+      echo -n "seed-from-parent" > /testkube/outputs/seed
+
+      # Artifacts are uploaded when this step ends, so they are already readable
+      # by the time the executions below start.
+      mkdir -p /data/fixtures
+      echo -n '{"cases":3}' > /data/fixtures/data.json
+    artifacts:
+      workingDir: /data
+      paths:
+      - 'fixtures/**'
+
+  - name: Run the producer, pulling its artifacts down
+    id: produce
+    execute:
+      workflows:
+      - name: tw-data-exchange-producer
+        as: p
+        fetch:
+        - paths:
+          - 'results/**'
+          to: /data/from-producer
+
+  - name: Read the producer's values and artifacts
+    shell: |
+      set -e
+      echo "token: {{ execution("p").outputs.token }}"
+      [ "{{ execution("p").outputs.token }}" = "token-from-producer" ] || { echo "unexpected token"; exit 1; }
+
+      echo "summary: {{ read_artifact("p", "results/summary.json") }}"
+      [ '{{ read_artifact("p", "results/summary.json") }}' = '{"passed":true}' ] || { echo "unexpected summary"; exit 1; }
+
+  - name: Check the fetched artifacts landed on disk
+    shell: |
+      set -e
+      ls -la /data/from-producer/results
+      [ -f /data/from-producer/results/summary.json ] || { echo "summary.json was not fetched"; exit 1; }
+      [ -f /data/from-producer/results/payload.txt ] || { echo "payload.txt was not fetched"; exit 1; }
+
+  - name: Run the consumer with the producer's output and identity
+    execute:
+      workflows:
+      - name: tw-data-exchange-consumer
+        config:
+          token: '{{ execution("p").outputs.token }}'
+          # Handing the id down is what lets the consumer reach its sibling itself,
+          # for anything the parent did not know to forward.
+          producerId: '{{ execution("p").id }}'

@@ -291,6 +291,9 @@ spec:
                   - end-testworkflow-aborted
                   - end-testworkflow-canceled
                   - end-testworkflow-not-passed
+                  - end-testworkflow-test-failure
+                  - end-testworkflow-infrastructure-failure
+                  - end-testworkflow-configuration-error
                   - become-testworkflow-up
                   - become-testworkflow-down
                   - become-testworkflow-failed
@@ -368,6 +371,12 @@ spec:
                     items:
                       type: string
                     type: array
+                  schedulerPolicy:
+                    description: SchedulerPolicy controls whether a targeted execution
+                      should be created.
+                    enum:
+                    - OnlyWhenMatches
+                    type: string
                 type: object
               uri:
                 description: Uri is address where webhook should be made (golang template
@@ -498,6 +507,9 @@ spec:
                   - end-testworkflow-aborted
                   - end-testworkflow-canceled
                   - end-testworkflow-not-passed
+                  - end-testworkflow-test-failure
+                  - end-testworkflow-infrastructure-failure
+                  - end-testworkflow-configuration-error
                   - become-testworkflow-up
                   - become-testworkflow-down
                   - become-testworkflow-failed
@@ -570,6 +582,12 @@ spec:
                     items:
                       type: string
                     type: array
+                  schedulerPolicy:
+                    description: SchedulerPolicy controls whether a targeted execution
+                      should be created.
+                    enum:
+                    - OnlyWhenMatches
+                    type: string
                 type: object
               uri:
                 description: Uri is address where webhook should be made (golang template
@@ -6533,6 +6551,12 @@ spec:
                         items:
                           type: string
                         type: array
+                      schedulerPolicy:
+                        description: SchedulerPolicy controls whether a targeted execution
+                          should be created.
+                        enum:
+                        - OnlyWhenMatches
+                        type: string
                     type: object
                 type: object
               concurrencyPolicy:
@@ -7086,6 +7110,225 @@ spec:
                     required:
                     - uri
                     type: object
+                  http:
+                    description: HTTP specifies an HTTP endpoint to poll for changes.
+                      Mutually exclusive with Git.
+                    properties:
+                      body:
+                        description: Body sent with every request, e.g. for a POST
+                          or GraphQL endpoint
+                        type: string
+                      expectedStatus:
+                        description: |-
+                          ExpectedStatus lists the status codes of a successful poll, 200 by default.
+                          A response with any other code is a failed poll, never a change.
+                        items:
+                          format: int32
+                          type: integer
+                        type: array
+                      fireOnFirstObservation:
+                        description: |-
+                          FireOnFirstObservation fires the trigger on the first successful poll. By default the first
+                          poll only records the value to compare later polls against.
+                        type: boolean
+                      headers:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Headers sent with every request.
+                          Warning: these are stored in plain text in the trigger spec. Prefer HeadersFrom for credentials.
+                        type: object
+                      headersFrom:
+                        description: |-
+                          HeadersFrom sends headers whose values are read from a Secret or ConfigMap in the trigger's
+                          namespace on every poll. Preferred for credentials.
+                        items:
+                          description: TestTriggerContentHTTPHeaderSource is a request
+                            header whose value is read from a Secret or ConfigMap
+                          properties:
+                            name:
+                              description: Name of the header
+                              type: string
+                            valueFrom:
+                              description: ValueFrom is the source of the header value
+                              properties:
+                                configMapKeyRef:
+                                  description: Selects a key of a ConfigMap.
+                                  properties:
+                                    key:
+                                      description: The key to select.
+                                      type: string
+                                    name:
+                                      default: ""
+                                      description: |-
+                                        Name of the referent.
+                                        This field is effectively required, but due to backwards compatibility is
+                                        allowed to be empty. Instances of this type with an empty value here are
+                                        almost certainly wrong.
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      type: string
+                                    optional:
+                                      description: Specify whether the ConfigMap or
+                                        its key must be defined
+                                      type: boolean
+                                  required:
+                                  - key
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                fieldRef:
+                                  description: |-
+                                    Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels['<KEY>']`, `metadata.annotations['<KEY>']`,
+                                    spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+                                  properties:
+                                    apiVersion:
+                                      description: Version of the schema the FieldPath
+                                        is written in terms of, defaults to "v1".
+                                      type: string
+                                    fieldPath:
+                                      description: Path of the field to select in
+                                        the specified API version.
+                                      type: string
+                                  required:
+                                  - fieldPath
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                fileKeyRef:
+                                  description: |-
+                                    FileKeyRef selects a key of the env file.
+                                    Requires the EnvFiles feature gate to be enabled.
+                                  properties:
+                                    key:
+                                      description: |-
+                                        The key within the env file. An invalid key will prevent the pod from starting.
+                                        The keys defined within a source may consist of any printable ASCII characters except '='.
+                                        During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
+                                      type: string
+                                    optional:
+                                      default: false
+                                      description: |-
+                                        Specify whether the file or its key must be defined. If the file or key
+                                        does not exist, then the env var is not published.
+                                        If optional is set to true and the specified key does not exist,
+                                        the environment variable will not be set in the Pod's containers.
+
+                                        If optional is set to false and the specified key does not exist,
+                                        an error will be returned during Pod creation.
+                                      type: boolean
+                                    path:
+                                      description: |-
+                                        The path within the volume from which to select the file.
+                                        Must be relative and may not contain the '..' path or start with '..'.
+                                      type: string
+                                    volumeName:
+                                      description: The name of the volume mount containing
+                                        the env file.
+                                      type: string
+                                  required:
+                                  - key
+                                  - path
+                                  - volumeName
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                resourceFieldRef:
+                                  description: |-
+                                    Selects a resource of the container: only resources limits and requests
+                                    (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+                                  properties:
+                                    containerName:
+                                      description: 'Container name: required for volumes,
+                                        optional for env vars'
+                                      type: string
+                                    divisor:
+                                      anyOf:
+                                      - type: integer
+                                      - type: string
+                                      description: Specifies the output format of
+                                        the exposed resources, defaults to "1"
+                                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                      x-kubernetes-int-or-string: true
+                                    resource:
+                                      description: 'Required: resource to select'
+                                      type: string
+                                  required:
+                                  - resource
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                secretKeyRef:
+                                  description: Selects a key of a secret in the pod's
+                                    namespace
+                                  properties:
+                                    key:
+                                      description: The key of the secret to select
+                                        from.  Must be a valid secret key.
+                                      type: string
+                                    name:
+                                      default: ""
+                                      description: |-
+                                        Name of the referent.
+                                        This field is effectively required, but due to backwards compatibility is
+                                        allowed to be empty. Instances of this type with an empty value here are
+                                        almost certainly wrong.
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      type: string
+                                    optional:
+                                      description: Specify whether the Secret or its
+                                        key must be defined
+                                      type: boolean
+                                  required:
+                                  - key
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                              type: object
+                          required:
+                          - name
+                          - valueFrom
+                          type: object
+                        type: array
+                      insecureSkipVerify:
+                        description: InsecureSkipVerify skips the verification of
+                          the server's TLS certificate
+                        type: boolean
+                      interval:
+                        description: Interval between polls, 1m by default and at
+                          least 10s
+                        format: duration
+                        type: string
+                      method:
+                        description: Method is the HTTP method of the request, GET
+                          by default
+                        enum:
+                        - GET
+                        - HEAD
+                        - POST
+                        - PUT
+                        - PATCH
+                        - DELETE
+                        - OPTIONS
+                        type: string
+                      select:
+                        description: Select chooses the part of the response that
+                          is watched. When omitted, the whole body is.
+                        properties:
+                          header:
+                            description: Header is the name of a response header whose
+                              value is watched (e.g. ETag)
+                            type: string
+                          jsonPath:
+                            description: |-
+                              JSONPath is a dot-path into the JSON response body (e.g. ".data.version").
+                              An object or array is compared by its JSON encoding.
+                            type: string
+                        type: object
+                      timeout:
+                        description: Timeout of one request, 10s by default
+                        format: duration
+                        type: string
+                      url:
+                        description: URL of the endpoint to poll (http or https)
+                        type: string
+                    required:
+                    - url
+                    type: object
                 type: object
               delay:
                 description: Delay is a duration string which specifies how long should
@@ -7096,7 +7339,9 @@ spec:
                 description: whether test trigger is disabled
                 type: boolean
               event:
-                description: On which Event for a Resource should an Action be triggered
+                description: |-
+                  On which Event for a Resource should an Action be triggered.
+                  Exactly one of Event or Events must be specified.
                 enum:
                 - created
                 - modified
@@ -7104,6 +7349,7 @@ spec:
                 - git-push
                 - git-tag-push
                 - git-pull-request
+                - http-changed
                 - deployment-scale-update
                 - deployment-image-update
                 - deployment-env-update
@@ -7131,6 +7377,49 @@ spec:
                 - event-updated
                 - event-deleted
                 type: string
+              events:
+                description: |-
+                  Events is a list of Events for a Resource on which an Action should be triggered;
+                  the trigger fires when any event in the list occurs.
+                  Exactly one of Event or Events must be specified.
+                items:
+                  description: TestTriggerEvent defines event for test triggers
+                  enum:
+                  - created
+                  - modified
+                  - deleted
+                  - git-push
+                  - git-tag-push
+                  - git-pull-request
+                  - http-changed
+                  - deployment-scale-update
+                  - deployment-image-update
+                  - deployment-env-update
+                  - deployment-containers-modified
+                  - deployment-generation-modified
+                  - deployment-resource-modified
+                  - event-start-test
+                  - event-end-test-success
+                  - event-end-test-failed
+                  - event-end-test-aborted
+                  - event-end-test-timeout
+                  - event-start-testsuite
+                  - event-end-testsuite-success
+                  - event-end-testsuite-failed
+                  - event-end-testsuite-aborted
+                  - event-end-testsuite-timeout
+                  - event-queue-testworkflow
+                  - event-start-testworkflow
+                  - event-end-testworkflow-success
+                  - event-end-testworkflow-failed
+                  - event-end-testworkflow-aborted
+                  - event-end-testworkflow-canceled
+                  - event-end-testworkflow-not-passed
+                  - event-created
+                  - event-updated
+                  - event-deleted
+                  type: string
+                type: array
               execution:
                 description: Execution identifies for which test execution should
                   an Action be executed
@@ -7166,6 +7455,12 @@ spec:
                     items:
                       type: string
                     type: array
+                  schedulerPolicy:
+                    description: SchedulerPolicy controls whether a targeted execution
+                      should be created.
+                    enum:
+                    - OnlyWhenMatches
+                    type: string
                 type: object
               match:
                 description: |-
@@ -7454,7 +7749,6 @@ spec:
                 type: object
             required:
             - action
-            - event
             - execution
             - testSelector
             type: object
@@ -7556,6 +7850,7 @@ spec:
                                 - testworkflow
                                 - testworkflowexecution
                                 - program
+                                - gitintegration
                               type: string
                           required:
                             - type
@@ -7606,6 +7901,11 @@ spec:
                           items:
                             type: string
                           type: array
+                        schedulerPolicy:
+                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                          enum:
+                            - OnlyWhenMatches
+                          type: string
                       type: object
                     testWorkflowExecutionName:
                       description: test workflow execution name started the test workflow execution
@@ -7651,6 +7951,24 @@ spec:
                     id:
                       description: unique execution identifier
                       type: string
+                    lineage:
+                      description: |-
+                        where this execution sits in its chain of reruns. Recorded on every
+                        execution: an original run is its own root at attempt 1, with no base.
+                      properties:
+                        attempt:
+                          description: 1 for an original run, one more than the base for a rerun
+                          format: int32
+                          type: integer
+                        baseId:
+                          description: the execution this one is a rerun of; empty for an original run
+                          type: string
+                        rootId:
+                          description: |-
+                            the first execution in the chain. An original run is its own root, so
+                            that every execution of a chain shares one rootId.
+                          type: string
+                      type: object
                     name:
                       description: execution name
                       type: string
@@ -7790,7 +8108,14 @@ spec:
                         initialization:
                           description: TestWorkflowStepResult contains step result of TestWorkflow
                           properties:
+                            attempts:
+                              description: number of attempts that the step started, empty when the init process reported none
+                              format: int32
+                              type: integer
                             errorMessage:
+                              type: string
+                            errorReason:
+                              description: code of the cause in the error message, for example unschedulable; empty when the message has no known cause
                               type: string
                             exitCode:
                               format: int64
@@ -7863,11 +8188,56 @@ spec:
                             - failed
                             - aborted
                           type: string
+                        statusDetails:
+                          description: |-
+                            TestWorkflowStatusDetails gives the reason why an execution did not pass. It is
+                            present on every terminal status except passed.
+                          properties:
+                            actor:
+                              description: code of the component that decided the stop, for example user or control-plane
+                              type: string
+                            message:
+                              description: the message of the step that holds the cause, verbatim
+                              type: string
+                            reason:
+                              description: code of the cause, for example unschedulable or oom-killed
+                              type: string
+                            step:
+                              description: reference of the step that holds the cause; empty when the initialization step holds it
+                              type: string
+                            type:
+                              description: the layer that failed
+                              enum:
+                                - init-failure
+                                - execution-failure
+                                - step-failure
+                                - user-cancel
+                                - unknown
+                              type: string
+                            user:
+                              description: the person who canceled the execution; the control plane fills it
+                              properties:
+                                email:
+                                  type: string
+                                name:
+                                  type: string
+                              type: object
+                          required:
+                            - reason
+                            - type
+                          type: object
                         steps:
                           additionalProperties:
                             description: TestWorkflowStepResult contains step result of TestWorkflow
                             properties:
+                              attempts:
+                                description: number of attempts that the step started, empty when the init process reported none
+                                format: int32
+                                type: integer
                               errorMessage:
+                                type: string
+                              errorReason:
+                                description: code of the cause in the error message, for example unschedulable; empty when the message has no known cause
                                 type: string
                               exitCode:
                                 format: int64
@@ -7930,6 +8300,7 @@ spec:
                                 - testworkflow
                                 - testworkflowexecution
                                 - program
+                                - gitintegration
                               type: string
                           required:
                             - type
@@ -8084,6 +8455,49 @@ spec:
                             description: working directory to override, so it will be used as a base dir
                             type: string
                         type: object
+                      cache:
+                        description: dependency cache to restore before and save after this step's operations
+                        properties:
+                          key:
+                            description: |-
+                              key to store the entry under, usually derived from a lockfile,
+                              e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          mount:
+                            description: |-
+                              should a volume be mounted at every cached path that is not part of one already
+                              (true if not specified); a path outside any volume would otherwise be restored
+                              into a container's own filesystem, where the step that needs it cannot see it
+                            type: boolean
+                          paths:
+                            description: paths to store in the cache, relative to the working directory
+                            items:
+                              type: string
+                            minItems: 1
+                            type: array
+                          restoreKeys:
+                            description: |-
+                              key prefixes to fall back to when there is no entry for the exact key,
+                              tried in order, where the most recently saved match wins
+                            items:
+                              type: string
+                            maxItems: 10
+                            type: array
+                          scope:
+                            description: how widely the entry is shared (defaults to workflow)
+                            enum:
+                              - workflow
+                              - environment
+                            type: string
+                          workingDir:
+                            description: working directory to override, so it will be used as a base dir
+                            type: string
+                        required:
+                          - key
+                          - paths
+                        type: object
                       condition:
                         description: |-
                           expression to declare under which conditions the step should be run
@@ -8456,6 +8870,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -8690,6 +9119,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -8729,10 +9165,10 @@ spec:
                             items:
                               properties:
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test execution description to display
@@ -9024,10 +9460,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: test name to run
@@ -9048,6 +9484,15 @@ spec:
                             description: workflows to run
                             items:
                               properties:
+                                as:
+                                  description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                  type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -9057,10 +9502,10 @@ spec:
                                   description: configuration to pass for the workflow
                                   type: object
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test workflow execution description to display
@@ -9068,15 +9513,37 @@ spec:
                                 executionName:
                                   description: unique execution name to use
                                   type: string
+                                fetch:
+                                  description: instructions for downloading artifacts produced by executed test workflows
+                                  items:
+                                    description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                    properties:
+                                      from:
+                                        description: execution to download the artifacts from, defaults to the one being executed
+                                        type: string
+                                      paths:
+                                        description: artifact paths to download, relative to the artifact root of the execution
+                                        items:
+                                          type: string
+                                        type: array
+                                      to:
+                                        description: |-
+                                          directory to download the artifacts to; when the entry fans out over a matrix or
+                                          shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                        type: string
+                                    required:
+                                      - to
+                                    type: object
+                                  type: array
                                 matrix:
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: workflow name to run
@@ -9137,6 +9604,11 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    schedulerPolicy:
+                                      description: SchedulerPolicy controls whether a targeted execution should be created.
+                                      enum:
+                                        - OnlyWhenMatches
+                                      type: string
                                   type: object
                               type: object
                             type: array
@@ -9184,6 +9656,49 @@ spec:
                                 description: working directory to override, so it will be used as a base dir
                                 type: string
                             type: object
+                          cache:
+                            description: dependency cache to restore before and save after this step's operations
+                            properties:
+                              key:
+                                description: |-
+                                  key to store the entry under, usually derived from a lockfile,
+                                  e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                                maxLength: 512
+                                minLength: 1
+                                type: string
+                              mount:
+                                description: |-
+                                  should a volume be mounted at every cached path that is not part of one already
+                                  (true if not specified); a path outside any volume would otherwise be restored
+                                  into a container's own filesystem, where the step that needs it cannot see it
+                                type: boolean
+                              paths:
+                                description: paths to store in the cache, relative to the working directory
+                                items:
+                                  type: string
+                                minItems: 1
+                                type: array
+                              restoreKeys:
+                                description: |-
+                                  key prefixes to fall back to when there is no entry for the exact key,
+                                  tried in order, where the most recently saved match wins
+                                items:
+                                  type: string
+                                maxItems: 10
+                                type: array
+                              scope:
+                                description: how widely the entry is shared (defaults to workflow)
+                                enum:
+                                  - workflow
+                                  - environment
+                                type: string
+                              workingDir:
+                                description: working directory to override, so it will be used as a base dir
+                                type: string
+                            required:
+                              - key
+                              - paths
+                            type: object
                           config:
                             description: make the instance configurable with some input data for scheduling it
                             x-kubernetes-preserve-unknown-fields: true
@@ -9194,10 +9709,10 @@ spec:
                             description: global content that should be fetched into all containers
                             x-kubernetes-preserve-unknown-fields: true
                           count:
+                            description: static number of sharded instances to spawn
                             anyOf:
                               - type: integer
                               - type: string
-                            description: static number of sharded instances to spawn
                             x-kubernetes-int-or-string: true
                           delay:
                             description: delay before the step
@@ -9224,10 +9739,10 @@ spec:
                                 items:
                                   properties:
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test execution description to display
@@ -9519,10 +10034,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: test name to run
@@ -9543,6 +10058,15 @@ spec:
                                 description: workflows to run
                                 items:
                                   properties:
+                                    as:
+                                      description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -9552,10 +10076,10 @@ spec:
                                       description: configuration to pass for the workflow
                                       type: object
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test workflow execution description to display
@@ -9563,15 +10087,37 @@ spec:
                                     executionName:
                                       description: unique execution name to use
                                       type: string
+                                    fetch:
+                                      description: instructions for downloading artifacts produced by executed test workflows
+                                      items:
+                                        description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                        properties:
+                                          from:
+                                            description: execution to download the artifacts from, defaults to the one being executed
+                                            type: string
+                                          paths:
+                                            description: artifact paths to download, relative to the artifact root of the execution
+                                            items:
+                                              type: string
+                                            type: array
+                                          to:
+                                            description: |-
+                                              directory to download the artifacts to; when the entry fans out over a matrix or
+                                              shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                            type: string
+                                        required:
+                                          - to
+                                        type: object
+                                      type: array
                                     matrix:
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: workflow name to run
@@ -9632,6 +10178,11 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        schedulerPolicy:
+                                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                                          enum:
+                                            - OnlyWhenMatches
+                                          type: string
                                       type: object
                                   type: object
                                 type: array
@@ -9661,10 +10212,10 @@ spec:
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           maxCount:
+                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             anyOf:
                               - type: integer
                               - type: string
-                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             x-kubernetes-int-or-string: true
                           negative:
                             description: is the step expected to fail
@@ -10414,6 +10965,21 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures (default 5, max 20)
+                                          format: int32
+                                          maximum: 20
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -10648,6 +11214,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -10669,10 +11242,10 @@ spec:
                                   type: array
                               type: object
                             count:
+                              description: static number of sharded instances to spawn
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: static number of sharded instances to spawn
                               x-kubernetes-int-or-string: true
                             description:
                               description: service description to display
@@ -10801,10 +11374,10 @@ spec:
                               type: object
                               x-kubernetes-preserve-unknown-fields: true
                             maxCount:
+                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               x-kubernetes-int-or-string: true
                             pod:
                               description: configuration for the scheduled pod
@@ -11445,10 +12018,10 @@ spec:
                   additionalProperties:
                     properties:
                       default:
+                        description: default value - if not provided, the parameter is required
                         anyOf:
                           - type: integer
                           - type: string
-                        description: default value - if not provided, the parameter is required
                         x-kubernetes-int-or-string: true
                       description:
                         description: parameter description
@@ -11459,10 +12032,10 @@ spec:
                           type: string
                         type: array
                       example:
+                        description: exemplary value
                         anyOf:
                           - type: integer
                           - type: string
-                        description: exemplary value
                         x-kubernetes-int-or-string: true
                       exclusiveMaximum:
                         description: maximum value for the number (exclusive)
@@ -11880,6 +12453,21 @@ spec:
                           items:
                             type: string
                           type: array
+                        retry:
+                          description: in-process retry policy for transient git failures during clone
+                          properties:
+                            count:
+                              description: max attempts for transient git failures (default 5, max 20)
+                              format: int32
+                              maximum: 20
+                              minimum: 1
+                              type: integer
+                            delay:
+                              description: |-
+                                base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                May be an expression template; validated after resolution.
+                              type: string
+                          type: object
                         revision:
                           description: branch, commit or a tag name to fetch
                           type: string
@@ -12114,6 +12702,13 @@ spec:
                               type: object
                               x-kubernetes-map-type: atomic
                           type: object
+                        verbosity:
+                          description: logging level for the clone. Omit defaults to verbose.
+                          enum:
+                            - quiet
+                            - normal
+                            - verbose
+                          type: string
                       type: object
                     tarball:
                       description: tarballs to unpack
@@ -12181,6 +12776,11 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              schedulerPolicy:
+                                description: SchedulerPolicy controls whether a targeted execution should be created.
+                                enum:
+                                  - OnlyWhenMatches
+                                type: string
                             type: object
                           timezone:
                             description: cron timezone
@@ -12220,6 +12820,11 @@ spec:
                           items:
                             type: string
                           type: array
+                        schedulerPolicy:
+                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                          enum:
+                            - OnlyWhenMatches
+                          type: string
                       type: object
                   type: object
                 job:
@@ -12696,6 +13301,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -12930,6 +13550,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -12951,10 +13578,10 @@ spec:
                             type: array
                         type: object
                       count:
+                        description: static number of sharded instances to spawn
                         anyOf:
                           - type: integer
                           - type: string
-                        description: static number of sharded instances to spawn
                         x-kubernetes-int-or-string: true
                       description:
                         description: service description to display
@@ -13083,10 +13710,10 @@ spec:
                         type: object
                         x-kubernetes-preserve-unknown-fields: true
                       maxCount:
+                        description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                         anyOf:
                           - type: integer
                           - type: string
-                        description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                         x-kubernetes-int-or-string: true
                       pod:
                         description: configuration for the scheduled pod
@@ -13676,6 +14303,49 @@ spec:
                             description: working directory to override, so it will be used as a base dir
                             type: string
                         type: object
+                      cache:
+                        description: dependency cache to restore before and save after this step's operations
+                        properties:
+                          key:
+                            description: |-
+                              key to store the entry under, usually derived from a lockfile,
+                              e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          mount:
+                            description: |-
+                              should a volume be mounted at every cached path that is not part of one already
+                              (true if not specified); a path outside any volume would otherwise be restored
+                              into a container's own filesystem, where the step that needs it cannot see it
+                            type: boolean
+                          paths:
+                            description: paths to store in the cache, relative to the working directory
+                            items:
+                              type: string
+                            minItems: 1
+                            type: array
+                          restoreKeys:
+                            description: |-
+                              key prefixes to fall back to when there is no entry for the exact key,
+                              tried in order, where the most recently saved match wins
+                            items:
+                              type: string
+                            maxItems: 10
+                            type: array
+                          scope:
+                            description: how widely the entry is shared (defaults to workflow)
+                            enum:
+                              - workflow
+                              - environment
+                            type: string
+                          workingDir:
+                            description: working directory to override, so it will be used as a base dir
+                            type: string
+                        required:
+                          - key
+                          - paths
+                        type: object
                       condition:
                         description: |-
                           expression to declare under which conditions the step should be run
@@ -14048,6 +14718,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -14282,6 +14967,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -14321,10 +15013,10 @@ spec:
                             items:
                               properties:
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test execution description to display
@@ -14616,10 +15308,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: test name to run
@@ -14640,6 +15332,15 @@ spec:
                             description: workflows to run
                             items:
                               properties:
+                                as:
+                                  description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                  type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -14649,10 +15350,10 @@ spec:
                                   description: configuration to pass for the workflow
                                   type: object
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test workflow execution description to display
@@ -14660,15 +15361,37 @@ spec:
                                 executionName:
                                   description: unique execution name to use
                                   type: string
+                                fetch:
+                                  description: instructions for downloading artifacts produced by executed test workflows
+                                  items:
+                                    description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                    properties:
+                                      from:
+                                        description: execution to download the artifacts from, defaults to the one being executed
+                                        type: string
+                                      paths:
+                                        description: artifact paths to download, relative to the artifact root of the execution
+                                        items:
+                                          type: string
+                                        type: array
+                                      to:
+                                        description: |-
+                                          directory to download the artifacts to; when the entry fans out over a matrix or
+                                          shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                        type: string
+                                    required:
+                                      - to
+                                    type: object
+                                  type: array
                                 matrix:
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: workflow name to run
@@ -14729,6 +15452,11 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    schedulerPolicy:
+                                      description: SchedulerPolicy controls whether a targeted execution should be created.
+                                      enum:
+                                        - OnlyWhenMatches
+                                      type: string
                                   type: object
                               type: object
                             type: array
@@ -14776,6 +15504,49 @@ spec:
                                 description: working directory to override, so it will be used as a base dir
                                 type: string
                             type: object
+                          cache:
+                            description: dependency cache to restore before and save after this step's operations
+                            properties:
+                              key:
+                                description: |-
+                                  key to store the entry under, usually derived from a lockfile,
+                                  e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                                maxLength: 512
+                                minLength: 1
+                                type: string
+                              mount:
+                                description: |-
+                                  should a volume be mounted at every cached path that is not part of one already
+                                  (true if not specified); a path outside any volume would otherwise be restored
+                                  into a container's own filesystem, where the step that needs it cannot see it
+                                type: boolean
+                              paths:
+                                description: paths to store in the cache, relative to the working directory
+                                items:
+                                  type: string
+                                minItems: 1
+                                type: array
+                              restoreKeys:
+                                description: |-
+                                  key prefixes to fall back to when there is no entry for the exact key,
+                                  tried in order, where the most recently saved match wins
+                                items:
+                                  type: string
+                                maxItems: 10
+                                type: array
+                              scope:
+                                description: how widely the entry is shared (defaults to workflow)
+                                enum:
+                                  - workflow
+                                  - environment
+                                type: string
+                              workingDir:
+                                description: working directory to override, so it will be used as a base dir
+                                type: string
+                            required:
+                              - key
+                              - paths
+                            type: object
                           config:
                             description: make the instance configurable with some input data for scheduling it
                             x-kubernetes-preserve-unknown-fields: true
@@ -14786,10 +15557,10 @@ spec:
                             description: global content that should be fetched into all containers
                             x-kubernetes-preserve-unknown-fields: true
                           count:
+                            description: static number of sharded instances to spawn
                             anyOf:
                               - type: integer
                               - type: string
-                            description: static number of sharded instances to spawn
                             x-kubernetes-int-or-string: true
                           delay:
                             description: delay before the step
@@ -14816,10 +15587,10 @@ spec:
                                 items:
                                   properties:
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test execution description to display
@@ -15111,10 +15882,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: test name to run
@@ -15135,6 +15906,15 @@ spec:
                                 description: workflows to run
                                 items:
                                   properties:
+                                    as:
+                                      description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -15144,10 +15924,10 @@ spec:
                                       description: configuration to pass for the workflow
                                       type: object
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test workflow execution description to display
@@ -15155,15 +15935,37 @@ spec:
                                     executionName:
                                       description: unique execution name to use
                                       type: string
+                                    fetch:
+                                      description: instructions for downloading artifacts produced by executed test workflows
+                                      items:
+                                        description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                        properties:
+                                          from:
+                                            description: execution to download the artifacts from, defaults to the one being executed
+                                            type: string
+                                          paths:
+                                            description: artifact paths to download, relative to the artifact root of the execution
+                                            items:
+                                              type: string
+                                            type: array
+                                          to:
+                                            description: |-
+                                              directory to download the artifacts to; when the entry fans out over a matrix or
+                                              shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                            type: string
+                                        required:
+                                          - to
+                                        type: object
+                                      type: array
                                     matrix:
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: workflow name to run
@@ -15224,6 +16026,11 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        schedulerPolicy:
+                                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                                          enum:
+                                            - OnlyWhenMatches
+                                          type: string
                                       type: object
                                   type: object
                                 type: array
@@ -15253,10 +16060,10 @@ spec:
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           maxCount:
+                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             anyOf:
                               - type: integer
                               - type: string
-                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             x-kubernetes-int-or-string: true
                           negative:
                             description: is the step expected to fail
@@ -16006,6 +16813,21 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures (default 5, max 20)
+                                          format: int32
+                                          maximum: 20
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -16240,6 +17062,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -16261,10 +17090,10 @@ spec:
                                   type: array
                               type: object
                             count:
+                              description: static number of sharded instances to spawn
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: static number of sharded instances to spawn
                               x-kubernetes-int-or-string: true
                             description:
                               description: service description to display
@@ -16393,10 +17222,10 @@ spec:
                               type: object
                               x-kubernetes-preserve-unknown-fields: true
                             maxCount:
+                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               x-kubernetes-int-or-string: true
                             pod:
                               description: configuration for the scheduled pod
@@ -17040,6 +17869,49 @@ spec:
                             description: working directory to override, so it will be used as a base dir
                             type: string
                         type: object
+                      cache:
+                        description: dependency cache to restore before and save after this step's operations
+                        properties:
+                          key:
+                            description: |-
+                              key to store the entry under, usually derived from a lockfile,
+                              e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          mount:
+                            description: |-
+                              should a volume be mounted at every cached path that is not part of one already
+                              (true if not specified); a path outside any volume would otherwise be restored
+                              into a container's own filesystem, where the step that needs it cannot see it
+                            type: boolean
+                          paths:
+                            description: paths to store in the cache, relative to the working directory
+                            items:
+                              type: string
+                            minItems: 1
+                            type: array
+                          restoreKeys:
+                            description: |-
+                              key prefixes to fall back to when there is no entry for the exact key,
+                              tried in order, where the most recently saved match wins
+                            items:
+                              type: string
+                            maxItems: 10
+                            type: array
+                          scope:
+                            description: how widely the entry is shared (defaults to workflow)
+                            enum:
+                              - workflow
+                              - environment
+                            type: string
+                          workingDir:
+                            description: working directory to override, so it will be used as a base dir
+                            type: string
+                        required:
+                          - key
+                          - paths
+                        type: object
                       condition:
                         description: |-
                           expression to declare under which conditions the step should be run
@@ -17412,6 +18284,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -17646,6 +18533,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -17685,10 +18579,10 @@ spec:
                             items:
                               properties:
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test execution description to display
@@ -17980,10 +18874,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: test name to run
@@ -18004,6 +18898,15 @@ spec:
                             description: workflows to run
                             items:
                               properties:
+                                as:
+                                  description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                  type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -18013,10 +18916,10 @@ spec:
                                   description: configuration to pass for the workflow
                                   type: object
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test workflow execution description to display
@@ -18024,15 +18927,37 @@ spec:
                                 executionName:
                                   description: unique execution name to use
                                   type: string
+                                fetch:
+                                  description: instructions for downloading artifacts produced by executed test workflows
+                                  items:
+                                    description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                    properties:
+                                      from:
+                                        description: execution to download the artifacts from, defaults to the one being executed
+                                        type: string
+                                      paths:
+                                        description: artifact paths to download, relative to the artifact root of the execution
+                                        items:
+                                          type: string
+                                        type: array
+                                      to:
+                                        description: |-
+                                          directory to download the artifacts to; when the entry fans out over a matrix or
+                                          shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                        type: string
+                                    required:
+                                      - to
+                                    type: object
+                                  type: array
                                 matrix:
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: workflow name to run
@@ -18093,6 +19018,11 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    schedulerPolicy:
+                                      description: SchedulerPolicy controls whether a targeted execution should be created.
+                                      enum:
+                                        - OnlyWhenMatches
+                                      type: string
                                   type: object
                               type: object
                             type: array
@@ -18140,6 +19070,49 @@ spec:
                                 description: working directory to override, so it will be used as a base dir
                                 type: string
                             type: object
+                          cache:
+                            description: dependency cache to restore before and save after this step's operations
+                            properties:
+                              key:
+                                description: |-
+                                  key to store the entry under, usually derived from a lockfile,
+                                  e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                                maxLength: 512
+                                minLength: 1
+                                type: string
+                              mount:
+                                description: |-
+                                  should a volume be mounted at every cached path that is not part of one already
+                                  (true if not specified); a path outside any volume would otherwise be restored
+                                  into a container's own filesystem, where the step that needs it cannot see it
+                                type: boolean
+                              paths:
+                                description: paths to store in the cache, relative to the working directory
+                                items:
+                                  type: string
+                                minItems: 1
+                                type: array
+                              restoreKeys:
+                                description: |-
+                                  key prefixes to fall back to when there is no entry for the exact key,
+                                  tried in order, where the most recently saved match wins
+                                items:
+                                  type: string
+                                maxItems: 10
+                                type: array
+                              scope:
+                                description: how widely the entry is shared (defaults to workflow)
+                                enum:
+                                  - workflow
+                                  - environment
+                                type: string
+                              workingDir:
+                                description: working directory to override, so it will be used as a base dir
+                                type: string
+                            required:
+                              - key
+                              - paths
+                            type: object
                           config:
                             description: make the instance configurable with some input data for scheduling it
                             x-kubernetes-preserve-unknown-fields: true
@@ -18150,10 +19123,10 @@ spec:
                             description: global content that should be fetched into all containers
                             x-kubernetes-preserve-unknown-fields: true
                           count:
+                            description: static number of sharded instances to spawn
                             anyOf:
                               - type: integer
                               - type: string
-                            description: static number of sharded instances to spawn
                             x-kubernetes-int-or-string: true
                           delay:
                             description: delay before the step
@@ -18180,10 +19153,10 @@ spec:
                                 items:
                                   properties:
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test execution description to display
@@ -18475,10 +19448,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: test name to run
@@ -18499,6 +19472,15 @@ spec:
                                 description: workflows to run
                                 items:
                                   properties:
+                                    as:
+                                      description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -18508,10 +19490,10 @@ spec:
                                       description: configuration to pass for the workflow
                                       type: object
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test workflow execution description to display
@@ -18519,15 +19501,37 @@ spec:
                                     executionName:
                                       description: unique execution name to use
                                       type: string
+                                    fetch:
+                                      description: instructions for downloading artifacts produced by executed test workflows
+                                      items:
+                                        description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                        properties:
+                                          from:
+                                            description: execution to download the artifacts from, defaults to the one being executed
+                                            type: string
+                                          paths:
+                                            description: artifact paths to download, relative to the artifact root of the execution
+                                            items:
+                                              type: string
+                                            type: array
+                                          to:
+                                            description: |-
+                                              directory to download the artifacts to; when the entry fans out over a matrix or
+                                              shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                            type: string
+                                        required:
+                                          - to
+                                        type: object
+                                      type: array
                                     matrix:
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: workflow name to run
@@ -18588,6 +19592,11 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        schedulerPolicy:
+                                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                                          enum:
+                                            - OnlyWhenMatches
+                                          type: string
                                       type: object
                                   type: object
                                 type: array
@@ -18617,10 +19626,10 @@ spec:
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           maxCount:
+                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             anyOf:
                               - type: integer
                               - type: string
-                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             x-kubernetes-int-or-string: true
                           negative:
                             description: is the step expected to fail
@@ -19370,6 +20379,21 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures (default 5, max 20)
+                                          format: int32
+                                          maximum: 20
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -19604,6 +20628,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -19625,10 +20656,10 @@ spec:
                                   type: array
                               type: object
                             count:
+                              description: static number of sharded instances to spawn
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: static number of sharded instances to spawn
                               x-kubernetes-int-or-string: true
                             description:
                               description: service description to display
@@ -19757,10 +20788,10 @@ spec:
                               type: object
                               x-kubernetes-preserve-unknown-fields: true
                             maxCount:
+                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               x-kubernetes-int-or-string: true
                             pod:
                               description: configuration for the scheduled pod
@@ -20392,7 +21423,9 @@ spec:
                   description: per-workflow timeout configuration
                   properties:
                     initialization:
-                      description: maximum time for initialization/transitioning before steps run
+                      description: |-
+                        maximum time from the job creation until the first step container starts, as a Go duration (for example 2m).
+                        When it ends, the runner aborts the execution and keeps the cause that Kubernetes reported.
                       type: string
                     queue:
                       description: maximum time the execution may spend in queue before starting
@@ -20500,6 +21533,44 @@ spec:
                             - failed
                             - aborted
                           type: string
+                        statusDetails:
+                          description: |-
+                            TestWorkflowStatusDetails gives the reason why an execution did not pass. It is
+                            present on every terminal status except passed.
+                          properties:
+                            actor:
+                              description: code of the component that decided the stop, for example user or control-plane
+                              type: string
+                            message:
+                              description: the message of the step that holds the cause, verbatim
+                              type: string
+                            reason:
+                              description: code of the cause, for example unschedulable or oom-killed
+                              type: string
+                            step:
+                              description: reference of the step that holds the cause; empty when the initialization step holds it
+                              type: string
+                            type:
+                              description: the layer that failed
+                              enum:
+                                - init-failure
+                                - execution-failure
+                                - step-failure
+                                - user-cancel
+                                - unknown
+                              type: string
+                            user:
+                              description: the person who canceled the execution; the control plane fills it
+                              properties:
+                                email:
+                                  type: string
+                                name:
+                                  type: string
+                              type: object
+                          required:
+                            - reason
+                            - type
+                          type: object
                         totalDuration:
                           description: Go-formatted (human-readable) duration (incl. pause)
                           type: string
@@ -20544,6 +21615,7 @@ spec:
                                 - testworkflow
                                 - testworkflowexecution
                                 - program
+                                - gitintegration
                               type: string
                           required:
                             - type
@@ -20685,6 +21757,49 @@ spec:
                             description: working directory to override, so it will be used as a base dir
                             type: string
                         type: object
+                      cache:
+                        description: dependency cache to restore before and save after this step's operations
+                        properties:
+                          key:
+                            description: |-
+                              key to store the entry under, usually derived from a lockfile,
+                              e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          mount:
+                            description: |-
+                              should a volume be mounted at every cached path that is not part of one already
+                              (true if not specified); a path outside any volume would otherwise be restored
+                              into a container's own filesystem, where the step that needs it cannot see it
+                            type: boolean
+                          paths:
+                            description: paths to store in the cache, relative to the working directory
+                            items:
+                              type: string
+                            minItems: 1
+                            type: array
+                          restoreKeys:
+                            description: |-
+                              key prefixes to fall back to when there is no entry for the exact key,
+                              tried in order, where the most recently saved match wins
+                            items:
+                              type: string
+                            maxItems: 10
+                            type: array
+                          scope:
+                            description: how widely the entry is shared (defaults to workflow)
+                            enum:
+                              - workflow
+                              - environment
+                            type: string
+                          workingDir:
+                            description: working directory to override, so it will be used as a base dir
+                            type: string
+                        required:
+                          - key
+                          - paths
+                        type: object
                       condition:
                         description: |-
                           expression to declare under which conditions the step should be run
@@ -21057,6 +22172,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -21291,6 +22421,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -21330,10 +22467,10 @@ spec:
                             items:
                               properties:
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test execution description to display
@@ -21625,10 +22762,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: test name to run
@@ -21649,6 +22786,15 @@ spec:
                             description: workflows to run
                             items:
                               properties:
+                                as:
+                                  description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                  type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -21658,10 +22804,10 @@ spec:
                                   description: configuration to pass for the workflow
                                   type: object
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test workflow execution description to display
@@ -21669,15 +22815,37 @@ spec:
                                 executionName:
                                   description: unique execution name to use
                                   type: string
+                                fetch:
+                                  description: instructions for downloading artifacts produced by executed test workflows
+                                  items:
+                                    description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                    properties:
+                                      from:
+                                        description: execution to download the artifacts from, defaults to the one being executed
+                                        type: string
+                                      paths:
+                                        description: artifact paths to download, relative to the artifact root of the execution
+                                        items:
+                                          type: string
+                                        type: array
+                                      to:
+                                        description: |-
+                                          directory to download the artifacts to; when the entry fans out over a matrix or
+                                          shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                        type: string
+                                    required:
+                                      - to
+                                    type: object
+                                  type: array
                                 matrix:
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: workflow name to run
@@ -21738,6 +22906,11 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    schedulerPolicy:
+                                      description: SchedulerPolicy controls whether a targeted execution should be created.
+                                      enum:
+                                        - OnlyWhenMatches
+                                      type: string
                                   type: object
                               type: object
                             type: array
@@ -21782,11 +22955,54 @@ spec:
                                 description: working directory to override, so it will be used as a base dir
                                 type: string
                             type: object
+                          cache:
+                            description: dependency cache to restore before and save after this step's operations
+                            properties:
+                              key:
+                                description: |-
+                                  key to store the entry under, usually derived from a lockfile,
+                                  e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                                maxLength: 512
+                                minLength: 1
+                                type: string
+                              mount:
+                                description: |-
+                                  should a volume be mounted at every cached path that is not part of one already
+                                  (true if not specified); a path outside any volume would otherwise be restored
+                                  into a container's own filesystem, where the step that needs it cannot see it
+                                type: boolean
+                              paths:
+                                description: paths to store in the cache, relative to the working directory
+                                items:
+                                  type: string
+                                minItems: 1
+                                type: array
+                              restoreKeys:
+                                description: |-
+                                  key prefixes to fall back to when there is no entry for the exact key,
+                                  tried in order, where the most recently saved match wins
+                                items:
+                                  type: string
+                                maxItems: 10
+                                type: array
+                              scope:
+                                description: how widely the entry is shared (defaults to workflow)
+                                enum:
+                                  - workflow
+                                  - environment
+                                type: string
+                              workingDir:
+                                description: working directory to override, so it will be used as a base dir
+                                type: string
+                            required:
+                              - key
+                              - paths
+                            type: object
                           count:
+                            description: static number of sharded instances to spawn
                             anyOf:
                               - type: integer
                               - type: string
-                            description: static number of sharded instances to spawn
                             x-kubernetes-int-or-string: true
                           delay:
                             description: delay before the step
@@ -21810,10 +23026,10 @@ spec:
                                 items:
                                   properties:
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test execution description to display
@@ -22105,10 +23321,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: test name to run
@@ -22129,6 +23345,15 @@ spec:
                                 description: workflows to run
                                 items:
                                   properties:
+                                    as:
+                                      description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -22138,10 +23363,10 @@ spec:
                                       description: configuration to pass for the workflow
                                       type: object
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test workflow execution description to display
@@ -22149,15 +23374,37 @@ spec:
                                     executionName:
                                       description: unique execution name to use
                                       type: string
+                                    fetch:
+                                      description: instructions for downloading artifacts produced by executed test workflows
+                                      items:
+                                        description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                        properties:
+                                          from:
+                                            description: execution to download the artifacts from, defaults to the one being executed
+                                            type: string
+                                          paths:
+                                            description: artifact paths to download, relative to the artifact root of the execution
+                                            items:
+                                              type: string
+                                            type: array
+                                          to:
+                                            description: |-
+                                              directory to download the artifacts to; when the entry fans out over a matrix or
+                                              shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                            type: string
+                                        required:
+                                          - to
+                                        type: object
+                                      type: array
                                     matrix:
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: workflow name to run
@@ -22218,6 +23465,11 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        schedulerPolicy:
+                                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                                          enum:
+                                            - OnlyWhenMatches
+                                          type: string
                                       type: object
                                   type: object
                                 type: array
@@ -22241,10 +23493,10 @@ spec:
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           maxCount:
+                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             anyOf:
                               - type: integer
                               - type: string
-                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             x-kubernetes-int-or-string: true
                           negative:
                             description: is the step expected to fail
@@ -22950,6 +24202,21 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures (default 5, max 20)
+                                          format: int32
+                                          maximum: 20
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -23184,6 +24451,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -23205,10 +24479,10 @@ spec:
                                   type: array
                               type: object
                             count:
+                              description: static number of sharded instances to spawn
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: static number of sharded instances to spawn
                               x-kubernetes-int-or-string: true
                             description:
                               description: service description to display
@@ -23337,10 +24611,10 @@ spec:
                               type: object
                               x-kubernetes-preserve-unknown-fields: true
                             maxCount:
+                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               x-kubernetes-int-or-string: true
                             pod:
                               description: configuration for the scheduled pod
@@ -23924,10 +25198,10 @@ spec:
                   additionalProperties:
                     properties:
                       default:
+                        description: default value - if not provided, the parameter is required
                         anyOf:
                           - type: integer
                           - type: string
-                        description: default value - if not provided, the parameter is required
                         x-kubernetes-int-or-string: true
                       description:
                         description: parameter description
@@ -23938,10 +25212,10 @@ spec:
                           type: string
                         type: array
                       example:
+                        description: exemplary value
                         anyOf:
                           - type: integer
                           - type: string
-                        description: exemplary value
                         x-kubernetes-int-or-string: true
                       exclusiveMaximum:
                         description: maximum value for the number (exclusive)
@@ -24359,6 +25633,21 @@ spec:
                           items:
                             type: string
                           type: array
+                        retry:
+                          description: in-process retry policy for transient git failures during clone
+                          properties:
+                            count:
+                              description: max attempts for transient git failures (default 5, max 20)
+                              format: int32
+                              maximum: 20
+                              minimum: 1
+                              type: integer
+                            delay:
+                              description: |-
+                                base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                May be an expression template; validated after resolution.
+                              type: string
+                          type: object
                         revision:
                           description: branch, commit or a tag name to fetch
                           type: string
@@ -24593,6 +25882,13 @@ spec:
                               type: object
                               x-kubernetes-map-type: atomic
                           type: object
+                        verbosity:
+                          description: logging level for the clone. Omit defaults to verbose.
+                          enum:
+                            - quiet
+                            - normal
+                            - verbose
+                          type: string
                       type: object
                     tarball:
                       description: tarballs to unpack
@@ -24660,6 +25956,11 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              schedulerPolicy:
+                                description: SchedulerPolicy controls whether a targeted execution should be created.
+                                enum:
+                                  - OnlyWhenMatches
+                                type: string
                             type: object
                           timezone:
                             description: cron timezone
@@ -24699,6 +26000,11 @@ spec:
                           items:
                             type: string
                           type: array
+                        schedulerPolicy:
+                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                          enum:
+                            - OnlyWhenMatches
+                          type: string
                       type: object
                   type: object
                 job:
@@ -25175,6 +26481,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -25409,6 +26730,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -25430,10 +26758,10 @@ spec:
                             type: array
                         type: object
                       count:
+                        description: static number of sharded instances to spawn
                         anyOf:
                           - type: integer
                           - type: string
-                        description: static number of sharded instances to spawn
                         x-kubernetes-int-or-string: true
                       description:
                         description: service description to display
@@ -25562,10 +26890,10 @@ spec:
                         type: object
                         x-kubernetes-preserve-unknown-fields: true
                       maxCount:
+                        description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                         anyOf:
                           - type: integer
                           - type: string
-                        description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                         x-kubernetes-int-or-string: true
                       pod:
                         description: configuration for the scheduled pod
@@ -26135,6 +27463,49 @@ spec:
                             description: working directory to override, so it will be used as a base dir
                             type: string
                         type: object
+                      cache:
+                        description: dependency cache to restore before and save after this step's operations
+                        properties:
+                          key:
+                            description: |-
+                              key to store the entry under, usually derived from a lockfile,
+                              e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          mount:
+                            description: |-
+                              should a volume be mounted at every cached path that is not part of one already
+                              (true if not specified); a path outside any volume would otherwise be restored
+                              into a container's own filesystem, where the step that needs it cannot see it
+                            type: boolean
+                          paths:
+                            description: paths to store in the cache, relative to the working directory
+                            items:
+                              type: string
+                            minItems: 1
+                            type: array
+                          restoreKeys:
+                            description: |-
+                              key prefixes to fall back to when there is no entry for the exact key,
+                              tried in order, where the most recently saved match wins
+                            items:
+                              type: string
+                            maxItems: 10
+                            type: array
+                          scope:
+                            description: how widely the entry is shared (defaults to workflow)
+                            enum:
+                              - workflow
+                              - environment
+                            type: string
+                          workingDir:
+                            description: working directory to override, so it will be used as a base dir
+                            type: string
+                        required:
+                          - key
+                          - paths
+                        type: object
                       condition:
                         description: |-
                           expression to declare under which conditions the step should be run
@@ -26507,6 +27878,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -26741,6 +28127,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -26780,10 +28173,10 @@ spec:
                             items:
                               properties:
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test execution description to display
@@ -27075,10 +28468,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: test name to run
@@ -27099,6 +28492,15 @@ spec:
                             description: workflows to run
                             items:
                               properties:
+                                as:
+                                  description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                  type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -27108,10 +28510,10 @@ spec:
                                   description: configuration to pass for the workflow
                                   type: object
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test workflow execution description to display
@@ -27119,15 +28521,37 @@ spec:
                                 executionName:
                                   description: unique execution name to use
                                   type: string
+                                fetch:
+                                  description: instructions for downloading artifacts produced by executed test workflows
+                                  items:
+                                    description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                    properties:
+                                      from:
+                                        description: execution to download the artifacts from, defaults to the one being executed
+                                        type: string
+                                      paths:
+                                        description: artifact paths to download, relative to the artifact root of the execution
+                                        items:
+                                          type: string
+                                        type: array
+                                      to:
+                                        description: |-
+                                          directory to download the artifacts to; when the entry fans out over a matrix or
+                                          shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                        type: string
+                                    required:
+                                      - to
+                                    type: object
+                                  type: array
                                 matrix:
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: workflow name to run
@@ -27188,6 +28612,11 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    schedulerPolicy:
+                                      description: SchedulerPolicy controls whether a targeted execution should be created.
+                                      enum:
+                                        - OnlyWhenMatches
+                                      type: string
                                   type: object
                               type: object
                             type: array
@@ -27232,11 +28661,54 @@ spec:
                                 description: working directory to override, so it will be used as a base dir
                                 type: string
                             type: object
+                          cache:
+                            description: dependency cache to restore before and save after this step's operations
+                            properties:
+                              key:
+                                description: |-
+                                  key to store the entry under, usually derived from a lockfile,
+                                  e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                                maxLength: 512
+                                minLength: 1
+                                type: string
+                              mount:
+                                description: |-
+                                  should a volume be mounted at every cached path that is not part of one already
+                                  (true if not specified); a path outside any volume would otherwise be restored
+                                  into a container's own filesystem, where the step that needs it cannot see it
+                                type: boolean
+                              paths:
+                                description: paths to store in the cache, relative to the working directory
+                                items:
+                                  type: string
+                                minItems: 1
+                                type: array
+                              restoreKeys:
+                                description: |-
+                                  key prefixes to fall back to when there is no entry for the exact key,
+                                  tried in order, where the most recently saved match wins
+                                items:
+                                  type: string
+                                maxItems: 10
+                                type: array
+                              scope:
+                                description: how widely the entry is shared (defaults to workflow)
+                                enum:
+                                  - workflow
+                                  - environment
+                                type: string
+                              workingDir:
+                                description: working directory to override, so it will be used as a base dir
+                                type: string
+                            required:
+                              - key
+                              - paths
+                            type: object
                           count:
+                            description: static number of sharded instances to spawn
                             anyOf:
                               - type: integer
                               - type: string
-                            description: static number of sharded instances to spawn
                             x-kubernetes-int-or-string: true
                           delay:
                             description: delay before the step
@@ -27260,10 +28732,10 @@ spec:
                                 items:
                                   properties:
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test execution description to display
@@ -27555,10 +29027,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: test name to run
@@ -27579,6 +29051,15 @@ spec:
                                 description: workflows to run
                                 items:
                                   properties:
+                                    as:
+                                      description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -27588,10 +29069,10 @@ spec:
                                       description: configuration to pass for the workflow
                                       type: object
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test workflow execution description to display
@@ -27599,15 +29080,37 @@ spec:
                                     executionName:
                                       description: unique execution name to use
                                       type: string
+                                    fetch:
+                                      description: instructions for downloading artifacts produced by executed test workflows
+                                      items:
+                                        description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                        properties:
+                                          from:
+                                            description: execution to download the artifacts from, defaults to the one being executed
+                                            type: string
+                                          paths:
+                                            description: artifact paths to download, relative to the artifact root of the execution
+                                            items:
+                                              type: string
+                                            type: array
+                                          to:
+                                            description: |-
+                                              directory to download the artifacts to; when the entry fans out over a matrix or
+                                              shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                            type: string
+                                        required:
+                                          - to
+                                        type: object
+                                      type: array
                                     matrix:
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: workflow name to run
@@ -27668,6 +29171,11 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        schedulerPolicy:
+                                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                                          enum:
+                                            - OnlyWhenMatches
+                                          type: string
                                       type: object
                                   type: object
                                 type: array
@@ -27691,10 +29199,10 @@ spec:
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           maxCount:
+                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             anyOf:
                               - type: integer
                               - type: string
-                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             x-kubernetes-int-or-string: true
                           negative:
                             description: is the step expected to fail
@@ -28400,6 +29908,21 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures (default 5, max 20)
+                                          format: int32
+                                          maximum: 20
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -28634,6 +30157,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -28655,10 +30185,10 @@ spec:
                                   type: array
                               type: object
                             count:
+                              description: static number of sharded instances to spawn
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: static number of sharded instances to spawn
                               x-kubernetes-int-or-string: true
                             description:
                               description: service description to display
@@ -28787,10 +30317,10 @@ spec:
                               type: object
                               x-kubernetes-preserve-unknown-fields: true
                             maxCount:
+                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               x-kubernetes-int-or-string: true
                             pod:
                               description: configuration for the scheduled pod
@@ -29377,6 +30907,49 @@ spec:
                             description: working directory to override, so it will be used as a base dir
                             type: string
                         type: object
+                      cache:
+                        description: dependency cache to restore before and save after this step's operations
+                        properties:
+                          key:
+                            description: |-
+                              key to store the entry under, usually derived from a lockfile,
+                              e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          mount:
+                            description: |-
+                              should a volume be mounted at every cached path that is not part of one already
+                              (true if not specified); a path outside any volume would otherwise be restored
+                              into a container's own filesystem, where the step that needs it cannot see it
+                            type: boolean
+                          paths:
+                            description: paths to store in the cache, relative to the working directory
+                            items:
+                              type: string
+                            minItems: 1
+                            type: array
+                          restoreKeys:
+                            description: |-
+                              key prefixes to fall back to when there is no entry for the exact key,
+                              tried in order, where the most recently saved match wins
+                            items:
+                              type: string
+                            maxItems: 10
+                            type: array
+                          scope:
+                            description: how widely the entry is shared (defaults to workflow)
+                            enum:
+                              - workflow
+                              - environment
+                            type: string
+                          workingDir:
+                            description: working directory to override, so it will be used as a base dir
+                            type: string
+                        required:
+                          - key
+                          - paths
+                        type: object
                       condition:
                         description: |-
                           expression to declare under which conditions the step should be run
@@ -29749,6 +31322,21 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              retry:
+                                description: in-process retry policy for transient git failures during clone
+                                properties:
+                                  count:
+                                    description: max attempts for transient git failures (default 5, max 20)
+                                    format: int32
+                                    maximum: 20
+                                    minimum: 1
+                                    type: integer
+                                  delay:
+                                    description: |-
+                                      base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                      May be an expression template; validated after resolution.
+                                    type: string
+                                type: object
                               revision:
                                 description: branch, commit or a tag name to fetch
                                 type: string
@@ -29983,6 +31571,13 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                 type: object
+                              verbosity:
+                                description: logging level for the clone. Omit defaults to verbose.
+                                enum:
+                                  - quiet
+                                  - normal
+                                  - verbose
+                                type: string
                             type: object
                           tarball:
                             description: tarballs to unpack
@@ -30022,10 +31617,10 @@ spec:
                             items:
                               properties:
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test execution description to display
@@ -30317,10 +31912,10 @@ spec:
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: test name to run
@@ -30341,6 +31936,15 @@ spec:
                             description: workflows to run
                             items:
                               properties:
+                                as:
+                                  description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                  type: string
+                                baseExecutionId:
+                                  description: |-
+                                    id of the execution to record this one as a rerun of, so that it resolves
+                                    execution("rerun"). Runs the current definition, not the base's snapshot.
+                                    The base must be one the scheduling execution may itself read.
+                                  type: string
                                 config:
                                   additionalProperties:
                                     anyOf:
@@ -30350,10 +31954,10 @@ spec:
                                   description: configuration to pass for the workflow
                                   type: object
                                 count:
+                                  description: static number of sharded instances to spawn
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: static number of sharded instances to spawn
                                   x-kubernetes-int-or-string: true
                                 description:
                                   description: test workflow execution description to display
@@ -30361,15 +31965,37 @@ spec:
                                 executionName:
                                   description: unique execution name to use
                                   type: string
+                                fetch:
+                                  description: instructions for downloading artifacts produced by executed test workflows
+                                  items:
+                                    description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                    properties:
+                                      from:
+                                        description: execution to download the artifacts from, defaults to the one being executed
+                                        type: string
+                                      paths:
+                                        description: artifact paths to download, relative to the artifact root of the execution
+                                        items:
+                                          type: string
+                                        type: array
+                                      to:
+                                        description: |-
+                                          directory to download the artifacts to; when the entry fans out over a matrix or
+                                          shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                        type: string
+                                    required:
+                                      - to
+                                    type: object
+                                  type: array
                                 matrix:
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
+                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   anyOf:
                                     - type: integer
                                     - type: string
-                                  description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                   x-kubernetes-int-or-string: true
                                 name:
                                   description: workflow name to run
@@ -30430,6 +32056,11 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    schedulerPolicy:
+                                      description: SchedulerPolicy controls whether a targeted execution should be created.
+                                      enum:
+                                        - OnlyWhenMatches
+                                      type: string
                                   type: object
                               type: object
                             type: array
@@ -30474,11 +32105,54 @@ spec:
                                 description: working directory to override, so it will be used as a base dir
                                 type: string
                             type: object
+                          cache:
+                            description: dependency cache to restore before and save after this step's operations
+                            properties:
+                              key:
+                                description: |-
+                                  key to store the entry under, usually derived from a lockfile,
+                                  e.g. 'npm-{{`{{`}} hash_files("package-lock.json") {{`}}`}}'
+                                maxLength: 512
+                                minLength: 1
+                                type: string
+                              mount:
+                                description: |-
+                                  should a volume be mounted at every cached path that is not part of one already
+                                  (true if not specified); a path outside any volume would otherwise be restored
+                                  into a container's own filesystem, where the step that needs it cannot see it
+                                type: boolean
+                              paths:
+                                description: paths to store in the cache, relative to the working directory
+                                items:
+                                  type: string
+                                minItems: 1
+                                type: array
+                              restoreKeys:
+                                description: |-
+                                  key prefixes to fall back to when there is no entry for the exact key,
+                                  tried in order, where the most recently saved match wins
+                                items:
+                                  type: string
+                                maxItems: 10
+                                type: array
+                              scope:
+                                description: how widely the entry is shared (defaults to workflow)
+                                enum:
+                                  - workflow
+                                  - environment
+                                type: string
+                              workingDir:
+                                description: working directory to override, so it will be used as a base dir
+                                type: string
+                            required:
+                              - key
+                              - paths
+                            type: object
                           count:
+                            description: static number of sharded instances to spawn
                             anyOf:
                               - type: integer
                               - type: string
-                            description: static number of sharded instances to spawn
                             x-kubernetes-int-or-string: true
                           delay:
                             description: delay before the step
@@ -30502,10 +32176,10 @@ spec:
                                 items:
                                   properties:
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test execution description to display
@@ -30797,10 +32471,10 @@ spec:
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: test name to run
@@ -30821,6 +32495,15 @@ spec:
                                 description: workflows to run
                                 items:
                                   properties:
+                                    as:
+                                      description: name to reference this execution by in the execution() expression, defaults to the workflow name
+                                      type: string
+                                    baseExecutionId:
+                                      description: |-
+                                        id of the execution to record this one as a rerun of, so that it resolves
+                                        execution("rerun"). Runs the current definition, not the base's snapshot.
+                                        The base must be one the scheduling execution may itself read.
+                                      type: string
                                     config:
                                       additionalProperties:
                                         anyOf:
@@ -30830,10 +32513,10 @@ spec:
                                       description: configuration to pass for the workflow
                                       type: object
                                     count:
+                                      description: static number of sharded instances to spawn
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: static number of sharded instances to spawn
                                       x-kubernetes-int-or-string: true
                                     description:
                                       description: test workflow execution description to display
@@ -30841,15 +32524,37 @@ spec:
                                     executionName:
                                       description: unique execution name to use
                                       type: string
+                                    fetch:
+                                      description: instructions for downloading artifacts produced by executed test workflows
+                                      items:
+                                        description: StepExecuteFetch downloads artifacts produced by an executed test workflow.
+                                        properties:
+                                          from:
+                                            description: execution to download the artifacts from, defaults to the one being executed
+                                            type: string
+                                          paths:
+                                            description: artifact paths to download, relative to the artifact root of the execution
+                                            items:
+                                              type: string
+                                            type: array
+                                          to:
+                                            description: |-
+                                              directory to download the artifacts to; when the entry fans out over a matrix or
+                                              shards, include {{`{{`}} index {{`}}`}} to keep each instance's artifacts apart
+                                            type: string
+                                        required:
+                                          - to
+                                        type: object
+                                      type: array
                                     matrix:
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
                                       x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
+                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       anyOf:
                                         - type: integer
                                         - type: string
-                                      description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                                       x-kubernetes-int-or-string: true
                                     name:
                                       description: workflow name to run
@@ -30910,6 +32615,11 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        schedulerPolicy:
+                                          description: SchedulerPolicy controls whether a targeted execution should be created.
+                                          enum:
+                                            - OnlyWhenMatches
+                                          type: string
                                       type: object
                                   type: object
                                 type: array
@@ -30933,10 +32643,10 @@ spec:
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           maxCount:
+                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             anyOf:
                               - type: integer
                               - type: string
-                            description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                             x-kubernetes-int-or-string: true
                           negative:
                             description: is the step expected to fail
@@ -31642,6 +33352,21 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    retry:
+                                      description: in-process retry policy for transient git failures during clone
+                                      properties:
+                                        count:
+                                          description: max attempts for transient git failures (default 5, max 20)
+                                          format: int32
+                                          maximum: 20
+                                          minimum: 1
+                                          type: integer
+                                        delay:
+                                          description: |-
+                                            base delay between attempts; exponential backoff applies (e.g. "100ms", "1s").
+                                            May be an expression template; validated after resolution.
+                                          type: string
+                                      type: object
                                     revision:
                                       description: branch, commit or a tag name to fetch
                                       type: string
@@ -31876,6 +33601,13 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
+                                    verbosity:
+                                      description: logging level for the clone. Omit defaults to verbose.
+                                      enum:
+                                        - quiet
+                                        - normal
+                                        - verbose
+                                      type: string
                                   type: object
                                 tarball:
                                   description: tarballs to unpack
@@ -31897,10 +33629,10 @@ spec:
                                   type: array
                               type: object
                             count:
+                              description: static number of sharded instances to spawn
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: static number of sharded instances to spawn
                               x-kubernetes-int-or-string: true
                             description:
                               description: service description to display
@@ -32029,10 +33761,10 @@ spec:
                               type: object
                               x-kubernetes-preserve-unknown-fields: true
                             maxCount:
+                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               anyOf:
                                 - type: integer
                                 - type: string
-                              description: dynamic number of sharded instances to spawn - it will be lowered if there is not enough sharded values
                               x-kubernetes-int-or-string: true
                             pod:
                               description: configuration for the scheduled pod
@@ -32607,7 +34339,9 @@ spec:
                   description: per-workflow timeout configuration
                   properties:
                     initialization:
-                      description: maximum time for initialization/transitioning before steps run
+                      description: |-
+                        maximum time from the job creation until the first step container starts, as a Go duration (for example 2m).
+                        When it ends, the runner aborts the execution and keeps the cause that Kubernetes reported.
                       type: string
                     queue:
                       description: maximum time the execution may spend in queue before starting
@@ -32756,6 +34490,12 @@ spec:
                         items:
                           type: string
                         type: array
+                      schedulerPolicy:
+                        description: SchedulerPolicy controls whether a targeted execution
+                          should be created.
+                        enum:
+                        - OnlyWhenMatches
+                        type: string
                     type: object
                   workflow:
                     description: Workflow identifies which workflow(s) to execute.

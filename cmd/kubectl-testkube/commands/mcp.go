@@ -11,7 +11,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/mcp"
-	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
@@ -30,7 +29,8 @@ Capabilities:
 
 We welcome feedback on Slack: https://bit.ly/testkube-slack
 
-The MCP server requires OAuth authentication and uses your current Testkube context.
+The MCP server uses your Testkube API key or OAuth login. Standalone HTTP also
+requires a separate TK_MCP_SHTTP_AUTH_TOKEN for inbound requests.
 
 Documentation: https://docs.testkube.io/articles/mcp-overview
 Configuration: https://docs.testkube.io/articles/mcp-configuration`,
@@ -65,7 +65,8 @@ The MCP server provides AI assistants with tools to:
 Please get in touch on Slack for questions and feedback: https://bit.ly/testkube-slack
 
 Requirements:
-• OAuth authentication (run 'testkube login')
+• OAuth authentication (run 'testkube login') or a Testkube API key
+• For --transport=shttp, a separate TK_MCP_SHTTP_AUTH_TOKEN; clients send it as Authorization: Bearer <token>
 • Testkube environment with proper context
 
 The server runs silently by default to avoid interfering with JSON-RPC communication
@@ -74,22 +75,14 @@ over stdio. Use --verbose to see detailed output during startup.
 Setup Guide: https://docs.testkube.io/articles/mcp-setup
 Configuration Examples: https://docs.testkube.io/articles/mcp-configuration`,
 
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			// Check for environment variable mode (for Docker deployment)
 			envMode := os.Getenv("TK_MCP_ENV_MODE") == "true"
 
-			if shttpHost == "" {
-				if telemetry.IsRunningInDocker() {
-					shttpHost = "0.0.0.0"
-				} else {
-					shttpHost = "localhost"
-				}
-			}
-
 			if envMode {
-				runEnvironmentMode(cmd, debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile)
+				return runEnvironmentMode(cmd, debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile)
 			} else {
-				runDefaultMode(cmd, debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile)
+				return runDefaultMode(cmd, debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile)
 			}
 		},
 	}
@@ -97,7 +90,7 @@ Configuration Examples: https://docs.testkube.io/articles/mcp-configuration`,
 	cmd.Flags().StringVar(&mcpBaseURL, "base-url", "", "Base URL for Testkube API (uses context API URL if not specified)")
 	cmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode with detailed operation information")
 	cmd.Flags().StringVar(&transport, "transport", "stdio", "Transport protocol: stdio or shttp")
-	cmd.Flags().StringVar(&shttpHost, "shttp-host", "", "Host to bind SHTTP server to, defaults to 0.0.0.0 when running in Docker, localhost otherwise")
+	cmd.Flags().StringVar(&shttpHost, "shttp-host", "localhost", "Host to bind SHTTP server to (external binding must be explicit, including Docker)")
 	cmd.Flags().IntVar(&shttpPort, "shttp-port", 8080, "Port to bind SHTTP server to")
 	cmd.Flags().BoolVar(&shttpTLS, "shttp-tls", false, "Enable TLS for SHTTP server")
 	cmd.Flags().StringVar(&shttpCertFile, "shttp-cert-file", "", "TLS certificate file for SHTTP server")
@@ -165,15 +158,11 @@ func validateCloudContext(cfg config.Data) error {
 }
 
 // runEnvironmentMode handles the environment variable mode logic
-func runEnvironmentMode(cmd *cobra.Command, debug bool, transport, shttpHost string, shttpPort int, shttpTLS bool, shttpCertFile, shttpKeyFile string) {
+func runEnvironmentMode(cmd *cobra.Command, debug bool, transport, shttpHost string, shttpPort int, shttpTLS bool, shttpCertFile, shttpKeyFile string) error {
 	// Parse environment variables
 	accessToken, orgID, envID, baseURL, dashboardURL, err := parseEnvironmentVariables()
 	if err != nil {
-		if ui.IsVerbose() {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-			fmt.Fprintf(os.Stderr, "Set TK_MCP_ENV_MODE=true to enable environment variable mode\n")
-		}
-		return
+		return err
 	}
 
 	// Prepare configuration display
@@ -202,41 +191,21 @@ func runEnvironmentMode(cmd *cobra.Command, debug bool, transport, shttpHost str
 	displayConfiguration(configData, "environment variable")
 
 	// Start the MCP server
-	if err := startMCPServer(common.ResolveSkipTLS(cmd, nil), accessToken, orgID, envID, baseURL, dashboardURL, debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile, "cli-env"); err != nil {
-		if ui.IsVerbose() {
-			fmt.Fprintf(os.Stderr, "Failed to start MCP server: %v\n", err)
-		}
-	}
+	return startMCPServer(common.ResolveSkipTLS(cmd, nil), accessToken, orgID, envID, baseURL, dashboardURL, debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile, "cli-env")
 }
 
 // runDefaultMode handles the default mode logic (OAuth + config file)
-func runDefaultMode(cmd *cobra.Command, debug bool, transport, shttpHost string, shttpPort int, shttpTLS bool, shttpCertFile, shttpKeyFile string) {
+func runDefaultMode(cmd *cobra.Command, debug bool, transport, shttpHost string, shttpPort int, shttpTLS bool, shttpCertFile, shttpKeyFile string) error {
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
-		if ui.IsVerbose() {
-			fmt.Fprintf(os.Stderr, "Failed to load configuration: %v\n", err)
-		}
-		return
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
-
-	// Validate authentication
 	if cfg.CloudContext.ApiKey == "" && !common.IsOAuthAuthenticated() {
-		if ui.IsVerbose() {
-			fmt.Fprintf(os.Stderr, "API key or OAuth authentication required\n")
-			fmt.Fprintf(os.Stderr, "Please run 'testkube login' to authenticate with OAuth flow\n")
-			fmt.Fprintf(os.Stderr, "or set an API key using 'testkube set context --api-key <key>'\n")
-			fmt.Fprintf(os.Stderr, "Setup guide: https://docs.testkube.io/articles/mcp-setup\n")
-		}
-		return
+		return fmt.Errorf("API key or OAuth authentication required: run 'testkube login' or 'testkube set context --api-key <key>'")
 	}
-
-	// Validate cloud context
 	if err := validateCloudContext(cfg); err != nil {
-		if ui.IsVerbose() {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-		}
-		return
+		return err
 	}
 
 	// Get access token
@@ -244,10 +213,7 @@ func runDefaultMode(cmd *cobra.Command, debug bool, transport, shttpHost string,
 	if err != nil {
 		accessToken = cfg.CloudContext.ApiKey
 		if accessToken == "" {
-			if ui.IsVerbose() {
-				fmt.Fprintf(os.Stderr, "Failed to get access token: %v\n", err)
-			}
-			return
+			return fmt.Errorf("failed to get access token: %w", err)
 		}
 		if ui.IsVerbose() {
 			fmt.Fprintf(os.Stderr, "Using API key for authentication\n")
@@ -270,27 +236,10 @@ func runDefaultMode(cmd *cobra.Command, debug bool, transport, shttpHost string,
 	displayConfiguration(configData, "default")
 
 	// Start the MCP server
-	if err := startMCPServer(common.ResolveSkipTLS(cmd, &cfg), accessToken, cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId, cfg.CloudContext.ApiUri, cfg.CloudContext.UiUri, debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile, "cli-direct"); err != nil {
-		if ui.IsVerbose() {
-			fmt.Fprintf(os.Stderr, "Failed to start MCP server: %v\n", err)
-		}
-		return
-	}
-
-	// If we reach here, the server shut down gracefully
-	if ui.IsVerbose() {
-		fmt.Fprintf(os.Stderr, "MCP server shut down gracefully\n")
-	}
+	return startMCPServer(common.ResolveSkipTLS(cmd, &cfg), accessToken, cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId, cfg.CloudContext.ApiUri, cfg.CloudContext.UiUri, debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile, "cli-direct")
 }
 
 func startMCPServer(skipTLS bool, accessToken, orgID, envID, baseURL, dashboardURL string, debug bool, transport, shttpHost string, shttpPort int, shttpTLS bool, shttpCertFile, shttpKeyFile string, source string) error {
-	// Load config to check telemetry settings
-	cfg, err := config.Load()
-	telemetryEnabled := true
-	if err == nil {
-		telemetryEnabled = cfg.TelemetryEnabled
-	}
-
 	// Parse transport type
 	var transportType mcp.TransportType
 	switch transport {
@@ -302,24 +251,33 @@ func startMCPServer(skipTLS bool, accessToken, orgID, envID, baseURL, dashboardU
 
 	// Create MCP server configuration
 	mcpCfg := mcp.MCPServerConfig{
-		Version:          common.Version,
-		Transport:        transportType,
-		ControlPlaneUrl:  baseURL,
-		DashboardUrl:     dashboardURL,
-		AccessToken:      accessToken,
-		OrgId:            orgID,
-		EnvId:            envID,
-		Debug:            debug,
-		TelemetryEnabled: telemetryEnabled,
-		Source:           source,
-		SkipTLS:          skipTLS,
+		Version:         common.Version,
+		Transport:       transportType,
+		ControlPlaneUrl: baseURL,
+		DashboardUrl:    dashboardURL,
+		AccessToken:     accessToken,
+		OrgId:           orgID,
+		EnvId:           envID,
+		Debug:           debug,
+		Source:          source,
+		SkipTLS:         skipTLS,
 		SHTTPConfig: mcp.SHTTPConfig{
+			AuthToken: os.Getenv("TK_MCP_SHTTP_AUTH_TOKEN"),
 			Host:      shttpHost,
 			Port:      shttpPort,
 			EnableTLS: shttpTLS,
 			CertFile:  shttpCertFile,
 			KeyFile:   shttpKeyFile,
 		},
+	}
+
+	// Fail closed before loading optional settings or creating any API client.
+	if err := mcpCfg.Validate(); err != nil {
+		return err
+	}
+	mcpCfg.TelemetryEnabled = true
+	if cfg, err := config.Load(); err == nil {
+		mcpCfg.TelemetryEnabled = cfg.TelemetryEnabled
 	}
 
 	// If no base URL is provided, use the default from testkube context

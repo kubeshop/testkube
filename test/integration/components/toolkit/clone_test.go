@@ -311,8 +311,7 @@ func TestCloneErrorHandling_Integration(t *testing.T) {
 		outputDir := t.TempDir()
 		err := executeClone(t, "https://github.com/kubeshop/does-not-exist-12345.git", outputDir, &commands.CloneOptions{})
 
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "cloning repository")
+		assert.ErrorContains(t, err, "error cloning repository: exit status 128: fatal:")
 	})
 
 	t.Run("invalid revision", func(t *testing.T) {

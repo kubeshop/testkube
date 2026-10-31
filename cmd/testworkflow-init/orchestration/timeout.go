@@ -73,6 +73,12 @@ func WatchTimeout[T Timeoutable](handler func(), objects ...T) func() {
 		ctxCancel()
 	}()
 
-	// Allow to cancel externally
-	return ctxCancel
+	// The returned function waits for the watchers to stop. A watcher that is
+	// firing is inside the handler, which is where a timed out step gets its
+	// status. Returning before that finishes lets the next step read the step
+	// while it still has no status.
+	return func() {
+		ctxCancel()
+		wg.Wait()
+	}
 }

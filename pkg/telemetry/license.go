@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 )
 
 const (
@@ -22,6 +23,10 @@ type EmailRequest struct {
 
 // GetEmail returns email
 func GetEmail(license string) string {
+	// No key: skip a lookup that may take 5s.
+	if license == "" {
+		return ""
+	}
 	if LicenseEndpoint != "" {
 		payload := EmailRequest{License: license}
 		jsonPayload, _ := json.Marshal(payload)
@@ -30,7 +35,8 @@ func GetEmail(license string) string {
 			return ""
 		}
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := http.DefaultClient.Do(req)
+		// Without a timeout, a slow network hangs every command.
+		resp, err := (&http.Client{Timeout: 5 * time.Second}).Do(req)
 		if err != nil {
 			return ""
 		}

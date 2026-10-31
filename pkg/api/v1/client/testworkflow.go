@@ -264,6 +264,8 @@ func (c TestWorkflowClient) ListTestWorkflowExecutions(id string, limit int, opt
 		"actorName":   options.ActorName,
 		"actorType":   string(options.ActorType),
 		"status":      options.Status,
+		// The server reads this as the layer that failed, for example init-failure.
+		"statusDetailsType": options.StatusDetailsType,
 	}
 	return c.testWorkflowExecutionsResultTransport.Execute(http.MethodGet, uri, nil, params)
 }
@@ -328,8 +330,10 @@ func (c TestWorkflowClient) UpdateTestWorkflowExecutionTags(executionID string, 
 	return c.testWorkflowExecutionTransport.Validate(http.MethodPatch, uri, body, nil)
 }
 
-// ReRunTestWorkflowExecution reruns selected execution
-func (c TestWorkflowClient) ReRunTestWorkflowExecution(workflow, id string, runningContext *testkube.TestWorkflowRunningContext) (result testkube.TestWorkflowExecution, err error) {
+// ReRunTestWorkflowExecution reruns selected execution.
+// When latest is true, the current workflow definition is used instead of the original resolved snapshot,
+// while keeping the original parameter set.
+func (c TestWorkflowClient) ReRunTestWorkflowExecution(workflow, id string, runningContext *testkube.TestWorkflowRunningContext, latest bool) (result testkube.TestWorkflowExecution, err error) {
 	if workflow == "" {
 		return result, fmt.Errorf("test workflow name '%s' is not valid", workflow)
 	}
@@ -341,7 +345,12 @@ func (c TestWorkflowClient) ReRunTestWorkflowExecution(workflow, id string, runn
 		return result, err
 	}
 
-	return c.testWorkflowExecutionTransport.Execute(http.MethodPost, uri, body, nil)
+	params := map[string]string{}
+	if latest {
+		params["latest"] = "true"
+	}
+
+	return c.testWorkflowExecutionTransport.Execute(http.MethodPost, uri, body, params)
 }
 
 // ExportExecutions downloads the export archive from the server

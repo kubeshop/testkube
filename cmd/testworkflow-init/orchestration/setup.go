@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/credentials"
+	"github.com/kubeshop/testkube/pkg/executiondata"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/expressions/libs"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
@@ -132,44 +133,58 @@ func (c *setup) AddSensitiveWords(words ...string) {
 	}
 }
 
+// GetSensitiveWords returns the values to mask in the log stream.
+//
+// Values shorter than the configured minimum are left out on purpose: masking two
+// characters rewrites nearly every line they appear in, which destroys the logs while
+// hiding almost nothing. This is a rendering decision - it must not be reused to decide
+// what may leave the pod. See GetSensitiveValues.
 func (c *setup) GetSensitiveWords() []string {
+	return c.sensitiveValues(c.minSensitiveWordLength)
+}
+
+// GetSensitiveValues returns every value marked sensitive, whatever its length.
+//
+// This is the set for deciding what may leave the pod. A step output published into the
+// execution record is readable by everyone who can read that execution, and readable
+// from another workflow through execution().outputs, so a short secret has to count:
+// missing it publishes the secret, while matching on it costs a withheld output, which
+// is announced rather than silent.
+func (c *setup) GetSensitiveValues() []string {
+	return c.sensitiveValues(0)
+}
+
+// sensitiveValues collects the values marked sensitive, skipping the ones shorter than
+// minLength. Words handed over at runtime - the values resolved credential() calls
+// produced - are never skipped, whatever minLength says.
+func (c *setup) sensitiveValues(minLength int) []string {
 	words := make([]string, 0, len(c.envAdditionalSensitive))
 	for value := range c.envAdditionalSensitive {
 		words = append(words, value)
 	}
-	for _, name := range commonSensitiveVariables {
-		value := os.Getenv(name)
-		if len(value) < c.minSensitiveWordLength {
-			continue
+	appendIfSensitive := func(value string) {
+		if value == "" || len(value) < minLength {
+			return
 		}
 		words = append(words, value)
 	}
+	for _, name := range commonSensitiveVariables {
+		appendIfSensitive(os.Getenv(name))
+	}
 	for k := range c.envBase {
-		value := os.Getenv(k)
-		if len(value) < c.minSensitiveWordLength {
-			continue
-		}
 		if _, ok := c.envGroupsSensitive[c.envSelectedGroup][k]; ok {
-			words = append(words, value)
+			appendIfSensitive(os.Getenv(k))
 		}
 	}
 	for k := range c.envGroups[c.envSelectedGroup] {
-		value := os.Getenv(k)
-		if len(value) < c.minSensitiveWordLength {
-			continue
-		}
 		if _, ok := c.envGroupsSensitive[c.envSelectedGroup][k]; ok {
-			words = append(words, value)
+			appendIfSensitive(os.Getenv(k))
 		}
 	}
 	// TODO(TKC-2585): Avoid adding the secrets to all the groups without isolation
 	for k := range c.envGroups[constants.EnvGroupSecrets] {
-		value := os.Getenv(k)
-		if len(value) < c.minSensitiveWordLength {
-			continue
-		}
 		if _, ok := c.envGroupsSensitive[constants.EnvGroupSecrets][k]; ok {
-			words = append(words, value)
+			appendIfSensitive(os.Getenv(k))
 		}
 	}
 	return words
@@ -229,6 +244,9 @@ func (c *setup) UseEnv(group string) error {
 		if _, ok := c.envGroupsComputed[group][k]; ok {
 			envTemplates[k] = v
 		} else {
+			if err := checkWithheldEnv(k, v); err != nil {
+				return err
+			}
 			os.Setenv(k, v)
 		}
 	}
@@ -238,6 +256,9 @@ func (c *setup) UseEnv(group string) error {
 		if _, ok := c.envGroupsComputed[constants.EnvGroupSecrets][k]; ok {
 			envTemplates[k] = v
 		} else {
+			if err := checkWithheldEnv(k, v); err != nil {
+				return err
+			}
 			os.Setenv(k, v)
 		}
 	}
@@ -257,6 +278,7 @@ func (c *setup) UseEnv(group string) error {
 
 	// Compute dynamic environment variables
 	addonMachine := expressions.CombinedMachines(data.RefSuccessMachine, data.AliasMachine, data.StateMachine, libs.NewFsMachine(os.DirFS("/"), cwd),
+		data.ExecutionDataMachine(),
 		credentials.NewCredentialMachine(data.Credentials(), func(_ string, value string) {
 			c.AddSensitiveWords(value)
 			output.Std.SetSensitiveWords(c.GetSensitiveWords())
@@ -284,9 +306,27 @@ func (c *setup) UseEnv(group string) error {
 			return errors.Wrapf(err, "failed to compute '%s' environment variable", name)
 		}
 		str, _ := value.Static().StringValue()
+		if err := checkWithheldEnv(name, str); err != nil {
+			return err
+		}
 		os.Setenv(name, str)
 	}
 	return nil
+}
+
+// checkWithheldEnv refuses to install a variable holding a withheld marker.
+//
+// An output another workflow withheld resolves to a marker instead of the value it was
+// meant to carry. Installing it would hand the marker to the tool as the value of the
+// variable, where nothing looks at it again - the command guard only sees arguments,
+// not what arrives through the environment. A plain value is checked as well as a
+// computed one: a step that spawns workers resolves their specification itself, so a
+// marker reaches the worker already baked in as a literal.
+func checkWithheldEnv(name, value string) error {
+	if !executiondata.IsWithheldMarker(value) {
+		return nil
+	}
+	return executiondata.WithheldError(fmt.Sprintf("the %q environment variable", name), executiondata.WithheldMarkersIn(value))
 }
 
 func (c *setup) UseCurrentEnv() error {

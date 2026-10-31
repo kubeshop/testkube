@@ -262,7 +262,7 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | testkube-api.additionalNamespaces | list | `[]` | Watch namespaces. In this case, a Role and a RoleBinding will be created for each specified namespace. |
 | testkube-api.additionalVolumeMounts | list | `[]` | Additional volume mounts to be added |
 | testkube-api.additionalVolumes | list | `[]` | Additional volumes to be added |
-| testkube-api.allowLowSecurityFields |  bool | `false` | Allow to use low securiy fields for test workflow pod and container configurations
+| testkube-api.allowLowSecurityFields |  bool | `false` | Allow to use low security fields for test workflow pod and container configurations
 | testkube-api.analyticsEnabled | bool | `true` | Enable analytics for Testkube |
 | testkube-api.cdeventsTarget | string | `""` | target for cdevents emission via http(s) |
 | testkube-api.cliIngress.annotations | object | `{}` | Additional annotations for the Ingress resource. |
@@ -325,7 +325,7 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | testkube-api.minio.extraEnvVars | list | `[]` | Minio extra vars |
 | testkube-api.minio.extraVolumeMounts | list | `[]` |  |
 | testkube-api.minio.extraVolumes | list | `[]` |  |
-| testkube-api.minio.image | object | `{"pullSecrets":[],"registry":"docker.io","repository":"minio/minio","tag":"RELEASE.2025-07-18T21-56-31Z"}` | Minio image from DockerHub |
+| testkube-api.minio.image | object | `{"pullSecrets":[],"registry":"docker.io","repository":"kubeshop/testkube-minio","tag":"2025.10"}` | Minio image from DockerHub |
 | testkube-api.minio.minioRootPassword | string | `"minio123"` | Root password |
 | testkube-api.minio.minioRootUser | string | `"minio"` | Root username |
 | testkube-api.minio.nodeSelector | object | `{}` | Node labels for pod assignment. |
@@ -384,6 +384,7 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | testkube-api.storage.accessKey | string | `"minio123"` | MinIO Secret Access Key |
 | testkube-api.storage.accessKeyId | string | `"minio"` | MinIO Access Key ID |
 | testkube-api.storage.bucket | string | `"testkube-artifacts"` | MinIO Bucket |
+| testkube-api.storage.cacheExpiration | int | `1` | Expiration period in days for step dependency caches (the .tkcache/v1 prefix). Defaults to 1 day, the shortest an object store lifecycle can express; 0 disables it and leaves them to the bucket-wide `expiration`, which stays at 0 because that rule is unfiltered and would expire artifacts too. Testkube preserves lifecycle rules it did not write, so neither setting disturbs one managed elsewhere. |
 | testkube-api.storage.certSecret.baseMountPath | string | `"/etc/client-certs/storage"` | Base path to mount the client certificate secret |
 | testkube-api.storage.certSecret.caFile | string | `"ca.crt"` | Path to ca file (used for self-signed certificates) |
 | testkube-api.storage.certSecret.certFile | string | `"cert.crt"` | Path to client certificate file |

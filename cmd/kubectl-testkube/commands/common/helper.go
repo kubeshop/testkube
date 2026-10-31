@@ -26,6 +26,7 @@ import (
 	tkhttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 type HelmOptions struct {
@@ -44,6 +45,49 @@ type HelmOptions struct {
 	MultiNamespace bool
 	NoCRDs         bool
 	EmbeddedNATS   bool
+
+	// ReuseValues keeps the values of the installed release (`helm upgrade --reuse-values`).
+	// Helm applies --set over reused values, so the CLI then sends only the settings of the
+	// flags in ExplicitFlags; a flag default would otherwise overwrite what the user set.
+	ReuseValues   bool
+	ExplicitFlags map[string]bool
+}
+
+// sendsFlag says whether the Helm setting derived from a flag is sent: always, unless the
+// release's values are reused and the user did not pass the flag.
+func (o HelmOptions) sendsFlag(name string) bool {
+	return !o.ReuseValues || o.ExplicitFlags[name]
+}
+
+// sendsAnyFlag is sendsFlag for a setting composed from several flags: it is sent when the
+// user passed any of them. A composed value is never empty on its own, since the CLI fills
+// the missing parts with defaults, so its presence says nothing about what the user asked for.
+func (o HelmOptions) sendsAnyFlag(names ...string) bool {
+	if !o.ReuseValues {
+		return true
+	}
+	for _, name := range names {
+		if o.ExplicitFlags[name] {
+			return true
+		}
+	}
+	return false
+}
+
+// The flags each control plane address of a runner is composed from.
+var (
+	rootDomainFlags = []string{"root-domain", "pro-root-domain", "cloud-root-domain"}
+	agentURIFlags   = append([]string{"runner-uri-override", "agent-uri-override", "runner-uri", "agent-uri", "runner-prefix", "agent-prefix", "cloud-agent-prefix"}, rootDomainFlags...)
+	uiURIFlags      = append([]string{"ui-uri-override", "ui-prefix", "cloud-ui-prefix"}, rootDomainFlags...)
+	agentTokenFlags = []string{"runner-token", "agent-token"}
+)
+
+// RunnerEndpointFlags lists the flags that the control plane address and key of a runner are
+// composed from, so that a test can check the upgrade command defines every one of them.
+func RunnerEndpointFlags() []string {
+	flags := append([]string{}, agentURIFlags...)
+	flags = append(flags, uiURIFlags...)
+	return append(flags, agentTokenFlags...)
 }
 
 type HelmGenericOptions struct {
@@ -84,7 +128,7 @@ func ShowOperatorDeprecationWarning(manager string, noCRDs bool) {
 	ui.NL()
 }
 
-func HelmUpgradeOrInstallTestkubeOnPremDemo(options HelmOptions) *CLIError {
+func HelmUpgradeOrInstallTestkubeOnPremDemo(options HelmOptions, runnerSecretKey string) *CLIError {
 	helmPath, cliErr := lookupHelmPath()
 	if cliErr != nil {
 		return cliErr
@@ -93,6 +137,11 @@ func HelmUpgradeOrInstallTestkubeOnPremDemo(options HelmOptions) *CLIError {
 	if err := updateHelmRepo(helmPath, options.DryRun, true); err != nil {
 		return err
 	}
+
+	if options.SetOptions == nil {
+		options.SetOptions = make(map[string]string)
+	}
+	options.SetOptions[demoRunnerBootstrapSecretKeyPath] = runnerSecretKey
 
 	// For default setup, change the Agent host to a cluster service endpoint,
 	// so it will be possible to install runners in different namespaces.
@@ -122,6 +171,133 @@ func HelmUpgradeOrInstallTestkubeOnPremDemo(options HelmOptions) *CLIError {
 
 }
 
+const (
+	demoRunnerName                   = "demo-runner"
+	demoRunnerID                     = "tkcrun_demo-runner"
+	demoRunnerOrgID                  = "tkcorg_demo"
+	demoRunnerEnvID                  = "tkcenv_my-first-environment"
+	demoRunnerBootstrapSecretKeyPath = "testkube-cloud-api.api.features.bootstrapConfig.config.organizations[0].runners[0].secret_key"
+	demoRunnerDeploymentName         = "testkube-demo-runner"
+	demoControlPlaneDeploymentName   = "testkube-enterprise-api"
+	demoRunnerAPIKeyEnvVar           = "TESTKUBE_PRO_API_KEY"
+)
+
+func GenerateDemoAgentSecretKey() string {
+	return "tkckey_agent_" + utils.RandAlphanum(32)
+}
+
+func ResolveDemoAgentSecretKey(namespace string, dryRun bool) (string, *CLIError) {
+	if dryRun {
+		return GenerateDemoAgentSecretKey(), nil
+	}
+
+	runnerExists, err := KubectlResourceExists(namespace, "deployment", demoRunnerDeploymentName)
+	if err != nil {
+		return "", NewCLIError(
+			TKErrKubectlCommandFailed,
+			"Checking for an existing Testkube demo runner",
+			"Check that the kubeconfig (~/.kube/config) has correct permissions and the cluster is reachable by running 'kubectl get nodes'.",
+			err,
+		)
+	}
+
+	var runnerKey string
+	if runnerExists {
+		var keyErr *CLIError
+		runnerKey, keyErr = readDemoRunnerSecretKey(namespace)
+		if keyErr != nil {
+			return "", keyErr
+		}
+	}
+
+	cpExists := false
+	if !runnerExists {
+		cpExists, err = KubectlResourceExists(namespace, "deployment", demoControlPlaneDeploymentName)
+		if err != nil {
+			return "", NewCLIError(
+				TKErrKubectlCommandFailed,
+				"Checking for an existing Testkube Control Plane",
+				"Check that the kubeconfig (~/.kube/config) has correct permissions and the cluster is reachable by running 'kubectl get nodes'.",
+				err,
+			)
+		}
+	}
+
+	reuseKey, generate, cliErr := decideDemoAgentSecretKey(runnerExists, runnerKey, cpExists, namespace)
+	if cliErr != nil {
+		return "", cliErr
+	}
+	if generate {
+		return GenerateDemoAgentSecretKey(), nil
+	}
+	return reuseKey, nil
+}
+
+func decideDemoAgentSecretKey(runnerExists bool, runnerKey string, cpExists bool, namespace string) (reuseKey string, generate bool, cliErr *CLIError) {
+	if runnerExists {
+		if runnerKey != "" {
+			return runnerKey, false, nil
+		}
+		return "", false, NewCLIError(
+			TKErrInvalidInstallConfig,
+			"Existing Testkube demo runner has no readable runner key",
+			fmt.Sprintf("To fix: recreate the cluster, or delete the %q namespace, then run 'testkube init demo' once. (A demo runner already exists but its runner key can't be read, so this install can't reuse it and a fresh key would not match the Control Plane.)", namespace),
+			fmt.Errorf("demo runner %q found but %s env is empty", demoRunnerDeploymentName, demoRunnerAPIKeyEnvVar),
+		)
+	}
+
+	if cpExists {
+		return "", false, NewCLIError(
+			TKErrInvalidInstallConfig,
+			"Testkube Control Plane already installed without a matching demo runner",
+			fmt.Sprintf("To fix: recreate the cluster, or delete the %q namespace, then run 'testkube init demo' once. (The Control Plane already bootstrapped a runner whose key can't be recovered, so installing a fresh key here would be rejected.)", namespace),
+			fmt.Errorf("control plane %q present without demo runner %q", demoControlPlaneDeploymentName, demoRunnerDeploymentName),
+		)
+	}
+
+	return "", true, nil
+}
+
+func readDemoRunnerSecretKey(namespace string) (string, *CLIError) {
+	kubectlPath, cliErr := lookupKubectlPath()
+	if cliErr != nil {
+		return "", cliErr
+	}
+	jsonpath := fmt.Sprintf(`jsonpath={.spec.template.spec.containers[*].env[?(@.name=="%s")].value}`, demoRunnerAPIKeyEnvVar)
+	out, cliErr := runKubectlCommand(kubectlPath, []string{"get", "deployment", demoRunnerDeploymentName, "--namespace", namespace, "-o", jsonpath})
+	if cliErr != nil {
+		return "", cliErr
+	}
+	return strings.TrimSpace(out), nil
+}
+
+func HelmUpgradeOrInstallTestkubeOnPremDemoRunner(options HelmOptions, runnerSecretKey string) *CLIError {
+	return HelmUpgradeOrInstallGeneric(demoRunnerHelmOptions(options.Namespace, runnerSecretKey, options.DryRun))
+}
+
+func demoRunnerHelmOptions(namespace, runnerSecretKey string, dryRun bool) HelmGenericOptions {
+	return HelmGenericOptions{
+		DryRun:         dryRun,
+		RegistryURL:    "https://kubeshop.github.io/helm-charts",
+		RepositoryName: "kubeshop",
+		ChartName:      "testkube-runner",
+		ReleaseName:    "testkube-" + demoRunnerName,
+		Namespace:      namespace,
+		Args:           []string{"--wait"},
+		Values: map[string]interface{}{
+			"fullnameOverride":  demoRunnerDeploymentName,
+			"runner.id":         demoRunnerID,
+			"runner.name":       demoRunnerName,
+			"runner.orgId":      demoRunnerOrgID,
+			"runner.envId":      demoRunnerEnvID,
+			"runner.secret":     runnerSecretKey,
+			"cloud.url":         fmt.Sprintf("testkube-enterprise-api.%s.svc.cluster.local:8089", namespace),
+			"cloud.tls.enabled": false,
+			"listener.enabled":  true,
+		},
+	}
+}
+
 func HelmUpgradeOrInstallTestkubeAgent(options HelmOptions, cfg config.Data, isMigration bool) *CLIError {
 	helmPath, cliErr := lookupHelmPath()
 	if cliErr != nil {
@@ -142,8 +318,8 @@ func HelmUpgradeOrInstallTestkubeAgent(options HelmOptions, cfg config.Data, isM
 		return NewCLIError(
 			TKErrInvalidInstallConfig,
 			"Invalid install config",
-			"Provide the agent token by setting the '--agent-token' flag",
-			errors.New("agent key is required"))
+			"Provide the runner token by setting the '--runner-token' flag",
+			errors.New("runner key is required"))
 	}
 
 	if cliErr := updateHelmRepo(helmPath, options.DryRun, false); cliErr != nil {
@@ -357,11 +533,25 @@ func prepareTestkubeOnPremDemoArgs(options HelmOptions) []string {
 
 // prepareTestkubeProHelmArgs prepares Helm arguments for Testkube Pro installation.
 func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string {
+	// a runner disables MinIO, MongoDB and PostgreSQL on purpose, so they are sent even when
+	// the release's values are reused
+	explicit := map[string]bool{"no-minio": true, "no-mongo": true, "no-postgres": true}
+	for name := range options.ExplicitFlags {
+		explicit[name] = true
+	}
+	options.ExplicitFlags = explicit
+
 	args, settings := prepareCommonHelmArgs(options)
 
-	settings["testkube-api.cloud.url"] = options.Master.URIs.Agent
-	settings["testkube-api.cloud.key"] = options.Master.AgentToken
-	settings["testkube-api.cloud.uiUrl"] = options.Master.URIs.Ui
+	if options.sendsAnyFlag(agentURIFlags...) {
+		settings["testkube-api.cloud.url"] = options.Master.URIs.Agent
+	}
+	if options.sendsAnyFlag(agentTokenFlags...) {
+		settings["testkube-api.cloud.key"] = options.Master.AgentToken
+	}
+	if options.sendsAnyFlag(uiURIFlags...) {
+		settings["testkube-api.cloud.uiUrl"] = options.Master.URIs.Ui
+	}
 
 	if isMigration {
 		settings["testkube-api.cloud.migrate"] = "true"
@@ -381,7 +571,9 @@ func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string 
 // prepareTestkubeHelmArgs prepares Helm arguments for Testkube OS installation.
 func prepareTestkubeHelmArgs(options HelmOptions) []string {
 	args, settings := prepareCommonHelmArgs(options)
-	settings["testkube-api.logs.storage"] = "minio"
+	if !options.ReuseValues {
+		settings["testkube-api.logs.storage"] = "minio"
+	}
 	return appendHelmArgs(args, options, settings)
 }
 
@@ -392,12 +584,22 @@ func prepareCommonHelmArgs(options HelmOptions) ([]string, map[string]string) {
 		"--namespace", options.Namespace,
 	}
 
-	settings := map[string]string{
-		"testkube-api.multinamespace.enabled": fmt.Sprintf("%t", options.MultiNamespace),
-		"testkube-api.minio.enabled":          fmt.Sprintf("%t", !options.NoMinio),
-		"testkube-operator.installCRD":        fmt.Sprintf("%t", !options.NoCRDs),
-		"mongodb.enabled":                     fmt.Sprintf("%t", !options.NoMongo),
-		"postgresql.enabled":                  fmt.Sprintf("%t", !options.NoPostgres),
+	if options.ReuseValues {
+		args = append(args, "--reuse-values")
+	}
+
+	settings := map[string]string{}
+	flagSettings := []struct{ flag, key, value string }{
+		{"multi-namespace", "testkube-api.multinamespace.enabled", fmt.Sprintf("%t", options.MultiNamespace)},
+		{"no-minio", "testkube-api.minio.enabled", fmt.Sprintf("%t", !options.NoMinio)},
+		{"no-crds", "testkube-operator.installCRD", fmt.Sprintf("%t", !options.NoCRDs)},
+		{"no-mongo", "mongodb.enabled", fmt.Sprintf("%t", !options.NoMongo)},
+		{"no-postgres", "postgresql.enabled", fmt.Sprintf("%t", !options.NoPostgres)},
+	}
+	for _, s := range flagSettings {
+		if options.sendsFlag(s.flag) {
+			settings[s.key] = s.value
+		}
 	}
 
 	if options.MinioReplicas > 0 {
@@ -417,7 +619,7 @@ func prepareCommonHelmArgs(options HelmOptions) ([]string, map[string]string) {
 	}
 
 	// if embedded nats is enabled disable nats chart
-	if options.EmbeddedNATS {
+	if options.EmbeddedNATS && options.sendsFlag("embedded-nats") {
 		settings["testkube-api.nats.enabled"] = "false"
 		settings["testkube-api.nats.embedded"] = "true"
 	}
@@ -580,10 +782,29 @@ func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, apiUrl string) (confi
 		cfg.CloudContext.EnvironmentId = envId
 	}
 
+	// A name lookup needs an id. Get("") would request the collection endpoint
+	// instead, which either 404s or decodes the list into an empty record, so
+	// an id that is not set has no name to fetch and no stale name to keep.
+	// The context is saved incomplete and ValidateCloudContext reports that at
+	// the end of the command - reaching the Control Plane adds nothing here.
+	if cfg.CloudContext.OrganizationId == "" {
+		cfg.CloudContext.OrganizationName = ""
+		cfg.CloudContext.EnvironmentName = ""
+		return cfg, nil
+	}
+
 	orgClient := cloudclient.NewOrganizationsClient(apiUrl, cfg.CloudContext.ApiKey, cfg.SkipTLS || cfg.CloudContext.SkipTLS)
 	org, err := orgClient.Get(cfg.CloudContext.OrganizationId)
 	if err != nil {
 		return cfg, errors.Wrap(err, "error getting organization")
+	}
+	cfg.CloudContext.OrganizationName = org.Name
+
+	// Changing the organization above resets the environment, so this is the
+	// common case of "switch org now, pick the environment later".
+	if cfg.CloudContext.EnvironmentId == "" {
+		cfg.CloudContext.EnvironmentName = ""
+		return cfg, nil
 	}
 
 	envsClient := cloudclient.NewEnvironmentsClient(apiUrl, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, cfg.SkipTLS || cfg.CloudContext.SkipTLS)
@@ -591,8 +812,6 @@ func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, apiUrl string) (confi
 	if err != nil {
 		return cfg, errors.Wrap(err, "error getting environment")
 	}
-
-	cfg.CloudContext.OrganizationName = org.Name
 	cfg.CloudContext.EnvironmentName = env.Name
 
 	return cfg, nil
@@ -623,6 +842,16 @@ func LoginUser(authUri, apiUri string, customConnector bool, port int, skipTLS .
 	allowInsecureTLS := len(skipTLS) == 1 && skipTLS[0]
 	connectorID := ""
 	if !customConnector {
+		if !ui.StdinIsInteractive() {
+			// Logging in means choosing a method and then following a browser flow, neither
+			// of which an unattended run can do. Fail here rather than returning, so the
+			// caller's generic "is the browser reachable" hint does not bury this one.
+			ui.Failf("cannot log in without a terminal.\n\n" +
+				"  For CI or an agent, authenticate with an API key instead of logging in:\n" +
+				"    testkube set context --api-key <key> --org-id <org-id> --env-id <env-id>\n\n" +
+				"  Create the key in the dashboard, under Organization Management, API Tokens.\n" +
+				"  To log in as yourself, run this from a terminal.")
+		}
 		connectorID = ui.Select("Choose your login method", []string{github, gitlab, google, emailLink})
 	}
 
@@ -1299,8 +1528,8 @@ func DockerRunTestkubeAgent(options HelmOptions, cfg config.Data, dockerContaine
 		return NewCLIError(
 			TKErrInvalidInstallConfig,
 			"Invalid install config",
-			"Provide the agent token by setting the '--agent-token' flag",
-			errors.New("agent key is required"))
+			"Provide the runner token by setting the '--runner-token' flag",
+			errors.New("runner key is required"))
 	}
 
 	args := prepareTestkubeProDockerArgs(options, dockerContainerName, dockerImage)
@@ -1385,7 +1614,7 @@ func StreamDockerLogs(dockerContainerName string) *CLIError {
 		return NewCLIError(
 			TKErrDockerLogStreamingFailed,
 			"Docker log streaming failed",
-			"Check that your Testkube Docker Agent container is up and runnning",
+			"Check that your Testkube Docker Runner container is up and runnning",
 			err)
 	}
 	defer logs.Close()
@@ -1410,7 +1639,7 @@ func StreamDockerLogs(dockerContainerName string) *CLIError {
 			return NewCLIError(
 				TKErrDockerInstallationFailed,
 				"Docker installation failed",
-				"Check logs of your Testkube Docker Agent container",
+				"Check logs of your Testkube Docker Runner container",
 				errors.New(string(line)))
 		}
 	}
@@ -1419,7 +1648,7 @@ func StreamDockerLogs(dockerContainerName string) *CLIError {
 		return NewCLIError(
 			TKErrDockerLogReadingFailed,
 			"Docker log reading failed",
-			"Check logs of your Testkube Docker Agent container",
+			"Check logs of your Testkube Docker Runner container",
 			err)
 	}
 
@@ -1436,8 +1665,8 @@ func DockerUpgradeTestkubeAgent(options HelmOptions, latestVersion string, cfg c
 		return NewCLIError(
 			TKErrInvalidInstallConfig,
 			"Invalid install config",
-			"Provide the agent token by setting the '--agent-token' flag",
-			errors.New("agent key is required"))
+			"Provide the runner token by setting the '--runner-token' flag",
+			errors.New("runner key is required"))
 	}
 
 	args := prepareTestkubeUpgradeDockerArgs(options, cfg.CloudContext.DockerContainerName, latestVersion)

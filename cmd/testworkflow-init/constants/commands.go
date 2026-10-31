@@ -20,4 +20,9 @@ const (
 	EnvResourceLimitsCPU      = "TKI_R_L_C"
 	EnvResourceRequestsMemory = "TKI_R_R_M"
 	EnvResourceLimitsMemory   = "TKI_R_L_M"
+
+	// EnvStepErrorFile gives a toolkit step the path of the file for the cause of its failure.
+	EnvStepErrorFile = "TK_ERR_FILE"
+	// EnvStepReasonFile gives a toolkit step the path of the file for the code of its failure.
+	EnvStepReasonFile = "TK_REASON_FILE"
 )

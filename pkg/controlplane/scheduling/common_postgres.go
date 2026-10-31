@@ -40,6 +40,7 @@ func mapPgTestWorkflowExecutionPartial(exec sqlc.TestWorkflowExecution, execResu
 		ResolvedWorkflow:     nil,
 
 		SilentMode: exec.SilentMode,
+		Lineage:    mapPgTestWorkflowExecutionLineage(exec),
 	}
 }
 
@@ -72,6 +73,7 @@ func mapPgTestWorkflowExecution(exec sqlc.TestWorkflowExecution, result sqlc.Tes
 		ResolvedWorkflow:     common.Ptr(mapPgTestWorkflow(resolvedWorkflow)),
 
 		SilentMode: exec.SilentMode,
+		Lineage:    mapPgTestWorkflowExecutionLineage(exec),
 	}
 }
 
@@ -188,4 +190,46 @@ func mapPgTestWorkflowResourceResourceAggregation(r sqlc.TestWorkflowResourceAgg
 		Global: r.Global,
 		Step:   r.Step,
 	}
+}
+
+// mapPgTestWorkflowExecutionLineage rebuilds the lineage a row carries, or nil
+// when it carries none.
+//
+// Both mappers feed createExecutionStart, which projects this onto the
+// ExecutionStart. Dropping it sends the pod no lineage, so execution("rerun")
+// stops resolving for every rerun on the Postgres backend with nothing to
+// report it.
+//
+// A row written before lineage existed has all three columns NULL and has to
+// come back nil rather than as a zero-valued record: the default belongs to
+// TestWorkflowExecution.EffectiveLineage(), and a present-but-empty struct here
+// would report an original run as attempt zero.
+func mapPgTestWorkflowExecutionLineage(exec sqlc.TestWorkflowExecution) *testkube.TestWorkflowExecutionLineage {
+	if !exec.LineageBaseID.Valid && !exec.LineageRootID.Valid && !exec.LineageAttempt.Valid {
+		return nil
+	}
+	return &testkube.TestWorkflowExecutionLineage{
+		BaseId:  exec.LineageBaseID.String,
+		RootId:  exec.LineageRootID.String,
+		Attempt: exec.LineageAttempt.Int32,
+	}
+}
+
+// mapPgTestWorkflowExecutionForDispatch builds the projection the runner is sent,
+// and nothing more.
+//
+// Workflow carries the denormalised name only. The runner fetches the real
+// workflow with GetExecutionWorkflow, so reading the spec here bought nothing and
+// cost six extra queries and a jsonb decode per queued execution per second -
+// which is what made a burst of scheduled workflows stall the dispatch loop.
+//
+// Result.Status comes from the denormalised e.status column, which a trigger on
+// test_workflow_results keeps in step. The handler switches on it, so it has to
+// be populated even though no result row was read.
+func mapPgTestWorkflowExecutionForDispatch(exec sqlc.TestWorkflowExecution) testkube.TestWorkflowExecution {
+	out := mapPgTestWorkflowExecutionPartial(exec, sqlc.TestWorkflowResult{Status: exec.Status})
+	if exec.WorkflowName.Valid {
+		out.Workflow = &testkube.TestWorkflow{Name: exec.WorkflowName.String}
+	}
+	return out
 }

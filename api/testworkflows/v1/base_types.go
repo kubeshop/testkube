@@ -43,8 +43,8 @@ type TestWorkflowTimeouts struct {
 	// maximum time the execution may spend in queue before starting
 	// TODO: Finish implementation
 	Queue string `json:"queue,omitempty" expr:"template"`
-	// maximum time for initialization/transitioning before steps run
-	// TODO: Finish implementation
+	// maximum time from the job creation until the first step container starts, as a Go duration (for example 2m).
+	// When it ends, the runner aborts the execution and keeps the cause that Kubernetes reported.
 	Initialization string `json:"initialization,omitempty" expr:"template"`
 }
 

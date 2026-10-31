@@ -507,14 +507,37 @@ spec:
   job:
     activeDeadlineSeconds: 30
   steps:
-  - name: Random pass/fail
+  - name: Pass twice, then fail
     retry:
       count: 20
       until: self.failed
     shell: |
-      code=$((RANDOM % 2))
-      [[ $code -eq 0 ]] && echo "random - passed" || echo "random - failed"
-      exit $code
+      # All attempts run in the same container, so the file keeps the count.
+      attempt=$(( $(cat /tmp/attempt 2>/dev/null || echo 0) + 1 ))
+      echo "$attempt" > /tmp/attempt
+      echo "attempt $attempt"
+      [ "$attempt" -lt 3 ]
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-step-retry-timeout
+  labels:
+    core-tests: expected-fail
+description: "step retry where every attempt ends with the step timeout"
+spec:
+  use:
+    - name: special-cases-template-default-resources
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 60
+  steps:
+  - name: Time out three times
+    timeout: 2s
+    retry:
+      count: 2
+    shell: sleep 30
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -622,6 +645,22 @@ spec:
   steps:
     - name: Check
       shell: echo "Should not reach this step if probe fails as expected"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-nested-execute
+  labels:
+    core-tests: expected-fail
+description: "execute step with a child execution that fails"
+spec:
+  use:
+    - name: special-cases-template-default-resources
+  steps:
+  - name: Execute a failing workflow
+    execute:
+      workflows:
+      - name: expected-fail-conditional-step-failed
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -766,3 +805,101 @@ spec:
         shell: |
           if [ "{{ index }}" = "1" ]; then sleep 2 && echo "worker 1 failing" && exit 1; fi
           sleep 30 && echo "worker {{ index }} completed"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-unschedulable
+  labels:
+    core-tests: expected-fail
+description: "no node has the label that the pod selects"
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  pod:
+    nodeSelector:
+      testkube.io/expected-fail: no-node-has-this-label
+  job:
+    activeDeadlineSeconds: 60
+  steps:
+  - name: Run test
+    shell: echo "This should not be printed, because no node can run the pod"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-env-secret-required
+  labels:
+    core-tests: expected-fail
+description: "a required env value comes from a secret that does not exist"
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  job:
+    activeDeadlineSeconds: 60
+  steps:
+  - name: Run test
+    container:
+      env:
+      - name: REQUIRED_VALUE
+        valueFrom:
+          secretKeyRef:
+            name: expected-fail-secret-that-does-not-exist
+            key: value
+            optional: false
+    shell: echo "This should not be printed, because the container cannot start"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-missing-volume-secret
+  labels:
+    core-tests: expected-fail
+description: "a volume comes from a secret that does not exist"
+spec:
+  pod:
+    volumes:
+    - name: missing-secret
+      secret:
+        secretName: expected-fail-secret-that-does-not-exist
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+    volumeMounts:
+    - name: missing-secret
+      mountPath: /missing-secret
+  job:
+    activeDeadlineSeconds: 60
+  steps:
+  - name: Run test
+    shell: echo "This should not be printed, because the volume cannot be mounted"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-init-timeout
+  labels:
+    core-tests: expected-fail
+description: "the initialization timeout ends a pod that no node can run"
+spec:
+  timeouts:
+    initialization: 30s
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  pod:
+    nodeSelector:
+      testkube.io/expected-fail: no-node-has-this-label
+  steps:
+  - name: Run test
+    shell: echo "This should not be printed, because no node can run the pod"

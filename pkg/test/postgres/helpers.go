@@ -22,7 +22,7 @@ import (
 const defaultPostgresTestURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 
 // PreparePostgresTestDatabase creates a temporary Postgres database with migrations applied.
-func PreparePostgresTestDatabase(t *testing.T, baseName string) (*database.DB, func()) {
+func PreparePostgresTestDatabase(t testing.TB, baseName string) (*database.DB, func()) {
 	t.Helper()
 
 	ctx := context.Background()

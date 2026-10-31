@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/pkg/errors"
-	"google.golang.org/appengine/v2/log"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/transport/spdy"
 
@@ -27,7 +27,13 @@ import (
 	"k8s.io/client-go/tools/portforward"
 
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/log"
 )
+
+// AgentSelector selects the pods of a Testkube agent, whichever chart installed it: the
+// `testkube` chart overrides the API server's name to `api-server`, while the `testkube-api`
+// chart installed directly and the `testkube-runner` chart keep their chart names.
+const AgentSelector = "app.kubernetes.io/name in (api-server,testkube-api,testkube-runner)"
 
 const (
 	apiServerDeploymentSelector = "app.kubernetes.io/name=api-server"
@@ -75,8 +81,12 @@ func GetK8sClientConfig() (*rest.Config, error) {
 		k8sConfigExists = true
 	}
 
-	if cfg, exists := os.LookupEnv("KUBECONFIG"); exists {
-		config, err = clientcmd.BuildConfigFromFlags("", cfg)
+	if cfg, exists := os.LookupEnv("KUBECONFIG"); exists && cfg != "" {
+		// KUBECONFIG may hold a list of files (colon-separated on Unix, semicolon on
+		// Windows); merge them with kubectl's own precedence semantics instead of
+		// treating the whole value as a single path.
+		loadingRules := &clientcmd.ClientConfigLoadingRules{Precedence: filepath.SplitList(cfg)}
+		config, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{}).ClientConfig()
 	} else if k8sConfigExists {
 		config, err = clientcmd.BuildConfigFromFlags("", cubeConfigPath)
 	} else {
@@ -370,7 +380,7 @@ func PortForward(ctx context.Context, namespace, serviceName string, servicePort
 			}
 		}()
 		if err = forwarder.ForwardPorts(); err != nil {
-			log.Errorf(ctx, "port forwarding failed: %v", err)
+			log.DefaultLogger.Errorw("port forwarding failed", "error", err)
 		}
 	}()
 	<-readyChan

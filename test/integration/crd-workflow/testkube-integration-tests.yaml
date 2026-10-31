@@ -26,13 +26,13 @@ spec:
           port: 27017
         periodSeconds: 1
     nats:
-      image: bitnami/nats
+      image: nats:2.15.2-alpine
       readinessProbe:
         tcpSocket:
           port: 4222
         periodSeconds: 1
     minio:
-      image: bitnami/minio
+      image: kubeshop/testkube-minio:2025.10
       env:
       - name: MINIO_ROOT_USER
         value: minio99

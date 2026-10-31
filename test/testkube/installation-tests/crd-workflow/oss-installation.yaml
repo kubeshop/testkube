@@ -6,6 +6,8 @@ metadata:
     core-tests: installation
     tool: testkube-oss
 spec:
+  job:
+    activeDeadlineSeconds: 900
   system:
     pureByDefault: true
   content:

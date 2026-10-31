@@ -12,7 +12,7 @@ package testkube
 type TestTriggerContentGit struct {
 	// URI of the git repository to watch.
 	Uri string `json:"uri"`
-	// Branch name patterns to watch (glob supported, e.g. \"main\", \"release/*\"). If empty, all branches are watched.
+	// Branch name patterns to watch (glob supported, e.g. \"main\", \"release/_*\"). If empty, all branches are watched.
 	Branches []string `json:"branches,omitempty"`
 	// Branch name patterns to exclude (glob supported). Takes precedence over branches.
 	BranchesIgnore []string `json:"branchesIgnore,omitempty"`
@@ -38,20 +38,4 @@ type TestTriggerContentGit struct {
 	// provider REST API for GitHub pull requests or GitLab merge requests; the provider
 	// is detected from Uri.
 	PullRequest *TestTriggerContentGitPullRequest `json:"pullRequest,omitempty"`
-}
-
-// TestTriggerContentGitPullRequest defines pull request trigger configuration.
-type TestTriggerContentGitPullRequest struct {
-	// Types is a list of PR activity types to watch (e.g. "opened", "synchronize", "reopened", "closed").
-	// If empty, all types are watched.
-	// The same activity names apply to GitLab merge requests: a merged or closed merge
-	// request reports "closed", and new commits report "synchronize".
-	Types []string `json:"types,omitempty"`
-	// Branches is a list of base branch patterns to watch (glob supported).
-	// If empty, PRs targeting any base branch are watched.
-	// For GitLab this matches the merge request target branch.
-	Branches []string `json:"branches,omitempty"`
-	// BranchesIgnore is a list of base branch patterns to exclude (glob supported).
-	// Takes precedence over Branches when both match.
-	BranchesIgnore []string `json:"branchesIgnore,omitempty"`
 }

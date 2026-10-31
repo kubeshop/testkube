@@ -422,6 +422,14 @@ func (m *MockFilter) StatusesDefined() bool {
 	return m.Called().Bool(0)
 }
 
+func (m *MockFilter) StatusDetailsTypes() []string {
+	return m.Called().Get(0).([]string)
+}
+
+func (m *MockFilter) StatusDetailsTypesDefined() bool {
+	return m.Called().Bool(0)
+}
+
 func (m *MockFilter) Page() int {
 	return m.Called().Int(0)
 }
@@ -551,6 +559,7 @@ func createTestFilter() *MockFilter {
 	filter.On("EndDateDefined").Return(false)
 	filter.On("LastNDaysDefined").Return(false)
 	filter.On("StatusesDefined").Return(false)
+	filter.On("StatusDetailsTypesDefined").Return(false)
 	filter.On("RunnerIDDefined").Return(false)
 	filter.On("AssignedDefined").Return(false)
 	filter.On("ActorNameDefined").Return(false)

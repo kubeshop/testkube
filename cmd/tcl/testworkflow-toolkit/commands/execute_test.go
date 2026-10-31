@@ -1,0 +1,427 @@
+// Copyright 2024 Testkube.
+//
+// Licensed as a Testkube Pro file under the Testkube Community
+// License (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
+//
+//	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
+
+package commands
+
+import (
+	"encoding/json"
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executiondata"
+	"github.com/kubeshop/testkube/pkg/expressions"
+)
+
+// The spec of an entry stays unresolved until its operation starts, so that its
+// configuration can read an execution scheduled before it. This checks that the
+// deferred resolution actually reaches the nested config values.
+func TestDeferredSpecFinalization(t *testing.T) {
+	spec := &testworkflowsv1.StepExecuteWorkflow{
+		Name: "consumer",
+		Config: map[string]testworkflowsv1.ConfigValue{
+			"token": `{{ execution("p").outputs.token }}`,
+		},
+	}
+
+	registry := executiondata.NewRegistry()
+	machine := executiondata.NewMachine(executiondata.MachineOptions{Registry: registry})
+
+	t.Run("fails while the referenced execution has not run", func(t *testing.T) {
+		workflow := *spec.DeepCopy()
+		err := expressions.Finalize(&workflow, machine)
+		assert.ErrorContains(t, err, `unknown execution "p"`)
+	})
+
+	t.Run("resolves once the execution is registered", func(t *testing.T) {
+		registry.Add(executiondata.Execution{
+			Id:       "exec-1",
+			Workflow: "producer",
+			Alias:    "p",
+			Outputs:  map[string]string{"token": "abc123"},
+		})
+
+		workflow := *spec.DeepCopy()
+		require.NoError(t, expressions.Finalize(&workflow, machine))
+		assert.Equal(t, testworkflowsv1.ConfigValue("abc123"), workflow.Config["token"])
+	})
+}
+
+// An output the producer withheld resolves to a marker instead of the value it was
+// meant to carry. Handing that to another workflow has to fail, rather than configure
+// it with the marker - or, worse, with nothing at all.
+//
+// This pins the contract: a sensitive output is not exchanged between executions, and
+// asking for one is an error naming the channels that can carry it. Turning this back
+// into an empty value would be a silent regression, which is what the marker exists to
+// prevent.
+func TestWithheldOutputStopsTheExecution(t *testing.T) {
+	spec := &testworkflowsv1.StepExecuteWorkflow{
+		Name: "consumer",
+		Config: map[string]testworkflowsv1.ConfigValue{
+			"token": `{{ execution("p").outputs.token }}`,
+		},
+	}
+
+	registry := executiondata.NewRegistry()
+	registry.Add(executiondata.Execution{
+		Id:       "exec-1",
+		Workflow: "producer",
+		Alias:    "p",
+		Outputs:  map[string]string{"token": executiondata.WithheldMarker("producer", "token")},
+	})
+	machine := executiondata.NewMachine(executiondata.MachineOptions{Registry: registry})
+
+	workflow := *spec.DeepCopy()
+	require.NoError(t, expressions.Finalize(&workflow, machine),
+		"the marker is an ordinary value, so resolution itself succeeds")
+
+	markers := executiondata.WithheldMarkersIn(&workflow)
+	require.Len(t, markers, 1, "the marker reaches the configuration of the scheduled execution")
+	assert.NotEmpty(t, workflow.Config["token"].String(),
+		"the consumer must not resolve a withheld output to an empty value")
+
+	err := executiondata.WithheldError("this execution", markers)
+	assert.ErrorContains(t, err, "was not published outside the workflow that produced it")
+	assert.ErrorContains(t, err, "output token of workflow producer",
+		"the error names which output of which workflow to stop relying on")
+	assert.ErrorContains(t, err, "read_artifact()",
+		"the error names a channel that can carry the value instead")
+}
+
+func TestClaimExecutionRefs(t *testing.T) {
+	t.Run("an entry is addressed by its workflow name", func(t *testing.T) {
+		claimed := map[string]refClaim{}
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}, 1))
+		assert.Equal(t, map[string]refClaim{"producer": {workflow: "producer"}}, claimed)
+	})
+
+	t.Run("an alias takes precedence over the workflow name", func(t *testing.T) {
+		claimed := map[string]refClaim{}
+		require.NoError(t, claimExecutionRefs(claimed, "p", []string{"producer"}, 1))
+		assert.Equal(t, map[string]refClaim{"p": {workflow: "producer", aliased: true}}, claimed)
+
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}, 1),
+			"the unaliased entry still claims the workflow name, so both stay addressable")
+	})
+
+	t.Run("a selector claims every workflow it matched", func(t *testing.T) {
+		claimed := map[string]refClaim{}
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"a", "b", "c"}, 1))
+		assert.Equal(t, map[string]refClaim{"a": {workflow: "a"}, "b": {workflow: "a"}, "c": {workflow: "a"}}, claimed)
+	})
+
+	t.Run("an aliased selector claims one reference for the whole group", func(t *testing.T) {
+		// The matched workflows form a single group addressed by execution("all", i),
+		// so the alias must not be claimed once per match.
+		claimed := map[string]refClaim{}
+		require.NoError(t, claimExecutionRefs(claimed, "all", []string{"a", "b", "c"}, 1))
+		assert.Equal(t, map[string]refClaim{"all": {workflow: "a", aliased: true}}, claimed)
+	})
+
+	t.Run("accepts the same workflow listed twice without an alias", func(t *testing.T) {
+		// Valid before execution() existed, so kept for backwards compatibility. The claim
+		// is marked ambiguous, so that the step refuses the name before scheduling.
+		claimed := map[string]refClaim{}
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}, 1))
+		assert.False(t, claimed["producer"].ambiguous)
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}, 1))
+		assert.Equal(t, refClaim{workflow: "producer", ambiguous: true}, claimed["producer"])
+	})
+
+	t.Run("an entry scheduling nothing claims nothing", func(t *testing.T) {
+		// count: 0 creates no execution, so it cannot make the name ambiguous or collide
+		// with an alias - the other entry's group is the only one answering to it.
+		claimed := map[string]refClaim{}
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}, 0))
+		assert.Empty(t, claimed)
+
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}, 1))
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}, 0))
+		require.NoError(t, claimExecutionRefs(claimed, "producer", []string{"consumer"}, 0))
+		assert.Equal(t, map[string]refClaim{"producer": {workflow: "producer"}}, claimed)
+	})
+
+	t.Run("rejects an alias naming a workflow an unaliased entry runs", func(t *testing.T) {
+		// Both would share the key "producer", and so one group.
+		claimed := map[string]refClaim{}
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"producer"}, 1))
+
+		err := claimExecutionRefs(claimed, "producer", []string{"consumer"}, 1)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `duplicated execution reference "producer"`)
+		assert.Contains(t, err.Error(), "set a unique 'as'")
+	})
+
+	t.Run("rejects an unaliased entry running a workflow named like an alias", func(t *testing.T) {
+		claimed := map[string]refClaim{}
+		require.NoError(t, claimExecutionRefs(claimed, "producer", []string{"consumer"}, 1))
+
+		err := claimExecutionRefs(claimed, "", []string{"producer"}, 1)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `already used by "consumer"`)
+	})
+
+	t.Run("rejects two entries sharing an alias", func(t *testing.T) {
+		claimed := map[string]refClaim{}
+		require.NoError(t, claimExecutionRefs(claimed, "shared", []string{"producer"}, 1))
+
+		err := claimExecutionRefs(claimed, "shared", []string{"consumer"}, 1)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `already used by "producer"`)
+	})
+
+	t.Run("accepts two unaliased selectors overlapping on a workflow", func(t *testing.T) {
+		claimed := map[string]refClaim{}
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"a", "b"}, 1))
+		require.NoError(t, claimExecutionRefs(claimed, "", []string{"b", "c"}, 1))
+		assert.Equal(t, refClaim{workflow: "b"}, claimed["c"])
+		assert.True(t, claimed["b"].ambiguous, "only the overlapping workflow is ambiguous")
+		assert.False(t, claimed["a"].ambiguous)
+	})
+}
+
+func TestExecutionRecorder_Complete(t *testing.T) {
+	// complete prints an output instruction, and that instruction needs a toolkit configuration.
+	t.Setenv("TK_CFG", "{}")
+	t.Setenv("TK_REF", "rparent")
+
+	tests := []struct {
+		name             string
+		result           *testkube.TestWorkflowResult
+		wantStatus       string
+		wantMessage      string
+		wantStepErrors   map[string]string
+		wantStepAttempts map[string]int64
+	}{
+		{
+			name: "records the messages of a failed execution",
+			result: &testkube.TestWorkflowResult{
+				Status:         common.Ptr(testkube.FAILED_TestWorkflowStatus),
+				Initialization: &testkube.TestWorkflowStepResult{ErrorMessage: "the pod cannot be scheduled"},
+				Steps:          map[string]testkube.TestWorkflowStepResult{"rstep1": {ErrorMessage: "the step timed out", Attempts: 3}},
+			},
+			wantStatus:       "failed",
+			wantMessage:      "the pod cannot be scheduled",
+			wantStepErrors:   map[string]string{"rstep1": "the step timed out"},
+			wantStepAttempts: map[string]int64{"rstep1": 3},
+		},
+		{
+			name: "records no messages for an execution that passed",
+			result: &testkube.TestWorkflowResult{
+				Status:         common.Ptr(testkube.PASSED_TestWorkflowStatus),
+				Initialization: &testkube.TestWorkflowStepResult{},
+				Steps:          map[string]testkube.TestWorkflowStepResult{"rstep1": {}},
+			},
+			wantStatus: "passed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			registry := executiondata.NewRegistry()
+			recorder := newExecutionRecorder(registry)
+			exec := testkube.TestWorkflowExecution{Id: "exec-1", Name: "child-1"}
+			entry := recorder.schedule("child", "child-workflow", exec)
+
+			exec.Result = tt.result
+			recorder.complete(entry, exec)
+
+			got, ok, err := registry.Lookup("child", 0)
+			require.NoError(t, err)
+			require.True(t, ok)
+			assert.Equal(t, executiondata.Execution{
+				Id:           "exec-1",
+				Name:         "child-1",
+				Workflow:     "child-workflow",
+				Alias:        "child",
+				Status:       tt.wantStatus,
+				Outputs:      map[string]string{},
+				ErrorMessage: tt.wantMessage,
+				StepErrors:   tt.wantStepErrors,
+				StepAttempts: tt.wantStepAttempts,
+			}, got)
+
+			// Later steps rebuild the registry from the JSON of the published group.
+			raw, err := json.Marshal(registry.Group("child"))
+			require.NoError(t, err)
+			var decoded []executiondata.Execution
+			require.NoError(t, json.Unmarshal(raw, &decoded))
+			require.Len(t, decoded, 1)
+			assert.Equal(t, got.ErrorMessage, decoded[0].ErrorMessage)
+			assert.Equal(t, got.StepErrors, decoded[0].StepErrors)
+			assert.Equal(t, got.StepAttempts, decoded[0].StepAttempts)
+		})
+	}
+}
+
+func TestFailureSummary(t *testing.T) {
+	passed := func(name string) executionOutcome { return executionOutcome{name: name} }
+	tests := []struct {
+		name    string
+		results []operationResult
+		want    string
+	}{
+		{
+			name: "returns an empty summary when every execution passed",
+			results: []operationResult{
+				{outcomes: []executionOutcome{passed("a-1")}},
+				{outcomes: []executionOutcome{passed("b-1")}},
+			},
+			want: "",
+		},
+		{
+			name: "names the failed executions of all entries with their status",
+			results: []operationResult{
+				{outcomes: []executionOutcome{passed("a-1"), {name: "a-2", err: childFailure(testkube.FAILED_TestWorkflowStatus, nil)}}},
+				{outcomes: []executionOutcome{passed("b-1"), passed("b-2")}},
+				{outcomes: []executionOutcome{{name: "c-1", err: childFailure(testkube.ABORTED_TestWorkflowStatus, nil)}}},
+				notScheduled("consumer", errors.New("computing execution: unknown execution \"p\"")),
+			},
+			want: "3 of 6 executions failed: a-2 (failed), c-1 (aborted), consumer (computing execution: unknown execution \"p\")",
+		},
+		{
+			name: "adds a failure that is not about one execution after the executions",
+			results: []operationResult{
+				{outcomes: []executionOutcome{{name: "a-1", err: childFailure(testkube.FAILED_TestWorkflowStatus, nil)}}, err: errors.New("fetching artifacts: fetch.0: not found")},
+			},
+			want: "The execution a-1 failed; fetching artifacts: fetch.0: not found",
+		},
+		{
+			name: "one execution gets a sentence with its status and its cause",
+			results: []operationResult{
+				{outcomes: []executionOutcome{{name: "child-12", err: childFailure(testkube.FAILED_TestWorkflowStatus, &testkube.TestWorkflowStatusDetails{
+					Reason: string(testkube.StopReasonExitCode), Message: "The step \"Run\" exited with code 1.",
+				})}}},
+			},
+			want: "The execution child-12 failed: The step \"Run\" exited with code 1.",
+		},
+		{
+			name: "one entry that the step could not schedule names the workflow",
+			results: []operationResult{
+				notScheduled("consumer", errors.New("computing execution: unknown execution \"p\"")),
+			},
+			want: "The workflow consumer could not run: computing execution: unknown execution \"p\".",
+		},
+		{
+			name: "returns only the other failure when every execution passed",
+			results: []operationResult{
+				{outcomes: []executionOutcome{passed("a-1")}, err: errors.New("fetching artifacts: fetch.0: not found")},
+			},
+			want: "fetching artifacts: fetch.0: not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, failureSummary(tt.results))
+		})
+	}
+}
+
+func TestExecutionRecorder_DeclareAmbiguous(t *testing.T) {
+	// An earlier step ran "producer", and this step runs it from two unaliased entries.
+	registry := executiondata.NewRegistry()
+	registry.Add(executiondata.Execution{Id: "earlier", Workflow: "producer"})
+	recorder := newExecutionRecorder(registry)
+	recorder.declareAmbiguous("producer")
+
+	assertRefused := func(t *testing.T) {
+		t.Helper()
+		_, ok, err := registry.Lookup("producer", 0)
+		assert.False(t, ok)
+		assert.ErrorContains(t, err, `ambiguous execution "producer"`)
+	}
+
+	t.Run("before either entry is scheduled", assertRefused)
+
+	recorder.schedule("", "producer", testkube.TestWorkflowExecution{Id: "first", Name: "producer-1"})
+	t.Run("while the other entry is still pending", assertRefused)
+
+	t.Run("the earlier step's run no longer answers to the name", func(t *testing.T) {
+		group := registry.Group("producer")
+		require.Len(t, group, 1)
+		assert.Equal(t, "first", group[0].Id)
+	})
+
+	recorder.schedule("", "producer", testkube.TestWorkflowExecution{Id: "second", Name: "producer-2"})
+	t.Run("once both are scheduled", assertRefused)
+}
+
+func TestChildFailure(t *testing.T) {
+	tests := []struct {
+		name    string
+		status  testkube.TestWorkflowStatus
+		details *testkube.TestWorkflowStatusDetails
+		want    string
+	}{
+		{
+			name:   "an execution without status details names its status",
+			status: testkube.FAILED_TestWorkflowStatus,
+			want:   "failed",
+		},
+		{
+			name:    "an execution with a cause names its status and the cause",
+			status:  testkube.ABORTED_TestWorkflowStatus,
+			details: &testkube.TestWorkflowStatusDetails{Reason: string(testkube.StopReasonStepTimeout), Message: "the step did not finish within its timeout."},
+			want:    "aborted: the step did not finish within its timeout.",
+		},
+		{
+			name:    "an execution with a code but no message names the words of its code",
+			status:  testkube.FAILED_TestWorkflowStatus,
+			details: &testkube.TestWorkflowStatusDetails{Reason: string(testkube.StopReasonExitCode)},
+			want:    "failed: a step of the test failed",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, childFailure(tt.status, tt.details).Error())
+		})
+	}
+}
+
+func TestFailureReason(t *testing.T) {
+	tests := []struct {
+		name    string
+		results []operationResult
+		want    testkube.StopReason
+	}{
+		{
+			name: "a child execution that failed gives the code of a failed child",
+			results: []operationResult{
+				{outcomes: []executionOutcome{{name: "a-1", err: childFailure(testkube.FAILED_TestWorkflowStatus, nil)}}},
+				notScheduled("consumer", errors.New("computing execution: unknown execution \"p\"")),
+			},
+			want: testkube.StopReasonChildWorkflowFailed,
+		},
+		{
+			name: "a workflow that the step could not run gives no code",
+			results: []operationResult{
+				notScheduled("consumer", errors.New("computing execution: unknown execution \"p\"")),
+			},
+			want: "",
+		},
+		{
+			name: "a failure that is not about one execution gives no code",
+			results: []operationResult{
+				{outcomes: []executionOutcome{{name: "a-1"}}, err: errors.New("fetching artifacts: fetch.0: not found")},
+			},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, failureReason(tt.results))
+		})
+	}
+}

@@ -27,7 +27,7 @@ func NewGetTestWorkflowTemplatesCmd() *cobra.Command {
 		Aliases: []string{"testworkflowtemplates", "twt"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Get all available test workflow templates",
-		Long:    `Get all available test workflow templates. In cloud context (API key) the CLI fetches them from the connected Control Plane environment and ignores the namespace flag. In kubeconfig context it fetches them from the agent in the given namespace (default "testkube").`,
+		Long:    `Get all available test workflow templates. In cloud context (API key) the CLI fetches them from the connected Control Plane environment and ignores the namespace flag. In kubeconfig context it fetches them from the runner in the given namespace (default "testkube").`,
 
 		Run: func(cmd *cobra.Command, args []string) {
 			namespace := cmd.Flag("namespace").Value.String()

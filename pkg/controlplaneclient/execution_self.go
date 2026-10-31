@@ -17,6 +17,7 @@ type ExecutionsReader channels.Watcher[testkube.TestWorkflowExecution]
 type ExecutionSelfClient interface {
 	AppendExecutionReport(ctx context.Context, environmentId, executionId, legacyWorkflowName, stepRef, filePath string, report []byte) error
 	SaveExecutionArtifactGetPresignedURL(ctx context.Context, environmentId, executionId, legacyWorkflowName, stepRef, filePath, contentType string) (string, error)
+	ListExecutionArtifactsGetPresignedURLs(ctx context.Context, environmentId, executionId string, patterns []string) ([]ExecutionArtifact, error)
 	ScheduleExecution(ctx context.Context, environmentId string, request *cloud.ScheduleRequest) ExecutionsReader
 	GetExecution(ctx context.Context, environmentId, executionId string) (*testkube.TestWorkflowExecution, error)
 	GetCredential(ctx context.Context, environmentId, executionId, name string) ([]byte, error)
@@ -49,12 +50,36 @@ func (c *client) SaveExecutionArtifactGetPresignedURL(ctx context.Context, envir
 	return res.Url, nil
 }
 
+// ExecutionArtifact is a single artifact of an execution, along with a temporary URL
+// to download it from.
+type ExecutionArtifact struct {
+	Path string
+	Url  string
+	Size int64
+}
+
+func (c *client) ListExecutionArtifactsGetPresignedURLs(ctx context.Context, environmentId, executionId string, patterns []string) ([]ExecutionArtifact, error) {
+	req := cloud.ListExecutionArtifactsPresignedRequest{
+		Id:       executionId,
+		Patterns: patterns,
+	}
+	res, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.ListExecutionArtifactsPresigned, &req)
+	if err != nil {
+		return nil, err
+	}
+	artifacts := make([]ExecutionArtifact, 0, len(res.Artifacts))
+	for _, artifact := range res.Artifacts {
+		artifacts = append(artifacts, ExecutionArtifact{Path: artifact.Path, Url: artifact.Url, Size: artifact.Size})
+	}
+	return artifacts, nil
+}
+
 func (c *client) ScheduleExecution(ctx context.Context, environmentId string, request *cloud.ScheduleRequest) ExecutionsReader {
 	if c.opts.ExecutionID != "" {
 		request.RunningContext = &cloud.RunningContext{
-			Name: c.opts.WorkflowName,
+			Name: c.opts.ParentActorType.ChildRunningContextName(c.opts.WorkflowName),
 			Id:   c.opts.ExecutionID,
-			Type: cloud.RunningContextType_EXECUTION,
+			Type: c.opts.ParentActorType.ChildRunningContextType(),
 		}
 		request.ParentExecutionIds = append(c.opts.ParentExecutionIDs, c.opts.ExecutionID)
 	}

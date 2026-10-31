@@ -30,9 +30,9 @@ spec:
       type: string
       default: 2.0.23
     artillery_binary:
-      description: Artillery binary path
+      description: Optional Artillery binary override; empty detects artillery in PATH, then checks /home/node/artillery/bin/run and /home/node/artillery/bin/artillery
       type: string
-      default: "/home/node/artillery/bin/run" # "run", or "artillery" (for older images)
+      default: ""
     run:
       description: Run command
       type: string
@@ -42,7 +42,23 @@ spec:
     run:
       image: "artilleryio/artillery:{{ config.version }}"
       shell: |
-        artillery() { {{ config.artillery_binary }} $@; }
+        artillery_binary="{{ config.artillery_binary }}"
+        if [ -z "$artillery_binary" ]; then
+          artillery_binary="$(command -v artillery || true)"
+          if [ -z "$artillery_binary" ]; then
+            for artillery_candidate in /home/node/artillery/bin/run /home/node/artillery/bin/artillery; do
+              if [ -x "$artillery_candidate" ] && [ ! -d "$artillery_candidate" ]; then
+                artillery_binary="$artillery_candidate"
+                break
+              fi
+            done
+          fi
+        fi
+        if ! command -v "$artillery_binary" >/dev/null 2>&1; then
+          echo "Artillery binary not found: $artillery_binary. Set artillery_binary to an executable path or command available in PATH." >&2
+          exit 1
+        fi
+        artillery() { command "$artillery_binary" "$@"; }
         {{ config.run }}
     artifacts:
       paths:

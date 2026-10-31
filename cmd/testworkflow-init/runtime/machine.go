@@ -12,6 +12,7 @@ func GetInternalTestWorkflowMachine() expressions.Machine {
 	return expressions.CombinedMachines(data.RefSuccessMachine, data.AliasMachine,
 		data.GetBaseTestWorkflowMachine(),
 		data.ExecutionMachine(),
+		data.ExecutionDataMachine(),
 		credentials.NewCredentialMachine(data.Credentials(), func(_ string, value string) {
 			orchestration.Setup.AddSensitiveWords(value)
 			output.Std.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())

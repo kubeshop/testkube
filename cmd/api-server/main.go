@@ -366,9 +366,15 @@ func main() {
 	)
 
 	// Keep startup-time capabilities in sync with runtime flags.
-	// The control plane enforces that runner capability cannot be changed via this path.
+	// The control plane enforces that the execution entitlement (runner/execution)
+	// cannot be changed via this path.
 	if proContext.APIKey != "" {
 		startupCapabilities := buildStartupCapabilities(cfg)
+		// The agent's own flags decide every capability except execution, which
+		// the Control Plane owns. Start from that list so the gates below have
+		// an answer even when the Control Plane cannot be asked, and replace it
+		// with the stored set once the update succeeds.
+		proContext.Agent.Capabilities = startupCapabilities
 		updateCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		updateCtx = metadata.NewOutgoingContext(updateCtx, metadata.New(map[string]string{
 			controlplaneclient.AgentSecretKeyMetadataName: proContext.APIKey,
@@ -435,6 +441,7 @@ func main() {
 				)
 			}
 		} else {
+			proContext.Agent.Capabilities = resp.Capabilities
 			log.DefaultLogger.Infow("updated startup capabilities in control plane",
 				"capabilities", stringifyCapabilities(resp.Capabilities),
 			)
@@ -585,6 +592,10 @@ func main() {
 			CDEventsTarget: cfg.CDEventsTarget,
 		},
 		testWorkflowsClient,
+		runnergrpc.WithPollInterval(cfg.RunnerPollInterval),
+		runnergrpc.WithCallTimeout(cfg.RunnerCallTimeout),
+		runnergrpc.WithMaxPollBackoff(cfg.RunnerPollMaxBackoff),
+		runnergrpc.WithStartConcurrency(cfg.RunnerStartConcurrency),
 	)
 
 	if !cfg.DisableRunner {
@@ -745,6 +756,16 @@ func main() {
 	httpServer := server.NewServer(server.Config{Port: cfg.APIServerPort, EnableTracing: cfg.TracingEnabled})
 	httpServer.Routes.Use(cors.New())
 
+	// Report a stalled execution poll loop through readiness. /health answers
+	// unconditionally, so a runner that has stopped consuming work looks healthy
+	// to Kubernetes for as long as the process stays up - which is exactly how a
+	// burst-induced stall went unnoticed for hours.
+	if !cfg.DisableRunner {
+		httpServer.AddReadinessCheck("runner-execution-updates", func() error {
+			return runnerClient.Healthy(time.Now(), cfg.RunnerPollStaleAfter)
+		})
+	}
+
 	isStandalone := mode == common.ModeStandalone
 	var executionController scheduling.Controller
 	if isStandalone && controlPlane != nil {
@@ -784,10 +805,10 @@ func main() {
 	api.ClusterDiscoverer = clusterdiscovery.New(clientset, cfg.TestkubeNamespace).WithSchemas(apiextClient)
 	api.Init(httpServer)
 
-	// Push watchable cluster-resources snapshot to CP on startup, on CRD
-	// informer events, and as an hourly safety net. CP caches the result to
-	// render the TestTrigger resourceRef picker (see AgentInventoryService).
-	if proContext.APIKey != "" {
+	// Push a cluster-resources snapshot to the CP on startup, on CRD informer
+	// events, and as an hourly safety net. The CP caches it to render the
+	// TestTrigger resourceRef picker (see AgentInventoryService).
+	if intconfig.ShouldPushClusterInventory(proContext, cfg.DisableTestTriggers) {
 		crdNotifier := inventorycontroller.StartCRDChangeNotifier(ctx, apiextClient, log.DefaultLogger)
 		clusterResourcesController := &inventorycontroller.ClusterResourcesController{
 			Discoverer: api.ClusterDiscoverer,
@@ -802,8 +823,9 @@ func main() {
 
 	shouldRunAgent := shouldRunDefaultAgent(cfg, proContext)
 	shouldRunEventReader := shouldRunAgent || shouldRunWebhookEventReader(cfg, proContext)
+	shouldRunHealthcheck := shouldRunGitOpsHealthcheck(cfg, shouldRunAgent)
 	var agentHandle *agent.Agent
-	if shouldRunAgent || shouldRunEventReader {
+	if shouldRunAgent || shouldRunEventReader || shouldRunHealthcheck {
 		var err error
 		agentHandle, err = agent.NewAgent(
 			log.DefaultLogger,
@@ -829,6 +851,18 @@ func main() {
 			},
 		})
 		eventsEmitter.Register(agentHandle)
+	}
+	if shouldRunHealthcheck {
+		leaderTasks = append(leaderTasks, leader.Task{
+			Name: "agent-healthcheck",
+			Start: func(taskCtx context.Context) error {
+				err := agentHandle.RunHealthcheck(taskCtx)
+				if err != nil && !errors.Is(err, context.Canceled) {
+					commons.ExitOnError("running agent healthcheck", err)
+				}
+				return err
+			},
+		})
 	}
 	if shouldRunEventReader {
 		leaderTasks = append(leaderTasks, leader.Task{
@@ -1094,6 +1128,7 @@ func buildStartupCapabilities(cfg *intconfig.Config) []cloud.AgentCapability {
 	caps := make([]cloud.AgentCapability, 0, 4)
 	if !cfg.DisableRunner {
 		caps = append(caps, cloud.AgentCapability_AGENT_CAPABILITY_RUNNER)
+		caps = append(caps, cloud.AgentCapability_AGENT_CAPABILITY_EXECUTION)
 	}
 	if !cfg.DisableTestTriggers {
 		caps = append(caps, cloud.AgentCapability_AGENT_CAPABILITY_LISTENER)
@@ -1194,6 +1229,13 @@ func shouldRunDefaultAgent(cfg *intconfig.Config, proContext intconfig.ProContex
 		return false
 	}
 	return !proContext.HasSourceOfTruthCapability || proContext.Agent.IsSuperAgent
+}
+
+// The Control Plane shows an agent offline once it stops receiving traffic from it. Execution and
+// webhooks call it every few seconds, but GitOps sync calls it only when a resource changes, so a
+// GitOps-only runner sends health checks of its own.
+func shouldRunGitOpsHealthcheck(cfg *intconfig.Config, runsDefaultAgent bool) bool {
+	return cfg.GitOpsSyncKubernetesToCloudEnabled && cfg.DisableRunner && cfg.DisableWebhooks && !runsDefaultAgent
 }
 
 func shouldRunWebhookEventReader(cfg *intconfig.Config, proContext intconfig.ProContext) bool {

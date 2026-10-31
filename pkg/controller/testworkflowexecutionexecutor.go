@@ -67,7 +67,10 @@ func testWorkflowExecutionExecutor(client client.Client, recorder events.EventRe
 
 		var scheduleExecution cloud.ScheduleExecution
 		if twe.Spec.ExecutionRequest.Target != nil {
-			target := &cloud.ExecutionTarget{Replicate: twe.Spec.ExecutionRequest.Target.Replicate}
+			target := &cloud.ExecutionTarget{
+				Replicate:       twe.Spec.ExecutionRequest.Target.Replicate,
+				SchedulerPolicy: string(twe.Spec.ExecutionRequest.Target.SchedulerPolicy),
+			}
 			if twe.Spec.ExecutionRequest.Target.Match != nil {
 				target.Match = make(map[string]*cloud.ExecutionTargetLabels)
 				for k, v := range twe.Spec.ExecutionRequest.Target.Match {

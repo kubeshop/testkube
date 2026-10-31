@@ -62,17 +62,17 @@ func NewFilteredTestTriggerInformer(
 ) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
-			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
+			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.TestsV1().TestTriggers(namespace).List(context.TODO(), options)
+				return client.TestsV1().TestTriggers(namespace).List(ctx, options)
 			},
-			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
+			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.TestsV1().TestTriggers(namespace).Watch(context.TODO(), options)
+				return client.TestsV1().TestTriggers(namespace).Watch(ctx, options)
 			},
 		}, client),
 		&testtriggersv1.TestTrigger{},

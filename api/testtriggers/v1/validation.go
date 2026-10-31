@@ -80,12 +80,13 @@ func ValidateMatchConditions(conditions []workflowtriggersv1.WorkflowTriggerFiel
 			errs = append(errs, matchErr(MatchReasonUnknownOp, "match[%d]: unknown operator %q", i, cond.Operator))
 		}
 
-		// change-based operators require the modified event
+		// change-based operators require an event that carries the previous object: modified,
+		// or http-changed, which carries the previous response
 		switch cond.Operator {
 		case workflowtriggersv1.FieldOperatorChanged,
 			workflowtriggersv1.FieldOperatorChangedTo,
 			workflowtriggersv1.FieldOperatorChangedFrom:
-			if event != TestTriggerEventModified {
+			if event != TestTriggerEventModified && event != TestTriggerEventHTTPChanged {
 				errs = append(errs, matchErr(MatchReasonEventMismatch, "match[%d]: operator %q requires event to be %q", i, cond.Operator, TestTriggerEventModified))
 			}
 		}
@@ -107,10 +108,23 @@ func ValidateMatchConditions(conditions []workflowtriggersv1.WorkflowTriggerFiel
 func (s *TestTriggerSpec) Validate() []error {
 	var errs []error
 
+	if s.Event != "" && len(s.Events) > 0 {
+		errs = append(errs, fmt.Errorf("only one of event or events can be set"))
+		return errs
+	}
+	if s.Event == "" && len(s.Events) == 0 {
+		errs = append(errs, fmt.Errorf("one of event or events must be set"))
+		return errs
+	}
+
+	effectiveEvents := s.EffectiveEvents()
+
 	isContentResource := s.Resource == TestTriggerResourceContent || (s.ResourceRef != nil && s.ResourceRef.Kind == string(TestTriggerResourceContent))
 
-	if isContentResource && s.Event != TestTriggerEventGitPush && s.Event != TestTriggerEventGitTagPush && s.Event != TestTriggerEventGitPullRequest {
-		errs = append(errs, fmt.Errorf("resource %q requires event to be one of %q, %q, or %q", TestTriggerResourceContent, TestTriggerEventGitPush, TestTriggerEventGitTagPush, TestTriggerEventGitPullRequest))
+	isHTTPContent := isContentResource && s.ContentSelector != nil && s.ContentSelector.HTTP != nil
+
+	if isContentResource {
+		errs = append(errs, validateContentSelector(s.ContentSelector, effectiveEvents)...)
 	}
 	if isContentResource && s.ConditionSpec != nil && len(s.ConditionSpec.Conditions) > 0 {
 		errs = append(errs, fmt.Errorf("resource %q does not support conditionSpec.conditions", TestTriggerResourceContent))
@@ -118,18 +132,30 @@ func (s *TestTriggerSpec) Validate() []error {
 	if isContentResource && s.ProbeSpec != nil && len(s.ProbeSpec.Probes) > 0 {
 		errs = append(errs, fmt.Errorf("resource %q does not support probeSpec.probes", TestTriggerResourceContent))
 	}
-	if isContentResource && (s.ContentSelector == nil || s.ContentSelector.Git == nil || s.ContentSelector.Git.Uri == "") {
-		errs = append(errs, fmt.Errorf("resource %q requires contentSelector.git.uri", TestTriggerResourceContent))
-	}
-	if isContentResource && len(s.Match) > 0 {
+	// match[] on an HTTP content trigger evaluates the polled response, not a cluster object, so
+	// there is no listener-specific schema it has to be validated against.
+	if isContentResource && !isHTTPContent && len(s.Match) > 0 {
 		errs = append(errs, fmt.Errorf("resource %q does not support match", TestTriggerResourceContent))
-	} else if len(s.Match) > 0 {
+	} else if len(s.Match) > 0 && !isHTTPContent {
 		if s.Listener == nil || len(s.Listener.Match["id"]) == 0 {
 			errs = append(errs, fmt.Errorf("match conditions require listener.match.id to pin the trigger to one or more listener agents"))
 		}
 	}
 
-	errs = append(errs, ValidateMatchConditions(s.Match, s.Event)...)
+	// Validate match conditions against every effective event so the
+	// change-operator/modified-event coupling holds for each event the trigger
+	// can fire on. Event-independent errors (e.g. bad paths) are identical
+	// across events, so duplicates are dropped.
+	seenMatchErrs := make(map[string]struct{})
+	for _, event := range effectiveEvents {
+		for _, err := range ValidateMatchConditions(s.Match, event) {
+			if _, ok := seenMatchErrs[err.Error()]; ok {
+				continue
+			}
+			seenMatchErrs[err.Error()] = struct{}{}
+			errs = append(errs, err)
+		}
+	}
 
 	return errs
 }

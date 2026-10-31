@@ -89,8 +89,9 @@ type ExecutionGetExecutionsSummaryResponse struct {
 }
 
 type ExecutionGetPreviousFinishedStateRequest struct {
-	WorkflowName string
-	Date         time.Time
+	WorkflowName                string
+	Date                        time.Time
+	SkipSilentWebhookExecutions bool
 }
 
 type ExecutionGetPreviousFinishedStateResponse struct {

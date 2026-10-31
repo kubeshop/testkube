@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/commands"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 
 	"golang.org/x/sync/errgroup"
@@ -21,6 +21,7 @@ func init() {
 	RootCmd.AddCommand(NewTarballCmd())
 	RootCmd.AddCommand(NewTransferCmd())
 	RootCmd.AddCommand(NewArtifactsCmd())
+	RootCmd.AddCommand(NewCacheCmd())
 
 	// Pro functionalities
 	RootCmd.AddCommand(commands.NewExecuteCmd())
@@ -65,7 +66,6 @@ func Execute() {
 	RootCmd.PersistentFlags().BoolVar(&config.UseProxyValue, "proxy", false, "use Kubernetes proxy for TK access")
 
 	if err := RootCmd.ExecuteContext(ctx); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		common.Fail(err)
 	}
 }

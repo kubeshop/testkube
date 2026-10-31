@@ -76,7 +76,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 
 	enqueuer := scheduling.NewEnqueuer(log.DefaultLogger, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository, eventsEmitter,
 		envID, cfg.GlobalWorkflowTemplateName, cfg.GlobalWorkflowTemplateInline != "")
-	scheduler := factory.NewScheduler()
+
 	executionController := factory.NewExecutionController()
 	executionQuerier := factory.NewExecutionQuerier()
 
@@ -98,7 +98,11 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 		Verbose:                          false,
 		StorageBucket:                    cfg.StorageBucket,
 		FeatureTestWorkflowsCloudStorage: cfg.FeatureCloudStorage,
-	}, enqueuer, scheduler, executionController, executionQuerier, eventsEmitter, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
+		DispatchBatchSize:                cfg.ExecutionDispatchBatchSize,
+		RedispatchAfter:                  cfg.ExecutionRedispatchAfter,
+		StartTimeout:                     cfg.ExecutionStartTimeout,
+		ReaperInterval:                   cfg.ExecutionReaperInterval,
+	}, enqueuer, executionController, executionQuerier, eventsEmitter, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
 		testWorkflowResultsRepository, testWorkflowOutputRepository, repoManager, envID, commands...)
 }
 

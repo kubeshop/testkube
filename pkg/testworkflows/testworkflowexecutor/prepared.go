@@ -163,6 +163,21 @@ func (e *IntermediateExecution) SetSilentMode(silentMode *testkube.SilentMode) *
 	return e
 }
 
+// SetLineage records where this execution came from.
+//
+// Copied rather than aliased: a fan-out shares one derived triple across every
+// execution in the request, and Clone() would otherwise hand them all the same
+// struct for a later caller to mutate underneath each other.
+func (e *IntermediateExecution) SetLineage(lineage *testkube.TestWorkflowExecutionLineage) *IntermediateExecution {
+	if lineage == nil {
+		e.execution.Lineage = nil
+		return e
+	}
+	copied := *lineage
+	e.execution.Lineage = &copied
+	return e
+}
+
 // IsSilent checks if the workflow has silent set to true in its execution schema
 func (e *IntermediateExecution) IsSilent() bool {
 	if e.cr == nil {
@@ -317,7 +332,12 @@ func (e *IntermediateExecution) Resolve(organizationId, organizationSlug, enviro
 	}
 	maps.Copy(executionTags, e.tags)
 
-	executionMachine := testworkflowconfig.CreateExecutionMachine(&testworkflowconfig.ExecutionConfig{
+	// Scheduling, not runtime: what this resolves is stored as ResolvedWorkflow
+	// and replayed by a rerun, so lineage is deliberately left for the pod to
+	// resolve against the execution actually running. See
+	// CreateSchedulingExecutionMachine. Lineage is not passed here at all, so
+	// that a future reader does not take it for something this machine uses.
+	executionMachine := testworkflowconfig.CreateSchedulingExecutionMachine(&testworkflowconfig.ExecutionConfig{
 		Id:               e.execution.Id,
 		GroupId:          e.execution.GroupId,
 		Name:             e.execution.Name,
@@ -391,10 +411,10 @@ func (e *IntermediateExecution) SequenceNumber() int32 {
 	return e.execution.Number
 }
 
-func (e *IntermediateExecution) SetError(header string, err error) *IntermediateExecution {
-	// Keep only the 1st error
+// SetError ends the execution with the error and its reason code. It keeps the first error only.
+func (e *IntermediateExecution) SetError(header, reason string, err error) *IntermediateExecution {
 	if !e.execution.Result.IsFinished() {
-		e.execution.InitializationError(header, err)
+		e.execution.InitializationError(header, reason, err)
 	}
 	return e
 }
@@ -422,6 +442,35 @@ func (e *IntermediateExecution) StoreConfig(config map[string]string) *Intermedi
 	return e
 }
 
+// GitMetadataKeyPrefix marks the execution config entries a trigger records about the git
+// event that caused a run. The individual keys live in pkg/git/informer, which drags in
+// go-git and a Kubernetes client and so is not worth importing for a string.
+const GitMetadataKeyPrefix = "TESTKUBE_GIT_"
+
+// StoreGitMetadata records the git provenance a trigger reported, whether or not the
+// workflow declared it.
+//
+// StoreConfig keeps only declared parameters, which is right for values a workflow asked
+// for. Git metadata is not one of those: the dependency cache reads it to decide which
+// namespace a run is allowed to write, and the absence of a pull request marker means
+// "trusted". Filtering it out would therefore fail open - a workflow that never declared
+// TESTKUBE_GIT_PR_NUMBER would let a pull request's run, which executes code its author
+// wrote, write the namespace the default branch later restores from.
+//
+// Called outside the configuration size limit for the same reason.
+func (e *IntermediateExecution) StoreGitMetadata(config map[string]string) *IntermediateExecution {
+	for k, v := range config {
+		if v == "" || !strings.HasPrefix(k, GitMetadataKeyPrefix) {
+			continue
+		}
+		if e.execution.ConfigParams == nil {
+			e.execution.ConfigParams = make(map[string]testkube.TestWorkflowExecutionConfigValue)
+		}
+		e.execution.ConfigParams[k] = testkube.TestWorkflowExecutionConfigValue{Value: v}
+	}
+	return e
+}
+
 func (e *IntermediateExecution) Finished() bool {
 	return e.execution.Result.IsFinished()
 }
@@ -437,3 +486,8 @@ func (e *IntermediateExecution) Clone() *IntermediateExecution {
 		variables:     maps.Clone(e.variables),
 	}
 }
+
+// Lineage no longer has a projection here: this file only builds the scheduling
+// machine, which leaves execution.lineage for the pod to resolve. The pod's copy
+// is built where the pod's config is assembled - lineageConfigFromExecution in
+// pkg/runner and lineageConfigFromProto in pkg/runner/grpc.

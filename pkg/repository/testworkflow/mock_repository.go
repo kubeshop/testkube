@@ -300,18 +300,18 @@ func (mr *MockRepositoryMockRecorder) GetNextExecutionNumber(ctx, name any) *gom
 }
 
 // GetPreviousFinishedState mocks base method.
-func (m *MockRepository) GetPreviousFinishedState(ctx context.Context, testName string, date time.Time) (testkube.TestWorkflowStatus, error) {
+func (m *MockRepository) GetPreviousFinishedState(ctx context.Context, testName string, date time.Time, opts GetPreviousFinishedStateOptions) (testkube.TestWorkflowStatus, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPreviousFinishedState", ctx, testName, date)
+	ret := m.ctrl.Call(m, "GetPreviousFinishedState", ctx, testName, date, opts)
 	ret0, _ := ret[0].(testkube.TestWorkflowStatus)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetPreviousFinishedState indicates an expected call of GetPreviousFinishedState.
-func (mr *MockRepositoryMockRecorder) GetPreviousFinishedState(ctx, testName, date any) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) GetPreviousFinishedState(ctx, testName, date, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPreviousFinishedState", reflect.TypeOf((*MockRepository)(nil).GetPreviousFinishedState), ctx, testName, date)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPreviousFinishedState", reflect.TypeOf((*MockRepository)(nil).GetPreviousFinishedState), ctx, testName, date, opts)
 }
 
 // GetRunning mocks base method.

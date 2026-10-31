@@ -1,9 +1,8 @@
 package commands
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
@@ -22,10 +21,18 @@ func NewUpgradeCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 
 			cfg, err := config.Load()
-			ui.ExitOnError("loading config file", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrConfigInitFailed,
+					"Error loading testkube config file",
+					common.ConfigFileHint,
+					err,
+				))
+			}
 			ui.NL()
 
 			common.ProcessMasterFlags(cmd, &options, &cfg)
+			options.ExplicitFlags = changedFlags(cmd)
 
 			// set to cloud context explicitly when user pass agent key and store the key later
 			if options.Master.AgentToken != "" {
@@ -55,7 +62,6 @@ func NewUpgradeCmd() *cobra.Command {
 					currentContext, cliErr := common.GetCurrentKubernetesContext()
 					common.HandleCLIError(cliErr)
 
-					ui.ExitOnError("getting current context", err)
 					ui.Alert("Current kubectl context:", currentContext)
 					ui.NL()
 				}
@@ -63,8 +69,8 @@ func NewUpgradeCmd() *cobra.Command {
 				if ui.IsVerbose() && cfg.ContextType == config.ContextTypeCloud {
 					ui.Info("Your Testkube is in 'cloud' mode with following context")
 					ui.InfoGrid(map[string]string{
-						"Agent Key": text.Obfuscate(cfg.CloudContext.AgentKey),
-						"Agent URI": cfg.CloudContext.AgentUri,
+						"Runner Key": text.Obfuscate(cfg.CloudContext.AgentKey),
+						"Runner URI": cfg.CloudContext.AgentUri,
 					})
 					ui.NL()
 				}
@@ -77,24 +83,39 @@ func NewUpgradeCmd() *cobra.Command {
 			}
 
 			if cfg.ContextType == config.ContextTypeCloud {
-				ui.Info("Testkube Pro agent upgrade started")
+				ui.Info("Testkube Pro runner upgrade started")
+				// Both upgrade helpers return *CLIError, so the result has to stay
+				// typed: assigning a nil *CLIError to an error turns it into a
+				// non-nil interface and reports a successful upgrade as a failure.
+				var upgradeErr *common.CLIError
 				if cfg.CloudContext.DockerContainerName != "" {
 					latestVersion, errLatestVersion := common.GetLatestVersion()
-					ui.ExitOnError("Getting latest version", errLatestVersion)
-					err = common.DockerUpgradeTestkubeAgent(options, latestVersion, cfg)
+					if errLatestVersion != nil {
+						common.HandleCLIError(common.NewCLIError(
+							common.TKErrLatestVersionFetchFailed,
+							"Error getting the latest Testkube version",
+							"Check your internet connection and access to github.com",
+							errLatestVersion,
+						))
+					}
+					upgradeErr = common.DockerUpgradeTestkubeAgent(options, latestVersion, cfg)
 				} else {
-					err = common.HelmUpgradeOrInstallTestkubeAgent(options, cfg, false)
+					upgradeErr = common.HelmUpgradeOrInstallTestkubeAgent(options, cfg, false)
 				}
-				ui.ExitOnError("Upgrading Testkube Pro Agent", err)
-				err = common.PopulateAgentDataToContext(options, cfg)
-				ui.ExitOnError("Storing agent data in context", err)
+				common.HandleCLIError(upgradeErr)
+
+				if err = common.PopulateAgentDataToContext(options, cfg); err != nil {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrContextSaveFailed,
+						"Error storing runner data in context",
+						common.ConfigFileHint,
+						err,
+					))
+				}
 			} else {
 				ui.Info("Updating Testkube")
 
-				if cliErr := common.HelmUpgradeOrInstallTestkube(options); cliErr != nil {
-					cliErr.Print()
-					os.Exit(1)
-				}
+				common.HandleCLIError(common.HelmUpgradeOrInstallTestkube(options))
 			}
 
 		},
@@ -103,7 +124,15 @@ func NewUpgradeCmd() *cobra.Command {
 	common.PopulateHelmFlags(cmd, &options)
 	common.PopulateMasterFlags(cmd, &options, false)
 
-	cmd.Flags().StringVar(&dockerContainerName, "docker-container", "testkube-agent", "Docker container name for Testkube Docker Agent")
+	cmd.Flags().StringVar(&dockerContainerName, "docker-container", "testkube-agent", "Docker container name for Testkube Docker Runner")
+	cmd.Flags().BoolVar(&options.ReuseValues, "reuse-values", false, "keep the Helm values of the installed release, and only override the ones passed as flags")
 
 	return cmd
+}
+
+// changedFlags returns the names of the flags the user passed.
+func changedFlags(cmd *cobra.Command) map[string]bool {
+	changed := map[string]bool{}
+	cmd.Flags().Visit(func(f *pflag.Flag) { changed[f.Name] = true })
+	return changed
 }

@@ -1,0 +1,273 @@
+# End-to-end coverage for the step dependency cache.
+#
+# The loop cannot be observed from inside one execution: a step's cache is saved after
+# the step passes, so nothing in that same run can see it. Every assertion here is
+# therefore driven by the suite at the bottom, which runs a child twice, or runs two
+# differently-named children against one key.
+#
+# The signal is a marker file inside the cached directory rather than a log line, so the
+# assertions test what was actually restored instead of what was printed.
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-cache-roundtrip
+  labels:
+    core-tests: dependency-cache
+description: "Cache round trip - populates on a miss, restores on the next run"
+spec:
+  config:
+    cacheKey:
+      type: string
+      default: ""
+    expectHit:
+      type: string
+      default: "false"
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+    workingDir: /data
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Restore, check, populate
+    cache:
+      # The key comes from the suite so that both runs share one entry, and it carries
+      # the suite's execution id so a rerun in CI cannot hit an entry left by an
+      # earlier one.
+      key: '{{ config.cacheKey }}'
+      paths:
+      - cache-probe
+    shell: |
+      set -e
+      mkdir -p /data/cache-probe
+
+      if [ "{{ config.expectHit }}" = "true" ]; then
+        # The previous run of this same workflow wrote this, and only the cache can
+        # have brought it back: each execution gets a fresh pod and a fresh volume.
+        [ -f /data/cache-probe/marker ] || { echo "FAIL: expected a cache hit, but the marker is missing"; exit 1; }
+        [ "$(cat /data/cache-probe/marker)" = "written-by-the-first-run" ] || { echo "FAIL: marker content is wrong"; exit 1; }
+        echo "restored the marker from the cache"
+      else
+        [ ! -f /data/cache-probe/marker ] || { echo "FAIL: expected a cache miss, but a marker was already there"; exit 1; }
+        echo -n "written-by-the-first-run" > /data/cache-probe/marker
+        echo "populated the cache"
+      fi
+
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-cache-shared-writer
+  labels:
+    core-tests: dependency-cache
+description: "Cache, environment scope - writes an entry meant to be read by another workflow"
+spec:
+  config:
+    cacheKey:
+      type: string
+      default: ""
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+    workingDir: /data
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Populate the shared entry
+    cache:
+      key: '{{ config.cacheKey }}'
+      paths:
+      - cache-probe
+      # Cannot be templated: the field carries a CRD enum, and enum validation happens
+      # before expressions are resolved. Hence one workflow per scope below rather than
+      # one workflow parameterised by scope.
+      scope: environment
+    shell: |
+      set -e
+      mkdir -p /data/cache-probe
+      echo -n "written-by-the-shared-writer" > /data/cache-probe/marker
+
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-cache-shared-reader
+  labels:
+    core-tests: dependency-cache
+description: "Cache, environment scope - a different workflow reads the shared entry"
+spec:
+  config:
+    cacheKey:
+      type: string
+      default: ""
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+    workingDir: /data
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Read the entry another workflow wrote
+    cache:
+      key: '{{ config.cacheKey }}'
+      paths:
+      - cache-probe
+      scope: environment
+    shell: |
+      set -e
+      mkdir -p /data/cache-probe
+      # This is the sharing claim, executable: a different workflow wrote this entry.
+      [ -f /data/cache-probe/marker ] || { echo "FAIL: the environment-scoped entry was not shared"; exit 1; }
+      [ "$(cat /data/cache-probe/marker)" = "written-by-the-shared-writer" ] || { echo "FAIL: marker content is wrong"; exit 1; }
+      echo "read the entry written by tw-cache-shared-writer"
+
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-cache-isolated-reader
+  labels:
+    core-tests: dependency-cache
+description: "Cache, workflow scope - the same key does not reach another workflow's entry"
+spec:
+  config:
+    cacheKey:
+      type: string
+      default: ""
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+    workingDir: /data
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Ask for the same key under the default scope
+    cache:
+      # Byte-for-byte the key tw-cache-shared-writer stored, so a hit here would mean
+      # the workflow scope is not a boundary at all. This is the isolation claim.
+      key: '{{ config.cacheKey }}'
+      paths:
+      - cache-probe
+      # The default, stated for contrast with the two workflows above.
+      scope: workflow
+    shell: |
+      set -e
+      mkdir -p /data/cache-probe
+      [ ! -f /data/cache-probe/marker ] || { echo "FAIL: a workflow-scoped lookup reached another workflow's entry"; exit 1; }
+      echo "did not see the other workflow's entry, as expected"
+
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-cache-degrades
+  labels:
+    core-tests: dependency-cache
+description: "Cache - a key that cannot resolve is a miss, not a failed step"
+spec:
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+    workingDir: /data
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Ask for a key that resolves to nothing
+    cache:
+      # hash_files() over nothing yields "", so the whole key is empty. That is refused
+      # as a key - caching every such step under one shared entry would be worse than
+      # not caching - and the step has to carry on regardless.
+      #
+      # This is the single most valuable case here: it is what the base64-encoded
+      # payload exists for. Were the key resolved as a plain container argument,
+      # testworkflow-init would apply FinalizerFail and kill the step instead.
+      key: '{{ hash_files("no-such-lockfile-*.lock") }}'
+      paths:
+      - cache-probe
+    shell: |
+      set -e
+      mkdir -p /data/cache-probe
+      echo "the step ran even though the cache key could not be resolved"
+
+  - name: Confirm the workflow got this far
+    shell: echo "reached the step after the unresolvable cache key"
+
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-cache-suite
+  labels:
+    core-tests: dependency-cache
+    type: suite
+description: "Drives the dependency cache assertions that need more than one execution"
+spec:
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  job:
+    activeDeadlineSeconds: 1800
+  steps:
+  # Every child is given a key derived from this suite execution, so a rerun starts
+  # cold instead of hitting whatever a previous run left behind.
+  - name: Populate the cache
+    execute:
+      workflows:
+      - name: tw-cache-roundtrip
+        config:
+          cacheKey: 'e2e-roundtrip-{{ execution.id }}'
+          expectHit: "false"
+
+  - name: Run the same workflow again, which must now hit
+    execute:
+      workflows:
+      - name: tw-cache-roundtrip
+        config:
+          cacheKey: 'e2e-roundtrip-{{ execution.id }}'
+          expectHit: "true"
+
+  - name: Write an entry under the environment scope
+    execute:
+      workflows:
+      - name: tw-cache-shared-writer
+        config:
+          cacheKey: 'e2e-shared-{{ execution.id }}'
+
+  # The two halves of what scope means, against one key: a different workflow sees the
+  # entry under the environment scope, and does not see it under the workflow scope.
+  - name: A different workflow reads it under the environment scope
+    execute:
+      workflows:
+      - name: tw-cache-shared-reader
+        config:
+          cacheKey: 'e2e-shared-{{ execution.id }}'
+
+  - name: The same key under the workflow scope must not reach it
+    execute:
+      workflows:
+      - name: tw-cache-isolated-reader
+        config:
+          cacheKey: 'e2e-shared-{{ execution.id }}'
+
+  - name: An unresolvable key must not fail a step
+    execute:
+      workflows:
+      - name: tw-cache-degrades

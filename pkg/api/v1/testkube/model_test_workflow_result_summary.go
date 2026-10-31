@@ -31,5 +31,6 @@ type TestWorkflowResultSummary struct {
 	// Duration in milliseconds (incl. pause)
 	TotalDurationMs int32 `json:"totalDurationMs"`
 	// Pause duration in milliseconds
-	PausedMs int32 `json:"pausedMs"`
+	PausedMs      int32                      `json:"pausedMs"`
+	StatusDetails *TestWorkflowStatusDetails `json:"statusDetails,omitempty"`
 }
