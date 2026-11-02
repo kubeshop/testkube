@@ -271,6 +271,11 @@ func fakeOIDCProvider(t *testing.T) (*httptest.Server, chan url.Values) {
 	return srv, exchanges
 }
 
+const (
+	callbackWaitTimeout  = 2 * time.Second
+	callbackPollInterval = 10 * time.Millisecond
+)
+
 // callLoginCallback waits for the CLI listener, then hits its callback.
 func callLoginCallback(t *testing.T, port int, query url.Values) string {
 	t.Helper()
@@ -288,7 +293,7 @@ func callLoginCallback(t *testing.T, port int, query url.Values) string {
 		require.NoError(t, err)
 		body = string(b)
 		return true
-	}, 2*time.Second, 10*time.Millisecond)
+	}, callbackWaitTimeout, callbackPollInterval)
 	return body
 }
 
