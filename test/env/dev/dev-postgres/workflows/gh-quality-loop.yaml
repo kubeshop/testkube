@@ -251,7 +251,7 @@ spec:
       cache:
         # Keyed on the modules and lint config, never the sources: both caches address
         # their own contents, so one entry serves every commit until dependencies change.
-        # No restoreKeys: nothing trims these caches, so a fallback grows them past the restore size limit.
+        # No restoreKeys. A fallback saves the old entry again with the new one, so the cache grows without limit.
         key: cloud-lint-go-v4-golangci-2.12.2-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum", "/data/repo/.golangci.yml")}}
         paths:
         - /root/.cache/go-build
