@@ -2,12 +2,15 @@ package cloudlogin
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -242,4 +245,86 @@ func freeTestPort(t *testing.T) int {
 	port := l.Addr().(*net.TCPAddr).Port
 	require.NoError(t, l.Close())
 	return port
+}
+
+// fakeOIDCProvider answers discovery and records each token exchange form.
+func fakeOIDCProvider(t *testing.T) (*httptest.Server, chan url.Values) {
+	t.Helper()
+	exchanges := make(chan url.Values, 1)
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/.well-known/openid-configuration":
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"issuer":                 srv.URL,
+				"authorization_endpoint": srv.URL + "/auth",
+				"token_endpoint":         srv.URL + "/token",
+				"jwks_uri":               srv.URL + "/keys",
+			})
+		case "/token":
+			_ = r.ParseForm()
+			exchanges <- r.PostForm
+			http.Error(w, "fixture stops the flow here", http.StatusBadRequest)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	return srv, exchanges
+}
+
+// callLoginCallback waits for the CLI listener, then hits its callback.
+func callLoginCallback(t *testing.T, port int, query url.Values) string {
+	t.Helper()
+	target := fmt.Sprintf("http://127.0.0.1:%d/callback?%s", port, query.Encode())
+	var body string
+	require.Eventually(t, func() bool {
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, target, nil)
+		require.NoError(t, err)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+		b, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		body = string(b)
+		return true
+	}, 2*time.Second, 10*time.Millisecond)
+	return body
+}
+
+func TestCloudLogin_ExchangeProvesPKCE(t *testing.T) {
+	provider, exchanges := fakeOIDCProvider(t)
+	port := freeTestPort(t)
+
+	authURL, tokens, err := CloudLogin(context.Background(), provider.URL, "", port)
+	require.NoError(t, err)
+	link, err := url.Parse(authURL)
+	require.NoError(t, err)
+	params := link.Query()
+	require.Equal(t, "S256", params.Get("code_challenge_method"))
+
+	callLoginCallback(t, port, url.Values{"code": {"code-fixture"}, "state": {params.Get("state")}})
+	form := <-exchanges
+	<-tokens
+
+	sum := sha256.Sum256([]byte(form.Get("code_verifier")))
+	assert.Equal(t, params.Get("code_challenge"), base64.RawURLEncoding.EncodeToString(sum[:]))
+}
+
+func TestCloudLogin_RejectsWrongState(t *testing.T) {
+	provider, exchanges := fakeOIDCProvider(t)
+	port := freeTestPort(t)
+
+	authURL, tokens, err := CloudLogin(context.Background(), provider.URL, "", port)
+	require.NoError(t, err)
+
+	body := callLoginCallback(t, port, url.Values{"code": {"code-fixture"}, "state": {"forged"}})
+	require.Contains(t, body, "Authorization failed.")
+	require.Empty(t, exchanges, "a forged callback must not reach the token exchange")
+
+	link, err := url.Parse(authURL)
+	require.NoError(t, err)
+	callLoginCallback(t, port, url.Values{"code": {"code-fixture"}, "state": {link.Query().Get("state")}})
+	<-exchanges
+	<-tokens
 }
