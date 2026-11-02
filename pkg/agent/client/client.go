@@ -47,28 +47,11 @@ const (
 	// How long to stay in TransientFailure before giving up on this dial
 	// attempt so the next credential mode (or retry) can run.
 	transientFailureTimeout = 2 * time.Second
-
-	// round_robin opens a subchannel per resolved address and assigns each new
-	// stream to the next one, so an agent's long-lived streams spread over every
-	// replica a `dns:///` target resolves to and a dead replica only takes down its
-	// own streams. Against a single-address target (Ingress, ClusterIP VIP) it
-	// degrades to the pick_first behaviour it replaces.
-	GRPCLoadBalancingPolicy = `{"loadBalancingConfig":[{"round_robin":{}}]}`
-
-	// grpc-go's DNS resolver does not poll: after a successful lookup it blocks
-	// until something calls ResolveNow, which the LB policy only does when a
-	// subchannel fails. So a scale-up is invisible — the new Pod is never dialled
-	// and receives no streams. Re-resolving on this interval adds a subchannel for
-	// each new replica without touching any established stream. The resolver
-	// rate-limits re-resolution to 30s (dns.MinResolutionInterval), so this must
-	// stay above that to have any effect.
-	GRPCResolveInterval = 60 * time.Second
 )
 
 // Build dial options
 var dialOpts = []grpc.DialOption{
 	grpc.WithUserAgent(version.Version + "/" + version.Commit),
-	grpc.WithDefaultServiceConfig(GRPCLoadBalancingPolicy),
 	grpc.WithKeepaliveParams(keepalive.ClientParameters{
 		Time:                GRPCKeepaliveTime,
 		Timeout:             GRPCKeepaliveTimeout,
@@ -83,12 +66,6 @@ var dialOpts = []grpc.DialOption{
 		},
 		MinConnectTimeout: connectionTimeout,
 	}),
-}
-
-func init() {
-	if r := refreshingDNSResolver(GRPCResolveInterval); r != nil {
-		dialOpts = append(dialOpts, grpc.WithResolvers(r))
-	}
 }
 
 // NewGRPCConnection keeps backward compatibility, tracing disabled by default.

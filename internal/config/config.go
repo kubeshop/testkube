@@ -18,13 +18,12 @@ type OSSControlPlaneConfig struct {
 	// Server
 	GRPCServerPort int `envconfig:"GRPCSERVER_PORT" default:"8089"`
 
-	// GRPCMaxConnectionAge is a last-resort recycle of long-lived agent streams, for
-	// agents that cannot see the individual replicas (behind an Ingress, or pointed at
-	// a plain ClusterIP Service). Sending GOAWAY makes them reconnect so the load
-	// balancer chooses again. Recycling breaks live notification streams, which then
-	// resume from the agent's seqNo replay buffer, so keep it rare: agents dialling
-	// `dns:///<headless-service>` spread with round_robin and do not need it. Zero
-	// disables the recycle and lets connections live as long as they stay healthy.
+	// GRPCMaxConnectionAge recycles long-lived agent streams with GOAWAY so the
+	// load balancer can pick a different replica. Agent connections are HTTP/2, so
+	// kube-proxy and Ingress only choose a backend when a new TCP connection is made;
+	// without this, agents stay pinned to whichever replica they first reached.
+	// Recycling breaks live notification streams, which then resume from the agent's
+	// seqNo replay buffer, so keep this long. Zero disables it.
 	GRPCMaxConnectionAge      time.Duration `envconfig:"GRPC_MAX_CONNECTION_AGE" default:"30m"`
 	GRPCMaxConnectionAgeGrace time.Duration `envconfig:"GRPC_MAX_CONNECTION_AGE_GRACE" default:"30s"`
 
