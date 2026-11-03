@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,6 +21,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/pkg/executioncache"
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
@@ -686,6 +688,49 @@ func TestRunCacheRestore_PartialExtractionClearsTheDeclaredPaths(t *testing.T) {
 	assert.Empty(t, entries, "a restore that wrote part of a tree must clear what it wrote")
 
 	assert.Equal(t, executioncache.HitMiss, readState(t, statePath).Hit)
+}
+
+func TestDownloadCache_FetchesAnArchiveOverTheLimitOnce(t *testing.T) {
+	root := t.TempDir()
+	// Container paths: see TestRunCacheRestore_Hit.
+	declaredPosix := filepath.ToSlash(root[len(filepath.VolumeName(root)):]) + "/deps"
+	archive := cacheTarball(t, strings.TrimPrefix(declaredPosix+"/big.txt", "/"), "more than eight bytes")
+
+	var fetches atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fetches.Add(1)
+		_, _ = w.Write(archive)
+	}))
+	t.Cleanup(server.Close)
+
+	_, err := downloadCache(context.Background(), server.URL, []string{declaredPosix}, 8)
+
+	require.ErrorAs(t, err, new(*common.UnpackLimitError))
+	assert.Equal(t, int32(1), fetches.Load(), "each fetch of a large archive costs minutes")
+}
+
+func TestDownloadCache_RetriesAnArchiveCutOffMidTransfer(t *testing.T) {
+	root := t.TempDir()
+	// Container paths: see TestRunCacheRestore_Hit.
+	declaredPosix := filepath.ToSlash(root[len(filepath.VolumeName(root)):]) + "/deps"
+	archive := cacheTarball(t, strings.TrimPrefix(declaredPosix+"/dep.txt", "/"), "restored")
+
+	var fetches atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if fetches.Add(1) == 1 {
+			_, _ = w.Write(archive[:len(archive)/2])
+			return
+		}
+		_, _ = w.Write(archive)
+	}))
+	t.Cleanup(server.Close)
+
+	_, err := downloadCache(context.Background(), server.URL, []string{declaredPosix}, cacheMaxUnpackedSize)
+
+	require.NoError(t, err)
+	restored, readErr := os.ReadFile(filepath.Join(root, "deps", "dep.txt"))
+	require.NoError(t, readErr)
+	assert.Equal(t, "restored", string(restored))
 }
 
 // TestRunCacheSave_SendsTheConditionalHeaders is what makes an entry immutable.
