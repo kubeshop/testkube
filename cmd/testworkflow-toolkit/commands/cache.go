@@ -272,7 +272,7 @@ func runCacheRestore(ctx context.Context, encoded string, repository executionca
 	}
 
 	started := time.Now()
-	if wrote, err := downloadCache(ctx, entry.URL, spec.Paths); err != nil {
+	if wrote, err := downloadCache(ctx, entry.URL, spec.Paths, cacheMaxUnpackedSize); err != nil {
 		// A half-unpacked node_modules is worse than none: an install would find some
 		// of what it needs and skip the rest. Clear what was written and report a miss.
 		//
@@ -510,7 +510,7 @@ func cacheTempDir() string {
 // transfer can succeed and the archive still be rejected before the first entry is
 // created. It is sticky across retries, because an attempt that wrote part of a tree
 // leaves that tree behind even if a later attempt fails earlier.
-func downloadCache(ctx context.Context, url string, allowedPaths []string) (wrote bool, err error) {
+func downloadCache(ctx context.Context, url string, allowedPaths []string, maxUnpackedSize int64) (wrote bool, err error) {
 	client := &http.Client{Timeout: cacheTransferTimeout}
 
 	var lastErr error
@@ -531,7 +531,7 @@ func downloadCache(ctx context.Context, url string, allowedPaths []string) (wrot
 		}
 		if err == nil {
 			err = common.UnpackTarball("/", resp.Body,
-				common.WithMaxTotalBytes(cacheMaxUnpackedSize),
+				common.WithMaxTotalBytes(maxUnpackedSize),
 				common.WithMaxEntries(cacheMaxEntries),
 				common.WithAllowedRoots(allowedPaths...),
 				// Tools may trim their caches by modification time.
@@ -540,6 +540,11 @@ func downloadCache(ctx context.Context, url string, allowedPaths []string) (wrot
 			resp.Body.Close()
 			if err == nil {
 				return wrote, nil
+			}
+			// A stored entry never changes, so retrying cannot succeed.
+			var limitErr *common.UnpackLimitError
+			if errors.As(err, &limitErr) {
+				return wrote, err
 			}
 		} else if resp != nil {
 			resp.Body.Close()

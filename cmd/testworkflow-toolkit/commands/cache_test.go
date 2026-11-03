@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -686,6 +687,25 @@ func TestRunCacheRestore_PartialExtractionClearsTheDeclaredPaths(t *testing.T) {
 	assert.Empty(t, entries, "a restore that wrote part of a tree must clear what it wrote")
 
 	assert.Equal(t, executioncache.HitMiss, readState(t, statePath).Hit)
+}
+
+func TestDownloadCache_FetchesAnArchiveOverTheLimitOnce(t *testing.T) {
+	root := t.TempDir()
+	// Container paths, as the code now resolves them: see TestRunCacheRestore_Hit.
+	declaredPosix := filepath.ToSlash(root[len(filepath.VolumeName(root)):]) + "/deps"
+	archive := cacheTarball(t, strings.TrimPrefix(declaredPosix+"/big.txt", "/"), "more than eight bytes")
+
+	var fetches atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fetches.Add(1)
+		_, _ = w.Write(archive)
+	}))
+	t.Cleanup(server.Close)
+
+	_, err := downloadCache(context.Background(), server.URL, []string{declaredPosix}, 8)
+
+	require.Error(t, err)
+	assert.Equal(t, int32(1), fetches.Load(), "each fetch of a large archive costs minutes")
 }
 
 // TestRunCacheSave_SendsTheConditionalHeaders is what makes an entry immutable.
