@@ -1,8 +1,8 @@
 #!/bin/bash
-# Generate OpenAPI Go models from testkube.yaml with swagger-codegen, through
-# Docker, or without Docker through a swagger-codegen of the same release.
+# Generate OpenAPI Go models from testkube.yaml with swagger-codegen, in Docker
+# or from the PATH.
 #
-# Requires: docker, or swagger-codegen on the PATH
+# Requires: docker, or swagger-codegen on the PATH of the release of SWAGGER_CODEGEN_IMAGE
 # Usage: Called via 'go generate ./pkg/api/v1/testkube' or 'make generate-openapi'
 
 set -euo pipefail
@@ -14,6 +14,7 @@ readonly TMP_API_DIR="${TMP_DIR}/api/testkube"
 readonly TARGET_DIR="${PROJECT_ROOT}/pkg/api/v1/testkube"
 
 readonly SWAGGER_CODEGEN_IMAGE="swaggerapi/swagger-codegen-cli-v3:3.0.78"
+readonly SWAGGER_CODEGEN_ARGS=(generate --model-package testkube -i api/v1/testkube.yaml -l go -o tmp/api/testkube)
 
 # ==================== Helpers ====================
 
@@ -49,11 +50,7 @@ run_swagger_codegen() {
         -v "${PROJECT_ROOT}:/work" \
         -w /work \
         "${SWAGGER_CODEGEN_IMAGE}" \
-        generate \
-        --model-package testkube \
-        -i api/v1/testkube.yaml \
-        -l go \
-        -o /work/tmp/api/testkube
+        "${SWAGGER_CODEGEN_ARGS[@]}"
 }
 
 # A host without Docker, such as a CI pod, runs a local swagger-codegen.
@@ -72,11 +69,7 @@ run_local_swagger_codegen() {
     fi
 
     log_info "Running swagger-codegen ${have} without Docker..."
-    (cd "${PROJECT_ROOT}" && swagger-codegen generate \
-        --model-package testkube \
-        -i api/v1/testkube.yaml \
-        -l go \
-        -o tmp/api/testkube)
+    (cd "${PROJECT_ROOT}" && swagger-codegen "${SWAGGER_CODEGEN_ARGS[@]}")
 }
 
 # ==================== Step 2: Post-process generated files ====================
