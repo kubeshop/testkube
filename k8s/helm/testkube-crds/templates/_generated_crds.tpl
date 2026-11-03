@@ -10224,8 +10224,10 @@ spec:
                             type: boolean
                           parallelism:
                             description: how many resources could be scheduled in parallel
-                            format: int32
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           paused:
                             description: pause the step initially
                             type: boolean
@@ -16072,8 +16074,10 @@ spec:
                             type: boolean
                           parallelism:
                             description: how many resources could be scheduled in parallel
-                            format: int32
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           paused:
                             description: pause the step initially
                             type: boolean
@@ -19638,8 +19642,10 @@ spec:
                             type: boolean
                           parallelism:
                             description: how many resources could be scheduled in parallel
-                            format: int32
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           paused:
                             description: pause the step initially
                             type: boolean
@@ -23500,8 +23506,10 @@ spec:
                             type: boolean
                           parallelism:
                             description: how many resources could be scheduled in parallel
-                            format: int32
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           paused:
                             description: pause the step initially
                             type: boolean
@@ -29206,8 +29214,10 @@ spec:
                             type: boolean
                           parallelism:
                             description: how many resources could be scheduled in parallel
-                            format: int32
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           paused:
                             description: pause the step initially
                             type: boolean
@@ -32650,8 +32660,10 @@ spec:
                             type: boolean
                           parallelism:
                             description: how many resources could be scheduled in parallel
-                            format: int32
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           paused:
                             description: pause the step initially
                             type: boolean
