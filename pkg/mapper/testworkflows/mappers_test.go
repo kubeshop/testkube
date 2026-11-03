@@ -524,25 +524,26 @@ func TestStepExecuteWorkflowRoundTripsBaseExecutionId(t *testing.T) {
 	assert.Equal(t, kube.BaseExecutionId, back.BaseExecutionId)
 }
 
-// The mappers are the API contract the control plane and the CLI go through, so
-// an expression in parallelism must reach the toolkit as written.
-func TestMapStepParallelParallelismBackAndForth(t *testing.T) {
-	cases := map[string]struct {
+func TestMapStepParallelRoundTripsParallelism(t *testing.T) {
+	tests := []struct {
+		name string
 		kube *testworkflowsv1.ConfigValue
 		api  *testkube.BoxedString
 	}{
-		"a static number survives the round trip": {
+		{
+			name: "a static number survives the round trip",
 			kube: testworkflowsv1.NewConfigValue("2"),
 			api:  &testkube.BoxedString{Value: "2"},
 		},
-		"an expression survives the round trip": {
+		{
+			name: "an expression survives the round trip",
 			kube: testworkflowsv1.NewConfigValue("config.PARALLELISM"),
 			api:  &testkube.BoxedString{Value: "config.PARALLELISM"},
 		},
-		"an unset parallelism stays nil": {},
+		{name: "an unset parallelism stays nil"},
 	}
-	for name, tc := range cases {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			api := MapStepParallelKubeToAPI(testworkflowsv1.StepParallel{Parallelism: tc.kube})
 			assert.Equal(t, tc.api, api.Parallelism)
 			assert.Equal(t, tc.kube, MapStepParallelAPIToKube(api).Parallelism)

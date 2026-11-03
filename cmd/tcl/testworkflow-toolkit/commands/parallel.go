@@ -408,8 +408,7 @@ func parseAndValidateSpec(specContent string, cfg *config.ConfigV2, base64Encode
 }
 
 // readParallelism resolves how many workers may run at once.
-// Both an unset value and 0 mean unlimited: the toolkit treated parallelism <= 0
-// as unlimited before the field accepted an expression, and a stored workflow may still hold 0.
+// Both an unset value and 0 mean unlimited, because a stored workflow may hold 0.
 func readParallelism(value *testworkflowsv1.ConfigValue, machines ...expressions.Machine) (int64, error) {
 	if value == nil {
 		return spawn.DefaultParallelism, nil
