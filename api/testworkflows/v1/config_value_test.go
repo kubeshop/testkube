@@ -149,3 +149,27 @@ spec:
 	require.NotNil(t, workflowFromYAML.Spec.Config["id"].Default)
 	assert.Equal(t, "873760302410822", workflowFromYAML.Spec.Config["id"].Default.String())
 }
+
+func TestStepParallel_UnmarshalParallelism(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{name: "integer", input: "parallelism: 2", want: "2"},
+		{name: "config expression", input: "parallelism: 'config.PARALLELISM'", want: "config.PARALLELISM"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var fromYAML StepParallel
+			require.NoError(t, yaml.Unmarshal([]byte(tt.input), &fromYAML))
+			require.NotNil(t, fromYAML.Parallelism)
+			assert.Equal(t, tt.want, fromYAML.Parallelism.String())
+
+			var fromKubeYAML StepParallel
+			require.NoError(t, sigsyaml.Unmarshal([]byte(tt.input), &fromKubeYAML))
+			require.NotNil(t, fromKubeYAML.Parallelism)
+			assert.Equal(t, tt.want, fromKubeYAML.Parallelism.String())
+		})
+	}
+}

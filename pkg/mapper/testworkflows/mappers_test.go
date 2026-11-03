@@ -522,3 +522,21 @@ func TestStepExecuteWorkflowRoundTripsBaseExecutionId(t *testing.T) {
 	assert.Equal(t, "exec-base", back.BaseExecutionId, "API -> kube dropped the base execution id")
 	assert.Equal(t, kube.BaseExecutionId, back.BaseExecutionId)
 }
+
+func TestMapStepParallelParallelismRoundTrip(t *testing.T) {
+	tests := []struct {
+		name        string
+		parallelism *testworkflowsv1.ConfigValue
+	}{
+		{name: "an integer value round trips", parallelism: testworkflowsv1.NewConfigValue("2")},
+		{name: "an expression round trips", parallelism: testworkflowsv1.NewConfigValue("config.PARALLELISM")},
+		{name: "a missing value stays nil", parallelism: nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			kube := testworkflowsv1.StepParallel{Parallelism: tt.parallelism}
+			back := MapStepParallelAPIToKube(MapStepParallelKubeToAPI(kube))
+			assert.Equal(t, tt.parallelism, back.Parallelism)
+		})
+	}
+}

@@ -9759,7 +9759,7 @@ components:
       - $ref: "#/components/schemas/TestWorkflowStepOperations"
       - properties:
           parallelism:
-            type: integer
+            $ref: "#/components/schemas/BoxedString"
             description: how many resources could be scheduled in parallel
           failFast:
             type: boolean
@@ -9791,7 +9791,7 @@ components:
       - $ref: "#/components/schemas/TestWorkflowStepOperations"
       - properties:
           parallelism:
-            type: integer
+            $ref: "#/components/schemas/BoxedString"
             description: how many resources could be scheduled in parallel
           failFast:
             type: boolean

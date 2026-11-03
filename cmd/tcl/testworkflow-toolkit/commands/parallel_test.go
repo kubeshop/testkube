@@ -24,11 +24,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
 
@@ -793,6 +795,34 @@ func TestStoppedByFailFast(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.want, stoppedByFailFast(tt.canceled, tt.result))
+		})
+	}
+}
+
+func TestReadParallelism(t *testing.T) {
+	machine := expressions.NewMachine().Register("config", map[string]interface{}{"PARALLELISM": 2})
+	tests := []struct {
+		name    string
+		value   *testworkflowsv1.ConfigValue
+		want    int64
+		wantErr string
+	}{
+		{name: "a missing value falls back to the default", value: nil, want: spawn.DefaultParallelism},
+		{name: "an integer literal is used as is", value: testworkflowsv1.NewConfigValue("3"), want: 3},
+		{name: "a config expression resolves through the machine", value: testworkflowsv1.NewConfigValue("config.PARALLELISM"), want: 2},
+		{name: "zero falls back to the default", value: testworkflowsv1.NewConfigValue("0"), want: spawn.DefaultParallelism},
+		{name: "an unresolvable expression is an error", value: testworkflowsv1.NewConfigValue("missing.VALUE"), wantErr: "parallelism"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := readParallelism(tt.value, machine)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
