@@ -754,9 +754,8 @@ spec:
         # stays correct across commits, where a key per commit would grow storage
         # without bound. go.mod carries the toolchain directive, and the image tag covers
         # an image newer than it: build outputs only serve the toolchain that made them.
-        key: cloud-test-app-v1-golang-1.26.6-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
-        restoreKeys:
-        - cloud-test-app-v1-golang-1.26.6-
+        # No restoreKeys. A fallback saves the old entry again with the new one, so the cache grows without limit.
+        key: cloud-test-app-v2-golang-1.26.6-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
         paths:
         - /root/.cache/go-build
         scope: workflow
