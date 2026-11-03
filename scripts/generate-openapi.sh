@@ -1,7 +1,8 @@
 #!/bin/bash
-# Generate OpenAPI Go models from testkube.yaml using swagger-codegen via Docker.
+# Generate OpenAPI Go models from testkube.yaml with swagger-codegen, through
+# Docker, or without Docker through a swagger-codegen of the same release.
 #
-# Requires: docker
+# Requires: docker, or swagger-codegen on the PATH
 # Usage: Called via 'go generate ./pkg/api/v1/testkube' or 'make generate-openapi'
 
 set -euo pipefail
@@ -32,18 +33,17 @@ log_info()    { echo "[INFO] $1"; }
 log_error()   { echo "[ERROR] $1" >&2; }
 log_success() { echo "[SUCCESS] $1"; }
 
-# ==================== Step 1: Run swagger-codegen via Docker ====================
+# ==================== Step 1: Run swagger-codegen ====================
 
 run_swagger_codegen() {
-    log_info "Running swagger-codegen via Docker..."
-
-    if ! command -v docker &> /dev/null; then
-        log_error "docker is not installed"
-        exit 1
-    fi
-
     rm -rf "${TMP_DIR}/api"
 
+    if ! command -v docker &> /dev/null; then
+        run_local_swagger_codegen
+        return
+    fi
+
+    log_info "Running swagger-codegen via Docker..."
     docker run --rm \
         --user "$(id -u):$(id -g)" \
         -v "${PROJECT_ROOT}:/work" \
@@ -54,6 +54,29 @@ run_swagger_codegen() {
         -i api/v1/testkube.yaml \
         -l go \
         -o /work/tmp/api/testkube
+}
+
+# A host without Docker, such as a CI pod, runs a local swagger-codegen.
+# It must be the release of the image, or the generated models differ.
+run_local_swagger_codegen() {
+    local want="${SWAGGER_CODEGEN_IMAGE##*:}" have
+
+    if ! command -v swagger-codegen &> /dev/null; then
+        log_error "docker is not installed, and swagger-codegen ${want} is not on the PATH"
+        exit 1
+    fi
+    have="$(swagger-codegen version 2>/dev/null | tail -1)"
+    if [[ "${have}" != "${want}" ]]; then
+        log_error "swagger-codegen on the PATH is ${have}, not ${want}, the release of ${SWAGGER_CODEGEN_IMAGE}"
+        exit 1
+    fi
+
+    log_info "Running swagger-codegen ${have} without Docker..."
+    (cd "${PROJECT_ROOT}" && swagger-codegen generate \
+        --model-package testkube \
+        -i api/v1/testkube.yaml \
+        -l go \
+        -o tmp/api/testkube)
 }
 
 # ==================== Step 2: Post-process generated files ====================
