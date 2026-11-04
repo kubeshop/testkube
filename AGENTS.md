@@ -79,7 +79,19 @@ Write the failing test first, at the lowest level that shows the bug, then fix i
 - `cmd/choco-stub` displays a deprecation message for the old Chocolatey package location.
 - `cmd/tools` contains internal tooling for release management and version bumping.
 
-### Regenerating artifacts
+### Control Plane resources (declarative boards)
+
+Entities that live only in the Control Plane - Insights boards first, AI agents and test bundles next - can be declared in CRD-shaped YAML and applied with `testkube apply -f`, exported with `testkube get board <name> -o yaml`, and removed with `testkube delete board <name>`.
+
+- **Schema**: one API group per entity family, so one package each: `api/insights/v1alpha1` (`insights.testkube.io`, `Board`), with `ai.testkube.io` and `testbundles.testkube.io` to come. The shared `ControlPlaneResourceStatus`/`GitOpsOwner` are in `api/common/v1/controlplane.go`. The CRDs are generated into `k8s/crd/insights.testkube.io_*.yaml`, and from there into the Helm CRD library like every other CRD.
+- **Rules**: `pkg/controlplane/declarative` is a contract shared by both repos. **The Control Plane (`testkube-cloud-api` `internal/declarative`) must import it rather than reimplement it.** It uses `Normalize` to validate and fill in every PUT, and `BoardToStored`/`BoardFromStored` to map a board to and from storage. A disagreement makes an object the CLI accepts fail in the Control Plane, or an export fail to re-apply. Board report params go through `pkg/mcp/boards`, so a dashboard change ported there flows through here too.
+- **`Normalize` must stay idempotent**, which is what lets `get -o yaml | apply -f -` round-trip without a diff. Anything it generates has to be deterministic: a filter without an id gets `<report id>-<index>`, because `pkg/mcp/boards` would otherwise make a random one on every apply. `TestFixtures_Valid` checks this on every fixture in `testdata/valid`.
+- **Adding a kind**: a types package (or a type in an existing group), an entry in `kinds` in `registry.go` (the plural `Resource` must be unique across groups, since it is the endpoint path segment), cases in `Normalize`, `PrepareForApply` and `StatusOf`, fixtures under `testdata/`, and the Control Plane endpoint. The CLI's `get`/`delete` subcommands are generated from the registry.
+- **Wire**: `GET|PUT|DELETE /organizations/{org}[/environments/{env}]/resources/{resource}[/{name}]`. PUT sends `ApplyPayload` (no status, no cluster-managed metadata), and the list returns `{"items": [...]}`. Ownership is never taken from a body. The client refuses organization-scoped kinds with a `tkcapi_` token, as `pkg/mcp/api.go` does for boards.
+- **CLI**: `cmd/kubectl-testkube/commands/apply.go` and `commands/controlplaneresources/`. Apply validates every document before sending any, and keeps going past a failed PUT, reporting all failures together.
+- Not yet: GitOps sync of these CRDs (a generic `SyncService` arm and reconciler), and Control Plane enforcement of read-only GitOps-owned resources.
+
+## Regenerating artifacts
 
 - Update the agent OpenAPI files with `make generate-openapi` after schema edits.
 - Regenerate Kubernetes CRDs after editing type definitions in `api/` via `make generate-crds`.

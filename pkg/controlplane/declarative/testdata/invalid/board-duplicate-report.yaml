@@ -1,0 +1,10 @@
+apiVersion: insights.testkube.io/v1alpha1
+kind: Board
+metadata:
+  name: b
+spec:
+  reports:
+    - id: a
+      kind: pass-fail
+    - id: a
+      kind: workflows

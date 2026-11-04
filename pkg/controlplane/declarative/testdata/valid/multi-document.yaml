@@ -1,0 +1,16 @@
+# Two boards in one file, with an empty document between them.
+apiVersion: insights.testkube.io/v1alpha1
+kind: Board
+metadata:
+  name: first
+spec: {}
+---
+---
+apiVersion: insights.testkube.io/v1alpha1
+kind: Board
+metadata:
+  name: second
+spec:
+  reports:
+    - id: runs
+      kind: executions

@@ -6,6 +6,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agents"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/controlplaneresources"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testtriggers"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflowtemplates"
@@ -46,6 +47,7 @@ func NewDeleteCmd() *cobra.Command {
 	cmd.AddCommand(testworkflowtemplates.NewDeleteTestWorkflowTemplateCmd())
 	cmd.AddCommand(agents.NewDeleteAgentCommand())
 	cmd.AddCommand(agents.NewDeleteCRDCommand())
+	cmd.AddCommand(controlplaneresources.NewDeleteCmds()...)
 
 	return cmd
 }

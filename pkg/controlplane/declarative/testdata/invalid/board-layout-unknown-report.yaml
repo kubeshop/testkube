@@ -1,0 +1,11 @@
+apiVersion: insights.testkube.io/v1alpha1
+kind: Board
+metadata:
+  name: b
+spec:
+  layout:
+    rows:
+      - cells: [a, ghost]
+  reports:
+    - id: a
+      kind: pass-fail

@@ -312,6 +312,14 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
   - **Leader behavior**: Git informer reconciliation is registered as a leader-coordinated task in `cmd/api-server/main.go`, so only the elected leader performs git polling/pulls
   - **HTTP content triggers**: the `trigger-http-watcher` leader task (`pkg/triggers/http_trigger.go`) polls the endpoint of each TestTrigger with `contentSelector.http` and fires its `http-changed` event when the selected value (a JSON field, a response header, or the body digest) changes
 
+#### Control Plane resource CRDs
+
+- **`Board`** (`insights.testkube.io/v1alpha1`)
+  - **Definition**: [`api/insights/v1alpha1/board_types.go`](api/insights/v1alpha1/board_types.go)
+  - **Purpose**: An Insights board, an entity that lives only in the Control Plane, declared in YAML so it can be kept in Git. `metadata.name` is the board's slug, and boards are organization-scoped in the Control Plane.
+  - **Status**: [`api/common/v1/controlplane.go`](api/common/v1/controlplane.go) (`ControlPlaneResourceStatus`) is the Control Plane's view: its id, the owning GitOps agent and the creation/modification sources. It is filled in on export and never taken from a request.
+  - Each Control Plane entity family gets an API group of its own (`ai.testkube.io` and `testbundles.testkube.io` to come). Today the CLI applies these objects (see [Control Plane Resources](#control-plane-resources)); no controller watches the CRDs yet.
+
 #### Deprecated CRDs
 
 - A number of now-deprecated CRDs are still in the codebase to avoid the removal of corresponding Kubernetes resources.
@@ -382,6 +390,14 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 - API server endpoints (standalone or control plane)
 - Authentication tokens
 - Contexts (for multi-environment setups)
+
+### Control Plane Resources
+
+**Location**: [`cmd/kubectl-testkube/commands/apply.go`](cmd/kubectl-testkube/commands/apply.go), [`cmd/kubectl-testkube/commands/controlplaneresources/`](cmd/kubectl-testkube/commands/controlplaneresources/), [`pkg/controlplane/declarative/`](pkg/controlplane/declarative/)
+
+`testkube apply -f <file|dir|->` creates or updates Control Plane resources (Insights boards today) from multi-document YAML or JSON. `testkube get board [name] -o yaml|json` exports them in the same form, so a board built in the dashboard can be adopted into Git, and `testkube delete board <name>` removes one. Apply validates every document locally first and sends nothing if any is invalid; `--dry-run` stops after validation, and with `-o yaml` prints the objects with their defaults filled in.
+
+[`pkg/controlplane/declarative`](pkg/controlplane/declarative/) is the contract shared with the Control Plane (`testkube-cloud-api` `internal/declarative`) and, later, the GitOps agent: the kind registry (group/version, kind, plural resource, CLI names, scope), multi-document decoding, the idempotent `Normalize` (built on [`pkg/mcp/boards`](pkg/mcp/boards/)), and the mapping of a board to and from its stored form. Its `client` subpackage talks to the Control Plane's generic, name-keyed endpoints, `/organizations/{org}[/environments/{env}]/resources/{resource}[/{name}]`, with the environment segment only for environment-scoped kinds. It refuses an organization-scoped kind with a `tkcapi_` API token before sending anything, and maps 404/405 on the endpoints to "Control Plane does not support this kind", 409 to a conflict (such as a GitOps-owned resource), and 422 to an invalid object, listing every problem the response names.
 
 ### Local Install
 
