@@ -71,32 +71,29 @@ spec:
   - name: Prepare UI preview
     condition: 'passed && config.revision != "main"'
     workingDir: /data/repo/js/packages/web
-    shell: |
-      npm run env:vercel
-
-      # Fast compression preserves npm's workspace and executable symlinks.
-      bash -o pipefail -c 'tar -cf - -C /data/repo js | gzip -1 > /data/ui-preview.tar.gz'
+    shell: npm run env:vercel
   - name: Run tests
     services:
       ui:
         count: 'config.revision == "main" ? 0 : 1'
-        # Match the install/build runtime when reusing its node_modules.
-        image: mcr.microsoft.com/playwright:v1.62.1-noble
+        image: nginx:1.29-alpine
         transfer:
-        - from: /data
-          files:
-          - ui-preview.tar.gz
-          to: /data/ui-preview
-        workingDir: /data/ui-preview
+        - from: /data/repo/js/packages/web/dist
+        # The dashboard uses browser routes, so unknown paths must return index.html.
         shell: |
-          mkdir -p /data/repo
-          tar -xzf /data/ui-preview/ui-preview.tar.gz -C /data/repo
-          cd /data/repo/js/packages/web
-          npx vite preview --host 0.0.0.0 --port 5173
+          cat > /etc/nginx/conf.d/default.conf <<'EOF'
+          server {
+            listen 5173;
+            root /data/repo/js/packages/web/dist;
+            location /assets/ { try_files $uri =404; }
+            location / { try_files $uri /index.html; }
+          }
+          EOF
+          exec nginx -g 'daemon off;'
         resources:
           requests:
-            cpu: 2
-            memory: 2Gi
+            cpu: 200m
+            memory: 128Mi
         timeout: 10m
         readinessProbe:
           httpGet:
