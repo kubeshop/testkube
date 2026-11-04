@@ -28,7 +28,6 @@
 //
 // # Time zones
 //
-//
 // The dashboard ends a day, week, month or quarter range at the viewer's local
 // midnight, so a relative range is anchored in a time zone: render_board takes
 // an IANA timeZone (default UTC) and passes it as QueryOptions.Location. The
