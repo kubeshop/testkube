@@ -4183,6 +4183,8 @@ paths:
         - $ref: "#/components/parameters/TagSelector"
         - $ref: "#/components/parameters/ActorName"
         - $ref: "#/components/parameters/ActorType"
+        - $ref: "#/components/parameters/MinDurationMs"
+        - $ref: "#/components/parameters/MaxDurationMs"
         - $ref: "#/components/parameters/StatusDetailsTypeFilter"
       summary: List test workflow executions
       description: List test workflow executions
@@ -4548,6 +4550,8 @@ paths:
         - $ref: "#/components/parameters/TagSelector"
         - $ref: "#/components/parameters/ActorName"
         - $ref: "#/components/parameters/ActorType"
+        - $ref: "#/components/parameters/MinDurationMs"
+        - $ref: "#/components/parameters/MaxDurationMs"
         - $ref: "#/components/parameters/StatusDetailsTypeFilter"
       summary: List test workflow executions
       description: List test workflow executions
@@ -12729,6 +12733,22 @@ components:
       schema:
         type: string
         description: Test workflow running conntext actor type
+    MinDurationMs:
+      in: query
+      name: minDurationMs
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+        description: Keep only the test workflow executions that ran at least this many milliseconds
+    MaxDurationMs:
+      in: query
+      name: maxDurationMs
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+        description: Keep only the test workflow executions that ran at most this many milliseconds
     ForceAgent:
       in: query
       name: forceAgent
