@@ -55,16 +55,16 @@ func TestFixtures_Valid(t *testing.T) {
 
 func TestFixtures_Invalid(t *testing.T) {
 	cases := map[string][]string{
-		"board-bad-slug.yaml":                     {"metadata.name", "RFC 1123 label"},
-		"board-unknown-report-kind.yaml":          {"spec.reports[0].kind", "pie-chart"},
-		"board-unknown-param.yaml":                {"spec.reports[0].params", "unknown params for a pass-fail report: durration"},
-		"board-bad-param-value.yaml":              {"spec.reports[0].params", "duration must be one of"},
-		"board-duplicate-report.yaml":             {"spec.reports[1].id", "Duplicate value"},
-		"board-layout-unknown-report.yaml":        {"spec.layout.rows[0].cells[1]", "ghost"},
-		"board-layout-unplaced-report.yaml":       {"spec.layout.rows", "these are not: b"},
-		"board-unknown-field.yaml":                {"document 1", `unknown field "dispayName"`},
-		"unknown-kind.yaml":                       {`unknown kind "Dashboard"`},
-		"not-a-controlplane-resource.yaml":        {`"testworkflows.testkube.io/v1" is not a Control Plane resource`},
+		"board-bad-slug.yaml":               {"metadata.name", "RFC 1123 label"},
+		"board-unknown-report-kind.yaml":    {"spec.reports[0].kind", "pie-chart"},
+		"board-unknown-param.yaml":          {"spec.reports[0].params", "unknown params for a pass-fail report: durration"},
+		"board-bad-param-value.yaml":        {"spec.reports[0].params", "duration must be one of"},
+		"board-duplicate-report.yaml":       {"spec.reports[1].id", "Duplicate value"},
+		"board-layout-unknown-report.yaml":  {"spec.layout.rows[0].cells[1]", "ghost"},
+		"board-layout-unplaced-report.yaml": {"spec.layout.rows", "these are not: b"},
+		"board-unknown-field.yaml":          {"document 1", `unknown field "dispayName"`},
+		"unknown-kind.yaml":                 {`unknown kind "Dashboard"`},
+		"not-a-controlplane-resource.yaml":  {`"testworkflows.testkube.io/v1" is not a Control Plane resource`},
 	}
 	files, err := filepath.Glob(filepath.Join("testdata", "invalid", "*.yaml"))
 	require.NoError(t, err)
@@ -253,4 +253,3 @@ func TestLookup(t *testing.T) {
 		resources[k.Resource] = true
 	}
 }
-
