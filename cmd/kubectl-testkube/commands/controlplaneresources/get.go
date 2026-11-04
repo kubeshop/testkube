@@ -14,15 +14,15 @@ import (
 
 // NewGetCmds returns a `testkube get <kind> [name]` subcommand per Control
 // Plane resource kind.
-func NewGetCmds() []*cobra.Command {
+func NewGetCmds(newClient ClientFactory) []*cobra.Command {
 	cmds := make([]*cobra.Command, 0, len(declarative.Kinds()))
 	for _, kind := range declarative.Kinds() {
-		cmds = append(cmds, newGetCmd(kind))
+		cmds = append(cmds, newGetCmd(kind, newClient))
 	}
 	return cmds
 }
 
-func newGetCmd(kind declarative.Kind) *cobra.Command {
+func newGetCmd(kind declarative.Kind, newClient ClientFactory) *cobra.Command {
 	return &cobra.Command{
 		Use:     kind.Name() + " [name]",
 		Aliases: kind.Names[1:],
@@ -33,7 +33,7 @@ form "testkube apply" takes, so a %[1]s built in the dashboard can be exported a
 		Args:    cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			output := cmd.Flag("output").Value.String()
-			c, err := NewClientFn(cmd)
+			c, err := newClient(cmd)
 			ui.ExitOnError("connecting to the Control Plane", err)
 			name := ""
 			if len(args) == 1 {

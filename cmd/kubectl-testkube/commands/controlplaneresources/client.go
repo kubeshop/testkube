@@ -17,10 +17,12 @@ import (
 	"github.com/kubeshop/testkube/pkg/http"
 )
 
-// NewClientFn builds the Control Plane client. Tests replace it.
-var NewClientFn = newClient
+// ClientFactory builds the Control Plane client for a command. The commands
+// take one, so a test can hand them a fake without changing shared state.
+type ClientFactory func(cmd *cobra.Command) (client.Client, error)
 
-func newClient(cmd *cobra.Command) (client.Client, error) {
+// NewClient is the ClientFactory for the CLI's current Control Plane context.
+func NewClient(cmd *cobra.Command) (client.Client, error) {
 	cfg, err := config.Load()
 	if err != nil {
 		return nil, fmt.Errorf("loading config: %w", err)

@@ -3,6 +3,7 @@ package declarative
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"strings"
 	"unicode"
 
@@ -144,12 +145,27 @@ func normalizeReport(report *insightsv1.BoardReport, path *field.Path) field.Err
 	if err != nil {
 		return field.ErrorList{field.Invalid(paramsPath, "", err.Error())}
 	}
+	keepNoSegment(report.Kind, normalized)
 	raw, err := json.Marshal(normalized)
 	if err != nil {
 		return field.ErrorList{field.InternalError(paramsPath, err)}
 	}
 	report.Params = &apiextensionsv1.JSON{Raw: raw}
 	return nil
+}
+
+// keepNoSegment writes back the empty segment of a time-series report that
+// boards.NormalizeReport dropped. NormalizeReport reads "" as "no grouping"
+// but a missing segment as "group by status", so without this a second
+// Normalize - the CLI normalizes before sending and the Control Plane again
+// on receipt - would group a chart its author left ungrouped.
+func keepNoSegment(kind string, params map[string]any) {
+	if kind != boards.KindTimeSeries {
+		return
+	}
+	if _, ok := params["segment"]; !ok {
+		params["segment"] = ""
+	}
 }
 
 func assignFilterIDs(params map[string]any, reportID string) {
@@ -239,8 +255,20 @@ func BoardFromStored(b *boards.Board, status commonv1.ControlPlaneResourceStatus
 	}
 	for _, r := range b.Content.Reports {
 		report := insightsv1.BoardReport{ID: r.ID, Kind: r.Kind, Name: r.Name, Description: r.Description}
-		if len(r.Params) > 0 {
-			raw, err := json.Marshal(r.Params)
+		// A stored time-series report without a segment is shown ungrouped,
+		// so the export says so: applying it without one would group by status.
+		params := r.Params
+		if r.Kind == boards.KindTimeSeries {
+			if _, ok := params["segment"]; !ok {
+				params = maps.Clone(params)
+				if params == nil {
+					params = map[string]any{}
+				}
+				params["segment"] = ""
+			}
+		}
+		if len(params) > 0 {
+			raw, err := json.Marshal(params)
 			if err != nil {
 				return nil, fmt.Errorf("report %q: %w", r.ID, err)
 			}

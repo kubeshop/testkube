@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -214,9 +215,27 @@ func TestDelete(t *testing.T) {
 }
 
 func TestCommandsPerKind(t *testing.T) {
-	gets := NewGetCmds()
+	gets := NewGetCmds(NewClient)
 	require.Len(t, gets, len(declarative.Kinds()))
 	assert.Equal(t, "board [name]", gets[0].Use)
 	assert.Equal(t, []string{"boards"}, gets[0].Aliases)
-	assert.Equal(t, "board <name>", NewDeleteCmds()[0].Use)
+	assert.Equal(t, "board <name>", NewDeleteCmds(NewClient)[0].Use)
+}
+
+func TestCommandsUseTheirClientFactory(t *testing.T) {
+	c := &fakeClient{stored: map[string]declarative.Object{"a": storedBoard("a")}}
+	factory := func(*cobra.Command) (client.Client, error) { return c, nil }
+
+	apply := NewApplyCmd(factory)
+	apply.SetIn(strings.NewReader(twoBoards))
+	apply.SetOut(&bytes.Buffer{})
+	apply.SetArgs([]string{"-f", "-"})
+	require.NoError(t, apply.Execute())
+	assert.Len(t, c.applied, 2)
+
+	del := NewDeleteCmds(factory)[0]
+	del.SetOut(&bytes.Buffer{})
+	del.SetArgs([]string{"a"})
+	require.NoError(t, del.Execute())
+	assert.Equal(t, []string{"a"}, c.deleted)
 }

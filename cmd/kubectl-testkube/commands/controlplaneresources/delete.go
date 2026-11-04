@@ -15,15 +15,15 @@ import (
 
 // NewDeleteCmds returns a `testkube delete <kind> <name>` subcommand per
 // Control Plane resource kind.
-func NewDeleteCmds() []*cobra.Command {
+func NewDeleteCmds(newClient ClientFactory) []*cobra.Command {
 	cmds := make([]*cobra.Command, 0, len(declarative.Kinds()))
 	for _, kind := range declarative.Kinds() {
-		cmds = append(cmds, newDeleteCmd(kind))
+		cmds = append(cmds, newDeleteCmd(kind, newClient))
 	}
 	return cmds
 }
 
-func newDeleteCmd(kind declarative.Kind) *cobra.Command {
+func newDeleteCmd(kind declarative.Kind, newClient ClientFactory) *cobra.Command {
 	return &cobra.Command{
 		Use:     kind.Name() + " <name>",
 		Aliases: kind.Names[1:],
@@ -34,7 +34,7 @@ func newDeleteCmd(kind declarative.Kind) *cobra.Command {
 			if flag := cmd.Flag("ignore-not-found"); flag != nil {
 				ignoreNotFound = flag.Value.String() == "true"
 			}
-			c, err := NewClientFn(cmd)
+			c, err := newClient(cmd)
 			ui.ExitOnError("connecting to the Control Plane", err)
 			ui.ExitOnError("deleting "+kind.Name(), Delete(cmd.Context(), c, kind, args[0], ignoreNotFound, cmd.OutOrStdout()))
 		},

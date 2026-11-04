@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -252,4 +253,46 @@ func TestLookup(t *testing.T) {
 		assert.False(t, resources[k.Resource], "resource %s is not unique", k.Resource)
 		resources[k.Resource] = true
 	}
+}
+
+// boards.NormalizeReport drops an empty segment and groups a missing one by
+// status, so a chart left ungrouped must survive the CLI's Normalize and the
+// Control Plane's second one.
+func TestNormalize_UngroupedTimeSeriesStaysUngrouped(t *testing.T) {
+	board := &insightsv1.Board{
+		ObjectMeta: metav1.ObjectMeta{Name: "b"},
+		Spec: insightsv1.BoardSpec{Reports: []insightsv1.BoardReport{
+			{ID: "none", Kind: boards.KindTimeSeries, Params: &apiextensionsv1.JSON{Raw: []byte(`{"segment":""}`)}},
+			{ID: "default", Kind: boards.KindTimeSeries},
+		}},
+	}
+	for range 3 {
+		require.NoError(t, Normalize(board))
+	}
+	assert.Equal(t, "", mustParams(t, board.Spec.Reports[0])["segment"])
+	assert.Equal(t, "status", mustParams(t, board.Spec.Reports[1])["segment"])
+}
+
+// A chart made ungrouped in the dashboard is stored without a segment, which
+// the dashboard shows as no grouping, so the export keeps it ungrouped.
+func TestBoardFromStored_UngroupedTimeSeries(t *testing.T) {
+	stored := &boards.Board{Slug: "b", Name: "B", Layout: json.RawMessage(`{"version":1,"rows":[]}`)}
+	stored.Content.Reports = []boards.Report{
+		{ID: "none", Kind: boards.KindTimeSeries, Params: map[string]any{"measure": "execution-count"}},
+		{ID: "bare", Kind: boards.KindTimeSeries},
+	}
+	exported, err := BoardFromStored(stored, commonv1.ControlPlaneResourceStatus{})
+	require.NoError(t, err)
+	require.NoError(t, Normalize(exported))
+	for _, r := range exported.Spec.Reports {
+		assert.JSONEq(t, `""`, mustJSON(t, mustParams(t, r)["segment"]), r.ID)
+	}
+	assert.NotContains(t, stored.Content.Reports[0].Params, "segment", "the stored board is not changed")
+}
+
+func mustParams(t *testing.T, r insightsv1.BoardReport) map[string]any {
+	t.Helper()
+	var params map[string]any
+	require.NoError(t, json.Unmarshal(r.Params.Raw, &params))
+	return params
 }

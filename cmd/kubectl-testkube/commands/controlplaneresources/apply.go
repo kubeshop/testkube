@@ -27,8 +27,8 @@ type ApplyOptions struct {
 	Output string
 }
 
-// NewApplyCmd returns `testkube apply`.
-func NewApplyCmd() *cobra.Command {
+// NewApplyCmd returns `testkube apply`, which connects with newClient.
+func NewApplyCmd(newClient ClientFactory) *cobra.Command {
 	var (
 		files []string
 		opts  ApplyOptions
@@ -54,7 +54,7 @@ Use --dry-run to validate without sending anything; with -o yaml it prints the o
 
 			var c client.Client
 			if !opts.DryRun {
-				c, err = NewClientFn(cmd)
+				c, err = newClient(cmd)
 				ui.ExitOnError("connecting to the Control Plane", err)
 			}
 			ui.ExitOnError("applying", Apply(cmd.Context(), c, objects, opts, cmd.OutOrStdout()))

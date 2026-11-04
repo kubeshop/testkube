@@ -11,7 +11,7 @@ spec:
   layout:
     rows:
       - cells: [pass-rate, executions]
-      - cells: [trend]
+      - cells: [trend, ungrouped]
       - cells: [slowest]
   reports:
     - id: pass-rate
@@ -42,6 +42,11 @@ spec:
               labelKey: team
               labelOperator: exists
               labelValue: ""
+    - id: ungrouped
+      kind: time-series
+      name: Executions, not grouped
+      params:
+        segment: ""
     - id: slowest
       kind: workflows
       name: Workflows

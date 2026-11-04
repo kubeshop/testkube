@@ -13,7 +13,7 @@ import (
 // NewApplyCmd returns `testkube apply`, which creates or updates Control
 // Plane resources from YAML.
 func NewApplyCmd() *cobra.Command {
-	cmd := controlplaneresources.NewApplyCmd()
+	cmd := controlplaneresources.NewApplyCmd(controlplaneresources.NewClient)
 	cmd.Annotations = map[string]string{cmdGroupAnnotation: cmdGroupCommands}
 	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		cfg, err := config.Load()
