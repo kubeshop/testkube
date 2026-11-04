@@ -153,6 +153,8 @@ dex:
     enabled: true
   configTemplate:
     customConfig: ""
+    # The CLI logs in with the admin email and password.
+    passwordGrant: true
     additionalStaticClients:
       - id: testkube-enterprise
         redirectURIs:
