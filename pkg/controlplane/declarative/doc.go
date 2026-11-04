@@ -43,6 +43,7 @@
 // The environment segment is present only for environment-scoped kinds. PUT
 // takes the object as JSON, stripped by PrepareForApply, and returns it as
 // stored. GET returns the object with status filled in, and the list returns
-// {"items": [...]}. Status, and with it GitOps ownership, is never taken from
+// every object of the kind as {"elements": [...]}, the Control Plane's list
+// envelope (it pages only when asked to). Status, and with it GitOps ownership, is never taken from
 // a request body.
 package declarative

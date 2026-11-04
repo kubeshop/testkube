@@ -68,7 +68,7 @@ func TestApply_SendsPreparedObjectToOrganizationScope(t *testing.T) {
 }
 
 func TestGetAndList(t *testing.T) {
-	c, rec := serve(t, http.StatusOK, `{"items":[{"metadata":{"name":"a"}},{"metadata":{"name":"b"}}]}`)
+	c, rec := serve(t, http.StatusOK, `{"elements":[{"metadata":{"name":"a"}},{"metadata":{"name":"b"}}]}`)
 	items, err := c.List(context.Background(), boardKind(t))
 	require.NoError(t, err)
 	assert.Equal(t, "/organizations/org/resources/boards", rec.path)

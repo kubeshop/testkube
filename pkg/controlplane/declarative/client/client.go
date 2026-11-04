@@ -131,13 +131,13 @@ func (c *httpClient) List(ctx context.Context, kind declarative.Kind) ([]declara
 		return nil, err
 	}
 	var list struct {
-		Items []json.RawMessage `json:"items"`
+		Elements []json.RawMessage `json:"elements"`
 	}
 	if err := json.Unmarshal(body, &list); err != nil {
 		return nil, fmt.Errorf("decoding %s list: %w", kind.Resource, err)
 	}
-	out := make([]declarative.Object, 0, len(list.Items))
-	for _, item := range list.Items {
+	out := make([]declarative.Object, 0, len(list.Elements))
+	for _, item := range list.Elements {
 		obj, err := decodeObject(item, kind)
 		if err != nil {
 			return nil, err
