@@ -23,7 +23,7 @@ var networkProbes = []struct{ name, url string }{
 	{"github.com", "https://github.com/"},
 }
 
-const networkFix = "Testkube downloads from these during install. If you use a proxy,\n" +
+var networkFix = "Testkube downloads from these during install. If you use a proxy,\n" +
 	"set HTTPS_PROXY in this shell and in Docker's settings, " + ThenRunAgain
 
 // Any HTTP answer counts: Docker Hub replies 401 to anonymous calls.

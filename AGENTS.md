@@ -113,6 +113,7 @@ Write the failing test first, at the lowest level that shows the bug, then fix i
 
 Each area below documents itself in the `doc.go` of its package; read that before changing it. A line that names another repository is a contract both ends change together.
 
+- **Execution-scoped GitLab checkout:** `pkg/cloud/doc.go`, `pkg/controlplaneclient/doc.go` and `cmd/testworkflow-toolkit/commands/doc.go`. The matching authorization contract is in testkube-cloud-api's `internal/agentserver/doc.go`; both sides must support `GetGitAccess` before using `authType: gitlab`.
 - **MCP integration:** `pkg/mcp/doc.go`, with the Insights board rules in `pkg/mcp/boards/doc.go` and how the board tools write in `pkg/mcp/tools/doc.go`. A new tool is also registered in the Control Plane's `mcp_handler.go`, the Control Plane's `HandlerClient` uses `pkg/mcp/boards` rather than reimplementing it, and a dashboard change to the ported report files needs a matching change in `pkg/mcp/boards`.
 - **GitOps resource sync** and its resource ownership contract: `internal/sync/doc.go`. The Control Plane enforces ownership in testkube-cloud-api's `internal/sync/ownership.go`.
 - **Mongo to Postgres conversion** (`cmd/convert`): `pkg/convert/doc.go`. A schema migration touching `test_workflow_executions` or its child tables is a change there too.
@@ -166,6 +167,7 @@ Pull request checks are not GitHub Actions. They are Testkube TestWorkflows in `
 | --- | --- |
 | `oss-lint-go` | `golangci-lint run ./...` |
 | `oss-lint-proto` | `buf lint`, `buf format --diff`, and `buf breaking` against `main` |
+| `oss-lint-shell` | `shellcheck --shell=dash` on `install-trial.sh` |
 | `oss-unit-tests` | `make unit-tests` |
 | `oss-integration-tests` | the `_Integration` tests with MongoDB, NATS, MinIO and Postgres |
 | `oss-verify-crds` | `make verify-crds-generated` |

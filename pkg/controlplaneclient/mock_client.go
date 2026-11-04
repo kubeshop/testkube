@@ -334,6 +334,21 @@ func (mr *MockClientMockRecorder) GetExecutionCachePresignedURL(ctx, environment
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecutionCachePresignedURL", reflect.TypeOf((*MockClient)(nil).GetExecutionCachePresignedURL), ctx, environmentId, executionId, req)
 }
 
+// GetGitAccess mocks base method.
+func (m *MockClient) GetGitAccess(ctx context.Context, url, revision string) (*cloud.GetGitAccessResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetGitAccess", ctx, url, revision)
+	ret0, _ := ret[0].(*cloud.GetGitAccessResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetGitAccess indicates an expected call of GetGitAccess.
+func (mr *MockClientMockRecorder) GetGitAccess(ctx, url, revision any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGitAccess", reflect.TypeOf((*MockClient)(nil).GetGitAccess), ctx, url, revision)
+}
+
 // GetGitHubToken mocks base method.
 func (m *MockClient) GetGitHubToken(ctx context.Context, url string) (string, error) {
 	m.ctrl.T.Helper()

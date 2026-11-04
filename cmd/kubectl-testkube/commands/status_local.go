@@ -14,7 +14,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-const statusLocalCommand = "testkube status local"
+var statusLocalCommand = localinstall.Self + " status local"
 
 // Scripts tell states apart by code; 1 means error.
 const (

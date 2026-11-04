@@ -44,6 +44,7 @@ service TestKubeCloudAPI {
     // scoped to the requested audience, so a workflow can exchange it with a cloud
     // provider (federated identity) instead of storing long-lived credentials.
     rpc GetIdentityToken(GetIdentityTokenRequest) returns (GetIdentityTokenResponse);
+    rpc GetGitAccess(GetGitAccessRequest) returns (GetGitAccessResponse);
 
     // Execution
     rpc SaveExecutionArtifactPresigned(SaveExecutionArtifactPresignedRequest) returns (SaveExecutionArtifactPresignedResponse);
@@ -1142,3 +1143,14 @@ message MigrateSuperAgentRequest {
 }
 
 message MigrateSuperAgentResponse {}
+
+// Checkout access is authorized from the execution token, never from request tenant IDs.
+message GetGitAccessRequest {
+ string url = 1;
+ string revision = 2;
+}
+message GetGitAccessResponse {
+ string url = 1;
+ string username = 2;
+ string token = 3;
+}

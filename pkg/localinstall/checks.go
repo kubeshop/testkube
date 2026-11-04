@@ -53,13 +53,14 @@ const (
 	minInotifyInstances = 512
 	minInotifyWatches   = 524288
 
-	systemDockerSocket  = "/var/run/docker.sock"
-	dockerPermissionFix = "Your user can't use Docker yet. Run:\n" +
-		"  sudo usermod -aG docker $USER\n" +
-		"  newgrp docker\n" +
-		"Details: https://docs.docker.com/engine/install/linux-postinstall/\n" +
-		"Then run again:\n  " + InstallCommand
+	systemDockerSocket = "/var/run/docker.sock"
 )
+
+var dockerPermissionFix = "Your user can't use Docker yet. Run:\n" +
+	"  sudo usermod -aG docker $USER\n" +
+	"  newgrp docker\n" +
+	"Details: https://docs.docker.com/engine/install/linux-postinstall/\n" +
+	"Then run again:\n  " + InstallCommand
 
 // We install these ourselves, so missing is only a warning.
 var installableTools = []string{"kubectl"}
@@ -260,7 +261,7 @@ func (c *Checker) CheckDocker(ctx context.Context) Result {
 }
 
 // init demo needs no Docker, only a cluster.
-const ownClusterAlternative = "Or, to install Testkube in your own Kubernetes cluster, run:\n  " + InitDemoCommand
+var ownClusterAlternative = "Or, to install Testkube in your own Kubernetes cluster, run:\n  " + InitDemoCommand
 
 func (c *Checker) checkDocker(ctx context.Context) Result {
 	if _, err := c.host.LookPath("docker"); err != nil {

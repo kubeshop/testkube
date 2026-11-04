@@ -444,7 +444,7 @@ generate-protobuf: $(BUF) ## Regenerate protobuf code from proto/ with buf
 	@cd proto && $(abspath $(BUF)) generate --template buf.gen.old.yaml
 
 .PHONY: generate-openapi
-generate-openapi: ## Regenerate OpenAPI models from api/v1/testkube.yaml (needs Docker)
+generate-openapi: ## Regenerate OpenAPI models from api/v1/testkube.yaml (needs Docker or swagger-codegen)
 	@bash scripts/generate-openapi.sh
 
 .PHONY: generate-mocks
