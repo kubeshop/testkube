@@ -4,7 +4,7 @@ metadata:
   name: special-cases-step-sharing
   labels:
     core-tests: special-cases
-description: "Step sharing - pass values via /testkube/outputs/ and files via step.results"
+description: "Step sharing - pass values via /testkube/outputs/ and files via step.results, and read the result of an earlier step"
 spec:
   use:
     - name: special-cases-template-default-resources
@@ -33,3 +33,31 @@ spec:
       test "{{step.consume.outputs.status}}" = "consumed" || { echo "FAIL: chained output"; exit 1; }
       test "{{step.produce.outputs.token}}" = "my_token" || { echo "FAIL: step1 output gone"; exit 1; }
       test -x {{step.produce.results}}/app || { echo "FAIL: step1 file gone"; exit 1; }
+  - name: Fail on purpose
+    id: fail_on_purpose
+    optional: true
+    shell: exit 3
+  - name: Skip on purpose
+    id: skip_on_purpose
+    condition: "false"
+    shell: echo "this step does not run"
+  - name: Time out on purpose
+    id: time_out_on_purpose
+    optional: true
+    timeout: 1s
+    shell: sleep 30
+  - name: Report the timeout
+    id: report_timeout
+    condition: 'step.time_out_on_purpose.status == "timeout"'
+    shell: echo "the earlier step ran into its timeout"
+  - name: Read the result of the failed step
+    id: read_result
+    condition: always
+    shell: |
+      test "{{step.fail_on_purpose.exitCode}}" = "3" || { echo "FAIL: exit code"; exit 1; }
+      test "{{step.fail_on_purpose.status}}" = "failed" || { echo "FAIL: status"; exit 1; }
+      test "{{step.skip_on_purpose.status}}" = "skipped" || { echo "FAIL: status of a skipped step"; exit 1; }
+      test "{{step.time_out_on_purpose.status}}" = "timeout" || { echo "FAIL: status of a step that timed out"; exit 1; }
+      test "{{step.report_timeout.status}}" = "passed" || { echo "FAIL: the condition on the timeout did not run the step"; exit 1; }
+      test "{{step.produce.status}}" = "passed" || { echo "FAIL: status of a step that passed"; exit 1; }
+      test "{{step.produce.exitCode}}" = "0" || { echo "FAIL: exit code of a step that passed"; exit 1; }
