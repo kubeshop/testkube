@@ -15,6 +15,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 
+	"github.com/kballard/go-shellquote"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -788,16 +790,33 @@ func TestCloneUsesAdmittedCommitAfterBranchAdvances(t *testing.T) {
 	admitted := git(source, "rev-parse", "HEAD")
 	require.NoError(t, os.WriteFile(filepath.Join(source, "commit.txt"), []byte("newer"), 0600))
 	git(source, "commit", "-am", "advance")
-	destination := filepath.Join(t.TempDir(), "checkout")
-	require.NoError(t, performFullClone((&url.URL{Scheme: "file", Path: source}).String(), destination, nil, nil, &CloneOptions{Revision: admitted, Verbosity: "quiet"}))
-	require.Equal(t, admitted, git(destination, "rev-parse", "HEAD"))
-	data, err := os.ReadFile(filepath.Join(destination, "commit.txt"))
-	require.NoError(t, err)
-	require.Equal(t, "admitted", string(data))
+	for _, sparse := range []bool{false, true} {
+		t.Run(fmt.Sprintf("sparse=%t", sparse), func(t *testing.T) {
+			uri, err := url.Parse("https://testkube:fixture-lease-token@relay.example.test/git-relay/lease/repo.git")
+			require.NoError(t, err)
+			cleanup, configArgs, err := setupGitLabCredentialStore(uri)
+			require.NoError(t, err)
+			defer cleanup()
+			destination := filepath.Join(t.TempDir(), "checkout")
+			var paths []string
+			if sparse {
+				paths = []string{"commit.txt"}
+			}
+			require.NoError(t, performClone((&url.URL{Scheme: "file", Path: source}).String(), destination, configArgs, nil, &CloneOptions{Revision: admitted, Verbosity: "quiet"}, paths))
+			require.Equal(t, admitted, git(destination, "rev-parse", "HEAD"))
+			data, err := os.ReadFile(filepath.Join(destination, "commit.txt"))
+			require.NoError(t, err)
+			require.Equal(t, "admitted", string(data))
+			repoConfig, err := os.ReadFile(filepath.Join(destination, ".git", "config"))
+			require.NoError(t, err)
+			require.NotContains(t, string(repoConfig), "credential")
+			require.NotContains(t, string(repoConfig), "fixture-lease-token")
+		})
+	}
 }
 
 // The production toolkit runs without a writable HOME. Git must still receive
-// its relay lease, and cleanup must remove both the configuration and credential.
+// its relay lease, and cleanup must remove the private credential file.
 func TestGitLabCredentialStoreWithoutWritableHome(t *testing.T) {
 	home := filepath.Join(t.TempDir(), "not-a-directory")
 	require.NoError(t, os.WriteFile(home, []byte("fixture"), 0600))
@@ -807,11 +826,17 @@ func TestGitLabCredentialStoreWithoutWritableHome(t *testing.T) {
 	t.Setenv("GIT_TERMINAL_PROMPT", "0")
 	uri, err := url.Parse("http://testkube:fixture-lease-token@relay.example.test/git-relay/lease/repo.git")
 	require.NoError(t, err)
-	cleanup, err := setupGitLabCredentialStore(uri)
+	cleanup, configArgs, err := setupGitLabCredentialStore(uri)
 	require.NoError(t, err)
 	defer cleanup()
-	config := os.Getenv("GIT_CONFIG_GLOBAL")
-	cmd := exec.CommandContext(t.Context(), "git", "credential", "fill")
+	helper, err := shellquote.Split(strings.TrimPrefix(configArgs[len(configArgs)-1], "credential.helper="))
+	require.NoError(t, err)
+	require.Len(t, helper, 3)
+	credentialFile := helper[2]
+	info, err := os.Stat(credentialFile)
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0600), info.Mode().Perm())
+	cmd := exec.CommandContext(t.Context(), "git", append(configArgs, "credential", "fill")...)
 	cmd.Stdin = strings.NewReader("protocol=http\nhost=relay.example.test\n\n")
 	data, err := cmd.Output()
 	require.NoError(t, err)
@@ -821,6 +846,45 @@ func TestGitLabCredentialStoreWithoutWritableHome(t *testing.T) {
 	require.NotContains(t, uri.String(), "fixture-lease-token")
 	cleanup()
 	require.Equal(t, "/dev/null", os.Getenv("GIT_CONFIG_GLOBAL"))
-	_, err = os.Stat(filepath.Dir(config))
+	_, err = os.Stat(filepath.Dir(credentialFile))
 	require.True(t, os.IsNotExist(err))
+}
+
+// Private relay credentials must not hide the Runner's CA or proxy configuration.
+func TestGitLabCredentialStorePreservesConnectionSettings(t *testing.T) {
+	for _, explicit := range []bool{false, true} {
+		t.Run(fmt.Sprintf("explicit-global-config=%t", explicit), func(t *testing.T) {
+			home := t.TempDir()
+			config := filepath.Join(home, ".gitconfig")
+			require.NoError(t, os.WriteFile(config, []byte("[http]\n\tsslCAInfo = /mounted/organization-ca.pem\n\tproxy = http://egress-proxy.example.test:3128\n[credential]\n\thelper = !exit 77\n\tuseHttpPath = true\n"), 0600))
+			t.Setenv("HOME", home)
+			t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+			t.Setenv("GIT_TERMINAL_PROMPT", "0")
+			t.Setenv("GIT_CONFIG_GLOBAL", config)
+			if !explicit {
+				require.NoError(t, os.Unsetenv("GIT_CONFIG_GLOBAL"))
+			}
+			before, existed := os.LookupEnv("GIT_CONFIG_GLOBAL")
+			uri, err := url.Parse("https://testkube:fixture-lease-token@relay.example.test/git-relay/lease/repo.git")
+			require.NoError(t, err)
+			cleanup, configArgs, err := setupGitLabCredentialStore(uri)
+			require.NoError(t, err)
+			defer cleanup()
+			after, exists := os.LookupEnv("GIT_CONFIG_GLOBAL")
+			require.Equal(t, existed, exists)
+			require.Equal(t, before, after)
+			for key, expected := range map[string]string{"http.sslCAInfo": "/mounted/organization-ca.pem", "http.proxy": "http://egress-proxy.example.test:3128"} {
+				cmd := exec.CommandContext(t.Context(), "git", append(configArgs, "config", "--get", key)...)
+				data, err := cmd.Output()
+				require.NoError(t, err)
+				require.Equal(t, expected, strings.TrimSpace(string(data)))
+			}
+			// useHttpPath and an inherited helper must not interfere with relay access.
+			cmd := exec.CommandContext(t.Context(), "git", append(configArgs, "credential", "fill")...)
+			cmd.Stdin = strings.NewReader("protocol=https\nhost=relay.example.test\npath=git-relay/lease/repo.git\n\n")
+			data, err := cmd.Output()
+			require.NoError(t, err)
+			require.Contains(t, string(data), "password=fixture-lease-token")
+		})
+	}
 }

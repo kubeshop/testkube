@@ -285,8 +285,9 @@ func RunClone(ctx context.Context, rawURI string, outputPath string, opts *Clone
 
 	// Setup credential store for reliable auth across redirects (best-effort)
 	var cleanupCreds func()
+	var credentialConfigArgs []string
 	if opts.AuthType == "gitlab" {
-		cleanupCreds, err = setupGitLabCredentialStore(uri)
+		cleanupCreds, credentialConfigArgs, err = setupGitLabCredentialStore(uri)
 		if err != nil {
 			return fmt.Errorf("setting up GitLab credential store: %w", err)
 		}
@@ -320,6 +321,7 @@ func RunClone(ctx context.Context, rawURI string, outputPath string, opts *Clone
 		"-c", fmt.Sprintf("safe.directory=%s", tmpPath),
 		"-c", "advice.detachedHead=false",
 	}
+	configArgs = append(configArgs, credentialConfigArgs...)
 
 	// Clean paths for sparse checkout
 	paths := cleanPaths(opts.RawPaths, opts.Cone)
@@ -473,43 +475,26 @@ func setupSSHKey(sshKey string) (func(), error) {
 }
 
 // GitLab runs in a non-root toolkit container whose HOME may be read-only.
-// Keep credentials and configuration in private temporary files, and point Git
-// at that configuration for this process. No credential is saved in the remote
-// URL or repository configuration, and no write to HOME is required.
-func setupGitLabCredentialStore(uri *url.URL) (func(), error) {
+// Keep credentials in a private temporary file and overlay the helper with
+// command-scoped options. Existing global CA, proxy and other connection settings
+// remain available, and no write to HOME or repository configuration is required.
+func setupGitLabCredentialStore(uri *url.URL) (func(), []string, error) {
 	if uri.User == nil {
-		return nil, fmt.Errorf("GitLab checkout credentials are missing")
+		return nil, nil, fmt.Errorf("GitLab checkout credentials are missing")
 	}
 	dir, err := os.MkdirTemp(constants.DefaultTmpDirPath, "gitlab-auth-*")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	previous, existed := os.LookupEnv("GIT_CONFIG_GLOBAL")
-	cleanup := func() {
-		if existed {
-			_ = os.Setenv("GIT_CONFIG_GLOBAL", previous)
-		} else {
-			_ = os.Unsetenv("GIT_CONFIG_GLOBAL")
-		}
-		_ = os.RemoveAll(dir)
-	}
-	credentialURL := &url.URL{Scheme: uri.Scheme, Host: uri.Host, User: uri.User}
+	cleanup := func() { _ = os.RemoveAll(dir) }
+	credentialURL := &url.URL{Scheme: uri.Scheme, Host: uri.Host, User: uri.User, Path: uri.Path, RawPath: uri.RawPath}
 	credentials := filepath.Join(dir, "credentials")
-	config := filepath.Join(dir, "config")
 	if err = os.WriteFile(credentials, []byte(credentialURL.String()+"\n"), 0600); err != nil {
 		cleanup()
-		return nil, err
+		return nil, nil, err
 	}
-	content := "[credential]\n\thelper = store --file " + shellquote.Join(credentials) + "\n"
-	if err = os.WriteFile(config, []byte(content), 0600); err != nil {
-		cleanup()
-		return nil, err
-	}
-	if err = os.Setenv("GIT_CONFIG_GLOBAL", config); err != nil {
-		cleanup()
-		return nil, err
-	}
-	return cleanup, nil
+	// An empty helper resets inherited helpers before adding the scoped store.
+	return cleanup, []string{"-c", "credential.helper=", "-c", "credential.helper=store --file " + shellquote.Join(credentials)}, nil
 }
 
 // setupCredentialStore configures a git credential store file so that credentials
@@ -603,10 +588,10 @@ func performFullClone(uri, outputPath string, configArgs, authArgs []string, opt
 	ui.Debug("performing full checkout")
 
 	retryCount, retryDelay := opts.retrySettings()
-	args := []interface{}{"clone"}
+	args := []interface{}{configArgs, "clone"}
 	// Always clone without checkout so we can resolve `revision` (branch, tag, or commit)
 	// using the same fetch+checkout logic as the sparse path.
-	args = append(args, configArgs, authArgs, "--depth", "1", "--no-checkout", opts.gitLogArgs(), uri, outputPath)
+	args = append(args, authArgs, "--depth", "1", "--no-checkout", opts.gitLogArgs(), uri, outputPath)
 
 	if err := runGitWithRetry(retryCount, retryDelay, args...); err != nil {
 		return err
@@ -641,8 +626,8 @@ func performSparseClone(uri, outputPath string, configArgs, authArgs []string, o
 // initializeSparseRepo initializes a sparse git repository without checking out files
 func initializeSparseRepo(uri, outputPath string, configArgs, authArgs []string, opts *CloneOptions) error {
 	retryCount, retryDelay := opts.retrySettings()
-	args := []interface{}{"clone"}
-	args = append(args, configArgs, authArgs,
+	args := []interface{}{configArgs, "clone"}
+	args = append(args, authArgs,
 		"--filter=blob:none",
 		"--no-checkout",
 		"--sparse",
