@@ -2321,6 +2321,7 @@ spec:
                         - basic
                         - header
                         - github
+                        - gitlab
                         type: string
                       branch:
                         description: branch/tag name for checkout
@@ -6624,6 +6625,7 @@ spec:
                         - basic
                         - header
                         - github
+                        - gitlab
                         type: string
                       branches:
                         description: |-
@@ -8852,6 +8854,7 @@ spec:
                                   - basic
                                   - header
                                   - github
+                                  - gitlab
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -10947,6 +10950,7 @@ spec:
                                         - basic
                                         - header
                                         - github
+                                        - gitlab
                                       type: string
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
@@ -12435,6 +12439,7 @@ spec:
                             - basic
                             - header
                             - github
+                            - gitlab
                           type: string
                         cone:
                           description: enable cone mode for sparse checkout with paths
@@ -13283,6 +13288,7 @@ spec:
                                   - basic
                                   - header
                                   - github
+                                  - gitlab
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -14700,6 +14706,7 @@ spec:
                                   - basic
                                   - header
                                   - github
+                                  - gitlab
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -16795,6 +16802,7 @@ spec:
                                         - basic
                                         - header
                                         - github
+                                        - gitlab
                                       type: string
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
@@ -18266,6 +18274,7 @@ spec:
                                   - basic
                                   - header
                                   - github
+                                  - gitlab
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -20361,6 +20370,7 @@ spec:
                                         - basic
                                         - header
                                         - github
+                                        - gitlab
                                       type: string
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
@@ -22154,6 +22164,7 @@ spec:
                                   - basic
                                   - header
                                   - github
+                                  - gitlab
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -24184,6 +24195,7 @@ spec:
                                         - basic
                                         - header
                                         - github
+                                        - gitlab
                                       type: string
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
@@ -25615,6 +25627,7 @@ spec:
                             - basic
                             - header
                             - github
+                            - gitlab
                           type: string
                         cone:
                           description: enable cone mode for sparse checkout with paths
@@ -26463,6 +26476,7 @@ spec:
                                   - basic
                                   - header
                                   - github
+                                  - gitlab
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -27860,6 +27874,7 @@ spec:
                                   - basic
                                   - header
                                   - github
+                                  - gitlab
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -29890,6 +29905,7 @@ spec:
                                         - basic
                                         - header
                                         - github
+                                        - gitlab
                                       type: string
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
@@ -31304,6 +31320,7 @@ spec:
                                   - basic
                                   - header
                                   - github
+                                  - gitlab
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -33334,6 +33351,7 @@ spec:
                                         - basic
                                         - header
                                         - github
+                                        - gitlab
                                       type: string
                                     cone:
                                       description: enable cone mode for sparse checkout with paths

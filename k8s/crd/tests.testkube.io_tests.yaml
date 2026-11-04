@@ -429,6 +429,7 @@ spec:
                         - basic
                         - header
                         - github
+                        - gitlab
                         type: string
                       branch:
                         description: branch/tag name for checkout

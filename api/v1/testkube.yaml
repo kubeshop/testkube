@@ -11096,6 +11096,7 @@ components:
         - basic
         - header
         - github
+        - gitlab
 
     BoxedStringList:
       type: object
