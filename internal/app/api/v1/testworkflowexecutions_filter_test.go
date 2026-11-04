@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -37,7 +38,7 @@ func TestGetWorkflowExecutionsFilterFromRequest_Duration(t *testing.T) {
 				return nil
 			})
 
-			_, err := app.Test(httptest.NewRequest("GET", "/test-workflow-executions?"+tc.query, nil))
+			_, err := app.Test(httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/test-workflow-executions?"+tc.query, nil))
 			require.NoError(t, err)
 
 			assert.Equal(t, tc.wantMin, filter.MinDurationMs(), "got min %d for %q, want %d", filter.MinDurationMs(), tc.query, tc.wantMin)
