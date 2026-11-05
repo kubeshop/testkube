@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"regexp"
 	"slices"
 	"strings"
 	"unicode"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
@@ -38,15 +38,28 @@ func normalizeBoard(b *insightsv1.Board) field.ErrorList {
 	return errs
 }
 
+// boardSlugPattern is the slugs the Control Plane makes from a board's name:
+// lower case letters, digits, '-' and '_', starting and ending with a letter
+// or digit. It is wider than a DNS-1123 label, which allows no '_', because a
+// slug made before declarative boards existed must export and apply again
+// unchanged, keeping the board's identity.
+var boardSlugPattern = regexp.MustCompile(`^[a-z0-9]([-_a-z0-9]*[a-z0-9])?$`)
+
+// maxBoardSlugLength bounds a slug. The Control Plane does not bound the
+// names it makes slugs from, so this is the generous DNS-1123 subdomain bound
+// rather than the 63 of a label.
+const maxBoardSlugLength = 253
+
 func validateSlug(name string, path *field.Path) field.ErrorList {
-	if name == "" {
+	switch {
+	case name == "":
 		return field.ErrorList{field.Required(path, "the board's slug")}
+	case len(name) > maxBoardSlugLength:
+		return field.ErrorList{field.TooLong(path, name, maxBoardSlugLength)}
+	case !boardSlugPattern.MatchString(name):
+		return field.ErrorList{field.Invalid(path, name, "a board slug must consist of lower case letters, digits, '-' or '_', and start and end with a letter or digit (e.g. 'release-health')")}
 	}
-	var errs field.ErrorList
-	for _, msg := range validation.IsDNS1123Label(name) {
-		errs = append(errs, field.Invalid(path, name, msg))
-	}
-	return errs
+	return nil
 }
 
 func normalizeBoardSpec(spec *insightsv1.BoardSpec, name string, path *field.Path) field.ErrorList {

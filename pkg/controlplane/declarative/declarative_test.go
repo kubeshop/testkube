@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
@@ -56,7 +57,7 @@ func TestFixtures_Valid(t *testing.T) {
 
 func TestFixtures_Invalid(t *testing.T) {
 	cases := map[string][]string{
-		"board-bad-slug.yaml":               {"metadata.name", "RFC 1123 label"},
+		"board-bad-slug.yaml":               {"metadata.name", "lower case letters, digits, '-' or '_'"},
 		"board-unknown-report-kind.yaml":    {"spec.reports[0].kind", "pie-chart"},
 		"board-unknown-param.yaml":          {"spec.reports[0].params", "unknown params for a pass-fail report: durration"},
 		"board-bad-param-value.yaml":        {"spec.reports[0].params", "duration must be one of"},
@@ -376,6 +377,32 @@ func TestBoardStoredExportApply_KeepsRenderedDefaults(t *testing.T) {
 		}
 	}
 	assert.Empty(t, stored.Content.Reports[0].Params, "the stored board is not changed")
+}
+
+// The Control Plane keeps underscores in the slugs it makes from board names,
+// so a board made before declarative boards existed may have one; its
+// unchanged export must apply again.
+func TestBoardStoredExportApply_UnderscoreSlug(t *testing.T) {
+	stored := &boards.Board{Slug: "release_health", Name: "release_health", Layout: json.RawMessage(`{"version":1,"rows":[]}`)}
+	exported, err := BoardFromStored(stored, commonv1.ControlPlaneResourceStatus{})
+	require.NoError(t, err)
+	encoded, err := Encode([]Object{exported}, "yaml")
+	require.NoError(t, err)
+	applied, err := Decode(bytes.NewReader(encoded))
+	require.NoError(t, err)
+	require.NoError(t, Normalize(applied[0]))
+	reapplied, err := BoardToStored(applied[0].(*insightsv1.Board))
+	require.NoError(t, err)
+	assert.Equal(t, "release_health", reapplied.Slug, "the board keeps its identity")
+}
+
+func TestValidateSlug(t *testing.T) {
+	for _, slug := range []string{"release-health", "release_health", "a", "2026_q1-report", strings.Repeat("a", maxBoardSlugLength)} {
+		assert.Empty(t, validateSlug(slug, field.NewPath("metadata", "name")), slug)
+	}
+	for _, slug := range []string{"", "Release", "_leading", "trailing-", "has space", "dot.ted", strings.Repeat("a", maxBoardSlugLength+1)} {
+		assert.NotEmpty(t, validateSlug(slug, field.NewPath("metadata", "name")), slug)
+	}
 }
 
 // A new report still gets the creation defaults.
