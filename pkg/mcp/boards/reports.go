@@ -47,6 +47,7 @@ var (
 	executionsMeasures = []string{"count", "duration"}
 	// The dashboard offers "last" as well; the backend falls back to sum for it.
 	timeSeriesAggregates = []string{"sum", "avg", "min", "max", "count", "last"}
+	timeSeriesPeriods    = []string{"day", "week", "month", "quarter", "year"}
 	timeSeriesChartTypes = []string{"bar", "bar-grouped", "bar-normalized", "line-stacked", "line", "area-normalized", "heatmap", "horizon"}
 )
 
@@ -58,7 +59,7 @@ var paramKeys = map[string][]string{
 	KindPassFail:   {"filter", "duration", "from", "to", "measure"},
 	KindExecutions: {"filter", "duration", "from", "to", "groupBy", "measure"},
 	KindWorkflows:  {"filter", "duration", "from", "to"},
-	KindTimeSeries: {"filter", "duration", "from", "to", "measure", "aggregate", "segment", "chartType", "overlaySuccessRate"},
+	KindTimeSeries: {"filter", "duration", "from", "to", "measure", "aggregate", "aggregationPeriod", "segment", "chartType", "overlaySuccessRate"},
 }
 
 // Report is one report ("analysis") on a board, as the Control Plane returns it.
@@ -354,6 +355,9 @@ func validateReport(kind string, out map[string]any) error {
 			}
 		}
 		if err := checkEnum(out, "aggregate", timeSeriesAggregates); err != nil {
+			return err
+		}
+		if err := checkEnum(out, "aggregationPeriod", timeSeriesPeriods); err != nil {
 			return err
 		}
 		if err := checkString(out, "segment"); err != nil {

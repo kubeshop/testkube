@@ -410,6 +410,8 @@ WHERE e.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
          (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type' = @actor_type::text)
+    AND (COALESCE(@min_duration_ms::bigint, 0) = 0 OR r.duration_ms >= @min_duration_ms::bigint)
+    AND (COALESCE(@max_duration_ms::bigint, 0) = 0 OR r.duration_ms <= @max_duration_ms::bigint)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
     AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
@@ -578,6 +580,8 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
          (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type' = @actor_type::text)
+    AND (COALESCE(@min_duration_ms::bigint, 0) = 0 OR r.duration_ms >= @min_duration_ms::bigint)
+    AND (COALESCE(@max_duration_ms::bigint, 0) = 0 OR r.duration_ms <= @max_duration_ms::bigint)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
     AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
@@ -733,6 +737,8 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
          (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type' = @actor_type::text)
+    AND (COALESCE(@min_duration_ms::bigint, 0) = 0 OR r.duration_ms >= @min_duration_ms::bigint)
+    AND (COALESCE(@max_duration_ms::bigint, 0) = 0 OR r.duration_ms <= @max_duration_ms::bigint)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
     AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
@@ -1224,6 +1230,8 @@ FROM (
              (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
         AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
         AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type' = @actor_type::text)
+        AND (COALESCE(@min_duration_ms::bigint, 0) = 0 OR r.duration_ms >= @min_duration_ms::bigint)
+        AND (COALESCE(@max_duration_ms::bigint, 0) = 0 OR r.duration_ms <= @max_duration_ms::bigint)
         AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
         AND (COALESCE(@initialized, NULL) IS NULL OR
              (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
@@ -1394,6 +1402,8 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
          (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type' = @actor_type::text)
+    AND (COALESCE(@min_duration_ms::bigint, 0) = 0 OR r.duration_ms >= @min_duration_ms::bigint)
+    AND (COALESCE(@max_duration_ms::bigint, 0) = 0 OR r.duration_ms <= @max_duration_ms::bigint)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
     AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR

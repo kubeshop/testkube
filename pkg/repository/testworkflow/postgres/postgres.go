@@ -750,6 +750,7 @@ func isFinishedByWorkflowFastPathFilter(f testworkflow.Filter) bool {
 		!f.AssignedDefined() &&
 		!f.ActorNameDefined() &&
 		!f.ActorTypeDefined() &&
+		!f.DurationDefined() &&
 		!f.GroupIDDefined() &&
 		!f.InitializedDefined() &&
 		!f.HealthRangesDefined() &&
@@ -809,6 +810,7 @@ func isNameOnlyFilter(f testworkflow.Filter) bool {
 		!f.AssignedDefined() &&
 		!f.ActorNameDefined() &&
 		!f.ActorTypeDefined() &&
+		!f.DurationDefined() &&
 		!f.GroupIDDefined() &&
 		!f.InitializedDefined() &&
 		!f.HealthRangesDefined() &&
@@ -2090,6 +2092,8 @@ func (r *PostgresRepository) Count(ctx context.Context, filter testworkflow.Filt
 		Assigned:           params.Assigned,
 		ActorName:          params.ActorName,
 		ActorType:          params.ActorType,
+		MinDurationMs:      params.MinDurationMs,
+		MaxDurationMs:      params.MaxDurationMs,
 		GroupID:            params.GroupID,
 		Initialized:        params.Initialized,
 		TagKeys:            params.TagKeys,
@@ -2170,6 +2174,12 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 
 	if filter.ActorTypeDefined() {
 		params.ActorType = string(filter.ActorType())
+	}
+
+	// Duration filters
+	if filter.DurationDefined() {
+		params.MinDurationMs = filter.MinDurationMs()
+		params.MaxDurationMs = filter.MaxDurationMs()
 	}
 
 	// Group filter
@@ -2350,6 +2360,12 @@ func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testwo
 
 	if filter.ActorTypeDefined() {
 		params.ActorType = string(filter.ActorType())
+	}
+
+	// Duration filters
+	if filter.DurationDefined() {
+		params.MinDurationMs = filter.MinDurationMs()
+		params.MaxDurationMs = filter.MaxDurationMs()
 	}
 
 	// Group filter

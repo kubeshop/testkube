@@ -38,6 +38,8 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionsTotals(t *tes
 		pgtype.Bool{},        // assigned
 		"",                   // actor_name
 		"",                   // actor_type
+		int64(0),             // min_duration_ms
+		int64(0),             // max_duration_ms
 		"",                   // group_id
 		pgtype.Bool{},        // initialized
 		[]byte("[]"),         // health_ranges
@@ -112,6 +114,8 @@ func TestSQLCTestWorkflowExecutionQueries_CountTestWorkflowExecutions(t *testing
 		pgtype.Bool{},        // assigned
 		"",                   // actor_name
 		"",                   // actor_type
+		int64(0),             // min_duration_ms
+		int64(0),             // max_duration_ms
 		"",                   // group_id
 		pgtype.Bool{},        // initialized
 		[]byte("[]"),         // health_ranges

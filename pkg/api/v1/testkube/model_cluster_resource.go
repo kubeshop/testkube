@@ -13,9 +13,7 @@ import "encoding/json"
 
 // One GVK the cluster exposes, with the agent's watch permission.
 type ClusterResource struct {
-	// API group (empty for core resources like Pod, Service). Always emitted so
-	// clients can distinguish "core" (group="") from a missing field — omitempty
-	// here would collapse the core group into undefined on the wire.
+	// API group (empty for core resources like Pod, Service).
 	Group   string `json:"group"`
 	Version string `json:"version"`
 	Kind    string `json:"kind"`
@@ -25,9 +23,6 @@ type ClusterResource struct {
 	Namespaced bool `json:"namespaced"`
 	// True when the agent ServiceAccount holds list+watch on this resource.
 	CanWatch bool `json:"canWatch"`
-	// Schema is the OpenAPI v3 schema for this resource, as JSON. Populated
-	// only for CustomResourceDefinitions (built-in types' schemas live in the
-	// kube-apiserver's /openapi/v3 spec — fetching those is a follow-up).
-	// Used by the UI to drive path autocomplete on TestTrigger.match[] entries.
+	// OpenAPI v3 schema of a CustomResourceDefinition. The dashboard uses it to suggest match paths.
 	Schema json.RawMessage `json:"schema,omitempty"`
 }
