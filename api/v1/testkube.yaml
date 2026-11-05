@@ -9870,8 +9870,7 @@ components:
             oneOf:
             - type: string
             - type: array
-              items:
-                type: string
+              items: {}
         shards:
           type: object
           description: "parameters that should be distributed across sharded instances"
@@ -9880,8 +9879,7 @@ components:
             oneOf:
             - type: string
             - type: array
-              items:
-                type: string
+              items: {}
 
     TestWorkflowStepParallelTransfer:
       type: object
