@@ -4,8 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -462,8 +465,11 @@ func TestWatchContainerLogsTerminalIdleReopensAndDrains(t *testing.T) {
 				assert.Nil(t, since)
 				return &blockingReader{ctx: ctx}, nil
 			}
-			assert.NotNil(t, since)
-			line := fmt.Sprintf("%s drained\n", since.Add(time.Second).UTC().Format(time.RFC3339Nano))
+			// The first stream delivered nothing, so the drain has no position to resume from and
+			// reads from the beginning. Resuming from the time it attached would skip whatever the
+			// container wrote before, which is the only copy of it.
+			assert.Nil(t, since, "a drain that received no content must read from the beginning")
+			line := fmt.Sprintf("%s drained\n", time.Now().UTC().Format(time.RFC3339Nano))
 			return bytes.NewBufferString(line), nil
 		},
 		nil,
@@ -754,5 +760,86 @@ func TestWatchContainerLogsDoneWithNoLogsCloses(t *testing.T) {
 		case <-deadline.C:
 			t.Fatal("timed out waiting for log stream to close")
 		}
+	}
+}
+
+// brokenReader fails on the first read, like a stream that is cut before any content arrives.
+type brokenReader struct{}
+
+func (brokenReader) Read([]byte) (int, error) { return 0, errors.New("connection reset by peer") }
+
+// TestWatchContainerLogsKeepsPrefixAfterContentlessBreak covers a stream that breaks before it
+// delivers anything. The reopen must read from the beginning: nothing was delivered, so nothing
+// can be duplicated, and the lines the container wrote before the watch attached are the only
+// copy of the early instructions.
+func TestWatchContainerLogsKeepsPrefixAfterContentlessBreak(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	// The container wrote this before the watch attached, so its timestamp is older than now.
+	early := "2020-01-01T00:00:00.000000000Z written before the watch attached\n"
+
+	var mu sync.Mutex
+	var sinces []*time.Time
+	var calls int
+
+	ch := watchContainerLogsWithStream(
+		ctx,
+		func(_ context.Context, _ kubernetes.Interface, _, _, _ string, _ func() bool, since *time.Time) (io.Reader, error) {
+			mu.Lock()
+			calls++
+			n := calls
+			sinces = append(sinces, since)
+			mu.Unlock()
+			if n == 1 {
+				return brokenReader{}, nil
+			}
+			return bytes.NewBufferString(early), nil
+		},
+		nil, "default", "pod", "container", testBufferSizeLarge,
+		func() bool { return false },
+		func(*instructions.Instruction) bool { return false },
+		testIdleTimeoutDefault,
+	)
+
+	var got string
+	deadline := time.After(testDeadlineLong)
+read:
+	for {
+		select {
+		case msg, ok := <-ch:
+			if !ok {
+				break read
+			}
+			if msg.Error == nil {
+				got += string(msg.Value.Log)
+			}
+			if bytes.Contains([]byte(got), []byte("written before the watch attached")) {
+				break read
+			}
+		case <-deadline:
+			break read
+		}
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if assert.Greater(t, calls, 1, "the broken stream must be reopened") {
+		assert.Nil(t, sinces[1],
+			"a reopen that delivered nothing must read from the beginning, not from the time it attached")
+	}
+	assert.Contains(t, got, "written before the watch attached",
+		"the lines written before the watch attached must survive a contentless break")
+	// Once that line has been delivered the stream has a position, so any further reopen continues
+	// after it instead of reading the same line again.
+	if calls > 2 {
+		if assert.NotNil(t, sinces[2], "a reopen that delivered content must resume from it") {
+			assert.True(t, sinces[2].After(time.Date(2019, 12, 31, 0, 0, 0, 0, time.UTC)),
+				"the resume point comes from the delivered line, not from the time the watch attached")
+		}
+		assert.Equal(t, 1, strings.Count(got, "written before the watch attached"),
+			"a resumed reopen must not deliver the same line twice")
 	}
 }
