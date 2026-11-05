@@ -779,3 +779,64 @@ func TestNotifier_End_InitializationRecovery(t *testing.T) {
 		})
 	}
 }
+
+// TestNotifier_End_RecoveredInitializationStillAborts pins the blast radius of the recovery.
+// A run that really was aborted mid-flight must still abort, and the cause must stay visible:
+// once the initialization resolves as passed it no longer carries the termination message, so
+// the message has to land on the first step that never finished.
+func TestNotifier_End_RecoveredInitializationStillAborts(t *testing.T) {
+	const ref = "rstep1"
+	start := time.Date(2026, 10, 26, 5, 16, 34, 0, time.UTC)
+
+	job := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "exec-1", Annotations: map[string]string{
+		constants.AnnotationTerminationCode:   string(testkube.ABORTED_TestWorkflowStatus),
+		constants.AnnotationTerminationActor:  string(testkube.StopActorRunner),
+		constants.AnnotationTerminationReason: string(testkube.StopReasonInitTimeout),
+	}}}
+	// The setup finished and reported itself, then the run stopped before the step ended, so the
+	// message holds one status only.
+	pod := &corev1.Pod{
+		Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "1"}}},
+		Status: corev1.PodStatus{
+			Phase:     corev1.PodRunning,
+			StartTime: &metav1.Time{Time: start},
+			ContainerStatuses: []corev1.ContainerStatus{{Name: "1", State: corev1.ContainerState{
+				Terminated: &corev1.ContainerStateTerminated{
+					Reason: "Completed", Message: "p,0",
+					StartedAt: metav1.NewTime(start), FinishedAt: metav1.NewTime(start.Add(time.Minute))},
+			}}},
+		},
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	n := newNotifier(ctx, testkube.TestWorkflowResult{
+		Initialization: &testkube.TestWorkflowStepResult{Status: common.Ptr(testkube.RUNNING_TestWorkflowStepStatus)},
+	}, start)
+	n.ch = make(chan ChannelMessage[Notification], 500)
+	// The watch knows the signature before it aligns, so Align seeds the step results from it.
+	n.sigSequence = []testkube.TestWorkflowSignature{{Ref: ref, Name: "Run tests"}}
+	n.Align(watchers.NewExecutionState(
+		watchers.NewJob(job), watchers.NewPod(pod),
+		watchers.NewJobEvents(nil), watchers.NewPodEvents(nil), nil))
+	n.useActionGroups(actiontypes.ActionGroups{{{Setup: &lite.ActionSetup{}}, {End: common.Ptr(ref)}}})
+
+	n.End()
+
+	assert.Equal(t, testkube.PASSED_TestWorkflowStepStatus, *n.result.Initialization.Status,
+		"the setup reported itself, so it is recovered as passed")
+	require.NotNil(t, n.result.Status)
+	assert.Equal(t, testkube.ABORTED_TestWorkflowStatus, *n.result.Status,
+		"the run was aborted before the step finished, so the execution still aborts")
+	assert.Equal(t, testkube.ABORTED_TestWorkflowStepStatus, *n.result.Steps[ref].Status)
+
+	require.NotNil(t, n.result.StatusDetails)
+	assert.Equal(t, string(testkube.StopReasonInitTimeout), n.result.StatusDetails.Reason,
+		"the reason code of the stop survives the recovery")
+
+	// The message moves with the abort: a passed initialization no longer carries it.
+	assert.Empty(t, n.result.Initialization.ErrorMessage,
+		"a recovered initialization carries no termination message")
+	assert.NotEmpty(t, n.result.Steps[ref].ErrorMessage,
+		"the first unfinished step carries the termination message instead")
+}
