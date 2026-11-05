@@ -39,6 +39,14 @@
 // defaults into an export, and Normalize accepts them, so stored → export →
 // apply leaves a report showing what it showed.
 //
+// # Metadata
+//
+// A board keeps its metadata.labels: Normalize checks them against the
+// Kubernetes label rules, BoardToStored stores them with the board and
+// BoardFromStored returns them, so an export carries the labels that were
+// applied. Annotations are not stored; they are sent on apply, and the Control
+// Plane ignores them.
+//
 // # Wire format
 //
 // The client package talks to the Control Plane's generic, name-keyed
