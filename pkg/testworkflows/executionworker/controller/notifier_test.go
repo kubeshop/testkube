@@ -12,12 +12,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
@@ -567,6 +569,213 @@ func TestNotifier_Instruction(t *testing.T) {
 			}
 			require.NotNil(t, last)
 			assert.Equal(t, tt.wantAttempts, last.Steps[ref].Attempts)
+		})
+	}
+}
+
+// newBundledNotifier builds a notifier over a realistic pod from the processor. It deliberately
+// does not use newTestNotifier: that helper seeds a "rstep1" step that bundledPod's signature
+// never contains, and HealAbortedOrCanceled aborts unrecognised steps, which would decide the
+// verdict before the initialization ever mattered.
+func newBundledNotifier(t *testing.T, pod *corev1.Pod, job *batchv1.Job, scheduledAt time.Time) *notifier {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	n := newNotifier(ctx, testkube.TestWorkflowResult{}, scheduledAt)
+	n.ch = make(chan ChannelMessage[Notification], 500)
+	n.Align(watchers.NewExecutionState(
+		watchers.NewJob(job), watchers.NewPod(pod),
+		watchers.NewJobEvents(nil), watchers.NewPodEvents(nil), nil))
+	return n
+}
+
+// TestNotifier_End_RecoversInitializationWithoutHint covers the case where the initialization
+// hint never reached the watcher but the container termination message did. Every step passed,
+// so the execution must pass: an initialization with no hint must not decide the verdict alone.
+func TestNotifier_End_RecoversInitializationWithoutHint(t *testing.T) {
+	workflow := &testworkflowsv1.TestWorkflow{Spec: testworkflowsv1.TestWorkflowSpec{
+		Steps: []testworkflowsv1.Step{{StepOperations: testworkflowsv1.StepOperations{Shell: "echo hello"}}},
+	}}
+	scheduled := time.Date(2026, 10, 26, 5, 16, 34, 0, time.UTC)
+	startedAt := metav1.NewTime(scheduled.Add(5 * time.Second))
+	finishedAt := metav1.NewTime(scheduled.Add(30 * time.Second))
+	always := corev1.ContainerRestartPolicyAlways
+
+	// The container ran every operation of its group and reported each as passed. The group holds
+	// the initialization, the step, the root and the trailing ref, so the message carries four.
+	passedAll := corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{
+		Reason: "Completed", Message: "p,0/p,0/p,0/p,0", StartedAt: startedAt, FinishedAt: finishedAt}}
+
+	tests := []struct {
+		name      string
+		withHint  bool
+		withIstio bool
+	}{
+		{name: "no initialization hint reached the watcher"},
+		{name: "the initialization hint reached the watcher", withHint: true},
+		{name: "an istio native sidecar is still running", withIstio: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			job, pod, _ := bundledPod(t, workflow, scheduled,
+				corev1.ContainerState{Running: &corev1.ContainerStateRunning{StartedAt: startedAt}})
+			for i := range pod.Status.ContainerStatuses {
+				pod.Status.ContainerStatuses[i].State = passedAll
+			}
+			for i := range pod.Status.InitContainerStatuses {
+				pod.Status.InitContainerStatuses[i].State = passedAll
+			}
+			if tt.withIstio {
+				// Istio injects its proxy as a native sidecar, so it is an init container that
+				// keeps running after the step containers terminated and leaves the pod not ready.
+				pod.Spec.InitContainers = append([]corev1.Container{
+					{Name: "istio-proxy", RestartPolicy: &always, ReadinessProbe: &corev1.Probe{}},
+				}, pod.Spec.InitContainers...)
+				pod.Status.InitContainerStatuses = append([]corev1.ContainerStatus{{
+					Name: "istio-proxy", Ready: false, Started: common.Ptr(true),
+					State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{StartedAt: startedAt}},
+				}}, pod.Status.InitContainerStatuses...)
+				pod.Status.Conditions = []corev1.PodCondition{
+					{Type: corev1.ContainersReady, Status: corev1.ConditionFalse, LastTransitionTime: finishedAt},
+				}
+			}
+			pod.Status.Phase = corev1.PodRunning
+			pod.Status.StartTime = &metav1.Time{Time: scheduled}
+
+			n := newBundledNotifier(t, pod, job, scheduled)
+			if tt.withHint {
+				n.Instruction(finishedAt.Time, instructions.Instruction{
+					Ref:   initconstants.InitStepName,
+					Name:  initconstants.InstructionEnd,
+					Value: string(testkube.PASSED_TestWorkflowStepStatus),
+				}, "exec-1")
+			}
+			n.End()
+
+			assert.Equal(t, testkube.PASSED_TestWorkflowStepStatus, *n.result.Initialization.Status,
+				"the initialization carries a passed result in the termination message")
+			for ref, step := range n.result.Steps {
+				assert.Equal(t, testkube.PASSED_TestWorkflowStepStatus, *step.Status, "step %q", ref)
+			}
+			require.NotNil(t, n.result.Status)
+			assert.Equal(t, testkube.PASSED_TestWorkflowStatus, *n.result.Status,
+				"every step passed, so the execution passed")
+		})
+	}
+}
+
+// TestNotifier_End_InitializationRecovery covers how the finalisation resolves the initialization
+// from the container termination message, including the shapes where it must not resolve at all.
+func TestNotifier_End_InitializationRecovery(t *testing.T) {
+	const ref = "rstep1"
+	start := time.Date(2026, 10, 26, 5, 16, 34, 0, time.UTC)
+
+	terminated := func(message string) corev1.ContainerState {
+		return corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{
+			Reason: "Completed", Message: message,
+			StartedAt: metav1.NewTime(start), FinishedAt: metav1.NewTime(start.Add(time.Minute))}}
+	}
+	// withInit mirrors production: the setup action puts tktw-init first in the group.
+	withInit := actiontypes.ActionGroups{{{Setup: &lite.ActionSetup{}}, {End: common.Ptr(ref)}}}
+	withoutInit := actiontypes.ActionGroups{{{End: common.Ptr(ref)}}}
+
+	tests := []struct {
+		name          string
+		initStatus    testkube.TestWorkflowStepStatus
+		state         corev1.ContainerState
+		actions       actiontypes.ActionGroups
+		reconcileOnly bool
+		wantStatus    testkube.TestWorkflowStepStatus
+		wantExitCode  float64
+	}{
+		{
+			// The init operation carries exit code 3 and the step 7, so a lookup that resolved to
+			// the wrong ref would surface as the wrong exit code rather than passing silently.
+			name:       "recovers the initialization and its own exit code",
+			initStatus: testkube.RUNNING_TestWorkflowStepStatus,
+			state:      terminated("p,3/p,7"), actions: withInit,
+			wantStatus: testkube.PASSED_TestWorkflowStepStatus, wantExitCode: 3,
+		},
+		{
+			name:       "keeps an initialization already passed by a hint",
+			initStatus: testkube.PASSED_TestWorkflowStepStatus,
+			state:      terminated("f,1/p,0"), actions: withInit,
+			wantStatus: testkube.PASSED_TestWorkflowStepStatus,
+		},
+		{
+			name:       "keeps an initialization already failed by a hint",
+			initStatus: testkube.FAILED_TestWorkflowStepStatus,
+			state:      terminated("p,0/p,0"), actions: withInit,
+			wantStatus: testkube.FAILED_TestWorkflowStepStatus,
+		},
+		{
+			// The init process writes the whole word for an operation it never finished, which the
+			// single-character pattern rejects, so the parse stops before any status is recorded.
+			name:       "does not recover the production abort shape",
+			initStatus: testkube.RUNNING_TestWorkflowStepStatus,
+			state:      terminated("aborted,137/p,0"), actions: withInit,
+			wantStatus: testkube.ABORTED_TestWorkflowStepStatus,
+		},
+		{
+			name:       "does not recover the coded abort shape",
+			initStatus: testkube.RUNNING_TestWorkflowStepStatus,
+			state:      terminated("a,1/p,0"), actions: withInit,
+			wantStatus: testkube.ABORTED_TestWorkflowStepStatus,
+		},
+		{
+			name:       "does not recover from a container that is still running",
+			initStatus: testkube.RUNNING_TestWorkflowStepStatus,
+			state:      corev1.ContainerState{Running: &corev1.ContainerStateRunning{StartedAt: metav1.NewTime(start)}},
+			actions:    withInit,
+			wantStatus: testkube.ABORTED_TestWorkflowStepStatus,
+		},
+		{
+			// Without a setup action the init ref is absent from the maps. A bare lookup would read
+			// as index 0 and take the step's result, so the status must stay untouched.
+			name:       "takes no other step when the init ref is absent",
+			initStatus: testkube.RUNNING_TestWorkflowStepStatus,
+			state:      terminated("p,7"), actions: withoutInit,
+			wantStatus: testkube.ABORTED_TestWorkflowStepStatus,
+		},
+		{
+			name:       "leaves the initialization alone outside a forced finalisation",
+			initStatus: testkube.RUNNING_TestWorkflowStepStatus,
+			state:      terminated("p,3/p,7"), actions: withInit, reconcileOnly: true,
+			wantStatus: testkube.RUNNING_TestWorkflowStepStatus,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pod := &corev1.Pod{
+				Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "1"}}},
+				Status: corev1.PodStatus{
+					Phase:             corev1.PodRunning,
+					StartTime:         &metav1.Time{Time: start},
+					ContainerStatuses: []corev1.ContainerStatus{{Name: "1", State: tt.state}},
+				},
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			t.Cleanup(cancel)
+			n := newNotifier(ctx, testkube.TestWorkflowResult{
+				Initialization: &testkube.TestWorkflowStepResult{Status: common.Ptr(tt.initStatus)},
+			}, start)
+			n.ch = make(chan ChannelMessage[Notification], 500)
+			n.Align(watchers.NewExecutionState(
+				watchers.NewJob(&batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "exec-1"}}),
+				watchers.NewPod(pod), watchers.NewJobEvents(nil), watchers.NewPodEvents(nil), nil))
+			n.useActionGroups(tt.actions)
+
+			if tt.reconcileOnly {
+				n.reconcile()
+			} else {
+				n.End()
+			}
+
+			require.NotNil(t, n.result.Initialization.Status)
+			assert.Equal(t, tt.wantStatus, *n.result.Initialization.Status)
+			assert.Equal(t, tt.wantExitCode, n.result.Initialization.ExitCode)
 		})
 	}
 }
