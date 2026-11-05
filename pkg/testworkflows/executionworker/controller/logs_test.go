@@ -457,18 +457,20 @@ func TestWatchContainerLogsTerminalIdleReopensAndDrains(t *testing.T) {
 	t.Cleanup(cancel)
 
 	var calls int32
+	var sinceMu sync.Mutex
+	var sinces []*time.Time
 	ch := watchContainerLogsWithStream(
 		ctx,
 		func(ctx context.Context, _ kubernetes.Interface, _, _, _ string, _ func() bool, since *time.Time) (io.Reader, error) {
 			call := atomic.AddInt32(&calls, 1)
+			// The opener runs on the watch goroutine and is called again for every later reopen,
+			// so the sinces are recorded here and asserted once the watch has finished.
+			sinceMu.Lock()
+			sinces = append(sinces, since)
+			sinceMu.Unlock()
 			if call == 1 {
-				assert.Nil(t, since)
 				return &blockingReader{ctx: ctx}, nil
 			}
-			// The first stream delivered nothing, so the drain has no position to resume from and
-			// reads from the beginning. Resuming from the time it attached would skip whatever the
-			// container wrote before, which is the only copy of it.
-			assert.Nil(t, since, "a drain that received no content must read from the beginning")
 			line := fmt.Sprintf("%s drained\n", time.Now().UTC().Format(time.RFC3339Nano))
 			return bytes.NewBufferString(line), nil
 		},
@@ -492,6 +494,14 @@ func TestWatchContainerLogsTerminalIdleReopensAndDrains(t *testing.T) {
 			if !ok {
 				assert.True(t, gotDrainedLog, "expected drain log after terminal idle reopen")
 				assert.GreaterOrEqual(t, atomic.LoadInt32(&calls), int32(2))
+				sinceMu.Lock()
+				defer sinceMu.Unlock()
+				assert.Nil(t, sinces[0], "the first open reads from the beginning")
+				// The first stream delivered nothing, so the drain has no position to resume from
+				// and reads from the beginning too. Resuming from the time the watch attached would
+				// skip whatever the container wrote before, which is the only copy of it. Later
+				// reopens may carry a position, because by then the drain has delivered a line.
+				assert.Nil(t, sinces[1], "a drain that received no content must read from the beginning")
 				return
 			}
 			if msg.Error != nil {
