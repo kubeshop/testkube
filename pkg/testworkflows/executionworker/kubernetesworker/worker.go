@@ -91,6 +91,9 @@ func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.P
 			EmptyDirSizeLimit:                 config.EmptyDirSizeLimit,
 			DefaultImagePullPolicy:            config.DefaultImagePullPolicy,
 			DefaultRunnerResources:            config.DefaultRunnerResources,
+			LogsTLSRetryMaxAttempts:           config.TLSRetry.MaxAttempts,
+			LogsTLSRetryInitialDelay:          config.TLSRetry.InitialDelay,
+			LogsTLSRetryMaxDelay:              config.TLSRetry.MaxDelay,
 		},
 	}
 }

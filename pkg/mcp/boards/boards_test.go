@@ -57,6 +57,20 @@ func TestBuildQuery_CurrentEnvironment(t *testing.T) {
 	assert.Equal(t, "tkcenv_other", q.WithEnvironment("tkcenv_mine").Env, "WithEnvironment only applies to current-environment queries")
 }
 
+// A saved report's aggregation period must reach the series request, or MCP reads it with Auto buckets.
+func TestBuildQuery_AggregationPeriod(t *testing.T) {
+	params := map[string]any{"measure": "execution-count", "aggregationPeriod": "month"}
+
+	q, err := BuildQuery(KindTimeSeries, params, QueryOptions{Now: time.Date(2026, 11, 4, 0, 0, 0, 0, time.UTC)})
+	require.NoError(t, err)
+	assert.Equal(t, "month", q.QueryParams()["aggregationPeriod"])
+
+	delete(params, "aggregationPeriod")
+	q, err = BuildQuery(KindTimeSeries, params, QueryOptions{Now: time.Date(2026, 11, 4, 0, 0, 0, 0, time.UTC)})
+	require.NoError(t, err)
+	assert.NotContains(t, q.QueryParams(), "aggregationPeriod")
+}
+
 func TestBuildQuery_Errors(t *testing.T) {
 	_, err := BuildQuery("pie", nil, QueryOptions{})
 	assert.ErrorContains(t, err, "unknown report kind")
@@ -230,6 +244,7 @@ func TestNormalizeReport_Validation(t *testing.T) {
 		{"bad executions measure", KindExecutions, map[string]any{"measure": "ratio"}, "param measure must be one of count"},
 		{"empty groupBy", KindExecutions, map[string]any{"groupBy": " "}, "groupBy must be a non-empty string"},
 		{"bad aggregate", KindTimeSeries, map[string]any{"aggregate": "median"}, "param aggregate must be one of"},
+		{"bad aggregation period", KindTimeSeries, map[string]any{"aggregationPeriod": "decade"}, "param aggregationPeriod must be one of"},
 		{"bad chart type", KindTimeSeries, map[string]any{"chartType": "pie"}, "param chartType must be one of"},
 		{"bad overlay", KindTimeSeries, map[string]any{"overlaySuccessRate": "yes"}, "overlaySuccessRate must be a boolean"},
 		{"bad from", KindWorkflows, map[string]any{"from": "2026-01-01"}, "param from must be an RFC3339"},

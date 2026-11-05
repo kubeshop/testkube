@@ -9874,8 +9874,7 @@ components:
             oneOf:
             - type: string
             - type: array
-              items:
-                type: string
+              items: {}
         shards:
           type: object
           description: "parameters that should be distributed across sharded instances"
@@ -9884,8 +9883,7 @@ components:
             oneOf:
             - type: string
             - type: array
-              items:
-                type: string
+              items: {}
 
     TestWorkflowStepParallelTransfer:
       type: object
@@ -12395,6 +12393,7 @@ components:
       description: One GVK the cluster exposes, with the agent's watch permission.
       type: object
       required:
+        - group
         - version
         - kind
         - resource
@@ -12421,6 +12420,9 @@ components:
         canWatch:
           type: boolean
           description: True when the agent ServiceAccount holds list+watch on this resource.
+        schema:
+          type: object
+          description: OpenAPI v3 schema of a CustomResourceDefinition. The dashboard uses it to suggest match paths.
 
     Syncable:
       description: |
