@@ -32,6 +32,13 @@
 // deterministic for the same reason: a report filter without an id gets
 // <report id>-<index>, never a random one.
 //
+// Normalize gives a new report the dashboard's creation defaults, which for
+// some params differ from what the dashboard renders when a stored report
+// lacks them (a pass-fail report without a duration shows a week, but is
+// created with a month). BoardFromStored therefore writes those rendered
+// defaults into an export, and Normalize accepts them, so stored → export →
+// apply leaves a report showing what it showed.
+//
 // # Wire format
 //
 // The client package talks to the Control Plane's generic, name-keyed

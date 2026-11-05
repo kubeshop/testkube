@@ -28,8 +28,8 @@ const listKind = "List"
 
 // Decode reads every object of a multi-document YAML (or JSON) stream. Empty
 // documents are skipped, and a v1 List is unpacked into its items. Fields the
-// schema does not know are an error, so a typo is reported rather than
-// silently dropped. The objects are not validated: see Normalize.
+// schema does not know and duplicate keys are an error, so a typo is reported
+// rather than silently dropped. The objects are not validated: see Normalize.
 func Decode(r io.Reader) ([]Object, error) {
 	reader := utilyaml.NewYAMLReader(bufio.NewReader(r))
 	var objects []Object
@@ -50,7 +50,10 @@ func Decode(r io.Reader) ([]Object, error) {
 }
 
 func decodeDocument(data []byte) ([]Object, error) {
-	data, err := yaml.YAMLToJSON(data)
+	// Strict, so a duplicate key is an error: the lenient conversion keeps
+	// only the last of two spec blocks, and applying that would drop the
+	// reports of the first.
+	data, err := yaml.YAMLToJSONStrict(data)
 	if err != nil {
 		return nil, err
 	}

@@ -109,6 +109,28 @@ func TestApply_DryRunSendsNothing(t *testing.T) {
 	assert.Equal(t, "second", again[1].(*insightsv1.Board).Spec.DisplayName, "the dry run prints the objects with defaults filled in")
 }
 
+func TestApply_DryRunPrintsThePayload(t *testing.T) {
+	exported := `apiVersion: insights.testkube.io/v1alpha1
+kind: Board
+metadata:
+  name: b
+  namespace: testkube
+  resourceVersion: "7"
+spec: {}
+status:
+  id: board-uuid
+  gitOpsOwner:
+    agentId: runner-1
+`
+	var out bytes.Buffer
+	require.NoError(t, Apply(context.Background(), nil, read(t, exported), ApplyOptions{DryRun: true, Output: "yaml"}, &out))
+	printed := out.String()
+	for _, field := range []string{"namespace", "resourceVersion", "status", "gitOpsOwner"} {
+		assert.NotContains(t, printed, field, "a PUT never sends %s", field)
+	}
+	assert.Contains(t, printed, "name: b")
+}
+
 func TestApply_InvalidDocumentSendsNothing(t *testing.T) {
 	input := twoBoards + `---
 apiVersion: insights.testkube.io/v1alpha1

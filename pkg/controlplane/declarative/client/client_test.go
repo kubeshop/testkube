@@ -82,6 +82,24 @@ func TestGetAndList(t *testing.T) {
 	assert.Equal(t, "a b", obj.GetName())
 }
 
+func TestSendsTheConfiguredHeaders(t *testing.T) {
+	var got http.Header
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r.Header.Clone()
+		_, _ = w.Write([]byte(`{"elements":[]}`))
+	}))
+	t.Cleanup(srv.Close)
+	c := New(Config{
+		URL: srv.URL, Token: "user-token", OrganizationID: "org", EnvironmentID: "env", HTTPClient: srv.Client(),
+		Headers: map[string]string{"X-Proxy-Auth": "secret", "Authorization": "Bearer forged"},
+	})
+
+	_, err := c.List(context.Background(), boardKind(t))
+	require.NoError(t, err)
+	assert.Equal(t, "secret", got.Get("X-Proxy-Auth"), "a proxy's header reaches it")
+	assert.Equal(t, "Bearer user-token", got.Get("Authorization"), "a header cannot replace the credential")
+}
+
 func TestDelete(t *testing.T) {
 	c, rec := serve(t, http.StatusNoContent, "")
 	require.NoError(t, c.Delete(context.Background(), boardKind(t), "b"))

@@ -145,7 +145,13 @@ func Apply(ctx context.Context, c client.Client, objects []declarative.Object, o
 			continue
 		}
 		seen[ref] = true
-		copied := obj.DeepCopyObject().(declarative.Object)
+		// Prepared as the client prepares a PUT, so a dry run prints what
+		// would be sent, without the status and cluster metadata of an export.
+		copied, err := declarative.PrepareForApply(obj)
+		if err != nil {
+			invalid = append(invalid, fmt.Errorf("%s: %w", ref, err))
+			continue
+		}
 		if err := declarative.Normalize(copied); err != nil {
 			invalid = append(invalid, fmt.Errorf("%s: %w", ref, err))
 			continue

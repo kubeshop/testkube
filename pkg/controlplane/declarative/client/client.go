@@ -64,7 +64,11 @@ type Config struct {
 	Token          string
 	OrganizationID string
 	EnvironmentID  string
-	HTTPClient     Doer
+	// Headers are sent with every request, such as one a proxy in front of
+	// the Control Plane requires. They cannot replace Authorization, Accept
+	// or Content-Type.
+	Headers    map[string]string
+	HTTPClient Doer
 }
 
 // New returns a client for the Control Plane described by cfg.
@@ -210,6 +214,9 @@ func (c *httpClient) do(ctx context.Context, method string, kind declarative.Kin
 	req, err := http.NewRequestWithContext(ctx, method, c.cfg.URL+path, reader)
 	if err != nil {
 		return nil, err
+	}
+	for name, value := range c.cfg.Headers {
+		req.Header.Set(name, value)
 	}
 	req.Header.Set("Authorization", "Bearer "+c.cfg.Token)
 	req.Header.Set("Accept", "application/json")

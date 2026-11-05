@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -141,9 +142,13 @@ func normalizeReport(report *insightsv1.BoardReport, path *field.Path) field.Err
 		return field.ErrorList{field.Invalid(paramsPath, keysOf(params), err.Error())}
 	}
 	assignFilterIDs(params, report.ID)
+	renderedSum := keepRenderedAggregate(report.Kind, params)
 	normalized, err := boards.NormalizeReport(report.Kind, params)
 	if err != nil {
 		return field.ErrorList{field.Invalid(paramsPath, "", err.Error())}
+	}
+	if renderedSum {
+		normalized["aggregate"] = renderedAggregate
 	}
 	keepNoSegment(report.Kind, normalized)
 	raw, err := json.Marshal(normalized)
@@ -166,6 +171,23 @@ func keepNoSegment(kind string, params map[string]any) {
 	if _, ok := params["segment"]; !ok {
 		params["segment"] = ""
 	}
+}
+
+// keepRenderedAggregate reports whether a time-series report asks for the
+// sum its measure does not offer, and if so takes it out of params for
+// boards.NormalizeReport, which would refuse it. The dashboard renders a
+// stored report without an aggregate with the sum whatever its measure, and
+// an export says so (see renderedDefaults), so the export must apply again.
+func keepRenderedAggregate(kind string, params map[string]any) bool {
+	if kind != boards.KindTimeSeries || params["aggregate"] != renderedAggregate {
+		return false
+	}
+	measure, _ := params["measure"].(string)
+	if measure == "" || slices.Contains(boards.AggregateOptions(measure), renderedAggregate) {
+		return false
+	}
+	delete(params, "aggregate")
+	return true
 }
 
 func assignFilterIDs(params map[string]any, reportID string) {
@@ -255,18 +277,7 @@ func BoardFromStored(b *boards.Board, status commonv1.ControlPlaneResourceStatus
 	}
 	for _, r := range b.Content.Reports {
 		report := insightsv1.BoardReport{ID: r.ID, Kind: r.Kind, Name: r.Name, Description: r.Description}
-		// A stored time-series report without a segment is shown ungrouped,
-		// so the export says so: applying it without one would group by status.
-		params := r.Params
-		if r.Kind == boards.KindTimeSeries {
-			if _, ok := params["segment"]; !ok {
-				params = maps.Clone(params)
-				if params == nil {
-					params = map[string]any{}
-				}
-				params["segment"] = ""
-			}
-		}
+		params := withRenderedDefaults(r.Kind, r.Params)
 		if len(params) > 0 {
 			raw, err := json.Marshal(params)
 			if err != nil {
@@ -308,6 +319,47 @@ func BoardFromStored(b *boards.Board, status commonv1.ControlPlaneResourceStatus
 		out.Spec.Layout = layout
 	}
 	return out, nil
+}
+
+// renderedAggregate is the aggregate the dashboard renders a time-series
+// report without one with, whatever its measure.
+const renderedAggregate = "sum"
+
+// renderedDefaults are what the dashboard shows for a param a stored report
+// does not have, where boards.NormalizeReport would give a new report
+// something else. An export writes them out, so applying it shows the same:
+//   - a pass-fail or workflows report without a duration shows a week, but is
+//     created with a month;
+//   - a time-series report without an aggregate shows the sum, but is created
+//     with its measure's preferred aggregate;
+//   - a time-series report without a segment is ungrouped, but is created
+//     grouped by status.
+var renderedDefaults = map[string]map[string]any{
+	boards.KindPassFail:   {"duration": "week"},
+	boards.KindWorkflows:  {"duration": "week"},
+	boards.KindTimeSeries: {"aggregate": renderedAggregate, "segment": ""},
+}
+
+// withRenderedDefaults returns the params of a stored report with the
+// rendered defaults it lacks, leaving the stored params unchanged.
+func withRenderedDefaults(kind string, params map[string]any) map[string]any {
+	var out map[string]any
+	for key, value := range renderedDefaults[kind] {
+		if _, ok := params[key]; ok {
+			continue
+		}
+		if out == nil {
+			out = maps.Clone(params)
+			if out == nil {
+				out = map[string]any{}
+			}
+		}
+		out[key] = value
+	}
+	if out == nil {
+		return params
+	}
+	return out
 }
 
 // layoutRows returns the board's layout, or the default one when it has none.

@@ -128,6 +128,23 @@ func TestDecode_MultiDocumentAndList(t *testing.T) {
 	assert.Equal(t, mustJSON(t, objects), mustJSON(t, fromList))
 }
 
+// The lenient conversion would keep only the second spec, and applying that
+// would remove the reports of the first.
+func TestDecode_RejectsDuplicateKeys(t *testing.T) {
+	_, err := Decode(strings.NewReader(`apiVersion: insights.testkube.io/v1alpha1
+kind: Board
+metadata:
+  name: b
+spec:
+  reports:
+    - id: kept
+      kind: pass-fail
+spec: {}
+`))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `"spec"`)
+}
+
 func TestDecode_MissingTypeMeta(t *testing.T) {
 	_, err := Decode(strings.NewReader("metadata:\n  name: x\n"))
 	require.Error(t, err)
@@ -288,6 +305,62 @@ func TestBoardFromStored_UngroupedTimeSeries(t *testing.T) {
 		assert.JSONEq(t, `""`, mustJSON(t, mustParams(t, r)["segment"]), r.ID)
 	}
 	assert.NotContains(t, stored.Content.Reports[0].Params, "segment", "the stored board is not changed")
+}
+
+// A stored report shows the dashboard's rendering defaults for the params it
+// lacks, which differ from the creation defaults Normalize gives a new
+// report. Stored → export → apply must keep what it shows.
+func TestBoardStoredExportApply_KeepsRenderedDefaults(t *testing.T) {
+	stored := &boards.Board{Slug: "b", Name: "B", Layout: json.RawMessage(`{"version":1,"rows":[]}`)}
+	stored.Content.Reports = []boards.Report{
+		{ID: "pass-fail", Kind: boards.KindPassFail},
+		{ID: "workflows", Kind: boards.KindWorkflows},
+		{ID: "counts", Kind: boards.KindTimeSeries, Params: map[string]any{"measure": "execution-count"}},
+		// A measure whose dashboard options do not include sum.
+		{ID: "latency", Kind: boards.KindTimeSeries, Params: map[string]any{"measure": "k6-http_req_duration-max"}},
+		{ID: "chosen", Kind: boards.KindPassFail, Params: map[string]any{"duration": "quarter"}},
+	}
+	want := map[string]map[string]any{
+		"pass-fail": {"duration": "week"},
+		"workflows": {"duration": "week"},
+		"counts":    {"aggregate": "sum", "segment": ""},
+		"latency":   {"aggregate": "sum", "segment": ""},
+		"chosen":    {"duration": "quarter"},
+	}
+
+	exported, err := BoardFromStored(stored, commonv1.ControlPlaneResourceStatus{})
+	require.NoError(t, err)
+	encoded, err := Encode([]Object{exported}, "yaml")
+	require.NoError(t, err)
+	applied, err := Decode(bytes.NewReader(encoded))
+	require.NoError(t, err)
+	// The CLI normalizes before sending, and the Control Plane again.
+	for range 2 {
+		require.NoError(t, Normalize(applied[0]))
+	}
+	reapplied, err := BoardToStored(applied[0].(*insightsv1.Board))
+	require.NoError(t, err)
+
+	for _, r := range reapplied.Reports {
+		for key, value := range want[r.ID] {
+			assert.Equal(t, value, r.Params[key], "%s: %s", r.ID, key)
+		}
+	}
+	assert.Empty(t, stored.Content.Reports[0].Params, "the stored board is not changed")
+}
+
+// A new report still gets the creation defaults.
+func TestNormalize_NewReportsGetCreationDefaults(t *testing.T) {
+	board := &insightsv1.Board{
+		ObjectMeta: metav1.ObjectMeta{Name: "b"},
+		Spec: insightsv1.BoardSpec{Reports: []insightsv1.BoardReport{
+			{ID: "pass-fail", Kind: boards.KindPassFail},
+			{ID: "latency", Kind: boards.KindTimeSeries, Params: &apiextensionsv1.JSON{Raw: []byte(`{"measure":"k6-http_req_duration-max"}`)}},
+		}},
+	}
+	require.NoError(t, Normalize(board))
+	assert.Equal(t, "month", mustParams(t, board.Spec.Reports[0])["duration"])
+	assert.Equal(t, "max", mustParams(t, board.Spec.Reports[1])["aggregate"])
 }
 
 func mustParams(t *testing.T, r insightsv1.BoardReport) map[string]any {

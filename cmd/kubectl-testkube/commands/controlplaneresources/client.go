@@ -37,11 +37,16 @@ func NewClient(cmd *cobra.Command) (client.Client, error) {
 	if cfg, err = config.Load(); err != nil {
 		return nil, fmt.Errorf("loading config: %w", err)
 	}
+	headers, err := common.ResolveHeaders(cmd)
+	if err != nil {
+		return nil, err
+	}
 	return client.New(client.Config{
 		URL:            cfg.CloudContext.ApiUri,
 		Token:          cfg.CloudContext.ApiKey,
 		OrganizationID: cfg.CloudContext.OrganizationId,
 		EnvironmentID:  cfg.CloudContext.EnvironmentId,
+		Headers:        headers,
 		HTTPClient:     http.NewClient(common.ResolveSkipTLS(cmd, &cfg)),
 	}), nil
 }
