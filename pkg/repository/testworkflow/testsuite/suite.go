@@ -28,6 +28,7 @@ func RunRepositoryTests(t *testing.T, repo testworkflow.Repository) {
 	t.Run("GetExecutionsByName", func(t *testing.T) { testGetExecutionsByName(t, repo) })
 	t.Run("GetExecutionsByStatus", func(t *testing.T) { testGetExecutionsByStatus(t, repo) })
 	t.Run("GetExecutionsByTags", func(t *testing.T) { testGetExecutionsByTags(t, repo) })
+	t.Run("GetExecutionsByDuration", func(t *testing.T) { testGetExecutionsByDuration(t, repo) })
 	t.Run("GetExecutionsPagination", func(t *testing.T) { testGetExecutionsPagination(t, repo) })
 	t.Run("GetExecutionsSummary", func(t *testing.T) { testGetExecutionsSummary(t, repo) })
 	t.Run("Count", func(t *testing.T) { testCount(t, repo) })

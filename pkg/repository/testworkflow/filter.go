@@ -24,6 +24,8 @@ type FilterImpl struct {
 	FLabelSelector      *LabelSelector
 	FActorName          string
 	FActorType          testkube.TestWorkflowRunningContextActorType
+	FMinDurationMs      int64
+	FMaxDurationMs      int64
 	FGroupID            string
 	FRunnerID           string
 	FInitialized        *bool
@@ -118,6 +120,18 @@ func (f *FilterImpl) WithActorName(actorName string) *FilterImpl {
 
 func (f *FilterImpl) WithActorType(actorType testkube.TestWorkflowRunningContextActorType) *FilterImpl {
 	f.FActorType = actorType
+	return f
+}
+
+// WithMinDurationMs keeps only the executions that ran at least this long. Zero means no minimum.
+func (f *FilterImpl) WithMinDurationMs(durationMs int64) *FilterImpl {
+	f.FMinDurationMs = durationMs
+	return f
+}
+
+// WithMaxDurationMs keeps only the executions that ran at most this long. Zero means no maximum.
+func (f *FilterImpl) WithMaxDurationMs(durationMs int64) *FilterImpl {
+	f.FMaxDurationMs = durationMs
 	return f
 }
 
@@ -260,6 +274,18 @@ func (f FilterImpl) ActorNameDefined() bool {
 
 func (f FilterImpl) ActorTypeDefined() bool {
 	return f.FActorType != ""
+}
+
+func (f FilterImpl) MinDurationMs() int64 {
+	return f.FMinDurationMs
+}
+
+func (f FilterImpl) MaxDurationMs() int64 {
+	return f.FMaxDurationMs
+}
+
+func (f FilterImpl) DurationDefined() bool {
+	return f.FMinDurationMs > 0 || f.FMaxDurationMs > 0
 }
 
 func (f FilterImpl) GroupIDDefined() bool {
