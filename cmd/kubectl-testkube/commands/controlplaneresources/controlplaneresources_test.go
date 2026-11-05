@@ -109,6 +109,15 @@ func TestApply_DryRunSendsNothing(t *testing.T) {
 	assert.Equal(t, "second", again[1].(*insightsv1.Board).Spec.DisplayName, "the dry run prints the objects with defaults filled in")
 }
 
+// A malformed List next to a valid board must stop the whole apply, not
+// apply the board and skip the List.
+func TestReadInputs_MalformedListFailsTheWholeInput(t *testing.T) {
+	input := twoBoards + "---\napiVersion: v1\nkind: List\nitmes: []\n"
+	_, err := ReadInputs([]string{"-"}, strings.NewReader(input))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "document 3")
+}
+
 func TestApply_DryRunPrintsThePayload(t *testing.T) {
 	exported := `apiVersion: insights.testkube.io/v1alpha1
 kind: Board

@@ -341,11 +341,14 @@ var renderedDefaults = map[string]map[string]any{
 }
 
 // withRenderedDefaults returns the params of a stored report with the
-// rendered defaults it lacks, leaving the stored params unchanged.
+// rendered defaults it lacks, leaving the stored params unchanged. An empty
+// or null value is lacking too: the dashboard renders it as unset, while
+// boards.NormalizeReport would replace it with the creation default. (For a
+// segment, "" is itself the rendered default, so it is kept.)
 func withRenderedDefaults(kind string, params map[string]any) map[string]any {
 	var out map[string]any
 	for key, value := range renderedDefaults[kind] {
-		if _, ok := params[key]; ok {
+		if current, ok := params[key]; ok && current != nil && current != "" {
 			continue
 		}
 		if out == nil {

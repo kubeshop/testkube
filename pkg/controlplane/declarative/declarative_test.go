@@ -145,6 +145,26 @@ spec: {}
 	assert.Contains(t, err.Error(), `"spec"`)
 }
 
+func TestDecode_StrictListEnvelope(t *testing.T) {
+	item := `{"apiVersion":"insights.testkube.io/v1alpha1","kind":"Board","metadata":{"name":"b"}}`
+	for _, tt := range []struct{ name, list, wantErr string }{
+		{"a misspelled items", `{"apiVersion":"v1","kind":"List","itmes":[` + item + `]}`, `unknown field "itmes"`},
+		{"an unknown list metadata field", `{"apiVersion":"v1","kind":"List","metadata":{"resourceVersion":"1","colour":"red"},"items":[]}`, `unknown field "colour"`},
+		{"no items", `{"apiVersion":"v1","kind":"List"}`, "items is required"},
+		{"items that are not a list", `{"apiVersion":"v1","kind":"List","items":{}}`, "items must be a list"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Decode(strings.NewReader(tt.list))
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+		})
+	}
+
+	objects, err := Decode(strings.NewReader(`{"apiVersion":"v1","kind":"List","metadata":{"resourceVersion":""},"items":[` + item + `]}`))
+	require.NoError(t, err, "the standard list metadata is allowed")
+	assert.Len(t, objects, 1)
+}
+
 func TestDecode_MissingTypeMeta(t *testing.T) {
 	_, err := Decode(strings.NewReader("metadata:\n  name: x\n"))
 	require.Error(t, err)
@@ -319,13 +339,22 @@ func TestBoardStoredExportApply_KeepsRenderedDefaults(t *testing.T) {
 		// A measure whose dashboard options do not include sum.
 		{ID: "latency", Kind: boards.KindTimeSeries, Params: map[string]any{"measure": "k6-http_req_duration-max"}},
 		{ID: "chosen", Kind: boards.KindPassFail, Params: map[string]any{"duration": "quarter"}},
+		// Empty and null values render as unset too.
+		{ID: "empty-pass-fail", Kind: boards.KindPassFail, Params: map[string]any{"duration": ""}},
+		{ID: "null-workflows", Kind: boards.KindWorkflows, Params: map[string]any{"duration": nil}},
+		{ID: "empty-aggregate", Kind: boards.KindTimeSeries, Params: map[string]any{"measure": "k6-http_req_duration-max", "aggregate": ""}},
+		{ID: "null-aggregate", Kind: boards.KindTimeSeries, Params: map[string]any{"measure": "execution-count", "aggregate": nil, "segment": nil}},
 	}
 	want := map[string]map[string]any{
-		"pass-fail": {"duration": "week"},
-		"workflows": {"duration": "week"},
-		"counts":    {"aggregate": "sum", "segment": ""},
-		"latency":   {"aggregate": "sum", "segment": ""},
-		"chosen":    {"duration": "quarter"},
+		"pass-fail":       {"duration": "week"},
+		"workflows":       {"duration": "week"},
+		"counts":          {"aggregate": "sum", "segment": ""},
+		"latency":         {"aggregate": "sum", "segment": ""},
+		"chosen":          {"duration": "quarter"},
+		"empty-pass-fail": {"duration": "week"},
+		"null-workflows":  {"duration": "week"},
+		"empty-aggregate": {"aggregate": "sum"},
+		"null-aggregate":  {"aggregate": "sum", "segment": ""},
 	}
 
 	exported, err := BoardFromStored(stored, commonv1.ControlPlaneResourceStatus{})

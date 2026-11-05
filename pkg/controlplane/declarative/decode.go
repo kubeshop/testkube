@@ -65,14 +65,12 @@ func decodeDocument(data []byte) ([]Object, error) {
 		return nil, err
 	}
 	if meta.APIVersion == "v1" && meta.Kind == listKind {
-		var list struct {
-			Items []json.RawMessage `json:"items"`
-		}
-		if err := json.Unmarshal(data, &list); err != nil {
+		items, err := decodeListItems(data)
+		if err != nil {
 			return nil, err
 		}
 		var objects []Object
-		for i, item := range list.Items {
+		for i, item := range items {
 			obj, err := DecodeObject(item)
 			if err != nil {
 				return nil, fmt.Errorf("items[%d]: %w", i, err)
@@ -86,6 +84,34 @@ func decodeDocument(data []byte) ([]Object, error) {
 		return nil, err
 	}
 	return []Object{obj}, nil
+}
+
+// listEnvelope is a v1 List: type and list metadata, and the items.
+type listEnvelope struct {
+	APIVersion string           `json:"apiVersion"`
+	Kind       string           `json:"kind"`
+	Metadata   metav1.ListMeta  `json:"metadata"`
+	Items      *json.RawMessage `json:"items"`
+}
+
+// decodeListItems reads the items of a v1 List strictly, as DecodeObject
+// reads an object: a misspelled items field would otherwise decode as an
+// empty list, and the other documents would be applied without it.
+func decodeListItems(data []byte) ([]json.RawMessage, error) {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	var list listEnvelope
+	if err := dec.Decode(&list); err != nil {
+		return nil, fmt.Errorf("%s: %w", listKind, err)
+	}
+	if list.Items == nil {
+		return nil, fmt.Errorf("%s: items is required", listKind)
+	}
+	var items []json.RawMessage
+	if err := json.Unmarshal(*list.Items, &items); err != nil {
+		return nil, fmt.Errorf("%s: items must be a list: %w", listKind, err)
+	}
+	return items, nil
 }
 
 // DecodeObject decodes one object, in YAML or JSON, dispatching on its
