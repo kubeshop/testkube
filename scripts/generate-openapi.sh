@@ -162,6 +162,13 @@ apply_special_transformations() {
     find "${TARGET_DIR}" -name "*_key_ref.go" -type f | while read -r file; do
         sed_inplace "s/ bool/ \*bool/g" "$file"
     done
+
+    # swagger-codegen cannot emit json.RawMessage for the CRD schema
+    local cluster_resource="${TARGET_DIR}/model_cluster_resource.go"
+    sed_inplace 's/ \*interface{} `json:"schema,omitempty"`/ json.RawMessage `json:"schema,omitempty"`/' "${cluster_resource}"
+    sed_inplace 's/^package testkube$/package testkube\
+\
+import "encoding\/json"/' "${cluster_resource}"
 }
 
 # ==================== Main ====================
