@@ -169,6 +169,10 @@ apply_special_transformations() {
     sed_inplace 's/^package testkube$/package testkube\
 \
 import "encoding\/json"/' "${cluster_resource}"
+
+    # The operator is required, so a pointer adds nil checks
+    sed_inplace 's/ \*TestTriggerFieldOperator / TestTriggerFieldOperator /' \
+        "${TARGET_DIR}/model_test_trigger_field_condition.go"
 }
 
 # ==================== Main ====================
