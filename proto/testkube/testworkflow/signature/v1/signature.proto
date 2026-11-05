@@ -19,4 +19,7 @@ message Signature {
   bool negative = 5;
   // children refers to any other steps that may be executed as part of this step.
   repeated Signature children = 7;
+  // id is the stable identifier of the step. It comes from the workflow, or the processor derives
+  // it from the name or the category of the step, so the same workflow gives the same id.
+  string id = 8;
 }

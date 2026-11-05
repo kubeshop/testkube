@@ -1,12 +1,15 @@
 package testworkflowprocessor
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"regexp"
 	"strings"
 	"unicode"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
 // stepIdPattern allows lowercase alphanumeric and underscores.
@@ -152,4 +155,87 @@ func resolveAndValidateStep(step *testworkflowsv1.Step, seen map[string]bool) er
 		}
 	}
 	return nil
+}
+
+// AssignStageIds gives an id to each stage that has none, so every step of an execution has a stable
+// key. The id is the id of the parent, then the name or the category of the stage, with an index
+// suffix when the id is taken. The root group is the workflow itself and gets no id.
+func AssignStageIds(root stage.Stage) {
+	used := make(map[string]bool)
+	collectStageIds(root, used)
+	group, ok := root.(stage.GroupStage)
+	if !ok {
+		assignStageId(root, "", used)
+		return
+	}
+	for _, child := range group.Children() {
+		assignStageId(child, "", used)
+	}
+}
+
+func collectStageIds(s stage.Stage, used map[string]bool) {
+	if s.Id() != "" {
+		used[s.Id()] = true
+	}
+	if group, ok := s.(stage.GroupStage); ok {
+		for _, child := range group.Children() {
+			collectStageIds(child, used)
+		}
+	}
+}
+
+func assignStageId(s stage.Stage, parentId string, used map[string]bool) {
+	group, isGroup := s.(stage.GroupStage)
+	if s.Id() == "" {
+		s.SetId(newStageId(s, parentId, used))
+		// The stage that runs the operation of a step owns the id of the step, because it writes the
+		// outputs of the step. Flatten gives a group id to that stage, so a new group id goes there too.
+		if isGroup && len(group.Children()) > 0 && group.Children()[0].Id() == "" {
+			group.Children()[0].SetId(s.Id())
+		}
+	}
+	if isGroup {
+		for _, child := range group.Children() {
+			assignStageId(child, s.Id(), used)
+		}
+	}
+}
+
+// newStageId returns an unused id for the stage, from the id of its parent and its name or category.
+// A group without both uses the category of its first child, which runs the operation of the step.
+func newStageId(s stage.Stage, parentId string, used map[string]bool) string {
+	base := DeriveStepId(s.Name())
+	if ValidateStepId(base) != nil {
+		base = DeriveStepId(s.Category())
+	}
+	if group, ok := s.(stage.GroupStage); ok && ValidateStepId(base) != nil && len(group.Children()) > 0 {
+		base = DeriveStepId(group.Children()[0].Category())
+	}
+	if ValidateStepId(base) != nil {
+		base = "step"
+	}
+	if parentId != "" {
+		base = parentId + "_" + base
+	}
+	id := limitStageId(base)
+	for n := 1; used[id]; n++ {
+		id = limitStageId(fmt.Sprintf("%s_%d", base, n))
+	}
+	used[id] = true
+	return id
+}
+
+// maxStageIdLength is the maximum length of a generated id. The runner uses the id in the name of a
+// directory, and a file name has a limit of 255 bytes. The limit leaves room for a prefix or a suffix.
+const maxStageIdLength = 128
+
+// limitStageId cuts an id that is too long and adds a hash of the full id. The hash keeps the id stable
+// for the same workflow, and different long ids stay different.
+func limitStageId(id string) string {
+	if len(id) <= maxStageIdLength {
+		return id
+	}
+	sum := sha256.Sum256([]byte(id))
+	hash := hex.EncodeToString(sum[:])[:8]
+	return strings.TrimRight(id[:maxStageIdLength-len(hash)-1], "_") + "_" + hash
 }

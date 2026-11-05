@@ -484,6 +484,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -835,6 +836,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -1103,6 +1105,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -1314,6 +1317,7 @@ SELECT DISTINCT ON (e.workflow_name)
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -1581,6 +1585,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -1797,6 +1802,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -2000,6 +2006,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -2262,6 +2269,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -2471,6 +2479,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -2820,6 +2829,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -3175,6 +3185,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -3694,6 +3705,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -4158,9 +4170,9 @@ func (q *Queries) InsertTestWorkflowResult(ctx context.Context, arg InsertTestWo
 
 const insertTestWorkflowSignature = `-- name: InsertTestWorkflowSignature :one
 INSERT INTO test_workflow_signatures (
-    execution_id, ref, name, category, optional, negative, parent_id, sig_order
+    execution_id, ref, step_id, name, category, optional, negative, parent_id, sig_order
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
 )
 RETURNING test_workflow_signatures.id
 `
@@ -4168,6 +4180,7 @@ RETURNING test_workflow_signatures.id
 type InsertTestWorkflowSignatureParams struct {
 	ExecutionID string      `db:"execution_id" json:"execution_id"`
 	Ref         pgtype.Text `db:"ref" json:"ref"`
+	StepID      pgtype.Text `db:"step_id" json:"step_id"`
 	Name        pgtype.Text `db:"name" json:"name"`
 	Category    pgtype.Text `db:"category" json:"category"`
 	Optional    pgtype.Bool `db:"optional" json:"optional"`
@@ -4180,6 +4193,7 @@ func (q *Queries) InsertTestWorkflowSignature(ctx context.Context, arg InsertTes
 	row := q.db.QueryRow(ctx, insertTestWorkflowSignature,
 		arg.ExecutionID,
 		arg.Ref,
+		arg.StepID,
 		arg.Name,
 		arg.Category,
 		arg.Optional,
