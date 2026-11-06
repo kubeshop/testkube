@@ -5,8 +5,12 @@ metadata:
   name: k6-perf-test
   labels:
     category: performance-testing
+    area: tools
   annotations:
     testkube.io/description: "Example that shows how to make the VUs and the duration of a k6 performance test configurable."
+    testkube.io/areas: tools,artifacts
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -49,8 +53,12 @@ metadata:
   name: k6-perf-test-gcp
   labels:
     category: performance-testing
+    area: tools
   annotations:
     testkube.io/description: "Example that shows a configurable k6 performance test against a static page in Google Cloud Storage."
+    testkube.io/areas: tools,artifacts
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -92,8 +100,12 @@ metadata:
   name: k6-perf-test-workers
   labels:
     category: performance-testing
+    area: parallel
   annotations:
     testkube.io/description: "Example that shows how to split a k6 performance test across parallel workers with execution segments."
+    testkube.io/areas: parallel,artifacts,tools
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   config:
     vus: {type: integer, default: 20}
@@ -142,8 +154,12 @@ metadata:
   name: k6-perf-test-workers-gcp
   labels:
     category: performance-testing
+    area: parallel
   annotations:
     testkube.io/description: "Example that shows a k6 performance test against Google Cloud Storage, split across parallel workers."
+    testkube.io/areas: parallel,artifacts,tools
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   config:
     vus: {type: integer, default: 20}
@@ -192,8 +208,12 @@ metadata:
   name: k6-perf-test-workers-gcp-discard-response-bodies
   labels:
     category: performance-testing
+    area: parallel
   annotations:
     testkube.io/description: "Example that shows how to lower the memory of a parallel k6 test by discarding response bodies."
+    testkube.io/areas: parallel,artifacts,tools
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 spec:
   config:
     vus: {type: integer, default: 20}
@@ -242,8 +262,12 @@ metadata:
   name: k6-perf-test-workers-prometheus
   labels:
     category: performance-testing
+    area: parallel
   annotations:
     testkube.io/description: "Example that shows how a parallel k6 test sends its metrics to Prometheus remote write."
+    testkube.io/areas: parallel,artifacts,tools
+    testkube.io/cost: medium
+    testkube.io/sandbox: needs-cluster
 spec:
   config:
     vus: {type: integer, default: 20}
@@ -298,8 +322,12 @@ metadata:
   name: k6-perf-test-gcp-workers-prometheus
   labels:
     category: performance-testing
+    area: parallel
   annotations:
     testkube.io/description: "Example that shows a parallel k6 test against Google Cloud Storage that sends its metrics to Prometheus remote write."
+    testkube.io/areas: parallel,artifacts,tools
+    testkube.io/cost: medium
+    testkube.io/sandbox: needs-cluster
 spec:
   config:
     vus: {type: integer, default: 20}

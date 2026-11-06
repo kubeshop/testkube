@@ -2,8 +2,13 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: tw-testkube-website-5m
+  labels:
+    area: tools
   annotations:
     testkube.io/description: "Status page example: a probe that checks the test page every 5 minutes."
+    testkube.io/areas: tools,ui
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   events:
     - cronjob:
@@ -22,8 +27,13 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: tw-testkube-docs-5m
+  labels:
+    area: tools
   annotations:
     testkube.io/description: "Status page example: the docs probe, which checks the test page every 5 minutes."
+    testkube.io/areas: tools,ui
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   events:
     - cronjob:
@@ -42,8 +52,13 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: tw-testkube-blog-5m
+  labels:
+    area: tools
   annotations:
     testkube.io/description: "Status page example: the blog probe, which checks the test page every 5 minutes."
+    testkube.io/areas: tools,ui
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   events:
     - cronjob:

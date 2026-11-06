@@ -5,8 +5,12 @@ metadata:
   labels:
     category: performance-testing
     artifacts: "true"
+    area: tools
   annotations:
     testkube.io/description: "Example that shows how to run a JMeter plan in Testkube and keep its HTML report."
+    testkube.io/areas: tools,artifacts
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   content:
     git:

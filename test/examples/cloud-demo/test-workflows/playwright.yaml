@@ -6,8 +6,12 @@ metadata:
     category: e2e-ui-testing
     core-tests: workflows
     artifacts: "true"
+    area: tools
   annotations:
     testkube.io/description: "Example that shows how to run Playwright tests in Testkube and keep the HTML report."
+    testkube.io/areas: tools,artifacts
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
