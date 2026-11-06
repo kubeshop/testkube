@@ -13,7 +13,7 @@ metadata:
     tool: espresso
     category: e2e-ui-testing
   annotations:
-    testkube.io/description: "Builds the Android example APKs with Gradle and runs the Espresso tests against an Android emulator service, with the APKs saved as artifacts."
+    testkube.io/description: "Checks that Espresso tests run against an Android emulator started as a service, with the built APKs kept as artifacts."
 description: "Android emulator - K8s+KVM"
 spec:
   content:

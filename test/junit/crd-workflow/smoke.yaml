@@ -9,7 +9,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
-    testkube.io/description: "Runs two passing JUnit 5 tests with Maven and saves the Surefire JUnit reports as artifacts."
+    testkube.io/description: "Checks that a passing JUnit 5 run with Maven passes and that its Surefire JUnit reports are kept."
     testkube.io/icon: junit
 spec:
   content:

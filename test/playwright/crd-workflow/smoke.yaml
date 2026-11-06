@@ -10,7 +10,7 @@ metadata:
     playwright-traces: "on"
     category: e2e-ui-testing
   annotations:
-    testkube.io/description: "Runs the Playwright 1.56.1 tests with traces on and the list, JUnit and HTML reporters, and saves the reports as artifacts."
+    testkube.io/description: "Checks that Testkube runs Playwright 1.56.1 tests with traces and keeps the JUnit and HTML reports as artifacts."
     testkube.io/icon: playwright
 spec:
   content:
@@ -59,7 +59,7 @@ metadata:
     playwright-traces: "on"
     category: e2e-ui-testing
   annotations:
-    testkube.io/description: "Runs the Playwright 1.56.1 tests with a config that records videos, and saves the videos, traces and reports as artifacts."
+    testkube.io/description: "Checks that Playwright 1.56.1 videos, traces and reports are kept as artifacts when the config records videos."
     testkube.io/icon: playwright
 description: "Playwright project with video recording enabled (in playwright config)"
 spec:
@@ -106,7 +106,7 @@ metadata:
     artifacts: "true"
     category: e2e-ui-testing
   annotations:
-    testkube.io/description: "Runs npm ci and the Playwright tests with command and args instead of a shell, and saves the output as artifacts."
+    testkube.io/description: "Checks that Playwright tests run with command and args, without a shell, and that their output is kept."
     testkube.io/icon: playwright
 spec:
   content:
@@ -160,7 +160,7 @@ metadata:
     tool: playwright
     category: e2e-ui-testing
   annotations:
-    testkube.io/description: "Runs the Playwright tests through the official/playwright/v1 template."
+    testkube.io/description: "Checks that the official/playwright/v1 template runs Playwright tests."
     testkube.io/icon: playwright
 spec:
   container:
@@ -196,7 +196,7 @@ metadata:
     artifacts: "true"
     category: e2e-ui-testing
   annotations:
-    testkube.io/description: "Shards the Playwright tests across parallel workers with blob reports, then merges them into one HTML report artifact."
+    testkube.io/description: "Checks that Playwright tests can be sharded across parallel workers and that their blob reports merge into one HTML report."
     testkube.io/icon: playwright
 spec:
   content:
@@ -250,7 +250,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
-    testkube.io/description: "Shards the Playwright tests across parallel workers with the JUnit reporter and collects the JUnit report of every shard."
+    testkube.io/description: "Checks that Playwright tests can be sharded across parallel workers and that the JUnit report of every shard is collected."
     testkube.io/icon: playwright
 description: "Distributed Playwright with `--shard`"
 spec:

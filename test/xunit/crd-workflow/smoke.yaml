@@ -9,7 +9,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
-    testkube.io/description: "Runs the xUnit example project with dotnet test and saves a JUnit report as an artifact."
+    testkube.io/description: "Checks that Testkube runs xUnit tests with dotnet test and keeps a JUnit report of the results."
 spec:
   content:
     git:
