@@ -7,7 +7,7 @@ metadata:
     type: suite
     tool: cypress
   annotations:
-    testkube.io/description: "Suite that runs 5 Cypress workflows: the smoke test, the matrix with JUnit, the negative case and two template variants."
+    testkube.io/description: "Groups 5 Cypress workflows as a fast check of the Cypress integration: smoke, matrix with JUnit, negative step and templates."
 spec:
   container:
     resources:

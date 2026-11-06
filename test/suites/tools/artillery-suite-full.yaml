@@ -7,7 +7,7 @@ metadata:
     type: suite
     tool: artillery
   annotations:
-    testkube.io/description: "Suite that runs all Artillery workflows: the plain, template and distributed smoke tests."
+    testkube.io/description: "Groups all Artillery workflows, to check the Artillery integration: plain, template and distributed runs."
 spec:
   container:
     resources:

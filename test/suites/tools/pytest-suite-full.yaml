@@ -7,7 +7,7 @@ metadata:
     type: suite
     tool: pytest
   annotations:
-    testkube.io/description: "Suite that runs the passing pytest workflows, with and without a JUnit report."
+    testkube.io/description: "Groups the passing pytest workflows, to check the pytest integration with and without a JUnit report."
 spec:
   container:
     resources:

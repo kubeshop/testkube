@@ -7,7 +7,7 @@ metadata:
     type: suite
     tool: junit-reports
   annotations:
-    testkube.io/description: "Suite that runs the workflows that publish JUnit reports, including pregenerated edge cases and mixed results; some of them are expected to fail."
+    testkube.io/description: "Groups the workflows that publish JUnit reports, to check how Testkube parses and shows them, including edge cases and expected failures."
 description: "JUnit reports - some of them are expected to fail"
 spec:
   container:

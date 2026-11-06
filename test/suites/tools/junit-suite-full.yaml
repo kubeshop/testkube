@@ -7,7 +7,7 @@ metadata:
     type: suite
     tool: junit
   annotations:
-    testkube.io/description: "Suite that runs the JUnit 5 smoke workflow."
+    testkube.io/description: "Groups the JUnit 5 workflow, to check the JUnit 5 integration."
 spec:
   container:
     resources:

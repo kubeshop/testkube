@@ -7,7 +7,7 @@ metadata:
     type: suite
     tool: k6
   annotations:
-    testkube.io/description: "Suite that runs 4 k6 workflows: the smoke test, the template, inline content and distributed mode."
+    testkube.io/description: "Groups 4 k6 workflows as a fast check of the k6 integration: smoke, template, inline content and distributed mode."
 spec:
   container:
     resources:

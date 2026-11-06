@@ -7,7 +7,7 @@ metadata:
     type: suite
     tool: robotframework
   annotations:
-    testkube.io/description: "Suite that runs the Robot Framework Browser smoke workflow."
+    testkube.io/description: "Groups the Robot Framework workflow, to check the Robot Framework integration."
 spec:
   container:
     resources:

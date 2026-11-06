@@ -7,7 +7,7 @@ metadata:
     type: suite
     tool: xunit
   annotations:
-    testkube.io/description: "Suite that runs the xUnit smoke workflow."
+    testkube.io/description: "Groups the xUnit workflow, to check the xUnit integration."
 spec:
   container:
     resources:

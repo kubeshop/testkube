@@ -7,7 +7,7 @@ metadata:
     type: suite
     tool: soapui
   annotations:
-    testkube.io/description: "Suite that runs all SoapUI workflows: the smoke test, the COMMAND_LINE env variant, the template and the negative case."
+    testkube.io/description: "Groups all SoapUI workflows, to check the SoapUI integration: plain, COMMAND_LINE env, template and negative runs."
 spec:
   container:
     resources:

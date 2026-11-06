@@ -7,7 +7,7 @@ metadata:
     type: suite
     tool: pact
   annotations:
-    testkube.io/description: "Suite that runs the Pact JS smoke workflow."
+    testkube.io/description: "Groups the Pact JS workflow, to check the Pact integration."
 spec:
   container:
     resources:
