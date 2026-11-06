@@ -6,8 +6,11 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: k6
+    area: tools
   annotations:
     testkube.io/description: "Groups 4 k6 workflows as a fast check of the k6 integration: smoke, template, inline content and distributed mode."
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

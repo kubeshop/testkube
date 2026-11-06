@@ -6,8 +6,11 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: curl
+    area: tools
   annotations:
     testkube.io/description: "Groups the curl workflows, to check a plain step and a matrix step."
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

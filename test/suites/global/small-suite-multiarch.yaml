@@ -5,8 +5,11 @@ metadata:
   labels:
     core-tests: workflows-suite
     type: suite
+    area: tools
   annotations:
     testkube.io/description: "Groups 5 smoke workflows with amd64 and arm64 images, to check that Testkube runs workflows on both architectures."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 description: "Small smoke test suite with only workflows using multiarch images (available for both amd64 and arm64)"
 spec:
   container:

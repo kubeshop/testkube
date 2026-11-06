@@ -6,8 +6,11 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: jmeter
+    area: tools
   annotations:
     testkube.io/description: "Groups all 8 JMeter workflows, to check the JMeter integration: images, shell, templates v1 and v2, artifacts and distributed mode."
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

@@ -5,8 +5,11 @@ metadata:
   labels:
     core-tests: workflows-suite
     type: suite
+    area: tools
   annotations:
     testkube.io/description: "Groups the small and full tool suites into a medium-size regression check of the tool integrations."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

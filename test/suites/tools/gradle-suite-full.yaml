@@ -6,8 +6,11 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: gradle
+    area: tools
   annotations:
     testkube.io/description: "Groups all Gradle workflows, to check the Gradle integration: plain, default command and template runs."
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

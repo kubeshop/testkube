@@ -6,8 +6,11 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: junit-reports
+    area: reports
   annotations:
     testkube.io/description: "Groups the workflows that publish JUnit reports, to check how Testkube parses and shows them, including edge cases and expected failures."
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 description: "JUnit reports - some of them are expected to fail"
 spec:
   container:

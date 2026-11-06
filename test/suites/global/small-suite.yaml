@@ -5,8 +5,11 @@ metadata:
   labels:
     core-tests: workflows-suite
     type: suite
+    area: tools
   annotations:
     testkube.io/description: "Groups one smoke workflow per main tool (Cypress, Playwright, Gradle, JMeter, k6, Postman, pytest), as a fast check that Testkube still runs them."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

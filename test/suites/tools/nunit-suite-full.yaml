@@ -6,8 +6,11 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: nunit
+    area: tools
   annotations:
     testkube.io/description: "Groups the NUnit workflow, to check the NUnit integration."
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

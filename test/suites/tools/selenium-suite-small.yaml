@@ -6,8 +6,11 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: selenium
+    area: tools
   annotations:
     testkube.io/description: "Groups 3 Selenium workflows as a fast check of the Selenium integration with a standalone Chrome and with a hub."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

@@ -6,8 +6,11 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: playwright
+    area: tools
   annotations:
     testkube.io/description: "Groups 2 Playwright workflows as a fast check: sharding with JUnit and command args."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:
