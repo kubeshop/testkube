@@ -41,7 +41,7 @@ func TestNormalize_RefusesSignatureQueryParameter(t *testing.T) {
 	p.Name = "azure"
 	err := Normalize(p)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "spec.queryParams[sig]")
+	assert.Contains(t, err.Error(), "spec.queryParams: Forbidden: has a query parameter that looks like a credential")
 	assert.NotContains(t, err.Error(), "c2lnbmF0dXJl")
 
 	p.Spec.QueryParams = nil
@@ -60,8 +60,31 @@ func TestNormalize_SecretValuesAreNotEchoed(t *testing.T) {
 	p.Name = "openai"
 	err := Normalize(p)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "spec.extraHeaders[X-Api-Key]")
+	assert.Contains(t, err.Error(), "spec.extraHeaders: Forbidden: has a header that looks like a credential")
 	assert.NotContains(t, err.Error(), "sk-live-123")
+}
+
+// A whole entry pasted as a key puts the secret in the name, so a refused
+// name is not echoed either, at the provider or the model level.
+func TestNormalize_SecretMapKeysAreNotEchoed(t *testing.T) {
+	const secret = "sk-live-123"
+	p := &aiv1.LLMProvider{Spec: aiv1.LLMProviderSpec{
+		Provider:     "openai",
+		ExtraHeaders: map[string]string{"Authorization: Bearer " + secret: ""},
+		QueryParams:  map[string]string{"api_key=" + secret: ""},
+		Models: []aiv1.LLMProviderModel{{
+			Name:         "gpt-4o",
+			ExtraHeaders: map[string]string{"X-Api-Key=" + secret: ""},
+			QueryParams:  map[string]string{"key=" + secret: ""},
+		}},
+	}}
+	p.Name = "openai"
+	err := Normalize(p)
+	require.Error(t, err)
+	for _, want := range []string{"spec.extraHeaders: Forbidden", "spec.queryParams: Forbidden", "spec.models[0].extraHeaders: Forbidden", "spec.models[0].queryParams: Forbidden"} {
+		assert.Contains(t, err.Error(), want)
+	}
+	assert.NotContains(t, err.Error(), secret)
 }
 
 // An export redacts every value, and the placeholder applied back keeps the
@@ -80,10 +103,10 @@ func TestNormalize_AcceptsTheExportedPlaceholder(t *testing.T) {
 }
 
 func TestIsCredentialField(t *testing.T) {
-	for _, name := range []string{"Authorization", "Proxy-Authorization", "Cookie", "X-Api-Key", "api_key", "key", "x-goog-api-key", "X-Auth-Token", "client_secret", "password", "sig.key", "X-Amz-Signature", "sig", "SIG", "x-ms-sig"} {
+	for _, name := range []string{"Authorization", "Proxy-Authorization", "Cookie", "X-Api-Key", "api_key", "key", "x-goog-api-key", "X-Auth-Token", "client_secret", "password", "sig.key", "X-Amz-Signature", "sig", "SIG", "x-ms-sig", "key=sk-live-123", "X-Api-Key: sk-live-123", "sig=abc"} {
 		assert.True(t, IsCredentialField(name), name)
 	}
-	for _, name := range []string{"anthropic-version", "api-version", "OpenAI-Organization", "x-request-id", "keyboard", "model", "signal", "sigma"} {
+	for _, name := range []string{"anthropic-version", "api-version", "OpenAI-Organization", "x-request-id", "keyboard", "model", "signal", "sigma", "model=gpt-4o"} {
 		assert.False(t, IsCredentialField(name), name)
 	}
 }

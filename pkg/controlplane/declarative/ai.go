@@ -62,8 +62,17 @@ var credentialFieldNames = []string{"key", "sig"}
 // IsCredentialField reports whether a header or query parameter name looks
 // like it carries a credential: Authorization, Cookie, X-Api-Key, a name
 // with token, secret or password in it, or one that is or ends in key or sig.
+// A name holding a whole pasted entry ("key=sk-live-123", "X-Api-Key: ...")
+// is judged by the part before its first '=' or ':' too.
 func IsCredentialField(name string) bool {
 	n := strings.ToLower(strings.TrimSpace(name))
+	if i := strings.IndexAny(n, "=:"); i >= 0 && isCredentialName(strings.TrimSpace(n[:i])) {
+		return true
+	}
+	return isCredentialName(n)
+}
+
+func isCredentialName(n string) bool {
 	for _, word := range credentialFieldWords {
 		if strings.Contains(n, word) {
 			return true
@@ -360,7 +369,10 @@ func validateCredentialReference(ref string, allowVault bool, path *field.Path) 
 // validateForwarded checks the headers or query parameters sent to a
 // provider: at most MaxHeaderEntries, none that carries a credential, and for
 // headers none the Control Plane refuses to forward. A value is never echoed
-// in an error, in case it is a secret after all.
+// in an error, in case it is a secret after all, and nor is the name of one
+// refused as a credential: the error is on the whole map, since a name can
+// hold a secret too, as "api_key=sk-live-123" pasted as a key. (A header the
+// Control Plane does not forward is named: it is one of forbiddenHeaders.)
 //
 // The Control Plane exports every value as RedactedValue, and keeps the stored
 // value for one applied back that way, as its REST API does. So the
@@ -372,14 +384,22 @@ func validateForwarded(values map[string]string, headers bool, path *field.Path)
 	if len(values) > MaxHeaderEntries {
 		errs = append(errs, field.TooMany(path, len(values), MaxHeaderEntries))
 	}
+	credential := false
 	for _, name := range sortedKeys(values) {
 		switch {
 		case headers && slices.Contains(forbiddenHeaders, strings.ToLower(name)):
 			errs = append(errs, field.Forbidden(path.Key(name), "is a header the Control Plane does not forward"))
 		case values[name] == RedactedValue:
 		case IsCredentialField(name):
-			errs = append(errs, field.Forbidden(path.Key(name), "looks like a credential; put it in an Environment Credential and name that in credentialReference"))
+			credential = true
 		}
+	}
+	if credential {
+		what := "a query parameter"
+		if headers {
+			what = "a header"
+		}
+		errs = append(errs, field.Forbidden(path, "has "+what+" that looks like a credential; put it in an Environment Credential and name that in credentialReference"))
 	}
 	return errs
 }
