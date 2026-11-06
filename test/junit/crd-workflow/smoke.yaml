@@ -9,6 +9,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
+    testkube.io/description: "Runs two passing JUnit 5 tests with Maven and saves the Surefire JUnit reports as artifacts."
     testkube.io/icon: junit
 spec:
   content:
@@ -43,6 +44,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
+    testkube.io/description: "Runs a failing JUnit 5 test with Maven; the execution must fail and the JUnit report must show the failure."
     testkube.io/icon: junit
 spec:
   content:
@@ -77,6 +79,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
+    testkube.io/description: "Runs all JUnit 5 tests of the project, some of which fail, so the execution fails with a JUnit report of mixed results."
     testkube.io/icon: junit
 spec:
   content:

@@ -7,6 +7,7 @@ metadata:
     tool: postman
     category: api-testing
   annotations:
+    testkube.io/description: "Runs the Postman smoke collection with Newman 6 and passes a collection variable from the command line."
     testkube.io/icon: postman
 spec:
   content:
@@ -37,6 +38,7 @@ metadata:
     tool: postman
     category: api-testing
   annotations:
+    testkube.io/description: "Runs a Postman collection that needs no variables, with Newman args instead of a shell command."
     testkube.io/icon: postman
 spec:
   content:
@@ -70,6 +72,7 @@ metadata:
     tool: postman
     category: api-testing
   annotations:
+    testkube.io/description: "Runs the Postman smoke collection through the official/postman/v1 template."
     testkube.io/icon: postman
 spec:
   content:
@@ -103,6 +106,7 @@ metadata:
     tool: postman
     category: api-testing
   annotations:
+    testkube.io/description: "Runs the Postman collection that needs no variables through the official/postman/v1 template."
     testkube.io/icon: postman
 spec:
   content:
@@ -137,6 +141,7 @@ metadata:
     junit: "true"
     category: api-testing
   annotations:
+    testkube.io/description: "Runs the Postman smoke collection with the Newman JUnit reporter and saves the JUnit report as an artifact."
     testkube.io/icon: postman
 spec:
   content:
@@ -170,6 +175,7 @@ metadata:
     tool: postman
     category: api-testing
   annotations:
+    testkube.io/description: "Runs the Postman smoke collection with the latest Newman alpine image."
     testkube.io/icon: postman
 spec:
   content:

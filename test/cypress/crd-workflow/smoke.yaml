@@ -8,6 +8,7 @@ metadata:
     artifacts: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Runs the Cypress 14.5.1 smoke tests with a shell command and custom env values, and saves screenshots and videos as artifacts."
     testkube.io/icon: cypress
 spec:
   content:
@@ -49,6 +50,7 @@ metadata:
     artifacts: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Runs the Cypress 14.5.1 smoke tests through the image entrypoint with run args instead of a shell command, and saves the artifacts."
     testkube.io/icon: cypress
 spec:
   content:
@@ -95,6 +97,7 @@ metadata:
     category: e2e-ui-testing
     junit: "true"
   annotations:
+    testkube.io/description: "Runs the Cypress 14.5.1 smoke tests with run args and saves the artifacts, including the JUnit report."
     testkube.io/icon: cypress
 spec:
   content:
@@ -144,6 +147,7 @@ metadata:
     artifacts: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Checks that a memory volume mounted at /dev/shm has 512Mi, then runs the Cypress 14.5.1 smoke tests on it."
     testkube.io/icon: cypress
 spec:
   content:
@@ -209,6 +213,7 @@ metadata:
     artifacts: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Runs the Cypress 13.6.4 smoke tests with run args and saves screenshots and videos as artifacts."
     testkube.io/icon: cypress
 spec:
   content:
@@ -255,6 +260,7 @@ metadata:
     artifacts-video: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Runs the Cypress 13.6.4 smoke tests with video recording on, to prove that the videos are saved as artifacts."
     testkube.io/icon: cypress
 spec:
   content:
@@ -300,6 +306,7 @@ metadata:
     category: e2e-ui-testing
     artifacts: "true"
   annotations: 
+    testkube.io/description: "Runs the Cypress 14.5.1 tests without the CYPRESS_CUSTOM_ENV value they need, so they fail; the step is negative, so the workflow passes."
     testkube.io/icon: cypress
 spec:
   content:
@@ -341,6 +348,7 @@ metadata:
     tool: cypress
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Runs the Cypress 14.5.1 smoke tests through the official/cypress/v1 template."
     testkube.io/icon: cypress
 spec:
   content:
@@ -379,6 +387,7 @@ metadata:
     tool: cypress
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Runs the official/cypress/v1 template in a step that checks out the Git content itself, not the whole workflow."
     testkube.io/icon: cypress
 spec:
   container:
@@ -418,6 +427,7 @@ metadata:
     tool: cypress
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Runs the official/cypress/v1 template in a sub-step of a step that checks out the Git content."
     testkube.io/icon: cypress
 spec:
   container:
@@ -460,6 +470,7 @@ metadata:
     artifacts: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Runs the Cypress 12.7.0 smoke tests with run args and saves screenshots and videos as artifacts."
     testkube.io/icon: cypress
 spec:
   content:
@@ -505,6 +516,7 @@ metadata:
     artifacts: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Shards the Cypress 14.5.1 spec files across parallel workers, records videos, and collects the artifacts of every shard."
     testkube.io/icon: cypress
 spec:
   content:
@@ -565,6 +577,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Runs the Cypress 14.5.1 tests in parallel for each browser of a matrix with the JUnit reporter, and collects the JUnit reports."
     testkube.io/icon: cypress
 spec:
   content:
