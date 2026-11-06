@@ -8,7 +8,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
-    testkube.io/description: "Artillery smoke test. Generates a JSON report artifact."
+    testkube.io/description: "Checks that Testkube runs an Artillery 2.0.23 load scenario and keeps its JSON report as an artifact. Generates a JSON report artifact."
     testkube.io/icon: artillery
 spec:
   content:
@@ -76,7 +76,7 @@ metadata:
     tool: artillery
     category: performance-testing
   annotations:
-    testkube.io/description: "Artillery smoke test using the official template. Generates a JSON report artifact."
+    testkube.io/description: "Checks that the official/artillery/v1 template runs an Artillery scenario and produces its JSON report. Generates a JSON report artifact."
     testkube.io/icon: artillery
 spec:
   container:
@@ -111,7 +111,7 @@ metadata:
     tool: artillery
     category: performance-testing
   annotations:
-    testkube.io/description: "Artillery smoke test using the official template and latest image. Generates a JSON report artifact."
+    testkube.io/description: "Checks that the official/artillery/v1 template still works with the latest Artillery version. Generates a JSON report artifact."
     testkube.io/icon: artillery
 spec:
   container:
@@ -147,7 +147,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
-    testkube.io/description: "Distributed Artillery smoke test. Generates JSON and HTML report artifacts per worker."
+    testkube.io/description: "Checks that an Artillery load test can be split across parallel workers with distribute/evenly and that the HTML reports of all workers are kept. Generates JSON and HTML report artifacts per worker."
     testkube.io/icon: artillery
 spec:
   config:
