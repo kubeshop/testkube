@@ -5,8 +5,12 @@ metadata:
   labels:
     category: performance-testing
     artifacts: "true"
+    area: tools
   annotations:
     testkube.io/description: "Example that shows how to run a k6 script in Testkube and keep its artifacts."
+    testkube.io/areas: tools,artifacts
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   content:
     git:

@@ -6,8 +6,11 @@ metadata:
   labels:
     demo: showcase-2
     workflow-suite: "true"
+    area: tools
   annotations:
     testkube.io/description: "Groups the showcase workflows and starts them every 4 hours, so the showcase environment always has fresh results."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 spec:
   events:
   - cronjob:
@@ -38,8 +41,12 @@ metadata:
     demo: showcase-2
     artifacts: report
     junit: "true"
+    area: parallel
   annotations:
     testkube.io/description: "Showcase of a distributed k6 load test with configurable VUs and duration."
+    testkube.io/areas: parallel,reports,artifacts,tools
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   config:
     vus: {type: integer, default: 2}
@@ -102,8 +109,12 @@ metadata:
   labels:
     demo: showcase-3
     junit: "true"
+    area: parallel
   annotations:
     testkube.io/description: "Showcase of a Cypress browser matrix with JUnit reports."
+    testkube.io/areas: parallel,reports,artifacts,tools
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -157,8 +168,11 @@ metadata:
   name: curl-with-nginx-service
   labels:
     demo: showcase-4
+    area: services
   annotations:
     testkube.io/description: "Showcase of a service: a step checks an nginx service with curl."
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:
@@ -189,8 +203,12 @@ metadata:
   labels:
     demo: showcase-5
     artifacts-video: "true"
+    area: tools
   annotations:
     testkube.io/description: "Showcase of a Cypress run with video recording."
+    testkube.io/areas: tools,artifacts
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -236,8 +254,12 @@ metadata:
   labels:
     demo: showcase-6
     junit: "true"
+    area: tools
   annotations:
     testkube.io/description: "Showcase of a Postman run with a JUnit report."
+    testkube.io/areas: tools,reports,artifacts
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -270,8 +292,12 @@ metadata:
   labels:
     demo: showcase-6
     junit: "true"
+    area: tools
   annotations:
     testkube.io/description: "Showcase of a Cypress run with a JUnit report."
+    testkube.io/areas: tools,reports,artifacts
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -319,8 +345,12 @@ metadata:
     demo: showcase-6
     artifacts-report: "true"
     junit: "true"
+    area: tools
   annotations:
     testkube.io/description: "Showcase of a passing JUnit 5 run with its JUnit reports."
+    testkube.io/areas: tools,reports,artifacts
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -354,8 +384,12 @@ metadata:
     artifacts-report: "true"
     junit: "true"
     expected-fail: "true"
+    area: tools
   annotations:
     testkube.io/description: "Showcase of a failing JUnit 5 run, expected to fail, with a JUnit report of mixed results."
+    testkube.io/areas: tools,reports,artifacts
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -387,8 +421,12 @@ metadata:
   labels:
     demo: showcase-6
     junit: "true"
+    area: tools
   annotations:
     testkube.io/description: "Showcase of a passing pytest run with a JUnit report."
+    testkube.io/areas: tools,reports,artifacts
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -424,8 +462,12 @@ metadata:
     demo: showcase-6
     junit: "true"
     expected-fail: "true"
+    area: tools
   annotations:
     testkube.io/description: "Showcase of a failing pytest run, expected to fail, with a JUnit report of mixed results."
+    testkube.io/areas: tools,reports,artifacts
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -460,8 +502,12 @@ metadata:
   labels:
     demo: showcase-6
     junit: "true"
+    area: tools
   annotations:
     testkube.io/description: "Showcase of an NUnit run with a JUnit report."
+    testkube.io/areas: tools,reports,artifacts
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -493,8 +539,12 @@ metadata:
   labels:
     demo: showcase-6
     junit: "true"
+    area: tools
   annotations:
     testkube.io/description: "Showcase of a Playwright run with a JUnit report."
+    testkube.io/areas: tools,reports,artifacts
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -532,8 +582,11 @@ metadata:
   name: template-trigger-remote-workflow
   labels:
     demo: showcase-9
+    area: runner
   annotations:
     testkube.io/description: "Showcase template that sets a CLI context from config values and runs a workflow in another Testkube environment."
+    testkube.io/cost: light
+    testkube.io/sandbox: needs-secrets
 spec:
   config:
     apiToken:
@@ -565,8 +618,11 @@ metadata:
   name: trigger-remote-workflow-with-template
   labels:
     demo: showcase-9
+    area: runner
   annotations:
     testkube.io/description: "Showcase of a workflow that starts a workflow in another Testkube environment."
+    testkube.io/cost: light
+    testkube.io/sandbox: needs-secrets
 spec:
   steps:
   - name: Run tests

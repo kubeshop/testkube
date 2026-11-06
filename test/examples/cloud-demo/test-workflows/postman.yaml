@@ -5,8 +5,11 @@ metadata:
   labels:
     category: api-testing
     core-tests: workflows
+    area: tools
   annotations:
     testkube.io/description: "Example that shows how to run a Postman collection with Newman in Testkube."
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
