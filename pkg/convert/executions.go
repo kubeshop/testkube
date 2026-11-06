@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -449,8 +450,8 @@ func (m *executionMigrator) recopyUnfinished(ctx context.Context, stats *Stats) 
 	}
 
 	recopied := 0
-	for start := 0; start < len(ids); start += m.config.BatchSize {
-		n, err := m.recopy(ctx, ids[start:min(start+m.config.BatchSize, len(ids))], stats)
+	for chunk := range slices.Chunk(ids, m.config.BatchSize) {
+		n, err := m.recopy(ctx, chunk, stats)
 		if err != nil {
 			return err
 		}
