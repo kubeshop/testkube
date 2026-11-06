@@ -2,8 +2,12 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflowTemplate
 metadata:
   name: oss-tests-setup-template
+  labels:
+    area: install
   annotations:
     testkube.io/description: "Template that installs the Testkube CLI and jq and authenticates to Google Cloud, for the OSS tests."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: needs-cluster
 spec:
   job:
     activeDeadlineSeconds: 600
@@ -45,8 +49,12 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflowTemplate
 metadata:
   name: oss-tests-steps-template
+  labels:
+    area: install
   annotations:
     testkube.io/description: "Template that runs Postman, curl and JUnit workflows on an OSS installation, downloads artifacts, and checks that suites and parallel steps hit the OSS limits."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: needs-cluster
 spec:
   config:
     namespace:
@@ -89,8 +97,11 @@ metadata:
     core-tests: workflows
     tool: testkube-oss
     environment-specific: dev
+    area: install
   annotations:
     testkube.io/description: "Checks that a Testkube OSS installation with MongoDB runs workflows, serves artifacts and enforces the OSS limits; it runs only at .dev."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: needs-cluster
 description: Testkube OSS tests (standard installation - Mongo)
 spec:
   use:
@@ -113,8 +124,11 @@ metadata:
     core-tests: workflows
     tool: testkube-oss
     environment-specific: dev
+    area: install
   annotations:
     testkube.io/description: "Checks that a Testkube OSS installation with PostgreSQL runs workflows, serves artifacts and enforces the OSS limits; it runs only at .dev."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: needs-cluster
 description: Testkube OSS tests (PostgreSQL)
 spec:
   use:

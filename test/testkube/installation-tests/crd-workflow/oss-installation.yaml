@@ -5,8 +5,11 @@ metadata:
   labels:
     core-tests: installation
     tool: testkube-oss
+    area: install
   annotations:
     testkube.io/description: "Checks that standalone Testkube OSS installs on a fresh kind cluster and can run a workflow."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: needs-cluster
 spec:
   job:
     activeDeadlineSeconds: 900

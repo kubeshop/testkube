@@ -5,8 +5,11 @@ metadata:
   name: special-cases-runner-target--dev-runner-2-ind
   labels:
     core-tests: special-cases
+    area: runner
   annotations:
     testkube.io/description: "Targets a named runner of .dev, to check runner targeting by name; it runs only at .dev, where this runner exists."
+    testkube.io/cost: light
+    testkube.io/sandbox: needs-cluster
 description: Run only at .dev where these runners are created!
 spec:
   execution:

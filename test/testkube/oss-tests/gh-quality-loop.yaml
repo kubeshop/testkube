@@ -7,9 +7,12 @@ metadata:
     quality-loop: "true"
     core-tests: docs
     tool: prettier
+    area: tools
   annotations:
     testkube.io/description: "Quality-loop check of testkube-docs: checks the formatting with Prettier."
     testkube.io/git-integration-managed: "false"
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 description: Prettier check (replaces prettier.yml). Runs on all PRs and on push to
   main.
 spec:
@@ -60,9 +63,12 @@ metadata:
     quality-loop: "true"
     core-tests: docs
     tool: typos
+    area: tools
   annotations:
     testkube.io/description: "Quality-loop check of testkube-docs: checks the spelling of the whole repository with typos and _typos.toml."
     testkube.io/git-integration-managed: "false"
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 description: typos spell check of the whole docs repository, using _typos.toml. Runs
   on all PRs and on push to main.
 spec:
@@ -104,9 +110,12 @@ metadata:
     quality-loop: "true"
     core-tests: docs
     tool: vale
+    area: tools
   annotations:
     testkube.io/description: "Quality-loop check of testkube-docs: lints the lines that a branch adds with Vale and .vale.ini."
     testkube.io/git-integration-managed: "false"
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 description: Vale prose lint of the lines a branch adds to the docs, using .vale.ini.
   Fails on error-level alerts only. Runs on all PRs.
 spec:
@@ -159,9 +168,12 @@ metadata:
     quality-loop: "true"
     core-tests: testkube-oss
     tool: golangci-lint
+    area: engine
   annotations:
     testkube.io/description: "Quality-loop check of testkube: verifies the golangci-lint config and lints the Go code."
     testkube.io/git-integration-managed: "false"
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 description: golangci-lint (replaces lint.yaml Go step). Runs on PRs to main (all
   files) and on feature-branch pushes (skip main/renovate/dependabot).
 spec:
@@ -229,9 +241,12 @@ metadata:
     quality-loop: "true"
     core-tests: testkube-oss
     tool: buf
+    area: engine
   annotations:
     testkube.io/description: "Quality-loop check of testkube: checks the protobuf files with Buf lint and format, and checks for breaking changes against main."
     testkube.io/git-integration-managed: "false"
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 description: Buf lint / format / breaking (replaces lint.yaml protobuf step). Runs
   on PRs to main (all files) and on feature-branch pushes (skip main/renovate/dependabot).
 spec:
@@ -269,9 +284,12 @@ metadata:
     quality-loop: "true"
     core-tests: testkube-oss
     tool: shellcheck
+    area: install
   annotations:
     testkube.io/description: "Quality-loop check of testkube: checks the trial install script with ShellCheck as dash."
     testkube.io/git-integration-managed: "false"
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 description: ShellCheck on the trial install script, as dash, since users pipe it
   to any sh. Runs on PRs to main and on feature-branch pushes.
 spec:
@@ -310,9 +328,12 @@ metadata:
     junit: "true"
     coverage: "true"
     tool: go
+    area: engine
   annotations:
     testkube.io/description: "Quality-loop check of testkube: checks that the integration tests pass against Mongo, NATS, MinIO and Postgres services, with JUnit and coverage reports."
     testkube.io/git-integration-managed: "false"
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 description: make integration-tests with Mongo/NATS/MinIO/Postgres (replaces test.yaml
   integration-tests, without Kind). Runs on push to main and PRs targeting main (opened/synchronize/reopened/ready_for_review).
   Listens to all paths except docs/**.
@@ -516,9 +537,12 @@ metadata:
     junit: "true"
     coverage: "true"
     tool: go
+    area: engine
   annotations:
     testkube.io/description: "Quality-loop check of testkube: checks that the unit tests pass, with JUnit and coverage reports."
     testkube.io/git-integration-managed: "false"
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 description: make unit-tests (replaces test.yaml unit-tests). Runs on push to main
   and PRs targeting main (opened/synchronize/reopened/ready_for_review). Listens to
   all paths except docs/**.
@@ -596,9 +620,12 @@ metadata:
     quality-loop: "true"
     core-tests: testkube-oss
     tool: go
+    area: engine
   annotations:
     testkube.io/description: "Quality-loop check of testkube: checks that the generated CRDs are up to date."
     testkube.io/git-integration-managed: "false"
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 description: make verify-crds-generated (replaces test.yaml verify-generated-crds).
   Runs on push to main and PRs targeting main (opened/synchronize/reopened/ready_for_review).
   Listens to all paths except docs/**.
@@ -657,9 +684,12 @@ metadata:
     quality-loop: "true"
     core-tests: testkube-oss
     tool: buf
+    area: engine
   annotations:
     testkube.io/description: "Quality-loop check of testkube: checks that the generated protobuf code is up to date."
     testkube.io/git-integration-managed: "false"
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 description: make verify-protobuf-generated (replaces test.yaml verify-generated-protobuf).
   Runs on push to main and PRs targeting main (opened/synchronize/reopened/ready_for_review).
   Listens to all paths except docs/**.
@@ -702,9 +732,12 @@ metadata:
     quality-loop: "true"
     core-tests: testkube-oss
     tool: conventional-commits
+    area: tools
   annotations:
     testkube.io/description: "Quality-loop check of testkube: checks that the pull request title follows Conventional Commits."
     testkube.io/git-integration-managed: "false"
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 description: Conventional Commits PR title (replaces lint_pr.yaml / amannn/action-semantic-pull-request).
   Wire on pull_request only (opened/synchronize/reopened/ready_for_review). GitHub
   Integration does not fire on title-only edits.
