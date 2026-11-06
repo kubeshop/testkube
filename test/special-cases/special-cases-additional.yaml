@@ -5,8 +5,11 @@ metadata:
   name: special-cases-cron-trigger-with-timezone
   labels:
     core-tests: special-cases
+    area: triggers
   annotations:
     testkube.io/description: "Has two cron events at 12:05 in the Europe/Warsaw and America/New_York time zones, to check that cron schedules respect the time zone."
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 description: "Cron trigger with timezone - workflow should run at 12:05 PM Europe/Warsaw and 12:05 PM America/New_York"
 spec:
   events:
@@ -31,8 +34,11 @@ metadata:
   name: special-cases-long-lasting-30m
   labels:
     core-tests: special-cases
+    area: execution-control
   annotations:
     testkube.io/description: "Checks that a 30 minute execution with a log line each second completes with all of its logs."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 description: "Long lasting workflow - 30 minutes"
 spec:
   steps:
@@ -49,8 +55,11 @@ metadata:
   name: special-cases-long-lasting-90m
   labels:
     core-tests: special-cases
+    area: execution-control
   annotations:
     testkube.io/description: "Checks that a 90 minute execution with a log line each second completes with all of its logs."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 description: "Long lasting workflow - 90 minutes"
 spec:
   steps:
@@ -67,8 +76,11 @@ metadata:
   name: special-cases-long-lasting-sleep-90m
   labels:
     core-tests: special-cases
+    area: execution-control
   annotations:
     testkube.io/description: "Checks that a 90 minute execution with no output is not treated as stuck and completes."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 description: "Long lasting workflow - 90 minutes sleep + echo in the end"
 spec:
   steps:
@@ -82,8 +94,11 @@ metadata:
   name: special-cases-service-name-with-dash  # only . notation is supported (https://linear.app/kubeshop/issue/TKC-4047/)
   labels:
     core-tests: special-cases
+    area: services
   annotations:
     testkube.io/description: "Checks that a service with a dash in its name can be reached by its IP through the at() expression and through an env value."
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 description: "Service name with dash"
 spec:
   container:
@@ -113,8 +128,11 @@ metadata:
   name: special-cases-30s
   labels:
     core-tests: special-cases
+    area: engine
   annotations:
     testkube.io/description: "A 30 second child workflow that passes; other special cases start it to check child executions."
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   steps:
   - name: Run test
@@ -127,8 +145,11 @@ metadata:
   name: special-cases-execute-100-parallel
   labels:
     core-tests: special-cases
+    area: engine
   annotations:
     testkube.io/description: "Checks that one execute step can start 100 child executions at once."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 spec:
   steps:
   - execute:

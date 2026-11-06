@@ -4,8 +4,11 @@ metadata:
   name: special-cases-step-sharing
   labels:
     core-tests: special-cases
+    area: engine
   annotations:
     testkube.io/description: "Checks that a step can pass a value through /testkube/outputs and a file through step.results to the next steps, including a chained output."
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 description: "Step sharing - pass values via /testkube/outputs/ and files via step.results"
 spec:
   use:

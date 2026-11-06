@@ -13,8 +13,11 @@ metadata:
   name: tw-cache-roundtrip
   labels:
     core-tests: dependency-cache
+    area: engine
   annotations:
     testkube.io/description: "Fills the dependency cache on a miss and checks on the next execution that the cache restores the entry."
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 description: "Cache round trip - populates on a miss, restores on the next run"
 spec:
   config:
@@ -65,8 +68,11 @@ metadata:
   name: tw-cache-shared-writer
   labels:
     core-tests: dependency-cache
+    area: engine
   annotations:
     testkube.io/description: "Writer of the dependency cache suite: it stores an environment-scope cache entry for another workflow to read."
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 description: "Cache, environment scope - writes an entry meant to be read by another workflow"
 spec:
   config:
@@ -104,8 +110,11 @@ metadata:
   name: tw-cache-shared-reader
   labels:
     core-tests: dependency-cache
+    area: engine
   annotations:
     testkube.io/description: "Checks that it can read an environment-scope cache entry that a different workflow wrote."
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 description: "Cache, environment scope - a different workflow reads the shared entry"
 spec:
   config:
@@ -143,8 +152,11 @@ metadata:
   name: tw-cache-isolated-reader
   labels:
     core-tests: dependency-cache
+    area: engine
   annotations:
     testkube.io/description: "Checks that a workflow-scope cache key does not reach the entry of another workflow."
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 description: "Cache, workflow scope - the same key does not reach another workflow's entry"
 spec:
   config:
@@ -183,8 +195,11 @@ metadata:
   name: tw-cache-degrades
   labels:
     core-tests: dependency-cache
+    area: engine
   annotations:
     testkube.io/description: "Checks that a cache key that cannot resolve gives a cache miss, not a failed step."
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 description: "Cache - a key that cannot resolve is a miss, not a failed step"
 spec:
   container:
@@ -225,8 +240,11 @@ metadata:
   labels:
     core-tests: dependency-cache
     type: suite
+    area: engine
   annotations:
     testkube.io/description: "Suite that runs the dependency cache workflows in order, for the assertions that need more than one execution."
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 description: "Drives the dependency cache assertions that need more than one execution"
 spec:
   container:

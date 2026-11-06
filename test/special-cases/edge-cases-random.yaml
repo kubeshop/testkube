@@ -4,8 +4,11 @@ metadata:
   name: expected-random-random-oomkilled
   labels:
     core-tests: expected-random
+    area: engine
   annotations:
     testkube.io/description: "Passes or fails at random: about half of the executions allocate memory over the limit and are OOMKilled."
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 description: "Expected random result"
 spec:
   container:
