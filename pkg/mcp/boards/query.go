@@ -51,10 +51,13 @@ type InsightQuery struct {
 	GroupBy string
 
 	// time-series
-	Measure         string
-	Aggregate       string
-	Segment         string
-	IdentityFilters string
+	Measure   string
+	Aggregate string
+	// AggregationPeriod is the calendar bucket (UTC) of the series; empty lets the Control Plane
+	// derive it from the date range.
+	AggregationPeriod string
+	Segment           string
+	IdentityFilters   string
 
 	// CurrentEnvironment asks the client to scope the query to the environment
 	// the MCP session runs in, replacing the report's own environment filter.
@@ -94,6 +97,7 @@ func (q InsightQuery) QueryParams() map[string]string {
 	set("groupBy", q.GroupBy)
 	set("measure", q.Measure)
 	set("aggregate", q.Aggregate)
+	set("aggregationPeriod", q.AggregationPeriod)
 	set("segment", q.Segment)
 	set("identityFilters", q.IdentityFilters)
 	return params
@@ -178,6 +182,7 @@ func BuildQuery(kind string, params map[string]any, opts QueryOptions) (InsightQ
 		if q.Aggregate == "" {
 			q.Aggregate = "sum"
 		}
+		q.AggregationPeriod = stringParam(params, "aggregationPeriod")
 		q.Segment = stringParam(params, "segment")
 		if identity := identityFilters(filters); len(identity) > 0 {
 			data, _ := json.Marshal(identity)

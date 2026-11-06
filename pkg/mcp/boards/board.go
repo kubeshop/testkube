@@ -17,12 +17,15 @@ type Board struct {
 	UpdatedAt   string `json:"updatedAt,omitempty"`
 	// Version is incremented by every change to the board. Nil when the
 	// Control Plane predates it.
-	Version        *int64          `json:"version,omitempty"`
-	Creator        string          `json:"creator,omitempty"`
-	Shared         bool            `json:"shared"`
-	IsUserFavorite bool            `json:"isUserFavorite,omitempty"`
-	IsOrgFavorite  bool            `json:"isOrgFavorite,omitempty"`
-	Layout         json.RawMessage `json:"layout,omitempty"`
+	Version *int64 `json:"version,omitempty"`
+	Creator string `json:"creator,omitempty"`
+	Shared  bool   `json:"shared"`
+	// Labels are the board's metadata.labels, which a declarative apply
+	// stores and an export returns. The dashboard does not show them.
+	Labels         map[string]string `json:"labels,omitempty"`
+	IsUserFavorite bool              `json:"isUserFavorite,omitempty"`
+	IsOrgFavorite  bool              `json:"isOrgFavorite,omitempty"`
+	Layout         json.RawMessage   `json:"layout,omitempty"`
 	Content        struct {
 		Reports []Report `json:"reports"`
 	} `json:"content"`

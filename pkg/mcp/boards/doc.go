@@ -17,6 +17,15 @@
 // HandlerClient must call this package rather than reimplement it.
 // testdata/translation_cases.json pins the report-to-/insights/* translation.
 //
+// # Aggregation period
+//
+// A time-series report may carry an aggregationPeriod param (day, week, month,
+// quarter or year), the calendar bucket in UTC that the dashboard's Period
+// selector saves. BuildQuery forwards it as the aggregationPeriod query param of
+// /insights/series; empty or absent means the Control Plane derives the bucket
+// from the date range, as before. A Control Plane that predates the param
+// ignores it and buckets by range.
+//
 // # Time zones
 //
 // The dashboard ends a day, week, month or quarter range at the viewer's local

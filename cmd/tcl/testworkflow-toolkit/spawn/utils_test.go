@@ -16,6 +16,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
 
@@ -41,6 +42,40 @@ func TestBuildKubernetesWorkerConfig(t *testing.T) {
 	assert.True(t, workerCfg.LogAbortedDetails)
 	assert.True(t, workerCfg.DisableResourceMetrics)
 	assert.Equal(t, "256Mi", workerCfg.EmptyDirSizeLimit)
+}
+
+// TestBuildKubernetesWorkerConfig_TLSRetry guards that parallel workers use the kubelet TLS log retry
+// configured for the runner, and keep the controller defaults when none is configured.
+func TestBuildKubernetesWorkerConfig_TLSRetry(t *testing.T) {
+	tests := []struct {
+		name   string
+		worker testworkflowconfig.WorkerConfig
+		want   controller.TLSRetryConfig
+	}{
+		{
+			name: "propagates the configured retry",
+			worker: testworkflowconfig.WorkerConfig{
+				LogsTLSRetryMaxAttempts:  12,
+				LogsTLSRetryInitialDelay: 2 * time.Second,
+				LogsTLSRetryMaxDelay:     time.Minute,
+			},
+			want: controller.TLSRetryConfig{MaxAttempts: 12, InitialDelay: 2 * time.Second, MaxDelay: time.Minute},
+		},
+		{
+			// Zero values make the controller fall back to the LogTLSRetry* defaults.
+			name:   "leaves the retry empty when none is configured",
+			worker: testworkflowconfig.WorkerConfig{},
+			want:   controller.TLSRetryConfig{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			workerCfg := buildKubernetesWorkerConfig(&testworkflowconfig.InternalConfig{Worker: tt.worker}, false)
+
+			assert.Equal(t, tt.want, workerCfg.TLSRetry)
+		})
+	}
 }
 
 func TestExecuteParallel(t *testing.T) {

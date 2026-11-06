@@ -10,6 +10,7 @@ import (
 	"unicode"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
@@ -41,6 +42,12 @@ func Normalize(obj Object) error {
 
 func normalizeBoard(b *insightsv1.Board) field.ErrorList {
 	errs := validateSlug(b.Name, field.NewPath("metadata", "name"))
+	// Labels follow the Kubernetes rules, so a board synced from a cluster,
+	// where the API server has already checked them, always applies.
+	errs = append(errs, metav1validation.ValidateLabels(b.Labels, field.NewPath("metadata", "labels"))...)
+	if len(b.Labels) == 0 {
+		b.Labels = nil
+	}
 	errs = append(errs, normalizeBoardSpec(&b.Spec, b.Name, field.NewPath("spec"))...)
 	return errs
 }
@@ -241,6 +248,7 @@ type StoredBoard struct {
 	Name        string
 	Description string
 	Shared      bool
+	Labels      map[string]string
 	Layout      boards.Layout
 	Reports     []boards.Report
 }
@@ -254,6 +262,7 @@ func BoardToStored(b *insightsv1.Board) (StoredBoard, error) {
 		Name:        b.Spec.DisplayName,
 		Description: b.Spec.Description,
 		Shared:      b.Spec.Shared == nil || *b.Spec.Shared,
+		Labels:      maps.Clone(b.Labels),
 		Layout:      boards.Layout{Version: boards.LayoutVersion, Rows: []boards.Row{}},
 		Reports:     make([]boards.Report, 0, len(b.Spec.Reports)),
 	}
@@ -292,6 +301,9 @@ func BoardFromStored(b *boards.Board, status commonv1.ControlPlaneResourceStatus
 	}
 	out.SetGroupVersionKind(insightsv1.GroupVersion.WithKind(insightsv1.BoardKind))
 	out.Name = b.Slug
+	if len(b.Labels) > 0 {
+		out.Labels = maps.Clone(b.Labels)
+	}
 	if out.Status.ID == "" {
 		out.Status.ID = b.ID
 	}

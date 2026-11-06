@@ -62,6 +62,7 @@ func TestFixtures_Invalid(t *testing.T) {
 		"board-unknown-param.yaml":          {"spec.reports[0].params", "unknown params for a pass-fail report: durration"},
 		"board-bad-param-value.yaml":        {"spec.reports[0].params", "duration must be one of"},
 		"board-duplicate-report.yaml":       {"spec.reports[1].id", "Duplicate value"},
+		"board-bad-label.yaml":              {"metadata.labels", "team lead"},
 		"board-layout-unknown-report.yaml":  {"spec.layout.rows[0].cells[1]", "ghost"},
 		"board-layout-unplaced-report.yaml": {"spec.layout.rows", "these are not: b"},
 		"board-unknown-field.yaml":          {"document 1", `unknown field "dispayName"`},
@@ -249,6 +250,7 @@ func TestBoardStoredRoundTrip(t *testing.T) {
 			require.NoError(t, Normalize(exported))
 
 			assert.Equal(t, board.Name, exported.Name)
+			assert.Equal(t, board.Labels, exported.Labels)
 			assert.JSONEq(t, mustJSON(t, board.Spec), mustJSON(t, exported.Spec))
 		})
 	}
@@ -291,7 +293,7 @@ func toBoardsBoard(t *testing.T, stored StoredBoard) *boards.Board {
 	t.Helper()
 	layout, err := json.Marshal(stored.Layout)
 	require.NoError(t, err)
-	b := &boards.Board{Slug: stored.Slug, Name: stored.Name, Description: stored.Description, Shared: stored.Shared, Layout: layout}
+	b := &boards.Board{Slug: stored.Slug, Name: stored.Name, Description: stored.Description, Shared: stored.Shared, Labels: stored.Labels, Layout: layout}
 	b.Content.Reports = stored.Reports
 	return b
 }
