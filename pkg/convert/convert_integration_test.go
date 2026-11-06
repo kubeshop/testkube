@@ -450,6 +450,33 @@ func TestConvertIsIdempotent_Integration(t *testing.T) {
 	assert.Equal(t, distinct, total, "no duplicate executions")
 }
 
+func TestConvertRecopiesExecutionThatFinishedAfterFirstRun_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
+	ctx := context.Background()
+	f := newFixture(t)
+
+	finished := buildExecution(1)
+	running := buildExecution(1)
+	runningStatus := testkube.RUNNING_TestWorkflowStatus
+	running.Result.Status = &runningStatus
+	running.Result.PredictedStatus = &runningStatus
+	running.Result.FinishedAt = time.Time{}
+	running.Reports = nil
+	require.NoError(t, f.mongoRepo.Insert(ctx, running))
+
+	f.convert(t, Config{})
+	require.NoError(t, f.mongoRepo.Update(ctx, finished))
+	second := f.convert(t, Config{})
+	require.Empty(t, second.Warnings)
+
+	got, err := f.pgRepo.Get(ctx, finished.Id)
+	require.NoError(t, err)
+	assert.Equal(t, *finished.Result.Status, *got.Result.Status)
+	assert.Len(t, got.Reports, 1, "the report written at the end of the run")
+	assert.Equal(t, int64(1), countRows(t, f.pg)["test_workflow_executions"], "no duplicate execution")
+}
+
 // Interrupting a run must lose at most the batch in flight, and resuming must
 // land every remaining execution exactly once.
 func TestConvertResumesFromCheckpoint_Integration(t *testing.T) {

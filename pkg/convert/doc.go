@@ -46,6 +46,11 @@
 // but still applies schema migrations, because the checkpoint lookup and the
 // verification read those tables.
 //
+// Paging on _id never reads a copied document again.
+// So each run first copies again every execution
+// that Postgres still holds unfinished. Without it, an execution
+// copied while running keeps that status after the cutover.
+//
 // The tool migrates the schema itself, with goose's WithAllowOutofOrder(true)
 // like the API server, and an out-of-date schema is fatal here rather than a
 // warning: the COPY statements name columns that may not exist yet.

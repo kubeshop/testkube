@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -94,6 +95,10 @@ func (m *executionMigrator) Migrate(ctx context.Context) (*Stats, error) {
 			cp.LastMongoID.Hex(), cp.Processed)
 	}
 	m.log.Infof("Executions to migrate: %d total, batch size %d", total, m.config.BatchSize)
+
+	if err := m.recopyUnfinished(ctx); err != nil {
+		return stats, err
+	}
 
 	if err := m.run(ctx, stats, cp); err != nil {
 		return stats, err
@@ -400,27 +405,8 @@ func (m *executionMigrator) commitBatch(ctx context.Context, buffers *executionB
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck // rollback after commit is a no-op
 
-	copies := []struct {
-		table   string
-		buf     *bytes.Buffer
-		columns []string
-	}{
-		{"test_workflow_executions", &buffers.executions, executionColumns},
-		{"test_workflow_signatures", &buffers.signatures, signatureColumns},
-		{"test_workflow_results", &buffers.results, resultColumns},
-		{"test_workflow_outputs", &buffers.outputs, outputColumns},
-		{"test_workflow_reports", &buffers.reports, reportColumns},
-		{"test_workflow_resource_aggregations", &buffers.resourceAggregations, resourceAggregationColumns},
-		{"test_workflows", &buffers.workflows, workflowColumns},
-	}
-
-	for _, c := range copies {
-		if c.buf.Len() == 0 {
-			continue
-		}
-		if _, err := copyFrom(ctx, tx, c.table, bytes.NewReader(c.buf.Bytes()), c.columns...); err != nil {
-			return err
-		}
+	if err := copyBuffers(ctx, tx, buffers); err != nil {
+		return err
 	}
 
 	// Advance the checkpoint inside the same transaction. This is what makes the
@@ -444,6 +430,136 @@ func (m *executionMigrator) commitBatch(ctx context.Context, buffers *executionB
 
 	m.applyCounts(stats, counts)
 	countBatch(stats, counts)
+	return nil
+}
+
+// recopyUnfinished copies again the executions earlier runs saw unfinished.
+// Paging on _id never reads a copied document twice.
+func (m *executionMigrator) recopyUnfinished(ctx context.Context) error {
+	ids, err := unfinishedExecutionIDs(ctx, m.pg)
+	if err != nil {
+		return err
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	if m.config.DryRun {
+		m.log.Infof("dry run: would copy %d unfinished executions again", len(ids))
+		return nil
+	}
+
+	recopied := 0
+	for start := 0; start < len(ids); start += m.config.BatchSize {
+		n, err := m.recopy(ctx, ids[start:min(start+m.config.BatchSize, len(ids))])
+		if err != nil {
+			return err
+		}
+		recopied += n
+	}
+	m.log.Infof("Copied %d of %d unfinished executions again", recopied, len(ids))
+	return nil
+}
+
+// recopy replaces the given executions with their current Mongo documents.
+func (m *executionMigrator) recopy(ctx context.Context, ids []string) (int, error) {
+	cursor, err := m.mongo.Find(ctx, bson.M{"id": bson.M{"$in": ids}},
+		options.Find().SetBatchSize(int32(m.config.ReadBatchSize)))
+	if err != nil {
+		return 0, fmt.Errorf("failed to open unfinished executions cursor: %w", err)
+	}
+	defer cursor.Close(ctx) //nolint:errcheck // best effort on the read path
+
+	var (
+		buffers executionBuffers
+		counts  batchCounts
+		staged  []string
+		seen    = make(map[string]struct{}, len(ids))
+		// The earlier copy stays, so a failure loses no execution.
+		ignored = newStats(TaskExecutions)
+	)
+	for cursor.Next(ctx) {
+		var execution testkube.TestWorkflowExecution
+		err := cursor.Decode(&execution)
+		if err == nil {
+			err = m.stage(&buffers, &counts, &execution, seen, ignored)
+		}
+		if err != nil {
+			if !m.config.SkipErrors {
+				return 0, fmt.Errorf("failed to copy an unfinished execution again: %w", err)
+			}
+			m.log.Warnf("Keeping the earlier copy of an unfinished execution: %v", err)
+			continue
+		}
+		staged = append(staged, execution.Id)
+	}
+	if err := cursor.Err(); err != nil {
+		return 0, fmt.Errorf("unfinished executions cursor failed: %w", err)
+	}
+	if len(staged) == 0 {
+		return 0, nil
+	}
+
+	tx, err := m.pg.Begin(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to begin recopy transaction: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck // rollback after commit is a no-op
+
+	if _, err := tx.Exec(ctx, `DELETE FROM test_workflow_executions WHERE id = ANY($1)`, staged); err != nil {
+		return 0, fmt.Errorf("failed to delete unfinished executions: %w", err)
+	}
+	if err := copyBuffers(ctx, tx, &buffers); err != nil {
+		return 0, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return 0, fmt.Errorf("failed to commit recopied executions: %w", err)
+	}
+	return len(staged), nil
+}
+
+// unfinishedExecutionIDs lists executions whose status is not terminal yet.
+func unfinishedExecutionIDs(ctx context.Context, db *pgxpool.Pool) ([]string, error) {
+	terminal := make([]string, len(testkube.TestWorkflowTerminalStatus))
+	for i, status := range testkube.TestWorkflowTerminalStatus {
+		terminal[i] = string(status)
+	}
+	rows, err := db.Query(ctx,
+		`SELECT id FROM test_workflow_executions WHERE status IS NULL OR status <> ALL($1)`, terminal)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list unfinished executions: %w", err)
+	}
+	ids, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, fmt.Errorf("failed to read unfinished executions: %w", err)
+	}
+	return ids, nil
+}
+
+// copyBuffers imports one batch of serialized rows.
+// Parents go first, so foreign keys and triggers resolve.
+func copyBuffers(ctx context.Context, tx pgx.Tx, buffers *executionBuffers) error {
+	copies := []struct {
+		table   string
+		buf     *bytes.Buffer
+		columns []string
+	}{
+		{"test_workflow_executions", &buffers.executions, executionColumns},
+		{"test_workflow_signatures", &buffers.signatures, signatureColumns},
+		{"test_workflow_results", &buffers.results, resultColumns},
+		{"test_workflow_outputs", &buffers.outputs, outputColumns},
+		{"test_workflow_reports", &buffers.reports, reportColumns},
+		{"test_workflow_resource_aggregations", &buffers.resourceAggregations, resourceAggregationColumns},
+		{"test_workflows", &buffers.workflows, workflowColumns},
+	}
+
+	for _, c := range copies {
+		if c.buf.Len() == 0 {
+			continue
+		}
+		if _, err := copyFrom(ctx, tx, c.table, bytes.NewReader(c.buf.Bytes()), c.columns...); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
