@@ -31,6 +31,27 @@ func TestNormalize_AIDefaults(t *testing.T) {
 	assert.Equal(t, []string{"a", "b"}, agent.Spec.Access.ResourceGroups)
 }
 
+// sig carries the signature of an Azure SAS URL, so a literal one is refused
+// in forwarded query parameters as in the base URL.
+func TestNormalize_RefusesSignatureQueryParameter(t *testing.T) {
+	p := &aiv1.LLMProvider{Spec: aiv1.LLMProviderSpec{
+		Provider:    "azure",
+		QueryParams: map[string]string{"sig": "c2lnbmF0dXJl"},
+	}}
+	p.Name = "azure"
+	err := Normalize(p)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "spec.queryParams[sig]")
+	assert.NotContains(t, err.Error(), "c2lnbmF0dXJl")
+
+	p.Spec.QueryParams = nil
+	p.Spec.BaseURL = "https://example.openai.azure.com/openai?sv=2024-01-01&sig=c2lnbmF0dXJl"
+	err = Normalize(p)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "spec.baseUrl")
+	assert.NotContains(t, err.Error(), "c2lnbmF0dXJl")
+}
+
 func TestNormalize_SecretValuesAreNotEchoed(t *testing.T) {
 	p := &aiv1.LLMProvider{Spec: aiv1.LLMProviderSpec{
 		Provider:     "openai",
@@ -49,7 +70,7 @@ func TestNormalize_AcceptsTheExportedPlaceholder(t *testing.T) {
 	p := &aiv1.LLMProvider{Spec: aiv1.LLMProviderSpec{
 		Provider:     "openai",
 		ExtraHeaders: map[string]string{"X-Api-Key": RedactedValue, "anthropic-version": RedactedValue},
-		Models:       []aiv1.LLMProviderModel{{Name: "gpt-4o", QueryParams: map[string]string{"key": RedactedValue}}},
+		Models:       []aiv1.LLMProviderModel{{Name: "gpt-4o", QueryParams: map[string]string{"key": RedactedValue, "sig": RedactedValue}}},
 	}}
 	p.Name = "openai"
 	require.NoError(t, Normalize(p))
@@ -59,10 +80,10 @@ func TestNormalize_AcceptsTheExportedPlaceholder(t *testing.T) {
 }
 
 func TestIsCredentialField(t *testing.T) {
-	for _, name := range []string{"Authorization", "Proxy-Authorization", "Cookie", "X-Api-Key", "api_key", "key", "x-goog-api-key", "X-Auth-Token", "client_secret", "password", "sig.key", "X-Amz-Signature"} {
+	for _, name := range []string{"Authorization", "Proxy-Authorization", "Cookie", "X-Api-Key", "api_key", "key", "x-goog-api-key", "X-Auth-Token", "client_secret", "password", "sig.key", "X-Amz-Signature", "sig", "SIG", "x-ms-sig"} {
 		assert.True(t, IsCredentialField(name), name)
 	}
-	for _, name := range []string{"anthropic-version", "api-version", "OpenAI-Organization", "x-request-id", "keyboard", "model"} {
+	for _, name := range []string{"anthropic-version", "api-version", "OpenAI-Organization", "x-request-id", "keyboard", "model", "signal", "sigma"} {
 		assert.False(t, IsCredentialField(name), name)
 	}
 }
@@ -99,13 +120,16 @@ func TestRefusedSecretsAreNotEchoed(t *testing.T) {
 		"https://example.com/mcp?Token=hunter2&x=1",
 		"ftp://example.com/hunter2",
 		"https://example.com/mcp?a=%zzhunter2",
+		"https://example.com/mcp?sv=2024-01-01&sig=hunter2",
+		"https://example.com/mcp?api_key%3Dhunter2",
 	} {
 		errs := validateHTTPURL(raw, path)
 		require.NotEmpty(t, errs, raw)
 		assert.NotContains(t, errs.ToAggregate().Error(), "hunter2", raw)
 	}
 	errs := validateHTTPURL("https://example.com/mcp?api_key=hunter2", path)
-	assert.Contains(t, errs.ToAggregate().Error(), `query parameter "api_key" looks like a credential`)
+	assert.Contains(t, errs.ToAggregate().Error(), "has a query parameter that looks like a credential")
+	assert.NotContains(t, errs.ToAggregate().Error(), "api_key", "a query parameter's name is not echoed either")
 	assert.Empty(t, validateHTTPURL("https://example.com/mcp?api-version=2024-10-21", path))
 }
 

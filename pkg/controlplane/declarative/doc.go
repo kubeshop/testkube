@@ -48,7 +48,10 @@
 // A manifest never carries a secret. A key is named by an Environment
 // Credential in credentialReference (secret://<name>, or vault://<path> for
 // an LLM provider), and Normalize refuses a header or query parameter whose
-// name looks like a credential (IsCredentialField) and a URL with user info.
+// name looks like a credential (IsCredentialField, which includes sig, the
+// signature of an Azure SAS URL) and a URL with user info. An error about a
+// URL echoes neither the URL nor a refused query parameter's name, which may
+// hold a secret itself.
 // The Control Plane exports every header and query parameter value as
 // RedactedValue, which applied back keeps the stored value, so the
 // placeholder is accepted under any name. A

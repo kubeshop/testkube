@@ -53,9 +53,15 @@ var credentialNamePattern = regexp.MustCompile(`^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Z
 // Credential, which the manifest names, not in the manifest.
 var credentialFieldWords = []string{"auth", "token", "secret", "password", "passwd", "cookie", "apikey", "api-key", "api_key", "signature"}
 
+// credentialFieldNames mark a header or query parameter whose value is a
+// credential, by its whole name or its last part (after '-', '_' or '.'):
+// too short to look for inside a name. sig is the signature of an Azure SAS
+// URL and of other signed endpoints.
+var credentialFieldNames = []string{"key", "sig"}
+
 // IsCredentialField reports whether a header or query parameter name looks
 // like it carries a credential: Authorization, Cookie, X-Api-Key, a name
-// with token, secret or password in it, or one ending in key.
+// with token, secret or password in it, or one that is or ends in key or sig.
 func IsCredentialField(name string) bool {
 	n := strings.ToLower(strings.TrimSpace(name))
 	for _, word := range credentialFieldWords {
@@ -63,7 +69,12 @@ func IsCredentialField(name string) bool {
 			return true
 		}
 	}
-	return n == "key" || strings.HasSuffix(n, "-key") || strings.HasSuffix(n, "_key") || strings.HasSuffix(n, ".key")
+	for _, word := range credentialFieldNames {
+		if n == word || strings.HasSuffix(n, "-"+word) || strings.HasSuffix(n, "_"+word) || strings.HasSuffix(n, "."+word) {
+			return true
+		}
+	}
+	return false
 }
 
 // ParseCredentialReference splits a credentialReference into the name it
@@ -302,7 +313,10 @@ func invalidSecret(path *field.Path, detail string) *field.Error {
 // credentials in it: no user info, and no query parameter whose name
 // IsCredentialField, the rule the forwarded query parameters keep. (Unlike
 // those, a URL is stored and exported as written, so the redacted placeholder
-// is no exception here.) The URL is never echoed.
+// is no exception here.) Neither the URL nor a refused parameter's name is
+// echoed: a name decoded from the query can hold a secret itself, as
+// ?api_key%3Dsk-live-123 (a whole entry encoded by mistake) decodes to the
+// name api_key=sk-live-123.
 func validateHTTPURL(raw string, path *field.Path) field.ErrorList {
 	u, err := url.Parse(raw)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
@@ -315,13 +329,12 @@ func validateHTTPURL(raw string, path *field.Path) field.ErrorList {
 	if err != nil {
 		return field.ErrorList{invalidSecret(path, "has a query string that is not valid")}
 	}
-	var errs field.ErrorList
-	for _, name := range sortedKeys(query) {
+	for name := range query {
 		if IsCredentialField(name) {
-			errs = append(errs, invalidSecret(path, fmt.Sprintf("query parameter %q looks like a credential; put it in an Environment Credential and name that in credentialReference", name)))
+			return field.ErrorList{invalidSecret(path, "has a query parameter that looks like a credential; put it in an Environment Credential and name that in credentialReference")}
 		}
 	}
-	return errs
+	return nil
 }
 
 // validateCredentialReference checks a reference names a credential rather
