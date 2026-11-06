@@ -7,6 +7,8 @@ metadata:
     type: suite
     dev-quality-gate: "true"
     release-quality-gate: "true"
+  annotations:
+    testkube.io/description: "Suite that runs the full suite of every tool: Artillery, curl, Cypress, Gradle, JMeter, JUnit, k6, Locust, Maven, NUnit, Pact, Playwright, Postman, pytest, Robot Framework, Selenium, SoapUI and xUnit."
 spec:
   container:
     resources:

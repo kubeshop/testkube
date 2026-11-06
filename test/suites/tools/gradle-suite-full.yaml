@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: gradle
+  annotations:
+    testkube.io/description: "Suite that runs all Gradle workflows: the plain, default-command and template smoke tests on JDK 11."
 spec:
   container:
     resources:

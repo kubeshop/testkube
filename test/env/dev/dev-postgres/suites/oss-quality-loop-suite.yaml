@@ -6,6 +6,8 @@ metadata:
     dev-quality-gate: "true"
     core-tests: workflows-suite
     type: suite
+  annotations:
+    testkube.io/description: "Suite that runs the quality-loop checks of testkube and testkube-docs: docs Prettier, typos and Vale, Go and protobuf lint, unit and integration tests, and the CRD and protobuf codegen checks."
 spec:
   container:
     resources:

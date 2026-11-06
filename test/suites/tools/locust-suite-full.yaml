@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: locust
+  annotations:
+    testkube.io/description: "Suite that runs the Locust smoke workflow and the distributed Locust workflow."
 spec:
   container:
     resources:

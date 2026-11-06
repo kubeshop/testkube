@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: tools-preview-images-suite
     type: suite
+  annotations:
+    testkube.io/description: "Suite that runs the Artillery, JMeter, k6, Locust and Postman smoke workflows with the latest and master images, to catch a break in a new tool release."
 spec:
   container:
     resources:

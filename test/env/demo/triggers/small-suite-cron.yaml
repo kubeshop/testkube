@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: suite-trigger
+  annotations:
+    testkube.io/description: "Demo environment cron at 07:30 each day: runs tw-suite-small-smoke."
 spec:
   container:
     resources:

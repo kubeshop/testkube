@@ -6,6 +6,8 @@ metadata:
   labels:
     demo: showcase-2
     workflow-suite: "true"
+  annotations:
+    testkube.io/description: "Showcase suite on a cron every 4 hours: runs the pytest, Postman, k6, JUnit 5, Cypress and Playwright showcase workflows."
 spec:
   events:
   - cronjob:
@@ -36,6 +38,8 @@ metadata:
     demo: showcase-2
     artifacts: report
     junit: "true"
+  annotations:
+    testkube.io/description: "Showcase: runs the k6 smoke script on parallel workers with the VUs and the duration as config, on a cron."
 spec:
   config:
     vus: {type: integer, default: 2}
@@ -98,6 +102,8 @@ metadata:
   labels:
     demo: showcase-3
     junit: "true"
+  annotations:
+    testkube.io/description: "Showcase: runs the Cypress tests in parallel for each browser of a matrix with JUnit reports, on a cron."
 spec:
   content:
     git:
@@ -151,6 +157,8 @@ metadata:
   name: curl-with-nginx-service
   labels:
     demo: showcase-4
+  annotations:
+    testkube.io/description: "Showcase: starts nginx as a service and checks its welcome page with curl, on a cron every 4 hours."
 spec:
   container:
     resources:
@@ -181,6 +189,8 @@ metadata:
   labels:
     demo: showcase-5
     artifacts-video: "true"
+  annotations:
+    testkube.io/description: "Showcase: runs one Cypress spec with video recording, on a cron every 4 hours."
 spec:
   content:
     git:
@@ -226,6 +236,8 @@ metadata:
   labels:
     demo: showcase-6
     junit: "true"
+  annotations:
+    testkube.io/description: "Showcase: runs the Postman smoke collection with a JUnit report, on a cron."
 spec:
   content:
     git:
@@ -258,6 +270,8 @@ metadata:
   labels:
     demo: showcase-6
     junit: "true"
+  annotations:
+    testkube.io/description: "Showcase: runs the Cypress tests with a JUnit report, on a cron every 4 hours."
 spec:
   content:
     git:
@@ -305,6 +319,8 @@ metadata:
     demo: showcase-6
     artifacts-report: "true"
     junit: "true"
+  annotations:
+    testkube.io/description: "Showcase: runs two passing JUnit 5 tests and saves the JUnit reports, on a cron every 4 hours."
 spec:
   content:
     git:
@@ -338,6 +354,8 @@ metadata:
     artifacts-report: "true"
     junit: "true"
     expected-fail: "true"
+  annotations:
+    testkube.io/description: "Showcase, expected to fail: runs all JUnit 5 tests, some of which fail, for a JUnit report of mixed results, on a cron."
 spec:
   content:
     git:
@@ -369,6 +387,8 @@ metadata:
   labels:
     demo: showcase-6
     junit: "true"
+  annotations:
+    testkube.io/description: "Showcase: runs the passing pytest tests with a JUnit report, on a cron every 4 hours."
 spec:
   content:
     git:
@@ -404,6 +424,8 @@ metadata:
     demo: showcase-6
     junit: "true"
     expected-fail: "true"
+  annotations:
+    testkube.io/description: "Showcase, expected to fail: runs all pytest tests, some of which fail, for a JUnit report of mixed results, on a cron."
 spec:
   content:
     git:
@@ -438,6 +460,8 @@ metadata:
   labels:
     demo: showcase-6
     junit: "true"
+  annotations:
+    testkube.io/description: "Showcase: runs the NUnit example project with a JUnit report, on a cron every 4 hours."
 spec:
   content:
     git:
@@ -469,6 +493,8 @@ metadata:
   labels:
     demo: showcase-6
     junit: "true"
+  annotations:
+    testkube.io/description: "Showcase: runs the Playwright tests with the JUnit reporter and saves the report, on a cron every 4 hours."
 spec:
   content:
     git:
@@ -506,6 +532,8 @@ metadata:
   name: template-trigger-remote-workflow
   labels:
     demo: showcase-9
+  annotations:
+    testkube.io/description: "Showcase template that sets a CLI context from config values and runs a workflow in another Testkube environment."
 spec:
   config:
     apiToken:
@@ -537,6 +565,8 @@ metadata:
   name: trigger-remote-workflow-with-template
   labels:
     demo: showcase-9
+  annotations:
+    testkube.io/description: "Showcase: runs a workflow in another Testkube environment through the template-trigger-remote-workflow template."
 spec:
   steps:
   - name: Run tests

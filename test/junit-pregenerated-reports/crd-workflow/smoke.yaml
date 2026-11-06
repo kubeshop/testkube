@@ -6,6 +6,8 @@ metadata:
     category: unit-component-testing
     core-tests: junit-pregenerated
     junit: "true"
+  annotations:
+    testkube.io/description: "Publishes a pregenerated JUnit report with a failure at the test suite level, to check how Testkube parses it."
 spec:
   content:
     git:
@@ -35,6 +37,8 @@ metadata:
     category: unit-component-testing
     core-tests: junit-pregenerated
     junit: "true"
+  annotations:
+    testkube.io/description: "Publishes a pregenerated JUnit report with a test suite that has no test cases, to check how Testkube parses it."
 spec:
   content:
     git:
@@ -64,6 +68,8 @@ metadata:
     category: unit-component-testing
     core-tests: junit-pregenerated
     junit: "true"
+  annotations:
+    testkube.io/description: "Publishes a pregenerated JUnit report with a test case that has both an error and a failure, to check how Testkube parses it."
 spec:
   content:
     git:

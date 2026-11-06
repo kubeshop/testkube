@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: cypress
+  annotations:
+    testkube.io/description: "Suite that runs all 13 Cypress workflows: versions 12 to 14, args, templates, JUnit, matrix, video, /dev/shm, negative and distributed."
 spec:
   container:
     resources:

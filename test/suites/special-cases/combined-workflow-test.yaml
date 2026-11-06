@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: artillery
+  annotations:
+    testkube.io/description: "Suite that runs a TestWorkflow and a legacy Test from one execute step: artillery-workflow-smoke and artillery-executor-smoke."
 spec:
   container:
     resources:

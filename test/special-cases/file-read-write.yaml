@@ -4,6 +4,8 @@ metadata:
   name: write-read-100mb
   labels:
     core-tests: write-read
+  annotations:
+    testkube.io/description: "Writes a 100 MB file at a limited rate and reads it back, to check file throughput in the step container."
 description: "Write 100 MB, read (redirected to /dev/null)"
 spec:
   container:

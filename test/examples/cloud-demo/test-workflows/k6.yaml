@@ -5,6 +5,8 @@ metadata:
   labels:
     category: performance-testing
     artifacts: "true"
+  annotations:
+    testkube.io/description: "Example: runs the k6 smoke script and saves the artifacts."
 spec:
   content:
     git:

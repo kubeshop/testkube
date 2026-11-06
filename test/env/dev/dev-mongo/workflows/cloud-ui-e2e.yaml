@@ -7,6 +7,8 @@ metadata:
     core-tests: cloud-ui-e2e-mongo
     artifacts: "true"
     dev-quality-gate: "true"
+  annotations:
+    testkube.io/description: "Runs the Playwright end-to-end tests of the cloud dashboard against the dev Mongo environment, with one retry, a scenario coverage report and a cleanup of test resources."
 spec:
   content:
     git:
@@ -87,6 +89,8 @@ metadata:
     artifacts: "true"
     distributed: "true"
     junit: "true"
+  annotations:
+    testkube.io/description: "Shards the Playwright end-to-end tests of the cloud dashboard across parallel workers against the dev Mongo environment, with a scenario coverage report."
 spec:
   content:
     git:

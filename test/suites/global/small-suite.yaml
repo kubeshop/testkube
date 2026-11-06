@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows-suite
     type: suite
+  annotations:
+    testkube.io/description: "Suite of 7 smoke workflows, one per main tool: Cypress, distributed Playwright JUnit, Gradle template, JMeter, k6, Postman template and pytest JUnit."
 spec:
   container:
     resources:

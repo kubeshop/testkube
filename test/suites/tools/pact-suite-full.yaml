@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: pact
+  annotations:
+    testkube.io/description: "Suite that runs the Pact JS smoke workflow."
 spec:
   container:
     resources:

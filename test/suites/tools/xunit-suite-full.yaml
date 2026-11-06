@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: xunit
+  annotations:
+    testkube.io/description: "Suite that runs the xUnit smoke workflow."
 spec:
   container:
     resources:

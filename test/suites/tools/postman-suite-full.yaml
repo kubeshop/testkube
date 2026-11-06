@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: postman
+  annotations:
+    testkube.io/description: "Suite that runs all 5 Postman workflows: with and without variables, templates and the JUnit reporter."
 spec:
   container:
     resources:

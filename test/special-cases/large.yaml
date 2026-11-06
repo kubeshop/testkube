@@ -5,6 +5,8 @@ metadata:
   name: large-logs-1mb-no-delay
   labels:
     core-tests: large
+  annotations:
+    testkube.io/description: "Writes about 1 MB of logs as fast as possible, to check that the log stream and the stored logs stay complete."
 description: "Logs: 1 MB"
 spec:
   container:
@@ -27,6 +29,8 @@ metadata:
   name: large-logs-1mb-1s
   labels:
     core-tests: large
+  annotations:
+    testkube.io/description: "Writes about 1 MB of logs over time, to check that live and stored logs stay complete."
 description: "Logs: 1 MB"
 spec:
   container:
@@ -49,6 +53,8 @@ metadata:
   name: large-logs-11mb-no-delay
   labels:
     core-tests: large
+  annotations:
+    testkube.io/description: "Writes about 11 MB of logs as fast as possible, to check log handling under load."
 description: "Logs: 11 MB"
 spec:
   container:
@@ -71,6 +77,8 @@ metadata:
   name: large-logs-11mb-1s
   labels:
     core-tests: large
+  annotations:
+    testkube.io/description: "Writes about 11 MB of logs with a 1 second pause per iteration, so the execution runs for a long time with steady log output."
 description: "Logs: 11 MB"
 spec:
   container:
@@ -93,6 +101,8 @@ metadata:
   name: large-logs-22mb-2s
   labels:
     core-tests: large
+  annotations:
+    testkube.io/description: "Writes about 22 MB of logs with a 2 second pause per iteration, for a long execution with a large log."
 description: "Logs: 22 MB"
 spec:
   container:
@@ -115,6 +125,8 @@ metadata:
   name: large-artifacts-1gb
   labels:
     core-tests: large
+  annotations:
+    testkube.io/description: "Generates a 1 GB file with openssl and saves it as an artifact, to check the upload of a large artifact."
 description: "Artifacts: 1GB file generated with openssl"
 spec:
   container:
@@ -138,6 +150,8 @@ metadata:
   name: large-artifacts-100mb
   labels:
     core-tests: large
+  annotations:
+    testkube.io/description: "Generates a 100 MB file with openssl and saves it as an artifact."
 description: "Artifacts: 100MB file generated with openssl"
 spec:
   container:

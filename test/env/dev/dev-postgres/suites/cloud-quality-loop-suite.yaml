@@ -6,6 +6,8 @@ metadata:
     dev-quality-gate: "true"
     core-tests: workflows-suite
     type: suite
+  annotations:
+    testkube.io/description: "Suite that runs every testkube-cloud-api quality-loop check: the web, backoffice and runspace-controller unit tests, Go, JS and Helm lint, skills drift, go.mod and codegen, and the Go app tests."
 spec:
   container:
     resources:

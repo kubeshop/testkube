@@ -25,6 +25,8 @@ metadata:
   name: special-cases-cache-workflow-scope
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Runs npm ci with the dependency cache at workflow scope, keyed on the lockfile, and logs whether the cache hit or missed."
 description: "Dependency cache, workflow scope - npm's package store keyed on a lockfile, private to this workflow"
 spec:
   content:
@@ -127,6 +129,8 @@ metadata:
   name: special-cases-cache-environment-scope
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Warms a Go module and build cache at environment scope, so other workflows in the environment can read the shared entry."
 description: "Dependency cache, environment scope - a Go module cache shared with every workflow in the environment"
 spec:
   content:

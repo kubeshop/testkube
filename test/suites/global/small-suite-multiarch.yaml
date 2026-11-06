@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows-suite
     type: suite
+  annotations:
+    testkube.io/description: "Suite of 5 smoke workflows whose images exist for both amd64 and arm64: curl matrix, distributed JMeter, k6, Postman template and pytest JUnit."
 description: "Small smoke test suite with only workflows using multiarch images (available for both amd64 and arm64)"
 spec:
   container:

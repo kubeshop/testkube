@@ -7,6 +7,7 @@ metadata:
     tool: maven
     category: build-integration
   annotations:
+    testkube.io/description: "Runs the tests of the hello-maven project with Maven 3.9.6 on JDK 11."
     testkube.io/icon: maven
 spec:
   content:
@@ -41,6 +42,7 @@ metadata:
     tool: maven
     category: build-integration
   annotations:
+    testkube.io/description: "Runs the hello-maven tests through the official/maven/v1 template on JDK 11."
     testkube.io/icon: maven
 spec:
   content:

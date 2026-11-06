@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: suite-trigger
+  annotations:
+    testkube.io/description: "dev cron at 14:30 each day: runs the suite with the latest and master tool images."
 spec:
   container:
     resources:

@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: installation
     tool: testkube-oss
+  annotations:
+    testkube.io/description: "Installs standalone Testkube OSS in a kind cluster that runs in Docker-in-Docker, applies a workflow and runs it."
 spec:
   job:
     activeDeadlineSeconds: 900

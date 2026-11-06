@@ -5,6 +5,8 @@ metadata:
   labels:
     component: ai-service
     category: ai-testing
+  annotations:
+    testkube.io/description: "Starts the AI service from the configured image with a Postgres service and a control plane stub, runs the AI assistant cases in parallel, and checks the session status callbacks."
 spec:
   config:
     serviceImage:

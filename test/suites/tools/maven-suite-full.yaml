@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: maven
+  annotations:
+    testkube.io/description: "Suite that runs the Maven smoke workflow and its template variant on JDK 11."
 spec:
   container:
     resources:

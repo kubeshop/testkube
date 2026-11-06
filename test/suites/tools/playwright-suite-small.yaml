@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: playwright
+  annotations:
+    testkube.io/description: "Suite that runs 2 Playwright workflows: distributed with JUnit, and command args."
 spec:
   container:
     resources:

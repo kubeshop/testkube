@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: workflow-trigger
+  annotations:
+    testkube.io/description: "dev Mongo environment cron at 00:20, 08:20 and 16:20: runs the cloud-ui-e2e dashboard tests."
 spec:
   container:
     resources:

@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: workflow-trigger
+  annotations:
+    testkube.io/description: "Release environment cron at 08:25 and 16:25: runs the cloud-ui-e2e dashboard tests."
 spec:
   container:
     resources:
