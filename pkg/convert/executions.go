@@ -462,7 +462,9 @@ func (m *executionMigrator) recopyUnfinished(ctx context.Context) error {
 
 // recopy replaces the given executions with their current Mongo documents.
 func (m *executionMigrator) recopy(ctx context.Context, ids []string) (int, error) {
-	cursor, err := m.mongo.Find(ctx, bson.M{"id": bson.M{"$in": ids}},
+	// After cutover, an unfinished Mongo copy is older than Postgres.
+	filter := bson.M{"id": bson.M{"$in": ids}, "result.status": bson.M{"$in": terminalStatuses()}}
+	cursor, err := m.mongo.Find(ctx, filter,
 		options.Find().SetBatchSize(int32(m.config.ReadBatchSize)))
 	if err != nil {
 		return 0, fmt.Errorf("failed to open unfinished executions cursor: %w", err)
@@ -519,12 +521,8 @@ func (m *executionMigrator) recopy(ctx context.Context, ids []string) (int, erro
 
 // unfinishedExecutionIDs lists executions whose status is not terminal yet.
 func unfinishedExecutionIDs(ctx context.Context, db *pgxpool.Pool) ([]string, error) {
-	terminal := make([]string, len(testkube.TestWorkflowTerminalStatus))
-	for i, status := range testkube.TestWorkflowTerminalStatus {
-		terminal[i] = string(status)
-	}
 	rows, err := db.Query(ctx,
-		`SELECT id FROM test_workflow_executions WHERE status IS NULL OR status <> ALL($1)`, terminal)
+		`SELECT id FROM test_workflow_executions WHERE status IS NULL OR status <> ALL($1)`, terminalStatuses())
 	if err != nil {
 		return nil, fmt.Errorf("failed to list unfinished executions: %w", err)
 	}
@@ -533,6 +531,14 @@ func unfinishedExecutionIDs(ctx context.Context, db *pgxpool.Pool) ([]string, er
 		return nil, fmt.Errorf("failed to read unfinished executions: %w", err)
 	}
 	return ids, nil
+}
+
+func terminalStatuses() []string {
+	terminal := make([]string, len(testkube.TestWorkflowTerminalStatus))
+	for i, status := range testkube.TestWorkflowTerminalStatus {
+		terminal[i] = string(status)
+	}
+	return terminal
 }
 
 // copyBuffers imports one batch of serialized rows.

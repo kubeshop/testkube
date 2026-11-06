@@ -477,6 +477,33 @@ func TestConvertRecopiesExecutionThatFinishedAfterFirstRun_Integration(t *testin
 	assert.Equal(t, int64(1), countRows(t, f.pg)["test_workflow_executions"], "no duplicate execution")
 }
 
+func TestConvertKeepsPostgresProgressWhenMongoCopyIsUnfinished_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
+	ctx := context.Background()
+	f := newFixture(t)
+
+	running := buildExecution(1)
+	runningStatus := testkube.RUNNING_TestWorkflowStatus
+	running.Result.Status = &runningStatus
+	running.Result.PredictedStatus = &runningStatus
+	running.Result.FinishedAt = time.Time{}
+	require.NoError(t, f.mongoRepo.Insert(ctx, running))
+	f.convert(t, Config{})
+
+	progressed := *running.Result
+	progressed.Steps = map[string]testkube.TestWorkflowStepResult{
+		"root":    {Status: stepStatusPtr(testkube.RUNNING_TestWorkflowStepStatus)},
+		"child-a": {Status: stepStatusPtr(testkube.PASSED_TestWorkflowStepStatus)},
+	}
+	require.NoError(t, f.pgRepo.UpdateResult(ctx, running.Id, &progressed))
+	f.convert(t, Config{})
+
+	got, err := f.pgRepo.Get(ctx, running.Id)
+	require.NoError(t, err)
+	assert.Contains(t, got.Result.Steps, "child-a", "the step the agent finished after the cutover")
+}
+
 // Interrupting a run must lose at most the batch in flight, and resuming must
 // land every remaining execution exactly once.
 func TestConvertResumesFromCheckpoint_Integration(t *testing.T) {

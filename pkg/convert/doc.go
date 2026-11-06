@@ -48,8 +48,10 @@
 //
 // Paging on _id never reads a copied document again.
 // So each run first copies again every execution
-// that Postgres still holds unfinished. Without it, an execution
-// copied while running keeps that status after the cutover.
+// that Postgres holds unfinished and Mongo holds finished.
+// Without it, an execution copied while running keeps
+// that status after the cutover. An unfinished Mongo copy
+// is never copied again: after cutover, Postgres is newer.
 //
 // The tool migrates the schema itself, with goose's WithAllowOutofOrder(true)
 // like the API server, and an out-of-date schema is fatal here rather than a
