@@ -31,8 +31,7 @@ const (
 )
 
 // Kind describes one kind of Control Plane resource. Each entity family has
-// an API group of its own (insights.testkube.io for boards; ai.testkube.io
-// and testbundles.testkube.io to come).
+// an API group of its own.
 type Kind struct {
 	// GroupVersion is the kind's API group and version.
 	GroupVersion schema.GroupVersion

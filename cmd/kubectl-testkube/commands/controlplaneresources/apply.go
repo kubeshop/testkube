@@ -36,7 +36,7 @@ func NewApplyCmd(newClient ClientFactory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "apply -f <file|dir|->",
 		Short: "Apply Control Plane resources from YAML",
-		Long: `Create or update Control Plane resources (Insights boards) from YAML or JSON.
+		Long: `Create or update Control Plane resources from YAML or JSON.
 
 Each file may hold several documents. A directory applies every .yaml, .yml and .json file in it, and "-" reads from stdin.
 Every document is validated locally before anything is sent; nothing is sent if any document is invalid.
