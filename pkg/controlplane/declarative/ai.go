@@ -290,39 +290,56 @@ func normalizeNames(names *[]string, path *field.Path) field.ErrorList {
 	return errs
 }
 
+// invalidSecret is an Invalid error that leaves the value out. Errors reach
+// the CLI's stderr, and from there terminal and CI logs, so a value refused
+// for possibly being, or holding, a secret is never echoed: a URL, a
+// credentialReference.
+func invalidSecret(path *field.Path, detail string) *field.Error {
+	return field.Invalid(path, field.OmitValueType{}, detail)
+}
+
+// validateHTTPURL checks an endpoint is an absolute http or https URL with no
+// credentials in it: no user info, and no query parameter whose name
+// IsCredentialField, the rule the forwarded query parameters keep. (Unlike
+// those, a URL is stored and exported as written, so the redacted placeholder
+// is no exception here.) The URL is never echoed.
 func validateHTTPURL(raw string, path *field.Path) field.ErrorList {
 	u, err := url.Parse(raw)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return field.ErrorList{field.Invalid(path, raw, "must be an absolute http or https URL")}
+		return field.ErrorList{invalidSecret(path, "must be an absolute http or https URL")}
 	}
 	if u.User != nil {
-		return field.ErrorList{field.Invalid(path, redactUserInfo(u), "must not carry credentials; put them in an Environment Credential and name it in credentialReference")}
+		return field.ErrorList{invalidSecret(path, "must not carry credentials; put them in an Environment Credential and name it in credentialReference")}
 	}
-	return nil
-}
-
-func redactUserInfo(u *url.URL) string {
-	c := *u
-	c.User = url.User("REDACTED")
-	return c.String()
+	query, err := url.ParseQuery(u.RawQuery)
+	if err != nil {
+		return field.ErrorList{invalidSecret(path, "has a query string that is not valid")}
+	}
+	var errs field.ErrorList
+	for _, name := range sortedKeys(query) {
+		if IsCredentialField(name) {
+			errs = append(errs, invalidSecret(path, fmt.Sprintf("query parameter %q looks like a credential; put it in an Environment Credential and name that in credentialReference", name)))
+		}
+	}
+	return errs
 }
 
 // validateCredentialReference checks a reference names a credential rather
 // than holding one. allowVault admits vault://<path>, which only LLM providers
-// read.
+// read. A refused reference may be the key itself, so it is never echoed.
 func validateCredentialReference(ref string, allowVault bool, path *field.Path) field.ErrorList {
 	name, source := ParseCredentialReference(ref)
 	if source == "vault" {
 		if !allowVault {
-			return field.ErrorList{field.Invalid(path, ref, "must name an Environment Credential, as secret://<name>")}
+			return field.ErrorList{invalidSecret(path, "must name an Environment Credential, as secret://<name>")}
 		}
 		if name == "" || strings.ContainsAny(name, " \t\n") {
-			return field.ErrorList{field.Invalid(path, ref, "must be vault://<path>")}
+			return field.ErrorList{invalidSecret(path, "must be vault://<path>")}
 		}
 		return nil
 	}
 	if !credentialNamePattern.MatchString(name) {
-		return field.ErrorList{field.Invalid(path, ref, "must name an Environment Credential, as secret://<name>; a key itself never goes in a manifest")}
+		return field.ErrorList{invalidSecret(path, "must name an Environment Credential, as secret://<name>; a key itself never goes in a manifest")}
 	}
 	return nil
 }

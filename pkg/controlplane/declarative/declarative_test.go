@@ -73,8 +73,11 @@ func TestFixtures_Invalid(t *testing.T) {
 			"spec.mcpServers[1].name", "Duplicate value",
 			"spec.access.roles[0]", `"owner"`,
 		},
-		"ai-agent-no-instructions.yaml":       {"metadata.name", "spec.instructions"},
-		"llm-provider-credential-header.yaml": {"spec.extraHeaders[Authorization]", "spec.models[0].queryParams[key]", "Environment Credential"},
+		"ai-agent-no-instructions.yaml": {"metadata.name", "spec.instructions"},
+		"llm-provider-credential-header.yaml": {
+			"spec.extraHeaders[Authorization]", "spec.models[0].queryParams[key]", "Environment Credential",
+			"spec.baseUrl", `query parameter "api_key" looks like a credential`,
+		},
 		"llm-provider-bad-model.yaml": {
 			"spec.extraHeaders[Host]", "does not forward",
 			"spec.models[0].name", "spec.models[2].name", "Duplicate value",
@@ -99,6 +102,11 @@ func TestFixtures_Invalid(t *testing.T) {
 			require.Error(t, err)
 			for _, want := range wants {
 				assert.Contains(t, err.Error(), want)
+			}
+			// The secrets the fixtures hold must not reach the error, which the
+			// CLI prints to terminal and CI logs.
+			for _, secret := range []string{"ghp_abc123", "hunter2", "sk-live-123"} {
+				assert.NotContains(t, err.Error(), secret)
 			}
 		})
 	}

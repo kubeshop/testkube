@@ -84,6 +84,31 @@ func TestCredentialReference(t *testing.T) {
 	assert.NotEmpty(t, validateCredentialReference("sk-live 123", false, path))
 }
 
+// A refused value may be the secret itself, and errors end up in terminal and
+// CI logs, so none is echoed.
+func TestRefusedSecretsAreNotEchoed(t *testing.T) {
+	path := fieldPath("x")
+	for _, ref := range []string{"Bearer ghp_abc123", "vault://ghp_abc123"} {
+		errs := validateCredentialReference(ref, false, path)
+		require.NotEmpty(t, errs, ref)
+		assert.NotContains(t, errs.ToAggregate().Error(), "ghp_abc123")
+	}
+	for _, raw := range []string{
+		"https://user:hunter2@example.com/mcp",
+		"https://example.com/mcp?api_key=hunter2",
+		"https://example.com/mcp?Token=hunter2&x=1",
+		"ftp://example.com/hunter2",
+		"https://example.com/mcp?a=%zzhunter2",
+	} {
+		errs := validateHTTPURL(raw, path)
+		require.NotEmpty(t, errs, raw)
+		assert.NotContains(t, errs.ToAggregate().Error(), "hunter2", raw)
+	}
+	errs := validateHTTPURL("https://example.com/mcp?api_key=hunter2", path)
+	assert.Contains(t, errs.ToAggregate().Error(), `query parameter "api_key" looks like a credential`)
+	assert.Empty(t, validateHTTPURL("https://example.com/mcp?api-version=2024-10-21", path))
+}
+
 func TestProposeName(t *testing.T) {
 	for display, want := range map[string]string{
 		"GitHub MCP":              "github-mcp",
