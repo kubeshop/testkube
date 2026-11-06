@@ -7,7 +7,7 @@ metadata:
     tool: gradle
     category: build-integration
   annotations:
-    testkube.io/description: "Runs the tests of the hello-gradle project with Gradle 8.5 on JDK 11."
+    testkube.io/description: "Checks that Testkube runs the tests of a Gradle 8.5 project on JDK 11."
     testkube.io/icon: gradle
 spec:
   content:
@@ -42,7 +42,7 @@ metadata:
     tool: gradle
     category: build-integration
   annotations:
-    testkube.io/description: "Runs the hello-gradle project with the default command of the Gradle 8.5 JDK 11 image, with no explicit run command."
+    testkube.io/description: "Checks that a Gradle 8.5 image runs with its default command when the workflow gives no run command."
     testkube.io/icon: gradle
 spec:
   content:
@@ -76,7 +76,7 @@ metadata:
     tool: gradle
     category: build-integration
   annotations:
-    testkube.io/description: "Runs the hello-gradle tests through the official/gradle/v1 template on JDK 11."
+    testkube.io/description: "Checks that the official/gradle/v1 template runs Gradle tests on JDK 11."
     testkube.io/icon: gradle
 spec:
   content:

@@ -7,7 +7,7 @@ metadata:
     tool: pytest
     category: unit-component-testing
   annotations:
-    testkube.io/description: "Runs the passing pytest tests on Python 3.12."
+    testkube.io/description: "Checks that Testkube runs passing pytest tests on Python 3.12."
     testkube.io/icon: pytest
 spec:
   content:
@@ -42,7 +42,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
-    testkube.io/description: "Runs the passing pytest tests and saves a JUnit XML report as an artifact."
+    testkube.io/description: "Checks that a passing pytest run passes and that its JUnit XML report is kept."
     testkube.io/icon: pytest
 spec:
   content:
@@ -81,7 +81,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
-    testkube.io/description: "Runs passing and failing pytest tests, so the execution fails with a JUnit report of mixed results."
+    testkube.io/description: "Checks that a pytest run with failing tests fails the execution and that its JUnit report shows the mixed results."
     testkube.io/icon: pytest
 spec:
   content:
