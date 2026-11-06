@@ -435,7 +435,6 @@ func (m *executionMigrator) commitBatch(ctx context.Context, buffers *executionB
 }
 
 // recopyUnfinished copies again the executions earlier runs saw unfinished.
-// Paging on _id never reads a copied document twice.
 func (m *executionMigrator) recopyUnfinished(ctx context.Context, stats *Stats) error {
 	ids, err := unfinishedExecutionIDs(ctx, m.pg)
 	if err != nil {
@@ -477,7 +476,7 @@ func (m *executionMigrator) recopy(ctx context.Context, ids []string, stats *Sta
 		counts  batchCounts
 		staged  []string
 		seen    = make(map[string]struct{}, len(ids))
-		// The earlier copy stays, so a failure loses no execution.
+		// stage counts errors as Failed, which sets the verify count.
 		ignored = newStats(TaskExecutions)
 	)
 	for cursor.Next(ctx) {
