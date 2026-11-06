@@ -9,6 +9,8 @@ metadata:
     junit: "true"
     playwright-traces: "on"
     category: e2e-ui-testing
+  annotations:
+    testkube.io/description: "Runs the Playwright end-to-end tests of the cloud dashboard against a sandbox environment, without the dev-only and sandbox-excluded tests."
 spec:
   content:
     git:

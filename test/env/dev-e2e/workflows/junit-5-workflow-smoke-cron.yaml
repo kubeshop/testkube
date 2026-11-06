@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: workflow-trigger
+  annotations:
+    testkube.io/description: "dev-e2e environment cron at minute 50 of each hour: runs junit5-workflow-smoke."
 spec:
   container:
     resources:
