@@ -504,6 +504,27 @@ func TestConvertKeepsPostgresProgressWhenMongoCopyIsUnfinished_Integration(t *te
 	assert.Contains(t, got.Result.Steps, "child-a", "the step the agent finished after the cutover")
 }
 
+func TestConvertFailsWhenSkippedRecopyLeavesExecutionUnfinished_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
+	ctx := context.Background()
+	f := newFixture(t)
+
+	running := buildExecution(1)
+	runningStatus := testkube.RUNNING_TestWorkflowStatus
+	running.Result.Status = &runningStatus
+	running.Result.PredictedStatus = &runningStatus
+	require.NoError(t, f.mongoRepo.Insert(ctx, running))
+	f.convert(t, Config{})
+
+	broken := buildExecution(1)
+	broken.Workflow.Name = ""
+	require.NoError(t, f.mongoRepo.Update(ctx, broken))
+	second := f.convert(t, Config{SkipErrors: true})
+
+	assert.True(t, second.Failed(), "the row is still running, so the job must not succeed")
+}
+
 // Interrupting a run must lose at most the batch in flight, and resuming must
 // land every remaining execution exactly once.
 func TestConvertResumesFromCheckpoint_Integration(t *testing.T) {

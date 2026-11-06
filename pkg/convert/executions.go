@@ -96,7 +96,7 @@ func (m *executionMigrator) Migrate(ctx context.Context) (*Stats, error) {
 	}
 	m.log.Infof("Executions to migrate: %d total, batch size %d", total, m.config.BatchSize)
 
-	if err := m.recopyUnfinished(ctx); err != nil {
+	if err := m.recopyUnfinished(ctx, stats); err != nil {
 		return stats, err
 	}
 
@@ -435,7 +435,7 @@ func (m *executionMigrator) commitBatch(ctx context.Context, buffers *executionB
 
 // recopyUnfinished copies again the executions earlier runs saw unfinished.
 // Paging on _id never reads a copied document twice.
-func (m *executionMigrator) recopyUnfinished(ctx context.Context) error {
+func (m *executionMigrator) recopyUnfinished(ctx context.Context, stats *Stats) error {
 	ids, err := unfinishedExecutionIDs(ctx, m.pg)
 	if err != nil {
 		return err
@@ -450,7 +450,7 @@ func (m *executionMigrator) recopyUnfinished(ctx context.Context) error {
 
 	recopied := 0
 	for start := 0; start < len(ids); start += m.config.BatchSize {
-		n, err := m.recopy(ctx, ids[start:min(start+m.config.BatchSize, len(ids))])
+		n, err := m.recopy(ctx, ids[start:min(start+m.config.BatchSize, len(ids))], stats)
 		if err != nil {
 			return err
 		}
@@ -461,7 +461,7 @@ func (m *executionMigrator) recopyUnfinished(ctx context.Context) error {
 }
 
 // recopy replaces the given executions with their current Mongo documents.
-func (m *executionMigrator) recopy(ctx context.Context, ids []string) (int, error) {
+func (m *executionMigrator) recopy(ctx context.Context, ids []string, stats *Stats) (int, error) {
 	// After cutover, an unfinished Mongo copy is older than Postgres.
 	filter := bson.M{"id": bson.M{"$in": ids}, "result.status": bson.M{"$in": terminalStatuses()}}
 	cursor, err := m.mongo.Find(ctx, filter,
@@ -490,6 +490,7 @@ func (m *executionMigrator) recopy(ctx context.Context, ids []string) (int, erro
 				return 0, fmt.Errorf("failed to copy an unfinished execution again: %w", err)
 			}
 			m.log.Warnf("Keeping the earlier copy of an unfinished execution: %v", err)
+			stats.RecopyFailed++
 			continue
 		}
 		staged = append(staged, execution.Id)

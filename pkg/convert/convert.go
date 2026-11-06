@@ -97,7 +97,7 @@ func (r *Result) Failed() bool {
 		return true
 	}
 	for _, s := range r.Stats {
-		if s.Failed > 0 {
+		if s.Failed > 0 || s.RecopyFailed > 0 {
 			return true
 		}
 	}
