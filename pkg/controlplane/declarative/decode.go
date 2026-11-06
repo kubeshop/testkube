@@ -13,6 +13,7 @@ import (
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/yaml"
 
+	aiv1 "github.com/kubeshop/testkube/api/ai/v1alpha1"
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 	insightsv1 "github.com/kubeshop/testkube/api/insights/v1alpha1"
 )
@@ -162,6 +163,15 @@ func PrepareForApply(obj Object) (Object, error) {
 	}
 	switch o := out.(type) {
 	case *insightsv1.Board:
+		o.ObjectMeta = meta
+		o.Status = commonv1.ControlPlaneResourceStatus{}
+	case *aiv1.AIAgent:
+		o.ObjectMeta = meta
+		o.Status = commonv1.ControlPlaneResourceStatus{}
+	case *aiv1.MCPServer:
+		o.ObjectMeta = meta
+		o.Status = aiv1.MCPServerStatus{}
+	case *aiv1.LLMProvider:
 		o.ObjectMeta = meta
 		o.Status = commonv1.ControlPlaneResourceStatus{}
 	}
