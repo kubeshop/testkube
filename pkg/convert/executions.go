@@ -443,10 +443,6 @@ func (m *executionMigrator) recopyUnfinished(ctx context.Context, stats *Stats) 
 	if len(ids) == 0 {
 		return nil
 	}
-	if m.config.DryRun {
-		m.log.Infof("dry run: would copy %d unfinished executions again", len(ids))
-		return nil
-	}
 
 	recopied := 0
 	for chunk := range slices.Chunk(ids, m.config.BatchSize) {
@@ -498,8 +494,8 @@ func (m *executionMigrator) recopy(ctx context.Context, ids []string, stats *Sta
 	if err := cursor.Err(); err != nil {
 		return 0, fmt.Errorf("unfinished executions cursor failed: %w", err)
 	}
-	if len(staged) == 0 {
-		return 0, nil
+	if len(staged) == 0 || m.config.DryRun {
+		return len(staged), nil
 	}
 
 	tx, err := m.pg.Begin(ctx)
