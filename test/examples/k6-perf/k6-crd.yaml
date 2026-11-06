@@ -6,7 +6,7 @@ metadata:
   labels:
     category: performance-testing
   annotations:
-    testkube.io/description: "Example k6 performance test with the VUs and the duration as config, and the summary saved as an artifact."
+    testkube.io/description: "Example that shows how to make the VUs and the duration of a k6 performance test configurable."
 spec:
   content:
     git:
@@ -50,7 +50,7 @@ metadata:
   labels:
     category: performance-testing
   annotations:
-    testkube.io/description: "Example k6 performance test against a static page in Google Cloud Storage, with the VUs and the duration as config."
+    testkube.io/description: "Example that shows a configurable k6 performance test against a static page in Google Cloud Storage."
 spec:
   content:
     git:
@@ -93,7 +93,7 @@ metadata:
   labels:
     category: performance-testing
   annotations:
-    testkube.io/description: "Example k6 performance test split across parallel workers with k6 execution segments."
+    testkube.io/description: "Example that shows how to split a k6 performance test across parallel workers with execution segments."
 spec:
   config:
     vus: {type: integer, default: 20}
@@ -143,7 +143,7 @@ metadata:
   labels:
     category: performance-testing
   annotations:
-    testkube.io/description: "Example k6 performance test against a static page in Google Cloud Storage, split across parallel workers with execution segments."
+    testkube.io/description: "Example that shows a k6 performance test against Google Cloud Storage, split across parallel workers."
 spec:
   config:
     vus: {type: integer, default: 20}
@@ -193,7 +193,7 @@ metadata:
   labels:
     category: performance-testing
   annotations:
-    testkube.io/description: "Example k6 performance test against a static page in Google Cloud Storage on parallel workers that discards response bodies to save memory."
+    testkube.io/description: "Example that shows how to lower the memory of a parallel k6 test by discarding response bodies."
 spec:
   config:
     vus: {type: integer, default: 20}
@@ -243,7 +243,7 @@ metadata:
   labels:
     category: performance-testing
   annotations:
-    testkube.io/description: "Example k6 performance test on parallel workers that sends its metrics to Prometheus remote write."
+    testkube.io/description: "Example that shows how a parallel k6 test sends its metrics to Prometheus remote write."
 spec:
   config:
     vus: {type: integer, default: 20}
@@ -299,7 +299,7 @@ metadata:
   labels:
     category: performance-testing
   annotations:
-    testkube.io/description: "Example k6 performance test against a static page in Google Cloud Storage on parallel workers that sends its metrics to Prometheus remote write."
+    testkube.io/description: "Example that shows a parallel k6 test against Google Cloud Storage that sends its metrics to Prometheus remote write."
 spec:
   config:
     vus: {type: integer, default: 20}

@@ -3,7 +3,7 @@ kind: TestWorkflow
 metadata:
   name: tw-testkube-website-5m
   annotations:
-    testkube.io/description: "Status page example: checks the test page with curl every 5 minutes."
+    testkube.io/description: "Status page example: a probe that checks the test page every 5 minutes."
 spec:
   events:
     - cronjob:
@@ -23,7 +23,7 @@ kind: TestWorkflow
 metadata:
   name: tw-testkube-docs-5m
   annotations:
-    testkube.io/description: "Status page example: checks the test page with curl every 5 minutes, as the docs probe."
+    testkube.io/description: "Status page example: the docs probe, which checks the test page every 5 minutes."
 spec:
   events:
     - cronjob:
@@ -43,7 +43,7 @@ kind: TestWorkflow
 metadata:
   name: tw-testkube-blog-5m
   annotations:
-    testkube.io/description: "Status page example: checks the test page with curl every 5 minutes, as the blog probe."
+    testkube.io/description: "Status page example: the blog probe, which checks the test page every 5 minutes."
 spec:
   events:
     - cronjob:

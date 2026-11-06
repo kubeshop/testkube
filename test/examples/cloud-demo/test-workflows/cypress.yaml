@@ -6,7 +6,7 @@ metadata:
     category: e2e-ui-testing
     artifacts: "true"
   annotations:
-    testkube.io/description: "Example: runs the Cypress 13.6.4 tests with video recording and saves the videos as artifacts."
+    testkube.io/description: "Example that shows how to run Cypress tests in Testkube and keep their videos as artifacts."
 spec:
   content:
     git:

@@ -6,7 +6,7 @@ metadata:
     category: e2e-ui-testing
     artifacts: "true"
   annotations:
-    testkube.io/description: "Example: runs the Playwright tests and saves the HTML report as an artifact."
+    testkube.io/description: "Example that shows how to run Playwright tests in Testkube and keep the HTML report."
 spec:
   content:
     git:
