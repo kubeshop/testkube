@@ -5,7 +5,7 @@ metadata:
   labels:
     core-tests: rerun-junit
   annotations:
-    testkube.io/description: "Selects test cases from a JUnit report by the execution lineage: an original run executes all cases and fails, and a rerun executes only the failed ones."
+    testkube.io/description: "Checks that a rerun can select only the failed test cases of a JUnit report through the execution lineage."
 spec:
   # Rerunning only the test cases that failed, built from the two pieces every
   # rerun already has: the reserved "rerun" reference, and the JUnit report the

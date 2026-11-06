@@ -32,7 +32,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Runs for 30 minutes and prints a line each second, to check long executions and their logs."
+    testkube.io/description: "Checks that a 30 minute execution with a log line each second completes with all of its logs."
 description: "Long lasting workflow - 30 minutes"
 spec:
   steps:
@@ -50,7 +50,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Runs for 90 minutes and prints a line each second, to check very long executions and their logs."
+    testkube.io/description: "Checks that a 90 minute execution with a log line each second completes with all of its logs."
 description: "Long lasting workflow - 90 minutes"
 spec:
   steps:
@@ -68,7 +68,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Sleeps for 90 minutes with no output and then prints one line, to check a long execution that stays silent."
+    testkube.io/description: "Checks that a 90 minute execution with no output is not treated as stuck and completes."
 description: "Long lasting workflow - 90 minutes sleep + echo in the end"
 spec:
   steps:
@@ -83,7 +83,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Starts a service with a dash in its name and reads its IP with the at() expression and from an env value."
+    testkube.io/description: "Checks that a service with a dash in its name can be reached by its IP through the at() expression and through an env value."
 description: "Service name with dash"
 spec:
   container:
@@ -114,7 +114,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Sleeps for 30 seconds and passes; other workflows start it as a child execution."
+    testkube.io/description: "A 30 second child workflow that passes; other special cases start it to check child executions."
 spec:
   steps:
   - name: Run test
@@ -128,7 +128,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Starts 100 executions of special-cases-30s from one execute step, to check many child executions at once."
+    testkube.io/description: "Checks that one execute step can start 100 child executions at once."
 spec:
   steps:
   - execute:

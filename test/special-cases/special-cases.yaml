@@ -279,7 +279,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Checks out a second Git repository in a step, at a custom mount path, and runs a k6 test and a Postman test from them."
+    testkube.io/description: "Checks that a step can check out a second Git repository at a custom mount path and use files from both repositories."
 description: "Git - multiple repositories (one on step level), custom mountPath"
 spec:
   use:
@@ -462,7 +462,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Retries a step that passes or fails at random until it passes, so the execution passes."
+    testkube.io/description: "Checks that a retry policy repeats a step that fails at random until it passes, so the execution passes."
 description: "step retry (until step passed)"
 spec:
   use:
@@ -510,7 +510,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Shares a custom volume between steps that run different images, and checks the files that each step wrote."
+    testkube.io/description: "Checks that a custom volume is shared between steps that run different images."
 description: "sharing custom volume between steps"
 spec:
   use:
@@ -639,7 +639,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Runs steps that print nothing for 60 seconds, to check that a silent step is not treated as stuck."
+    testkube.io/description: "Checks that a step that prints nothing for 60 seconds is not treated as stuck."
 description: "No output for 60s"
 spec:
   use:
@@ -661,7 +661,7 @@ metadata:
     artifacts: "true"
     manual: "true"
   annotations:
-    testkube.io/description: "Saves artifacts with a path pattern that has two double asterisks, to check the matching of nested directories."
+    testkube.io/description: "Checks that an artifact path pattern with two double asterisks matches nested directories."
 description: "Artifacts path with double asterisks (/data/example/directory/aaa/bbb should contain file1.txt and file2.log)"
 spec:
   use:
@@ -693,7 +693,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Sets execution tags, one of them from the execution.id expression, so the execution shows them."
+    testkube.io/description: "Checks that execution tags, including one from the execution.id expression, are set on the execution."
 spec:
   use:
     - name: special-cases-template-default-resources
@@ -734,7 +734,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Starts child workflows that an execute step selects by label with matchLabels."
+    testkube.io/description: "Checks that an execute step can select and start child workflows by label with matchLabels."
 spec:
   use:
     - name: special-cases-template-default-resources
@@ -815,7 +815,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Starts special-cases-config-override-target with config overrides for the service count, the workers and a step value."
+    testkube.io/description: "Checks that an execute step can override the config of a child workflow: its service count, its workers and a step value."
 spec:
   use:
     - name: special-cases-template-default-resources
@@ -838,7 +838,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Runs parallel workers that each write a file to a fetched volume, then checks that the files of all workers arrived."
+    testkube.io/description: "Checks that files written by parallel workers are fetched back to the main pod."
 spec:
   config:
     workers:
@@ -890,7 +890,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Runs parallel workers from a matrix that each write a file, then checks that the files of all matrix entries arrived."
+    testkube.io/description: "Checks that files written by parallel workers of a matrix are fetched back to the main pod."
 spec:
   container:
     resources:
