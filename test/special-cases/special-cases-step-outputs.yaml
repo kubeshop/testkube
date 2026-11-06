@@ -5,7 +5,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Passes a value from one step to the next through /testkube/outputs and a file through step.results, and checks a chained output."
+    testkube.io/description: "Checks that a step can pass a value through /testkube/outputs and a file through step.results to the next steps, including a chained output."
 description: "Step sharing - pass values via /testkube/outputs/ and files via step.results"
 spec:
   use:

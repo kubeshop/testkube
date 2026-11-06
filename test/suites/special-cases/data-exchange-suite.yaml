@@ -5,7 +5,7 @@ metadata:
   labels:
     core-tests: data-exchange
   annotations:
-    testkube.io/description: "Writes an output and saves files as artifacts, for the data exchange suite to pass to another workflow."
+    testkube.io/description: "Producer of the data exchange suite: it writes an output and artifacts for another workflow to receive."
 spec:
   container:
     resources:

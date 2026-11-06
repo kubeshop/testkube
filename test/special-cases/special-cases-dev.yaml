@@ -81,7 +81,7 @@ metadata:
     core-tests: special-cases
     environment: dev
   annotations:
-    testkube.io/description: "Checks out a private Git repository with credentials and runs a k6 script from it; it runs only at .dev, where these credentials exist."
+    testkube.io/description: "Checks that a private Git repository can be checked out with credentials and used by a step; it runs only at .dev, where these credentials exist."
 description: ".dev environment-only!"
 spec:
   content:
