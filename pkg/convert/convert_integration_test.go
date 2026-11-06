@@ -504,25 +504,35 @@ func TestConvertKeepsPostgresProgressWhenMongoCopyIsUnfinished_Integration(t *te
 	assert.Contains(t, got.Result.Steps, "child-a", "the step the agent finished after the cutover")
 }
 
-func TestConvertFailsWhenSkippedRecopyLeavesExecutionUnfinished_Integration(t *testing.T) {
+func TestConvertKeepsEarlierCopyAndFailsWhenRecopyIsSkipped_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 
 	ctx := context.Background()
 	f := newFixture(t)
 
-	running := buildExecution(1)
 	runningStatus := testkube.RUNNING_TestWorkflowStatus
-	running.Result.Status = &runningStatus
-	running.Result.PredictedStatus = &runningStatus
-	require.NoError(t, f.mongoRepo.Insert(ctx, running))
+	for i := 1; i <= 2; i++ {
+		running := buildExecution(i)
+		running.Result.Status = &runningStatus
+		running.Result.PredictedStatus = &runningStatus
+		require.NoError(t, f.mongoRepo.Insert(ctx, running))
+	}
 	f.convert(t, Config{})
 
 	broken := buildExecution(1)
 	broken.Workflow.Name = ""
 	require.NoError(t, f.mongoRepo.Update(ctx, broken))
+	finished := buildExecution(2)
+	require.NoError(t, f.mongoRepo.Update(ctx, finished))
 	second := f.convert(t, Config{SkipErrors: true})
 
 	assert.True(t, second.Failed(), "the row is still running, so the job must not succeed")
+	kept, err := f.pgRepo.Get(ctx, broken.Id)
+	require.NoError(t, err, "the earlier copy of the broken execution")
+	assert.Equal(t, runningStatus, *kept.Result.Status)
+	got, err := f.pgRepo.Get(ctx, finished.Id)
+	require.NoError(t, err)
+	assert.Equal(t, *finished.Result.Status, *got.Result.Status)
 }
 
 // Interrupting a run must lose at most the batch in flight, and resuming must
