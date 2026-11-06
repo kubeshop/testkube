@@ -5,8 +5,11 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: suite-trigger
+    area: triggers
   annotations:
     testkube.io/description: "Starts the expected-failure suite at 10:50 each day, to check that the release environment still reports failures correctly."
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

@@ -5,8 +5,11 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: suite-trigger
+    area: triggers
   annotations:
     testkube.io/description: "Starts the pytest mixed-failure and random-failure workflows at 07:30 each day, so the demo environment shows JUnit results and flaky tests."
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:
