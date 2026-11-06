@@ -4,8 +4,11 @@ metadata:
   name: enterprise-installation-test
   labels:
     core-tests: installation
+    area: install
   annotations:
     testkube.io/description: "Checks that the Testkube Enterprise demo installs on a fresh kind cluster and can run a workflow through the control plane."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: needs-cluster
 description: "Enterprise installation test - DinD+kind"
 spec:
   execution:
@@ -150,8 +153,11 @@ metadata:
   labels:
     core-tests: installation
     environment-specific: dev
+    area: install
   annotations:
     testkube.io/description: "Checks that Testkube Enterprise installs and works across several namespaces; it runs only at .dev, which has access to the edge cluster."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: needs-cluster
 description: "Enterprise installation test - edge, multi-namespace. Can be run ONLY at .dev"
 spec:
   system:

@@ -5,8 +5,12 @@ metadata:
   labels:
     component: ai-service
     category: ai-testing
+    area: ui
   annotations:
     testkube.io/description: "Checks that the AI service answers the AI assistant cases and sends the session status callbacks, against a Postgres service and a control plane stub."
+    testkube.io/areas: ui,parallel,services,artifacts
+    testkube.io/cost: heavy
+    testkube.io/sandbox: needs-secrets
 spec:
   config:
     serviceImage:
