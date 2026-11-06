@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: junit
+  annotations:
+    testkube.io/description: "Groups the JUnit 5 workflow, to check the JUnit 5 integration."
 spec:
   container:
     resources:

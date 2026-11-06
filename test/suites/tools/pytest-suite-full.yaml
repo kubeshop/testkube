@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: pytest
+  annotations:
+    testkube.io/description: "Groups the passing pytest workflows, to check the pytest integration with and without a JUnit report."
 spec:
   container:
     resources:

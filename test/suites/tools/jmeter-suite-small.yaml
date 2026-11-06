@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: jmeter
+  annotations:
+    testkube.io/description: "Groups 3 JMeter workflows as a fast check of the JMeter integration: smoke, template and distributed mode."
 spec:
   container:
     resources:
