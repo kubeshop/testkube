@@ -79,7 +79,7 @@ Write the failing test first, at the lowest level that shows the bug, then fix i
 - `cmd/choco-stub` displays a deprecation message for the old Chocolatey package location.
 - `cmd/tools` contains internal tooling for release management and version bumping.
 
-### Regenerating artifacts
+## Regenerating artifacts
 
 - Update the agent OpenAPI files with `make generate-openapi` after schema edits.
 - Regenerate Kubernetes CRDs after editing type definitions in `api/` via `make generate-crds`.
@@ -115,6 +115,7 @@ Each area below documents itself in the `doc.go` of its package; read that befor
 
 - **Execution-scoped GitLab checkout:** `pkg/cloud/doc.go`, `pkg/controlplaneclient/doc.go` and `cmd/testworkflow-toolkit/commands/doc.go`. The matching authorization contract is in testkube-cloud-api's `internal/agentserver/doc.go`; both sides must support `GetGitAccess` before using `authType: gitlab`.
 - **MCP integration:** `pkg/mcp/doc.go`, with the Insights board rules in `pkg/mcp/boards/doc.go` and how the board tools write in `pkg/mcp/tools/doc.go`. A new tool is also registered in the Control Plane's `mcp_handler.go`, the Control Plane's `HandlerClient` uses `pkg/mcp/boards` rather than reimplementing it, and a dashboard change to the ported report files needs a matching change in `pkg/mcp/boards`.
+- **Control Plane resources** (`testkube apply`, and `get`/`delete` of the kinds that live only in the Control Plane): `pkg/controlplane/declarative/doc.go`. testkube-cloud-api's `internal/declarative` imports the package rather than reimplementing it, so a rule change there is a change in both repos.
 - **GitOps resource sync** and its resource ownership contract: `internal/sync/doc.go`. The Control Plane enforces ownership in testkube-cloud-api's `internal/sync/ownership.go`.
 - **Mongo to Postgres conversion** (`cmd/convert`): `pkg/convert/doc.go`. A schema migration touching `test_workflow_executions` or its child tables is a change there too.
 - **Execution lineage and reruns:** `pkg/api/v1/testkube/doc.go`. Every path that builds an `ExecutionStart`, here and in testkube-cloud-api, sets the lineage from the execution record.

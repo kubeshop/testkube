@@ -1,0 +1,56 @@
+apiVersion: insights.testkube.io/v1alpha1
+kind: Board
+metadata:
+  name: checkout-team
+  labels:
+    team: checkout
+spec:
+  displayName: Checkout team
+  description: Health of the checkout end-to-end suites.
+  shared: true
+  layout:
+    rows:
+      - cells: [pass-rate, executions]
+      - cells: [trend, ungrouped]
+      - cells: [slowest]
+  reports:
+    - id: pass-rate
+      kind: pass-fail
+      name: Pass rate
+      params:
+        duration: week
+        measure: ratio
+        filter:
+          - filterConfigurationKey: workflow
+            operator: is
+            value: [checkout-e2e, checkout-api]
+    - id: executions
+      kind: executions
+      name: Executions by status
+      params:
+        groupBy: status
+    - id: trend
+      kind: time-series
+      name: Duration trend
+      params:
+        measure: execution-count
+        chartType: line
+        filter:
+          - filterConfigurationKey: labels-v2
+            operator: where
+            value:
+              labelKey: team
+              labelOperator: exists
+              labelValue: ""
+    - id: ungrouped
+      kind: time-series
+      name: Executions, not grouped
+      params:
+        segment: ""
+    - id: slowest
+      kind: workflows
+      name: Workflows
+      params:
+        duration: custom
+        from: "2026-10-01T00:00:00Z"
+        to: "2026-11-01T00:00:00Z"
