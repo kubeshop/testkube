@@ -9,6 +9,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Runs the Java Selenium tests with Maven against a standalone Chrome service and saves the Surefire reports."
     testkube.io/icon: selenium
 description: "Selenium Java + Standalone Chrome"
 spec:
@@ -66,6 +67,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Runs the Java Selenium tests against a Selenium hub service with a configurable count of Chrome node services."
     testkube.io/icon: selenium
 description: "Selenium Java + Hub + Chrome Nodes"
 spec:
@@ -160,6 +162,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Runs the Python Selenium tests with pytest against a standalone Chrome service and saves a JUnit report."
     testkube.io/icon: selenium
 description: "Selenium Python + Standalone Chrome"
 spec:
@@ -222,6 +225,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Runs the Python Selenium tests in parallel against a Selenium hub with a configurable count of Chrome node services."
     testkube.io/icon: selenium
 description: "Selenium Python + Hub + Chrome Nodes"
 spec:
@@ -311,6 +315,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Runs the JavaScript Selenium tests with Mocha against a standalone Chrome service and saves a JUnit report."
     testkube.io/icon: selenium
 description: "Selenium JS (selenium-webdriver) + Mocha + Standalone Chrome"
 spec:
@@ -372,6 +377,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Runs the JavaScript Selenium tests with Cucumber against a standalone Chrome service and saves a JUnit report."
     testkube.io/icon: selenium
 description: "Selenium JS (selenium-webdriver) + Cucumber + Standalone Chrome"
 spec:

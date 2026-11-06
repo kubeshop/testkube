@@ -8,6 +8,7 @@ metadata:
     category: performance-testing
     artifacts: "true"
   annotations:
+    testkube.io/description: "Runs the JMeter smoke plan with JMeter 5.6 in non-GUI mode and saves the log, the JTL results and the HTML report as artifacts."
     testkube.io/icon: jmeter
 spec:
   content:
@@ -46,6 +47,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
+    testkube.io/description: "Runs the JMeter smoke plan with the justb4/jmeter 5.5 image and saves the log, the JTL results and the HTML report."
     testkube.io/icon: jmeter
 spec:
   content:
@@ -84,6 +86,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
+    testkube.io/description: "Runs the JMeter 5.6 smoke plan from a single shell command and saves the log, the JTL results and the HTML report."
     testkube.io/icon: jmeter
 spec:
   content:
@@ -122,6 +125,7 @@ metadata:
     category: performance-testing
     artifacts: "true"
   annotations:
+    testkube.io/description: "Runs the JMeter smoke plan through the official/jmeter/v2 template and saves the artifacts."
     testkube.io/icon: jmeter
 spec:
   content:
@@ -157,6 +161,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
+    testkube.io/description: "Runs the JMeter smoke plan through the older official/jmeter/v1 template, to keep the v1 template working."
     testkube.io/icon: jmeter
 spec:
   content:
@@ -192,6 +197,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
+    testkube.io/description: "Runs the official/jmeter/v2 template in one step and saves the artifacts in a separate step."
     testkube.io/icon: jmeter
 spec:
   content:
@@ -230,6 +236,7 @@ metadata:
     tool: jmeter
     category: performance-testing
   annotations:
+    testkube.io/description: "Runs the JMeter smoke plan with the latest alpine/jmeter image, to catch a break in a new release."
     testkube.io/icon: jmeter
 spec:
   content:
@@ -268,6 +275,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
+    testkube.io/description: "Runs the JMeter smoke plan in distributed mode: JMeter servers start as services, and the controller sends the load through them."
     testkube.io/icon: jmeter
 spec:
   content:
@@ -327,6 +335,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
+    testkube.io/description: "Runs distributed JMeter with the servers started by a shell command in the services, and the controller in non-GUI mode."
     testkube.io/icon: jmeter
 spec:
   content:

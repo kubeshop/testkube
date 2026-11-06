@@ -8,6 +8,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
+    testkube.io/description: "Runs a headless Locust 2.32.3 load test with 6 users for 10 seconds against the test page and saves the reports as artifacts."
     testkube.io/icon: locust
 spec:
   content:
@@ -45,6 +46,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
+    testkube.io/description: "Runs the Locust smoke load test with the master image of Locust, to catch a break before a release."
     testkube.io/icon: locust
 spec:
   content:
@@ -82,6 +84,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
+    testkube.io/description: "Runs the Locust smoke load test with the latest Locust image."
     testkube.io/icon: locust
 spec:
   content:
@@ -118,6 +121,7 @@ metadata:
     tool: locust
     category: performance-testing
   annotations:
+    testkube.io/description: "Runs a distributed Locust load test: a master runs as a service and parallel workers connect to it."
     testkube.io/icon: locust
 spec:
   config:

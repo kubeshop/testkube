@@ -9,6 +9,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
+    testkube.io/description: "Runs the NUnit example project with dotnet test and saves a JUnit report as an artifact."
     testkube.io/icon: nunit
 spec:
   content:
