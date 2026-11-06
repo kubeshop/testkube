@@ -8,7 +8,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
-    testkube.io/description: "k6 smoke test. Generates JSON summary and HTML report artifacts."
+    testkube.io/description: "Checks that Testkube runs a k6 1.1.0 script with env values from the container and from args and keeps the summary JSON. Generates JSON summary and HTML report artifacts."
     testkube.io/icon: k6
 spec:
   content:
@@ -55,7 +55,7 @@ metadata:
     tool: k6
     category: performance-testing
   annotations:
-    testkube.io/description: "k6 smoke test using the official template. Generates a JSON summary artifact."
+    testkube.io/description: "Checks that the official/k6/v1 template runs a k6 script and exports its summary JSON. Generates a JSON summary artifact."
     testkube.io/icon: k6
 spec:
   container:
@@ -93,7 +93,7 @@ metadata:
     tool: k6
     category: performance-testing
   annotations:
-    testkube.io/description: "k6 smoke test using the official template without a separate checkout step. Generates a JSON summary artifact."
+    testkube.io/description: "Checks that the official/k6/v1 template uses Git content checked out at the workflow level, with no separate checkout step. Generates a JSON summary artifact."
     testkube.io/icon: k6
 spec:
   content:
@@ -132,7 +132,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
-    testkube.io/description: "k6 smoke test using an inline content file. Generates JSON summary and HTML report artifacts."
+    testkube.io/description: "Checks that a k6 script defined inline as a content file runs without a Git checkout and that its summary is kept. Generates JSON summary and HTML report artifacts."
     testkube.io/icon: k6
 spec:
   content:
@@ -245,7 +245,7 @@ metadata:
     tool: k6
     category: performance-testing
   annotations:
-    testkube.io/description: "Distributed k6 load test"
+    testkube.io/description: "Checks that a k6 load test can be split across parallel workers with distribute/evenly, with VUs, duration and worker count as config."
     testkube.io/icon: k6
 spec:
   config:
@@ -302,7 +302,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
-    testkube.io/description: "k6 browser smoke test. Generates a JSON results artifact."
+    testkube.io/description: "Checks that a k6 browser test runs with the k6 1.3.0 browser image and that its JSON results are kept. Generates a JSON results artifact."
     testkube.io/icon: k6
 spec:
   content:

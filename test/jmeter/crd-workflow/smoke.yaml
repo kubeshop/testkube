@@ -8,7 +8,7 @@ metadata:
     category: performance-testing
     artifacts: "true"
   annotations:
-    testkube.io/description: "JMeter smoke test. Generates JTL results, logs and an HTML report as artifacts."
+    testkube.io/description: "Checks that Testkube runs a JMeter 5.6 plan in non-GUI mode and keeps the log, the JTL results and the HTML report. Generates JTL results, logs and an HTML report as artifacts."
     testkube.io/icon: jmeter
 spec:
   content:
@@ -47,7 +47,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
-    testkube.io/description: "JMeter smoke test using the justb4 5.5 image. Generates JTL results, logs and an HTML report as artifacts."
+    testkube.io/description: "Checks that the justb4/jmeter 5.5 image still runs a JMeter plan and that its log, JTL results and HTML report are kept. Generates JTL results, logs and an HTML report as artifacts."
     testkube.io/icon: jmeter
 spec:
   content:
@@ -86,7 +86,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
-    testkube.io/description: "JMeter smoke test using a shell. Generates JTL results, logs and an HTML report as artifacts."
+    testkube.io/description: "Checks that a JMeter 5.6 plan run from one shell command produces a kept log, JTL results and HTML report. Generates JTL results, logs and an HTML report as artifacts."
     testkube.io/icon: jmeter
 spec:
   content:
@@ -125,7 +125,7 @@ metadata:
     category: performance-testing
     artifacts: "true"
   annotations:
-    testkube.io/description: "JMeter smoke test using the official template. Generates JTL results, logs and an HTML report as artifacts."
+    testkube.io/description: "Checks that the official/jmeter/v2 template runs a JMeter plan and keeps its artifacts. Generates JTL results, logs and an HTML report as artifacts."
     testkube.io/icon: jmeter
 spec:
   content:
@@ -197,7 +197,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
-    testkube.io/description: "JMeter smoke test using the official template with a separate artifacts step. Generates JTL results, logs and an HTML report as artifacts."
+    testkube.io/description: "Checks that the artifacts of the official/jmeter/v2 template can be saved in a separate step. Generates JTL results, logs and an HTML report as artifacts."
     testkube.io/icon: jmeter
 spec:
   content:
@@ -275,7 +275,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
-    testkube.io/description: "Distributed JMeter load test. Generates JTL results, logs and an HTML report as artifacts."
+    testkube.io/description: "Checks that distributed JMeter works with the JMeter servers started as services and the controller sending the load through them. Generates JTL results, logs and an HTML report as artifacts."
     testkube.io/icon: jmeter
 spec:
   content:
@@ -335,7 +335,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
-    testkube.io/description: "Distributed JMeter load test using shell commands. Generates JTL results, logs and an HTML report as artifacts."
+    testkube.io/description: "Checks that distributed JMeter works when the server services start from a shell command and the controller runs in non-GUI mode. Generates JTL results, logs and an HTML report as artifacts."
     testkube.io/icon: jmeter
 spec:
   content:
