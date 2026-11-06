@@ -9763,8 +9763,7 @@ components:
       - $ref: "#/components/schemas/TestWorkflowStepOperations"
       - properties:
           parallelism:
-            type: integer
-            description: how many resources could be scheduled in parallel
+            $ref: "#/components/schemas/BoxedString"
           failFast:
             type: boolean
             description: abort remaining parallel workers on first failure
@@ -9795,8 +9794,7 @@ components:
       - $ref: "#/components/schemas/TestWorkflowStepOperations"
       - properties:
           parallelism:
-            type: integer
-            description: how many resources could be scheduled in parallel
+            $ref: "#/components/schemas/BoxedString"
           failFast:
             type: boolean
             description: abort remaining parallel workers on first failure
