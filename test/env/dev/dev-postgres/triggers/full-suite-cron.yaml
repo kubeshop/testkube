@@ -6,7 +6,7 @@ metadata:
     core-tests: workflows-suite-trigger
     type: suite-trigger
   annotations:
-    testkube.io/description: "dev cron at 01:45 and 13:45: runs tw-suite-full-smoke."
+    testkube.io/description: "Starts tw-suite-full-smoke at 01:45 and 13:45, to catch tool integration regressions on .dev."
 spec:
   container:
     resources:

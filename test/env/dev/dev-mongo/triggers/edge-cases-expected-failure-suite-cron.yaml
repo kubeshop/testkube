@@ -6,7 +6,7 @@ metadata:
     core-tests: workflows-suite-trigger
     type: suite-trigger
   annotations:
-    testkube.io/description: "dev Mongo environment cron at 10:55 each day: runs the expected-failure suite."
+    testkube.io/description: "Starts the expected-failure suite at 10:55 each day, to check that the dev Mongo environment still reports failures correctly."
 spec:
   container:
     resources:

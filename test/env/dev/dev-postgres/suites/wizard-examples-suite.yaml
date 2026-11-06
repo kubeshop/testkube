@@ -7,7 +7,7 @@ metadata:
     type: workflow-suite
     dev-quality-gate: "true"
   annotations:
-    testkube.io/description: "Suite that runs the example workflows of the dashboard creation wizard, to keep the examples that users start from working."
+    testkube.io/description: "Groups the example workflows of the dashboard creation wizard, to check that the examples users start from still work."
 description: "UI examples"
 spec:
   container:

@@ -12,7 +12,7 @@ metadata:
     package: web
     tool: vitest
   annotations:
-    testkube.io/description: "Quality-loop check of testkube-cloud-api: runs the Vitest unit tests of the web dashboard package and saves a JUnit report."
+    testkube.io/description: "Quality-loop check of testkube-cloud-api: checks that the unit tests of the web dashboard pass."
 spec:
   system:
     pureByDefault: true
@@ -81,7 +81,7 @@ metadata:
     package: backoffice
     tool: vitest
   annotations:
-    testkube.io/description: "Quality-loop check of testkube-cloud-api: runs the Vitest unit tests of the backoffice package and saves a JUnit report."
+    testkube.io/description: "Quality-loop check of testkube-cloud-api: checks that the unit tests of the backoffice pass."
 spec:
   system:
     pureByDefault: true
@@ -150,7 +150,7 @@ metadata:
     package: runspace-controller
     tool: vitest
   annotations:
-    testkube.io/description: "Quality-loop check of testkube-cloud-api: runs the Vitest unit tests of the runspace-controller package and saves a JUnit report."
+    testkube.io/description: "Quality-loop check of testkube-cloud-api: checks that the unit tests of the runspace-controller pass."
 spec:
   system:
     pureByDefault: true
@@ -216,7 +216,7 @@ metadata:
     team-backend: "true"
     tool: golangci-lint
   annotations:
-    testkube.io/description: "Quality-loop check of testkube-cloud-api: lints the OpenAPI spec with Spectral and the Go code with golangci-lint."
+    testkube.io/description: "Quality-loop check of testkube-cloud-api: checks the OpenAPI spec and the Go code with their linters."
 spec:
   config:
     revision:
@@ -294,7 +294,7 @@ metadata:
     team-backend: "true"
     tool: turbo
   annotations:
-    testkube.io/description: "Quality-loop check of testkube-cloud-api: checks the lockfile, then runs the TypeScript type check, Prettier and the linters of the JS packages with Turbo."
+    testkube.io/description: "Quality-loop check of testkube-cloud-api: checks the lockfile, the types, the formatting and the lint of the JS packages."
 spec:
   system:
     pureByDefault: true
@@ -383,7 +383,7 @@ metadata:
     team-frontend: "true"
     tool: helm
   annotations:
-    testkube.io/description: "Quality-loop check of testkube-cloud-api: checks the vendored chart dependencies, lints the Helm charts and runs their helm-unittest suites."
+    testkube.io/description: "Quality-loop check of testkube-cloud-api: checks the Helm charts, their vendored dependencies and their helm-unittest suites."
 spec:
   config:
     revision:
@@ -560,7 +560,7 @@ metadata:
     team-backend: "true"
     tool: go
   annotations:
-    testkube.io/description: "Quality-loop check of testkube-cloud-api: runs the Go test suite with Postgres, Mongo, NATS, MinIO, fake GCS, Vault and SMTP services, with JUnit and coverage reports."
+    testkube.io/description: "Quality-loop check of testkube-cloud-api: checks that the Go tests pass against their Postgres, Mongo, NATS, MinIO, GCS, Vault and SMTP services."
 spec:
   config:
     revision:

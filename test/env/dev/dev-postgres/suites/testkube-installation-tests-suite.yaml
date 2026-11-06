@@ -8,7 +8,7 @@ metadata:
     tool: testkube
     team-support: "true"
   annotations:
-    testkube.io/description: "Suite that runs the installation tests: Testkube Enterprise in kind, Enterprise in several namespaces, and standalone Testkube OSS."
+    testkube.io/description: "Groups the installation tests, to check that Testkube Enterprise and standalone Testkube OSS still install and run workflows."
 spec:
   container:
     resources:

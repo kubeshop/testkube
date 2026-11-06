@@ -9,7 +9,7 @@ metadata:
     category: performance-testing
     dev-quality-gate: "true"
   annotations:
-    testkube.io/description: "Runs the k6 load test of js/packages/k6-load-tests against the .dev API, with p95 and p75 thresholds per endpoint, including Insights and boards; 5 VUs for 10 minutes by default."
+    testkube.io/description: "Benchmarks the .dev cloud API under load with the k6 tests of js/packages/k6-load-tests and fails when an endpoint, including Insights and boards, goes over its latency threshold."
 spec:
   content:
     git:

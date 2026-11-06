@@ -6,7 +6,7 @@ metadata:
     core-tests: workflows-suite-trigger
     type: workflow-trigger
   annotations:
-    testkube.io/description: "dev cron every 4 hours at minute 20: runs the cloud-ui-e2e dashboard tests."
+    testkube.io/description: "Starts the cloud-ui-e2e dashboard tests every 4 hours, to catch dashboard regressions on .dev."
 spec:
   container:
     resources:

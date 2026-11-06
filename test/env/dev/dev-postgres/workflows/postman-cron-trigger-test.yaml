@@ -7,7 +7,7 @@ metadata:
     tool: postman
     category: api-testing
   annotations:
-    testkube.io/description: "Runs the Postman smoke collection on its own cron event, to check that a cron event on a workflow starts it."
+    testkube.io/description: "Checks that a cron event defined on a workflow starts it."
 spec:
   container:
     resources:

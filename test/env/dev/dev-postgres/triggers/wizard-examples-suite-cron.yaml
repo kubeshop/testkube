@@ -6,7 +6,7 @@ metadata:
     core-tests: workflows-suite-trigger
     type: suite-trigger
   annotations:
-    testkube.io/description: "dev cron at 12:10 each day: runs the wizard examples suite."
+    testkube.io/description: "Starts the wizard examples suite at 12:10 each day, to check that the wizard examples still work."
 spec:
   container:
     resources:

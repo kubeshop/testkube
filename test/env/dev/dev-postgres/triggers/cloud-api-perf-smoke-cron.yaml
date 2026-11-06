@@ -6,7 +6,7 @@ metadata:
     core-tests: workflows-suite-trigger
     type: workflow-trigger
   annotations:
-    testkube.io/description: "dev cron at 01:45 each day: runs cloud-api-perf-smoke, the k6 load test of the cloud API."
+    testkube.io/description: "Starts cloud-api-perf-smoke at 01:45 each day, to catch performance regressions of the .dev cloud API, including Insights and boards."
 spec:
   container:
     resources:

@@ -13,7 +13,7 @@ metadata:
     team-backend: "true"
     team-frontend: "true"
   annotations:
-    testkube.io/description: "Builds the cloud dashboard from a revision, serves it, runs the Playwright end-to-end tests against .dev, writes a scenario coverage report and cleans up test resources."
+    testkube.io/description: "Checks a revision of the cloud dashboard end to end with Playwright against .dev, with a scenario coverage report."
 spec:
   config:
     revision:
@@ -137,7 +137,7 @@ metadata:
     category: e2e-ui-testing
     distributed: "true"
   annotations:
-    testkube.io/description: "Shards the Playwright end-to-end tests of the cloud dashboard across parallel workers against .dev, with a scenario coverage report."
+    testkube.io/description: "Checks the cloud dashboard end to end with Playwright against .dev, sharded across parallel workers."
 spec:
   content:
     git:

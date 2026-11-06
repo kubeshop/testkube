@@ -6,7 +6,7 @@ metadata:
     core-tests: workflows-suite-trigger
     type: suite-trigger
   annotations:
-    testkube.io/description: "dev cron every 4 hours at minute 5: runs the expected-failure suite."
+    testkube.io/description: "Starts the expected-failure suite every 4 hours, to check that .dev still reports failures correctly."
 spec:
   container:
     resources:
