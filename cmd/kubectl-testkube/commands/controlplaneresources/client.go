@@ -1,6 +1,5 @@
 // Package controlplaneresources implements the CLI for Control Plane
-// resources - Insights boards, AI Agents, MCP servers and LLM providers, with
-// test bundles to come: `testkube apply`, and the per-kind `get` and `delete`
+// resources: `testkube apply`, and the per-kind `get` and `delete`
 // subcommands. The rules are in pkg/controlplane/declarative, shared with the
 // GitOps agent and the Control Plane.
 package controlplaneresources

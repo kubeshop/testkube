@@ -36,9 +36,9 @@ func NewApplyCmd(newClient ClientFactory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "apply -f <file|dir|->",
 		Short: "Apply Control Plane resources from YAML",
-		Long: `Create or update Control Plane resources (Insights boards, AI Agents, MCP servers and LLM providers) from YAML or JSON.
+		Long: `Create or update Control Plane resources from YAML or JSON.
 
-Each file may hold several documents, applied with each kind after the kinds it refers to (MCP servers and LLM providers before AI Agents). A directory applies every .yaml, .yml and .json file in it, and "-" reads from stdin.
+Each file may hold several documents, applied with each kind after the kinds it refers to. A directory applies every .yaml, .yml and .json file in it, and "-" reads from stdin.
 Every document is validated locally before anything is sent; nothing is sent if any document is invalid.
 Use --dry-run to validate without sending anything; with -o yaml it prints the objects as they would be sent, defaults filled in.`,
 		Example: `  testkube apply -f board.yaml

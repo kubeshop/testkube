@@ -4,8 +4,8 @@
 // GitOps agent.
 //
 // Both paths share this schema and the rules in pkg/controlplane/declarative.
-// Every Control Plane entity family has an API group of its own (insights,
-// ai, testbundles), and therefore a package of its own.
+// Every Control Plane entity family has an API group of its own, and
+// therefore a package of its own.
 // +kubebuilder:object:generate=true
 // +groupName=insights.testkube.io
 package v1alpha1
