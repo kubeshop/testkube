@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: robotframework
+  annotations:
+    testkube.io/description: "Suite that runs the Robot Framework Browser smoke workflow."
 spec:
   container:
     resources:

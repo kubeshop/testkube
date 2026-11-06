@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows-suite
     type: suite
+  annotations:
+    testkube.io/description: "Suite that runs the small suites of Cypress, JMeter, k6, Playwright, Postman and Selenium, and the full suites of Artillery, curl, Gradle, Locust, Maven and pytest."
 spec:
   container:
     resources:

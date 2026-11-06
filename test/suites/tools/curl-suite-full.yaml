@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: curl
+  annotations:
+    testkube.io/description: "Suite that runs the curl smoke workflow and the curl matrix workflow."
 spec:
   container:
     resources:

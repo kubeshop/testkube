@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: postman
+  annotations:
+    testkube.io/description: "Suite that runs the Postman smoke workflow and its template variant."
 spec:
   container:
     resources:

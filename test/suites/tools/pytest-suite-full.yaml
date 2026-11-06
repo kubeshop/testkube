@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: pytest
+  annotations:
+    testkube.io/description: "Suite that runs the passing pytest workflows, with and without a JUnit report."
 spec:
   container:
     resources:
