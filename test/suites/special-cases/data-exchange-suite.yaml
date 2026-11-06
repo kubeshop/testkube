@@ -4,6 +4,8 @@ metadata:
   name: tw-data-exchange-producer
   labels:
     core-tests: data-exchange
+  annotations:
+    testkube.io/description: "Producer of the data exchange suite: it writes an output and artifacts for another workflow to receive."
 spec:
   container:
     resources:
@@ -44,6 +46,8 @@ metadata:
   name: tw-data-exchange-consumer
   labels:
     core-tests: data-exchange
+  annotations:
+    testkube.io/description: "Checks that it received the token output of the producer workflow as a config value."
 spec:
   config:
     token:
@@ -98,6 +102,8 @@ metadata:
   labels:
     core-tests: data-exchange
     type: suite
+  annotations:
+    testkube.io/description: "Suite that runs the producer workflow, fetches its artifacts and passes its output to the consumer workflow, to check data exchange between workflows."
 spec:
   container:
     resources:
