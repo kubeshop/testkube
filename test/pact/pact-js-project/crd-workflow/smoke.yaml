@@ -6,9 +6,12 @@ metadata:
     core-tests: workflows
     tool: pact
     category: api-testing
+    area: tools
   annotations:
     testkube.io/description: "Checks that Pact JS consumer tests run with Jest in Testkube."
     testkube.io/icon: pact
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   content:
     git:

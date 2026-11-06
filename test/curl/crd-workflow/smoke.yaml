@@ -6,9 +6,12 @@ metadata:
     core-tests: workflows
     tool: curl
     category: api-testing
+    area: tools
   annotations:
     testkube.io/description: "Checks with curl 8.7.1 that the test page answers with a success status."
     testkube.io/icon: curl
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:
@@ -31,8 +34,12 @@ metadata:
     core-tests: workflows
     tool: curl
     category: api-testing
+    area: engine
   annotations:
     testkube.io/description: "Runs the curl check from an image in a private registry, to prove that image pull secrets work."
+    testkube.io/areas: engine,tools
+    testkube.io/cost: light
+    testkube.io/sandbox: needs-secrets
 spec:
   pod:
     imagePullSecrets:
@@ -58,8 +65,12 @@ metadata:
     core-tests: workflows
     tool: curl
     category: api-testing
+    area: parallel
   annotations:
     testkube.io/description: "Runs the curl check in parallel for each URL of a matrix, to prove the matrix expansion of a step."
+    testkube.io/areas: parallel,tools
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

@@ -6,9 +6,12 @@ metadata:
     core-tests: workflows
     tool: gradle
     category: build-integration
+    area: tools
   annotations:
     testkube.io/description: "Checks that Testkube runs the tests of a Gradle 8.5 project on JDK 11."
     testkube.io/icon: gradle
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -41,9 +44,12 @@ metadata:
     core-tests: workflows
     tool: gradle
     category: build-integration
+    area: tools
   annotations:
     testkube.io/description: "Checks that a Gradle 8.5 image runs with its default command when the workflow gives no run command."
     testkube.io/icon: gradle
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -75,9 +81,12 @@ metadata:
     core-tests: workflows
     tool: gradle
     category: build-integration
+    area: tools
   annotations:
     testkube.io/description: "Checks that the official/gradle/v1 template runs Gradle tests on JDK 11."
     testkube.io/icon: gradle
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   content:
     git:

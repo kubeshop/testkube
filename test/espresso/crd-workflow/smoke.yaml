@@ -12,8 +12,12 @@ metadata:
     core-tests: workflows
     tool: espresso
     category: e2e-ui-testing
+    area: tools
   annotations:
     testkube.io/description: "Checks that Espresso tests run against an Android emulator started as a service, with the built APKs kept as artifacts."
+    testkube.io/areas: tools,services,artifacts
+    testkube.io/cost: heavy
+    testkube.io/sandbox: needs-cluster
 description: "Android emulator - K8s+KVM"
 spec:
   content:

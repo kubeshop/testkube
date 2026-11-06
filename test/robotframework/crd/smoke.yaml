@@ -7,9 +7,13 @@ metadata:
     category: e2e-ui-testing
     junit: "true"
     artifacts: "true"
+    area: tools
   annotations:
     testkube.io/description: "Checks that Testkube runs Robot Framework Browser tests and keeps their output and JUnit report as artifacts."
     testkube.io/icon: robotframework
+    testkube.io/areas: tools,reports,artifacts
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
