@@ -6,8 +6,11 @@ metadata:
     core-tests: heartbeat
     heartbeat-type: prod-e2e-webhook
     environment: prod
+    area: triggers
   annotations:
     testkube.io/description: "Passes on a cron every 5 minutes, so its webhook proves that production executions and webhooks work."
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:
