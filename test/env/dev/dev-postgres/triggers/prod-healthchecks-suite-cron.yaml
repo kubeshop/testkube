@@ -6,8 +6,11 @@ metadata:
     core-tests: workflows-suite-trigger
     type: suite-trigger
     tool: healthcheck
+    area: triggers
   annotations:
     testkube.io/description: "Starts the production health checks suite every 15 minutes, to detect a production outage fast."
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

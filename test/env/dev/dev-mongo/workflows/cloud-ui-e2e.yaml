@@ -7,8 +7,12 @@ metadata:
     core-tests: cloud-ui-e2e-mongo
     artifacts: "true"
     dev-quality-gate: "true"
+    area: ui
   annotations:
     testkube.io/description: "Checks the cloud dashboard end to end with Playwright against the dev Mongo environment, with a scenario coverage report."
+    testkube.io/areas: ui,artifacts
+    testkube.io/cost: heavy
+    testkube.io/sandbox: needs-secrets
 spec:
   content:
     git:
@@ -89,8 +93,12 @@ metadata:
     artifacts: "true"
     distributed: "true"
     junit: "true"
+    area: ui
   annotations:
     testkube.io/description: "Checks the cloud dashboard end to end with Playwright against the dev Mongo environment, sharded across parallel workers."
+    testkube.io/areas: ui,parallel,reports,artifacts
+    testkube.io/cost: heavy
+    testkube.io/sandbox: needs-secrets
 spec:
   content:
     git:

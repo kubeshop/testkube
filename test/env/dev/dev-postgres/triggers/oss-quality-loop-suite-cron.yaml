@@ -5,8 +5,11 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: suite-trigger
+    area: triggers
   annotations:
     testkube.io/description: "Starts oss-quality-loop-suite at 07:30 each day, to run the testkube and testkube-docs quality-loop checks each day."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

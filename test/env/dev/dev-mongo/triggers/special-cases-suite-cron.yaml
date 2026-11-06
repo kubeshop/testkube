@@ -5,8 +5,11 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: suite-trigger
+    area: triggers
   annotations:
     testkube.io/description: "Starts the special-cases suite at 10:45 each day, to catch engine regressions on the dev Mongo environment."
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

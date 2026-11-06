@@ -5,8 +5,11 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: workflow-trigger
+    area: triggers
   annotations:
     testkube.io/description: "Starts the cloud-ui-e2e dashboard tests every 4 hours, to catch dashboard regressions on .dev."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:
