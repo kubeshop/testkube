@@ -5,6 +5,8 @@ metadata:
   labels:
     category: api-testing
     core-tests: workflows
+  annotations:
+    testkube.io/description: "Example: runs the Postman smoke collection with Newman."
 spec:
   content:
     git:

@@ -5,6 +5,8 @@ metadata:
   labels:
     category: build-integration
     core-tests: workflows
+  annotations:
+    testkube.io/description: "Example: runs the tests of the hello-gradle project with Gradle 8.5 on JDK 11."
 spec:
   content:
     git:

@@ -5,6 +5,8 @@ metadata:
   labels:
     category: performance-testing
     artifacts: "true"
+  annotations:
+    testkube.io/description: "Example: runs the JMeter smoke plan and saves the HTML report as an artifact."
 spec:
   content:
     git:
