@@ -6,8 +6,11 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: locust
+    area: tools
   annotations:
     testkube.io/description: "Groups the Locust workflows, to check plain and distributed Locust runs."
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

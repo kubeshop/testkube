@@ -6,8 +6,11 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: maven
+    area: tools
   annotations:
     testkube.io/description: "Groups the Maven workflows, to check plain and template Maven runs."
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

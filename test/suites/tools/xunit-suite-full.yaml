@@ -6,8 +6,11 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: xunit
+    area: tools
   annotations:
     testkube.io/description: "Groups the xUnit workflow, to check the xUnit integration."
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

@@ -6,8 +6,11 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: postman
+    area: tools
   annotations:
     testkube.io/description: "Groups all 5 Postman workflows, to check the Postman integration: variables, templates and the JUnit reporter."
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

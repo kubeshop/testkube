@@ -6,8 +6,11 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: robotframework
+    area: tools
   annotations:
     testkube.io/description: "Groups the Robot Framework workflow, to check the Robot Framework integration."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

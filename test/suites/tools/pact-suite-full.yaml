@@ -6,8 +6,11 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: pact
+    area: tools
   annotations:
     testkube.io/description: "Groups the Pact JS workflow, to check the Pact integration."
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:
