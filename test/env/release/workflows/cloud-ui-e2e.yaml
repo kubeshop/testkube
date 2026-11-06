@@ -10,6 +10,8 @@ metadata:
     playwright-traces: "on"
     category: e2e-ui-testing
     release-quality-gate: "true"
+  annotations:
+    testkube.io/description: "Checks the cloud dashboard end to end with Playwright against the release environment, without the dev-only tests."
 spec:
   content:
     git:

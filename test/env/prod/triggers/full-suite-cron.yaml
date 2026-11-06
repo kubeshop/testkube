@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: suite-trigger
+  annotations:
+    testkube.io/description: "Starts tw-suite-full-smoke at 02:45 each day, to catch tool integration regressions in production."
 spec:
   container:
     resources:
