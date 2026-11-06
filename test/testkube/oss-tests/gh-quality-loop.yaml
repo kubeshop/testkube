@@ -230,7 +230,7 @@ metadata:
     core-tests: testkube-oss
     tool: buf
   annotations:
-    testkube.io/description: "Quality-loop check of testkube: runs Buf lint and format, and checks for breaking changes against the main branch."
+    testkube.io/description: "Quality-loop check of testkube: checks the protobuf files with Buf lint and format, and checks for breaking changes against main."
     testkube.io/git-integration-managed: "false"
 description: Buf lint / format / breaking (replaces lint.yaml protobuf step). Runs
   on PRs to main (all files) and on feature-branch pushes (skip main/renovate/dependabot).
@@ -270,7 +270,7 @@ metadata:
     core-tests: testkube-oss
     tool: shellcheck
   annotations:
-    testkube.io/description: "Quality-loop check of testkube: runs ShellCheck as dash on the trial install script."
+    testkube.io/description: "Quality-loop check of testkube: checks the trial install script with ShellCheck as dash."
     testkube.io/git-integration-managed: "false"
 description: ShellCheck on the trial install script, as dash, since users pipe it
   to any sh. Runs on PRs to main and on feature-branch pushes.
@@ -311,7 +311,7 @@ metadata:
     coverage: "true"
     tool: go
   annotations:
-    testkube.io/description: "Quality-loop check of testkube: runs make integration-tests with Mongo, NATS, MinIO and Postgres services, with JUnit and coverage reports."
+    testkube.io/description: "Quality-loop check of testkube: checks that the integration tests pass against Mongo, NATS, MinIO and Postgres services, with JUnit and coverage reports."
     testkube.io/git-integration-managed: "false"
 description: make integration-tests with Mongo/NATS/MinIO/Postgres (replaces test.yaml
   integration-tests, without Kind). Runs on push to main and PRs targeting main (opened/synchronize/reopened/ready_for_review).
@@ -517,7 +517,7 @@ metadata:
     coverage: "true"
     tool: go
   annotations:
-    testkube.io/description: "Quality-loop check of testkube: runs make unit-tests with JUnit and coverage reports."
+    testkube.io/description: "Quality-loop check of testkube: checks that the unit tests pass, with JUnit and coverage reports."
     testkube.io/git-integration-managed: "false"
 description: make unit-tests (replaces test.yaml unit-tests). Runs on push to main
   and PRs targeting main (opened/synchronize/reopened/ready_for_review). Listens to

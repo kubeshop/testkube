@@ -5,7 +5,7 @@ metadata:
   labels:
     core-tests: installation
   annotations:
-    testkube.io/description: "Installs the Testkube Enterprise demo in a kind cluster that runs in Docker-in-Docker, waits for the components, and runs a workflow through the control plane."
+    testkube.io/description: "Checks that the Testkube Enterprise demo installs on a fresh kind cluster and can run a workflow through the control plane."
 description: "Enterprise installation test - DinD+kind"
 spec:
   execution:
@@ -151,7 +151,7 @@ metadata:
     core-tests: installation
     environment-specific: dev
   annotations:
-    testkube.io/description: "Installs Testkube Enterprise across several namespaces of the edge cluster and runs a check; it runs only at .dev, which has the cluster access."
+    testkube.io/description: "Checks that Testkube Enterprise installs and works across several namespaces; it runs only at .dev, which has access to the edge cluster."
 description: "Enterprise installation test - edge, multi-namespace. Can be run ONLY at .dev"
 spec:
   system:
