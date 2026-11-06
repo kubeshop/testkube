@@ -6,7 +6,7 @@ metadata:
     core-tests: workflows-suite-trigger
     type: suite-trigger
   annotations:
-    testkube.io/description: "Release environment cron at 10:35 each day: runs the special-cases suite."
+    testkube.io/description: "Starts the special-cases suite at 10:35 each day, to catch engine regressions in the release environment."
 spec:
   container:
     resources:

@@ -6,7 +6,7 @@ metadata:
     core-tests: workflows-suite-trigger
     type: suite-trigger
   annotations:
-    testkube.io/description: "Release environment cron every 2 hours at minute 15: runs junit5-workflow-smoke."
+    testkube.io/description: "Starts junit5-workflow-smoke every 2 hours, to keep fresh JUnit results in the release environment."
 spec:
   container:
     resources:

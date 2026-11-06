@@ -6,7 +6,7 @@ metadata:
     core-tests: workflows-suite-trigger
     type: workflow-trigger
   annotations:
-    testkube.io/description: "dev-e2e environment cron at minute 50 of each hour: runs pytest-workflow-smoke-junit-mixed-failures."
+    testkube.io/description: "Starts pytest-workflow-smoke-junit-mixed-failures each hour at minute 50, to keep fresh mixed JUnit results on the dev-e2e environment."
 spec:
   container:
     resources:

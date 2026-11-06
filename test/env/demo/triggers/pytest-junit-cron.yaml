@@ -6,7 +6,7 @@ metadata:
     core-tests: workflows-suite-trigger
     type: suite-trigger
   annotations:
-    testkube.io/description: "Demo environment cron at 07:30 each day: runs the pytest mixed-failure and random-failure workflows, so the demo shows JUnit results and flaky tests."
+    testkube.io/description: "Starts the pytest mixed-failure and random-failure workflows at 07:30 each day, so the demo environment shows JUnit results and flaky tests."
 spec:
   container:
     resources:

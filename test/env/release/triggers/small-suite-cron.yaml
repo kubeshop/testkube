@@ -6,7 +6,7 @@ metadata:
     core-tests: workflows-suite-trigger
     type: suite-trigger
   annotations:
-    testkube.io/description: "Release environment cron every 2 hours at minute 15: runs tw-suite-small-smoke."
+    testkube.io/description: "Starts tw-suite-small-smoke every 2 hours, as a fast regression check of the release environment."
 spec:
   container:
     resources:
