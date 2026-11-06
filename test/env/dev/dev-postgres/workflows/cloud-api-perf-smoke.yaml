@@ -8,6 +8,8 @@ metadata:
     tool: k6
     category: performance-testing
     dev-quality-gate: "true"
+  annotations:
+    testkube.io/description: "Runs the k6 load test of js/packages/k6-load-tests against the .dev API, with p95 and p75 thresholds per endpoint, including Insights and boards; 5 VUs for 10 minutes by default."
 spec:
   content:
     git:

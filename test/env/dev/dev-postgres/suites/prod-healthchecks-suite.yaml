@@ -7,6 +7,8 @@ metadata:
     type: suite
     tool: healthcheck
     team-support: "true"
+  annotations:
+    testkube.io/description: "Suite that runs the production health checks: prod US, prod EU, the public demo, Paris and the license endpoint."
 spec:
   pod:
     # Healthchecks drive prod alerts; keep them off spot nodes so a preemption does not page as an outage.

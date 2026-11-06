@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: suite-trigger
+  annotations:
+    testkube.io/description: "dev cron at 06:58 and 18:58: runs cloud-quality-loop-suite."
 spec:
   container:
     resources:

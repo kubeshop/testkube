@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: healthcheck
     environment: prod
+  annotations:
+    testkube.io/description: "Production health check: runs postman-workflow-smoke in the prod US environment through the CLI, kept off spot nodes."
 spec:
   pod:
     # Healthchecks drive prod alerts; keep them off spot nodes so a preemption does not page as an outage.

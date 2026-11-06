@@ -11,6 +11,8 @@ metadata:
     team-frontend: "true"
     package: web
     tool: vitest
+  annotations:
+    testkube.io/description: "Quality-loop check of testkube-cloud-api: runs the Vitest unit tests of the web dashboard package and saves a JUnit report."
 spec:
   system:
     pureByDefault: true
@@ -78,6 +80,8 @@ metadata:
     team-frontend: "true"
     package: backoffice
     tool: vitest
+  annotations:
+    testkube.io/description: "Quality-loop check of testkube-cloud-api: runs the Vitest unit tests of the backoffice package and saves a JUnit report."
 spec:
   system:
     pureByDefault: true
@@ -145,6 +149,8 @@ metadata:
     team-backend: "true"
     package: runspace-controller
     tool: vitest
+  annotations:
+    testkube.io/description: "Quality-loop check of testkube-cloud-api: runs the Vitest unit tests of the runspace-controller package and saves a JUnit report."
 spec:
   system:
     pureByDefault: true
@@ -209,6 +215,8 @@ metadata:
     core-tests: cloud-api
     team-backend: "true"
     tool: golangci-lint
+  annotations:
+    testkube.io/description: "Quality-loop check of testkube-cloud-api: lints the OpenAPI spec with Spectral and the Go code with golangci-lint."
 spec:
   config:
     revision:
@@ -285,6 +293,8 @@ metadata:
     team-frontend: "true"
     team-backend: "true"
     tool: turbo
+  annotations:
+    testkube.io/description: "Quality-loop check of testkube-cloud-api: checks the lockfile, then runs the TypeScript type check, Prettier and the linters of the JS packages with Turbo."
 spec:
   system:
     pureByDefault: true
@@ -372,6 +382,8 @@ metadata:
     team-backend: "true"
     team-frontend: "true"
     tool: helm
+  annotations:
+    testkube.io/description: "Quality-loop check of testkube-cloud-api: checks the vendored chart dependencies, lints the Helm charts and runs their helm-unittest suites."
 spec:
   config:
     revision:
@@ -424,6 +436,8 @@ metadata:
     core-tests: cloud-api
     team: backend
     tool: git
+  annotations:
+    testkube.io/description: "Quality-loop check of testkube-cloud-api: compares the runspace-controller skills with the testkube-skills repository and fails on drift."
 description: The runspace skill files listed in js/packages/runspace-controller/shared-skills.txt
   are identical to kubeshop/testkube-skills at the pinned commit.
 spec:
@@ -465,6 +479,8 @@ metadata:
     core-tests: cloud-api
     team-backend: "true"
     tool: go
+  annotations:
+    testkube.io/description: "Quality-loop check of testkube-cloud-api: checks that go.mod, go.sum and the generated OpenAPI code are up to date."
 spec:
   config:
     revision:
@@ -543,6 +559,8 @@ metadata:
     junit: "true"
     team-backend: "true"
     tool: go
+  annotations:
+    testkube.io/description: "Quality-loop check of testkube-cloud-api: runs the Go test suite with Postgres, Mongo, NATS, MinIO, fake GCS, Vault and SMTP services, with JUnit and coverage reports."
 spec:
   config:
     revision:

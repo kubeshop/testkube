@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite-trigger
     type: suite-trigger
     tool: healthcheck
+  annotations:
+    testkube.io/description: "dev cron every 15 minutes: runs the production health checks suite."
 spec:
   container:
     resources:

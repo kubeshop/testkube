@@ -7,6 +7,8 @@ metadata:
     type: suite
     tool: testkube-multi-agent
     dev-quality-gate: "true"
+  annotations:
+    testkube.io/description: "Suite that runs k6, Maven, Gradle, pytest, Postman and NUnit smoke workflows on other runners of .dev, to check runner targeting; it runs only at .dev."
 description: Run only at .dev where these runners are created!
 spec:
   container:
