@@ -6,8 +6,11 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: artillery
+    area: engine
   annotations:
     testkube.io/description: "Checks that one execute step can start both a TestWorkflow and a legacy Test."
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

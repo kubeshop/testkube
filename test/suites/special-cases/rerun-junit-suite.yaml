@@ -4,8 +4,12 @@ metadata:
   name: tw-rerun-junit
   labels:
     core-tests: rerun-junit
+    area: reports
   annotations:
     testkube.io/description: "Checks that a rerun can select only the failed test cases of a JUnit report through the execution lineage."
+    testkube.io/areas: reports,artifacts,execution-control
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   # Rerunning only the test cases that failed, built from the two pieces every
   # rerun already has: the reserved "rerun" reference, and the JUnit report the
@@ -200,8 +204,12 @@ metadata:
   labels:
     core-tests: rerun-junit
     type: suite
+    area: reports
   annotations:
     testkube.io/description: "Suite that runs tw-rerun-junit, expects the first run to fail, checks its lineage, and reruns it with baseExecutionId to check that only the failed case runs."
+    testkube.io/areas: reports,execution-control
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   # Drives the whole loop: run the suite once and let it fail, check what the
   # original recorded, then rerun that execution with execute's baseExecutionId

@@ -7,8 +7,12 @@ metadata:
     type: suite
     dev-quality-gate: "true"
     release-quality-gate: "true"
+    area: engine
   annotations:
     testkube.io/description: "Suite that runs every expected-fail workflow with negative steps, so the suite passes only when each child fails as it should; it is a quality gate for dev and release."
+    testkube.io/areas: engine,parallel,services,execution-control
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

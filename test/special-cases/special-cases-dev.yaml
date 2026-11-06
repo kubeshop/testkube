@@ -5,8 +5,12 @@ metadata:
   labels:
     core-tests: special-cases
     environment: dev
+    area: engine
   annotations:
     testkube.io/description: "Checks that organization and environment credentials reach steps and services as env values; it runs only at .dev, where these credentials exist."
+    testkube.io/areas: engine,services
+    testkube.io/cost: medium
+    testkube.io/sandbox: needs-secrets
 description: ".dev environment-only!"
 spec:
   container:
@@ -80,8 +84,11 @@ metadata:
   labels:
     core-tests: special-cases
     environment: dev
+    area: engine
   annotations:
     testkube.io/description: "Checks that a private Git repository can be checked out with credentials and used by a step; it runs only at .dev, where these credentials exist."
+    testkube.io/cost: light
+    testkube.io/sandbox: needs-secrets
 description: ".dev environment-only!"
 spec:
   content:
