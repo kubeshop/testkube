@@ -155,8 +155,8 @@ func (c *setup) GetSensitiveValues() []string {
 }
 
 // sensitiveValues collects the values marked sensitive, skipping the ones shorter than
-// minLength. Words handed over at runtime - the values resolved credential() calls
-// produced - are never skipped, whatever minLength says.
+// minLength. Words handed over at runtime - the values resolved credential() and
+// identity_token() calls produced - are never skipped, whatever minLength says.
 func (c *setup) sensitiveValues(minLength int) []string {
 	words := make([]string, 0, len(c.envAdditionalSensitive))
 	for value := range c.envAdditionalSensitive {
@@ -281,6 +281,10 @@ func (c *setup) UseEnv(group string) error {
 		data.ExecutionDataMachine(),
 		credentials.NewCredentialMachine(data.Credentials(), func(_ string, value string) {
 			c.AddSensitiveWords(value)
+			output.Std.SetSensitiveWords(c.GetSensitiveWords())
+		}),
+		credentials.NewIdentityTokenMachine(data.IdentityTokens(), func(_ string, token string) {
+			c.AddSensitiveWords(token)
 			output.Std.SetSensitiveWords(c.GetSensitiveWords())
 		}))
 	localEnvMachine := expressions.NewMachine().
