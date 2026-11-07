@@ -1,0 +1,62 @@
+# An agent and the MCP server it links to, in the order a person might write
+# them: the agent first. Apply sends the server first.
+apiVersion: ai.testkube.io/v1alpha1
+kind: AIAgent
+metadata:
+  name: flaky-test-triager
+spec:
+  displayName: Flaky Test Triager
+  description: Looks into flaky workflow executions.
+  instructions: |
+    You triage flaky tests. Read the logs of the failed execution and open an issue.
+  defaultModel: gpt-4o
+  labels:
+    team: qa
+  private: true
+  mcpServers:
+    - name: testkube
+      tools:
+        list_executions:
+          enabled: true
+          autoApproved: true
+        run_workflow:
+          enabled: true
+    - name: github
+      signIn: shared_key
+      credentialReference: secret://github-mcp-token
+      tools:
+        create_issue:
+          enabled: true
+    - name: jira
+      signIn: per_person
+  access:
+    roles: [write, read]
+    resourceGroups: [payments]
+  skills:
+    - name: flaky-triage
+      description: Use when an execution failed only some of the time.
+      content: Compare the last ten executions before calling a test flaky.
+      alwaysInclude: true
+    - name: issue-format
+      description: Use when opening an issue.
+      content: 'Title issues "Flaky: <workflow>" and link the execution.'
+      metadata:
+        author: qa-team
+---
+apiVersion: ai.testkube.io/v1alpha1
+kind: MCPServer
+metadata:
+  name: github
+spec:
+  displayName: GitHub
+  url: https://api.githubcopilot.com/mcp/
+---
+apiVersion: ai.testkube.io/v1alpha1
+kind: MCPServer
+metadata:
+  name: local-files
+spec:
+  type: stdio
+  url: https://files.example.com/mcp
+  command: npx
+  args: ["-y", "@modelcontextprotocol/server-filesystem", "/data"]

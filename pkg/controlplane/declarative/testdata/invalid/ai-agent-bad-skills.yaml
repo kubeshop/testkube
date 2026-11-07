@@ -1,0 +1,16 @@
+apiVersion: ai.testkube.io/v1alpha1
+kind: AIAgent
+metadata:
+  name: helper
+spec:
+  instructions: Help.
+  skills:
+    - name: Flaky Triage
+      description: Triage.
+      content: Compare runs.
+    - name: notes
+      description: ""
+      content: "  "
+    - name: notes
+      description: Notes.
+      content: Some notes.

@@ -270,3 +270,31 @@ func TestCommandsUseTheirClientFactory(t *testing.T) {
 	require.NoError(t, del.Execute())
 	assert.Equal(t, []string{"a"}, c.deleted)
 }
+
+const agentBeforeItsServer = `apiVersion: ai.testkube.io/v1alpha1
+kind: AIAgent
+metadata:
+  name: triager
+spec:
+  instructions: Triage failures.
+  mcpServers:
+    - name: github
+---
+apiVersion: ai.testkube.io/v1alpha1
+kind: MCPServer
+metadata:
+  name: github
+spec:
+  url: https://api.githubcopilot.com/mcp/
+`
+
+func TestApply_SendsTheServerBeforeTheAgentThatLinksToIt(t *testing.T) {
+	c := &fakeClient{}
+	var out bytes.Buffer
+	require.NoError(t, Apply(context.Background(), c, read(t, agentBeforeItsServer), ApplyOptions{}, &out))
+
+	assert.Equal(t, "mcpserver/github applied\naiagent/triager applied\n", out.String())
+	require.Len(t, c.applied, 2)
+	assert.Equal(t, "github", c.applied[0].GetName())
+	assert.Equal(t, "triager", c.applied[1].GetName())
+}

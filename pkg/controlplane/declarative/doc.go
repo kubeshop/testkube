@@ -3,8 +3,8 @@
 // with `testkube apply -f`, exported with `testkube get <kind> <name> -o yaml`
 // and removed with `testkube delete <kind> <name>`. Each entity family has an
 // API group and a schema package of its own under api/ (such as
-// insights.testkube.io in api/insights/v1alpha1), with CRDs generated into
-// k8s/crd. Shared status types are in api/common/v1.
+// ai.testkube.io in api/ai/v1alpha1), with CRDs generated into k8s/crd.
+// Shared status types are in api/common/v1.
 //
 // It is a contract between three consumers, which must all go through it
 // rather than reimplement it:
@@ -31,6 +31,51 @@
 // PrepareForApply and StatusOf, fixtures under testdata/, and the Control
 // Plane endpoint. The CLI's get and delete subcommands are generated from the
 // registry.
+//
+// The registry is in apply order: a kind comes after every kind it refers to.
+// SortForApply puts MCP servers and LLM providers before the AI Agents that
+// link to them, so one input applies whatever order it lists them in.
+//
+// # AI resources
+//
+// AI Agents, MCP servers and LLM providers are environment-scoped. Their
+// metadata.name is a DNS-1123 label, so it also names a custom resource; the
+// Control Plane stores it as the entity's slug, and ProposeName makes one
+// from a display name for an entity created without one. The stored models
+// live in the Control Plane, which maps them itself; what both ends must
+// agree on is here.
+//
+// A manifest never carries a secret. A key is named by an Environment
+// Credential in credentialReference (secret://<name>, or vault://<path> for
+// an LLM provider), and Normalize refuses a header or query parameter whose
+// name looks like a credential (IsCredentialField, which includes sig, the
+// signature of an Azure SAS URL) and a URL with user info. Such an error
+// echoes neither the value nor the refused name, which may hold a secret
+// itself: it is reported on the URL or on the whole header or query map.
+// The Control Plane exports every header and query parameter value as
+// RedactedValue, which applied back keeps the stored value, so the
+// placeholder is accepted under any name. A
+// shared-key link without a credentialReference keeps the key set in the
+// dashboard, which is never exported.
+//
+// An agent links to an MCPServer by its metadata.name, and to the built-in
+// Testkube MCP server as "testkube", a name no MCPServer may take. An agent
+// that leaves the built-in server out keeps its link to it as stored (the
+// default tools, for a new agent), so applying an older manifest does not
+// cut the agent off from Testkube. Access roles and resource groups are sorted,
+// as the Control Plane returns them.
+//
+// An agent's Skills belong to it: applying a skills list replaces the whole
+// list, in manifest order, matched by name, so a Skill left out is deleted,
+// and skills: [] removes them all. An agent that leaves skills out keeps its
+// Skills as stored, as it keeps its built-in server link, so applying a
+// manifest written before Skills existed does not delete the ones added in
+// the dashboard. AIAgentSpec.Skills is therefore not omitempty: nil (absent
+// or null) and an empty list mean different things. Each
+// follows the Agent Skills spec's limits (MaxSkillNameLength and the others,
+// in skill.go), and the content of those always included is at most
+// MaxAlwaysIncludedSkillsLength characters together, since every prompt
+// carries it; the others are read on demand.
 //
 // # Normalization
 //
@@ -77,8 +122,9 @@
 // # CLI
 //
 // The CLI (cmd/kubectl-testkube/commands/controlplaneresources) validates
-// every document before sending any, and keeps going past a failed PUT,
-// reporting all failures together.
+// every document before sending any, sends them in registry order
+// (SortForApply), and keeps going past a failed PUT, reporting all failures
+// together.
 //
 // Not yet done: GitOps sync of these CRDs (a generic SyncService arm and a
 // reconciler), and Control Plane enforcement of read-only GitOps-owned

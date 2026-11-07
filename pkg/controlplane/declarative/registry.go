@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	aiv1 "github.com/kubeshop/testkube/api/ai/v1alpha1"
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 	insightsv1 "github.com/kubeshop/testkube/api/insights/v1alpha1"
 )
@@ -66,6 +67,9 @@ func (k Kind) Name() string {
 	return k.Names[0]
 }
 
+// kinds is in apply order: a kind comes after every kind it refers to, so
+// SortForApply can put an AI Agent after the MCP servers and LLM providers in
+// the same input.
 var kinds = []Kind{
 	{
 		GroupVersion: insightsv1.GroupVersion,
@@ -75,6 +79,44 @@ var kinds = []Kind{
 		Scope:        ScopeOrganization,
 		newObject:    func() Object { return &insightsv1.Board{} },
 	},
+	{
+		GroupVersion: aiv1.GroupVersion,
+		Kind:         aiv1.LLMProviderKind,
+		Resource:     aiv1.LLMProviderResource,
+		Names:        []string{"llmprovider", "llmproviders"},
+		Scope:        ScopeEnvironment,
+		newObject:    func() Object { return &aiv1.LLMProvider{} },
+	},
+	{
+		GroupVersion: aiv1.GroupVersion,
+		Kind:         aiv1.MCPServerKind,
+		Resource:     aiv1.MCPServerResource,
+		Names:        []string{"mcpserver", "mcpservers"},
+		Scope:        ScopeEnvironment,
+		newObject:    func() Object { return &aiv1.MCPServer{} },
+	},
+	{
+		GroupVersion: aiv1.GroupVersion,
+		Kind:         aiv1.AIAgentKind,
+		Resource:     aiv1.AIAgentResource,
+		Names:        []string{"aiagent", "aiagents"},
+		Scope:        ScopeEnvironment,
+		newObject:    func() Object { return &aiv1.AIAgent{} },
+	},
+}
+
+// SortForApply orders objects so each comes after the kinds it refers to,
+// keeping the input order within a kind. Applying an AI Agent and its MCP
+// server from one input then works whatever order the input has them in.
+func SortForApply(objects []Object) {
+	rank := func(obj Object) int {
+		kind, err := KindOf(obj)
+		if err != nil {
+			return len(kinds)
+		}
+		return slices.IndexFunc(kinds, func(k Kind) bool { return k.GroupVersionKind() == kind.GroupVersionKind() })
+	}
+	slices.SortStableFunc(objects, func(a, b Object) int { return rank(a) - rank(b) })
 }
 
 // Kinds returns every supported kind.
@@ -134,6 +176,12 @@ func supported() []string {
 func StatusOf(obj Object) commonv1.ControlPlaneResourceStatus {
 	switch o := obj.(type) {
 	case *insightsv1.Board:
+		return o.Status
+	case *aiv1.AIAgent:
+		return o.Status
+	case *aiv1.MCPServer:
+		return o.Status.ControlPlaneResourceStatus
+	case *aiv1.LLMProvider:
 		return o.Status
 	}
 	return commonv1.ControlPlaneResourceStatus{}

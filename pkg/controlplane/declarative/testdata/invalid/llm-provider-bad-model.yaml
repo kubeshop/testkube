@@ -1,0 +1,12 @@
+apiVersion: ai.testkube.io/v1alpha1
+kind: LLMProvider
+metadata:
+  name: openai
+spec:
+  provider: openai
+  extraHeaders:
+    Host: evil.example.com
+  models:
+    - name: "gpt-*"
+    - name: gpt-4o
+    - name: gpt-4o

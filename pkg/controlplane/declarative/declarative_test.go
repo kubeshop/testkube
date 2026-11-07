@@ -68,6 +68,29 @@ func TestFixtures_Invalid(t *testing.T) {
 		"board-unknown-field.yaml":          {"document 1", `unknown field "dispayName"`},
 		"unknown-kind.yaml":                 {`unknown kind "Dashboard"`},
 		"not-a-controlplane-resource.yaml":  {`"testworkflows.testkube.io/v1" is not a Control Plane resource`},
+		"ai-agent-literal-secret.yaml":      {"spec.mcpServers[0].credentialReference", "a key itself never goes in a manifest"},
+		"ai-agent-bad-link.yaml": {
+			"spec.mcpServers[0].credentialReference", "only a shared_key link",
+			"spec.mcpServers[1].name", "Duplicate value",
+			"spec.access.roles[0]", `"owner"`,
+		},
+		"ai-agent-no-instructions.yaml": {"metadata.name", "spec.instructions"},
+		"ai-agent-bad-skills.yaml": {
+			"spec.skills[0].name", "lowercase letters, digits and single hyphens",
+			"spec.skills[1].description: Required", "spec.skills[1].content: Required",
+			"spec.skills[2].name", "Duplicate value",
+		},
+		"llm-provider-credential-header.yaml": {
+			"spec.extraHeaders: Forbidden: has a header", "spec.models[0].queryParams: Forbidden: has a query parameter", "Environment Credential",
+			"spec.baseUrl", "has a query parameter that looks like a credential",
+		},
+		"llm-provider-bad-model.yaml": {
+			"spec.extraHeaders[Host]", "does not forward",
+			"spec.models[0].name", "spec.models[2].name", "Duplicate value",
+		},
+		"mcp-server-builtin-name.yaml":    {"metadata.name", "built-in Testkube MCP server"},
+		"mcp-server-missing-url.yaml":     {"spec.url", "spec.command", "only a stdio server"},
+		"mcp-server-url-credentials.yaml": {"spec.url", "must not carry credentials"},
 	}
 	files, err := filepath.Glob(filepath.Join("testdata", "invalid", "*.yaml"))
 	require.NoError(t, err)
@@ -85,6 +108,11 @@ func TestFixtures_Invalid(t *testing.T) {
 			require.Error(t, err)
 			for _, want := range wants {
 				assert.Contains(t, err.Error(), want)
+			}
+			// The secrets the fixtures hold must not reach the error, which the
+			// CLI prints to terminal and CI logs.
+			for _, secret := range []string{"ghp_abc123", "hunter2", "sk-live-123"} {
+				assert.NotContains(t, err.Error(), secret)
 			}
 		})
 	}
