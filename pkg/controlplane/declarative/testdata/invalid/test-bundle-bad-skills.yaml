@@ -1,0 +1,19 @@
+apiVersion: testbundles.testkube.io/v1alpha1
+kind: TestBundle
+metadata:
+  name: this-test-bundle-name-is-far-too-long-to-be-a-slug-of-a-bundle
+spec:
+  skills:
+    - name: K6 Load Testing
+      description: Load tests.
+      content: Use k6.
+    - name: notes
+      description: ""
+      content: "   "
+    - name: notes
+      description: Notes.
+      content: Some notes.
+  aiAgents:
+    - triager
+    - triager
+    - Not_A_Name

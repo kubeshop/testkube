@@ -91,6 +91,14 @@ func TestFixtures_Invalid(t *testing.T) {
 		"mcp-server-builtin-name.yaml":    {"metadata.name", "built-in Testkube MCP server"},
 		"mcp-server-missing-url.yaml":     {"spec.url", "spec.command", "only a stdio server"},
 		"mcp-server-url-credentials.yaml": {"spec.url", "must not carry credentials"},
+		"test-bundle-bad-skills.yaml": {
+			"metadata.name", "may not be more than 59 bytes",
+			"spec.skills[0].name", "lowercase letters, digits and single hyphens",
+			"spec.skills[1].description: Required", "spec.skills[1].content: Required",
+			"spec.skills[2].name", "Duplicate value",
+			"spec.aiAgents[1]", "spec.aiAgents[2]",
+		},
+		"test-bundle-git-credentials.yaml": {"spec.gitSource.uri", "must not carry credentials"},
 	}
 	files, err := filepath.Glob(filepath.Join("testdata", "invalid", "*.yaml"))
 	require.NoError(t, err)

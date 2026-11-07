@@ -34,7 +34,8 @@
 //
 // The registry is in apply order: a kind comes after every kind it refers to.
 // SortForApply puts MCP servers and LLM providers before the AI Agents that
-// link to them, so one input applies whatever order it lists them in.
+// link to them, and AI Agents before the Test Bundles that delegate to them,
+// so one input applies whatever order it lists them in.
 //
 // # AI resources
 //
@@ -76,6 +77,42 @@
 // in skill.go), and the content of those always included is at most
 // MaxAlwaysIncludedSkillsLength characters together, since every prompt
 // carries it; the others are read on demand.
+//
+// # Test Bundles
+//
+// A Test Bundle is environment-scoped. Its metadata.name is the slug the
+// Control Plane gave it, which never changes: lowercase letters, digits, '-'
+// and '_', at most 59 characters (MaxTestBundleNameLength), since it labels
+// the bundle's workflow and sandbox. A slug made in the dashboard can hold
+// '_', so unlike an AI resource's name it is not always a DNS-1123 label.
+//
+// The manifest declares the bundle's definition only: display name,
+// description, labels, the Git source its tests are read from, its Skills and
+// the AI Agents it may delegate to. What authoring produces (test files,
+// chats, the sandbox, the shared workflow and the GitHub repository set up for
+// chats) stays in the Control Plane; the workflow's name and chat activity are
+// exported in status and never applied. Deleting a bundle is the dashboard's
+// delete: a soft delete that also ends its chats and sandbox.
+//
+// Skills belong to the bundle, keyed by name and kept in manifest order:
+// applying a skills list replaces the whole list, so a Skill left out is
+// deleted, and skills: [] removes them all. A bundle that leaves skills out
+// keeps its Skills as stored, as an AI Agent does, so a manifest without them
+// does not delete the ones added in the dashboard; TestBundleSpec.Skills is
+// therefore not omitempty either. They follow
+// the Agent Skills spec's limits (skill.go) and are always included, so
+// together they hold at most MaxAlwaysIncludedSkillsLength characters of
+// content, since every authoring prompt carries all of them. A Git source URI
+// must not carry credentials, which Normalize reports without echoing the URI.
+// It must be a URL with a scheme and host, or Git's scp-like user@host:path;
+// anything else, such as a URL url.Parse cannot read, is refused, since its
+// credentials could not be checked.
+//
+// aiAgents names AI Agents by metadata.name and is sorted, as the Control
+// Plane exports it. Omitted, a new bundle starts with the environment's
+// defaults for new bundles and an existing one keeps its own; an empty list
+// delegates to none. The field is a pointer so the two reach the Control Plane
+// apart.
 //
 // # Normalization
 //
