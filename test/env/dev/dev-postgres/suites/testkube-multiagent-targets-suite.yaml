@@ -7,8 +7,11 @@ metadata:
     type: suite
     tool: testkube-multi-agent
     dev-quality-gate: "true"
+    area: runner
   annotations:
     testkube.io/description: "Groups smoke workflows that target other runners of .dev, to check that runner targeting works; it runs only at .dev."
+    testkube.io/cost: light
+    testkube.io/sandbox: needs-cluster
 description: Run only at .dev where these runners are created!
 spec:
   container:

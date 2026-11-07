@@ -6,8 +6,11 @@ metadata:
     core-tests: heartbeat
     heartbeat-type: dev-e2e-webhook
     environment: dev
+    area: triggers
   annotations:
     testkube.io/description: "Passes on a cron at minute 15 and 45 of each hour, so its webhook proves that dev executions and webhooks work."
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

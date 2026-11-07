@@ -6,8 +6,11 @@ metadata:
     dev-quality-gate: "true"
     core-tests: workflows-suite
     type: suite
+    area: engine
   annotations:
     testkube.io/description: "Groups the quality-loop checks of testkube and testkube-docs, to run all of them in one execution."
+    testkube.io/cost: heavy
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:

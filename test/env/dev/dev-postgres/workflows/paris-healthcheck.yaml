@@ -5,8 +5,11 @@ metadata:
   labels:
     core-tests: healthcheck
     environment: prod
+    area: runner
   annotations:
     testkube.io/description: "Production health check: checks that the Paris environment can run postman-junit-report."
+    testkube.io/cost: light
+    testkube.io/sandbox: needs-secrets
 spec:
   pod:
     # Healthchecks drive prod alerts; keep them off spot nodes so a preemption does not page as an outage.

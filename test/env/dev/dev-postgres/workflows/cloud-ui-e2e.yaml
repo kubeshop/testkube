@@ -12,8 +12,12 @@ metadata:
     dev-quality-gate: "true"
     team-backend: "true"
     team-frontend: "true"
+    area: ui
   annotations:
     testkube.io/description: "Checks a revision of the cloud dashboard end to end with Playwright against .dev, with a scenario coverage report."
+    testkube.io/areas: ui,services,reports,artifacts
+    testkube.io/cost: heavy
+    testkube.io/sandbox: needs-secrets
 spec:
   config:
     revision:
@@ -136,8 +140,12 @@ metadata:
     playwright-traces: "on"
     category: e2e-ui-testing
     distributed: "true"
+    area: ui
   annotations:
     testkube.io/description: "Checks the cloud dashboard end to end with Playwright against .dev, sharded across parallel workers."
+    testkube.io/areas: ui,parallel,reports,artifacts
+    testkube.io/cost: heavy
+    testkube.io/sandbox: needs-secrets
 spec:
   content:
     git:
