@@ -95,11 +95,18 @@
 // delete: a soft delete that also ends its chats and sandbox.
 //
 // Skills belong to the bundle, keyed by name and kept in manifest order:
-// applying replaces the whole list, so a Skill left out is deleted. They follow
+// applying a skills list replaces the whole list, so a Skill left out is
+// deleted, and skills: [] removes them all. A bundle that leaves skills out
+// keeps its Skills as stored, as an AI Agent does, so a manifest without them
+// does not delete the ones added in the dashboard; TestBundleSpec.Skills is
+// therefore not omitempty either. They follow
 // the Agent Skills spec's limits (skill.go) and are always included, so
 // together they hold at most MaxAlwaysIncludedSkillsLength characters of
-// content, since every authoring prompt carries all of them. A Git source URI must not
-// carry credentials, which Normalize reports without echoing the URI.
+// content, since every authoring prompt carries all of them. A Git source URI
+// must not carry credentials, which Normalize reports without echoing the URI.
+// It must be a URL with a scheme and host, or Git's scp-like user@host:path;
+// anything else, such as a URL url.Parse cannot read, is refused, since its
+// credentials could not be checked.
 //
 // aiAgents names AI Agents by metadata.name and is sorted, as the Control
 // Plane exports it. Omitted, a new bundle starts with the environment's

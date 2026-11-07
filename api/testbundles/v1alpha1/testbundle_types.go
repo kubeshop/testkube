@@ -43,9 +43,13 @@ type TestBundleSpec struct {
 	// read from; nothing is pushed back.
 	GitSource *TestBundleGitSource `json:"gitSource,omitempty"`
 	// Skills are the guidance every authoring chat of the bundle gets, in
-	// this order. They belong to the bundle: applying replaces the whole
-	// list, so a Skill left out is deleted.
-	Skills []TestBundleSkill `json:"skills,omitempty"`
+	// this order. They belong to the bundle: applying a list replaces the
+	// whole list, so a Skill left out is deleted, and an empty list removes
+	// them all. When skills is omitted, the bundle's Skills are left as they
+	// are, so applying a manifest without them does not delete the ones
+	// added in the dashboard.
+	// +optional
+	Skills []TestBundleSkill `json:"skills"`
 	// AIAgents are the AI Agents, by metadata.name, the bundle's authoring
 	// may delegate to. Each must be public. When it is omitted, a new bundle
 	// starts with the environment's defaults for new bundles and an existing

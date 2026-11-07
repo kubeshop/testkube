@@ -1433,8 +1433,11 @@ spec:
               skills:
                 description: |-
                   Skills are the guidance every authoring chat of the bundle gets, in
-                  this order. They belong to the bundle: applying replaces the whole
-                  list, so a Skill left out is deleted.
+                  this order. They belong to the bundle: applying a list replaces the
+                  whole list, so a Skill left out is deleted, and an empty list removes
+                  them all. When skills is omitted, the bundle's Skills are left as they
+                  are, so applying a manifest without them does not delete the ones
+                  added in the dashboard.
                 items:
                   description: |-
                     TestBundleSkill is guidance a Test Bundle's authoring gets in full in every

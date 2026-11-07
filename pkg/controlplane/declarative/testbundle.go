@@ -2,6 +2,7 @@ package declarative
 
 import (
 	"net/url"
+	"regexp"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -14,6 +15,13 @@ import (
 // MaxTestBundleNameLength bounds a Test Bundle's slug, which labels its
 // workflow and sandbox resources.
 const MaxTestBundleNameLength = 59
+
+// scpGitURIPattern matches Git's scp-like syntax, [user@]host:path, as Git
+// tells it from a URL: no "://", and no slash before the colon. The user
+// holds no ':', so it cannot carry a password.
+var scpGitURIPattern = regexp.MustCompile(`^(?:[^@/:]+@)?(?:[^@/:\[\]]+|\[[^\]/]+\]):[^@]*$`)
+
+const gitURICredentialsDetail = "must not carry credentials; connect the repository in the Control Plane instead"
 
 func normalizeTestBundle(b *testbundlesv1.TestBundle) field.ErrorList {
 	errs := validateTestBundleName(b.Name, field.NewPath("metadata", "name"))
@@ -67,17 +75,22 @@ func validateTestBundleName(name string, path *field.Path) field.ErrorList {
 
 // validateGitURI refuses an empty repository URI and one that carries
 // credentials: a password, any user of an http or https URL, where a token
-// often goes, or a query parameter whose name IsCredentialField. scp-like and ssh URIs, such as git@github.com:org/repo,
-// keep their user, which names an account rather than holding a secret. The
-// URI is never echoed.
+// often goes, or a query parameter whose name IsCredentialField. scp-like and
+// ssh URIs, such as git@github.com:org/repo, keep their user, which names an
+// account rather than holding a secret. Anything else must be a URL with a
+// scheme: a URI that is neither, such as one url.Parse cannot read, is
+// refused, since its credentials could not be checked. The URI is never
+// echoed.
 func validateGitURI(raw string, path *field.Path) field.ErrorList {
 	if strings.TrimSpace(raw) == "" {
 		return field.ErrorList{field.Required(path, "the repository to read tests from")}
 	}
-	u, err := url.Parse(raw)
-	if err != nil || u.Scheme == "" {
-		// An scp-like URI (user@host:path) is not a URL; it holds no password.
+	if !strings.Contains(raw, "://") && scpGitURIPattern.MatchString(raw) {
 		return nil
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme == "" || u.Opaque != "" || u.Host == "" {
+		return field.ErrorList{invalidSecret(path, "must be a URL, such as https://github.com/org/repo.git, or an scp-like address, such as git@github.com:org/repo.git")}
 	}
 	refused := false
 	if u.User != nil {
@@ -88,7 +101,7 @@ func validateGitURI(raw string, path *field.Path) field.ErrorList {
 		refused = refused || IsCredentialField(name)
 	}
 	if refused {
-		return field.ErrorList{invalidSecret(path, "must not carry credentials; connect the repository in the Control Plane instead")}
+		return field.ErrorList{invalidSecret(path, gitURICredentialsDetail)}
 	}
 	return nil
 }
