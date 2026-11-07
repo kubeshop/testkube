@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	aiv1 "github.com/kubeshop/testkube/api/ai/v1alpha1"
@@ -220,3 +221,24 @@ func TestLookup_AIKinds(t *testing.T) {
 }
 
 func fieldPath(name string) *field.Path { return field.NewPath(name) }
+
+// Only the Skills an agent always includes count against the budget: the
+// others are read on demand.
+func TestNormalize_AIAgentSkillBudgetCountsAlwaysIncluded(t *testing.T) {
+	half := strings.Repeat("a", MaxAlwaysIncludedSkillsLength/2+1)
+	agent := func(always bool) *aiv1.AIAgent {
+		return &aiv1.AIAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "helper"},
+			Spec: aiv1.AIAgentSpec{Instructions: "Help.", Skills: []aiv1.AIAgentSkill{
+				{Name: "one", Description: "One.", Content: half, AlwaysInclude: true},
+				{Name: "two", Description: "Two.", Content: half, AlwaysInclude: always},
+			}},
+		}
+	}
+	require.NoError(t, Normalize(agent(false)))
+	err := Normalize(agent(true))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "spec.skills")
+	assert.Contains(t, err.Error(), "always included is over 32000 characters")
+	assert.NotContains(t, err.Error(), half[:100], "the content is not echoed")
+}

@@ -75,6 +75,11 @@ func TestFixtures_Invalid(t *testing.T) {
 			"spec.access.roles[0]", `"owner"`,
 		},
 		"ai-agent-no-instructions.yaml": {"metadata.name", "spec.instructions"},
+		"ai-agent-bad-skills.yaml": {
+			"spec.skills[0].name", "lowercase letters, digits and single hyphens",
+			"spec.skills[1].description: Required", "spec.skills[1].content: Required",
+			"spec.skills[2].name", "Duplicate value",
+		},
 		"llm-provider-credential-header.yaml": {
 			"spec.extraHeaders: Forbidden: has a header", "spec.models[0].queryParams: Forbidden: has a query parameter", "Environment Credential",
 			"spec.baseUrl", "has a query parameter that looks like a credential",

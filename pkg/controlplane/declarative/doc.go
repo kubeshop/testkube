@@ -65,6 +65,13 @@
 // cut the agent off from Testkube. Access roles and resource groups are sorted,
 // as the Control Plane returns them.
 //
+// An agent's Skills belong to it: applying replaces the whole list, in
+// manifest order, matched by name, so a Skill left out is deleted. Each
+// follows the Agent Skills spec's limits (MaxSkillNameLength and the others,
+// in skill.go), and the content of those always included is at most
+// MaxAlwaysIncludedSkillsLength characters together, since every prompt
+// carries it; the others are read on demand.
+//
 // # Normalization
 //
 // Normalize validates an object and fills in its defaults, in place. It is

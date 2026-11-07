@@ -32,6 +32,16 @@ spec:
   access:
     roles: [write, read]
     resourceGroups: [payments]
+  skills:
+    - name: flaky-triage
+      description: Use when an execution failed only some of the time.
+      content: Compare the last ten executions before calling a test flaky.
+      alwaysInclude: true
+    - name: issue-format
+      description: Use when opening an issue.
+      content: 'Title issues "Flaky: <workflow>" and link the execution.'
+      metadata:
+        author: qa-team
 ---
 apiVersion: ai.testkube.io/v1alpha1
 kind: MCPServer

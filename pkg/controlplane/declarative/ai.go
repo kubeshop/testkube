@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -289,6 +290,17 @@ func normalizeAIAgent(a *aiv1.AIAgent) field.ErrorList {
 		}
 		errs = append(errs, normalizeNames(&spec.Access.ResourceGroups, accessPath.Child("resourceGroups"))...)
 	}
+
+	skills := make([]skillFields, 0, len(spec.Skills))
+	alwaysIncluded := 0
+	for i := range spec.Skills {
+		s := &spec.Skills[i]
+		skills = append(skills, skillFields{name: &s.Name, description: &s.Description, content: s.Content, metadata: s.Metadata})
+		if s.AlwaysInclude {
+			alwaysIncluded += utf8.RuneCountInString(s.Content)
+		}
+	}
+	errs = append(errs, normalizeSkills(skills, alwaysIncluded, path.Child("skills"))...)
 	return errs
 }
 

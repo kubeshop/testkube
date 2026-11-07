@@ -67,6 +67,33 @@ type AIAgentSpec struct {
 	// Access links the agent to roles and resource groups. When it is
 	// omitted, the agent's links are left as they are.
 	Access *AIAgentAccess `json:"access,omitempty"`
+	// Skills are guidance the agent uses, in this order. They belong to the
+	// agent: applying replaces the whole list, so a Skill left out is
+	// deleted.
+	Skills []AIAgentSkill `json:"skills,omitempty"`
+}
+
+// AIAgentSkill is guidance an AI Agent uses, following the Agent Skills spec.
+// The agent sees its name and description, and reads the content when a task
+// needs it, unless it is always included.
+type AIAgentSkill struct {
+	// Name identifies the Skill within the agent: up to 64 lowercase
+	// letters, digits and single hyphens.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=64
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]+(-[a-z0-9]+)*$`
+	Name string `json:"name"`
+	// Description says what the Skill does and when to use it.
+	// +kubebuilder:validation:MinLength=1
+	Description string `json:"description"`
+	// Content is the guidance itself.
+	// +kubebuilder:validation:MinLength=1
+	Content string `json:"content"`
+	// AlwaysInclude puts the content in every prompt instead of having the
+	// agent read it on demand.
+	AlwaysInclude bool `json:"alwaysInclude,omitempty"`
+	// Metadata is extra Agent Skills spec metadata.
+	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 // AIAgentMCPServer is an AI Agent's link to an MCP server.

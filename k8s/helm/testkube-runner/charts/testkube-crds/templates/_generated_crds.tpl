@@ -191,6 +191,50 @@ spec:
                   to the environment's admins. It needs a license that includes RBAC,
                   and has no effect where AI governance is off.
                 type: boolean
+              skills:
+                description: |-
+                  Skills are guidance the agent uses, in this order. They belong to the
+                  agent: applying replaces the whole list, so a Skill left out is
+                  deleted.
+                items:
+                  description: |-
+                    AIAgentSkill is guidance an AI Agent uses, following the Agent Skills spec.
+                    The agent sees its name and description, and reads the content when a task
+                    needs it, unless it is always included.
+                  properties:
+                    alwaysInclude:
+                      description: |-
+                        AlwaysInclude puts the content in every prompt instead of having the
+                        agent read it on demand.
+                      type: boolean
+                    content:
+                      description: Content is the guidance itself.
+                      minLength: 1
+                      type: string
+                    description:
+                      description: Description says what the Skill does and when to
+                        use it.
+                      minLength: 1
+                      type: string
+                    metadata:
+                      additionalProperties:
+                        type: string
+                      description: Metadata is extra Agent Skills spec metadata.
+                      type: object
+                    name:
+                      description: |-
+                        Name identifies the Skill within the agent: up to 64 lowercase
+                        letters, digits and single hyphens.
+                      maxLength: 64
+                      minLength: 1
+                      pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+                      type: string
+                  required:
+                  - content
+                  - description
+                  - name
+                  type: object
+                type: array
             required:
             - instructions
             type: object
