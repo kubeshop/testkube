@@ -9,11 +9,11 @@
  */
 package testkube
 
-// Pull request trigger configuration for GitHub API polling.
+// Pull request trigger configuration. The informer polls the provider REST API for GitHub pull requests or GitLab merge requests; the provider is detected from the git uri.
 type TestTriggerContentGitPullRequest struct {
-	// PR activity types to watch (e.g. \"opened\", \"synchronize\", \"reopened\", \"closed\"). If empty, all types are watched.
+	// PR activity types to watch (e.g. \"opened\", \"synchronize\", \"reopened\", \"closed\"). If empty, all types are watched. The same activity names apply to GitLab merge requests: a merged or closed merge request reports \"closed\", and new commits report \"synchronize\".
 	Types []string `json:"types,omitempty"`
-	// Base branch name patterns to watch (glob supported). If empty, PRs targeting any base branch are watched.
+	// Base branch name patterns to watch (glob supported). If empty, PRs targeting any base branch are watched. For GitLab this matches the merge request target branch.
 	Branches []string `json:"branches,omitempty"`
 	// Base branch name patterns to exclude (glob supported). Takes precedence over branches.
 	BranchesIgnore []string `json:"branchesIgnore,omitempty"`

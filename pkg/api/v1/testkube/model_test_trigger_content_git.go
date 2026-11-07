@@ -31,8 +31,11 @@ type TestTriggerContentGit struct {
 	Token     string        `json:"token,omitempty"`
 	TokenFrom *EnvVarSource `json:"tokenFrom,omitempty"`
 	// plain text SSH private key to fetch with. Warning: this credential is stored in plain text in the trigger spec; prefer sshKeyFrom instead.
-	SshKey      string                            `json:"sshKey,omitempty"`
-	SshKeyFrom  *EnvVarSource                     `json:"sshKeyFrom,omitempty"`
-	AuthType    string                            `json:"authType,omitempty"`
+	SshKey     string        `json:"sshKey,omitempty"`
+	SshKeyFrom *EnvVarSource `json:"sshKeyFrom,omitempty"`
+	AuthType   string        `json:"authType,omitempty"`
+	// PullRequest specifies pull request trigger configuration. The informer polls the
+	// provider REST API for GitHub pull requests or GitLab merge requests; the provider
+	// is detected from Uri.
 	PullRequest *TestTriggerContentGitPullRequest `json:"pullRequest,omitempty"`
 }
