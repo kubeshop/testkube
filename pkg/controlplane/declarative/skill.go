@@ -1,6 +1,7 @@
 package declarative
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"unicode/utf8"
@@ -57,12 +58,12 @@ func normalizeSkills(skills []skillFields, alwaysIncluded int, path *field.Path)
 		if *s.description == "" {
 			errs = append(errs, field.Required(skillPath.Child("description"), "what the Skill does and when to use it"))
 		} else if utf8.RuneCountInString(*s.description) > MaxSkillDescriptionLength {
-			errs = append(errs, field.TooLong(skillPath.Child("description"), "", MaxSkillDescriptionLength))
+			errs = append(errs, tooManyCharacters(skillPath.Child("description"), MaxSkillDescriptionLength))
 		}
 		if strings.TrimSpace(s.content) == "" {
 			errs = append(errs, field.Required(skillPath.Child("content"), "the guidance the AI follows"))
 		} else if utf8.RuneCountInString(s.content) > MaxSkillContentLength {
-			errs = append(errs, field.TooLong(skillPath.Child("content"), "", MaxSkillContentLength))
+			errs = append(errs, tooManyCharacters(skillPath.Child("content"), MaxSkillContentLength))
 		}
 		for key := range s.metadata {
 			if strings.TrimSpace(key) == "" {
@@ -75,4 +76,10 @@ func normalizeSkills(skills []skillFields, alwaysIncluded int, path *field.Path)
 			"the content of the Skills always included is over 32000 characters in total; shorten one, or include it on demand"))
 	}
 	return errs
+}
+
+// tooManyCharacters is the error for a value over a limit counted in
+// characters. field.TooLong says bytes, and would echo the value.
+func tooManyCharacters(path *field.Path, limit int) *field.Error {
+	return field.Invalid(path, field.OmitValueType{}, fmt.Sprintf("may not be more than %d characters", limit))
 }

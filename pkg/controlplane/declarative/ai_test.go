@@ -242,3 +242,65 @@ func TestNormalize_AIAgentSkillBudgetCountsAlwaysIncluded(t *testing.T) {
 	assert.Contains(t, err.Error(), "always included is over 32000 characters")
 	assert.NotContains(t, err.Error(), half[:100], "the content is not echoed")
 }
+
+// An agent that leaves skills out keeps its Skills, while skills: [] removes
+// them all, so the difference between nil and empty has to survive decoding,
+// normalizing and the apply payload.
+func TestAIAgentSkills_AbsentAndEmptyDiffer(t *testing.T) {
+	const head = "apiVersion: ai.testkube.io/v1alpha1\nkind: AIAgent\nmetadata:\n  name: helper\nspec:\n  instructions: Help.\n"
+	for name, tc := range map[string]struct {
+		yaml    string
+		nil     bool
+		payload string
+	}{
+		"absent": {yaml: head, nil: true, payload: ""},
+		"null":   {yaml: head + "  skills: null\n", nil: true, payload: ""},
+		"empty":  {yaml: head + "  skills: []\n", nil: false, payload: `"skills":[]`},
+	} {
+		t.Run(name, func(t *testing.T) {
+			objects, err := Decode(strings.NewReader(tc.yaml))
+			require.NoError(t, err)
+			require.Len(t, objects, 1)
+			require.NoError(t, Normalize(objects[0]))
+			agent := objects[0].(*aiv1.AIAgent)
+			assert.Equal(t, tc.nil, agent.Spec.Skills == nil)
+			assert.Empty(t, agent.Spec.Skills)
+
+			payload, err := ApplyPayload(agent)
+			require.NoError(t, err)
+			if tc.payload == "" {
+				assert.NotContains(t, string(payload), "skills", "an absent list is not sent as null or []")
+			} else {
+				assert.Contains(t, string(payload), tc.payload)
+			}
+			sent, err := DecodeObject(payload)
+			require.NoError(t, err)
+			assert.Equal(t, tc.nil, sent.(*aiv1.AIAgent).Spec.Skills == nil, "the Control Plane reads what was applied")
+		})
+	}
+}
+
+// The lengths are counted in characters, and the errors say so without
+// echoing the value.
+func TestNormalize_AIAgentSkillLengthsInCharacters(t *testing.T) {
+	agent := func(description, content string) *aiv1.AIAgent {
+		return &aiv1.AIAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "helper"},
+			Spec: aiv1.AIAgentSpec{Instructions: "Help.", Skills: []aiv1.AIAgentSkill{
+				{Name: "one", Description: description, Content: content},
+			}},
+		}
+	}
+	// Two bytes a character: over the limit in bytes, within it in characters.
+	require.NoError(t, Normalize(agent(strings.Repeat("é", MaxSkillDescriptionLength), strings.Repeat("é", MaxSkillContentLength))))
+
+	content := strings.Repeat("b", MaxSkillContentLength+1)
+	description := strings.Repeat("d", MaxSkillDescriptionLength+1)
+	err := Normalize(agent(description, content))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "spec.skills[0].content: Invalid value: may not be more than 32000 characters")
+	assert.Contains(t, err.Error(), "spec.skills[0].description: Invalid value: may not be more than 1024 characters")
+	assert.NotContains(t, err.Error(), "bytes")
+	assert.NotContains(t, err.Error(), content[:100], "the content is not echoed")
+	assert.NotContains(t, err.Error(), description[:100], "the description is not echoed")
+}

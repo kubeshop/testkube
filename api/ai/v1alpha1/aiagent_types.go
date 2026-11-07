@@ -68,9 +68,12 @@ type AIAgentSpec struct {
 	// omitted, the agent's links are left as they are.
 	Access *AIAgentAccess `json:"access,omitempty"`
 	// Skills are guidance the agent uses, in this order. They belong to the
-	// agent: applying replaces the whole list, so a Skill left out is
-	// deleted.
-	Skills []AIAgentSkill `json:"skills,omitempty"`
+	// agent: applying a list replaces the whole list, so a Skill left out is
+	// deleted, and an empty list removes them all. When skills is omitted,
+	// the agent's Skills are left as they are, so applying an older manifest
+	// does not delete the ones added in the dashboard.
+	// +optional
+	Skills []AIAgentSkill `json:"skills"`
 }
 
 // AIAgentSkill is guidance an AI Agent uses, following the Agent Skills spec.

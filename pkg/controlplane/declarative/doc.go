@@ -65,8 +65,13 @@
 // cut the agent off from Testkube. Access roles and resource groups are sorted,
 // as the Control Plane returns them.
 //
-// An agent's Skills belong to it: applying replaces the whole list, in
-// manifest order, matched by name, so a Skill left out is deleted. Each
+// An agent's Skills belong to it: applying a skills list replaces the whole
+// list, in manifest order, matched by name, so a Skill left out is deleted,
+// and skills: [] removes them all. An agent that leaves skills out keeps its
+// Skills as stored, as it keeps its built-in server link, so applying a
+// manifest written before Skills existed does not delete the ones added in
+// the dashboard. AIAgentSpec.Skills is therefore not omitempty: nil (absent
+// or null) and an empty list mean different things. Each
 // follows the Agent Skills spec's limits (MaxSkillNameLength and the others,
 // in skill.go), and the content of those always included is at most
 // MaxAlwaysIncludedSkillsLength characters together, since every prompt

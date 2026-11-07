@@ -232,7 +232,7 @@ func Encode(objects []Object, format string) ([]byte, error) {
 }
 
 // clean drops what an object always serializes even when unset - a null
-// creationTimestamp and an empty status - so an export reads like the file
+// creationTimestamp, an empty status and null spec fields - so an export reads like the file
 // it was applied from.
 func clean(obj Object) (map[string]any, error) {
 	data, err := json.Marshal(obj)
@@ -250,6 +250,15 @@ func clean(obj Object) (map[string]any, error) {
 	}
 	if status, ok := out["status"].(map[string]any); ok && len(status) == 0 {
 		delete(out, "status")
+	}
+	// A spec field that is not omitempty, such as an AIAgent's skills,
+	// serializes nil as null; absent means the same and reads better.
+	if spec, ok := out["spec"].(map[string]any); ok {
+		for k, v := range spec {
+			if v == nil {
+				delete(spec, k)
+			}
+		}
 	}
 	return out, nil
 }
