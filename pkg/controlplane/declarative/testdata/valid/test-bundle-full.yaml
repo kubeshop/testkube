@@ -1,0 +1,26 @@
+apiVersion: testbundles.testkube.io/v1alpha1
+kind: TestBundle
+metadata:
+  name: checkout_api
+spec:
+  displayName: Checkout API
+  description: Load and contract tests of the checkout service.
+  labels:
+    team: payments
+  gitSource:
+    uri: https://github.com/acme/checkout.git
+    revision: main
+    path: tests
+  skills:
+    - name: k6-load-testing
+      description: Use when writing or debugging k6 load tests in this repository.
+      content: |
+        k6 scripts live in tests/load. Fail the run when p95 latency is above 500 ms.
+      metadata:
+        author: platform-team
+    - name: contract-tests
+      description: Use when a test checks the checkout API's responses.
+      content: Contract tests use the OpenAPI spec in api/checkout.yaml.
+  aiAgents:
+    - triager
+    - helper
