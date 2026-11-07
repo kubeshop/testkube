@@ -9,6 +9,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Checks that Java Selenium tests run against a standalone Chrome service and that their Surefire reports are kept."
     testkube.io/icon: selenium
 description: "Selenium Java + Standalone Chrome"
 spec:
@@ -66,6 +67,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Checks that Java Selenium tests run against a Selenium hub service with a configurable count of Chrome nodes."
     testkube.io/icon: selenium
 description: "Selenium Java + Hub + Chrome Nodes"
 spec:
@@ -160,6 +162,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Checks that Python Selenium tests run with pytest against a standalone Chrome service and that their JUnit report is kept."
     testkube.io/icon: selenium
 description: "Selenium Python + Standalone Chrome"
 spec:
@@ -222,6 +225,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Checks that Python Selenium tests run in parallel against a Selenium hub with a configurable count of Chrome nodes."
     testkube.io/icon: selenium
 description: "Selenium Python + Hub + Chrome Nodes"
 spec:
@@ -311,6 +315,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Checks that JavaScript Selenium tests run with Mocha against a standalone Chrome service and that their JUnit report is kept."
     testkube.io/icon: selenium
 description: "Selenium JS (selenium-webdriver) + Mocha + Standalone Chrome"
 spec:
@@ -372,6 +377,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Checks that JavaScript Selenium tests run with Cucumber against a standalone Chrome service and that their JUnit report is kept."
     testkube.io/icon: selenium
 description: "Selenium JS (selenium-webdriver) + Cucumber + Standalone Chrome"
 spec:

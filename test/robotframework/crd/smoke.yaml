@@ -8,6 +8,7 @@ metadata:
     junit: "true"
     artifacts: "true"
   annotations:
+    testkube.io/description: "Checks that Testkube runs Robot Framework Browser tests and keeps their output and JUnit report as artifacts."
     testkube.io/icon: robotframework
 spec:
   content:

@@ -8,6 +8,8 @@ metadata:
     artifacts: "true"
     junit: "true"
     category: unit-component-testing
+  annotations:
+    testkube.io/description: "Checks that Testkube runs xUnit tests with dotnet test and keeps a JUnit report of the results."
 spec:
   content:
     git:

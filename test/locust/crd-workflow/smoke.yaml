@@ -8,6 +8,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
+    testkube.io/description: "Checks that Testkube runs a headless Locust 2.32.3 load test and keeps its reports as artifacts."
     testkube.io/icon: locust
 spec:
   content:
@@ -45,6 +46,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
+    testkube.io/description: "Checks that the Locust master image still runs the smoke load test, to catch a break before a Locust release."
     testkube.io/icon: locust
 spec:
   content:
@@ -82,6 +84,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
+    testkube.io/description: "Checks that the latest Locust image still runs the smoke load test."
     testkube.io/icon: locust
 spec:
   content:
@@ -118,6 +121,7 @@ metadata:
     tool: locust
     category: performance-testing
   annotations:
+    testkube.io/description: "Checks that distributed Locust works with a master started as a service and parallel workers that connect to it."
     testkube.io/icon: locust
 spec:
   config:
