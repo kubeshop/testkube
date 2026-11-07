@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: suite-trigger
+  annotations:
+    testkube.io/description: "Starts the preview images suite at 14:30 each day, to catch a break in a new tool release."
 spec:
   container:
     resources:
