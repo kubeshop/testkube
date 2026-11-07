@@ -7,9 +7,13 @@ metadata:
     tool: artillery
     artifacts: "true"
     category: performance-testing
+    area: tools
   annotations:
     testkube.io/description: "Checks that Testkube runs an Artillery 2.0.23 load scenario and keeps its JSON report as an artifact."
     testkube.io/icon: artillery
+    testkube.io/areas: tools,artifacts
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -44,9 +48,12 @@ metadata:
     core-tests: workflows
     tool: artillery
     category: performance-testing
+    area: tools
   annotations:
     testkube.io/description: "Runs the Artillery smoke scenario with the latest Artillery image, to catch a break in a new release."
     testkube.io/icon: artillery
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -75,9 +82,12 @@ metadata:
     core-tests: workflows
     tool: artillery
     category: performance-testing
+    area: tools
   annotations:
     testkube.io/description: "Checks that the official/artillery/v1 template runs an Artillery scenario and produces its JSON report."
     testkube.io/icon: artillery
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:
@@ -110,9 +120,12 @@ metadata:
     core-tests: workflows
     tool: artillery
     category: performance-testing
+    area: tools
   annotations:
     testkube.io/description: "Checks that the official/artillery/v1 template still works with the latest Artillery version."
     testkube.io/icon: artillery
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   container:
     resources:
@@ -146,9 +159,13 @@ metadata:
     tool: artillery
     artifacts: "true"
     category: performance-testing
+    area: parallel
   annotations:
     testkube.io/description: "Checks that an Artillery load test can be split across parallel workers with distribute/evenly and that the HTML reports of all workers are kept."
     testkube.io/icon: artillery
+    testkube.io/areas: parallel,artifacts,tools
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   config:
     arrivalRatePerWorker:

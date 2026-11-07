@@ -6,9 +6,12 @@ metadata:
     core-tests: workflows
     tool: pytest
     category: unit-component-testing
+    area: tools
   annotations:
     testkube.io/description: "Checks that Testkube runs passing pytest tests on Python 3.12."
     testkube.io/icon: pytest
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -41,9 +44,13 @@ metadata:
     artifacts: "true"
     junit: "true"
     category: unit-component-testing
+    area: tools
   annotations:
     testkube.io/description: "Checks that a passing pytest run passes and that its JUnit XML report is kept."
     testkube.io/icon: pytest
+    testkube.io/areas: tools,reports,artifacts
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -80,9 +87,13 @@ metadata:
     artifacts: "true"
     junit: "true"
     category: unit-component-testing
+    area: reports
   annotations:
     testkube.io/description: "Checks that a pytest run with failing tests fails the execution and that its JUnit report shows the mixed results."
     testkube.io/icon: pytest
+    testkube.io/areas: reports,artifacts
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -119,9 +130,13 @@ metadata:
     artifacts: "true"
     junit: "true"
     category: unit-component-testing
+    area: insights
   annotations:
     testkube.io/description: "Runs pytest tests that fail at random next to passing ones, so the result changes between executions; it feeds flaky-test views."
     testkube.io/icon: pytest
+    testkube.io/areas: insights,reports,artifacts
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   content:
     git:

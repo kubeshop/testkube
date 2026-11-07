@@ -4,8 +4,12 @@ metadata:
   name: testkube-integration
   labels:
     core-tests: workflows
+    area: engine
   annotations:
     testkube.io/description: "Checks that the Testkube Go integration tests pass against MongoDB, NATS and MinIO started as services."
+    testkube.io/areas: engine,services
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   config:
     revision:

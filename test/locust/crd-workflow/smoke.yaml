@@ -7,9 +7,13 @@ metadata:
     tool: locust
     artifacts: "true"
     category: performance-testing
+    area: tools
   annotations:
     testkube.io/description: "Checks that Testkube runs a headless Locust 2.32.3 load test and keeps its reports as artifacts."
     testkube.io/icon: locust
+    testkube.io/areas: tools,artifacts
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -45,9 +49,13 @@ metadata:
     tool: locust
     artifacts: "true"
     category: performance-testing
+    area: tools
   annotations:
     testkube.io/description: "Checks that the Locust master image still runs the smoke load test, to catch a break before a Locust release."
     testkube.io/icon: locust
+    testkube.io/areas: tools,artifacts
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -83,9 +91,13 @@ metadata:
     tool: locust
     artifacts: "true"
     category: performance-testing
+    area: tools
   annotations:
     testkube.io/description: "Checks that the latest Locust image still runs the smoke load test."
     testkube.io/icon: locust
+    testkube.io/areas: tools,artifacts
+    testkube.io/cost: light
+    testkube.io/sandbox: ok
 spec:
   content:
     git:
@@ -120,9 +132,13 @@ metadata:
     core-tests: workflows
     tool: locust
     category: performance-testing
+    area: parallel
   annotations:
     testkube.io/description: "Checks that distributed Locust works with a master started as a service and parallel workers that connect to it."
     testkube.io/icon: locust
+    testkube.io/areas: parallel,services,tools
+    testkube.io/cost: medium
+    testkube.io/sandbox: ok
 spec:
   config:
     workers: {type: integer, default: 2}
