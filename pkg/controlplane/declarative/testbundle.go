@@ -79,7 +79,9 @@ func validateTestBundleName(name string, path *field.Path) field.ErrorList {
 // ssh URIs, such as git@github.com:org/repo, keep their user, which names an
 // account rather than holding a secret. Anything else must be a URL with a
 // scheme: a URI that is neither, such as one url.Parse cannot read, is
-// refused, since its credentials could not be checked. The URI is never
+// refused, since its credentials could not be checked. So is a URL whose query
+// url.ParseQuery cannot read: URL.Query drops the parameters it fails on, as
+// ?access_token=x1;other=value, though the URI keeps them. The URI is never
 // echoed.
 func validateGitURI(raw string, path *field.Path) field.ErrorList {
 	if strings.TrimSpace(raw) == "" {
@@ -97,7 +99,11 @@ func validateGitURI(raw string, path *field.Path) field.ErrorList {
 		_, hasPassword := u.User.Password()
 		refused = hasPassword || slices.Contains([]string{"http", "https"}, strings.ToLower(u.Scheme))
 	}
-	for name := range u.Query() {
+	query, err := url.ParseQuery(u.RawQuery)
+	if err != nil {
+		return field.ErrorList{invalidSecret(path, "has a query string that is not valid")}
+	}
+	for name := range query {
 		refused = refused || IsCredentialField(name)
 	}
 	if refused {

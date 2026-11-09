@@ -71,8 +71,11 @@ func TestNormalize_TestBundleGitURI(t *testing.T) {
 		"https://ghp_abc123@github.com/acme/checkout.git":      false,
 		"ssh://git:hunter2@github.com/acme/checkout.git":       false,
 		"https://github.com/acme/checkout.git?access_token=x1": false,
-		"github.com:acme/checkout.git":                         true,
-		"[::1]:acme/checkout.git":                              true,
+		"https://github.com/acme/checkout.git?ref=main":        true,
+		// URL.Query would drop every parameter of this query, the token too.
+		"https://github.com/acme/checkout.git?access_token=ghp_abc123;other=value": false,
+		"github.com:acme/checkout.git":                                             true,
+		"[::1]:acme/checkout.git":                                                  true,
 		// url.Parse cannot read these, so their credentials could not be checked.
 		"https://x-access-token:ghp_abc123@github.com/acme/repo%zz.git": false,
 		"https://ghp_abc123@github.com/acme/repo%zz.git":                false,
