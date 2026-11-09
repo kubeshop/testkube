@@ -520,10 +520,10 @@ func TestBundle_PodResources(t *testing.T) {
 			},
 		},
 		{
-			name: "no pod resources",
+			name: "no pod resources leaves the pod spec without resources",
 		},
 		{
-			name: "expression template resolves",
+			name: "an expression in a value resolves",
 			resources: &testworkflowsv1.Resources{
 				Limits: map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceMemory: `{{ "512" }}Mi`},
 			},
@@ -532,7 +532,7 @@ func TestBundle_PodResources(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid quantity",
+			name: "an invalid quantity fails the bundle",
 			resources: &testworkflowsv1.Resources{
 				Limits: map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceMemory: "12x"},
 			},

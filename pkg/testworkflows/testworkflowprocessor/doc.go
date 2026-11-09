@@ -17,7 +17,6 @@
 // The `pod.resources` of a workflow becomes the `resources` of the pod spec. It sets the requests
 // and limits of the whole pod, including the init and sidecar containers of Testkube. It is
 // independent of the resources of each container and of the default runner resources, which keep
-// applying to the containers. The cluster needs the `PodLevelResources` feature gate, beta and on
-// by default since Kubernetes 1.34. An API server without the gate drops the field silently, and
-// the pod runs without pod-level resources.
+// applying to the containers. The cluster needs the `PodLevelResources` feature gate. An API
+// server without the gate drops the field silently, and the pod runs without pod-level resources.
 package testworkflowprocessor
