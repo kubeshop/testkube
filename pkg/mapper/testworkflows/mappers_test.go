@@ -554,3 +554,14 @@ func TestMapStepParallelRoundTripsParallelism(t *testing.T) {
 		})
 	}
 }
+
+func TestMapPodConfigResourcesRoundTrip(t *testing.T) {
+	v := testworkflowsv1.PodConfig{
+		Resources: &testworkflowsv1.Resources{
+			Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceCPU: "200m", corev1.ResourceMemory: "256Mi"},
+			Limits:   map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceCPU: "1", corev1.ResourceMemory: "512Mi"},
+		},
+	}
+
+	assert.Equal(t, v, MapPodConfigAPIToKube(MapPodConfigKubeToAPI(v)))
+}
