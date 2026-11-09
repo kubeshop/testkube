@@ -556,12 +556,30 @@ func TestMapStepParallelRoundTripsParallelism(t *testing.T) {
 }
 
 func TestMapPodConfigResourcesRoundTrip(t *testing.T) {
-	v := testworkflowsv1.PodConfig{
-		Resources: &testworkflowsv1.Resources{
-			Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceCPU: "200m", corev1.ResourceMemory: "256Mi"},
-			Limits:   map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceCPU: "1", corev1.ResourceMemory: "512Mi"},
+	tests := []struct {
+		name      string
+		resources *testworkflowsv1.Resources
+	}{
+		{
+			name: "keeps cpu and memory",
+			resources: &testworkflowsv1.Resources{
+				Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceCPU: "200m", corev1.ResourceMemory: "256Mi"},
+				Limits:   map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceCPU: "1", corev1.ResourceMemory: "512Mi"},
+			},
+		},
+		{
+			name: "keeps hugepages",
+			resources: &testworkflowsv1.Resources{
+				Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{"hugepages-2Mi": "64Mi"},
+				Limits:   map[corev1.ResourceName]testworkflowsv1.ConfigValue{"hugepages-2Mi": "128Mi", "hugepages-1Gi": "{{config.pages}}"},
+			},
 		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := testworkflowsv1.PodConfig{Resources: tt.resources}
 
-	assert.Equal(t, v, MapPodConfigAPIToKube(MapPodConfigKubeToAPI(v)))
+			assert.Equal(t, v, MapPodConfigAPIToKube(MapPodConfigKubeToAPI(v)))
+		})
+	}
 }

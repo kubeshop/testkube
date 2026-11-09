@@ -413,6 +413,25 @@ func MapResourcesAPIToKube(v testkube.TestWorkflowResources) testworkflowsv1.Res
 	}
 }
 
+// MapPodResourcesListAPIToKube keeps every resource name, such as hugepages-2Mi, not only the fixed keys of a container.
+func MapPodResourcesListAPIToKube(v map[string]string) map[corev1.ResourceName]testworkflowsv1.ConfigValue {
+	if len(v) == 0 {
+		return nil
+	}
+	res := make(map[corev1.ResourceName]testworkflowsv1.ConfigValue, len(v))
+	for name, value := range v {
+		res[corev1.ResourceName(name)] = MapStringToConfigValue(value)
+	}
+	return res
+}
+
+func MapPodResourcesAPIToKube(v testkube.TestWorkflowPodResources) testworkflowsv1.Resources {
+	return testworkflowsv1.Resources{
+		Limits:   MapPodResourcesListAPIToKube(v.Limits),
+		Requests: MapPodResourcesListAPIToKube(v.Requests),
+	}
+}
+
 func MapJobConfigAPIToKube(v testkube.TestWorkflowJobConfig) testworkflowsv1.JobConfig {
 	return testworkflowsv1.JobConfig{
 		Labels:                v.Labels,
@@ -884,7 +903,7 @@ func MapPodConfigAPIToKube(v testkube.TestWorkflowPodConfig) testworkflowsv1.Pod
 		SchedulingGates:           common.MapSlice(v.SchedulingGates, MapPodSchedulingGateAPIToKube),
 		ResourceClaims:            common.MapSlice(v.ResourceClaims, MapPodResourceClaimAPIToKube),
 		HostPID:                   MapBoxedBooleanToBool(v.HostPID),
-		Resources:                 common.MapPtr(v.Resources, MapResourcesAPIToKube),
+		Resources:                 common.MapPtr(v.Resources, MapPodResourcesAPIToKube),
 	}
 }
 
