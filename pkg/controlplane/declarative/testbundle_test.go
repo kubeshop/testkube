@@ -76,6 +76,12 @@ func TestNormalize_TestBundleGitURI(t *testing.T) {
 		"https://github.com/acme/checkout.git?access_token=ghp_abc123;other=value": false,
 		"github.com:acme/checkout.git":                                             true,
 		"[::1]:acme/checkout.git":                                                  true,
+		// An '@' in an scp-like path, after a user or after the path's first '/'.
+		"git@git.example.com:team/repo@v2.git": true,
+		"git@git.example.com:repo@v2.git":      true,
+		"git.example.com:team/repo@v2.git":     true,
+		// With no user, an '@' before the path's first '/' reads as user:password@host.
+		"git:hunter2@github.com": false,
 		// url.Parse cannot read these, so their credentials could not be checked.
 		"https://x-access-token:ghp_abc123@github.com/acme/repo%zz.git": false,
 		"https://ghp_abc123@github.com/acme/repo%zz.git":                false,

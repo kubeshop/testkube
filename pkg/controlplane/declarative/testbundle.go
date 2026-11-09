@@ -17,9 +17,28 @@ import (
 const MaxTestBundleNameLength = 59
 
 // scpGitURIPattern matches Git's scp-like syntax, [user@]host:path, as Git
-// tells it from a URL: no "://", and no slash before the colon. The user
-// holds no ':', so it cannot carry a password.
-var scpGitURIPattern = regexp.MustCompile(`^(?:[^@/:]+@)?(?:[^@/:\[\]]+|\[[^\]/]+\]):[^@]*$`)
+// tells it from a URL: no "://", and no slash before the colon. It captures
+// the user and the path. The user holds no ':', so it cannot carry a password;
+// the path may hold anything, an '@' too, as team/repo@v2.git. See isSCPGitURI.
+var scpGitURIPattern = regexp.MustCompile(`^(?:([^@/:]+)@)?(?:[^@/:\[\]]+|\[[^\]/]+\]):(.*)$`)
+
+// isSCPGitURI reports whether raw is a credential-free scp-like address. One
+// with no user whose path has an '@' before its first '/' also reads as
+// user:password@host, as git:hunter2@github.com:org/repo does, so it is not
+// one: an '@' is accepted in the path only after a user, or after the path's
+// first '/'.
+func isSCPGitURI(raw string) bool {
+	if strings.Contains(raw, "://") {
+		return false
+	}
+	m := scpGitURIPattern.FindStringSubmatch(raw)
+	if m == nil {
+		return false
+	}
+	user, path := m[1], m[2]
+	firstSegment, _, _ := strings.Cut(path, "/")
+	return user != "" || !strings.Contains(firstSegment, "@")
+}
 
 const gitURICredentialsDetail = "must not carry credentials; connect the repository in the Control Plane instead"
 
@@ -87,7 +106,7 @@ func validateGitURI(raw string, path *field.Path) field.ErrorList {
 	if strings.TrimSpace(raw) == "" {
 		return field.ErrorList{field.Required(path, "the repository to read tests from")}
 	}
-	if !strings.Contains(raw, "://") && scpGitURIPattern.MatchString(raw) {
+	if isSCPGitURI(raw) {
 		return nil
 	}
 	u, err := url.Parse(raw)
