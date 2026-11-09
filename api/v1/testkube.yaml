@@ -10779,7 +10779,7 @@ components:
         setHostnameAsFQDN:
           $ref: "#/components/schemas/BoxedBoolean"
         resources:
-          $ref: "#/components/schemas/TestWorkflowResources"
+          $ref: "#/components/schemas/TestWorkflowPodResources"
 
     TestWorkflowContainerConfig:
       type: object
@@ -10914,6 +10914,19 @@ components:
           $ref: "#/components/schemas/TestWorkflowResourcesList"
         requests:
           $ref: "#/components/schemas/TestWorkflowResourcesList"
+
+    TestWorkflowPodResources:
+      type: object
+      description: pod-level resource requests and limits, keyed by the Kubernetes resource name, such as cpu, memory or hugepages-2Mi
+      properties:
+        limits:
+          type: object
+          additionalProperties:
+            type: string
+        requests:
+          type: object
+          additionalProperties:
+            type: string
 
     TestWorkflowResourcesList:
       type: object
