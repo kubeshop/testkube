@@ -7,7 +7,7 @@ metadata:
     tool: soapui
     category: api-testing
   annotations:
-    testkube.io/description: "Checks that Testkube runs a SoapUI project with the SoapUI 5.9.1 testrunner."
+    testkube.io/description: "SoapUI smoke test"
     testkube.io/icon: soapui
 spec:
   content:
@@ -38,7 +38,7 @@ metadata:
     tool: soapui
     category: api-testing
   annotations:
-    testkube.io/description: "Checks that the SoapUI testrunner image runs a project from its COMMAND_LINE env value, without a shell command."
+    testkube.io/description: "SoapUI smoke test using the COMMAND_LINE environment variable"
     testkube.io/icon: soapui
 description: Running SoapUI test using COMMAND_LINE ENV variable
 spec:
@@ -72,7 +72,7 @@ metadata:
     tool: soapui
     category: api-testing
   annotations:
-    testkube.io/description: "Checks that a negative step makes the workflow pass when the SoapUI testrunner fails on a project file that does not exist."
+    testkube.io/description: "SoapUI negative test with a missing project file"
     testkube.io/icon: soapui
 spec:
   content:
@@ -141,7 +141,7 @@ metadata:
     tool: soapui
     category: api-testing
   annotations:
-    testkube.io/description: "Checks that the official/soapui/beta template runs a SoapUI project."
+    testkube.io/description: "SoapUI smoke test using the official template"
     testkube.io/icon: soapui
 spec:
   content:
