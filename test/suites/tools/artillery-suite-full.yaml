@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: artillery
+  annotations:
+    testkube.io/description: "Groups all Artillery workflows, to check the Artillery integration: plain, template and distributed runs."
 spec:
   container:
     resources:

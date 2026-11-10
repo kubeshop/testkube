@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: soapui
+  annotations:
+    testkube.io/description: "Groups all SoapUI workflows, to check the SoapUI integration: plain, COMMAND_LINE env, template and negative runs."
 spec:
   container:
     resources:
