@@ -20,6 +20,8 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	utilnet "k8s.io/apimachinery/pkg/util/net"
+
+	"github.com/kubeshop/testkube/pkg/retry"
 )
 
 const cleanupRetryCount = 5
@@ -27,7 +29,7 @@ const cleanupRetryCount = 5
 // cleanupRetryDelay is a var so tests can shorten it, matching pkg/runner's overridable delay.
 var cleanupRetryDelay = 500 * time.Millisecond
 
-// cleanupRetryBudget is the wall time one retryTransient call can spend sleeping.
+// cleanupRetryBudget is the longest time that one call under cleanupPolicy waits between attempts.
 func cleanupRetryBudget() time.Duration {
 	var total time.Duration
 	for attempt := 0; attempt < cleanupRetryCount-1; attempt++ {
@@ -174,39 +176,8 @@ func isFullyTransientCleanupError(err error) bool {
 	return total > 0 && transient == total
 }
 
-// retryTransient calls fn until it succeeds, until no attempt could help, or until the attempts
-// run out. A cancelled context stops the loop and joins its cause onto the last error, so the
-// caller still sees what actually failed.
-func retryTransient(ctx context.Context, count int, delayBase time.Duration, fn func() error) error {
-	if count < 1 {
-		count = 1
-	}
-
-	var err error
-	for attempt := 0; attempt < count; attempt++ {
-		if ctxErr := ctx.Err(); ctxErr != nil {
-			if err == nil {
-				return ctxErr
-			}
-			return errors.Join(err, ctxErr)
-		}
-
-		err = fn()
-		if err == nil {
-			return nil
-		}
-		if !shouldRetryCleanupError(err) {
-			return err
-		}
-		if attempt == count-1 {
-			break
-		}
-
-		select {
-		case <-ctx.Done():
-			return errors.Join(err, ctx.Err())
-		case <-time.After(time.Duration(attempt+1) * delayBase):
-		}
-	}
-	return err
+// cleanupPolicy retries a call of the services cleanup while another attempt could help. It reads
+// cleanupRetryDelay on each call, so a test can shorten the delay.
+func cleanupPolicy() retry.Policy {
+	return retry.Policy{Attempts: cleanupRetryCount, Delay: cleanupRetryDelay, RetryIf: shouldRetryCleanupError}
 }
