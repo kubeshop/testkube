@@ -141,7 +141,7 @@ metadata:
     junit: "true"
     category: api-testing
   annotations:
-    testkube.io/description: "Postman smoke test with JUnit reporting enabled"
+    testkube.io/description: "Postman smoke test with JUnit reporting enabled. Generates a JUnit XML report artifact."
     testkube.io/icon: postman
 spec:
   content:

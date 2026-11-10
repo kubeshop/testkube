@@ -8,7 +8,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
-    testkube.io/description: "Locust smoke test"
+    testkube.io/description: "Locust smoke test. Generates an HTML report artifact."
     testkube.io/icon: locust
 spec:
   content:
@@ -46,7 +46,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
-    testkube.io/description: "Locust smoke test using the master image"
+    testkube.io/description: "Locust smoke test using the master image. Generates an HTML report artifact."
     testkube.io/icon: locust
 spec:
   content:
@@ -84,7 +84,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
-    testkube.io/description: "Locust smoke test using the latest image"
+    testkube.io/description: "Locust smoke test using the latest image. Generates an HTML report artifact."
     testkube.io/icon: locust
 spec:
   content:

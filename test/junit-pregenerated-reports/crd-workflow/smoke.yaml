@@ -7,7 +7,7 @@ metadata:
     core-tests: junit-pregenerated
     junit: "true"
   annotations:
-    testkube.io/description: "JUnit report with a suite-level failure"
+    testkube.io/description: "JUnit report with a suite-level failure. Publishes a pregenerated JUnit XML artifact."
 spec:
   content:
     git:
@@ -38,7 +38,7 @@ metadata:
     core-tests: junit-pregenerated
     junit: "true"
   annotations:
-    testkube.io/description: "JUnit report with a suite containing no test cases"
+    testkube.io/description: "JUnit report with a suite containing no test cases. Publishes a pregenerated JUnit XML artifact."
 spec:
   content:
     git:
@@ -69,7 +69,7 @@ metadata:
     core-tests: junit-pregenerated
     junit: "true"
   annotations:
-    testkube.io/description: "JUnit report with both an error and a failure in one test case"
+    testkube.io/description: "JUnit report with both an error and a failure in one test case. Publishes a pregenerated JUnit XML artifact."
 spec:
   content:
     git:
