@@ -50,6 +50,13 @@ type TestBundleSpec struct {
 	// added in the dashboard.
 	// +optional
 	Skills []TestBundleSkill `json:"skills"`
+	// Contexts are the bundle's Attached Context, in this order: guidance
+	// its authoring sandbox holds for the AI to read, never part of the
+	// tests the bundle publishes. As with skills, applying a list replaces
+	// the whole list, an empty list removes them all, and when contexts is
+	// omitted the bundle's Attached Context is left as it is.
+	// +optional
+	Contexts []TestBundleContext `json:"contexts"`
 	// AIAgents are the AI Agents, by metadata.name, the bundle's authoring
 	// may delegate to. Each must be public. When it is omitted, a new bundle
 	// starts with the environment's defaults for new bundles and an existing
@@ -85,6 +92,16 @@ type TestBundleSkill struct {
 	Content string `json:"content"`
 	// Metadata is extra Agent Skills spec metadata.
 	Metadata map[string]string `json:"metadata,omitempty"`
+}
+
+// TestBundleContext is one piece of a Test Bundle's Attached Context.
+type TestBundleContext struct {
+	// Title names the context in the dashboard. Titles need not be unique.
+	// +kubebuilder:validation:MinLength=1
+	Title string `json:"title"`
+	// Content is the guidance itself.
+	// +kubebuilder:validation:MinLength=1
+	Content string `json:"content"`
 }
 
 // TestBundleStatus is the Control Plane's view of a Test Bundle. It is

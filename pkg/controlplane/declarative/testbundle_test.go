@@ -127,6 +127,51 @@ spec:
 	assert.Equal(t, []string{"triager", "checkout"}, []string{objects[0].GetName(), objects[1].GetName()})
 }
 
+// A bundle that leaves contexts out keeps its Attached Context, while
+// contexts: [] removes it all, as with skills.
+func TestTestBundleContexts_AbsentAndEmptyDiffer(t *testing.T) {
+	const head = "apiVersion: testbundles.testkube.io/v1alpha1\nkind: TestBundle\nmetadata:\n  name: checkout\nspec:\n  displayName: Checkout\n"
+	for name, tc := range map[string]struct {
+		yaml    string
+		nil     bool
+		payload string
+	}{
+		"absent": {yaml: head, nil: true},
+		"null":   {yaml: head + "  contexts: null\n", nil: true},
+		"empty":  {yaml: head + "  contexts: []\n", nil: false, payload: `"contexts":[]`},
+	} {
+		t.Run(name, func(t *testing.T) {
+			objects, err := Decode(strings.NewReader(tc.yaml))
+			require.NoError(t, err)
+			require.Len(t, objects, 1)
+			require.NoError(t, Normalize(objects[0]))
+			bundle := objects[0].(*testbundlesv1.TestBundle)
+			assert.Equal(t, tc.nil, bundle.Spec.Contexts == nil)
+
+			payload, err := ApplyPayload(bundle)
+			require.NoError(t, err)
+			if tc.payload == "" {
+				assert.NotContains(t, string(payload), "contexts", "an absent list is not sent as null or []")
+			} else {
+				assert.Contains(t, string(payload), tc.payload)
+			}
+			sent, err := DecodeObject(payload)
+			require.NoError(t, err)
+			assert.Equal(t, tc.nil, sent.(*testbundlesv1.TestBundle).Spec.Contexts == nil, "the Control Plane reads what was applied")
+		})
+	}
+}
+
+// Attached Context titles are trimmed and may repeat, as in the dashboard.
+func TestNormalize_TestBundleContextTitles(t *testing.T) {
+	b := testBundle(testbundlesv1.TestBundleSpec{Contexts: []testbundlesv1.TestBundleContext{
+		{Title: "  Notes ", Content: "first"},
+		{Title: "Notes", Content: "second"},
+	}})
+	require.NoError(t, Normalize(b))
+	assert.Equal(t, []testbundlesv1.TestBundleContext{{Title: "Notes", Content: "first"}, {Title: "Notes", Content: "second"}}, b.Spec.Contexts)
+}
+
 // A bundle that leaves skills out keeps its Skills, while skills: [] removes
 // them all, so the difference has to survive decoding, normalizing and the
 // apply payload.

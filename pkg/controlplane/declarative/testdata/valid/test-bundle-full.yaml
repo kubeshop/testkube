@@ -21,6 +21,10 @@ spec:
     - name: contract-tests
       description: Use when a test checks the checkout API's responses.
       content: Contract tests use the OpenAPI spec in api/checkout.yaml.
+  contexts:
+    - title: Checkout API conventions
+      content: |
+        Every endpoint answers JSON and errors follow RFC 9457.
   aiAgents:
     - triager
     - helper

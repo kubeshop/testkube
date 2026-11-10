@@ -96,6 +96,7 @@ func TestFixtures_Invalid(t *testing.T) {
 			"spec.skills[0].name", "lowercase letters, digits and single hyphens",
 			"spec.skills[1].description: Required", "spec.skills[1].content: Required",
 			"spec.skills[2].name", "Duplicate value",
+			"spec.contexts[0].title: Required", "spec.contexts[1].content: Required",
 			"spec.aiAgents[1]", "spec.aiAgents[2]",
 		},
 		"test-bundle-git-credentials.yaml": {"spec.gitSource.uri", "must not carry credentials"},

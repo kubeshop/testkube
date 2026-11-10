@@ -65,6 +65,7 @@ func normalizeTestBundle(b *testbundlesv1.TestBundle) field.ErrorList {
 		total += utf8.RuneCountInString(skill.Content)
 	}
 	errs = append(errs, normalizeSkills(skills, total, path.Child("skills"))...)
+	errs = append(errs, normalizeTestBundleContexts(spec.Contexts, path.Child("contexts"))...)
 
 	if spec.AIAgents != nil {
 		// Checked before normalizeNames sorts them, so an error names the
@@ -76,6 +77,25 @@ func normalizeTestBundle(b *testbundlesv1.TestBundle) field.ErrorList {
 			}
 		}
 		errs = append(errs, normalizeNames(spec.AIAgents, agentsPath)...)
+	}
+	return errs
+}
+
+// normalizeTestBundleContexts trims each Attached Context's title and checks
+// that it has a title and content, as the dashboard does. Titles may repeat,
+// as they may there, so every bundle's Attached Context can be exported and
+// applied back. No content is echoed.
+func normalizeTestBundleContexts(contexts []testbundlesv1.TestBundleContext, path *field.Path) field.ErrorList {
+	var errs field.ErrorList
+	for i := range contexts {
+		c := &contexts[i]
+		c.Title = strings.TrimSpace(c.Title)
+		if c.Title == "" {
+			errs = append(errs, field.Required(path.Index(i).Child("title"), "a title such as Checkout API conventions"))
+		}
+		if strings.TrimSpace(c.Content) == "" {
+			errs = append(errs, field.Required(path.Index(i).Child("content"), "the guidance the AI reads"))
+		}
 	}
 	return errs
 }

@@ -87,8 +87,8 @@
 // '_', so unlike an AI resource's name it is not always a DNS-1123 label.
 //
 // The manifest declares the bundle's definition only: display name,
-// description, labels, the Git source its tests are read from, its Skills and
-// the AI Agents it may delegate to. What authoring produces (test files,
+// description, labels, the Git source its tests are read from, its Skills, its
+// Attached Context and the AI Agents it may delegate to. What authoring produces (test files,
 // chats, the sandbox, the shared workflow and the GitHub repository set up for
 // chats) stays in the Control Plane; the workflow's name and chat activity are
 // exported in status and never applied. Deleting a bundle is the dashboard's
@@ -104,6 +104,15 @@
 // together they hold at most MaxAlwaysIncludedSkillsLength characters of
 // content, since every authoring prompt carries all of them. A Git source URI
 // must not carry credentials, which Normalize reports without echoing the URI.
+//
+// contexts is the bundle's Attached Context: guidance its authoring sandbox
+// holds for the AI to read, apart from its Skills. It is kept in manifest
+// order and replaced as a whole as skills is, and left as stored when
+// omitted, so TestBundleSpec.Contexts is not omitempty either. Each entry
+// needs a title and content and nothing more, as in the dashboard: titles may
+// repeat, so an entry has no key, and applying a list writes it position by
+// position.
+//
 // It must be a URL with a scheme and host, or Git's scp-like [user@]host:path,
 // whose path may hold an '@' (team/repo@v2.git) unless, with no user, it comes
 // before the path's first '/', where host:secret@... reads as

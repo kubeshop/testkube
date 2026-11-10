@@ -62,6 +62,31 @@ spec:
                 items:
                   type: string
                 type: array
+              contexts:
+                description: |-
+                  Contexts are the bundle's Attached Context, in this order: guidance
+                  its authoring sandbox holds for the AI to read, never part of the
+                  tests the bundle publishes. As with skills, applying a list replaces
+                  the whole list, an empty list removes them all, and when contexts is
+                  omitted the bundle's Attached Context is left as it is.
+                items:
+                  description: TestBundleContext is one piece of a Test Bundle's Attached
+                    Context.
+                  properties:
+                    content:
+                      description: Content is the guidance itself.
+                      minLength: 1
+                      type: string
+                    title:
+                      description: Title names the context in the dashboard. Titles
+                        need not be unique.
+                      minLength: 1
+                      type: string
+                  required:
+                  - content
+                  - title
+                  type: object
+                type: array
               description:
                 description: Description of the bundle.
                 type: string

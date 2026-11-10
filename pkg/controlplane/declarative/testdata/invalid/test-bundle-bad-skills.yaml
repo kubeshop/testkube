@@ -13,6 +13,11 @@ spec:
     - name: notes
       description: Notes.
       content: Some notes.
+  contexts:
+    - title: "  "
+      content: Read the README first.
+    - title: Notes
+      content: ""
   aiAgents:
     - triager
     - triager
