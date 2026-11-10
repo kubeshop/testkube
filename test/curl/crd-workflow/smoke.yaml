@@ -7,7 +7,7 @@ metadata:
     tool: curl
     category: api-testing
   annotations:
-    testkube.io/description: "Checks with curl 8.7.1 that the test page answers with a success status."
+    testkube.io/description: "curl smoke test"
     testkube.io/icon: curl
 spec:
   container:
@@ -32,7 +32,7 @@ metadata:
     tool: curl
     category: api-testing
   annotations:
-    testkube.io/description: "Runs the curl check from an image in a private registry, to prove that image pull secrets work."
+    testkube.io/description: "curl smoke test using a private registry image"
 spec:
   pod:
     imagePullSecrets:
@@ -59,7 +59,7 @@ metadata:
     tool: curl
     category: api-testing
   annotations:
-    testkube.io/description: "Runs the curl check in parallel for each URL of a matrix, to prove the matrix expansion of a step."
+    testkube.io/description: "curl smoke test across a URL matrix"
 spec:
   container:
     resources:

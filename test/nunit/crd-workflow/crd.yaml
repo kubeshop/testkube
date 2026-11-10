@@ -9,7 +9,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
-    testkube.io/description: "Checks that Testkube runs NUnit tests with dotnet test and keeps a JUnit report of the results."
+    testkube.io/description: "NUnit smoke test"
     testkube.io/icon: nunit
 spec:
   content:
