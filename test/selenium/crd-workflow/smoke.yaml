@@ -9,7 +9,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
-    testkube.io/description: "Selenium Java smoke test"
+    testkube.io/description: "Selenium Java smoke test. Generates JUnit XML and HTML report artifacts."
     testkube.io/icon: selenium
 description: "Selenium Java + Standalone Chrome"
 spec:
@@ -67,7 +67,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
-    testkube.io/description: "Selenium Java smoke test using a hub and Chrome nodes"
+    testkube.io/description: "Selenium Java smoke test using a hub and Chrome nodes. Generates JUnit XML and HTML report artifacts."
     testkube.io/icon: selenium
 description: "Selenium Java + Hub + Chrome Nodes"
 spec:
@@ -162,7 +162,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
-    testkube.io/description: "Selenium Python smoke test"
+    testkube.io/description: "Selenium Python smoke test. Generates a JUnit XML report artifact."
     testkube.io/icon: selenium
 description: "Selenium Python + Standalone Chrome"
 spec:
@@ -225,7 +225,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
-    testkube.io/description: "Selenium Python smoke test using Selenium hub and nodes"
+    testkube.io/description: "Selenium Python smoke test using Selenium hub and nodes. Generates a JUnit XML report artifact."
     testkube.io/icon: selenium
 description: "Selenium Python + Hub + Chrome Nodes"
 spec:
@@ -315,7 +315,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
-    testkube.io/description: "Selenium JavaScript with Mocha smoke test"
+    testkube.io/description: "Selenium JavaScript with Mocha smoke test. Generates a JUnit XML report artifact."
     testkube.io/icon: selenium
 description: "Selenium JS (selenium-webdriver) + Mocha + Standalone Chrome"
 spec:
@@ -377,7 +377,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
-    testkube.io/description: "Selenium JavaScript with Cucumber smoke test"
+    testkube.io/description: "Selenium JavaScript with Cucumber smoke test. Generates a JUnit XML report artifact."
     testkube.io/icon: selenium
 description: "Selenium JS (selenium-webdriver) + Cucumber + Standalone Chrome"
 spec:

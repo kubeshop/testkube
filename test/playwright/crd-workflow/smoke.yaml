@@ -10,7 +10,7 @@ metadata:
     playwright-traces: "on"
     category: e2e-ui-testing
   annotations:
-    testkube.io/description: "Playwright smoke test"
+    testkube.io/description: "Playwright smoke test. Generates JUnit XML, HTML report and trace artifacts."
     testkube.io/icon: playwright
 spec:
   content:
@@ -59,7 +59,7 @@ metadata:
     playwright-traces: "on"
     category: e2e-ui-testing
   annotations:
-    testkube.io/description: "Playwright smoke test with video recording enabled"
+    testkube.io/description: "Playwright smoke test with video recording enabled. Generates JUnit XML, HTML report, trace and video artifacts."
     testkube.io/icon: playwright
 description: "Playwright project with video recording enabled (in playwright config)"
 spec:
@@ -106,7 +106,7 @@ metadata:
     artifacts: "true"
     category: e2e-ui-testing
   annotations:
-    testkube.io/description: "Playwright smoke test using command/args"
+    testkube.io/description: "Playwright smoke test using command/args. Generates an HTML report artifact."
     testkube.io/icon: playwright
 spec:
   content:
@@ -196,7 +196,7 @@ metadata:
     artifacts: "true"
     category: e2e-ui-testing
   annotations:
-    testkube.io/description: "Distributed Playwright test"
+    testkube.io/description: "Distributed Playwright test. Generates a merged HTML report artifact."
     testkube.io/icon: playwright
 spec:
   content:
@@ -250,7 +250,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
-    testkube.io/description: "Distributed Playwright test with JUnit reporting enabled"
+    testkube.io/description: "Distributed Playwright test with JUnit reporting enabled. Generates JUnit XML artifacts per shard."
     testkube.io/icon: playwright
 description: "Distributed Playwright with `--shard`"
 spec:

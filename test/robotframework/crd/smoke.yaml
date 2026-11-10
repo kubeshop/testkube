@@ -8,7 +8,7 @@ metadata:
     junit: "true"
     artifacts: "true"
   annotations:
-    testkube.io/description: "Robot Framework browser smoke test"
+    testkube.io/description: "Robot Framework browser smoke test. Generates JUnit XML, HTML reports, XML results and log artifacts."
     testkube.io/icon: robotframework
 spec:
   content:

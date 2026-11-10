@@ -9,7 +9,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
-    testkube.io/description: "NUnit smoke test"
+    testkube.io/description: "NUnit smoke test. Generates a JUnit XML report artifact."
     testkube.io/icon: nunit
 spec:
   content:

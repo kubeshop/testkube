@@ -8,7 +8,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
-    testkube.io/description: "Artillery smoke test"
+    testkube.io/description: "Artillery smoke test. Generates a JSON report artifact."
     testkube.io/icon: artillery
 spec:
   content:
@@ -76,7 +76,7 @@ metadata:
     tool: artillery
     category: performance-testing
   annotations:
-    testkube.io/description: "Artillery smoke test using the official template"
+    testkube.io/description: "Artillery smoke test using the official template. Generates a JSON report artifact."
     testkube.io/icon: artillery
 spec:
   container:
@@ -111,7 +111,7 @@ metadata:
     tool: artillery
     category: performance-testing
   annotations:
-    testkube.io/description: "Artillery smoke test using the official template and latest image"
+    testkube.io/description: "Artillery smoke test using the official template and latest image. Generates a JSON report artifact."
     testkube.io/icon: artillery
 spec:
   container:
@@ -147,7 +147,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
-    testkube.io/description: "Distributed Artillery smoke test"
+    testkube.io/description: "Distributed Artillery smoke test. Generates JSON and HTML report artifacts per worker."
     testkube.io/icon: artillery
 spec:
   config:
