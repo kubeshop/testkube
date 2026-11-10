@@ -7,7 +7,7 @@ metadata:
     tool: pact
     category: api-testing
   annotations:
-    testkube.io/description: "Checks that Pact JS consumer tests run with Jest in Testkube."
+    testkube.io/description: "Pact JS consumer contract smoke test"
     testkube.io/icon: pact
 spec:
   content:

@@ -9,7 +9,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
-    testkube.io/description: "Checks that a passing JUnit 5 run with Maven passes and that its Surefire JUnit reports are kept. Generates JUnit XML and text report artifacts."
+    testkube.io/description: "JUnit 5 smoke test. Generates JUnit XML and text report artifacts."
     testkube.io/icon: junit
 spec:
   content:
