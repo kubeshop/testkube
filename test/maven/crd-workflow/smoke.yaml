@@ -7,7 +7,7 @@ metadata:
     tool: maven
     category: build-integration
   annotations:
-    testkube.io/description: "Checks that Testkube runs the tests of a Maven 3.9.6 project on JDK 11."
+    testkube.io/description: "Maven smoke test on JDK 11"
     testkube.io/icon: maven
 spec:
   content:
@@ -42,7 +42,7 @@ metadata:
     tool: maven
     category: build-integration
   annotations:
-    testkube.io/description: "Checks that the official/maven/v1 template runs Maven tests on JDK 11."
+    testkube.io/description: "Maven smoke test on JDK 11 using the official template"
     testkube.io/icon: maven
 spec:
   content:

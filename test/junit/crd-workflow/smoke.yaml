@@ -9,7 +9,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
-    testkube.io/description: "Checks that a passing JUnit 5 run with Maven passes and that its Surefire JUnit reports are kept."
+    testkube.io/description: "JUnit 5 smoke test"
     testkube.io/icon: junit
 spec:
   content:
@@ -44,7 +44,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
-    testkube.io/description: "Runs a failing JUnit 5 test with Maven; the execution must fail and the JUnit report must show the failure."
+    testkube.io/description: "JUnit 5 smoke test with an expected failure"
     testkube.io/icon: junit
 spec:
   content:
@@ -79,7 +79,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
-    testkube.io/description: "Runs all JUnit 5 tests of the project, some of which fail, so the execution fails with a JUnit report of mixed results."
+    testkube.io/description: "JUnit 5 smoke test with mixed results"
     testkube.io/icon: junit
 spec:
   content:
