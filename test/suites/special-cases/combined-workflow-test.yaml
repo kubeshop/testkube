@@ -7,7 +7,7 @@ metadata:
     type: suite
     tool: artillery
   annotations:
-    testkube.io/description: "Checks that one execute step can start both a TestWorkflow and a legacy Test."
+    testkube.io/description: "Combined Artillery TestWorkflow and legacy Test execution suite"
 spec:
   container:
     resources:

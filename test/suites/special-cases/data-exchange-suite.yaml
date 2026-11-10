@@ -5,7 +5,7 @@ metadata:
   labels:
     core-tests: data-exchange
   annotations:
-    testkube.io/description: "Producer of the data exchange suite: it writes an output and artifacts for another workflow to receive."
+    testkube.io/description: "Data exchange producer. Generates a token output and JSON/TXT artifacts."
 spec:
   container:
     resources:
@@ -47,7 +47,7 @@ metadata:
   labels:
     core-tests: data-exchange
   annotations:
-    testkube.io/description: "Checks that it received the token output of the producer workflow as a config value."
+    testkube.io/description: "Data exchange consumer testing parent/sibling outputs and artifacts"
 spec:
   config:
     token:
@@ -103,7 +103,7 @@ metadata:
     core-tests: data-exchange
     type: suite
   annotations:
-    testkube.io/description: "Suite that runs the producer workflow, fetches its artifacts and passes its output to the consumer workflow, to check data exchange between workflows."
+    testkube.io/description: "Cross-workflow output and artifact exchange suite. Generates a JSON fixture artifact."
 spec:
   container:
     resources:

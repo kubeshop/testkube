@@ -6,7 +6,7 @@ metadata:
   labels:
     core-tests: large
   annotations:
-    testkube.io/description: "Checks that the log stream and the stored logs stay complete when a step writes about 1 MB of logs at full speed."
+    testkube.io/description: "1 MB log output test without delay"
 description: "Logs: 1 MB"
 spec:
   container:
@@ -30,7 +30,7 @@ metadata:
   labels:
     core-tests: large
   annotations:
-    testkube.io/description: "Checks that live and stored logs stay complete when a step writes about 1 MB of logs over time."
+    testkube.io/description: "1 MB log output test without delay"
 description: "Logs: 1 MB"
 spec:
   container:
@@ -54,7 +54,7 @@ metadata:
   labels:
     core-tests: large
   annotations:
-    testkube.io/description: "Checks that Testkube handles about 11 MB of logs written at full speed."
+    testkube.io/description: "11 MB log output test without delay"
 description: "Logs: 11 MB"
 spec:
   container:
@@ -78,7 +78,7 @@ metadata:
   labels:
     core-tests: large
   annotations:
-    testkube.io/description: "Checks that a long execution with steady log output keeps all of its about 11 MB of logs."
+    testkube.io/description: "11 MB log output test with a 1s interval"
 description: "Logs: 11 MB"
 spec:
   container:
@@ -102,7 +102,7 @@ metadata:
   labels:
     core-tests: large
   annotations:
-    testkube.io/description: "Checks that a long execution keeps all of its about 22 MB of logs."
+    testkube.io/description: "Large log output test with a 2s interval"
 description: "Logs: 22 MB"
 spec:
   container:
@@ -126,7 +126,7 @@ metadata:
   labels:
     core-tests: large
   annotations:
-    testkube.io/description: "Checks that Testkube uploads and keeps a 1 GB artifact."
+    testkube.io/description: "1 GB artifact upload test. Generates a TXT artifact."
 description: "Artifacts: 1GB file generated with openssl"
 spec:
   container:
@@ -151,7 +151,7 @@ metadata:
   labels:
     core-tests: large
   annotations:
-    testkube.io/description: "Checks that Testkube uploads and keeps a 100 MB artifact."
+    testkube.io/description: "100 MB artifact upload test. Generates a TXT artifact."
 description: "Artifacts: 100MB file generated with openssl"
 spec:
   container:
