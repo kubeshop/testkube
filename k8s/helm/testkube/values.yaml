@@ -546,6 +546,12 @@ testkube-api:
   # -- Testkube API name override
   nameOverride: api-server
 
+  # -- Deployment update strategy. Leave empty to use Kubernetes defaults.
+  # Example for non-overlapping upgrades:
+  # deploymentStrategy:
+  #   type: Recreate
+  deploymentStrategy: {}
+
   # -- Toggle whether to deploy Testkube API RBAC
   rbac:
     create: true
