@@ -8,7 +8,7 @@ metadata:
     dev-quality-gate: "true"
     release-quality-gate: "true"
   annotations:
-    testkube.io/description: "Suite that runs the special-cases workflows (env, workingDir, securityContext, Git, optional, conditional, retry, negative and parallel steps); it is a quality gate for dev and release."
+    testkube.io/description: "Workflow engine special-cases suite. Dev/release quality gate."
 spec:
   container:
     resources:

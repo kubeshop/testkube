@@ -6,7 +6,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Has two cron events at 12:05 in the Europe/Warsaw and America/New_York time zones, to check that cron schedules respect the time zone."
+    testkube.io/description: "Cron trigger test with Europe/Warsaw and America/New_York timezones"
 description: "Cron trigger with timezone - workflow should run at 12:05 PM Europe/Warsaw and 12:05 PM America/New_York"
 spec:
   events:
@@ -32,7 +32,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Checks that a 30 minute execution with a log line each second completes with all of its logs."
+    testkube.io/description: "30-minute workflow execution test with continuous log output"
 description: "Long lasting workflow - 30 minutes"
 spec:
   steps:
@@ -50,7 +50,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Checks that a 90 minute execution with a log line each second completes with all of its logs."
+    testkube.io/description: "90-minute workflow execution test with continuous log output"
 description: "Long lasting workflow - 90 minutes"
 spec:
   steps:
@@ -68,7 +68,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Checks that a 90 minute execution with no output is not treated as stuck and completes."
+    testkube.io/description: "90-minute workflow execution test without intermediate log output"
 description: "Long lasting workflow - 90 minutes sleep + echo in the end"
 spec:
   steps:
@@ -83,7 +83,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Checks that a service with a dash in its name can be reached by its IP through the at() expression and through an env value."
+    testkube.io/description: "Service name with a dash test using at() and ENV"
 description: "Service name with dash"
 spec:
   container:
@@ -114,7 +114,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "A 30 second child workflow that passes; other special cases start it to check child executions."
+    testkube.io/description: "30-second child workflow for execute tests"
 spec:
   steps:
   - name: Run test
@@ -128,7 +128,7 @@ metadata:
   labels:
     core-tests: special-cases
   annotations:
-    testkube.io/description: "Checks that one execute step can start 100 child executions at once."
+    testkube.io/description: "execute test with 100 parallel child workflows"
 spec:
   steps:
   - execute:

@@ -6,7 +6,7 @@ metadata:
     core-tests: special-cases
     environment: dev
   annotations:
-    testkube.io/description: "Checks that organization and environment credentials reach steps and services as env values; it runs only at .dev, where these credentials exist."
+    testkube.io/description: "Organization/environment credential propagation test across steps and services (.dev only)"
 description: ".dev environment-only!"
 spec:
   container:
@@ -81,7 +81,7 @@ metadata:
     core-tests: special-cases
     environment: dev
   annotations:
-    testkube.io/description: "Checks that a private Git repository can be checked out with credentials and used by a step; it runs only at .dev, where these credentials exist."
+    testkube.io/description: "Private Git repository checkout test using credentials (.dev only)"
 description: ".dev environment-only!"
 spec:
   content:

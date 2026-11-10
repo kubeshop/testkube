@@ -14,7 +14,7 @@ metadata:
   labels:
     core-tests: dependency-cache
   annotations:
-    testkube.io/description: "Fills the dependency cache on a miss and checks on the next execution that the cache restores the entry."
+    testkube.io/description: "Dependency cache save/restore test"
 description: "Cache round trip - populates on a miss, restores on the next run"
 spec:
   config:
@@ -66,7 +66,7 @@ metadata:
   labels:
     core-tests: dependency-cache
   annotations:
-    testkube.io/description: "Writer of the dependency cache suite: it stores an environment-scope cache entry for another workflow to read."
+    testkube.io/description: "Environment-scope dependency cache writer"
 description: "Cache, environment scope - writes an entry meant to be read by another workflow"
 spec:
   config:
@@ -105,7 +105,7 @@ metadata:
   labels:
     core-tests: dependency-cache
   annotations:
-    testkube.io/description: "Checks that it can read an environment-scope cache entry that a different workflow wrote."
+    testkube.io/description: "Environment-scope dependency cache reader across workflows"
 description: "Cache, environment scope - a different workflow reads the shared entry"
 spec:
   config:
@@ -144,7 +144,7 @@ metadata:
   labels:
     core-tests: dependency-cache
   annotations:
-    testkube.io/description: "Checks that a workflow-scope cache key does not reach the entry of another workflow."
+    testkube.io/description: "Workflow-scope dependency cache isolation test"
 description: "Cache, workflow scope - the same key does not reach another workflow's entry"
 spec:
   config:
@@ -184,7 +184,7 @@ metadata:
   labels:
     core-tests: dependency-cache
   annotations:
-    testkube.io/description: "Checks that a cache key that cannot resolve gives a cache miss, not a failed step."
+    testkube.io/description: "Unresolvable cache key test with a cache miss and a passing step"
 description: "Cache - a key that cannot resolve is a miss, not a failed step"
 spec:
   container:
@@ -226,7 +226,7 @@ metadata:
     core-tests: dependency-cache
     type: suite
   annotations:
-    testkube.io/description: "Suite that runs the dependency cache workflows in order, for the assertions that need more than one execution."
+    testkube.io/description: "Dependency cache suite testing save/restore, sharing, isolation and unresolved keys"
 description: "Drives the dependency cache assertions that need more than one execution"
 spec:
   container:
