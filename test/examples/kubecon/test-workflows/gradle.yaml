@@ -5,6 +5,8 @@ metadata:
   labels:
     category: build-integration
     core-tests: workflows
+  annotations:
+    testkube.io/description: "Example that shows how to run Gradle tests in Testkube."
 spec:
   content:
     git:

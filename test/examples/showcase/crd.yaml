@@ -6,6 +6,8 @@ metadata:
   labels:
     demo: showcase-2
     workflow-suite: "true"
+  annotations:
+    testkube.io/description: "Groups the showcase workflows and starts them every 4 hours, so the showcase environment always has fresh results."
 spec:
   events:
   - cronjob:
@@ -36,6 +38,8 @@ metadata:
     demo: showcase-2
     artifacts: report
     junit: "true"
+  annotations:
+    testkube.io/description: "Showcase of a distributed k6 load test with configurable VUs and duration."
 spec:
   config:
     vus: {type: integer, default: 2}
@@ -98,6 +102,8 @@ metadata:
   labels:
     demo: showcase-3
     junit: "true"
+  annotations:
+    testkube.io/description: "Showcase of a Cypress browser matrix with JUnit reports."
 spec:
   content:
     git:
@@ -151,6 +157,8 @@ metadata:
   name: curl-with-nginx-service
   labels:
     demo: showcase-4
+  annotations:
+    testkube.io/description: "Showcase of a service: a step checks an nginx service with curl."
 spec:
   container:
     resources:
@@ -181,6 +189,8 @@ metadata:
   labels:
     demo: showcase-5
     artifacts-video: "true"
+  annotations:
+    testkube.io/description: "Showcase of a Cypress run with video recording."
 spec:
   content:
     git:
@@ -226,6 +236,8 @@ metadata:
   labels:
     demo: showcase-6
     junit: "true"
+  annotations:
+    testkube.io/description: "Showcase of a Postman run with a JUnit report."
 spec:
   content:
     git:
@@ -258,6 +270,8 @@ metadata:
   labels:
     demo: showcase-6
     junit: "true"
+  annotations:
+    testkube.io/description: "Showcase of a Cypress run with a JUnit report."
 spec:
   content:
     git:
@@ -305,6 +319,8 @@ metadata:
     demo: showcase-6
     artifacts-report: "true"
     junit: "true"
+  annotations:
+    testkube.io/description: "Showcase of a passing JUnit 5 run with its JUnit reports."
 spec:
   content:
     git:
@@ -338,6 +354,8 @@ metadata:
     artifacts-report: "true"
     junit: "true"
     expected-fail: "true"
+  annotations:
+    testkube.io/description: "Showcase of a failing JUnit 5 run, expected to fail, with a JUnit report of mixed results."
 spec:
   content:
     git:
@@ -369,6 +387,8 @@ metadata:
   labels:
     demo: showcase-6
     junit: "true"
+  annotations:
+    testkube.io/description: "Showcase of a passing pytest run with a JUnit report."
 spec:
   content:
     git:
@@ -404,6 +424,8 @@ metadata:
     demo: showcase-6
     junit: "true"
     expected-fail: "true"
+  annotations:
+    testkube.io/description: "Showcase of a failing pytest run, expected to fail, with a JUnit report of mixed results."
 spec:
   content:
     git:
@@ -438,6 +460,8 @@ metadata:
   labels:
     demo: showcase-6
     junit: "true"
+  annotations:
+    testkube.io/description: "Showcase of an NUnit run with a JUnit report."
 spec:
   content:
     git:
@@ -469,6 +493,8 @@ metadata:
   labels:
     demo: showcase-6
     junit: "true"
+  annotations:
+    testkube.io/description: "Showcase of a Playwright run with a JUnit report."
 spec:
   content:
     git:
@@ -506,6 +532,8 @@ metadata:
   name: template-trigger-remote-workflow
   labels:
     demo: showcase-9
+  annotations:
+    testkube.io/description: "Showcase template that sets a CLI context from config values and runs a workflow in another Testkube environment."
 spec:
   config:
     apiToken:
@@ -537,6 +565,8 @@ metadata:
   name: trigger-remote-workflow-with-template
   labels:
     demo: showcase-9
+  annotations:
+    testkube.io/description: "Showcase of a workflow that starts a workflow in another Testkube environment."
 spec:
   steps:
   - name: Run tests
