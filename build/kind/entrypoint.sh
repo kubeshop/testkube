@@ -210,7 +210,7 @@ if echo "$EXISTING_CLUSTERS" | grep -wq "testkube-cluster"; then
 else
   # Step 4: Create Kind cluster using a specific Kubernetes version
   log "Creating Kubernetes cluster using Kind (Kubernetes v1.31.0)..."
-  kind create cluster --name testkube-cluster --image kindest/node:v1.31.0 --wait 5m
+  kind create cluster --name testkube-cluster --image kindest/node:v1.34.11 --wait 5m
   if [ $? -ne 0 ]; then
     log "Testkube installation failed. Couldn't create Kind cluster."
     send_telenetry "docker_installation_failed" "kind_error" "Kind cluster was not created"
