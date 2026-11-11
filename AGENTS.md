@@ -4,7 +4,7 @@ Testkube Core: the agent services that run in a cluster, the `kubectl-testkube` 
 
 Owner: `.github/CODEOWNERS` names the owning team of each path; ask the owner of the path you change.
 
-Rules live in two places, and each owns one kind. This file owns how we work: commands, tests and pull requests. Each package's `doc.go` owns that package's behaviour. `CONTRIBUTING.md` walks outside contributors through the same steps. When two disagree, follow the owner and mention the conflict in the PR.
+Rules live in two places, and each owns one kind. This file owns how we work: commands, tests and pull requests. Each package's `doc.go` owns that package's behaviour. `CONTRIBUTING.md` is the starting guide for outside contributors; the rules here apply to them too. When two disagree, follow the owner and mention the conflict in the PR.
 
 ## 1. Verifying a change
 
