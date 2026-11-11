@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: workflow-trigger
+  annotations:
+    testkube.io/description: "Starts the cloud-ui-e2e dashboard tests at 08:25 and 16:25, to catch dashboard regressions in the release environment."
 spec:
   container:
     resources:
