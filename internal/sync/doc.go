@@ -27,7 +27,8 @@
 //
 // These controllers also need the Control Plane to advertise the controlplane-resources capability
 // (capabilities.CapabilityControlPlaneResources), so an older Control Plane never gets the arm. A
-// kind whose CRD is not installed, or that the agent may not list and watch in its namespace, is
+// kind whose CRD is not installed, that the agent may not list and watch in its namespace, or
+// whose access the agent may not check (a cluster that forbids SelfSubjectAccessReviews) is
 // skipped with a warning: a controller whose cache cannot sync would stop the manager, and the
 // agent with it. The Helm charts install the CRDs (testkube-crds) and grant the read access (the
 // runner chart's watcher role when gitops.enabled, and the testkube-api chart's

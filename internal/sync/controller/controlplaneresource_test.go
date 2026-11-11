@@ -8,7 +8,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	authorizationv1 "k8s.io/api/authorization/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -131,11 +133,15 @@ func TestControlPlaneResourceSyncReconcilerRejection(t *testing.T) {
 
 type fakeAccessReviews struct {
 	denied string
+	err    error
 	asked  []authorizationv1.ResourceAttributes
 }
 
 func (f *fakeAccessReviews) Create(_ context.Context, review *authorizationv1.SelfSubjectAccessReview, _ metav1.CreateOptions) (*authorizationv1.SelfSubjectAccessReview, error) {
 	f.asked = append(f.asked, *review.Spec.ResourceAttributes)
+	if f.err != nil {
+		return nil, f.err
+	}
 	out := review.DeepCopy()
 	out.Status.Allowed = review.Spec.ResourceAttributes.Verb != f.denied
 	return out, nil
@@ -155,4 +161,18 @@ func TestCanListAndWatch(t *testing.T) {
 	allowed, err = canListAndWatch(t.Context(), &fakeAccessReviews{denied: "watch"}, "testkube", "insights.testkube.io", "boards")
 	require.NoError(t, err)
 	assert.False(t, allowed)
+}
+
+// A cluster that forbids the access review itself makes the kind unavailable, which the caller
+// skips, rather than an error that stops the agent; any other failure is still an error.
+func TestCanListAndWatch_ReviewForbidden(t *testing.T) {
+	forbidden := apierrors.NewForbidden(schema.GroupResource{Group: "authorization.k8s.io", Resource: "selfsubjectaccessreviews"}, "", errors.New("RBAC: access denied"))
+	allowed, err := canListAndWatch(t.Context(), &fakeAccessReviews{err: forbidden}, "testkube", "insights.testkube.io", "boards")
+	require.ErrorIs(t, err, errAccessReviewForbidden)
+	assert.False(t, allowed)
+
+	unavailable := apierrors.NewServiceUnavailable("apiserver is starting")
+	_, err = canListAndWatch(t.Context(), &fakeAccessReviews{err: unavailable}, "testkube", "insights.testkube.io", "boards")
+	require.Error(t, err)
+	assert.NotErrorIs(t, err, errAccessReviewForbidden)
 }

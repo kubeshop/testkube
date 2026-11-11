@@ -2,12 +2,13 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 
 	"go.uber.org/zap"
 	authorizationv1 "k8s.io/api/authorization/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -40,9 +41,11 @@ func SyncedControlPlaneKinds() []declarative.Kind {
 }
 
 // NewControlPlaneResourceSyncControllers registers a sync controller for each synced kind whose
-// custom resource the agent can watch in namespace. A kind whose CRD is not installed, or that the
-// agent's role does not let it list and watch, is skipped with a warning rather than failing: a
-// controller that cannot sync its cache stops the manager, and with it the agent.
+// custom resource the agent can watch in namespace. A kind whose CRD is not installed, that the
+// agent's role does not let it list and watch, or whose access the agent may not check (a cluster
+// that forbids SelfSubjectAccessReviews), is skipped with a warning rather than failing: these
+// kinds are optional, and a controller that cannot sync its cache stops the manager, and with it
+// the agent.
 func NewControlPlaneResourceSyncControllers(ctx context.Context, mgr ctrl.Manager, store ControlPlaneResourceStore, namespace string, logger *zap.SugaredLogger) error {
 	clientset, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
@@ -59,10 +62,13 @@ func NewControlPlaneResourceSyncControllers(ctx context.Context, mgr ctrl.Manage
 			return fmt.Errorf("look up the %s CRD: %w", kind.Kind, err)
 		}
 		allowed, err := canListAndWatch(ctx, reviews, namespace, mapping.Resource.Group, mapping.Resource.Resource)
-		if err != nil {
+		switch {
+		case errors.Is(err, errAccessReviewForbidden):
+			logger.Warnw("not syncing a Control Plane resource kind: the agent may not check its access to it", "kind", kind.Kind, "group", kind.GroupVersion.Group, "namespace", namespace, "error", err)
+			continue
+		case err != nil:
 			return fmt.Errorf("check access to %s: %w", kind.Resource, err)
-		}
-		if !allowed {
+		case !allowed:
 			logger.Warnw("not syncing a Control Plane resource kind: the agent may not list and watch it", "kind", kind.Kind, "group", kind.GroupVersion.Group, "namespace", namespace)
 			continue
 		}
@@ -79,7 +85,12 @@ type accessReviews interface {
 	Create(ctx context.Context, review *authorizationv1.SelfSubjectAccessReview, opts metav1.CreateOptions) (*authorizationv1.SelfSubjectAccessReview, error)
 }
 
-// canListAndWatch reports whether the agent may list and watch the resource in namespace.
+// errAccessReviewForbidden is returned by canListAndWatch when the cluster refuses the agent's
+// access review itself, so whether it may read the resource is unknown.
+var errAccessReviewForbidden = errors.New("the agent may not create SelfSubjectAccessReviews")
+
+// canListAndWatch reports whether the agent may list and watch the resource in namespace. A
+// cluster that forbids the review itself is errAccessReviewForbidden.
 func canListAndWatch(ctx context.Context, reviews accessReviews, namespace, group, resource string) (bool, error) {
 	for _, verb := range []string{"list", "watch"} {
 		review := &authorizationv1.SelfSubjectAccessReview{
@@ -93,6 +104,9 @@ func canListAndWatch(ctx context.Context, reviews accessReviews, namespace, grou
 			},
 		}
 		result, err := reviews.Create(ctx, review, metav1.CreateOptions{})
+		if apierrors.IsForbidden(err) {
+			return false, fmt.Errorf("%w: %w", errAccessReviewForbidden, err)
+		}
 		if err != nil {
 			return false, err
 		}
@@ -119,7 +133,7 @@ func controlPlaneResourceSyncReconciler(client client.Reader, store ControlPlane
 		obj := kind.New()
 		err := client.Get(ctx, req.NamespacedName, obj)
 		switch {
-		case errors.IsNotFound(err):
+		case apierrors.IsNotFound(err):
 			// Deleted. Resources are named by their name alone in the Control Plane.
 			return ctrl.Result{}, deleteControlPlaneResource(ctx, store, kind, req.Name)
 		case err != nil:
