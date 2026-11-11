@@ -4,6 +4,8 @@ Testkube Core: the agent services that run in a cluster, the `kubectl-testkube` 
 
 Owner: `.github/CODEOWNERS` names the owning team of each path; ask the owner of the path you change.
 
+Rules live in two places, and each owns one kind. This file owns how we work: commands, tests and pull requests. Each package's `doc.go` owns that package's behaviour. `CONTRIBUTING.md` walks outside contributors through the same steps. When two disagree, follow the owner and mention the conflict in the PR.
+
 ## 1. Verifying a change
 
 Verification has two loops: the local commands below before every commit, and the pull request workflows in section 6 before asking for review. Use the make targets rather than `go build` or `go test`: `oss-unit-tests` runs `make unit-tests`, and the test targets carry the pinned `gotestsum` and the environment the integration tests expect. `make unit-tests` and `make integration-tests` take `PKG=` (packages) and `RUN=` (a `go test -run` pattern) to narrow a run, and `GOFLAGS=-count=1` skips cached results.
