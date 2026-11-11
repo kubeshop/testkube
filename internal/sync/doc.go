@@ -51,7 +51,7 @@
 // environment-id header with the sync-multi-namespace capability
 // (capabilities.CapabilityMultiNamespaceSync), which the agent exposes as
 // ProContext.MultiNamespaceSyncSupportedInControlPlane. Without it an agent syncs one namespace
-// per Environment. The agent does not fill the fields or the header yet.
+// per Environment.
 //
 // The Control Plane side lives in testkube-cloud-api: it persists the owner on the six syncable
 // tables and enforces it in internal/sync/ownership.go, on every Upsert and Delete path.

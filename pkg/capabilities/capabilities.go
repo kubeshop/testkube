@@ -32,7 +32,7 @@ const CapabilitySourceOfTruth Capability = "source-of-truth"
 
 // CapabilityMultiNamespaceSync is whether the control plane reads the namespace fields of the
 // sync API and the environment-id header, and keys GitOps ownership by (agentId, namespace).
-// Without it an agent must sync one namespace per Environment, as before.
+// Without it an agent must sync one namespace per Environment.
 const CapabilityMultiNamespaceSync Capability = "sync-multi-namespace"
 
 func Enabled(capabilities []*cloud.Capability, capability Capability) bool {
