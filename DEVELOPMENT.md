@@ -190,8 +190,8 @@ make test
 make lint
 
 # Run specific package tests
-go test ./cmd/api-server/... -v
-go test ./pkg/... -race
+make unit-tests PKG=./cmd/api-server/...
+make unit-tests PKG=./pkg/... GOFLAGS=-race
 ```
 
 ### Code Generation
