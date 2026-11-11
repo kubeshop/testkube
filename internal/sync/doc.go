@@ -18,11 +18,16 @@
 // contract spans four layers, and a change to one usually needs a matching change in the others:
 //
 //  1. Schema: Syncable.gitOpsOwner in api/v1/testkube.yaml, a GitOpsOwner holding the
-//     authoritative agentId plus a display-only agentName that may be stale after a rename. Run
-//     `make generate-openapi` after editing.
+//     authoritative agentId, the namespace the agent synced the resource from, and a
+//     display-only agentName that may be stale after a rename. The owner key is the pair
+//     (agentId, namespace); the namespace is empty for resources synced before it was recorded.
+//     Run `make generate-openapi` after editing.
 //  2. Wire: the Control Plane rejects a sync from a non-owning agent with the gRPC status
 //     codes.FailedPrecondition. That code is reserved for ownership conflicts on the sync API; do
-//     not reuse it there for other validation failures, or agents will misreport the cause.
+//     not reuse it there for other validation failures, or agents will misreport the cause. A
+//     request may carry the environment-id header: without it the Control Plane uses the
+//     Environment of the agent token, and an Environment the agent may not use is refused with
+//     codes.PermissionDenied.
 //  3. Agent translation: translateError in grpc/errors.go maps FailedPrecondition onto the
 //     ErrOwnershipConflict sentinel in errors.go, keeping the original status in the error chain
 //     because its message names the current owner. Callers match on the sentinel so that no layer
@@ -38,6 +43,15 @@
 // reconcilers, during SuperAgent migration. That migration retries sync failures forever by
 // design, so a rejection has to break the loop or a single unowned or invalid resource wedges the
 // migration indefinitely.
+//
+// The sync API carries the namespace explicitly: each *Id message of DeleteRequest and the
+// UpdateOrCreateRequest have an optional namespace field. When it is empty the Control Plane
+// falls back to the agent's default namespace for a delete, and to the namespace inside the
+// payload for an update. The Control Plane advertises that it reads these fields and the
+// environment-id header with the sync-multi-namespace capability
+// (capabilities.CapabilityMultiNamespaceSync), which the agent exposes as
+// ProContext.MultiNamespaceSyncSupportedInControlPlane. Without it an agent syncs one namespace
+// per Environment. The agent does not fill the fields or the header yet.
 //
 // The Control Plane side lives in testkube-cloud-api: it persists the owner on the six syncable
 // tables and enforces it in internal/sync/ownership.go, on every Upsert and Delete path.
