@@ -266,8 +266,12 @@ We follow the [Conventional Commits](https://www.conventionalcommits.org/) speci
 - `refactor`: Code change that neither fixes a bug nor adds a feature
 - `perf`: A code change that improves performance
 - `test`: Adding missing tests or correcting existing tests
-- `chore`: Changes to the build process or auxiliary tools
+- `build`: Changes to the build system or dependencies
 - `ci`: Changes to CI configuration files and scripts
+- `chore`: Other maintenance that does not change code meaning
+- `revert`: Reverts an earlier commit
+
+The `oss-lint-pr` check rejects a pull request whose title does not use one of these types.
 
 ### Examples
 
