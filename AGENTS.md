@@ -46,7 +46,9 @@ Verification has two loops: the local commands below before every commit, and th
 
 ## 3. Reproducing a bug
 
-Write the failing test first, at the lowest level that shows the bug, then fix it.
+Reproduce the bug before you fix it: with a failing test at the lowest level that shows it, or with exact steps and their output. If you cannot reproduce it, say so instead of guessing a fix.
+
+Unless the bug is cosmetic or static copy, keep a test that fails on the old code when the bug touches data, money, security, access or a core flow, when an earlier commit already fixed a bug in the same function, or when the file you fix had 5 or more commits in the last 6 months (`git log --since=6.months --oneline -- <file> | wc -l`). Otherwise ship the fix without a test and write `No regression test: <reason>` in the PR description, with how you checked the fix.
 
 - **Unit tests** sit next to the code (`foo_test.go`) and use `testify` (`require` for preconditions, `assert` for checks), usually as a table of cases. Fakes go in through interfaces; reviewers ask for that instead of package-level function variables that tests swap. Generated `gomock` mocks (`mock_*.go`) exist for the larger interfaces. Run one test with `make unit-tests PKG=./pkg/<pkg>/ RUN='^TestName$' GOFLAGS=-count=1`.
 - **Fixtures** live in a `testdata/` folder beside the test (for example `pkg/mcp/boards/testdata/`, `cmd/testworkflow-init/orchestration/testdata/`). Test Workflow specs for smoke tests are under `test/*/crd-workflow/`.
