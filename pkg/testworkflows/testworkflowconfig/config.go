@@ -117,6 +117,11 @@ type WorkerConfig struct {
 
 	DefaultImagePullPolicy string                  `json:"Y,omitempty"`
 	DefaultRunnerResources ContainerResourceConfig `json:"D,omitempty"`
+
+	// Zero values keep the built-in TLS log retry defaults of the execution worker controller.
+	LogsTLSRetryMaxAttempts  int           `json:"l,omitempty"`
+	LogsTLSRetryInitialDelay time.Duration `json:"L,omitempty"`
+	LogsTLSRetryMaxDelay     time.Duration `json:"M,omitempty"`
 }
 
 type WorkerConnectionConfig struct {
