@@ -163,7 +163,7 @@ Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`
 
 ## 6. Pull request checks and the MCP tools
 
-Pull request checks are not GitHub Actions. They are Testkube TestWorkflows in `test/testkube/oss-tests/gh-quality-loop.yaml`, started by the Testkube GitHub integration on every pull request. Each takes a `revision` config input (default `main`) and checks out `https://github.com/kubeshop/testkube.git` at that revision, so the branch must be pushed to this repository first.
+Pull request checks are not GitHub Actions. They are Testkube TestWorkflows in `test/testkube/oss-tests/gh-quality-loop.yaml`, started by the Testkube GitHub integration on every pull request. Each takes a `revision` config input (default `main`) and checks out `https://github.com/kubeshop/testkube.git` at that revision, so team members push the branch to this repository first. Outside contributors open the pull request from a fork, as the [pull request process](CONTRIBUTING.md#pull-request-process) describes.
 
 | Workflow | What it runs |
 | --- | --- |
