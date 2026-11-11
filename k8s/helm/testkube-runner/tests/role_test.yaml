@@ -142,6 +142,46 @@ tests:
           path: kind
           value: ClusterRole
 
+  - it: lets a GitOps agent read the Boards it syncs
+    set:
+      gitops.enabled: true
+      listener.watchAllNamespaces: true
+    documentSelector:
+      path: metadata.name
+      value: watchers-role-tk
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - insights.testkube.io
+            resources:
+              - boards
+            verbs:
+              - get
+              - list
+              - watch
+
+  - it: does not let a listener alone read Boards
+    set:
+      listener.enabled: true
+      listener.watchAllNamespaces: true
+    documentSelector:
+      path: metadata.name
+      value: watchers-role-tk
+    asserts:
+      - notContains:
+          path: rules
+          content:
+            apiGroups:
+              - insights.testkube.io
+            resources:
+              - boards
+            verbs:
+              - get
+              - list
+              - watch
+
   - it: no watchers role when listener and gitops both disabled
     asserts:
       - hasDocuments:

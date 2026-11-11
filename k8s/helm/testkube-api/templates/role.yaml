@@ -458,6 +458,31 @@ rules:
       - get
 
 ---
+
+# Control Plane resources (insights.testkube.io Boards), which a GitOps agent syncs to the Control
+# Plane. It only reads them.
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: Role
+metadata:
+  name: controlplaneresources-role-{{ .Release.Name }}
+  labels: {{- include "testkube-api.labels" . | nindent 4 }}
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.global.annotations}}
+  annotations: {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+rules:
+  - apiGroups:
+      - insights.testkube.io
+    resources:
+      - boards
+    verbs:
+      - get
+      - list
+      - watch
+
+---
 {{- if .Values.next.testTriggers.enabled }}
 
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}

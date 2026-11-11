@@ -51,7 +51,10 @@ type ProContext struct {
 	CloudStorage                        bool
 	CloudStorageSupportedInControlPlane bool
 	HasSourceOfTruthCapability          bool
-	Agent                               ProContextAgent
+	// ControlPlaneResourcesSyncSupported is whether the Control Plane accepts Control Plane
+	// resources (capabilities.CapabilityControlPlaneResources) through the SyncService.
+	ControlPlaneResourcesSyncSupported bool
+	Agent                              ProContextAgent
 }
 
 func (p *ProContext) GetEnvSlug(id string) string {

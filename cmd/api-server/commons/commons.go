@@ -412,6 +412,10 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		proContext.HasSourceOfTruthCapability = true
 	}
 
+	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityControlPlaneResources) {
+		proContext.ControlPlaneResourcesSyncSupported = true
+	}
+
 	return proContext, nil
 }
 

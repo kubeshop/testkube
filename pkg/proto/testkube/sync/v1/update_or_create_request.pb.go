@@ -39,6 +39,7 @@ type UpdateOrCreateRequest struct {
 	//	*UpdateOrCreateRequest_Webhook
 	//	*UpdateOrCreateRequest_WebhookTemplate
 	//	*UpdateOrCreateRequest_WorkflowTrigger
+	//	*UpdateOrCreateRequest_ControlPlaneResource
 	Payload       isUpdateOrCreateRequest_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -135,6 +136,15 @@ func (x *UpdateOrCreateRequest) GetWorkflowTrigger() *WorkflowTrigger {
 	return nil
 }
 
+func (x *UpdateOrCreateRequest) GetControlPlaneResource() *ControlPlaneResource {
+	if x != nil {
+		if x, ok := x.Payload.(*UpdateOrCreateRequest_ControlPlaneResource); ok {
+			return x.ControlPlaneResource
+		}
+	}
+	return nil
+}
+
 type isUpdateOrCreateRequest_Payload interface {
 	isUpdateOrCreateRequest_Payload()
 }
@@ -169,6 +179,12 @@ type UpdateOrCreateRequest_WorkflowTrigger struct {
 	WorkflowTrigger *WorkflowTrigger `protobuf:"bytes,6,opt,name=workflow_trigger,json=workflowTrigger,oneof"`
 }
 
+type UpdateOrCreateRequest_ControlPlaneResource struct {
+	// control_plane_resource indicates the object is a Control Plane resource,
+	// such as an Insights board
+	ControlPlaneResource *ControlPlaneResource `protobuf:"bytes,7,opt,name=control_plane_resource,json=controlPlaneResource,oneof"`
+}
+
 func (*UpdateOrCreateRequest_TestTrigger) isUpdateOrCreateRequest_Payload() {}
 
 func (*UpdateOrCreateRequest_TestWorkflow) isUpdateOrCreateRequest_Payload() {}
@@ -181,18 +197,21 @@ func (*UpdateOrCreateRequest_WebhookTemplate) isUpdateOrCreateRequest_Payload() 
 
 func (*UpdateOrCreateRequest_WorkflowTrigger) isUpdateOrCreateRequest_Payload() {}
 
+func (*UpdateOrCreateRequest_ControlPlaneResource) isUpdateOrCreateRequest_Payload() {}
+
 var File_testkube_sync_v1_update_or_create_request_proto protoreflect.FileDescriptor
 
 const file_testkube_sync_v1_update_or_create_request_proto_rawDesc = "" +
 	"\n" +
-	"/testkube/sync/v1/update_or_create_request.proto\x12\x10testkube.sync.v1\x1a#testkube/sync/v1/test_trigger.proto\x1a-testkube/sync/v1/test_workflow_template.proto\x1a\x1etestkube/sync/v1/webhook.proto\x1a'testkube/sync/v1/webhook_template.proto\x1a'testkube/sync/v1/workflow_trigger.proto\x1a,testkube/testworkflow/v1/test_workflow.proto\"\xec\x03\n" +
+	"/testkube/sync/v1/update_or_create_request.proto\x12\x10testkube.sync.v1\x1a-testkube/sync/v1/control_plane_resource.proto\x1a#testkube/sync/v1/test_trigger.proto\x1a-testkube/sync/v1/test_workflow_template.proto\x1a\x1etestkube/sync/v1/webhook.proto\x1a'testkube/sync/v1/webhook_template.proto\x1a'testkube/sync/v1/workflow_trigger.proto\x1a,testkube/testworkflow/v1/test_workflow.proto\"\xcc\x04\n" +
 	"\x15UpdateOrCreateRequest\x12B\n" +
 	"\ftest_trigger\x18\x01 \x01(\v2\x1d.testkube.sync.v1.TestTriggerH\x00R\vtestTrigger\x12M\n" +
 	"\rtest_workflow\x18\x02 \x01(\v2&.testkube.testworkflow.v1.TestWorkflowH\x00R\ftestWorkflow\x12^\n" +
 	"\x16test_workflow_template\x18\x03 \x01(\v2&.testkube.sync.v1.TestWorkflowTemplateH\x00R\x14testWorkflowTemplate\x125\n" +
 	"\awebhook\x18\x04 \x01(\v2\x19.testkube.sync.v1.WebhookH\x00R\awebhook\x12N\n" +
 	"\x10webhook_template\x18\x05 \x01(\v2!.testkube.sync.v1.WebhookTemplateH\x00R\x0fwebhookTemplate\x12N\n" +
-	"\x10workflow_trigger\x18\x06 \x01(\v2!.testkube.sync.v1.WorkflowTriggerH\x00R\x0fworkflowTriggerB\t\n" +
+	"\x10workflow_trigger\x18\x06 \x01(\v2!.testkube.sync.v1.WorkflowTriggerH\x00R\x0fworkflowTrigger\x12^\n" +
+	"\x16control_plane_resource\x18\a \x01(\v2&.testkube.sync.v1.ControlPlaneResourceH\x00R\x14controlPlaneResourceB\t\n" +
 	"\apayloadB\xd4\x01\n" +
 	"\x14com.testkube.sync.v1B\x1aUpdateOrCreateRequestProtoP\x01Z>github.com/kubeshop/testkube/pkg/proto/testkube/sync/v1;syncv1\xa2\x02\x03TSX\xaa\x02\x10Testkube.Sync.V1\xca\x02\x10Testkube\\Sync\\V1\xe2\x02\x1cTestkube\\Sync\\V1\\GPBMetadata\xea\x02\x12Testkube::Sync::V1b\beditionsp\xe8\a"
 
@@ -217,6 +236,7 @@ var file_testkube_sync_v1_update_or_create_request_proto_goTypes = []any{
 	(*Webhook)(nil),               // 4: testkube.sync.v1.Webhook
 	(*WebhookTemplate)(nil),       // 5: testkube.sync.v1.WebhookTemplate
 	(*WorkflowTrigger)(nil),       // 6: testkube.sync.v1.WorkflowTrigger
+	(*ControlPlaneResource)(nil),  // 7: testkube.sync.v1.ControlPlaneResource
 }
 var file_testkube_sync_v1_update_or_create_request_proto_depIdxs = []int32{
 	1, // 0: testkube.sync.v1.UpdateOrCreateRequest.test_trigger:type_name -> testkube.sync.v1.TestTrigger
@@ -225,11 +245,12 @@ var file_testkube_sync_v1_update_or_create_request_proto_depIdxs = []int32{
 	4, // 3: testkube.sync.v1.UpdateOrCreateRequest.webhook:type_name -> testkube.sync.v1.Webhook
 	5, // 4: testkube.sync.v1.UpdateOrCreateRequest.webhook_template:type_name -> testkube.sync.v1.WebhookTemplate
 	6, // 5: testkube.sync.v1.UpdateOrCreateRequest.workflow_trigger:type_name -> testkube.sync.v1.WorkflowTrigger
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	7, // 6: testkube.sync.v1.UpdateOrCreateRequest.control_plane_resource:type_name -> testkube.sync.v1.ControlPlaneResource
+	7, // [7:7] is the sub-list for method output_type
+	7, // [7:7] is the sub-list for method input_type
+	7, // [7:7] is the sub-list for extension type_name
+	7, // [7:7] is the sub-list for extension extendee
+	0, // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_testkube_sync_v1_update_or_create_request_proto_init() }
@@ -237,6 +258,7 @@ func file_testkube_sync_v1_update_or_create_request_proto_init() {
 	if File_testkube_sync_v1_update_or_create_request_proto != nil {
 		return
 	}
+	file_testkube_sync_v1_control_plane_resource_proto_init()
 	file_testkube_sync_v1_test_trigger_proto_init()
 	file_testkube_sync_v1_test_workflow_template_proto_init()
 	file_testkube_sync_v1_webhook_proto_init()
@@ -249,6 +271,7 @@ func file_testkube_sync_v1_update_or_create_request_proto_init() {
 		(*UpdateOrCreateRequest_Webhook)(nil),
 		(*UpdateOrCreateRequest_WebhookTemplate)(nil),
 		(*UpdateOrCreateRequest_WorkflowTrigger)(nil),
+		(*UpdateOrCreateRequest_ControlPlaneResource)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
