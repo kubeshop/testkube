@@ -153,3 +153,24 @@ func TestAPIClient_UpdateBoard_ConflictIsErrBoardChanged(t *testing.T) {
 	assert.Contains(t, err.Error(), "status 409", "the Control Plane's message is kept")
 	assert.Equal(t, float64(7), body["expectedVersion"])
 }
+
+func TestAPIClient_GitOpsOwnedBoardIsNotAConcurrentChange(t *testing.T) {
+	const locked = `{"title":"Managed by GitOps","status":409,"errorCode":"managed-by-gitops","detail":"managed by GitOps agent prod-sync; change it in Git"}`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/problem+json")
+		w.WriteHeader(http.StatusConflict)
+		_, _ = io.WriteString(w, locked)
+	}))
+	defer server.Close()
+	client := NewAPIClient(&MCPServerConfig{ControlPlaneUrl: server.URL, AccessToken: "user-token", OrgId: "o", EnvId: "e"}, server.Client())
+
+	name, version := "Renamed", int64(7)
+	_, err := client.UpdateBoard(context.Background(), "tkcbrd_1", tools.UpdateBoardRequest{Name: &name, ExpectedVersion: &version})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, tools.ErrBoardManagedByGitOps)
+	assert.NotErrorIs(t, err, tools.ErrBoardChanged, "a lock is not worth a retry")
+	assert.Contains(t, err.Error(), "prod-sync")
+
+	err = client.DeleteBoard(context.Background(), "tkcbrd_1")
+	assert.ErrorIs(t, err, tools.ErrBoardManagedByGitOps)
+}

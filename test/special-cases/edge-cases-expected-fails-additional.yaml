@@ -4,6 +4,8 @@ metadata:
   name: expected-fail-high-parallel-step-failed-sync-paused
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: one of 20 synchronized parallel workers fails last (paused: true)"
 description: "one of 20 parallel steps failed (last), synced parallel (paused: true)"
 spec:
   container:
@@ -36,6 +38,8 @@ metadata:
   name: expected-fail-high-parallel-first-step-failed-sync-paused
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: one of 20 synchronized parallel workers fails first (paused: true)"
 description: "one of 20 parallel steps failed (last), synced parallel (paused: true)"
 spec:
   container:
@@ -68,6 +72,8 @@ metadata:
   name: expected-fail-high-parallel-step-failed
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: one of 20 parallel workers fails"
 description: "one of 20 parallel steps failed (last)"
 spec:
   container:

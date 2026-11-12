@@ -5,6 +5,8 @@ metadata:
   name: large-logs-1mb-no-delay
   labels:
     core-tests: large
+  annotations:
+    testkube.io/description: "1 MB log output test without delay"
 description: "Logs: 1 MB"
 spec:
   container:
@@ -27,6 +29,8 @@ metadata:
   name: large-logs-1mb-1s
   labels:
     core-tests: large
+  annotations:
+    testkube.io/description: "1 MB log output test without delay"
 description: "Logs: 1 MB"
 spec:
   container:
@@ -49,6 +53,8 @@ metadata:
   name: large-logs-11mb-no-delay
   labels:
     core-tests: large
+  annotations:
+    testkube.io/description: "11 MB log output test without delay"
 description: "Logs: 11 MB"
 spec:
   container:
@@ -71,6 +77,8 @@ metadata:
   name: large-logs-11mb-1s
   labels:
     core-tests: large
+  annotations:
+    testkube.io/description: "11 MB log output test with a 1s interval"
 description: "Logs: 11 MB"
 spec:
   container:
@@ -93,6 +101,8 @@ metadata:
   name: large-logs-22mb-2s
   labels:
     core-tests: large
+  annotations:
+    testkube.io/description: "Large log output test with a 2s interval"
 description: "Logs: 22 MB"
 spec:
   container:
@@ -115,6 +125,8 @@ metadata:
   name: large-artifacts-1gb
   labels:
     core-tests: large
+  annotations:
+    testkube.io/description: "1 GB artifact upload test. Generates a TXT artifact."
 description: "Artifacts: 1GB file generated with openssl"
 spec:
   container:
@@ -138,6 +150,8 @@ metadata:
   name: large-artifacts-100mb
   labels:
     core-tests: large
+  annotations:
+    testkube.io/description: "100 MB artifact upload test. Generates a TXT artifact."
 description: "Artifacts: 100MB file generated with openssl"
 spec:
   container:

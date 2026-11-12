@@ -8,6 +8,7 @@ metadata:
     artifacts: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Cypress smoke test. Collects screenshot/video artifacts when generated."
     testkube.io/icon: cypress
 spec:
   content:
@@ -49,6 +50,7 @@ metadata:
     artifacts: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Cypress smoke test using command/args. Collects screenshot/video artifacts when generated."
     testkube.io/icon: cypress
 spec:
   content:
@@ -95,6 +97,7 @@ metadata:
     category: e2e-ui-testing
     junit: "true"
   annotations:
+    testkube.io/description: "Cypress smoke test with JUnit reporting enabled. Generates JUnit XML artifacts; collects screenshots/videos when generated."
     testkube.io/icon: cypress
 spec:
   content:
@@ -144,6 +147,7 @@ metadata:
     artifacts: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Cypress smoke test with /dev/shm (shared mem) enabled. Collects screenshot/video artifacts when generated."
     testkube.io/icon: cypress
 spec:
   content:
@@ -209,6 +213,7 @@ metadata:
     artifacts: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Cypress 13 smoke test. Collects screenshot/video artifacts when generated."
     testkube.io/icon: cypress
 spec:
   content:
@@ -255,6 +260,7 @@ metadata:
     artifacts-video: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Cypress 13 smoke test with video recording enabled. Generates video artifacts."
     testkube.io/icon: cypress
 spec:
   content:
@@ -300,6 +306,7 @@ metadata:
     category: e2e-ui-testing
     artifacts: "true"
   annotations: 
+    testkube.io/description: "Cypress negative test. Generates screenshot artifacts on test failure."
     testkube.io/icon: cypress
 spec:
   content:
@@ -341,6 +348,7 @@ metadata:
     tool: cypress
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Cypress smoke test using the official template"
     testkube.io/icon: cypress
 spec:
   content:
@@ -379,6 +387,7 @@ metadata:
     tool: cypress
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Cypress smoke test using the official template with step-level Git checkout"
     testkube.io/icon: cypress
 spec:
   container:
@@ -418,6 +427,7 @@ metadata:
     tool: cypress
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Cypress smoke test using the official template in a sub-step"
     testkube.io/icon: cypress
 spec:
   container:
@@ -460,6 +470,7 @@ metadata:
     artifacts: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Cypress 12 smoke test. Collects screenshot/video artifacts when generated."
     testkube.io/icon: cypress
 spec:
   content:
@@ -505,6 +516,7 @@ metadata:
     artifacts: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Distributed Cypress test. Generates video artifacts; collects screenshots on test failure."
     testkube.io/icon: cypress
 spec:
   content:
@@ -565,6 +577,7 @@ metadata:
     junit: "true"
     category: e2e-ui-testing
   annotations:
+    testkube.io/description: "Cypress smoke test across a browser matrix with JUnit reporting enabled. Generates JUnit XML artifacts per browser."
     testkube.io/icon: cypress
 spec:
   content:

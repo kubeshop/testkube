@@ -7,6 +7,7 @@ metadata:
     tool: gradle
     category: build-integration
   annotations:
+    testkube.io/description: "Gradle smoke test on JDK 11"
     testkube.io/icon: gradle
 spec:
   content:
@@ -41,6 +42,7 @@ metadata:
     tool: gradle
     category: build-integration
   annotations:
+    testkube.io/description: "Gradle smoke test on JDK 11 using the default command"
     testkube.io/icon: gradle
 spec:
   content:
@@ -74,6 +76,7 @@ metadata:
     tool: gradle
     category: build-integration
   annotations:
+    testkube.io/description: "Gradle smoke test on JDK 11 using the official template"
     testkube.io/icon: gradle
 spec:
   content:

@@ -40,6 +40,7 @@ func init() {
 	// New commands
 	RootCmd.AddCommand(NewCreateCmd())
 	RootCmd.AddCommand(NewUpdateCmd())
+	RootCmd.AddCommand(NewApplyCmd())
 
 	RootCmd.AddCommand(NewGetCmd())
 	RootCmd.AddCommand(NewSetCmd())

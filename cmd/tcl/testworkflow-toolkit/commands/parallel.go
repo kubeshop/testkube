@@ -338,7 +338,7 @@ func RunParallelWithOptions(ctx context.Context, specContent string, cfg *config
 	stateMachine := data.StateMachine
 	credentialMachine := credentials.NewCredentialMachine(data.Credentials())
 
-	parallel, params, err := parseAndValidateSpec(specContent, cfg, base64Encoded, stateMachine, credentialMachine)
+	parallel, params, parallelism, err := parseAndValidateSpec(specContent, cfg, base64Encoded, stateMachine, credentialMachine)
 	if err != nil {
 		return err
 	}
@@ -348,10 +348,6 @@ func RunParallelWithOptions(ctx context.Context, specContent string, cfg *config
 		return nil
 	}
 
-	parallelism := int64(parallel.Parallelism)
-	if parallelism <= 0 {
-		parallelism = spawn.DefaultParallelism
-	}
 	fmt.Println("Parallelism: " + params.String(parallelism))
 
 	workers, transferSrv, err := prepareWorkers(parallel, params, cfg, stateMachine, credentialMachine)
@@ -385,12 +381,12 @@ func RunParallelWithOptions(ctx context.Context, specContent string, cfg *config
 
 // parseAndValidateSpec parses the input spec and calculates execution parameters.
 // Uses a machine without env resolution to preserve {{env.X}} expressions for workers.
-// Returns the normalized spec and calculated parameters (worker count, matrix, shards).
-func parseAndValidateSpec(specContent string, cfg *config.ConfigV2, base64Encoded bool, stateMachine expressions.Machine, credentialMachine expressions.Machine) (*testworkflowsv1.StepParallel, *commontcl.ParamsSpec, error) {
+// Returns the normalized spec, calculated parameters (worker count, matrix, shards) and the resolved parallelism.
+func parseAndValidateSpec(specContent string, cfg *config.ConfigV2, base64Encoded bool, stateMachine expressions.Machine, credentialMachine expressions.Machine) (*testworkflowsv1.StepParallel, *commontcl.ParamsSpec, int64, error) {
 	parser := &ParallelSpecParser{}
 	parallel, err := parser.ParseSpec(specContent, base64Encoded)
 	if err != nil {
-		return nil, nil, &DefinitionError{Subject: parallelSubject, Err: err}
+		return nil, nil, 0, &DefinitionError{Subject: parallelSubject, Err: err}
 	}
 
 	parser.NormalizeParallelSpec(parallel)
@@ -400,10 +396,31 @@ func parseAndValidateSpec(specContent string, cfg *config.ConfigV2, base64Encode
 
 	params, err := commontcl.GetParamsSpec(parallel.Matrix, parallel.Shards, parallel.Count, parallel.MaxCount, baseMachine)
 	if err != nil {
-		return nil, nil, &DefinitionError{Subject: parallelSubject, Err: err}
+		return nil, nil, 0, &DefinitionError{Subject: parallelSubject, Err: err}
 	}
 
-	return parallel, params, nil
+	parallelism, err := readParallelism(parallel.Parallelism, baseMachine)
+	if err != nil {
+		return nil, nil, 0, &DefinitionError{Subject: parallelSubject, Err: err}
+	}
+
+	return parallel, params, parallelism, nil
+}
+
+// readParallelism resolves how many workers may run at once.
+// Both an unset value and 0 mean unlimited, because a stored workflow may hold 0.
+func readParallelism(value *testworkflowsv1.ConfigValue, machines ...expressions.Machine) (int64, error) {
+	if value == nil {
+		return spawn.DefaultParallelism, nil
+	}
+	parallelism, err := commontcl.ReadCount(*value, machines...)
+	if err != nil {
+		return 0, fmt.Errorf("parallelism: %w", err)
+	}
+	if parallelism == 0 {
+		return spawn.DefaultParallelism, nil
+	}
+	return parallelism, nil
 }
 
 // parallelSubject names the parallel step in an error of its definition.

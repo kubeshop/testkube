@@ -160,6 +160,39 @@ func testGetExecutionsByTags(t *testing.T, repo testworkflow.Repository) {
 	}
 }
 
+// Duration is a range over how long an execution ran: either bound alone, both, and neither.
+func testGetExecutionsByDuration(t *testing.T, repo testworkflow.Repository) {
+	ctx := context.Background()
+	wfName := "duration-filter-test"
+
+	for i, durationMs := range []int32{500, 2_000, 10_000} {
+		err := repo.Insert(ctx, fixtures.NewExecution(wfName,
+			fixtures.WithStatus(testkube.PASSED_TestWorkflowStatus),
+			fixtures.WithDurationMs(durationMs),
+			fixtures.WithNumber(int32(i+1)),
+		))
+		require.NoError(t, err)
+	}
+
+	names := func(filter *testworkflow.FilterImpl) []int32 {
+		results, err := repo.GetExecutions(ctx, filter.WithName(wfName))
+		require.NoError(t, err)
+		durations := make([]int32, 0, len(results))
+		for _, r := range results {
+			durations = append(durations, r.Result.DurationMs)
+		}
+		return durations
+	}
+
+	assert.ElementsMatch(t, []int32{500, 2_000, 10_000}, names(testworkflow.NewExecutionsFilter()))
+	assert.ElementsMatch(t, []int32{2_000, 10_000}, names(testworkflow.NewExecutionsFilter().WithMinDurationMs(1_000)))
+	assert.ElementsMatch(t, []int32{500, 2_000}, names(testworkflow.NewExecutionsFilter().WithMaxDurationMs(5_000)))
+	assert.ElementsMatch(t, []int32{2_000}, names(testworkflow.NewExecutionsFilter().WithMinDurationMs(1_000).WithMaxDurationMs(5_000)))
+	// Both bounds are inclusive.
+	assert.ElementsMatch(t, []int32{500, 2_000}, names(testworkflow.NewExecutionsFilter().WithMinDurationMs(500).WithMaxDurationMs(2_000)))
+	assert.Empty(t, names(testworkflow.NewExecutionsFilter().WithMinDurationMs(20_000)))
+}
+
 func testGetExecutionsPagination(t *testing.T, repo testworkflow.Repository) {
 	ctx := context.Background()
 	wfName := "pagination-test"

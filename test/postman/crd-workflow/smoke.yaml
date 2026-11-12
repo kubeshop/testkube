@@ -7,6 +7,7 @@ metadata:
     tool: postman
     category: api-testing
   annotations:
+    testkube.io/description: "Postman smoke test"
     testkube.io/icon: postman
 spec:
   content:
@@ -37,6 +38,7 @@ metadata:
     tool: postman
     category: api-testing
   annotations:
+    testkube.io/description: "Postman smoke test without environment variables"
     testkube.io/icon: postman
 spec:
   content:
@@ -70,6 +72,7 @@ metadata:
     tool: postman
     category: api-testing
   annotations:
+    testkube.io/description: "Postman smoke test using the official template"
     testkube.io/icon: postman
 spec:
   content:
@@ -103,6 +106,7 @@ metadata:
     tool: postman
     category: api-testing
   annotations:
+    testkube.io/description: "Postman smoke test using the official template without environment variables"
     testkube.io/icon: postman
 spec:
   content:
@@ -137,6 +141,7 @@ metadata:
     junit: "true"
     category: api-testing
   annotations:
+    testkube.io/description: "Postman smoke test with JUnit reporting enabled. Generates a JUnit XML report artifact."
     testkube.io/icon: postman
 spec:
   content:
@@ -170,6 +175,7 @@ metadata:
     tool: postman
     category: api-testing
   annotations:
+    testkube.io/description: "Postman smoke test using the latest Newman image"
     testkube.io/icon: postman
 spec:
   content:

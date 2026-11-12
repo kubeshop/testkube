@@ -7,6 +7,7 @@ metadata:
     tool: pact
     category: api-testing
   annotations:
+    testkube.io/description: "Pact JS consumer contract smoke test"
     testkube.io/icon: pact
 spec:
   content:

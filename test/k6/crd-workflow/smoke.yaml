@@ -8,6 +8,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
+    testkube.io/description: "k6 smoke test. Generates JSON summary and HTML report artifacts."
     testkube.io/icon: k6
 spec:
   content:
@@ -54,6 +55,7 @@ metadata:
     tool: k6
     category: performance-testing
   annotations:
+    testkube.io/description: "k6 smoke test using the official template. Generates a JSON summary artifact."
     testkube.io/icon: k6
 spec:
   container:
@@ -91,6 +93,7 @@ metadata:
     tool: k6
     category: performance-testing
   annotations:
+    testkube.io/description: "k6 smoke test using the official template without a separate checkout step. Generates a JSON summary artifact."
     testkube.io/icon: k6
 spec:
   content:
@@ -129,6 +132,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
+    testkube.io/description: "k6 smoke test using an inline content file. Generates JSON summary and HTML report artifacts."
     testkube.io/icon: k6
 spec:
   content:
@@ -171,6 +175,7 @@ metadata:
     tool: k6
     category: performance-testing
   annotations:
+    testkube.io/description: "k6 smoke test using the latest image"
     testkube.io/icon: k6
 spec:
   content:
@@ -205,6 +210,7 @@ metadata:
     tool: k6
     category: performance-testing
   annotations:
+    testkube.io/description: "k6 smoke test using the master image"
     testkube.io/icon: k6
 spec:
   content:
@@ -239,6 +245,7 @@ metadata:
     tool: k6
     category: performance-testing
   annotations:
+    testkube.io/description: "Distributed k6 load test"
     testkube.io/icon: k6
 spec:
   config:
@@ -295,6 +302,7 @@ metadata:
     artifacts: "true"
     category: performance-testing
   annotations:
+    testkube.io/description: "k6 browser smoke test. Generates a JSON results artifact."
     testkube.io/icon: k6
 spec:
   content:

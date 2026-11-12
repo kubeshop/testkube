@@ -9,6 +9,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
+    testkube.io/description: "JUnit 5 smoke test. Generates JUnit XML and text report artifacts."
     testkube.io/icon: junit
 spec:
   content:
@@ -43,6 +44,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
+    testkube.io/description: "JUnit 5 smoke test with an expected failure. Generates JUnit XML and text report artifacts."
     testkube.io/icon: junit
 spec:
   content:
@@ -77,6 +79,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
+    testkube.io/description: "JUnit 5 smoke test with mixed results. Generates JUnit XML and text report artifacts."
     testkube.io/icon: junit
 spec:
   content:

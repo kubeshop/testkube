@@ -44,6 +44,9 @@ type Stats struct {
 	CumulativeFailed  int64
 	CumulativeSkipped int64
 
+	// RecopyFailed stays out of Failed, which sets the verify count.
+	RecopyFailed int64
+
 	Batches int64
 
 	Signatures           int64
@@ -115,6 +118,9 @@ func (s *Stats) Print(log *zap.SugaredLogger, resume *resumeInfo) {
 	log.Infof("Processed:            %d", s.Processed)
 	log.Infof("Failed:               %d", s.Failed)
 	log.Infof("Skipped:              %d", s.Skipped)
+	if s.RecopyFailed > 0 {
+		log.Warnf("Recopy failed:        %d (still unfinished in postgres)", s.RecopyFailed)
+	}
 	log.Infof("Batches committed:    %d", s.Batches)
 	if s.Batches > 0 {
 		log.Infof("Avg batch size:       %.0f", float64(s.Processed)/float64(s.Batches))

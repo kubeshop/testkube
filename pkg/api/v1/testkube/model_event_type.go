@@ -9,6 +9,7 @@
  */
 package testkube
 
+// EventType : The type of an event. The events end-testworkflow-test-failure, end-testworkflow-infrastructure-failure and end-testworkflow-configuration-error select executions by the cause of the failure.
 type EventType string
 
 // List of EventType

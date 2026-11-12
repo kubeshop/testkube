@@ -4183,6 +4183,8 @@ paths:
         - $ref: "#/components/parameters/TagSelector"
         - $ref: "#/components/parameters/ActorName"
         - $ref: "#/components/parameters/ActorType"
+        - $ref: "#/components/parameters/MinDurationMs"
+        - $ref: "#/components/parameters/MaxDurationMs"
         - $ref: "#/components/parameters/StatusDetailsTypeFilter"
       summary: List test workflow executions
       description: List test workflow executions
@@ -4548,6 +4550,8 @@ paths:
         - $ref: "#/components/parameters/TagSelector"
         - $ref: "#/components/parameters/ActorName"
         - $ref: "#/components/parameters/ActorType"
+        - $ref: "#/components/parameters/MinDurationMs"
+        - $ref: "#/components/parameters/MaxDurationMs"
         - $ref: "#/components/parameters/StatusDetailsTypeFilter"
       summary: List test workflow executions
       description: List test workflow executions
@@ -9759,8 +9763,7 @@ components:
       - $ref: "#/components/schemas/TestWorkflowStepOperations"
       - properties:
           parallelism:
-            type: integer
-            description: how many resources could be scheduled in parallel
+            $ref: "#/components/schemas/BoxedString"
           failFast:
             type: boolean
             description: abort remaining parallel workers on first failure
@@ -9791,8 +9794,7 @@ components:
       - $ref: "#/components/schemas/TestWorkflowStepOperations"
       - properties:
           parallelism:
-            type: integer
-            description: how many resources could be scheduled in parallel
+            $ref: "#/components/schemas/BoxedString"
           failFast:
             type: boolean
             description: abort remaining parallel workers on first failure
@@ -9870,8 +9872,7 @@ components:
             oneOf:
             - type: string
             - type: array
-              items:
-                type: string
+              items: {}
         shards:
           type: object
           description: "parameters that should be distributed across sharded instances"
@@ -9880,8 +9881,7 @@ components:
             oneOf:
             - type: string
             - type: array
-              items:
-                type: string
+              items: {}
 
     TestWorkflowStepParallelTransfer:
       type: object
@@ -12391,6 +12391,7 @@ components:
       description: One GVK the cluster exposes, with the agent's watch permission.
       type: object
       required:
+        - group
         - version
         - kind
         - resource
@@ -12417,6 +12418,9 @@ components:
         canWatch:
           type: boolean
           description: True when the agent ServiceAccount holds list+watch on this resource.
+        schema:
+          type: object
+          description: OpenAPI v3 schema of a CustomResourceDefinition. The dashboard uses it to suggest match paths.
 
     Syncable:
       description: |
@@ -12729,6 +12733,22 @@ components:
       schema:
         type: string
         description: Test workflow running conntext actor type
+    MinDurationMs:
+      in: query
+      name: minDurationMs
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+        description: Keep only the test workflow executions that ran at least this many milliseconds
+    MaxDurationMs:
+      in: query
+      name: maxDurationMs
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+        description: Keep only the test workflow executions that ran at most this many milliseconds
     ForceAgent:
       in: query
       name: forceAgent

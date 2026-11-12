@@ -47,6 +47,7 @@ var (
 	executionsMeasures = []string{"count", "duration"}
 	// The dashboard offers "last" as well; the backend falls back to sum for it.
 	timeSeriesAggregates = []string{"sum", "avg", "min", "max", "count", "last"}
+	timeSeriesPeriods    = []string{"day", "week", "month", "quarter", "year"}
 	timeSeriesChartTypes = []string{"bar", "bar-grouped", "bar-normalized", "line-stacked", "line", "area-normalized", "heatmap", "horizon"}
 )
 
@@ -58,7 +59,7 @@ var paramKeys = map[string][]string{
 	KindPassFail:   {"filter", "duration", "from", "to", "measure"},
 	KindExecutions: {"filter", "duration", "from", "to", "groupBy", "measure"},
 	KindWorkflows:  {"filter", "duration", "from", "to"},
-	KindTimeSeries: {"filter", "duration", "from", "to", "measure", "aggregate", "segment", "chartType", "overlaySuccessRate"},
+	KindTimeSeries: {"filter", "duration", "from", "to", "measure", "aggregate", "aggregationPeriod", "segment", "chartType", "overlaySuccessRate"},
 }
 
 // Report is one report ("analysis") on a board, as the Control Plane returns it.
@@ -356,6 +357,9 @@ func validateReport(kind string, out map[string]any) error {
 		if err := checkEnum(out, "aggregate", timeSeriesAggregates); err != nil {
 			return err
 		}
+		if err := checkEnum(out, "aggregationPeriod", timeSeriesPeriods); err != nil {
+			return err
+		}
 		if err := checkString(out, "segment"); err != nil {
 			return err
 		}
@@ -417,16 +421,32 @@ func ParseFilters(raw any) ([]Filter, error) {
 			return nil, fmt.Errorf("param filter[%d] is missing filterConfigurationKey", i)
 		}
 		if !validFilterValue(f) {
-			return nil, fmt.Errorf("param filter[%d] (%s) has an invalid value: expected a string or an array of strings; a labels-v2 filter takes an array of selectors with operator 'is', or {labelKey, labelOperator: exists|contains, labelValue} with operator 'where'", i, f.FilterConfigurationKey)
+			return nil, fmt.Errorf("param filter[%d] (%s) has an invalid value: expected a string or an array of strings; a labels-v2 filter takes an array of selectors with operator 'is' or 'is not', or {labelKey, labelOperator: exists|contains|does not contain, labelValue} with operator 'where'", i, f.FilterConfigurationKey)
 		}
 	}
 	return filters, nil
 }
 
+// negateSelector writes the exclusion of a key=value selector the way the dashboard does:
+// key!=value, key!~pattern for a key=~pattern regex, and !key for a bare key (the key is absent).
+func negateSelector(selector string) string {
+	key, value, hasValue := strings.Cut(selector, "=")
+	if !hasValue {
+		return "!" + selector
+	}
+	if pattern, ok := strings.CutPrefix(value, "~"); ok {
+		return key + "!~" + pattern
+	}
+	return key + "!=" + value
+}
+
 // FilterValues gathers every value of the filters with the given key,
 // regardless of operator. It is a port of the dashboard's getFilterValue:
-// a string value with the "contains" operator becomes "~value", and an
-// advanced label filter becomes "key=~value" (contains) or "key" (exists).
+// a string value with the "contains" operator becomes "~value" and with
+// "does not contain" "!~value", the values of an "is not" filter get a "!"
+// prefix (or become key!=value for tags and labels), and an advanced label
+// filter becomes "key=~value" (contains), "key!~value" (does not contain)
+// or "key" (exists).
 func FilterValues(filters []Filter, key string) []string {
 	result := []string{}
 	for _, f := range filters {
@@ -435,10 +455,16 @@ func FilterValues(filters []Filter, key string) []string {
 		}
 		if key == FilterLabels {
 			switch f.Operator {
-			case "is":
+			case "is", "is not":
 				var values []string
-				if json.Unmarshal(f.Value, &values) == nil {
-					result = append(result, values...)
+				if json.Unmarshal(f.Value, &values) != nil {
+					continue
+				}
+				for _, v := range values {
+					if f.Operator == "is not" {
+						v = negateSelector(v)
+					}
+					result = append(result, v)
 				}
 			case "where":
 				var v LabelFilterValue
@@ -449,6 +475,10 @@ func FilterValues(filters []Filter, key string) []string {
 				case "contains":
 					if v.LabelKey != "" && v.LabelValue != "" {
 						result = append(result, v.LabelKey+"=~"+v.LabelValue)
+					}
+				case "does not contain":
+					if v.LabelKey != "" && v.LabelValue != "" {
+						result = append(result, v.LabelKey+"!~"+v.LabelValue)
 					}
 				case "exists":
 					if v.LabelKey != "" {
@@ -463,16 +493,28 @@ func FilterValues(filters []Filter, key string) []string {
 			if s == "" {
 				continue
 			}
-			if f.Operator == "contains" {
+			switch f.Operator {
+			case "contains":
 				result = append(result, "~"+s)
-			} else {
+			case "does not contain":
+				result = append(result, "!~"+s)
+			default:
 				result = append(result, s)
 			}
 			continue
 		}
 		var values []string
 		if json.Unmarshal(f.Value, &values) == nil {
-			result = append(result, values...)
+			for _, v := range values {
+				switch {
+				case f.Operator != "is not":
+				case key == FilterTags:
+					v = negateSelector(v)
+				default:
+					v = "!" + v
+				}
+				result = append(result, v)
+			}
 		}
 	}
 	return result
@@ -480,11 +522,11 @@ func FilterValues(filters []Filter, key string) []string {
 
 func validFilterValue(f Filter) bool {
 	if f.FilterConfigurationKey == FilterLabels {
-		// Only the two shapes the dashboard writes, which FilterValues reads:
+		// Only the shapes the dashboard writes, which FilterValues reads:
 		// any other value would pass here and then be silently ignored, and
 		// the report would query without its label restriction.
 		switch f.Operator {
-		case "is", "":
+		case "is", "is not", "":
 			var values []string
 			return json.Unmarshal(f.Value, &values) == nil
 		case "where":
@@ -492,7 +534,8 @@ func validFilterValue(f Filter) bool {
 			if json.Unmarshal(f.Value, &v) != nil || v.LabelKey == "" {
 				return false
 			}
-			return v.LabelOperator == "exists" || (v.LabelOperator == "contains" && v.LabelValue != "")
+			return v.LabelOperator == "exists" ||
+				((v.LabelOperator == "contains" || v.LabelOperator == "does not contain") && v.LabelValue != "")
 		}
 		return false
 	}

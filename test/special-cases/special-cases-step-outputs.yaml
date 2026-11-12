@@ -4,6 +4,8 @@ metadata:
   name: special-cases-step-sharing
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Step output and file sharing test using /testkube/outputs and step.results"
 description: "Step sharing - pass values via /testkube/outputs/ and files via step.results"
 spec:
   use:

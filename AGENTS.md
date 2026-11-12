@@ -4,6 +4,8 @@ Testkube Core: the agent services that run in a cluster, the `kubectl-testkube` 
 
 Owner: `.github/CODEOWNERS` names the owning team of each path; ask the owner of the path you change.
 
+Rules live in two places, and each owns one kind. This file owns how we work: commands, tests and pull requests. Each package's `doc.go` owns that package's behaviour. `CONTRIBUTING.md` is the starting guide for outside contributors; the rules here apply to them too. When two disagree, follow the owner and mention the conflict in the PR.
+
 ## 1. Verifying a change
 
 Verification has two loops: the local commands below before every commit, and the pull request workflows in section 6 before asking for review. Use the make targets rather than `go build` or `go test`: `oss-unit-tests` runs `make unit-tests`, and the test targets carry the pinned `gotestsum` and the environment the integration tests expect. `make unit-tests` and `make integration-tests` take `PKG=` (packages) and `RUN=` (a `go test -run` pattern) to narrow a run, and `GOFLAGS=-count=1` skips cached results.
@@ -46,7 +48,9 @@ Verification has two loops: the local commands below before every commit, and th
 
 ## 3. Reproducing a bug
 
-Write the failing test first, at the lowest level that shows the bug, then fix it.
+Reproduce the bug before you fix it: with a failing test at the lowest level that shows it, or with exact steps and their output. If you cannot reproduce it, say so instead of guessing a fix.
+
+Unless the bug is cosmetic or static copy, keep a test that fails on the old code when the bug touches data, money, security, access or a core flow, when an earlier commit already fixed a bug in the same function, or when the file you fix had 5 or more commits in the last 6 months (`git log --since=6.months --oneline -- <file> | wc -l`). Otherwise ship the fix without a test and write `No regression test: <reason>` in the PR description, with how you checked the fix.
 
 - **Unit tests** sit next to the code (`foo_test.go`) and use `testify` (`require` for preconditions, `assert` for checks), usually as a table of cases. Fakes go in through interfaces; reviewers ask for that instead of package-level function variables that tests swap. Generated `gomock` mocks (`mock_*.go`) exist for the larger interfaces. Run one test with `make unit-tests PKG=./pkg/<pkg>/ RUN='^TestName$' GOFLAGS=-count=1`.
 - **Fixtures** live in a `testdata/` folder beside the test (for example `pkg/mcp/boards/testdata/`, `cmd/testworkflow-init/orchestration/testdata/`). Test Workflow specs for smoke tests are under `test/*/crd-workflow/`.
@@ -79,7 +83,7 @@ Write the failing test first, at the lowest level that shows the bug, then fix i
 - `cmd/choco-stub` displays a deprecation message for the old Chocolatey package location.
 - `cmd/tools` contains internal tooling for release management and version bumping.
 
-### Regenerating artifacts
+## Regenerating artifacts
 
 - Update the agent OpenAPI files with `make generate-openapi` after schema edits.
 - Regenerate Kubernetes CRDs after editing type definitions in `api/` via `make generate-crds`.
@@ -115,10 +119,12 @@ Each area below documents itself in the `doc.go` of its package; read that befor
 
 - **Execution-scoped GitLab checkout:** `pkg/cloud/doc.go`, `pkg/controlplaneclient/doc.go` and `cmd/testworkflow-toolkit/commands/doc.go`. The matching authorization contract is in testkube-cloud-api's `internal/agentserver/doc.go`; both sides must support `GetGitAccess` before using `authType: gitlab`.
 - **MCP integration:** `pkg/mcp/doc.go`, with the Insights board rules in `pkg/mcp/boards/doc.go` and how the board tools write in `pkg/mcp/tools/doc.go`. A new tool is also registered in the Control Plane's `mcp_handler.go`, the Control Plane's `HandlerClient` uses `pkg/mcp/boards` rather than reimplementing it, and a dashboard change to the ported report files needs a matching change in `pkg/mcp/boards`.
+- **Control Plane resources** (`testkube apply`, and `get`/`delete` of the kinds that live only in the Control Plane): `pkg/controlplane/declarative/doc.go`. testkube-cloud-api's `internal/declarative` imports the package rather than reimplementing it, so a rule change there is a change in both repos.
 - **GitOps resource sync** and its resource ownership contract: `internal/sync/doc.go`. The Control Plane enforces ownership in testkube-cloud-api's `internal/sync/ownership.go`.
 - **Mongo to Postgres conversion** (`cmd/convert`): `pkg/convert/doc.go`. A schema migration touching `test_workflow_executions` or its child tables is a change there too.
 - **Execution lineage and reruns:** `pkg/api/v1/testkube/doc.go`. Every path that builds an `ExecutionStart`, here and in testkube-cloud-api, sets the lineage from the execution record.
 - **Runtime credentials and identity tokens** (`credential()`, `identity_token()`): `pkg/credentials/doc.go`. testkube-cloud-api implements the `GetCredential` and `GetIdentityToken` RPCs, including the signing key and JWKS of identity tokens.
+- **Parallelism of a parallel step** (`parallel.parallelism` as a `BoxedString`): `pkg/api/v1/testkube/doc.go`. The dashboard type `TestWorkflowStepParallelBase` in testkube-cloud-api's `js/packages/shared-types/src/workflows.ts` reads the boxed form.
 - **Step dependency cache:** `pkg/executioncache/doc.go`. The Control Plane imports `pkg/executioncache` rather than reimplementing it.
 - **Object retention** (`STORAGE_EXPIRATION`, `STORAGE_CACHE_EXPIRATION`): `pkg/storage/minio/doc.go`.
 - **Transient-failure retries:** `pkg/runner/doc.go` (resource cleanup), `pkg/event/kind/webhook/doc.go` (webhook delivery) and `cmd/tcl/testworkflow-toolkit/commands/doc.go` (services cleanup in the kill step).
@@ -161,7 +167,7 @@ Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`
 
 ## 6. Pull request checks and the MCP tools
 
-Pull request checks are not GitHub Actions. They are Testkube TestWorkflows in `test/testkube/oss-tests/gh-quality-loop.yaml`, started by the Testkube GitHub integration on every pull request. Each takes a `revision` config input (default `main`) and checks out `https://github.com/kubeshop/testkube.git` at that revision, so the branch must be pushed to this repository first.
+Pull request checks are not GitHub Actions. They are Testkube TestWorkflows in `test/testkube/oss-tests/gh-quality-loop.yaml`, started by the Testkube GitHub integration on every pull request. Each takes a `revision` config input (default `main`) and checks out `https://github.com/kubeshop/testkube.git` at that revision, so team members push the branch to this repository first. Outside contributors open the pull request from a fork, as the [pull request process](CONTRIBUTING.md#pull-request-process) describes.
 
 | Workflow | What it runs |
 | --- | --- |

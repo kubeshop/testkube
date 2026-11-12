@@ -7,6 +7,7 @@ metadata:
     tool: pytest
     category: unit-component-testing
   annotations:
+    testkube.io/description: "pytest smoke test"
     testkube.io/icon: pytest
 spec:
   content:
@@ -41,6 +42,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
+    testkube.io/description: "pytest smoke test with JUnit reporting and passing tests. Generates a JUnit XML report artifact."
     testkube.io/icon: pytest
 spec:
   content:
@@ -79,6 +81,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
+    testkube.io/description: "pytest smoke test with JUnit reporting and mixed results. Generates a JUnit XML report artifact."
     testkube.io/icon: pytest
 spec:
   content:
@@ -117,6 +120,7 @@ metadata:
     junit: "true"
     category: unit-component-testing
   annotations:
+    testkube.io/description: "pytest smoke test with JUnit reporting and random failures. Generates a JUnit XML report artifact."
     testkube.io/icon: pytest
 spec:
   content:

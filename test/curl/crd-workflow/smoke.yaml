@@ -7,6 +7,7 @@ metadata:
     tool: curl
     category: api-testing
   annotations:
+    testkube.io/description: "curl smoke test"
     testkube.io/icon: curl
 spec:
   container:
@@ -30,6 +31,8 @@ metadata:
     core-tests: workflows
     tool: curl
     category: api-testing
+  annotations:
+    testkube.io/description: "curl smoke test using a private registry image"
 spec:
   pod:
     imagePullSecrets:
@@ -55,6 +58,8 @@ metadata:
     core-tests: workflows
     tool: curl
     category: api-testing
+  annotations:
+    testkube.io/description: "curl smoke test across a URL matrix"
 spec:
   container:
     resources:

@@ -1041,5 +1041,13 @@ func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow2.Filter {
 		filter = filter.WithActorType(testkube.TestWorkflowRunningContextActorType(actorType))
 	}
 
+	// A value that is not a positive number is ignored, like the other numeric filters here.
+	if minDurationMs, err := strconv.ParseInt(c.Query("minDurationMs", ""), 10, 64); err == nil && minDurationMs > 0 {
+		filter = filter.WithMinDurationMs(minDurationMs)
+	}
+	if maxDurationMs, err := strconv.ParseInt(c.Query("maxDurationMs", ""), 10, 64); err == nil && maxDurationMs > 0 {
+		filter = filter.WithMaxDurationMs(maxDurationMs)
+	}
+
 	return filter
 }
