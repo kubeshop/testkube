@@ -117,8 +117,6 @@ func TestWorker_BuildInternalConfig_TLSRetry(t *testing.T) {
 	}
 }
 
-// TestWorker_BuildInternalConfig_SourceNamespace guards that the namespace of the workflow picks the
-// execution namespace only with the flag on and only when the runner allows that namespace.
 func TestWorker_BuildInternalConfig_SourceNamespace(t *testing.T) {
 	tests := []struct {
 		name               string
