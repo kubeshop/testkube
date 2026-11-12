@@ -111,6 +111,13 @@ func (w *worker) buildInternalConfig(resourceId, fsPrefix string, execution test
 	}
 	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
 		cfg.Worker.Namespace = workflow.Spec.Job.Namespace
+	} else if w.config.ExecuteInSourceNamespace && workflow.Namespace != "" {
+		// The Control Plane hands metadata.namespace over in the resolved workflow.
+		// A namespace outside Cluster.Namespaces falls back silently to the default,
+		// because the operator did not allow it on this runner.
+		if _, ok := w.config.Cluster.Namespaces[workflow.Namespace]; ok {
+			cfg.Worker.Namespace = workflow.Namespace
+		}
 	}
 	if ns, ok := w.config.Cluster.Namespaces[cfg.Worker.Namespace]; ok && ns.DefaultServiceAccountName != "" {
 		cfg.Worker.DefaultServiceAccount = ns.DefaultServiceAccountName

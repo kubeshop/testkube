@@ -42,4 +42,7 @@ type Config struct {
 	EmptyDirSizeLimit                        string
 	DefaultImagePullPolicy                   string
 	DefaultRunnerResources                   testworkflowconfig.ContainerResourceConfig
+	// ExecuteInSourceNamespace lets metadata.namespace of the workflow pick the execution namespace
+	// when spec.job.namespace is unset and Cluster.Namespaces holds that namespace.
+	ExecuteInSourceNamespace bool
 }
