@@ -130,6 +130,7 @@ func TestWorker_BuildInternalConfig_SourceNamespace(t *testing.T) {
 		{name: "runs in the source namespace when the flag is on and the runner allows it", flag: true, sourceNamespace: "src", wantNamespace: "src", wantServiceAccount: "sa-src"},
 		{name: "keeps the default namespace when the flag is on and the runner does not allow the source namespace", flag: true, sourceNamespace: "other", wantNamespace: "ns", wantServiceAccount: "sa-ns"},
 		{name: "lets spec.job.namespace win over the source namespace", flag: true, sourceNamespace: "src", job: &testworkflowsv1.JobConfig{Namespace: "ns"}, wantNamespace: "ns", wantServiceAccount: "sa-ns"},
+		{name: "drops the default service account when the source namespace has none", flag: true, sourceNamespace: "bare", wantNamespace: "bare", wantServiceAccount: ""},
 		{name: "keeps the default namespace when the workflow has no namespace", flag: true, sourceNamespace: "", wantNamespace: "ns", wantServiceAccount: "sa-ns"},
 	}
 
@@ -137,8 +138,9 @@ func TestWorker_BuildInternalConfig_SourceNamespace(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := NewWorker(fake.NewSimpleClientset(), nil, Config{
 				Cluster: ClusterConfig{DefaultNamespace: "ns", Namespaces: map[string]NamespaceConfig{
-					"ns":  {DefaultServiceAccountName: "sa-ns"},
-					"src": {DefaultServiceAccountName: "sa-src"},
+					"ns":   {DefaultServiceAccountName: "sa-ns"},
+					"src":  {DefaultServiceAccountName: "sa-src"},
+					"bare": {},
 				}},
 				ExecuteInSourceNamespace: tt.flag,
 			})
