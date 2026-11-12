@@ -227,6 +227,9 @@ type GitOpsSyncConfig struct {
 	// GitOpsSyncControlPlaneResourcesEnabled also syncs the Control Plane resources (Insights
 	// Boards, the AI kinds and Test Bundles), which a GitOps runner syncs only when it is set.
 	GitOpsSyncControlPlaneResourcesEnabled bool `envconfig:"GITOPS_CONTROLPLANE_RESOURCES_ENABLED" default:"false"`
+	// GitOpsExecuteInSourceNamespace makes a GitOps-synced workflow run in the namespace of its CR,
+	// when the runner allows that namespace.
+	GitOpsExecuteInSourceNamespace bool `envconfig:"GITOPS_EXECUTE_IN_SOURCE_NAMESPACE" default:"false"`
 }
 
 type CronJobConfig struct {
