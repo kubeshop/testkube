@@ -81,4 +81,14 @@
 // - parent or rerun cannot shadow them. A collision is refused rather than resolved either way,
 // because preferring the reserved meaning would instead make that child unreachable by name.
 // executiondata.IsReservedRef is the list.
+//
+// # Parallelism of a parallel step
+//
+// TestWorkflowStepParallel.Parallelism and TestWorkflowIndependentStepParallel.Parallelism are a
+// BoxedString, so a workflow can set them from an expression such as config.PARALLELISM. They were
+// an integer before. A stored workflow or execution can still hold the bare number, so
+// BoxedString decodes a bare number from JSON and from BSON (boxed_string_decode.go), and nothing
+// has to be migrated. It always encodes the object form {"value": "2"}. The dashboard type in
+// testkube-cloud-api (js/packages/shared-types/src/workflows.ts, TestWorkflowStepParallelBase)
+// reads the same field, so it changes to the boxed form together with this one.
 package testkube
