@@ -35,7 +35,7 @@ func webhookTemplateSyncReconciler(client client.Reader, store WebhookTemplateSt
 		switch {
 		case errors.IsNotFound(err):
 			// Deleted, request deletion from store.
-			if err := store.DeleteWebhookTemplate(ctx, target, req.Name); err != nil {
+			if err := syncDelete(ctx, client, &executorv1.WebhookTemplateList{}, req.Name, target, resolveTarget, store.UpdateOrCreateWebhookTemplate, store.DeleteWebhookTemplate); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete WebhookTemplate %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
@@ -51,7 +51,7 @@ func webhookTemplateSyncReconciler(client client.Reader, store WebhookTemplateSt
 		// there is no going back so we know this resource is about to be deleted.
 		if !template.DeletionTimestamp.IsZero() {
 			// About to be deleted, request deletion from store.
-			if err := store.DeleteWebhookTemplate(ctx, target, req.Name); err != nil {
+			if err := syncDelete(ctx, client, &executorv1.WebhookTemplateList{}, req.Name, target, resolveTarget, store.UpdateOrCreateWebhookTemplate, store.DeleteWebhookTemplate); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete WebhookTemplate %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
