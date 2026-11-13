@@ -40,10 +40,12 @@ func (n GitOpsNamespaces) Names() []string {
 }
 
 // EnvironmentID returns the Environment of the entry named namespace. It returns empty, the default
-// Environment, for a namespace without a mapping, such as one that only GitOpsAllNamespaces watches.
-func (n GitOpsNamespaces) EnvironmentID(namespace string) string {
+// Environment, for a namespace without a mapping, such as one that only GitOpsAllNamespaces watches,
+// and for a namespace that maps to tokenEnvID. One Environment so has one value, and the name
+// collision check of the sync controllers sees two namespaces of the token Environment as one.
+func (n GitOpsNamespaces) EnvironmentID(namespace, tokenEnvID string) string {
 	for _, ns := range n {
-		if ns.Name == namespace {
+		if ns.Name == namespace && ns.EnvID != tokenEnvID {
 			return ns.EnvID
 		}
 	}
