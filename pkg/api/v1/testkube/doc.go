@@ -82,6 +82,20 @@
 // because preferring the reserved meaning would instead make that child unreachable by name.
 // executiondata.IsReservedRef is the list.
 //
+// # Retrying a whole execution
+//
+// spec.execution.retry { count, on } reruns a workflow when it ends for a cause the policy
+// lists. on is infrastructure (evicted, preempted, node-shutdown, unschedulable; the default),
+// timeout (execution-timeout) or oom (oom-killed). The decision keys on the stop reason, not on
+// the status details type, because unschedulable is typed init-failure yet a retry can fix it.
+// Step failures, other init failures, user cancels and stops with no reason are never retried, so
+// a retry cannot turn a real regression green. ShouldRetryExecution is the one decision function.
+// The agent does not schedule the retry: the Control Plane does, as a rerun with
+// ScheduleRequest.base_execution_id, so the lineage attempt counts it. That consumer in
+// testkube-cloud-api (the finished-event handler) must call ShouldRetryExecution with the stored
+// execution and make a redelivered event schedule one retry only. This is not the step-level
+// RetryPolicy, which reruns a step in the same pod.
+//
 // # Parallelism of a parallel step
 //
 // TestWorkflowStepParallel.Parallelism and TestWorkflowIndependentStepParallel.Parallelism are a

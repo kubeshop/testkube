@@ -11082,6 +11082,30 @@ components:
           type: boolean
           description: indicates that all executions should be silent by default. When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
           default: false
+        retry:
+          $ref: "#/components/schemas/TestWorkflowExecutionRetryPolicy"
+
+    TestWorkflowExecutionRetryPolicy:
+      type: object
+      description: reruns the whole workflow when an execution ends for one of the listed causes
+      required:
+        - count
+      properties:
+        count:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 10
+          description: how many times at most the execution is retried, so the workflow runs at most count+1 times
+        "on":
+          type: array
+          description: the causes that are retried (defaults to infrastructure)
+          items:
+            type: string
+            enum:
+              - infrastructure
+              - timeout
+              - oom
 
     TestWorkflowExecutionTags:
       type: object

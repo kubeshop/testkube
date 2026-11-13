@@ -353,7 +353,8 @@ var (
 			},
 		},
 		Execution: &testworkflowsv1.TestWorkflowExecutionSchema{
-			Tags: map[string]string{"some-key": "some-value"},
+			Tags:  map[string]string{"some-key": "some-value"},
+			Retry: &testworkflowsv1.ExecutionRetryPolicy{Count: 2, On: []testworkflowsv1.ExecutionRetryCause{testworkflowsv1.ExecutionRetryCauseInfrastructure, testworkflowsv1.ExecutionRetryCauseOOM}},
 		},
 		Timeouts: &testworkflowsv1.TestWorkflowTimeouts{
 			Queue:          "30s",

@@ -483,6 +483,9 @@ func MergeExecution(dst, include *testworkflowsv1.TestWorkflowExecutionSchema) *
 	if include.Silent != nil {
 		dst.Silent = include.Silent
 	}
+	if include.Retry != nil {
+		dst.Retry = include.Retry
+	}
 	return dst
 }
 

@@ -1745,6 +1745,14 @@ func MapTestWorkflowTagSchemaAPIToKube(v testkube.TestWorkflowExecutionSchema) t
 		Tags:   v.Tags,
 		Target: common.MapPtr(v.Target, commonmapper.MapTargetApiToKube),
 		Silent: silent,
+		Retry:  common.MapPtr(v.Retry, MapExecutionRetryPolicyAPIToKube),
+	}
+}
+
+func MapExecutionRetryPolicyAPIToKube(v testkube.TestWorkflowExecutionRetryPolicy) testworkflowsv1.ExecutionRetryPolicy {
+	return testworkflowsv1.ExecutionRetryPolicy{
+		Count: v.Count,
+		On:    common.MapSlice(v.On, func(c string) testworkflowsv1.ExecutionRetryCause { return testworkflowsv1.ExecutionRetryCause(c) }),
 	}
 }
 
