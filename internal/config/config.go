@@ -224,6 +224,9 @@ type RunnerConfig struct {
 
 type GitOpsSyncConfig struct {
 	GitOpsSyncKubernetesToCloudEnabled bool `envconfig:"GITOPS_KUBERNETES_TO_CLOUD_ENABLED" default:"false"`
+	// GitOpsExecuteInSourceNamespace makes a GitOps-synced workflow run in the namespace of its CR,
+	// when the runner allows that namespace.
+	GitOpsExecuteInSourceNamespace bool `envconfig:"GITOPS_EXECUTE_IN_SOURCE_NAMESPACE" default:"false"`
 }
 
 type CronJobConfig struct {

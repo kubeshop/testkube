@@ -111,6 +111,16 @@ func (w *worker) buildInternalConfig(resourceId, fsPrefix string, execution test
 	}
 	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
 		cfg.Worker.Namespace = workflow.Spec.Job.Namespace
+	} else if w.config.ExecuteInSourceNamespace && workflow.Namespace != "" {
+		// The Control Plane hands metadata.namespace over in the resolved workflow.
+		// A namespace outside Cluster.Namespaces falls back silently to the default,
+		// because the operator did not allow it on this runner.
+		// The service account of the source namespace replaces the default one, also when it is empty,
+		// so that Kubernetes uses the default account of that namespace.
+		if ns, ok := w.config.Cluster.Namespaces[workflow.Namespace]; ok {
+			cfg.Worker.Namespace = workflow.Namespace
+			cfg.Worker.DefaultServiceAccount = ns.DefaultServiceAccountName
+		}
 	}
 	if ns, ok := w.config.Cluster.Namespaces[cfg.Worker.Namespace]; ok && ns.DefaultServiceAccountName != "" {
 		cfg.Worker.DefaultServiceAccount = ns.DefaultServiceAccountName
