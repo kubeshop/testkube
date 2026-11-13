@@ -123,6 +123,7 @@ Each area below documents itself in the `doc.go` of its package; read that befor
 - **GitOps resource sync** and its resource ownership contract: `internal/sync/doc.go`. The Control Plane enforces ownership in testkube-cloud-api's `internal/sync/ownership.go`.
 - **Mongo to Postgres conversion** (`cmd/convert`): `pkg/convert/doc.go`. A schema migration touching `test_workflow_executions` or its child tables is a change there too.
 - **Execution lineage and reruns:** `pkg/api/v1/testkube/doc.go`. Every path that builds an `ExecutionStart`, here and in testkube-cloud-api, sets the lineage from the execution record.
+- **Runtime credentials and identity tokens** (`credential()`, `identity_token()`): `pkg/credentials/doc.go`. testkube-cloud-api implements the `GetCredential` and `GetIdentityToken` RPCs, including the signing key and JWKS of identity tokens.
 - **Parallelism of a parallel step** (`parallel.parallelism` as a `BoxedString`): `pkg/api/v1/testkube/doc.go`. The dashboard type `TestWorkflowStepParallelBase` in testkube-cloud-api's `js/packages/shared-types/src/workflows.ts` reads the boxed form.
 - **Step dependency cache:** `pkg/executioncache/doc.go`. The Control Plane imports `pkg/executioncache` rather than reimplementing it.
 - **Object retention** (`STORAGE_EXPIRATION`, `STORAGE_CACHE_EXPIRATION`): `pkg/storage/minio/doc.go`.
