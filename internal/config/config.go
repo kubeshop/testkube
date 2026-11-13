@@ -224,6 +224,10 @@ type RunnerConfig struct {
 
 type GitOpsSyncConfig struct {
 	GitOpsSyncKubernetesToCloudEnabled bool `envconfig:"GITOPS_KUBERNETES_TO_CLOUD_ENABLED" default:"false"`
+	// GitOpsNamespaces lists the namespaces the controller manager watches, comma separated.
+	// An entry is ns, ns=<envId> (sync ns into that Environment) or * (every namespace).
+	// Empty means TESTKUBE_NAMESPACE. See ParseGitOpsNamespaces.
+	GitOpsNamespaces string `envconfig:"GITOPS_NAMESPACES" default:""`
 }
 
 type CronJobConfig struct {
