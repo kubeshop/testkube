@@ -24,6 +24,10 @@ const (
 	SignInSharedKey = "shared_key"
 	// SignInPerPerson signs each person in with their own account.
 	SignInPerPerson = "per_person"
+	// SignInOBO signs in on behalf of the person through the organization's
+	// identity provider, or as the agent's own principal there when nobody
+	// is present.
+	SignInOBO = "obo"
 )
 
 //+kubebuilder:object:root=true
@@ -105,10 +109,10 @@ type AIAgentMCPServer struct {
 	// server.
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
-	// SignIn is how the agent signs in to the server: none, shared_key or
-	// per_person. Empty keeps the behavior of a link made before the choice
-	// existed.
-	// +kubebuilder:validation:Enum=none;shared_key;per_person
+	// SignIn is how the agent signs in to the server: none, shared_key,
+	// per_person or obo (through the organization's identity provider).
+	// Empty keeps the behavior of a link made before the choice existed.
+	// +kubebuilder:validation:Enum=none;shared_key;per_person;obo
 	SignIn string `json:"signIn,omitempty"`
 	// CredentialReference names the Environment Credential holding the
 	// headers to sign in with, as secret://<name>. It is only valid with
