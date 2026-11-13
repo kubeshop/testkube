@@ -107,7 +107,9 @@ spec:
                     description: Revision is a branch, tag or commit.
                     type: string
                   uri:
-                    description: URI of the repository. It must not carry credentials.
+                    description: |-
+                      URI of the repository: a URL, or Git's scp-like [user@]host:path. It
+                      may carry credentials, as the dashboard accepts.
                     minLength: 1
                     type: string
                 required:

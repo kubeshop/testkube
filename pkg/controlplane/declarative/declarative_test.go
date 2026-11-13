@@ -80,17 +80,12 @@ func TestFixtures_Invalid(t *testing.T) {
 			"spec.skills[1].description: Required", "spec.skills[1].content: Required",
 			"spec.skills[2].name", "Duplicate value",
 		},
-		"llm-provider-credential-header.yaml": {
-			"spec.extraHeaders: Forbidden: has a header", "spec.models[0].queryParams: Forbidden: has a query parameter", "Environment Credential",
-			"spec.baseUrl", "has a query parameter that looks like a credential",
-		},
 		"llm-provider-bad-model.yaml": {
 			"spec.extraHeaders[Host]", "does not forward",
 			"spec.models[0].name", "spec.models[2].name", "Duplicate value",
 		},
-		"mcp-server-builtin-name.yaml":    {"metadata.name", "built-in Testkube MCP server"},
-		"mcp-server-missing-url.yaml":     {"spec.url", "spec.command", "only a stdio server"},
-		"mcp-server-url-credentials.yaml": {"spec.url", "must not carry credentials"},
+		"mcp-server-builtin-name.yaml": {"metadata.name", "built-in Testkube MCP server"},
+		"mcp-server-missing-url.yaml":  {"spec.url", "spec.command", "only a stdio server"},
 		"test-bundle-bad-skills.yaml": {
 			"metadata.name", "may not be more than 59 bytes",
 			"spec.skills[0].name", "lowercase letters, digits and single hyphens",
@@ -99,7 +94,6 @@ func TestFixtures_Invalid(t *testing.T) {
 			"spec.contexts[0].title: Required", "spec.contexts[1].content: Required",
 			"spec.aiAgents[1]", "spec.aiAgents[2]",
 		},
-		"test-bundle-git-credentials.yaml": {"spec.gitSource.uri", "must not carry credentials"},
 	}
 	files, err := filepath.Glob(filepath.Join("testdata", "invalid", "*.yaml"))
 	require.NoError(t, err)

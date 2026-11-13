@@ -44,9 +44,9 @@ type LLMProviderSpec struct {
 	// secret://<name> (or a bare name) for a credential, vault://<path> for
 	// a Vault secret.
 	CredentialReference string `json:"credentialReference,omitempty"`
-	// ExtraHeaders are sent with every request to the provider. They must
-	// not carry a credential: a header such as Authorization or X-Api-Key is
-	// refused, and belongs in the credential.
+	// ExtraHeaders are sent with every request to the provider. A value may
+	// be a credential, such as an X-Api-Key header; the Control Plane exports
+	// every value as ********, which applied back keeps the stored one.
 	ExtraHeaders map[string]string `json:"extraHeaders,omitempty"`
 	// QueryParams are added to every request to the provider, under the same
 	// rule as ExtraHeaders.
