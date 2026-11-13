@@ -49,44 +49,6 @@ var AgentRoles = []string{"admin", "read", "run", "write"}
 // credentialNamePattern is the name of an Environment Credential.
 var credentialNamePattern = regexp.MustCompile(`^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?$`)
 
-// credentialFieldWords mark a header or query parameter whose value is a
-// credential, by a word in its name. Such a value belongs in an Environment
-// Credential, which the manifest names, not in the manifest.
-var credentialFieldWords = []string{"auth", "token", "secret", "password", "passwd", "cookie", "apikey", "api-key", "api_key", "signature"}
-
-// credentialFieldNames mark a header or query parameter whose value is a
-// credential, by its whole name or its last part (after '-', '_' or '.'):
-// too short to look for inside a name. sig is the signature of an Azure SAS
-// URL and of other signed endpoints.
-var credentialFieldNames = []string{"key", "sig"}
-
-// IsCredentialField reports whether a header or query parameter name looks
-// like it carries a credential: Authorization, Cookie, X-Api-Key, a name
-// with token, secret or password in it, or one that is or ends in key or sig.
-// A name holding a whole pasted entry ("key=sk-live-123", "X-Api-Key: ...")
-// is judged by the part before its first '=' or ':' too.
-func IsCredentialField(name string) bool {
-	n := strings.ToLower(strings.TrimSpace(name))
-	if i := strings.IndexAny(n, "=:"); i >= 0 && isCredentialName(strings.TrimSpace(n[:i])) {
-		return true
-	}
-	return isCredentialName(n)
-}
-
-func isCredentialName(n string) bool {
-	for _, word := range credentialFieldWords {
-		if strings.Contains(n, word) {
-			return true
-		}
-	}
-	for _, word := range credentialFieldNames {
-		if n == word || strings.HasSuffix(n, "-"+word) || strings.HasSuffix(n, "_"+word) || strings.HasSuffix(n, "."+word) {
-			return true
-		}
-	}
-	return false
-}
-
 // ParseCredentialReference splits a credentialReference into the name it
 // names and its source: "credential" for secret://<name> or a bare name, and
 // "vault" for vault://<path>.

@@ -12,6 +12,7 @@ import (
 	aiv1 "github.com/kubeshop/testkube/api/ai/v1alpha1"
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 	insightsv1 "github.com/kubeshop/testkube/api/insights/v1alpha1"
+	testbundlesv1 "github.com/kubeshop/testkube/api/testbundles/v1alpha1"
 )
 
 // Object is a Control Plane resource.
@@ -103,6 +104,14 @@ var kinds = []Kind{
 		Scope:        ScopeEnvironment,
 		newObject:    func() Object { return &aiv1.AIAgent{} },
 	},
+	{
+		GroupVersion: testbundlesv1.GroupVersion,
+		Kind:         testbundlesv1.TestBundleKind,
+		Resource:     testbundlesv1.TestBundleResource,
+		Names:        []string{"testbundle", "testbundles"},
+		Scope:        ScopeEnvironment,
+		newObject:    func() Object { return &testbundlesv1.TestBundle{} },
+	},
 }
 
 // SortForApply orders objects so each comes after the kinds it refers to,
@@ -183,6 +192,8 @@ func StatusOf(obj Object) commonv1.ControlPlaneResourceStatus {
 		return o.Status.ControlPlaneResourceStatus
 	case *aiv1.LLMProvider:
 		return o.Status
+	case *testbundlesv1.TestBundle:
+		return o.Status.ControlPlaneResourceStatus
 	}
 	return commonv1.ControlPlaneResourceStatus{}
 }

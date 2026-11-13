@@ -1,0 +1,216 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.21.0
+  name: testbundles.testbundles.testkube.io
+spec:
+  group: testbundles.testkube.io
+  names:
+    kind: TestBundle
+    listKind: TestBundleList
+    plural: testbundles
+    singular: testbundle
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.displayName
+      name: Display Name
+      type: string
+    - jsonPath: .status.workflowName
+      name: Workflow
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          TestBundle is a Test Bundle of an environment. metadata.name is its slug,
+          which never changes once the bundle exists.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              TestBundleSpec is what a Test Bundle is and the guidance its authoring
+              uses.
+            properties:
+              aiAgents:
+                description: |-
+                  AIAgents are the AI Agents, by metadata.name, the bundle's authoring
+                  may delegate to. Each must be public. When it is omitted, a new bundle
+                  starts with the environment's defaults for new bundles and an existing
+                  one keeps its own; an empty list delegates to none.
+                items:
+                  type: string
+                type: array
+              contexts:
+                description: |-
+                  Contexts are the bundle's Attached Context, in this order: guidance
+                  its authoring sandbox holds for the AI to read, never part of the
+                  tests the bundle publishes. As with skills, applying a list replaces
+                  the whole list, an empty list removes them all, and when contexts is
+                  omitted the bundle's Attached Context is left as it is.
+                items:
+                  description: TestBundleContext is one piece of a Test Bundle's Attached
+                    Context.
+                  properties:
+                    content:
+                      description: Content is the guidance itself.
+                      minLength: 1
+                      type: string
+                    title:
+                      description: Title names the context in the dashboard. Titles
+                        need not be unique.
+                      minLength: 1
+                      type: string
+                  required:
+                  - content
+                  - title
+                  type: object
+                type: array
+              description:
+                description: Description of the bundle.
+                type: string
+              displayName:
+                description: |-
+                  DisplayName is the bundle's name in the dashboard. It defaults to
+                  metadata.name.
+                type: string
+              gitSource:
+                description: |-
+                  GitSource is the repository the bundle's tests come from. It is only
+                  read from; nothing is pushed back.
+                properties:
+                  path:
+                    description: Path within the repository.
+                    type: string
+                  revision:
+                    description: Revision is a branch, tag or commit.
+                    type: string
+                  uri:
+                    description: |-
+                      URI of the repository: a URL, or Git's scp-like [user@]host:path. It
+                      may carry credentials, as the dashboard accepts.
+                    minLength: 1
+                    type: string
+                required:
+                - uri
+                type: object
+              labels:
+                additionalProperties:
+                  type: string
+                description: Labels categorize the bundle in the dashboard.
+                type: object
+              skills:
+                description: |-
+                  Skills are the guidance every authoring chat of the bundle gets, in
+                  this order. They belong to the bundle: applying a list replaces the
+                  whole list, so a Skill left out is deleted, and an empty list removes
+                  them all. When skills is omitted, the bundle's Skills are left as they
+                  are, so applying a manifest without them does not delete the ones
+                  added in the dashboard.
+                items:
+                  description: |-
+                    TestBundleSkill is guidance a Test Bundle's authoring gets in full in every
+                    prompt, following the Agent Skills spec.
+                  properties:
+                    content:
+                      description: Content is the guidance itself.
+                      minLength: 1
+                      type: string
+                    description:
+                      description: Description says what the Skill does and when to
+                        use it.
+                      minLength: 1
+                      type: string
+                    metadata:
+                      additionalProperties:
+                        type: string
+                      description: Metadata is extra Agent Skills spec metadata.
+                      type: object
+                    name:
+                      description: |-
+                        Name identifies the Skill within the bundle: up to 64 lowercase
+                        letters, digits and single hyphens.
+                      maxLength: 64
+                      minLength: 1
+                      pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+                      type: string
+                  required:
+                  - content
+                  - description
+                  - name
+                  type: object
+                type: array
+            type: object
+          status:
+            description: |-
+              TestBundleStatus is the Control Plane's view of a Test Bundle. It is
+              exported, never applied.
+            properties:
+              creationSource:
+                description: 'CreationSource records how the resource was created:
+                  ui, api or gitops.'
+                type: string
+              gitOpsOwner:
+                description: |-
+                  GitOpsOwner is the GitOps agent that owns the resource. While it is set,
+                  the resource is read-only everywhere else.
+                properties:
+                  agentId:
+                    description: AgentID is the authoritative identifier of the owning
+                      agent.
+                    type: string
+                  agentName:
+                    description: AgentName is for display only, and may be stale after
+                      a rename.
+                    type: string
+                required:
+                - agentId
+                type: object
+              id:
+                description: ID is the Control Plane's identifier of the resource.
+                type: string
+              lastActiveAt:
+                description: LastActiveAt is when a chat on the bundle was last active.
+                format: date-time
+                type: string
+              lastModificationSource:
+                description: |-
+                  LastModificationSource records how the resource was last changed: ui,
+                  api or gitops.
+                type: string
+              sessionCount:
+                description: SessionCount is the number of chats on the bundle the
+                  exporter sees.
+                type: integer
+              workflowName:
+                description: |-
+                  WorkflowName is the bundle's shared Test Workflow, set once a chat
+                  creates it.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
