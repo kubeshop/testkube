@@ -142,8 +142,6 @@ func TestTestWorkflowSyncReconcilerOwnershipConflictIsTerminal(t *testing.T) {
 	}
 }
 
-// The reconciler works out the target of a resource from the namespace of the request, for the
-// update and for the delete.
 func TestTestWorkflowSyncReconcilerTarget(t *testing.T) {
 	want := syncagent.Target{Namespace: "team-b", EnvironmentID: "env-b"}
 	tests := []struct {
@@ -176,8 +174,6 @@ func TestTestWorkflowSyncReconcilerTarget(t *testing.T) {
 	}
 }
 
-// A second TestWorkflow with the same name in a namespace of the same Environment never reaches
-// the Control Plane, and the reconciler does not retry it.
 func TestTestWorkflowSyncReconcilerNameCollisionIsTerminal(t *testing.T) {
 	earlier := metav1.NewTime(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
 	later := metav1.NewTime(earlier.Add(time.Hour))

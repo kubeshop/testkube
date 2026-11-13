@@ -18,24 +18,24 @@ type TestWorkflowTemplateStore interface {
 	DeleteTestWorkflowTemplate(context.Context, syncagent.Target, string) error
 }
 
-func NewTestWorkflowTemplateSyncController(mgr ctrl.Manager, store TestWorkflowTemplateStore, target syncagent.TargetFunc) error {
+func NewTestWorkflowTemplateSyncController(mgr ctrl.Manager, store TestWorkflowTemplateStore, resolveTarget syncagent.TargetFunc) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&testworkflowsv1.TestWorkflowTemplate{}).
-		Complete(testWorkflowTemplateSyncReconciler(mgr.GetClient(), store, target)); err != nil {
+		Complete(testWorkflowTemplateSyncReconciler(mgr.GetClient(), store, resolveTarget)); err != nil {
 		return fmt.Errorf("create new sync controller for TestWorkflowTemplate: %w", err)
 	}
 	return nil
 }
 
-func testWorkflowTemplateSyncReconciler(client client.Reader, store TestWorkflowTemplateStore, target syncagent.TargetFunc) reconcile.Reconciler {
+func testWorkflowTemplateSyncReconciler(client client.Reader, store TestWorkflowTemplateStore, resolveTarget syncagent.TargetFunc) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-		t := target(req.Namespace)
+		target := resolveTarget(req.Namespace)
 		var workflowTemplate testworkflowsv1.TestWorkflowTemplate
 		err := client.Get(ctx, req.NamespacedName, &workflowTemplate)
 		switch {
 		case errors.IsNotFound(err):
 			// Deleted, request deletion from store.
-			if err := store.DeleteTestWorkflowTemplate(ctx, t, req.Name); err != nil {
+			if err := store.DeleteTestWorkflowTemplate(ctx, target, req.Name); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete TestWorkflowTemplate %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
@@ -51,18 +51,18 @@ func testWorkflowTemplateSyncReconciler(client client.Reader, store TestWorkflow
 		// there is no going back so we know this resource is about to be deleted.
 		if !workflowTemplate.DeletionTimestamp.IsZero() {
 			// About to be deleted, request deletion from store.
-			if err := store.DeleteTestWorkflowTemplate(ctx, t, req.Name); err != nil {
+			if err := store.DeleteTestWorkflowTemplate(ctx, target, req.Name); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete TestWorkflowTemplate %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		}
 
 		// Regular update so send the new object into the store.
-		if err := checkNameCollision(ctx, client, &testworkflowsv1.TestWorkflowTemplateList{}, &workflowTemplate, t, target); err != nil {
+		if err := checkNameCollision(ctx, client, &testworkflowsv1.TestWorkflowTemplateList{}, &workflowTemplate, target, resolveTarget); err != nil {
 			return ctrl.Result{}, terminalOnRejection(fmt.Errorf("sync TestWorkflowTemplate %q: %w", req.NamespacedName, err))
 		}
 
-		if err := store.UpdateOrCreateTestWorkflowTemplate(ctx, t, workflowTemplate); err != nil {
+		if err := store.UpdateOrCreateTestWorkflowTemplate(ctx, target, workflowTemplate); err != nil {
 			return ctrl.Result{}, terminalOnRejection(fmt.Errorf("update TestWorkflowTemplate %q in store: %w", workflowTemplate.Name, err))
 		}
 

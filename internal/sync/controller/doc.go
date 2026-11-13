@@ -13,8 +13,8 @@
 // after its next change. A List error stays retryable.
 //
 // Some store rejections do not clear on retry: an ownership conflict, an invalid resource, a
-// forbidden Environment or a name collision (see syncagent.IsRejection). terminalOnRejection wraps such an error in reconcile.TerminalError, so
-// controller-runtime stops the requeue of the resource. The reconcilers return every other error
+// forbidden Environment or a name collision (see syncagent.IsRejection). terminalOnRejection wraps
+// such an error in reconcile.TerminalError, so controller-runtime stops the requeue of the resource. The reconcilers return every other error
 // unchanged, and controller-runtime retries it with backoff. The reconcilers do not log these errors,
 // because controller-runtime logs the returned error with the kind and the name of the resource.
 //

@@ -64,8 +64,8 @@ func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, apiToke
 	}
 }
 
-// callContext returns the context of one call to the Control Plane: our own call timeout, to
-// prevent stalling out, and the metadata of the target.
+// callContext returns the context of one call to the Control Plane: the call timeout of the client,
+// so that a call cannot stall, and the metadata of the target.
 //
 // The environment-id header goes out only for an Environment other than the one of the agent
 // token. The Control Plane already syncs into the token Environment without it, and a Control

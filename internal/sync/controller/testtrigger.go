@@ -18,24 +18,24 @@ type TestTriggerStore interface {
 	DeleteTestTrigger(context.Context, syncagent.Target, string) error
 }
 
-func NewTestTriggerSyncController(mgr ctrl.Manager, store TestTriggerStore, target syncagent.TargetFunc) error {
+func NewTestTriggerSyncController(mgr ctrl.Manager, store TestTriggerStore, resolveTarget syncagent.TargetFunc) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&testtriggersv1.TestTrigger{}).
-		Complete(testTriggerSyncReconciler(mgr.GetClient(), store, target)); err != nil {
+		Complete(testTriggerSyncReconciler(mgr.GetClient(), store, resolveTarget)); err != nil {
 		return fmt.Errorf("create new sync controller for TestTrigger: %w", err)
 	}
 	return nil
 }
 
-func testTriggerSyncReconciler(client client.Reader, store TestTriggerStore, target syncagent.TargetFunc) reconcile.Reconciler {
+func testTriggerSyncReconciler(client client.Reader, store TestTriggerStore, resolveTarget syncagent.TargetFunc) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-		t := target(req.Namespace)
+		target := resolveTarget(req.Namespace)
 		var trigger testtriggersv1.TestTrigger
 		err := client.Get(ctx, req.NamespacedName, &trigger)
 		switch {
 		case errors.IsNotFound(err):
 			// Deleted, request deletion from store.
-			if err := store.DeleteTestTrigger(ctx, t, req.Name); err != nil {
+			if err := store.DeleteTestTrigger(ctx, target, req.Name); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete TestTrigger %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
@@ -51,18 +51,18 @@ func testTriggerSyncReconciler(client client.Reader, store TestTriggerStore, tar
 		// there is no going back so we know this resource is about to be deleted.
 		if !trigger.DeletionTimestamp.IsZero() {
 			// About to be deleted, request deletion from store.
-			if err := store.DeleteTestTrigger(ctx, t, req.Name); err != nil {
+			if err := store.DeleteTestTrigger(ctx, target, req.Name); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete TestTrigger %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		}
 
 		// Regular update so send the new object into the store.
-		if err := checkNameCollision(ctx, client, &testtriggersv1.TestTriggerList{}, &trigger, t, target); err != nil {
+		if err := checkNameCollision(ctx, client, &testtriggersv1.TestTriggerList{}, &trigger, target, resolveTarget); err != nil {
 			return ctrl.Result{}, terminalOnRejection(fmt.Errorf("sync TestTrigger %q: %w", req.NamespacedName, err))
 		}
 
-		if err := store.UpdateOrCreateTestTrigger(ctx, t, trigger); err != nil {
+		if err := store.UpdateOrCreateTestTrigger(ctx, target, trigger); err != nil {
 			return ctrl.Result{}, terminalOnRejection(fmt.Errorf("update TestTrigger %q in store: %w", trigger.Name, err))
 		}
 
