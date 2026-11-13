@@ -32,64 +32,31 @@ func TestNormalize_AIDefaults(t *testing.T) {
 	assert.Equal(t, []string{"a", "b"}, agent.Spec.Access.ResourceGroups)
 }
 
-// sig carries the signature of an Azure SAS URL, so a literal one is refused
-// in forwarded query parameters as in the base URL.
-func TestNormalize_RefusesSignatureQueryParameter(t *testing.T) {
+// Credentials are taken as written, as the REST API and Test Workflows take
+// them: in headers, query parameters and URLs, at the provider and the model.
+func TestNormalize_AcceptsLiteralCredentials(t *testing.T) {
 	p := &aiv1.LLMProvider{Spec: aiv1.LLMProviderSpec{
-		Provider:    "azure",
-		QueryParams: map[string]string{"sig": "c2lnbmF0dXJl"},
-	}}
-	p.Name = "azure"
-	err := Normalize(p)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "spec.queryParams: Forbidden: has a query parameter that looks like a credential")
-	assert.NotContains(t, err.Error(), "c2lnbmF0dXJl")
-
-	p.Spec.QueryParams = nil
-	p.Spec.BaseURL = "https://example.openai.azure.com/openai?sv=2024-01-01&sig=c2lnbmF0dXJl"
-	err = Normalize(p)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "spec.baseUrl")
-	assert.NotContains(t, err.Error(), "c2lnbmF0dXJl")
-}
-
-func TestNormalize_SecretValuesAreNotEchoed(t *testing.T) {
-	p := &aiv1.LLMProvider{Spec: aiv1.LLMProviderSpec{
-		Provider:     "openai",
-		ExtraHeaders: map[string]string{"X-Api-Key": "sk-live-123"},
-	}}
-	p.Name = "openai"
-	err := Normalize(p)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "spec.extraHeaders: Forbidden: has a header that looks like a credential")
-	assert.NotContains(t, err.Error(), "sk-live-123")
-}
-
-// A whole entry pasted as a key puts the secret in the name, so a refused
-// name is not echoed either, at the provider or the model level.
-func TestNormalize_SecretMapKeysAreNotEchoed(t *testing.T) {
-	const secret = "sk-live-123"
-	p := &aiv1.LLMProvider{Spec: aiv1.LLMProviderSpec{
-		Provider:     "openai",
-		ExtraHeaders: map[string]string{"Authorization: Bearer " + secret: ""},
-		QueryParams:  map[string]string{"api_key=" + secret: ""},
+		Provider:     "azure",
+		BaseURL:      "https://example.openai.azure.com/openai?sv=2024-01-01&sig=c2lnbmF0dXJl",
+		ExtraHeaders: map[string]string{"X-Api-Key": "sk-live-123", "Authorization": "Bearer sk-live-123"},
+		QueryParams:  map[string]string{"sig": "c2lnbmF0dXJl"},
 		Models: []aiv1.LLMProviderModel{{
 			Name:         "gpt-4o",
-			ExtraHeaders: map[string]string{"X-Api-Key=" + secret: ""},
-			QueryParams:  map[string]string{"key=" + secret: ""},
+			URL:          "https://user:hunter2@llm.example.com/v1?api_key=sk-live-123",
+			ExtraHeaders: map[string]string{"api-key": "sk-live-123"},
+			QueryParams:  map[string]string{"key": "sk-live-123"},
 		}},
 	}}
-	p.Name = "openai"
-	err := Normalize(p)
-	require.Error(t, err)
-	for _, want := range []string{"spec.extraHeaders: Forbidden", "spec.queryParams: Forbidden", "spec.models[0].extraHeaders: Forbidden", "spec.models[0].queryParams: Forbidden"} {
-		assert.Contains(t, err.Error(), want)
-	}
-	assert.NotContains(t, err.Error(), secret)
+	p.Name = "azure"
+	require.NoError(t, Normalize(p))
+
+	server := &aiv1.MCPServer{Spec: aiv1.MCPServerSpec{URL: "https://user:hunter2@example.com/mcp?token=hunter2"}}
+	server.Name = "private"
+	require.NoError(t, Normalize(server))
 }
 
 // An export redacts every value, and the placeholder applied back keeps the
-// stored value, so it is accepted whatever the name: it carries no secret.
+// stored value, so it is accepted whatever the name.
 func TestNormalize_AcceptsTheExportedPlaceholder(t *testing.T) {
 	p := &aiv1.LLMProvider{Spec: aiv1.LLMProviderSpec{
 		Provider:     "openai",
@@ -139,21 +106,14 @@ func TestRefusedSecretsAreNotEchoed(t *testing.T) {
 		assert.NotContains(t, errs.ToAggregate().Error(), "ghp_abc123")
 	}
 	for _, raw := range []string{
-		"https://user:hunter2@example.com/mcp",
-		"https://example.com/mcp?api_key=hunter2",
-		"https://example.com/mcp?Token=hunter2&x=1",
-		"ftp://example.com/hunter2",
-		"https://example.com/mcp?a=%zzhunter2",
-		"https://example.com/mcp?sv=2024-01-01&sig=hunter2",
-		"https://example.com/mcp?api_key%3Dhunter2",
+		"ftp://user:hunter2@example.com/mcp",
+		"//user:hunter2@example.com/mcp",
+		"https://user:hunter2@exa mple.com/mcp",
 	} {
 		errs := validateHTTPURL(raw, path)
 		require.NotEmpty(t, errs, raw)
 		assert.NotContains(t, errs.ToAggregate().Error(), "hunter2", raw)
 	}
-	errs := validateHTTPURL("https://example.com/mcp?api_key=hunter2", path)
-	assert.Contains(t, errs.ToAggregate().Error(), "has a query parameter that looks like a credential")
-	assert.NotContains(t, errs.ToAggregate().Error(), "api_key", "a query parameter's name is not echoed either")
 	assert.Empty(t, validateHTTPURL("https://example.com/mcp?api-version=2024-10-21", path))
 }
 
