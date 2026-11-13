@@ -356,8 +356,8 @@ func TestInNamespace(t *testing.T) {
 		namespace string
 		want      bool
 	}{
-		{name: "own namespace", namespace: "testkube", want: true},
-		{name: "another namespace", namespace: "other", want: false},
+		{name: "an object in the agent namespace passes", namespace: "testkube", want: true},
+		{name: "an object in another namespace is filtered out", namespace: "other", want: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
