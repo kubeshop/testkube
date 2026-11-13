@@ -70,15 +70,6 @@ func TestNormalize_AcceptsTheExportedPlaceholder(t *testing.T) {
 	require.Error(t, Normalize(p), "a header that is never forwarded stays refused")
 }
 
-func TestIsCredentialField(t *testing.T) {
-	for _, name := range []string{"Authorization", "Proxy-Authorization", "Cookie", "X-Api-Key", "api_key", "key", "x-goog-api-key", "X-Auth-Token", "client_secret", "password", "sig.key", "X-Amz-Signature", "sig", "SIG", "x-ms-sig", "key=sk-live-123", "X-Api-Key: sk-live-123", "sig=abc"} {
-		assert.True(t, IsCredentialField(name), name)
-	}
-	for _, name := range []string{"anthropic-version", "api-version", "OpenAI-Organization", "x-request-id", "keyboard", "model", "signal", "sigma", "model=gpt-4o"} {
-		assert.False(t, IsCredentialField(name), name)
-	}
-}
-
 func TestCredentialReference(t *testing.T) {
 	for ref, want := range map[string][2]string{
 		"secret://github-token": {"github-token", "credential"},

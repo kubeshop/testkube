@@ -103,7 +103,7 @@
 // the Agent Skills spec's limits (skill.go) and are always included, so
 // together they hold at most MaxAlwaysIncludedSkillsLength characters of
 // content, since every authoring prompt carries all of them. A Git source URI
-// must not carry credentials, which Normalize reports without echoing the URI.
+// may carry credentials, as the REST API accepts, and is exported as stored.
 //
 // contexts is the bundle's Attached Context: guidance its authoring sandbox
 // holds for the AI to read, apart from its Skills. It is kept in manifest
@@ -115,10 +115,9 @@
 //
 // It must be a URL with a scheme and host, or Git's scp-like [user@]host:path,
 // whose path may hold an '@' (team/repo@v2.git) unless, with no user, it comes
-// before the path's first '/', where host:secret@... reads as
-// user:password@host. Anything else, such as a URL url.Parse cannot read, or
-// one whose query url.ParseQuery cannot read, is refused, since its
-// credentials could not be checked.
+// before the path's first '/': https:token@github.com/... is a URL missing its
+// "//", not a repository on the host "https". Anything else, such as a URL
+// url.Parse cannot read, is refused, and not echoed.
 //
 // aiAgents names AI Agents by metadata.name and is sorted, as the Control
 // Plane exports it. Omitted, a new bundle starts with the environment's

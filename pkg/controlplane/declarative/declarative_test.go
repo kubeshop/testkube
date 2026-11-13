@@ -94,7 +94,6 @@ func TestFixtures_Invalid(t *testing.T) {
 			"spec.contexts[0].title: Required", "spec.contexts[1].content: Required",
 			"spec.aiAgents[1]", "spec.aiAgents[2]",
 		},
-		"test-bundle-git-credentials.yaml": {"spec.gitSource.uri", "must not carry credentials"},
 	}
 	files, err := filepath.Glob(filepath.Join("testdata", "invalid", "*.yaml"))
 	require.NoError(t, err)

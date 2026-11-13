@@ -66,7 +66,8 @@ type TestBundleSpec struct {
 
 // TestBundleGitSource is a repository a Test Bundle reads tests from.
 type TestBundleGitSource struct {
-	// URI of the repository. It must not carry credentials.
+	// URI of the repository: a URL, or Git's scp-like [user@]host:path. It
+	// may carry credentials, as the dashboard accepts.
 	// +kubebuilder:validation:MinLength=1
 	URI string `json:"uri"`
 	// Revision is a branch, tag or commit.
