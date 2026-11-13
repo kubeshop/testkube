@@ -18,24 +18,24 @@ type WebhookStore interface {
 	DeleteWebhook(context.Context, syncagent.Target, string) error
 }
 
-func NewWebhookSyncController(mgr ctrl.Manager, store WebhookStore, target syncagent.TargetFunc) error {
+func NewWebhookSyncController(mgr ctrl.Manager, store WebhookStore, resolveTarget syncagent.TargetFunc) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&executorv1.Webhook{}).
-		Complete(webhookSyncReconciler(mgr.GetClient(), store, target)); err != nil {
+		Complete(webhookSyncReconciler(mgr.GetClient(), store, resolveTarget)); err != nil {
 		return fmt.Errorf("create new sync controller for Webhook: %w", err)
 	}
 	return nil
 }
 
-func webhookSyncReconciler(client client.Reader, store WebhookStore, target syncagent.TargetFunc) reconcile.Reconciler {
+func webhookSyncReconciler(client client.Reader, store WebhookStore, resolveTarget syncagent.TargetFunc) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-		t := target(req.Namespace)
+		target := resolveTarget(req.Namespace)
 		var webhook executorv1.Webhook
 		err := client.Get(ctx, req.NamespacedName, &webhook)
 		switch {
 		case errors.IsNotFound(err):
 			// Deleted, request deletion from store.
-			if err := store.DeleteWebhook(ctx, t, req.Name); err != nil {
+			if err := store.DeleteWebhook(ctx, target, req.Name); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete Webhook %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
@@ -51,18 +51,18 @@ func webhookSyncReconciler(client client.Reader, store WebhookStore, target sync
 		// there is no going back so we know this resource is about to be deleted.
 		if !webhook.DeletionTimestamp.IsZero() {
 			// About to be deleted, request deletion from store.
-			if err := store.DeleteWebhook(ctx, t, req.Name); err != nil {
+			if err := store.DeleteWebhook(ctx, target, req.Name); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete Webhook %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		}
 
 		// Regular update so send the new object into the store.
-		if err := checkNameCollision(ctx, client, &executorv1.WebhookList{}, &webhook, t, target); err != nil {
+		if err := checkNameCollision(ctx, client, &executorv1.WebhookList{}, &webhook, target, resolveTarget); err != nil {
 			return ctrl.Result{}, terminalOnRejection(fmt.Errorf("sync Webhook %q: %w", req.NamespacedName, err))
 		}
 
-		if err := store.UpdateOrCreateWebhook(ctx, t, webhook); err != nil {
+		if err := store.UpdateOrCreateWebhook(ctx, target, webhook); err != nil {
 			return ctrl.Result{}, terminalOnRejection(fmt.Errorf("update Webhook %q in store: %w", webhook.Name, err))
 		}
 
