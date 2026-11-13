@@ -65,27 +65,23 @@ func TestNormalize_TestBundleSkillsShareOneBudget(t *testing.T) {
 
 func TestNormalize_TestBundleGitURI(t *testing.T) {
 	for uri, ok := range map[string]bool{
-		"https://github.com/acme/checkout.git":                 true,
-		"git@github.com:acme/checkout.git":                     true,
-		"ssh://git@github.com/acme/checkout.git":               true,
-		"https://ghp_abc123@github.com/acme/checkout.git":      false,
-		"ssh://git:hunter2@github.com/acme/checkout.git":       false,
-		"https://github.com/acme/checkout.git?access_token=x1": false,
-		"https://github.com/acme/checkout.git?ref=main":        true,
-		// URL.Query would drop every parameter of this query, the token too.
-		"https://github.com/acme/checkout.git?access_token=ghp_abc123;other=value": false,
-		"github.com:acme/checkout.git":                                             true,
-		"[::1]:acme/checkout.git":                                                  true,
-		// An '@' in an scp-like path, after a user or after the path's first '/'.
-		"git@git.example.com:team/repo@v2.git": true,
-		"git@git.example.com:repo@v2.git":      true,
-		"git.example.com:team/repo@v2.git":     true,
-		// With no user, an '@' before the path's first '/' reads as user:password@host.
-		"git:hunter2@github.com": false,
-		// url.Parse cannot read these, so their credentials could not be checked.
+		"https://github.com/acme/checkout.git":          true,
+		"git@github.com:acme/checkout.git":              true,
+		"ssh://git@github.com/acme/checkout.git":        true,
+		"https://github.com/acme/checkout.git?ref=main": true,
+		"github.com:acme/checkout.git":                  true,
+		"[::1]:acme/checkout.git":                       true,
+		"git@git.example.com:team/repo@v2.git":          true,
+		"git@git.example.com:repo@v2.git":               true,
+		"git.example.com:team/repo@v2.git":              true,
+		// Credentials are taken as written, as the REST API takes them.
+		"https://ghp_abc123@github.com/acme/checkout.git":                true,
+		"https://x-access-token:ghp_abc123@github.com/acme/checkout.git": true,
+		"ssh://git:hunter2@github.com/acme/checkout.git":                 true,
+		"https://github.com/acme/checkout.git?access_token=ghp_abc123":   true,
+		// url.Parse cannot read these; the refusal does not echo them.
 		"https://x-access-token:ghp_abc123@github.com/acme/repo%zz.git": false,
 		"https://ghp_abc123@github.com/acme/repo%zz.git":                false,
-		"git:hunter2@github.com:acme/checkout.git":                      false,
 		// Neither a URL with a host nor scp-like.
 		"//git:hunter2@github.com/acme/checkout.git": false,
 		"https:ghp_abc123@github.com/acme/checkout":  false,
