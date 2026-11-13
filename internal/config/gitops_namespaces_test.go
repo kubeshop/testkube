@@ -70,8 +70,19 @@ func TestValidateGitOpsNamespaces(t *testing.T) {
 		capability bool
 		wantErr    string
 	}{
-		{name: "default-only entries pass without the capability", namespaces: GitOpsNamespaces{{Name: "a"}, {Name: "*"}}},
+		{name: "one default namespace passes without the capability", namespaces: GitOpsNamespaces{{Name: "a"}}},
 		{name: "the token Environment passes without the capability", namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-token"}}},
+		{
+			name:       "two namespaces in one Environment without the capability fail",
+			namespaces: GitOpsNamespaces{{Name: "a"}, {Name: "b", EnvID: "env-token"}},
+			wantErr:    `GITOPS_NAMESPACES: 2 namespaces sync into Environment "env-token", but the Control Plane lacks the sync-multi-namespace capability`,
+		},
+		{
+			name:       "* without the capability fails",
+			namespaces: GitOpsNamespaces{{Name: "*"}},
+			wantErr:    `GITOPS_NAMESPACES: "*" watches every namespace, but the Control Plane lacks the sync-multi-namespace capability`,
+		},
+		{name: "several namespaces and * with the capability pass", namespaces: GitOpsNamespaces{{Name: "a"}, {Name: "b"}, {Name: "*"}}, capability: true},
 		{
 			name:       "an unknown envId fails and lists the known Environments",
 			namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-missing"}},
