@@ -250,4 +250,32 @@ type TestWorkflowExecutionSchema struct {
 
 	// When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
 	Silent *bool `json:"silent,omitempty" expr:"template"`
+
+	// Retry reruns the whole workflow when the execution ends for a cause the policy lists.
+	// It is not the step-level retry: that one reruns a step inside the same pod.
+	Retry *ExecutionRetryPolicy `json:"retry,omitempty" expr:"include"`
+}
+
+// ExecutionRetryCause is a class of failure that an execution retry may answer.
+// +kubebuilder:validation:Enum=infrastructure;timeout;oom
+type ExecutionRetryCause string
+
+const (
+	// ExecutionRetryCauseInfrastructure is the cluster taking the pod away: evicted, preempted, node-shutdown, unschedulable.
+	ExecutionRetryCauseInfrastructure ExecutionRetryCause = "infrastructure"
+	// ExecutionRetryCauseTimeout is an execution-timeout stop.
+	ExecutionRetryCauseTimeout ExecutionRetryCause = "timeout"
+	// ExecutionRetryCauseOOM is an oom-killed stop.
+	ExecutionRetryCauseOOM ExecutionRetryCause = "oom"
+)
+
+type ExecutionRetryPolicy struct {
+	// how many times at most the execution is retried, so the workflow runs at most count+1 times
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=10
+	Count int32 `json:"count,omitempty"`
+
+	// the causes that are retried (defaults to: infrastructure)
+	On []ExecutionRetryCause `json:"on,omitempty"`
 }
