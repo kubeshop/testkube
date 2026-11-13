@@ -9,8 +9,14 @@
 // lists the kind from the cache and refuses the resource with syncagent.ErrNameCollision when
 // another one wins. The resource with the earlier creationTimestamp wins, and on a tie the
 // namespace that sorts first. The rule depends only on the objects, so every replica comes to the
-// same answer. The refusal is terminal: when the winning resource goes, the refused one syncs only
-// after its next change. A List error stays retryable.
+// same answer. The refusal is terminal. A List error stays retryable.
+//
+// A delete must not remove the record of another namespace. When another watched namespace of the
+// same Environment still holds a resource of the same name, syncDelete sends the winning one of
+// them instead of the delete. The delete of a refused resource so keeps the winner, and the delete
+// of the winner hands the record to the next one. With gitOpsOwnership on, the Control Plane refuses
+// that update with an ownership conflict when the record belongs to the deleted resource; syncDelete
+// then deletes the record, and the next resource syncs after its next change.
 //
 // Some store rejections do not clear on retry: an ownership conflict, an invalid resource, a
 // forbidden Environment or a name collision (see syncagent.IsRejection). terminalOnRejection wraps

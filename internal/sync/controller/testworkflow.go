@@ -35,7 +35,7 @@ func testWorkflowSyncReconciler(client client.Reader, store TestWorkflowStore, r
 		switch {
 		case errors.IsNotFound(err):
 			// Deleted, request deletion from store.
-			if err := store.DeleteTestWorkflow(ctx, target, req.Name); err != nil {
+			if err := syncDelete(ctx, client, &testworkflowsv1.TestWorkflowList{}, req.Name, target, resolveTarget, store.UpdateOrCreateTestWorkflow, store.DeleteTestWorkflow); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete TestWorkflow %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
@@ -51,7 +51,7 @@ func testWorkflowSyncReconciler(client client.Reader, store TestWorkflowStore, r
 		// there is no going back so we know this resource is about to be deleted.
 		if !workflow.DeletionTimestamp.IsZero() {
 			// About to be deleted, request deletion from store.
-			if err := store.DeleteTestWorkflow(ctx, target, req.Name); err != nil {
+			if err := syncDelete(ctx, client, &testworkflowsv1.TestWorkflowList{}, req.Name, target, resolveTarget, store.UpdateOrCreateTestWorkflow, store.DeleteTestWorkflow); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete TestWorkflow %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
