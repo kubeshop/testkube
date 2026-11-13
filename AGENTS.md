@@ -98,6 +98,7 @@ Unless the bug is cosmetic or static copy, keep a test that fails on the old cod
 - The convert tool reads its own env vars, not `internal/config`; `pkg/convert/doc.go` lists them.
 - Standalone MCP HTTP requires `TK_MCP_SHTTP_AUTH_TOKEN`, distinct from the outbound API token. CLI transport/host/port use flags; loopback is the default even in Docker. Authentication wraps all HTTP requests before MCP dispatch. Stdio and the Control Plane integration are unchanged.
 - GitOps sync of Kubernetes resources into the Control Plane is gated by `GITOPS_KUBERNETES_TO_CLOUD_ENABLED` (default `false`), and additionally requires the Control Plane to report cloud storage support.
+- `GITOPS_NAMESPACES` (default empty, meaning `TESTKUBE_NAMESPACE`) sets the namespaces the controller manager watches and maps them to Environments; `internal/sync/doc.go` explains the entry forms, the startup checks and the leader election lease.
 - TestTriggers accept `spec.event` or a `spec.events` list (mutually exclusive, validated service-side); always consume them via `EffectiveEvents()` so both forms are honored — classification gates that read the single `event` field directly will silently skip list-form triggers.
 - `TEST_TRIGGER_GIT_INFORMER_*` tune the Git trigger informer, which only the leader runs (the `leader` coordinator tasks in `cmd/api-server/main.go`).
 - HTTP content triggers (`contentSelector.http`, event `http-changed`): `pkg/triggers/doc.go`.

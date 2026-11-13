@@ -332,6 +332,12 @@ func main() {
 	proContext, err := commons.ReadProContext(ctx, cfg, grpcClient)
 	commons.ExitOnError("cannot connect to control plane", err)
 
+	gitopsNamespaces, err := intconfig.ParseGitOpsNamespaces(cfg.GitOpsNamespaces, cfg.TestkubeNamespace)
+	commons.ExitOnError("parsing GITOPS_NAMESPACES", err)
+	if cfg.GitOpsSyncKubernetesToCloudEnabled {
+		commons.ExitOnError("checking GITOPS_NAMESPACES against the Control Plane", intconfig.ValidateGitOpsNamespaces(gitopsNamespaces, proContext))
+	}
+
 	// Scope the emitter lease to the AgentID so that agents for different
 	// environments sharing the same namespace each get their own emitter leader.
 	if proContext.Agent.ID != "" {
@@ -712,14 +718,29 @@ func main() {
 		err = testsuiteexecutionv1.AddToScheme(scheme)
 		commons.ExitOnError("add TestSuiteExecution to kubernetes runtime scheme", err)
 
-		// Configure the manager to use the defined scheme and to operate in the current namespace.
+		// Configure the manager to use the defined scheme and to watch the namespaces of
+		// GITOPS_NAMESPACES. A nil DefaultNamespaces watches every namespace.
+		var watchedNamespaces map[string]cache.Config
+		var loggedNamespaces any = []string{intconfig.GitOpsAllNamespaces}
+		if !gitopsNamespaces.WatchesAll() {
+			watchedNamespaces = make(map[string]cache.Config)
+			for _, name := range gitopsNamespaces.Names() {
+				watchedNamespaces[name] = cache.Config{}
+			}
+			loggedNamespaces = gitopsNamespaces.Names()
+		}
+		log.DefaultLogger.Infow("kubernetes controller manager", "namespaces", loggedNamespaces, "leaderElection", !cfg.LeaderElectionDisabled)
 		mgr, err := manager.New(kubeConfig, manager.Options{
 			Scheme: scheme,
 			Cache: cache.Options{
-				DefaultNamespaces: map[string]cache.Config{
-					cfg.TestkubeNamespace: {},
-				},
+				DefaultNamespaces: watchedNamespaces,
 			},
+			LeaderElection:          !cfg.LeaderElectionDisabled,
+			LeaderElectionNamespace: cfg.TestkubeNamespace,
+			// The lease carries APIServerFullname, as the emitter lease does, so two agents
+			// in one namespace each elect their own leader.
+			LeaderElectionID:              leasebackend.SanitizeForK8sName("testkube-controllers-" + cfg.APIServerFullname),
+			LeaderElectionReleaseOnCancel: true,
 		})
 		commons.ExitOnError("creating kubernetes controller manager", err)
 
@@ -741,7 +762,7 @@ func main() {
 
 		// Initialise controllers
 		if cfg.EnableK8sControllers {
-			err = controller.NewTestWorkflowExecutionExecutorController(mgr, testWorkflowExecutor)
+			err = controller.NewTestWorkflowExecutionExecutorController(mgr, testWorkflowExecutor, cfg.TestkubeNamespace)
 			commons.ExitOnError("creating TestWorkflowExecution controller", err)
 		}
 

@@ -23,14 +23,22 @@ type TestWorkflowExecutor interface {
 	Execute(ctx context.Context, request *cloud.ScheduleRequest) ([]testkubev1.TestWorkflowExecution, error)
 }
 
-func NewTestWorkflowExecutionExecutorController(mgr ctrl.Manager, exec TestWorkflowExecutor) error {
+func NewTestWorkflowExecutionExecutorController(mgr ctrl.Manager, exec TestWorkflowExecutor, namespace string) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&testworkflowsv1.TestWorkflowExecution{}).
-		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		WithEventFilter(predicate.And(predicate.GenerationChangedPredicate{}, inNamespace(namespace))).
 		Complete(testWorkflowExecutionExecutor(mgr.GetClient(), mgr.GetEventRecorder("testworkflowexecution-controller"), exec)); err != nil {
 		return fmt.Errorf("create new controller for TestWorkflowExecution: %w", err)
 	}
 	return nil
+}
+
+// inNamespace keeps the events of objects in namespace. The manager cache may span every
+// namespace of GITOPS_NAMESPACES, while the agent runs executions only in its own namespace.
+func inNamespace(namespace string) predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return obj.GetNamespace() == namespace
+	})
 }
 
 func testWorkflowExecutionExecutor(client client.Client, recorder events.EventRecorder, exec TestWorkflowExecutor) reconcile.Reconciler {
