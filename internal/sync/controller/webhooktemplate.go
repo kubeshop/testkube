@@ -10,32 +10,32 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
+	syncagent "github.com/kubeshop/testkube/internal/sync"
 )
 
 type WebhookTemplateStore interface {
-	UpdateOrCreateWebhookTemplate(context.Context, executorv1.WebhookTemplate) error
-	DeleteWebhookTemplate(context.Context, string) error
+	UpdateOrCreateWebhookTemplate(context.Context, syncagent.Target, executorv1.WebhookTemplate) error
+	DeleteWebhookTemplate(context.Context, syncagent.Target, string) error
 }
 
-func NewWebhookTemplateSyncController(mgr ctrl.Manager, store WebhookTemplateStore) error {
+func NewWebhookTemplateSyncController(mgr ctrl.Manager, store WebhookTemplateStore, resolveTarget syncagent.TargetFunc) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&executorv1.WebhookTemplate{}).
-		Complete(webhookTemplateSyncReconciler(mgr.GetClient(), store)); err != nil {
+		Complete(webhookTemplateSyncReconciler(mgr.GetClient(), store, resolveTarget)); err != nil {
 		return fmt.Errorf("create new sync controller for WebhookTemplate: %w", err)
 	}
 	return nil
 }
 
-func webhookTemplateSyncReconciler(client client.Reader, store WebhookTemplateStore) reconcile.Reconciler {
+func webhookTemplateSyncReconciler(client client.Reader, store WebhookTemplateStore, resolveTarget syncagent.TargetFunc) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+		target := resolveTarget(req.Namespace)
 		var template executorv1.WebhookTemplate
 		err := client.Get(ctx, req.NamespacedName, &template)
 		switch {
 		case errors.IsNotFound(err):
 			// Deleted, request deletion from store.
-			// Passing the name here rather than the namespaced name as generally we refer to objects
-			// purely by their name.
-			if err := store.DeleteWebhookTemplate(ctx, req.Name); err != nil {
+			if err := syncDelete(ctx, client, &executorv1.WebhookTemplateList{}, req.Name, target, resolveTarget, store.UpdateOrCreateWebhookTemplate, store.DeleteWebhookTemplate); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete WebhookTemplate %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
@@ -51,16 +51,18 @@ func webhookTemplateSyncReconciler(client client.Reader, store WebhookTemplateSt
 		// there is no going back so we know this resource is about to be deleted.
 		if !template.DeletionTimestamp.IsZero() {
 			// About to be deleted, request deletion from store.
-			// Passing the name here rather than the namespaced name as generally we refer to objects
-			// purely by their name.
-			if err := store.DeleteWebhookTemplate(ctx, req.Name); err != nil {
+			if err := syncDelete(ctx, client, &executorv1.WebhookTemplateList{}, req.Name, target, resolveTarget, store.UpdateOrCreateWebhookTemplate, store.DeleteWebhookTemplate); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete WebhookTemplate %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		}
 
 		// Regular update so send the new object into the store.
-		if err := store.UpdateOrCreateWebhookTemplate(ctx, template); err != nil {
+		if err := checkNameCollision(ctx, client, &executorv1.WebhookTemplateList{}, &template, target, resolveTarget); err != nil {
+			return ctrl.Result{}, terminalOnRejection(fmt.Errorf("sync WebhookTemplate %q: %w", req.NamespacedName, err))
+		}
+
+		if err := store.UpdateOrCreateWebhookTemplate(ctx, target, template); err != nil {
 			return ctrl.Result{}, terminalOnRejection(fmt.Errorf("update WebhookTemplate %q in store: %w", template.Name, err))
 		}
 

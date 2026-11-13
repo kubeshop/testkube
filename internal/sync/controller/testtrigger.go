@@ -10,32 +10,32 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
+	syncagent "github.com/kubeshop/testkube/internal/sync"
 )
 
 type TestTriggerStore interface {
-	UpdateOrCreateTestTrigger(context.Context, testtriggersv1.TestTrigger) error
-	DeleteTestTrigger(context.Context, string) error
+	UpdateOrCreateTestTrigger(context.Context, syncagent.Target, testtriggersv1.TestTrigger) error
+	DeleteTestTrigger(context.Context, syncagent.Target, string) error
 }
 
-func NewTestTriggerSyncController(mgr ctrl.Manager, store TestTriggerStore) error {
+func NewTestTriggerSyncController(mgr ctrl.Manager, store TestTriggerStore, resolveTarget syncagent.TargetFunc) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&testtriggersv1.TestTrigger{}).
-		Complete(testTriggerSyncReconciler(mgr.GetClient(), store)); err != nil {
+		Complete(testTriggerSyncReconciler(mgr.GetClient(), store, resolveTarget)); err != nil {
 		return fmt.Errorf("create new sync controller for TestTrigger: %w", err)
 	}
 	return nil
 }
 
-func testTriggerSyncReconciler(client client.Reader, store TestTriggerStore) reconcile.Reconciler {
+func testTriggerSyncReconciler(client client.Reader, store TestTriggerStore, resolveTarget syncagent.TargetFunc) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+		target := resolveTarget(req.Namespace)
 		var trigger testtriggersv1.TestTrigger
 		err := client.Get(ctx, req.NamespacedName, &trigger)
 		switch {
 		case errors.IsNotFound(err):
 			// Deleted, request deletion from store.
-			// Passing the name here rather than the namespaced name as generally we refer to objects
-			// purely by their name.
-			if err := store.DeleteTestTrigger(ctx, req.Name); err != nil {
+			if err := syncDelete(ctx, client, &testtriggersv1.TestTriggerList{}, req.Name, target, resolveTarget, store.UpdateOrCreateTestTrigger, store.DeleteTestTrigger); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete TestTrigger %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
@@ -51,16 +51,18 @@ func testTriggerSyncReconciler(client client.Reader, store TestTriggerStore) rec
 		// there is no going back so we know this resource is about to be deleted.
 		if !trigger.DeletionTimestamp.IsZero() {
 			// About to be deleted, request deletion from store.
-			// Passing the name here rather than the namespaced name as generally we refer to objects
-			// purely by their name.
-			if err := store.DeleteTestTrigger(ctx, req.Name); err != nil {
+			if err := syncDelete(ctx, client, &testtriggersv1.TestTriggerList{}, req.Name, target, resolveTarget, store.UpdateOrCreateTestTrigger, store.DeleteTestTrigger); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete TestTrigger %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		}
 
 		// Regular update so send the new object into the store.
-		if err := store.UpdateOrCreateTestTrigger(ctx, trigger); err != nil {
+		if err := checkNameCollision(ctx, client, &testtriggersv1.TestTriggerList{}, &trigger, target, resolveTarget); err != nil {
+			return ctrl.Result{}, terminalOnRejection(fmt.Errorf("sync TestTrigger %q: %w", req.NamespacedName, err))
+		}
+
+		if err := store.UpdateOrCreateTestTrigger(ctx, target, trigger); err != nil {
 			return ctrl.Result{}, terminalOnRejection(fmt.Errorf("update TestTrigger %q in store: %w", trigger.Name, err))
 		}
 

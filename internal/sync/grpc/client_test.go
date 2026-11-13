@@ -2,16 +2,23 @@ package grpc_test
 
 import (
 	"context"
+	"encoding/json"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/local"
+	"google.golang.org/grpc/metadata"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	syncagent "github.com/kubeshop/testkube/internal/sync"
 	syncgrpc "github.com/kubeshop/testkube/internal/sync/grpc"
 	syncv1 "github.com/kubeshop/testkube/pkg/proto/testkube/sync/v1"
 	testworkflowv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/v1"
@@ -27,11 +34,29 @@ type testSrv struct {
 	Webhook              *syncv1.Webhook
 	WebhookTemplate      *syncv1.WebhookTemplate
 
+	// Namespace is the namespace of the last call; a delete records it only for a TestWorkflow.
+	Namespace string
+	// DeleteId is the name of the last TestWorkflow delete.
+	DeleteId string
+	// EnvironmentID is the environment-id header of the last call.
+	EnvironmentID string
+
 	// Err is returned by both RPCs, to exercise the client's status code translation.
 	Err error
 }
 
-func (t *testSrv) UpdateOrCreate(_ context.Context, req *syncv1.UpdateOrCreateRequest) (*syncv1.UpdateOrCreateResponse, error) {
+// recordEnvironment keeps the environment-id header of the call, or empty when the call has none.
+func (t *testSrv) recordEnvironment(ctx context.Context) {
+	t.EnvironmentID = ""
+	md, _ := metadata.FromIncomingContext(ctx)
+	if values := md.Get("environment-id"); len(values) > 0 {
+		t.EnvironmentID = values[0]
+	}
+}
+
+func (t *testSrv) UpdateOrCreate(ctx context.Context, req *syncv1.UpdateOrCreateRequest) (*syncv1.UpdateOrCreateResponse, error) {
+	t.recordEnvironment(ctx)
+	t.Namespace = req.GetNamespace()
 	switch v := req.Payload.(type) {
 	case *syncv1.UpdateOrCreateRequest_TestTrigger:
 		t.TestTrigger = v.TestTrigger
@@ -49,7 +74,12 @@ func (t *testSrv) UpdateOrCreate(_ context.Context, req *syncv1.UpdateOrCreateRe
 	return nil, t.Err
 }
 
-func (t *testSrv) Delete(_ context.Context, req *syncv1.DeleteRequest) (*syncv1.DeleteResponse, error) {
+func (t *testSrv) Delete(ctx context.Context, req *syncv1.DeleteRequest) (*syncv1.DeleteResponse, error) {
+	t.recordEnvironment(ctx)
+	if id := req.GetTestWorkflow(); id != nil {
+		t.DeleteId = id.GetId()
+		t.Namespace = id.GetNamespace()
+	}
 	return nil, t.Err
 }
 
@@ -106,5 +136,61 @@ func startGRPCTestConnection(t *testing.T, ts *testSrv) syncgrpc.Client {
 		t.Fatal(err)
 	}
 
-	return syncgrpc.NewClient(conn, zap.NewExample().Sugar(), "foo", "bar", true)
+	return syncgrpc.NewClient(conn, zap.NewExample().Sugar(), "foo", "bar", "env-default", true)
+}
+
+func TestClientTarget(t *testing.T) {
+	tests := []struct {
+		name              string
+		target            syncagent.Target
+		delete            bool
+		wantEnvironmentID string
+	}{
+		{
+			name:   "an update into the Environment of the agent token sends no environment-id header",
+			target: syncagent.Target{Namespace: "team-a", EnvironmentID: "env-default"},
+		},
+		{
+			name:   "an update with an empty Environment sends no environment-id header",
+			target: syncagent.Target{Namespace: "team-a"},
+		},
+		{
+			name:              "an update into another Environment sends the environment-id header",
+			target:            syncagent.Target{Namespace: "team-b", EnvironmentID: "env-b"},
+			wantEnvironmentID: "env-b",
+		},
+		{
+			name:   "a delete carries the name and the namespace",
+			target: syncagent.Target{Namespace: "team-a"},
+			delete: true,
+		},
+		{
+			name:              "a delete in another Environment sends the environment-id header",
+			target:            syncagent.Target{Namespace: "team-b", EnvironmentID: "env-b"},
+			delete:            true,
+			wantEnvironmentID: "env-b",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var srv testSrv
+			client := startGRPCTestConnection(t, &srv)
+			labels := map[string]string{"app": "smoke"}
+			workflow := testworkflowsv1.TestWorkflow{ObjectMeta: metav1.ObjectMeta{Name: "smoke", Labels: labels}}
+
+			if tt.delete {
+				require.NoError(t, client.DeleteTestWorkflow(t.Context(), tt.target, "smoke"))
+				assert.Equal(t, "smoke", srv.DeleteId)
+			} else {
+				require.NoError(t, client.UpdateOrCreateTestWorkflow(t.Context(), tt.target, workflow))
+				var sent testworkflowsv1.TestWorkflow
+				require.NoError(t, json.Unmarshal(srv.TestWorkflow.GetJson(), &sent))
+				assert.Equal(t, map[string]string{"app": "smoke", syncagent.SourceNamespaceLabel: tt.target.Namespace}, sent.Labels)
+			}
+
+			assert.Equal(t, tt.target.Namespace, srv.Namespace)
+			assert.Equal(t, tt.wantEnvironmentID, srv.EnvironmentID)
+			assert.Equal(t, map[string]string{"app": "smoke"}, labels, "the Kubernetes object keeps its labels")
+		})
+	}
 }

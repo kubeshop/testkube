@@ -14,50 +14,50 @@ import (
 // It performs no operations and returns no errors from all of its functions.
 type NoOpStore struct{}
 
-func (s NoOpStore) UpdateOrCreateTestTrigger(_ context.Context, _ testtriggersv1.TestTrigger) error {
+func (s NoOpStore) UpdateOrCreateTestTrigger(_ context.Context, _ Target, _ testtriggersv1.TestTrigger) error {
 	return nil
 }
 
-func (s NoOpStore) DeleteTestTrigger(_ context.Context, _ string) error {
+func (s NoOpStore) DeleteTestTrigger(_ context.Context, _ Target, _ string) error {
 	return nil
 }
 
-func (s NoOpStore) UpdateOrCreateWorkflowTrigger(_ context.Context, _ workflowtriggersv1.WorkflowTrigger) error {
+func (s NoOpStore) UpdateOrCreateWorkflowTrigger(_ context.Context, _ Target, _ workflowtriggersv1.WorkflowTrigger) error {
 	return nil
 }
 
-func (s NoOpStore) DeleteWorkflowTrigger(_ context.Context, _ string) error {
+func (s NoOpStore) DeleteWorkflowTrigger(_ context.Context, _ Target, _ string) error {
 	return nil
 }
 
-func (s NoOpStore) UpdateOrCreateTestWorkflow(_ context.Context, _ testworkflowsv1.TestWorkflow) error {
+func (s NoOpStore) UpdateOrCreateTestWorkflow(_ context.Context, _ Target, _ testworkflowsv1.TestWorkflow) error {
 	return nil
 }
 
-func (s NoOpStore) DeleteTestWorkflow(_ context.Context, _ string) error {
+func (s NoOpStore) DeleteTestWorkflow(_ context.Context, _ Target, _ string) error {
 	return nil
 }
 
-func (s NoOpStore) UpdateOrCreateTestWorkflowTemplate(_ context.Context, _ testworkflowsv1.TestWorkflowTemplate) error {
+func (s NoOpStore) UpdateOrCreateTestWorkflowTemplate(_ context.Context, _ Target, _ testworkflowsv1.TestWorkflowTemplate) error {
 	return nil
 }
 
-func (s NoOpStore) DeleteTestWorkflowTemplate(_ context.Context, _ string) error {
+func (s NoOpStore) DeleteTestWorkflowTemplate(_ context.Context, _ Target, _ string) error {
 	return nil
 }
 
-func (s NoOpStore) UpdateOrCreateWebhook(_ context.Context, _ executorv1.Webhook) error {
+func (s NoOpStore) UpdateOrCreateWebhook(_ context.Context, _ Target, _ executorv1.Webhook) error {
 	return nil
 }
 
-func (s NoOpStore) DeleteWebhook(_ context.Context, _ string) error {
+func (s NoOpStore) DeleteWebhook(_ context.Context, _ Target, _ string) error {
 	return nil
 }
 
-func (s NoOpStore) UpdateOrCreateWebhookTemplate(_ context.Context, _ executorv1.WebhookTemplate) error {
+func (s NoOpStore) UpdateOrCreateWebhookTemplate(_ context.Context, _ Target, _ executorv1.WebhookTemplate) error {
 	return nil
 }
 
-func (s NoOpStore) DeleteWebhookTemplate(_ context.Context, _ string) error {
+func (s NoOpStore) DeleteWebhookTemplate(_ context.Context, _ Target, _ string) error {
 	return nil
 }
