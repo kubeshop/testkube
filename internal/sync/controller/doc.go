@@ -15,8 +15,9 @@
 // same Environment still holds a resource of the same name, syncDelete sends the winning one of
 // them instead of the delete. The delete of a refused resource so keeps the winner, and the delete
 // of the winner hands the record to the next one. With gitOpsOwnership on, the Control Plane refuses
-// that update with an ownership conflict when the record belongs to the deleted resource; syncDelete
-// then deletes the record, and the next resource syncs after its next change.
+// that update with an ownership conflict when the record belongs to the deleted resource. On such a
+// conflict, or on any other rejection of that update, such as an invalid resource, syncDelete
+// deletes the record, and the next resource syncs after its next change.
 //
 // Some store rejections do not clear on retry: an ownership conflict, an invalid resource, a
 // forbidden Environment or a name collision (see syncagent.IsRejection). terminalOnRejection wraps
