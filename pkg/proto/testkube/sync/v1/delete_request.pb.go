@@ -38,6 +38,7 @@ type DeleteRequest struct {
 	//	*DeleteRequest_Webhook
 	//	*DeleteRequest_WebhookTemplate
 	//	*DeleteRequest_WorkflowTrigger
+	//	*DeleteRequest_ControlPlaneResource
 	Id            isDeleteRequest_Id `protobuf_oneof:"id"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -134,6 +135,15 @@ func (x *DeleteRequest) GetWorkflowTrigger() *WorkflowTriggerId {
 	return nil
 }
 
+func (x *DeleteRequest) GetControlPlaneResource() *ControlPlaneResourceId {
+	if x != nil {
+		if x, ok := x.Id.(*DeleteRequest_ControlPlaneResource); ok {
+			return x.ControlPlaneResource
+		}
+	}
+	return nil
+}
+
 type isDeleteRequest_Id interface {
 	isDeleteRequest_Id()
 }
@@ -168,6 +178,12 @@ type DeleteRequest_WorkflowTrigger struct {
 	WorkflowTrigger *WorkflowTriggerId `protobuf:"bytes,6,opt,name=workflow_trigger,json=workflowTrigger,oneof"`
 }
 
+type DeleteRequest_ControlPlaneResource struct {
+	// control_plane_resource indicates the object is a Control Plane resource,
+	// such as an Insights board
+	ControlPlaneResource *ControlPlaneResourceId `protobuf:"bytes,7,opt,name=control_plane_resource,json=controlPlaneResource,oneof"`
+}
+
 func (*DeleteRequest_TestTrigger) isDeleteRequest_Id() {}
 
 func (*DeleteRequest_TestWorkflow) isDeleteRequest_Id() {}
@@ -180,18 +196,21 @@ func (*DeleteRequest_WebhookTemplate) isDeleteRequest_Id() {}
 
 func (*DeleteRequest_WorkflowTrigger) isDeleteRequest_Id() {}
 
+func (*DeleteRequest_ControlPlaneResource) isDeleteRequest_Id() {}
+
 var File_testkube_sync_v1_delete_request_proto protoreflect.FileDescriptor
 
 const file_testkube_sync_v1_delete_request_proto_rawDesc = "" +
 	"\n" +
-	"%testkube/sync/v1/delete_request.proto\x12\x10testkube.sync.v1\x1a&testkube/sync/v1/test_trigger_id.proto\x1a'testkube/sync/v1/test_workflow_id.proto\x1a0testkube/sync/v1/test_workflow_template_id.proto\x1a!testkube/sync/v1/webhook_id.proto\x1a*testkube/sync/v1/webhook_template_id.proto\x1a*testkube/sync/v1/workflow_trigger_id.proto\"\xe3\x03\n" +
+	"%testkube/sync/v1/delete_request.proto\x12\x10testkube.sync.v1\x1a0testkube/sync/v1/control_plane_resource_id.proto\x1a&testkube/sync/v1/test_trigger_id.proto\x1a'testkube/sync/v1/test_workflow_id.proto\x1a0testkube/sync/v1/test_workflow_template_id.proto\x1a!testkube/sync/v1/webhook_id.proto\x1a*testkube/sync/v1/webhook_template_id.proto\x1a*testkube/sync/v1/workflow_trigger_id.proto\"\xc5\x04\n" +
 	"\rDeleteRequest\x12D\n" +
 	"\ftest_trigger\x18\x01 \x01(\v2\x1f.testkube.sync.v1.TestTriggerIdH\x00R\vtestTrigger\x12G\n" +
 	"\rtest_workflow\x18\x02 \x01(\v2 .testkube.sync.v1.TestWorkflowIdH\x00R\ftestWorkflow\x12`\n" +
 	"\x16test_workflow_template\x18\x03 \x01(\v2(.testkube.sync.v1.TestWorkflowTemplateIdH\x00R\x14testWorkflowTemplate\x127\n" +
 	"\awebhook\x18\x04 \x01(\v2\x1b.testkube.sync.v1.WebhookIdH\x00R\awebhook\x12P\n" +
 	"\x10webhook_template\x18\x05 \x01(\v2#.testkube.sync.v1.WebhookTemplateIdH\x00R\x0fwebhookTemplate\x12P\n" +
-	"\x10workflow_trigger\x18\x06 \x01(\v2#.testkube.sync.v1.WorkflowTriggerIdH\x00R\x0fworkflowTriggerB\x04\n" +
+	"\x10workflow_trigger\x18\x06 \x01(\v2#.testkube.sync.v1.WorkflowTriggerIdH\x00R\x0fworkflowTrigger\x12`\n" +
+	"\x16control_plane_resource\x18\a \x01(\v2(.testkube.sync.v1.ControlPlaneResourceIdH\x00R\x14controlPlaneResourceB\x04\n" +
 	"\x02idB\xcc\x01\n" +
 	"\x14com.testkube.sync.v1B\x12DeleteRequestProtoP\x01Z>github.com/kubeshop/testkube/pkg/proto/testkube/sync/v1;syncv1\xa2\x02\x03TSX\xaa\x02\x10Testkube.Sync.V1\xca\x02\x10Testkube\\Sync\\V1\xe2\x02\x1cTestkube\\Sync\\V1\\GPBMetadata\xea\x02\x12Testkube::Sync::V1b\beditionsp\xe8\a"
 
@@ -216,6 +235,7 @@ var file_testkube_sync_v1_delete_request_proto_goTypes = []any{
 	(*WebhookId)(nil),              // 4: testkube.sync.v1.WebhookId
 	(*WebhookTemplateId)(nil),      // 5: testkube.sync.v1.WebhookTemplateId
 	(*WorkflowTriggerId)(nil),      // 6: testkube.sync.v1.WorkflowTriggerId
+	(*ControlPlaneResourceId)(nil), // 7: testkube.sync.v1.ControlPlaneResourceId
 }
 var file_testkube_sync_v1_delete_request_proto_depIdxs = []int32{
 	1, // 0: testkube.sync.v1.DeleteRequest.test_trigger:type_name -> testkube.sync.v1.TestTriggerId
@@ -224,11 +244,12 @@ var file_testkube_sync_v1_delete_request_proto_depIdxs = []int32{
 	4, // 3: testkube.sync.v1.DeleteRequest.webhook:type_name -> testkube.sync.v1.WebhookId
 	5, // 4: testkube.sync.v1.DeleteRequest.webhook_template:type_name -> testkube.sync.v1.WebhookTemplateId
 	6, // 5: testkube.sync.v1.DeleteRequest.workflow_trigger:type_name -> testkube.sync.v1.WorkflowTriggerId
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	7, // 6: testkube.sync.v1.DeleteRequest.control_plane_resource:type_name -> testkube.sync.v1.ControlPlaneResourceId
+	7, // [7:7] is the sub-list for method output_type
+	7, // [7:7] is the sub-list for method input_type
+	7, // [7:7] is the sub-list for extension type_name
+	7, // [7:7] is the sub-list for extension extendee
+	0, // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_testkube_sync_v1_delete_request_proto_init() }
@@ -236,6 +257,7 @@ func file_testkube_sync_v1_delete_request_proto_init() {
 	if File_testkube_sync_v1_delete_request_proto != nil {
 		return
 	}
+	file_testkube_sync_v1_control_plane_resource_id_proto_init()
 	file_testkube_sync_v1_test_trigger_id_proto_init()
 	file_testkube_sync_v1_test_workflow_id_proto_init()
 	file_testkube_sync_v1_test_workflow_template_id_proto_init()
@@ -249,6 +271,7 @@ func file_testkube_sync_v1_delete_request_proto_init() {
 		(*DeleteRequest_Webhook)(nil),
 		(*DeleteRequest_WebhookTemplate)(nil),
 		(*DeleteRequest_WorkflowTrigger)(nil),
+		(*DeleteRequest_ControlPlaneResource)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

@@ -210,6 +210,18 @@ rules:
       - get
       - list
       - watch
+  {{- if .Values.gitops.enabled }}
+  # Control Plane resources, such as Insights boards, which the GitOps runner syncs to the Control
+  # Plane. It only reads them.
+  - apiGroups:
+      - "insights.testkube.io"
+    resources:
+      - boards
+    verbs:
+      - get
+      - list
+      - watch
+  {{- end }}
   {{- with .Values.listener.extraWatchedResources }}
   # User-declared GVKs for TestTrigger / WorkflowTrigger `resourceRef` targets
   # that aren't covered by the built-in resource list above.

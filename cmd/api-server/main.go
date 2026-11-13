@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
+	insightsv1 "github.com/kubeshop/testkube/api/insights/v1alpha1"
 	testexecutionv1 "github.com/kubeshop/testkube/api/testexecution/v1"
 	testsuiteexecutionv1 "github.com/kubeshop/testkube/api/testsuiteexecution/v1"
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
@@ -705,6 +706,8 @@ func main() {
 		commons.ExitOnError("add WorkflowTriggers to kubernetes runtime scheme", err)
 		err = executorv1.AddToScheme(scheme)
 		commons.ExitOnError("add Webhooks to kubernetes runtime scheme", err)
+		err = insightsv1.AddToScheme(scheme)
+		commons.ExitOnError("add Boards to kubernetes runtime scheme", err)
 
 		// Legacy schemes
 		err = testexecutionv1.AddToScheme(scheme)
@@ -737,6 +740,12 @@ func main() {
 			commons.ExitOnError("creating Webhook sync controller", err)
 			err = synccontroller.NewWebhookTemplateSyncController(mgr, syncStore)
 			commons.ExitOnError("creating WebhookTemplate sync controller", err)
+			// Control Plane resources, such as Insights boards, go only to a Control Plane that
+			// takes them, and only the kinds whose CRD is installed and readable here.
+			if proContext.ControlPlaneResourcesSyncSupported {
+				err = synccontroller.NewControlPlaneResourceSyncControllers(ctx, mgr, syncStore, cfg.TestkubeNamespace, log.DefaultLogger)
+				commons.ExitOnError("creating Control Plane resource sync controllers", err)
+			}
 		}
 
 		// Initialise controllers

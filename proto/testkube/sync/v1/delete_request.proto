@@ -2,6 +2,7 @@ edition = "2023";
 
 package testkube.sync.v1;
 
+import "testkube/sync/v1/control_plane_resource_id.proto";
 import "testkube/sync/v1/test_trigger_id.proto";
 import "testkube/sync/v1/test_workflow_id.proto";
 import "testkube/sync/v1/test_workflow_template_id.proto";
@@ -29,5 +30,8 @@ message DeleteRequest {
     WebhookTemplateId webhook_template = 5;
     // workflow_trigger indicates the object is a WorkflowTrigger
     WorkflowTriggerId workflow_trigger = 6;
+    // control_plane_resource indicates the object is a Control Plane resource,
+    // such as an Insights board
+    ControlPlaneResourceId control_plane_resource = 7;
   }
 }

@@ -26,6 +26,9 @@ type testSrv struct {
 	TestWorkflowTemplate *syncv1.TestWorkflowTemplate
 	Webhook              *syncv1.Webhook
 	WebhookTemplate      *syncv1.WebhookTemplate
+	ControlPlaneResource *syncv1.ControlPlaneResource
+	// Deleted is the last delete request.
+	Deleted *syncv1.DeleteRequest
 
 	// Err is returned by both RPCs, to exercise the client's status code translation.
 	Err error
@@ -45,11 +48,14 @@ func (t *testSrv) UpdateOrCreate(_ context.Context, req *syncv1.UpdateOrCreateRe
 		t.Webhook = v.Webhook
 	case *syncv1.UpdateOrCreateRequest_WebhookTemplate:
 		t.WebhookTemplate = v.WebhookTemplate
+	case *syncv1.UpdateOrCreateRequest_ControlPlaneResource:
+		t.ControlPlaneResource = v.ControlPlaneResource
 	}
 	return nil, t.Err
 }
 
 func (t *testSrv) Delete(_ context.Context, req *syncv1.DeleteRequest) (*syncv1.DeleteResponse, error) {
+	t.Deleted = req
 	return nil, t.Err
 }
 
