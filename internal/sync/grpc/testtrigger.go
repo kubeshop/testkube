@@ -40,7 +40,7 @@ func (c Client) UpdateOrCreateTestTrigger(ctx context.Context, obj testtriggersv
 
 // DeleteTestTrigger sends a request to the Control Plane informing that a TestTrigger object has
 // been removed from the observable scope of this Agent.
-func (c Client) DeleteTestTrigger(ctx context.Context, name string) error {
+func (c Client) DeleteTestTrigger(ctx context.Context, name, namespace string) error {
 	// Execute with our own call timeout context to prevent stalling out.
 	callCtx, cancel := context.WithTimeout(ctx, c.callTimeout)
 	defer cancel()
@@ -50,7 +50,8 @@ func (c Client) DeleteTestTrigger(ctx context.Context, name string) error {
 	if _, err := c.client.Delete(callCtx, &syncv1.DeleteRequest{
 		Id: &syncv1.DeleteRequest_TestTrigger{
 			TestTrigger: &syncv1.TestTriggerId{
-				Id: &name,
+				Id:        &name,
+				Namespace: optionalString(namespace),
 			},
 		},
 	}, c.callOpts...); err != nil {

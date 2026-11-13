@@ -38,7 +38,7 @@ func (c Client) UpdateOrCreateWorkflowTrigger(ctx context.Context, obj workflowt
 
 // DeleteWorkflowTrigger sends a request to the Control Plane informing that a WorkflowTrigger object has
 // been removed from the observable scope of this Agent.
-func (c Client) DeleteWorkflowTrigger(ctx context.Context, name string) error {
+func (c Client) DeleteWorkflowTrigger(ctx context.Context, name, namespace string) error {
 	callCtx, cancel := context.WithTimeout(ctx, c.callTimeout)
 	defer cancel()
 	callCtx = metadata.AppendToOutgoingContext(callCtx, "organization-id", c.OrganizationId)
@@ -46,7 +46,8 @@ func (c Client) DeleteWorkflowTrigger(ctx context.Context, name string) error {
 	if _, err := c.client.Delete(callCtx, &syncv1.DeleteRequest{
 		Id: &syncv1.DeleteRequest_WorkflowTrigger{
 			WorkflowTrigger: &syncv1.WorkflowTriggerId{
-				Id: &name,
+				Id:        &name,
+				Namespace: optionalString(namespace),
 			},
 		},
 	}, c.callOpts...); err != nil {

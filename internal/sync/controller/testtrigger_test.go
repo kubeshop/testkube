@@ -54,11 +54,11 @@ func TestTestTriggerSyncReconcilerDelete(t *testing.T) {
 		store,
 	)
 
-	if _, err := reconciler.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
+	if _, err := reconciler.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "team-a", Name: name}}); err != nil {
 		t.Errorf("reconciliation failed: %v", err)
 	}
 
-	if diff := cmp.Diff(name, store.Deleted); diff != "" {
+	if diff := cmp.Diff("team-a/"+name, store.Deleted); diff != "" {
 		t.Errorf("TestTriggerSyncReconcilerUpdateOrCreate: -want, +got:\n%s", diff)
 	}
 
@@ -84,11 +84,11 @@ func TestTestTriggerSyncReconcilerDeleteWhenMarkedForDeletion(t *testing.T) {
 		store,
 	)
 
-	if _, err := reconciler.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
+	if _, err := reconciler.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "team-a", Name: name}}); err != nil {
 		t.Errorf("reconciliation failed: %v", err)
 	}
 
-	if diff := cmp.Diff(name, store.Deleted); diff != "" {
+	if diff := cmp.Diff("team-a/"+name, store.Deleted); diff != "" {
 		t.Errorf("TestTriggerSyncReconcilerDeleteWhenMarkedForDeletion: -want, +got:\n%s", diff)
 	}
 
