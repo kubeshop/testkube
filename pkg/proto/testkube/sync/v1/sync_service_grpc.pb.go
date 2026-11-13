@@ -30,6 +30,13 @@ const (
 // SyncService contains RPCs related to synchronisation of Testkube objects from a remote
 // agent's connected Kubernetes cluster, up to a central Control Plane acting as a source
 // of truth for a Testkube installation.
+//
+// Request metadata: an Agent may send the `environment-id` header to name the
+// Environment that a request applies to. Without the header the Control Plane uses
+// the Environment of the agent token. An Environment the agent is not allowed to use
+// is refused with PermissionDenied. FailedPrecondition stays reserved for ownership
+// conflicts. The Control Plane advertises multi-namespace sync with the
+// `sync-multi-namespace` capability of GetProContext.
 type SyncServiceClient interface {
 	// UpdateOrCreate is called to pass any detected changes to an object from an Agent client
 	// to a Contol Plane server.
@@ -79,6 +86,13 @@ func (c *syncServiceClient) Delete(ctx context.Context, in *DeleteRequest, opts 
 // SyncService contains RPCs related to synchronisation of Testkube objects from a remote
 // agent's connected Kubernetes cluster, up to a central Control Plane acting as a source
 // of truth for a Testkube installation.
+//
+// Request metadata: an Agent may send the `environment-id` header to name the
+// Environment that a request applies to. Without the header the Control Plane uses
+// the Environment of the agent token. An Environment the agent is not allowed to use
+// is refused with PermissionDenied. FailedPrecondition stays reserved for ownership
+// conflicts. The Control Plane advertises multi-namespace sync with the
+// `sync-multi-namespace` capability of GetProContext.
 type SyncServiceServer interface {
 	// UpdateOrCreate is called to pass any detected changes to an object from an Agent client
 	// to a Contol Plane server.

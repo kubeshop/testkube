@@ -30,4 +30,8 @@ message UpdateOrCreateRequest {
     // workflow_trigger indicates the object is a WorkflowTrigger
     WorkflowTrigger workflow_trigger = 6;
   }
+  // namespace is the Kubernetes namespace of the object in payload.
+  // It is explicit so the Control Plane keys ownership by (agentId, namespace)
+  // without parsing the JSON; when empty the namespace inside the payload applies.
+  string namespace = 7;
 }
