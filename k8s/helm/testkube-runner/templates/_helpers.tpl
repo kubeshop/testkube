@@ -150,6 +150,44 @@ Define TESTKUBE_WATCHER_NAMESPACES variable
 {{- end -}}
 {{- end }}
 
+{{/*
+Value of GITOPS_NAMESPACES. Each entry is a namespace, a namespace=<Environment id>, or * for all namespaces.
+The * goes first, so the Environment ids of a map still apply to their namespaces when all namespaces are watched.
+*/}}
+{{- define "testkube-runner.gitops.namespaces" -}}
+{{- $entries := list -}}
+{{- if .Values.gitops.watchAllNamespaces -}}
+{{- $entries = append $entries "*" -}}
+{{- end -}}
+{{- $namespaces := default (list) .Values.gitops.namespaces -}}
+{{- if kindIs "map" $namespaces -}}
+{{- range $name := keys $namespaces | sortAlpha -}}
+{{- $env := get $namespaces $name | default "" | toString -}}
+{{- if $env -}}
+{{- $entries = append $entries (printf "%s=%s" $name $env) -}}
+{{- else -}}
+{{- $entries = append $entries $name -}}
+{{- end -}}
+{{- end -}}
+{{- else -}}
+{{- range $name := $namespaces -}}
+{{- $entries = append $entries (toString $name) -}}
+{{- end -}}
+{{- end -}}
+{{- join "," $entries -}}
+{{- end }}
+
+{{- define "testkube-runner.gitops.namespaceNames" -}}
+{{- if .Values.gitops.enabled -}}
+{{- $namespaces := default (list) .Values.gitops.namespaces -}}
+{{- if kindIs "map" $namespaces -}}
+{{- join "," (keys $namespaces | sortAlpha) -}}
+{{- else -}}
+{{- join "," $namespaces -}}
+{{- end -}}
+{{- end -}}
+{{- end }}
+
 {{- define "testkube-runner.listener.watchers.rules" -}}
 rules:
   - apiGroups:

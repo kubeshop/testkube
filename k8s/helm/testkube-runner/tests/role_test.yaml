@@ -146,3 +146,74 @@ tests:
     asserts:
       - hasDocuments:
           count: 3
+
+  - it: renders a watchers Role in the release namespace only when gitops.enabled with default namespaces
+    set:
+      gitops.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 4
+      - equal:
+          path: metadata.namespace
+          value: testkube-dev
+        documentSelector:
+          path: metadata.name
+          value: watchers-role-tk
+
+  - it: renders a watchers Role in each namespace of gitops.namespaces
+    set:
+      gitops.enabled: true
+      gitops.namespaces: [team-a, team-b]
+    asserts:
+      - hasDocuments:
+          count: 6
+      - equal:
+          path: kind
+          value: Role
+        documentSelector:
+          path: metadata.namespace
+          value: team-a
+      - equal:
+          path: metadata.name
+          value: watchers-role-tk
+        documentSelector:
+          path: metadata.namespace
+          value: team-a
+      - equal:
+          path: kind
+          value: Role
+        documentSelector:
+          path: metadata.namespace
+          value: team-b
+      - equal:
+          path: metadata.name
+          value: watchers-role-tk
+        documentSelector:
+          path: metadata.namespace
+          value: team-b
+
+  - it: renders a watchers ClusterRole when gitops.watchAllNamespaces is true
+    set:
+      gitops.enabled: true
+      gitops.watchAllNamespaces: true
+    documentSelector:
+      path: metadata.name
+      value: watchers-role-tk
+    asserts:
+      - equal:
+          path: kind
+          value: ClusterRole
+
+  - it: ignores gitops.namespaces when gitops.enabled is false
+    set:
+      listener.enabled: true
+      gitops.namespaces: [team-a]
+    asserts:
+      - hasDocuments:
+          count: 4
+      - equal:
+          path: metadata.namespace
+          value: testkube-dev
+        documentSelector:
+          path: metadata.name
+          value: watchers-role-tk
