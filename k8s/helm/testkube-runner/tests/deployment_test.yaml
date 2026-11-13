@@ -202,7 +202,9 @@ tests:
           path: spec.template.spec.serviceAccountName
           value: my-sa
 
-  - it: renders no GITOPS_NAMESPACES by default
+  - it: renders no GITOPS_NAMESPACES when gitops.enabled has no namespaces
+    set:
+      gitops.enabled: true
     asserts:
       - notContains:
           path: spec.template.spec.containers[0].env
