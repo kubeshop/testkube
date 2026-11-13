@@ -302,6 +302,14 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	if err != nil {
 		return nil, errors.Wrap(err, "finalizing pod config")
 	}
+	var podResources *corev1.ResourceRequirements
+	if podConfig.Resources != nil {
+		resources, err := stage.MapResourcesToKubernetesResources(podConfig.Resources)
+		if err != nil {
+			return nil, errors.Wrap(err, "parsing pod resources")
+		}
+		podResources = &resources
+	}
 	disableFsGroupDefaulting := podConfig.DisableFsGroupDefaulting != nil && *podConfig.DisableFsGroupDefaulting
 
 	// Build signature
@@ -602,6 +610,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			SchedulingGates:           podConfig.SchedulingGates,
 			ResourceClaims:            podConfig.ResourceClaims,
 			HostPID:                   hostPID,
+			Resources:                 podResources,
 		},
 	}
 	AnnotateControlledBy(&podSpec, options.Config.Resource.RootId, options.Config.Resource.Id)

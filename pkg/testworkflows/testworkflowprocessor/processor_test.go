@@ -500,3 +500,84 @@ func TestBundle_DefaultRunnerResources_AppliesLimitsWhenOnlyRequestsSet(t *testi
 		assert.Equalf(t, resource.MustParse("512Mi"), c.Resources.Limits[corev1.ResourceMemory], "container %s should receive default memory limit", c.Name)
 	}
 }
+
+func TestBundle_PodResources(t *testing.T) {
+	tests := []struct {
+		name      string
+		resources *testworkflowsv1.Resources
+		want      *corev1.ResourceRequirements
+		wantErr   string
+	}{
+		{
+			name: "requests and limits go to the pod spec",
+			resources: &testworkflowsv1.Resources{
+				Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceCPU: "200m", corev1.ResourceMemory: "256Mi"},
+				Limits:   map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceCPU: "1", corev1.ResourceMemory: "512Mi"},
+			},
+			want: &corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("200m"), corev1.ResourceMemory: resource.MustParse("256Mi")},
+				Limits:   corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("1"), corev1.ResourceMemory: resource.MustParse("512Mi")},
+			},
+		},
+		{
+			name: "no pod resources leaves the pod spec without resources",
+		},
+		{
+			name: "an expression in a value resolves",
+			resources: &testworkflowsv1.Resources{
+				Limits: map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceMemory: `{{ "512" }}Mi`},
+			},
+			want: &corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("512Mi")},
+			},
+		},
+		{
+			name: "an invalid quantity fails the bundle",
+			resources: &testworkflowsv1.Resources{
+				Limits: map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceMemory: "12x"},
+			},
+			wantErr: "parsing pod resources",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			proc := New(&dummyInspector{}).
+				Register(ProcessRunCommand).
+				Register(ProcessShellCommand).
+				Register(ProcessNestedSteps)
+			workflow := &testworkflowsv1.TestWorkflow{
+				Spec: testworkflowsv1.TestWorkflowSpec{
+					TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+						Pod: &testworkflowsv1.PodConfig{Resources: tt.resources},
+					},
+					Steps: []testworkflowsv1.Step{
+						{StepOperations: testworkflowsv1.StepOperations{Shell: "echo hello"}},
+					},
+				},
+			}
+
+			bundle, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+				Config: testworkflowconfig.InternalConfig{
+					Resource: testworkflowconfig.ResourceConfig{
+						Id:     "resource-id",
+						RootId: "resource-root-id",
+					},
+				},
+			})
+
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, bundle.Job.Spec.Template.Spec.Resources)
+			allContainers := append(bundle.Job.Spec.Template.Spec.InitContainers, bundle.Job.Spec.Template.Spec.Containers...)
+			for _, c := range allContainers {
+				assert.Emptyf(t, c.Resources.Limits, "container %s should not receive pod limits", c.Name)
+				assert.Emptyf(t, c.Resources.Requests, "container %s should not receive pod requests", c.Name)
+			}
+		})
+	}
+}

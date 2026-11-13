@@ -109,6 +109,7 @@ func MergePodConfig(dst, include *testworkflowsv1.PodConfig) *testworkflowsv1.Po
 	if include.HostPID != nil {
 		dst.HostPID = include.HostPID
 	}
+	dst.Resources = MergeResources(dst.Resources, include.Resources)
 	return dst
 }
 

@@ -146,6 +146,9 @@ type PodConfig struct {
 
 	// Whether to allow a pod to have access to the host process ID namespace
 	HostPID *bool `json:"hostPID,omitempty" expr:"template"`
+
+	// pod-level resource requests and limits for the whole pod, incl. the init and sidecar containers of Testkube (Kubernetes PodLevelResources, KEP-2837)
+	Resources *Resources `json:"resources,omitempty" expr:"include"`
 }
 
 type NotificationsConfig struct {

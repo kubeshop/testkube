@@ -40,4 +40,5 @@ type TestWorkflowPodConfig struct {
 	SchedulingGates           []PodSchedulingGate        `json:"schedulingGates,omitempty"`
 	ResourceClaims            []PodResourceClaim         `json:"resourceClaims,omitempty"`
 	HostPID                   *BoxedBoolean              `json:"hostPID,omitempty"`
+	Resources                 *TestWorkflowPodResources  `json:"resources,omitempty"`
 }

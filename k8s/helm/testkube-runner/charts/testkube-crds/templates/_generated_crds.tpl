@@ -11654,6 +11654,26 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: pod-level resource requests and limits for the whole pod, incl. the init and sidecar containers of Testkube (Kubernetes PodLevelResources, KEP-2837)
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
                                 schedulingGates:
                                   items:
                                     properties:
@@ -13132,6 +13152,26 @@ spec:
                           - name
                         type: object
                       type: array
+                    resources:
+                      description: pod-level resource requests and limits for the whole pod, incl. the init and sidecar containers of Testkube (Kubernetes PodLevelResources, KEP-2837)
+                      properties:
+                        limits:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource limits for the container
+                          type: object
+                        requests:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource requests for the container
+                          type: object
+                      type: object
                     schedulingGates:
                       items:
                         properties:
@@ -13992,6 +14032,26 @@ spec:
                                 - name
                               type: object
                             type: array
+                          resources:
+                            description: pod-level resource requests and limits for the whole pod, incl. the init and sidecar containers of Testkube (Kubernetes PodLevelResources, KEP-2837)
+                            properties:
+                              limits:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource limits for the container
+                                type: object
+                              requests:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource requests for the container
+                                type: object
+                            type: object
                           schedulingGates:
                             items:
                               properties:
@@ -17508,6 +17568,26 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: pod-level resource requests and limits for the whole pod, incl. the init and sidecar containers of Testkube (Kubernetes PodLevelResources, KEP-2837)
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
                                 schedulingGates:
                                   items:
                                     properties:
@@ -21078,6 +21158,26 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: pod-level resource requests and limits for the whole pod, incl. the init and sidecar containers of Testkube (Kubernetes PodLevelResources, KEP-2837)
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
                                 schedulingGates:
                                   items:
                                     properties:
@@ -24905,6 +25005,26 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: pod-level resource requests and limits for the whole pod, incl. the init and sidecar containers of Testkube (Kubernetes PodLevelResources, KEP-2837)
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
                                 schedulingGates:
                                   items:
                                     properties:
@@ -26326,6 +26446,26 @@ spec:
                           - name
                         type: object
                       type: array
+                    resources:
+                      description: pod-level resource requests and limits for the whole pod, incl. the init and sidecar containers of Testkube (Kubernetes PodLevelResources, KEP-2837)
+                      properties:
+                        limits:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource limits for the container
+                          type: object
+                        requests:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource requests for the container
+                          type: object
+                      type: object
                     schedulingGates:
                       items:
                         properties:
@@ -27186,6 +27326,26 @@ spec:
                                 - name
                               type: object
                             type: array
+                          resources:
+                            description: pod-level resource requests and limits for the whole pod, incl. the init and sidecar containers of Testkube (Kubernetes PodLevelResources, KEP-2837)
+                            properties:
+                              limits:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource limits for the container
+                                type: object
+                              requests:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource requests for the container
+                                type: object
+                            type: object
                           schedulingGates:
                             items:
                               properties:
@@ -30617,6 +30777,26 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: pod-level resource requests and limits for the whole pod, incl. the init and sidecar containers of Testkube (Kubernetes PodLevelResources, KEP-2837)
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
                                 schedulingGates:
                                   items:
                                     properties:
@@ -34065,6 +34245,26 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: pod-level resource requests and limits for the whole pod, incl. the init and sidecar containers of Testkube (Kubernetes PodLevelResources, KEP-2837)
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
                                 schedulingGates:
                                   items:
                                     properties:
