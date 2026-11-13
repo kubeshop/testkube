@@ -749,7 +749,7 @@ func main() {
 		if proContext.CloudStorageSupportedInControlPlane && cfg.GitOpsSyncKubernetesToCloudEnabled {
 			// Each resource syncs into the Environment that GITOPS_NAMESPACES maps its namespace to.
 			syncTarget := syncagent.TargetFunc(func(ns string) syncagent.Target {
-				return syncagent.Target{Namespace: ns, EnvironmentID: gitopsNamespaces.EnvironmentID(ns)}
+				return syncagent.Target{Namespace: ns, EnvironmentID: gitopsNamespaces.EnvironmentID(ns, proContext.EnvID)}
 			})
 			err = synccontroller.NewTestTriggerSyncController(mgr, syncStore, syncTarget)
 			commons.ExitOnError("creating TestTrigger sync controller", err)

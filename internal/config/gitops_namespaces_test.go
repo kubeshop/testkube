@@ -57,7 +57,7 @@ func TestGitOpsNamespaces_WatchesAllAndNames(t *testing.T) {
 }
 
 func TestGitOpsNamespaces_EnvironmentID(t *testing.T) {
-	namespaces := GitOpsNamespaces{{Name: "*"}, {Name: "a"}, {Name: "b", EnvID: "env-1"}}
+	namespaces := GitOpsNamespaces{{Name: "*"}, {Name: "a"}, {Name: "b", EnvID: "env-1"}, {Name: "c", EnvID: "env-token"}}
 	tests := []struct {
 		name      string
 		namespace string
@@ -66,10 +66,11 @@ func TestGitOpsNamespaces_EnvironmentID(t *testing.T) {
 		{name: "a mapped namespace syncs into its Environment", namespace: "b", want: "env-1"},
 		{name: "an unmapped namespace syncs into the default Environment", namespace: "a", want: ""},
 		{name: "a namespace under * syncs into the default Environment", namespace: "other", want: ""},
+		{name: "a namespace mapped to the token Environment syncs into the default Environment", namespace: "c", want: ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, namespaces.EnvironmentID(tt.namespace))
+			assert.Equal(t, tt.want, namespaces.EnvironmentID(tt.namespace, "env-token"))
 		})
 	}
 }
