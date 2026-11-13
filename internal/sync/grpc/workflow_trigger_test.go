@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
+	syncagent "github.com/kubeshop/testkube/internal/sync"
 )
 
 func TestUpdateOrCreateWorkflowTrigger(t *testing.T) {
@@ -25,7 +26,7 @@ func TestUpdateOrCreateWorkflowTrigger(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := client.UpdateOrCreateWorkflowTrigger(t.Context(), input); err != nil {
+	if err := client.UpdateOrCreateWorkflowTrigger(t.Context(), syncagent.Target{}, input); err != nil {
 		t.Fatal(err)
 	}
 

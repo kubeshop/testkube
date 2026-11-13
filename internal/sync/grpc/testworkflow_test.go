@@ -10,6 +10,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	syncagent "github.com/kubeshop/testkube/internal/sync"
 )
 
 func TestUpdateOrCreateTestWorkflow(t *testing.T) {
@@ -41,7 +42,7 @@ func TestUpdateOrCreateTestWorkflow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := client.UpdateOrCreateTestWorkflow(t.Context(), input); err != nil {
+	if err := client.UpdateOrCreateTestWorkflow(t.Context(), syncagent.Target{}, input); err != nil {
 		t.Fatal(err)
 	}
 
@@ -64,7 +65,7 @@ func TestDeleteTestWorkflow(t *testing.T) {
 			var srv testSrv
 			client := startGRPCTestConnection(t, &srv)
 
-			require.NoError(t, client.DeleteTestWorkflow(t.Context(), "foobar", tt.namespace))
+			require.NoError(t, client.DeleteTestWorkflow(t.Context(), syncagent.Target{Namespace: tt.namespace}, "foobar"))
 
 			id := srv.DeleteRequest.GetTestWorkflow()
 			assert.Equal(t, "foobar", id.GetId())

@@ -27,6 +27,16 @@ func TestTerminalOnRejection(t *testing.T) {
 			wantTerminal: true,
 		},
 		{
+			name:         "a forbidden Environment stands until the configuration changes",
+			err:          fmt.Errorf("update TestWorkflow %q in store: %w", "smoke", syncagent.ErrEnvironmentForbidden),
+			wantTerminal: true,
+		},
+		{
+			name:         "a name collision stands until one resource goes",
+			err:          fmt.Errorf("sync TestWorkflow %q: %w", "team-c/smoke", syncagent.ErrNameCollision),
+			wantTerminal: true,
+		},
+		{
 			name: "any other failure is transient as far as the agent can tell",
 			err:  errors.New("connection refused"),
 		},
