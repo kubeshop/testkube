@@ -15,8 +15,21 @@ var ErrOwnershipConflict = errors.New("resource is owned by another GitOps agent
 // on every retry, so callers treat it as terminal until somebody changes the resource.
 var ErrInvalidResource = errors.New("the Control Plane rejected the resource as invalid")
 
-// IsRejection reports whether the Control Plane rejected a resource in a way that no retry clears:
-// an ownership conflict or an invalid resource.
+// ErrEnvironmentForbidden is returned by a store when the Control Plane refuses the Environment of
+// a resource for this agent. The refusal stands until somebody changes GITOPS_NAMESPACES or the
+// Environments of the agent, so callers treat it as terminal.
+var ErrEnvironmentForbidden = errors.New("the Control Plane refused the Environment for this agent")
+
+// ErrNameCollision is returned when two watched namespaces that sync into the same Environment hold
+// a resource of the same kind and name. The Control Plane keys a resource by its name, so only one
+// of them can sync.
+var ErrNameCollision = errors.New("another namespace of the same Environment already has a resource with this name")
+
+// IsRejection reports whether err is a rejection that no retry clears: an ownership conflict, an
+// invalid resource, a forbidden Environment or a name collision.
 func IsRejection(err error) bool {
-	return errors.Is(err, ErrOwnershipConflict) || errors.Is(err, ErrInvalidResource)
+	return errors.Is(err, ErrOwnershipConflict) ||
+		errors.Is(err, ErrInvalidResource) ||
+		errors.Is(err, ErrEnvironmentForbidden) ||
+		errors.Is(err, ErrNameCollision)
 }
