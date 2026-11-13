@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
@@ -734,6 +735,12 @@ func main() {
 			Scheme: scheme,
 			Cache: cache.Options{
 				DefaultNamespaces: watchedNamespaces,
+				// Executions run only in the agent namespace, whatever GITOPS_NAMESPACES watches.
+				ByObject: map[ctrlclient.Object]cache.ByObject{
+					&testworkflowsv1.TestWorkflowExecution{}: {
+						Namespaces: map[string]cache.Config{cfg.TestkubeNamespace: {}},
+					},
+				},
 			},
 			LeaderElection:          !cfg.LeaderElectionDisabled,
 			LeaderElectionNamespace: cfg.TestkubeNamespace,
