@@ -55,3 +55,11 @@ func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, apiToke
 		callTimeout: defaultCallTimeout,
 	}
 }
+
+// optionalString leaves an empty value unset, so the Control Plane applies its fallback.
+func optionalString(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}

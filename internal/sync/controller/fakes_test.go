@@ -66,8 +66,8 @@ func (t *fakeStore) UpdateOrCreateTestTrigger(_ context.Context, trigger testtri
 	return t.Err
 }
 
-func (t *fakeStore) DeleteTestTrigger(_ context.Context, s string) error {
-	t.Deleted = s
+func (t *fakeStore) DeleteTestTrigger(_ context.Context, name, namespace string) error {
+	t.Deleted = namespace + "/" + name
 	return t.Err
 }
 
@@ -77,8 +77,8 @@ func (t *fakeStore) UpdateOrCreateWorkflowTrigger(_ context.Context, trigger wor
 	return t.Err
 }
 
-func (t *fakeStore) DeleteWorkflowTrigger(_ context.Context, s string) error {
-	t.Deleted = s
+func (t *fakeStore) DeleteWorkflowTrigger(_ context.Context, name, namespace string) error {
+	t.Deleted = namespace + "/" + name
 	return t.Err
 }
 
@@ -88,8 +88,8 @@ func (t *fakeStore) UpdateOrCreateTestWorkflow(_ context.Context, workflow testw
 	return t.Err
 }
 
-func (t *fakeStore) DeleteTestWorkflow(_ context.Context, s string) error {
-	t.Deleted = s
+func (t *fakeStore) DeleteTestWorkflow(_ context.Context, name, namespace string) error {
+	t.Deleted = namespace + "/" + name
 	return t.Err
 }
 
@@ -99,8 +99,8 @@ func (t *fakeStore) UpdateOrCreateTestWorkflowTemplate(_ context.Context, templa
 	return t.Err
 }
 
-func (t *fakeStore) DeleteTestWorkflowTemplate(_ context.Context, s string) error {
-	t.Deleted = s
+func (t *fakeStore) DeleteTestWorkflowTemplate(_ context.Context, name, namespace string) error {
+	t.Deleted = namespace + "/" + name
 	return t.Err
 }
 
@@ -110,8 +110,8 @@ func (t *fakeStore) UpdateOrCreateWebhook(_ context.Context, webhook executorv1.
 	return t.Err
 }
 
-func (t *fakeStore) DeleteWebhook(_ context.Context, s string) error {
-	t.Deleted = s
+func (t *fakeStore) DeleteWebhook(_ context.Context, name, namespace string) error {
+	t.Deleted = namespace + "/" + name
 	return t.Err
 }
 
@@ -121,7 +121,7 @@ func (t *fakeStore) UpdateOrCreateWebhookTemplate(_ context.Context, template ex
 	return t.Err
 }
 
-func (t *fakeStore) DeleteWebhookTemplate(_ context.Context, s string) error {
-	t.Deleted = s
+func (t *fakeStore) DeleteWebhookTemplate(_ context.Context, name, namespace string) error {
+	t.Deleted = namespace + "/" + name
 	return t.Err
 }

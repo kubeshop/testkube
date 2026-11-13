@@ -19,7 +19,7 @@ func TestTranslateError(t *testing.T) {
 		return c.UpdateOrCreateTestWorkflow(t.Context(), testworkflowsv1.TestWorkflow{})
 	}
 	deleteWorkflow := func(t *testing.T, c syncgrpc.Client) error {
-		return c.DeleteTestWorkflow(t.Context(), "smoke")
+		return c.DeleteTestWorkflow(t.Context(), "smoke", "testkube")
 	}
 	updateWebhook := func(t *testing.T, c syncgrpc.Client) error {
 		return c.UpdateOrCreateWebhook(t.Context(), executorv1.Webhook{})

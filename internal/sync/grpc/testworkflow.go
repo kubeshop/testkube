@@ -41,7 +41,7 @@ func (c Client) UpdateOrCreateTestWorkflow(ctx context.Context, obj testworkflow
 
 // DeleteTestWorkflow sends a request to the Control Plane informing that a TestWorkflow object has
 // been removed from the observable scope of this Agent.
-func (c Client) DeleteTestWorkflow(ctx context.Context, name string) error {
+func (c Client) DeleteTestWorkflow(ctx context.Context, name, namespace string) error {
 	// Execute with our own call timeout context to prevent stalling out.
 	callCtx, cancel := context.WithTimeout(ctx, c.callTimeout)
 	defer cancel()
@@ -51,7 +51,8 @@ func (c Client) DeleteTestWorkflow(ctx context.Context, name string) error {
 	if _, err := c.client.Delete(callCtx, &syncv1.DeleteRequest{
 		Id: &syncv1.DeleteRequest_TestWorkflow{
 			TestWorkflow: &syncv1.TestWorkflowId{
-				Id: &name,
+				Id:        &name,
+				Namespace: optionalString(namespace),
 			},
 		},
 	}, c.callOpts...); err != nil {

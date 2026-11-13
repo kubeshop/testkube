@@ -54,11 +54,11 @@ func TestWebhookTemplateSyncReconcilerDelete(t *testing.T) {
 		store,
 	)
 
-	if _, err := reconciler.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
+	if _, err := reconciler.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "team-a", Name: name}}); err != nil {
 		t.Errorf("reconciliation failed: %v", err)
 	}
 
-	if diff := cmp.Diff(name, store.Deleted); diff != "" {
+	if diff := cmp.Diff("team-a/"+name, store.Deleted); diff != "" {
 		t.Errorf("WebhookTemplateSyncReconcilerUpdateOrCreate: -want, +got:\n%s", diff)
 	}
 
@@ -84,11 +84,11 @@ func TestWebhookTemplateSyncReconcilerDeleteWhenMarkedForDeletion(t *testing.T) 
 		store,
 	)
 
-	if _, err := reconciler.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
+	if _, err := reconciler.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "team-a", Name: name}}); err != nil {
 		t.Errorf("reconciliation failed: %v", err)
 	}
 
-	if diff := cmp.Diff(name, store.Deleted); diff != "" {
+	if diff := cmp.Diff("team-a/"+name, store.Deleted); diff != "" {
 		t.Errorf("WebhookTemplateSyncReconcilerDeleteWhenMarkedForDeletion: -want, +got:\n%s", diff)
 	}
 

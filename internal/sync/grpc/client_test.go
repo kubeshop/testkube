@@ -26,6 +26,7 @@ type testSrv struct {
 	TestWorkflowTemplate *syncv1.TestWorkflowTemplate
 	Webhook              *syncv1.Webhook
 	WebhookTemplate      *syncv1.WebhookTemplate
+	DeleteRequest        *syncv1.DeleteRequest
 
 	// Err is returned by both RPCs, to exercise the client's status code translation.
 	Err error
@@ -50,6 +51,7 @@ func (t *testSrv) UpdateOrCreate(_ context.Context, req *syncv1.UpdateOrCreateRe
 }
 
 func (t *testSrv) Delete(_ context.Context, req *syncv1.DeleteRequest) (*syncv1.DeleteResponse, error) {
+	t.DeleteRequest = req
 	return nil, t.Err
 }
 

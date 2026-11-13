@@ -14,7 +14,7 @@ import (
 
 type TestWorkflowStore interface {
 	UpdateOrCreateTestWorkflow(context.Context, testworkflowsv1.TestWorkflow) error
-	DeleteTestWorkflow(context.Context, string) error
+	DeleteTestWorkflow(ctx context.Context, name, namespace string) error
 }
 
 func NewTestWorkflowSyncController(mgr ctrl.Manager, store TestWorkflowStore) error {
@@ -33,9 +33,8 @@ func testWorkflowSyncReconciler(client client.Reader, store TestWorkflowStore) r
 		switch {
 		case errors.IsNotFound(err):
 			// Deleted, request deletion from store.
-			// Passing the name here rather than the namespaced name as generally we refer to objects
-			// purely by their name.
-			if err := store.DeleteTestWorkflow(ctx, req.Name); err != nil {
+			// Passing the namespace too, as the manager may watch more than one namespace.
+			if err := store.DeleteTestWorkflow(ctx, req.Name, req.Namespace); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete TestWorkflow %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
@@ -51,9 +50,8 @@ func testWorkflowSyncReconciler(client client.Reader, store TestWorkflowStore) r
 		// there is no going back so we know this resource is about to be deleted.
 		if !workflow.DeletionTimestamp.IsZero() {
 			// About to be deleted, request deletion from store.
-			// Passing the name here rather than the namespaced name as generally we refer to objects
-			// purely by their name.
-			if err := store.DeleteTestWorkflow(ctx, req.Name); err != nil {
+			// Passing the namespace too, as the manager may watch more than one namespace.
+			if err := store.DeleteTestWorkflow(ctx, req.Name, req.Namespace); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete TestWorkflow %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
