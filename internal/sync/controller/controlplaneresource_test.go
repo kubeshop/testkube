@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	insightsv1 "github.com/kubeshop/testkube/api/insights/v1alpha1"
-	syncagent "github.com/kubeshop/testkube/internal/sync"
+	gitopssync "github.com/kubeshop/testkube/internal/sync"
 	"github.com/kubeshop/testkube/pkg/controlplane/declarative"
 )
 
@@ -118,7 +118,7 @@ func TestControlPlaneResourceSyncReconcilerDeleteWhenMarkedForDeletion(t *testin
 // An ownership conflict is terminal for updates and deletes alike; any other failure is retried.
 func TestControlPlaneResourceSyncReconcilerRejection(t *testing.T) {
 	board := &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: "release-health"}}
-	conflict := &fakeControlPlaneResourceStore{Err: syncagent.ErrOwnershipConflict}
+	conflict := &fakeControlPlaneResourceStore{Err: gitopssync.ErrOwnershipConflict}
 
 	_, err := controlPlaneResourceSyncReconciler(boardClient{Board: board}, conflict, boardKind(t)).Reconcile(t.Context(), request("release-health"))
 	assert.True(t, errors.Is(err, reconcile.TerminalError(nil)), "update: %v", err)
@@ -147,7 +147,7 @@ func (f *fakeAccessReviews) Create(_ context.Context, review *authorizationv1.Se
 	return out, nil
 }
 
-// A kind is synced only when the agent may both list and watch it in its namespace.
+// A kind is synced only when the runner may both list and watch it in its namespace.
 func TestCanListAndWatch(t *testing.T) {
 	reviews := &fakeAccessReviews{}
 	allowed, err := canListAndWatch(t.Context(), reviews, "testkube", "insights.testkube.io", "boards")
@@ -164,7 +164,7 @@ func TestCanListAndWatch(t *testing.T) {
 }
 
 // A cluster that forbids the access review itself makes the kind unavailable, which the caller
-// skips, rather than an error that stops the agent; any other failure is still an error.
+// skips, rather than an error that stops the runner; any other failure is still an error.
 func TestCanListAndWatch_ReviewForbidden(t *testing.T) {
 	forbidden := apierrors.NewForbidden(schema.GroupResource{Group: "authorization.k8s.io", Resource: "selfsubjectaccessreviews"}, "", errors.New("RBAC: access denied"))
 	allowed, err := canListAndWatch(t.Context(), &fakeAccessReviews{err: forbidden}, "testkube", "insights.testkube.io", "boards")

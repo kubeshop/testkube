@@ -142,7 +142,7 @@ tests:
           path: kind
           value: ClusterRole
 
-  - it: lets a GitOps agent read the Boards it syncs
+  - it: lets a GitOps runner read the Boards it syncs
     set:
       gitops.enabled: true
       listener.watchAllNamespaces: true

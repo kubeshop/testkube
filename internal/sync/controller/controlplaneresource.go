@@ -19,7 +19,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/controlplane/declarative"
 )
 
-// ControlPlaneResourceStore receives the Control Plane resources this agent syncs.
+// ControlPlaneResourceStore receives the Control Plane resources this runner syncs.
 type ControlPlaneResourceStore interface {
 	UpdateOrCreateControlPlaneResource(ctx context.Context, obj declarative.Object) error
 	DeleteControlPlaneResource(ctx context.Context, kind declarative.Kind, name string) error
@@ -29,7 +29,7 @@ type ControlPlaneResourceStore interface {
 // synced. A kind is added here when the Control Plane can take it through the SyncService.
 var syncedControlPlaneResources = []string{"boards"}
 
-// SyncedControlPlaneKinds returns the kinds of the declarative registry that a GitOps agent syncs.
+// SyncedControlPlaneKinds returns the kinds of the declarative registry that a GitOps runner syncs.
 func SyncedControlPlaneKinds() []declarative.Kind {
 	var out []declarative.Kind
 	for _, k := range declarative.Kinds() {
@@ -41,11 +41,11 @@ func SyncedControlPlaneKinds() []declarative.Kind {
 }
 
 // NewControlPlaneResourceSyncControllers registers a sync controller for each synced kind whose
-// custom resource the agent can watch in namespace. A kind whose CRD is not installed, that the
-// agent's role does not let it list and watch, or whose access the agent may not check (a cluster
+// custom resource the runner can watch in namespace. A kind whose CRD is not installed, that the
+// runner's role does not let it list and watch, or whose access the runner may not check (a cluster
 // that forbids SelfSubjectAccessReviews), is skipped with a warning rather than failing: these
 // kinds are optional, and a controller that cannot sync its cache stops the manager, and with it
-// the agent.
+// the runner.
 func NewControlPlaneResourceSyncControllers(ctx context.Context, mgr ctrl.Manager, store ControlPlaneResourceStore, namespace string, logger *zap.SugaredLogger) error {
 	clientset, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
@@ -64,12 +64,12 @@ func NewControlPlaneResourceSyncControllers(ctx context.Context, mgr ctrl.Manage
 		allowed, err := canListAndWatch(ctx, reviews, namespace, mapping.Resource.Group, mapping.Resource.Resource)
 		switch {
 		case errors.Is(err, errAccessReviewForbidden):
-			logger.Warnw("not syncing a Control Plane resource kind: the agent may not check its access to it", "kind", kind.Kind, "group", kind.GroupVersion.Group, "namespace", namespace, "error", err)
+			logger.Warnw("not syncing a Control Plane resource kind: the runner may not check its access to it", "kind", kind.Kind, "group", kind.GroupVersion.Group, "namespace", namespace, "error", err)
 			continue
 		case err != nil:
 			return fmt.Errorf("check access to %s: %w", kind.Resource, err)
 		case !allowed:
-			logger.Warnw("not syncing a Control Plane resource kind: the agent may not list and watch it", "kind", kind.Kind, "group", kind.GroupVersion.Group, "namespace", namespace)
+			logger.Warnw("not syncing a Control Plane resource kind: the runner may not list and watch it", "kind", kind.Kind, "group", kind.GroupVersion.Group, "namespace", namespace)
 			continue
 		}
 		if err := NewControlPlaneResourceSyncController(mgr, store, kind); err != nil {
@@ -85,11 +85,11 @@ type accessReviews interface {
 	Create(ctx context.Context, review *authorizationv1.SelfSubjectAccessReview, opts metav1.CreateOptions) (*authorizationv1.SelfSubjectAccessReview, error)
 }
 
-// errAccessReviewForbidden is returned by canListAndWatch when the cluster refuses the agent's
+// errAccessReviewForbidden is returned by canListAndWatch when the cluster refuses the runner's
 // access review itself, so whether it may read the resource is unknown.
-var errAccessReviewForbidden = errors.New("the agent may not create SelfSubjectAccessReviews")
+var errAccessReviewForbidden = errors.New("the runner may not create SelfSubjectAccessReviews")
 
-// canListAndWatch reports whether the agent may list and watch the resource in namespace. A
+// canListAndWatch reports whether the runner may list and watch the resource in namespace. A
 // cluster that forbids the review itself is errAccessReviewForbidden.
 func canListAndWatch(ctx context.Context, reviews accessReviews, namespace, group, resource string) (bool, error) {
 	for _, verb := range []string{"list", "watch"} {

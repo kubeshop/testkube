@@ -211,7 +211,7 @@ rules:
       - list
       - watch
   {{- if .Values.gitops.enabled }}
-  # Control Plane resources, such as Insights boards, which the GitOps agent syncs to the Control
+  # Control Plane resources, such as Insights boards, which the GitOps runner syncs to the Control
   # Plane. It only reads them.
   - apiGroups:
       - "insights.testkube.io"

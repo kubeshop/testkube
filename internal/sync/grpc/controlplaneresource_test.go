@@ -13,7 +13,7 @@ import (
 
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 	insightsv1 "github.com/kubeshop/testkube/api/insights/v1alpha1"
-	syncagent "github.com/kubeshop/testkube/internal/sync"
+	gitopssync "github.com/kubeshop/testkube/internal/sync"
 	"github.com/kubeshop/testkube/pkg/controlplane/declarative"
 )
 
@@ -23,7 +23,7 @@ func syncedBoard() *insightsv1.Board {
 		Name:            "release-health",
 		Namespace:       "testkube",
 		ResourceVersion: "42",
-		Annotations:     map[string]string{"testkube.io/gitops-owner": "agent-1"},
+		Annotations:     map[string]string{"testkube.io/gitops-owner": "runner-1"},
 	}
 	board.Spec.DisplayName = "Release health"
 	board.Status = commonv1.ControlPlaneResourceStatus{ID: "board-1", GitOpsOwner: &commonv1.GitOpsOwner{AgentID: "forged"}}
@@ -49,7 +49,7 @@ func TestUpdateOrCreateControlPlaneResource(t *testing.T) {
 	assert.Equal(t, "Board", sent["kind"])
 	assert.Equal(t, map[string]any{
 		"name":        "release-health",
-		"annotations": map[string]any{"testkube.io/gitops-owner": "agent-1"},
+		"annotations": map[string]any{"testkube.io/gitops-owner": "runner-1"},
 	}, sent["metadata"])
 	assert.NotContains(t, sent, "status", "ownership is never taken from the payload")
 }
@@ -68,15 +68,15 @@ func TestDeleteControlPlaneResource(t *testing.T) {
 
 // A rejection is translated as for every other kind, so the reconciler stops retrying it.
 func TestControlPlaneResourceRejection(t *testing.T) {
-	srv := testSrv{Err: status.Error(codes.FailedPrecondition, `owned by "prod-sync" (agent-2)`)}
+	srv := testSrv{Err: status.Error(codes.FailedPrecondition, `owned by "prod-sync" (runner-2)`)}
 	client := startGRPCTestConnection(t, &srv)
 
 	err := client.UpdateOrCreateControlPlaneResource(t.Context(), syncedBoard())
-	assert.True(t, errors.Is(err, syncagent.ErrOwnershipConflict), err)
+	assert.True(t, errors.Is(err, gitopssync.ErrOwnershipConflict), err)
 	err = client.DeleteControlPlaneResource(t.Context(), declarative.Kinds()[0], "release-health")
-	assert.True(t, errors.Is(err, syncagent.ErrOwnershipConflict), err)
+	assert.True(t, errors.Is(err, gitopssync.ErrOwnershipConflict), err)
 
 	srv.Err = status.Error(codes.InvalidArgument, "spec.reports[0].kind: Unsupported value")
 	err = client.UpdateOrCreateControlPlaneResource(t.Context(), syncedBoard())
-	assert.True(t, errors.Is(err, syncagent.ErrInvalidResource), err)
+	assert.True(t, errors.Is(err, gitopssync.ErrInvalidResource), err)
 }

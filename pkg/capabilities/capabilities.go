@@ -32,7 +32,7 @@ const CapabilitySourceOfTruth Capability = "source-of-truth"
 
 // CapabilityControlPlaneResources is whether the control plane accepts Control Plane resources,
 // such as Insights boards, through the SyncService (its control_plane_resource arm). A GitOps
-// agent syncs those custom resources only when the control plane advertises it, so an older
+// runner syncs those custom resources only when the control plane advertises it, so an older
 // control plane never receives an arm it cannot handle.
 const CapabilityControlPlaneResources Capability = "controlplane-resources"
 

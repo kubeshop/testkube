@@ -459,7 +459,7 @@ rules:
 
 ---
 
-# Control Plane resources (insights.testkube.io Boards), which a GitOps agent syncs to the Control
+# Control Plane resources (insights.testkube.io Boards), which a GitOps runner syncs to the Control
 # Plane. It only reads them.
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: Role
