@@ -45,18 +45,18 @@
 // live in the Control Plane, which maps them itself; what both ends must
 // agree on is here.
 //
-// A manifest never carries a secret. A key is named by an Environment
-// Credential in credentialReference (secret://<name>, or vault://<path> for
-// an LLM provider), and Normalize refuses a header or query parameter whose
-// name looks like a credential (IsCredentialField, which includes sig, the
-// signature of an Azure SAS URL) and a URL with user info. Such an error
-// echoes neither the value nor the refused name, which may hold a secret
-// itself: it is reported on the URL or on the whole header or query map.
-// The Control Plane exports every header and query parameter value as
-// RedactedValue, which applied back keeps the stored value, so the
-// placeholder is accepted under any name. A
-// shared-key link without a credentialReference keeps the key set in the
-// dashboard, which is never exported.
+// Credentials follow the rules of the dashboard and the REST API, as Test
+// Workflows do: a manifest may carry them. An LLM provider's headers, query
+// parameters and URLs are taken as written, an X-Api-Key header or a key in a
+// query included. A credentialReference names an Environment Credential
+// (secret://<name>, or vault://<path> for an LLM provider) and is the way to
+// keep a key out of Git, so it must be a name, not a key itself. The Control
+// Plane exports every header and query parameter value as RedactedValue, as
+// its REST API returns them, and keeps the stored value for one applied back
+// that way. A URL or a credentialReference refused as malformed is not echoed
+// in the error, since it may hold a secret, and errors reach terminal and CI
+// logs. A shared-key link without a credentialReference keeps the key set in
+// the dashboard, which is never exported.
 //
 // An agent links to an MCPServer by its metadata.name, and to the built-in
 // Testkube MCP server as "testkube", a name no MCPServer may take. An agent

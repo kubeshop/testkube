@@ -320,7 +320,7 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
   - **Status**: [`api/common/v1/controlplane.go`](api/common/v1/controlplane.go) (`ControlPlaneResourceStatus`) is the Control Plane's view: its id, the owning GitOps agent and the creation/modification sources. It is filled in on export and never taken from a request.
 - **`AIAgent`, `MCPServer`, `LLMProvider`** (`ai.testkube.io/v1alpha1`)
   - **Definition**: [`api/ai/v1alpha1/`](api/ai/v1alpha1/)
-  - **Purpose**: an AI Agent, the MCP servers it links to (by name, with the built-in Testkube server as `testkube`) and the LLM providers that serve its models, all environment-scoped. `metadata.name` is a DNS-1123 label the Control Plane keeps as the entity's slug. A manifest never carries a secret: keys are named by an Environment Credential in `credentialReference`, and headers that look like credentials are refused. An agent's Skills are declared with it and replaced as a whole on apply.
+  - **Purpose**: an AI Agent, the MCP servers it links to (by name, with the built-in Testkube server as `testkube`) and the LLM providers that serve its models, all environment-scoped. `metadata.name` is a DNS-1123 label the Control Plane keeps as the entity's slug. A key can be named by an Environment Credential in `credentialReference` or written in a header, as in the dashboard; exports redact header and query parameter values. An agent's Skills are declared with it and replaced as a whole on apply.
 - Each Control Plane entity family gets an API group of its own. Today the CLI applies these objects (see [Control Plane Resources](#control-plane-resources)); no controller watches the CRDs yet.
 
 #### Deprecated CRDs

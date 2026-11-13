@@ -356,9 +356,9 @@ spec:
                 additionalProperties:
                   type: string
                 description: |-
-                  ExtraHeaders are sent with every request to the provider. They must
-                  not carry a credential: a header such as Authorization or X-Api-Key is
-                  refused, and belongs in the credential.
+                  ExtraHeaders are sent with every request to the provider. A value may
+                  be a credential, such as an X-Api-Key header; the Control Plane exports
+                  every value as ********, which applied back keeps the stored one.
                 type: object
               models:
                 description: Models offered from the provider.

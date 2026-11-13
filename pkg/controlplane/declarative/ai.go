@@ -330,30 +330,12 @@ func invalidSecret(path *field.Path, detail string) *field.Error {
 	return field.Invalid(path, field.OmitValueType{}, detail)
 }
 
-// validateHTTPURL checks an endpoint is an absolute http or https URL with no
-// credentials in it: no user info, and no query parameter whose name
-// IsCredentialField, the rule the forwarded query parameters keep. (Unlike
-// those, a URL is stored and exported as written, so the redacted placeholder
-// is no exception here.) Neither the URL nor a refused parameter's name is
-// echoed: a name decoded from the query can hold a secret itself, as
-// ?api_key%3Dsk-live-123 (a whole entry encoded by mistake) decodes to the
-// name api_key=sk-live-123.
+// validateHTTPURL checks an endpoint is an absolute http or https URL. It may
+// carry credentials, as the REST API accepts, so a refused URL is not echoed.
 func validateHTTPURL(raw string, path *field.Path) field.ErrorList {
 	u, err := url.Parse(raw)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return field.ErrorList{invalidSecret(path, "must be an absolute http or https URL")}
-	}
-	if u.User != nil {
-		return field.ErrorList{invalidSecret(path, "must not carry credentials; put them in an Environment Credential and name it in credentialReference")}
-	}
-	query, err := url.ParseQuery(u.RawQuery)
-	if err != nil {
-		return field.ErrorList{invalidSecret(path, "has a query string that is not valid")}
-	}
-	for name := range query {
-		if IsCredentialField(name) {
-			return field.ErrorList{invalidSecret(path, "has a query parameter that looks like a credential; put it in an Environment Credential and name that in credentialReference")}
-		}
 	}
 	return nil
 }
@@ -379,39 +361,25 @@ func validateCredentialReference(ref string, allowVault bool, path *field.Path) 
 }
 
 // validateForwarded checks the headers or query parameters sent to a
-// provider: at most MaxHeaderEntries, none that carries a credential, and for
-// headers none the Control Plane refuses to forward. A value is never echoed
-// in an error, in case it is a secret after all, and nor is the name of one
-// refused as a credential: the error is on the whole map, since a name can
-// hold a secret too, as "api_key=sk-live-123" pasted as a key. (A header the
-// Control Plane does not forward is named: it is one of forbiddenHeaders.)
+// provider: at most MaxHeaderEntries, and for headers none the Control Plane
+// refuses to forward, as the REST API does. A value may be a credential, as
+// an X-Api-Key header is; it is never echoed in an error.
 //
 // The Control Plane exports every value as RedactedValue, and keeps the stored
-// value for one applied back that way, as its REST API does. So the
-// placeholder is accepted, even for a name that looks like a credential: it
-// carries no secret. (The Control Plane refuses it for a value it does not
-// have.)
+// value for one applied back that way, as its REST API does. (It refuses the
+// placeholder for a value it does not have.)
 func validateForwarded(values map[string]string, headers bool, path *field.Path) field.ErrorList {
 	var errs field.ErrorList
 	if len(values) > MaxHeaderEntries {
 		errs = append(errs, field.TooMany(path, len(values), MaxHeaderEntries))
 	}
-	credential := false
-	for _, name := range sortedKeys(values) {
-		switch {
-		case headers && slices.Contains(forbiddenHeaders, strings.ToLower(name)):
-			errs = append(errs, field.Forbidden(path.Key(name), "is a header the Control Plane does not forward"))
-		case values[name] == RedactedValue:
-		case IsCredentialField(name):
-			credential = true
-		}
+	if !headers {
+		return errs
 	}
-	if credential {
-		what := "a query parameter"
-		if headers {
-			what = "a header"
+	for _, name := range sortedKeys(values) {
+		if slices.Contains(forbiddenHeaders, strings.ToLower(name)) {
+			errs = append(errs, field.Forbidden(path.Key(name), "is a header the Control Plane does not forward"))
 		}
-		errs = append(errs, field.Forbidden(path, "has "+what+" that looks like a credential; put it in an Environment Credential and name that in credentialReference"))
 	}
 	return errs
 }
