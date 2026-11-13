@@ -3,6 +3,7 @@ package config
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,33 +20,40 @@ func TestParseGitOpsNamespaces(t *testing.T) {
 		{name: "ns=envId maps the namespace", raw: "a,b = env-1", want: GitOpsNamespaces{{Name: "a"}, {Name: "b", EnvID: "env-1"}}},
 		{name: "* watches all", raw: "*", want: GitOpsNamespaces{{Name: "*"}}},
 		{name: "* with ns=envId keeps the mapping", raw: "*,b=env-1", want: GitOpsNamespaces{{Name: "*"}, {Name: "b", EnvID: "env-1"}}},
-		{name: "*=envId is an error", raw: "*=env-1", wantErr: "cannot map"},
-		{name: "duplicate namespace is an error", raw: "a,a=env-1", wantErr: "more than once"},
-		{name: "empty envId after = is an error", raw: "a=", wantErr: "no Environment id"},
-		{name: "empty namespace before = is an error", raw: "=env-1", wantErr: "no namespace"},
+		{name: "*=envId is an error", raw: "*=env-1", wantErr: `GITOPS_NAMESPACES: entry "*=env-1" cannot map "*" to an Environment`},
+		{name: "duplicate namespace is an error", raw: "a,a=env-1", wantErr: `GITOPS_NAMESPACES: namespace "a" appears more than once`},
+		{name: "empty envId after = is an error", raw: "a=", wantErr: `GITOPS_NAMESPACES: entry "a=" has no Environment id after '='`},
+		{name: "empty namespace before = is an error", raw: "=env-1", wantErr: `GITOPS_NAMESPACES: entry "=env-1" has no namespace`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := ParseGitOpsNamespaces(tt.raw, "testkube")
 			if tt.wantErr != "" {
-				require.ErrorContains(t, err, tt.wantErr)
-				require.ErrorContains(t, err, "GITOPS_NAMESPACES:")
+				assert.EqualError(t, err, tt.wantErr)
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, tt.want, got)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
-func TestGitOpsNamespacesNamesAndWatchesAll(t *testing.T) {
-	ns := GitOpsNamespaces{{Name: "*"}, {Name: "a", EnvID: "env-1"}}
-	require.True(t, ns.WatchesAll())
-	require.Equal(t, []string{"a"}, ns.Names())
-
-	ns = GitOpsNamespaces{{Name: "a"}}
-	require.False(t, ns.WatchesAll())
-	require.Equal(t, []string{"a"}, ns.Names())
+func TestGitOpsNamespaces_WatchesAllAndNames(t *testing.T) {
+	tests := []struct {
+		name           string
+		namespaces     GitOpsNamespaces
+		wantWatchesAll bool
+		wantNames      []string
+	}{
+		{name: "a * entry watches all and is left out of the names", namespaces: GitOpsNamespaces{{Name: "*"}, {Name: "a", EnvID: "env-1"}}, wantWatchesAll: true, wantNames: []string{"a"}},
+		{name: "named entries only do not watch all", namespaces: GitOpsNamespaces{{Name: "a"}}, wantWatchesAll: false, wantNames: []string{"a"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wantWatchesAll, tt.namespaces.WatchesAll())
+			assert.Equal(t, tt.wantNames, tt.namespaces.Names())
+		})
+	}
 }
 
 func TestValidateGitOpsNamespaces(t *testing.T) {
@@ -60,24 +68,31 @@ func TestValidateGitOpsNamespaces(t *testing.T) {
 		name       string
 		namespaces GitOpsNamespaces
 		capability bool
-		wantErr    []string
+		wantErr    string
 	}{
 		{name: "default-only entries pass without the capability", namespaces: GitOpsNamespaces{{Name: "a"}, {Name: "*"}}},
 		{name: "the token Environment passes without the capability", namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-token"}}},
-		{name: "an unknown envId fails and names it", namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-missing"}}, capability: true, wantErr: []string{"env-missing", `"a"`, "env-other"}},
-		{name: "a known envId without the capability fails and names the capability", namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-other"}}, wantErr: []string{"capability", "sync-multi-namespace"}},
+		{
+			name:       "an unknown envId fails and lists the known Environments",
+			namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-missing"}},
+			capability: true,
+			wantErr:    `GITOPS_NAMESPACES: namespace "a" maps to Environment "env-missing", which is not an Environment of the agent (known: env-token, env-other)`,
+		},
+		{
+			name:       "a known envId without the capability fails and names the capability",
+			namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-other"}},
+			wantErr:    `GITOPS_NAMESPACES: namespace "a" maps to Environment "env-other", but the Control Plane lacks the sync-multi-namespace capability`,
+		},
 		{name: "a known envId with the capability passes", namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-other"}}, capability: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ValidateGitOpsNamespaces(tt.namespaces, proContext(tt.capability))
-			if len(tt.wantErr) == 0 {
-				require.NoError(t, err)
+			if tt.wantErr == "" {
+				assert.NoError(t, err)
 				return
 			}
-			for _, want := range tt.wantErr {
-				require.ErrorContains(t, err, want)
-			}
+			assert.EqualError(t, err, tt.wantErr)
 		})
 	}
 }

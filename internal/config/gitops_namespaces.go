@@ -84,17 +84,8 @@ func ValidateGitOpsNamespaces(namespaces GitOpsNamespaces, proContext ProContext
 			continue
 		}
 		if !agentHasEnvironment(proContext, ns.EnvID) {
-			known := make([]string, 0, len(proContext.Agent.Environments)+1)
-			if proContext.EnvID != "" {
-				known = append(known, proContext.EnvID)
-			}
-			for _, env := range proContext.Agent.Environments {
-				if env.ID != proContext.EnvID {
-					known = append(known, env.ID)
-				}
-			}
 			return fmt.Errorf("GITOPS_NAMESPACES: namespace %q maps to Environment %q, which is not an Environment of the agent (known: %s)",
-				ns.Name, ns.EnvID, strings.Join(known, ", "))
+				ns.Name, ns.EnvID, strings.Join(knownEnvironmentIDs(proContext), ", "))
 		}
 		if !proContext.MultiNamespaceSyncSupportedInControlPlane {
 			return fmt.Errorf("GITOPS_NAMESPACES: namespace %q maps to Environment %q, but the Control Plane lacks the sync-multi-namespace capability",
@@ -102,6 +93,20 @@ func ValidateGitOpsNamespaces(namespaces GitOpsNamespaces, proContext ProContext
 		}
 	}
 	return nil
+}
+
+// knownEnvironmentIDs lists the token Environment first, then the other Environments of the agent.
+func knownEnvironmentIDs(proContext ProContext) []string {
+	known := make([]string, 0, len(proContext.Agent.Environments)+1)
+	if proContext.EnvID != "" {
+		known = append(known, proContext.EnvID)
+	}
+	for _, env := range proContext.Agent.Environments {
+		if env.ID != proContext.EnvID {
+			known = append(known, env.ID)
+		}
+	}
+	return known
 }
 
 func agentHasEnvironment(proContext ProContext, envID string) bool {
