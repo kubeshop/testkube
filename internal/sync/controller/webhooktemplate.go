@@ -14,7 +14,7 @@ import (
 
 type WebhookTemplateStore interface {
 	UpdateOrCreateWebhookTemplate(context.Context, executorv1.WebhookTemplate) error
-	DeleteWebhookTemplate(context.Context, string) error
+	DeleteWebhookTemplate(ctx context.Context, name, namespace string) error
 }
 
 func NewWebhookTemplateSyncController(mgr ctrl.Manager, store WebhookTemplateStore) error {
@@ -33,9 +33,8 @@ func webhookTemplateSyncReconciler(client client.Reader, store WebhookTemplateSt
 		switch {
 		case errors.IsNotFound(err):
 			// Deleted, request deletion from store.
-			// Passing the name here rather than the namespaced name as generally we refer to objects
-			// purely by their name.
-			if err := store.DeleteWebhookTemplate(ctx, req.Name); err != nil {
+			// Passing the namespace too, as the manager may watch more than one namespace.
+			if err := store.DeleteWebhookTemplate(ctx, req.Name, req.Namespace); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete WebhookTemplate %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
@@ -51,9 +50,8 @@ func webhookTemplateSyncReconciler(client client.Reader, store WebhookTemplateSt
 		// there is no going back so we know this resource is about to be deleted.
 		if !template.DeletionTimestamp.IsZero() {
 			// About to be deleted, request deletion from store.
-			// Passing the name here rather than the namespaced name as generally we refer to objects
-			// purely by their name.
-			if err := store.DeleteWebhookTemplate(ctx, req.Name); err != nil {
+			// Passing the namespace too, as the manager may watch more than one namespace.
+			if err := store.DeleteWebhookTemplate(ctx, req.Name, req.Namespace); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete WebhookTemplate %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil

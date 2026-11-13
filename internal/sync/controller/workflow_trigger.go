@@ -14,7 +14,7 @@ import (
 
 type WorkflowTriggerStore interface {
 	UpdateOrCreateWorkflowTrigger(context.Context, workflowtriggersv1.WorkflowTrigger) error
-	DeleteWorkflowTrigger(context.Context, string) error
+	DeleteWorkflowTrigger(ctx context.Context, name, namespace string) error
 }
 
 func NewWorkflowTriggerSyncController(mgr ctrl.Manager, store WorkflowTriggerStore) error {
@@ -32,7 +32,7 @@ func workflowTriggerSyncReconciler(client client.Reader, store WorkflowTriggerSt
 		err := client.Get(ctx, req.NamespacedName, &trigger)
 		switch {
 		case errors.IsNotFound(err):
-			if err := store.DeleteWorkflowTrigger(ctx, req.Name); err != nil {
+			if err := store.DeleteWorkflowTrigger(ctx, req.Name, req.Namespace); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete WorkflowTrigger %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
@@ -41,7 +41,7 @@ func workflowTriggerSyncReconciler(client client.Reader, store WorkflowTriggerSt
 		}
 
 		if !trigger.DeletionTimestamp.IsZero() {
-			if err := store.DeleteWorkflowTrigger(ctx, req.Name); err != nil {
+			if err := store.DeleteWorkflowTrigger(ctx, req.Name, req.Namespace); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete WorkflowTrigger %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil

@@ -14,7 +14,7 @@ import (
 
 type WebhookStore interface {
 	UpdateOrCreateWebhook(context.Context, executorv1.Webhook) error
-	DeleteWebhook(context.Context, string) error
+	DeleteWebhook(ctx context.Context, name, namespace string) error
 }
 
 func NewWebhookSyncController(mgr ctrl.Manager, store WebhookStore) error {
@@ -33,9 +33,8 @@ func webhookSyncReconciler(client client.Reader, store WebhookStore) reconcile.R
 		switch {
 		case errors.IsNotFound(err):
 			// Deleted, request deletion from store.
-			// Passing the name here rather than the namespaced name as generally we refer to objects
-			// purely by their name.
-			if err := store.DeleteWebhook(ctx, req.Name); err != nil {
+			// Passing the namespace too, as the manager may watch more than one namespace.
+			if err := store.DeleteWebhook(ctx, req.Name, req.Namespace); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete Webhook %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
@@ -51,9 +50,8 @@ func webhookSyncReconciler(client client.Reader, store WebhookStore) reconcile.R
 		// there is no going back so we know this resource is about to be deleted.
 		if !webhook.DeletionTimestamp.IsZero() {
 			// About to be deleted, request deletion from store.
-			// Passing the name here rather than the namespaced name as generally we refer to objects
-			// purely by their name.
-			if err := store.DeleteWebhook(ctx, req.Name); err != nil {
+			// Passing the namespace too, as the manager may watch more than one namespace.
+			if err := store.DeleteWebhook(ctx, req.Name, req.Namespace); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete Webhook %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
