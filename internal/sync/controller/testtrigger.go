@@ -35,7 +35,7 @@ func testTriggerSyncReconciler(client client.Reader, store TestTriggerStore, res
 		switch {
 		case errors.IsNotFound(err):
 			// Deleted, request deletion from store.
-			if err := store.DeleteTestTrigger(ctx, target, req.Name); err != nil {
+			if err := syncDelete(ctx, client, &testtriggersv1.TestTriggerList{}, req.Name, target, resolveTarget, store.UpdateOrCreateTestTrigger, store.DeleteTestTrigger); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete TestTrigger %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
@@ -51,7 +51,7 @@ func testTriggerSyncReconciler(client client.Reader, store TestTriggerStore, res
 		// there is no going back so we know this resource is about to be deleted.
 		if !trigger.DeletionTimestamp.IsZero() {
 			// About to be deleted, request deletion from store.
-			if err := store.DeleteTestTrigger(ctx, target, req.Name); err != nil {
+			if err := syncDelete(ctx, client, &testtriggersv1.TestTriggerList{}, req.Name, target, resolveTarget, store.UpdateOrCreateTestTrigger, store.DeleteTestTrigger); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete TestTrigger %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
