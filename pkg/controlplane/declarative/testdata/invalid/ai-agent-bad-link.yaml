@@ -1,0 +1,13 @@
+apiVersion: ai.testkube.io/v1alpha1
+kind: AIAgent
+metadata:
+  name: linker
+spec:
+  instructions: Do things.
+  mcpServers:
+    - name: github
+      signIn: none
+      credentialReference: secret://github-token
+    - name: github
+  access:
+    roles: [owner]

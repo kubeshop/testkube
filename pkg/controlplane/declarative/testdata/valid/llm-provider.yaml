@@ -1,0 +1,26 @@
+apiVersion: ai.testkube.io/v1alpha1
+kind: LLMProvider
+metadata:
+  name: azure-openai
+spec:
+  displayName: Azure OpenAI
+  provider: azure
+  baseUrl: https://example.openai.azure.com
+  credentialReference: secret://azure-openai-key
+  queryParams:
+    api-version: "2024-10-21"
+  models:
+    - name: gpt-4o
+      label: GPT-4o
+      contextWindowTokens: 128000
+    - name: anthropic/claude-sonnet-5.5
+      extraHeaders:
+        anthropic-beta: tools-2024-05-16
+---
+apiVersion: ai.testkube.io/v1alpha1
+kind: LLMProvider
+metadata:
+  name: vault-backed
+spec:
+  provider: openai
+  credentialReference: vault://kv/openai

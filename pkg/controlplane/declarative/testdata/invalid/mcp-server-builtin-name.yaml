@@ -1,0 +1,6 @@
+apiVersion: ai.testkube.io/v1alpha1
+kind: MCPServer
+metadata:
+  name: testkube
+spec:
+  url: https://example.com/mcp
