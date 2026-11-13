@@ -16,6 +16,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	aiv1 "github.com/kubeshop/testkube/api/ai/v1alpha1"
+	insightsv1 "github.com/kubeshop/testkube/api/insights/v1alpha1"
+	testbundlesv1 "github.com/kubeshop/testkube/api/testbundles/v1alpha1"
+	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/controlplane/declarative"
 )
 
@@ -25,34 +29,58 @@ type ControlPlaneResourceStore interface {
 	DeleteControlPlaneResource(ctx context.Context, kind declarative.Kind, name string) error
 }
 
-// syncedControlPlaneResources names, by resource, the kinds of the declarative registry that are
-// synced. A kind is added here when the Control Plane can take it through the SyncService.
-var syncedControlPlaneResources = []string{"boards"}
+// syncedControlPlaneResource is a kind of the declarative registry that is synced, by resource,
+// with the capability a Control Plane advertises when it takes that kind through the SyncService.
+type syncedControlPlaneResource struct {
+	resource   string
+	capability capabilities.Capability
+}
 
-// SyncedControlPlaneKinds returns the kinds of the declarative registry that a GitOps agent syncs.
-func SyncedControlPlaneKinds() []declarative.Kind {
+// syncedControlPlaneResources are the kinds a GitOps agent syncs. A kind is added here when the
+// Control Plane can take it through the SyncService. A kind that refers to another comes after it
+// (an AI Agent after the MCP servers it links, a Test Bundle after its AI Agents), so on a start
+// the dependency is usually there first; when it is not, the Control Plane answers with a
+// retryable error and the reference is resolved on a later attempt.
+var syncedControlPlaneResources = []syncedControlPlaneResource{
+	{resource: insightsv1.BoardResource, capability: capabilities.CapabilityControlPlaneResources},
+	{resource: aiv1.MCPServerResource, capability: capabilities.CapabilityControlPlaneResourcesAI},
+	{resource: aiv1.LLMProviderResource, capability: capabilities.CapabilityControlPlaneResourcesAI},
+	{resource: aiv1.AIAgentResource, capability: capabilities.CapabilityControlPlaneResourcesAI},
+	{resource: testbundlesv1.TestBundleResource, capability: capabilities.CapabilityControlPlaneResourcesTestBundles},
+}
+
+// SyncedControlPlaneKinds returns the kinds of the declarative registry that a GitOps agent syncs
+// to a Control Plane advertising the capabilities given, in the order of
+// syncedControlPlaneResources.
+func SyncedControlPlaneKinds(advertised []capabilities.Capability) []declarative.Kind {
 	var out []declarative.Kind
-	for _, k := range declarative.Kinds() {
-		if slices.Contains(syncedControlPlaneResources, k.Resource) {
-			out = append(out, k)
+	for _, synced := range syncedControlPlaneResources {
+		if !slices.Contains(advertised, synced.capability) {
+			continue
+		}
+		for _, k := range declarative.Kinds() {
+			if k.Resource == synced.resource {
+				out = append(out, k)
+			}
 		}
 	}
 	return out
 }
 
-// NewControlPlaneResourceSyncControllers registers a sync controller for each synced kind whose
-// custom resource the agent can watch in namespace. A kind whose CRD is not installed, that the
+// NewControlPlaneResourceSyncControllers registers a sync controller for each synced kind that the
+// Control Plane takes (it advertises the kind's capability) and whose custom resource the agent
+// can watch in namespace. A kind whose CRD is not installed, that the
 // agent's role does not let it list and watch, or whose access the agent may not check (a cluster
 // that forbids SelfSubjectAccessReviews), is skipped with a warning rather than failing: these
 // kinds are optional, and a controller that cannot sync its cache stops the manager, and with it
 // the agent.
-func NewControlPlaneResourceSyncControllers(ctx context.Context, mgr ctrl.Manager, store ControlPlaneResourceStore, namespace string, logger *zap.SugaredLogger) error {
+func NewControlPlaneResourceSyncControllers(ctx context.Context, mgr ctrl.Manager, store ControlPlaneResourceStore, namespace string, advertised []capabilities.Capability, logger *zap.SugaredLogger) error {
 	clientset, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		return fmt.Errorf("create client for access reviews: %w", err)
 	}
 	reviews := clientset.AuthorizationV1().SelfSubjectAccessReviews()
-	for _, kind := range SyncedControlPlaneKinds() {
+	for _, kind := range SyncedControlPlaneKinds(advertised) {
 		mapping, err := mgr.GetRESTMapper().RESTMapping(kind.GroupVersionKind().GroupKind(), kind.GroupVersion.Version)
 		if meta.IsNoMatchError(err) {
 			logger.Warnw("not syncing a Control Plane resource kind: its CRD is not installed", "kind", kind.Kind, "group", kind.GroupVersion.Group)

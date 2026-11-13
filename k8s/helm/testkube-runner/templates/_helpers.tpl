@@ -211,12 +211,30 @@ rules:
       - list
       - watch
   {{- if .Values.gitops.enabled }}
-  # Control Plane resources, such as Insights boards, which the GitOps agent syncs to the Control
-  # Plane. It only reads them.
+  # Control Plane resources (Insights Boards, AI Agents, MCP servers, LLM providers and Test
+  # Bundles), which the GitOps agent syncs to the Control Plane. It only reads them.
   - apiGroups:
       - "insights.testkube.io"
     resources:
       - boards
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "ai.testkube.io"
+    resources:
+      - aiagents
+      - mcpservers
+      - llmproviders
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "testbundles.testkube.io"
+    resources:
+      - testbundles
     verbs:
       - get
       - list

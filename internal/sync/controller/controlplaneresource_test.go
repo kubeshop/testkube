@@ -17,6 +17,7 @@ import (
 
 	insightsv1 "github.com/kubeshop/testkube/api/insights/v1alpha1"
 	syncagent "github.com/kubeshop/testkube/internal/sync"
+	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/controlplane/declarative"
 )
 
@@ -59,10 +60,36 @@ func (s *fakeControlPlaneResourceStore) DeleteControlPlaneResource(_ context.Con
 
 func boardKind(t *testing.T) declarative.Kind {
 	t.Helper()
-	kinds := SyncedControlPlaneKinds()
-	require.Len(t, kinds, 1, "boards are the only synced kind")
+	kinds := SyncedControlPlaneKinds([]capabilities.Capability{capabilities.CapabilityControlPlaneResources})
+	require.Len(t, kinds, 1, "boards are the only kind the base capability syncs")
 	require.Equal(t, "boards", kinds[0].Resource)
 	return kinds[0]
+}
+
+func resources(kinds []declarative.Kind) []string {
+	out := make([]string, 0, len(kinds))
+	for _, k := range kinds {
+		out = append(out, k.Resource)
+	}
+	return out
+}
+
+// A kind is synced only to a Control Plane that advertises the capability of its family, so an
+// older one, or one that serves no AI resources, never gets a kind it refuses. A kind comes after
+// the kinds it refers to.
+func TestSyncedControlPlaneKinds(t *testing.T) {
+	assert.Empty(t, SyncedControlPlaneKinds(nil))
+	assert.Equal(t, []string{"boards"}, resources(SyncedControlPlaneKinds([]capabilities.Capability{
+		capabilities.CapabilityControlPlaneResources,
+	})))
+	assert.Equal(t, []string{"mcpservers", "llmproviders", "aiagents"}, resources(SyncedControlPlaneKinds([]capabilities.Capability{
+		capabilities.CapabilityControlPlaneResourcesAI,
+	})))
+	assert.Equal(t, []string{"boards", "mcpservers", "llmproviders", "aiagents", "testbundles"}, resources(SyncedControlPlaneKinds([]capabilities.Capability{
+		capabilities.CapabilityControlPlaneResourcesTestBundles,
+		capabilities.CapabilityControlPlaneResourcesAI,
+		capabilities.CapabilityControlPlaneResources,
+	})))
 }
 
 func request(name string) reconcile.Request {

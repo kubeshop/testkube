@@ -36,6 +36,16 @@ const CapabilitySourceOfTruth Capability = "source-of-truth"
 // control plane never receives an arm it cannot handle.
 const CapabilityControlPlaneResources Capability = "controlplane-resources"
 
+// CapabilityControlPlaneResourcesAI is whether the control plane takes the AI kinds (AI Agents,
+// MCP servers and LLM providers) through the control_plane_resource arm. It is advertised apart
+// from CapabilityControlPlaneResources because a control plane serves those kinds only with AI
+// features on PostgreSQL, and one that predates their sync refuses them.
+const CapabilityControlPlaneResourcesAI Capability = "controlplane-resources-ai"
+
+// CapabilityControlPlaneResourcesTestBundles is whether the control plane takes Test Bundles
+// through the control_plane_resource arm, for the same reasons as CapabilityControlPlaneResourcesAI.
+const CapabilityControlPlaneResourcesTestBundles Capability = "controlplane-resources-testbundles"
+
 func Enabled(capabilities []*cloud.Capability, capability Capability) bool {
 	for _, c := range capabilities {
 		if c.Name == string(capability) {

@@ -162,6 +162,39 @@ tests:
               - list
               - watch
 
+  - it: lets a GitOps agent read the AI resources and Test Bundles it syncs
+    set:
+      gitops.enabled: true
+      listener.watchAllNamespaces: true
+    documentSelector:
+      path: metadata.name
+      value: watchers-role-tk
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - ai.testkube.io
+            resources:
+              - aiagents
+              - mcpservers
+              - llmproviders
+            verbs:
+              - get
+              - list
+              - watch
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - testbundles.testkube.io
+            resources:
+              - testbundles
+            verbs:
+              - get
+              - list
+              - watch
+
   - it: does not let a listener alone read Boards
     set:
       listener.enabled: true

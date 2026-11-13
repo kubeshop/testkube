@@ -459,8 +459,8 @@ rules:
 
 ---
 
-# Control Plane resources (insights.testkube.io Boards), which a GitOps agent syncs to the Control
-# Plane. It only reads them.
+# Control Plane resources (Insights Boards, AI Agents, MCP servers, LLM providers and Test
+# Bundles), which a GitOps agent syncs to the Control Plane. It only reads them.
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: Role
 metadata:
@@ -477,6 +477,24 @@ rules:
       - insights.testkube.io
     resources:
       - boards
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ai.testkube.io
+    resources:
+      - aiagents
+      - mcpservers
+      - llmproviders
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - testbundles.testkube.io
+    resources:
+      - testbundles
     verbs:
       - get
       - list

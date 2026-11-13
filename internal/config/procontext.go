@@ -3,6 +3,7 @@ package config
 import (
 	"slices"
 
+	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
 )
 
@@ -51,10 +52,12 @@ type ProContext struct {
 	CloudStorage                        bool
 	CloudStorageSupportedInControlPlane bool
 	HasSourceOfTruthCapability          bool
-	// ControlPlaneResourcesSyncSupported is whether the Control Plane accepts Control Plane
-	// resources (capabilities.CapabilityControlPlaneResources) through the SyncService.
-	ControlPlaneResourcesSyncSupported bool
-	Agent                              ProContextAgent
+	// ControlPlaneResourceCapabilities are the capabilities the Control Plane advertises for the
+	// Control Plane resources it accepts through the SyncService
+	// (capabilities.CapabilityControlPlaneResources and the per-family ones after it). A kind is
+	// synced only when the capability that gates it is among them.
+	ControlPlaneResourceCapabilities []capabilities.Capability
+	Agent                            ProContextAgent
 }
 
 func (p *ProContext) GetEnvSlug(id string) string {
