@@ -200,7 +200,10 @@ roleRef:
 # Apply watchers role bindings for triggers functionality
 {{- $watchersEnabled := or .Values.listener.enabled .Values.gitops.enabled }}
 {{- if and .Values.pod.serviceAccount.autoCreate $watchersEnabled }}
-{{- if .Values.listener.watchAllNamespaces }}
+{{- $gitopsNames := compact (splitList "," (include "testkube-runner.gitops.namespaceNames" .)) }}
+{{- $watchAll := or .Values.listener.watchAllNamespaces (and .Values.gitops.enabled .Values.gitops.watchAllNamespaces) }}
+{{- $additional := default (list) .Values.listener.additionalNamespaces }}
+{{- if $watchAll }}
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: ClusterRoleBinding
 metadata:
@@ -227,7 +230,7 @@ roleRef:
   name: "watchers-role-{{ .Release.Name }}"
 {{- else }}
 {{- $root := . }}
-{{- $namespaces := uniq (concat (list .Release.Namespace) (default (list) .Values.listener.additionalNamespaces)) }}
+{{- $namespaces := uniq (concat (list .Release.Namespace) $additional $gitopsNames) }}
 {{- range $idx, $ns := $namespaces }}
 {{- if gt $idx 0 }}---
 
