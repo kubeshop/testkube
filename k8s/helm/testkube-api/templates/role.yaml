@@ -460,7 +460,7 @@ rules:
 ---
 
 # Control Plane resources (Insights Boards, AI Agents, MCP servers, LLM providers and Test
-# Bundles), which a GitOps agent syncs to the Control Plane. It only reads them.
+# Bundles), which a GitOps runner syncs to the Control Plane. It only reads them.
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: Role
 metadata:

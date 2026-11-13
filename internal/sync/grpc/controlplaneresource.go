@@ -45,7 +45,7 @@ func (c Client) UpdateOrCreateControlPlaneResource(ctx context.Context, obj decl
 }
 
 // DeleteControlPlaneResource tells the Control Plane that a Control Plane resource has been removed
-// from the observable scope of this Agent.
+// from the observable scope of this runner.
 func (c Client) DeleteControlPlaneResource(ctx context.Context, kind declarative.Kind, name string) error {
 	resource := kind.Resource
 

@@ -142,7 +142,7 @@ tests:
           path: kind
           value: ClusterRole
 
-  - it: lets a GitOps agent read the Boards it syncs
+  - it: lets a GitOps runner read the Boards it syncs
     set:
       gitops.enabled: true
       listener.watchAllNamespaces: true
@@ -162,7 +162,7 @@ tests:
               - list
               - watch
 
-  - it: lets a GitOps agent read the AI resources and Test Bundles it syncs
+  - it: lets a GitOps runner read the AI resources and Test Bundles it syncs
     set:
       gitops.enabled: true
       listener.watchAllNamespaces: true

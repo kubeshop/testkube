@@ -33,19 +33,19 @@
 // servers before the AI Agents that link them and AI Agents before the Test Bundles that name
 // them, so a first sync needs fewer retries. A resource naming one the Control Plane does not have
 // yet is retried with backoff, not refused, as what it names may be synced next. A
-// kind whose CRD is not installed, that the agent may not list and watch in its namespace, or
-// whose access the agent may not check (a cluster that forbids SelfSubjectAccessReviews) is
+// kind whose CRD is not installed, that the runner may not list and watch in its namespace, or
+// whose access the runner may not check (a cluster that forbids SelfSubjectAccessReviews) is
 // skipped with a warning: a controller whose cache cannot sync would stop the manager, and the
-// agent with it. The Helm charts install the CRDs (testkube-crds) and grant the read access (the
+// runner with it. The Helm charts install the CRDs (testkube-crds) and grant the read access (the
 // runner chart's watcher role when gitops.enabled, and the testkube-api chart's
 // controlplaneresources role).
 //
-// While a GitOps agent owns a Control Plane resource, it is read-only everywhere else in the
+// While a GitOps runner owns a Control Plane resource, it is read-only everywhere else in the
 // Control Plane (the dashboard, the MCP tools, and testkube apply and delete), so it cannot drift
 // from Git. For an AI Agent that includes its roles, resource groups and own Skills, and for a Test
 // Bundle its Attached Context, own Skills and AI Agents. A synced AI Agent is never private: the
 // Control Plane refuses one that is. Deleting the custom resource deletes it in the Control Plane,
-// unless another agent owns it: that delete is an ownership conflict, and the resource is left as
+// unless another runner owns it: that delete is an ownership conflict, and the resource is left as
 // it is. Deleting a TestBundle custom resource deletes the Test Bundle as the dashboard does: it is
 // soft-deleted, and its chats and their sandbox end with it.
 //
