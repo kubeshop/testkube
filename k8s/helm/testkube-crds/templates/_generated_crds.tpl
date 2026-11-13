@@ -158,13 +158,14 @@ spec:
                       type: string
                     signIn:
                       description: |-
-                        SignIn is how the agent signs in to the server: none, shared_key or
-                        per_person. Empty keeps the behavior of a link made before the choice
-                        existed.
+                        SignIn is how the agent signs in to the server: none, shared_key,
+                        per_person or obo (through the organization's identity provider).
+                        Empty keeps the behavior of a link made before the choice existed.
                       enum:
                       - none
                       - shared_key
                       - per_person
+                      - obo
                       type: string
                     tools:
                       additionalProperties:

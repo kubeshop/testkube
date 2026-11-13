@@ -223,9 +223,9 @@ func normalizeAIAgent(a *aiv1.AIAgent) field.ErrorList {
 		}
 		seen[link.Name] = true
 		switch link.SignIn {
-		case "", aiv1.SignInNone, aiv1.SignInSharedKey, aiv1.SignInPerPerson:
+		case "", aiv1.SignInNone, aiv1.SignInSharedKey, aiv1.SignInPerPerson, aiv1.SignInOBO:
 		default:
-			errs = append(errs, field.NotSupported(linkPath.Child("signIn"), link.SignIn, []string{aiv1.SignInNone, aiv1.SignInSharedKey, aiv1.SignInPerPerson}))
+			errs = append(errs, field.NotSupported(linkPath.Child("signIn"), link.SignIn, []string{aiv1.SignInNone, aiv1.SignInSharedKey, aiv1.SignInPerPerson, aiv1.SignInOBO}))
 		}
 		if link.CredentialReference != "" {
 			if link.SignIn != aiv1.SignInSharedKey {
