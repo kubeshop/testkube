@@ -33,8 +33,9 @@ func NewTestWorkflowExecutionExecutorController(mgr ctrl.Manager, exec TestWorkf
 	return nil
 }
 
-// inNamespace keeps the events of objects in namespace. The manager cache may span every
-// namespace of GITOPS_NAMESPACES, while the agent runs executions only in its own namespace.
+// inNamespace keeps the events of objects in namespace. The agent runs executions only in its own
+// namespace. The API server scopes the TestWorkflowExecution cache to it, and this filter guards a
+// manager whose cache spans more namespaces.
 func inNamespace(namespace string) predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		return obj.GetNamespace() == namespace
