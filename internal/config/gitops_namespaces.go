@@ -39,6 +39,17 @@ func (n GitOpsNamespaces) Names() []string {
 	return names
 }
 
+// EnvironmentID returns the Environment of the entry named namespace. It returns empty, the default
+// Environment, for a namespace without a mapping, such as one that only GitOpsAllNamespaces watches.
+func (n GitOpsNamespaces) EnvironmentID(namespace string) string {
+	for _, ns := range n {
+		if ns.Name == namespace {
+			return ns.EnvID
+		}
+	}
+	return ""
+}
+
 // ParseGitOpsNamespaces parses GITOPS_NAMESPACES. Entries are comma separated and trimmed, and
 // empty entries are ignored. An entry is ns, ns=<envId> or *. An empty value means
 // defaultNamespace in the default Environment.

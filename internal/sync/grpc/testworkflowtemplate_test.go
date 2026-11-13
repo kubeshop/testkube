@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	syncagent "github.com/kubeshop/testkube/internal/sync"
 )
 
 func TestUpdateOrCreateTestWorkflowTemplate(t *testing.T) {
@@ -37,7 +38,7 @@ func TestUpdateOrCreateTestWorkflowTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := client.UpdateOrCreateTestWorkflowTemplate(t.Context(), input); err != nil {
+	if err := client.UpdateOrCreateTestWorkflowTemplate(t.Context(), syncagent.Target{}, input); err != nil {
 		t.Fatal(err)
 	}
 

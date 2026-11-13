@@ -30,10 +30,12 @@
 //     codes.PermissionDenied.
 //  3. Agent translation: translateError in grpc/errors.go maps FailedPrecondition onto the
 //     ErrOwnershipConflict sentinel in errors.go, keeping the original status in the error chain
-//     because its message names the current owner. Callers match on the sentinel so that no layer
-//     above the client depends on gRPC.
+//     because its message names the current owner, and PermissionDenied onto
+//     ErrEnvironmentForbidden. Callers match on the sentinel so that no layer above the client
+//     depends on gRPC.
 //  4. Reconciliation: terminalOnRejection in controller/errors.go wraps a rejection (an ownership
-//     conflict or an invalid resource, see syncagent.IsRejection) in reconcile.TerminalError so
+//     conflict, an invalid resource, a forbidden Environment or a name collision, see
+//     syncagent.IsRejection) in reconcile.TerminalError so
 //     controller-runtime stops requeueing something no retry can fix, while every other error
 //     stays retryable with backoff. Rejections are deliberately not logged there:
 //     controller-runtime already logs whatever a reconciler returns, along with the kind and name
@@ -62,6 +64,16 @@
 // unless LEADER_ELECTION_DISABLED is set, so one replica syncs; the lease is
 // testkube-controllers-<APIServerFullname> in TESTKUBE_NAMESPACE. The TestWorkflowExecution
 // controller still handles only TESTKUBE_NAMESPACE.
+//
+// A store call takes a Target (target.go): the namespace of the resource and the Environment that
+// config.GitOpsNamespaces.EnvironmentID maps it to, empty for the Environment of the agent token.
+// The grpc client puts the namespace on every update and delete. It sends the environment-id
+// header only for an Environment other than the one of the agent token, because a Control Plane
+// without sync-multi-namespace refuses the header. It adds the label SourceNamespaceLabel
+// (testkube.io/source-namespace) to a copy of each resource it sends, so the Kubernetes object in
+// the cache stays unchanged. The Control Plane keys a resource by its name in an Environment, so
+// the controller package refuses a second resource with the same name from another namespace of
+// the same Environment (ErrNameCollision); the controller package documents the rule.
 //
 // The Control Plane side lives in testkube-cloud-api: it persists the owner on the six syncable
 // tables and enforces it in internal/sync/ownership.go, on every Upsert and Delete path.

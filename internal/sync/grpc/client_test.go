@@ -2,16 +2,23 @@ package grpc_test
 
 import (
 	"context"
+	"encoding/json"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/local"
+	"google.golang.org/grpc/metadata"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	syncagent "github.com/kubeshop/testkube/internal/sync"
 	syncgrpc "github.com/kubeshop/testkube/internal/sync/grpc"
 	syncv1 "github.com/kubeshop/testkube/pkg/proto/testkube/sync/v1"
 	testworkflowv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/v1"
@@ -27,11 +34,30 @@ type testSrv struct {
 	Webhook              *syncv1.Webhook
 	WebhookTemplate      *syncv1.WebhookTemplate
 
+	// Namespace is the namespace of the last update.
+	Namespace string
+	// DeleteId and DeleteNamespace are the name and the namespace of the last delete.
+	DeleteId        string
+	DeleteNamespace string
+	// EnvironmentID is the environment-id header of the last call.
+	EnvironmentID string
+
 	// Err is returned by both RPCs, to exercise the client's status code translation.
 	Err error
 }
 
-func (t *testSrv) UpdateOrCreate(_ context.Context, req *syncv1.UpdateOrCreateRequest) (*syncv1.UpdateOrCreateResponse, error) {
+// recordEnvironment keeps the environment-id header of the call, or empty when the call has none.
+func (t *testSrv) recordEnvironment(ctx context.Context) {
+	t.EnvironmentID = ""
+	md, _ := metadata.FromIncomingContext(ctx)
+	if values := md.Get("environment-id"); len(values) > 0 {
+		t.EnvironmentID = values[0]
+	}
+}
+
+func (t *testSrv) UpdateOrCreate(ctx context.Context, req *syncv1.UpdateOrCreateRequest) (*syncv1.UpdateOrCreateResponse, error) {
+	t.recordEnvironment(ctx)
+	t.Namespace = req.GetNamespace()
 	switch v := req.Payload.(type) {
 	case *syncv1.UpdateOrCreateRequest_TestTrigger:
 		t.TestTrigger = v.TestTrigger
@@ -49,7 +75,12 @@ func (t *testSrv) UpdateOrCreate(_ context.Context, req *syncv1.UpdateOrCreateRe
 	return nil, t.Err
 }
 
-func (t *testSrv) Delete(_ context.Context, req *syncv1.DeleteRequest) (*syncv1.DeleteResponse, error) {
+func (t *testSrv) Delete(ctx context.Context, req *syncv1.DeleteRequest) (*syncv1.DeleteResponse, error) {
+	t.recordEnvironment(ctx)
+	if id := req.GetTestWorkflow(); id != nil {
+		t.DeleteId = id.GetId()
+		t.DeleteNamespace = id.GetNamespace()
+	}
 	return nil, t.Err
 }
 
@@ -106,5 +137,86 @@ func startGRPCTestConnection(t *testing.T, ts *testSrv) syncgrpc.Client {
 		t.Fatal(err)
 	}
 
-	return syncgrpc.NewClient(conn, zap.NewExample().Sugar(), "foo", "bar", true)
+	return syncgrpc.NewClient(conn, zap.NewExample().Sugar(), "foo", "bar", "env-default", true)
+}
+
+func TestClientTarget(t *testing.T) {
+	tests := []struct {
+		name   string
+		target syncagent.Target
+		delete bool
+		check  func(t *testing.T, srv *testSrv)
+	}{
+		{
+			name:   "the default Environment sends no environment-id header",
+			target: syncagent.Target{Namespace: "team-a", EnvironmentID: "env-default"},
+			check: func(t *testing.T, srv *testSrv) {
+				assert.Empty(t, srv.EnvironmentID)
+			},
+		},
+		{
+			name:   "an empty Environment sends no header",
+			target: syncagent.Target{Namespace: "team-a"},
+			check: func(t *testing.T, srv *testSrv) {
+				assert.Empty(t, srv.EnvironmentID)
+			},
+		},
+		{
+			name:   "another Environment sends the header",
+			target: syncagent.Target{Namespace: "team-b", EnvironmentID: "env-b"},
+			check: func(t *testing.T, srv *testSrv) {
+				assert.Equal(t, "env-b", srv.EnvironmentID)
+			},
+		},
+		{
+			name:   "another Environment sends the header on a delete",
+			target: syncagent.Target{Namespace: "team-b", EnvironmentID: "env-b"},
+			delete: true,
+			check: func(t *testing.T, srv *testSrv) {
+				assert.Equal(t, "env-b", srv.EnvironmentID)
+			},
+		},
+		{
+			name:   "an update carries the namespace",
+			target: syncagent.Target{Namespace: "team-a"},
+			check: func(t *testing.T, srv *testSrv) {
+				assert.Equal(t, "team-a", srv.Namespace)
+			},
+		},
+		{
+			name:   "a delete carries the namespace",
+			target: syncagent.Target{Namespace: "team-a"},
+			delete: true,
+			check: func(t *testing.T, srv *testSrv) {
+				assert.Equal(t, "smoke", srv.DeleteId)
+				assert.Equal(t, "team-a", srv.DeleteNamespace)
+			},
+		},
+		{
+			name:   "the copy carries the source-namespace label and the Kubernetes object keeps its labels",
+			target: syncagent.Target{Namespace: "team-a"},
+			check: func(t *testing.T, srv *testSrv) {
+				var sent testworkflowsv1.TestWorkflow
+				require.NoError(t, json.Unmarshal(srv.TestWorkflow.GetJson(), &sent))
+				assert.Equal(t, map[string]string{"app": "smoke", syncagent.SourceNamespaceLabel: "team-a"}, sent.Labels)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var srv testSrv
+			client := startGRPCTestConnection(t, &srv)
+			labels := map[string]string{"app": "smoke"}
+			workflow := testworkflowsv1.TestWorkflow{ObjectMeta: metav1.ObjectMeta{Name: "smoke", Labels: labels}}
+
+			if tt.delete {
+				require.NoError(t, client.DeleteTestWorkflow(t.Context(), tt.target, "smoke"))
+			} else {
+				require.NoError(t, client.UpdateOrCreateTestWorkflow(t.Context(), tt.target, workflow))
+			}
+
+			tt.check(t, &srv)
+			assert.Equal(t, map[string]string{"app": "smoke"}, labels, "the Kubernetes object must keep its labels")
+		})
+	}
 }

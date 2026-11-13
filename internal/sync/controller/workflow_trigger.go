@@ -10,29 +10,31 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
+	syncagent "github.com/kubeshop/testkube/internal/sync"
 )
 
 type WorkflowTriggerStore interface {
-	UpdateOrCreateWorkflowTrigger(context.Context, workflowtriggersv1.WorkflowTrigger) error
-	DeleteWorkflowTrigger(context.Context, string) error
+	UpdateOrCreateWorkflowTrigger(context.Context, syncagent.Target, workflowtriggersv1.WorkflowTrigger) error
+	DeleteWorkflowTrigger(context.Context, syncagent.Target, string) error
 }
 
-func NewWorkflowTriggerSyncController(mgr ctrl.Manager, store WorkflowTriggerStore) error {
+func NewWorkflowTriggerSyncController(mgr ctrl.Manager, store WorkflowTriggerStore, target syncagent.TargetFunc) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&workflowtriggersv1.WorkflowTrigger{}).
-		Complete(workflowTriggerSyncReconciler(mgr.GetClient(), store)); err != nil {
+		Complete(workflowTriggerSyncReconciler(mgr.GetClient(), store, target)); err != nil {
 		return fmt.Errorf("create new sync controller for WorkflowTrigger: %w", err)
 	}
 	return nil
 }
 
-func workflowTriggerSyncReconciler(client client.Reader, store WorkflowTriggerStore) reconcile.Reconciler {
+func workflowTriggerSyncReconciler(client client.Reader, store WorkflowTriggerStore, target syncagent.TargetFunc) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+		t := target(req.Namespace)
 		var trigger workflowtriggersv1.WorkflowTrigger
 		err := client.Get(ctx, req.NamespacedName, &trigger)
 		switch {
 		case errors.IsNotFound(err):
-			if err := store.DeleteWorkflowTrigger(ctx, req.Name); err != nil {
+			if err := store.DeleteWorkflowTrigger(ctx, t, req.Name); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete WorkflowTrigger %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
@@ -41,13 +43,17 @@ func workflowTriggerSyncReconciler(client client.Reader, store WorkflowTriggerSt
 		}
 
 		if !trigger.DeletionTimestamp.IsZero() {
-			if err := store.DeleteWorkflowTrigger(ctx, req.Name); err != nil {
+			if err := store.DeleteWorkflowTrigger(ctx, t, req.Name); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete WorkflowTrigger %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		}
 
-		if err := store.UpdateOrCreateWorkflowTrigger(ctx, trigger); err != nil {
+		if err := checkNameCollision(ctx, client, &workflowtriggersv1.WorkflowTriggerList{}, &trigger, t, target); err != nil {
+			return ctrl.Result{}, terminalOnRejection(fmt.Errorf("sync WorkflowTrigger %q: %w", req.NamespacedName, err))
+		}
+
+		if err := store.UpdateOrCreateWorkflowTrigger(ctx, t, trigger); err != nil {
 			return ctrl.Result{}, terminalOnRejection(fmt.Errorf("update WorkflowTrigger %q in store: %w", trigger.Name, err))
 		}
 

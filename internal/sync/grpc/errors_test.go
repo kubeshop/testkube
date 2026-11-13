@@ -16,13 +16,13 @@ import (
 
 func TestTranslateError(t *testing.T) {
 	updateWorkflow := func(t *testing.T, c syncgrpc.Client) error {
-		return c.UpdateOrCreateTestWorkflow(t.Context(), testworkflowsv1.TestWorkflow{})
+		return c.UpdateOrCreateTestWorkflow(t.Context(), syncagent.Target{}, testworkflowsv1.TestWorkflow{})
 	}
 	deleteWorkflow := func(t *testing.T, c syncgrpc.Client) error {
-		return c.DeleteTestWorkflow(t.Context(), "smoke")
+		return c.DeleteTestWorkflow(t.Context(), syncagent.Target{}, "smoke")
 	}
 	updateWebhook := func(t *testing.T, c syncgrpc.Client) error {
-		return c.UpdateOrCreateWebhook(t.Context(), executorv1.Webhook{})
+		return c.UpdateOrCreateWebhook(t.Context(), syncagent.Target{}, executorv1.Webhook{})
 	}
 
 	tests := []struct {
@@ -35,6 +35,7 @@ func TestTranslateError(t *testing.T) {
 		{name: "FailedPrecondition on update is an ownership conflict", code: codes.FailedPrecondition, call: updateWorkflow, want: syncagent.ErrOwnershipConflict},
 		{name: "FailedPrecondition on delete is an ownership conflict", code: codes.FailedPrecondition, call: deleteWorkflow, want: syncagent.ErrOwnershipConflict},
 		{name: "InvalidArgument is an invalid resource", code: codes.InvalidArgument, call: updateWebhook, want: syncagent.ErrInvalidResource},
+		{name: "PermissionDenied is a forbidden Environment", code: codes.PermissionDenied, call: updateWorkflow, want: syncagent.ErrEnvironmentForbidden},
 		{name: "Internal stays retryable", code: codes.Internal, call: updateWorkflow},
 		{name: "Unavailable stays retryable", code: codes.Unavailable, call: updateWorkflow},
 		{name: "NotFound stays retryable", code: codes.NotFound, call: updateWorkflow},
