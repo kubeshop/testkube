@@ -101,8 +101,6 @@ func TestTestTriggerSyncReconcilerDeleteWhenMarkedForDeletion(t *testing.T) {
 	}
 }
 
-// The reconciler works out the target of a resource from the namespace of the request, for the
-// update and for the delete.
 func TestTestTriggerSyncReconcilerTarget(t *testing.T) {
 	want := syncagent.Target{Namespace: "team-b", EnvironmentID: "env-b"}
 	tests := []struct {

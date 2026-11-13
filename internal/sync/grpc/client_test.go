@@ -34,11 +34,10 @@ type testSrv struct {
 	Webhook              *syncv1.Webhook
 	WebhookTemplate      *syncv1.WebhookTemplate
 
-	// Namespace is the namespace of the last update.
+	// Namespace is the namespace of the last call; a delete records it only for a TestWorkflow.
 	Namespace string
-	// DeleteId and DeleteNamespace are the name and the namespace of the last delete.
-	DeleteId        string
-	DeleteNamespace string
+	// DeleteId is the name of the last TestWorkflow delete.
+	DeleteId string
 	// EnvironmentID is the environment-id header of the last call.
 	EnvironmentID string
 
@@ -79,7 +78,7 @@ func (t *testSrv) Delete(ctx context.Context, req *syncv1.DeleteRequest) (*syncv
 	t.recordEnvironment(ctx)
 	if id := req.GetTestWorkflow(); id != nil {
 		t.DeleteId = id.GetId()
-		t.DeleteNamespace = id.GetNamespace()
+		t.Namespace = id.GetNamespace()
 	}
 	return nil, t.Err
 }
@@ -142,64 +141,34 @@ func startGRPCTestConnection(t *testing.T, ts *testSrv) syncgrpc.Client {
 
 func TestClientTarget(t *testing.T) {
 	tests := []struct {
-		name   string
-		target syncagent.Target
-		delete bool
-		check  func(t *testing.T, srv *testSrv)
+		name              string
+		target            syncagent.Target
+		delete            bool
+		wantEnvironmentID string
 	}{
 		{
-			name:   "the default Environment sends no environment-id header",
+			name:   "an update into the Environment of the agent token sends no environment-id header",
 			target: syncagent.Target{Namespace: "team-a", EnvironmentID: "env-default"},
-			check: func(t *testing.T, srv *testSrv) {
-				assert.Empty(t, srv.EnvironmentID)
-			},
 		},
 		{
-			name:   "an empty Environment sends no header",
+			name:   "an update with an empty Environment sends no environment-id header",
 			target: syncagent.Target{Namespace: "team-a"},
-			check: func(t *testing.T, srv *testSrv) {
-				assert.Empty(t, srv.EnvironmentID)
-			},
 		},
 		{
-			name:   "another Environment sends the header",
-			target: syncagent.Target{Namespace: "team-b", EnvironmentID: "env-b"},
-			check: func(t *testing.T, srv *testSrv) {
-				assert.Equal(t, "env-b", srv.EnvironmentID)
-			},
+			name:              "an update into another Environment sends the environment-id header",
+			target:            syncagent.Target{Namespace: "team-b", EnvironmentID: "env-b"},
+			wantEnvironmentID: "env-b",
 		},
 		{
-			name:   "another Environment sends the header on a delete",
-			target: syncagent.Target{Namespace: "team-b", EnvironmentID: "env-b"},
-			delete: true,
-			check: func(t *testing.T, srv *testSrv) {
-				assert.Equal(t, "env-b", srv.EnvironmentID)
-			},
-		},
-		{
-			name:   "an update carries the namespace",
-			target: syncagent.Target{Namespace: "team-a"},
-			check: func(t *testing.T, srv *testSrv) {
-				assert.Equal(t, "team-a", srv.Namespace)
-			},
-		},
-		{
-			name:   "a delete carries the namespace",
+			name:   "a delete carries the name and the namespace",
 			target: syncagent.Target{Namespace: "team-a"},
 			delete: true,
-			check: func(t *testing.T, srv *testSrv) {
-				assert.Equal(t, "smoke", srv.DeleteId)
-				assert.Equal(t, "team-a", srv.DeleteNamespace)
-			},
 		},
 		{
-			name:   "the copy carries the source-namespace label and the Kubernetes object keeps its labels",
-			target: syncagent.Target{Namespace: "team-a"},
-			check: func(t *testing.T, srv *testSrv) {
-				var sent testworkflowsv1.TestWorkflow
-				require.NoError(t, json.Unmarshal(srv.TestWorkflow.GetJson(), &sent))
-				assert.Equal(t, map[string]string{"app": "smoke", syncagent.SourceNamespaceLabel: "team-a"}, sent.Labels)
-			},
+			name:              "a delete in another Environment sends the environment-id header",
+			target:            syncagent.Target{Namespace: "team-b", EnvironmentID: "env-b"},
+			delete:            true,
+			wantEnvironmentID: "env-b",
 		},
 	}
 	for _, tt := range tests {
@@ -211,12 +180,17 @@ func TestClientTarget(t *testing.T) {
 
 			if tt.delete {
 				require.NoError(t, client.DeleteTestWorkflow(t.Context(), tt.target, "smoke"))
+				assert.Equal(t, "smoke", srv.DeleteId)
 			} else {
 				require.NoError(t, client.UpdateOrCreateTestWorkflow(t.Context(), tt.target, workflow))
+				var sent testworkflowsv1.TestWorkflow
+				require.NoError(t, json.Unmarshal(srv.TestWorkflow.GetJson(), &sent))
+				assert.Equal(t, map[string]string{"app": "smoke", syncagent.SourceNamespaceLabel: tt.target.Namespace}, sent.Labels)
 			}
 
-			tt.check(t, &srv)
-			assert.Equal(t, map[string]string{"app": "smoke"}, labels, "the Kubernetes object must keep its labels")
+			assert.Equal(t, tt.target.Namespace, srv.Namespace)
+			assert.Equal(t, tt.wantEnvironmentID, srv.EnvironmentID)
+			assert.Equal(t, map[string]string{"app": "smoke"}, labels, "the Kubernetes object keeps its labels")
 		})
 	}
 }

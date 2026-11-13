@@ -18,7 +18,7 @@ import (
 // first. The rule depends only on the objects, so every replica of the agent comes to the same
 // answer. list is an empty list of the kind of obj; the cache of the manager holds only the
 // watched namespaces, so the List sees nothing else.
-func checkNameCollision(ctx context.Context, reader client.Reader, list client.ObjectList, obj client.Object, target syncagent.Target, resolve syncagent.TargetFunc) error {
+func checkNameCollision(ctx context.Context, reader client.Reader, list client.ObjectList, obj client.Object, target syncagent.Target, resolveTarget syncagent.TargetFunc) error {
 	kind := fmt.Sprintf("%T", list)
 	if err := reader.List(ctx, list); err != nil {
 		return fmt.Errorf("list %s: %w", kind, err)
@@ -33,7 +33,7 @@ func checkNameCollision(ctx context.Context, reader client.Reader, list client.O
 		if !ok || other.GetName() != obj.GetName() || other.GetNamespace() == obj.GetNamespace() {
 			continue
 		}
-		if resolve(other.GetNamespace()).EnvironmentID != target.EnvironmentID {
+		if resolveTarget(other.GetNamespace()).EnvironmentID != target.EnvironmentID {
 			continue
 		}
 		if winsOver(other, obj) {

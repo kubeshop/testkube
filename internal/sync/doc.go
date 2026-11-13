@@ -35,11 +35,10 @@
 //     depends on gRPC.
 //  4. Reconciliation: terminalOnRejection in controller/errors.go wraps a rejection (an ownership
 //     conflict, an invalid resource, a forbidden Environment or a name collision, see
-//     syncagent.IsRejection) in reconcile.TerminalError so
-//     controller-runtime stops requeueing something no retry can fix, while every other error
-//     stays retryable with backoff. Rejections are deliberately not logged there:
-//     controller-runtime already logs whatever a reconciler returns, along with the kind and name
-//     of the resource.
+//     syncagent.IsRejection) in reconcile.TerminalError so controller-runtime stops requeueing
+//     something no retry can fix, while every other error stays retryable with backoff. Rejections
+//     are deliberately not logged there: controller-runtime already logs whatever a reconciler
+//     returns, along with the kind and name of the resource.
 //
 // skipRejectedResource in cmd/api-server/superagentmigration.go applies the same rule outside the
 // reconcilers, during SuperAgent migration. That migration retries sync failures forever by
