@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -47,9 +46,9 @@ func checkNameCollision(ctx context.Context, reader client.Reader, list client.O
 // syncDelete removes the resource named name in the namespace of target from the store. When
 // another watched namespace of the same Environment still holds a resource of the same kind and
 // name, the Control Plane record can belong to that resource. syncDelete then sends the winning one
-// of them with upsert instead, so the delete of a refused resource keeps the winner. An ownership
-// conflict on that upsert means that the record still belongs to the deleted resource, so
-// syncDelete deletes it with del.
+// of them with upsert instead, so the delete of a refused resource keeps the winner. A rejection of
+// that upsert, such as an ownership conflict or an invalid resource, means that the winner cannot
+// take the record, so syncDelete deletes it with del.
 func syncDelete[T any, PT interface {
 	*T
 	client.Object
@@ -64,7 +63,7 @@ func syncDelete[T any, PT interface {
 		if err == nil {
 			return nil
 		}
-		if !errors.Is(err, syncagent.ErrOwnershipConflict) {
+		if !syncagent.IsRejection(err) {
 			return fmt.Errorf("update the resource of namespace %q: %w", obj.GetNamespace(), err)
 		}
 	}

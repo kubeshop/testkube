@@ -140,6 +140,14 @@ func TestSyncDelete(t *testing.T) {
 			wantDeleted: true,
 		},
 		{
+			name:        "an invalid replacement does not block the delete",
+			namespace:   "team-b",
+			existing:    []testworkflowsv1.TestWorkflow{workflow("team-c", later)},
+			upsertErr:   syncagent.ErrInvalidResource,
+			wantUpdated: "team-c",
+			wantDeleted: true,
+		},
+		{
 			name:          "another update error is returned",
 			namespace:     "team-b",
 			existing:      []testworkflowsv1.TestWorkflow{workflow("team-c", later)},
