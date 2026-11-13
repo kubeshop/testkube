@@ -56,12 +56,13 @@
 // GITOPS_NAMESPACES sets the namespaces that the controller manager watches, comma separated. An
 // entry is ns, ns=<envId> (sync ns into that Environment) or * (every namespace); empty means
 // TESTKUBE_NAMESPACE. config.ParseGitOpsNamespaces parses it. With GitOps sync on, the agent
-// exits at startup when an envId is not an Environment of the agent, or when a namespace maps to
-// an Environment other than the one of the agent token and the Control Plane lacks
-// sync-multi-namespace (config.ValidateGitOpsNamespaces). The manager runs with leader election
-// unless LEADER_ELECTION_DISABLED is set, so one replica syncs; the lease is
-// testkube-controllers-<APIServerFullname> in TESTKUBE_NAMESPACE. The TestWorkflowExecution
-// controller still handles only TESTKUBE_NAMESPACE.
+// exits at startup when an envId is not an Environment of the agent. Without sync-multi-namespace
+// it also exits when a namespace maps to an Environment other than the one of the agent token,
+// when several namespaces sync into one Environment, or with * (config.ValidateGitOpsNamespaces).
+// The sync controllers send the namespace of the resource on every delete. The manager runs with
+// leader election unless LEADER_ELECTION_DISABLED is set, so one replica syncs; the lease is
+// testkube-controllers-<APIServerFullname> in TESTKUBE_NAMESPACE. The manager caches
+// TestWorkflowExecution objects only in TESTKUBE_NAMESPACE, whatever GITOPS_NAMESPACES watches.
 //
 // The Control Plane side lives in testkube-cloud-api: it persists the owner on the six syncable
 // tables and enforces it in internal/sync/ownership.go, on every Upsert and Delete path.
