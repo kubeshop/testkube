@@ -10746,6 +10746,12 @@ components:
             $ref: "#/components/schemas/HostAlias"
         priorityClassName:
           type: string
+        runtimeClassName:
+          $ref: "#/components/schemas/BoxedString"
+        schedulerName:
+          type: string
+        hostUsers:
+          $ref: "#/components/schemas/BoxedBoolean"
         priority:
           $ref: "#/components/schemas/BoxedInteger"
         dnsConfig:

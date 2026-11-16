@@ -124,6 +124,15 @@ type PodConfig struct {
 	// If specified, indicates the pod's priority.
 	PriorityClassName string `json:"priorityClassName,omitempty" expr:"template"`
 
+	// RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+	RuntimeClassName *string `json:"runtimeClassName,omitempty" expr:"template"`
+
+	// If specified, the pod will be dispatched by the specified scheduler.
+	SchedulerName string `json:"schedulerName,omitempty" expr:"template"`
+
+	// Use the host's user namespace. Set to false to run the pod in its own user namespace.
+	HostUsers *bool `json:"hostUsers,omitempty" expr:"template"`
+
 	// The priority value. Various system components use this field to find the priority of the pod.
 	Priority *int32 `json:"priority,omitempty" expr:"ignore"`
 

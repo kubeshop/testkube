@@ -33,6 +33,9 @@ type TestWorkflowPodConfig struct {
 	Tolerations               []Toleration               `json:"tolerations,omitempty"`
 	HostAliases               []HostAlias                `json:"hostAliases,omitempty"`
 	PriorityClassName         string                     `json:"priorityClassName,omitempty"`
+	RuntimeClassName          *BoxedString               `json:"runtimeClassName,omitempty"`
+	SchedulerName             string                     `json:"schedulerName,omitempty"`
+	HostUsers                 *BoxedBoolean              `json:"hostUsers,omitempty"`
 	Priority                  *BoxedInteger              `json:"priority,omitempty"`
 	DnsConfig                 *PodDnsConfig              `json:"dnsConfig,omitempty"`
 	PreemptionPolicy          *BoxedString               `json:"preemptionPolicy,omitempty"`

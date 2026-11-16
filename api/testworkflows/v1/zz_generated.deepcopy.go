@@ -693,6 +693,16 @@ func (in *PodConfig) DeepCopyInto(out *PodConfig) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.RuntimeClassName != nil {
+		in, out := &in.RuntimeClassName, &out.RuntimeClassName
+		*out = new(string)
+		**out = **in
+	}
+	if in.HostUsers != nil {
+		in, out := &in.HostUsers, &out.HostUsers
+		*out = new(bool)
+		**out = **in
+	}
 	if in.Priority != nil {
 		in, out := &in.Priority, &out.Priority
 		*out = new(int32)
