@@ -11606,6 +11606,9 @@ spec:
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
                                   type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                                  type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
                                   type: string
@@ -11654,6 +11657,12 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -13084,6 +13093,9 @@ spec:
                     hostPID:
                       description: Whether to allow a pod to have access to the host process ID namespace
                       type: boolean
+                    hostUsers:
+                      description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                      type: boolean
                     hostname:
                       description: Specifies the hostname of the Pod
                       type: string
@@ -13132,6 +13144,12 @@ spec:
                           - name
                         type: object
                       type: array
+                    runtimeClassName:
+                      description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                      type: string
+                    schedulerName:
+                      description: If specified, the pod will be dispatched by the specified scheduler.
+                      type: string
                     schedulingGates:
                       items:
                         properties:
@@ -13944,6 +13962,9 @@ spec:
                           hostPID:
                             description: Whether to allow a pod to have access to the host process ID namespace
                             type: boolean
+                          hostUsers:
+                            description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                            type: boolean
                           hostname:
                             description: Specifies the hostname of the Pod
                             type: string
@@ -13992,6 +14013,12 @@ spec:
                                 - name
                               type: object
                             type: array
+                          runtimeClassName:
+                            description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                            type: string
+                          schedulerName:
+                            description: If specified, the pod will be dispatched by the specified scheduler.
+                            type: string
                           schedulingGates:
                             items:
                               properties:
@@ -17460,6 +17487,9 @@ spec:
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
                                   type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                                  type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
                                   type: string
@@ -17508,6 +17538,12 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -21030,6 +21066,9 @@ spec:
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
                                   type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                                  type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
                                   type: string
@@ -21078,6 +21117,12 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -24857,6 +24902,9 @@ spec:
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
                                   type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                                  type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
                                   type: string
@@ -24905,6 +24953,12 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -26278,6 +26332,9 @@ spec:
                     hostPID:
                       description: Whether to allow a pod to have access to the host process ID namespace
                       type: boolean
+                    hostUsers:
+                      description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                      type: boolean
                     hostname:
                       description: Specifies the hostname of the Pod
                       type: string
@@ -26326,6 +26383,12 @@ spec:
                           - name
                         type: object
                       type: array
+                    runtimeClassName:
+                      description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                      type: string
+                    schedulerName:
+                      description: If specified, the pod will be dispatched by the specified scheduler.
+                      type: string
                     schedulingGates:
                       items:
                         properties:
@@ -27138,6 +27201,9 @@ spec:
                           hostPID:
                             description: Whether to allow a pod to have access to the host process ID namespace
                             type: boolean
+                          hostUsers:
+                            description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                            type: boolean
                           hostname:
                             description: Specifies the hostname of the Pod
                             type: string
@@ -27186,6 +27252,12 @@ spec:
                                 - name
                               type: object
                             type: array
+                          runtimeClassName:
+                            description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                            type: string
+                          schedulerName:
+                            description: If specified, the pod will be dispatched by the specified scheduler.
+                            type: string
                           schedulingGates:
                             items:
                               properties:
@@ -30569,6 +30641,9 @@ spec:
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
                                   type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                                  type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
                                   type: string
@@ -30617,6 +30692,12 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -34017,6 +34098,9 @@ spec:
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
                                   type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                                  type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
                                   type: string
@@ -34065,6 +34149,12 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:

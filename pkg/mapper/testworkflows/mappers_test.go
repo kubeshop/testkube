@@ -341,6 +341,9 @@ var (
 			NodeSelector:       map[string]string{"some-key-3": "some-value"},
 			Labels:             map[string]string{"some-key-4": "some-value"},
 			Annotations:        map[string]string{"some-key=5": "some-value-2"},
+			RuntimeClassName:   common.Ptr("gvisor"),
+			SchedulerName:      "volcano",
+			HostUsers:          common.Ptr(false),
 		},
 		Events: []testworkflowsv1.Event{
 			{
