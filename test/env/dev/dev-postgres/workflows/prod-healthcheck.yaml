@@ -19,7 +19,7 @@ spec:
   system:
     pureByDefault: true
   job:
-    activeDeadlineSeconds: 420
+    activeDeadlineSeconds: 600
   container:
     image: kubeshop/testkube-cli:latest
     resources:
@@ -42,13 +42,16 @@ spec:
           secretKeyRef:
             name: testkube-agent-secrets
             key: TESTKUBE-CLOUD-TEST-BASIC-ENV-ID
-  # A transient container I/O error ("/.tktw/bin/sh: testkube: I/O error") or a dropped log
-  # stream fails a step here without prod being involved, and the alert reads as a prod
-  # outage. One retry per step keeps that noise out of the channel; a real outage fails
-  # both attempts. The job deadline leaves room for the second attempt.
+  # A transient container I/O error in the runner pod ("/.tktw/bin/sh: testkube: I/O error",
+  # 2026-11-16) fails a step without prod being involved, and this alert reads as a prod
+  # outage. One retry per step keeps that out of the channel; a real outage still fails both
+  # attempts. Every step carries its own timeout: the runtime only retries a timed-out step
+  # when the timeout is the step's own, and an unbounded step would otherwise run until the
+  # job deadline. activeDeadlineSeconds covers both attempts plus scheduling and image pull.
   steps:
   - name: Disable telemetry (optional)
     optional: true
+    timeout: 30s
     shell: testkube disable telemetry
   - name: Set context
     retry:
@@ -62,5 +65,5 @@ spec:
   - name: Run remote workflow
     retry:
       count: 1
-    timeout: 2m
+    timeout: 3m
     shell: testkube run tw postman-workflow-smoke -f
