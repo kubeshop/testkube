@@ -437,10 +437,11 @@ WHERE e.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
             ) = array_length(@tag_keys::text[], 1)
         )
         AND
+        -- every tag key must match; a key with several values matches any of them, as the Mongo repository does
         (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[]) AS cond
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond
                 WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) > 0
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond)
         )
     )
     AND (
@@ -608,9 +609,9 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
         )
         AND
         (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[]) AS cond
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond
                 WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) > 0
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond)
         )
     )
     AND (
@@ -765,9 +766,9 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
         )
         AND
         (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[]) AS cond
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond
                 WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) > 0
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond)
         )
     )
     AND (
@@ -1258,9 +1259,9 @@ FROM (
             )
             AND
             (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-                (SELECT COUNT(*) FROM unnest(@tag_conditions::text[]) AS cond
+                (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond
                     WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-                ) > 0
+                ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond)
             )
         )
         AND (
@@ -1430,9 +1431,9 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
         )
         AND
         (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[]) AS cond
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond
                 WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) > 0
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond)
         )
     )
     AND (

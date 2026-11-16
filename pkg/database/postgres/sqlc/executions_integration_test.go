@@ -122,6 +122,40 @@ func TestGetTestWorkflowExecutions_Integration(t *testing.T) {
 		assert.Equal(t, 2, len(result), "Should find 2 executions with env=prod")
 	})
 
+	t.Run("Test tag conditions on two keys match only the execution that has both", func(t *testing.T) {
+		result, err := queries.GetTestWorkflowExecutions(ctx, GetTestWorkflowExecutionsParams{
+			OrganizationID: orgID,
+			EnvironmentID:  envID,
+			TagConditions:  []string{"env=prod", "owner=bob"},
+			Lmt:            10,
+		})
+		require.NoError(t, err)
+		require.Equal(t, 1, len(result), "Should find only the execution with env=prod and owner=bob")
+		assert.Equal(t, execution3, result[0].ID)
+	})
+
+	t.Run("Test tag conditions on the same key match either value", func(t *testing.T) {
+		result, err := queries.GetTestWorkflowExecutions(ctx, GetTestWorkflowExecutionsParams{
+			OrganizationID: orgID,
+			EnvironmentID:  envID,
+			TagConditions:  []string{"env=prod", "env=dev"},
+			Lmt:            10,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, 3, len(result), "Should find all 3 executions with env=prod or env=dev")
+	})
+
+	t.Run("Test tag conditions on two keys with no execution that has both return nothing", func(t *testing.T) {
+		result, err := queries.GetTestWorkflowExecutions(ctx, GetTestWorkflowExecutionsParams{
+			OrganizationID: orgID,
+			EnvironmentID:  envID,
+			TagConditions:  []string{"env=dev", "owner=bob"},
+			Lmt:            10,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(result), "Should find no execution with env=dev and owner=bob")
+	})
+
 	t.Run("Test label filtering with key existence", func(t *testing.T) {
 		// Test filtering by label key existence
 		result, err := queries.GetTestWorkflowExecutions(ctx, GetTestWorkflowExecutionsParams{
