@@ -18,8 +18,15 @@ spec:
                   values: ["true"]
   system:
     pureByDefault: true
+  timeouts:
+    # Bound the gap between job start and the first step container, so a scheduling or
+    # image-pull problem aborts with the cause Kubernetes reported instead of being
+    # swallowed by activeDeadlineSeconds, which budgets 120s for it.
+    initialization: 120s
   job:
-    activeDeadlineSeconds: 360
+    # 2x2m installing dependencies plus 2x1m on the check is 6m, 120s for initialization,
+    # and a minute of slack for teardown.
+    activeDeadlineSeconds: 540
   container:
     image: alpine:3.22.2
     resources:
@@ -29,12 +36,13 @@ spec:
   # A transient container I/O error in the runner pod fails a step without the license
   # endpoint being involved. One retry per step keeps that out of the alarms channel; a real
   # outage still fails both attempts. Every step carries its own timeout: the runtime only
-  # retries a timed-out step when the timeout is the step's own.
+  # retries a timed-out step when the timeout is the step's own, and an unbounded step would
+  # otherwise run until the job deadline.
   steps:
   - name: Install dependencies
     retry:
       count: 1
-    timeout: 1m
+    timeout: 2m
     shell: |
       apk add --no-cache curl jq
   - name: License endpoint healthcheck

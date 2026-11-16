@@ -18,6 +18,11 @@ spec:
                   values: ["true"]
   system:
     pureByDefault: true
+  timeouts:
+    # Bound the gap between job start and the first step container, so a scheduling or
+    # image-pull problem aborts with the cause Kubernetes reported instead of being
+    # swallowed by activeDeadlineSeconds, which budgets 90s for it.
+    initialization: 90s
   job:
     activeDeadlineSeconds: 600
   container:
@@ -65,5 +70,9 @@ spec:
   - name: Run remote workflow
     retry:
       count: 1
+      # Retry the fast failures this alert is about, not a timeout. On a timeout the runtime
+      # only kills the local CLI: the remote execution it was following keeps running, so a
+      # retry would add a second one in the target environment on every cron tick.
+      until: 'passed || status == "timeout"'
     timeout: 3m
     shell: testkube run tw postman-junit-report -f
