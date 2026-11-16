@@ -24,7 +24,10 @@ spec:
     # swallowed by activeDeadlineSeconds, which budgets 90s for it.
     initialization: 90s
   job:
-    activeDeadlineSeconds: 600
+    # 30s telemetry, 2x1m set context and 2x3m on the remote run is 8m30s (a retry still
+    # follows a non-zero exit just under the timeout), 90s for initialization, and a minute
+    # of slack for teardown.
+    activeDeadlineSeconds: 660
   container:
     image: kubeshop/testkube-cli:latest
     resources:
