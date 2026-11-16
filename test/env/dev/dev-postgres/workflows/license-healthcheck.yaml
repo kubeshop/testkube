@@ -19,18 +19,28 @@ spec:
   system:
     pureByDefault: true
   job:
-    activeDeadlineSeconds: 180
+    activeDeadlineSeconds: 420
   container:
     image: alpine:3.22.2
     resources:
       requests:
         cpu: 32m
         memory: 32Mi
+  # A transient container I/O error ("/.tktw/bin/sh: testkube: I/O error") or a dropped log
+  # stream fails a step here without prod being involved, and the alert reads as a prod
+  # outage. One retry per step keeps that noise out of the channel; a real outage fails
+  # both attempts. The job deadline leaves room for the second attempt.
   steps:
   - name: Install dependencies
+    retry:
+      count: 1
+    timeout: 1m
     shell: |
       apk add --no-cache curl jq
   - name: License endpoint healthcheck
+    retry:
+      count: 1
+    timeout: 1m
     run:
       env:
       - name: LICENSE_KEY
