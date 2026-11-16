@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -26,4 +27,7 @@ func TestValidateRepositoryHandlerReportsAFailedCheckAsBadRequest(t *testing.T) 
 	t.Cleanup(func() { _ = resp.Body.Close() })
 
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	reply, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Contains(t, string(reply), git.URL+"/repo.git/' not found")
 }
