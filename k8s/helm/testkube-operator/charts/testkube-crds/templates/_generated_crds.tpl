@@ -11657,6 +11657,28 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
                                 runtimeClassName:
                                   description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
                                   type: string
@@ -13144,6 +13166,28 @@ spec:
                           - name
                         type: object
                       type: array
+                    resources:
+                      description: |-
+                        Pod-level resource requests and limits, shared by all containers in the pod,
+                        including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                      properties:
+                        limits:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource limits for the container
+                          type: object
+                        requests:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource requests for the container
+                          type: object
+                      type: object
                     runtimeClassName:
                       description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
                       type: string
@@ -14013,6 +14057,28 @@ spec:
                                 - name
                               type: object
                             type: array
+                          resources:
+                            description: |-
+                              Pod-level resource requests and limits, shared by all containers in the pod,
+                              including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                            properties:
+                              limits:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource limits for the container
+                                type: object
+                              requests:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource requests for the container
+                                type: object
+                            type: object
                           runtimeClassName:
                             description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
                             type: string
@@ -17538,6 +17604,28 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
                                 runtimeClassName:
                                   description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
                                   type: string
@@ -21117,6 +21205,28 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
                                 runtimeClassName:
                                   description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
                                   type: string
@@ -24953,6 +25063,28 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
                                 runtimeClassName:
                                   description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
                                   type: string
@@ -26383,6 +26515,28 @@ spec:
                           - name
                         type: object
                       type: array
+                    resources:
+                      description: |-
+                        Pod-level resource requests and limits, shared by all containers in the pod,
+                        including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                      properties:
+                        limits:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource limits for the container
+                          type: object
+                        requests:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource requests for the container
+                          type: object
+                      type: object
                     runtimeClassName:
                       description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
                       type: string
@@ -27252,6 +27406,28 @@ spec:
                                 - name
                               type: object
                             type: array
+                          resources:
+                            description: |-
+                              Pod-level resource requests and limits, shared by all containers in the pod,
+                              including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                            properties:
+                              limits:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource limits for the container
+                                type: object
+                              requests:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource requests for the container
+                                type: object
+                            type: object
                           runtimeClassName:
                             description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
                             type: string
@@ -30692,6 +30868,28 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
                                 runtimeClassName:
                                   description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
                                   type: string
@@ -34149,6 +34347,28 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
                                 runtimeClassName:
                                   description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
                                   type: string

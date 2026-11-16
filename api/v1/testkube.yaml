@@ -10772,6 +10772,8 @@ components:
             $ref: "#/components/schemas/PodResourceClaim"
         hostPID:
           $ref: "#/components/schemas/BoxedBoolean"
+        resources:
+          $ref: "#/components/schemas/TestWorkflowResources"
 
     TestWorkflowContainerConfig:
       type: object

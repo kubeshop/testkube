@@ -155,6 +155,10 @@ type PodConfig struct {
 
 	// Whether to allow a pod to have access to the host process ID namespace
 	HostPID *bool `json:"hostPID,omitempty" expr:"template"`
+
+	// Pod-level resource requests and limits, shared by all containers in the pod,
+	// including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+	Resources *Resources `json:"resources,omitempty" expr:"include"`
 }
 
 type NotificationsConfig struct {
