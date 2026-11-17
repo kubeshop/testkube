@@ -7,9 +7,9 @@
 // Two watched namespaces that sync into the same Environment can hold a resource of the same kind
 // and name, and the Control Plane keys a resource by its name. Before an update, checkNameCollision
 // lists the kind from the cache and refuses the resource with syncagent.ErrNameCollision when
-// another one wins. The resource with the earlier creationTimestamp wins, and on a tie the
-// namespace that sorts first. The rule depends only on the objects, so every replica comes to the
-// same answer. The refusal is terminal. A List error stays retryable.
+// another one wins. A resource that is marked for deletion never wins. The resource with the
+// earlier creationTimestamp wins, and on a tie the namespace that sorts first. The rule depends
+// only on the objects, so every replica comes to the same answer. The refusal is terminal. A List error stays retryable.
 //
 // A delete must not remove the record of another namespace. When another watched namespace of the
 // same Environment still holds a resource of the same name, syncDelete sends the winning one of
