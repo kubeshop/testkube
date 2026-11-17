@@ -11096,7 +11096,7 @@ components:
           format: int32
           minimum: 1
           maximum: 10
-          description: how many times at most the execution is retried, so the workflow runs at most count+1 times
+          description: how many automatic retries follow a run that a person started or a schedule triggered; a manual rerun starts a new budget
         "on":
           type: array
           description: the causes that are retried (defaults to infrastructure)

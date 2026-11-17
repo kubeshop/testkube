@@ -4295,7 +4295,7 @@ spec:
                         It is not the step-level retry: that one reruns a step inside the same pod.
                       properties:
                         count:
-                          description: how many times at most the execution is retried, so the workflow runs at most count+1 times
+                          description: how many automatic retries follow a run that a person started or a schedule triggered; a manual rerun starts a new budget
                           format: int32
                           maximum: 10
                           minimum: 1

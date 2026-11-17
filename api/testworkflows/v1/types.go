@@ -270,7 +270,7 @@ const (
 )
 
 type ExecutionRetryPolicy struct {
-	// how many times at most the execution is retried, so the workflow runs at most count+1 times
+	// how many automatic retries follow a run that a person started or a schedule triggered; a manual rerun starts a new budget
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=10

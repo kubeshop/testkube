@@ -9,8 +9,11 @@ type ExecutionRetryInput struct {
 	// Status and StatusDetails come from the finished result.
 	Status        TestWorkflowStatus
 	StatusDetails *TestWorkflowStatusDetails
-	// Attempt is the execution's lineage attempt, 1 for an original run.
-	Attempt int32
+	// Retries is how many automatic retries the chain has had since the last run a person
+	// started. It is not the lineage attempt, which also counts manual reruns, so a manual
+	// rerun would spend the budget. The lineage does not record who started a run, so the
+	// caller counts: 0 for a run that a person started.
+	Retries int32
 }
 
 // Retry causes, as spec.execution.retry.on spells them.
@@ -31,14 +34,14 @@ var executionRetryReasons = map[string][]StopReason{
 }
 
 // ShouldRetryExecution decides whether a finished execution is retried as a new attempt of
-// the same chain. It is true only when the policy exists, the attempt is within count (the
-// first run is attempt 1, so count 2 allows attempts 1 and 2 to retry), the execution
+// the same chain. It is true only when the policy exists, fewer than Count automatic retries
+// have been made (count 2 allows two retries after a run that a person started), the execution
 // aborted or failed, a person did not stop it, and its reason is one that the policy's
 // causes cover. An empty On means infrastructure. A missing StatusDetails never retries,
 // because a stop with no reason cannot be told from a test failure. It is the only place
 // that decides, in this repository and in testkube-cloud-api.
 func ShouldRetryExecution(in ExecutionRetryInput) bool {
-	if in.Count < 1 || in.Attempt > in.Count || in.StatusDetails == nil {
+	if in.Count < 1 || in.Retries >= in.Count || in.StatusDetails == nil {
 		return false
 	}
 	if in.Status != ABORTED_TestWorkflowStatus && in.Status != FAILED_TestWorkflowStatus {

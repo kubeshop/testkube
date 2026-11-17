@@ -90,6 +90,9 @@
 // the status details type, because unschedulable is typed init-failure yet a retry can fix it.
 // Step failures, other init failures, user cancels and stops with no reason are never retried, so
 // a retry cannot turn a real regression green. ShouldRetryExecution is the one decision function.
+// count is a budget of automatic retries, and a manual rerun starts a new one, so the caller
+// passes Retries, the automatic retries since the last run a person started, not the lineage
+// attempt, which counts manual reruns too.
 // The agent does not schedule the retry: the Control Plane does, as a rerun with
 // ScheduleRequest.base_execution_id, so the lineage attempt counts it. That consumer in
 // testkube-cloud-api (the finished-event handler) must call ShouldRetryExecution with the stored

@@ -11,7 +11,7 @@ package testkube
 
 // reruns the whole workflow when an execution ends for one of the listed causes
 type TestWorkflowExecutionRetryPolicy struct {
-	// how many times at most the execution is retried, so the workflow runs at most count+1 times
+	// how many automatic retries follow a run that a person started or a schedule triggered; a manual rerun starts a new budget
 	Count int32 `json:"count"`
 	// the causes that are retried (defaults to infrastructure)
 	On []string `json:"on,omitempty"`
