@@ -4442,6 +4442,30 @@ spec:
                 execution:
                   description: values to be used for test workflow execution
                   properties:
+                    retry:
+                      description: |-
+                        Retry reruns the whole workflow when the execution ends for a cause the policy lists.
+                        It is not the step-level retry: that one reruns a step inside the same pod.
+                      properties:
+                        count:
+                          description: how many automatic retries follow a run that a person started or a schedule triggered; a manual rerun starts a new budget
+                          format: int32
+                          maximum: 10
+                          minimum: 1
+                          type: integer
+                        "on":
+                          description: 'the causes that are retried (defaults to: infrastructure)'
+                          items:
+                            description: ExecutionRetryCause is a class of failure that an execution retry may answer.
+                            enum:
+                              - infrastructure
+                              - timeout
+                              - oom
+                            type: string
+                          type: array
+                      required:
+                        - count
+                      type: object
                     silent:
                       description: When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
                       type: boolean
