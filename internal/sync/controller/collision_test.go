@@ -21,6 +21,10 @@ func TestCheckNameCollision(t *testing.T) {
 		return testworkflowsv1.TestWorkflow{ObjectMeta: metav1.ObjectMeta{Name: "smoke", Namespace: namespace, CreationTimestamp: created}}
 	}
 
+	now := metav1.Now()
+	deleting := workflow("team-b", earlier)
+	deleting.DeletionTimestamp = &now
+
 	tests := []struct {
 		name      string
 		obj       testworkflowsv1.TestWorkflow
@@ -45,6 +49,11 @@ func TestCheckNameCollision(t *testing.T) {
 			name:     "the earlier resource syncs",
 			obj:      workflow("team-b", earlier),
 			existing: []testworkflowsv1.TestWorkflow{workflow("team-b", earlier), workflow("team-c", later)},
+		},
+		{
+			name:     "an earlier resource that is marked for deletion does not refuse its replacement",
+			obj:      workflow("team-c", later),
+			existing: []testworkflowsv1.TestWorkflow{deleting, workflow("team-c", later)},
 		},
 		{
 			name:     "the same name in another Environment syncs",

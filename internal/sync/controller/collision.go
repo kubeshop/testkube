@@ -16,8 +16,9 @@ import (
 //
 // The resource with the earlier creationTimestamp wins, and on a tie the namespace that sorts
 // first. The rule depends only on the objects, so every replica of the agent comes to the same
-// answer. list is an empty list of the kind of obj; the cache of the manager holds only the
-// watched namespaces, so the List sees nothing else.
+// answer. A resource that is marked for deletion does not win, because syncDelete already hands
+// the record to the remaining winner. list is an empty list of the kind of obj; the cache of the
+// manager holds only the watched namespaces, so the List sees nothing else.
 func checkNameCollision(ctx context.Context, reader client.Reader, list client.ObjectList, obj client.Object, target syncagent.Target, resolveTarget syncagent.TargetFunc) error {
 	kind := fmt.Sprintf("%T", list)
 	if err := reader.List(ctx, list); err != nil {
@@ -30,7 +31,7 @@ func checkNameCollision(ctx context.Context, reader client.Reader, list client.O
 
 	for _, item := range items {
 		other, ok := item.(client.Object)
-		if !ok || other.GetName() != obj.GetName() || other.GetNamespace() == obj.GetNamespace() {
+		if !ok || other.GetName() != obj.GetName() || other.GetNamespace() == obj.GetNamespace() || !other.GetDeletionTimestamp().IsZero() {
 			continue
 		}
 		if resolveTarget(other.GetNamespace()).EnvironmentID != target.EnvironmentID {
