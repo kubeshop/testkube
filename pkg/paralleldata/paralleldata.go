@@ -1,19 +1,3 @@
-// Package paralleldata exposes what the workers of a parallel step published to the
-// expression language, so that a later step can aggregate per-worker results:
-//
-//	{{ parallel("shard", 0).outputs.duration }}
-//
-// A worker writes to its outputs directory as any step does. Its own init scans the
-// directory and prints an outputs instruction, which the parallel step reads from the
-// worker's status stream. When the workers end, the parallel step prints one hint per
-// step, named after the step id, holding every worker's status and outputs.
-//
-// The hint is stored in the state of the pod running the parallel step, where the later
-// steps read it. It is not saved on the execution record: a workflow that wants to publish
-// an aggregate writes it to its own outputs directory.
-//
-// Sensitive values never leave the worker: its init replaces them with withheld markers
-// before printing the instruction, so a consumer that refuses markers keeps refusing them.
 package paralleldata
 
 import (

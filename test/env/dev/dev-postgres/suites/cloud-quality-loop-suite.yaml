@@ -22,5 +22,6 @@ spec:
       - name: cloud-lint-go
       - name: cloud-lint-js
       - name: cloud-lint-helm
+      - name: cloud-skills-drift
       - name: cloud-gomod-codegen
       - name: cloud-test-app

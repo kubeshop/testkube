@@ -789,3 +789,18 @@ func TestUpdateBoardReport_EditsLikeTheDashboardEditor(t *testing.T) {
 		assert.Empty(t, f.updates)
 	})
 }
+
+func TestBoardWrites_DoNotRetryAGitOpsOwnedBoard(t *testing.T) {
+	locked := fmt.Errorf("%w: API returned status 409: managed by GitOps agent prod-sync", ErrBoardManagedByGitOps)
+	f := &fakeBoardClient{
+		boardReads: []string{boardAt(3, "old"), boardAt(3, "old")},
+		updateErrs: []error{locked, nil},
+	}
+	_, handler := UpdateBoard(f)
+	result := callTool(t, handler, map[string]any{"board": "quality", "name": "Renamed"})
+
+	require.True(t, result.IsError)
+	assert.Len(t, f.updates, 1, "a GitOps-owned board is refused for good, so the write is not rebuilt")
+	assert.Contains(t, getResultText(result), "GitOps agent owns this board")
+	assert.Contains(t, getResultText(result), "prod-sync")
+}

@@ -47,7 +47,9 @@ The MCP server supports environment variable mode when `TK_MCP_ENV_MODE=true` (s
 - `TK_ENV_ID` - Testkube environment ID (required)
 - `TK_CONTROL_PLANE_URL` - Testkube API URL (optional, default: https://api.testkube.io)
 - `TK_DASHBOARD_URL` - Testkube dashboard URL (optional, auto-derived)
-- `TK_DEBUG` - Enable debug output (optional, default: false)
+- `TK_MCP_SHTTP_AUTH_TOKEN` - Separate inbound bearer token (required only with `--transport=shttp`)
+
+Use `--debug` for debug output and CLI flags for transport, bind host, and port.
 
 ## MCP Client Usage
 
@@ -58,5 +60,31 @@ npx @modelcontextprotocol/inspector docker run --rm -i \
   -e TK_ACCESS_TOKEN=$TK_ACCESS_TOKEN \
   -e TK_ORG_ID=$TK_ORG_ID \
   -e TK_ENV_ID=$TK_ENV_ID \
-  testkube/mcp-server:local mcp serve
+  testkube/mcp-server:local
 ```
+
+## Authenticated HTTP
+
+The operator deploying this container must create and securely store a random inbound
+secret (at least 32 bytes of entropy) independently of `TK_ACCESS_TOKEN`, and distribute
+it to authorized MCP clients. The server does not provision the token. Inject the stored
+value through your secret manager or environment and reuse it on container restarts.
+For local HTTP testing, the container needs an explicit external bind, while the
+published port is restricted to host loopback:
+
+```bash
+docker run --rm \
+  -p 127.0.0.1:8080:8080 \
+  -e TK_ACCESS_TOKEN -e TK_ORG_ID -e TK_ENV_ID -e TK_MCP_SHTTP_AUTH_TOKEN \
+  testkube/mcp-server:local --transport=shttp --shttp-host=0.0.0.0
+```
+
+The image entrypoint already includes `mcp serve`; append flags only. The default
+transport remains stdio. Setting `TK_MCP_TRANSPORT`, `TK_MCP_SHTTP_HOST`, or
+`TK_MCP_SHTTP_PORT` does not configure the CLI.
+
+Clients send `Authorization: Bearer <inbound-token>` on every request. Remote clients
+must use HTTPS: configure the built-in `--shttp-tls`, `--shttp-cert-file`, and
+`--shttp-key-file` flags with mounted certificates, or terminate TLS at a proxy and
+prevent direct access to the HTTP listener. A loopback proxy must rewrite upstream
+`Host` to `localhost`. See the [MCP security and rotation guidance](../../pkg/mcp/README.md#streamable-http-shttp-transport).

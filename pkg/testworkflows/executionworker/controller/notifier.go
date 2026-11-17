@@ -586,6 +586,23 @@ func (n *notifier) fillGaps(force bool) {
 			n.result.Steps[ref] = step
 		}
 	}
+
+	// The initialization is not part of the signature, so the loop above never reaches it and its
+	// status would rest on a log hint alone. The termination message carries the same result and
+	// outlives the hint, so the finalisation falls back to it. A missing key reads as index 0,
+	// which is in range, so the refs resolve with comma-ok rather than a length check alone.
+	if !force || n.result.Initialization.Status.Finished() {
+		return
+	}
+	containerIndex, okContainer := containerIndexes[constants.InitStepName]
+	refIndex, okRef := refIndexes[constants.InitStepName]
+	if !okContainer || !okRef || containerIndex >= len(containerResults) {
+		return
+	}
+	if statuses := containerResults[containerIndex].Statuses; refIndex < len(statuses) {
+		n.result.Initialization.Status = common.Ptr(statuses[refIndex].Status)
+		n.result.Initialization.ExitCode = float64(statuses[refIndex].ExitCode)
+	}
 }
 
 func (n *notifier) reconcile() {

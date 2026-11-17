@@ -4,6 +4,8 @@ metadata:
   name: testkube-integration
   labels:
     core-tests: workflows
+  annotations:
+    testkube.io/description: "Testkube integration tests"
 spec:
   config:
     revision:
@@ -26,7 +28,7 @@ spec:
           port: 27017
         periodSeconds: 1
     nats:
-      image: bitnami/nats
+      image: nats:2.15.2-alpine
       readinessProbe:
         tcpSocket:
           port: 4222

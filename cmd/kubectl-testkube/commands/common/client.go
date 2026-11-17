@@ -21,15 +21,10 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	namespace := cmd.Flag("namespace").Value.String()
 	apiURI := cmd.Flag("api-uri").Value.String()
 
-	headers, err := cmd.Flags().GetStringToString("header")
+	headers, err := ResolveHeaders(cmd)
 	if err != nil {
-		return nil, "", fmt.Errorf("parsing flag value %w", err)
+		return nil, "", err
 	}
-
-	if headers == nil {
-		headers = make(map[string]string)
-	}
-	headers["User-Agent"] = userAgent()
 
 	options := client.Options{
 		Namespace: namespace,
@@ -118,6 +113,22 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	}
 
 	return c, namespace, nil
+}
+
+// ResolveHeaders returns the headers every request of the command carries:
+// the configured ones (`testkube config headers`, the --header default) or
+// those given with --header, and the CLI's User-Agent.
+func ResolveHeaders(cmd *cobra.Command) (map[string]string, error) {
+	flagged, err := cmd.Flags().GetStringToString("header")
+	if err != nil {
+		return nil, fmt.Errorf("parsing flag value %w", err)
+	}
+	headers := make(map[string]string, len(flagged)+1)
+	for k, v := range flagged {
+		headers[k] = v
+	}
+	headers["User-Agent"] = userAgent()
+	return headers, nil
 }
 
 func TelemetryUserID(cmd *cobra.Command, cfg *config.Data) string {

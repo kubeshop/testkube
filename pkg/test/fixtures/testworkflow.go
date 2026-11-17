@@ -39,6 +39,16 @@ func WithStatus(status testkube.TestWorkflowStatus) ExecutionOption {
 	}
 }
 
+// WithDurationMs sets how long the execution ran, in milliseconds.
+func WithDurationMs(durationMs int32) ExecutionOption {
+	return func(e *testkube.TestWorkflowExecution) {
+		if e.Result == nil {
+			e.Result = &testkube.TestWorkflowResult{}
+		}
+		e.Result.DurationMs = durationMs
+	}
+}
+
 func WithTags(tags map[string]string) ExecutionOption {
 	return func(e *testkube.TestWorkflowExecution) {
 		e.Tags = tags

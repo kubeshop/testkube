@@ -51,7 +51,7 @@ func setContextLocal(cmd *cobra.Command) {
 		}
 		fail("login", common.NewCLIError(
 			common.TKErrLocalCLILoginFailed, "Error logging the testkube CLI in to the local install",
-			"Check that it's ready:\n  testkube status local", plain))
+			"Check that it's ready:\n  "+localinstall.Self+" status local", plain))
 	}
 	ui.Printf("  %s testkube CLI now uses the local install\n", ui.Green("✔"))
 }

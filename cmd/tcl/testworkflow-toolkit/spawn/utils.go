@@ -36,6 +36,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/expressions/libs"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/kubernetesworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
@@ -80,6 +81,11 @@ func buildKubernetesWorkerConfig(cfg *testworkflowconfig.InternalConfig, debug b
 		EmptyDirSizeLimit:      cfg.Worker.EmptyDirSizeLimit,
 		DefaultImagePullPolicy: cfg.Worker.DefaultImagePullPolicy,
 		DefaultRunnerResources: cfg.Worker.DefaultRunnerResources,
+		TLSRetry: controller.TLSRetryConfig{
+			MaxAttempts:  cfg.Worker.LogsTLSRetryMaxAttempts,
+			InitialDelay: cfg.Worker.LogsTLSRetryInitialDelay,
+			MaxDelay:     cfg.Worker.LogsTLSRetryMaxDelay,
+		},
 	}
 }
 

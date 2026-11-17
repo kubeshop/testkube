@@ -319,10 +319,11 @@ func askOwnCluster(tracker *telemetry.InstallTracker, kubeContext string, local 
 		kubeContext += ", remote"
 	}
 	thisMachine := "On this machine (recommended, creates a new cluster in Docker)"
-	ownCluster := "In my Kubernetes cluster (current kubectl context: " + kubeContext + ")"
+	ownCluster := "In a Kubernetes cluster (current kubectl context: " + kubeContext + ")"
+	sharedCluster := "In a shared cluster for your team (link to the Helm guide)"
 	ui.NL()
 	choice, err := pterm.DefaultInteractiveSelect.
-		WithOptions([]string{thisMachine, ownCluster}).
+		WithOptions([]string{thisMachine, ownCluster, sharedCluster}).
 		WithDefaultOption(thisMachine).
 		WithFilter(false).
 		WithOnInterruptFunc(func() { abortInstall(tracker, "path") }).
@@ -332,6 +333,14 @@ func askOwnCluster(tracker *telemetry.InstallTracker, kubeContext string, local 
 		ui.Printf("%s\n", ui.LightGray(ownClusterHint))
 		tracker.Send("install_local_path", map[string]any{"path": "select_failed", "context_local": local})
 		return false
+	}
+	// Init demo is single-user; teams need the Helm install.
+	if choice == sharedCluster {
+		ui.Printf("\n  To install Testkube for your team, follow the Helm guide:\n    %s\n  Your license key works there too.\n", teamGuideURL)
+		tracker.Send("install_local_path", map[string]any{"path": "shared", "context_local": local})
+		tracker.Funnel(installAttemptEvent, map[string]any{"path": "shared", "rerun": false})
+		waitForEvents(tracker)
+		os.Exit(0)
 	}
 	own := choice == ownCluster
 	path := "docker"
@@ -390,8 +399,9 @@ const (
 	installLocalOwnerEnv = "TESTKUBE_INSTALL_LOCAL_OWNER"
 )
 
-const (
+var (
 	localInstallLead = "This sets up Testkube locally, in its own cluster inside Docker."
+	teamGuideURL     = "https://docs.testkube.io/articles/tutorial/quickstart/team-evaluation"
 	ownClusterHint   = "Already have a Kubernetes cluster? To install Testkube there, run:\n  " + localinstall.InitDemoCommand
 )
 
@@ -618,11 +628,11 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error, repo
 		reason, r.Detail = "secrets_lost", "old data can't be opened"
 		r.Fix = "~/.testkube/data holds data from an earlier install whose passwords are gone.\n" +
 			"Delete the cluster and that data to start fresh:\n" +
-			"  testkube uninstall local --delete-data\n" +
+			"  " + uninstallCommand + " --delete-data\n" +
 			"Then run again:\n  " + localinstall.InstallCommand
 	case errors.Is(err, localinstall.ErrSecretsDamaged):
 		reason, r.Detail = "secrets_damaged", "saved passwords can't be read"
-		r.Fix = "Restore ~/.testkube/secrets.json, or start fresh:\n  testkube uninstall local --delete-data"
+		r.Fix = "Restore ~/.testkube/secrets.json, or start fresh:\n  " + uninstallCommand + " --delete-data"
 	case errors.Is(err, localinstall.ErrStuck):
 		reason, r.Detail = "stuck", "gave up after "+took(stuck.After)
 		if errors.Is(err, localinstall.ErrRunnerInstall) {
@@ -672,10 +682,10 @@ func failTestkube(tracker *telemetry.InstallTracker, out string, err error, repo
 	os.Exit(1)
 }
 
-const (
+var (
 	runAgain               = localinstall.RunAgain
 	thenRunAgain           = localinstall.ThenRunAgain
-	setContextLocalCommand = "testkube set context local"
+	setContextLocalCommand = localinstall.Self + " set context local"
 	contactFix             = "If it fails again, contact us: https://testkube.io/contact"
 	retryFix               = runAgain + "\n" + contactFix
 	// A rerun rarely fixes these, so don't pretend it will.
@@ -795,11 +805,11 @@ func failCluster(tracker *telemetry.InstallTracker, out string, err error) {
 	case errors.Is(err, localinstall.ErrClusterStart):
 		reason, r.Detail = "start", "could not start"
 		r.Fix = lastLines(out, 5) + "\nIf a port is in use, close that program, " + thenRunAgain + "\n" +
-			"Otherwise remove it:\n  testkube uninstall local"
+			"Otherwise remove it:\n  " + uninstallCommand
 	case errors.Is(err, localinstall.ErrClusterStorage):
 		reason, r.Detail = "storage", "could not set up storage"
 		r.Fix = lastLines(out, 5) + "\n" + runAgain + "\nIf it keeps failing, remove it:\n" +
-			"  testkube uninstall local"
+			"  " + uninstallCommand
 	case errors.Is(err, localinstall.ErrClusterInspect):
 		reason, r.Detail = "inspect", "could not read existing cluster"
 		r.Fix = withWhy(out, "Check that Docker is running, "+thenRunAgain)

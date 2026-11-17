@@ -1,7 +1,3 @@
-// Package cliruntime exposes lightweight runtime-context detection helpers
-// (Docker, CI, interactive local). It is intentionally dependency-free so it
-// can be imported by both the telemetry package and the CLI commands packages
-// without creating an import cycle.
 package cliruntime
 
 import (

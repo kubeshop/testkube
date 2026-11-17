@@ -184,7 +184,7 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 				debugInfo.Data["responseBody"] = string(errBody)
 			}
 		}
-		return "", &apiStatusError{status: resp.StatusCode, detail: extractErrorDetail(errBody)}
+		return "", &apiStatusError{status: resp.StatusCode, detail: extractErrorDetail(errBody), errorCode: extractErrorCode(errBody)}
 	}
 
 	// Read response body as string
@@ -209,6 +209,9 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 type apiStatusError struct {
 	status int
 	detail string
+	// errorCode is the problem's errorCode, which tells apart refusals that
+	// share a status, such as the two kinds of board 409.
+	errorCode string
 }
 
 func (e *apiStatusError) Error() string {
@@ -242,6 +245,31 @@ func extractErrorDetail(body []byte) string {
 		}
 	}
 	return truncate(strings.TrimSpace(string(body)), maxErrorDetailLen)
+}
+
+// extractErrorCode returns the errorCode of a problem+json error response, or
+// "" when the body has none.
+func extractErrorCode(body []byte) string {
+	var problem struct {
+		ErrorCode string `json:"errorCode"`
+	}
+	if json.Unmarshal(body, &problem) != nil {
+		return ""
+	}
+	return problem.ErrorCode
+}
+
+// boardConflict tells the two board 409s apart: a GitOps-owned board, which
+// is final, and a stale expectedVersion, which a fresh read can fix.
+func boardConflict(err error) error {
+	var statusErr *apiStatusError
+	if !errors.As(err, &statusErr) || statusErr.status != http.StatusConflict {
+		return err
+	}
+	if statusErr.errorCode == tools.ProblemCodeManagedByGitOps {
+		return fmt.Errorf("%w: %v", tools.ErrBoardManagedByGitOps, err)
+	}
+	return fmt.Errorf("%w: %v", tools.ErrBoardChanged, err)
 }
 
 func truncate(s string, max int) string {
@@ -1238,11 +1266,10 @@ func (c *APIClient) UpdateBoard(ctx context.Context, board string, request tools
 		PathParams: map[string]string{"boardID": url.PathEscape(board)},
 		Body:       request,
 	})
-	var statusErr *apiStatusError
-	if errors.As(err, &statusErr) && statusErr.status == http.StatusConflict {
-		return "", fmt.Errorf("%w: %v", tools.ErrBoardChanged, err)
+	if err != nil {
+		return "", boardConflict(err)
 	}
-	return result, err
+	return result, nil
 }
 
 func (c *APIClient) DeleteBoard(ctx context.Context, board string) error {
@@ -1255,6 +1282,11 @@ func (c *APIClient) DeleteBoard(ctx context.Context, board string) error {
 		Scope:      ApiScopeOrg,
 		PathParams: map[string]string{"boardID": url.PathEscape(board)},
 	})
+	// A delete is never conditional, so its only 409 is a GitOps-owned board.
+	var statusErr *apiStatusError
+	if errors.As(err, &statusErr) && statusErr.status == http.StatusConflict && statusErr.errorCode == tools.ProblemCodeManagedByGitOps {
+		return fmt.Errorf("%w: %v", tools.ErrBoardManagedByGitOps, err)
+	}
 	return err
 }
 

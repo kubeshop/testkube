@@ -6,6 +6,7 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: healthcheck
+    team-support: "true"
 spec:
   pod:
     # Healthchecks drive prod alerts; keep them off spot nodes so a preemption does not page as an outage.
