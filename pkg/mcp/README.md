@@ -1,4 +1,3 @@
-````markdown
 # Testkube MCP (Model Context Protocol) Integration
 
 This package provides MCP integration for Testkube, enabling AI assistants to interact with Testkube workflows, executions, and artifacts through the [Model Context Protocol](https://modelcontextprotocol.io).
@@ -184,6 +183,45 @@ make rebuild-kubectl-testkube-cli
 
 #### Streamable HTTP (SHTTP) Transport
 
+Standalone HTTP requires `TK_MCP_SHTTP_AUTH_TOKEN`, a separate inbound secret;
+`TK_ACCESS_TOKEN` (or your CLI login) remains the outbound Testkube credential.
+An absent, malformed, or reused token prevents startup. Stdio needs no inbound token.
+
+Upgrading an existing standalone HTTP deployment is a **breaking change**: unauthenticated
+clients stop working, and Docker no longer defaults to an external bind address. Follow
+the [migration procedure](../../docs/release-notes/unreleased-mcp-http-auth.md) before upgrading.
+
+The operator deploying standalone HTTP MCP creates, securely stores, and distributes
+the inbound token to authorized clients. The server only reads the token; it does not
+generate, persist, or distribute it. Generate it once with at least 32 random bytes:
+
+```bash
+export TK_MCP_SHTTP_AUTH_TOKEN="$(openssl rand -hex 32)"
+```
+
+Save this value in your secret manager and provide the same value to the server and
+MCP clients through their secret configuration. Reuse the stored value on restarts;
+do not run the generation command in a startup script. Do not commit the token or
+put it in CLI arguments.
+
+The standard Testkube agent/runner and Enterprise Helm charts do not deploy this
+standalone server, so no chart changes are required. The embedded Control Plane MCP
+endpoint is unchanged. For a custom Kubernetes deployment of standalone HTTP MCP,
+provision a Secret named `testkube-mcp-auth` with a `token` key in the same namespace,
+using your secret-management tooling. Inject it into the MCP container:
+
+```yaml
+env:
+  - name: TK_MCP_SHTTP_AUTH_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: testkube-mcp-auth
+        key: token
+```
+
+Configure the outbound Testkube credential separately. The Secret above supplies
+only the inbound token, which must also be configured on authorized MCP clients.
+
 ```bash
 # Start MCP server with SHTTP transport on localhost:8080
 ./bin/app/kubectl-testkube mcp serve --transport=shttp
@@ -197,6 +235,26 @@ make rebuild-kubectl-testkube-cli
 # Start SHTTP server with debug output
 ./bin/app/kubectl-testkube mcp serve --transport=shttp --debug
 ```
+
+Every HTTP request must include `Authorization: Bearer <inbound-token>`, including
+initialization, tool listing/calls, streams, and session deletion. Missing or invalid
+credentials return HTTP 401; session IDs, cookies, and query parameters are not credentials.
+All clients sharing the inbound secret use the same outbound identity and permissions;
+there is no per-client RBAC.
+
+The default bind address is `localhost`, including Docker. Set `--shttp-host=0.0.0.0`
+explicitly when required. Remote clients must use HTTPS, either with the TLS flags above
+or a TLS-terminating proxy. Keep the HTTP listener private and prevent direct access
+around the proxy. A proxy connecting over loopback must set its upstream `Host` to
+`localhost` to preserve the transport's DNS-rebinding protection.
+
+The CLI selects transport, host, and port through flags, not `TK_MCP_TRANSPORT`,
+`TK_MCP_SHTTP_HOST`, or `TK_MCP_SHTTP_PORT`. Those variables apply only to library users
+calling `LoadConfigFromEnv`.
+
+Rotate the inbound secret by replacing it and restarting the server, which closes
+existing streams. There is no hot reload or multi-token overlap. If migration fails,
+use stdio or disable standalone HTTP; do not restore unauthenticated access.
 
 ### Development and Testing
 
@@ -224,17 +282,20 @@ The debug mode enables detailed request/response logging for the API client, mak
 }
 ```
 
-#### SHTTP Configuration
+#### SHTTP client requests
 
-```json
-{
-  "servers": {
-    "testkube": {
-      "command": "/path/to/your/testkube/bin/app/kubectl-testkube",
-      "args": ["mcp", "serve", "--transport=shttp", "--shttp-host=localhost", "--shttp-port=8080"],
-      "type": "shttp"
-    }
-  }
-}
+Start the HTTP server separately. Configure your client's HTTP URL (for example,
+`https://mcp.example.com/mcp`) and its secret-backed Authorization header. The wire
+request for initialization is:
+
+```http
+POST /mcp HTTP/1.1
+Host: mcp.example.com
+Authorization: Bearer <inbound-token>
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"example","version":"1"}}}
 ```
-````
+
+Keep the Authorization header on subsequent requests, even when using an MCP session ID.

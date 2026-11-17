@@ -75,12 +75,14 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string, port int, 
 		RedirectURL: getRedirectAddress(port),
 		Scopes:      []string{oidc.ScopeOpenID, "profile", "email", "offline_access"},
 	}
+	verifier := oauth2.GenerateVerifier()
+	state := rand.Text()
 
 	ch := make(chan string)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
 		code := r.URL.Query().Get("code")
-		if code != "" {
+		if code != "" && r.URL.Query().Get("state") == state {
 			ch <- code
 			fmt.Fprintln(w, "<script>window.close()</script>")
 			fmt.Fprintln(w, "Your testkube CLI is now successfully authenticated. Go back to the terminal to continue.")
@@ -93,11 +95,11 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string, port int, 
 		srv.ListenAndServe()
 	}()
 
-	opts := []oauth2.AuthCodeOption{oauth2.AccessTypeOffline}
+	opts := []oauth2.AuthCodeOption{oauth2.AccessTypeOffline, oauth2.S256ChallengeOption(verifier)}
 	if connectorID != "" {
 		opts = append(opts, oauth2.SetAuthURLParam("connector_id", connectorID))
 	}
-	authURL := oauth2Config.AuthCodeURL("state", opts...)
+	authURL := oauth2Config.AuthCodeURL(state, opts...)
 
 	respCh := make(chan Tokens)
 
@@ -106,7 +108,7 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string, port int, 
 
 		code := <-ch
 
-		token, err := oauth2Config.Exchange(httpCtx, code)
+		token, err := oauth2Config.Exchange(httpCtx, code, oauth2.VerifierOption(verifier))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to retrieve token: %v\n", err)
 			respCh <- Tokens{}

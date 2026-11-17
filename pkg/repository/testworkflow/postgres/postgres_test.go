@@ -470,6 +470,18 @@ func (m *MockFilter) ActorName() string {
 	return m.Called().String(0)
 }
 
+func (m *MockFilter) MinDurationMs() int64 {
+	return m.Called().Get(0).(int64)
+}
+
+func (m *MockFilter) MaxDurationMs() int64 {
+	return m.Called().Get(0).(int64)
+}
+
+func (m *MockFilter) DurationDefined() bool {
+	return m.Called().Bool(0)
+}
+
 func (m *MockFilter) ActorNameDefined() bool {
 	return m.Called().Bool(0)
 }
@@ -564,6 +576,7 @@ func createTestFilter() *MockFilter {
 	filter.On("AssignedDefined").Return(false)
 	filter.On("ActorNameDefined").Return(false)
 	filter.On("ActorTypeDefined").Return(false)
+	filter.On("DurationDefined").Return(false)
 	filter.On("GroupIDDefined").Return(false)
 	filter.On("InitializedDefined").Return(false)
 	filter.On("HealthRangesDefined").Return(false)

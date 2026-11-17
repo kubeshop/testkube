@@ -12,8 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes/fake"
 
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
 
 func TestWorker_AbortInBackground(t *testing.T) {
@@ -67,6 +71,47 @@ func TestWorker_AbortInBackground(t *testing.T) {
 			} else {
 				assert.Equal(t, tt.wantCalls, calls.Load())
 			}
+		})
+	}
+}
+
+// TestWorker_BuildInternalConfig_TLSRetry guards that the kubelet TLS log retry of the runner reaches
+// the execution's internal config, which the toolkit reads to build the workers of parallel steps.
+func TestWorker_BuildInternalConfig_TLSRetry(t *testing.T) {
+	tests := []struct {
+		name     string
+		tlsRetry controller.TLSRetryConfig
+		want     testworkflowconfig.WorkerConfig
+	}{
+		{
+			name:     "carries the configured retry",
+			tlsRetry: controller.TLSRetryConfig{MaxAttempts: 12, InitialDelay: 2 * time.Second, MaxDelay: time.Minute},
+			want: testworkflowconfig.WorkerConfig{
+				LogsTLSRetryMaxAttempts:  12,
+				LogsTLSRetryInitialDelay: 2 * time.Second,
+				LogsTLSRetryMaxDelay:     time.Minute,
+			},
+		},
+		{
+			// Zero values are omitted from the serialized config, so the controller defaults apply.
+			name:     "leaves the retry empty when none is configured",
+			tlsRetry: controller.TLSRetryConfig{},
+			want:     testworkflowconfig.WorkerConfig{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := NewWorker(fake.NewSimpleClientset(), nil, Config{
+				Cluster:  ClusterConfig{DefaultNamespace: "ns", Namespaces: map[string]NamespaceConfig{"ns": {}}},
+				TLSRetry: tt.tlsRetry,
+			})
+
+			cfg := w.buildInternalConfig("exec-1", "", testworkflowconfig.ExecutionConfig{Id: "exec-1"}, testworkflowconfig.ControlPlaneConfig{}, testworkflowsv1.TestWorkflow{}, "")
+
+			assert.Equal(t, tt.want.LogsTLSRetryMaxAttempts, cfg.Worker.LogsTLSRetryMaxAttempts)
+			assert.Equal(t, tt.want.LogsTLSRetryInitialDelay, cfg.Worker.LogsTLSRetryInitialDelay)
+			assert.Equal(t, tt.want.LogsTLSRetryMaxDelay, cfg.Worker.LogsTLSRetryMaxDelay)
 		})
 	}
 }

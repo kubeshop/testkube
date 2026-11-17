@@ -8,6 +8,8 @@
 
 {{ include "testkube-crds.item.executor.testkube.io_webhooktemplates.yaml" . }}
 
+{{ include "testkube-crds.item.insights.testkube.io_boards.yaml" . }}
+
 {{ include "testkube-crds.item.tests.testkube.io_scripts.yaml" . }}
 
 {{ include "testkube-crds.item.tests.testkube.io_templates.yaml" . }}
@@ -597,6 +599,172 @@ spec:
           status:
             description: WebhookTemplateStatus defines the observed state of Webhook
               Template
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+{{- end }}
+
+{{- define "testkube-crds.item.insights.testkube.io_boards.yaml" -}}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.21.0
+  name: boards.insights.testkube.io
+spec:
+  group: insights.testkube.io
+  names:
+    kind: Board
+    listKind: BoardList
+    plural: boards
+    singular: board
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.displayName
+      name: Display Name
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          Board is an Insights board. Boards are organization-scoped in the Control
+          Plane, and metadata.name is the board's slug.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: BoardSpec is the content of a board.
+            properties:
+              description:
+                description: Description of the board.
+                type: string
+              displayName:
+                description: DisplayName is the board's title. It defaults to metadata.name.
+                type: string
+              layout:
+                description: |-
+                  Layout places the reports on rows. When it is omitted every report
+                  gets a row of its own, in the order of reports; when it is set it must
+                  place every report exactly once.
+                properties:
+                  rows:
+                    items:
+                      description: BoardLayoutRow is one row of a board layout.
+                      properties:
+                        cells:
+                          description: Cells lists the IDs of the reports in the row,
+                            left to right.
+                          items:
+                            type: string
+                          minItems: 1
+                          type: array
+                      required:
+                      - cells
+                      type: object
+                    type: array
+                required:
+                - rows
+                type: object
+              reports:
+                description: Reports shown on the board.
+                items:
+                  description: BoardReport is one report on a board.
+                  properties:
+                    description:
+                      description: Description of the report.
+                      type: string
+                    id:
+                      description: |-
+                        ID identifies the report within the board, and is what the layout
+                        refers to.
+                      minLength: 1
+                      type: string
+                    kind:
+                      description: Kind of the report.
+                      enum:
+                      - time-series
+                      - executions
+                      - pass-fail
+                      - workflows
+                      type: string
+                    name:
+                      description: Name is the report's title.
+                      type: string
+                    params:
+                      description: |-
+                        Params configure the report, in the dashboard's format (filter,
+                        duration, measure, ...). The keys each kind understands are validated
+                        when the board is applied.
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                  - id
+                  - kind
+                  type: object
+                type: array
+              shared:
+                description: |-
+                  Shared makes the board visible to the whole organization. It defaults
+                  to true, and a board synced by a GitOps agent is always shared.
+                type: boolean
+            type: object
+          status:
+            description: |-
+              ControlPlaneResourceStatus is the Control Plane's view of a resource. The Control Plane
+              fills it in when it exports a resource, and ignores it when one is applied:
+              ownership is never taken from a request body.
+            properties:
+              creationSource:
+                description: 'CreationSource records how the resource was created:
+                  ui, api or gitops.'
+                type: string
+              gitOpsOwner:
+                description: |-
+                  GitOpsOwner is the GitOps agent that owns the resource. While it is set,
+                  the resource is read-only everywhere else.
+                properties:
+                  agentId:
+                    description: AgentID is the authoritative identifier of the owning
+                      agent.
+                    type: string
+                  agentName:
+                    description: AgentName is for display only, and may be stale after
+                      a rename.
+                    type: string
+                required:
+                - agentId
+                type: object
+              id:
+                description: ID is the Control Plane's identifier of the resource.
+                type: string
+              lastModificationSource:
+                description: |-
+                  LastModificationSource records how the resource was last changed: ui,
+                  api or gitops.
+                type: string
             type: object
         type: object
     served: true
@@ -2321,6 +2489,7 @@ spec:
                         - basic
                         - header
                         - github
+                        - gitlab
                         type: string
                       branch:
                         description: branch/tag name for checkout
@@ -6624,6 +6793,7 @@ spec:
                         - basic
                         - header
                         - github
+                        - gitlab
                         type: string
                       branches:
                         description: |-
@@ -8852,6 +9022,7 @@ spec:
                                   - basic
                                   - header
                                   - github
+                                  - gitlab
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -10224,8 +10395,10 @@ spec:
                             type: boolean
                           parallelism:
                             description: how many resources could be scheduled in parallel
-                            format: int32
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           paused:
                             description: pause the step initially
                             type: boolean
@@ -10947,6 +11120,7 @@ spec:
                                         - basic
                                         - header
                                         - github
+                                        - gitlab
                                       type: string
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
@@ -11432,6 +11606,9 @@ spec:
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
                                   type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                                  type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
                                   type: string
@@ -11480,6 +11657,34 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -12435,6 +12640,7 @@ spec:
                             - basic
                             - header
                             - github
+                            - gitlab
                           type: string
                         cone:
                           description: enable cone mode for sparse checkout with paths
@@ -12909,6 +13115,9 @@ spec:
                     hostPID:
                       description: Whether to allow a pod to have access to the host process ID namespace
                       type: boolean
+                    hostUsers:
+                      description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                      type: boolean
                     hostname:
                       description: Specifies the hostname of the Pod
                       type: string
@@ -12957,6 +13166,34 @@ spec:
                           - name
                         type: object
                       type: array
+                    resources:
+                      description: |-
+                        Pod-level resource requests and limits, shared by all containers in the pod,
+                        including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                      properties:
+                        limits:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource limits for the container
+                          type: object
+                        requests:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource requests for the container
+                          type: object
+                      type: object
+                    runtimeClassName:
+                      description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                      type: string
+                    schedulerName:
+                      description: If specified, the pod will be dispatched by the specified scheduler.
+                      type: string
                     schedulingGates:
                       items:
                         properties:
@@ -13283,6 +13520,7 @@ spec:
                                   - basic
                                   - header
                                   - github
+                                  - gitlab
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -13768,6 +14006,9 @@ spec:
                           hostPID:
                             description: Whether to allow a pod to have access to the host process ID namespace
                             type: boolean
+                          hostUsers:
+                            description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                            type: boolean
                           hostname:
                             description: Specifies the hostname of the Pod
                             type: string
@@ -13816,6 +14057,34 @@ spec:
                                 - name
                               type: object
                             type: array
+                          resources:
+                            description: |-
+                              Pod-level resource requests and limits, shared by all containers in the pod,
+                              including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                            properties:
+                              limits:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource limits for the container
+                                type: object
+                              requests:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource requests for the container
+                                type: object
+                            type: object
+                          runtimeClassName:
+                            description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                            type: string
+                          schedulerName:
+                            description: If specified, the pod will be dispatched by the specified scheduler.
+                            type: string
                           schedulingGates:
                             items:
                               properties:
@@ -14700,6 +14969,7 @@ spec:
                                   - basic
                                   - header
                                   - github
+                                  - gitlab
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -16072,8 +16342,10 @@ spec:
                             type: boolean
                           parallelism:
                             description: how many resources could be scheduled in parallel
-                            format: int32
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           paused:
                             description: pause the step initially
                             type: boolean
@@ -16795,6 +17067,7 @@ spec:
                                         - basic
                                         - header
                                         - github
+                                        - gitlab
                                       type: string
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
@@ -17280,6 +17553,9 @@ spec:
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
                                   type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                                  type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
                                   type: string
@@ -17328,6 +17604,34 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -18266,6 +18570,7 @@ spec:
                                   - basic
                                   - header
                                   - github
+                                  - gitlab
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -19638,8 +19943,10 @@ spec:
                             type: boolean
                           parallelism:
                             description: how many resources could be scheduled in parallel
-                            format: int32
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           paused:
                             description: pause the step initially
                             type: boolean
@@ -20361,6 +20668,7 @@ spec:
                                         - basic
                                         - header
                                         - github
+                                        - gitlab
                                       type: string
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
@@ -20846,6 +21154,9 @@ spec:
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
                                   type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                                  type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
                                   type: string
@@ -20894,6 +21205,34 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -22154,6 +22493,7 @@ spec:
                                   - basic
                                   - header
                                   - github
+                                  - gitlab
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -23500,8 +23840,10 @@ spec:
                             type: boolean
                           parallelism:
                             description: how many resources could be scheduled in parallel
-                            format: int32
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           paused:
                             description: pause the step initially
                             type: boolean
@@ -24184,6 +24526,7 @@ spec:
                                         - basic
                                         - header
                                         - github
+                                        - gitlab
                                       type: string
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
@@ -24669,6 +25012,9 @@ spec:
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
                                   type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                                  type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
                                   type: string
@@ -24717,6 +25063,34 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -25615,6 +25989,7 @@ spec:
                             - basic
                             - header
                             - github
+                            - gitlab
                           type: string
                         cone:
                           description: enable cone mode for sparse checkout with paths
@@ -26089,6 +26464,9 @@ spec:
                     hostPID:
                       description: Whether to allow a pod to have access to the host process ID namespace
                       type: boolean
+                    hostUsers:
+                      description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                      type: boolean
                     hostname:
                       description: Specifies the hostname of the Pod
                       type: string
@@ -26137,6 +26515,34 @@ spec:
                           - name
                         type: object
                       type: array
+                    resources:
+                      description: |-
+                        Pod-level resource requests and limits, shared by all containers in the pod,
+                        including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                      properties:
+                        limits:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource limits for the container
+                          type: object
+                        requests:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource requests for the container
+                          type: object
+                      type: object
+                    runtimeClassName:
+                      description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                      type: string
+                    schedulerName:
+                      description: If specified, the pod will be dispatched by the specified scheduler.
+                      type: string
                     schedulingGates:
                       items:
                         properties:
@@ -26463,6 +26869,7 @@ spec:
                                   - basic
                                   - header
                                   - github
+                                  - gitlab
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -26948,6 +27355,9 @@ spec:
                           hostPID:
                             description: Whether to allow a pod to have access to the host process ID namespace
                             type: boolean
+                          hostUsers:
+                            description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                            type: boolean
                           hostname:
                             description: Specifies the hostname of the Pod
                             type: string
@@ -26996,6 +27406,34 @@ spec:
                                 - name
                               type: object
                             type: array
+                          resources:
+                            description: |-
+                              Pod-level resource requests and limits, shared by all containers in the pod,
+                              including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                            properties:
+                              limits:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource limits for the container
+                                type: object
+                              requests:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource requests for the container
+                                type: object
+                            type: object
+                          runtimeClassName:
+                            description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                            type: string
+                          schedulerName:
+                            description: If specified, the pod will be dispatched by the specified scheduler.
+                            type: string
                           schedulingGates:
                             items:
                               properties:
@@ -27860,6 +28298,7 @@ spec:
                                   - basic
                                   - header
                                   - github
+                                  - gitlab
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -29206,8 +29645,10 @@ spec:
                             type: boolean
                           parallelism:
                             description: how many resources could be scheduled in parallel
-                            format: int32
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           paused:
                             description: pause the step initially
                             type: boolean
@@ -29890,6 +30331,7 @@ spec:
                                         - basic
                                         - header
                                         - github
+                                        - gitlab
                                       type: string
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
@@ -30375,6 +30817,9 @@ spec:
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
                                   type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                                  type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
                                   type: string
@@ -30423,6 +30868,34 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -31304,6 +31777,7 @@ spec:
                                   - basic
                                   - header
                                   - github
+                                  - gitlab
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -32650,8 +33124,10 @@ spec:
                             type: boolean
                           parallelism:
                             description: how many resources could be scheduled in parallel
-                            format: int32
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           paused:
                             description: pause the step initially
                             type: boolean
@@ -33334,6 +33810,7 @@ spec:
                                         - basic
                                         - header
                                         - github
+                                        - gitlab
                                       type: string
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
@@ -33819,6 +34296,9 @@ spec:
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
                                   type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
+                                  type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
                                   type: string
@@ -33867,6 +34347,34 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:

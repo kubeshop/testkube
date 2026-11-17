@@ -39,6 +39,16 @@ var ErrBoardsRequireUser = errors.New("insights boards require a signed-in user 
 // ExpectedVersion.
 var ErrBoardChanged = errors.New("the board changed since it was read")
 
+// ErrBoardManagedByGitOps is returned by a client when the Control Plane
+// refuses a change to a board a GitOps agent owns. Unlike ErrBoardChanged it
+// is final: the board is read-only until it is changed in Git, so no write is
+// rebuilt and retried.
+var ErrBoardManagedByGitOps = errors.New("the board is managed by a GitOps agent and is read-only here")
+
+// ProblemCodeManagedByGitOps is the errorCode of the Control Plane's problem
+// response refusing a change to a GitOps-owned resource.
+const ProblemCodeManagedByGitOps = "managed-by-gitops"
+
 const renderConcurrency = 4
 
 // boardWriteAttempts bounds how many times a board write is rebuilt from a
@@ -957,6 +967,8 @@ func boardError(action string, err error) *mcp.CallToolResult {
 	switch {
 	case errors.Is(err, ErrBoardsRequireUser), strings.Contains(msg, "API tokens are not supported"):
 		return mcp.NewToolResultError(ErrBoardsRequireUser.Error())
+	case errors.Is(err, ErrBoardManagedByGitOps):
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to %s: %v. Nothing was written: a GitOps agent owns this board, so it can only be changed in the Git repository the agent syncs from.", action, err))
 	case errors.Is(err, ErrBoardChanged):
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to %s: the board kept changing while the change was applied (%d attempts), so nothing was written. Someone may be editing it; try again.", action, boardWriteAttempts))
 	case strings.Contains(msg, "status 404"):

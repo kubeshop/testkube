@@ -2,6 +2,8 @@ package commands
 
 import (
 	"testing"
+
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 )
 
 func TestShouldPurge(t *testing.T) {
@@ -44,4 +46,32 @@ func TestPurgeCmdHasYesFlag(t *testing.T) {
 	if flag.DefValue != "false" {
 		t.Fatalf("expected --yes to default to false, got %q", flag.DefValue)
 	}
+}
+
+func TestPurge(t *testing.T) {
+	t.Run("uninstalls the release from the namespace", func(t *testing.T) {
+		var gotNamespace, gotRelease string
+		err := purge("my-release", "my-namespace", func(namespace, releaseName string) *common.CLIError {
+			gotNamespace, gotRelease = namespace, releaseName
+			return nil
+		})
+
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if gotNamespace != "my-namespace" || gotRelease != "my-release" {
+			t.Fatalf("expected the release my-release in my-namespace to be uninstalled, got %q in %q", gotRelease, gotNamespace)
+		}
+	})
+
+	t.Run("returns the uninstall error", func(t *testing.T) {
+		want := &common.CLIError{Title: "helm uninstall failed"}
+		err := purge("testkube", "testkube", func(string, string) *common.CLIError {
+			return want
+		})
+
+		if err != want {
+			t.Fatalf("expected the uninstall error to be returned, got %v", err)
+		}
+	})
 }

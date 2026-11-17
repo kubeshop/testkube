@@ -36,6 +36,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/expressions/libs"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/kubernetesworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
@@ -85,6 +86,11 @@ func buildKubernetesWorkerConfig(cfg *testworkflowconfig.InternalConfig, debug b
 		// back to the object store, which is the kind of difference nobody notices
 		// except as a cache that works everywhere but there.
 		StepCacheVolume: cfg.Worker.StepCacheVolume,
+		TLSRetry: controller.TLSRetryConfig{
+			MaxAttempts:  cfg.Worker.LogsTLSRetryMaxAttempts,
+			InitialDelay: cfg.Worker.LogsTLSRetryInitialDelay,
+			MaxDelay:     cfg.Worker.LogsTLSRetryMaxDelay,
+		},
 	}
 }
 

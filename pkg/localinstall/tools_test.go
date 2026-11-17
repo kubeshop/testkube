@@ -147,3 +147,36 @@ func TestAddToolsDirToPath_UserToolsStillWin(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, filepath.Join(userBin, "kubectl"), found)
 }
+
+func TestSelfCommand_FullPathOnlyWhenPathMissesOurBinary(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("needs an executable without an .exe suffix")
+	}
+	home, other := t.TempDir(), t.TempDir()
+	t.Setenv("HOME", home)
+	ours := filepath.Join(home, ".testkube", "bin")
+	require.NoError(t, os.MkdirAll(ours, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(ours, "kubectl-testkube"), nil, 0o755))
+	require.NoError(t, os.Symlink("kubectl-testkube", filepath.Join(ours, "testkube")))
+	require.NoError(t, os.WriteFile(filepath.Join(other, "testkube"), nil, 0o755))
+	empty := t.TempDir()
+
+	tests := []struct {
+		name string
+		exe  string
+		path string
+		want string
+	}{
+		{"ours, off PATH", filepath.Join(ours, "testkube"), empty, "~/.testkube/bin/testkube"},
+		{"ours, on PATH", filepath.Join(ours, "kubectl-testkube"), ours, "testkube"},
+		{"ours, older one first on PATH", filepath.Join(ours, "testkube"), other + string(os.PathListSeparator) + ours, "~/.testkube/bin/testkube"},
+		{"installed elsewhere, like brew", filepath.Join(other, "testkube"), empty, "testkube"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("PATH", tt.path)
+
+			assert.Equal(t, tt.want, selfCommand(tt.exe))
+		})
+	}
+}

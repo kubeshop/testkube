@@ -828,6 +828,9 @@ func MapPodConfigKubeToAPI(v testworkflowsv1.PodConfig) testkube.TestWorkflowPod
 		Tolerations:               common.MapSlice(v.Tolerations, MapTolerationKubeToAPI),
 		HostAliases:               common.MapSlice(v.HostAliases, MapHostAliasKubeToAPI),
 		PriorityClassName:         v.PriorityClassName,
+		RuntimeClassName:          MapStringToBoxedString(v.RuntimeClassName),
+		SchedulerName:             v.SchedulerName,
+		HostUsers:                 MapBoolToBoxedBoolean(v.HostUsers),
 		Priority:                  MapInt32ToBoxedInteger(v.Priority),
 		DnsConfig:                 common.MapPtr(v.DNSConfig, MapPodDNSConfigKubeToAPI),
 		PreemptionPolicy:          MapStringToBoxedString(common.MapPtr(v.PreemptionPolicy, common.MapEnumToString[corev1.PreemptionPolicy])),
@@ -835,6 +838,7 @@ func MapPodConfigKubeToAPI(v testworkflowsv1.PodConfig) testkube.TestWorkflowPod
 		SchedulingGates:           common.MapSlice(v.SchedulingGates, MapPodSchedulingGateKubeToAPI),
 		ResourceClaims:            common.MapSlice(v.ResourceClaims, MapPodResourceClaimKubeToAPI),
 		HostPID:                   MapBoolToBoxedBoolean(v.HostPID),
+		Resources:                 common.MapPtr(v.Resources, MapResourcesKubeToAPI),
 	}
 }
 
@@ -1092,7 +1096,7 @@ func MapStepParallelKubeToAPI(v testworkflowsv1.StepParallel) testkube.TestWorkf
 		MaxCount:    MapStringTypeToBoxedString(v.MaxCount),
 		Matrix:      MapDynamicListMapKubeToAPI(v.Matrix),
 		Shards:      MapDynamicListMapKubeToAPI(v.Shards),
-		Parallelism: v.Parallelism,
+		Parallelism: MapStringTypeToBoxedString(v.Parallelism),
 		FailFast:    v.FailFast,
 		Description: v.Description,
 		Logs:        MapStringToBoxedString(v.Logs),
@@ -1131,7 +1135,7 @@ func MapIndependentStepParallelKubeToAPI(v testworkflowsv1.IndependentStepParall
 		MaxCount:    MapStringTypeToBoxedString(v.MaxCount),
 		Matrix:      MapDynamicListMapKubeToAPI(v.Matrix),
 		Shards:      MapDynamicListMapKubeToAPI(v.Shards),
-		Parallelism: v.Parallelism,
+		Parallelism: MapStringTypeToBoxedString(v.Parallelism),
 		FailFast:    v.FailFast,
 		Description: v.Description,
 		Logs:        MapStringToBoxedString(v.Logs),

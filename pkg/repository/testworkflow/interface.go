@@ -87,6 +87,9 @@ type Filter interface {
 	ActorNameDefined() bool
 	ActorType() testkube.TestWorkflowRunningContextActorType
 	ActorTypeDefined() bool
+	MinDurationMs() int64
+	MaxDurationMs() int64
+	DurationDefined() bool
 	GroupID() string
 	GroupIDDefined() bool
 	RunnerID() string

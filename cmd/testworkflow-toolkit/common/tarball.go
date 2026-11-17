@@ -283,6 +283,15 @@ func normalizeEntryName(raw string) (string, error) {
 	return cleaned, nil
 }
 
+// UnpackLimitError reports an archive that exceeds MaxTotalBytes or MaxEntries.
+type UnpackLimitError struct {
+	message string
+}
+
+func (e *UnpackLimitError) Error() string {
+	return e.message
+}
+
 // UnpackTarball extracts an archive into dirPath.
 //
 // Extraction goes through os.Root, so every path is resolved inside dirPath by the
@@ -385,7 +394,7 @@ func UnpackTarball(dirPath string, stream io.Reader, opts ...UnpackOption) error
 
 		entries++
 		if options.MaxEntries > 0 && entries > options.MaxEntries {
-			return fmt.Errorf("tarball holds more than %d entries", options.MaxEntries)
+			return &UnpackLimitError{message: fmt.Sprintf("tarball holds more than %d entries", options.MaxEntries)}
 		}
 
 		// Kept for error messages and for the mode; os.Root does the resolving.
@@ -439,7 +448,7 @@ func UnpackTarball(dirPath string, stream io.Reader, opts ...UnpackOption) error
 				copied, err = io.CopyBuffer(destinationFile, io.LimitReader(tarReader, remaining+1), buffer)
 				if err == nil && copied > remaining {
 					_ = outFile.Close()
-					return fmt.Errorf("tarball expands to more than %d bytes", options.MaxTotalBytes)
+					return &UnpackLimitError{message: fmt.Sprintf("tarball expands to more than %d bytes", options.MaxTotalBytes)}
 				}
 			} else {
 				copied, err = io.CopyBuffer(destinationFile, tarReader, buffer)

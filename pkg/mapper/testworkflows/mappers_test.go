@@ -10,6 +10,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 var (
@@ -340,6 +341,9 @@ var (
 			NodeSelector:       map[string]string{"some-key-3": "some-value"},
 			Labels:             map[string]string{"some-key-4": "some-value"},
 			Annotations:        map[string]string{"some-key=5": "some-value-2"},
+			RuntimeClassName:   common.Ptr("gvisor"),
+			SchedulerName:      "volcano",
+			HostUsers:          common.Ptr(false),
 		},
 		Events: []testworkflowsv1.Event{
 			{
@@ -521,4 +525,35 @@ func TestStepExecuteWorkflowRoundTripsBaseExecutionId(t *testing.T) {
 	back := MapStepExecuteTestWorkflowAPIToKube(api)
 	assert.Equal(t, "exec-base", back.BaseExecutionId, "API -> kube dropped the base execution id")
 	assert.Equal(t, kube.BaseExecutionId, back.BaseExecutionId)
+}
+
+func TestMapStepParallelRoundTripsParallelism(t *testing.T) {
+	tests := []struct {
+		name string
+		kube *testworkflowsv1.ConfigValue
+		api  *testkube.BoxedString
+	}{
+		{
+			name: "a static number survives the round trip",
+			kube: testworkflowsv1.NewConfigValue("2"),
+			api:  &testkube.BoxedString{Value: "2"},
+		},
+		{
+			name: "an expression survives the round trip",
+			kube: testworkflowsv1.NewConfigValue("config.PARALLELISM"),
+			api:  &testkube.BoxedString{Value: "config.PARALLELISM"},
+		},
+		{name: "an unset parallelism stays nil"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			api := MapStepParallelKubeToAPI(testworkflowsv1.StepParallel{Parallelism: tc.kube})
+			assert.Equal(t, tc.api, api.Parallelism)
+			assert.Equal(t, tc.kube, MapStepParallelAPIToKube(api).Parallelism)
+
+			independentAPI := MapIndependentStepParallelKubeToAPI(testworkflowsv1.IndependentStepParallel{Parallelism: tc.kube})
+			assert.Equal(t, tc.api, independentAPI.Parallelism)
+			assert.Equal(t, tc.kube, MapIndependentStepParallelAPIToKube(independentAPI).Parallelism)
+		})
+	}
 }

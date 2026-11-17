@@ -877,6 +877,9 @@ func MapPodConfigAPIToKube(v testkube.TestWorkflowPodConfig) testworkflowsv1.Pod
 		Tolerations:               common.MapSlice(v.Tolerations, MapTolerationAPIToKube),
 		HostAliases:               common.MapSlice(v.HostAliases, MapHostAliasAPIToKube),
 		PriorityClassName:         v.PriorityClassName,
+		RuntimeClassName:          MapBoxedStringToString(v.RuntimeClassName),
+		SchedulerName:             v.SchedulerName,
+		HostUsers:                 MapBoxedBooleanToBool(v.HostUsers),
 		Priority:                  MapBoxedIntegerToInt32(v.Priority),
 		DNSConfig:                 common.MapPtr(v.DnsConfig, MapPodDNSConfigAPIToKube),
 		PreemptionPolicy:          common.MapPtr(MapBoxedStringToString(v.PreemptionPolicy), common.MapStringToEnum[corev1.PreemptionPolicy]),
@@ -884,6 +887,7 @@ func MapPodConfigAPIToKube(v testkube.TestWorkflowPodConfig) testworkflowsv1.Pod
 		SchedulingGates:           common.MapSlice(v.SchedulingGates, MapPodSchedulingGateAPIToKube),
 		ResourceClaims:            common.MapSlice(v.ResourceClaims, MapPodResourceClaimAPIToKube),
 		HostPID:                   MapBoxedBooleanToBool(v.HostPID),
+		Resources:                 common.MapPtr(v.Resources, MapResourcesAPIToKube),
 	}
 }
 
@@ -1155,7 +1159,7 @@ func MapStepParallelAPIToKube(v testkube.TestWorkflowStepParallel) testworkflows
 			Matrix:   MapDynamicListMapAPIToKube(v.Matrix),
 			Shards:   MapDynamicListMapAPIToKube(v.Shards),
 		},
-		Parallelism: v.Parallelism,
+		Parallelism: MapBoxedStringToConfigValue(v.Parallelism),
 		FailFast:    v.FailFast,
 		Description: v.Description,
 		Logs:        MapBoxedStringToString(v.Logs),
@@ -1200,7 +1204,7 @@ func MapIndependentStepParallelAPIToKube(v testkube.TestWorkflowIndependentStepP
 			Matrix:   MapDynamicListMapAPIToKube(v.Matrix),
 			Shards:   MapDynamicListMapAPIToKube(v.Shards),
 		},
-		Parallelism: v.Parallelism,
+		Parallelism: MapBoxedStringToConfigValue(v.Parallelism),
 		FailFast:    v.FailFast,
 		Description: v.Description,
 		Logs:        MapBoxedStringToString(v.Logs),

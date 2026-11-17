@@ -195,6 +195,7 @@ func TestUnpackTarball_EnforcesLimits(t *testing.T) {
 			tar.Header{Name: "big.bin", Typeflag: tar.TypeReg, Mode: 0o644, Size: 4096},
 		), WithMaxTotalBytes(1024))
 		assert.ErrorContains(t, err, "expands to more than")
+		assert.ErrorAs(t, err, new(*UnpackLimitError))
 	})
 
 	t.Run("total bytes across entries", func(t *testing.T) {
@@ -203,6 +204,7 @@ func TestUnpackTarball_EnforcesLimits(t *testing.T) {
 			tar.Header{Name: "b.bin", Typeflag: tar.TypeReg, Mode: 0o644, Size: 600},
 		), WithMaxTotalBytes(1024))
 		assert.ErrorContains(t, err, "expands to more than")
+		assert.ErrorAs(t, err, new(*UnpackLimitError))
 	})
 
 	t.Run("entry count", func(t *testing.T) {
@@ -212,6 +214,7 @@ func TestUnpackTarball_EnforcesLimits(t *testing.T) {
 			tar.Header{Name: "c", Typeflag: tar.TypeReg, Mode: 0o644, Size: 1},
 		), WithMaxEntries(2))
 		assert.ErrorContains(t, err, "more than 2 entries")
+		assert.ErrorAs(t, err, new(*UnpackLimitError))
 	})
 
 	t.Run("within limits", func(t *testing.T) {

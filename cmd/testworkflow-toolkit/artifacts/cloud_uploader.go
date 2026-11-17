@@ -129,7 +129,14 @@ func (d *cloudUploader) putObject(url string, path string, file io.Reader, size 
 func (d *cloudUploader) putObjectOnce(url string, path string, file io.Reader, size int64) (retryable bool, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, file)
+	// Hand the request a non-closing view of the body. An *os.File is an
+	// io.ReadCloser, so net/http would otherwise close it after each attempt -
+	// and the retry in putObject could no longer Seek(0) to resend it.
+	body := file
+	if body != nil {
+		body = io.NopCloser(body)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, body)
 	if err != nil {
 		return false, err
 	}

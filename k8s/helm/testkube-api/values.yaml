@@ -94,6 +94,12 @@ rbac:
 ## Number of Testkube API Pod replicas
 replicaCount: 1
 
+## Deployment update strategy. Leave empty to use Kubernetes defaults.
+## Example for non-overlapping upgrades:
+## deploymentStrategy:
+##   type: Recreate
+deploymentStrategy: {}
+
 ## Testkube Pod annotations
 ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
 ## To add annotations to the pods related to the test executions use the

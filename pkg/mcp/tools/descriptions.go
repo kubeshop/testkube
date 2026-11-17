@@ -52,7 +52,7 @@ or an RFC 3339 timestamp (e.g., '2024-01-31T16:00:00Z'). Combine with startDate 
 	UpdateWorkflowDescription              = "Update an existing TestWorkflow with a new YAML definition. The workflow is updated immediately and available for execution with the new configuration."
 
 	// Execution tool descriptions
-	FetchExecutionLogsDescription           = "Retrieve logs from a test workflow execution. Default returns last 100 lines. Use grep to search the full log (capped at 100 matches). Always paginate in 100-line chunks. For parallel workflows with workers, call get_execution_info first to get valid worker refs (do not use step refs)."
+	FetchExecutionLogsDescription           = "Retrieve logs from a test workflow execution. Default returns last 100 lines. Use grep to search the full log in any case; over 100 matches, you get the last 100. Always paginate in 100-line chunks. For a failed execution, start with step set to the statusDetails.step that get_execution_info returns. Line numbers in results count from the top of the whole log, also when a step is set. For parallel workflows with workers, call get_execution_info first to get valid worker refs (do not use step refs)."
 	ListExecutionsDescription               = "List test workflow executions with filtering by workflow, status, date range, labels, tags, or text search. Returns execution summaries including status, duration, and metadata. Use to discover recent runs or find specific executions."
 	GetExecutionInfoDescription             = "Get detailed information about a specific workflow execution: status, timing, results, configuration, and worker instances. An execution that did not pass also carries statusDetails, which names the layer that failed, a reason code for the cause, and the step that holds it. Requires executionId. workflowName is optional for disambiguation."
 	GetExecutionInfoWorkflowNameDescription = "Optional workflow name for scoping an execution name lookup. Safe to omit when you have an execution ID."
@@ -184,6 +184,7 @@ Per kind:
   or a granular metric key from list_insight_metric_keys;
   aggregate - one the measure offers, defaulting to the first: 'sum' only for counts (execution-count, case-count, '-total', count metrics),
   'max'/'min' first for '-max'/'-min' measures, 'avg' only for '-avg', 'max' first for latency, duration and rate metrics, otherwise 'sum', 'avg', 'min' or 'max';
+  aggregationPeriod ('day', 'week', 'month', 'quarter' or 'year'; calendar buckets in UTC, default derived from the date range);
   segment (break down by 'status', 'statusDetailsType', 'statusDetailsReason', 'workflow', a label key, 'tag:<key>' or an identity field; default 'status', '' for none);
   chartType 'bar' (default), 'bar-grouped', 'bar-normalized', 'line-stacked', 'line', 'area-normalized', 'heatmap' or 'horizon'; overlaySuccessRate (boolean).
 Example: {"measure": "execution-duration", "aggregate": "avg", "segment": "workflow", "duration": "month", "chartType": "line"}`

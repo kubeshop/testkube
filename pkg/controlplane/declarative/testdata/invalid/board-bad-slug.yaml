@@ -1,0 +1,6 @@
+apiVersion: insights.testkube.io/v1alpha1
+kind: Board
+metadata:
+  name: My_Board
+spec:
+  reports: []

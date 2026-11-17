@@ -1,23 +1,3 @@
-// Package convert migrates Testkube control-plane data from MongoDB to
-// PostgreSQL.
-//
-// It exists because an OSS installation that switches API_MONGO_DSN for
-// API_POSTGRES_DSN otherwise starts from an empty database: historical Test
-// Workflow executions vanish, and execution numbering restarts at 1 so new
-// executions collide with the names of old ones.
-//
-// Two collections carry data worth moving:
-//
-//   - testworkflowresults, into the seven test_workflow_* tables
-//   - sequences, into execution_sequences
-//
-// Everything else is deliberately out of scope. Execution logs, outputs and
-// artifacts live in object storage, not Mongo -- only their references travel
-// with the execution. Test workflow and template definitions are Kubernetes
-// custom resources. Cluster configuration lives in a ConfigMap. The triggers
-// collection holds a leader-election lease with a one-minute lifetime that the
-// API server reacquires on startup, so copying it across would move a stale row
-// and nothing else.
 package convert
 
 import (
@@ -117,7 +97,7 @@ func (r *Result) Failed() bool {
 		return true
 	}
 	for _, s := range r.Stats {
-		if s.Failed > 0 {
+		if s.Failed > 0 || s.RecopyFailed > 0 {
 			return true
 		}
 	}
@@ -302,6 +282,10 @@ func (r *Result) PrintSummary(log *zap.SugaredLogger) {
 		log.Infof("%-12s processed=%d failed=%d skipped=%d of %d in %s",
 			task, stats.Processed, stats.Failed, stats.Skipped, stats.Total,
 			stats.Duration().Round(time.Millisecond))
+		if stats.RecopyFailed > 0 {
+			log.Warnf("%-12s %d executions still unfinished in postgres: recopy failed",
+				task, stats.RecopyFailed)
+		}
 	}
 	log.Infof("Total duration: %s", r.Duration.Round(time.Millisecond))
 	log.Info(rule)

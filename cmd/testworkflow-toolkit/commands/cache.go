@@ -315,7 +315,7 @@ func runCacheRestore(ctx context.Context, encoded string, repository executionca
 	store := cacheStore(out)
 	defer store.Close()
 
-	wrote, size, err := downloadCache(ctx, store, entry.URL, spec.Paths)
+	wrote, size, err := downloadCache(ctx, store, entry.URL, spec.Paths, cacheMaxUnpackedSize)
 	if size > 0 {
 		// The object was a pointer, so its own size says nothing about what was
 		// restored; the pointer carries what the entry holds.
@@ -632,7 +632,7 @@ func cacheInbox(out io.Writer) *volume.Inbox {
 // leaves that tree behind even if a later attempt fails earlier.
 // size reports how much the entry held, for the line the restore prints. It is zero
 // for an archive, whose compressed size the caller already knows from the grant.
-func downloadCache(ctx context.Context, store *volume.Store, url string, allowedPaths []string) (wrote bool, size int64, err error) {
+func downloadCache(ctx context.Context, store *volume.Store, url string, allowedPaths []string, maxUnpackedSize int64) (wrote bool, size int64, err error) {
 	client := &http.Client{Timeout: cacheTransferTimeout}
 
 	var lastErr error
@@ -659,7 +659,7 @@ func downloadCache(ctx context.Context, store *volume.Store, url string, allowed
 			body := bufio.NewReaderSize(resp.Body, volume.MaxPointerBytes)
 			head, peekErr := body.Peek(len(volume.Magic))
 			if peekErr == nil && bytes.Equal(head, []byte(volume.Magic)) {
-				wrote, size, err = restoreFromVolume(store, body, allowedPaths)
+				wrote, size, err = restoreFromVolume(store, body, allowedPaths, maxUnpackedSize)
 				resp.Body.Close()
 
 				// A pointer that was read and could not be followed will not start
@@ -680,7 +680,7 @@ func downloadCache(ctx context.Context, store *volume.Store, url string, allowed
 			}
 
 			err = common.UnpackTarball("/", body,
-				common.WithMaxTotalBytes(cacheMaxUnpackedSize),
+				common.WithMaxTotalBytes(maxUnpackedSize),
 				common.WithMaxEntries(cacheMaxEntries),
 				common.WithAllowedRoots(allowedPaths...),
 				// Tools may trim their caches by modification time.
@@ -689,6 +689,11 @@ func downloadCache(ctx context.Context, store *volume.Store, url string, allowed
 			resp.Body.Close()
 			if err == nil {
 				return wrote, 0, nil
+			}
+			// A stored entry never changes, so retrying cannot succeed.
+			var limitErr *common.UnpackLimitError
+			if errors.As(err, &limitErr) {
+				return wrote, 0, err
 			}
 		} else if resp != nil {
 			resp.Body.Close()
@@ -704,7 +709,7 @@ func downloadCache(ctx context.Context, store *volume.Store, url string, allowed
 // contract the archive path has - but the reasons are worth naming separately, because
 // "the pointer is there and the entry is not" is a retention misconfiguration, and a
 // silent miss would hide it behind a cold cache.
-func restoreFromVolume(store *volume.Store, body io.Reader, allowedPaths []string) (bool, int64, error) {
+func restoreFromVolume(store *volume.Store, body io.Reader, allowedPaths []string, maxUnpackedSize int64) (bool, int64, error) {
 	head, err := io.ReadAll(io.LimitReader(body, volume.MaxPointerBytes))
 	if err != nil {
 		// Marked retryable: the magic was only the first bytes, and the rest of the
@@ -731,7 +736,7 @@ func restoreFromVolume(store *volume.Store, body io.Reader, allowedPaths []strin
 	defer root.Close()
 
 	wrote, err := volume.RestoreTree(root, allowedPaths, volume.CopyLimits{
-		MaxTotalBytes: cacheMaxUnpackedSize,
+		MaxTotalBytes: maxUnpackedSize,
 		MaxEntries:    cacheMaxEntries,
 	})
 	if err != nil {
