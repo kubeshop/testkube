@@ -297,39 +297,40 @@ spec:
       npx turbo run build --filter=@testkube-ai/copilot
       ln -s ../src/stores/data packages/copilot/dist/data
   - name: Run AI assistant cases
-    workingDir: /data/repo/js/packages/copilot
-    env:
-    - name: CP_STUB_PORT
-      value: "8090"
-    - name: TEST_ORG_ID
-      value: test-org
-    - name: TEST_ENV_ID
-      value: test-env
-    - name: ENABLE_MCP_TOOLS
-      value: "true"
-    - name: NODE_ENV
-      value: production
-    - name: LOG_LEVEL
-      value: info
-    - name: USE_TLS
-      value: "false"
-    - name: PORT
-      value: "9090"
-    - name: CONTROL_PLANE_ENDPOINT
-      value: http://localhost:8090
-    - name: API_POSTGRES_URL
-      value: postgresql://copilot:copilot@{{ services.postgres.0.ip }}:5432/copilot?sslmode=disable
-    - name: LLM_API_KEY
-      valueFrom:
-        secretKeyRef:
-          name: testkube-agent-secrets
-          key: DEV_LLM_API_KEY
-    - name: MODEL_NAME
-      value: gpt-4o-mini
-    - name: OAUTH_JWKS_URL
-      value: http://localhost:8090/keys
-    - name: OAUTH_ISSUER
-      value: http://localhost:8090
+    container:
+      workingDir: /data/repo/js/packages/copilot
+      env:
+      - name: CP_STUB_PORT
+        value: "8090"
+      - name: TEST_ORG_ID
+        value: test-org
+      - name: TEST_ENV_ID
+        value: test-env
+      - name: ENABLE_MCP_TOOLS
+        value: "true"
+      - name: NODE_ENV
+        value: production
+      - name: LOG_LEVEL
+        value: info
+      - name: USE_TLS
+        value: "false"
+      - name: PORT
+        value: "9090"
+      - name: CONTROL_PLANE_ENDPOINT
+        value: http://localhost:8090
+      - name: API_POSTGRES_URL
+        value: postgresql://copilot:copilot@{{ services.postgres.0.ip }}:5432/copilot?sslmode=disable
+      - name: LLM_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: testkube-agent-secrets
+            key: DEV_LLM_API_KEY
+      - name: MODEL_NAME
+        value: gpt-4o-mini
+      - name: OAUTH_JWKS_URL
+        value: http://localhost:8090/keys
+      - name: OAUTH_ISSUER
+        value: http://localhost:8090
     shell: |
       mkdir -p /data/artifacts
       wait_for() {
