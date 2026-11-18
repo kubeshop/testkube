@@ -100,7 +100,7 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 			}
 		}
 		clientType = string(client.ClientCloud)
-		options.CloudApiPathPrefix = fmt.Sprintf("/organizations/%s/environments/%s/agent", cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId)
+		options.CloudApiPathPrefix = client.CloudAgentPathPrefix(cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId)
 		options.CloudApiKey = token
 		options.CloudEnvironment = cfg.CloudContext.EnvironmentId
 		options.CloudOrganization = cfg.CloudContext.OrganizationId
