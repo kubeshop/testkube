@@ -21,7 +21,10 @@
 // Normalize before sending it, so an invalid one is a terminal error reported in the cluster and is
 // never sent. It sends the object as declarative.ApplyPayload makes it for testkube apply: without
 // status, and with its annotations, so testkube.io/gitops-owner and testkube.io/no-gitops-sync work
-// as they do for the other kinds. Syncing another kind means adding it to
+// as they do for the other kinds. A delete names the resource alone, and the Control Plane does not
+// store these kinds' annotations, so testkube.io/no-gitops-sync pauses deletes here, in the runner:
+// it remembers which custom resources carried the annotation when it last saw them
+// (pausedResources) and does not send their delete. Syncing another kind means adding it to
 // syncedControlPlaneResources in the controller package, its scheme in main.go, read access in the
 // Helm charts, and its arm in the Control Plane's handler; the proto stays as it is.
 //
