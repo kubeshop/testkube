@@ -352,7 +352,7 @@ func main() {
 	// Configure SyncStore here as it is required for the SuperAgent migration.
 	// This setup can be moved back down to just before the controller initialisation
 	// when the SuperAgent migration has been removed.
-	syncStore := syncgrpc.NewClient(grpcConn, log.DefaultLogger, proContext.APIKey, proContext.OrgID, proContext.EnvID, grpcTLSEnabled)
+	syncStore := syncgrpc.NewClient(grpcConn, log.DefaultLogger, proContext.APIKey, proContext.OrgID, proContext.TokenEnvID, grpcTLSEnabled)
 	inventoryClient := inventorygrpc.NewClient(grpcConn, log.DefaultLogger, proContext.APIKey, proContext.OrgID, grpcTLSEnabled)
 	// SUPER AGENT DEPRECATION MIGRATION
 	// Run the migration function blocking further processing. We want the migration to run and succeed or to fail and
@@ -756,7 +756,7 @@ func main() {
 		if proContext.CloudStorageSupportedInControlPlane && cfg.GitOpsSyncKubernetesToCloudEnabled {
 			// Each resource syncs into the Environment that GITOPS_NAMESPACES maps its namespace to.
 			syncTarget := syncagent.TargetFunc(func(ns string) syncagent.Target {
-				return syncagent.Target{Namespace: ns, EnvironmentID: gitopsNamespaces.EnvironmentID(ns, proContext.EnvID)}
+				return syncagent.Target{Namespace: ns, EnvironmentID: gitopsNamespaces.EnvironmentID(ns, proContext.TokenEnvID)}
 			})
 			err = synccontroller.NewTestTriggerSyncController(mgr, syncStore, syncTarget)
 			commons.ExitOnError("creating TestTrigger sync controller", err)
