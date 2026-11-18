@@ -14,8 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
@@ -105,12 +103,11 @@ type HelmGenericOptions struct {
 }
 
 const (
-	github                = "GitHub"
-	gitlab                = "GitLab"
-	google                = "Google"
-	emailLink             = "Email (magic link)"
-	dockerDaemonPrefixLen = 8
-	latestReleaseUrl      = "https://api.github.com/repos/kubeshop/testkube/releases/latest"
+	github           = "GitHub"
+	gitlab           = "GitLab"
+	google           = "Google"
+	emailLink        = "Email (magic link)"
+	latestReleaseUrl = "https://api.github.com/repos/kubeshop/testkube/releases/latest"
 )
 
 func (o HelmOptions) GetApiURI() string {
@@ -1589,43 +1586,36 @@ func prepareTestkubeUpgradeDockerArgs(options HelmOptions, dockerContainerName, 
 }
 
 func StreamDockerLogs(dockerContainerName string) *CLIError {
-	// Create a Docker client
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return NewCLIError(
-			TKErrInvalidDockerConfig,
-			"Invalid docker config",
-			"Check your environment variables used to connect to Docker daemon",
-			err)
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	ctx := context.Background()
-	// Set options to stream logs and show both stdout and stderr logs
-	opts := container.LogsOptions{
-		ShowStdout: true,
-		ShowStderr: true,
-		Follow:     true, // Follow logs in real-time
-		Timestamps: false,
-	}
-
-	// Fetch logs from the container
-	logs, err := cli.ContainerLogs(ctx, dockerContainerName, opts)
-	if err != nil {
+	// Use the docker CLI, as RunDockerCommand does, so binaries importing this package
+	// do not link github.com/docker/docker and its daemon-side CVEs.
+	// process.Execute cannot be used here: it waits for exit, and "docker logs --follow" does not exit.
+	args := []string{"logs", "--follow", dockerContainerName}
+	cmd := exec.CommandContext(ctx, "docker", args...)
+	logs, writer := io.Pipe()
+	// docker logs writes the container's stdout and stderr to its own stdout and stderr
+	cmd.Stdout = writer
+	cmd.Stderr = writer
+	if err := cmd.Start(); err != nil {
 		return NewCLIError(
 			TKErrDockerLogStreamingFailed,
 			"Docker log streaming failed",
-			"Check that your Testkube Docker Runner container is up and runnning",
-			err)
+			"Check is the Docker service installed and running on your computer by executing 'docker info' ",
+			err,
+		).WithExecutedCommand(strings.Join(append([]string{"docker"}, args...), " "))
 	}
+	go func() {
+		writer.CloseWithError(cmd.Wait())
+	}()
+	// Closing the reader first unblocks the copy to the pipe, so the cancelled command can exit
 	defer logs.Close()
 
 	// Use a buffered scanner to read the logs line by line
 	scanner := bufio.NewScanner(logs)
 	for scanner.Scan() {
 		line := scanner.Bytes()
-		if len(line) > dockerDaemonPrefixLen {
-			line = line[dockerDaemonPrefixLen:]
-		}
 
 		if ui.IsVerbose() {
 			fmt.Println(string(line)) // Optional: print logs to console
@@ -1645,6 +1635,15 @@ func StreamDockerLogs(dockerContainerName string) *CLIError {
 	}
 
 	if err := scanner.Err(); err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			return NewCLIError(
+				TKErrDockerLogStreamingFailed,
+				"Docker log streaming failed",
+				"Check that your Testkube Docker Runner container is up and runnning",
+				err,
+			).WithExecutedCommand(strings.Join(append([]string{"docker"}, args...), " "))
+		}
 		return NewCLIError(
 			TKErrDockerLogReadingFailed,
 			"Docker log reading failed",
