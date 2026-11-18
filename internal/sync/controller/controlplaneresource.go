@@ -171,6 +171,12 @@ func syncPaused(obj client.Object) bool {
 // seen. A deleted resource is gone by the time it is reconciled, and the delete names it alone, so
 // what the runner saw of it last is what says whether its delete is paused: every event carries the
 // object, the delete event its final state.
+//
+// The pause is kept for as long as no event says otherwise, however often the resource is read
+// missing: a retry queued before the delete, or a requeue after it, reconciles the same name again
+// and must not send the delete either. Only an event changes it, such as the create of a new
+// resource of the same name without the annotation. A paused resource that stays deleted keeps
+// its entry, one name each.
 type pausedResources struct {
 	mu    sync.Mutex
 	names map[types.NamespacedName]bool
@@ -195,14 +201,11 @@ func (p *pausedResources) observe(obj client.Object) {
 	}
 }
 
-// deleted reports whether the delete of the resource is paused, and forgets it: once gone, it is
-// not seen again unless created anew.
-func (p *pausedResources) deleted(name types.NamespacedName) bool {
+// paused reports whether the sync of the resource is paused, as the runner last saw it.
+func (p *pausedResources) paused(name types.NamespacedName) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	paused := p.names[name]
-	delete(p.names, name)
-	return paused
+	return p.names[name]
 }
 
 // predicate observes every event and filters none.
@@ -291,7 +294,7 @@ func controlPlaneResourceSyncReconciler(client client.Reader, store ControlPlane
 		case apierrors.IsNotFound(err):
 			// Deleted. Resources are named by their name alone in the Control Plane.
 			synced.set(kind.Resource, req.NamespacedName, false)
-			if paused.deleted(req.NamespacedName) {
+			if paused.paused(req.NamespacedName) {
 				return ctrl.Result{}, nil
 			}
 			return ctrl.Result{}, deleteControlPlaneResource(ctx, store, kind, req.Name)

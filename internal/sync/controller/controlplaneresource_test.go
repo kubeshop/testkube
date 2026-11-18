@@ -176,11 +176,18 @@ func TestControlPlaneResourceSyncReconcilerPausedDelete(t *testing.T) {
 		return store
 	}
 
-	// Seen last with the annotation: the delete is not sent, and only that once.
+	// Seen last with the annotation: the delete is not sent, nor by any later read of the missing
+	// resource, such as a retry queued before the delete.
 	paused := newPausedResources()
 	paused.predicate().Delete(event.DeleteEvent{Object: marked("true")})
 	assert.Empty(t, gone(paused).Deleted)
-	assert.Equal(t, "release-health", gone(paused).Deleted, "forgotten once deleted")
+	assert.Empty(t, gone(paused).Deleted, "a retry is paused too")
+
+	// A new resource of the same name, without the annotation, is synced and deleted again.
+	unmarked := marked("true")
+	unmarked.Annotations = nil
+	paused.predicate().Create(event.CreateEvent{Object: unmarked})
+	assert.Equal(t, "release-health", gone(paused).Deleted, "an event clears the pause")
 
 	// The annotation removed before the delete, or not true, deletes it.
 	paused = newPausedResources()
