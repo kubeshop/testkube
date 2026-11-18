@@ -228,6 +228,7 @@ spec:
       cone: true
       paths:
       - js
+      - cmd/mcp-bridge
   services:
     postgres:
       image: postgres:16-alpine
@@ -269,6 +270,12 @@ spec:
       - cloud-ai-service-v1-npm-
       paths:
       - /root/.npm/_cacache
+  - name: Build MCP bridge
+    # The AI service exits at startup without this binary.
+    container:
+      image: golang:1.26.10-bookworm
+      workingDir: /data/repo
+    shell: go build -o js/packages/copilot/mcp-bridge/mcp-bridge ./cmd/mcp-bridge
   - name: Build
     shell: |
       npx turbo run build --filter=@testkube-ai/copilot
@@ -311,7 +318,7 @@ spec:
       mkdir -p /data/artifacts
       wait_for() {
         for _ in $(seq 1 150); do curl -sf -o /dev/null "$1" && return 0; sleep 2; done
-        echo "$1 did not become ready"; tail -50 /data/artifacts/*.log; exit 1
+        echo "$1 did not become ready"; tail -n 50 /data/artifacts/*.log; exit 1
       }
       node dist/scripts/cp-stub/index.js > /data/artifacts/cpstub.log 2>&1 &
       wait_for http://localhost:8090/
@@ -327,7 +334,7 @@ spec:
       {"id":"workflow-knowledge","title":"Explain readiness probes","prompt":"What are the best practices for configuring a readiness probe in a TestWorkflow?","responseMustContainAll":["readiness"]}
       EOF
       EXPECTED_SESSIONS=3 node dist/scripts/verify-status-pushes.js || fail=1
-      [ "$fail" = 0 ] || tail -100 /data/artifacts/aiservice.log
+      [ "$fail" = 0 ] || tail -n 100 /data/artifacts/aiservice.log
       exit "$fail"
     artifacts:
       workingDir: /data/artifacts
