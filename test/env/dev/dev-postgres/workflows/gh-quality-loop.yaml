@@ -275,6 +275,21 @@ spec:
     container:
       image: golang:1.26.10-bookworm
       workingDir: /data/repo
+      env:
+      - name: GOMODCACHE
+        value: /root/go/pkg/mod
+      - name: GOPROXY
+        value: https://proxy.golang.org,direct
+      - name: GOCACHE
+        value: /root/.cache/go-build
+    cache:
+      # Keyed on the modules and the image's Go, never the sources: the bridge's code is tiny,
+      # its dependencies are the cost. No restoreKeys, so the entry can't grow (see cloud-lint-go).
+      key: cloud-ai-service-v1-golang-1.26.10-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      paths:
+      - /root/go/pkg/mod/cache/download
+      - /root/.cache/go-build
+      scope: workflow
     # -buildvcs=false: git can't read the clone from this container, and the version stamp isn't needed.
     shell: go build -buildvcs=false -o js/packages/copilot/mcp-bridge/mcp-bridge ./cmd/mcp-bridge
   - name: Build
