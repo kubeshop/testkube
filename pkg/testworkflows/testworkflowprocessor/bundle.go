@@ -82,9 +82,13 @@ func (b *Bundle) SetRunnerId(runnerId string) {
 	}
 }
 
+// Deploy creates the resources of the bundle in the namespace of the Job, or in the given namespace
+// when the Job has none. The Job keeps the namespace that it runs in, so the caller can report it.
 func (b *Bundle) Deploy(ctx context.Context, clientSet kubernetes.Interface, namespace string) (err error) {
 	if b.Job.Namespace != "" {
 		namespace = b.Job.Namespace
+	} else {
+		b.Job.Namespace = namespace
 	}
 	for _, item := range b.Secrets {
 		_, err = clientSet.CoreV1().Secrets(namespace).Create(ctx, &item, metav1.CreateOptions{})
