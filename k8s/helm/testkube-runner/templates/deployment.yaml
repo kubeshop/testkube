@@ -376,7 +376,7 @@ spec:
             - name: "GITOPS_KUBERNETES_TO_CLOUD_ENABLED"
               value: "{{ if .Values.gitops.enabled }}true{{ else }}false{{ end }}"
             - name: "GITOPS_CONTROLPLANE_RESOURCES_ENABLED"
-              value: "{{ if and .Values.gitops.enabled .Values.gitops.controlPlaneResources.enabled }}true{{ else }}false{{ end }}"
+              value: "{{ if include "testkube-runner.gitops.controlPlaneResources" . }}true{{ else }}false{{ end }}"
             - name: "GITOPS_CLOUD_TO_KUBERNETES_ENABLED"
               value: "false"
             - name: "ENABLE_CRON_JOBS"

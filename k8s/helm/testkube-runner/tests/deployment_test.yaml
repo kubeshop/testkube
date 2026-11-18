@@ -183,6 +183,17 @@ tests:
             name: GITOPS_CONTROLPLANE_RESOURCES_ENABLED
             value: "false"
 
+  - it: does not sync Control Plane resources with values that predate gitops.controlPlaneResources
+    set:
+      gitops.enabled: true
+      gitops.controlPlaneResources: null
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GITOPS_CONTROLPLANE_RESOURCES_ENABLED
+            value: "false"
+
   - it: passes GITOPS_CONTROLPLANE_RESOURCES_ENABLED when the GitOps runner syncs them
     set:
       gitops.enabled: true

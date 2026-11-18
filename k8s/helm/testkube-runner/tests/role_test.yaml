@@ -217,6 +217,27 @@ tests:
               - list
               - watch
 
+  - it: does not let a GitOps runner read Boards with values that predate gitops.controlPlaneResources
+    set:
+      gitops.enabled: true
+      gitops.controlPlaneResources: null
+      listener.watchAllNamespaces: true
+    documentSelector:
+      path: metadata.name
+      value: watchers-role-tk
+    asserts:
+      - notContains:
+          path: rules
+          content:
+            apiGroups:
+              - insights.testkube.io
+            resources:
+              - boards
+            verbs:
+              - get
+              - list
+              - watch
+
   - it: does not let a listener alone read Boards
     set:
       listener.enabled: true
