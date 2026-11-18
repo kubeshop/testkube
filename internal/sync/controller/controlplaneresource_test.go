@@ -183,6 +183,30 @@ func TestControlPlaneResourceSyncReconcilerDeleteWaitsForItsEvent(t *testing.T) 
 	assert.Equal(t, "release-health", store.Deleted)
 }
 
+// A delete seen during a watch interruption carries a final state that may be stale, such as the
+// board as it was before the annotation was added, so its delete is not sent, by that reconcile or
+// any retry. A new board of the same name is synced and deleted again as usual.
+func TestControlPlaneResourceSyncReconcilerUnknownDeleteIsNotSent(t *testing.T) {
+	board := &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: "release-health", Namespace: "testkube"}}
+	reconcileMissing := func(paused *pausedResources) *fakeControlPlaneResourceStore {
+		store := &fakeControlPlaneResourceStore{}
+		_, err := controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, store, boardKind(t), paused).Reconcile(t.Context(), request("release-health"))
+		require.NoError(t, err)
+		return store
+	}
+
+	paused := newPausedResources()
+	paused.predicate().Create(event.CreateEvent{Object: board})
+	// The board was annotated and deleted while the watch was down; the tombstone holds it unannotated.
+	paused.predicate().Delete(event.DeleteEvent{Object: board, DeleteStateUnknown: true})
+	assert.Empty(t, reconcileMissing(paused).Deleted, "stale state: not sent")
+	assert.Empty(t, reconcileMissing(paused).Deleted, "nor by a retry")
+
+	paused.predicate().Create(event.CreateEvent{Object: board})
+	paused.predicate().Delete(event.DeleteEvent{Object: board})
+	assert.Equal(t, "release-health", reconcileMissing(paused).Deleted, "a known delete is sent")
+}
+
 func TestControlPlaneResourceSyncReconcilerDeleteWhenMarkedForDeletion(t *testing.T) {
 	now := metav1.Now()
 	board := &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: "release-health", DeletionTimestamp: &now, Finalizers: []string{"keep"}}}
