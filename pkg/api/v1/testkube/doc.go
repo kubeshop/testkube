@@ -108,4 +108,14 @@
 // has to be migrated. It always encodes the object form {"value": "2"}. The dashboard type in
 // testkube-cloud-api (js/packages/shared-types/src/workflows.ts, TestWorkflowStepParallelBase)
 // reads the same field, so it changes to the boxed form together with this one.
+//
+// # Pod-level resources
+//
+// TestWorkflowPodConfig.Resources is a TestWorkflowPodResources, not the TestWorkflowResources of
+// a container. Its limits and requests are maps keyed by the Kubernetes resource name, so a
+// pod-level name such as hugepages-2Mi survives the mapping to the CRD and back. The fixed fields
+// of a container keep only cpu, memory, storage and ephemeral-storage. The JSON form of those
+// names stays the same object with string values, so a stored workflow decodes without a
+// migration. The Control Plane decodes the field with this model, so it keeps the other names
+// only after it updates its testkube module.
 package testkube
