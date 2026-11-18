@@ -19,6 +19,9 @@ type WebhookStore interface {
 }
 
 func NewWebhookSyncController(mgr ctrl.Manager, store WebhookStore, resolveTarget syncagent.TargetFunc) error {
+	if err := indexByName(mgr, &executorv1.Webhook{}); err != nil {
+		return fmt.Errorf("index Webhook by name: %w", err)
+	}
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&executorv1.Webhook{}).
 		Complete(webhookSyncReconciler(mgr.GetClient(), store, resolveTarget)); err != nil {

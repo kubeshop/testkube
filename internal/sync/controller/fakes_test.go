@@ -4,6 +4,9 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -34,7 +37,8 @@ type fakeKubernetesClient struct {
 	Webhook              executorv1.Webhook
 	WebhookTemplate      executorv1.WebhookTemplate
 
-	// ListErr is returned by List, and the slices below are what List returns for each kind.
+	// ListErr is returned by List, and the slices below are what List returns for each kind. List
+	// keeps only the items of the name that a nameIndexField selector asks for, as the cache does.
 	ListErr               error
 	TestTriggers          []testtriggersv1.TestTrigger
 	WorkflowTriggers      []workflowtriggersv1.WorkflowTrigger
@@ -62,7 +66,7 @@ func (t fakeKubernetesClient) Get(_ context.Context, _ client.ObjectKey, obj cli
 	return t.Err
 }
 
-func (t fakeKubernetesClient) List(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
+func (t fakeKubernetesClient) List(_ context.Context, list client.ObjectList, opts ...client.ListOption) error {
 	switch v := list.(type) {
 	case *testtriggersv1.TestTriggerList:
 		v.Items = append(v.Items[:0], t.TestTriggers...)
@@ -77,7 +81,24 @@ func (t fakeKubernetesClient) List(_ context.Context, list client.ObjectList, _ 
 	case *executorv1.WebhookTemplateList:
 		v.Items = append(v.Items[:0], t.WebhookTemplates...)
 	}
-	return t.ListErr
+	if t.ListErr != nil {
+		return t.ListErr
+	}
+	selector := (&client.ListOptions{}).ApplyOptions(opts).FieldSelector
+	if selector == nil {
+		return nil
+	}
+	items, err := meta.ExtractList(list)
+	if err != nil {
+		return err
+	}
+	selected := make([]runtime.Object, 0, len(items))
+	for _, item := range items {
+		if obj, ok := item.(client.Object); ok && selector.Matches(fields.Set{nameIndexField: obj.GetName()}) {
+			selected = append(selected, item)
+		}
+	}
+	return meta.SetList(list, selected)
 }
 
 type fakeStore struct {

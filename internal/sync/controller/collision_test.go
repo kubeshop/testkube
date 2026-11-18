@@ -46,6 +46,11 @@ func TestCheckNameCollision(t *testing.T) {
 			wantErr:  syncagent.ErrNameCollision,
 		},
 		{
+			name:     "an earlier resource with another name does not refuse it",
+			obj:      workflow("team-c", later),
+			existing: []testworkflowsv1.TestWorkflow{renamed(workflow("team-b", earlier)), workflow("team-c", later)},
+		},
+		{
 			name:     "the earlier resource syncs",
 			obj:      workflow("team-b", earlier),
 			existing: []testworkflowsv1.TestWorkflow{workflow("team-b", earlier), workflow("team-c", later)},
@@ -129,6 +134,12 @@ func TestSyncDelete(t *testing.T) {
 			wantUpdated: "team-c",
 		},
 		{
+			name:        "a resource with another name does not take the record",
+			namespace:   "team-c",
+			existing:    []testworkflowsv1.TestWorkflow{renamed(workflow("team-b", earlier))},
+			wantDeleted: true,
+		},
+		{
 			name:        "the earliest of the other resources wins",
 			namespace:   "default",
 			existing:    []testworkflowsv1.TestWorkflow{workflow("team-z", later), workflow("team-y", earlier)},
@@ -194,4 +205,10 @@ func TestSyncDelete(t *testing.T) {
 			assert.Equal(t, tt.wantDeleted, deleted)
 		})
 	}
+}
+
+// renamed returns workflow with another name, which the name selector of the List leaves out.
+func renamed(workflow testworkflowsv1.TestWorkflow) testworkflowsv1.TestWorkflow {
+	workflow.Name = "other"
+	return workflow
 }
