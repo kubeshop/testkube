@@ -5,15 +5,21 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
+	"sync"
 
 	"go.uber.org/zap"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	aiv1 "github.com/kubeshop/testkube/api/ai/v1alpha1"
@@ -145,32 +151,106 @@ func canListAndWatch(ctx context.Context, reviews accessReviews, namespace, grou
 	return true, nil
 }
 
+// noGitOpsSyncAnnotation pauses the sync of one resource. The Control Plane skips the creates and
+// updates of a resource carrying it; the runner skips its deletes (pausedResources), as the
+// Control Plane does not store the annotations of these kinds and so cannot.
+const noGitOpsSyncAnnotation = "testkube.io/no-gitops-sync"
+
+// syncPaused reports whether obj carries testkube.io/no-gitops-sync set to true, read as the
+// Control Plane reads it.
+func syncPaused(obj client.Object) bool {
+	value, ok := obj.GetAnnotations()[noGitOpsSyncAnnotation]
+	if !ok {
+		return false
+	}
+	paused, err := strconv.ParseBool(value)
+	return err == nil && paused
+}
+
+// pausedResources remembers which custom resources carried testkube.io/no-gitops-sync when last
+// seen. A deleted resource is gone by the time it is reconciled, and the delete names it alone, so
+// what the runner saw of it last is what says whether its delete is paused: every event carries the
+// object, the delete event its final state.
+type pausedResources struct {
+	mu    sync.Mutex
+	names map[types.NamespacedName]bool
+}
+
+func newPausedResources() *pausedResources {
+	return &pausedResources{names: map[types.NamespacedName]bool{}}
+}
+
+// observe records whether obj, as an event carries it, pauses its sync.
+func (p *pausedResources) observe(obj client.Object) {
+	if obj == nil {
+		return
+	}
+	name := types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if syncPaused(obj) {
+		p.names[name] = true
+	} else {
+		delete(p.names, name)
+	}
+}
+
+// deleted reports whether the delete of the resource is paused, and forgets it: once gone, it is
+// not seen again unless created anew.
+func (p *pausedResources) deleted(name types.NamespacedName) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	paused := p.names[name]
+	delete(p.names, name)
+	return paused
+}
+
+// predicate observes every event and filters none.
+func (p *pausedResources) predicate() predicate.Funcs {
+	return predicate.Funcs{
+		CreateFunc:  func(e event.CreateEvent) bool { p.observe(e.Object); return true },
+		UpdateFunc:  func(e event.UpdateEvent) bool { p.observe(e.ObjectNew); return true },
+		DeleteFunc:  func(e event.DeleteEvent) bool { p.observe(e.Object); return true },
+		GenericFunc: func(e event.GenericEvent) bool { p.observe(e.Object); return true },
+	}
+}
+
 // NewControlPlaneResourceSyncController syncs the custom resources of one kind of the declarative
 // registry to the Control Plane.
 func NewControlPlaneResourceSyncController(mgr ctrl.Manager, store ControlPlaneResourceStore, kind declarative.Kind) error {
+	paused := newPausedResources()
 	if err := ctrl.NewControllerManagedBy(mgr).
-		For(kind.New()).
-		Complete(controlPlaneResourceSyncReconciler(mgr.GetClient(), store, kind)); err != nil {
+		For(kind.New(), builder.WithPredicates(paused.predicate())).
+		Complete(controlPlaneResourceSyncReconciler(mgr.GetClient(), store, kind, paused)); err != nil {
 		return fmt.Errorf("create new sync controller for %s: %w", kind.Kind, err)
 	}
 	return nil
 }
 
-func controlPlaneResourceSyncReconciler(client client.Reader, store ControlPlaneResourceStore, kind declarative.Kind) reconcile.Reconciler {
+// controlPlaneResourceSyncReconciler syncs one kind. A resource carrying testkube.io/no-gitops-sync
+// is sent, and the Control Plane skips it, but its delete is not sent at all: paused says whether
+// the resource carried the annotation when the runner last saw it.
+func controlPlaneResourceSyncReconciler(client client.Reader, store ControlPlaneResourceStore, kind declarative.Kind, paused *pausedResources) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 		obj := kind.New()
 		err := client.Get(ctx, req.NamespacedName, obj)
 		switch {
 		case apierrors.IsNotFound(err):
 			// Deleted. Resources are named by their name alone in the Control Plane.
+			if paused.deleted(req.NamespacedName) {
+				return ctrl.Result{}, nil
+			}
 			return ctrl.Result{}, deleteControlPlaneResource(ctx, store, kind, req.Name)
 		case err != nil:
 			return ctrl.Result{}, fmt.Errorf("retrieve %s %q from Kubernetes: %w", kind.Kind, req.NamespacedName, err)
 		}
 
 		// Marked for deletion: there may be no event when it finally goes, so this is when the
-		// Control Plane is told.
+		// Control Plane is told, unless the resource pauses its sync.
 		if !obj.GetDeletionTimestamp().IsZero() {
+			if syncPaused(obj) {
+				return ctrl.Result{}, nil
+			}
 			return ctrl.Result{}, deleteControlPlaneResource(ctx, store, kind, req.Name)
 		}
 
