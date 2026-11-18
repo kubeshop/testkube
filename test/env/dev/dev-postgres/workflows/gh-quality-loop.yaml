@@ -275,7 +275,8 @@ spec:
     container:
       image: golang:1.26.10-bookworm
       workingDir: /data/repo
-    shell: go build -o js/packages/copilot/mcp-bridge/mcp-bridge ./cmd/mcp-bridge
+    # -buildvcs=false: git can't read the clone from this container, and the version stamp isn't needed.
+    shell: go build -buildvcs=false -o js/packages/copilot/mcp-bridge/mcp-bridge ./cmd/mcp-bridge
   - name: Build
     shell: |
       npx turbo run build --filter=@testkube-ai/copilot
