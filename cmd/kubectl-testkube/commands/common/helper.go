@@ -1606,11 +1606,18 @@ func StreamDockerLogs(dockerContainerName string) *CLIError {
 			err,
 		).WithExecutedCommand(strings.Join(append([]string{"docker"}, args...), " "))
 	}
+	exited := make(chan struct{})
 	go func() {
 		writer.CloseWithError(cmd.Wait())
+		close(exited)
 	}()
-	// Closing the reader first unblocks the copy to the pipe, so the cancelled command can exit
-	defer logs.Close()
+	// Stop the command once a marker is found, and return only after it exited so no process is left behind.
+	// Closing the reader first unblocks the copy to the pipe, so the cancelled command can exit.
+	defer func() {
+		logs.Close()
+		cancel()
+		<-exited
+	}()
 
 	// Use a buffered scanner to read the logs line by line
 	scanner := bufio.NewScanner(logs)
