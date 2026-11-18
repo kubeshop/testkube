@@ -11603,6 +11603,12 @@ spec:
                                       - ip
                                     type: object
                                   type: array
+                                hostIPC:
+                                  description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
+                                hostNetwork:
+                                  description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
                                   type: boolean
@@ -11780,6 +11786,9 @@ spec:
                                 serviceAccountName:
                                   description: default service account name for the scheduled pod
                                   type: string
+                                setHostnameAsFQDN:
+                                  description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                                  type: boolean
                                 subdomain:
                                   description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                                   type: string
@@ -13136,6 +13145,12 @@ spec:
                           - ip
                         type: object
                       type: array
+                    hostIPC:
+                      description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                      type: boolean
+                    hostNetwork:
+                      description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                      type: boolean
                     hostPID:
                       description: Whether to allow a pod to have access to the host process ID namespace
                       type: boolean
@@ -13313,6 +13328,9 @@ spec:
                     serviceAccountName:
                       description: default service account name for the scheduled pod
                       type: string
+                    setHostnameAsFQDN:
+                      description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                      type: boolean
                     subdomain:
                       description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                       type: string
@@ -14027,6 +14045,12 @@ spec:
                                 - ip
                               type: object
                             type: array
+                          hostIPC:
+                            description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                            type: boolean
+                          hostNetwork:
+                            description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                            type: boolean
                           hostPID:
                             description: Whether to allow a pod to have access to the host process ID namespace
                             type: boolean
@@ -14204,6 +14228,9 @@ spec:
                           serviceAccountName:
                             description: default service account name for the scheduled pod
                             type: string
+                          setHostnameAsFQDN:
+                            description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                            type: boolean
                           subdomain:
                             description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                             type: string
@@ -17574,6 +17601,12 @@ spec:
                                       - ip
                                     type: object
                                   type: array
+                                hostIPC:
+                                  description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
+                                hostNetwork:
+                                  description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
                                   type: boolean
@@ -17751,6 +17784,9 @@ spec:
                                 serviceAccountName:
                                   description: default service account name for the scheduled pod
                                   type: string
+                                setHostnameAsFQDN:
+                                  description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                                  type: boolean
                                 subdomain:
                                   description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                                   type: string
@@ -21175,6 +21211,12 @@ spec:
                                       - ip
                                     type: object
                                   type: array
+                                hostIPC:
+                                  description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
+                                hostNetwork:
+                                  description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
                                   type: boolean
@@ -21352,6 +21394,9 @@ spec:
                                 serviceAccountName:
                                   description: default service account name for the scheduled pod
                                   type: string
+                                setHostnameAsFQDN:
+                                  description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                                  type: boolean
                                 subdomain:
                                   description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                                   type: string
@@ -25033,6 +25078,12 @@ spec:
                                       - ip
                                     type: object
                                   type: array
+                                hostIPC:
+                                  description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
+                                hostNetwork:
+                                  description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
                                   type: boolean
@@ -25210,6 +25261,9 @@ spec:
                                 serviceAccountName:
                                   description: default service account name for the scheduled pod
                                   type: string
+                                setHostnameAsFQDN:
+                                  description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                                  type: boolean
                                 subdomain:
                                   description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                                   type: string
@@ -26509,6 +26563,12 @@ spec:
                           - ip
                         type: object
                       type: array
+                    hostIPC:
+                      description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                      type: boolean
+                    hostNetwork:
+                      description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                      type: boolean
                     hostPID:
                       description: Whether to allow a pod to have access to the host process ID namespace
                       type: boolean
@@ -26686,6 +26746,9 @@ spec:
                     serviceAccountName:
                       description: default service account name for the scheduled pod
                       type: string
+                    setHostnameAsFQDN:
+                      description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                      type: boolean
                     subdomain:
                       description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                       type: string
@@ -27400,6 +27463,12 @@ spec:
                                 - ip
                               type: object
                             type: array
+                          hostIPC:
+                            description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                            type: boolean
+                          hostNetwork:
+                            description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                            type: boolean
                           hostPID:
                             description: Whether to allow a pod to have access to the host process ID namespace
                             type: boolean
@@ -27577,6 +27646,9 @@ spec:
                           serviceAccountName:
                             description: default service account name for the scheduled pod
                             type: string
+                          setHostnameAsFQDN:
+                            description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                            type: boolean
                           subdomain:
                             description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                             type: string
@@ -30862,6 +30934,12 @@ spec:
                                       - ip
                                     type: object
                                   type: array
+                                hostIPC:
+                                  description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
+                                hostNetwork:
+                                  description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
                                   type: boolean
@@ -31039,6 +31117,9 @@ spec:
                                 serviceAccountName:
                                   description: default service account name for the scheduled pod
                                   type: string
+                                setHostnameAsFQDN:
+                                  description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                                  type: boolean
                                 subdomain:
                                   description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                                   type: string
@@ -34341,6 +34422,12 @@ spec:
                                       - ip
                                     type: object
                                   type: array
+                                hostIPC:
+                                  description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
+                                hostNetwork:
+                                  description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
                                   type: boolean
@@ -34518,6 +34605,9 @@ spec:
                                 serviceAccountName:
                                   description: default service account name for the scheduled pod
                                   type: string
+                                setHostnameAsFQDN:
+                                  description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                                  type: boolean
                                 subdomain:
                                   description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                                   type: string

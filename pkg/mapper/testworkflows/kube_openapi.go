@@ -838,6 +838,9 @@ func MapPodConfigKubeToAPI(v testworkflowsv1.PodConfig) testkube.TestWorkflowPod
 		SchedulingGates:           common.MapSlice(v.SchedulingGates, MapPodSchedulingGateKubeToAPI),
 		ResourceClaims:            common.MapSlice(v.ResourceClaims, MapPodResourceClaimKubeToAPI),
 		HostPID:                   MapBoolToBoxedBoolean(v.HostPID),
+		HostNetwork:               MapBoolToBoxedBoolean(v.HostNetwork),
+		HostIPC:                   MapBoolToBoxedBoolean(v.HostIPC),
+		SetHostnameAsFQDN:         MapBoolToBoxedBoolean(v.SetHostnameAsFQDN),
 		Resources:                 common.MapPtr(v.Resources, MapResourcesKubeToAPI),
 	}
 }

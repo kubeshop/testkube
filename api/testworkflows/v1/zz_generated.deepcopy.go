@@ -762,6 +762,21 @@ func (in *PodConfig) DeepCopyInto(out *PodConfig) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.HostNetwork != nil {
+		in, out := &in.HostNetwork, &out.HostNetwork
+		*out = new(bool)
+		**out = **in
+	}
+	if in.HostIPC != nil {
+		in, out := &in.HostIPC, &out.HostIPC
+		*out = new(bool)
+		**out = **in
+	}
+	if in.SetHostnameAsFQDN != nil {
+		in, out := &in.SetHostnameAsFQDN, &out.SetHostnameAsFQDN
+		*out = new(bool)
+		**out = **in
+	}
 	if in.Resources != nil {
 		in, out := &in.Resources, &out.Resources
 		*out = new(Resources)

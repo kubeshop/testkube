@@ -344,6 +344,9 @@ var (
 			RuntimeClassName:   common.Ptr("gvisor"),
 			SchedulerName:      "volcano",
 			HostUsers:          common.Ptr(false),
+			HostNetwork:        common.Ptr(true),
+			HostIPC:            common.Ptr(true),
+			SetHostnameAsFQDN:  common.Ptr(true),
 		},
 		Events: []testworkflowsv1.Event{
 			{

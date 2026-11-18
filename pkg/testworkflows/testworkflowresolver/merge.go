@@ -118,6 +118,15 @@ func MergePodConfig(dst, include *testworkflowsv1.PodConfig) *testworkflowsv1.Po
 	if include.HostPID != nil {
 		dst.HostPID = include.HostPID
 	}
+	if include.HostNetwork != nil {
+		dst.HostNetwork = include.HostNetwork
+	}
+	if include.HostIPC != nil {
+		dst.HostIPC = include.HostIPC
+	}
+	if include.SetHostnameAsFQDN != nil {
+		dst.SetHostnameAsFQDN = include.SetHostnameAsFQDN
+	}
 	dst.Resources = MergeResources(dst.Resources, include.Resources)
 	return dst
 }
