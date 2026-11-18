@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
@@ -676,6 +677,13 @@ func TestBundle_PodHostNamespacesAndFQDN(t *testing.T) {
 	assert.False(t, podSpec.HostPID)
 	require.NotNil(t, podSpec.SetHostnameAsFQDN)
 	assert.True(t, *podSpec.SetHostnameAsFQDN)
+	// the control port is reserved so host network pods don't collide on a node
+	mainContainer := podSpec.Containers[len(podSpec.Containers)-1]
+	assert.Contains(t, mainContainer.Ports, corev1.ContainerPort{
+		Name:          "tk-control",
+		ContainerPort: int32(initconstants.ControlServerPort),
+		Protocol:      corev1.ProtocolTCP,
+	})
 
 	// sharing a host namespace is a low security field
 	for name, pod := range map[string]testworkflowsv1.PodConfig{

@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -596,6 +597,12 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	if err != nil {
 		return nil, err
 	}
+	// On the host network every runner binds the same control port on the node,
+	// so declare it on the pod to let the scheduler keep such pods off nodes
+	// where the port is already taken.
+	if hostNetwork {
+		reserveControlPort(&containers[len(containers)-1])
+	}
 
 	podSpec := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
@@ -728,4 +735,20 @@ func addEnvVarToContainerSpec(mapEnv map[string]corev1.EnvVarSource, containers 
 			containers[i].Env = append(containers[i].Env, e)
 		}
 	}
+}
+
+// reserveControlPort declares the runner control server port on the container,
+// unless it's already declared there.
+func reserveControlPort(container *corev1.Container) {
+	port := int32(initconstants.ControlServerPort)
+	for _, p := range container.Ports {
+		if p.ContainerPort == port && (p.Protocol == "" || p.Protocol == corev1.ProtocolTCP) {
+			return
+		}
+	}
+	container.Ports = append(container.Ports, corev1.ContainerPort{
+		Name:          "tk-control",
+		ContainerPort: port,
+		Protocol:      corev1.ProtocolTCP,
+	})
 }
