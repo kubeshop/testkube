@@ -24,8 +24,11 @@
 // as they do for the other kinds. A delete names the resource alone, and the Control Plane does not
 // store these kinds' annotations, so testkube.io/no-gitops-sync pauses deletes here, in the runner:
 // it remembers which custom resources carried the annotation when it last saw them
-// (pausedResources) and does not send their delete. The reconciler also counts the resources it
-// syncs, by kind, for the telemetry heartbeat (SyncedResources). Syncing another kind means adding it to
+// (pausedResources) and does not send their delete. It sends a delete only once it has seen the
+// resource's delete event, whose final state decides: a reconcile that reads the resource missing
+// before that, as one queued earlier may, looks again shortly. The reconciler also counts the
+// resources it syncs, by kind, for the telemetry heartbeat (SyncedResources). Syncing another kind
+// means adding it to
 // syncedControlPlaneResources in the controller package, its scheme in main.go, read access in the
 // Helm charts, and its arm in the Control Plane's handler; the proto stays as it is.
 //
