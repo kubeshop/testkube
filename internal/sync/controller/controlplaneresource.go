@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -157,6 +158,11 @@ const deleteEventWait = time.Second
 // requeue reconciles the same name again; only an event changes it, such as the create of a new
 // resource of the same name. A paused resource that stays deleted keeps its entry, one name each;
 // the entry of one whose delete was sent is dropped.
+//
+// A delete seen during a watch interruption (DeleteStateUnknown) carries the last object the runner
+// happened to see, which may predate an annotation added before the delete. Nothing else holds the
+// annotation, the object being gone and the Control Plane keeping none, so such a delete is not sent
+// (missingUnknown): the resource stays in the Control Plane, to be deleted there if it should go.
 type pausedResources struct {
 	mu    sync.Mutex
 	names map[types.NamespacedName]observedResource
@@ -166,21 +172,24 @@ type pausedResources struct {
 type observedResource struct {
 	paused  bool
 	deleted bool
+	// unknown is set for a delete whose final state is unknown (DeleteStateUnknown).
+	unknown bool
 }
 
 func newPausedResources() *pausedResources {
 	return &pausedResources{names: map[types.NamespacedName]observedResource{}}
 }
 
-// observe records obj as an event carries it, and whether the event is its delete.
-func (p *pausedResources) observe(obj client.Object, deleted bool) {
+// observe records obj as an event carries it, whether the event is its delete, and whether that
+// delete's final state is unknown.
+func (p *pausedResources) observe(obj client.Object, deleted, unknown bool) {
 	if obj == nil {
 		return
 	}
 	name := types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.names[name] = observedResource{paused: syncPaused(obj), deleted: deleted}
+	p.names[name] = observedResource{paused: syncPaused(obj), deleted: deleted, unknown: deleted && unknown}
 }
 
 // missingResource is what to do with a resource read missing.
@@ -195,6 +204,9 @@ const (
 	missingDeleted
 	// missingGone: no entry, so its delete was sent already, or the runner never saw it.
 	missingGone
+	// missingUnknown: deleted while the runner's watch was interrupted, so whether it was paused
+	// is unknown; its delete is not sent.
+	missingUnknown
 )
 
 // missing says what to do with the named resource, read missing.
@@ -209,6 +221,8 @@ func (p *pausedResources) missing(name types.NamespacedName) missingResource {
 		return missingUnseen
 	case observed.paused:
 		return missingPaused
+	case observed.unknown:
+		return missingUnknown
 	}
 	return missingDeleted
 }
@@ -226,10 +240,10 @@ func (p *pausedResources) sent(name types.NamespacedName) {
 // predicate observes every event and filters none.
 func (p *pausedResources) predicate() predicate.Funcs {
 	return predicate.Funcs{
-		CreateFunc:  func(e event.CreateEvent) bool { p.observe(e.Object, false); return true },
-		UpdateFunc:  func(e event.UpdateEvent) bool { p.observe(e.ObjectNew, false); return true },
-		DeleteFunc:  func(e event.DeleteEvent) bool { p.observe(e.Object, true); return true },
-		GenericFunc: func(e event.GenericEvent) bool { p.observe(e.Object, false); return true },
+		CreateFunc:  func(e event.CreateEvent) bool { p.observe(e.Object, false, false); return true },
+		UpdateFunc:  func(e event.UpdateEvent) bool { p.observe(e.ObjectNew, false, false); return true },
+		DeleteFunc:  func(e event.DeleteEvent) bool { p.observe(e.Object, true, e.DeleteStateUnknown); return true },
+		GenericFunc: func(e event.GenericEvent) bool { p.observe(e.Object, false, false); return true },
 	}
 }
 
@@ -259,6 +273,10 @@ func controlPlaneResourceSyncReconciler(client client.Reader, store ControlPlane
 			case missingUnseen:
 				return ctrl.Result{RequeueAfter: deleteEventWait}, nil
 			case missingPaused, missingGone:
+				return ctrl.Result{}, nil
+			case missingUnknown:
+				log.FromContext(ctx).Info("not deleting a Control Plane resource: it was deleted while the runner's watch was interrupted, so whether it carried testkube.io/no-gitops-sync is unknown; delete it in the Control Plane if it should go",
+					"kind", kind.Kind, "name", req.Name)
 				return ctrl.Result{}, nil
 			}
 			if err := deleteControlPlaneResource(ctx, store, kind, req.Name); err != nil {
