@@ -156,6 +156,15 @@ type PodConfig struct {
 	// Whether to allow a pod to have access to the host process ID namespace
 	HostPID *bool `json:"hostPID,omitempty" expr:"template"`
 
+	// Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+	HostNetwork *bool `json:"hostNetwork,omitempty" expr:"template"`
+
+	// Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+	HostIPC *bool `json:"hostIPC,omitempty" expr:"template"`
+
+	// If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+	SetHostnameAsFQDN *bool `json:"setHostnameAsFQDN,omitempty" expr:"template"`
+
 	// Pod-level resource requests and limits, shared by all containers in the pod,
 	// including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
 	Resources *Resources `json:"resources,omitempty" expr:"include"`

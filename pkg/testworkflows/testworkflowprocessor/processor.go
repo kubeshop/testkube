@@ -574,13 +574,27 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	if err != nil {
 		return nil, err
 	}
-	hostPID := false
-	if podConfig.HostPID != nil {
-		if options.AllowLowSecurityFields {
-			hostPID = *podConfig.HostPID
-		} else {
-			return nil, errors.New("low security fields are not allowed")
+	// sharing the host's namespaces is only allowed when low security fields are enabled
+	hostNamespace := func(value *bool) (bool, error) {
+		if value == nil {
+			return false, nil
 		}
+		if !options.AllowLowSecurityFields {
+			return false, errors.New("low security fields are not allowed")
+		}
+		return *value, nil
+	}
+	hostPID, err := hostNamespace(podConfig.HostPID)
+	if err != nil {
+		return nil, err
+	}
+	hostNetwork, err := hostNamespace(podConfig.HostNetwork)
+	if err != nil {
+		return nil, err
+	}
+	hostIPC, err := hostNamespace(podConfig.HostIPC)
+	if err != nil {
+		return nil, err
 	}
 
 	podSpec := corev1.PodTemplateSpec{
@@ -615,6 +629,9 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			SchedulingGates:           podConfig.SchedulingGates,
 			ResourceClaims:            podConfig.ResourceClaims,
 			HostPID:                   hostPID,
+			HostNetwork:               hostNetwork,
+			HostIPC:                   hostIPC,
+			SetHostnameAsFQDN:         podConfig.SetHostnameAsFQDN,
 			Resources:                 podResources,
 		},
 	}

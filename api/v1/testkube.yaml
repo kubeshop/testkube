@@ -10772,6 +10772,12 @@ components:
             $ref: "#/components/schemas/PodResourceClaim"
         hostPID:
           $ref: "#/components/schemas/BoxedBoolean"
+        hostNetwork:
+          $ref: "#/components/schemas/BoxedBoolean"
+        hostIPC:
+          $ref: "#/components/schemas/BoxedBoolean"
+        setHostnameAsFQDN:
+          $ref: "#/components/schemas/BoxedBoolean"
         resources:
           $ref: "#/components/schemas/TestWorkflowResources"
 
