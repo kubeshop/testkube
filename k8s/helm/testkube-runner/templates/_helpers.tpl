@@ -210,7 +210,7 @@ rules:
       - get
       - list
       - watch
-  {{- if .Values.gitops.enabled }}
+  {{- if and .Values.gitops.enabled .Values.gitops.controlPlaneResources.enabled }}
   # Control Plane resources (Insights Boards, AI Agents, MCP servers, LLM providers and Test
   # Bundles), which the GitOps runner syncs to the Control Plane. It only reads them.
   - apiGroups:

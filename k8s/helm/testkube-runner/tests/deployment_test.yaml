@@ -173,6 +173,27 @@ tests:
             name: GITOPS_KUBERNETES_TO_CLOUD_ENABLED
             value: "true"
 
+  - it: syncs Control Plane resources only when gitops.controlPlaneResources is enabled
+    set:
+      gitops.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GITOPS_CONTROLPLANE_RESOURCES_ENABLED
+            value: "false"
+
+  - it: passes GITOPS_CONTROLPLANE_RESOURCES_ENABLED when the GitOps runner syncs them
+    set:
+      gitops.enabled: true
+      gitops.controlPlaneResources.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GITOPS_CONTROLPLANE_RESOURCES_ENABLED
+            value: "true"
+
   - it: passes self-registration token and runner name when register.token is set
     set:
       runner.register.token: tok-abc123

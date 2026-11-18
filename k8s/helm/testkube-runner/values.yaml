@@ -92,12 +92,17 @@ webhooks:
 
 ## GitOps capability configuration
 gitops:
-  ## Enable Kubernetes to Control Plane sync. It also syncs the Control Plane resources the
-  ## Control Plane serves: Insights Boards, MCP servers, LLM providers, AI Agents and Test Bundles.
-  ## Deleting a TestBundle custom resource deletes the Test Bundle, ending its chats and sandbox.
+  ## Enable Kubernetes to Control Plane sync
   enabled: false
   ## Install the shared Testkube CRDs required by GitOps watchers
   installCRD: true
+  controlPlaneResources:
+    ## Also sync the Control Plane resources: Insights Boards, MCP servers, LLM providers, AI Agents
+    ## and Test Bundles. Needs gitops.enabled. It grants the runner read access to their custom
+    ## resources (installed with installCRD). A Control Plane that does not serve a kind is not
+    ## sent it, and the runner skips it. Deleting a TestBundle custom resource deletes the Test
+    ## Bundle, ending its chats and sandbox.
+    enabled: false
 
 execution:
   default:

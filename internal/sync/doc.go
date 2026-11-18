@@ -25,6 +25,11 @@
 // syncedControlPlaneResources in the controller package, its scheme in main.go, read access in the
 // Helm charts, and its arm in the Control Plane's handler; the proto stays as it is.
 //
+// A runner syncs them only with GITOPS_CONTROLPLANE_RESOURCES_ENABLED (default false), set by the
+// runner chart's gitops.controlPlaneResources.enabled and the testkube-api chart's
+// next.gitops.syncControlPlaneResources, which also grant the read access below; without it they
+// are not watched at all, and the runner needs neither their CRDs nor access to them.
+//
 // Each kind also needs the Control Plane to advertise its family's capability, so a Control Plane
 // that does not serve the kind never gets it: controlplane-resources for Insights Boards,
 // controlplane-resources-ai for MCP servers, LLM providers and AI Agents, and
@@ -37,8 +42,8 @@
 // whose access the runner may not check (a cluster that forbids SelfSubjectAccessReviews) is
 // skipped with a warning: a controller whose cache cannot sync would stop the manager, and the
 // runner with it. The Helm charts install the CRDs (testkube-crds) and grant the read access (the
-// runner chart's watcher role when gitops.enabled, and the testkube-api chart's
-// controlplaneresources role).
+// runner chart's watcher role when gitops.enabled and gitops.controlPlaneResources.enabled, and
+// the testkube-api chart's controlplaneresources role when next.gitops.syncControlPlaneResources).
 //
 // While a GitOps runner owns a Control Plane resource, it is read-only everywhere else in the
 // Control Plane (the dashboard, the MCP tools, and testkube apply and delete), so it cannot drift

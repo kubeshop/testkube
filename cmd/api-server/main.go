@@ -746,9 +746,14 @@ func main() {
 			commons.ExitOnError("creating Webhook sync controller", err)
 			err = synccontroller.NewWebhookTemplateSyncController(mgr, syncStore)
 			commons.ExitOnError("creating WebhookTemplate sync controller", err)
-			// Control Plane resources, such as Insights boards, go only to a Control Plane that
-			// takes their kind, and only the kinds whose CRD is installed and readable here.
-			if len(proContext.ControlPlaneResourceCapabilities) > 0 {
+			// Control Plane resources, such as Insights boards, are synced only when the runner is
+			// told to, and then only to a Control Plane that takes their kind, and only the kinds
+			// whose CRD is installed and readable here.
+			switch {
+			case !cfg.GitOpsSyncControlPlaneResourcesEnabled:
+			case len(proContext.ControlPlaneResourceCapabilities) == 0:
+				log.DefaultLogger.Infow("not syncing Control Plane resources: the Control Plane does not take them")
+			default:
 				err = synccontroller.NewControlPlaneResourceSyncControllers(ctx, mgr, syncStore, cfg.TestkubeNamespace, proContext.ControlPlaneResourceCapabilities, log.DefaultLogger)
 				commons.ExitOnError("creating Control Plane resource sync controllers", err)
 			}

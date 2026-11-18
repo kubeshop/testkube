@@ -458,6 +458,7 @@ rules:
       - get
 
 ---
+{{- if and .Values.next.gitops.syncKubernetesToCloud .Values.next.gitops.syncControlPlaneResources }}
 
 # Control Plane resources (Insights Boards, AI Agents, MCP servers, LLM providers and Test
 # Bundles), which a GitOps runner syncs to the Control Plane. It only reads them.
@@ -499,6 +500,7 @@ rules:
       - get
       - list
       - watch
+{{- end }}
 
 ---
 {{- if .Values.next.testTriggers.enabled }}
