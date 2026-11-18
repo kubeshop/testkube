@@ -19,6 +19,9 @@ type TestWorkflowTemplateStore interface {
 }
 
 func NewTestWorkflowTemplateSyncController(mgr ctrl.Manager, store TestWorkflowTemplateStore, resolveTarget syncagent.TargetFunc) error {
+	if err := indexByName(mgr, &testworkflowsv1.TestWorkflowTemplate{}); err != nil {
+		return fmt.Errorf("index TestWorkflowTemplate by name: %w", err)
+	}
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&testworkflowsv1.TestWorkflowTemplate{}).
 		Complete(testWorkflowTemplateSyncReconciler(mgr.GetClient(), store, resolveTarget)); err != nil {

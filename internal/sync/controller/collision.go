@@ -5,10 +5,25 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/meta"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	syncagent "github.com/kubeshop/testkube/internal/sync"
 )
+
+// nameIndexField is the field index of the manager cache that maps a resource to its name. The
+// collision lookups list only the resources of one name with it, so a reconcile does not scan
+// every cached resource of the kind.
+const nameIndexField = ".metadata.name"
+
+// indexByName registers nameIndexField for the kind of obj in the cache of mgr. Each sync
+// controller calls it before the manager starts, because a List with nameIndexField fails
+// without the index.
+func indexByName(mgr ctrl.Manager, obj client.Object) error {
+	return mgr.GetFieldIndexer().IndexField(context.Background(), obj, nameIndexField, func(o client.Object) []string {
+		return []string{o.GetName()}
+	})
+}
 
 // checkNameCollision refuses obj when another watched namespace of the same Environment holds a
 // resource of the same kind and name that wins over it. The Control Plane keys a resource by its
@@ -18,10 +33,11 @@ import (
 // first. The rule depends only on the objects, so every replica of the agent comes to the same
 // answer. A resource that is marked for deletion does not win, because syncDelete already hands
 // the record to the remaining winner. list is an empty list of the kind of obj; the cache of the
-// manager holds only the watched namespaces, so the List sees nothing else.
+// manager holds only the watched namespaces, so the List sees nothing else. The List selects the
+// name of obj with nameIndexField.
 func checkNameCollision(ctx context.Context, reader client.Reader, list client.ObjectList, obj client.Object, target syncagent.Target, resolveTarget syncagent.TargetFunc) error {
 	kind := fmt.Sprintf("%T", list)
-	if err := reader.List(ctx, list); err != nil {
+	if err := reader.List(ctx, list, client.MatchingFields{nameIndexField: obj.GetName()}); err != nil {
 		return fmt.Errorf("list %s: %w", kind, err)
 	}
 	items, err := meta.ExtractList(list)
@@ -31,7 +47,7 @@ func checkNameCollision(ctx context.Context, reader client.Reader, list client.O
 
 	for _, item := range items {
 		other, ok := item.(client.Object)
-		if !ok || other.GetName() != obj.GetName() || other.GetNamespace() == obj.GetNamespace() || !other.GetDeletionTimestamp().IsZero() {
+		if !ok || other.GetNamespace() == obj.GetNamespace() || !other.GetDeletionTimestamp().IsZero() {
 			continue
 		}
 		if resolveTarget(other.GetNamespace()).EnvironmentID != target.EnvironmentID {
@@ -76,7 +92,7 @@ func syncDelete[T any, PT interface {
 // deletion.
 func remainingWinner(ctx context.Context, reader client.Reader, list client.ObjectList, name string, target syncagent.Target, resolveTarget syncagent.TargetFunc) (client.Object, error) {
 	kind := fmt.Sprintf("%T", list)
-	if err := reader.List(ctx, list); err != nil {
+	if err := reader.List(ctx, list, client.MatchingFields{nameIndexField: name}); err != nil {
 		return nil, fmt.Errorf("list %s: %w", kind, err)
 	}
 	items, err := meta.ExtractList(list)
@@ -87,7 +103,7 @@ func remainingWinner(ctx context.Context, reader client.Reader, list client.Obje
 	var winner client.Object
 	for _, item := range items {
 		other, ok := item.(client.Object)
-		if !ok || other.GetName() != name || other.GetNamespace() == target.Namespace || !other.GetDeletionTimestamp().IsZero() {
+		if !ok || other.GetNamespace() == target.Namespace || !other.GetDeletionTimestamp().IsZero() {
 			continue
 		}
 		if resolveTarget(other.GetNamespace()).EnvironmentID != target.EnvironmentID {

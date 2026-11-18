@@ -19,6 +19,9 @@ type WorkflowTriggerStore interface {
 }
 
 func NewWorkflowTriggerSyncController(mgr ctrl.Manager, store WorkflowTriggerStore, resolveTarget syncagent.TargetFunc) error {
+	if err := indexByName(mgr, &workflowtriggersv1.WorkflowTrigger{}); err != nil {
+		return fmt.Errorf("index WorkflowTrigger by name: %w", err)
+	}
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&workflowtriggersv1.WorkflowTrigger{}).
 		Complete(workflowTriggerSyncReconciler(mgr.GetClient(), store, resolveTarget)); err != nil {

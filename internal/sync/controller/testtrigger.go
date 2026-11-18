@@ -19,6 +19,9 @@ type TestTriggerStore interface {
 }
 
 func NewTestTriggerSyncController(mgr ctrl.Manager, store TestTriggerStore, resolveTarget syncagent.TargetFunc) error {
+	if err := indexByName(mgr, &testtriggersv1.TestTrigger{}); err != nil {
+		return fmt.Errorf("index TestTrigger by name: %w", err)
+	}
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&testtriggersv1.TestTrigger{}).
 		Complete(testTriggerSyncReconciler(mgr.GetClient(), store, resolveTarget)); err != nil {
