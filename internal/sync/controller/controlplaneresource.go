@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strconv"
 	"sync"
+	"time"
 
 	"go.uber.org/zap"
 	authorizationv1 "k8s.io/api/authorization/v1"
@@ -139,54 +140,96 @@ func syncPaused(obj client.Object) bool {
 	return err == nil && paused
 }
 
-// pausedResources remembers which custom resources carried testkube.io/no-gitops-sync when last
-// seen. A deleted resource is gone by the time it is reconciled, and the delete names it alone, so
-// what the runner saw of it last is what says whether its delete is paused: every event carries the
-// object, the delete event its final state.
+// deleteEventWait is how long a reconcile that reads a resource missing waits for its delete event
+// before it looks again. The informer removes an object from its cache before it hands the event to
+// the handlers, so the gap is short.
+const deleteEventWait = time.Second
+
+// pausedResources remembers, for every custom resource the runner has seen, what its last event
+// said: whether it carried testkube.io/no-gitops-sync, and whether that event was its delete. A
+// deleted resource is gone by the time it is reconciled, and the delete names it alone, so the delete
+// event, which carries the object's final state, is what says whether its delete is paused.
 //
-// The pause is kept for as long as no event says otherwise, however often the resource is read
-// missing: a retry queued before the delete, or a requeue after it, reconciles the same name again
-// and must not send the delete either. Only an event changes it, such as the create of a new
-// resource of the same name without the annotation. A paused resource that stays deleted keeps
-// its entry, one name each.
+// A resource read missing before its delete event is seen is not deleted yet: the informer removes
+// it from its cache first, so a reconcile queued earlier can read it missing while its final state,
+// such as an annotation added just before the delete, is still unseen (missingUnseen). Once the delete
+// event is seen, a paused resource keeps its entry however often it is read missing, as a retry or a
+// requeue reconciles the same name again; only an event changes it, such as the create of a new
+// resource of the same name. A paused resource that stays deleted keeps its entry, one name each;
+// the entry of one whose delete was sent is dropped.
 type pausedResources struct {
 	mu    sync.Mutex
-	names map[types.NamespacedName]bool
+	names map[types.NamespacedName]observedResource
+}
+
+// observedResource is what the last event of a resource said.
+type observedResource struct {
+	paused  bool
+	deleted bool
 }
 
 func newPausedResources() *pausedResources {
-	return &pausedResources{names: map[types.NamespacedName]bool{}}
+	return &pausedResources{names: map[types.NamespacedName]observedResource{}}
 }
 
-// observe records whether obj, as an event carries it, pauses its sync.
-func (p *pausedResources) observe(obj client.Object) {
+// observe records obj as an event carries it, and whether the event is its delete.
+func (p *pausedResources) observe(obj client.Object, deleted bool) {
 	if obj == nil {
 		return
 	}
 	name := types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if syncPaused(obj) {
-		p.names[name] = true
-	} else {
-		delete(p.names, name)
-	}
+	p.names[name] = observedResource{paused: syncPaused(obj), deleted: deleted}
 }
 
-// paused reports whether the sync of the resource is paused, as the runner last saw it.
-func (p *pausedResources) paused(name types.NamespacedName) bool {
+// missingResource is what to do with a resource read missing.
+type missingResource int
+
+const (
+	// missingUnseen: its delete event is not seen yet; look again later.
+	missingUnseen missingResource = iota
+	// missingPaused: deleted with testkube.io/no-gitops-sync; its delete is not sent.
+	missingPaused
+	// missingDeleted: deleted; its delete is sent.
+	missingDeleted
+	// missingGone: no entry, so its delete was sent already, or the runner never saw it.
+	missingGone
+)
+
+// missing says what to do with the named resource, read missing.
+func (p *pausedResources) missing(name types.NamespacedName) missingResource {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return p.names[name]
+	observed, ok := p.names[name]
+	switch {
+	case !ok:
+		return missingGone
+	case !observed.deleted:
+		return missingUnseen
+	case observed.paused:
+		return missingPaused
+	}
+	return missingDeleted
+}
+
+// sent drops the entry of a resource whose delete was sent, unless an event changed it meanwhile,
+// such as the create of a new resource of the same name.
+func (p *pausedResources) sent(name types.NamespacedName) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if observed := p.names[name]; observed.deleted && !observed.paused {
+		delete(p.names, name)
+	}
 }
 
 // predicate observes every event and filters none.
 func (p *pausedResources) predicate() predicate.Funcs {
 	return predicate.Funcs{
-		CreateFunc:  func(e event.CreateEvent) bool { p.observe(e.Object); return true },
-		UpdateFunc:  func(e event.UpdateEvent) bool { p.observe(e.ObjectNew); return true },
-		DeleteFunc:  func(e event.DeleteEvent) bool { p.observe(e.Object); return true },
-		GenericFunc: func(e event.GenericEvent) bool { p.observe(e.Object); return true },
+		CreateFunc:  func(e event.CreateEvent) bool { p.observe(e.Object, false); return true },
+		UpdateFunc:  func(e event.UpdateEvent) bool { p.observe(e.ObjectNew, false); return true },
+		DeleteFunc:  func(e event.DeleteEvent) bool { p.observe(e.Object, true); return true },
+		GenericFunc: func(e event.GenericEvent) bool { p.observe(e.Object, false); return true },
 	}
 }
 
@@ -212,10 +255,17 @@ func controlPlaneResourceSyncReconciler(client client.Reader, store ControlPlane
 		switch {
 		case apierrors.IsNotFound(err):
 			// Deleted. Resources are named by their name alone in the Control Plane.
-			if paused.paused(req.NamespacedName) {
+			switch paused.missing(req.NamespacedName) {
+			case missingUnseen:
+				return ctrl.Result{RequeueAfter: deleteEventWait}, nil
+			case missingPaused, missingGone:
 				return ctrl.Result{}, nil
 			}
-			return ctrl.Result{}, deleteControlPlaneResource(ctx, store, kind, req.Name)
+			if err := deleteControlPlaneResource(ctx, store, kind, req.Name); err != nil {
+				return ctrl.Result{}, err
+			}
+			paused.sent(req.NamespacedName)
+			return ctrl.Result{}, nil
 		case err != nil:
 			return ctrl.Result{}, fmt.Errorf("retrieve %s %q from Kubernetes: %w", kind.Kind, req.NamespacedName, err)
 		}

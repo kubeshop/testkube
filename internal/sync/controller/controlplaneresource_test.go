@@ -96,13 +96,64 @@ func TestControlPlaneResourceSyncReconcilerInvalid(t *testing.T) {
 	assert.Nil(t, store.Sent)
 }
 
+// deletedBoard returns the runner's record of a board whose delete event it saw.
+func deletedBoard(name string) *pausedResources {
+	paused := newPausedResources()
+	paused.predicate().Delete(event.DeleteEvent{Object: &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "testkube"}}})
+	return paused
+}
+
 func TestControlPlaneResourceSyncReconcilerDelete(t *testing.T) {
 	store := &fakeControlPlaneResourceStore{}
+	paused := deletedBoard("release-health")
 
-	_, err := controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, store, boardKind(t), newPausedResources()).Reconcile(t.Context(), request("release-health"))
+	_, err := controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, store, boardKind(t), paused).Reconcile(t.Context(), request("release-health"))
 	require.NoError(t, err)
 	assert.Equal(t, "release-health", store.Deleted)
 	assert.Equal(t, "boards", store.DeletedKind.Resource)
+
+	// Sent once: a later read of the missing board has nothing to send.
+	again := &fakeControlPlaneResourceStore{}
+	_, err = controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, again, boardKind(t), paused).Reconcile(t.Context(), request("release-health"))
+	require.NoError(t, err)
+	assert.Empty(t, again.Deleted)
+}
+
+// A board read missing before its delete event is seen is not deleted yet: the informer drops it
+// from the cache before it hands the event over, so a reconcile queued earlier can run in between,
+// while an annotation added just before the delete is still unseen. It looks again once the event
+// is seen, and does what the event's final state says.
+func TestControlPlaneResourceSyncReconcilerDeleteWaitsForItsEvent(t *testing.T) {
+	board := &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: "release-health", Namespace: "testkube"}}
+	reconcileMissing := func(paused *pausedResources) (reconcile.Result, *fakeControlPlaneResourceStore) {
+		store := &fakeControlPlaneResourceStore{}
+		result, err := controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, store, boardKind(t), paused).Reconcile(t.Context(), request("release-health"))
+		require.NoError(t, err)
+		return result, store
+	}
+
+	// Annotated and deleted: the queued reconcile runs before the delete event's predicate.
+	paused := newPausedResources()
+	paused.predicate().Create(event.CreateEvent{Object: board})
+	result, store := reconcileMissing(paused)
+	assert.Empty(t, store.Deleted, "not sent before the delete event")
+	assert.Equal(t, deleteEventWait, result.RequeueAfter, "looked at again")
+
+	annotated := board.DeepCopy()
+	annotated.Annotations = map[string]string{noGitOpsSyncAnnotation: "true"}
+	paused.predicate().Delete(event.DeleteEvent{Object: annotated})
+	result, store = reconcileMissing(paused)
+	assert.Empty(t, store.Deleted, "paused by the final state")
+	assert.Zero(t, result.RequeueAfter)
+
+	// Deleted without the annotation: sent once the event is seen.
+	paused = newPausedResources()
+	paused.predicate().Create(event.CreateEvent{Object: board})
+	_, store = reconcileMissing(paused)
+	assert.Empty(t, store.Deleted)
+	paused.predicate().Delete(event.DeleteEvent{Object: board})
+	_, store = reconcileMissing(paused)
+	assert.Equal(t, "release-health", store.Deleted)
 }
 
 func TestControlPlaneResourceSyncReconcilerDeleteWhenMarkedForDeletion(t *testing.T) {
@@ -123,7 +174,7 @@ func TestControlPlaneResourceSyncReconcilerRejection(t *testing.T) {
 
 	_, err := controlPlaneResourceSyncReconciler(boardClient{Board: board}, conflict, boardKind(t), newPausedResources()).Reconcile(t.Context(), request("release-health"))
 	assert.True(t, errors.Is(err, reconcile.TerminalError(nil)), "update: %v", err)
-	_, err = controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, conflict, boardKind(t), newPausedResources()).Reconcile(t.Context(), request("release-health"))
+	_, err = controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, conflict, boardKind(t), deletedBoard("release-health")).Reconcile(t.Context(), request("release-health"))
 	assert.True(t, errors.Is(err, reconcile.TerminalError(nil)), "delete: %v", err)
 
 	unavailable := &fakeControlPlaneResourceStore{Err: errors.New("unavailable")}
@@ -160,12 +211,14 @@ func TestControlPlaneResourceSyncReconcilerPausedDelete(t *testing.T) {
 	unmarked := marked("true")
 	unmarked.Annotations = nil
 	paused.predicate().Create(event.CreateEvent{Object: unmarked})
+	paused.predicate().Delete(event.DeleteEvent{Object: unmarked})
 	assert.Equal(t, "release-health", gone(paused).Deleted, "an event clears the pause")
 
 	// The annotation removed before the delete, or not true, deletes it.
 	paused = newPausedResources()
 	paused.predicate().Create(event.CreateEvent{Object: marked("true")})
 	paused.predicate().Update(event.UpdateEvent{ObjectOld: marked("true"), ObjectNew: marked("false")})
+	paused.predicate().Delete(event.DeleteEvent{Object: marked("false")})
 	assert.Equal(t, "release-health", gone(paused).Deleted)
 	paused.predicate().Delete(event.DeleteEvent{Object: marked("yes")})
 	assert.Equal(t, "release-health", gone(paused).Deleted, "read as the Control Plane reads it")
