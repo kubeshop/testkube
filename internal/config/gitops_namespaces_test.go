@@ -78,8 +78,9 @@ func TestGitOpsNamespaces_EnvironmentID(t *testing.T) {
 func TestValidateGitOpsNamespaces(t *testing.T) {
 	proContext := func(capability bool) ProContext {
 		return ProContext{
-			EnvID: "env-token",
-			Agent: ProContextAgent{Environments: []ProContextAgentEnvironment{{ID: "env-token"}, {ID: "env-other"}}},
+			EnvID:      "env-configured",
+			TokenEnvID: "env-token",
+			Agent:      ProContextAgent{Environments: []ProContextAgentEnvironment{{ID: "env-token"}, {ID: "env-other"}}},
 			MultiNamespaceSyncSupportedInControlPlane: capability,
 		}
 	}
@@ -114,6 +115,12 @@ func TestValidateGitOpsNamespaces(t *testing.T) {
 			wantErr:    `GITOPS_NAMESPACES: namespace "a" maps to Environment "env-other", but the Control Plane lacks the sync-multi-namespace capability`,
 		},
 		{name: "a known envId with the capability passes", namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-other"}}, capability: true},
+		{
+			name:       "the configured EnvID is not the token Environment",
+			namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-configured"}},
+			capability: true,
+			wantErr:    `GITOPS_NAMESPACES: namespace "a" maps to Environment "env-configured", which is not an Environment of the agent (known: env-token, env-other)`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -97,13 +97,13 @@ func ValidateGitOpsNamespaces(namespaces GitOpsNamespaces, proContext ProContext
 	for _, ns := range namespaces {
 		envID := ns.EnvID
 		if envID == "" {
-			envID = proContext.EnvID
+			envID = proContext.TokenEnvID
 		}
 		if ns.Name == GitOpsAllNamespaces && !capable {
 			return fmt.Errorf("GITOPS_NAMESPACES: %q watches every namespace, but the Control Plane lacks the sync-multi-namespace capability",
 				GitOpsAllNamespaces)
 		}
-		if envID == proContext.EnvID {
+		if envID == proContext.TokenEnvID {
 			continue
 		}
 		if !agentHasEnvironment(proContext, envID) {
@@ -118,7 +118,7 @@ func ValidateGitOpsNamespaces(namespaces GitOpsNamespaces, proContext ProContext
 	// Without the capability, every entry left is in the token Environment.
 	if !capable && len(namespaces) > 1 {
 		return fmt.Errorf("GITOPS_NAMESPACES: %d namespaces sync into Environment %q, but the Control Plane lacks the sync-multi-namespace capability",
-			len(namespaces), proContext.EnvID)
+			len(namespaces), proContext.TokenEnvID)
 	}
 	return nil
 }
@@ -126,11 +126,11 @@ func ValidateGitOpsNamespaces(namespaces GitOpsNamespaces, proContext ProContext
 // knownEnvironmentIDs lists the token Environment first, then the other Environments of the agent.
 func knownEnvironmentIDs(proContext ProContext) []string {
 	known := make([]string, 0, len(proContext.Agent.Environments)+1)
-	if proContext.EnvID != "" {
-		known = append(known, proContext.EnvID)
+	if proContext.TokenEnvID != "" {
+		known = append(known, proContext.TokenEnvID)
 	}
 	for _, env := range proContext.Agent.Environments {
-		if env.ID != proContext.EnvID {
+		if env.ID != proContext.TokenEnvID {
 			known = append(known, env.ID)
 		}
 	}

@@ -357,6 +357,10 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	if proContext.EnvID == "" {
 		proContext.EnvID = foundProContext.EnvId
 	}
+	proContext.TokenEnvID = foundProContext.EnvId
+	if proContext.TokenEnvID == "" {
+		proContext.TokenEnvID = proContext.EnvID
+	}
 
 	if proContext.Agent.ID == "" && strings.HasPrefix(proContext.APIKey, "tkcagnt_") {
 		proContext.Agent.ID = strings.Replace(foundProContext.EnvId, "tkcenv_", "tkcroot_", 1)
