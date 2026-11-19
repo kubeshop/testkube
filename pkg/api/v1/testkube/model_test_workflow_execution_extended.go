@@ -78,6 +78,25 @@ func (e *TestWorkflowExecution) ContainsExecuteAction() bool {
 	return false
 }
 
+// AgentSteps returns the agent operation of each step in the resolved workflow of the
+// execution, nested steps and parallel steps included. A caller that must know which
+// AI Agents the execution can run reads them from here, because the stored workflow is
+// the only definition that the workflow pod cannot change.
+func (e *TestWorkflowExecution) AgentSteps() []TestWorkflowStepAgent {
+	if e == nil || e.ResolvedWorkflow == nil || e.ResolvedWorkflow.Spec == nil {
+		return nil
+	}
+
+	spec := e.ResolvedWorkflow.Spec
+	var agents []TestWorkflowStepAgent
+	for _, steps := range [][]TestWorkflowStep{spec.Setup, spec.Steps, spec.After} {
+		for i := range steps {
+			agents = append(agents, steps[i].AgentSteps()...)
+		}
+	}
+	return agents
+}
+
 func (e *TestWorkflowExecution) GetTemplateRefs() []TestWorkflowTemplateRef {
 	if e == nil {
 		return nil
