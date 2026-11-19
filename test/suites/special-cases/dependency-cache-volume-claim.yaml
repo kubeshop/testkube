@@ -1,0 +1,23 @@
+# The claim the shared-volume cache suite runs against (dependency-cache-volume-suite.yaml).
+#
+# Deliberately an ordinary ReadWriteOnce claim on the cluster's default StorageClass, so
+# that the suite runs on any standard cluster rather than only where an NFS or other
+# ReadWriteMany provisioner exists. ReadWriteOnce is per node, not per pod: every pod
+# on the node the volume is attached to may mount it, which on a single-node cluster
+# (k3d, kind, minikube, Docker Desktop) is every pod. On a multi-node cluster the agent
+# and every execution pod would have to land on one node - local-path does that by
+# itself through the volume's node affinity, a network block device does not - and a
+# production installation should use ReadWriteMany instead.
+#
+# Apply it in the agent's namespace before enabling the volume, then set
+# testkube-api.stepCacheVolume.enabled=true and claimName=testkube-step-cache-e2e.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: testkube-step-cache-e2e
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

@@ -9,6 +9,8 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -36,6 +38,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/executioncache"
+	"github.com/kubeshop/testkube/pkg/executioncache/volume"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
@@ -168,6 +171,14 @@ func MustGetMinioClient(cfg *config.Config) domainstorage.Client {
 		CacheDays:   cfg.StorageCacheExpiration,
 	}); expErr != nil {
 		log.DefaultLogger.Errorw("Error setting expiration policy", "error", expErr)
+	} else if _, expires := volume.PointerLifetime(cfg.StorageCacheExpiration, cfg.StorageExpiration); expires {
+		// Only now is a cache object known to expire: the call was accepted and the
+		// settings it was given actually expire something. Failing it is not fatal -
+		// reading the existing lifecycle needs a permission an upgrade may not have
+		// granted - but it leaves the rule uninstalled, and anything that sweeps a
+		// shared volume on the strength of these numbers would then delete entries
+		// whose pointers are kept forever. See StepCacheVolumeEnabled.
+		cacheExpirationConfirmed.Store(true)
 	}
 
 	// A stored cache entry is immutable only if the store applies the condition the
@@ -498,4 +509,54 @@ func CronJobsEnabled(cfg *config.Config) bool {
 	}
 
 	return result
+}
+
+// cacheExpirationConfirmed records that this process installed a lifecycle rule which
+// expires cache objects, and saw the store accept it.
+//
+// It is deliberately not "the operator configured one". SetExpirationPolicies has to
+// read the bucket's existing lifecycle before replacing it, which is a permission
+// earlier versions did not need, so a perfectly well configured installation can fail
+// to install the rule and carry on - the failure is logged and startup continues,
+// because a retention policy is not worth refusing to serve over.
+var (
+	cacheExpirationConfirmed atomic.Bool
+	// stepCacheVolumeWarning keeps the explanation below to one line in the log.
+	stepCacheVolumeWarning sync.Once
+)
+
+// StepCacheVolumeEnabled reports whether step dependency caches are kept on a shared
+// volume, which is a question of the claim being configured and nothing else.
+//
+// Deliberately not conditional on the object store's expiration being confirmed. The
+// volume is the agent's own disk: it is written to in every mode, so it has to be
+// bounded in every mode, and the sweep answers to this same question for that reason.
+// A mode that filled a shared volume without limit would take the cluster's storage
+// down with it, which is worse than a cache that occasionally misses.
+//
+// What cannot be confirmed in every mode is the other half - that the object pointing
+// at an entry also goes away. This process installs that rule only where it owns the
+// bucket, which is standalone mode: an agent attached to a Control Plane does not own
+// it, never calls SetExpirationPolicies, and holds expiration settings with no bearing
+// on the store its pointers are written to. Where an entry is swept before its pointer
+// expires, that key restores nothing until the object goes. That is stated once at
+// startup, with the setting that avoids it, rather than resolved by refusing to cache.
+func StepCacheVolumeEnabled(cfg *config.Config) bool {
+	if cfg.TestkubeStepCacheVolumeClaim == "" {
+		return false
+	}
+	if !cacheExpirationConfirmed.Load() {
+		// Once, because both the mounts and the sweep ask, and an operator reading two
+		// identical warnings looks for two problems.
+		stepCacheVolumeWarning.Do(func() {
+			log.DefaultLogger.Warnw(
+				"this process has not installed a lifecycle rule that expires cache objects, so an entry swept off the shared volume may leave a pointer that outlives it, and that key will restore nothing until the object expires; an agent attached to a Control Plane can neither install nor read that rule, so set the cache expiration on the Control Plane and keep the volume retention at least as long",
+				"claim", cfg.TestkubeStepCacheVolumeClaim,
+				"retentionDays", cfg.TestkubeStepCacheVolumeRetentionDays,
+				"cacheExpirationDays", cfg.StorageCacheExpiration,
+				"storageExpirationDays", cfg.StorageExpiration,
+			)
+		})
+	}
+	return true
 }

@@ -107,6 +107,7 @@ Unless the bug is cosmetic or static copy, keep a test that fails on the old cod
 - Telemetry opt-out: `DO_NOT_TRACK=1` (any value except empty, `0` or `false`) skips every telemetry send in the CLI and the agent (`pkg/telemetry`).
 - `TESTKUBE_DISABLE_UPDATE_CHECK=1` turns off the CLI update check (`cmd/kubectl-testkube/commands/common/doc.go`).
 - Object retention: `STORAGE_EXPIRATION` (whole bucket, opt-in) and `STORAGE_CACHE_EXPIRATION` (step dependency caches, on by default); `pkg/storage/minio/doc.go` explains the defaults and the permission the lifecycle read needs.
+- Step dependency caches on a shared ReadWriteMany volume: `TESTKUBE_STEP_CACHE_VOLUME_CLAIM` (empty disables it), `TESTKUBE_STEP_CACHE_VOLUME_MOUNT_PATH`, `TESTKUBE_STEP_CACHE_VOLUME_RETENTION_DAYS` (default `7`) and `TESTKUBE_STEP_CACHE_VOLUME_SWEEP_INTERVAL` (default `1h`); `pkg/executioncache/volume/doc.go` explains them.
 
 ### Architecture reference
 

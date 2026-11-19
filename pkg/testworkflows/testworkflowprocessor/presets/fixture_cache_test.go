@@ -18,6 +18,7 @@ func TestCacheFixturesBundle(t *testing.T) {
 	for _, file := range []string{
 		"../../../../test/special-cases/dependency-cache.yaml",
 		"../../../../test/suites/special-cases/dependency-cache-suite.yaml",
+		"../../../../test/suites/special-cases/dependency-cache-volume-suite.yaml",
 	} {
 		raw, err := os.ReadFile(file)
 		require.NoError(t, err, file)
