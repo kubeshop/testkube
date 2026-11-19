@@ -84,6 +84,14 @@ func (c *APIClient) buildApiUrl(path string, pathParams map[string]string, scope
 	}
 }
 
+func (c *APIClient) userAgent() string {
+	source := c.config.Source
+	if source == "" {
+		source = "unknown"
+	}
+	return "Testkube-MCP/" + source
+}
+
 func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string, error) {
 	// Check if debug collection is active
 	debugInfo := GetDebugInfo(ctx)
@@ -152,6 +160,9 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 
 	// Set standard headers
 	req.Header.Set("Authorization", "Bearer "+c.config.AccessToken)
+	// The Control Plane cannot otherwise tell this apart from any other Go client, and its audit
+	// log then records what an AI Agent did as if a person had done it from the dashboard.
+	req.Header.Set("User-Agent", c.userAgent())
 
 	// Set default Content-Type only if not already specified in custom headers
 	if _, hasContentType := apiReq.Headers["Content-Type"]; !hasContentType && apiReq.Body != nil {

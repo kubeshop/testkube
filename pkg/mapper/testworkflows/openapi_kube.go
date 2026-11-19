@@ -413,6 +413,25 @@ func MapResourcesAPIToKube(v testkube.TestWorkflowResources) testworkflowsv1.Res
 	}
 }
 
+// MapPodResourcesListAPIToKube keeps every resource name, such as hugepages-2Mi, not only the fixed keys of a container.
+func MapPodResourcesListAPIToKube(v map[string]string) map[corev1.ResourceName]testworkflowsv1.ConfigValue {
+	if len(v) == 0 {
+		return nil
+	}
+	res := make(map[corev1.ResourceName]testworkflowsv1.ConfigValue, len(v))
+	for name, value := range v {
+		res[corev1.ResourceName(name)] = MapStringToConfigValue(value)
+	}
+	return res
+}
+
+func MapPodResourcesAPIToKube(v testkube.TestWorkflowPodResources) testworkflowsv1.Resources {
+	return testworkflowsv1.Resources{
+		Limits:   MapPodResourcesListAPIToKube(v.Limits),
+		Requests: MapPodResourcesListAPIToKube(v.Requests),
+	}
+}
+
 func MapJobConfigAPIToKube(v testkube.TestWorkflowJobConfig) testworkflowsv1.JobConfig {
 	return testworkflowsv1.JobConfig{
 		Labels:                v.Labels,
@@ -877,6 +896,9 @@ func MapPodConfigAPIToKube(v testkube.TestWorkflowPodConfig) testworkflowsv1.Pod
 		Tolerations:               common.MapSlice(v.Tolerations, MapTolerationAPIToKube),
 		HostAliases:               common.MapSlice(v.HostAliases, MapHostAliasAPIToKube),
 		PriorityClassName:         v.PriorityClassName,
+		RuntimeClassName:          MapBoxedStringToString(v.RuntimeClassName),
+		SchedulerName:             v.SchedulerName,
+		HostUsers:                 MapBoxedBooleanToBool(v.HostUsers),
 		Priority:                  MapBoxedIntegerToInt32(v.Priority),
 		DNSConfig:                 common.MapPtr(v.DnsConfig, MapPodDNSConfigAPIToKube),
 		PreemptionPolicy:          common.MapPtr(MapBoxedStringToString(v.PreemptionPolicy), common.MapStringToEnum[corev1.PreemptionPolicy]),
@@ -884,6 +906,10 @@ func MapPodConfigAPIToKube(v testkube.TestWorkflowPodConfig) testworkflowsv1.Pod
 		SchedulingGates:           common.MapSlice(v.SchedulingGates, MapPodSchedulingGateAPIToKube),
 		ResourceClaims:            common.MapSlice(v.ResourceClaims, MapPodResourceClaimAPIToKube),
 		HostPID:                   MapBoxedBooleanToBool(v.HostPID),
+		HostNetwork:               MapBoxedBooleanToBool(v.HostNetwork),
+		HostIPC:                   MapBoxedBooleanToBool(v.HostIPC),
+		SetHostnameAsFQDN:         MapBoxedBooleanToBool(v.SetHostnameAsFQDN),
+		Resources:                 common.MapPtr(v.Resources, MapPodResourcesAPIToKube),
 	}
 }
 
@@ -1745,6 +1771,14 @@ func MapTestWorkflowTagSchemaAPIToKube(v testkube.TestWorkflowExecutionSchema) t
 		Tags:   v.Tags,
 		Target: common.MapPtr(v.Target, commonmapper.MapTargetApiToKube),
 		Silent: silent,
+		Retry:  common.MapPtr(v.Retry, MapExecutionRetryPolicyAPIToKube),
+	}
+}
+
+func MapExecutionRetryPolicyAPIToKube(v testkube.TestWorkflowExecutionRetryPolicy) testworkflowsv1.ExecutionRetryPolicy {
+	return testworkflowsv1.ExecutionRetryPolicy{
+		Count: v.Count,
+		On:    common.MapSlice(v.On, func(c string) testworkflowsv1.ExecutionRetryCause { return testworkflowsv1.ExecutionRetryCause(c) }),
 	}
 }
 

@@ -122,6 +122,32 @@ func TestGetTestWorkflowExecutions_Integration(t *testing.T) {
 		assert.Equal(t, 2, len(result), "Should find 2 executions with env=prod")
 	})
 
+	tagConditionTests := []struct {
+		name       string
+		conditions []string
+		want       []string
+	}{
+		{name: "conditions on two keys match only the execution that has both", conditions: []string{"env=prod", "owner=bob"}, want: []string{execution3}},
+		{name: "conditions on the same key match either value", conditions: []string{"env=prod", "env=dev"}, want: []string{execution1, execution2, execution3}},
+		{name: "conditions on two keys that no execution has together match nothing", conditions: []string{"env=dev", "owner=bob"}, want: []string{}},
+	}
+	for _, tt := range tagConditionTests {
+		t.Run("Test tag "+tt.name, func(t *testing.T) {
+			result, err := queries.GetTestWorkflowExecutions(ctx, GetTestWorkflowExecutionsParams{
+				OrganizationID: orgID,
+				EnvironmentID:  envID,
+				TagConditions:  tt.conditions,
+				Lmt:            10,
+			})
+			require.NoError(t, err)
+			ids := make([]string, 0, len(result))
+			for _, execution := range result {
+				ids = append(ids, execution.ID)
+			}
+			assert.ElementsMatch(t, tt.want, ids)
+		})
+	}
+
 	t.Run("Test label filtering with key existence", func(t *testing.T) {
 		// Test filtering by label key existence
 		result, err := queries.GetTestWorkflowExecutions(ctx, GetTestWorkflowExecutionsParams{
