@@ -659,6 +659,7 @@ func PopulateLoginDataToContext(orgID, envID, tokenType, token, refreshToken, do
 	if options.Master.URIs.Auth != "" {
 		cfg.CloudContext.AuthUri = options.Master.URIs.Auth
 	}
+	cfg.CloudContext.CustomAuth = options.Master.CustomAuth
 	cfg.ContextType = config.ContextTypeCloud
 	cfg.CloudContext.OrganizationId = orgID
 	cfg.CloudContext.EnvironmentId = envID

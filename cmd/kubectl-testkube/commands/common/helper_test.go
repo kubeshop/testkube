@@ -108,3 +108,18 @@ func TestPopulateOrgAndEnvNames(t *testing.T) {
 		assert.Contains(t, err.Error(), "HTTP 401")
 	})
 }
+
+// Re-login after a failed refresh reads the saved flag.
+func TestPopulateLoginDataToContext_KeepsCustomAuth(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
+	var opts HelmOptions
+	opts.Master.CustomAuth = true
+	require.NoError(t, PopulateLoginDataToContext("", "", config.TokenTypeOIDC, "token", "refresh", "", opts, config.Data{}))
+
+	saved, err := config.Load()
+	require.NoError(t, err)
+	assert.True(t, saved.CloudContext.CustomAuth)
+}
