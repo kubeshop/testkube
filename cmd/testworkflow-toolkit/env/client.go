@@ -145,7 +145,12 @@ func Testkube() client.Client {
 		port = int(portStr)
 	}
 	if config2.UseProxy() {
-		return client.NewProxyAPIClient(Kubernetes(), client.NewAPIConfig(config2.Namespace(), host, port))
+		// A host in the form <service>.<namespace> names the namespace of the agent Service.
+		namespace := config2.Namespace()
+		if service, ns, ok := strings.Cut(host, "."); ok {
+			host, namespace = service, ns
+		}
+		return client.NewProxyAPIClient(Kubernetes(), client.NewAPIConfig(namespace, host, port))
 	}
 	httpClient := phttp.NewClient(true)
 	sseClient := phttp.NewSSEClient(true)

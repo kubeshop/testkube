@@ -54,7 +54,8 @@ func CreateExecutionWorker(
 			TlsInsecure: cfg.TestkubeProTLSInsecure,
 
 			// TODO: Prepare ControlPlane interface for OSS, so we may unify the communication
-			LocalApiUrl: fmt.Sprintf("http://%s:%d", cfg.APIServerFullname, cfg.APIServerPort),
+			// The Service name carries the agent namespace, because the execution can run in another namespace.
+			LocalApiUrl: fmt.Sprintf("http://%s.%s:%d", cfg.APIServerFullname, cfg.TestkubeNamespace, cfg.APIServerPort),
 		},
 		FeatureFlags:                             featureFlags,
 		RunnerId:                                 runnerId,
