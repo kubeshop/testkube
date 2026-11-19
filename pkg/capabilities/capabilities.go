@@ -25,6 +25,10 @@ const CapabilityArtifactRead Capability = "tw-artifact-read"
 // capability existed has to keep running after.
 const CapabilityDependencyCache Capability = "tw-cache"
 
+// CapabilityAgentStep is whether the control plane can run a turn of an AI Agent for the
+// `agent` step of a Test Workflow.
+const CapabilityAgentStep Capability = "tw-agent-step"
+
 // CapabilitySourceOfTruth is whether the control plane is ready to act as source of truth.
 // When this capability is present, newer versions of the agent MUST migrate which entails
 // pushing data to the control plane and handing over control to let the control plane be the new source of truth.

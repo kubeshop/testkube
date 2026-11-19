@@ -82,6 +82,26 @@ func (mr *MockTestKubeCloudAPIClientMockRecorder) Call(ctx, in any, opts ...any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Call", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).Call), varargs...)
 }
 
+// CancelAgentTurn mocks base method.
+func (m *MockTestKubeCloudAPIClient) CancelAgentTurn(ctx context.Context, in *CancelAgentTurnRequest, opts ...grpc.CallOption) (*AgentTurn, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CancelAgentTurn", varargs...)
+	ret0, _ := ret[0].(*AgentTurn)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CancelAgentTurn indicates an expected call of CancelAgentTurn.
+func (mr *MockTestKubeCloudAPIClientMockRecorder) CancelAgentTurn(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelAgentTurn", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).CancelAgentTurn), varargs...)
+}
+
 // CreateTestTrigger mocks base method.
 func (m *MockTestKubeCloudAPIClient) CreateTestTrigger(ctx context.Context, in *CreateTestTriggerRequest, opts ...grpc.CallOption) (*CreateTestTriggerResponse, error) {
 	m.ctrl.T.Helper()
@@ -500,6 +520,26 @@ func (mr *MockTestKubeCloudAPIClientMockRecorder) FinishExecution(ctx, in any, o
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, in}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinishExecution", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).FinishExecution), varargs...)
+}
+
+// GetAgentTurn mocks base method.
+func (m *MockTestKubeCloudAPIClient) GetAgentTurn(ctx context.Context, in *GetAgentTurnRequest, opts ...grpc.CallOption) (*AgentTurn, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetAgentTurn", varargs...)
+	ret0, _ := ret[0].(*AgentTurn)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAgentTurn indicates an expected call of GetAgentTurn.
+func (mr *MockTestKubeCloudAPIClientMockRecorder) GetAgentTurn(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAgentTurn", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).GetAgentTurn), varargs...)
 }
 
 // GetCredential mocks base method.
@@ -1240,6 +1280,26 @@ func (mr *MockTestKubeCloudAPIClientMockRecorder) Send(ctx any, opts ...any) *go
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).Send), varargs...)
+}
+
+// StartAgentTurn mocks base method.
+func (m *MockTestKubeCloudAPIClient) StartAgentTurn(ctx context.Context, in *StartAgentTurnRequest, opts ...grpc.CallOption) (*AgentTurn, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "StartAgentTurn", varargs...)
+	ret0, _ := ret[0].(*AgentTurn)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StartAgentTurn indicates an expected call of StartAgentTurn.
+func (mr *MockTestKubeCloudAPIClientMockRecorder) StartAgentTurn(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartAgentTurn", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).StartAgentTurn), varargs...)
 }
 
 // UpdateAgentCapabilitiesOnStartup mocks base method.
