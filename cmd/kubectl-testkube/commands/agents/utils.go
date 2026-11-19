@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -267,22 +268,23 @@ func getAgentRunnerMode(agent *cloudclient.Agent) string {
 	}
 
 	match := agent.RunnerPolicy.RequiredMatch
-	if len(match) == 0 {
+	if len(match) == 0 || slices.Contains(match, "global") {
 		return "Global"
 	}
 
-	if len(match) == 1 {
-		switch match[0] {
-		case "global":
-			return "Global"
-		case "name":
-			return "Independent"
-		case "group":
-			return "Group"
-		}
+	// A runner is reachable by name whatever its policy says, so the policy's other
+	// labels are the additional routes. That makes ["group"] and ["group","name"] the
+	// same runner, and the latter is what self-registration stores.
+	routes := slices.DeleteFunc(slices.Clone(match), func(label string) bool { return label == "name" })
+	switch {
+	case len(routes) == 0:
+		return "Independent"
+	case len(routes) == 1 && routes[0] == "group":
+		return "Group"
+	default:
+		// The detail view lists the labels; this column holds one word.
+		return "Custom Policy"
 	}
-
-	return "Custom Policy"
 }
 
 // getAgentLicenseType returns "Floating" or "Fixed"
