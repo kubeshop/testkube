@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: suite-trigger
+  annotations:
+    testkube.io/description: "Starts tw-suite-small-smoke every 20 minutes, as a fast check that production runs the main tools."
 spec:
   container:
     resources:

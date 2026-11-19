@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: suite-trigger
+  annotations:
+    testkube.io/description: "Starts tw-suite-standard-smoke every 4 hours, as a medium-size regression check in production."
 spec:
   container:
     resources:
