@@ -19,6 +19,7 @@ spec:
       - name: cloud-web-unit
       - name: cloud-backoffice-unit
       - name: cloud-runspace-controller-unit
+      - name: cloud-ai-service
       - name: cloud-lint-go
       - name: cloud-lint-js
       - name: cloud-lint-helm
