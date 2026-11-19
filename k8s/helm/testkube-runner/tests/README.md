@@ -9,7 +9,7 @@ helm plugin install https://github.com/helm-unittest/helm-unittest.git  # once
 helm unittest k8s/helm/testkube-runner
 ```
 
-Expected: `Test Suites: 8 passed, 8 total` / `Tests: 75 passed`.
+Expected: `Test Suites: 9 passed, 9 total` / `Tests: 83 passed`.
 
 ## Suites
 
@@ -19,10 +19,11 @@ Expected: `Test Suites: 8 passed, 8 total` / `Tests: 75 passed`.
 | `servicemonitor_test.yaml` | `servicemonitor.yaml` | 13 | gating by `prometheus.enabled`, targetPort sync with Service, interval/monitoringLabels/matchLabels/sampleLimit |
 | `serviceaccount_test.yaml` | `serviceaccount.yaml` | 8 | auto-create branches (`pod.serviceAccount.autoCreate`, `execution.default.serviceAccount.autoCreate`), name/namespace overrides, annotations |
 | `poddisruptionbudget_test.yaml` | `poddisruptionbudget.yaml` | 7 | local vs `global.podDisruptionBudget` fallback, `minAvailable`/`maxUnavailable`, selector, K8s ≥1.21 apiVersion |
-| `role_test.yaml` | `role.yaml` | 10 | the 4 base Roles + watchers ClusterRole/Role per `watchAllNamespaces`; gating via `listener.enabled` / `gitops.enabled` |
+| `role_test.yaml` | `role.yaml` | 11 | the 4 base Roles + watchers ClusterRole/Role per `watchAllNamespaces`; gating via `listener.enabled` / `gitops.enabled` |
 | `rolebinding_test.yaml` | `rolebinding.yaml` | 10 | RoleBinding subjects + roleRef wiring (`agent-sa` → exec-role for jobs, `exec-sa` → exec-role), namespace propagation, watchers ClusterRoleBinding |
-| `deployment_test.yaml` | `deployment.yaml` | 15 | port 8088, ServiceAccount, runner credentials (inline & via secretRef), TLS, listener/gitops toggles, registration token, image references |
+| `deployment_test.yaml` | `deployment.yaml` | 17 | port 8088, ServiceAccount, runner credentials (inline & via secretRef), TLS, listener/gitops toggles, registration token, image references |
 | `crds_test.yaml` | `crds.yaml` | 1 | CRDs are rendered when `gitops.enabled && gitops.installCRD` |
+| `crd_reader_rbac_test.yaml` | `crd-reader-rbac.yaml` | 5 | cluster-wide CRD read is granted only to listener/gitops-enabled agents, and only when the agent ServiceAccount is auto-created |
 
 CI does not run these yet — they are local-dev guardrails. Wiring into a workflow is a separate follow-up.
 
