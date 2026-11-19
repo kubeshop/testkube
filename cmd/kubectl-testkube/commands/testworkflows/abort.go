@@ -37,11 +37,12 @@ func NewAbortTestWorkflowExecutionCmd() *cobra.Command {
 
 func NewAbortTestWorkflowExecutionsCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:        "testworkflowexecutions <testWorkflowName>",
-		Deprecated: "use \"cancel\" instead",
-		Aliases:    []string{"twes", "testworkflows-executions", "testworkflow-executions"},
-		Short:      "Abort all test workflow executions",
-		Args:       cobra.ExactArgs(1),
+		Use:               "testworkflowexecutions <testWorkflowName>",
+		Deprecated:        "use \"cancel\" instead",
+		Aliases:           []string{"twes", "testworkflows-executions", "testworkflow-executions"},
+		Short:             "Abort all test workflow executions",
+		ValidArgsFunction: common.CompleteTestWorkflowNames,
+		Args:              cobra.ExactArgs(1),
 
 		Run: func(cmd *cobra.Command, args []string) {
 			testWorkflowName := args[0]
