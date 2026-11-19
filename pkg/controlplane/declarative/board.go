@@ -37,6 +37,8 @@ func Normalize(obj Object) error {
 		return normalizeMCPServer(o).ToAggregate()
 	case *aiv1.LLMProvider:
 		return normalizeLLMProvider(o).ToAggregate()
+	case *aiv1.Skill:
+		return normalizeSkill(o).ToAggregate()
 	case *testbundlesv1.TestBundle:
 		return normalizeTestBundle(o).ToAggregate()
 	}

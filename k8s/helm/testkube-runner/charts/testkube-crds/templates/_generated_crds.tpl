@@ -8,6 +8,8 @@
 
 {{ include "testkube-crds.item.ai.testkube.io_mcpservers.yaml" . }}
 
+{{ include "testkube-crds.item.ai.testkube.io_skills.yaml" . }}
+
 {{ include "testkube-crds.item.executor.testkube.io_executors.yaml" . }}
 
 {{ include "testkube-crds.item.executor.testkube.io_webhooks.yaml" . }}
@@ -194,6 +196,36 @@ spec:
                   to the environment's admins. It needs a license that includes RBAC,
                   and has no effect where AI governance is off.
                 type: boolean
+              skillRefs:
+                description: |-
+                  SkillRefs are Skills of the environment's or the organization's
+                  library the agent uses, in this order. They are shared, so a Skill
+                  left out is only unlinked. Applying a list replaces the whole list,
+                  and skillRefs: [] unlinks them all; when skillRefs is omitted, the
+                  agent's links are left as they are. No name may be both a skillRef and
+                  one of the agent's own Skills.
+                items:
+                  description: AIAgentSkillRef refers to a Skill of a library.
+                  properties:
+                    name:
+                      description: |-
+                        Name is the Skill's name: the metadata.name of a Skill, for the
+                        environment's library.
+                      maxLength: 64
+                      minLength: 1
+                      pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+                      type: string
+                    scope:
+                      description: 'Scope is the library: environment (the default)
+                        or organization.'
+                      enum:
+                      - environment
+                      - organization
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
               skills:
                 description: |-
                   Skills are guidance the agent uses, in this order. They belong to the
@@ -213,13 +245,13 @@ spec:
                         agent read it on demand.
                       type: boolean
                     content:
-                      description: Content is the guidance itself.
-                      minLength: 1
+                      description: Content is the guidance itself. Required unless
+                        skillFrom is set.
                       type: string
                     description:
-                      description: Description says what the Skill does and when to
-                        use it.
-                      minLength: 1
+                      description: |-
+                        Description says what the Skill does and when to use it. Required
+                        unless skillFrom is set.
                       type: string
                     metadata:
                       additionalProperties:
@@ -234,9 +266,30 @@ spec:
                       minLength: 1
                       pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
                       type: string
+                    skillFrom:
+                      description: |-
+                        SkillFrom reads the description, metadata and content from a SKILL.md
+                        kept in a ConfigMap, whose name must be the Skill's name. Only a GitOps
+                        runner reads it, from its own namespace; testkube apply takes the Skill
+                        inline.
+                      properties:
+                        configMapKeyRef:
+                          description: |-
+                            ConfigMapKeyRef selects the key of a ConfigMap, in the namespace of the
+                            resource, that holds a SKILL.md.
+                          properties:
+                            key:
+                              description: Key holding the SKILL.md, such as SKILL.md.
+                              type: string
+                            name:
+                              description: Name of the ConfigMap.
+                              type: string
+                          required:
+                          - key
+                          - name
+                          type: object
+                      type: object
                   required:
-                  - content
-                  - description
                   - name
                   type: object
                 type: array
@@ -584,6 +637,167 @@ spec:
                 type: string
               lastError:
                 description: LastError is the error of the last failed connection.
+                type: string
+              lastModificationSource:
+                description: |-
+                  LastModificationSource records how the resource was last changed: ui,
+                  api or gitops.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+{{- end }}
+
+{{- define "testkube-crds.item.ai.testkube.io_skills.yaml" -}}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.21.0
+  name: skills.ai.testkube.io
+spec:
+  group: ai.testkube.io
+  names:
+    kind: Skill
+    listKind: SkillList
+    plural: skills
+    singular: skill
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          Skill is a Skill of an environment's library, following the Agent Skills
+          spec (https://agentskills.io/specification). metadata.name is the Skill's
+          name, and spec follows the SKILL.md frontmatter key for key, with content as
+          its Markdown body. AI Agents use it through skillRefs.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              SkillSpec is a Skill, written inline or read from a SKILL.md with
+              skillFrom. With skillFrom, the SKILL.md gives every field but testkube.
+            properties:
+              allowed-tools:
+                description: |-
+                  AllowedTools are the tools the Skill may run without asking, space
+                  separated, as in a SKILL.md.
+                type: string
+              compatibility:
+                description: |-
+                  Compatibility says what environment the Skill needs: up to 500
+                  characters.
+                type: string
+              content:
+                description: |-
+                  Content is the guidance itself, the Markdown body of a SKILL.md: up to
+                  32000 characters. Required unless skillFrom is set.
+                type: string
+              description:
+                description: |-
+                  Description says what the Skill does and when to use it: up to 1024
+                  characters. Required unless skillFrom is set.
+                type: string
+              license:
+                description: License is the Skill's license name, or a reference to
+                  a license file.
+                type: string
+              metadata:
+                additionalProperties:
+                  type: string
+                description: Metadata is extra Agent Skills spec metadata.
+                type: object
+              skillFrom:
+                description: |-
+                  SkillFrom reads the whole Skill, frontmatter and body, from a SKILL.md
+                  kept in a ConfigMap, instead of the fields above. Only a GitOps runner
+                  reads it, from its own namespace; testkube apply takes the Skill inline.
+                properties:
+                  configMapKeyRef:
+                    description: |-
+                      ConfigMapKeyRef selects the key of a ConfigMap, in the namespace of the
+                      resource, that holds a SKILL.md.
+                    properties:
+                      key:
+                        description: Key holding the SKILL.md, such as SKILL.md.
+                        type: string
+                      name:
+                        description: Name of the ConfigMap.
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                type: object
+              testkube:
+                description: |-
+                  Testkube holds the settings that are Testkube's own rather than the
+                  Agent Skills spec's.
+                properties:
+                  addToNewTestBundles:
+                    description: AddToNewTestBundles adds the Skill to every Test
+                      Bundle created after it.
+                    type: boolean
+                  alwaysInclude:
+                    description: |-
+                      AlwaysInclude puts the content in every prompt instead of having the
+                      agent read it on demand.
+                    type: boolean
+                type: object
+            type: object
+          status:
+            description: |-
+              ControlPlaneResourceStatus is the Control Plane's view of a resource. The Control Plane
+              fills it in when it exports a resource, and ignores it when one is applied:
+              ownership is never taken from a request body.
+            properties:
+              creationSource:
+                description: 'CreationSource records how the resource was created:
+                  ui, api or gitops.'
+                type: string
+              gitOpsOwner:
+                description: |-
+                  GitOpsOwner is the GitOps agent that owns the resource. While it is set,
+                  the resource is read-only everywhere else.
+                properties:
+                  agentId:
+                    description: AgentID is the authoritative identifier of the owning
+                      agent.
+                    type: string
+                  agentName:
+                    description: AgentName is for display only, and may be stale after
+                      a rename.
+                    type: string
+                required:
+                - agentId
+                type: object
+              id:
+                description: ID is the Control Plane's identifier of the resource.
                 type: string
               lastModificationSource:
                 description: |-

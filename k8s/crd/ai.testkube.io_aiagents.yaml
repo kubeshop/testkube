@@ -147,6 +147,36 @@ spec:
                   to the environment's admins. It needs a license that includes RBAC,
                   and has no effect where AI governance is off.
                 type: boolean
+              skillRefs:
+                description: |-
+                  SkillRefs are Skills of the environment's or the organization's
+                  library the agent uses, in this order. They are shared, so a Skill
+                  left out is only unlinked. Applying a list replaces the whole list,
+                  and skillRefs: [] unlinks them all; when skillRefs is omitted, the
+                  agent's links are left as they are. No name may be both a skillRef and
+                  one of the agent's own Skills.
+                items:
+                  description: AIAgentSkillRef refers to a Skill of a library.
+                  properties:
+                    name:
+                      description: |-
+                        Name is the Skill's name: the metadata.name of a Skill, for the
+                        environment's library.
+                      maxLength: 64
+                      minLength: 1
+                      pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+                      type: string
+                    scope:
+                      description: 'Scope is the library: environment (the default)
+                        or organization.'
+                      enum:
+                      - environment
+                      - organization
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
               skills:
                 description: |-
                   Skills are guidance the agent uses, in this order. They belong to the
@@ -166,13 +196,13 @@ spec:
                         agent read it on demand.
                       type: boolean
                     content:
-                      description: Content is the guidance itself.
-                      minLength: 1
+                      description: Content is the guidance itself. Required unless
+                        skillFrom is set.
                       type: string
                     description:
-                      description: Description says what the Skill does and when to
-                        use it.
-                      minLength: 1
+                      description: |-
+                        Description says what the Skill does and when to use it. Required
+                        unless skillFrom is set.
                       type: string
                     metadata:
                       additionalProperties:
@@ -187,9 +217,30 @@ spec:
                       minLength: 1
                       pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
                       type: string
+                    skillFrom:
+                      description: |-
+                        SkillFrom reads the description, metadata and content from a SKILL.md
+                        kept in a ConfigMap, whose name must be the Skill's name. Only a GitOps
+                        runner reads it, from its own namespace; testkube apply takes the Skill
+                        inline.
+                      properties:
+                        configMapKeyRef:
+                          description: |-
+                            ConfigMapKeyRef selects the key of a ConfigMap, in the namespace of the
+                            resource, that holds a SKILL.md.
+                          properties:
+                            key:
+                              description: Key holding the SKILL.md, such as SKILL.md.
+                              type: string
+                            name:
+                              description: Name of the ConfigMap.
+                              type: string
+                          required:
+                          - key
+                          - name
+                          type: object
+                      type: object
                   required:
-                  - content
-                  - description
                   - name
                   type: object
                 type: array

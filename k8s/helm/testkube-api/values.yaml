@@ -220,8 +220,8 @@ next:
   # - tkcsync_*** - GitOps Agent
   gitops:
     ## Should it copy data from Kubernetes to Control Plane. It also syncs the Control Plane
-    ## resources the Control Plane serves: Insights Boards, MCP servers, LLM providers, AI Agents
-    ## and Test Bundles. Deleting a TestBundle custom resource deletes the Test Bundle, ending its
+    ## resources the Control Plane serves: Insights Boards, MCP servers, LLM providers, Skills,
+    ## AI Agents and Test Bundles. Deleting a TestBundle custom resource deletes the Test Bundle, ending its
     ## chats and sandbox.
     syncKubernetesToCloud: true
 

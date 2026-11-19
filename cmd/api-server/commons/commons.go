@@ -416,6 +416,7 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		capabilities.CapabilityControlPlaneResources,
 		capabilities.CapabilityControlPlaneResourcesAI,
 		capabilities.CapabilityControlPlaneResourcesTestBundles,
+		capabilities.CapabilityControlPlaneResourcesSkills,
 	} {
 		if capabilities.Enabled(foundProContext.Capabilities, c) {
 			proContext.ControlPlaneResourceCapabilities = append(proContext.ControlPlaneResourceCapabilities, c)

@@ -175,6 +175,9 @@ func PrepareForApply(obj Object) (Object, error) {
 	case *aiv1.LLMProvider:
 		o.ObjectMeta = meta
 		o.Status = commonv1.ControlPlaneResourceStatus{}
+	case *aiv1.Skill:
+		o.ObjectMeta = meta
+		o.Status = commonv1.ControlPlaneResourceStatus{}
 	case *testbundlesv1.TestBundle:
 		o.ObjectMeta = meta
 		o.Status = testbundlesv1.TestBundleStatus{}

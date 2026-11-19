@@ -211,8 +211,9 @@ rules:
       - list
       - watch
   {{- if .Values.gitops.enabled }}
-  # Control Plane resources (Insights Boards, AI Agents, MCP servers, LLM providers and Test
-  # Bundles), which the GitOps runner syncs to the Control Plane. It only reads them.
+  # Control Plane resources (Insights Boards, AI Agents, MCP servers, LLM providers, Skills and
+  # Test Bundles), which the GitOps runner syncs to the Control Plane. It only reads them, and the
+  # ConfigMaps above that a Skill's skillFrom reads its SKILL.md from.
   - apiGroups:
       - "insights.testkube.io"
     resources:
@@ -227,6 +228,7 @@ rules:
       - aiagents
       - mcpservers
       - llmproviders
+      - skills
     verbs:
       - get
       - list

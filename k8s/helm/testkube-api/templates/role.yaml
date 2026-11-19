@@ -459,8 +459,9 @@ rules:
 
 ---
 
-# Control Plane resources (Insights Boards, AI Agents, MCP servers, LLM providers and Test
-# Bundles), which a GitOps runner syncs to the Control Plane. It only reads them.
+# Control Plane resources (Insights Boards, AI Agents, MCP servers, LLM providers, Skills and Test
+# Bundles), which a GitOps runner syncs to the Control Plane. It only reads them, and the
+# ConfigMaps a Skill's skillFrom reads its SKILL.md from.
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: Role
 metadata:
@@ -487,6 +488,15 @@ rules:
       - aiagents
       - mcpservers
       - llmproviders
+      - skills
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
     verbs:
       - get
       - list

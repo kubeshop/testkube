@@ -179,6 +179,7 @@ tests:
               - aiagents
               - mcpservers
               - llmproviders
+              - skills
             verbs:
               - get
               - list

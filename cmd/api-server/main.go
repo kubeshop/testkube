@@ -711,7 +711,7 @@ func main() {
 		err = insightsv1.AddToScheme(scheme)
 		commons.ExitOnError("add Boards to kubernetes runtime scheme", err)
 		err = aiv1.AddToScheme(scheme)
-		commons.ExitOnError("add AI Agents, MCP servers and LLM providers to kubernetes runtime scheme", err)
+		commons.ExitOnError("add AI Agents, MCP servers, LLM providers and Skills to kubernetes runtime scheme", err)
 		err = testbundlesv1.AddToScheme(scheme)
 		commons.ExitOnError("add Test Bundles to kubernetes runtime scheme", err)
 
