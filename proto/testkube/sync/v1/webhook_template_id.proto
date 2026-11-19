@@ -7,4 +7,8 @@ package testkube.sync.v1;
 message WebhookTemplateId {
   // Id is the unique ID string for a WebhookTemplate.
   string id = 1;
+  // namespace is the Kubernetes namespace the object was deleted from.
+  // Optional: when empty the Control Plane uses the agent's default namespace,
+  // as before this field existed.
+  string namespace = 2;
 }
