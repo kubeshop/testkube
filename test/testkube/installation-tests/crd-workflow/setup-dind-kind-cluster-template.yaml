@@ -4,6 +4,8 @@ metadata:
   name: setup-dind-kind-cluster-template
   labels:
     core-tests: installation-template
+  annotations:
+    testkube.io/description: "Template that starts a Docker-in-Docker service, creates a kind cluster with external access and fixed DNS, and installs Helm and the Testkube CLI."
 spec:
   container:
     image: gcr.io/google.com/cloudsdktool/google-cloud-cli:584.0.0 # Provides kubectl and Debian tooling for installation workflows.

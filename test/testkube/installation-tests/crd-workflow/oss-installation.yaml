@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: installation
     tool: testkube-oss
+  annotations:
+    testkube.io/description: "Checks that standalone Testkube OSS installs on a fresh kind cluster and can run a workflow."
 spec:
   job:
     activeDeadlineSeconds: 900
