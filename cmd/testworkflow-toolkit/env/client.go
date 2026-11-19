@@ -145,16 +145,22 @@ func Testkube() client.Client {
 		port = int(portStr)
 	}
 	if config2.UseProxy() {
-		// A host in the form <service>.<namespace> names the namespace of the agent Service.
-		namespace := config2.Namespace()
-		if service, ns, ok := strings.Cut(host, "."); ok {
-			host, namespace = service, ns
-		}
-		return client.NewProxyAPIClient(Kubernetes(), client.NewAPIConfig(namespace, host, port))
+		service, namespace := proxyTarget(host, config2.Namespace())
+		return client.NewProxyAPIClient(Kubernetes(), client.NewAPIConfig(namespace, service, port))
 	}
 	httpClient := phttp.NewClient(true)
 	sseClient := phttp.NewSSEClient(true)
 	return client.NewDirectAPIClient(httpClient, sseClient, fmt.Sprintf("http://%s", net.JoinHostPort(host, strconv.Itoa(port))), "")
+}
+
+// proxyTarget reads the Service and its namespace from a host in the form <service>.<namespace>[.svc.<domain>.].
+// A host without a dot names a Service in the namespace of the execution.
+func proxyTarget(host, executionNamespace string) (service, namespace string) {
+	parts := strings.SplitN(host, ".", 3)
+	if len(parts) < 2 || parts[1] == "" {
+		return parts[0], executionNamespace
+	}
+	return parts[0], parts[1]
 }
 
 func CloudInternal() (cloud.TestKubeCloudAPIClient, error) {

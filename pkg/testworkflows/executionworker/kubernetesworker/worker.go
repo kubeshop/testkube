@@ -122,6 +122,9 @@ func (w *worker) buildInternalConfig(resourceId, fsPrefix string, execution test
 			cfg.Worker.DefaultServiceAccount = ns.DefaultServiceAccountName
 		}
 	}
+	if w.config.CrossNamespaceLocalApiUrl != "" && w.config.AgentNamespace != "" && cfg.Worker.Namespace != w.config.AgentNamespace {
+		cfg.Worker.Connection.LocalApiUrl = w.config.CrossNamespaceLocalApiUrl
+	}
 	if ns, ok := w.config.Cluster.Namespaces[cfg.Worker.Namespace]; ok && ns.DefaultServiceAccountName != "" {
 		cfg.Worker.DefaultServiceAccount = ns.DefaultServiceAccountName
 	}

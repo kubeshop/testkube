@@ -19,4 +19,13 @@
 // The default service account of the chosen namespace in Cluster.Namespaces replaces the default one of the runner.
 // For a source namespace it does so also when it is empty, so that Kubernetes uses the default account of that
 // namespace. A service account in spec.pod of the workflow wins over both.
+//
+// # Agent API address
+//
+// An execution in AgentNamespace gets Connection.LocalApiUrl with the short Service name, which every toolkit reads.
+// An execution in another namespace gets CrossNamespaceLocalApiUrl, an absolute name <service>.<namespace>.svc.<domain>.
+// with a trailing dot. The DNS search list of the execution pod then cannot resolve the name to a Service of the
+// execution namespace. The toolkit in proxy mode (--proxy) reads the Service and its namespace from that name. Proxy
+// mode needs services/proxy on the agent Service in AgentNamespace for the service account of the execution. The chart
+// generates no such Role in any namespace, so an operator who uses --proxy grants it by hand.
 package kubernetesworker
