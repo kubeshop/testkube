@@ -156,3 +156,39 @@ func TestWorker_BuildInternalConfig_SourceNamespace(t *testing.T) {
 		})
 	}
 }
+
+func TestWorker_BuildInternalConfig_LocalApiUrl(t *testing.T) {
+	const (
+		shortUrl = "http://testkube-api-server:8088"
+		fullUrl  = "http://testkube-api-server.agent.svc.cluster.local.:8088"
+	)
+	tests := []struct {
+		name    string
+		job     *testworkflowsv1.JobConfig
+		wantUrl string
+	}{
+		{name: "keeps the short Service name in the agent namespace", wantUrl: shortUrl},
+		{name: "uses the absolute Service name in another namespace", job: &testworkflowsv1.JobConfig{Namespace: "src"}, wantUrl: fullUrl},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := NewWorker(fake.NewSimpleClientset(), nil, Config{
+				Cluster: ClusterConfig{DefaultNamespace: "agent", Namespaces: map[string]NamespaceConfig{
+					"agent": {},
+					"src":   {},
+				}},
+				Connection:                testworkflowconfig.WorkerConnectionConfig{LocalApiUrl: shortUrl},
+				AgentNamespace:            "agent",
+				CrossNamespaceLocalApiUrl: fullUrl,
+			})
+			workflow := testworkflowsv1.TestWorkflow{
+				Spec: testworkflowsv1.TestWorkflowSpec{TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{Job: tt.job}},
+			}
+
+			cfg := w.buildInternalConfig("exec-1", "", testworkflowconfig.ExecutionConfig{Id: "exec-1"}, testworkflowconfig.ControlPlaneConfig{}, workflow, "")
+
+			assert.Equal(t, tt.wantUrl, cfg.Worker.Connection.LocalApiUrl)
+		})
+	}
+}

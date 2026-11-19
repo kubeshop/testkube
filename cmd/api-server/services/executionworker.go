@@ -1,7 +1,11 @@
 package services
 
 import (
+	"bufio"
 	"fmt"
+	"io"
+	"os"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -54,8 +58,7 @@ func CreateExecutionWorker(
 			TlsInsecure: cfg.TestkubeProTLSInsecure,
 
 			// TODO: Prepare ControlPlane interface for OSS, so we may unify the communication
-			// The Service name carries the agent namespace, because the execution can run in another namespace.
-			LocalApiUrl: fmt.Sprintf("http://%s.%s:%d", cfg.APIServerFullname, cfg.TestkubeNamespace, cfg.APIServerPort),
+			LocalApiUrl: fmt.Sprintf("http://%s:%d", cfg.APIServerFullname, cfg.APIServerPort),
 		},
 		FeatureFlags:                             featureFlags,
 		RunnerId:                                 runnerId,
@@ -74,6 +77,9 @@ func CreateExecutionWorker(
 		EmptyDirSizeLimit:        cfg.TestkubeEmptyDirSizeLimit,
 		DefaultImagePullPolicy:   cfg.TestkubeDefaultImagePullPolicy,
 		ExecuteInSourceNamespace: cfg.GitOpsExecuteInSourceNamespace,
+		AgentNamespace:           cfg.TestkubeNamespace,
+		// An absolute name, so that no Service in the execution namespace can shadow the agent Service.
+		CrossNamespaceLocalApiUrl: fmt.Sprintf("http://%s.%s.svc.%s.:%d", cfg.APIServerFullname, cfg.TestkubeNamespace, clusterDomain(cfg.TestkubeNamespace), cfg.APIServerPort),
 		DefaultRunnerResources: testworkflowconfig.ContainerResourceConfig{
 			Requests: testworkflowconfig.ContainerResources{
 				CPU:    cfg.TestkubeDefaultRunnerCPURequest,
@@ -85,4 +91,37 @@ func CreateExecutionWorker(
 			},
 		},
 	})
+}
+
+const (
+	resolvConfPath       = "/etc/resolv.conf"
+	defaultClusterDomain = "cluster.local"
+)
+
+// clusterDomain reads the cluster domain from the DNS search list of the agent pod.
+func clusterDomain(namespace string) string {
+	f, err := os.Open(resolvConfPath)
+	if err != nil {
+		return defaultClusterDomain
+	}
+	defer f.Close()
+	return clusterDomainFromResolvConf(f, namespace)
+}
+
+// clusterDomainFromResolvConf finds the search domain <namespace>.svc.<domain> and returns <domain>.
+func clusterDomainFromResolvConf(r io.Reader, namespace string) string {
+	prefix := namespace + ".svc."
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		if len(fields) == 0 || fields[0] != "search" {
+			continue
+		}
+		for _, domain := range fields[1:] {
+			if rest, ok := strings.CutPrefix(strings.TrimSuffix(domain, "."), prefix); ok && rest != "" {
+				return rest
+			}
+		}
+	}
+	return defaultClusterDomain
 }
