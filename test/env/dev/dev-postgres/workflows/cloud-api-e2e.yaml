@@ -10,6 +10,8 @@ metadata:
     junit: "true"
     playwright-traces: "on"
     category: e2e-api-testing
+  annotations:
+    testkube.io/description: "Checks the cloud API end to end with Playwright API tests against .dev, with an API scenario coverage report."
 spec:
   config:
     revision:

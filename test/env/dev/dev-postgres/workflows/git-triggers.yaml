@@ -5,6 +5,8 @@ metadata:
   name: git-triggered-workflow-push-main-branch
   labels:
     core-tests: git-triggers
+  annotations:
+    testkube.io/description: "Passes in one step; a Git trigger runs it on a push to the main branch, to check that push triggers fire."
 spec:
   container:
     resources:
@@ -24,6 +26,8 @@ metadata:
   name: git-triggered-workflow-pr-content-trigger
   labels:
     core-tests: git-triggers
+  annotations:
+    testkube.io/description: "Passes in one step; a Git trigger runs it when a pull request is opened, updated or reopened, to check that pull request triggers fire."
 spec:
   container:
     resources:

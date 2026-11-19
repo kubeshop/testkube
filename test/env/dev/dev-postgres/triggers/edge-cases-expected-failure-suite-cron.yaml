@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: suite-trigger
+  annotations:
+    testkube.io/description: "Starts the expected-failure suite every 4 hours, to check that .dev still reports failures correctly."
 spec:
   container:
     resources:

@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: workflow-trigger
+  annotations:
+    testkube.io/description: "Starts cloud-api-perf-smoke at 01:45 each day, to catch performance regressions of the .dev cloud API, including Insights and boards."
 spec:
   container:
     resources:

@@ -6,6 +6,8 @@ metadata:
     dev-quality-gate: "true"
     core-tests: workflows-suite
     type: suite
+  annotations:
+    testkube.io/description: "Groups every testkube-cloud-api quality-loop check, to run all of them in one execution."
 spec:
   container:
     resources:

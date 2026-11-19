@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite-trigger
     type: suite-trigger
     tool: testkube-oss
+  annotations:
+    testkube.io/description: "Starts the Testkube OSS suite every 4 hours, to check the OSS installations."
 spec:
   container:
     resources:

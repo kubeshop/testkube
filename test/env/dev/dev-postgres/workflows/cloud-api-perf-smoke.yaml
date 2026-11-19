@@ -8,6 +8,8 @@ metadata:
     tool: k6
     category: performance-testing
     dev-quality-gate: "true"
+  annotations:
+    testkube.io/description: "Benchmarks the .dev cloud API under load with the k6 tests of js/packages/k6-load-tests and fails when an endpoint, including Insights and boards, goes over its latency threshold."
 spec:
   content:
     git:

@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows
     tool: postman
     category: api-testing
+  annotations:
+    testkube.io/description: "Checks that a cron event defined on a workflow starts it."
 spec:
   container:
     resources:
