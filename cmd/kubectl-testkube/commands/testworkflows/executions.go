@@ -97,6 +97,7 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&testWorkflowName, "testworkflow", "w", "", "test workflow name")
+	_ = cmd.RegisterFlagCompletionFunc("testworkflow", common.CompleteTestWorkflowNameFlag)
 	cmd.Flags().IntVar(&limit, "limit", 1000, "max number of records to return")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().BoolVar(&logsOnly, "logs-only", false, "show only execution logs")
