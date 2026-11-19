@@ -1062,6 +1062,14 @@ rules:
     - watch
     - list
   - apiGroups:
+    - ""
+    resources:
+    - events
+    verbs:
+    - get
+    - watch
+    - list
+  - apiGroups:
       - batch
     resources:
       - cronjobs
