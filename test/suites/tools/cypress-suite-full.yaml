@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: cypress
+  annotations:
+    testkube.io/description: "Groups all 13 Cypress workflows, to check the Cypress integration across versions 12 to 14, templates, reports, matrix, video and sharding."
 spec:
   container:
     resources:

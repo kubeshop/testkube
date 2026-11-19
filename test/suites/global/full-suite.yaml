@@ -7,6 +7,8 @@ metadata:
     type: suite
     dev-quality-gate: "true"
     release-quality-gate: "true"
+  annotations:
+    testkube.io/description: "Groups the full suites of every supported tool, to check all tool integrations of Testkube in one run."
 spec:
   container:
     resources:

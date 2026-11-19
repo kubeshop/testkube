@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: xunit
+  annotations:
+    testkube.io/description: "Groups the xUnit workflow, to check the xUnit integration."
 spec:
   container:
     resources:
