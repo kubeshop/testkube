@@ -123,3 +123,18 @@ func TestPopulateLoginDataToContext_KeepsCustomAuth(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, saved.CloudContext.CustomAuth)
 }
+
+// Init commands save the context without logging in again.
+func TestPopulateLoginDataToContext_KeepsCustomAuthWithoutNewLogin(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
+	var cfg config.Data
+	cfg.CloudContext.CustomAuth = true
+	require.NoError(t, PopulateLoginDataToContext("", "", config.TokenTypeOIDC, "", "", "", HelmOptions{}, cfg))
+
+	saved, err := config.Load()
+	require.NoError(t, err)
+	assert.True(t, saved.CloudContext.CustomAuth)
+}

@@ -659,13 +659,14 @@ func PopulateLoginDataToContext(orgID, envID, tokenType, token, refreshToken, do
 	if options.Master.URIs.Auth != "" {
 		cfg.CloudContext.AuthUri = options.Master.URIs.Auth
 	}
-	cfg.CloudContext.CustomAuth = options.Master.CustomAuth
 	cfg.ContextType = config.ContextTypeCloud
 	cfg.CloudContext.OrganizationId = orgID
 	cfg.CloudContext.EnvironmentId = envID
 	cfg.CloudContext.TokenType = tokenType
 	if token != "" {
 		cfg.CloudContext.ApiKey = token
+		// Re-login after a failed refresh must reuse this login page.
+		cfg.CloudContext.CustomAuth = options.Master.CustomAuth
 	}
 	if refreshToken != "" {
 		cfg.CloudContext.RefreshToken = refreshToken
