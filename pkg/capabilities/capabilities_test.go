@@ -36,6 +36,14 @@ func TestEnabled(t *testing.T) {
 			},
 			want: false,
 		},
+		{
+			name: "skips nil capabilities instead of panicking",
+			capabilities: []*cloud.Capability{
+				nil,
+				{Name: string(CapabilityMultiNamespaceSync), Enabled: true},
+			},
+			want: true,
+		},
 	}
 
 	for _, tt := range tests {

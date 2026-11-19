@@ -37,6 +37,9 @@ const CapabilityMultiNamespaceSync Capability = "sync-multi-namespace"
 
 func Enabled(capabilities []*cloud.Capability, capability Capability) bool {
 	for _, c := range capabilities {
+		if c == nil {
+			continue
+		}
 		if c.Name == string(capability) {
 			return c.Enabled
 		}
