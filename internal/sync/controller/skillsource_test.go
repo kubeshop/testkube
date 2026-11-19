@@ -137,6 +137,9 @@ func TestControlPlaneResourceSyncReconciler_SkillFromErrors(t *testing.T) {
 	cms := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap("skills", map[string]string{"SKILL.md": skillMarkdown})).Build()
 	noConfigMaps := fake.NewClientBuilder().WithScheme(scheme).Build()
 
+	withDescription := skill("k6-load-testing", "SKILL.md")
+	withDescription.Spec.Description = "Mine."
+
 	for name, tc := range map[string]struct {
 		skill    *aiv1.Skill
 		cms      client.Reader
@@ -146,6 +149,7 @@ func TestControlPlaneResourceSyncReconciler_SkillFromErrors(t *testing.T) {
 		"missing ConfigMap": {skill("k6-load-testing", "SKILL.md"), noConfigMaps, false, `configmaps "skills" not found`},
 		"missing key":       {skill("k6-load-testing", "README.md"), cms, false, `ConfigMap "skills" has no key "README.md"`},
 		"another name":      {skill("other", "SKILL.md"), cms, true, "the SKILL.md must be named as the Skill is: other"},
+		"inline field":      {withDescription, cms, true, "spec.description: Forbidden: comes from the SKILL.md that skillFrom reads"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			resources := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tc.skill).Build()

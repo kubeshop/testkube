@@ -64,11 +64,7 @@ func normalizeSkills(skills []skillFields, alwaysIncluded int, path *field.Path)
 		seen[name] = true
 		if s.from != nil {
 			errs = append(errs, validateSkillSource(s.from, skillPath.Child("skillFrom"))...)
-			errs = append(errs, forbidWithSkillFrom(skillPath, map[string]bool{
-				"description": *s.description != "",
-				"content":     s.content != "",
-				"metadata":    len(s.metadata) > 0,
-			})...)
+			errs = append(errs, forbidWithSkillFrom(skillPath, ownSkillWritten(*s.description, s.content, s.metadata))...)
 			errs = append(errs, unresolvedSkillSource(skillPath.Child("skillFrom")))
 			continue
 		}
@@ -137,14 +133,7 @@ func normalizeSkill(s *aiv1.Skill) field.ErrorList {
 	}
 	if spec.SkillFrom != nil {
 		errs = append(errs, validateSkillSource(spec.SkillFrom, path.Child("skillFrom"))...)
-		errs = append(errs, forbidWithSkillFrom(path, map[string]bool{
-			"description":   spec.Description != "",
-			"license":       spec.License != "",
-			"compatibility": spec.Compatibility != "",
-			"metadata":      len(spec.Metadata) > 0,
-			"allowed-tools": spec.AllowedTools != "",
-			"content":       spec.Content != "",
-		})...)
+		errs = append(errs, forbidWithSkillFrom(path, skillWritten(spec))...)
 		return append(errs, unresolvedSkillSource(path.Child("skillFrom")))
 	}
 	errs = append(errs, normalizeSkillBody(&spec.Description, spec.Content, spec.Metadata, path)...)

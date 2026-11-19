@@ -257,9 +257,8 @@ func TestParseSkillMarkdown(t *testing.T) {
 	require.NoError(t, err, "a byte order mark and Windows line endings are read")
 	assert.Equal(t, want, md)
 
-	md, err = ParseSkillMarkdown("---\nname: a\ndescription: A.\nallowed-tools:\n  - Read\n  - Bash(git:*)\n---\nBody")
+	md, err = ParseSkillMarkdown("---\nname: a\ndescription: A.\n---\nBody")
 	require.NoError(t, err)
-	assert.Equal(t, "Read Bash(git:*)", md.AllowedTools, "a YAML list is joined with spaces")
 	assert.Equal(t, "Body", md.Body)
 	assert.Nil(t, md.Metadata)
 
@@ -269,6 +268,7 @@ func TestParseSkillMarkdown(t *testing.T) {
 		"not YAML":             {"---\nname: [a\n---\n", "frontmatter is not valid"},
 		"number metadata":      {"---\nname: a\nmetadata:\n  version: 1.0\n---\n", `metadata "version" is not a string; quote it`},
 		"bad allowed-tools":    {"---\nname: a\nallowed-tools:\n  read: true\n---\n", "allowed-tools is not a space-separated string"},
+		"allowed-tools list":   {"---\nname: a\nallowed-tools:\n  - Read\n  - Bash(git:*)\n---\n", "allowed-tools is not a space-separated string"},
 	} {
 		_, err := ParseSkillMarkdown(tc.data)
 		require.Error(t, err, name)
@@ -377,6 +377,48 @@ func TestResolveSkillSources_AIAgentOwnSkills(t *testing.T) {
 	err := ResolveSkillSources(wrong, cms.read)
 	require.ErrorIs(t, err, ErrInvalidSkillSource)
 	assert.Contains(t, err.Error(), "spec.skills[0].skillFrom", "the SKILL.md names k6-load-testing")
+}
+
+// A field written beside skillFrom is refused before the SKILL.md is read,
+// as Normalize refuses it, rather than replaced by the file's value.
+func TestResolveSkillSources_InlineFieldsBesideSkillFrom(t *testing.T) {
+	cms := &configMaps{data: map[string]map[string]string{"skills": {"SKILL.md": k6SkillMarkdown}}}
+	from := &aiv1.SkillSource{ConfigMapKeyRef: &aiv1.ConfigMapKeyReference{Name: "skills", Key: "SKILL.md"}}
+
+	for _, key := range []string{"description", "license", "compatibility", "metadata", "allowed-tools", "content"} {
+		spec := aiv1.SkillSpec{SkillFrom: from}
+		switch key {
+		case "description":
+			spec.Description = "Mine."
+		case "license":
+			spec.License = "MIT"
+		case "compatibility":
+			spec.Compatibility = "Any."
+		case "metadata":
+			spec.Metadata = map[string]string{"a": "b"}
+		case "allowed-tools":
+			spec.AllowedTools = "Read"
+		case "content":
+			spec.Content = "Mine."
+		}
+		s := newSkill("k6-load-testing", spec)
+		err := ResolveSkillSources(s, cms.read)
+		require.ErrorIs(t, err, ErrInvalidSkillSource, key)
+		assert.Contains(t, err.Error(), "spec."+key+": Forbidden: comes from the SKILL.md that skillFrom reads", key)
+		assert.Equal(t, from, s.Spec.SkillFrom, key)
+	}
+	assert.Empty(t, cms.asked, "nothing is read")
+
+	agent := agentWithRefs([]aiv1.AIAgentSkill{
+		{Name: "k6-load-testing", SkillFrom: from, Description: "Mine.", Content: "Mine.", Metadata: map[string]string{"a": "b"}},
+	}, nil)
+	err := ResolveSkillSources(agent, cms.read)
+	require.ErrorIs(t, err, ErrInvalidSkillSource)
+	for _, key := range []string{"description", "content", "metadata"} {
+		assert.Contains(t, err.Error(), "spec.skills[0]."+key+": Forbidden: comes from the SKILL.md that skillFrom reads", key)
+	}
+	assert.Equal(t, "Mine.", agent.Spec.Skills[0].Description)
+	assert.Empty(t, cms.asked, "nothing is read")
 }
 
 func TestSkillSourceConfigMaps(t *testing.T) {

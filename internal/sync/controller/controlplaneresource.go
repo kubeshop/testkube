@@ -363,9 +363,6 @@ func configMapKeyReader(ctx context.Context, reader client.Reader, namespace str
 		if value, ok := configMap.Data[ref.Key]; ok {
 			return value, nil
 		}
-		if value, ok := configMap.BinaryData[ref.Key]; ok {
-			return string(value), nil
-		}
 		return "", fmt.Errorf("ConfigMap %q has no key %q", ref.Name, ref.Key)
 	}
 }

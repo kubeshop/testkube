@@ -102,8 +102,8 @@
 // place, which is what testkube apply sees. ParseSkillMarkdown reads the
 // file: frontmatter keys outside the spec are ignored, since the same file
 // often serves other agent tools; metadata values must be strings; and
-// allowed-tools is space separated, though a YAML list is accepted. An own
-// Skill keeps only the description, metadata and body of the file.
+// allowed-tools is a space-separated string. An own Skill keeps only the
+// description, metadata and body of the file.
 //
 // An AI Agent refers to library Skills with skillRefs, each {name, scope}:
 // scope is environment (a Skill, the default) or organization (a Skill of the

@@ -48,8 +48,7 @@ type skillFrontmatter struct {
 
 // ParseSkillMarkdown reads a SKILL.md: YAML frontmatter between two "---"
 // lines, then the Markdown body. Metadata values must be strings, as the spec
-// says. allowed-tools is a space-separated string; a YAML list is accepted
-// too, and joined with spaces.
+// says, and allowed-tools is a space-separated string.
 func ParseSkillMarkdown(data string) (SkillMarkdown, error) {
 	data = strings.TrimPrefix(data, byteOrderMark)
 	data = strings.ReplaceAll(data, "\r\n", "\n")
@@ -99,10 +98,6 @@ func parseAllowedTools(raw json.RawMessage) (string, error) {
 	if err := json.Unmarshal(raw, &text); err == nil {
 		return strings.Join(strings.Fields(text), " "), nil
 	}
-	var list []string
-	if err := json.Unmarshal(raw, &list); err == nil {
-		return strings.Join(list, " "), nil
-	}
 	return "", errors.New("the SKILL.md allowed-tools is not a space-separated string of tools")
 }
 
@@ -128,6 +123,9 @@ func ResolveSkillSources(obj Object, read SkillSourceReader) error {
 	case *aiv1.Skill:
 		if o.Spec.SkillFrom == nil {
 			return nil
+		}
+		if errs := forbidWithSkillFrom(field.NewPath("spec"), skillWritten(&o.Spec)); len(errs) > 0 {
+			return fmt.Errorf("%w: %w", ErrInvalidSkillSource, errs.ToAggregate())
 		}
 		path := field.NewPath("spec", "skillFrom")
 		md, err := readSkillSource(o.Spec.SkillFrom, path, read)
@@ -158,7 +156,12 @@ func ResolveSkillSources(obj Object, read SkillSourceReader) error {
 			if s.SkillFrom == nil {
 				continue
 			}
-			path := field.NewPath("spec", "skills").Index(i).Child("skillFrom")
+			skillPath := field.NewPath("spec", "skills").Index(i)
+			if forbidden := forbidWithSkillFrom(skillPath, ownSkillWritten(s.Description, s.Content, s.Metadata)); len(forbidden) > 0 {
+				errs = append(errs, forbidden...)
+				continue
+			}
+			path := skillPath.Child("skillFrom")
 			md, err := readSkillSource(s.SkillFrom, path, read)
 			if err != nil {
 				return err
@@ -235,6 +238,28 @@ func forbidWithSkillFrom(path *field.Path, set map[string]bool) field.ErrorList 
 		}
 	}
 	return errs
+}
+
+// skillWritten marks the fields of a Skill's spec that a SKILL.md gives.
+func skillWritten(spec *aiv1.SkillSpec) map[string]bool {
+	return map[string]bool{
+		"description":   spec.Description != "",
+		"license":       spec.License != "",
+		"compatibility": spec.Compatibility != "",
+		"metadata":      len(spec.Metadata) > 0,
+		"allowed-tools": spec.AllowedTools != "",
+		"content":       spec.Content != "",
+	}
+}
+
+// ownSkillWritten marks the fields of an AI Agent's own Skill that a SKILL.md
+// gives.
+func ownSkillWritten(description, content string, metadata map[string]string) map[string]bool {
+	return map[string]bool{
+		"description": description != "",
+		"content":     content != "",
+		"metadata":    len(metadata) > 0,
+	}
 }
 
 // unresolvedSkillSource is the error for a skillFrom left in an object being
