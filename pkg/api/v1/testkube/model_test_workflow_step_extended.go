@@ -47,6 +47,24 @@ func (w *TestWorkflowStep) ContainsExecuteAction() bool {
 	return false
 }
 
+// AgentSteps returns the agent operation of the step, then the ones of its nested steps
+// and of its parallel step.
+func (w *TestWorkflowStep) AgentSteps() []TestWorkflowStepAgent {
+	var agents []TestWorkflowStepAgent
+	if w.Agent != nil {
+		agents = append(agents, *w.Agent)
+	}
+	for _, steps := range [][]TestWorkflowStep{w.Setup, w.Steps} {
+		for i := range steps {
+			agents = append(agents, steps[i].AgentSteps()...)
+		}
+	}
+	if w.Parallel != nil {
+		agents = append(agents, w.Parallel.AgentSteps()...)
+	}
+	return agents
+}
+
 func (w *TestWorkflowStep) GetTemplateRefs() []TestWorkflowTemplateRef {
 	var templateRefs []TestWorkflowTemplateRef
 
