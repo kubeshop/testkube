@@ -104,6 +104,41 @@ func ProcessExecute(_ testworkflowprocessor.InternalProcessor, layer testworkflo
 	return stage, nil
 }
 
+// ProcessAgent builds the stage that runs one turn of an AI Agent. The AI Agent runs in the
+// control plane, so the stage only needs the toolkit, as the execute stage does.
+func ProcessAgent(_ testworkflowprocessor.InternalProcessor, layer testworkflowprocessor.Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
+	if step.Agent == nil {
+		return nil, nil
+	}
+	if step.Agent.Name == "" {
+		return nil, errors.New("no AI Agent name provided to the 'agent' step")
+	}
+	container = container.CreateChild()
+	stage := stage.NewContainerStage(layer.NextRef(), container)
+	stage.SetRetryPolicy(step.Retry)
+	stage.SetCategory("Run AI Agent")
+
+	// Allow to combine it within other containers
+	stage.SetPure(true)
+
+	// Base64 encode to prevent testworkflow-init from resolving the expressions. The prompt
+	// reads the outputs of earlier steps, and a value of an output can contain text that the
+	// init process would read as an expression again. The toolkit resolves the prompt once.
+	encoded, err := expressionstcl.EncodeBase64JSON(step.Agent)
+	if err != nil {
+		return nil, errors.Wrap(err, "agent: encoding error")
+	}
+
+	container.
+		SetImage(constants.DefaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand(constants.DefaultToolkitPath, "agent").
+		SetArgs("--base64", encoded).
+		EnableToolkit(stage.Ref())
+
+	return stage, nil
+}
+
 func ProcessParallel(_ testworkflowprocessor.InternalProcessor, layer testworkflowprocessor.Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if step.Parallel == nil {
 		return nil, nil

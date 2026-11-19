@@ -43,7 +43,7 @@ func NewPro(inspector imageinspector.Inspector) testworkflowprocessor.Processor 
 		Register(testworkflowprocessor.ProcessRunCommand).
 		Register(testworkflowprocessor.ProcessShellCommand).
 		Register(testworkflowprocessortcl.ProcessExecute).
-		Register(testworkflowprocessor.StubAgent).
+		Register(testworkflowprocessortcl.ProcessAgent).
 		Register(testworkflowprocessortcl.ProcessParallel).
 		Register(testworkflowprocessor.ProcessNestedSteps).
 		Register(testworkflowprocessortcl.ProcessServicesStop).
