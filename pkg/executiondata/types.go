@@ -270,16 +270,23 @@ func OutputsOf(execution *testkube.TestWorkflowExecution) map[string]string {
 	}
 	values := make(map[string]string)
 	for _, output := range execution.Output {
-		if output.Name != OutputsInstructionName {
-			continue
-		}
-		for key, value := range output.Value {
-			if str, ok := value.(string); ok {
-				values[key] = str
-			}
-		}
+		MergeOutputs(values, output)
 	}
 	return values
+}
+
+// MergeOutputs adds the values of an outputs instruction to values, replacing the
+// keys it already holds, and ignores any other instruction. Merging instructions in
+// the order the steps emitted them is what makes the later step win.
+func MergeOutputs(values map[string]string, output testkube.TestWorkflowOutput) {
+	if output.Name != OutputsInstructionName {
+		return
+	}
+	for key, value := range output.Value {
+		if str, ok := value.(string); ok {
+			values[key] = str
+		}
+	}
 }
 
 // IsReservedRef reports whether a reference has a meaning Testkube assigns,
