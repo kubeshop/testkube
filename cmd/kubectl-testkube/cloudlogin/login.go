@@ -57,7 +57,7 @@ type Tokens struct {
 	RefreshToken string
 }
 
-func CloudLogin(ctx context.Context, providerURL, connectorID string, port int, skipTLS ...bool) (string, chan Tokens, error) {
+func CloudLogin(ctx context.Context, providerURL, connectorID string, customAuth bool, port int, skipTLS ...bool) (string, chan Tokens, error) {
 	if err := checkPortAvailable(port); err != nil {
 		return "", nil, err
 	}
@@ -69,11 +69,16 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string, port int, 
 		return "", nil, err
 	}
 
+	scopes := []string{oidc.ScopeOpenID, "profile", "email", "offline_access"}
+	if customAuth {
+		// Self-hosted login policy reads groups; cloud avoids GitHub's org prompt.
+		scopes = append(scopes, "groups")
+	}
 	oauth2Config := oauth2.Config{
 		ClientID:    clientID,
 		Endpoint:    provider.Endpoint(),
 		RedirectURL: getRedirectAddress(port),
-		Scopes:      []string{oidc.ScopeOpenID, "profile", "email", "offline_access"},
+		Scopes:      scopes,
 	}
 	verifier := oauth2.GenerateVerifier()
 	state := rand.Text()

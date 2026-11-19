@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -301,7 +303,7 @@ func TestCloudLogin_ExchangeProvesPKCE(t *testing.T) {
 	provider, exchanges := fakeOIDCProvider(t)
 	port := freeTestPort(t)
 
-	authURL, tokens, err := CloudLogin(context.Background(), provider.URL, "", port)
+	authURL, tokens, err := CloudLogin(context.Background(), provider.URL, "", false, port)
 	require.NoError(t, err)
 	link, err := url.Parse(authURL)
 	require.NoError(t, err)
@@ -320,7 +322,7 @@ func TestCloudLogin_RejectsWrongState(t *testing.T) {
 	provider, exchanges := fakeOIDCProvider(t)
 	port := freeTestPort(t)
 
-	authURL, tokens, err := CloudLogin(context.Background(), provider.URL, "", port)
+	authURL, tokens, err := CloudLogin(context.Background(), provider.URL, "", false, port)
 	require.NoError(t, err)
 
 	body := callLoginCallback(t, port, url.Values{"code": {"code-fixture"}, "state": {"forged"}})
@@ -332,4 +334,34 @@ func TestCloudLogin_RejectsWrongState(t *testing.T) {
 	callLoginCallback(t, port, url.Values{"code": {"code-fixture"}, "state": {link.Query().Get("state")}})
 	<-exchanges
 	<-tokens
+}
+
+// The login policy reads groups on self-hosted installs only.
+func TestCloudLogin_AsksForGroupsOnlyWithCustomAuth(t *testing.T) {
+	tests := []struct {
+		name       string
+		customAuth bool
+		wantGroups bool
+	}{
+		{name: "cloud login leaves groups out", customAuth: false, wantGroups: false},
+		{name: "custom auth login asks for groups", customAuth: true, wantGroups: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			provider, exchanges := fakeOIDCProvider(t)
+			port := freeTestPort(t)
+
+			authURL, tokens, err := CloudLogin(context.Background(), provider.URL, "", tt.customAuth, port)
+			require.NoError(t, err)
+			link, err := url.Parse(authURL)
+			require.NoError(t, err)
+			scopes := strings.Fields(link.Query().Get("scope"))
+
+			callLoginCallback(t, port, url.Values{"code": {"code-fixture"}, "state": {link.Query().Get("state")}})
+			<-exchanges
+			<-tokens
+
+			assert.Equal(t, tt.wantGroups, slices.Contains(scopes, "groups"), "scopes %v", scopes)
+		})
+	}
 }

@@ -865,7 +865,7 @@ func LoginUser(authUri, apiUri string, customConnector bool, port int, skipTLS .
 	}
 
 	ui.Debug("Logging into cloud with parameters", authUri, connectorID)
-	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), authUri, strings.ToLower(connectorID), port, allowInsecureTLS)
+	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), authUri, strings.ToLower(connectorID), customConnector, port, allowInsecureTLS)
 	if err != nil {
 		return "", "", "", fmt.Errorf("cloud login: %w", err)
 	}
