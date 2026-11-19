@@ -57,7 +57,7 @@
 // Without the sync-multi-namespace capability it also exits when a namespace maps to another
 // Environment than the token one, when several namespaces sync into one Environment, or with *
 // (config.ValidateGitOpsNamespaces). One namespace in the token Environment passes without the
-// capability, as before.
+// capability.
 //
 // Each store call takes a Target (target.go): the namespace of the resource and the Environment
 // that config.GitOpsNamespaces.EnvironmentID maps it to, empty for the Environment of the agent
