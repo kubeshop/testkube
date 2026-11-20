@@ -12,4 +12,8 @@
 //     label createdBy=testkube, so the operator must delete it or add the label).
 //   - The caller exits on failure. The runner is already registered, so continuing on in-memory
 //     credentials would only fail later with AlreadyExists on the next start.
+//
+// Before registering, CheckSelfRegistrationSecretWritable runs the same write with no data (create
+// empty, or update keeping the existing data), so RBAC, configuration and ownership problems stop
+// the start before the Control Plane has a runner and need no cleanup in its UI.
 package commons

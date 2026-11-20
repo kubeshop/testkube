@@ -69,6 +69,44 @@ var (
 	maxTestSecretCalls   = len(testSecretBackoff) + 1
 )
 
+func TestCheckSelfRegistrationSecretWritable(t *testing.T) {
+	tests := []struct {
+		name        string
+		createErrs  []error
+		updateErrs  []error
+		wantErr     error
+		wantCreates int
+		wantUpdates int
+	}{
+		{name: "creates an empty secret", wantCreates: 1},
+		{name: "existing managed secret is updated without data", createErrs: []error{errSecretExists}, wantCreates: 1, wantUpdates: 1},
+		{name: "transient error is retried", createErrs: []error{errSecretConnReset}, wantCreates: 2},
+		{name: "forbidden fails before registration", createErrs: []error{errSecretForbidden}, wantCreates: 1},
+		{name: "existing unmanaged secret fails before registration",
+			createErrs: []error{errSecretExists}, updateErrs: []error{secretmanager.ErrNotFound},
+			wantErr: errSelfRegistrationSecretNotManaged, wantCreates: 1, wantUpdates: 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sm := &fakeSecretWriter{createErrs: tt.createErrs, updateErrs: tt.updateErrs, lastData: testSecretData}
+			err := CheckSelfRegistrationSecretWritable(context.Background(), &countingLogger{}, sm, "ns", "self-registration",
+				SelfRegistrationOptions{Backoff: testSecretBackoff})
+			switch {
+			case tt.wantErr != nil:
+				require.ErrorIs(t, err, tt.wantErr)
+			case len(tt.createErrs) > 0 && tt.createErrs[0] == errSecretForbidden:
+				require.Error(t, err)
+			default:
+				require.NoError(t, err)
+			}
+			// nil data: Create makes an empty secret and Update keeps the existing data.
+			assert.Nil(t, sm.lastData)
+			assert.Equal(t, tt.wantCreates, sm.creates, "creates")
+			assert.Equal(t, tt.wantUpdates, sm.updates, "updates")
+		})
+	}
+}
+
 func TestPersistSelfRegistrationSecret(t *testing.T) {
 	tests := []struct {
 		name        string

@@ -268,6 +268,24 @@ func main() {
 			log.DefaultLogger.Fatalw("cannot register runner without secrets enabled", "error", "secrets must be enabled to register a runner")
 		}
 
+		// Pre-flight: prove the credentials secret is writable before creating any Control Plane state.
+		// Failing here needs only the RBAC/secret fix; failing after Register also needs the runner
+		// deleted in the Control Plane UI.
+		selfRegistrationOpts := commons.SelfRegistrationOptions{
+			Backoff:      commons.DefaultSelfRegistrationSecretBackoff(),
+			SecretPrefix: cfg.SecretCreationPrefix,
+		}
+		if err := commons.CheckSelfRegistrationSecretWritable(ctx, log.DefaultLogger, secretManager,
+			cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, selfRegistrationOpts); err != nil {
+			log.DefaultLogger.Fatalw("cannot write the self-registration secret; the runner was not registered, "+
+				"fix the secret or the service account permissions (create/update on secrets) and restart",
+				"runner_name", runnerName,
+				"namespace", cfg.TestkubeNamespace,
+				"secret", cfg.SecretCreationPrefix+cfg.SelfRegistrationSecret,
+				"error", err.Error(),
+			)
+		}
+
 		capabilities := buildStartupCapabilities(cfg)
 		log.DefaultLogger.Infow("runner capabilities", "capabilities", stringifyCapabilities(capabilities))
 
@@ -318,10 +336,7 @@ func main() {
 		if err := commons.PersistSelfRegistrationSecret(ctx, log.DefaultLogger, secretManager, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, map[string]string{
 			"TESTKUBE_PRO_API_KEY":  res.RunnerKey,
 			"TESTKUBE_PRO_AGENT_ID": res.RunnerId,
-		}, commons.SelfRegistrationOptions{
-			Backoff:      commons.DefaultSelfRegistrationSecretBackoff(),
-			SecretPrefix: cfg.SecretCreationPrefix,
-		}); err != nil {
+		}, selfRegistrationOpts); err != nil {
 			// Exit instead of running on in-memory credentials. The runner is now registered, so every later
 			// start without the secret fails with AlreadyExists. Running on would only hide that until the next
 			// restart or rollout (possibly days later, on every replica); failing now surfaces it at install

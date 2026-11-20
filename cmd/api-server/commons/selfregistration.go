@@ -110,12 +110,30 @@ func PersistSelfRegistrationSecret(
 	return fmt.Errorf("saving secret %q: %w", fullName, lastErr)
 }
 
+// CheckSelfRegistrationSecretWritable verifies, before the runner registers, that the
+// self-registration secret can be written. It creates the secret empty or, when it already exists,
+// updates it without touching its data, using the same retries and error classification as
+// PersistSelfRegistrationSecret. Configuration, RBAC and ownership problems then surface while the
+// Control Plane has no runner yet, so fixing them needs no cleanup in the Control Plane UI.
+// An empty secret loaded through envFrom leaves TESTKUBE_PRO_API_KEY empty, so the next start
+// still registers and PersistSelfRegistrationSecret fills the secret in.
+func CheckSelfRegistrationSecretWritable(
+	ctx context.Context,
+	log SelfRegistrationLogger,
+	sm SelfRegistrationSecretWriter,
+	namespace, name string,
+	opts SelfRegistrationOptions,
+) error {
+	return PersistSelfRegistrationSecret(ctx, log, sm, namespace, name, nil, opts)
+}
+
 func writeSelfRegistrationSecret(ctx context.Context, sm SelfRegistrationSecretWriter, namespace, name, fullName string, data map[string]string) error {
 	_, err := sm.Create(ctx, namespace, name, data, secretmanager.CreateOptions{})
 	if err == nil || !k8serrors.IsAlreadyExists(err) {
 		return err
 	}
 	// Left over from an earlier attempt or a previous registration: overwrite with the new credentials.
+	// With nil data (the pre-flight check) the secret manager keeps the existing data.
 	_, err = sm.Update(ctx, namespace, name, data, secretmanager.UpdateOptions{})
 	// Without ListAll the manager only sees secrets labelled createdBy=testkube, so a foreign secret
 	// of the same name surfaces as ErrNotFound, not ErrNotControlled. ErrNotFound can also mean the secret
