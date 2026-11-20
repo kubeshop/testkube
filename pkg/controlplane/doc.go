@@ -13,4 +13,11 @@
 // executions before they are retried; the server clamps it if it is not. Raising the batch size
 // trades a bounded poll for a larger one: the bound is what keeps a burst of workflows sharing a
 // cron minute from exceeding the runner's call deadline.
+//
+// # Step ids in the signature
+//
+// The runner sends the id of each step in the signature of an execution (Signature.id), and the
+// server stores it with the signature. pkg/runner/grpc is the other end of this contract. A runner
+// without the field sends no id. The server then stores none, and a reader of that execution
+// identifies a step by its ref, as before the field existed.
 package controlplane
