@@ -16,6 +16,7 @@ type WorkflowTemplateLister interface {
 
 func ListWorkflowTemplates(client WorkflowTemplateLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_workflowtemplates",
+		readOnlyTool(),
 		mcp.WithDescription(ListWorkflowTemplatesDescription),
 		mcp.WithString("selector", mcp.Description(SelectorDescription)),
 	)
@@ -45,6 +46,7 @@ type WorkflowTemplateDefinitionGetter interface {
 
 func GetWorkflowTemplateDefinition(client WorkflowTemplateDefinitionGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_workflowtemplate_definition",
+		readOnlyTool(),
 		mcp.WithDescription(GetWorkflowTemplateDefinitionDescription),
 		mcp.WithString("templateName", mcp.Required(), mcp.Description(TemplateNameDescription)),
 	)
@@ -77,6 +79,7 @@ type WorkflowTemplateCreator interface {
 
 func CreateWorkflowTemplate(client WorkflowTemplateCreator) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("create_workflowtemplate",
+		additiveTool(),
 		mcp.WithDescription(CreateWorkflowTemplateDescription),
 		mcp.WithString("yaml", mcp.Required(), mcp.Description("Complete YAML definition of the TestWorkflowTemplate to create in Testkube. This should be the full template specification including metadata and spec.")),
 	)
@@ -109,6 +112,7 @@ type WorkflowTemplateUpdater interface {
 
 func UpdateWorkflowTemplate(client WorkflowTemplateUpdater) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("update_workflowtemplate",
+		destructiveTool(),
 		mcp.WithDescription(UpdateWorkflowTemplateDescription),
 		mcp.WithString("templateName", mcp.Required(), mcp.Description(TemplateNameDescription)),
 		mcp.WithString("yaml", mcp.Required(), mcp.Description("Complete YAML definition of the TestWorkflowTemplate to update in Testkube. This should be the full template specification including metadata and spec.")),

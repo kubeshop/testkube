@@ -30,6 +30,7 @@ type ExecutionBulkGetter interface {
 // QueryWorkflows creates a tool for querying workflow definitions with JSONPath
 func QueryWorkflows(client WorkflowDefinitionBulkGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("query_workflows",
+		readOnlyTool(),
 		mcp.WithDescription(QueryWorkflowsDescription),
 		mcp.WithString("expression", mcp.Required(), mcp.Description(`JSONPath expression to apply to workflow definitions.
 
@@ -141,6 +142,7 @@ Examples: '$..image', '$.spec.steps[*].name', '$.metadata.labels'.`)),
 // QueryExecutions creates a tool for querying execution data with JSONPath
 func QueryExecutions(client ExecutionBulkGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("query_executions",
+		readOnlyTool(),
 		mcp.WithDescription(QueryExecutionsDescription),
 		mcp.WithString("expression", mcp.Required(), mcp.Description(`JSONPath expression to apply to execution data.
 
