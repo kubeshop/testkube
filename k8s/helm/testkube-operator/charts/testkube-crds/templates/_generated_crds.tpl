@@ -8597,6 +8597,19 @@ spec:
                   description: steps to run at the end of the workflow
                   items:
                     properties:
+                      agent:
+                        description: run an AI Agent of the environment
+                        properties:
+                          name:
+                            description: name of the AI Agent
+                            minLength: 1
+                            type: string
+                          prompt:
+                            description: message for the AI Agent
+                            type: string
+                        required:
+                          - name
+                        type: object
                       artifacts:
                         description: scrape artifacts from the volumes
                         properties:
@@ -9799,6 +9812,19 @@ spec:
                           after:
                             description: steps to run at the end of the workflow
                             x-kubernetes-preserve-unknown-fields: true
+                          agent:
+                            description: run an AI Agent of the environment
+                            properties:
+                              name:
+                                description: name of the AI Agent
+                                minLength: 1
+                                type: string
+                              prompt:
+                                description: message for the AI Agent
+                                type: string
+                            required:
+                              - name
+                            type: object
                           artifacts:
                             description: scrape artifacts from the volumes
                             properties:
@@ -14595,6 +14621,19 @@ spec:
                   description: steps for setting up the workflow
                   items:
                     properties:
+                      agent:
+                        description: run an AI Agent of the environment
+                        properties:
+                          name:
+                            description: name of the AI Agent
+                            minLength: 1
+                            type: string
+                          prompt:
+                            description: message for the AI Agent
+                            type: string
+                        required:
+                          - name
+                        type: object
                       artifacts:
                         description: scrape artifacts from the volumes
                         properties:
@@ -15797,6 +15836,19 @@ spec:
                           after:
                             description: steps to run at the end of the workflow
                             x-kubernetes-preserve-unknown-fields: true
+                          agent:
+                            description: run an AI Agent of the environment
+                            properties:
+                              name:
+                                description: name of the AI Agent
+                                minLength: 1
+                                type: string
+                              prompt:
+                                description: message for the AI Agent
+                                type: string
+                            required:
+                              - name
+                            type: object
                           artifacts:
                             description: scrape artifacts from the volumes
                             properties:
@@ -18205,6 +18257,19 @@ spec:
                   description: steps to execute in the workflow
                   items:
                     properties:
+                      agent:
+                        description: run an AI Agent of the environment
+                        properties:
+                          name:
+                            description: name of the AI Agent
+                            minLength: 1
+                            type: string
+                          prompt:
+                            description: message for the AI Agent
+                            type: string
+                        required:
+                          - name
+                        type: object
                       artifacts:
                         description: scrape artifacts from the volumes
                         properties:
@@ -19407,6 +19472,19 @@ spec:
                           after:
                             description: steps to run at the end of the workflow
                             x-kubernetes-preserve-unknown-fields: true
+                          agent:
+                            description: run an AI Agent of the environment
+                            properties:
+                              name:
+                                description: name of the AI Agent
+                                minLength: 1
+                                type: string
+                              prompt:
+                                description: message for the AI Agent
+                                type: string
+                            required:
+                              - name
+                            type: object
                           artifacts:
                             description: scrape artifacts from the volumes
                             properties:
@@ -22137,6 +22215,19 @@ spec:
                   description: steps to run at the end of the workflow
                   items:
                     properties:
+                      agent:
+                        description: run an AI Agent of the environment
+                        properties:
+                          name:
+                            description: name of the AI Agent
+                            minLength: 1
+                            type: string
+                          prompt:
+                            description: message for the AI Agent
+                            type: string
+                        required:
+                          - name
+                        type: object
                       artifacts:
                         description: scrape artifacts from the volumes
                         properties:
@@ -23336,6 +23427,19 @@ spec:
                       parallel:
                         description: instructions for parallel execution
                         properties:
+                          agent:
+                            description: run an AI Agent of the environment
+                            properties:
+                              name:
+                                description: name of the AI Agent
+                                minLength: 1
+                                type: string
+                              prompt:
+                                description: message for the AI Agent
+                                type: string
+                            required:
+                              - name
+                            type: object
                           artifacts:
                             description: scrape artifacts from the volumes
                             properties:
@@ -27993,6 +28097,19 @@ spec:
                   description: steps for setting up the workflow
                   items:
                     properties:
+                      agent:
+                        description: run an AI Agent of the environment
+                        properties:
+                          name:
+                            description: name of the AI Agent
+                            minLength: 1
+                            type: string
+                          prompt:
+                            description: message for the AI Agent
+                            type: string
+                        required:
+                          - name
+                        type: object
                       artifacts:
                         description: scrape artifacts from the volumes
                         properties:
@@ -29192,6 +29309,19 @@ spec:
                       parallel:
                         description: instructions for parallel execution
                         properties:
+                          agent:
+                            description: run an AI Agent of the environment
+                            properties:
+                              name:
+                                description: name of the AI Agent
+                                minLength: 1
+                                type: string
+                              prompt:
+                                description: message for the AI Agent
+                                type: string
+                            required:
+                              - name
+                            type: object
                           artifacts:
                             description: scrape artifacts from the volumes
                             properties:
@@ -31481,6 +31611,19 @@ spec:
                   description: steps to execute in the workflow
                   items:
                     properties:
+                      agent:
+                        description: run an AI Agent of the environment
+                        properties:
+                          name:
+                            description: name of the AI Agent
+                            minLength: 1
+                            type: string
+                          prompt:
+                            description: message for the AI Agent
+                            type: string
+                        required:
+                          - name
+                        type: object
                       artifacts:
                         description: scrape artifacts from the volumes
                         properties:
@@ -32680,6 +32823,19 @@ spec:
                       parallel:
                         description: instructions for parallel execution
                         properties:
+                          agent:
+                            description: run an AI Agent of the environment
+                            properties:
+                              name:
+                                description: name of the AI Agent
+                                minLength: 1
+                                type: string
+                              prompt:
+                                description: message for the AI Agent
+                                type: string
+                            required:
+                              - name
+                            type: object
                           artifacts:
                             description: scrape artifacts from the volumes
                             properties:
