@@ -14,6 +14,7 @@ import (
 
 func BuildDashboardUrl(dashboardUrl string, orgId string, envId string) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("build_dashboard_url",
+		readOnlyTool(),
 		mcp.WithDescription(BuildDashboardUrlDescription),
 		mcp.WithString("resourceType",
 			mcp.Required(),

@@ -164,8 +164,8 @@ type BoardRenderer interface {
 // ListBoards creates a tool for listing Insights boards.
 func ListBoards(client BoardLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_boards",
+		readOnlyTool(),
 		mcp.WithDescription(ListBoardsDescription),
-		mcp.WithReadOnlyHintAnnotation(true),
 		mcp.WithString("name", mcp.Description("Filter boards whose name contains this text.")),
 		mcp.WithString("visibility", mcp.Description("'all' (default), 'private' (only your private boards) or 'shared' (only boards shared with the organization)."), mcp.Enum("all", "private", "shared")),
 		mcp.WithString("favorite", mcp.Description("'user' for boards you pinned, 'org' for boards pinned for the organization."), mcp.Enum("user", "org")),
@@ -238,8 +238,8 @@ func ListBoards(client BoardLister) (tool mcp.Tool, handler server.ToolHandlerFu
 // GetBoard creates a tool for viewing a board and its reports.
 func GetBoard(client BoardGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_board",
+		readOnlyTool(),
 		mcp.WithDescription(GetBoardDescription),
-		mcp.WithReadOnlyHintAnnotation(true),
 		mcp.WithString("board", mcp.Required(), mcp.Description(BoardIdDescription)),
 	)
 
@@ -265,6 +265,7 @@ func GetBoard(client BoardGetter) (tool mcp.Tool, handler server.ToolHandlerFunc
 // CreateBoard creates a tool for creating an empty board.
 func CreateBoard(client BoardCreatorWithSlugCheck) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("create_board",
+		additiveTool(),
 		mcp.WithDescription(CreateBoardDescription),
 		mcp.WithString("name", mcp.Required(), mcp.Description("Name of the board.")),
 		mcp.WithString("description", mcp.Description("Description of the board.")),
@@ -318,6 +319,7 @@ func CreateBoard(client BoardCreatorWithSlugCheck) (tool mcp.Tool, handler serve
 // UpdateBoard creates a tool for changing a board's details or layout.
 func UpdateBoard(client BoardEditor) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("update_board",
+		destructiveTool(),
 		mcp.WithDescription(UpdateBoardDescription),
 		mcp.WithString("board", mcp.Required(), mcp.Description(BoardIdDescription)),
 		mcp.WithString("name", mcp.Description("New name.")),
@@ -398,6 +400,7 @@ func UpdateBoard(client BoardEditor) (tool mcp.Tool, handler server.ToolHandlerF
 // AddBoardReport creates a tool for adding a report to a board.
 func AddBoardReport(client BoardEditor) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("add_board_report",
+		additiveTool(),
 		mcp.WithDescription(AddBoardReportDescription),
 		mcp.WithString("board", mcp.Required(), mcp.Description(BoardIdDescription)),
 		mcp.WithString("kind", mcp.Required(), mcp.Description(BoardReportKindDescription), mcp.Enum(boards.Kinds...)),
@@ -469,6 +472,7 @@ func AddBoardReport(client BoardEditor) (tool mcp.Tool, handler server.ToolHandl
 // UpdateBoardReport creates a tool for changing a report on a board.
 func UpdateBoardReport(client BoardEditor) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("update_board_report",
+		destructiveTool(),
 		mcp.WithDescription(UpdateBoardReportDescription),
 		mcp.WithString("board", mcp.Required(), mcp.Description(BoardIdDescription)),
 		mcp.WithString("reportId", mcp.Required(), mcp.Description("ID of the report to change (from get_board).")),
@@ -578,8 +582,8 @@ func UpdateBoardReport(client BoardEditor) (tool mcp.Tool, handler server.ToolHa
 // RemoveBoardReport creates a tool for removing a report from a board.
 func RemoveBoardReport(client BoardEditor) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("remove_board_report",
+		destructiveTool(),
 		mcp.WithDescription(RemoveBoardReportDescription),
-		mcp.WithDestructiveHintAnnotation(true),
 		mcp.WithString("board", mcp.Required(), mcp.Description(BoardIdDescription)),
 		mcp.WithString("reportId", mcp.Required(), mcp.Description("ID of the report to remove (from get_board).")),
 	)
@@ -628,8 +632,8 @@ func RemoveBoardReport(client BoardEditor) (tool mcp.Tool, handler server.ToolHa
 // DeleteBoard creates a tool for deleting a board.
 func DeleteBoard(client BoardRemover) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("delete_board",
+		destructiveTool(),
 		mcp.WithDescription(DeleteBoardDescription),
-		mcp.WithDestructiveHintAnnotation(true),
 		mcp.WithString("board", mcp.Required(), mcp.Description(BoardIdDescription)),
 	)
 
@@ -664,8 +668,8 @@ type renderedReport struct {
 // RenderBoard creates a tool that runs a board's reports and returns their data.
 func RenderBoard(client BoardRenderer) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("render_board",
+		readOnlyTool(),
 		mcp.WithDescription(RenderBoardDescription),
-		mcp.WithReadOnlyHintAnnotation(true),
 		mcp.WithString("board", mcp.Required(), mcp.Description(BoardIdDescription)),
 		mcp.WithString("reportId", mcp.Description("Render only this report (from get_board). Renders every report when omitted.")),
 		mcp.WithString("scope", mcp.Description(BoardRenderScopeDescription), mcp.Enum("board", "environment")),

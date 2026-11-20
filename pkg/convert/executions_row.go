@@ -37,7 +37,7 @@ var (
 	}
 
 	signatureColumns = []string{
-		"execution_id", "ref", "name", "category", "optional", "negative",
+		"execution_id", "ref", "step_id", "name", "category", "optional", "negative",
 		"parent_id", "sig_order", "id",
 	}
 
@@ -171,9 +171,10 @@ func writeSignatureRows(w io.Writer, executionID string, signatures []testkube.T
 
 		id := uuid.NewString()
 
-		_, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%t\t%t\t%s\t%d\t%s\n",
+		_, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%t\t%t\t%s\t%d\t%s\n",
 			escapeCopyValue(executionID),
 			escapeCopyValue(sig.Ref),
+			escapeCopyValue(sig.Id),
 			escapeCopyValue(sig.Name),
 			escapeCopyValue(sig.Category),
 			sig.Optional,
