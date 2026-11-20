@@ -244,14 +244,6 @@ rules:
       - get
       - list
       - watch
-  - apiGroups:
-      - "testbundles.testkube.io"
-    resources:
-      - testbundles
-    verbs:
-      - get
-      - list
-      - watch
   {{- end }}
   {{- with .Values.listener.extraWatchedResources }}
   # User-declared GVKs for TestTrigger / WorkflowTrigger `resourceRef` targets
