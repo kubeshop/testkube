@@ -1,4 +1,0 @@
-apiVersion: testbundles.testkube.io/v1alpha1
-kind: TestBundle
-metadata:
-  name: smoke

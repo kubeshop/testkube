@@ -16,7 +16,6 @@ import (
 	aiv1 "github.com/kubeshop/testkube/api/ai/v1alpha1"
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 	insightsv1 "github.com/kubeshop/testkube/api/insights/v1alpha1"
-	testbundlesv1 "github.com/kubeshop/testkube/api/testbundles/v1alpha1"
 )
 
 // lastAppliedAnnotation is kubectl's copy of the applied object, which a
@@ -178,9 +177,6 @@ func PrepareForApply(obj Object) (Object, error) {
 	case *aiv1.Skill:
 		o.ObjectMeta = meta
 		o.Status = commonv1.ControlPlaneResourceStatus{}
-	case *testbundlesv1.TestBundle:
-		o.ObjectMeta = meta
-		o.Status = testbundlesv1.TestBundleStatus{}
 	}
 	return out, nil
 }

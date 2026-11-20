@@ -42,10 +42,6 @@ const CapabilityControlPlaneResources Capability = "controlplane-resources"
 // features on PostgreSQL, and one that predates their sync refuses them.
 const CapabilityControlPlaneResourcesAI Capability = "controlplane-resources-ai"
 
-// CapabilityControlPlaneResourcesTestBundles is whether the control plane takes Test Bundles
-// through the control_plane_resource arm, for the same reasons as CapabilityControlPlaneResourcesAI.
-const CapabilityControlPlaneResourcesTestBundles Capability = "controlplane-resources-testbundles"
-
 // CapabilityControlPlaneResourcesSkills is whether the control plane takes the Skills of an
 // environment's library (the Skill kind) through the control_plane_resource arm. It is advertised
 // apart from CapabilityControlPlaneResourcesAI because a control plane that takes the other AI

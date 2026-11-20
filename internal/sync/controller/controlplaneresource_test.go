@@ -90,8 +90,7 @@ func TestSyncedControlPlaneKinds(t *testing.T) {
 	assert.Equal(t, []string{"mcpservers", "llmproviders", "aiagents"}, resources(SyncedControlPlaneKinds([]capabilities.Capability{
 		capabilities.CapabilityControlPlaneResourcesAI,
 	})))
-	assert.Equal(t, []string{"boards", "mcpservers", "llmproviders", "aiagents", "testbundles"}, resources(SyncedControlPlaneKinds([]capabilities.Capability{
-		capabilities.CapabilityControlPlaneResourcesTestBundles,
+	assert.Equal(t, []string{"boards", "mcpservers", "llmproviders", "aiagents"}, resources(SyncedControlPlaneKinds([]capabilities.Capability{
 		capabilities.CapabilityControlPlaneResourcesAI,
 		capabilities.CapabilityControlPlaneResources,
 	})))

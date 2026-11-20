@@ -29,7 +29,6 @@ import (
 
 	aiv1 "github.com/kubeshop/testkube/api/ai/v1alpha1"
 	insightsv1 "github.com/kubeshop/testkube/api/insights/v1alpha1"
-	testbundlesv1 "github.com/kubeshop/testkube/api/testbundles/v1alpha1"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/controlplane/declarative"
 )
@@ -49,8 +48,7 @@ type syncedControlPlaneResource struct {
 
 // syncedControlPlaneResources are the kinds a GitOps runner syncs. A kind is added here when the
 // Control Plane can take it through the SyncService. A kind that refers to another comes after it
-// (an AI Agent after the MCP servers it links and the Skills it refers to, a Test Bundle after its
-// AI Agents), so on a start
+// (an AI Agent after the MCP servers it links and the Skills it refers to), so on a start
 // the dependency is usually there first; when it is not, the Control Plane answers with a
 // retryable error and the reference is resolved on a later attempt.
 var syncedControlPlaneResources = []syncedControlPlaneResource{
@@ -59,7 +57,6 @@ var syncedControlPlaneResources = []syncedControlPlaneResource{
 	{resource: aiv1.LLMProviderResource, capability: capabilities.CapabilityControlPlaneResourcesAI},
 	{resource: aiv1.SkillResource, capability: capabilities.CapabilityControlPlaneResourcesSkills},
 	{resource: aiv1.AIAgentResource, capability: capabilities.CapabilityControlPlaneResourcesAI},
-	{resource: testbundlesv1.TestBundleResource, capability: capabilities.CapabilityControlPlaneResourcesTestBundles},
 }
 
 // SyncedControlPlaneKinds returns the kinds of the declarative registry that a GitOps runner syncs
