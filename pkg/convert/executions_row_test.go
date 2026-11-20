@@ -202,10 +202,12 @@ func TestWriteSignatureRowsTree(t *testing.T) {
 
 	signatures := []testkube.TestWorkflowSignature{{
 		Ref:  "root",
+		Id:   "root",
 		Name: "Root",
 		Children: []testkube.TestWorkflowSignature{
 			{
 				Ref:      "child-a",
+				Id:       "child_a",
 				Name:     "Child A",
 				Optional: true,
 				Children: []testkube.TestWorkflowSignature{
@@ -234,6 +236,8 @@ func TestWriteSignatureRowsTree(t *testing.T) {
 	// Pre-order traversal, with sig_order dense and 1-based.
 	assert.Equal(t, []string{"root", "child-a", "grandchild", "child-b"},
 		[]string{rows[0]["ref"], rows[1]["ref"], rows[2]["ref"], rows[3]["ref"]})
+	assert.Equal(t, []string{"root", "child_a", `\N`, `\N`},
+		[]string{rows[0]["step_id"], rows[1]["step_id"], rows[2]["step_id"], rows[3]["step_id"]})
 	for i, row := range rows {
 		assert.Equal(t, strconv.Itoa(i+1), row["sig_order"])
 		assert.Equal(t, "exec-1", row["execution_id"])
