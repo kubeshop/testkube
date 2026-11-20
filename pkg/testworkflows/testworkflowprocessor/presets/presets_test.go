@@ -11,16 +11,29 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
-func TestNewOpenSource_RefusesAgentStep(t *testing.T) {
-	wf := &testworkflowsv1.TestWorkflow{
-		Spec: testworkflowsv1.TestWorkflowSpec{
-			Steps: []testworkflowsv1.Step{{StepOperations: testworkflowsv1.StepOperations{
-				Agent: &testworkflowsv1.StepAgent{Name: "failure-triage"},
-			}}},
-		},
+func TestPresets_RefuseAgentStep(t *testing.T) {
+	tests := []struct {
+		name      string
+		processor testworkflowprocessor.Processor
+		wantErr   error
+	}{
+		{name: "the open source preset names the standalone mode", processor: NewOpenSource(ins), wantErr: constants.ErrOpenSourceAgentOperationIsNotAvailable},
+		{name: "the commercial preset names the Runner version", processor: NewPro(ins), wantErr: errAgentOperationHasNoProcessor},
 	}
 
-	_, err := NewOpenSource(ins).Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wf := &testworkflowsv1.TestWorkflow{
+				Spec: testworkflowsv1.TestWorkflowSpec{
+					Steps: []testworkflowsv1.Step{{StepOperations: testworkflowsv1.StepOperations{
+						Agent: &testworkflowsv1.StepAgent{Name: "failure-triage"},
+					}}},
+				},
+			}
 
-	assert.ErrorIs(t, err, constants.ErrOpenSourceAgentOperationIsNotAvailable)
+			_, err := tt.processor.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+
+			assert.ErrorIs(t, err, tt.wantErr)
+		})
+	}
 }

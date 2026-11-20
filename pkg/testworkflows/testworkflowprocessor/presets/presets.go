@@ -1,10 +1,27 @@
 package presets
 
 import (
+	"errors"
+
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	testworkflowprocessortcl "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
+
+// errAgentOperationHasNoProcessor is the answer of the commercial preset to an agent step. The
+// message of the open source preset names the standalone mode, which is false for this preset.
+var errAgentOperationHasNoProcessor = errors.New(`"agent" operation is not available in this version of the Runner`)
+
+// refuseAgent refuses the agent step. A step that no processor claims disappears from the
+// workflow with no error.
+func refuseAgent(_ testworkflowprocessor.InternalProcessor, _ testworkflowprocessor.Intermediate, _ stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
+	if step.Agent != nil {
+		return nil, errAgentOperationHasNoProcessor
+	}
+	return nil, nil
+}
 
 func NewOpenSource(inspector imageinspector.Inspector) testworkflowprocessor.Processor {
 	return testworkflowprocessor.New(inspector).
@@ -43,7 +60,7 @@ func NewPro(inspector imageinspector.Inspector) testworkflowprocessor.Processor 
 		Register(testworkflowprocessor.ProcessRunCommand).
 		Register(testworkflowprocessor.ProcessShellCommand).
 		Register(testworkflowprocessortcl.ProcessExecute).
-		Register(testworkflowprocessor.StubAgent).
+		Register(refuseAgent).
 		Register(testworkflowprocessortcl.ProcessParallel).
 		Register(testworkflowprocessor.ProcessNestedSteps).
 		Register(testworkflowprocessortcl.ProcessServicesStop).
