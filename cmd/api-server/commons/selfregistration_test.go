@@ -92,16 +92,16 @@ func TestPersistSelfRegistrationSecret(t *testing.T) {
 		{name: "creation disabled is not retried", createErrs: []error{secretmanager.ErrCreateDisabled}, wantErr: true, wantCreates: 1},
 		{name: "existing secret not owned by testkube is not retried",
 			createErrs: []error{errSecretExists}, updateErrs: []error{secretmanager.ErrNotControlled}, wantErr: true, wantCreates: 1, wantUpdates: 1,
-			wantMsg: "lacks label createdBy=testkube"},
+			wantMsg: "missing label createdBy=testkube"},
 		{name: "existing unlabelled secret (update reports not found) is not retried",
 			createErrs: []error{errSecretExists}, updateErrs: []error{secretmanager.ErrNotFound}, wantErr: true, wantCreates: 1, wantUpdates: 1,
-			wantMsg: `secret "self-registration" exists but lacks label createdBy=testkube`},
+			wantMsg: `secret "runner-self-registration" exists but is not visible to Testkube`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sm := &fakeSecretWriter{createErrs: tt.createErrs, updateErrs: tt.updateErrs}
 			l := &countingLogger{}
-			err := PersistSelfRegistrationSecret(context.Background(), l, sm, "ns", "self-registration", testSecretData, SelfRegistrationOptions{Backoff: testSecretBackoff})
+			err := PersistSelfRegistrationSecret(context.Background(), l, sm, "ns", "self-registration", testSecretData, SelfRegistrationOptions{Backoff: testSecretBackoff, SecretPrefix: "runner-"})
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "self-registration")

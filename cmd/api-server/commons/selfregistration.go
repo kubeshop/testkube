@@ -32,7 +32,7 @@ const (
 
 	// selfRegistrationWriteTimeout bounds one Create or Update call, so a hung API server
 	// connection counts as one failed attempt instead of blocking startup.
-	selfRegistrationWriteTimeout = 10 * time.Second
+	selfRegistrationWriteTimeout = 5 * time.Second
 )
 
 // errSelfRegistrationSecretNotManaged is returned when the secret already exists but Testkube may not overwrite it.
@@ -54,8 +54,12 @@ func DefaultSelfRegistrationSecretBackoff() []time.Duration {
 type SelfRegistrationOptions struct {
 	// Backoff is the wait before each retry; its length sets the number of retries.
 	Backoff []time.Duration
-	// WriteTimeout bounds each Create or Update attempt. Zero means the default (10s).
+	// WriteTimeout bounds each Create or Update attempt. Zero means the default (5s).
+	// With the default backoff the worst case is about 32.5s, well inside the runner startup probe.
 	WriteTimeout time.Duration
+	// SecretPrefix is the prefix the secret manager adds to name (SECRET_CREATION_PREFIX). It is only
+	// used to name the real Kubernetes object in logs and errors.
+	SecretPrefix string
 }
 
 // PersistSelfRegistrationSecret stores the runner credentials so the next start reads them
@@ -75,37 +79,38 @@ func PersistSelfRegistrationSecret(
 		writeTimeout = selfRegistrationWriteTimeout
 	}
 	backoff := opts.Backoff
+	fullName := opts.SecretPrefix + name
 	var lastErr error
 	attempts := len(backoff) + 1
 	for attempt := 1; attempt <= attempts; attempt++ {
 		attemptCtx, cancel := context.WithTimeout(ctx, writeTimeout)
-		lastErr = writeSelfRegistrationSecret(attemptCtx, sm, namespace, name, data)
+		lastErr = writeSelfRegistrationSecret(attemptCtx, sm, namespace, name, fullName, data)
 		cancel()
 		if lastErr == nil {
 			if attempt > 1 {
-				log.Infow("self-register runner secret saved after retry", "secret", name, "attempt", attempt)
+				log.Infow("self-register runner secret saved after retry", "secret", fullName, "attempt", attempt)
 			}
 			return nil
 		}
 		if ctx.Err() != nil {
-			return fmt.Errorf("saving secret %q: %w (last error: %v)", name, ctx.Err(), lastErr)
+			return fmt.Errorf("saving secret %q: %w (last error: %v)", fullName, ctx.Err(), lastErr)
 		}
 		if !isRetryableSecretError(lastErr) || attempt == attempts {
 			break
 		}
 		wait := backoff[attempt-1]
 		log.Warnw("error saving self-register runner secret, retrying",
-			"secret", name, "attempt", attempt, "max_attempts", attempts, "retry_in", wait.String(), "error", lastErr.Error())
+			"secret", fullName, "attempt", attempt, "max_attempts", attempts, "retry_in", wait.String(), "error", lastErr.Error())
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("saving secret %q: %w (last error: %v)", name, ctx.Err(), lastErr)
+			return fmt.Errorf("saving secret %q: %w (last error: %v)", fullName, ctx.Err(), lastErr)
 		case <-time.After(wait):
 		}
 	}
-	return fmt.Errorf("saving secret %q: %w", name, lastErr)
+	return fmt.Errorf("saving secret %q: %w", fullName, lastErr)
 }
 
-func writeSelfRegistrationSecret(ctx context.Context, sm SelfRegistrationSecretWriter, namespace, name string, data map[string]string) error {
+func writeSelfRegistrationSecret(ctx context.Context, sm SelfRegistrationSecretWriter, namespace, name, fullName string, data map[string]string) error {
 	_, err := sm.Create(ctx, namespace, name, data, secretmanager.CreateOptions{})
 	if err == nil || !k8serrors.IsAlreadyExists(err) {
 		return err
@@ -113,10 +118,11 @@ func writeSelfRegistrationSecret(ctx context.Context, sm SelfRegistrationSecretW
 	// Left over from an earlier attempt or a previous registration: overwrite with the new credentials.
 	_, err = sm.Update(ctx, namespace, name, data, secretmanager.UpdateOptions{})
 	// Without ListAll the manager only sees secrets labelled createdBy=testkube, so a foreign secret
-	// of the same name surfaces as ErrNotFound, not ErrNotControlled.
+	// of the same name surfaces as ErrNotFound, not ErrNotControlled. ErrNotFound can also mean the secret
+	// was deleted between Create and Update; that race is rare enough to report rather than retry.
 	if errors.Is(err, secretmanager.ErrNotFound) || errors.Is(err, secretmanager.ErrNotControlled) {
-		return fmt.Errorf("%w: secret %q exists but lacks label createdBy=testkube; delete it or add the label",
-			errSelfRegistrationSecretNotManaged, name)
+		return fmt.Errorf("%w: secret %q exists but is not visible to Testkube (missing label createdBy=testkube?); "+
+			"delete it or add the label", errSelfRegistrationSecretNotManaged, fullName)
 	}
 	return err
 }
