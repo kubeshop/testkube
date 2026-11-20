@@ -8,6 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 func staticNames(names ...string) nameLister {
@@ -95,13 +97,76 @@ func TestCompleteNamesOffersNothingOnceNameIsSet(t *testing.T) {
 	// With a positional argument set, the functions return before building a
 	// client, so a bare command with no flags is enough.
 	for name, fn := range map[string]cobra.CompletionFunc{
-		"workflows": CompleteTestWorkflowNames,
-		"templates": CompleteTestWorkflowTemplateNames,
+		"workflows":         CompleteTestWorkflowNames,
+		"templates":         CompleteTestWorkflowTemplateNames,
+		"executions":        CompleteTestWorkflowExecutionNames,
+		"active executions": CompleteActiveTestWorkflowExecutionNames,
+		"test triggers":     CompleteTestTriggerNames,
+		"workflow triggers": CompleteWorkflowTriggerNames,
+		"webhooks":          CompleteWebhookNames,
+		"webhook templates": CompleteWebhookTemplateNames,
 	} {
 		t.Run(name, func(t *testing.T) {
 			got, directive := fn(&cobra.Command{}, []string{"smoke"}, "")
 			assert.Empty(t, got)
-			assert.Equal(t, cobra.ShellCompDirectiveNoFileComp, directive)
+			assert.Equal(t, cobra.ShellCompDirectiveNoFileComp, directive&cobra.ShellCompDirectiveNoFileComp)
 		})
 	}
+}
+
+func execSummary(id, name, workflow string, status testkube.TestWorkflowStatus) testkube.TestWorkflowExecutionSummary {
+	e := testkube.TestWorkflowExecutionSummary{Id: id, Name: name}
+	if workflow != "" {
+		e.Workflow = &testkube.TestWorkflowSummary{Name: workflow}
+	}
+	if status != "" {
+		e.Result = &testkube.TestWorkflowResultSummary{Status: &status}
+	}
+	return e
+}
+
+func TestExecutionEntries(t *testing.T) {
+	executions := []testkube.TestWorkflowExecutionSummary{
+		execSummary("id-3", "smoke-3", "smoke", testkube.RUNNING_TestWorkflowStatus),
+		execSummary("id-2", "smoke-2", "smoke", testkube.PASSED_TestWorkflowStatus),
+		execSummary("id-1", "", "", testkube.QUEUED_TestWorkflowStatus),
+		execSummary("id-0", "k6-1", "k6", ""),
+	}
+
+	assert.Equal(t, []executionEntry{
+		{name: "smoke-3", description: "smoke, running"},
+		{name: "smoke-2", description: "smoke, passed"},
+		{name: "id-1", description: "queued"},
+		{name: "k6-1", description: "k6"},
+	}, executionEntries(executions, false))
+
+	assert.Equal(t, []executionEntry{
+		{name: "smoke-3", description: "smoke, running"},
+		{name: "id-1", description: "queued"},
+		{name: "k6-1", description: "k6"},
+	}, executionEntries(executions, true))
+}
+
+func TestCompleteExecutions(t *testing.T) {
+	const directive = cobra.ShellCompDirectiveNoFileComp | cobra.ShellCompDirectiveKeepOrder
+	entries := func(context.Context) ([]executionEntry, error) {
+		return []executionEntry{
+			{name: "smoke-10", description: "smoke, running"},
+			{name: "k6-4"},
+			{name: "smoke-9", description: "smoke, failed"},
+			{name: ""},
+		}, nil
+	}
+
+	got, d := completeExecutions(context.Background(), "", time.Second, entries)
+	assert.Equal(t, []cobra.Completion{"smoke-10	smoke, running", "k6-4", "smoke-9	smoke, failed"}, got)
+	assert.Equal(t, directive, d)
+
+	got, _ = completeExecutions(context.Background(), "smoke", time.Second, entries)
+	assert.Equal(t, []cobra.Completion{"smoke-10	smoke, running", "smoke-9	smoke, failed"}, got)
+
+	failing := func(context.Context) ([]executionEntry, error) { return nil, errors.New("no cluster") }
+	got, d = completeExecutions(context.Background(), "", time.Second, failing)
+	assert.Empty(t, got)
+	assert.Equal(t, directive, d)
 }
