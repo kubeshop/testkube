@@ -7,15 +7,19 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	authorizationv1 "k8s.io/api/authorization/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	aiv1 "github.com/kubeshop/testkube/api/ai/v1alpha1"
 	insightsv1 "github.com/kubeshop/testkube/api/insights/v1alpha1"
 	gitopssync "github.com/kubeshop/testkube/internal/sync"
 	"github.com/kubeshop/testkube/pkg/capabilities"
@@ -329,4 +333,40 @@ func TestCanListAndWatch_ReviewForbidden(t *testing.T) {
 	_, err = canListAndWatch(t.Context(), &fakeAccessReviews{err: unavailable}, "testkube", "insights.testkube.io", "boards")
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, errAccessReviewForbidden)
+}
+
+// The ConfigMap watch of the Skill sync is enabled only when the manager's scheme knows core/v1
+// ConfigMaps and the runner may list and watch them; otherwise the kind is still synced, without
+// the watch, rather than failing the runner at startup.
+func TestCanWatchSkillSources(t *testing.T) {
+	withConfigMaps := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(withConfigMaps))
+	forbidden := apierrors.NewForbidden(schema.GroupResource{Group: "authorization.k8s.io", Resource: "selfsubjectaccessreviews"}, "", errors.New("RBAC: access denied"))
+	skill := declarative.Kind{GroupVersion: aiv1.GroupVersion, Kind: aiv1.SkillKind}
+
+	cases := map[string]struct {
+		scheme  *runtime.Scheme
+		reviews *fakeAccessReviews
+		want    bool
+		wantErr bool
+		asked   int
+	}{
+		"scheme without core/v1":    {scheme: runtime.NewScheme(), reviews: &fakeAccessReviews{}, want: false, asked: 0},
+		"allowed":                   {scheme: withConfigMaps, reviews: &fakeAccessReviews{}, want: true, asked: 2},
+		"may not watch":             {scheme: withConfigMaps, reviews: &fakeAccessReviews{denied: "watch"}, want: false, asked: 2},
+		"access review forbidden":   {scheme: withConfigMaps, reviews: &fakeAccessReviews{err: forbidden}, want: false, asked: 1},
+		"access review unavailable": {scheme: withConfigMaps, reviews: &fakeAccessReviews{err: apierrors.NewServiceUnavailable("starting")}, wantErr: true, asked: 1},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			got, err := canWatchSkillSources(t.Context(), tc.scheme, tc.reviews, "testkube", skill, zap.NewNop().Sugar())
+			if tc.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			assert.Equal(t, tc.want, got)
+			assert.Len(t, tc.reviews.asked, tc.asked)
+		})
+	}
 }

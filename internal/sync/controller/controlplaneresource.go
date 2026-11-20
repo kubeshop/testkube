@@ -115,12 +115,9 @@ func NewControlPlaneResourceSyncControllers(ctx context.Context, mgr ctrl.Manage
 		}
 		watchConfigMaps := false
 		if readsSkillSources(kind) {
-			watchConfigMaps, err = canListAndWatch(ctx, reviews, namespace, "", "configmaps")
-			if err != nil && !errors.Is(err, errAccessReviewForbidden) {
-				return fmt.Errorf("check access to configmaps: %w", err)
-			}
-			if !watchConfigMaps {
-				logger.Warnw("not watching the ConfigMaps Skills are read from: the runner may not list and watch them, so a changed SKILL.md is synced only when its resource changes", "kind", kind.Kind, "namespace", namespace)
+			watchConfigMaps, err = canWatchSkillSources(ctx, mgr.GetScheme(), reviews, namespace, kind, logger)
+			if err != nil {
+				return err
 			}
 		}
 		if err := NewControlPlaneResourceSyncController(mgr, store, kind, watchConfigMaps); err != nil {
@@ -134,6 +131,25 @@ func NewControlPlaneResourceSyncControllers(ctx context.Context, mgr ctrl.Manage
 // (skillFrom.configMapKeyRef).
 func readsSkillSources(kind declarative.Kind) bool {
 	return kind.GroupVersion == aiv1.GroupVersion && (kind.Kind == aiv1.SkillKind || kind.Kind == aiv1.AIAgentKind)
+}
+
+// canWatchSkillSources reports whether the sync of kind may watch the ConfigMaps Skills are read
+// from: the manager's scheme must know ConfigMaps, and the runner must be allowed to list and
+// watch them in namespace. Otherwise it warns, and the kind is synced without the watch, so a
+// changed SKILL.md is synced only when its resource changes.
+func canWatchSkillSources(ctx context.Context, scheme *runtime.Scheme, reviews accessReviews, namespace string, kind declarative.Kind, logger *zap.SugaredLogger) (bool, error) {
+	if !scheme.Recognizes(corev1.SchemeGroupVersion.WithKind("ConfigMap")) {
+		logger.Warnw("not watching the ConfigMaps Skills are read from: the controller scheme does not register core/v1 ConfigMaps, so a changed SKILL.md is synced only when its resource changes", "kind", kind.Kind)
+		return false, nil
+	}
+	allowed, err := canListAndWatch(ctx, reviews, namespace, "", "configmaps")
+	if err != nil && !errors.Is(err, errAccessReviewForbidden) {
+		return false, fmt.Errorf("check access to configmaps: %w", err)
+	}
+	if !allowed {
+		logger.Warnw("not watching the ConfigMaps Skills are read from: the runner may not list and watch them, so a changed SKILL.md is synced only when its resource changes", "kind", kind.Kind, "namespace", namespace)
+	}
+	return allowed, nil
 }
 
 // accessReviews creates SelfSubjectAccessReviews, as the client-go client of the authorization API
