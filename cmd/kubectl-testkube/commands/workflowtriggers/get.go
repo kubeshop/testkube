@@ -16,10 +16,11 @@ func NewGetWorkflowTriggerCmd() *cobra.Command {
 	var selectors []string
 
 	cmd := &cobra.Command{
-		Use:     "workflowtrigger <name>",
-		Aliases: []string{"workflowtriggers", "wt"},
-		Short:   "Get WorkflowTrigger (v2) details",
-		Long:    `Get a single WorkflowTrigger by name, or list all matching ones. Use --label to filter.`,
+		Use:               "workflowtrigger <name>",
+		ValidArgsFunction: common.CompleteWorkflowTriggerNames,
+		Aliases:           []string{"workflowtriggers", "wt"},
+		Short:             "Get WorkflowTrigger (v2) details",
+		Long:              `Get a single WorkflowTrigger by name, or list all matching ones. Use --label to filter.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)

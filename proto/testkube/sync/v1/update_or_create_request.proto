@@ -32,6 +32,10 @@ message UpdateOrCreateRequest {
     WorkflowTrigger workflow_trigger = 6;
     // control_plane_resource indicates the object is a Control Plane resource,
     // such as an Insights board
-    ControlPlaneResource control_plane_resource = 7;
+    ControlPlaneResource control_plane_resource = 8;
   }
+  // namespace is the Kubernetes namespace of the object in payload.
+  // It is explicit so the Control Plane keys ownership by (agentId, namespace)
+  // without parsing the JSON; when empty the namespace inside the payload applies.
+  string namespace = 7;
 }

@@ -202,6 +202,165 @@ spec:
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
+  name: cloud-ai-service
+  labels:
+    category: ai-testing
+    quality-loop: "true"
+    core-tests: cloud-api
+    artifacts: "true"
+    team-backend: "true"
+    package: copilot
+spec:
+  system:
+    pureByDefault: true
+  config:
+    revision:
+      description: Git ref to clone (branch, tag, or SHA). Quality Loop injects the
+        PR head.
+      type: string
+      default: main
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube-cloud-api.git
+      revision: '{{config.revision}}'
+      authType: github
+      verbosity: quiet
+      cone: true
+      paths:
+      - js
+      - cmd/mcp-bridge
+  services:
+    postgres:
+      image: postgres:16-alpine
+      timeout: 120s
+      logs: always
+      env:
+      - name: POSTGRES_USER
+        value: copilot
+      - name: POSTGRES_PASSWORD
+        value: copilot
+      - name: POSTGRES_DB
+        value: copilot
+      readinessProbe:
+        tcpSocket:
+          port: 5432
+        periodSeconds: 1
+  container:
+    workingDir: /data/repo/js
+    image: node:24-bookworm
+    env:
+    - name: npm_config_cache
+      value: /root/.npm
+    resources:
+      limits:
+        cpu: 4
+        memory: 6Gi
+      requests:
+        cpu: 2
+        memory: 4Gi
+  job:
+    activeDeadlineSeconds: 1800
+  steps:
+  - name: Install
+    # .npmrc sets ignore-scripts, so patch-package (langchain) runs by hand, as in the copilot Dockerfile.
+    shell: corepack enable npm && npm ci --prefer-offline && npx patch-package
+    cache:
+      key: cloud-ai-service-v1-npm-{{hash_files("/data/repo/js/package-lock.json")}}
+      restoreKeys:
+      - cloud-ai-service-v1-npm-
+      paths:
+      - /root/.npm/_cacache
+  - name: Build MCP bridge
+    # The AI service exits at startup without this binary.
+    container:
+      image: golang:1.26.10-bookworm
+      workingDir: /data/repo
+      env:
+      - name: GOMODCACHE
+        value: /root/go/pkg/mod
+      - name: GOPROXY
+        value: https://proxy.golang.org,direct
+      - name: GOCACHE
+        value: /root/.cache/go-build
+    cache:
+      # Keyed on the modules and the image's Go, never the sources: the bridge's code is tiny,
+      # its dependencies are the cost. No restoreKeys, so the entry can't grow (see cloud-lint-go).
+      key: cloud-ai-service-v1-golang-1.26.10-{{hash_files("/data/repo/go.mod", "/data/repo/go.sum")}}
+      paths:
+      - /root/go/pkg/mod/cache/download
+      - /root/.cache/go-build
+      scope: workflow
+    # -buildvcs=false: git can't read the clone from this container, and the version stamp isn't needed.
+    shell: go build -buildvcs=false -o js/packages/copilot/mcp-bridge/mcp-bridge ./cmd/mcp-bridge
+  - name: Build
+    shell: |
+      npx turbo run build --filter=@testkube-ai/copilot
+      ln -s ../src/stores/data packages/copilot/dist/data
+  - name: Run AI assistant cases
+    container:
+      workingDir: /data/repo/js/packages/copilot
+      env:
+      - name: CP_STUB_PORT
+        value: "8090"
+      - name: TEST_ORG_ID
+        value: test-org
+      - name: TEST_ENV_ID
+        value: test-env
+      - name: ENABLE_MCP_TOOLS
+        value: "true"
+      - name: NODE_ENV
+        value: production
+      - name: LOG_LEVEL
+        value: info
+      - name: USE_TLS
+        value: "false"
+      - name: PORT
+        value: "9090"
+      - name: CONTROL_PLANE_ENDPOINT
+        value: http://localhost:8090
+      - name: API_POSTGRES_URL
+        value: postgresql://copilot:copilot@{{ services.postgres.0.ip }}:5432/copilot?sslmode=disable
+      - name: LLM_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: testkube-agent-secrets
+            key: DEV_LLM_API_KEY
+      - name: MODEL_NAME
+        value: gpt-4o-mini
+      - name: OAUTH_JWKS_URL
+        value: http://localhost:8090/keys
+      - name: OAUTH_ISSUER
+        value: http://localhost:8090
+    shell: |
+      mkdir -p /data/artifacts
+      wait_for() {
+        for _ in $(seq 1 150); do curl -sf -o /dev/null "$1" && return 0; sleep 2; done
+        echo "$1 did not become ready"; tail -n 50 /data/artifacts/*.log; exit 1
+      }
+      node dist/scripts/cp-stub/index.js > /data/artifacts/cpstub.log 2>&1 &
+      wait_for http://localhost:8090/
+      node dist/index.js > /data/artifacts/aiservice.log 2>&1 &
+      wait_for http://localhost:9090/
+
+      fail=0
+      while IFS= read -r case; do
+        TEST_CASE_JSON="$case" node dist/scripts/test-runner.js || fail=1
+      done <<'EOF'
+      {"id":"list-workflows","title":"List workflows","prompt":"List all workflows in this environment and summarize their latest status","requiredToolCalls":["list_workflows"],"responseMustContainAll":["workflow"]}
+      {"id":"diagnose-failure","title":"Diagnose playwright failure","prompt":"Diagnose the latest failure for execution name playwright-smoke-8. Use only lookup_execution_id and fetch_execution_logs, then explain the failure cause briefly.","requiredToolCalls":["lookup_execution_id","fetch_execution_logs"],"responseMustContainAll":["playwright","failure"]}
+      {"id":"workflow-knowledge","title":"Explain readiness probes","prompt":"What are the best practices for configuring a readiness probe in a TestWorkflow?","responseMustContainAll":["readiness"]}
+      EOF
+      EXPECTED_SESSIONS=3 node dist/scripts/verify-status-pushes.js || fail=1
+      [ "$fail" = 0 ] || tail -n 100 /data/artifacts/aiservice.log
+      exit "$fail"
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '**/*'
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
   name: cloud-lint-go
   labels:
     category: static-analysis

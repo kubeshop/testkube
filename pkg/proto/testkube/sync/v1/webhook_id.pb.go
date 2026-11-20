@@ -26,7 +26,11 @@ const (
 type WebhookId struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Id is the unique ID string for a Webhook.
-	Id            *string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	Id *string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	// namespace is the Kubernetes namespace the object was deleted from.
+	// Optional: when empty the Control Plane uses the agent's default namespace,
+	// as before this field existed.
+	Namespace     *string `protobuf:"bytes,2,opt,name=namespace" json:"namespace,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -68,13 +72,21 @@ func (x *WebhookId) GetId() string {
 	return ""
 }
 
+func (x *WebhookId) GetNamespace() string {
+	if x != nil && x.Namespace != nil {
+		return *x.Namespace
+	}
+	return ""
+}
+
 var File_testkube_sync_v1_webhook_id_proto protoreflect.FileDescriptor
 
 const file_testkube_sync_v1_webhook_id_proto_rawDesc = "" +
 	"\n" +
-	"!testkube/sync/v1/webhook_id.proto\x12\x10testkube.sync.v1\"\x1b\n" +
+	"!testkube/sync/v1/webhook_id.proto\x12\x10testkube.sync.v1\"9\n" +
 	"\tWebhookId\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02idB\xc8\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1c\n" +
+	"\tnamespace\x18\x02 \x01(\tR\tnamespaceB\xc8\x01\n" +
 	"\x14com.testkube.sync.v1B\x0eWebhookIdProtoP\x01Z>github.com/kubeshop/testkube/pkg/proto/testkube/sync/v1;syncv1\xa2\x02\x03TSX\xaa\x02\x10Testkube.Sync.V1\xca\x02\x10Testkube\\Sync\\V1\xe2\x02\x1cTestkube\\Sync\\V1\\GPBMetadata\xea\x02\x12Testkube::Sync::V1b\beditionsp\xe8\a"
 
 var (

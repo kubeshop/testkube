@@ -145,9 +145,10 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "testworkflow [name]",
-		Aliases: []string{"testworkflows", "tw"},
-		Short:   "Starts test workflow execution",
+		Use:               "testworkflow [name]",
+		Aliases:           []string{"testworkflows", "tw"},
+		Short:             "Starts test workflow execution",
+		ValidArgsFunction: common.CompleteTestWorkflowNames,
 
 		Run: runTestWorkflow(opts),
 	}

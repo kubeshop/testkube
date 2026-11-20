@@ -138,10 +138,21 @@
 // keeps its Skills as stored, as an AI Agent does, so a manifest without them
 // does not delete the ones added in the dashboard; TestBundleSpec.Skills is
 // therefore not omitempty either. They follow
-// the Agent Skills spec's limits (skill.go) and are always included, so
-// together they hold at most MaxAlwaysIncludedSkillsLength characters of
-// content, since every authoring prompt carries all of them. A Git source URI
-// may carry credentials, as the REST API accepts, and is exported as stored.
+// the Agent Skills spec's limits (skill.go). A Skill is read on demand unless
+// alwaysInclude is set, as an AI Agent's is and as the REST API defaults, and
+// the ones always included hold at most MaxAlwaysIncludedSkillsLength
+// characters of content together, since every authoring prompt carries them.
+// The Control Plane exports alwaysInclude, so an export applies back
+// unchanged.
+//
+// A Git source URI must not carry credentials: no password in any URL, and no
+// user in an http or https one, where the user is usually a token. A manifest
+// lives in Git and get prints it, so a token there is readable by anyone who
+// reads either; a refused URI is not echoed. The dashboard and the REST API
+// still accept credentials, so the Control Plane exports a stored URI through
+// GitURIWithoutCredentials, which leaves them out. Nothing reads the Git
+// source yet; a private repository's token will get its own field, as
+// content.git of a Test Workflow has, rather than a place in the URI.
 //
 // contexts is the bundle's Attached Context: guidance its authoring sandbox
 // holds for the AI to read, apart from its Skills. It is kept in manifest

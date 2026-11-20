@@ -4,6 +4,8 @@ metadata:
   name: testkube-integration
   labels:
     core-tests: workflows
+  annotations:
+    testkube.io/description: "Testkube integration tests"
 spec:
   config:
     revision:

@@ -271,7 +271,7 @@ func TestParallelismLimit_Integration(t *testing.T) {
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
 			Count: testworkflowsv1.NewConfigValue("5"),
 		},
-		Parallelism: 2, // Only 2 at a time
+		Parallelism: testworkflowsv1.NewConfigValue("2"), // Only 2 at a time
 		Description: "parallel-limited-{{index}}",
 	}
 
