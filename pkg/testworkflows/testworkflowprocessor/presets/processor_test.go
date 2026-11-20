@@ -1905,7 +1905,7 @@ func stageIdProblems(sigs []stage.Signature) []string {
 				problems = append(problems, fmt.Sprintf("%s has no id", sig.Ref()))
 			case len(sig.Id()) > 255:
 				problems = append(problems, fmt.Sprintf("%s has an id of %d characters", sig.Ref(), len(sig.Id())))
-			case used[sig.Id()] && !(i == 0 && sig.Id() == groupId):
+			case used[sig.Id()] && (i != 0 || sig.Id() != groupId):
 				problems = append(problems, fmt.Sprintf("%s repeats the id %s", sig.Ref(), sig.Id()))
 			}
 			used[sig.Id()] = true
