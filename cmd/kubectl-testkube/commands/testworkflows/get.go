@@ -28,11 +28,12 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "testworkflow [name]",
-		Aliases: []string{"testworkflows", "tw"},
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Get all available test workflows",
-		Long:    `Get all available test workflows. In cloud context (API key) the CLI fetches them from the connected Control Plane environment and ignores the namespace flag. In kubeconfig context it fetches them from the runner in the given namespace (default "testkube").`,
+		Use:               "testworkflow [name]",
+		Aliases:           []string{"testworkflows", "tw"},
+		Args:              cobra.MaximumNArgs(1),
+		Short:             "Get all available test workflows",
+		ValidArgsFunction: common.CompleteTestWorkflowNames,
+		Long:              `Get all available test workflows. In cloud context (API key) the CLI fetches them from the connected Control Plane environment and ignores the namespace flag. In kubeconfig context it fetches them from the runner in the given namespace (default "testkube").`,
 
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if limit < 0 {

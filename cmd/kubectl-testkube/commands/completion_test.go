@@ -6,6 +6,13 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
+
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testtriggers"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflowtemplates"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooks"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooktemplates"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/workflowtriggers"
 )
 
 // TestZshCompletionUsesActualBinaryName guards against #964: the zsh
@@ -46,5 +53,69 @@ func TestCompletionCmdRejectsUnknownShell(t *testing.T) {
 
 	if err := cmd.Execute(); err == nil {
 		t.Fatal("expected an error for an unsupported shell argument")
+	}
+}
+
+func TestIsCompletionRequest(t *testing.T) {
+	for _, args := range [][]string{
+		{cobra.ShellCompRequestCmd, "get", ""},
+		{cobra.ShellCompNoDescRequestCmd, "get", ""},
+	} {
+		t.Run(args[0], func(t *testing.T) {
+			var seen bool
+			root := &cobra.Command{
+				Use:              "testkube",
+				PersistentPreRun: func(cmd *cobra.Command, _ []string) { seen = isCompletionRequest(cmd) },
+			}
+			root.AddCommand(&cobra.Command{Use: "get", Run: func(*cobra.Command, []string) {}})
+			root.SetArgs(args)
+			root.SetOut(&bytes.Buffer{})
+			root.SetErr(&bytes.Buffer{})
+
+			if err := root.Execute(); err != nil {
+				t.Fatalf("executing %v: %v", args, err)
+			}
+			if !seen {
+				t.Fatalf("expected %q to be treated as a completion request", args[0])
+			}
+		})
+	}
+
+	if isCompletionRequest(&cobra.Command{Use: "get"}) {
+		t.Fatal("a regular command must not be treated as a completion request")
+	}
+}
+
+func TestNameArgsHaveCompletion(t *testing.T) {
+	for name, cmd := range map[string]*cobra.Command{
+		"get testworkflow":              testworkflows.NewGetTestWorkflowsCmd(),
+		"delete testworkflow":           testworkflows.NewDeleteTestWorkflowCmd(),
+		"run testworkflow":              testworkflows.NewRunTestWorkflowCmd(),
+		"abort testworkflowexecutions":  testworkflows.NewAbortTestWorkflowExecutionsCmd(),
+		"cancel testworkflowexecutions": testworkflows.NewCancelTestWorkflowExecutionsCmd(),
+		"get testworkflowtemplate":      testworkflowtemplates.NewGetTestWorkflowTemplatesCmd(),
+		"delete testworkflowtemplate":   testworkflowtemplates.NewDeleteTestWorkflowTemplateCmd(),
+		"get testworkflowexecution":     testworkflows.NewGetTestWorkflowExecutionsCmd(),
+		"watch testworkflowexecution":   testworkflows.NewWatchTestWorkflowExecutionCmd(),
+		"rerun testworkflowexecution":   testworkflows.NewReRunTestWorkflowExecutionCmd(),
+		"cancel testworkflowexecution":  testworkflows.NewCancelTestWorkflowExecutionCmd(),
+		"abort testworkflowexecution":   testworkflows.NewAbortTestWorkflowExecutionCmd(),
+		"get testtrigger":               testtriggers.NewGetTestTriggerCmd(),
+		"delete testtrigger":            testtriggers.NewDeleteTestTriggerCmd(),
+		"get workflowtrigger":           workflowtriggers.NewGetWorkflowTriggerCmd(),
+		"delete workflowtrigger":        workflowtriggers.NewDeleteWorkflowTriggerCmd(),
+		"get webhook":                   webhooks.NewGetWebhookCmd(),
+		"delete webhook":                webhooks.NewDeleteWebhookCmd(),
+		"get webhooktemplate":           webhooktemplates.NewGetWebhookTemplateCmd(),
+		"delete webhooktemplate":        webhooktemplates.NewDeleteWebhookTemplateCmd(),
+	} {
+		if cmd.ValidArgsFunction == nil {
+			t.Errorf("%s: expected the name argument to have shell completion", name)
+		}
+	}
+
+	cmd := testworkflows.NewGetTestWorkflowExecutionsCmd()
+	if _, ok := cmd.GetFlagCompletionFunc("testworkflow"); !ok {
+		t.Error("get testworkflowexecution: expected --testworkflow to have shell completion")
 	}
 }

@@ -440,6 +440,10 @@ func AbortWorkflowExecution(client WorkflowExecutionAborter) (tool mcp.Tool, han
 	return tool, handler
 }
 
+// ExecutionWaiter waits until every execution reaches a terminal status.
+// WaitForExecutions returns a JSON array of the final TestWorkflowExecution
+// records, in the order of executionIds, because FormatWaitForExecutions reads
+// id, name and result from them.
 type ExecutionWaiter interface {
 	WaitForExecutions(ctx context.Context, executionIds []string) (string, error)
 }

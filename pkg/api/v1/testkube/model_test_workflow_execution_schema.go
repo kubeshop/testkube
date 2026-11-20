@@ -14,5 +14,6 @@ type TestWorkflowExecutionSchema struct {
 	Tags   map[string]string `json:"tags,omitempty"`
 	Target *ExecutionTarget  `json:"target,omitempty"`
 	// indicates that all executions should be silent by default. When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
-	Silent bool `json:"silent,omitempty"`
+	Silent bool                              `json:"silent,omitempty"`
+	Retry  *TestWorkflowExecutionRetryPolicy `json:"retry,omitempty"`
 }

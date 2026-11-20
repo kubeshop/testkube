@@ -4,6 +4,8 @@ metadata:
   name: expected-fail-cypress-incorrect-repo-path
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: Cypress with an invalid Git checkout path (no-cone mode)"
 description: default no-cone mode
 spec:
   content:
@@ -41,6 +43,8 @@ metadata:
   name: expected-fail-cypress-incorrect-repo-path-cone-mode
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: invalid Git checkout path with cone mode enabled"
 spec:
   content:
     git:
@@ -78,6 +82,8 @@ metadata:
   name: expected-fail-cypress-incorrect-image-name
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: invalid Cypress image name"
 spec:
   content:
     git:
@@ -114,6 +120,8 @@ metadata:
   name: expected-fail-cypress-incorrect-workingdir
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: incorrect Cypress workingDir"
 spec:
   content:
     git:
@@ -152,6 +160,8 @@ metadata:
   name: expected-fail-step-oomkilled
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: step OOMKilled"
 spec:
   container:
     image: python:3.14.3-slim-trixie
@@ -169,6 +179,8 @@ metadata:
   name: expected-fail-service-oomkilled # Issue: TKC-5012
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: service OOMKilled before readiness"
 spec:
   container:
     image: alpine:3.22.0
@@ -196,6 +208,8 @@ metadata:
   name: expected-fail-service-oomkilled-after-readiness # Issue: TKC-5014
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: service OOMKilled after readiness"
 spec:
   container:
     image: alpine:3.22.0
@@ -227,6 +241,8 @@ metadata:
   name: expected-fail-cypress-artifacts-condition-always-with-artifacts
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: Cypress tests fail; failure screenshots are collected with condition: always"
 spec:
   content:
     git:
@@ -261,6 +277,8 @@ metadata:
   name: expected-fail-k6-test-report-condition-always-no-artifacts
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: k6 script is missing; condition: always artifact collection runs with no files"
 spec:
   content:
     git:
@@ -298,6 +316,8 @@ metadata:
   name: expected-fail-timeout-activedeadlineseconds
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: k6 job timeout using activeDeadlineSeconds"
 spec:
   job:
     activeDeadlineSeconds: 1
@@ -332,6 +352,8 @@ metadata:
   name: expected-fail-timeout-step
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: Playwright step times out after 1s; the condition: always follow-up step still runs"
 spec:
   content:
     git:
@@ -367,6 +389,8 @@ metadata:
   name: expected-fail-private-registry-auth
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: private registry image pull without credentials"
 spec:
   container:
     resources:
@@ -385,6 +409,8 @@ metadata:
   name: expected-fail-private-repo-auth
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: Git checkout without access to the repository"
 spec:
   content:
     git:
@@ -414,6 +440,8 @@ metadata:
   name: expected-fail-missing-git-secret
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: Git credentials referencing missing Secrets"
 spec:
   content:
     git:
@@ -447,6 +475,8 @@ metadata:
   name: expected-fail-missing-template
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: missing workflow template"
 spec:
   use:
     - name: special-cases-template-default-resources
@@ -472,6 +502,8 @@ metadata:
   name: expected-fail-service-exit-code
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: service exits with a non-zero exit code"
 spec:
   use:
     - name: special-cases-template-default-resources
@@ -498,6 +530,8 @@ metadata:
   name: expected-fail-step-retry
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: until: self.failed retries passing attempts and stops on the third, failing attempt"
 description: "step retry (until step failed)"
 spec:
   use:
@@ -524,6 +558,8 @@ metadata:
   name: expected-fail-step-retry-timeout
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: step timeout on every retry attempt"
 description: "step retry where every attempt ends with the step timeout"
 spec:
   use:
@@ -545,6 +581,8 @@ metadata:
   name: expected-fail-negative-step
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: command passes and negative: true inverts the step result to failed"
 description: "negative step passed - inverting step result to failed"
 spec:
   use:
@@ -565,6 +603,8 @@ metadata:
   name: expected-fail-volume-not-mounted
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: volumeMount referencing an undefined volume"
 description: "volumeMount references missing volume"
 spec:
   container:
@@ -580,6 +620,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflowTemplate
 metadata:
   name: expected-fail-required-config-template
+  annotations:
+    testkube.io/description: "Workflow template with a required config parameter"
 spec:
   config:
     message:
@@ -595,6 +637,8 @@ metadata:
   name: expected-fail-template-missing-config-options
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: missing required template config"
 description: "Required template config missing"
 spec:
   use:
@@ -610,6 +654,8 @@ metadata:
   name: expected-fail-template-not-defined-config-options
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: undefined template config parameters"
 description: "Not defined template config params passed"
 spec:
   use:
@@ -628,6 +674,8 @@ metadata:
   name: expected-fail-service-readiness-probe
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: failing service readiness probe"
 description: "Service with failing readiness probe"
 spec:
   use:
@@ -652,6 +700,8 @@ metadata:
   name: expected-fail-nested-execute
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: child workflow failure propagated through execute"
 description: "execute step with a child execution that fails"
 spec:
   use:
@@ -668,6 +718,8 @@ metadata:
   name: expected-fail-conditional-step-failed
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: true condition runs a failing step and the workflow fails"
 description: "conditional step failed"
 spec:
   use:
@@ -687,6 +739,8 @@ metadata:
   name: expected-fail-parallel-step-failed
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: parallel worker fails"
 description: "one of parallel steps failed"
 spec:
   container:
@@ -718,6 +772,8 @@ metadata:
   name: expected-fail-parallel-step-timed-out
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: parallel worker timeout"
 description: "one of parallel steps timed out"
 spec:
   container:
@@ -750,6 +806,8 @@ metadata:
   name: expected-fail-parallel-oomkilled
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: parallel worker OOMKilled"
 description: "one of parallel steps oomkilled"
 spec:
   container:
@@ -781,6 +839,8 @@ metadata:
   name: expected-fail-parallel-step-fail-fast
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: failFast aborts remaining parallel workers after the first worker fails"
 description: "failFast aborts remaining parallel workers on first failure"
 spec:
   container:
@@ -812,6 +872,8 @@ metadata:
   name: expected-fail-unschedulable
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: unschedulable pod with an unmatched nodeSelector"
 description: "no node has the label that the pod selects"
 spec:
   container:
@@ -834,6 +896,8 @@ metadata:
   name: expected-fail-env-secret-required
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: required ENV value referencing a missing Secret"
 description: "a required env value comes from a secret that does not exist"
 spec:
   container:
@@ -861,6 +925,8 @@ metadata:
   name: expected-fail-missing-volume-secret
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: volume referencing a missing Secret"
 description: "a volume comes from a secret that does not exist"
 spec:
   pod:
@@ -888,6 +954,8 @@ metadata:
   name: expected-fail-init-timeout
   labels:
     core-tests: expected-fail
+  annotations:
+    testkube.io/description: "Expected failure: initialization timeout for an unschedulable pod"
 description: "the initialization timeout ends a pod that no node can run"
 spec:
   timeouts:
