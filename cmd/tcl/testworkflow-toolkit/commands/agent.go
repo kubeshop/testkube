@@ -107,7 +107,7 @@ type agentStep struct {
 	stepRef   string
 	// outputsDir is the directory that the init process reads the step outputs from.
 	outputsDir string
-	// resultsDir is the results directory of the step. It is empty for a step with no ID.
+	// resultsDir is the results directory of the step. It is empty when the step has no ID.
 	resultsDir   string
 	pollInterval time.Duration
 }
@@ -115,10 +115,10 @@ type agentStep struct {
 // run starts the turn and follows it to its end. It returns an error for each end that is not a
 // completed turn.
 func (s *agentStep) run(ctx context.Context, spec testworkflowsv1.StepAgent) error {
-	// The answer is a file in the results directory. A turn costs time and tokens, so the step
-	// must not start one when it has no place for the answer.
+	// The answer is a file in the results directory. The processor gives each step an ID, but a
+	// turn costs time and tokens, so the step does not start one when it has no place for the answer.
 	if s.resultsDir == "" {
-		return &DefinitionError{Subject: agentSubject, Err: errors.New("the step needs an id or a name, because the answer goes to the results directory of the step")}
+		return &DefinitionError{Subject: agentSubject, Err: errors.New("the step has no results directory for the answer, because it has no id. Set an id on the step")}
 	}
 	turn, err := s.call(ctx, func(ctx context.Context) (*cloud.AgentTurn, error) {
 		return s.client.StartAgentTurn(ctx, &cloud.StartAgentTurnRequest{

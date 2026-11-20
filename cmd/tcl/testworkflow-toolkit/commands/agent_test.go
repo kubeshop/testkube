@@ -159,7 +159,7 @@ func TestAgentStep_Run(t *testing.T) {
 			name:     "starts no turn for a step with no ID",
 			start:    agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Answer: "pass"}},
 			noStepID: true,
-			wantErr:  "the step needs an id or a name",
+			wantErr:  "the step has no results directory for the answer",
 		},
 		{
 			name:    "fails when the start call fails",
