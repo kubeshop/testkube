@@ -34,8 +34,8 @@
 //     writes it. With that byte the text can start an instruction for the init process.
 //   - The answer is the file response.md in the results directory of the step, and it is not a
 //     step output. The init process skips an output file above data.MaxOutputSize, and an
-//     answer has no size limit. A step with no ID has no results directory, so its answer is
-//     only in the step log.
+//     answer has no size limit. A step with no ID has no results directory, so the command
+//     fails before it starts a turn.
 //   - The command makes one request ID for the process and sends it with the start call, so a
 //     retry of that call returns the same turn.
 //   - When the step stops before the turn ends, the command asks the control plane one time to

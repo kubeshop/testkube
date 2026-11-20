@@ -156,11 +156,10 @@ func TestAgentStep_Run(t *testing.T) {
 			wantAnswer:  "ok\n\x05\x05;output",
 		},
 		{
-			name:        "writes the session and no file for a step with no ID",
-			start:       agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Answer: "pass"}},
-			noStepID:    true,
-			wantLog:     []string{"The step has no ID"},
-			wantOutputs: map[string]string{"session": "session-1"},
+			name:     "starts no turn for a step with no ID",
+			start:    agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Answer: "pass"}},
+			noStepID: true,
+			wantErr:  "the step needs an id or a name",
 		},
 		{
 			name:    "fails when the start call fails",
@@ -250,11 +249,15 @@ func TestAgentStep_Run(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			require.Len(t, client.started, 1)
-			assert.Equal(t, "request-1", client.started[0].GetRequestId())
-			assert.Equal(t, "ref-1", client.started[0].GetStepRef())
-			assert.Equal(t, "failure-triage", client.started[0].GetAgentName())
-			assert.Equal(t, "Find the cause.", client.started[0].GetPrompt())
+			if tt.noStepID {
+				assert.Empty(t, client.started)
+			} else {
+				require.Len(t, client.started, 1)
+				assert.Equal(t, "request-1", client.started[0].GetRequestId())
+				assert.Equal(t, "ref-1", client.started[0].GetStepRef())
+				assert.Equal(t, "failure-triage", client.started[0].GetAgentName())
+				assert.Equal(t, "Find the cause.", client.started[0].GetPrompt())
+			}
 
 			for _, line := range tt.wantLog {
 				assert.Contains(t, log.String(), line)
