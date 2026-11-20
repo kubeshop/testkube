@@ -11183,8 +11183,10 @@ spec:
                             type: boolean
                           parallelism:
                             description: how many resources could be scheduled in parallel
-                            format: int32
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           paused:
                             description: pause the step initially
                             type: boolean
@@ -12389,8 +12391,17 @@ spec:
                                       - ip
                                     type: object
                                   type: array
+                                hostIPC:
+                                  description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
+                                hostNetwork:
+                                  description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
+                                  type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                                   type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
@@ -12440,6 +12451,34 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -12535,6 +12574,9 @@ spec:
                                 serviceAccountName:
                                   description: default service account name for the scheduled pod
                                   type: string
+                                setHostnameAsFQDN:
+                                  description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                                  type: boolean
                                 subdomain:
                                   description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                                   type: string
@@ -13748,6 +13790,30 @@ spec:
                 execution:
                   description: values to be used for test workflow execution
                   properties:
+                    retry:
+                      description: |-
+                        Retry reruns the whole workflow when the execution ends for a cause the policy lists.
+                        It is not the step-level retry: that one reruns a step inside the same pod.
+                      properties:
+                        count:
+                          description: how many automatic retries follow a run that a person started or a schedule triggered; a manual rerun starts a new budget
+                          format: int32
+                          maximum: 10
+                          minimum: 1
+                          type: integer
+                        "on":
+                          description: 'the causes that are retried (defaults to: infrastructure)'
+                          items:
+                            description: ExecutionRetryCause is a class of failure that an execution retry may answer.
+                            enum:
+                              - infrastructure
+                              - timeout
+                              - oom
+                            type: string
+                          type: array
+                      required:
+                        - count
+                      type: object
                     silent:
                       description: When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
                       type: boolean
@@ -13867,8 +13933,17 @@ spec:
                           - ip
                         type: object
                       type: array
+                    hostIPC:
+                      description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                      type: boolean
+                    hostNetwork:
+                      description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                      type: boolean
                     hostPID:
                       description: Whether to allow a pod to have access to the host process ID namespace
+                      type: boolean
+                    hostUsers:
+                      description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                       type: boolean
                     hostname:
                       description: Specifies the hostname of the Pod
@@ -13918,6 +13993,34 @@ spec:
                           - name
                         type: object
                       type: array
+                    resources:
+                      description: |-
+                        Pod-level resource requests and limits, shared by all containers in the pod,
+                        including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                      properties:
+                        limits:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource limits for the container
+                          type: object
+                        requests:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource requests for the container
+                          type: object
+                      type: object
+                    runtimeClassName:
+                      description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                      type: string
+                    schedulerName:
+                      description: If specified, the pod will be dispatched by the specified scheduler.
+                      type: string
                     schedulingGates:
                       items:
                         properties:
@@ -14013,6 +14116,9 @@ spec:
                     serviceAccountName:
                       description: default service account name for the scheduled pod
                       type: string
+                    setHostnameAsFQDN:
+                      description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                      type: boolean
                     subdomain:
                       description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                       type: string
@@ -14727,8 +14833,17 @@ spec:
                                 - ip
                               type: object
                             type: array
+                          hostIPC:
+                            description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                            type: boolean
+                          hostNetwork:
+                            description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                            type: boolean
                           hostPID:
                             description: Whether to allow a pod to have access to the host process ID namespace
+                            type: boolean
+                          hostUsers:
+                            description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                             type: boolean
                           hostname:
                             description: Specifies the hostname of the Pod
@@ -14778,6 +14893,34 @@ spec:
                                 - name
                               type: object
                             type: array
+                          resources:
+                            description: |-
+                              Pod-level resource requests and limits, shared by all containers in the pod,
+                              including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                            properties:
+                              limits:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource limits for the container
+                                type: object
+                              requests:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource requests for the container
+                                type: object
+                            type: object
+                          runtimeClassName:
+                            description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                            type: string
+                          schedulerName:
+                            description: If specified, the pod will be dispatched by the specified scheduler.
+                            type: string
                           schedulingGates:
                             items:
                               properties:
@@ -14873,6 +15016,9 @@ spec:
                           serviceAccountName:
                             description: default service account name for the scheduled pod
                             type: string
+                          setHostnameAsFQDN:
+                            description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                            type: boolean
                           subdomain:
                             description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                             type: string
@@ -17035,8 +17181,10 @@ spec:
                             type: boolean
                           parallelism:
                             description: how many resources could be scheduled in parallel
-                            format: int32
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           paused:
                             description: pause the step initially
                             type: boolean
@@ -18241,8 +18389,17 @@ spec:
                                       - ip
                                     type: object
                                   type: array
+                                hostIPC:
+                                  description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
+                                hostNetwork:
+                                  description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
+                                  type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                                   type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
@@ -18292,6 +18449,34 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -18387,6 +18572,9 @@ spec:
                                 serviceAccountName:
                                   description: default service account name for the scheduled pod
                                   type: string
+                                setHostnameAsFQDN:
+                                  description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                                  type: boolean
                                 subdomain:
                                   description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                                   type: string
@@ -20603,8 +20791,10 @@ spec:
                             type: boolean
                           parallelism:
                             description: how many resources could be scheduled in parallel
-                            format: int32
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           paused:
                             description: pause the step initially
                             type: boolean
@@ -21809,8 +21999,17 @@ spec:
                                       - ip
                                     type: object
                                   type: array
+                                hostIPC:
+                                  description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
+                                hostNetwork:
+                                  description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
+                                  type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                                   type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
@@ -21860,6 +22059,34 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -21955,6 +22182,9 @@ spec:
                                 serviceAccountName:
                                   description: default service account name for the scheduled pod
                                   type: string
+                                setHostnameAsFQDN:
+                                  description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                                  type: boolean
                                 subdomain:
                                   description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                                   type: string
@@ -24467,8 +24697,10 @@ spec:
                             type: boolean
                           parallelism:
                             description: how many resources could be scheduled in parallel
-                            format: int32
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           paused:
                             description: pause the step initially
                             type: boolean
@@ -25634,8 +25866,17 @@ spec:
                                       - ip
                                     type: object
                                   type: array
+                                hostIPC:
+                                  description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
+                                hostNetwork:
+                                  description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
+                                  type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                                   type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
@@ -25685,6 +25926,34 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -25780,6 +26049,9 @@ spec:
                                 serviceAccountName:
                                   description: default service account name for the scheduled pod
                                   type: string
+                                setHostnameAsFQDN:
+                                  description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                                  type: boolean
                                 subdomain:
                                   description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                                   type: string
@@ -26936,6 +27208,30 @@ spec:
                 execution:
                   description: values to be used for test workflow execution
                   properties:
+                    retry:
+                      description: |-
+                        Retry reruns the whole workflow when the execution ends for a cause the policy lists.
+                        It is not the step-level retry: that one reruns a step inside the same pod.
+                      properties:
+                        count:
+                          description: how many automatic retries follow a run that a person started or a schedule triggered; a manual rerun starts a new budget
+                          format: int32
+                          maximum: 10
+                          minimum: 1
+                          type: integer
+                        "on":
+                          description: 'the causes that are retried (defaults to: infrastructure)'
+                          items:
+                            description: ExecutionRetryCause is a class of failure that an execution retry may answer.
+                            enum:
+                              - infrastructure
+                              - timeout
+                              - oom
+                            type: string
+                          type: array
+                      required:
+                        - count
+                      type: object
                     silent:
                       description: When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
                       type: boolean
@@ -27055,8 +27351,17 @@ spec:
                           - ip
                         type: object
                       type: array
+                    hostIPC:
+                      description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                      type: boolean
+                    hostNetwork:
+                      description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                      type: boolean
                     hostPID:
                       description: Whether to allow a pod to have access to the host process ID namespace
+                      type: boolean
+                    hostUsers:
+                      description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                       type: boolean
                     hostname:
                       description: Specifies the hostname of the Pod
@@ -27106,6 +27411,34 @@ spec:
                           - name
                         type: object
                       type: array
+                    resources:
+                      description: |-
+                        Pod-level resource requests and limits, shared by all containers in the pod,
+                        including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                      properties:
+                        limits:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource limits for the container
+                          type: object
+                        requests:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource requests for the container
+                          type: object
+                      type: object
+                    runtimeClassName:
+                      description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                      type: string
+                    schedulerName:
+                      description: If specified, the pod will be dispatched by the specified scheduler.
+                      type: string
                     schedulingGates:
                       items:
                         properties:
@@ -27201,6 +27534,9 @@ spec:
                     serviceAccountName:
                       description: default service account name for the scheduled pod
                       type: string
+                    setHostnameAsFQDN:
+                      description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                      type: boolean
                     subdomain:
                       description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                       type: string
@@ -27915,8 +28251,17 @@ spec:
                                 - ip
                               type: object
                             type: array
+                          hostIPC:
+                            description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                            type: boolean
+                          hostNetwork:
+                            description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                            type: boolean
                           hostPID:
                             description: Whether to allow a pod to have access to the host process ID namespace
+                            type: boolean
+                          hostUsers:
+                            description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                             type: boolean
                           hostname:
                             description: Specifies the hostname of the Pod
@@ -27966,6 +28311,34 @@ spec:
                                 - name
                               type: object
                             type: array
+                          resources:
+                            description: |-
+                              Pod-level resource requests and limits, shared by all containers in the pod,
+                              including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                            properties:
+                              limits:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource limits for the container
+                                type: object
+                              requests:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource requests for the container
+                                type: object
+                            type: object
+                          runtimeClassName:
+                            description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                            type: string
+                          schedulerName:
+                            description: If specified, the pod will be dispatched by the specified scheduler.
+                            type: string
                           schedulingGates:
                             items:
                               properties:
@@ -28061,6 +28434,9 @@ spec:
                           serviceAccountName:
                             description: default service account name for the scheduled pod
                             type: string
+                          setHostnameAsFQDN:
+                            description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                            type: boolean
                           subdomain:
                             description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                             type: string
@@ -30177,8 +30553,10 @@ spec:
                             type: boolean
                           parallelism:
                             description: how many resources could be scheduled in parallel
-                            format: int32
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           paused:
                             description: pause the step initially
                             type: boolean
@@ -31344,8 +31722,17 @@ spec:
                                       - ip
                                     type: object
                                   type: array
+                                hostIPC:
+                                  description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
+                                hostNetwork:
+                                  description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
+                                  type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                                   type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
@@ -31395,6 +31782,34 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -31490,6 +31905,9 @@ spec:
                                 serviceAccountName:
                                   description: default service account name for the scheduled pod
                                   type: string
+                                setHostnameAsFQDN:
+                                  description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                                  type: boolean
                                 subdomain:
                                   description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                                   type: string
@@ -33623,8 +34041,10 @@ spec:
                             type: boolean
                           parallelism:
                             description: how many resources could be scheduled in parallel
-                            format: int32
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           paused:
                             description: pause the step initially
                             type: boolean
@@ -34790,8 +35210,17 @@ spec:
                                       - ip
                                     type: object
                                   type: array
+                                hostIPC:
+                                  description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
+                                hostNetwork:
+                                  description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
+                                  type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                                   type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
@@ -34841,6 +35270,34 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -34936,6 +35393,9 @@ spec:
                                 serviceAccountName:
                                   description: default service account name for the scheduled pod
                                   type: string
+                                setHostnameAsFQDN:
+                                  description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                                  type: boolean
                                 subdomain:
                                   description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                                   type: string

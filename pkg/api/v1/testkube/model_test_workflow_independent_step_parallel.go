@@ -28,13 +28,12 @@ type TestWorkflowIndependentStepParallel struct {
 	// delay before the step
 	Delay string `json:"delay,omitempty"`
 	// script to run in a default shell for the container
-	Shell     string                     `json:"shell,omitempty"`
-	Run       *TestWorkflowStepRun       `json:"run,omitempty"`
-	Execute   *TestWorkflowStepExecute   `json:"execute,omitempty"`
-	Artifacts *TestWorkflowStepArtifacts `json:"artifacts,omitempty"`
-	Cache     *TestWorkflowStepCache     `json:"cache,omitempty"`
-	// how many resources could be scheduled in parallel
-	Parallelism int32 `json:"parallelism,omitempty"`
+	Shell       string                     `json:"shell,omitempty"`
+	Run         *TestWorkflowStepRun       `json:"run,omitempty"`
+	Execute     *TestWorkflowStepExecute   `json:"execute,omitempty"`
+	Artifacts   *TestWorkflowStepArtifacts `json:"artifacts,omitempty"`
+	Cache       *TestWorkflowStepCache     `json:"cache,omitempty"`
+	Parallelism *BoxedString               `json:"parallelism,omitempty"`
 	// abort remaining parallel workers on first failure
 	FailFast bool `json:"failFast,omitempty"`
 	// worker description to display

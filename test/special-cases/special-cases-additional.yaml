@@ -5,6 +5,8 @@ metadata:
   name: special-cases-cron-trigger-with-timezone
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Cron trigger test with Europe/Warsaw and America/New_York timezones"
 description: "Cron trigger with timezone - workflow should run at 12:05 PM Europe/Warsaw and 12:05 PM America/New_York"
 spec:
   events:
@@ -29,6 +31,8 @@ metadata:
   name: special-cases-long-lasting-30m
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "30-minute workflow execution test with continuous log output"
 description: "Long lasting workflow - 30 minutes"
 spec:
   steps:
@@ -45,6 +49,8 @@ metadata:
   name: special-cases-long-lasting-90m
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "90-minute workflow execution test with continuous log output"
 description: "Long lasting workflow - 90 minutes"
 spec:
   steps:
@@ -61,6 +67,8 @@ metadata:
   name: special-cases-long-lasting-sleep-90m
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "90-minute workflow execution test without intermediate log output"
 description: "Long lasting workflow - 90 minutes sleep + echo in the end"
 spec:
   steps:
@@ -74,6 +82,8 @@ metadata:
   name: special-cases-service-name-with-dash  # only . notation is supported (https://linear.app/kubeshop/issue/TKC-4047/)
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Service name with a dash test using at() and ENV"
 description: "Service name with dash"
 spec:
   container:
@@ -103,6 +113,8 @@ metadata:
   name: special-cases-30s
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "30-second child workflow for execute tests"
 spec:
   steps:
   - name: Run test
@@ -115,6 +127,8 @@ metadata:
   name: special-cases-execute-100-parallel
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "execute test with 100 parallel child workflows"
 spec:
   steps:
   - execute:

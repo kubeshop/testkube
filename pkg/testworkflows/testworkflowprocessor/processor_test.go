@@ -10,6 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -499,4 +501,208 @@ func TestBundle_DefaultRunnerResources_AppliesLimitsWhenOnlyRequestsSet(t *testi
 		assert.Equalf(t, resource.MustParse("500m"), c.Resources.Limits[corev1.ResourceCPU], "container %s should receive default CPU limit", c.Name)
 		assert.Equalf(t, resource.MustParse("512Mi"), c.Resources.Limits[corev1.ResourceMemory], "container %s should receive default memory limit", c.Name)
 	}
+}
+
+func TestBundle_PodRuntimeSchedulerAndHostUsers_Applied(t *testing.T) {
+	proc := New(&dummyInspector{}).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+	runtimeClass := "gvisor"
+	hostUsers := false
+	workflow := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					RuntimeClassName: &runtimeClass,
+					SchedulerName:    "{{ \"volcano\" }}",
+					HostUsers:        &hostUsers,
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "echo hello"}},
+			},
+		},
+	}
+
+	bundle, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+		Config: testworkflowconfig.InternalConfig{
+			Resource: testworkflowconfig.ResourceConfig{Id: "resource-id", RootId: "resource-root-id"},
+		},
+	})
+
+	require.NoError(t, err)
+	podSpec := bundle.Job.Spec.Template.Spec
+	require.NotNil(t, podSpec.RuntimeClassName)
+	assert.Equal(t, "gvisor", *podSpec.RuntimeClassName)
+	assert.Equal(t, "volcano", podSpec.SchedulerName)
+	require.NotNil(t, podSpec.HostUsers)
+	assert.False(t, *podSpec.HostUsers)
+}
+
+func TestBundle_PodLevelResources_Applied(t *testing.T) {
+	proc := New(&dummyInspector{}).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+	workflow := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					Resources: &testworkflowsv1.Resources{
+						Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{
+							corev1.ResourceCPU:    "500m",
+							corev1.ResourceMemory: "{{ \"256Mi\" }}",
+						},
+						Limits: map[corev1.ResourceName]testworkflowsv1.ConfigValue{
+							corev1.ResourceMemory: "1Gi",
+						},
+					},
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "echo hello"}},
+			},
+		},
+	}
+
+	bundle, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+		Config: testworkflowconfig.InternalConfig{
+			Resource: testworkflowconfig.ResourceConfig{Id: "resource-id", RootId: "resource-root-id"},
+		},
+	})
+
+	require.NoError(t, err)
+	podResources := bundle.Job.Spec.Template.Spec.Resources
+	require.NotNil(t, podResources)
+	assert.Equal(t, corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("500m"),
+			corev1.ResourceMemory: resource.MustParse("256Mi"),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("1Gi"),
+		},
+	}, *podResources)
+}
+
+func TestBundle_PodLevelResources_NotSetByDefault(t *testing.T) {
+	proc := New(&dummyInspector{}).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+	workflow := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "echo hello"}},
+			},
+		},
+	}
+
+	bundle, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+		Config: testworkflowconfig.InternalConfig{
+			Resource: testworkflowconfig.ResourceConfig{Id: "resource-id", RootId: "resource-root-id"},
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Nil(t, bundle.Job.Spec.Template.Spec.Resources)
+}
+
+func TestBundle_PodLevelResources_InvalidValue_ReturnsError(t *testing.T) {
+	proc := New(&dummyInspector{}).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+	workflow := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					Resources: &testworkflowsv1.Resources{
+						Limits: map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceCPU: "lots"},
+					},
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "echo hello"}},
+			},
+		},
+	}
+
+	_, err := proc.Bundle(context.Background(), workflow, BundleOptions{
+		Config: testworkflowconfig.InternalConfig{
+			Resource: testworkflowconfig.ResourceConfig{Id: "resource-id", RootId: "resource-root-id"},
+		},
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "pod.resources")
+}
+
+func TestBundle_PodHostNamespacesAndFQDN(t *testing.T) {
+	proc := New(&dummyInspector{}).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+	newWorkflow := func(pod testworkflowsv1.PodConfig) *testworkflowsv1.TestWorkflow {
+		return &testworkflowsv1.TestWorkflow{
+			Spec: testworkflowsv1.TestWorkflowSpec{
+				TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{Pod: &pod},
+				Steps: []testworkflowsv1.Step{
+					{StepOperations: testworkflowsv1.StepOperations{Shell: "echo hello"}},
+				},
+			},
+		}
+	}
+	options := func(allowLowSecurityFields bool) BundleOptions {
+		return BundleOptions{
+			Config: testworkflowconfig.InternalConfig{
+				Resource: testworkflowconfig.ResourceConfig{Id: "resource-id", RootId: "resource-root-id"},
+			},
+			AllowLowSecurityFields: allowLowSecurityFields,
+		}
+	}
+
+	bundle, err := proc.Bundle(context.Background(), newWorkflow(testworkflowsv1.PodConfig{
+		HostNetwork:       common.Ptr(true),
+		HostIPC:           common.Ptr(true),
+		Hostname:          "runner",
+		Subdomain:         "tests",
+		SetHostnameAsFQDN: common.Ptr(true),
+	}), options(true))
+	require.NoError(t, err)
+	podSpec := bundle.Job.Spec.Template.Spec
+	assert.True(t, podSpec.HostNetwork)
+	assert.True(t, podSpec.HostIPC)
+	assert.False(t, podSpec.HostPID)
+	require.NotNil(t, podSpec.SetHostnameAsFQDN)
+	assert.True(t, *podSpec.SetHostnameAsFQDN)
+	// the control port is reserved so host network pods don't collide on a node
+	mainContainer := podSpec.Containers[len(podSpec.Containers)-1]
+	assert.Contains(t, mainContainer.Ports, corev1.ContainerPort{
+		Name:          "tk-control",
+		ContainerPort: int32(initconstants.ControlServerPort),
+		Protocol:      corev1.ProtocolTCP,
+	})
+
+	// sharing a host namespace is a low security field
+	for name, pod := range map[string]testworkflowsv1.PodConfig{
+		"hostNetwork": {HostNetwork: common.Ptr(true)},
+		"hostIPC":     {HostIPC: common.Ptr(true)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := proc.Bundle(context.Background(), newWorkflow(pod), options(false))
+			assert.ErrorContains(t, err, "low security fields are not allowed")
+		})
+	}
+
+	// setHostnameAsFQDN is not one, and nothing changes when the fields aren't set
+	bundle, err = proc.Bundle(context.Background(), newWorkflow(testworkflowsv1.PodConfig{
+		SetHostnameAsFQDN: common.Ptr(true),
+	}), options(false))
+	require.NoError(t, err)
+	podSpec = bundle.Job.Spec.Template.Spec
+	assert.False(t, podSpec.HostNetwork)
+	assert.False(t, podSpec.HostIPC)
+	require.NotNil(t, podSpec.SetHostnameAsFQDN)
 }

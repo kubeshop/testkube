@@ -12,6 +12,8 @@ metadata:
     core-tests: workflows
     tool: espresso
     category: e2e-ui-testing
+  annotations:
+    testkube.io/description: "Espresso test using an Android emulator. Generates application and test APK artifacts."
 description: "Android emulator - K8s+KVM"
 spec:
   content:

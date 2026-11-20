@@ -450,6 +450,91 @@ func TestConvertIsIdempotent_Integration(t *testing.T) {
 	assert.Equal(t, distinct, total, "no duplicate executions")
 }
 
+func TestConvertRecopiesExecutionThatFinishedAfterFirstRun_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
+	ctx := context.Background()
+	f := newFixture(t)
+
+	finished := buildExecution(1)
+	running := buildExecution(1)
+	runningStatus := testkube.RUNNING_TestWorkflowStatus
+	running.Result.Status = &runningStatus
+	running.Result.PredictedStatus = &runningStatus
+	running.Result.FinishedAt = time.Time{}
+	running.Reports = nil
+	require.NoError(t, f.mongoRepo.Insert(ctx, running))
+
+	f.convert(t, Config{})
+	require.NoError(t, f.mongoRepo.Update(ctx, finished))
+	second := f.convert(t, Config{})
+	require.Empty(t, second.Warnings)
+
+	got, err := f.pgRepo.Get(ctx, finished.Id)
+	require.NoError(t, err)
+	assert.Equal(t, *finished.Result.Status, *got.Result.Status)
+	assert.Len(t, got.Reports, 1, "the report written at the end of the run")
+	assert.Equal(t, int64(1), countRows(t, f.pg)["test_workflow_executions"], "no duplicate execution")
+}
+
+func TestConvertKeepsPostgresProgressWhenMongoCopyIsUnfinished_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
+	ctx := context.Background()
+	f := newFixture(t)
+
+	running := buildExecution(1)
+	runningStatus := testkube.RUNNING_TestWorkflowStatus
+	running.Result.Status = &runningStatus
+	running.Result.PredictedStatus = &runningStatus
+	running.Result.FinishedAt = time.Time{}
+	require.NoError(t, f.mongoRepo.Insert(ctx, running))
+	f.convert(t, Config{})
+
+	progressed := *running.Result
+	progressed.Steps = map[string]testkube.TestWorkflowStepResult{
+		"root":    {Status: stepStatusPtr(testkube.RUNNING_TestWorkflowStepStatus)},
+		"child-a": {Status: stepStatusPtr(testkube.PASSED_TestWorkflowStepStatus)},
+	}
+	require.NoError(t, f.pgRepo.UpdateResult(ctx, running.Id, &progressed))
+	f.convert(t, Config{})
+
+	got, err := f.pgRepo.Get(ctx, running.Id)
+	require.NoError(t, err)
+	assert.Contains(t, got.Result.Steps, "child-a", "the step the agent finished after the cutover")
+}
+
+func TestConvertKeepsEarlierCopyAndFailsWhenRecopyIsSkipped_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
+	ctx := context.Background()
+	f := newFixture(t)
+
+	runningStatus := testkube.RUNNING_TestWorkflowStatus
+	for i := 1; i <= 2; i++ {
+		running := buildExecution(i)
+		running.Result.Status = &runningStatus
+		running.Result.PredictedStatus = &runningStatus
+		require.NoError(t, f.mongoRepo.Insert(ctx, running))
+	}
+	f.convert(t, Config{})
+
+	broken := buildExecution(1)
+	broken.Workflow.Name = ""
+	require.NoError(t, f.mongoRepo.Update(ctx, broken))
+	finished := buildExecution(2)
+	require.NoError(t, f.mongoRepo.Update(ctx, finished))
+	second := f.convert(t, Config{SkipErrors: true})
+
+	assert.True(t, second.Failed(), "the row is still running, so the job must not succeed")
+	kept, err := f.pgRepo.Get(ctx, broken.Id)
+	require.NoError(t, err, "the earlier copy of the broken execution")
+	assert.Equal(t, runningStatus, *kept.Result.Status)
+	got, err := f.pgRepo.Get(ctx, finished.Id)
+	require.NoError(t, err)
+	assert.Equal(t, *finished.Result.Status, *got.Result.Status)
+}
+
 // Interrupting a run must lose at most the batch in flight, and resuming must
 // land every remaining execution exactly once.
 func TestConvertResumesFromCheckpoint_Integration(t *testing.T) {

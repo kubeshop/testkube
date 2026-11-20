@@ -46,8 +46,16 @@ const CapabilityControlPlaneResourcesAI Capability = "controlplane-resources-ai"
 // through the control_plane_resource arm, for the same reasons as CapabilityControlPlaneResourcesAI.
 const CapabilityControlPlaneResourcesTestBundles Capability = "controlplane-resources-testbundles"
 
+// CapabilityMultiNamespaceSync is whether the control plane reads the namespace fields of the
+// sync API and the environment-id header, and keys GitOps ownership by (agentId, namespace).
+// Without it an agent must sync one namespace per Environment.
+const CapabilityMultiNamespaceSync Capability = "sync-multi-namespace"
+
 func Enabled(capabilities []*cloud.Capability, capability Capability) bool {
 	for _, c := range capabilities {
+		if c == nil {
+			continue
+		}
 		if c.Name == string(capability) {
 			return c.Enabled
 		}

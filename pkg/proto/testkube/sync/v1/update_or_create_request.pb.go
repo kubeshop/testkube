@@ -40,7 +40,11 @@ type UpdateOrCreateRequest struct {
 	//	*UpdateOrCreateRequest_WebhookTemplate
 	//	*UpdateOrCreateRequest_WorkflowTrigger
 	//	*UpdateOrCreateRequest_ControlPlaneResource
-	Payload       isUpdateOrCreateRequest_Payload `protobuf_oneof:"payload"`
+	Payload isUpdateOrCreateRequest_Payload `protobuf_oneof:"payload"`
+	// namespace is the Kubernetes namespace of the object in payload.
+	// It is explicit so the Control Plane keys ownership by (agentId, namespace)
+	// without parsing the JSON; when empty the namespace inside the payload applies.
+	Namespace     *string `protobuf:"bytes,7,opt,name=namespace" json:"namespace,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -145,6 +149,13 @@ func (x *UpdateOrCreateRequest) GetControlPlaneResource() *ControlPlaneResource 
 	return nil
 }
 
+func (x *UpdateOrCreateRequest) GetNamespace() string {
+	if x != nil && x.Namespace != nil {
+		return *x.Namespace
+	}
+	return ""
+}
+
 type isUpdateOrCreateRequest_Payload interface {
 	isUpdateOrCreateRequest_Payload()
 }
@@ -182,7 +193,7 @@ type UpdateOrCreateRequest_WorkflowTrigger struct {
 type UpdateOrCreateRequest_ControlPlaneResource struct {
 	// control_plane_resource indicates the object is a Control Plane resource,
 	// such as an Insights board
-	ControlPlaneResource *ControlPlaneResource `protobuf:"bytes,7,opt,name=control_plane_resource,json=controlPlaneResource,oneof"`
+	ControlPlaneResource *ControlPlaneResource `protobuf:"bytes,8,opt,name=control_plane_resource,json=controlPlaneResource,oneof"`
 }
 
 func (*UpdateOrCreateRequest_TestTrigger) isUpdateOrCreateRequest_Payload() {}
@@ -203,7 +214,7 @@ var File_testkube_sync_v1_update_or_create_request_proto protoreflect.FileDescri
 
 const file_testkube_sync_v1_update_or_create_request_proto_rawDesc = "" +
 	"\n" +
-	"/testkube/sync/v1/update_or_create_request.proto\x12\x10testkube.sync.v1\x1a-testkube/sync/v1/control_plane_resource.proto\x1a#testkube/sync/v1/test_trigger.proto\x1a-testkube/sync/v1/test_workflow_template.proto\x1a\x1etestkube/sync/v1/webhook.proto\x1a'testkube/sync/v1/webhook_template.proto\x1a'testkube/sync/v1/workflow_trigger.proto\x1a,testkube/testworkflow/v1/test_workflow.proto\"\xcc\x04\n" +
+	"/testkube/sync/v1/update_or_create_request.proto\x12\x10testkube.sync.v1\x1a-testkube/sync/v1/control_plane_resource.proto\x1a#testkube/sync/v1/test_trigger.proto\x1a-testkube/sync/v1/test_workflow_template.proto\x1a\x1etestkube/sync/v1/webhook.proto\x1a'testkube/sync/v1/webhook_template.proto\x1a'testkube/sync/v1/workflow_trigger.proto\x1a,testkube/testworkflow/v1/test_workflow.proto\"\xea\x04\n" +
 	"\x15UpdateOrCreateRequest\x12B\n" +
 	"\ftest_trigger\x18\x01 \x01(\v2\x1d.testkube.sync.v1.TestTriggerH\x00R\vtestTrigger\x12M\n" +
 	"\rtest_workflow\x18\x02 \x01(\v2&.testkube.testworkflow.v1.TestWorkflowH\x00R\ftestWorkflow\x12^\n" +
@@ -211,7 +222,8 @@ const file_testkube_sync_v1_update_or_create_request_proto_rawDesc = "" +
 	"\awebhook\x18\x04 \x01(\v2\x19.testkube.sync.v1.WebhookH\x00R\awebhook\x12N\n" +
 	"\x10webhook_template\x18\x05 \x01(\v2!.testkube.sync.v1.WebhookTemplateH\x00R\x0fwebhookTemplate\x12N\n" +
 	"\x10workflow_trigger\x18\x06 \x01(\v2!.testkube.sync.v1.WorkflowTriggerH\x00R\x0fworkflowTrigger\x12^\n" +
-	"\x16control_plane_resource\x18\a \x01(\v2&.testkube.sync.v1.ControlPlaneResourceH\x00R\x14controlPlaneResourceB\t\n" +
+	"\x16control_plane_resource\x18\b \x01(\v2&.testkube.sync.v1.ControlPlaneResourceH\x00R\x14controlPlaneResource\x12\x1c\n" +
+	"\tnamespace\x18\a \x01(\tR\tnamespaceB\t\n" +
 	"\apayloadB\xd4\x01\n" +
 	"\x14com.testkube.sync.v1B\x1aUpdateOrCreateRequestProtoP\x01Z>github.com/kubeshop/testkube/pkg/proto/testkube/sync/v1;syncv1\xa2\x02\x03TSX\xaa\x02\x10Testkube.Sync.V1\xca\x02\x10Testkube\\Sync\\V1\xe2\x02\x1cTestkube\\Sync\\V1\\GPBMetadata\xea\x02\x12Testkube::Sync::V1b\beditionsp\xe8\a"
 
