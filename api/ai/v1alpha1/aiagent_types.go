@@ -122,9 +122,9 @@ type AIAgentSkill struct {
 	// Metadata is extra Agent Skills spec metadata.
 	Metadata map[string]string `json:"metadata,omitempty"`
 	// SkillFrom reads the description, metadata and content from a SKILL.md
-	// kept in a ConfigMap, whose name must be the Skill's name. Only a GitOps
-	// runner reads it, from its own namespace; testkube apply takes the Skill
-	// inline.
+	// kept in a ConfigMap. The SKILL.md's name must be the Skill's name. Only a
+	// GitOps runner reads it, from its own namespace; testkube apply takes the
+	// Skill inline.
 	SkillFrom *SkillSource `json:"skillFrom,omitempty"`
 }
 

@@ -480,6 +480,7 @@ func controlPlaneResourceSyncReconciler(client client.Reader, configMaps client.
 		// ConfigMap. A missing ConfigMap or key is retried, as Git may bring it next; a SKILL.md
 		// that does not fit is fixed only by a change, which the ConfigMap watch picks up.
 		if err := declarative.ResolveSkillSources(obj, configMapKeyReader(ctx, configMaps, req.Namespace)); err != nil {
+			synced.set(kind.Resource, req.NamespacedName, false)
 			err = fmt.Errorf("%s %q reads a Skill it cannot use, so it is not synced: %w", kind.Kind, obj.GetName(), err)
 			if errors.Is(err, declarative.ErrInvalidSkillSource) {
 				return ctrl.Result{}, reconcile.TerminalError(err)

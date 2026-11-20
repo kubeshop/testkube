@@ -2,6 +2,7 @@ package controller
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -159,6 +160,36 @@ func TestControlPlaneResourceSyncReconciler_SkillFromErrors(t *testing.T) {
 			assert.Contains(t, err.Error(), tc.want)
 			assert.Equal(t, tc.terminal, errors.Is(err, reconcile.TerminalError(nil)), "terminal: %v", err)
 			assert.Nil(t, store.Sent)
+		})
+	}
+}
+
+// A Skill whose SKILL.md it can no longer use stops counting as synced, whether the failure is
+// retried or not, as nothing of it is sent.
+func TestControlPlaneResourceSyncReconciler_SkillFromFailureNotCountedAsSynced(t *testing.T) {
+	scheme := skillScheme(t)
+	skill := &aiv1.Skill{ObjectMeta: metav1.ObjectMeta{Name: "k6-load-testing", Namespace: "testkube"}, Spec: aiv1.SkillSpec{SkillFrom: skillFrom("skills", "SKILL.md")}}
+	resources := fake.NewClientBuilder().WithScheme(scheme).WithObjects(skill).Build()
+	renamed := strings.Replace(skillMarkdown, "name: k6-load-testing", "name: other", 1)
+
+	for name, tc := range map[string]struct {
+		cms      client.Reader
+		terminal bool
+	}{
+		"SKILL.md names another Skill": {fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap("skills", map[string]string{"SKILL.md": renamed})).Build(), true},
+		"ConfigMap removed":            {fake.NewClientBuilder().WithScheme(scheme).Build(), false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			synced := NewSyncedResources()
+			good := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap("skills", map[string]string{"SKILL.md": skillMarkdown})).Build()
+			_, err := controlPlaneResourceSyncReconciler(resources, good, &fakeControlPlaneResourceStore{}, syncedKind(t, "skills"), newPausedResources(), synced).Reconcile(t.Context(), request("k6-load-testing"))
+			require.NoError(t, err)
+			require.Equal(t, map[string]int{"skills": 1}, synced.Counts())
+
+			_, err = controlPlaneResourceSyncReconciler(resources, tc.cms, &fakeControlPlaneResourceStore{}, syncedKind(t, "skills"), newPausedResources(), synced).Reconcile(t.Context(), request("k6-load-testing"))
+			require.Error(t, err)
+			assert.Equal(t, tc.terminal, errors.Is(err, reconcile.TerminalError(nil)), "terminal: %v", err)
+			assert.Nil(t, synced.Counts())
 		})
 	}
 }
