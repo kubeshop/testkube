@@ -201,3 +201,92 @@ tests:
       - equal:
           path: spec.template.spec.serviceAccountName
           value: my-sa
+
+  - it: renders no GITOPS_NAMESPACES when gitops.enabled has no namespaces
+    set:
+      gitops.enabled: true
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GITOPS_NAMESPACES
+          any: true
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GITOPS_EXECUTE_IN_SOURCE_NAMESPACE
+          any: true
+
+  - it: renders no GITOPS_NAMESPACES when gitops.enabled is false even with gitops.namespaces set
+    set:
+      gitops.namespaces: [team-a]
+      gitops.watchAllNamespaces: true
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GITOPS_NAMESPACES
+          any: true
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GITOPS_EXECUTE_IN_SOURCE_NAMESPACE
+          any: true
+
+  - it: renders GITOPS_NAMESPACES from a list
+    set:
+      gitops.enabled: true
+      gitops.namespaces: [team-a, team-b]
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GITOPS_NAMESPACES
+            value: team-a,team-b
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GITOPS_EXECUTE_IN_SOURCE_NAMESPACE
+            value: "true"
+
+  - it: renders GITOPS_NAMESPACES from a map with Environment ids
+    set:
+      gitops.enabled: true
+      gitops.namespaces:
+        team-a: env-1
+        team-b: ""
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GITOPS_NAMESPACES
+            value: team-a=env-1,team-b
+
+  - it: renders * when gitops.watchAllNamespaces is true
+    set:
+      gitops.enabled: true
+      gitops.watchAllNamespaces: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GITOPS_NAMESPACES
+            value: "*"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GITOPS_EXECUTE_IN_SOURCE_NAMESPACE
+            value: "true"
+
+  - it: renders * before the mapped namespaces when both are set
+    set:
+      gitops.enabled: true
+      gitops.watchAllNamespaces: true
+      gitops.namespaces:
+        team-a: env-1
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GITOPS_NAMESPACES
+            value: "*,team-a=env-1"

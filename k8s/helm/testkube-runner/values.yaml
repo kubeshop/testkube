@@ -96,6 +96,18 @@ gitops:
   enabled: false
   ## Install the shared Testkube CRDs required by GitOps watchers
   installCRD: true
+  ## Namespaces to sync: a list of namespaces, or a map from namespace to Environment id.
+  ## An empty Environment id means the Environment of this runner.
+  ## Empty means the release namespace only.
+  ## A non-empty value renders GITOPS_NAMESPACES and GITOPS_EXECUTE_IN_SOURCE_NAMESPACE.
+  ## Example:
+  ##   namespaces:
+  ##     team-a: <environment id>
+  ##     team-b: ""
+  ## Null by default, so both a list and a map override it without a Helm coalesce warning.
+  namespaces:
+  ## Sync every namespace of the cluster; needs a ClusterRole
+  watchAllNamespaces: false
 
 execution:
   default:

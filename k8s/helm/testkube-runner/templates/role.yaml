@@ -195,7 +195,8 @@ rules:
 # Allow Agent to watch resources for triggers functionality
 {{- $watchersEnabled := or .Values.listener.enabled .Values.gitops.enabled }}
 {{- if and .Values.pod.serviceAccount.autoCreate $watchersEnabled }}
-{{- $watchAll := .Values.listener.watchAllNamespaces }}
+{{- $gitopsNames := compact (splitList "," (include "testkube-runner.gitops.namespaceNames" .)) }}
+{{- $watchAll := or .Values.listener.watchAllNamespaces (and .Values.gitops.enabled .Values.gitops.watchAllNamespaces) }}
 {{- $additional := default (list) .Values.listener.additionalNamespaces }}
 {{- if $watchAll }}
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
@@ -213,7 +214,7 @@ metadata:
 {{ include "testkube-runner.listener.watchers.rules" . | nindent 0 }}
 {{- else }}
 {{- $root := . }}
-{{- $namespaces := uniq (concat (list .Release.Namespace) $additional) }}
+{{- $namespaces := uniq (concat (list .Release.Namespace) $additional $gitopsNames) }}
 {{- range $idx, $ns := $namespaces }}
 {{- if gt $idx 0 }}---
 

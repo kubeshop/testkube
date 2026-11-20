@@ -377,6 +377,15 @@ spec:
               value: "{{ if .Values.gitops.enabled }}true{{ else }}false{{ end }}"
             - name: "GITOPS_CLOUD_TO_KUBERNETES_ENABLED"
               value: "false"
+            {{- $gitopsNamespaces := include "testkube-runner.gitops.namespaces" . }}
+            {{- if and .Values.gitops.enabled $gitopsNamespaces }}
+            - name: "GITOPS_NAMESPACES"
+              value: {{ $gitopsNamespaces | quote }}
+            # An operator who lists namespaces wants their workflows to run there;
+            # execution.additionalNamespaces still gates which namespaces the runner may use.
+            - name: "GITOPS_EXECUTE_IN_SOURCE_NAMESPACE"
+              value: "true"
+            {{- end }}
             - name: "ENABLE_CRON_JOBS"
               value: "false"
             - name: "NATS_EMBEDDED"

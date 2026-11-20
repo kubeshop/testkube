@@ -129,3 +129,77 @@ tests:
     asserts:
       - hasDocuments:
           count: 0
+
+  - it: renders a watchers RoleBinding in the release namespace only when gitops.enabled with default namespaces
+    set:
+      gitops.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 5
+      - equal:
+          path: metadata.namespace
+          value: testkube-dev
+        documentSelector:
+          path: metadata.name
+          value: watchers-role-rb-tk
+
+  - it: renders a watchers RoleBinding in each namespace of gitops.namespaces
+    set:
+      gitops.enabled: true
+      gitops.namespaces: [team-a, team-b]
+    asserts:
+      - hasDocuments:
+          count: 7
+      - equal:
+          path: kind
+          value: RoleBinding
+        documentSelector:
+          path: metadata.namespace
+          value: team-a
+      - equal:
+          path: roleRef.kind
+          value: Role
+        documentSelector:
+          path: metadata.namespace
+          value: team-a
+      - equal:
+          path: kind
+          value: RoleBinding
+        documentSelector:
+          path: metadata.namespace
+          value: team-b
+      - equal:
+          path: roleRef.kind
+          value: Role
+        documentSelector:
+          path: metadata.namespace
+          value: team-b
+
+  - it: renders a watchers ClusterRoleBinding when gitops.watchAllNamespaces is true
+    set:
+      gitops.enabled: true
+      gitops.watchAllNamespaces: true
+    documentSelector:
+      path: metadata.name
+      value: watchers-role-rb-tk
+    asserts:
+      - equal:
+          path: kind
+          value: ClusterRoleBinding
+      - equal:
+          path: roleRef.kind
+          value: ClusterRole
+
+  - it: ignores gitops.namespaces when gitops.enabled is false
+    set:
+      listener.enabled: true
+      gitops.namespaces: [team-a]
+    asserts:
+      - hasDocuments:
+          count: 5
+      - equal:
+          path: metadata.namespace
+          value: testkube-dev
+        documentSelector:
+          path: metadata.name
+          value: watchers-role-rb-tk
