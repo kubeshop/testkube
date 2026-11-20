@@ -96,6 +96,15 @@ func MergePodConfig(dst, include *testworkflowsv1.PodConfig) *testworkflowsv1.Po
 	if include.PriorityClassName != "" {
 		dst.PriorityClassName = include.PriorityClassName
 	}
+	if include.RuntimeClassName != nil {
+		dst.RuntimeClassName = include.RuntimeClassName
+	}
+	if include.SchedulerName != "" {
+		dst.SchedulerName = include.SchedulerName
+	}
+	if include.HostUsers != nil {
+		dst.HostUsers = include.HostUsers
+	}
 	if include.Priority != nil {
 		dst.Priority = include.Priority
 	}
@@ -109,6 +118,16 @@ func MergePodConfig(dst, include *testworkflowsv1.PodConfig) *testworkflowsv1.Po
 	if include.HostPID != nil {
 		dst.HostPID = include.HostPID
 	}
+	if include.HostNetwork != nil {
+		dst.HostNetwork = include.HostNetwork
+	}
+	if include.HostIPC != nil {
+		dst.HostIPC = include.HostIPC
+	}
+	if include.SetHostnameAsFQDN != nil {
+		dst.SetHostnameAsFQDN = include.SetHostnameAsFQDN
+	}
+	dst.Resources = MergeResources(dst.Resources, include.Resources)
 	return dst
 }
 
@@ -482,6 +501,9 @@ func MergeExecution(dst, include *testworkflowsv1.TestWorkflowExecutionSchema) *
 	dst.Tags = MergeTags(dst.Tags, include.Tags)
 	if include.Silent != nil {
 		dst.Silent = include.Silent
+	}
+	if include.Retry != nil {
+		dst.Retry = include.Retry
 	}
 	return dst
 }

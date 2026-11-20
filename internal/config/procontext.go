@@ -51,7 +51,10 @@ type ProContext struct {
 	CloudStorage                        bool
 	CloudStorageSupportedInControlPlane bool
 	HasSourceOfTruthCapability          bool
-	Agent                               ProContextAgent
+	// MultiNamespaceSyncSupportedInControlPlane is whether the Control Plane accepts several
+	// namespaces and Environments over one sync connection (capabilities.CapabilityMultiNamespaceSync).
+	MultiNamespaceSyncSupportedInControlPlane bool
+	Agent                                     ProContextAgent
 }
 
 func (p *ProContext) GetEnvSlug(id string) string {

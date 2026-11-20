@@ -1,0 +1,22 @@
+#!/bin/sh
+# Fake docker CLI for StreamDockerLogs tests: "docker logs --follow <container>".
+# The container name picks the scenario. Containers that keep running write their PID
+# to FAKE_DOCKER_PID_FILE first, then exec sleep, so the test can check the process was stopped.
+case "$3" in
+  succeeded)
+    echo $$ > "$FAKE_DOCKER_PID_FILE"
+    echo "Installing Testkube"
+    echo "Testkube installation succeed"
+    exec sleep 600
+    ;;
+  failed)
+    echo $$ > "$FAKE_DOCKER_PID_FILE"
+    echo "Installing Testkube"
+    echo "Testkube installation failed: chart not found" >&2
+    exec sleep 600
+    ;;
+  *)
+    echo "Error response from daemon: No such container: $3" >&2
+    exit 1
+    ;;
+esac

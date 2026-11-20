@@ -419,17 +419,21 @@ func TestParseFilters_LabelShapes(t *testing.T) {
 		label("is", []any{"team=core"}),
 		label("where", map[string]any{"labelKey": "tier", "labelOperator": "contains", "labelValue": "gold"}),
 		label("where", map[string]any{"labelKey": "owner", "labelOperator": "exists"}),
+		label("is not", []any{"team=core"}),
+		label("where", map[string]any{"labelKey": "tier", "labelOperator": "does not contain", "labelValue": "gold"}),
 	}
 	for _, f := range valid {
 		_, err := ParseFilters(f)
 		assert.NoError(t, err)
 	}
 	invalid := map[string][]any{
-		"a string with is":        label("is", "team=core"),
-		"an array with where":     label("where", []any{"team=core"}),
-		"where without a key":     label("where", map[string]any{"labelOperator": "exists"}),
-		"where with a bad op":     label("where", map[string]any{"labelKey": "tier", "labelOperator": "equals"}),
-		"an unsupported operator": label("contains", []any{"team=core"}),
+		"a string with is":                 label("is", "team=core"),
+		"an array with where":              label("where", []any{"team=core"}),
+		"where without a key":              label("where", map[string]any{"labelOperator": "exists"}),
+		"where with a bad op":              label("where", map[string]any{"labelKey": "tier", "labelOperator": "equals"}),
+		"an unsupported operator":          label("contains", []any{"team=core"}),
+		"is not with a string":             label("is not", "team=core"),
+		"does not contain without a value": label("where", map[string]any{"labelKey": "tier", "labelOperator": "does not contain"}),
 	}
 	for name, f := range invalid {
 		t.Run(name, func(t *testing.T) {
@@ -442,4 +446,36 @@ func TestParseFilters_LabelShapes(t *testing.T) {
 		_, err := BuildQuery(KindWorkflows, map[string]any{"filter": label("is", "team=core")}, QueryOptions{})
 		assert.ErrorContains(t, err, "invalid value")
 	})
+}
+
+// A saved exclusion must read back as the exclusion. Dropping the operator would run the opposite
+// query, so each encoding here is the one the dashboard's getFilterValue writes.
+func TestFilterValues_Exclusions(t *testing.T) {
+	filter := func(key, operator string, value any) []Filter {
+		raw, err := json.Marshal(value)
+		require.NoError(t, err)
+		return []Filter{{FilterConfigurationKey: key, ID: "f", Operator: operator, Value: raw}}
+	}
+	tests := []struct {
+		name    string
+		filters []Filter
+		key     string
+		want    []string
+	}{
+		{"workflow is not", filter(FilterWorkflow, "is not", []string{"flaky", "tmp"}), FilterWorkflow, []string{"!flaky", "!tmp"}},
+		{"workflow does not contain", filter(FilterWorkflow, "does not contain", "smoke"), FilterWorkflow, []string{"!~smoke"}},
+		{"workflow contains", filter(FilterWorkflow, "contains", "smoke"), FilterWorkflow, []string{"~smoke"}},
+		{"tag is not", filter(FilterTags, "is not", []string{"release=1.0"}), FilterTags, []string{"release!=1.0"}},
+		{"tag is not a bare key", filter(FilterTags, "is not", []string{"release"}), FilterTags, []string{"!release"}},
+		{"tag does not contain", filter(FilterTags, "does not contain", "release=2"), FilterTags, []string{"!~release=2"}},
+		{"label is not", filter(FilterLabels, "is not", []string{"core-tests=a=b"}), FilterLabels, []string{"core-tests!=a=b"}},
+		{"label is not a regex", filter(FilterLabels, "is not", []string{"team=~pay.*"}), FilterLabels, []string{"team!~pay.*"}},
+		{"label does not contain", filter(FilterLabels, "where", map[string]string{"labelKey": "team", "labelOperator": "does not contain", "labelValue": "pay"}), FilterLabels, []string{"team!~pay"}},
+		{"label does not contain without a value is left out", filter(FilterLabels, "where", map[string]string{"labelKey": "team", "labelOperator": "does not contain"}), FilterLabels, []string{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, FilterValues(tt.filters, tt.key))
+		})
+	}
 }

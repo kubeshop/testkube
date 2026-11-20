@@ -248,6 +248,17 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 	)
 }
 
+// resumePoint returns the point a reopened log stream continues from. A stream that delivered
+// nothing has no position, so it returns nil and the reopen reads from the beginning: there is
+// no content to duplicate, and anything written before the watch attached would otherwise be
+// skipped for good, because the skip persists across every later reopen.
+func resumePoint(lastContentTs time.Time) *time.Time {
+	if lastContentTs.IsZero() {
+		return nil
+	}
+	return common.Ptr(lastContentTs.Add(1))
+}
+
 func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpener, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, isDone func() bool, isLastHint func(*instructions.Instruction) bool, idleTimeout time.Duration) <-chan ChannelMessage[ContainerLog] {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	ch := make(chan ChannelMessage[ContainerLog], bufferSize)
@@ -440,7 +451,13 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 		reader := bufio.NewReaderSize(stream, FlushBufferSize)
 		readerAnyContent := false
 		tsReader := newTimestampReader()
+		// lastTs stamps the lines that arrive without a timestamp of their own, so it starts at the
+		// current time. It is not a position in the log, and a reopen must not resume from it: until
+		// content arrives it points at the moment the watch attached, which is newer than everything
+		// the container wrote before. lastContentTs holds the real position, and stays zero until a
+		// line is actually read.
 		lastTs := time.Now()
+		var lastContentTs time.Time
 		completed := false
 		reopenedTerminalDrain := false
 
@@ -461,7 +478,7 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 					return
 				}
 				reopenedTerminalDrain = true
-				since = common.Ptr(lastTs.Add(1))
+				since = resumePoint(lastContentTs)
 				stream, err = openStream(since)
 				if err == io.EOF {
 					return
@@ -491,6 +508,7 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 			// Save information about the last timestamp
 			if err == nil {
 				lastTs = tsReader.ts
+				lastContentTs = tsReader.ts
 			}
 
 			// The logs are finished only when the container is: the last expected
@@ -517,7 +535,7 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 					case <-time.After(LogRetryOnConnectionLostDelay):
 					}
 				}
-				since = common.Ptr(lastTs.Add(1))
+				since = resumePoint(lastContentTs)
 				stream, err = openStream(since)
 				if err != nil {
 					return

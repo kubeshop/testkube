@@ -121,7 +121,7 @@ mongodb:
     # -- MongoDB image repository
     repository: kubeshop/bitnami-mongodb
     # -- MongoDB image tag
-    tag: 9.0.2
+    tag: 9.0.4
     # -- MongoDB image pull Secret
     pullSecrets: []
   # -- Target MongoDB Feature Compatibility Version used by the FCV hook jobs.
@@ -545,6 +545,12 @@ testkube-api:
   fullnameOverride: testkube-api-server
   # -- Testkube API name override
   nameOverride: api-server
+
+  # -- Deployment update strategy. Leave empty to use Kubernetes defaults.
+  # Example for non-overlapping upgrades:
+  # deploymentStrategy:
+  #   type: Recreate
+  deploymentStrategy: {}
 
   # -- Toggle whether to deploy Testkube API RBAC
   rbac:

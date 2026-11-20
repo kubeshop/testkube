@@ -7,6 +7,8 @@ metadata:
     type: suite
     dev-quality-gate: "true"
     release-quality-gate: "true"
+  annotations:
+    testkube.io/description: "Expected-failure workflow suite using negative steps. Dev/release quality gate."
 spec:
   container:
     resources:
