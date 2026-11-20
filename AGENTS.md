@@ -127,7 +127,7 @@ Each area below documents itself in the `doc.go` of its package; read that befor
 - **CLI requests through the Control Plane** (`--client=cloud`): `pkg/api/v1/client/doc.go`. The CLI states the agent API version in the path, and testkube-cloud-api's `stripAgentAPIVersion` in `internal/server/http.go` accepts it; the CLI needs a Control Plane on 2.14.0 or later.
 - **Step dependency cache:** `pkg/executioncache/doc.go`. The Control Plane imports `pkg/executioncache` rather than reimplementing it.
 - **Object retention** (`STORAGE_EXPIRATION`, `STORAGE_CACHE_EXPIRATION`): `pkg/storage/minio/doc.go`.
-- **Transient-failure retries:** `pkg/runner/doc.go` (resource cleanup), `pkg/event/kind/webhook/doc.go` (webhook delivery) and `cmd/tcl/testworkflow-toolkit/commands/doc.go` (services cleanup in the kill step).
+- **Transient-failure retries:** `pkg/runner/doc.go` (resource cleanup), `pkg/event/kind/webhook/doc.go` (webhook delivery), `cmd/tcl/testworkflow-toolkit/commands/doc.go` (services cleanup in the kill step) and `cmd/api-server/commons/doc.go` (self-registration secret write).
 - **Telemetry and cluster detection:** `pkg/telemetry/doc.go`, with the CLI runtime context and AI-tool detection in `pkg/cliruntime/doc.go`. `hostedRunnerNamePrefix` stays in sync with `naming.HostedRunnerAgentName` in testkube-cloud-api.
 - **CLI update check, file input and `upgrade --reuse-values`:** `cmd/kubectl-testkube/commands/common/doc.go`.
 - **CLI prompts and non-interactive runs:** `pkg/ui/doc.go`.

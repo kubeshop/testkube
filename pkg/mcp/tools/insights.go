@@ -90,6 +90,7 @@ type InsightExecutionsLister interface {
 // ListInsightSeries creates a tool for discovering granular insight series.
 func ListInsightSeries(client InsightSeriesLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_insight_series",
+		readOnlyTool(),
 		mcp.WithDescription(ListInsightSeriesDescription),
 		mcp.WithString("workflow", mcp.Description(InsightWorkflowDescription)),
 		mcp.WithString("source", mcp.Description(InsightSourceDescription)),
@@ -160,6 +161,7 @@ func ListInsightSeries(client InsightSeriesLister) (tool mcp.Tool, handler serve
 // ListInsightMetricKeys creates a tool for listing distinct insight metric keys.
 func ListInsightMetricKeys(client InsightMetricKeysLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_insight_metric_keys",
+		readOnlyTool(),
 		mcp.WithDescription(ListInsightMetricKeysDescription),
 		mcp.WithString("workflow", mcp.Description(InsightWorkflowDescription)),
 		mcp.WithString("source", mcp.Description(InsightSourceDescription)),
@@ -224,6 +226,7 @@ func ListInsightMetricKeys(client InsightMetricKeysLister) (tool mcp.Tool, handl
 // GetInsightMetricSeries creates a tool for querying a granular insight time series.
 func GetInsightMetricSeries(client InsightMetricSeriesGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_insight_metric_series",
+		readOnlyTool(),
 		mcp.WithDescription(GetInsightMetricSeriesDescription),
 		mcp.WithString("measure", mcp.Description(InsightMeasureDescription)),
 		mcp.WithString("seriesId", mcp.Description(InsightSeriesIdDescription)),
@@ -328,6 +331,7 @@ func GetInsightMetricSeries(client InsightMetricSeriesGetter) (tool mcp.Tool, ha
 // ListInsightExecutions creates a tool for listing executions behind an insight metric.
 func ListInsightExecutions(client InsightExecutionsLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_insight_executions",
+		readOnlyTool(),
 		mcp.WithDescription(ListInsightExecutionsDescription),
 		mcp.WithString("measure", mcp.Description(InsightMeasureDescription)),
 		mcp.WithString("identityFilters", mcp.Description(InsightIdentityFiltersDescription)),
