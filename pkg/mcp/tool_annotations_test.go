@@ -19,7 +19,7 @@ var (
 	readHints        = [4]bool{true, false, true, false}
 	additiveHints    = [4]bool{false, false, false, false}
 	destructiveHints = [4]bool{false, true, true, false}
-	runHints         = [4]bool{false, false, false, true}
+	runHints         = [4]bool{false, true, false, true}
 )
 
 // expectedToolHints lists every registered tool; a new tool fails the test until it is added here.

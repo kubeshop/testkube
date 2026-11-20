@@ -208,7 +208,7 @@ type WorkflowRunner interface {
 
 func RunWorkflow(client WorkflowRunner) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("run_workflow",
-		toolHints(false, false, false, true), // runs test code that may reach outside systems
+		toolHints(false, true, false, true), // runs workflow code that may delete things or reach outside systems
 		mcp.WithDescription(RunWorkflowDescription),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
 		mcp.WithObject("config",
