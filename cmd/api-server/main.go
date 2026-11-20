@@ -318,7 +318,7 @@ func main() {
 		if err := commons.PersistSelfRegistrationSecret(ctx, log.DefaultLogger, secretManager, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, map[string]string{
 			"TESTKUBE_PRO_API_KEY":  res.RunnerKey,
 			"TESTKUBE_PRO_AGENT_ID": res.RunnerId,
-		}, commons.SelfRegistrationSecretBackoff); err != nil {
+		}, commons.SelfRegistrationOptions{Backoff: commons.DefaultSelfRegistrationSecretBackoff()}); err != nil {
 			// Exit instead of running on in-memory credentials. The runner is now registered, so every later
 			// start without the secret fails with AlreadyExists. Running on would only hide that until the next
 			// restart or rollout (possibly days later, on every replica); failing now surfaces it at install
