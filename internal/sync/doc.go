@@ -30,9 +30,9 @@
 // interruption carries a state that may predate the annotation, so its delete is not sent: the
 // resource stays in the Control Plane, and the runner logs it. The reconciler also counts the
 // resources it syncs, by kind, for the telemetry heartbeat (SyncedResources). Syncing another kind
-// means adding it to
-// syncedControlPlaneResources in the controller package, its scheme in main.go, read access in the
-// Helm charts, and its arm in the Control Plane's handler; the proto stays as it is.
+// means adding it to syncedControlPlaneResources in the controller package, its group to
+// services.NewControllerScheme (cmd/api-server/services), read access in the Helm charts, and its
+// arm in the Control Plane's handler; the proto stays as it is.
 //
 // A runner syncs them only with GITOPS_CONTROLPLANE_RESOURCES_ENABLED (default false), set by the
 // runner chart's gitops.controlPlaneResources.enabled and the testkube-api chart's
