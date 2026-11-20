@@ -35,6 +35,7 @@ type ExecutionLogger interface {
 
 func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("fetch_execution_logs",
+		readOnlyTool(),
 		mcp.WithDescription(FetchExecutionLogsDescription),
 		mcp.WithString("executionId",
 			mcp.Required(),
@@ -172,6 +173,7 @@ type ExecutionLister interface {
 
 func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_executions",
+		readOnlyTool(),
 		mcp.WithDescription(ListExecutionsDescription),
 		mcp.WithString("workflowName", mcp.Description(WorkflowNameDescription)),
 		mcp.WithString("selector", mcp.Description(SelectorDescription)),
@@ -230,6 +232,7 @@ type ExecutionInfoGetter interface {
 
 func GetExecutionInfo(client ExecutionInfoGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_execution_info",
+		readOnlyTool(),
 		mcp.WithDescription(GetExecutionInfoDescription),
 		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),
 		mcp.WithString("workflowName", mcp.Description(GetExecutionInfoWorkflowNameDescription)),
@@ -268,6 +271,7 @@ type ExecutionLookup interface {
 
 func LookupExecutionId(client ExecutionLookup) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("lookup_execution_id",
+		readOnlyTool(),
 		mcp.WithDescription(LookupExecutionIdDescription),
 		mcp.WithString("executionName", mcp.Required(), mcp.Description(ExecutionNameDescription)),
 	)
@@ -360,6 +364,7 @@ type ExecutionTagUpdater interface {
 
 func UpdateExecutionTags(client ExecutionTagUpdater) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("update_execution_tags",
+		destructiveTool(),
 		mcp.WithDescription(UpdateExecutionTagsDescription),
 		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),
 		mcp.WithObject("tags", mcp.Required(), mcp.Description(`Key-value tag pairs (e.g., {"env":"prod","bug":"found"}). Replaces all existing tags. Use {} to clear all tags.`)),
@@ -408,6 +413,7 @@ type WorkflowExecutionAborter interface {
 
 func AbortWorkflowExecution(client WorkflowExecutionAborter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("abort_workflow_execution",
+		destructiveTool(),
 		mcp.WithDescription(AbortWorkflowExecutionDescription),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
 		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),
@@ -450,6 +456,7 @@ type ExecutionWaiter interface {
 
 func WaitForExecutions(client ExecutionWaiter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("wait_for_executions",
+		readOnlyTool(),
 		mcp.WithDescription(WaitForExecutionsDescription),
 		mcp.WithString("executionIds", mcp.Required(), mcp.Description(ExecutionIdsDescription)),
 		mcp.WithString("timeoutMinutes", mcp.Description(TimeoutMinutesDescription)),
