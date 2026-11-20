@@ -42,4 +42,12 @@ type Config struct {
 	EmptyDirSizeLimit                        string
 	DefaultImagePullPolicy                   string
 	DefaultRunnerResources                   testworkflowconfig.ContainerResourceConfig
+	// ExecuteInSourceNamespace lets metadata.namespace of the workflow pick the execution namespace
+	// when spec.job.namespace is unset and Cluster.Namespaces holds that namespace.
+	ExecuteInSourceNamespace bool
+	// AgentNamespace is the namespace of the agent API Service.
+	AgentNamespace string
+	// CrossNamespaceLocalApiUrl replaces Connection.LocalApiUrl for an execution outside AgentNamespace.
+	// An execution in AgentNamespace keeps the short Service name, which an older toolkit can read.
+	CrossNamespaceLocalApiUrl string
 }
