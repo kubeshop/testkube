@@ -162,7 +162,7 @@ tests:
               - list
               - watch
 
-  - it: lets a GitOps runner read the AI resources and Test Bundles it syncs
+  - it: lets a GitOps runner read the AI resources it syncs
     set:
       gitops.enabled: true
       listener.watchAllNamespaces: true
@@ -179,17 +179,6 @@ tests:
               - aiagents
               - mcpservers
               - llmproviders
-            verbs:
-              - get
-              - list
-              - watch
-      - contains:
-          path: rules
-          content:
-            apiGroups:
-              - testbundles.testkube.io
-            resources:
-              - testbundles
             verbs:
               - get
               - list

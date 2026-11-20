@@ -17,7 +17,6 @@ import (
 	aiv1 "github.com/kubeshop/testkube/api/ai/v1alpha1"
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 	insightsv1 "github.com/kubeshop/testkube/api/insights/v1alpha1"
-	testbundlesv1 "github.com/kubeshop/testkube/api/testbundles/v1alpha1"
 	"github.com/kubeshop/testkube/pkg/mcp/boards"
 )
 
@@ -37,8 +36,6 @@ func Normalize(obj Object) error {
 		return normalizeMCPServer(o).ToAggregate()
 	case *aiv1.LLMProvider:
 		return normalizeLLMProvider(o).ToAggregate()
-	case *testbundlesv1.TestBundle:
-		return normalizeTestBundle(o).ToAggregate()
 	}
 	return unsupportedType(obj)
 }

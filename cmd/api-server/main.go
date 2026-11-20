@@ -31,7 +31,6 @@ import (
 	aiv1 "github.com/kubeshop/testkube/api/ai/v1alpha1"
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	insightsv1 "github.com/kubeshop/testkube/api/insights/v1alpha1"
-	testbundlesv1 "github.com/kubeshop/testkube/api/testbundles/v1alpha1"
 	testexecutionv1 "github.com/kubeshop/testkube/api/testexecution/v1"
 	testsuiteexecutionv1 "github.com/kubeshop/testkube/api/testsuiteexecution/v1"
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
@@ -712,8 +711,6 @@ func main() {
 		commons.ExitOnError("add Boards to kubernetes runtime scheme", err)
 		err = aiv1.AddToScheme(scheme)
 		commons.ExitOnError("add AI Agents, MCP servers and LLM providers to kubernetes runtime scheme", err)
-		err = testbundlesv1.AddToScheme(scheme)
-		commons.ExitOnError("add Test Bundles to kubernetes runtime scheme", err)
 
 		// Legacy schemes
 		err = testexecutionv1.AddToScheme(scheme)
