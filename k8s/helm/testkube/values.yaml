@@ -822,9 +822,8 @@ testkube-api:
       ## Should it copy data from Kubernetes to Control Plane
       syncKubernetesToCloud: true
       ## Should it also sync the Control Plane resources: Insights Boards, MCP servers, LLM
-      ## providers, AI Agents and Test Bundles. Needs syncKubernetesToCloud. A Control Plane that
-      ## does not serve a kind is not sent it. Deleting a TestBundle custom resource deletes the
-      ## Test Bundle, ending its chats and sandbox.
+      ## providers and AI Agents. Needs syncKubernetesToCloud. A Control Plane that does not serve
+      ## a kind is not sent it.
       syncControlPlaneResources: false
       ## Define the naming patterns for resources in different sources
       namePatterns:
