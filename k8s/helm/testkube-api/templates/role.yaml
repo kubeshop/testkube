@@ -460,9 +460,9 @@ rules:
 ---
 {{- if and .Values.next.gitops.syncKubernetesToCloud .Values.next.gitops.syncControlPlaneResources }}
 
-# Control Plane resources (Insights Boards, AI Agents, MCP servers, LLM providers, Skills and Test
-# Bundles), which a GitOps runner syncs to the Control Plane. It only reads them, and the
-# ConfigMaps a Skill's skillFrom reads its SKILL.md from.
+# Control Plane resources (Insights Boards, AI Agents, MCP servers, LLM providers and Skills),
+# which a GitOps runner syncs to the Control Plane. It only reads them, and the ConfigMaps a
+# Skill's skillFrom reads its SKILL.md from.
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: Role
 metadata:

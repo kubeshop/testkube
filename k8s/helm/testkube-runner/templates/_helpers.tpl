@@ -222,9 +222,9 @@ rules:
       - list
       - watch
   {{- if include "testkube-runner.gitops.controlPlaneResources" . }}
-  # Control Plane resources (Insights Boards, AI Agents, MCP servers, LLM providers, Skills and
-  # Test Bundles), which the GitOps runner syncs to the Control Plane. It only reads them, and the
-  # ConfigMaps above that a Skill's skillFrom reads its SKILL.md from.
+  # Control Plane resources (Insights Boards, AI Agents, MCP servers, LLM providers and Skills),
+  # which the GitOps runner syncs to the Control Plane. It only reads them, and the ConfigMaps
+  # above that a Skill's skillFrom reads its SKILL.md from.
   - apiGroups:
       - "insights.testkube.io"
     resources:
