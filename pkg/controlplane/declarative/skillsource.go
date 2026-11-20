@@ -53,10 +53,10 @@ func ParseSkillMarkdown(data string) (SkillMarkdown, error) {
 	data = strings.TrimPrefix(data, byteOrderMark)
 	data = strings.ReplaceAll(data, "\r\n", "\n")
 	lines := strings.SplitAfter(data, "\n")
-	if len(lines) == 0 || strings.TrimSpace(lines[0]) != frontmatterDelimiter {
+	if len(lines) == 0 || !isFrontmatterDelimiter(lines[0]) {
 		return SkillMarkdown{}, errors.New("a SKILL.md starts with YAML frontmatter between two --- lines")
 	}
-	end := slices.IndexFunc(lines[1:], func(line string) bool { return strings.TrimSpace(line) == frontmatterDelimiter })
+	end := slices.IndexFunc(lines[1:], isFrontmatterDelimiter)
 	if end < 0 {
 		return SkillMarkdown{}, errors.New("the SKILL.md frontmatter has no closing --- line")
 	}
@@ -88,6 +88,13 @@ func ParseSkillMarkdown(data string) (SkillMarkdown, error) {
 	}
 	md.AllowedTools = tools
 	return md, nil
+}
+
+// isFrontmatterDelimiter reports whether line opens or closes the frontmatter: "---" from the
+// start of the line, with nothing after it but spaces or tabs. An indented "---" is text inside a
+// YAML block scalar, such as a multi-line description, and does not end the frontmatter.
+func isFrontmatterDelimiter(line string) bool {
+	return strings.TrimRight(line, " \t\n") == frontmatterDelimiter
 }
 
 func parseAllowedTools(raw json.RawMessage) (string, error) {

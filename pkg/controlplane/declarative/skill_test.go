@@ -473,3 +473,18 @@ func TestSkillKind(t *testing.T) {
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"apiVersion":"ai.testkube.io/v1alpha1","kind":"Skill","metadata":{"name":"k6"},"spec":{"description":"D.","content":"C."}}`, string(payload))
 }
+
+// An indented "---" is part of a YAML block scalar, not the end of the frontmatter, so a
+// description holding one is read whole and the keys after it are kept.
+func TestParseSkillMarkdown_IndentedDelimiterInBlock(t *testing.T) {
+	md, err := ParseSkillMarkdown("---\nname: a\ndescription: |\n  Use for tables like:\n  ---\n  | a | b |\nmetadata:\n  author: qa\nallowed-tools: Read\n--- \n# Body\n")
+	require.NoError(t, err)
+	assert.Equal(t, "Use for tables like:\n---\n| a | b |", md.Description)
+	assert.Equal(t, map[string]string{"author": "qa"}, md.Metadata)
+	assert.Equal(t, "Read", md.AllowedTools)
+	assert.Equal(t, "# Body\n", md.Body, "a closing --- may carry trailing spaces")
+
+	_, err = ParseSkillMarkdown("---\nname: a\n  ---\n# Body\n")
+	require.Error(t, err, "an indented --- does not close the frontmatter")
+	assert.Contains(t, err.Error(), "no closing --- line")
+}
