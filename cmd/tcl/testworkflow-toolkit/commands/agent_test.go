@@ -168,10 +168,11 @@ func TestAgentStep_Run(t *testing.T) {
 			wantErr: `cannot start the AI Agent "failure-triage"`,
 		},
 		{
-			name:    "fails with the message of a failed turn",
-			start:   agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: working}},
-			gets:    []agentReply{{turn: &cloud.AgentTurn{Id: "turn-1", State: failed, Message: "The tool run_workflow\x01 needs an approval."}}},
-			wantErr: "the AI Agent failed: The tool run_workflow needs an approval.",
+			name:        "fails with the message of a failed turn and keeps its session",
+			start:       agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: working, SessionId: "session-1"}},
+			gets:        []agentReply{{turn: &cloud.AgentTurn{Id: "turn-1", State: failed, Message: "The tool run_workflow\x01 needs an approval."}}},
+			wantErr:     "the AI Agent failed: The tool run_workflow needs an approval.",
+			wantOutputs: map[string]string{"session": "session-1"},
 		},
 		{
 			name:    "fails with the message of a canceled turn",
@@ -190,7 +191,6 @@ func TestAgentStep_Run(t *testing.T) {
 			start:       agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: working, Next: 4}},
 			gets:        append(transientFailures(agentPollFailureLimit-1), agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, Answer: "pass"}}),
 			wantCursors: repeatCursor(4, agentPollFailureLimit),
-			wantOutputs: map[string]string{"session": ""},
 			wantAnswer:  "pass",
 		},
 		{
@@ -347,7 +347,7 @@ func TestAgentCapabilityError(t *testing.T) {
 			}
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), string(capabilities.CapabilityAgentStep))
-			assert.Contains(t, err.Error(), "control plane "+agentMinControlPlane)
+			assert.Contains(t, err.Error(), "Upgrade the control plane")
 		})
 	}
 }

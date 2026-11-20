@@ -18,6 +18,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -112,6 +113,11 @@ func ProcessAgent(_ testworkflowprocessor.InternalProcessor, layer testworkflowp
 	}
 	if step.Agent.Name == "" {
 		return nil, errors.New("no AI Agent name provided to the 'agent' step")
+	}
+	// The control plane compares the name with the stored workflow before it runs the AI Agent.
+	// Config values are resolved by now, so an expression that remains has a value only in the pod.
+	if !expressions.IsTemplateStringWithoutExpressions(step.Agent.Name) {
+		return nil, errors.Errorf("agent: name %q: the name of the AI Agent accepts a literal or a config value only", step.Agent.Name)
 	}
 	container = container.CreateChild()
 	stage := stage.NewContainerStage(layer.NextRef(), container)

@@ -41,6 +41,13 @@ func TestProcessAgent(t *testing.T) {
 			wantErr: "no AI Agent name",
 		},
 		{
+			name: "fails when the name of the AI Agent has an expression",
+			step: testworkflowsv1.Step{StepOperations: testworkflowsv1.StepOperations{
+				Agent: &testworkflowsv1.StepAgent{Name: "{{ step.pick.outputs.agent }}", Prompt: "Find the cause."},
+			}},
+			wantErr: "accepts a literal or a config value only",
+		},
+		{
 			name: "gives the toolkit the spec with its expressions not resolved",
 			step: testworkflowsv1.Step{StepOperations: testworkflowsv1.StepOperations{
 				Agent: &testworkflowsv1.StepAgent{Name: "failure-triage", Prompt: "Read {{ step.tests.outputs.summary }}."},

@@ -37,9 +37,6 @@ import (
 // agentSubject names the agent step in an error of its definition.
 const agentSubject = "The agent step"
 
-// agentMinControlPlane is the first control plane version that can run the agent step.
-const agentMinControlPlane = "2.16.0"
-
 const (
 	agentPollInterval = 2 * time.Second
 	// agentCallTimeout limits one call, so a connection that hangs counts as a failed call.
@@ -77,8 +74,8 @@ func agentCapabilityError(published []*cloud.Capability) error {
 		return nil
 	}
 	return fmt.Errorf("this control plane cannot run the agent step: it does not publish the %q capability. "+
-		"The agent step needs control plane %s or later, with AI Agent steps enabled",
-		string(capabilities.CapabilityAgentStep), agentMinControlPlane)
+		"Upgrade the control plane to a version that has AI Agent steps, and enable them",
+		string(capabilities.CapabilityAgentStep))
 }
 
 // agentMachine returns the values that the spec of the step can read: the values of the workflow
@@ -133,12 +130,20 @@ func (s *agentStep) run(ctx context.Context, spec testworkflowsv1.StepAgent) err
 	turnID := turn.GetId()
 	s.printf("AI Agent %q started. Session: %s\n", spec.Name, plainText(turn.GetSessionId()))
 
+	sessionWritten := false
 	for {
 		s.printEvents(turn.GetEvents())
+		// A turn that fails later still has a session, and a person finds the cause there.
+		if session := plainText(turn.GetSessionId()); session != "" && !sessionWritten {
+			if err := writeStepFile(filepath.Join(s.outputsDir, agentOutputSession), session); err != nil {
+				return fmt.Errorf("cannot write the %q output: %w", agentOutputSession, err)
+			}
+			sessionWritten = true
+		}
 
 		switch turn.GetState() {
 		case cloud.AgentTurnState_AGENT_TURN_STATE_COMPLETED:
-			return s.writeOutputs(turn)
+			return s.writeAnswer(turn)
 		case cloud.AgentTurnState_AGENT_TURN_STATE_FAILED:
 			return fmt.Errorf("the AI Agent failed: %s", plainText(turn.GetMessage()))
 		case cloud.AgentTurnState_AGENT_TURN_STATE_CANCELED:
@@ -226,20 +231,17 @@ func (s *agentStep) printEvents(events []*cloud.AgentTurnEvent) {
 	}
 }
 
-// writeOutputs writes the file with the answer and the session output.
-func (s *agentStep) writeOutputs(turn *cloud.AgentTurn) error {
+// writeAnswer writes the file with the answer.
+func (s *agentStep) writeAnswer(turn *cloud.AgentTurn) error {
 	if s.resultsDir == "" {
 		s.printf("The step has no ID, so the next steps cannot read the answer.\n")
-	} else {
-		path := filepath.Join(s.resultsDir, agentResponseFile)
-		if err := writeStepFile(path, plainText(turn.GetAnswer())); err != nil {
-			return fmt.Errorf("cannot write the answer of the AI Agent: %w", err)
-		}
-		s.printf("The answer is in %s\n", path)
+		return nil
 	}
-	if err := writeStepFile(filepath.Join(s.outputsDir, agentOutputSession), plainText(turn.GetSessionId())); err != nil {
-		return fmt.Errorf("cannot write the %q output: %w", agentOutputSession, err)
+	path := filepath.Join(s.resultsDir, agentResponseFile)
+	if err := writeStepFile(path, plainText(turn.GetAnswer())); err != nil {
+		return fmt.Errorf("cannot write the answer of the AI Agent: %w", err)
 	}
+	s.printf("The answer is in %s\n", path)
 	return nil
 }
 

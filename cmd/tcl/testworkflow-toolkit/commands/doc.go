@@ -1,3 +1,11 @@
+// Copyright 2024 Testkube.
+//
+// Licensed as a Testkube Pro file under the Testkube Community
+// License (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
+//
+//	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
+
 // Package commands holds the commercial testworkflow-toolkit commands.
 //
 // # Services cleanup retries
@@ -13,7 +21,8 @@
 //
 // agent.go runs the `agent` step: one turn of an AI Agent that runs in the control plane. The
 // command starts the turn, reads it until its end, prints its tool calls and text to the step
-// log, writes the answer to a file, and writes the step output `session`.
+// log, writes the answer to a file, and writes the step output `session`. It writes `session`
+// when the control plane first gives the session ID, so a failed turn has it too.
 //
 //   - The processor gives the spec as base64 JSON, so the command resolves the expressions of
 //     the name and the prompt. It resolves them one time: an expression in the value of a step
