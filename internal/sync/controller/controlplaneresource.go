@@ -87,7 +87,7 @@ func SyncedControlPlaneKinds(advertised []capabilities.Capability) []declarative
 // that forbids SelfSubjectAccessReviews), is skipped with a warning rather than failing: these
 // kinds are optional, and a controller that cannot sync its cache stops the manager, and with it
 // the runner.
-func NewControlPlaneResourceSyncControllers(ctx context.Context, mgr ctrl.Manager, store ControlPlaneResourceStore, namespace string, advertised []capabilities.Capability, logger *zap.SugaredLogger) error {
+func NewControlPlaneResourceSyncControllers(ctx context.Context, mgr ctrl.Manager, store ControlPlaneResourceStore, namespace string, advertised []capabilities.Capability, synced *SyncedResources, logger *zap.SugaredLogger) error {
 	clientset, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		return fmt.Errorf("create client for access reviews: %w", err)
@@ -120,7 +120,7 @@ func NewControlPlaneResourceSyncControllers(ctx context.Context, mgr ctrl.Manage
 				return err
 			}
 		}
-		if err := NewControlPlaneResourceSyncController(mgr, store, kind, watchConfigMaps); err != nil {
+		if err := NewControlPlaneResourceSyncController(mgr, store, kind, watchConfigMaps, synced); err != nil {
 			return err
 		}
 	}
@@ -312,11 +312,64 @@ func (p *pausedResources) predicate() predicate.Funcs {
 	}
 }
 
+// SyncedResources counts the Control Plane resources a runner syncs, by resource (boards,
+// aiagents, ...), for the telemetry heartbeat. A resource counts once the Control Plane took it,
+// and stops counting once its custom resource is deleted, pauses its sync, turns invalid or is
+// refused (such as one another runner owns). A failure that is retried leaves it as it was. Its
+// zero value is not usable; a nil one counts nothing.
+type SyncedResources struct {
+	mu    sync.Mutex
+	names map[string]map[types.NamespacedName]struct{}
+}
+
+// NewSyncedResources returns an empty count.
+func NewSyncedResources() *SyncedResources {
+	return &SyncedResources{names: map[string]map[types.NamespacedName]struct{}{}}
+}
+
+// set records whether the named resource of the kind is synced.
+func (s *SyncedResources) set(resource string, name types.NamespacedName, synced bool) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !synced {
+		delete(s.names[resource], name)
+		return
+	}
+	if s.names[resource] == nil {
+		s.names[resource] = map[types.NamespacedName]struct{}{}
+	}
+	s.names[resource][name] = struct{}{}
+}
+
+// Counts returns how many resources of each kind are synced, leaving out the kinds with none, or
+// nil if there are none at all.
+func (s *SyncedResources) Counts() map[string]int {
+	if s == nil {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var out map[string]int
+	for resource, names := range s.names {
+		if len(names) == 0 {
+			continue
+		}
+		if out == nil {
+			out = map[string]int{}
+		}
+		out[resource] = len(names)
+	}
+	return out
+}
+
 // NewControlPlaneResourceSyncController syncs the custom resources of one kind of the declarative
-// registry to the Control Plane. The SKILL.md a resource reads with skillFrom is read straight from
+// registry to the Control Plane, counting what it syncs in synced. The SKILL.md a resource reads with skillFrom is read straight from
 // the API server, so the runner caches no ConfigMap; with watchConfigMaps, a change to one of those
 // ConfigMaps (watched by metadata only) syncs the resources reading it again.
-func NewControlPlaneResourceSyncController(mgr ctrl.Manager, store ControlPlaneResourceStore, kind declarative.Kind, watchConfigMaps bool) error {
+func NewControlPlaneResourceSyncController(mgr ctrl.Manager, store ControlPlaneResourceStore, kind declarative.Kind, watchConfigMaps bool, synced *SyncedResources) error {
 	paused := newPausedResources()
 	b := ctrl.NewControllerManagedBy(mgr).
 		For(kind.New(), builder.WithPredicates(paused.predicate()))
@@ -327,7 +380,7 @@ func NewControlPlaneResourceSyncController(mgr ctrl.Manager, store ControlPlaneR
 		}
 		b = b.Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(skillSourceReaders(mgr.GetClient(), list)), builder.OnlyMetadata)
 	}
-	if err := b.Complete(controlPlaneResourceSyncReconciler(mgr.GetClient(), mgr.GetAPIReader(), store, kind, paused)); err != nil {
+	if err := b.Complete(controlPlaneResourceSyncReconciler(mgr.GetClient(), mgr.GetAPIReader(), store, kind, paused, synced)); err != nil {
 		return fmt.Errorf("create new sync controller for %s: %w", kind.Kind, err)
 	}
 	return nil
@@ -386,14 +439,15 @@ func configMapKeyReader(ctx context.Context, reader client.Reader, namespace str
 // controlPlaneResourceSyncReconciler syncs one kind. A resource carrying testkube.io/no-gitops-sync
 // is sent, and the Control Plane skips it, but its delete is not sent at all: paused says whether
 // the resource carried the annotation when the runner last saw it. configMaps reads the SKILL.md
-// files that skillFrom selects.
-func controlPlaneResourceSyncReconciler(client client.Reader, configMaps client.Reader, store ControlPlaneResourceStore, kind declarative.Kind, paused *pausedResources) reconcile.Reconciler {
+// files that skillFrom selects. synced counts what it syncs.
+func controlPlaneResourceSyncReconciler(client client.Reader, configMaps client.Reader, store ControlPlaneResourceStore, kind declarative.Kind, paused *pausedResources, synced *SyncedResources) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 		obj := kind.New()
 		err := client.Get(ctx, req.NamespacedName, obj)
 		switch {
 		case apierrors.IsNotFound(err):
 			// Deleted. Resources are named by their name alone in the Control Plane.
+			synced.set(kind.Resource, req.NamespacedName, false)
 			switch paused.missing(req.NamespacedName) {
 			case missingUnseen:
 				return ctrl.Result{RequeueAfter: deleteEventWait}, nil
@@ -416,6 +470,7 @@ func controlPlaneResourceSyncReconciler(client client.Reader, configMaps client.
 		// Marked for deletion: there may be no event when it finally goes, so this is when the
 		// Control Plane is told, unless the resource pauses its sync.
 		if !obj.GetDeletionTimestamp().IsZero() {
+			synced.set(kind.Resource, req.NamespacedName, false)
 			if syncPaused(obj) {
 				return ctrl.Result{}, nil
 			}
@@ -437,11 +492,18 @@ func controlPlaneResourceSyncReconciler(client client.Reader, configMaps client.
 		// Checked here with the rules the Control Plane applies, so an invalid resource is reported
 		// where it is declared and never sent. No retry fixes it; a change in Git does.
 		if err := declarative.Normalize(obj); err != nil {
+			synced.set(kind.Resource, req.NamespacedName, false)
 			return ctrl.Result{}, reconcile.TerminalError(fmt.Errorf("%s %q is invalid, so it is not synced: %w", kind.Kind, obj.GetName(), err))
 		}
 		if err := store.UpdateOrCreateControlPlaneResource(ctx, obj); err != nil {
-			return ctrl.Result{}, terminalOnRejection(fmt.Errorf("update %s %q in store: %w", kind.Kind, obj.GetName(), err))
+			err = terminalOnRejection(fmt.Errorf("update %s %q in store: %w", kind.Kind, obj.GetName(), err))
+			if errors.Is(err, reconcile.TerminalError(nil)) {
+				synced.set(kind.Resource, req.NamespacedName, false)
+			}
+			return ctrl.Result{}, err
 		}
+		// The Control Plane skips a paused resource, so it is not counted as synced.
+		synced.set(kind.Resource, req.NamespacedName, !syncPaused(obj))
 		return ctrl.Result{}, nil
 	})
 }

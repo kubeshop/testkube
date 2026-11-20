@@ -28,9 +28,16 @@
 // resource's delete event, whose final state decides: a reconcile that reads the resource missing
 // before that, as one queued earlier may, looks again shortly. A delete seen during a watch
 // interruption carries a state that may predate the annotation, so its delete is not sent: the
-// resource stays in the Control Plane, and the runner logs it. Syncing another kind means adding it to
+// resource stays in the Control Plane, and the runner logs it. The reconciler also counts the
+// resources it syncs, by kind, for the telemetry heartbeat (SyncedResources). Syncing another kind
+// means adding it to
 // syncedControlPlaneResources in the controller package, its scheme in main.go, read access in the
 // Helm charts, and its arm in the Control Plane's handler; the proto stays as it is.
+//
+// A runner syncs them only with GITOPS_CONTROLPLANE_RESOURCES_ENABLED (default false), set by the
+// runner chart's gitops.controlPlaneResources.enabled and the testkube-api chart's
+// next.gitops.syncControlPlaneResources, which also grant the read access below; without it they
+// are not watched at all, and the runner needs neither their CRDs nor access to them.
 //
 // Each kind also needs the Control Plane to advertise its family's capability, so a Control Plane
 // that does not serve the kind never gets it: controlplane-resources for Insights Boards,
@@ -45,8 +52,8 @@
 // whose access the runner may not check (a cluster that forbids SelfSubjectAccessReviews) is
 // skipped with a warning: a controller whose cache cannot sync would stop the manager, and the
 // runner with it. The Helm charts install the CRDs (testkube-crds) and grant the read access (the
-// runner chart's watcher role when gitops.enabled, and the testkube-api chart's
-// controlplaneresources role).
+// runner chart's watcher role when gitops.enabled and gitops.controlPlaneResources.enabled, and
+// the testkube-api chart's controlplaneresources role when next.gitops.syncControlPlaneResources).
 //
 // A Skill, or an AI Agent's own Skill, may read its SKILL.md from a ConfigMap in the runner's
 // namespace (skillFrom.configMapKeyRef). The runner reads it straight from the API server and sends

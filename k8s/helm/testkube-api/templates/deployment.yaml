@@ -257,6 +257,8 @@ spec:
               value: "{{ not .Values.next.legacyTests.enabled }}"
             - name: GITOPS_KUBERNETES_TO_CLOUD_ENABLED
               value: "{{ .Values.next.gitops.syncKubernetesToCloud }}"
+            - name: GITOPS_CONTROLPLANE_RESOURCES_ENABLED
+              value: "{{ if and .Values.next.gitops.syncKubernetesToCloud .Values.next.gitops.syncControlPlaneResources }}true{{ else }}false{{ end }}"
             - name: DISABLE_DEFAULT_AGENT
               value: "{{ not .Values.next.legacyAgent.enabled }}"
             - name: ENABLE_CRON_JOBS

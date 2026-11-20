@@ -84,7 +84,7 @@ func TestControlPlaneResourceSyncReconciler_SkillFromConfigMap(t *testing.T) {
 	cms := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap("skills", map[string]string{"SKILL.md": skillMarkdown})).Build()
 	store := &fakeControlPlaneResourceStore{}
 
-	_, err := controlPlaneResourceSyncReconciler(resources, cms, store, syncedKind(t, "skills"), newPausedResources()).Reconcile(t.Context(), request("k6-load-testing"))
+	_, err := controlPlaneResourceSyncReconciler(resources, cms, store, syncedKind(t, "skills"), newPausedResources(), nil).Reconcile(t.Context(), request("k6-load-testing"))
 	require.NoError(t, err)
 
 	sent, ok := store.Sent.(*aiv1.Skill)
@@ -116,7 +116,7 @@ func TestControlPlaneResourceSyncReconciler_AIAgentOwnSkillFromConfigMap(t *test
 	cms := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap("skills", map[string]string{"k6.md": skillMarkdown})).Build()
 	store := &fakeControlPlaneResourceStore{}
 
-	_, err := controlPlaneResourceSyncReconciler(resources, cms, store, syncedKind(t, "aiagents"), newPausedResources()).Reconcile(t.Context(), request("load-tester"))
+	_, err := controlPlaneResourceSyncReconciler(resources, cms, store, syncedKind(t, "aiagents"), newPausedResources(), nil).Reconcile(t.Context(), request("load-tester"))
 	require.NoError(t, err)
 
 	sent := store.Sent.(*aiv1.AIAgent)
@@ -154,7 +154,7 @@ func TestControlPlaneResourceSyncReconciler_SkillFromErrors(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			resources := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tc.skill).Build()
 			store := &fakeControlPlaneResourceStore{}
-			_, err := controlPlaneResourceSyncReconciler(resources, tc.cms, store, syncedKind(t, "skills"), newPausedResources()).Reconcile(t.Context(), request(tc.skill.Name))
+			_, err := controlPlaneResourceSyncReconciler(resources, tc.cms, store, syncedKind(t, "skills"), newPausedResources(), nil).Reconcile(t.Context(), request(tc.skill.Name))
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tc.want)
 			assert.Equal(t, tc.terminal, errors.Is(err, reconcile.TerminalError(nil)), "terminal: %v", err)
