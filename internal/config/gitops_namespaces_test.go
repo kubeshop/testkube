@@ -56,11 +56,31 @@ func TestGitOpsNamespaces_WatchesAllAndNames(t *testing.T) {
 	}
 }
 
+func TestGitOpsNamespaces_EnvironmentID(t *testing.T) {
+	namespaces := GitOpsNamespaces{{Name: "*"}, {Name: "a"}, {Name: "b", EnvID: "env-1"}, {Name: "c", EnvID: "env-token"}}
+	tests := []struct {
+		name      string
+		namespace string
+		want      string
+	}{
+		{name: "a mapped namespace syncs into its Environment", namespace: "b", want: "env-1"},
+		{name: "an unmapped namespace syncs into the default Environment", namespace: "a", want: ""},
+		{name: "a namespace under * syncs into the default Environment", namespace: "other", want: ""},
+		{name: "a namespace mapped to the token Environment syncs into the default Environment", namespace: "c", want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, namespaces.EnvironmentID(tt.namespace, "env-token"))
+		})
+	}
+}
+
 func TestValidateGitOpsNamespaces(t *testing.T) {
 	proContext := func(capability bool) ProContext {
 		return ProContext{
-			EnvID: "env-token",
-			Agent: ProContextAgent{Environments: []ProContextAgentEnvironment{{ID: "env-token"}, {ID: "env-other"}}},
+			EnvID:      "env-configured",
+			TokenEnvID: "env-token",
+			Agent:      ProContextAgent{Environments: []ProContextAgentEnvironment{{ID: "env-token"}, {ID: "env-other"}}},
 			MultiNamespaceSyncSupportedInControlPlane: capability,
 		}
 	}
@@ -95,6 +115,12 @@ func TestValidateGitOpsNamespaces(t *testing.T) {
 			wantErr:    `GITOPS_NAMESPACES: namespace "a" maps to Environment "env-other", but the Control Plane lacks the sync-multi-namespace capability`,
 		},
 		{name: "a known envId with the capability passes", namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-other"}}, capability: true},
+		{
+			name:       "the configured EnvID is not the token Environment",
+			namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-configured"}},
+			capability: true,
+			wantErr:    `GITOPS_NAMESPACES: namespace "a" maps to Environment "env-configured", which is not an Environment of the agent (known: env-token, env-other)`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -10,31 +10,35 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	syncagent "github.com/kubeshop/testkube/internal/sync"
 )
 
 type TestWorkflowStore interface {
-	UpdateOrCreateTestWorkflow(context.Context, testworkflowsv1.TestWorkflow) error
-	DeleteTestWorkflow(ctx context.Context, name, namespace string) error
+	UpdateOrCreateTestWorkflow(context.Context, syncagent.Target, testworkflowsv1.TestWorkflow) error
+	DeleteTestWorkflow(context.Context, syncagent.Target, string) error
 }
 
-func NewTestWorkflowSyncController(mgr ctrl.Manager, store TestWorkflowStore) error {
+func NewTestWorkflowSyncController(mgr ctrl.Manager, store TestWorkflowStore, resolveTarget syncagent.TargetFunc) error {
+	if err := indexByName(mgr, &testworkflowsv1.TestWorkflow{}); err != nil {
+		return fmt.Errorf("index TestWorkflow by name: %w", err)
+	}
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&testworkflowsv1.TestWorkflow{}).
-		Complete(testWorkflowSyncReconciler(mgr.GetClient(), store)); err != nil {
+		Complete(testWorkflowSyncReconciler(mgr.GetClient(), store, resolveTarget)); err != nil {
 		return fmt.Errorf("create new sync controller for TestWorkflow: %w", err)
 	}
 	return nil
 }
 
-func testWorkflowSyncReconciler(client client.Reader, store TestWorkflowStore) reconcile.Reconciler {
+func testWorkflowSyncReconciler(client client.Reader, store TestWorkflowStore, resolveTarget syncagent.TargetFunc) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+		target := resolveTarget(req.Namespace)
 		var workflow testworkflowsv1.TestWorkflow
 		err := client.Get(ctx, req.NamespacedName, &workflow)
 		switch {
 		case errors.IsNotFound(err):
 			// Deleted, request deletion from store.
-			// Passing the namespace too, as the manager may watch more than one namespace.
-			if err := store.DeleteTestWorkflow(ctx, req.Name, req.Namespace); err != nil {
+			if err := syncDelete(ctx, client, &testworkflowsv1.TestWorkflowList{}, req.Name, target, resolveTarget, store.UpdateOrCreateTestWorkflow, store.DeleteTestWorkflow); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete TestWorkflow %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
@@ -50,15 +54,18 @@ func testWorkflowSyncReconciler(client client.Reader, store TestWorkflowStore) r
 		// there is no going back so we know this resource is about to be deleted.
 		if !workflow.DeletionTimestamp.IsZero() {
 			// About to be deleted, request deletion from store.
-			// Passing the namespace too, as the manager may watch more than one namespace.
-			if err := store.DeleteTestWorkflow(ctx, req.Name, req.Namespace); err != nil {
+			if err := syncDelete(ctx, client, &testworkflowsv1.TestWorkflowList{}, req.Name, target, resolveTarget, store.UpdateOrCreateTestWorkflow, store.DeleteTestWorkflow); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete TestWorkflow %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
 		}
 
 		// Regular update so send the new object into the store.
-		if err := store.UpdateOrCreateTestWorkflow(ctx, workflow); err != nil {
+		if err := checkNameCollision(ctx, client, &testworkflowsv1.TestWorkflowList{}, &workflow, target, resolveTarget); err != nil {
+			return ctrl.Result{}, terminalOnRejection(fmt.Errorf("sync TestWorkflow %q: %w", req.NamespacedName, err))
+		}
+
+		if err := store.UpdateOrCreateTestWorkflow(ctx, target, workflow); err != nil {
 			return ctrl.Result{}, terminalOnRejection(fmt.Errorf("update TestWorkflow %q in store: %w", workflow.Name, err))
 		}
 
