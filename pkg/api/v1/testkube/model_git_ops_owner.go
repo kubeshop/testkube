@@ -9,10 +9,12 @@
  */
 package testkube
 
-// The GitOps agent that exclusively owns a resource. Ownership is claimed by the first GitOps agent to sync the resource, and can be reassigned by declaring the testkube.io/gitops-owner annotation on the Kubernetes resource. While an owner is set, syncs from any other GitOps agent are rejected instead of overwriting the resource.
+// The GitOps agent that exclusively owns a resource. Ownership is claimed by the first GitOps agent to sync the resource, and can be reassigned by declaring the testkube.io/gitops-owner annotation on the Kubernetes resource. While an owner is set, syncs from any other GitOps agent are rejected instead of overwriting the resource. Ownership is keyed by the pair agentId and namespace.
 type GitOpsOwner struct {
 	// ID of the owning GitOps agent. Authoritative for ownership comparisons.
 	AgentId string `json:"agentId"`
 	// Name of the owning GitOps agent at the time of the last sync, for display purposes only. May be stale if the agent has since been renamed.
 	AgentName string `json:"agentName,omitempty"`
+	// Kubernetes namespace the owning agent synced the resource from. Ownership is keyed by agentId and namespace. Empty for resources synced before namespaces were recorded.
+	Namespace string `json:"namespace,omitempty"`
 }

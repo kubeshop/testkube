@@ -52,15 +52,16 @@ func normalizeTestBundle(b *testbundlesv1.TestBundle) field.ErrorList {
 		errs = append(errs, validateGitURI(spec.GitSource.URI, path.Child("gitSource", "uri"))...)
 	}
 
-	// A bundle's Skills are always included: every authoring prompt carries them.
 	skills := make([]skillFields, 0, len(spec.Skills))
-	total := 0
+	alwaysIncluded := 0
 	for i := range spec.Skills {
 		skill := &spec.Skills[i]
 		skills = append(skills, skillFields{name: &skill.Name, description: &skill.Description, content: skill.Content, metadata: skill.Metadata})
-		total += utf8.RuneCountInString(skill.Content)
+		if skill.AlwaysInclude {
+			alwaysIncluded += utf8.RuneCountInString(skill.Content)
+		}
 	}
-	errs = append(errs, normalizeSkills(skills, total, path.Child("skills"))...)
+	errs = append(errs, normalizeSkills(skills, alwaysIncluded, path.Child("skills"))...)
 	errs = append(errs, normalizeTestBundleContexts(spec.Contexts, path.Child("contexts"))...)
 
 	if spec.AIAgents != nil {
@@ -108,10 +109,11 @@ func validateTestBundleName(name string, path *field.Path) field.ErrorList {
 	return errs
 }
 
-// validateGitURI refuses an empty repository URI and one that is neither a
-// URL with a scheme and host nor scp-like. A URI may carry credentials, such
-// as a token in an https URL, as the REST API accepts, so a refused one is
-// never echoed.
+// validateGitURI refuses an empty repository URI, one that is neither a URL
+// with a scheme and host nor scp-like, and a URL that carries credentials
+// (gitURLHasCredentials). A manifest is kept in Git and printed back by get,
+// so a token in it would be readable by anyone who reads either. A refused
+// URI is never echoed, since it may hold a token.
 func validateGitURI(raw string, path *field.Path) field.ErrorList {
 	if strings.TrimSpace(raw) == "" {
 		return field.ErrorList{field.Required(path, "the repository to read tests from")}
@@ -123,5 +125,60 @@ func validateGitURI(raw string, path *field.Path) field.ErrorList {
 	if err != nil || u.Scheme == "" || u.Opaque != "" || u.Host == "" {
 		return field.ErrorList{invalidSecret(path, "must be a URL, such as https://github.com/org/repo.git, or an scp-like address, such as git@github.com:org/repo.git")}
 	}
+	if gitURLHasCredentials(u) {
+		return field.ErrorList{invalidSecret(path, "must not carry credentials; name the repository without a user or password, such as https://github.com/org/repo.git")}
+	}
 	return nil
+}
+
+// gitURLHasCredentials reports whether a repository URL holds a password, or
+// names a user over http or https, where the user is usually a token
+// (https://ghp_...@github.com). A user alone over ssh, as in
+// ssh://git@github.com, is not a secret.
+func gitURLHasCredentials(u *url.URL) bool {
+	if u.User == nil {
+		return false
+	}
+	if _, ok := u.User.Password(); ok {
+		return true
+	}
+	switch strings.ToLower(u.Scheme) {
+	case "http", "https":
+		return u.User.Username() != ""
+	}
+	return false
+}
+
+// GitURIWithoutCredentials is raw with the credentials gitURLHasCredentials
+// finds left out, so the Control Plane can export a Git source URI that was
+// stored with them (the dashboard and the REST API accept them) without
+// printing a token, and the export applies back. It edits the string rather
+// than parsing it, so the rest stays as written and a URL url.Parse cannot
+// read loses its credentials too. A URI without them, and a scp-like one,
+// whose user is no secret, are returned as they are.
+func GitURIWithoutCredentials(raw string) string {
+	scheme, rest, ok := strings.Cut(raw, "://")
+	if !ok {
+		return raw
+	}
+	authority, tail := rest, ""
+	if i := strings.IndexAny(rest, "/?#"); i >= 0 {
+		authority, tail = rest[:i], rest[i:]
+	}
+	// As url.Parse, the user information ends at the authority's last '@'.
+	at := strings.LastIndex(authority, "@")
+	if at < 0 {
+		return raw
+	}
+	userinfo, host := authority[:at], authority[at+1:]
+	switch strings.ToLower(scheme) {
+	case "http", "https":
+		return scheme + "://" + host + tail
+	}
+	// Only the password is a credential; ssh://git@host keeps its user.
+	user, _, hasPassword := strings.Cut(userinfo, ":")
+	if !hasPassword {
+		return raw
+	}
+	return scheme + "://" + user + "@" + host + tail
 }

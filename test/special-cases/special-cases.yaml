@@ -4,6 +4,8 @@ metadata:
   name: special-cases-template-default-resources
   labels:
     core-tests: special-cases-template
+  annotations:
+    testkube.io/description: "Default container resources template for special-case workflows"
 spec:
   container:
     resources:
@@ -17,6 +19,8 @@ metadata:
   name: special-cases-global-env
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Global ENV propagation test across steps, services and parallel workers"
 description: "Global ENV - set for both pods and slave pods"
 spec:
   use:
@@ -62,6 +66,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflowTemplate
 metadata:
   name: special-cases-template-with-env
+  annotations:
+    testkube.io/description: "Global ENV template for ENV override tests"
 spec:
   container:
     env:
@@ -74,6 +80,8 @@ metadata:
   name: special-cases-step-env-override
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "ENV override test across containers, steps, services, parallel workers and templates"
 description: "ENV override - container ENV vs expression ENV in steps, services and parallel"
 spec:
   use:
@@ -152,6 +160,8 @@ metadata:
   name: special-cases-env-expression-env-not-set
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Unset ENV expression test with an empty default value"
 description: "ENV expression - ENV variable not set - should default to empty"
 spec:
   use:
@@ -172,6 +182,8 @@ metadata:
   name: special-cases-workingdir-override
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Step-level workingDir override test"
 description: "workingDir - override at step level"
 spec:
   use:
@@ -200,6 +212,8 @@ metadata:
   name: special-cases-securitycontext-runasuser-runasgroup
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "securityContext runAsUser/runAsGroup test across steps, services and parallel workers"
 description: "securityContext - runAsUser and runAsGroup"
 spec:
   use:
@@ -264,6 +278,8 @@ metadata:
   name: special-cases-multiple-git-repositories-custommountpath
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Multiple Git repository checkout test with a custom mountPath"
 description: "Git - multiple repositories (one on step level), custom mountPath"
 spec:
   use:
@@ -309,6 +325,8 @@ metadata:
   name: special-cases-optional-step-failed
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Optional step test: step fails, the next step runs and the workflow passes"
 description: "optional step failed"
 spec:
   use:
@@ -330,6 +348,8 @@ metadata:
   name: special-cases-optional-step-timed-out
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Optional step timeout test: step times out, the next step runs and the workflow passes"
 description: "optional step failed"
 spec:
   use:
@@ -352,6 +372,8 @@ metadata:
   name: special-cases-optional-step-passed
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Optional step test: step and workflow pass"
 description: "optional step passed"
 spec:
   use:
@@ -371,6 +393,8 @@ metadata:
   name: special-cases-conditional-step-skipped
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Conditional step test: false condition skips the step and the workflow passes"
 description: "conditional step skipped"
 spec:
   use:
@@ -392,6 +416,8 @@ metadata:
   name: special-cases-conditional-step-passed
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Conditional step test: condition: always runs the step; step and workflow pass"
 description: "conditional step passed"
 spec:
   use:
@@ -411,6 +437,8 @@ metadata:
   name: special-cases-conditional-step-failed-but-optional
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Optional conditional step test: true condition runs a failing step, the next step runs and the workflow passes"
 description: "conditional step failed but optional"
 spec:
   use:
@@ -433,6 +461,8 @@ metadata:
   name: special-cases-step-retry
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Step retry test using until: self.passed to retry failed attempts until success"
 description: "step retry (until step passed)"
 spec:
   use:
@@ -457,6 +487,8 @@ metadata:
   name: special-cases-negative-step
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Negative step test: command fails and negative: true inverts the step result to passed"
 description: "negative step failed - inverting step result to passed"
 spec:
   use:
@@ -477,6 +509,8 @@ metadata:
   name: special-cases-custom-shared-volume-steps
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Custom shared volume test across steps using different images"
 description: "sharing custom volume between steps"
 spec:
   use:
@@ -523,6 +557,8 @@ metadata:
   name: special-cases-step-timeout-ok
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Step completion test within the configured timeout"
 spec:
   use:
     - name: special-cases-template-default-resources
@@ -539,6 +575,8 @@ metadata:
   name: special-cases-missing-env-secret
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Optional ENV Secret test with an empty value for a missing Secret"
 description: "Missing Secret - ENV should default to empty string"
 spec:
   use:
@@ -569,6 +607,8 @@ metadata:
   name: special-cases-missing-configmap-key
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Optional ConfigMap key test with an empty value for a missing key"
 description: "Missing ConfigMap - ENV should default to empty string"
 spec:
   use:
@@ -598,6 +638,8 @@ metadata:
   name: special-cases-no-initial-output
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Workflow execution test with no output for the first 60s"
 description: "No output for 60s"
 spec:
   use:
@@ -618,6 +660,8 @@ metadata:
     core-tests: special-cases
     artifacts: "true"
     manual: "true"
+  annotations:
+    testkube.io/description: "Manual artifact glob test using **. Generates TXT and LOG artifacts."
 description: "Artifacts path with double asterisks (/data/example/directory/aaa/bbb should contain file1.txt and file2.log)"
 spec:
   use:
@@ -648,6 +692,8 @@ metadata:
   name: special-cases-execution-tags
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Execution tags test using static values and execution.id"
 spec:
   use:
     - name: special-cases-template-default-resources
@@ -669,6 +715,8 @@ metadata:
   labels:
     unique-label: unique-label-value
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Child workflow for execute.selector.matchLabels tests"
 description: "Special-cases workflow for execute.selector.matchLabels test"
 spec:
   use:
@@ -685,6 +733,8 @@ metadata:
   name: special-cases-execute-workflows-selector-matchlabels
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Child workflow selection test using execute.selector.matchLabels"
 spec:
   use:
     - name: special-cases-template-default-resources
@@ -705,6 +755,8 @@ metadata:
   labels:
     core-tests: special-cases
     manual: "true"
+  annotations:
+    testkube.io/description: "Manual silent workflow test with metrics, Insights, health and webhooks excluded"
 description: "Silent workflow - should be excluded from metrics/insights/health, shouldn't trigger webhooks"
 spec:
   use:
@@ -723,6 +775,8 @@ metadata:
   name: special-cases-config-override-target # don't target it specifically - just a dependency for special-cases-config-override
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Child workflow for config override tests; requires config overrides"
 description: "Shouldn't be triggered directly (will fail then) - requires specific config overrides to pass"
 spec:
   use:
@@ -760,6 +814,8 @@ metadata:
   name: special-cases-config-override
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Child workflow config override test"
 spec:
   use:
     - name: special-cases-template-default-resources
@@ -781,6 +837,8 @@ metadata:
   name: special-cases-parallel-steps
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Parallel execution test with file fetch from workers"
 spec:
   config:
     workers:
@@ -831,6 +889,8 @@ metadata:
   name: special-cases-parallel-steps-matrix
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Parallel matrix execution test with file fetch from workers"
 spec:
   container:
     resources:
@@ -879,6 +939,8 @@ metadata:
   name: special-cases-parallel-steps-fail-fast-disabled
   labels:
     core-tests: special-cases
+  annotations:
+    testkube.io/description: "Parallel execution test: with failFast disabled, remaining workers finish after one worker fails"
 description: "parallel failFast disabled (default) - all workers complete even if one fails quickly"
 spec:
   container:

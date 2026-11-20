@@ -10,6 +10,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 var (
@@ -340,6 +341,12 @@ var (
 			NodeSelector:       map[string]string{"some-key-3": "some-value"},
 			Labels:             map[string]string{"some-key-4": "some-value"},
 			Annotations:        map[string]string{"some-key=5": "some-value-2"},
+			RuntimeClassName:   common.Ptr("gvisor"),
+			SchedulerName:      "volcano",
+			HostUsers:          common.Ptr(false),
+			HostNetwork:        common.Ptr(true),
+			HostIPC:            common.Ptr(true),
+			SetHostnameAsFQDN:  common.Ptr(true),
 		},
 		Events: []testworkflowsv1.Event{
 			{
@@ -352,7 +359,8 @@ var (
 			},
 		},
 		Execution: &testworkflowsv1.TestWorkflowExecutionSchema{
-			Tags: map[string]string{"some-key": "some-value"},
+			Tags:  map[string]string{"some-key": "some-value"},
+			Retry: &testworkflowsv1.ExecutionRetryPolicy{Count: 2, On: []testworkflowsv1.ExecutionRetryCause{testworkflowsv1.ExecutionRetryCauseInfrastructure, testworkflowsv1.ExecutionRetryCauseOOM}},
 		},
 		Timeouts: &testworkflowsv1.TestWorkflowTimeouts{
 			Queue:          "30s",
@@ -521,4 +529,64 @@ func TestStepExecuteWorkflowRoundTripsBaseExecutionId(t *testing.T) {
 	back := MapStepExecuteTestWorkflowAPIToKube(api)
 	assert.Equal(t, "exec-base", back.BaseExecutionId, "API -> kube dropped the base execution id")
 	assert.Equal(t, kube.BaseExecutionId, back.BaseExecutionId)
+}
+
+func TestMapStepParallelRoundTripsParallelism(t *testing.T) {
+	tests := []struct {
+		name string
+		kube *testworkflowsv1.ConfigValue
+		api  *testkube.BoxedString
+	}{
+		{
+			name: "a static number survives the round trip",
+			kube: testworkflowsv1.NewConfigValue("2"),
+			api:  &testkube.BoxedString{Value: "2"},
+		},
+		{
+			name: "an expression survives the round trip",
+			kube: testworkflowsv1.NewConfigValue("config.PARALLELISM"),
+			api:  &testkube.BoxedString{Value: "config.PARALLELISM"},
+		},
+		{name: "an unset parallelism stays nil"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			api := MapStepParallelKubeToAPI(testworkflowsv1.StepParallel{Parallelism: tc.kube})
+			assert.Equal(t, tc.api, api.Parallelism)
+			assert.Equal(t, tc.kube, MapStepParallelAPIToKube(api).Parallelism)
+
+			independentAPI := MapIndependentStepParallelKubeToAPI(testworkflowsv1.IndependentStepParallel{Parallelism: tc.kube})
+			assert.Equal(t, tc.api, independentAPI.Parallelism)
+			assert.Equal(t, tc.kube, MapIndependentStepParallelAPIToKube(independentAPI).Parallelism)
+		})
+	}
+}
+
+func TestMapPodConfigResourcesRoundTrip(t *testing.T) {
+	tests := []struct {
+		name      string
+		resources *testworkflowsv1.Resources
+	}{
+		{
+			name: "keeps cpu and memory",
+			resources: &testworkflowsv1.Resources{
+				Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceCPU: "200m", corev1.ResourceMemory: "256Mi"},
+				Limits:   map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceCPU: "1", corev1.ResourceMemory: "512Mi"},
+			},
+		},
+		{
+			name: "keeps hugepages",
+			resources: &testworkflowsv1.Resources{
+				Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{"hugepages-2Mi": "64Mi"},
+				Limits:   map[corev1.ResourceName]testworkflowsv1.ConfigValue{"hugepages-2Mi": "128Mi", "hugepages-1Gi": "{{config.pages}}"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := testworkflowsv1.PodConfig{Resources: tt.resources}
+
+			assert.Equal(t, v, MapPodConfigAPIToKube(MapPodConfigKubeToAPI(v)))
+		})
+	}
 }

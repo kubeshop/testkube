@@ -50,17 +50,40 @@ func TestApplyPayload_TestBundleKeepsOmittedAndEmptyAIAgentsApart(t *testing.T) 
 	}
 }
 
-func TestNormalize_TestBundleSkillsShareOneBudget(t *testing.T) {
+// Only the Skills always included count toward the budget, as an AI Agent's.
+func TestNormalize_TestBundleSkillBudgetCountsAlwaysIncluded(t *testing.T) {
 	half := strings.Repeat("a", MaxAlwaysIncludedSkillsLength/2+1)
-	b := testBundle(testbundlesv1.TestBundleSpec{Skills: []testbundlesv1.TestBundleSkill{
-		{Name: "one", Description: "One.", Content: half},
-		{Name: "two", Description: "Two.", Content: half},
-	}})
-	err := Normalize(b)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "spec.skills")
-	assert.Contains(t, err.Error(), "over 32000 characters")
-	assert.NotContains(t, err.Error(), half[:100], "the content is not echoed")
+	for _, always := range []bool{false, true} {
+		b := testBundle(testbundlesv1.TestBundleSpec{Skills: []testbundlesv1.TestBundleSkill{
+			{Name: "one", Description: "One.", Content: half, AlwaysInclude: true},
+			{Name: "two", Description: "Two.", Content: half, AlwaysInclude: always},
+		}})
+		err := Normalize(b)
+		if !always {
+			assert.NoError(t, err, "a Skill read on demand is not in every prompt")
+			continue
+		}
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "spec.skills")
+		assert.Contains(t, err.Error(), "over 32000 characters")
+		assert.NotContains(t, err.Error(), half[:100], "the content is not echoed")
+	}
+}
+
+// alwaysInclude reaches the Control Plane when set and is left out when not,
+// so an exported on-demand Skill applies back on demand.
+func TestApplyPayload_TestBundleSkillAlwaysInclude(t *testing.T) {
+	payload, err := ApplyPayload(testBundle(testbundlesv1.TestBundleSpec{Skills: []testbundlesv1.TestBundleSkill{
+		{Name: "always", Description: "Always.", Content: "a", AlwaysInclude: true},
+		{Name: "on-demand", Description: "On demand.", Content: "b"},
+	}}))
+	require.NoError(t, err)
+	var back testbundlesv1.TestBundle
+	require.NoError(t, json.Unmarshal(payload, &back))
+	require.Len(t, back.Spec.Skills, 2)
+	assert.True(t, back.Spec.Skills[0].AlwaysInclude)
+	assert.False(t, back.Spec.Skills[1].AlwaysInclude)
+	assert.Equal(t, 1, strings.Count(string(payload), "alwaysInclude"))
 }
 
 func TestNormalize_TestBundleGitURI(t *testing.T) {
@@ -74,11 +97,15 @@ func TestNormalize_TestBundleGitURI(t *testing.T) {
 		"git@git.example.com:team/repo@v2.git":          true,
 		"git@git.example.com:repo@v2.git":               true,
 		"git.example.com:team/repo@v2.git":              true,
-		// Credentials are taken as written, as the REST API takes them.
-		"https://ghp_abc123@github.com/acme/checkout.git":                true,
-		"https://x-access-token:ghp_abc123@github.com/acme/checkout.git": true,
-		"ssh://git:hunter2@github.com/acme/checkout.git":                 true,
-		"https://github.com/acme/checkout.git?access_token=ghp_abc123":   true,
+		// A user over ssh is not a secret; a password anywhere, and a user
+		// over http or https (usually a token), are.
+		"ssh://git@github.com:2222/acme/checkout.git":                    true,
+		"https://ghp_abc123@github.com/acme/checkout.git":                false,
+		"https://x-access-token:ghp_abc123@github.com/acme/checkout.git": false,
+		"http://ghp_abc123@git.example.com/acme/checkout.git":            false,
+		"HTTPS://ghp_abc123@github.com/acme/checkout.git":                false,
+		"ssh://git:hunter2@github.com/acme/checkout.git":                 false,
+		"https://:ghp_abc123@github.com/acme/checkout.git":               false,
 		// url.Parse cannot read these; the refusal does not echo them.
 		"https://x-access-token:ghp_abc123@github.com/acme/repo%zz.git": false,
 		"https://ghp_abc123@github.com/acme/repo%zz.git":                false,
@@ -101,6 +128,28 @@ func TestNormalize_TestBundleGitURI(t *testing.T) {
 	err := Normalize(testBundle(testbundlesv1.TestBundleSpec{GitSource: &testbundlesv1.TestBundleGitSource{}}))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "spec.gitSource.uri: Required")
+}
+
+func TestGitURIWithoutCredentials(t *testing.T) {
+	for raw, want := range map[string]string{
+		"https://ghp_abc123@github.com/acme/checkout.git":                "https://github.com/acme/checkout.git",
+		"https://x-access-token:ghp_abc123@github.com/acme/checkout.git": "https://github.com/acme/checkout.git",
+		"ssh://git:hunter2@github.com/acme/checkout.git":                 "ssh://git@github.com/acme/checkout.git",
+		"ssh://git@github.com/acme/checkout.git":                         "ssh://git@github.com/acme/checkout.git",
+		"git@github.com:acme/checkout.git":                               "git@github.com:acme/checkout.git",
+		"https://github.com/acme/checkout.git":                           "https://github.com/acme/checkout.git",
+		"https://github.com/acme/checkout.git?ref=a@b":                   "https://github.com/acme/checkout.git?ref=a@b",
+		"https://:ghp_abc123@github.com:8443/acme/checkout.git":          "https://github.com:8443/acme/checkout.git",
+	} {
+		t.Run(raw, func(t *testing.T) {
+			got := GitURIWithoutCredentials(raw)
+			assert.Equal(t, want, got)
+			require.NoError(t, Normalize(testBundle(testbundlesv1.TestBundleSpec{GitSource: &testbundlesv1.TestBundleGitSource{URI: got}})), "the export applies back")
+		})
+	}
+	// A URL url.Parse cannot read still loses its token, though the manifest
+	// refuses what is left.
+	assert.Equal(t, "https://github.com/acme/repo%zz.git", GitURIWithoutCredentials("https://x-access-token:ghp_abc123@github.com/acme/repo%zz.git"))
 }
 
 func TestSortForApply_TestBundleAfterItsAIAgents(t *testing.T) {

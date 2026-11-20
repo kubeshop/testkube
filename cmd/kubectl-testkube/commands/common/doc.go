@@ -22,6 +22,16 @@
 // GetClient (client.go) uses ui.StdinIsInteractive to refuse starting a login when a token
 // refresh fails with no terminal present, the same way the email-link branch beside it does.
 //
+// # Shell completion of names
+//
+// completion.go completes resource names on a tab press: CompleteTestWorkflowNames and
+// CompleteTestWorkflowTemplateNames for the name argument (nothing once it is set), and
+// CompleteTestWorkflowNameFlag for flags that take a workflow name. They build the client with
+// getClient and allowLogin false, so an expired login fails instead of opening a browser, and
+// they give up after completionTimeout. Any error offers no candidates and prints nothing, since
+// whatever the command writes becomes completion output. The root command skips its persistent
+// hooks (context validation, telemetry, the update check) for cobra's __complete command.
+//
 // # File input
 //
 // A flag that names a file to read takes - for the command's standard input (ReadFileOrStdin in

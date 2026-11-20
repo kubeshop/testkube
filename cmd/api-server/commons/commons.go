@@ -422,6 +422,10 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		}
 	}
 
+	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityMultiNamespaceSync) {
+		proContext.MultiNamespaceSyncSupportedInControlPlane = true
+	}
+
 	return proContext, nil
 }
 

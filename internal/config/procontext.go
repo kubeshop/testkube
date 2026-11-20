@@ -57,7 +57,10 @@ type ProContext struct {
 	// (capabilities.CapabilityControlPlaneResources and the per-family ones after it). A kind is
 	// synced only when the capability that gates it is among them.
 	ControlPlaneResourceCapabilities []capabilities.Capability
-	Agent                            ProContextAgent
+	// MultiNamespaceSyncSupportedInControlPlane is whether the Control Plane accepts several
+	// namespaces and Environments over one sync connection (capabilities.CapabilityMultiNamespaceSync).
+	MultiNamespaceSyncSupportedInControlPlane bool
+	Agent                                     ProContextAgent
 }
 
 func (p *ProContext) GetEnvSlug(id string) string {

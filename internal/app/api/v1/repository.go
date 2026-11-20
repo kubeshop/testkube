@@ -119,7 +119,7 @@ func (s *TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 					err = errPathNotFound
 				}
 
-				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: %w", errPrefix, err))
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: %w", errPrefix, err))
 			}
 		}
 
