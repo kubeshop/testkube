@@ -7,8 +7,12 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testtriggers"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflowtemplates"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooks"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooktemplates"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/workflowtriggers"
 )
 
 // TestZshCompletionUsesActualBinaryName guards against #964: the zsh
@@ -91,6 +95,19 @@ func TestNameArgsHaveCompletion(t *testing.T) {
 		"cancel testworkflowexecutions": testworkflows.NewCancelTestWorkflowExecutionsCmd(),
 		"get testworkflowtemplate":      testworkflowtemplates.NewGetTestWorkflowTemplatesCmd(),
 		"delete testworkflowtemplate":   testworkflowtemplates.NewDeleteTestWorkflowTemplateCmd(),
+		"get testworkflowexecution":     testworkflows.NewGetTestWorkflowExecutionsCmd(),
+		"watch testworkflowexecution":   testworkflows.NewWatchTestWorkflowExecutionCmd(),
+		"rerun testworkflowexecution":   testworkflows.NewReRunTestWorkflowExecutionCmd(),
+		"cancel testworkflowexecution":  testworkflows.NewCancelTestWorkflowExecutionCmd(),
+		"abort testworkflowexecution":   testworkflows.NewAbortTestWorkflowExecutionCmd(),
+		"get testtrigger":               testtriggers.NewGetTestTriggerCmd(),
+		"delete testtrigger":            testtriggers.NewDeleteTestTriggerCmd(),
+		"get workflowtrigger":           workflowtriggers.NewGetWorkflowTriggerCmd(),
+		"delete workflowtrigger":        workflowtriggers.NewDeleteWorkflowTriggerCmd(),
+		"get webhook":                   webhooks.NewGetWebhookCmd(),
+		"delete webhook":                webhooks.NewDeleteWebhookCmd(),
+		"get webhooktemplate":           webhooktemplates.NewGetWebhookTemplateCmd(),
+		"delete webhooktemplate":        webhooktemplates.NewDeleteWebhookTemplateCmd(),
 	} {
 		if cmd.ValidArgsFunction == nil {
 			t.Errorf("%s: expected the name argument to have shell completion", name)
