@@ -81,6 +81,13 @@ func agentCapabilityError(published []*cloud.Capability) error {
 		string(capabilities.CapabilityAgentStep), agentMinControlPlane)
 }
 
+// agentMachine returns the values that the spec of the step can read: the values of the workflow
+// and its steps, and with executions the data of the executions that an earlier step started. The
+// init process resolves the same set for a step that it does not hide.
+func agentMachine(executions expressions.Machine) expressions.Machine {
+	return expressions.CombinedMachines(data.GetBaseTestWorkflowMachine(), data.ExecutionMachine(), executions)
+}
+
 // resolveAgentSpec resolves the expressions in the spec of the step. The processor hides the spec
 // from the init process, so this is the only place that resolves them.
 func resolveAgentSpec(spec testworkflowsv1.StepAgent, machines ...expressions.Machine) (testworkflowsv1.StepAgent, error) {
@@ -269,7 +276,7 @@ func NewAgentCmd() *cobra.Command {
 				toolkitcommon.Fail(err)
 			}
 
-			machine := expressions.CombinedMachines(data.GetBaseTestWorkflowMachine(), data.ExecutionMachine())
+			machine := agentMachine(data.ExecutionDataMachine())
 			spec, err := resolveAgentSpec(spec, machine)
 			if err != nil {
 				toolkitcommon.Fail(err)

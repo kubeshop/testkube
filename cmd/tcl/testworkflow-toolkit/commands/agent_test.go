@@ -27,6 +27,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/executiondata"
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
@@ -402,6 +403,47 @@ func TestResolveAgentSpec(t *testing.T) {
 			}
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestAgentMachine(t *testing.T) {
+	registry := executiondata.NewRegistry()
+	registry.Add(executiondata.Execution{
+		Id:       "exec-2",
+		Workflow: "tests",
+		Outputs:  map[string]string{"summary": "3 of 40 failed"},
+	})
+	machine := agentMachine(executiondata.NewMachine(executiondata.MachineOptions{Registry: registry}))
+
+	tests := []struct {
+		name    string
+		prompt  string
+		want    string
+		wantErr string
+	}{
+		{
+			name:   "reads an output of an execution that an earlier step started",
+			prompt: `Find the cause: {{ execution("tests").outputs.summary }}`,
+			want:   "Find the cause: 3 of 40 failed",
+		},
+		{
+			name:    "fails on an execution that no step started",
+			prompt:  `{{ execution("other").outputs.summary }}`,
+			wantErr: `unknown execution "other"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := resolveAgentSpec(testworkflowsv1.StepAgent{Name: "failure-triage", Prompt: tt.prompt}, machine)
+
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got.Prompt)
 		})
 	}
 }

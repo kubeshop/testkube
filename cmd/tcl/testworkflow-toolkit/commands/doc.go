@@ -17,7 +17,8 @@
 //
 //   - The processor gives the spec as base64 JSON, so the command resolves the expressions of
 //     the name and the prompt. It resolves them one time: an expression in the value of a step
-//     output stays text.
+//     output stays text. The prompt reads what a step of the init process reads, the data of
+//     the executions that an earlier step started included.
 //   - The command fails before the first call when the control plane does not publish the
 //     capability of the step.
 //   - Text from the AI Agent and its tools loses each byte 0x01 before the command prints it or
