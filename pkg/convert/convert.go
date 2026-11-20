@@ -97,7 +97,7 @@ func (r *Result) Failed() bool {
 		return true
 	}
 	for _, s := range r.Stats {
-		if s.Failed > 0 {
+		if s.Failed > 0 || s.RecopyFailed > 0 {
 			return true
 		}
 	}
@@ -282,6 +282,10 @@ func (r *Result) PrintSummary(log *zap.SugaredLogger) {
 		log.Infof("%-12s processed=%d failed=%d skipped=%d of %d in %s",
 			task, stats.Processed, stats.Failed, stats.Skipped, stats.Total,
 			stats.Duration().Round(time.Millisecond))
+		if stats.RecopyFailed > 0 {
+			log.Warnf("%-12s %d executions still unfinished in postgres: recopy failed",
+				task, stats.RecopyFailed)
+		}
 	}
 	log.Infof("Total duration: %s", r.Duration.Round(time.Millisecond))
 	log.Info(rule)

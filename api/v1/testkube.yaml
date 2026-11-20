@@ -3616,7 +3616,7 @@ paths:
         204:
           description: "no content"
         400:
-          description: "problem with repository definition - probably some bad input occurs (invalid JSON body or similar)"
+          description: "problem with repository definition or the repository check failed (not found, authentication, branch, commit or path)"
           content:
             application/problem+json:
               schema:
@@ -3632,7 +3632,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
         502:
-          description: "problem with communicating with kubernetes cluster or git server"
+          description: "problem with communicating with kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -9763,8 +9763,7 @@ components:
       - $ref: "#/components/schemas/TestWorkflowStepOperations"
       - properties:
           parallelism:
-            type: integer
-            description: how many resources could be scheduled in parallel
+            $ref: "#/components/schemas/BoxedString"
           failFast:
             type: boolean
             description: abort remaining parallel workers on first failure
@@ -9795,8 +9794,7 @@ components:
       - $ref: "#/components/schemas/TestWorkflowStepOperations"
       - properties:
           parallelism:
-            type: integer
-            description: how many resources could be scheduled in parallel
+            $ref: "#/components/schemas/BoxedString"
           failFast:
             type: boolean
             description: abort remaining parallel workers on first failure
@@ -10748,6 +10746,12 @@ components:
             $ref: "#/components/schemas/HostAlias"
         priorityClassName:
           type: string
+        runtimeClassName:
+          $ref: "#/components/schemas/BoxedString"
+        schedulerName:
+          type: string
+        hostUsers:
+          $ref: "#/components/schemas/BoxedBoolean"
         priority:
           $ref: "#/components/schemas/BoxedInteger"
         dnsConfig:
@@ -10768,6 +10772,14 @@ components:
             $ref: "#/components/schemas/PodResourceClaim"
         hostPID:
           $ref: "#/components/schemas/BoxedBoolean"
+        hostNetwork:
+          $ref: "#/components/schemas/BoxedBoolean"
+        hostIPC:
+          $ref: "#/components/schemas/BoxedBoolean"
+        setHostnameAsFQDN:
+          $ref: "#/components/schemas/BoxedBoolean"
+        resources:
+          $ref: "#/components/schemas/TestWorkflowPodResources"
 
     TestWorkflowContainerConfig:
       type: object
@@ -10902,6 +10914,19 @@ components:
           $ref: "#/components/schemas/TestWorkflowResourcesList"
         requests:
           $ref: "#/components/schemas/TestWorkflowResourcesList"
+
+    TestWorkflowPodResources:
+      type: object
+      description: pod-level resource requests and limits, keyed by the Kubernetes resource name, such as cpu, memory or hugepages-2Mi
+      properties:
+        limits:
+          type: object
+          additionalProperties:
+            type: string
+        requests:
+          type: object
+          additionalProperties:
+            type: string
 
     TestWorkflowResourcesList:
       type: object
@@ -11084,6 +11109,30 @@ components:
           type: boolean
           description: indicates that all executions should be silent by default. When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
           default: false
+        retry:
+          $ref: "#/components/schemas/TestWorkflowExecutionRetryPolicy"
+
+    TestWorkflowExecutionRetryPolicy:
+      type: object
+      description: reruns the whole workflow when an execution ends for one of the listed causes
+      required:
+        - count
+      properties:
+        count:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 10
+          description: how many automatic retries follow a run that a person started or a schedule triggered; a manual rerun starts a new budget
+        "on":
+          type: array
+          description: the causes that are retried (defaults to infrastructure)
+          items:
+            type: string
+            enum:
+              - infrastructure
+              - timeout
+              - oom
 
     TestWorkflowExecutionTags:
       type: object
@@ -12446,6 +12495,7 @@ components:
         GitOps agent to sync the resource, and can be reassigned by declaring the
         testkube.io/gitops-owner annotation on the Kubernetes resource. While an owner is set,
         syncs from any other GitOps agent are rejected instead of overwriting the resource.
+        Ownership is keyed by the pair agentId and namespace.
       type: object
       required:
         - agentId
@@ -12458,6 +12508,10 @@ components:
           type: string
           description: Name of the owning GitOps agent at the time of the last sync, for display purposes only. May be stale if the agent has since been renamed.
           example: "team-a-gitops"
+        namespace:
+          type: string
+          description: Kubernetes namespace the owning agent synced the resource from. Ownership is keyed by agentId and namespace. Empty for resources synced before namespaces were recorded.
+          example: "testkube"
 
     #
     # Errors

@@ -18,10 +18,11 @@ func NewGetWebhookCmd() *cobra.Command {
 	var crdOnly bool
 
 	cmd := &cobra.Command{
-		Use:     "webhook <webhookName>",
-		Aliases: []string{"webhooks", "wh"},
-		Short:   "Get webhook details",
-		Long:    `Get webhook, you can change output format, to get single details pass name as first arg`,
+		Use:               "webhook <webhookName>",
+		ValidArgsFunction: common.CompleteWebhookNames,
+		Aliases:           []string{"webhooks", "wh"},
+		Short:             "Get webhook details",
+		Long:              `Get webhook, you can change output format, to get single details pass name as first arg`,
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _, err := common.GetClient(cmd)
 			if err != nil {

@@ -259,7 +259,7 @@ type StepExecuteFetch struct {
 
 type StepParallel struct {
 	// how many resources could be scheduled in parallel
-	Parallelism int32 `json:"parallelism,omitempty"`
+	Parallelism *ConfigValue `json:"parallelism,omitempty" expr:"expression"`
 
 	// abort remaining parallel workers on first failure
 	FailFast bool `json:"failFast,omitempty"`
@@ -391,7 +391,7 @@ func (sp StepParallel) NewTestWorkflowSpec() *TestWorkflowSpec {
 
 type IndependentStepParallel struct {
 	// how many resources could be scheduled in parallel
-	Parallelism int32 `json:"parallelism,omitempty"`
+	Parallelism *ConfigValue `json:"parallelism,omitempty" expr:"expression"`
 
 	// abort remaining parallel workers on first failure
 	FailFast bool `json:"failFast,omitempty"`

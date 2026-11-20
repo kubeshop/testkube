@@ -15,10 +15,11 @@ func NewDeleteTestWorkflowTemplateCmd() *cobra.Command {
 	var selectors []string
 
 	cmd := &cobra.Command{
-		Use:     "testworkflowtemplate [name]",
-		Aliases: []string{"testworkflowtemplates", "twt"},
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Delete test workflow templates",
+		Use:               "testworkflowtemplate [name]",
+		Aliases:           []string{"testworkflowtemplates", "twt"},
+		Args:              cobra.MaximumNArgs(1),
+		Short:             "Delete test workflow templates",
+		ValidArgsFunction: common.CompleteTestWorkflowTemplateNames,
 		Run: func(cmd *cobra.Command, args []string) {
 			ignoreNotFound, err := cmd.Flags().GetBool("ignore-not-found")
 			ui.ExitOnError("reading flag ignore-not-found", err)

@@ -13,6 +13,8 @@ metadata:
   name: tw-cache-roundtrip
   labels:
     core-tests: dependency-cache
+  annotations:
+    testkube.io/description: "Dependency cache save/restore test"
 description: "Cache round trip - populates on a miss, restores on the next run"
 spec:
   config:
@@ -63,6 +65,8 @@ metadata:
   name: tw-cache-shared-writer
   labels:
     core-tests: dependency-cache
+  annotations:
+    testkube.io/description: "Environment-scope dependency cache writer"
 description: "Cache, environment scope - writes an entry meant to be read by another workflow"
 spec:
   config:
@@ -100,6 +104,8 @@ metadata:
   name: tw-cache-shared-reader
   labels:
     core-tests: dependency-cache
+  annotations:
+    testkube.io/description: "Environment-scope dependency cache reader across workflows"
 description: "Cache, environment scope - a different workflow reads the shared entry"
 spec:
   config:
@@ -137,6 +143,8 @@ metadata:
   name: tw-cache-isolated-reader
   labels:
     core-tests: dependency-cache
+  annotations:
+    testkube.io/description: "Workflow-scope dependency cache isolation test"
 description: "Cache, workflow scope - the same key does not reach another workflow's entry"
 spec:
   config:
@@ -175,6 +183,8 @@ metadata:
   name: tw-cache-degrades
   labels:
     core-tests: dependency-cache
+  annotations:
+    testkube.io/description: "Unresolvable cache key test with a cache miss and a passing step"
 description: "Cache - a key that cannot resolve is a miss, not a failed step"
 spec:
   container:
@@ -215,6 +225,8 @@ metadata:
   labels:
     core-tests: dependency-cache
     type: suite
+  annotations:
+    testkube.io/description: "Dependency cache suite testing save/restore, sharing, isolation and unresolved keys"
 description: "Drives the dependency cache assertions that need more than one execution"
 spec:
   container:
