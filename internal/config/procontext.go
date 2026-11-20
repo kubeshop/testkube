@@ -54,7 +54,10 @@ type ProContext struct {
 	// ControlPlaneResourcesSyncSupported is whether the Control Plane accepts Control Plane
 	// resources (capabilities.CapabilityControlPlaneResources) through the SyncService.
 	ControlPlaneResourcesSyncSupported bool
-	Agent                              ProContextAgent
+	// MultiNamespaceSyncSupportedInControlPlane is whether the Control Plane accepts several
+	// namespaces and Environments over one sync connection (capabilities.CapabilityMultiNamespaceSync).
+	MultiNamespaceSyncSupportedInControlPlane bool
+	Agent                                     ProContextAgent
 }
 
 func (p *ProContext) GetEnvSlug(id string) string {

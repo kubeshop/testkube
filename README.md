@@ -6,9 +6,9 @@
   <img alt="Testkube" src="./assets/testkube_logo-light.png">
 </picture>
 
-# The Open Testing Platform for AI-driven Engineering Teams
+# The Testing Platform for the agentic SDLC
 
-Testkube provides a single platform for defining, running and analyzing automated tests, using your existing testing tools/scripts, running in your Kubernetes infrastructure.
+Testkube gives teams and AI agents one place to create, orchestrate, execute and analyze any test in their existing infrastructure.
 
 <a href="#open-source-agent---this-repo">
 <img src="https://img.shields.io/badge/Testkube%20OSS%20Agent-Get%20Started-lightgrey?style=for-the-badge" alt="Testkube Open Source - Get Started" /></a>

@@ -16,10 +16,11 @@ func NewGetTestTriggerCmd() *cobra.Command {
 	var selectors []string
 
 	cmd := &cobra.Command{
-		Use:     "testtrigger <name>",
-		Aliases: []string{"testtriggers", "tt"},
-		Short:   "Get TestTrigger details",
-		Long:    `Get a single TestTrigger by name, or list all matching ones. Use --label to filter.`,
+		Use:               "testtrigger <name>",
+		ValidArgsFunction: common.CompleteTestTriggerNames,
+		Aliases:           []string{"testtriggers", "tt"},
+		Short:             "Get TestTrigger details",
+		Long:              `Get a single TestTrigger by name, or list all matching ones. Use --label to filter.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)

@@ -145,15 +145,17 @@ This generates an HTML coverage report and opens it in your browser.
 
 ### Running Specific Tests
 
+Use the make targets rather than `go test`: they run the same test runner and environment as the pull request checks.
+
 ```bash
 # Run tests for a specific package
-go test ./pkg/testworkflows/... -v
+make unit-tests PKG=./pkg/testworkflows/...
 
 # Run with race detection
-go test ./pkg/... -race
+make unit-tests PKG=./pkg/... GOFLAGS=-race
 
 # Run a specific test
-go test ./pkg/event/... -run TestEmitter -v
+make unit-tests PKG=./pkg/event/... RUN=TestEmitter
 ```
 
 ## Linting and Code Style
@@ -266,8 +268,12 @@ We follow the [Conventional Commits](https://www.conventionalcommits.org/) speci
 - `refactor`: Code change that neither fixes a bug nor adds a feature
 - `perf`: A code change that improves performance
 - `test`: Adding missing tests or correcting existing tests
-- `chore`: Changes to the build process or auxiliary tools
+- `build`: Changes to the build system or dependencies
 - `ci`: Changes to CI configuration files and scripts
+- `chore`: Other maintenance that does not change code meaning
+- `revert`: Reverts an earlier commit
+
+The `oss-lint-pr` check rejects a pull request whose title does not use one of these types.
 
 ### Examples
 
