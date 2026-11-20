@@ -1447,7 +1447,8 @@ spec:
                   uri:
                     description: |-
                       URI of the repository: a URL, or Git's scp-like [user@]host:path. It
-                      may carry credentials, as the dashboard accepts.
+                      must not carry credentials: an https URL names no user, and no URL
+                      holds a password.
                     minLength: 1
                     type: string
                 required:
@@ -1468,9 +1469,15 @@ spec:
                   added in the dashboard.
                 items:
                   description: |-
-                    TestBundleSkill is guidance a Test Bundle's authoring gets in full in every
-                    prompt, following the Agent Skills spec.
+                    TestBundleSkill is guidance a Test Bundle's authoring reads when the task
+                    needs it, or in every prompt when it is always included, following the
+                    Agent Skills spec.
                   properties:
+                    alwaysInclude:
+                      description: |-
+                        AlwaysInclude puts the content in every authoring prompt instead of
+                        having the AI read it on demand.
+                      type: boolean
                     content:
                       description: Content is the guidance itself.
                       minLength: 1
