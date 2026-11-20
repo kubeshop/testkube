@@ -37,7 +37,8 @@ spec:
       value: /root/.npm
     resources:
       limits:
-        cpu: 4
+        # Above the request so test peaks can use spare node CPU.
+        cpu: 6
         memory: 6Gi
       requests:
         cpu: 4
