@@ -1,11 +1,13 @@
 package convert
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEscapeCopyValue(t *testing.T) {
@@ -162,4 +164,51 @@ func TestToJSONBytes(t *testing.T) {
 		assert.Equal(t, `{}`, escapeJSONB(b),
 			"an empty map must stay an empty object, not become NULL")
 	})
+}
+
+func TestWriteCopyRow(t *testing.T) {
+	columns := []string{"id", "name", "number"}
+
+	tests := []struct {
+		name    string
+		fields  []copyField
+		want    string
+		wantErr string
+	}{
+		{
+			name:   "fields in the order of the columns give one row",
+			fields: []copyField{{"id", "e1"}, {"name", copyNull}, {"number", "7"}},
+			want:   "e1\t\\N\t7\n",
+		},
+		{
+			name:    "two fields in the wrong order give no row",
+			fields:  []copyField{{"name", "n"}, {"id", "e1"}, {"number", "7"}},
+			wantErr: `COPY row has the field "name" at the position of the column "id"`,
+		},
+		{
+			name:    "a missing field gives no row",
+			fields:  []copyField{{"id", "e1"}, {"name", "n"}},
+			wantErr: "COPY row has 2 fields for 3 columns",
+		},
+		{
+			name:    "a field with no column gives no row",
+			fields:  []copyField{{"id", "e1"}, {"name", "n"}, {"number", "7"}, {"step_id", "s"}},
+			wantErr: "COPY row has 4 fields for 3 columns",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+
+			err := writeCopyRow(&buf, columns, tt.fields)
+
+			if tt.wantErr != "" {
+				require.EqualError(t, err, tt.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+			assert.Equal(t, tt.want, buf.String())
+		})
+	}
 }
