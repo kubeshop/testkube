@@ -321,9 +321,6 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
 - **`AIAgent`, `MCPServer`, `LLMProvider`** (`ai.testkube.io/v1alpha1`)
   - **Definition**: [`api/ai/v1alpha1/`](api/ai/v1alpha1/)
   - **Purpose**: an AI Agent, the MCP servers it links to (by name, with the built-in Testkube server as `testkube`) and the LLM providers that serve its models, all environment-scoped. `metadata.name` is a DNS-1123 label the Control Plane keeps as the entity's slug. A key can be named by an Environment Credential in `credentialReference` or written in a header, as in the dashboard; exports redact header and query parameter values. An agent's Skills are declared with it and replaced as a whole on apply.
-- **`TestBundle`** (`testbundles.testkube.io/v1alpha1`)
-  - **Definition**: [`api/testbundles/v1alpha1/testbundle_types.go`](api/testbundles/v1alpha1/testbundle_types.go)
-  - **Purpose**: a Test Bundle's definition, environment-scoped: its Git source, the Skills its authoring always gets (replaced as a whole on apply) and the AI Agents it may delegate to. `metadata.name` is the bundle's immutable slug. Authoring output (test files, chats, sandbox, shared workflow) stays in the Control Plane.
 - Each Control Plane entity family gets an API group of its own. The CLI applies these objects (see [Control Plane Resources](#control-plane-resources)), and a GitOps runner syncs `Board` custom resources from its cluster (see the GitOps sync controllers above); a board a runner owns is read-only everywhere else in the Control Plane. The other kinds are not synced yet.
 
 #### Deprecated CRDs
