@@ -13,7 +13,7 @@
 //
 // agent.go runs the `agent` step: one turn of an AI Agent that runs in the control plane. The
 // command starts the turn, reads it until its end, prints its tool calls and text to the step
-// log, and writes the step outputs `response`, `truncated` and `session`.
+// log, writes the answer to a file, and writes the step output `session`.
 //
 //   - The processor gives the spec as base64 JSON, so the command resolves the expressions of
 //     the name and the prompt. It resolves them one time: an expression in the value of a step
@@ -22,9 +22,10 @@
 //     capability of the step.
 //   - Text from the AI Agent and its tools loses each byte 0x01 before the command prints it or
 //     writes it. With that byte the text can start an instruction for the init process.
-//   - The init process skips an output file above data.MaxOutputSize. The command cuts
-//     `response` to that size on a character boundary and sets `truncated`. The full answer is
-//     the file response.md in the results directory of the step.
+//   - The answer is the file response.md in the results directory of the step, and it is not a
+//     step output. The init process skips an output file above data.MaxOutputSize, and an
+//     answer has no size limit. A step with no ID has no results directory, so its answer is
+//     only in the step log.
 //   - The command makes one request ID for the process and sends it with the start call, so a
 //     retry of that call returns the same turn.
 //   - When the step stops before the turn ends, the command asks the control plane one time to

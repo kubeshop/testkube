@@ -17,7 +17,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -117,11 +116,11 @@ func TestAgentStep_Run(t *testing.T) {
 		wantCancels []string
 		// wantOutputs is nil when the step must write no output.
 		wantOutputs map[string]string
-		// wantAnswer is the content of the file with the full answer. Empty means no file.
+		// wantAnswer is the content of the file with the answer. Empty means no file.
 		wantAnswer string
 	}{
 		{
-			name:  "prints the events and writes the outputs of a completed turn",
+			name:  "prints the events and writes the answer of a completed turn to the file",
 			start: agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: working, SessionId: "session-1", Next: 0}},
 			gets: []agentReply{
 				{turn: &cloud.AgentTurn{Id: "turn-1", State: working, Next: 2, Events: []*cloud.AgentTurnEvent{
@@ -132,36 +131,35 @@ func TestAgentStep_Run(t *testing.T) {
 			},
 			wantLog:     []string{"I read the logs.\n", "Tool call: fetch_execution_logs {\"executionId\":\"e1\"}\n", "The database was down.\n"},
 			wantCursors: []uint32{0, 2},
-			wantOutputs: map[string]string{"response": "The database was down.", "truncated": "false", "session": "session-1"},
+			wantOutputs: map[string]string{"session": "session-1"},
 			wantAnswer:  "  The database was down.\n",
 		},
 		{
 			name:        "uses a turn that is completed in the answer to the start call",
 			start:       agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Answer: "pass"}},
-			wantOutputs: map[string]string{"response": "pass", "truncated": "false", "session": "session-1"},
+			wantOutputs: map[string]string{"session": "session-1"},
 			wantAnswer:  "pass",
 		},
 		{
-			name:        "cuts a long answer for the output and keeps it in the file",
+			name:        "writes an answer above the size of a step output to the file in full",
 			start:       agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Answer: long}},
-			wantLog:     []string{"response.md has the full answer"},
-			wantOutputs: map[string]string{"response": long[:data.MaxOutputSize], "truncated": "true", "session": "session-1"},
+			wantOutputs: map[string]string{"session": "session-1"},
 			wantAnswer:  long,
 		},
 		{
-			name: "removes the instruction start byte from the log, the outputs and the file",
+			name: "removes the instruction start byte from the log, the output and the file",
 			start: agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "s\x01\x051", Answer: "ok\n\x01\x01\x05\x05;output",
 				Events: []*cloud.AgentTurnEvent{textEvent("\x01\x05;pass"), toolEvent("\x01\x05tool", "\x01\x05args")}}},
 			wantLog:     []string{"\x05;pass\n", "Tool call: \x05tool \x05args\n"},
-			wantOutputs: map[string]string{"response": "ok\n\x05\x05;output", "truncated": "false", "session": "s\x051"},
+			wantOutputs: map[string]string{"session": "s\x051"},
 			wantAnswer:  "ok\n\x05\x05;output",
 		},
 		{
-			name:        "writes the outputs and no file for a step with no ID",
+			name:        "writes the session and no file for a step with no ID",
 			start:       agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Answer: "pass"}},
 			noStepID:    true,
 			wantLog:     []string{"The step has no ID"},
-			wantOutputs: map[string]string{"response": "pass", "truncated": "false", "session": "session-1"},
+			wantOutputs: map[string]string{"session": "session-1"},
 		},
 		{
 			name:    "fails when the start call fails",
@@ -191,7 +189,7 @@ func TestAgentStep_Run(t *testing.T) {
 			start:       agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: working, Next: 4}},
 			gets:        append(transientFailures(agentPollFailureLimit-1), agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, Answer: "pass"}}),
 			wantCursors: repeatCursor(4, agentPollFailureLimit),
-			wantOutputs: map[string]string{"response": "pass", "truncated": "false", "session": ""},
+			wantOutputs: map[string]string{"session": ""},
 			wantAnswer:  "pass",
 		},
 		{
@@ -273,9 +271,6 @@ func TestAgentStep_Run(t *testing.T) {
 				wantFiles = map[string]string{agentResponseFile: tt.wantAnswer}
 			}
 			assert.Equal(t, wantFiles, readDir(t, filepath.Join(dir, "results")))
-			for _, value := range tt.wantOutputs {
-				assert.LessOrEqual(t, len(value), data.MaxOutputSize)
-			}
 		})
 	}
 }
@@ -323,35 +318,6 @@ func TestPlainText(t *testing.T) {
 
 			assert.Equal(t, tt.want, got)
 			assert.NotContains(t, got, "\x01")
-		})
-	}
-}
-
-func TestFitOutput(t *testing.T) {
-	limit := data.MaxOutputSize
-
-	tests := []struct {
-		name          string
-		in            string
-		wantLen       int
-		wantTruncated bool
-	}{
-		{name: "value below the limit", in: "pass", wantLen: 4},
-		{name: "value of the limit", in: strings.Repeat("a", limit), wantLen: limit},
-		{name: "one byte above the limit", in: strings.Repeat("a", limit+1), wantLen: limit, wantTruncated: true},
-		{name: "two-byte character that ends at the limit", in: strings.Repeat("é", limit/2) + "tail", wantLen: limit, wantTruncated: true},
-		{name: "two-byte character across the limit", in: "a" + strings.Repeat("é", limit), wantLen: limit - 1, wantTruncated: true},
-		{name: "four-byte character across the limit", in: "aaa" + strings.Repeat("🙂", limit), wantLen: limit - 1, wantTruncated: true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, truncated := fitOutput(tt.in)
-
-			assert.Equal(t, tt.wantTruncated, truncated)
-			assert.Len(t, got, tt.wantLen)
-			assert.True(t, strings.HasPrefix(tt.in, got))
-			assert.True(t, utf8.ValidString(got), "the cut must not break a character")
 		})
 	}
 }

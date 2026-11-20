@@ -15,10 +15,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
@@ -55,10 +53,9 @@ const (
 )
 
 const (
-	agentOutputResponse  = "response"
-	agentOutputTruncated = "truncated"
-	agentOutputSession   = "session"
-	// agentResponseFile is the file in the step results directory that holds the full answer.
+	agentOutputSession = "session"
+	// agentResponseFile is the file in the step results directory that holds the answer. The
+	// answer is not a step output, because a step output has a size limit and an answer has none.
 	agentResponseFile = "response.md"
 )
 
@@ -72,19 +69,6 @@ const instructionStart = "\x01"
 // because the text around a removed pair can join into a new pair.
 func plainText(s string) string {
 	return strings.ReplaceAll(s, instructionStart, "")
-}
-
-// fitOutput cuts the value to the size that the init process accepts for a step output. The cut
-// is on a character boundary. It reports true when it removed text.
-func fitOutput(value string) (string, bool) {
-	if len(value) <= data.MaxOutputSize {
-		return value, false
-	}
-	end := data.MaxOutputSize
-	for end > 0 && !utf8.RuneStart(value[end]) {
-		end--
-	}
-	return value[:end], true
 }
 
 // agentCapabilityError returns an error when the control plane cannot run the agent step.
@@ -119,7 +103,8 @@ type agentStep struct {
 	stepRef   string
 	// outputsDir is the directory that the init process reads the step outputs from.
 	outputsDir string
-	// resultsDir is the results directory of the step. It is empty for a step with no ID.
+	// resultsDir is the results directory of the step. It is empty for a step with no ID, and
+	// then the answer is only in the step log.
 	resultsDir   string
 	pollInterval time.Duration
 }
@@ -234,33 +219,19 @@ func (s *agentStep) printEvents(events []*cloud.AgentTurnEvent) {
 	}
 }
 
-// writeOutputs writes the step outputs and the file with the full answer.
+// writeOutputs writes the file with the answer and the session output.
 func (s *agentStep) writeOutputs(turn *cloud.AgentTurn) error {
-	answer := plainText(turn.GetAnswer())
-	// The init process trims an output, so the cut must not count the space around the answer.
-	response, truncated := fitOutput(strings.TrimSpace(answer))
-
 	if s.resultsDir == "" {
-		s.printf("The step has no ID, so the next steps cannot read its outputs.\n")
+		s.printf("The step has no ID, so the next steps cannot read the answer.\n")
 	} else {
 		path := filepath.Join(s.resultsDir, agentResponseFile)
-		if err := writeStepFile(path, answer); err != nil {
+		if err := writeStepFile(path, plainText(turn.GetAnswer())); err != nil {
 			return fmt.Errorf("cannot write the answer of the AI Agent: %w", err)
 		}
-		if truncated {
-			s.printf("The answer is larger than a step output. The %q output has its start, and %s has the full answer.\n", agentOutputResponse, path)
-		}
+		s.printf("The answer is in %s\n", path)
 	}
-
-	outputs := map[string]string{
-		agentOutputResponse:  response,
-		agentOutputTruncated: strconv.FormatBool(truncated),
-		agentOutputSession:   plainText(turn.GetSessionId()),
-	}
-	for name, value := range outputs {
-		if err := writeStepFile(filepath.Join(s.outputsDir, name), value); err != nil {
-			return fmt.Errorf("cannot write the %q output: %w", name, err)
-		}
+	if err := writeStepFile(filepath.Join(s.outputsDir, agentOutputSession), plainText(turn.GetSessionId())); err != nil {
+		return fmt.Errorf("cannot write the %q output: %w", agentOutputSession, err)
 	}
 	return nil
 }
