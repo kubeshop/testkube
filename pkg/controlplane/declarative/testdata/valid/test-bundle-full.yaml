@@ -21,6 +21,7 @@ spec:
     - name: contract-tests
       description: Use when a test checks the checkout API's responses.
       content: Contract tests use the OpenAPI spec in api/checkout.yaml.
+      alwaysInclude: true
   contexts:
     - title: Checkout API conventions
       content: |

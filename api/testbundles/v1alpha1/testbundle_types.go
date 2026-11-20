@@ -67,7 +67,8 @@ type TestBundleSpec struct {
 // TestBundleGitSource is a repository a Test Bundle reads tests from.
 type TestBundleGitSource struct {
 	// URI of the repository: a URL, or Git's scp-like [user@]host:path. It
-	// may carry credentials, as the dashboard accepts.
+	// must not carry credentials: an https URL names no user, and no URL
+	// holds a password.
 	// +kubebuilder:validation:MinLength=1
 	URI string `json:"uri"`
 	// Revision is a branch, tag or commit.
@@ -76,8 +77,9 @@ type TestBundleGitSource struct {
 	Path string `json:"path,omitempty"`
 }
 
-// TestBundleSkill is guidance a Test Bundle's authoring gets in full in every
-// prompt, following the Agent Skills spec.
+// TestBundleSkill is guidance a Test Bundle's authoring reads when the task
+// needs it, or in every prompt when it is always included, following the
+// Agent Skills spec.
 type TestBundleSkill struct {
 	// Name identifies the Skill within the bundle: up to 64 lowercase
 	// letters, digits and single hyphens.
@@ -91,6 +93,9 @@ type TestBundleSkill struct {
 	// Content is the guidance itself.
 	// +kubebuilder:validation:MinLength=1
 	Content string `json:"content"`
+	// AlwaysInclude puts the content in every authoring prompt instead of
+	// having the AI read it on demand.
+	AlwaysInclude bool `json:"alwaysInclude,omitempty"`
 	// Metadata is extra Agent Skills spec metadata.
 	Metadata map[string]string `json:"metadata,omitempty"`
 }
