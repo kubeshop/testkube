@@ -14,7 +14,7 @@ import (
 
 type TestTriggerStore interface {
 	UpdateOrCreateTestTrigger(context.Context, testtriggersv1.TestTrigger) error
-	DeleteTestTrigger(context.Context, string) error
+	DeleteTestTrigger(ctx context.Context, name, namespace string) error
 }
 
 func NewTestTriggerSyncController(mgr ctrl.Manager, store TestTriggerStore) error {
@@ -33,9 +33,8 @@ func testTriggerSyncReconciler(client client.Reader, store TestTriggerStore) rec
 		switch {
 		case errors.IsNotFound(err):
 			// Deleted, request deletion from store.
-			// Passing the name here rather than the namespaced name as generally we refer to objects
-			// purely by their name.
-			if err := store.DeleteTestTrigger(ctx, req.Name); err != nil {
+			// Passing the namespace too, as the manager may watch more than one namespace.
+			if err := store.DeleteTestTrigger(ctx, req.Name, req.Namespace); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete TestTrigger %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil
@@ -51,9 +50,8 @@ func testTriggerSyncReconciler(client client.Reader, store TestTriggerStore) rec
 		// there is no going back so we know this resource is about to be deleted.
 		if !trigger.DeletionTimestamp.IsZero() {
 			// About to be deleted, request deletion from store.
-			// Passing the name here rather than the namespaced name as generally we refer to objects
-			// purely by their name.
-			if err := store.DeleteTestTrigger(ctx, req.Name); err != nil {
+			// Passing the namespace too, as the manager may watch more than one namespace.
+			if err := store.DeleteTestTrigger(ctx, req.Name, req.Namespace); err != nil {
 				return ctrl.Result{}, terminalOnRejection(fmt.Errorf("delete TestTrigger %q from store: %w", req.Name, err))
 			}
 			return ctrl.Result{}, nil

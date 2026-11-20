@@ -8,11 +8,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
@@ -342,4 +344,27 @@ func TestWorkflowExecutionExecutorController(t *testing.T) {
 		})
 	}
 
+}
+
+func TestInNamespace(t *testing.T) {
+	newExecution := func(namespace string) *testworkflowsv1.TestWorkflowExecution {
+		return &testworkflowsv1.TestWorkflowExecution{ObjectMeta: metav1.ObjectMeta{Name: "execution", Namespace: namespace}}
+	}
+	p := inNamespace("testkube")
+	tests := []struct {
+		name      string
+		namespace string
+		want      bool
+	}{
+		{name: "an object in the agent namespace passes", namespace: "testkube", want: true},
+		{name: "an object in another namespace is filtered out", namespace: "other", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			obj := newExecution(tt.namespace)
+			assert.Equal(t, tt.want, p.Create(event.CreateEvent{Object: obj}), "create")
+			assert.Equal(t, tt.want, p.Update(event.UpdateEvent{ObjectOld: obj, ObjectNew: obj}), "update")
+			assert.Equal(t, tt.want, p.Delete(event.DeleteEvent{Object: obj}), "delete")
+		})
+	}
 }
