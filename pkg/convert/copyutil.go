@@ -82,6 +82,35 @@ func formatTimestamp(t time.Time) string {
 	return t.Format(timestampLayout)
 }
 
+// copyField is one value of a COPY row, with the column that it belongs to. The
+// value is the final field text: escaped, formatted, or the NULL sentinel.
+type copyField struct {
+	column string
+	value  string
+}
+
+// writeCopyRow writes one COPY text row. It fails when the fields do not name
+// the columns of the table in the same order. COPY reads fields by position, so
+// without this check a moved or missing value lands in a different column.
+func writeCopyRow(w io.Writer, columns []string, fields []copyField) error {
+	if len(fields) != len(columns) {
+		return fmt.Errorf("COPY row has %d fields for %d columns", len(fields), len(columns))
+	}
+	var row strings.Builder
+	for i, field := range fields {
+		if field.column != columns[i] {
+			return fmt.Errorf("COPY row has the field %q at the position of the column %q", field.column, columns[i])
+		}
+		if i > 0 {
+			row.WriteByte('\t')
+		}
+		row.WriteString(field.value)
+	}
+	row.WriteByte('\n')
+	_, err := io.WriteString(w, row.String())
+	return err
+}
+
 // copyFrom streams r into tableName via COPY FROM STDIN. An empty reader is
 // valid and copies zero rows.
 func copyFrom(ctx context.Context, tx pgx.Tx, tableName string, r io.Reader, columns ...string) (int64, error) {
