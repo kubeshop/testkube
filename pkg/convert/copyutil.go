@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"time"
 
@@ -80,6 +81,11 @@ func formatTimestamp(t time.Time) string {
 		return copyNull
 	}
 	return t.Format(timestampLayout)
+}
+
+// formatInt renders an integer for a numeric column.
+func formatInt[T int32 | int64](v T) string {
+	return strconv.FormatInt(int64(v), 10)
 }
 
 // copyField is one value of a COPY row, with the column that it belongs to. The

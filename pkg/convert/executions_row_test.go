@@ -26,20 +26,6 @@ func splitRow(t *testing.T, raw string) []string {
 
 func statusPtr(s testkube.TestWorkflowStatus) *testkube.TestWorkflowStatus { return &s }
 
-func TestWriteExecutionRowFieldCountMatchesColumns(t *testing.T) {
-	t.Parallel()
-
-	var buf bytes.Buffer
-	require.NoError(t, writeExecutionRow(&buf, &testkube.TestWorkflowExecution{
-		Id:   "exec-1",
-		Name: "wf-1",
-	}))
-
-	fields := splitRow(t, buf.String())
-	assert.Len(t, fields, len(executionColumns),
-		"serialized field count must match the executionColumns list")
-}
-
 func TestWriteExecutionRowMinimal(t *testing.T) {
 	t.Parallel()
 

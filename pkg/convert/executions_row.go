@@ -116,7 +116,7 @@ func writeExecutionRow(w io.Writer, exec *testkube.TestWorkflowExecution) error 
 	if exec.Lineage != nil {
 		lineageBaseID = escapeCopyValue(exec.Lineage.BaseId)
 		lineageRootID = escapeCopyValue(exec.Lineage.RootId)
-		lineageAttempt = strconv.FormatInt(int64(exec.Lineage.Attempt), 10)
+		lineageAttempt = formatInt(exec.Lineage.Attempt)
 	}
 
 	return writeCopyRow(w, executionColumns, []copyField{
@@ -127,7 +127,7 @@ func writeExecutionRow(w io.Writer, exec *testkube.TestWorkflowExecution) error 
 		{"runner_original_target", escapeJSONB(runnerOriginalTarget)},
 		{"name", escapeCopyValue(exec.Name)},
 		{"namespace", escapeCopyValue(exec.Namespace)},
-		{"number", strconv.FormatInt(int64(exec.Number), 10)},
+		{"number", formatInt(exec.Number)},
 		{"scheduled_at", formatTimestamp(exec.ScheduledAt)},
 		{"assigned_at", formatTimestamp(exec.AssignedAt)},
 		{"status_at", formatTimestamp(exec.StatusAt)},
@@ -177,7 +177,7 @@ func writeSignatureRows(w io.Writer, executionID string, signatures []testkube.T
 			{"optional", strconv.FormatBool(sig.Optional)},
 			{"negative", strconv.FormatBool(sig.Negative)},
 			{"parent_id", parent},
-			{"sig_order", strconv.FormatInt(int64(*order), 10)},
+			{"sig_order", formatInt(*order)},
 			{"id", id},
 		})
 		if err != nil {
@@ -231,9 +231,9 @@ func writeResultRow(w io.Writer, executionID string, result *testkube.TestWorkfl
 		{"finished_at", formatTimestamp(result.FinishedAt)},
 		{"duration", escapeCopyValue(result.Duration)},
 		{"total_duration", escapeCopyValue(result.TotalDuration)},
-		{"duration_ms", strconv.FormatInt(int64(result.DurationMs), 10)},
-		{"paused_ms", strconv.FormatInt(int64(result.PausedMs), 10)},
-		{"total_duration_ms", strconv.FormatInt(int64(result.TotalDurationMs), 10)},
+		{"duration_ms", formatInt(result.DurationMs)},
+		{"paused_ms", formatInt(result.PausedMs)},
+		{"total_duration_ms", formatInt(result.TotalDurationMs)},
 		{"pauses", escapeJSONB(pauses)},
 		{"initialization", escapeJSONB(initialization)},
 		{"steps", escapeJSONB(steps)},
@@ -254,7 +254,7 @@ func writeOutputRow(w io.Writer, executionID string, output *testkube.TestWorkfl
 		{"ref", escapeCopyValue(output.Ref)},
 		{"name", escapeCopyValue(output.Name)},
 		{"value", escapeJSONB(value)},
-		{"out_order", strconv.FormatInt(int64(order), 10)},
+		{"out_order", formatInt(order)},
 	})
 }
 
@@ -270,7 +270,7 @@ func writeReportRow(w io.Writer, executionID string, report *testkube.TestWorkfl
 		{"kind", escapeCopyValue(report.Kind)},
 		{"file", escapeCopyValue(report.File)},
 		{"summary", escapeJSONB(summary)},
-		{"rep_order", strconv.FormatInt(int64(order), 10)},
+		{"rep_order", formatInt(order)},
 	})
 }
 
