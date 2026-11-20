@@ -74,29 +74,29 @@ func TestCheckSelfRegistrationSecretWritable(t *testing.T) {
 		name        string
 		createErrs  []error
 		updateErrs  []error
-		wantErr     error
+		wantErr     func(error) bool
 		wantCreates int
 		wantUpdates int
 	}{
-		{name: "creates an empty secret", wantCreates: 1},
+		{name: "creates an empty secret, then checks update", wantCreates: 1, wantUpdates: 1},
+		{name: "update forbidden after create fails before registration",
+			updateErrs: []error{errSecretForbidden}, wantErr: k8serrors.IsForbidden, wantCreates: 1, wantUpdates: 1},
 		{name: "existing managed secret is updated without data", createErrs: []error{errSecretExists}, wantCreates: 1, wantUpdates: 1},
-		{name: "transient error is retried", createErrs: []error{errSecretConnReset}, wantCreates: 2},
-		{name: "forbidden fails before registration", createErrs: []error{errSecretForbidden}, wantCreates: 1},
+		{name: "transient error is retried", createErrs: []error{errSecretConnReset}, wantCreates: 2, wantUpdates: 1},
+		{name: "create forbidden fails before registration", createErrs: []error{errSecretForbidden}, wantErr: k8serrors.IsForbidden, wantCreates: 1},
 		{name: "existing unmanaged secret fails before registration",
 			createErrs: []error{errSecretExists}, updateErrs: []error{secretmanager.ErrNotFound},
-			wantErr: errSelfRegistrationSecretNotManaged, wantCreates: 1, wantUpdates: 1},
+			wantErr: func(err error) bool { return errors.Is(err, errSelfRegistrationSecretNotManaged) }, wantCreates: 1, wantUpdates: 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sm := &fakeSecretWriter{createErrs: tt.createErrs, updateErrs: tt.updateErrs, lastData: testSecretData}
 			err := CheckSelfRegistrationSecretWritable(context.Background(), &countingLogger{}, sm, "ns", "self-registration",
 				SelfRegistrationOptions{Backoff: testSecretBackoff})
-			switch {
-			case tt.wantErr != nil:
-				require.ErrorIs(t, err, tt.wantErr)
-			case len(tt.createErrs) > 0 && tt.createErrs[0] == errSecretForbidden:
+			if tt.wantErr != nil {
 				require.Error(t, err)
-			default:
+				assert.True(t, tt.wantErr(err), "unexpected error: %v", err)
+			} else {
 				require.NoError(t, err)
 			}
 			// nil data: Create makes an empty secret and Update keeps the existing data.

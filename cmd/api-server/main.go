@@ -315,7 +315,8 @@ func main() {
 				// Re-registering under the same name is refused by the Control Plane on purpose. This usually
 				// means an earlier start registered the runner but its credentials secret is missing.
 				log.DefaultLogger.Fatalw("runner already registered; use a different name, or check that the "+
-					"self-registration secret exists and holds TESTKUBE_PRO_API_KEY and TESTKUBE_PRO_AGENT_ID; "+
+					"self-registration secret holds non-empty TESTKUBE_PRO_API_KEY and TESTKUBE_PRO_AGENT_ID (an empty secret means "+
+					"the credentials were never saved); "+
 					"if the secret is lost, delete the runner in the Control Plane UI so it can register again",
 					"runner_name", runnerName,
 					"organization_id", cfg.TestkubeProOrgID,

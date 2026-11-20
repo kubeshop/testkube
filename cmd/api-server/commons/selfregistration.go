@@ -74,6 +74,20 @@ func PersistSelfRegistrationSecret(
 	data map[string]string,
 	opts SelfRegistrationOptions,
 ) error {
+	return persistSelfRegistrationSecret(ctx, log, sm, namespace, name, data, opts, false)
+}
+
+// persistSelfRegistrationSecret implements PersistSelfRegistrationSecret. With alwaysUpdate, a
+// successful Create is followed by an Update, so both verbs the post-register write may need are exercised.
+func persistSelfRegistrationSecret(
+	ctx context.Context,
+	log SelfRegistrationLogger,
+	sm SelfRegistrationSecretWriter,
+	namespace, name string,
+	data map[string]string,
+	opts SelfRegistrationOptions,
+	alwaysUpdate bool,
+) error {
 	writeTimeout := opts.WriteTimeout
 	if writeTimeout <= 0 {
 		writeTimeout = selfRegistrationWriteTimeout
@@ -84,7 +98,7 @@ func PersistSelfRegistrationSecret(
 	attempts := len(backoff) + 1
 	for attempt := 1; attempt <= attempts; attempt++ {
 		attemptCtx, cancel := context.WithTimeout(ctx, writeTimeout)
-		lastErr = writeSelfRegistrationSecret(attemptCtx, sm, namespace, name, fullName, data)
+		lastErr = writeSelfRegistrationSecret(attemptCtx, sm, namespace, name, fullName, data, alwaysUpdate)
 		cancel()
 		if lastErr == nil {
 			if attempt > 1 {
@@ -115,6 +129,8 @@ func PersistSelfRegistrationSecret(
 // updates it without touching its data, using the same retries and error classification as
 // PersistSelfRegistrationSecret. Configuration, RBAC and ownership problems then surface while the
 // Control Plane has no runner yet, so fixing them needs no cleanup in the Control Plane UI.
+// It always ends with an Update (also after a successful Create): once the secret exists, the
+// post-register write is Create (AlreadyExists) then Update, so a Role without get/update must fail here.
 // An empty secret loaded through envFrom leaves TESTKUBE_PRO_API_KEY empty, so the next start
 // still registers and PersistSelfRegistrationSecret fills the secret in.
 func CheckSelfRegistrationSecretWritable(
@@ -124,13 +140,16 @@ func CheckSelfRegistrationSecretWritable(
 	namespace, name string,
 	opts SelfRegistrationOptions,
 ) error {
-	return PersistSelfRegistrationSecret(ctx, log, sm, namespace, name, nil, opts)
+	return persistSelfRegistrationSecret(ctx, log, sm, namespace, name, nil, opts, true)
 }
 
-func writeSelfRegistrationSecret(ctx context.Context, sm SelfRegistrationSecretWriter, namespace, name, fullName string, data map[string]string) error {
+func writeSelfRegistrationSecret(ctx context.Context, sm SelfRegistrationSecretWriter, namespace, name, fullName string, data map[string]string, alwaysUpdate bool) error {
 	_, err := sm.Create(ctx, namespace, name, data, secretmanager.CreateOptions{})
-	if err == nil || !k8serrors.IsAlreadyExists(err) {
+	if err != nil && !k8serrors.IsAlreadyExists(err) {
 		return err
+	}
+	if err == nil && !alwaysUpdate {
+		return nil
 	}
 	// Left over from an earlier attempt or a previous registration: overwrite with the new credentials.
 	// With nil data (the pre-flight check) the secret manager keeps the existing data.
