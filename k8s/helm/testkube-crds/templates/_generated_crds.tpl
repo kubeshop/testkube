@@ -98,9 +98,21 @@ spec:
                   omitted, the agent's links are left as they are.
                 properties:
                   resourceGroups:
-                    description: ResourceGroups linked to the agent, by slug.
+                    description: |-
+                      ResourceGroups linked to the agent. This is how an agent joins a
+                      resource group: the testkube.io/group label a Test Workflow uses is
+                      refused on an agent, since an agent can join several.
                     items:
-                      type: string
+                      description: AIAgentResourceGroup refers to a resource group
+                        of the organization.
+                      properties:
+                        name:
+                          description: Name is the resource group's slug.
+                          minLength: 1
+                          type: string
+                      required:
+                      - name
+                      type: object
                     type: array
                   roles:
                     description: |-
@@ -134,20 +146,29 @@ spec:
                 type: object
               mcpServers:
                 description: |-
-                  MCPServers are the MCP servers the agent uses, each once. The
-                  built-in Testkube MCP server is "testkube"; when it is left out, the
-                  agent keeps its link to it as it is (the default tools for a new
-                  agent).
+                  MCPServers are the MCP servers the agent uses, each once. Applying a
+                  list replaces the agent's links, so a server left out is unlinked, and
+                  an empty list unlinks them all. When mcpServers is omitted, the
+                  agent's links are left as they are, as with skills and access. The
+                  built-in Testkube MCP server is "testkube"; when it is left out of a
+                  list, the agent keeps its link to it as it is (the default tools for a
+                  new agent).
                 items:
                   description: AIAgentMCPServer is an AI Agent's link to an MCP server.
                   properties:
-                    credentialReference:
+                    headers:
+                      additionalProperties:
+                        type: string
                       description: |-
-                        CredentialReference names the Environment Credential holding the
-                        headers to sign in with, as secret://<name>. It is only valid with
-                        shared_key; a shared_key link without one keeps the key set in the
-                        dashboard.
-                      type: string
+                        Headers are sent to the server to sign in, only with shared_key. A
+                        value reads an Environment Credential as {{`{{`}} credential("name") {{`}}`}}, as
+                        webhook headers do, such as Authorization set to
+                        'Bearer {{`{{`}} credential("github-token") {{`}}`}}'. A header that carries a
+                        credential (Authorization, Cookie, or a name with token, secret or key
+                        in it) has to read one, so no key is written in the manifest. A
+                        shared_key link without headers keeps the key it has, such as one set
+                        in the dashboard.
+                      type: object
                     name:
                       description: |-
                         Name is the MCPServer's metadata.name, or "testkube" for the built-in
@@ -315,8 +336,8 @@ spec:
       openAPIV3Schema:
         description: |-
           LLMProvider is a model provider an environment brings its own key for.
-          metadata.name is its slug. The key is never part of the manifest: it is
-          named by credentialReference and stays in the Control Plane.
+          metadata.name is its slug. The key is never part of the manifest: apiKey
+          reads it from an Environment Credential, which stays in the Control Plane.
         properties:
           apiVersion:
             description: |-
@@ -339,14 +360,14 @@ spec:
             description: LLMProviderSpec is how to reach a provider and which of its
               models to offer.
             properties:
+              apiKey:
+                description: |-
+                  APIKey reads the provider's key from an Environment Credential, as
+                  {{`{{`}} credential("name") {{`}}`}} and nothing else. Without it the provider has
+                  no key.
+                type: string
               baseUrl:
                 description: BaseURL overrides the provider's default endpoint.
-                type: string
-              credentialReference:
-                description: |-
-                  CredentialReference names the Environment Credential holding the key:
-                  secret://<name> (or a bare name) for a credential, vault://<path> for
-                  a Vault secret.
                 type: string
               displayName:
                 description: |-

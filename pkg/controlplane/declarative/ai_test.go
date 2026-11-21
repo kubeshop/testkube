@@ -1,6 +1,7 @@
 package declarative
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -23,13 +24,73 @@ func TestNormalize_AIDefaults(t *testing.T) {
 	agent := &aiv1.AIAgent{Spec: aiv1.AIAgentSpec{
 		DisplayName:  "  Triage  ",
 		Instructions: "Triage.",
-		Access:       &aiv1.AIAgentAccess{Roles: []string{"write", "read"}, ResourceGroups: []string{"b", "a"}},
+		Access:       &aiv1.AIAgentAccess{Roles: []string{"write", "read"}, ResourceGroups: []aiv1.AIAgentResourceGroup{{Name: "b"}, {Name: "a"}}},
 	}}
 	agent.Name = "triage"
 	require.NoError(t, Normalize(agent))
 	assert.Equal(t, "Triage", agent.Spec.DisplayName)
 	assert.Equal(t, []string{"read", "write"}, agent.Spec.Access.Roles, "sorted as the Control Plane returns them")
-	assert.Equal(t, []string{"a", "b"}, agent.Spec.Access.ResourceGroups)
+	assert.Equal(t, []aiv1.AIAgentResourceGroup{{Name: "a"}, {Name: "b"}}, agent.Spec.Access.ResourceGroups)
+
+	agent.Spec.Access.ResourceGroups = []aiv1.AIAgentResourceGroup{{Name: "a"}, {Name: ""}, {Name: "a"}}
+	err := Normalize(agent)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "spec.access.resourceGroups[1].name: Required value")
+	assert.Contains(t, err.Error(), "Duplicate value")
+}
+
+// The label a Test Workflow joins a resource group with is refused on every AI
+// kind rather than dropped, and the other labels are left alone.
+func TestNormalize_AIKindsRefuseTheGroupLabel(t *testing.T) {
+	grouped := metav1.ObjectMeta{Name: "x", Labels: map[string]string{ResourceGroupLabel: "payments", "kustomize.toolkit.fluxcd.io/name": "apps"}}
+	for name, obj := range map[string]Object{
+		"agent":    &aiv1.AIAgent{ObjectMeta: grouped, Spec: aiv1.AIAgentSpec{Instructions: "Do things."}},
+		"server":   &aiv1.MCPServer{ObjectMeta: grouped, Spec: aiv1.MCPServerSpec{URL: "https://example.com/mcp"}},
+		"provider": &aiv1.LLMProvider{ObjectMeta: grouped, Spec: aiv1.LLMProviderSpec{Provider: "openai"}},
+	} {
+		err := Normalize(obj)
+		require.Error(t, err, name)
+		assert.Contains(t, err.Error(), "metadata.labels[testkube.io/group]", name)
+		assert.NotContains(t, err.Error(), "fluxcd", name)
+	}
+	agent := &aiv1.AIAgent{ObjectMeta: metav1.ObjectMeta{Name: "x", Labels: map[string]string{"kustomize.toolkit.fluxcd.io/name": "apps"}}, Spec: aiv1.AIAgentSpec{Instructions: "Do things."}}
+	require.NoError(t, Normalize(agent))
+}
+
+// An agent that leaves mcpServers out keeps its links, while mcpServers: []
+// removes them, so nil and empty have to survive decoding, normalizing and the
+// apply payload, as they do for skills.
+func TestAIAgentMCPServers_AbsentAndEmptyDiffer(t *testing.T) {
+	const head = "apiVersion: ai.testkube.io/v1alpha1\nkind: AIAgent\nmetadata:\n  name: helper\nspec:\n  instructions: Help.\n"
+	for name, tc := range map[string]struct {
+		yaml    string
+		nil     bool
+		payload string
+	}{
+		"absent": {yaml: head, nil: true},
+		"null":   {yaml: head + "  mcpServers: null\n", nil: true},
+		"empty":  {yaml: head + "  mcpServers: []\n", nil: false, payload: `"mcpServers":[]`},
+	} {
+		t.Run(name, func(t *testing.T) {
+			objects, err := Decode(strings.NewReader(tc.yaml))
+			require.NoError(t, err)
+			require.Len(t, objects, 1)
+			require.NoError(t, Normalize(objects[0]))
+			agent := objects[0].(*aiv1.AIAgent)
+			assert.Equal(t, tc.nil, agent.Spec.MCPServers == nil)
+
+			payload, err := ApplyPayload(agent)
+			require.NoError(t, err)
+			if tc.payload == "" {
+				assert.NotContains(t, string(payload), "mcpServers", "an absent list is not sent as null or []")
+			} else {
+				assert.Contains(t, string(payload), tc.payload)
+			}
+			sent, err := DecodeObject(payload)
+			require.NoError(t, err)
+			assert.Equal(t, tc.nil, sent.(*aiv1.AIAgent).Spec.MCPServers == nil, "the Control Plane reads what was applied")
+		})
+	}
 }
 
 // Credentials are taken as written, as the REST API and Test Workflows take
@@ -38,7 +99,7 @@ func TestNormalize_AcceptsLiteralCredentials(t *testing.T) {
 	p := &aiv1.LLMProvider{Spec: aiv1.LLMProviderSpec{
 		Provider:     "azure",
 		BaseURL:      "https://example.openai.azure.com/openai?sv=2024-01-01&sig=c2lnbmF0dXJl",
-		ExtraHeaders: map[string]string{"X-Api-Key": "sk-live-123", "Authorization": "Bearer sk-live-123"},
+		ExtraHeaders: map[string]string{"X-Api-Key": "sk-live-123"},
 		QueryParams:  map[string]string{"sig": "c2lnbmF0dXJl"},
 		Models: []aiv1.LLMProviderModel{{
 			Name:         "gpt-4o",
@@ -70,6 +131,23 @@ func TestNormalize_AcceptsTheExportedPlaceholder(t *testing.T) {
 	require.Error(t, Normalize(p), "a header that is never forwarded stays refused")
 }
 
+// The Control Plane sends the key as Authorization and refuses the header, so
+// the dry run refuses it too, at the provider and at a model.
+func TestNormalize_LLMProviderRefusesAuthorizationHeader(t *testing.T) {
+	for _, headers := range []map[string]string{{"Authorization": "Bearer sk-live-123"}, {"authorization": RedactedValue}} {
+		p := &aiv1.LLMProvider{Spec: aiv1.LLMProviderSpec{Provider: "openai", ExtraHeaders: headers}}
+		p.Name = "openai"
+		err := Normalize(p)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "is set from apiKey")
+		assert.NotContains(t, err.Error(), "sk-live-123")
+
+		p.Spec.ExtraHeaders = nil
+		p.Spec.Models = []aiv1.LLMProviderModel{{Name: "gpt-4o", ExtraHeaders: headers}}
+		require.Error(t, Normalize(p))
+	}
+}
+
 func TestIsCredentialField(t *testing.T) {
 	for _, name := range []string{"Authorization", "Proxy-Authorization", "Cookie", "X-Api-Key", "api_key", "key", "x-goog-api-key", "X-Auth-Token", "client_secret", "password", "sig.key", "X-Amz-Signature", "sig", "SIG", "x-ms-sig", "key=sk-live-123", "X-Api-Key: sk-live-123", "sig=abc"} {
 		assert.True(t, IsCredentialField(name), name)
@@ -79,31 +157,89 @@ func TestIsCredentialField(t *testing.T) {
 	}
 }
 
-func TestCredentialReference(t *testing.T) {
-	for ref, want := range map[string][2]string{
-		"secret://github-token": {"github-token", "credential"},
-		"github-token":          {"github-token", "credential"},
-		"vault://kv/openai":     {"kv/openai", "vault"},
+func TestCredentialNames(t *testing.T) {
+	for value, want := range map[string][]string{
+		"plain":                                             nil,
+		`{{ credential("github-token") }}`:                  {"github-token"},
+		`Bearer {{credential("github-token")}}`:             {"github-token"},
+		`{{ credential("user") }}:{{ credential("pass") }}`: {"user", "pass"},
 	} {
-		name, source := ParseCredentialReference(ref)
-		assert.Equal(t, want, [2]string{name, source}, ref)
+		names, ok := CredentialNames(value)
+		assert.True(t, ok, value)
+		assert.Equal(t, want, names, value)
 	}
-	path := fieldPath("credentialReference")
-	assert.Empty(t, validateCredentialReference("secret://github-token", false, path))
-	assert.Empty(t, validateCredentialReference("vault://kv/openai", true, path))
-	assert.NotEmpty(t, validateCredentialReference("vault://kv/openai", false, path), "only providers read Vault")
-	assert.NotEmpty(t, validateCredentialReference("secret://", false, path))
-	assert.NotEmpty(t, validateCredentialReference("sk-live 123", false, path))
+	for _, value := range []string{`{{ env("TOKEN") }}`, `{{ credential("bad name") }}`, `{{ credential("") }}`, `Bearer {{ credential("a") }} }}`, `{{ credential('a') }}`} {
+		_, ok := CredentialNames(value)
+		assert.False(t, ok, value)
+	}
+}
+
+func TestAPIKeyCredential(t *testing.T) {
+	for value, want := range map[string]string{
+		`{{ credential("openai-key") }}`: "openai-key",
+		` {{credential("openai-key")}} `: "openai-key",
+	} {
+		name, ok := APIKeyCredential(value)
+		assert.True(t, ok, value)
+		assert.Equal(t, want, name)
+	}
+	for _, value := range []string{"sk-live-123", "vault://kv/openai", "secret://openai-key", `Bearer {{ credential("openai-key") }}`, `{{ credential("a") }}{{ credential("b") }}`} {
+		_, ok := APIKeyCredential(value)
+		assert.False(t, ok, value)
+	}
+	assert.Equal(t, `{{ credential("openai-key") }}`, CredentialExpression("openai-key"))
+}
+
+func TestExpandCredentials(t *testing.T) {
+	values := map[string]string{"user": "alice", "pass": "hunter2"}
+	resolve := func(name string) (string, error) {
+		if v, ok := values[name]; ok {
+			return v, nil
+		}
+		return "", errors.New("no such credential")
+	}
+	got, err := ExpandCredentials(`Basic {{ credential("user") }}:{{credential("pass")}}`, resolve)
+	require.NoError(t, err)
+	assert.Equal(t, "Basic alice:hunter2", got)
+	got, err = ExpandCredentials("2022-11-28", resolve)
+	require.NoError(t, err)
+	assert.Equal(t, "2022-11-28", got)
+	_, err = ExpandCredentials(`Bearer {{ credential("missing") }}`, resolve)
+	require.Error(t, err)
+	_, err = ExpandCredentials(`{{ env("TOKEN") }}`, resolve)
+	require.Error(t, err)
+}
+
+func TestValidateSignInHeaders(t *testing.T) {
+	path := fieldPath("headers")
+	assert.Empty(t, ValidateSignInHeaders(map[string]string{
+		"Authorization":        `Bearer {{ credential("github-token") }}`,
+		"X-Api-Key":            `{{ credential("api-key") }}`,
+		"X-GitHub-Api-Version": "2022-11-28",
+	}, path))
+	for name, headers := range map[string]map[string]string{
+		"literal key":      {"Authorization": "Bearer ghp_abc123"},
+		"literal api key":  {"X-Api-Key": "ghp_abc123"},
+		"other expression": {"X-Trace": `{{ env("ghp_abc123") }}`},
+		"never sent":       {"Host": "example.com"},
+		"empty name":       {"": "x"},
+	} {
+		errs := ValidateSignInHeaders(headers, path)
+		require.NotEmpty(t, errs, name)
+		assert.NotContains(t, errs.ToAggregate().Error(), "ghp_abc123", name)
+	}
 }
 
 // A refused value may be the secret itself, and errors end up in terminal and
 // CI logs, so none is echoed.
 func TestRefusedSecretsAreNotEchoed(t *testing.T) {
 	path := fieldPath("x")
-	for _, ref := range []string{"Bearer ghp_abc123", "vault://ghp_abc123"} {
-		errs := validateCredentialReference(ref, false, path)
-		require.NotEmpty(t, errs, ref)
-		assert.NotContains(t, errs.ToAggregate().Error(), "ghp_abc123")
+	for _, key := range []string{"Bearer ghp_abc123", "vault://ghp_abc123", "ghp_abc123"} {
+		p := &aiv1.LLMProvider{Spec: aiv1.LLMProviderSpec{Provider: "openai", APIKey: key}}
+		p.Name = "openai"
+		err := Normalize(p)
+		require.Error(t, err, key)
+		assert.NotContains(t, err.Error(), "ghp_abc123")
 	}
 	for _, raw := range []string{
 		"ftp://user:hunter2@example.com/mcp",
