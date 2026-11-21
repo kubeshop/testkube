@@ -23,7 +23,9 @@ spec:
           enabled: true
     - name: github
       signIn: shared_key
-      credentialReference: secret://github-mcp-token
+      headers:
+        Authorization: 'Bearer {{ credential("github-mcp-token") }}'
+        X-GitHub-Api-Version: "2022-11-28"
       tools:
         create_issue:
           enabled: true
@@ -33,7 +35,8 @@ spec:
       signIn: obo
   access:
     roles: [write, read]
-    resourceGroups: [payments]
+    resourceGroups:
+      - name: payments
   skills:
     - name: flaky-triage
       description: Use when an execution failed only some of the time.

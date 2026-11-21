@@ -33,15 +33,81 @@ const (
 // would make a wildcard deployment and "," splits the Sandbox's model list.
 var llmModelNamePattern = regexp.MustCompile(`^[A-Za-z0-9._:/@-]+$`)
 
-// Credential reference schemes. A bare name is a credential too.
-const (
-	credentialScheme = "secret://"
-	vaultScheme      = "vault://"
-)
+// ResourceGroupLabel puts a Test Workflow in a resource group. The AI kinds
+// refuse it rather than drop it: an AI Agent joins resource groups through
+// spec.access.resourceGroups, and the other AI kinds belong to none.
+const ResourceGroupLabel = "testkube.io/group"
 
-// forbiddenHeaders are headers the Control Plane never forwards to a provider:
-// they would redirect the request or reach a cloud metadata service.
+// forbiddenHeaders are headers the Control Plane never sends to a server, as a
+// provider's extra headers or an AI Agent's sign-in headers: they would
+// redirect the request or reach a cloud metadata service.
 var forbiddenHeaders = []string{"host", "transfer-encoding", "content-length", "metadata-flavor", "x-aws-ec2-metadata-token", "x-goog-metadata-request", "x-gce-metadata-flavor", "x-azure-fed-token-request"}
+
+// authorizationHeader is never an LLM provider's extra header: the Control
+// Plane sends the provider's key as Authorization itself.
+const authorizationHeader = "authorization"
+
+// credentialExpressionPattern is one {{ credential("name") }} in a value, the
+// way a Test Workflow or a webhook reads an Environment Credential.
+var credentialExpressionPattern = regexp.MustCompile(`\{\{\s*credential\(\s*"([^"]*)"\s*\)\s*\}\}`)
+
+// CredentialExpression is the value that reads the named Environment
+// Credential, as an export writes it.
+func CredentialExpression(name string) string {
+	return `{{ credential("` + name + `") }}`
+}
+
+// CredentialNames returns the Environment Credentials a value reads, in order,
+// one for each {{ credential("name") }} in it. ok is false when the value holds
+// any other expression, or names a credential no credential can be named.
+func CredentialNames(value string) (names []string, ok bool) {
+	for _, match := range credentialExpressionPattern.FindAllStringSubmatch(value, -1) {
+		if !credentialNamePattern.MatchString(match[1]) {
+			return nil, false
+		}
+		names = append(names, match[1])
+	}
+	rest := credentialExpressionPattern.ReplaceAllString(value, "")
+	if strings.Contains(rest, "{{") || strings.Contains(rest, "}}") {
+		return nil, false
+	}
+	return names, true
+}
+
+// ExpandCredentials returns value with each {{ credential("name") }} replaced
+// by what resolve returns for the name. The Control Plane reads an AI Agent's
+// sign-in headers this way when the agent signs in.
+func ExpandCredentials(value string, resolve func(name string) (string, error)) (string, error) {
+	if _, ok := CredentialNames(value); !ok {
+		return "", fmt.Errorf("a value may read a credential only as %s", CredentialExpression("name"))
+	}
+	var resolveErr error
+	expanded := credentialExpressionPattern.ReplaceAllStringFunc(value, func(expr string) string {
+		if resolveErr != nil {
+			return ""
+		}
+		resolved, err := resolve(credentialExpressionPattern.FindStringSubmatch(expr)[1])
+		if err != nil {
+			resolveErr = err
+			return ""
+		}
+		return resolved
+	})
+	if resolveErr != nil {
+		return "", resolveErr
+	}
+	return expanded, nil
+}
+
+// APIKeyCredential returns the Environment Credential an LLM provider's apiKey
+// reads. ok is false unless the value is a single {{ credential("name") }}.
+func APIKeyCredential(apiKey string) (name string, ok bool) {
+	names, ok := CredentialNames(apiKey)
+	if !ok || len(names) != 1 || strings.TrimSpace(apiKey) != strings.TrimSpace(credentialExpressionPattern.FindString(apiKey)) {
+		return "", false
+	}
+	return names[0], true
+}
 
 // AgentRoles are the environment roles an AI Agent can be linked to.
 var AgentRoles = []string{"admin", "read", "run", "write"}
@@ -87,19 +153,6 @@ func isCredentialName(n string) bool {
 	return false
 }
 
-// ParseCredentialReference splits a credentialReference into the name it
-// names and its source: "credential" for secret://<name> or a bare name, and
-// "vault" for vault://<path>.
-func ParseCredentialReference(ref string) (name, source string) {
-	if after, ok := strings.CutPrefix(ref, credentialScheme); ok {
-		return after, "credential"
-	}
-	if after, ok := strings.CutPrefix(ref, vaultScheme); ok {
-		return after, "vault"
-	}
-	return ref, "credential"
-}
-
 // ProposeName returns a metadata.name for an AI resource that has only a
 // display name, as one made before declarative AI resources existed: lower
 // case, with every run of other characters turned into one '-', and cut to
@@ -138,6 +191,16 @@ func validateAIName(name string, path *field.Path) field.ErrorList {
 	return errs
 }
 
+// refuseGroupLabel refuses the resource group label of a Test Workflow on an
+// AI kind, which would otherwise be dropped without a word. hint says what to
+// do instead.
+func refuseGroupLabel(labels map[string]string, hint string) field.ErrorList {
+	if _, ok := labels[ResourceGroupLabel]; !ok {
+		return nil
+	}
+	return field.ErrorList{field.Forbidden(field.NewPath("metadata", "labels").Key(ResourceGroupLabel), hint)}
+}
+
 func defaultDisplayName(displayName *string, name string) {
 	*displayName = strings.TrimSpace(*displayName)
 	if *displayName == "" {
@@ -151,6 +214,7 @@ func normalizeMCPServer(s *aiv1.MCPServer) field.ErrorList {
 	if s.Name == aiv1.BuiltinMCPServerName {
 		errs = append(errs, field.Invalid(namePath, s.Name, "is the name of the built-in Testkube MCP server"))
 	}
+	errs = append(errs, refuseGroupLabel(s.Labels, "MCP servers don't belong to resource groups; link the AI Agents that use the server to the group instead")...)
 	spec := &s.Spec
 	path := field.NewPath("spec")
 	defaultDisplayName(&spec.DisplayName, s.Name)
@@ -184,6 +248,7 @@ func normalizeMCPServer(s *aiv1.MCPServer) field.ErrorList {
 
 func normalizeLLMProvider(p *aiv1.LLMProvider) field.ErrorList {
 	errs := validateAIName(p.Name, field.NewPath("metadata", "name"))
+	errs = append(errs, refuseGroupLabel(p.Labels, "LLM providers don't belong to resource groups")...)
 	spec := &p.Spec
 	path := field.NewPath("spec")
 	defaultDisplayName(&spec.DisplayName, p.Name)
@@ -194,8 +259,10 @@ func normalizeLLMProvider(p *aiv1.LLMProvider) field.ErrorList {
 	if spec.BaseURL != "" {
 		errs = append(errs, validateHTTPURL(spec.BaseURL, path.Child("baseUrl"))...)
 	}
-	if spec.CredentialReference != "" {
-		errs = append(errs, validateCredentialReference(spec.CredentialReference, true, path.Child("credentialReference"))...)
+	if spec.APIKey != "" {
+		if _, ok := APIKeyCredential(spec.APIKey); !ok {
+			errs = append(errs, invalidSecret(path.Child("apiKey"), fmt.Sprintf("must read an Environment Credential, as %s; a key itself never goes in a manifest", CredentialExpression("name"))))
+		}
 	}
 	errs = append(errs, validateForwarded(spec.ExtraHeaders, true, path.Child("extraHeaders"))...)
 	errs = append(errs, validateForwarded(spec.QueryParams, false, path.Child("queryParams"))...)
@@ -234,6 +301,7 @@ func normalizeLLMProvider(p *aiv1.LLMProvider) field.ErrorList {
 
 func normalizeAIAgent(a *aiv1.AIAgent) field.ErrorList {
 	errs := validateAIName(a.Name, field.NewPath("metadata", "name"))
+	errs = append(errs, refuseGroupLabel(a.Labels, "an AI Agent joins resource groups through spec.access.resourceGroups, as [{name: <group>}]")...)
 	spec := &a.Spec
 	path := field.NewPath("spec")
 	defaultDisplayName(&spec.DisplayName, a.Name)
@@ -265,11 +333,11 @@ func normalizeAIAgent(a *aiv1.AIAgent) field.ErrorList {
 		default:
 			errs = append(errs, field.NotSupported(linkPath.Child("signIn"), link.SignIn, []string{aiv1.SignInNone, aiv1.SignInSharedKey, aiv1.SignInPerPerson, aiv1.SignInOBO}))
 		}
-		if link.CredentialReference != "" {
+		if len(link.Headers) > 0 {
 			if link.SignIn != aiv1.SignInSharedKey {
-				errs = append(errs, field.Forbidden(linkPath.Child("credentialReference"), "only a shared_key link signs in with a credential"))
+				errs = append(errs, field.Forbidden(linkPath.Child("headers"), "only a shared_key link signs in with headers"))
 			} else {
-				errs = append(errs, validateCredentialReference(link.CredentialReference, false, linkPath.Child("credentialReference"))...)
+				errs = append(errs, ValidateSignInHeaders(link.Headers, linkPath.Child("headers"))...)
 			}
 		}
 		for tool := range link.Tools {
@@ -288,7 +356,7 @@ func normalizeAIAgent(a *aiv1.AIAgent) field.ErrorList {
 				errs = append(errs, field.NotSupported(rolesPath.Index(i), role, AgentRoles))
 			}
 		}
-		errs = append(errs, normalizeNames(&spec.Access.ResourceGroups, accessPath.Child("resourceGroups"))...)
+		errs = append(errs, normalizeResourceGroups(spec.Access.ResourceGroups, accessPath.Child("resourceGroups"))...)
 	}
 
 	skills := make([]skillFields, 0, len(spec.Skills))
@@ -324,8 +392,8 @@ func normalizeNames(names *[]string, path *field.Path) field.ErrorList {
 
 // invalidSecret is an Invalid error that leaves the value out. Errors reach
 // the CLI's stderr, and from there terminal and CI logs, so a value refused
-// for possibly being, or holding, a secret is never echoed: a URL, a
-// credentialReference.
+// for possibly being, or holding, a secret is never echoed: a URL, an apiKey,
+// a sign-in header.
 func invalidSecret(path *field.Path, detail string) *field.Error {
 	return field.Invalid(path, field.OmitValueType{}, detail)
 }
@@ -340,24 +408,51 @@ func validateHTTPURL(raw string, path *field.Path) field.ErrorList {
 	return nil
 }
 
-// validateCredentialReference checks a reference names a credential rather
-// than holding one. allowVault admits vault://<path>, which only LLM providers
-// read. A refused reference may be the key itself, so it is never echoed.
-func validateCredentialReference(ref string, allowVault bool, path *field.Path) field.ErrorList {
-	name, source := ParseCredentialReference(ref)
-	if source == "vault" {
-		if !allowVault {
-			return field.ErrorList{invalidSecret(path, "must name an Environment Credential, as secret://<name>")}
+// normalizeResourceGroups sorts an AI Agent's resource groups by name, as the
+// Control Plane returns them, and refuses an empty or repeated one.
+func normalizeResourceGroups(groups []aiv1.AIAgentResourceGroup, path *field.Path) field.ErrorList {
+	var errs field.ErrorList
+	seen := map[string]bool{}
+	for i, group := range groups {
+		namePath := path.Index(i).Child("name")
+		switch {
+		case strings.TrimSpace(group.Name) == "":
+			errs = append(errs, field.Required(namePath, "the resource group's slug"))
+		case seen[group.Name]:
+			errs = append(errs, field.Duplicate(namePath, group.Name))
 		}
-		if name == "" || strings.ContainsAny(name, " \t\n") {
-			return field.ErrorList{invalidSecret(path, "must be vault://<path>")}
+		seen[group.Name] = true
+	}
+	slices.SortStableFunc(groups, func(a, b aiv1.AIAgentResourceGroup) int { return strings.Compare(a.Name, b.Name) })
+	return errs
+}
+
+// ValidateSignInHeaders checks the headers an AI Agent signs in to an MCP
+// server with. They are stored on the agent and exported as written, so no
+// value may be a key: a value reads an Environment Credential only as
+// {{ credential("name") }}, and a header that carries a credential has to read
+// one. The Control Plane applies the same rules to headers sent to its REST
+// API. A refused value may be the key itself, so it is never echoed.
+func ValidateSignInHeaders(headers map[string]string, path *field.Path) field.ErrorList {
+	var errs field.ErrorList
+	if len(headers) > MaxHeaderEntries {
+		errs = append(errs, field.TooMany(path, len(headers), MaxHeaderEntries))
+	}
+	for _, name := range sortedKeys(headers) {
+		namePath := path.Key(name)
+		names, ok := CredentialNames(headers[name])
+		switch {
+		case strings.TrimSpace(name) == "":
+			errs = append(errs, field.Required(namePath, "a header needs a name"))
+		case slices.Contains(forbiddenHeaders, strings.ToLower(name)):
+			errs = append(errs, field.Forbidden(namePath, "is a header the Control Plane does not send"))
+		case !ok:
+			errs = append(errs, invalidSecret(namePath, fmt.Sprintf("may read a credential only as %s", CredentialExpression("name"))))
+		case len(names) == 0 && IsCredentialField(name):
+			errs = append(errs, invalidSecret(namePath, fmt.Sprintf("carries a credential, so it has to read one, as 'Bearer %s'; a key itself never goes in a manifest", CredentialExpression("name"))))
 		}
-		return nil
 	}
-	if !credentialNamePattern.MatchString(name) {
-		return field.ErrorList{invalidSecret(path, "must name an Environment Credential, as secret://<name>; a key itself never goes in a manifest")}
-	}
-	return nil
+	return errs
 }
 
 // validateForwarded checks the headers or query parameters sent to a
@@ -377,8 +472,11 @@ func validateForwarded(values map[string]string, headers bool, path *field.Path)
 		return errs
 	}
 	for _, name := range sortedKeys(values) {
-		if slices.Contains(forbiddenHeaders, strings.ToLower(name)) {
+		switch lower := strings.ToLower(name); {
+		case slices.Contains(forbiddenHeaders, lower):
 			errs = append(errs, field.Forbidden(path.Key(name), "is a header the Control Plane does not forward"))
+		case lower == authorizationHeader:
+			errs = append(errs, field.Forbidden(path.Key(name), "is set from apiKey; the Control Plane does not take it from an extra header"))
 		}
 	}
 	return errs
