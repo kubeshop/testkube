@@ -162,6 +162,28 @@ tests:
               - list
               - watch
 
+  - it: lets a GitOps runner read the AI resources it syncs
+    set:
+      gitops.enabled: true
+      listener.watchAllNamespaces: true
+    documentSelector:
+      path: metadata.name
+      value: watchers-role-tk
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - ai.testkube.io
+            resources:
+              - aiagents
+              - mcpservers
+              - llmproviders
+            verbs:
+              - get
+              - list
+              - watch
+
   - it: does not let a listener alone read Boards
     set:
       listener.enabled: true

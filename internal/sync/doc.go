@@ -15,7 +15,7 @@
 // # Control Plane resources
 //
 // Control Plane resources, the kinds that live only in the Control Plane and are declared in the
-// registry of pkg/controlplane/declarative (an Insights Board today), share one reconciler and one
+// registry of pkg/controlplane/declarative, share one reconciler and one
 // SyncService arm (ControlPlaneResource, named by the kind's resource and the object's name). The
 // reconciler (controller.NewControlPlaneResourceSyncControllers) checks each object with the shared
 // Normalize before sending it, so an invalid one is a terminal error reported in the cluster and is
@@ -32,8 +32,13 @@
 // syncedControlPlaneResources in the controller package, its scheme in main.go, read access in the
 // Helm charts, and its arm in the Control Plane's handler; the proto stays as it is.
 //
-// These controllers also need the Control Plane to advertise the controlplane-resources capability
-// (capabilities.CapabilityControlPlaneResources), so an older Control Plane never gets the arm. A
+// Each kind also needs the Control Plane to advertise its family's capability, so a Control Plane
+// that does not serve the kind never gets it: controlplane-resources for Insights Boards,
+// and controlplane-resources-ai for MCP servers, LLM providers and AI Agents
+// (capabilities.CapabilityControlPlaneResources and the one beside it). The kinds are registered
+// in the order they reference each other, MCP servers before the AI Agents that link them, so a
+// first sync needs fewer retries. A resource naming one the Control Plane does not have
+// yet is retried with backoff, not refused, as what it names may be synced next. A
 // kind whose CRD is not installed, that the runner may not list and watch in its namespace, or
 // whose access the runner may not check (a cluster that forbids SelfSubjectAccessReviews) is
 // skipped with a warning: a controller whose cache cannot sync would stop the manager, and the
@@ -43,8 +48,10 @@
 //
 // While a GitOps runner owns a Control Plane resource, it is read-only everywhere else in the
 // Control Plane (the dashboard, the MCP tools, and testkube apply and delete), so it cannot drift
-// from Git. Deleting the custom resource deletes it in the Control Plane, unless another runner
-// owns it: that delete is an ownership conflict, and the resource is left as it is.
+// from Git. For an AI Agent that includes its roles, resource groups and own Skills. A synced AI Agent is never private: the
+// Control Plane refuses one that is. Deleting the custom resource deletes it in the Control Plane,
+// unless another runner owns it: that delete is an ownership conflict, and the resource is left as
+// it is.
 //
 // # Resource ownership contract
 //
