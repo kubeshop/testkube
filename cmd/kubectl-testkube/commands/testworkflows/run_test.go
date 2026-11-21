@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
 )
@@ -128,6 +129,49 @@ func TestIsExecutionReadyForLogFollowWaitsForRunnerID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.expected, isExecutionReadyForLogFollow(tt.execution))
+		})
+	}
+}
+
+// Keep the log paths deterministic without connecting to a runner.
+type stubWatchWorkflowClient struct {
+	apiclientv1.Client
+	result *testkube.TestWorkflowResult
+}
+
+func (c stubWatchWorkflowClient) GetTestWorkflowExecutionNotificationsWithOptions(_ string, _ apiclientv1.TestWorkflowExecutionNotificationsOptions) (chan testkube.TestWorkflowExecutionNotification, error) {
+	notifications := make(chan testkube.TestWorkflowExecutionNotification, 1)
+	notifications <- testkube.TestWorkflowExecutionNotification{Result: c.result}
+	close(notifications)
+	return notifications, nil
+}
+
+func (c stubWatchWorkflowClient) GetTestWorkflowExecutionLogs(_ string) ([]byte, error) {
+	return nil, nil
+}
+
+func TestWatchWorkflowExitCode(t *testing.T) {
+	for _, tc := range []struct {
+		status testkube.TestWorkflowStatus
+		code   int
+	}{
+		{testkube.PASSED_TestWorkflowStatus, 0},
+		{testkube.FAILED_TestWorkflowStatus, 1},
+		{testkube.ABORTED_TestWorkflowStatus, 1},
+		{testkube.CANCELED_TestWorkflowStatus, 1},
+	} {
+		t.Run(string(tc.status), func(t *testing.T) {
+			result := newWorkflowResult(tc.status, true)
+			result.Initialization = &testkube.TestWorkflowStepResult{}
+			client := stubWatchWorkflowClient{result: result}
+			execution := testkube.TestWorkflowExecution{Id: "example", RunnerId: "runner-1"}
+			t.Run("streamed", func(t *testing.T) {
+				assert.Equal(t, tc.code, uiWatch(execution, nil, 0, nil, 0, client))
+			})
+			t.Run("already finished", func(t *testing.T) {
+				execution.Result = result
+				assert.Equal(t, tc.code, uiWatch(execution, nil, 0, nil, 0, client))
+			})
 		})
 	}
 }

@@ -737,6 +737,9 @@ func uiWatch(
 	case result.IsAborted():
 		ui.Warn("test workflow execution aborted")
 		return 1
+	case result.IsCanceled():
+		ui.Warn("test workflow execution canceled")
+		return 1
 	case result.IsPassed():
 		ui.Success("test workflow execution completed with success in " + result.FinishedAt.Sub(result.QueuedAt).String())
 	}
