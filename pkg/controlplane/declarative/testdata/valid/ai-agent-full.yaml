@@ -12,7 +12,6 @@ spec:
   defaultModel: gpt-4o
   labels:
     team: qa
-  private: true
   mcpServers:
     - name: testkube
       tools:

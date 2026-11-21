@@ -58,10 +58,6 @@ type AIAgentSpec struct {
 	DefaultModel string `json:"defaultModel,omitempty"`
 	// Labels categorize the agent in the dashboard.
 	Labels map[string]string `json:"labels,omitempty"`
-	// Private makes the agent visible only to the members linked to it and
-	// to the environment's admins. It needs a license that includes RBAC,
-	// and has no effect where AI governance is off.
-	Private bool `json:"private,omitempty"`
 	// MCPServers are the MCP servers the agent uses, each once. Applying a
 	// list replaces the agent's links, so a server left out is unlinked, and
 	// an empty list unlinks them all. When mcpServers is omitted, the
