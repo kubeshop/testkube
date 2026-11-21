@@ -83,6 +83,16 @@
 // group is refused on every AI kind instead of being dropped, as the AI kinds
 // keep no labels in metadata.
 //
+// Whether an agent is private is not part of a manifest. A private agent is
+// visible to the person who created it and the members linked to it, and
+// members cannot be declared, so an apply keeps the stored setting (a new
+// agent is not private) and privacy stays a dashboard setting. The Control
+// Plane refuses to delete an MCPServer that AI Agents still link to, naming
+// the agents, so no agent is left linked to a server that no longer exists.
+// It also refuses an apply whose {{ credential("name") }} names no
+// Environment Credential, which a dry run cannot see, since it never reaches
+// the Control Plane.
+//
 // An agent's Skills belong to it: applying a skills list replaces the whole
 // list, in manifest order, matched by name, so a Skill left out is deleted,
 // and skills: [] removes them all. An agent that leaves skills out keeps its

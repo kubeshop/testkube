@@ -207,12 +207,6 @@ spec:
                   - name
                   type: object
                 type: array
-              private:
-                description: |-
-                  Private makes the agent visible only to the members linked to it and
-                  to the environment's admins. It needs a license that includes RBAC,
-                  and has no effect where AI governance is off.
-                type: boolean
               skills:
                 description: |-
                   Skills are guidance the agent uses, in this order. They belong to the
