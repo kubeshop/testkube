@@ -24,6 +24,7 @@ type ExecutionSelfClient interface {
 	GetCredentialWithSource(ctx context.Context, environmentId, executionId, name, source string) ([]byte, error)
 	GetGitAccess(ctx context.Context, url, revision string) (*cloud.GetGitAccessResponse, error)
 	GetGitHubToken(ctx context.Context, url string) (string, error)
+	GetIdentityToken(ctx context.Context, environmentId, executionId, audience string) (string, error)
 }
 
 func (c *client) AppendExecutionReport(ctx context.Context, environmentId, executionId, legacyWorkflowName, stepRef, filePath string, report []byte) error {
@@ -136,6 +137,18 @@ func (c *client) GetGitHubToken(ctx context.Context, url string) (string, error)
 		Url: url,
 	}
 	res, err := call(ctx, c.metadata().GRPC(), c.client.GetGitHubToken, &req)
+	if err != nil {
+		return "", err
+	}
+	return res.Token, nil
+}
+
+func (c *client) GetIdentityToken(ctx context.Context, environmentId, executionId, audience string) (string, error) {
+	req := cloud.GetIdentityTokenRequest{
+		ExecutionId: executionId,
+		Audience:    audience,
+	}
+	res, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.GetIdentityToken, &req)
 	if err != nil {
 		return "", err
 	}
