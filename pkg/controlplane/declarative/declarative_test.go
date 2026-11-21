@@ -73,6 +73,7 @@ func TestFixtures_Invalid(t *testing.T) {
 			"spec.mcpServers[0].headers[X-Trace]", `may read a credential only as {{ credential("name") }}`,
 		},
 		"ai-agent-group-label.yaml": {"metadata.labels[testkube.io/group]", "spec.access.resourceGroups"},
+		"ai-agent-private.yaml":     {`unknown field "private"`},
 		"llm-provider-vault-key.yaml": {
 			"spec.apiKey", "must read an Environment Credential",
 			"spec.extraHeaders[Authorization]", "is set from apiKey",
