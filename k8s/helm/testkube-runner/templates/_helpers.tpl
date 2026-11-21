@@ -150,6 +150,17 @@ Define TESTKUBE_WATCHER_NAMESPACES variable
 {{- end -}}
 {{- end }}
 
+{{/*
+Whether the GitOps runner syncs the Control Plane resources: "true", or empty. Values reused from a
+release made before gitops.controlPlaneResources existed (helm upgrade --reuse-values) lack it, so
+it is read with a default rather than directly.
+*/}}
+{{- define "testkube-runner.gitops.controlPlaneResources" -}}
+{{- if and .Values.gitops.enabled (get (default dict .Values.gitops.controlPlaneResources) "enabled") -}}
+true
+{{- end -}}
+{{- end }}
+
 {{- define "testkube-runner.listener.watchers.rules" -}}
 rules:
   - apiGroups:
@@ -210,7 +221,7 @@ rules:
       - get
       - list
       - watch
-  {{- if .Values.gitops.enabled }}
+  {{- if include "testkube-runner.gitops.controlPlaneResources" . }}
   # Control Plane resources (Insights Boards, AI Agents, MCP servers, LLM providers and Test
   # Bundles), which the GitOps runner syncs to the Control Plane. It only reads them.
   - apiGroups:

@@ -55,6 +55,7 @@ func TestAgentCapabilities_Features(t *testing.T) {
 		cfg.EnableCronJobs = "true"
 		cfg.EnableCloudWebhooks = true
 		cfg.GitOpsSyncKubernetesToCloudEnabled = true
+		cfg.GitOpsSyncControlPlaneResourcesEnabled = true
 		cfg.FeatureCloudStorage = true
 		cfg.TracingEnabled = true
 		cfg.FloatingRunner = true
@@ -69,6 +70,7 @@ func TestAgentCapabilities_Features(t *testing.T) {
 		assert.Contains(t, caps, "webhooks")
 		assert.Contains(t, caps, "cloud-webhooks")
 		assert.Contains(t, caps, "gitops-sync")
+		assert.Contains(t, caps, "gitops-controlplane-resources")
 		assert.Contains(t, caps, "cloud-storage")
 		assert.Contains(t, caps, "tracing")
 	})
@@ -88,6 +90,7 @@ func TestAgentCapabilities_Features(t *testing.T) {
 		assert.NotContains(t, caps, "k8s-controllers")
 		assert.NotContains(t, caps, "cloud-webhooks")
 		assert.NotContains(t, caps, "gitops-sync")
+		assert.NotContains(t, caps, "gitops-controlplane-resources")
 		assert.NotContains(t, caps, "cloud-storage")
 		assert.NotContains(t, caps, "tracing")
 	})

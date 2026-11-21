@@ -729,6 +729,8 @@ func main() {
 
 	/////////////////////////////////
 	// KUBERNETES CONTROLLER SETUP
+	// The Control Plane resources the GitOps runner syncs, counted for the telemetry heartbeat.
+	gitOpsSynced := synccontroller.NewSyncedResources()
 	if cfg.EnableK8sControllers || cfg.GitOpsSyncKubernetesToCloudEnabled {
 		// Initialise the controller runtime with our logger.
 		ctrl.SetLogger(zapr.NewLogger(log.DefaultLogger.Desugar()))
@@ -779,10 +781,15 @@ func main() {
 			commons.ExitOnError("creating Webhook sync controller", err)
 			err = synccontroller.NewWebhookTemplateSyncController(mgr, syncStore)
 			commons.ExitOnError("creating WebhookTemplate sync controller", err)
-			// Control Plane resources, such as Insights boards, go only to a Control Plane that
-			// takes their kind, and only the kinds whose CRD is installed and readable here.
-			if len(proContext.ControlPlaneResourceCapabilities) > 0 {
-				err = synccontroller.NewControlPlaneResourceSyncControllers(ctx, mgr, syncStore, cfg.TestkubeNamespace, proContext.ControlPlaneResourceCapabilities, log.DefaultLogger)
+			// Control Plane resources, such as Insights boards, are synced only when the runner is
+			// told to, and then only to a Control Plane that takes their kind, and only the kinds
+			// whose CRD is installed and readable here.
+			switch {
+			case !cfg.GitOpsSyncControlPlaneResourcesEnabled:
+			case len(proContext.ControlPlaneResourceCapabilities) == 0:
+				log.DefaultLogger.Infow("not syncing Control Plane resources: the Control Plane does not take them")
+			default:
+				err = synccontroller.NewControlPlaneResourceSyncControllers(ctx, mgr, syncStore, cfg.TestkubeNamespace, proContext.ControlPlaneResourceCapabilities, gitOpsSynced, log.DefaultLogger)
 				commons.ExitOnError("creating Control Plane resource sync controllers", err)
 			}
 		}
@@ -1025,7 +1032,7 @@ func main() {
 	leaderTasks = append(leaderTasks, leader.Task{
 		Name: "telemetry-heartbeat",
 		Start: func(taskCtx context.Context) error {
-			services.HandleTelemetryHeartbeat(taskCtx, clusterId, configMapConfig, capabilities)
+			services.HandleTelemetryHeartbeat(taskCtx, clusterId, configMapConfig, capabilities, gitOpsSynced.Counts)
 			return nil
 		},
 	})
