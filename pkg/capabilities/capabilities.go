@@ -30,6 +30,12 @@ const CapabilityDependencyCache Capability = "tw-cache"
 // pushing data to the control plane and handing over control to let the control plane be the new source of truth.
 const CapabilitySourceOfTruth Capability = "source-of-truth"
 
+// CapabilityControlPlaneResources is whether the control plane accepts Control Plane resources,
+// such as Insights boards, through the SyncService (its control_plane_resource arm). A GitOps
+// runner syncs those custom resources only when the control plane advertises it, so an older
+// control plane never receives an arm it cannot handle.
+const CapabilityControlPlaneResources Capability = "controlplane-resources"
+
 // CapabilityMultiNamespaceSync is whether the control plane reads the namespace fields of the
 // sync API and the environment-id header, and keys GitOps ownership by (agentId, namespace).
 // Without it an agent must sync one namespace per Environment.

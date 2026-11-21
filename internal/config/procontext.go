@@ -51,6 +51,9 @@ type ProContext struct {
 	CloudStorage                        bool
 	CloudStorageSupportedInControlPlane bool
 	HasSourceOfTruthCapability          bool
+	// ControlPlaneResourcesSyncSupported is whether the Control Plane accepts Control Plane
+	// resources (capabilities.CapabilityControlPlaneResources) through the SyncService.
+	ControlPlaneResourcesSyncSupported bool
 	// MultiNamespaceSyncSupportedInControlPlane is whether the Control Plane accepts several
 	// namespaces and Environments over one sync connection (capabilities.CapabilityMultiNamespaceSync).
 	MultiNamespaceSyncSupportedInControlPlane bool
