@@ -45,25 +45,43 @@
 // live in the Control Plane, which maps them itself; what both ends must
 // agree on is here.
 //
-// Credentials follow the rules of the dashboard and the REST API, as Test
-// Workflows do: a manifest may carry them. An LLM provider's headers, query
-// parameters and URLs are taken as written, an X-Api-Key header or a key in a
-// query included. A credentialReference names an Environment Credential
-// (secret://<name>, or vault://<path> for an LLM provider) and is the way to
-// keep a key out of Git, so it must be a name, not a key itself. The Control
-// Plane exports every header and query parameter value as RedactedValue, as
-// its REST API returns them, and keeps the stored value for one applied back
-// that way. A URL or a credentialReference refused as malformed is not echoed
-// in the error, since it may hold a secret, and errors reach terminal and CI
-// logs. A shared-key link without a credentialReference keeps the key set in
-// the dashboard, which is never exported.
+// A manifest reads an Environment Credential as {{ credential("name") }}, the
+// way a Test Workflow or a webhook does (CredentialNames, CredentialExpression),
+// and nothing else in {{ }} is read. The Control Plane resolves only these
+// credentials, so a Vault path or a Kubernetes Secret is refused rather than
+// skipped at run time. An LLM provider's apiKey is exactly one such
+// expression (APIKeyCredential). An AI Agent's shared-key headers may mix
+// credentials into text ('Bearer {{ credential("github-token") }}'), and a
+// header that carries a credential has to read one (ValidateSignInHeaders),
+// because the Control Plane stores those headers on the agent and exports them
+// as written; it expands them when the agent signs in (ExpandCredentials). A
+// shared-key link without headers keeps the key it has, such as one set in the
+// dashboard, which is never exported.
+//
+// An LLM provider's extra headers, query parameters and URLs follow the REST
+// API instead, as Test Workflows do: they are taken as written, an X-Api-Key
+// header or a key in a query included, and the Control Plane exports every
+// header and query parameter value as RedactedValue and keeps the stored value
+// for one applied back that way. Authorization is not an extra header: the
+// Control Plane sends apiKey as Authorization and refuses the header, so
+// Normalize refuses it too, and a dry run catches what the apply would. A
+// value refused for possibly being a secret (a URL, an apiKey, a sign-in
+// header) is not echoed in the error, since errors reach terminal and CI logs.
 //
 // An agent links to an MCPServer by its metadata.name, and to the built-in
-// Testkube MCP server as "testkube", a name no MCPServer may take. An agent
-// that leaves the built-in server out keeps its link to it as stored (the
-// default tools, for a new agent), so applying an older manifest does not
-// cut the agent off from Testkube. Access roles and resource groups are sorted,
-// as the Control Plane returns them.
+// Testkube MCP server as "testkube", a name no MCPServer may take. An
+// mcpServers list replaces the agent's links, and mcpServers: [] removes them;
+// an agent that leaves mcpServers out keeps its links as stored, as it keeps
+// its Skills (below), so AIAgentSpec.MCPServers is not omitempty either. An
+// agent whose list leaves the built-in server out keeps its link to it as
+// stored (the default tools, for a new agent), so applying an older manifest
+// does not cut the agent off from Testkube. Access roles and resource groups
+// are sorted, as the Control Plane returns them. A resource group is referred
+// to as {name: <slug>}, the shape of every other reference in the CRDs. An AI
+// Agent joins resource groups only through spec.access.resourceGroups: the
+// testkube.io/group label (ResourceGroupLabel) that puts a Test Workflow in a
+// group is refused on every AI kind instead of being dropped, as the AI kinds
+// keep no labels in metadata.
 //
 // An agent's Skills belong to it: applying a skills list replaces the whole
 // list, in manifest order, matched by name, so a Skill left out is deleted,

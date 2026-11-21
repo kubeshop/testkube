@@ -68,9 +68,17 @@ func TestFixtures_Invalid(t *testing.T) {
 		"board-unknown-field.yaml":          {"document 1", `unknown field "dispayName"`},
 		"unknown-kind.yaml":                 {`unknown kind "Dashboard"`},
 		"not-a-controlplane-resource.yaml":  {`"testworkflows.testkube.io/v1" is not a Control Plane resource`},
-		"ai-agent-literal-secret.yaml":      {"spec.mcpServers[0].credentialReference", "a key itself never goes in a manifest"},
+		"ai-agent-literal-secret.yaml": {
+			"spec.mcpServers[0].headers[Authorization]", "a key itself never goes in a manifest",
+			"spec.mcpServers[0].headers[X-Trace]", `may read a credential only as {{ credential("name") }}`,
+		},
+		"ai-agent-group-label.yaml": {"metadata.labels[testkube.io/group]", "spec.access.resourceGroups"},
+		"llm-provider-vault-key.yaml": {
+			"spec.apiKey", "must read an Environment Credential",
+			"spec.extraHeaders[Authorization]", "is set from apiKey",
+		},
 		"ai-agent-bad-link.yaml": {
-			"spec.mcpServers[0].credentialReference", "only a shared_key link",
+			"spec.mcpServers[0].headers", "only a shared_key link",
 			"spec.mcpServers[1].name", "Duplicate value",
 			"spec.access.roles[0]", `"owner"`,
 		},
