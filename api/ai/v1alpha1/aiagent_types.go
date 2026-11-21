@@ -77,6 +77,27 @@ type AIAgentSpec struct {
 	// does not delete the ones added in the dashboard.
 	// +optional
 	Skills []AIAgentSkill `json:"skills"`
+	// SkillRefs are Skills of the environment's or the organization's
+	// library the agent uses, in this order. They are shared, so a Skill
+	// left out is only unlinked. Applying a list replaces the whole list,
+	// and skillRefs: [] unlinks them all; when skillRefs is omitted, the
+	// agent's links are left as they are. No name may be both a skillRef and
+	// one of the agent's own Skills.
+	// +optional
+	SkillRefs []AIAgentSkillRef `json:"skillRefs"`
+}
+
+// AIAgentSkillRef refers to a Skill of a library.
+type AIAgentSkillRef struct {
+	// Name is the Skill's name: the metadata.name of a Skill, for the
+	// environment's library.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=64
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]+(-[a-z0-9]+)*$`
+	Name string `json:"name"`
+	// Scope is the library: environment (the default) or organization.
+	// +kubebuilder:validation:Enum=environment;organization
+	Scope string `json:"scope,omitempty"`
 }
 
 // AIAgentSkill is guidance an AI Agent uses, following the Agent Skills spec.
@@ -89,17 +110,21 @@ type AIAgentSkill struct {
 	// +kubebuilder:validation:MaxLength=64
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]+(-[a-z0-9]+)*$`
 	Name string `json:"name"`
-	// Description says what the Skill does and when to use it.
-	// +kubebuilder:validation:MinLength=1
-	Description string `json:"description"`
-	// Content is the guidance itself.
-	// +kubebuilder:validation:MinLength=1
-	Content string `json:"content"`
+	// Description says what the Skill does and when to use it. Required
+	// unless skillFrom is set.
+	Description string `json:"description,omitempty"`
+	// Content is the guidance itself. Required unless skillFrom is set.
+	Content string `json:"content,omitempty"`
 	// AlwaysInclude puts the content in every prompt instead of having the
 	// agent read it on demand.
 	AlwaysInclude bool `json:"alwaysInclude,omitempty"`
 	// Metadata is extra Agent Skills spec metadata.
 	Metadata map[string]string `json:"metadata,omitempty"`
+	// SkillFrom reads the description, metadata and content from a SKILL.md
+	// kept in a ConfigMap. The SKILL.md's name must be the Skill's name. Only a
+	// GitOps runner reads it, from its own namespace; testkube apply takes the
+	// Skill inline.
+	SkillFrom *SkillSource `json:"skillFrom,omitempty"`
 }
 
 // AIAgentMCPServer is an AI Agent's link to an MCP server.

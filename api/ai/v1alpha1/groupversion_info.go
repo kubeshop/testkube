@@ -1,5 +1,6 @@
 // Package v1alpha1 contains the API schema of the AI resources: AI Agents,
-// the MCP servers they use and the LLM providers that serve their models.
+// the MCP servers they use, the LLM providers that serve their models and the
+// Skills of the environment's library.
 // They live only in the Control Plane and are declared in YAML, to be applied
 // by the CLI or, as custom resources, synced by a GitOps agent.
 //
@@ -42,6 +43,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&MCPServerList{},
 		&LLMProvider{},
 		&LLMProviderList{},
+		&Skill{},
+		&SkillList{},
 	)
 	metav1.AddToGroupVersion(scheme, GroupVersion)
 	return nil

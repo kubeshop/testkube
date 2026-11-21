@@ -33,12 +33,12 @@
 // registry.
 //
 // The registry is in apply order: a kind comes after every kind it refers to.
-// SortForApply puts MCP servers and LLM providers before the AI Agents that
-// link to them, so one input applies whatever order it lists them in.
+// SortForApply puts MCP servers, LLM providers and Skills before the AI Agents
+// that link to them, so one input applies whatever order it lists them in.
 //
 // # AI resources
 //
-// AI Agents, MCP servers and LLM providers are environment-scoped. Their
+// AI Agents, MCP servers, LLM providers and Skills are environment-scoped. Their
 // metadata.name is a DNS-1123 label, so it also names a custom resource; the
 // Control Plane stores it as the entity's slug, and ProposeName makes one
 // from a display name for an entity created without one. The stored models
@@ -105,6 +105,44 @@
 // MaxAlwaysIncludedSkillsLength characters together, since every prompt
 // carries it; the others are read on demand.
 //
+// # Skills
+//
+// A Skill is a Skill of the environment's library, which AI Agents share; an
+// agent's own Skills stay in its spec.skills. It follows the Agent Skills spec
+// (https://agentskills.io/specification) key for key: metadata.name is the
+// SKILL.md name, spec holds description, license, compatibility, metadata and
+// allowed-tools as the frontmatter does, and content is the Markdown body.
+// Settings of Testkube's own are under spec.testkube (alwaysInclude,
+// addToNewTestBundles); an empty block is dropped, as both off is the
+// default. Its metadata.name is both a DNS-1123 label and a spec name, so it
+// has no consecutive hyphens and at most 63 characters. The spec's scripts/,
+// references/ and assets/ folders are not declared yet.
+//
+// A Skill, and an AI Agent's own Skill, may instead read a real SKILL.md from
+// a ConfigMap with skillFrom.configMapKeyRef, so the file kept in Git is the
+// source. The SKILL.md then gives every field but spec.testkube (an own
+// Skill's alwaysInclude stays in the manifest), so writing one beside skillFrom
+// is refused, and its name must be the Skill's. Only a GitOps runner can read
+// the ConfigMap: ResolveSkillSources, given a reader of its cluster, replaces
+// skillFrom with what the SKILL.md holds before Normalize, so the Control Plane
+// gets the Skill as if written inline. Normalize refuses a skillFrom left in
+// place, which is what testkube apply sees. ParseSkillMarkdown reads the
+// file: frontmatter keys outside the spec are ignored, since the same file
+// often serves other agent tools; metadata values must be strings; and
+// allowed-tools is a space-separated string. An own Skill keeps only the
+// description, metadata and body of the file.
+//
+// An AI Agent refers to library Skills with skillRefs, each {name, scope}:
+// scope is environment (a Skill, the default) or organization (a Skill of the
+// organization's library, managed in the dashboard and never declared). The
+// list is kept in manifest order and, like skills, replaced as a whole when
+// present and left as stored when omitted, so AIAgentSpec.SkillRefs is not
+// omitempty and skillRefs: [] unlinks them all. Unlinking never deletes the
+// Skill. The agent knows its Skills by name, so a name appears once across
+// skillRefs and none is also the name of one of its own Skills; the Control
+// Plane checks the same against the stored Skills, and answers 422. It also
+// refuses to delete a Skill that an agent refers to.
+//
 // # Normalization
 //
 // Normalize validates an object and fills in its defaults, in place. It is
@@ -163,8 +201,9 @@
 // to (GITOPS_CONTROLPLANE_RESOURCES_ENABLED, off by default). Then every kind in
 // the registry is synced, each once the Control Plane advertises its family's
 // capability:
-// controlplane-resources for Boards, and controlplane-resources-ai for MCP
-// servers, LLM providers and AI Agents. A resource a GitOps runner owns is
-// read-only to every other writer, testkube apply and delete included, and its
-// status.gitOpsOwner names the runner.
+// controlplane-resources for Boards, controlplane-resources-ai for MCP
+// servers, LLM providers and AI Agents, and controlplane-resources-skills for
+// Skills. A resource a GitOps runner owns is read-only to every other writer,
+// testkube apply and delete included, and its status.gitOpsOwner names the
+// runner.
 package declarative

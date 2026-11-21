@@ -228,9 +228,10 @@ next:
     ## Should it copy data from Kubernetes to Control Plane
     syncKubernetesToCloud: true
     ## Should it also sync the Control Plane resources: Insights Boards, MCP servers, LLM
-    ## providers and AI Agents. Needs syncKubernetesToCloud. It grants read access to their custom
-    ## resources (installed by the testkube-crds chart). A Control Plane that does not serve a kind
-    ## is not sent it, and the agent skips it.
+    ## providers, Skills and AI Agents. Needs syncKubernetesToCloud. It grants read access to their
+    ## custom resources (installed by the testkube-crds chart) and to the ConfigMaps a Skill reads
+    ## its SKILL.md from. A Control Plane that does not serve a kind is not sent it, and the agent
+    ## skips it.
     syncControlPlaneResources: false
 
   # Configure the legacy Tests and Test Suites execution

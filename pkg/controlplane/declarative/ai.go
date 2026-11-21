@@ -363,12 +363,17 @@ func normalizeAIAgent(a *aiv1.AIAgent) field.ErrorList {
 	alwaysIncluded := 0
 	for i := range spec.Skills {
 		s := &spec.Skills[i]
-		skills = append(skills, skillFields{name: &s.Name, description: &s.Description, content: s.Content, metadata: s.Metadata})
+		skills = append(skills, skillFields{name: &s.Name, description: &s.Description, content: s.Content, metadata: s.Metadata, from: s.SkillFrom})
 		if s.AlwaysInclude {
 			alwaysIncluded += utf8.RuneCountInString(s.Content)
 		}
 	}
 	errs = append(errs, normalizeSkills(skills, alwaysIncluded, path.Child("skills"))...)
+	ownSkills := map[string]bool{}
+	for _, s := range spec.Skills {
+		ownSkills[s.Name] = true
+	}
+	errs = append(errs, normalizeSkillRefs(spec.SkillRefs, ownSkills, path.Child("skillRefs"))...)
 	return errs
 }
 
