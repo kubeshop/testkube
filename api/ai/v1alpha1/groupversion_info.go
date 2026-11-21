@@ -4,8 +4,9 @@
 // by the CLI or, as custom resources, synced by a GitOps agent.
 //
 // Both paths share this schema and the rules in pkg/controlplane/declarative.
-// A key can stay out of the manifest: credentialReference names an
-// Environment Credential, which stays in the Control Plane.
+// A key can stay out of the manifest: {{ credential("name") }} reads an
+// Environment Credential, which stays in the Control Plane, as it does in a
+// Test Workflow or a webhook.
 // +kubebuilder:object:generate=true
 // +groupName=ai.testkube.io
 package v1alpha1

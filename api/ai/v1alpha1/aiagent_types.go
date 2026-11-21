@@ -18,9 +18,8 @@ const (
 
 	// SignInNone links an MCP server without signing in.
 	SignInNone = "none"
-	// SignInSharedKey signs in with one key the whole agent shares, read
-	// from credentialReference or, without one, the key set in the
-	// dashboard.
+	// SignInSharedKey signs in with one key the whole agent shares: the
+	// link's headers or, without them, the key the link already has.
 	SignInSharedKey = "shared_key"
 	// SignInPerPerson signs each person in with their own account.
 	SignInPerPerson = "per_person"
@@ -63,11 +62,15 @@ type AIAgentSpec struct {
 	// to the environment's admins. It needs a license that includes RBAC,
 	// and has no effect where AI governance is off.
 	Private bool `json:"private,omitempty"`
-	// MCPServers are the MCP servers the agent uses, each once. The
-	// built-in Testkube MCP server is "testkube"; when it is left out, the
-	// agent keeps its link to it as it is (the default tools for a new
-	// agent).
-	MCPServers []AIAgentMCPServer `json:"mcpServers,omitempty"`
+	// MCPServers are the MCP servers the agent uses, each once. Applying a
+	// list replaces the agent's links, so a server left out is unlinked, and
+	// an empty list unlinks them all. When mcpServers is omitted, the
+	// agent's links are left as they are, as with skills and access. The
+	// built-in Testkube MCP server is "testkube"; when it is left out of a
+	// list, the agent keeps its link to it as it is (the default tools for a
+	// new agent).
+	// +optional
+	MCPServers []AIAgentMCPServer `json:"mcpServers"`
 	// Access links the agent to roles and resource groups. When it is
 	// omitted, the agent's links are left as they are.
 	Access *AIAgentAccess `json:"access,omitempty"`
@@ -114,11 +117,15 @@ type AIAgentMCPServer struct {
 	// Empty keeps the behavior of a link made before the choice existed.
 	// +kubebuilder:validation:Enum=none;shared_key;per_person;obo
 	SignIn string `json:"signIn,omitempty"`
-	// CredentialReference names the Environment Credential holding the
-	// headers to sign in with, as secret://<name>. It is only valid with
-	// shared_key; a shared_key link without one keeps the key set in the
-	// dashboard.
-	CredentialReference string `json:"credentialReference,omitempty"`
+	// Headers are sent to the server to sign in, only with shared_key. A
+	// value reads an Environment Credential as {{ credential("name") }}, as
+	// webhook headers do, such as Authorization set to
+	// 'Bearer {{ credential("github-token") }}'. A header that carries a
+	// credential (Authorization, Cookie, or a name with token, secret or key
+	// in it) has to read one, so no key is written in the manifest. A
+	// shared_key link without headers keeps the key it has, such as one set
+	// in the dashboard.
+	Headers map[string]string `json:"headers,omitempty"`
 	// Tools configures the server's tools by name. A tool left out is
 	// disabled.
 	Tools map[string]AIAgentMCPTool `json:"tools,omitempty"`
@@ -138,8 +145,17 @@ type AIAgentAccess struct {
 	// Roles linked to the agent: environment roles, of read, run, write and
 	// admin.
 	Roles []string `json:"roles,omitempty"`
-	// ResourceGroups linked to the agent, by slug.
-	ResourceGroups []string `json:"resourceGroups,omitempty"`
+	// ResourceGroups linked to the agent. This is how an agent joins a
+	// resource group: the testkube.io/group label a Test Workflow uses is
+	// refused on an agent, since an agent can join several.
+	ResourceGroups []AIAgentResourceGroup `json:"resourceGroups,omitempty"`
+}
+
+// AIAgentResourceGroup refers to a resource group of the organization.
+type AIAgentResourceGroup struct {
+	// Name is the resource group's slug.
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
 }
 
 //+kubebuilder:object:root=true

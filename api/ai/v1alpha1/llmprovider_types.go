@@ -17,8 +17,8 @@ const (
 //+kubebuilder:subresource:status
 
 // LLMProvider is a model provider an environment brings its own key for.
-// metadata.name is its slug. The key is never part of the manifest: it is
-// named by credentialReference and stays in the Control Plane.
+// metadata.name is its slug. The key is never part of the manifest: apiKey
+// reads it from an Environment Credential, which stays in the Control Plane.
 // +kubebuilder:printcolumn:name="Display Name",type=string,JSONPath=`.spec.displayName`
 // +kubebuilder:printcolumn:name="Provider",type=string,JSONPath=`.spec.provider`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
@@ -40,10 +40,10 @@ type LLMProviderSpec struct {
 	Provider string `json:"provider"`
 	// BaseURL overrides the provider's default endpoint.
 	BaseURL string `json:"baseUrl,omitempty"`
-	// CredentialReference names the Environment Credential holding the key:
-	// secret://<name> (or a bare name) for a credential, vault://<path> for
-	// a Vault secret.
-	CredentialReference string `json:"credentialReference,omitempty"`
+	// APIKey reads the provider's key from an Environment Credential, as
+	// {{ credential("name") }} and nothing else. Without it the provider has
+	// no key.
+	APIKey string `json:"apiKey,omitempty"`
 	// ExtraHeaders are sent with every request to the provider. A value may
 	// be a credential, such as an X-Api-Key header; the Control Plane exports
 	// every value as ********, which applied back keeps the stored one.

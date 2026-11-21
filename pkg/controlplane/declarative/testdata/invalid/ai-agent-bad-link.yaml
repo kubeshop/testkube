@@ -7,7 +7,8 @@ spec:
   mcpServers:
     - name: github
       signIn: none
-      credentialReference: secret://github-token
+      headers:
+        Authorization: 'Bearer {{ credential("github-token") }}'
     - name: github
   access:
     roles: [owner]
