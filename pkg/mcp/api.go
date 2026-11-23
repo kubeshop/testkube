@@ -37,15 +37,21 @@ type APIRequest struct {
 	Headers     map[string]string // Additional headers beyond auth
 }
 
+// defaultWaitPollInterval is how often WaitForExecutions re-reads the executions.
+const defaultWaitPollInterval = 5 * time.Second
+
 type APIClient struct {
 	config *MCPServerConfig
 	client *http.Client
+	// waitPollInterval is how often WaitForExecutions re-reads the executions.
+	waitPollInterval time.Duration
 }
 
 func NewAPIClient(cfg *MCPServerConfig, client *http.Client) *APIClient {
 	return &APIClient{
-		config: cfg,
-		client: client,
+		config:           cfg,
+		client:           client,
+		waitPollInterval: defaultWaitPollInterval,
 	}
 }
 
@@ -82,6 +88,14 @@ func (c *APIClient) buildApiUrl(path string, pathParams map[string]string, scope
 	default:
 		return c.config.ControlPlaneUrl + finalPath
 	}
+}
+
+func (c *APIClient) userAgent() string {
+	source := c.config.Source
+	if source == "" {
+		source = "unknown"
+	}
+	return "Testkube-MCP/" + source
 }
 
 func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string, error) {
@@ -152,6 +166,9 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 
 	// Set standard headers
 	req.Header.Set("Authorization", "Bearer "+c.config.AccessToken)
+	// The Control Plane cannot otherwise tell this apart from any other Go client, and its audit
+	// log then records what an AI Agent did as if a person had done it from the dashboard.
+	req.Header.Set("User-Agent", c.userAgent())
 
 	// Set default Content-Type only if not already specified in custom headers
 	if _, hasContentType := apiReq.Headers["Content-Type"]; !hasContentType && apiReq.Body != nil {
@@ -184,7 +201,7 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 				debugInfo.Data["responseBody"] = string(errBody)
 			}
 		}
-		return "", &apiStatusError{status: resp.StatusCode, detail: extractErrorDetail(errBody)}
+		return "", &apiStatusError{status: resp.StatusCode, detail: extractErrorDetail(errBody), errorCode: extractErrorCode(errBody)}
 	}
 
 	// Read response body as string
@@ -209,6 +226,9 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 type apiStatusError struct {
 	status int
 	detail string
+	// errorCode is the problem's errorCode, which tells apart refusals that
+	// share a status, such as the two kinds of board 409.
+	errorCode string
 }
 
 func (e *apiStatusError) Error() string {
@@ -242,6 +262,31 @@ func extractErrorDetail(body []byte) string {
 		}
 	}
 	return truncate(strings.TrimSpace(string(body)), maxErrorDetailLen)
+}
+
+// extractErrorCode returns the errorCode of a problem+json error response, or
+// "" when the body has none.
+func extractErrorCode(body []byte) string {
+	var problem struct {
+		ErrorCode string `json:"errorCode"`
+	}
+	if json.Unmarshal(body, &problem) != nil {
+		return ""
+	}
+	return problem.ErrorCode
+}
+
+// boardConflict tells the two board 409s apart: a GitOps-owned board, which
+// is final, and a stale expectedVersion, which a fresh read can fix.
+func boardConflict(err error) error {
+	var statusErr *apiStatusError
+	if !errors.As(err, &statusErr) || statusErr.status != http.StatusConflict {
+		return err
+	}
+	if statusErr.errorCode == tools.ProblemCodeManagedByGitOps {
+		return fmt.Errorf("%w: %v", tools.ErrBoardManagedByGitOps, err)
+	}
+	return fmt.Errorf("%w: %v", tools.ErrBoardChanged, err)
 }
 
 func truncate(s string, max int) string {
@@ -778,10 +823,10 @@ func (c *APIClient) GetWorkflowExecutionMetrics(ctx context.Context, workflowNam
 func (c *APIClient) WaitForExecutions(ctx context.Context, executionIds []string) (string, error) {
 	// Track completed executions to avoid re-checking them
 	completedExecutions := make(map[string]bool)
-	allResults := make(map[string]map[string]interface{})
+	allResults := make(map[string]json.RawMessage)
 
 	// Polling loop
-	ticker := time.Tick(5 * time.Second) // Check every 5 seconds
+	ticker := time.Tick(c.waitPollInterval)
 
 	// TODO: improve inner loop / polling logic in line with suggestion at https://github.com/kubeshop/testkube/pull/6706#discussion_r2381356579
 	for {
@@ -831,11 +876,9 @@ func (c *APIClient) WaitForExecutions(ctx context.Context, executionIds []string
 					return "", fmt.Errorf("status not found in execution response for %s", executionId)
 				}
 
-				// Store the result
-				allResults[executionId] = map[string]interface{}{
-					"executionId": executionId,
-					"status":      status,
-				}
+				// Keep the whole execution: the wait_for_executions formatter reads
+				// id, name and result from TestWorkflowExecution records.
+				allResults[executionId] = json.RawMessage(response)
 
 				// Check if execution is in a final state
 				if slices.Contains(testkube.TestWorkflowTerminalStatus, testkube.TestWorkflowStatus(status)) {
@@ -847,14 +890,17 @@ func (c *APIClient) WaitForExecutions(ctx context.Context, executionIds []string
 
 			if allComplete {
 				// Build results array from all results (both completed and in-progress)
-				var results []map[string]interface{}
+				var results []json.RawMessage
 				for _, executionId := range executionIds {
 					if result, exists := allResults[executionId]; exists {
 						results = append(results, result)
 					}
 				}
 
-				resultJSON, _ := json.Marshal(results)
+				resultJSON, err := json.Marshal(results)
+				if err != nil {
+					return "", fmt.Errorf("failed to encode execution results: %w", err)
+				}
 				return string(resultJSON), nil
 			}
 		}
@@ -1238,11 +1284,10 @@ func (c *APIClient) UpdateBoard(ctx context.Context, board string, request tools
 		PathParams: map[string]string{"boardID": url.PathEscape(board)},
 		Body:       request,
 	})
-	var statusErr *apiStatusError
-	if errors.As(err, &statusErr) && statusErr.status == http.StatusConflict {
-		return "", fmt.Errorf("%w: %v", tools.ErrBoardChanged, err)
+	if err != nil {
+		return "", boardConflict(err)
 	}
-	return result, err
+	return result, nil
 }
 
 func (c *APIClient) DeleteBoard(ctx context.Context, board string) error {
@@ -1255,6 +1300,11 @@ func (c *APIClient) DeleteBoard(ctx context.Context, board string) error {
 		Scope:      ApiScopeOrg,
 		PathParams: map[string]string{"boardID": url.PathEscape(board)},
 	})
+	// A delete is never conditional, so its only 409 is a GitOps-owned board.
+	var statusErr *apiStatusError
+	if errors.As(err, &statusErr) && statusErr.status == http.StatusConflict && statusErr.errorCode == tools.ProblemCodeManagedByGitOps {
+		return fmt.Errorf("%w: %v", tools.ErrBoardManagedByGitOps, err)
+	}
 	return err
 }
 

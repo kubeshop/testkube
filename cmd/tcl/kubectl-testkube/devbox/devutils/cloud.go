@@ -114,7 +114,7 @@ func (c *CloudObject) Client(environmentId string) (client2.Client, error) {
 			CloudApiKey:        c.ApiKey(),
 			CloudOrganization:  c.cfg.OrganizationId,
 			CloudEnvironment:   environmentId,
-			CloudApiPathPrefix: fmt.Sprintf("/organizations/%s/environments/%s/agent", c.cfg.OrganizationId, environmentId),
+			CloudApiPathPrefix: client2.CloudAgentPathPrefix(c.cfg.OrganizationId, environmentId),
 		})
 		if err != nil {
 			return nil, err

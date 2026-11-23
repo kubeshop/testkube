@@ -27,4 +27,23 @@
 //
 // The pod can also stop after the last step ends, for example when Kubernetes removes a sidecar. The events that
 // report the stop reach the log as warnings, because the result of the steps stands and the stop is not a cause.
+//
+// # Initialization result
+//
+// A step reports itself twice: as a hint in the log while it runs, and in the termination message that the container
+// leaves behind. The finalisation reads the termination message for any step whose hint never arrived, so a lost log
+// segment costs no step its result.
+//
+// The initialization is not part of the signature, so the loop that recovers the steps never reaches it. It reads its
+// own entry of the same termination message instead. Without that, a lost initialization hint leaves the step
+// unfinished, and an unfinished initialization aborts the whole execution even when every step passed. The hint still
+// wins when it arrives, and an initialization that reports no result keeps today's abort.
+//
+// # Reopening a log stream
+//
+// A broken log stream reopens from just after the last line it delivered, so the reader sees each
+// line once. A stream that broke before it delivered anything has no such position: resuming from
+// the time it attached would skip everything the container wrote earlier, and because the position
+// never advances the skip would hold for every later reopen. Such a reopen reads from the
+// beginning instead, which duplicates nothing, as nothing was delivered.
 package controller

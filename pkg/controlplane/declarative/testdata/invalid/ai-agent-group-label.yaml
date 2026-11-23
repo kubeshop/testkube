@@ -1,0 +1,10 @@
+# A Test Workflow joins a resource group with this label; an AI Agent does it
+# in spec.access.resourceGroups, so the label is refused rather than dropped.
+apiVersion: ai.testkube.io/v1alpha1
+kind: AIAgent
+metadata:
+  name: grouped
+  labels:
+    testkube.io/group: payments
+spec:
+  instructions: Do things.

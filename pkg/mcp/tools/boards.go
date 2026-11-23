@@ -39,6 +39,16 @@ var ErrBoardsRequireUser = errors.New("insights boards require a signed-in user 
 // ExpectedVersion.
 var ErrBoardChanged = errors.New("the board changed since it was read")
 
+// ErrBoardManagedByGitOps is returned by a client when the Control Plane
+// refuses a change to a board a GitOps agent owns. Unlike ErrBoardChanged it
+// is final: the board is read-only until it is changed in Git, so no write is
+// rebuilt and retried.
+var ErrBoardManagedByGitOps = errors.New("the board is managed by a GitOps agent and is read-only here")
+
+// ProblemCodeManagedByGitOps is the errorCode of the Control Plane's problem
+// response refusing a change to a GitOps-owned resource.
+const ProblemCodeManagedByGitOps = "managed-by-gitops"
+
 const renderConcurrency = 4
 
 // boardWriteAttempts bounds how many times a board write is rebuilt from a
@@ -154,8 +164,8 @@ type BoardRenderer interface {
 // ListBoards creates a tool for listing Insights boards.
 func ListBoards(client BoardLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_boards",
+		readOnlyTool(),
 		mcp.WithDescription(ListBoardsDescription),
-		mcp.WithReadOnlyHintAnnotation(true),
 		mcp.WithString("name", mcp.Description("Filter boards whose name contains this text.")),
 		mcp.WithString("visibility", mcp.Description("'all' (default), 'private' (only your private boards) or 'shared' (only boards shared with the organization)."), mcp.Enum("all", "private", "shared")),
 		mcp.WithString("favorite", mcp.Description("'user' for boards you pinned, 'org' for boards pinned for the organization."), mcp.Enum("user", "org")),
@@ -228,8 +238,8 @@ func ListBoards(client BoardLister) (tool mcp.Tool, handler server.ToolHandlerFu
 // GetBoard creates a tool for viewing a board and its reports.
 func GetBoard(client BoardGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_board",
+		readOnlyTool(),
 		mcp.WithDescription(GetBoardDescription),
-		mcp.WithReadOnlyHintAnnotation(true),
 		mcp.WithString("board", mcp.Required(), mcp.Description(BoardIdDescription)),
 	)
 
@@ -255,6 +265,7 @@ func GetBoard(client BoardGetter) (tool mcp.Tool, handler server.ToolHandlerFunc
 // CreateBoard creates a tool for creating an empty board.
 func CreateBoard(client BoardCreatorWithSlugCheck) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("create_board",
+		additiveTool(),
 		mcp.WithDescription(CreateBoardDescription),
 		mcp.WithString("name", mcp.Required(), mcp.Description("Name of the board.")),
 		mcp.WithString("description", mcp.Description("Description of the board.")),
@@ -308,6 +319,7 @@ func CreateBoard(client BoardCreatorWithSlugCheck) (tool mcp.Tool, handler serve
 // UpdateBoard creates a tool for changing a board's details or layout.
 func UpdateBoard(client BoardEditor) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("update_board",
+		destructiveTool(),
 		mcp.WithDescription(UpdateBoardDescription),
 		mcp.WithString("board", mcp.Required(), mcp.Description(BoardIdDescription)),
 		mcp.WithString("name", mcp.Description("New name.")),
@@ -388,6 +400,7 @@ func UpdateBoard(client BoardEditor) (tool mcp.Tool, handler server.ToolHandlerF
 // AddBoardReport creates a tool for adding a report to a board.
 func AddBoardReport(client BoardEditor) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("add_board_report",
+		additiveTool(),
 		mcp.WithDescription(AddBoardReportDescription),
 		mcp.WithString("board", mcp.Required(), mcp.Description(BoardIdDescription)),
 		mcp.WithString("kind", mcp.Required(), mcp.Description(BoardReportKindDescription), mcp.Enum(boards.Kinds...)),
@@ -459,6 +472,7 @@ func AddBoardReport(client BoardEditor) (tool mcp.Tool, handler server.ToolHandl
 // UpdateBoardReport creates a tool for changing a report on a board.
 func UpdateBoardReport(client BoardEditor) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("update_board_report",
+		destructiveTool(),
 		mcp.WithDescription(UpdateBoardReportDescription),
 		mcp.WithString("board", mcp.Required(), mcp.Description(BoardIdDescription)),
 		mcp.WithString("reportId", mcp.Required(), mcp.Description("ID of the report to change (from get_board).")),
@@ -568,8 +582,8 @@ func UpdateBoardReport(client BoardEditor) (tool mcp.Tool, handler server.ToolHa
 // RemoveBoardReport creates a tool for removing a report from a board.
 func RemoveBoardReport(client BoardEditor) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("remove_board_report",
+		destructiveTool(),
 		mcp.WithDescription(RemoveBoardReportDescription),
-		mcp.WithDestructiveHintAnnotation(true),
 		mcp.WithString("board", mcp.Required(), mcp.Description(BoardIdDescription)),
 		mcp.WithString("reportId", mcp.Required(), mcp.Description("ID of the report to remove (from get_board).")),
 	)
@@ -618,8 +632,8 @@ func RemoveBoardReport(client BoardEditor) (tool mcp.Tool, handler server.ToolHa
 // DeleteBoard creates a tool for deleting a board.
 func DeleteBoard(client BoardRemover) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("delete_board",
+		destructiveTool(),
 		mcp.WithDescription(DeleteBoardDescription),
-		mcp.WithDestructiveHintAnnotation(true),
 		mcp.WithString("board", mcp.Required(), mcp.Description(BoardIdDescription)),
 	)
 
@@ -654,8 +668,8 @@ type renderedReport struct {
 // RenderBoard creates a tool that runs a board's reports and returns their data.
 func RenderBoard(client BoardRenderer) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("render_board",
+		readOnlyTool(),
 		mcp.WithDescription(RenderBoardDescription),
-		mcp.WithReadOnlyHintAnnotation(true),
 		mcp.WithString("board", mcp.Required(), mcp.Description(BoardIdDescription)),
 		mcp.WithString("reportId", mcp.Description("Render only this report (from get_board). Renders every report when omitted.")),
 		mcp.WithString("scope", mcp.Description(BoardRenderScopeDescription), mcp.Enum("board", "environment")),
@@ -957,6 +971,8 @@ func boardError(action string, err error) *mcp.CallToolResult {
 	switch {
 	case errors.Is(err, ErrBoardsRequireUser), strings.Contains(msg, "API tokens are not supported"):
 		return mcp.NewToolResultError(ErrBoardsRequireUser.Error())
+	case errors.Is(err, ErrBoardManagedByGitOps):
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to %s: %v. Nothing was written: a GitOps agent owns this board, so it can only be changed in the Git repository the agent syncs from.", action, err))
 	case errors.Is(err, ErrBoardChanged):
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to %s: the board kept changing while the change was applied (%d attempts), so nothing was written. Someone may be editing it; try again.", action, boardWriteAttempts))
 	case strings.Contains(msg, "status 404"):

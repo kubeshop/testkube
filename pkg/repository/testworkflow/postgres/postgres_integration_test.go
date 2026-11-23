@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -962,4 +963,35 @@ func TestPostgresRepositoryStatusDetails_Integration(t *testing.T) {
 			assert.Equal(t, tt.wantIDs, ids)
 		})
 	}
+}
+
+func TestPostgresRepositorySignature_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "repo_signature")
+	t.Cleanup(cleanup)
+
+	ctx := context.Background()
+	repo := NewPostgresRepository(testDB.Pool, WithOrganizationID("test-org"), WithEnvironmentID("test-env"))
+	signature := []testkube.TestWorkflowSignature{
+		{Ref: "rgroup", Id: "build", Name: "Build", Children: []testkube.TestWorkflowSignature{
+			{Ref: "rshell", Id: "build", Category: "Run shell command"},
+			{Ref: "rartifacts", Id: "build_upload_artifacts", Category: "Upload artifacts", Optional: true},
+		}},
+		{Ref: "rold", Name: "A step from a runner that sends no id"},
+		{Ref: "rlong", Id: strings.Repeat("a", 300), Name: "A step with an explicit id that is longer than a name column"},
+	}
+	require.NoError(t, repo.Insert(ctx, testkube.TestWorkflowExecution{
+		Id:        "exec-1",
+		Name:      "exec-1",
+		Namespace: "default",
+		Number:    1,
+		Workflow:  &testkube.TestWorkflow{Name: "exec-1", Spec: &testkube.TestWorkflowSpec{}},
+		Signature: signature,
+		Result:    &testkube.TestWorkflowResult{Status: common.Ptr(testkube.QUEUED_TestWorkflowStatus)},
+	}))
+
+	got, err := repo.Get(ctx, "exec-1")
+
+	require.NoError(t, err)
+	assert.Equal(t, signature, got.Signature)
 }

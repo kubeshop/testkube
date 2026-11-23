@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"regexp"
 	"runtime"
 	"sort"
@@ -18,7 +17,6 @@ import (
 	"unicode"
 
 	ecr "github.com/awslabs/amazon-ecr-credential-helper/ecr-login"
-	"github.com/chrismellard/docker-credential-acr-env/pkg/credhelper"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/authn/github"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -27,6 +25,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/google"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	"github.com/osscontainertools/docker-credential-acr/pkg/credhelper"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshop/testkube/pkg/utils"
@@ -34,23 +33,6 @@ import (
 
 type craneFetcher struct {
 	insecureRegistries map[string]struct{}
-}
-
-type acrCredentialsHelper struct {
-	authn.Helper
-}
-
-func (h acrCredentialsHelper) Get(serverURL string) (string, string, error) {
-	u, err := url.Parse("https://" + serverURL)
-	if err != nil || u.User != nil || u.Path != "" || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" {
-		return "", "", fmt.Errorf("invalid Azure registry address")
-	}
-	host := strings.ToLower(u.Hostname())
-	// The upstream helper's unanchored regex can send Azure tokens to attacker-owned hosts.
-	if host == "mcr.microsoft.com" || strings.HasSuffix(host, ".azurecr.io") || strings.HasSuffix(host, ".azurecr.cn") || strings.HasSuffix(host, ".azurecr.de") || strings.HasSuffix(host, ".azurecr.us") {
-		return h.Helper.Get(serverURL)
-	}
-	return "", "", fmt.Errorf("server is not an Azure registry")
 }
 
 func NewCraneFetcher(insecureRegistries ...string) InfoFetcher {
@@ -83,7 +65,7 @@ func (c *craneFetcher) Fetch(ctx context.Context, registry, image string, pullSe
 	}
 
 	amazonKeychain := authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogger(io.Discard)))
-	azureKeychain := authn.NewKeychainFromHelper(acrCredentialsHelper{credhelper.NewACRCredentialsHelper()})
+	azureKeychain := authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper())
 	keychain := authn.NewMultiKeychain(
 		authn.DefaultKeychain,
 		google.Keychain,

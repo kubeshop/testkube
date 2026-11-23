@@ -713,6 +713,17 @@ func composeQueryAndOpts(filter testworkflow.Filter) (bson.M, *options.FindOptio
 		query["runningcontext.actor.type_"] = filter.ActorType()
 	}
 
+	if filter.DurationDefined() {
+		duration := bson.M{}
+		if filter.MinDurationMs() > 0 {
+			duration["$gte"] = filter.MinDurationMs()
+		}
+		if filter.MaxDurationMs() > 0 {
+			duration["$lte"] = filter.MaxDurationMs()
+		}
+		query["result.durationms"] = duration
+	}
+
 	if filter.RunnerIDDefined() {
 		query["runnerid"] = filter.RunnerID()
 	} else if filter.AssignedDefined() {

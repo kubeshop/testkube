@@ -184,6 +184,7 @@ Per kind:
   or a granular metric key from list_insight_metric_keys;
   aggregate - one the measure offers, defaulting to the first: 'sum' only for counts (execution-count, case-count, '-total', count metrics),
   'max'/'min' first for '-max'/'-min' measures, 'avg' only for '-avg', 'max' first for latency, duration and rate metrics, otherwise 'sum', 'avg', 'min' or 'max';
+  aggregationPeriod ('day', 'week', 'month', 'quarter' or 'year'; calendar buckets in UTC, default derived from the date range);
   segment (break down by 'status', 'statusDetailsType', 'statusDetailsReason', 'workflow', a label key, 'tag:<key>' or an identity field; default 'status', '' for none);
   chartType 'bar' (default), 'bar-grouped', 'bar-normalized', 'line-stacked', 'line', 'area-normalized', 'heatmap' or 'horizon'; overlaySuccessRate (boolean).
 Example: {"measure": "execution-duration", "aggregate": "avg", "segment": "workflow", "duration": "month", "chartType": "line"}`

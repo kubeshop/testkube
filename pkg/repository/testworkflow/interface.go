@@ -16,6 +16,8 @@ type Label struct {
 	Exists *bool
 }
 
+// LabelSelector selects the executions whose workflow has any one label of Or, unlike
+// Filter.Selector and Filter.TagSelector, which require every key.
 type LabelSelector struct {
 	Or []Label
 }
@@ -80,13 +82,20 @@ type Filter interface {
 	SkipDefined() bool
 	TextSearchDefined() bool
 	TextSearch() string
+	// Selector matches workflow labels, such as "env=prod,team". An execution matches when every item matches.
 	Selector() string
+	// TagSelector matches execution tags, such as "env=prod,owner=bob". An execution matches when every tag key
+	// matches; a key that the selector gives twice, such as "env=prod,env=dev", matches any of its values.
 	TagSelector() string
+	// LabelSelector matches workflow labels. An execution matches when any one label of Or matches.
 	LabelSelector() *LabelSelector
 	ActorName() string
 	ActorNameDefined() bool
 	ActorType() testkube.TestWorkflowRunningContextActorType
 	ActorTypeDefined() bool
+	MinDurationMs() int64
+	MaxDurationMs() int64
+	DurationDefined() bool
 	GroupID() string
 	GroupIDDefined() bool
 	RunnerID() string

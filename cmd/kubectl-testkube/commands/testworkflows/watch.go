@@ -21,11 +21,12 @@ func NewWatchTestWorkflowExecutionCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "testworkflowexecution <executionName>",
-		Aliases: []string{"testworkflowexecutions", "twe", "tw"},
-		Args:    validator.ExecutionName,
-		Short:   "Watch output from test workflow execution",
-		Long:    `Gets test workflow execution details, until it's in success/error state, blocks until gets complete state`,
+		Use:               "testworkflowexecution <executionName>",
+		ValidArgsFunction: common.CompleteTestWorkflowExecutionNames,
+		Aliases:           []string{"testworkflowexecutions", "twe", "tw"},
+		Args:              validator.ExecutionName,
+		Short:             "Watch output from test workflow execution",
+		Long:              `Gets test workflow execution details, until it's in success/error state, blocks until gets complete state`,
 
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _, err := common.GetClient(cmd)

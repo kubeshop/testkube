@@ -1,0 +1,8 @@
+apiVersion: insights.testkube.io/v1alpha1
+kind: Board
+metadata:
+  name: release-health
+spec:
+  reports:
+    - id: pass-rate
+      kind: pass-fail

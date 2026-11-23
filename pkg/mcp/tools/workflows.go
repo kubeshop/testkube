@@ -52,6 +52,7 @@ type WorkflowLister interface {
 
 func ListWorkflows(client WorkflowLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_workflows",
+		readOnlyTool(),
 		mcp.WithDescription(ListWorkflowsDescription),
 		mcp.WithString("resourceGroup", mcp.Description(ResourceGroupDescription)),
 		mcp.WithString("selector", mcp.Description(SelectorDescription)),
@@ -102,6 +103,7 @@ type WorkflowCreator interface {
 
 func CreateWorkflow(client WorkflowCreator) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("create_workflow",
+		additiveTool(),
 		mcp.WithDescription(CreateWorkflowDescription),
 		mcp.WithString("yaml", mcp.Required(), mcp.Description("Complete YAML definition of the TestWorkflow to create in Testkube. This should be the full workflow specification including metadata, spec, and all steps.")),
 	)
@@ -134,6 +136,7 @@ type WorkflowDefinitionGetter interface {
 
 func GetWorkflowDefinition(client WorkflowDefinitionGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_workflow_definition",
+		readOnlyTool(),
 		mcp.WithDescription(GetWorkflowDefinitionDescription),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
 	)
@@ -166,6 +169,7 @@ type WorkflowGetter interface {
 
 func GetWorkflow(client WorkflowGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_workflow",
+		readOnlyTool(),
 		mcp.WithDescription(GetWorkflowDescription),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
 	)
@@ -204,6 +208,7 @@ type WorkflowRunner interface {
 
 func RunWorkflow(client WorkflowRunner) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("run_workflow",
+		toolHints(false, true, false, true), // runs workflow code that may delete things or reach outside systems
 		mcp.WithDescription(RunWorkflowDescription),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
 		mcp.WithObject("config",
@@ -261,6 +266,7 @@ type WorkflowUpdater interface {
 
 func UpdateWorkflow(client WorkflowUpdater) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("update_workflow",
+		destructiveTool(),
 		mcp.WithDescription(UpdateWorkflowDescription),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
 		mcp.WithString("yaml", mcp.Required(), mcp.Description("Complete YAML definition of the TestWorkflow to update in Testkube. This should be the full workflow specification including metadata, spec, and all steps.")),
@@ -299,6 +305,7 @@ type WorkflowMetricsGetter interface {
 
 func GetWorkflowMetrics(client WorkflowMetricsGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_workflow_metrics",
+		readOnlyTool(),
 		mcp.WithDescription(GetWorkflowMetricsDescription),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
 	)
@@ -331,6 +338,7 @@ type WorkflowExecutionMetricsGetter interface {
 
 func GetWorkflowExecutionMetrics(client WorkflowExecutionMetricsGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_workflow_execution_metrics",
+		readOnlyTool(),
 		mcp.WithDescription(GetWorkflowExecutionMetricsDescription),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
 		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),

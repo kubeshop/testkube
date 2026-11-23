@@ -1,0 +1,10 @@
+apiVersion: insights.testkube.io/v1alpha1
+kind: Board
+metadata:
+  name: bad-label
+  labels:
+    team lead: alice
+spec:
+  reports:
+    - id: a
+      kind: pass-fail

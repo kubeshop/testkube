@@ -14,9 +14,10 @@ func NewDeleteWorkflowTriggerCmd() *cobra.Command {
 	var selectors []string
 
 	cmd := &cobra.Command{
-		Use:     "workflowtrigger [name]",
-		Aliases: []string{"workflowtriggers", "wt"},
-		Short:   "Delete a WorkflowTrigger (v2) by name, or bulk-delete by selector",
+		Use:               "workflowtrigger [name]",
+		ValidArgsFunction: common.CompleteWorkflowTriggerNames,
+		Aliases:           []string{"workflowtriggers", "wt"},
+		Short:             "Delete a WorkflowTrigger (v2) by name, or bulk-delete by selector",
 		Run: func(cmd *cobra.Command, args []string) {
 			ignoreNotFound, err := cmd.Flags().GetBool("ignore-not-found")
 			ui.ExitOnError("reading flag ignore-not-found", err)

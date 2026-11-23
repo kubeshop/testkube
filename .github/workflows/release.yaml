@@ -223,11 +223,21 @@ jobs:
           mkdir -p build/kind/images/arm
           mkdir -p build/kind/images/amd
 
-          docker pull --platform linux/arm64 kindest/node:v1.31.0
-          docker save kindest/node:v1.31.0 > build/kind/images/arm/node.tar
+          # Must be a node image listed for the kind version in build/kind/kind.Dockerfile,
+          # pulled by digest and re-tagged because entrypoint.sh starts the cluster by tag.
+          KIND_NODE=kindest/node:v1.34.11
+          KIND_NODE_DIGEST=sha256:44e222ee2132dab25ff87301682f89eb82c7880ea3a1bf543bfe9708fd08d67d
 
-          docker pull --platform linux/amd64 kindest/node:v1.31.0
-          docker save kindest/node:v1.31.0 > build/kind/images/amd/node.tar
+          # The digest is a multi-arch index, and Docker will not point an existing digest
+          # reference at a second platform's image, so drop each image before the next pull.
+          for pair in arm64:arm amd64:amd; do
+            platform="${pair%%:*}"
+            dir="${pair##*:}"
+            docker pull --platform "linux/${platform}" "kindest/node@${KIND_NODE_DIGEST}"
+            docker tag "kindest/node@${KIND_NODE_DIGEST}" "$KIND_NODE"
+            docker save "$KIND_NODE" > "build/kind/images/${dir}/node.tar"
+            docker image rm -f "$(docker image inspect --format '{{.Id}}' "$KIND_NODE")"
+          done
 
       - name: Build and push
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0

@@ -22,4 +22,11 @@
 // failing ones. The api and runner charts point their readiness probes at /ready. Liveness
 // deliberately stays on /health: a stalled poll loop usually means the control plane is
 // unreachable, and restarting every runner over that is worse than the stall.
+//
+// # Step ids in the signature
+//
+// The client sends the id of each step in the signature of an execution (Signature.id), next to
+// the ref. The ref is random for each compile of the workflow, and the id is the same for the same
+// workflow, so the control plane can match the steps of two executions by the id. pkg/controlplane
+// is the other end of this contract and documents what it does with the id.
 package grpc

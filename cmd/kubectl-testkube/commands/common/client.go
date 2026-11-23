@@ -17,19 +17,20 @@ const UserAgentCLI = "Testkube-CLI"
 
 // GetClient returns api client
 func GetClient(cmd *cobra.Command) (client.Client, string, error) {
-	clientType := cmd.Flag("client").Value.String()
+	return getClient(context.Background(), cmd, true)
+}
+
+// getClient builds the API client from the flags and the saved context. When
+// allowLogin is false, a failed token refresh is returned as an error instead
+// of starting a login, which shell completion relies on.
+func getClient(ctx context.Context, cmd *cobra.Command, allowLogin bool) (client.Client, string, error) {
 	namespace := cmd.Flag("namespace").Value.String()
 	apiURI := cmd.Flag("api-uri").Value.String()
 
-	headers, err := cmd.Flags().GetStringToString("header")
+	headers, err := ResolveHeaders(cmd)
 	if err != nil {
-		return nil, "", fmt.Errorf("parsing flag value %w", err)
+		return nil, "", err
 	}
-
-	if headers == nil {
-		headers = make(map[string]string)
-	}
-	headers["User-Agent"] = userAgent()
 
 	options := client.Options{
 		Namespace: namespace,
@@ -41,6 +42,9 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("loading config file %w", err)
 	}
+
+	clientFlag := cmd.Flag("client")
+	clientType := cfg.ResolveClientType(clientFlag.Value.String(), clientFlag.Changed)
 
 	// set kubeconfig as default config type
 	if cfg.ContextType == "" {
@@ -66,8 +70,11 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 		if cfg.CloudContext.ApiKey != "" && cfg.CloudContext.RefreshToken != "" {
 			newTokenType := cfg.CloudContext.TokenType
 			var refreshToken string
-			token, refreshToken, err = refreshUserToken(context.Background(), cfg, options.Insecure)
+			token, refreshToken, err = refreshUserToken(ctx, cfg, options.Insecure)
 			if err != nil {
+				if !allowLogin {
+					return nil, "", fmt.Errorf("token refresh failed: %w", err)
+				}
 				if cfg.CloudContext.TokenType == config.TokenTypeEmailLink {
 					// Don't auto-restart the email-link flow from inside an
 					// unrelated command — a 5-minute "check your inbox" wait
@@ -105,7 +112,7 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 			}
 		}
 		clientType = string(client.ClientCloud)
-		options.CloudApiPathPrefix = fmt.Sprintf("/organizations/%s/environments/%s/agent", cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId)
+		options.CloudApiPathPrefix = client.CloudAgentPathPrefix(cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId)
 		options.CloudApiKey = token
 		options.CloudEnvironment = cfg.CloudContext.EnvironmentId
 		options.CloudOrganization = cfg.CloudContext.OrganizationId
@@ -118,6 +125,22 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	}
 
 	return c, namespace, nil
+}
+
+// ResolveHeaders returns the headers every request of the command carries:
+// the configured ones (`testkube config headers`, the --header default) or
+// those given with --header, and the CLI's User-Agent.
+func ResolveHeaders(cmd *cobra.Command) (map[string]string, error) {
+	flagged, err := cmd.Flags().GetStringToString("header")
+	if err != nil {
+		return nil, fmt.Errorf("parsing flag value %w", err)
+	}
+	headers := make(map[string]string, len(flagged)+1)
+	for k, v := range flagged {
+		headers[k] = v
+	}
+	headers["User-Agent"] = userAgent()
+	return headers, nil
 }
 
 func TelemetryUserID(cmd *cobra.Command, cfg *config.Data) string {

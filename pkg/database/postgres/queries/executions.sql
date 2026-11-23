@@ -18,6 +18,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -79,6 +80,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -170,6 +172,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -231,6 +234,7 @@ SELECT DISTINCT ON (e.workflow_name)
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -293,6 +297,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -355,6 +360,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -410,6 +416,8 @@ WHERE e.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
          (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type' = @actor_type::text)
+    AND (COALESCE(@min_duration_ms::bigint, 0) = 0 OR r.duration_ms >= @min_duration_ms::bigint)
+    AND (COALESCE(@max_duration_ms::bigint, 0) = 0 OR r.duration_ms <= @max_duration_ms::bigint)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
     AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
@@ -435,10 +443,11 @@ WHERE e.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
             ) = array_length(@tag_keys::text[], 1)
         )
         AND
+        -- every tag key must match; a key with several values matches any of them, as the Mongo repository does
         (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[]) AS cond
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond
                 WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) > 0
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond)
         )
     )
     AND (
@@ -508,6 +517,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -578,6 +588,8 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
          (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type' = @actor_type::text)
+    AND (COALESCE(@min_duration_ms::bigint, 0) = 0 OR r.duration_ms >= @min_duration_ms::bigint)
+    AND (COALESCE(@max_duration_ms::bigint, 0) = 0 OR r.duration_ms <= @max_duration_ms::bigint)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
     AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
@@ -604,9 +616,9 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
         )
         AND
         (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[]) AS cond
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond
                 WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) > 0
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond)
         )
     )
     AND (
@@ -679,6 +691,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -733,6 +746,8 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
          (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type' = @actor_type::text)
+    AND (COALESCE(@min_duration_ms::bigint, 0) = 0 OR r.duration_ms >= @min_duration_ms::bigint)
+    AND (COALESCE(@max_duration_ms::bigint, 0) = 0 OR r.duration_ms <= @max_duration_ms::bigint)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
     AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
@@ -759,9 +774,9 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
         )
         AND
         (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[]) AS cond
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond
                 WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) > 0
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond)
         )
     )
     AND (
@@ -818,9 +833,9 @@ INSERT INTO test_workflow_executions (
 
 -- name: InsertTestWorkflowSignature :one
 INSERT INTO test_workflow_signatures (
-    execution_id, ref, name, category, optional, negative, parent_id, sig_order
+    execution_id, ref, step_id, name, category, optional, negative, parent_id, sig_order
 ) VALUES (
-    @execution_id, @ref, @name, @category, @optional, @negative, @parent_id, @sig_order
+    @execution_id, @ref, @step_id, @name, @category, @optional, @negative, @parent_id, @sig_order
 )
 RETURNING test_workflow_signatures.id;
 
@@ -1052,6 +1067,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -1170,6 +1186,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -1224,6 +1241,8 @@ FROM (
              (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
         AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
         AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type' = @actor_type::text)
+        AND (COALESCE(@min_duration_ms::bigint, 0) = 0 OR r.duration_ms >= @min_duration_ms::bigint)
+        AND (COALESCE(@max_duration_ms::bigint, 0) = 0 OR r.duration_ms <= @max_duration_ms::bigint)
         AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
         AND (COALESCE(@initialized, NULL) IS NULL OR
              (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
@@ -1250,9 +1269,9 @@ FROM (
             )
             AND
             (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-                (SELECT COUNT(*) FROM unnest(@tag_conditions::text[]) AS cond
+                (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond
                     WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-                ) > 0
+                ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond)
             )
         )
         AND (
@@ -1327,6 +1346,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -1394,6 +1414,8 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
          (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type' = @actor_type::text)
+    AND (COALESCE(@min_duration_ms::bigint, 0) = 0 OR r.duration_ms >= @min_duration_ms::bigint)
+    AND (COALESCE(@max_duration_ms::bigint, 0) = 0 OR r.duration_ms <= @max_duration_ms::bigint)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
     AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
@@ -1420,9 +1442,9 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
         )
         AND
         (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[]) AS cond
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond
                 WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) > 0
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@tag_conditions::text[]) AS cond)
         )
     )
     AND (
@@ -1484,6 +1506,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
