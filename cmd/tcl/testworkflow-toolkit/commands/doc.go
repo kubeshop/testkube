@@ -35,8 +35,9 @@
 //   - The answer is the file response.md in the results directory of the step, and it is not a
 //     step output. The init process skips an output file above data.MaxOutputSize, and an
 //     answer has no size limit. The processor gives an ID to each step, so each agent step has
-//     a results directory. The ID goes to the first stage of the step only, so after a delay
-//     the command takes the ID from the group of the step. A later step reads the answer at step.<id>.results/response.md, so
+//     a results directory. The ID goes to the first stage of a step only, so the processor
+//     refuses an agent step with an operation that makes an earlier stage, such as a delay.
+//     Without the ID, the init process does not collect the session output. A later step reads the answer at step.<id>.results/response.md, so
 //     the author sets the id or the name of the step to know that path. When the step has no
 //     results directory, the command fails before it starts a turn.
 //   - The command makes one request ID for the process and sends it with the start call, so a

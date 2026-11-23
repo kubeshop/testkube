@@ -85,24 +85,6 @@ func agentMachine(executions expressions.Machine) expressions.Machine {
 	return expressions.CombinedMachines(data.GetBaseTestWorkflowMachine(), data.ExecutionMachine(), executions)
 }
 
-// ownResultsDir returns the results directory of the step that owns the stage with the ref. It
-// is empty when the step has no ID. The processor gives the ID of a step to its first stage only,
-// so when an earlier stage such as a delay runs first, the ID stays on the group of the step,
-// which is the direct parent of the stage.
-func ownResultsDir(getStep func(ref string) *data.StepData, ref string) string {
-	stage := getStep(ref)
-	if stage.Id != "" {
-		return data.StepResultsDir(stage.Id)
-	}
-	if len(stage.Parents) == 0 {
-		return ""
-	}
-	if parent := getStep(stage.Parents[len(stage.Parents)-1]); parent.Id != "" {
-		return data.StepResultsDir(parent.Id)
-	}
-	return ""
-}
-
 // resolveAgentSpec resolves the expressions in the spec of the step. The processor hides the spec
 // from the init process, so this is the only place that resolves them.
 func resolveAgentSpec(spec testworkflowsv1.StepAgent, machines ...expressions.Machine) (testworkflowsv1.StepAgent, error) {
@@ -307,14 +289,18 @@ func NewAgentCmd() *cobra.Command {
 				toolkitcommon.Fail(fmt.Errorf("cannot reach the control plane: %w", err))
 			}
 
+			// The expression has no value for a step with no ID.
+			resultsDir, _ := expressions.EvalExpression("step.results", machine)
 			step := &agentStep{
 				client:       client,
 				out:          os.Stdout,
 				requestID:    uuid.NewString(),
 				stepRef:      config.Ref(),
 				outputsDir:   data.GetOutputsDir(),
-				resultsDir:   ownResultsDir(data.GetState().GetStep, config.Ref()),
 				pollInterval: agentPollInterval,
+			}
+			if resultsDir != nil {
+				step.resultsDir, _ = resultsDir.StringValue()
 			}
 
 			if err := step.run(cmd.Context(), spec); err != nil {

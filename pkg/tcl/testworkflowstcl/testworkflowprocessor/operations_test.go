@@ -55,6 +55,31 @@ func TestProcessAgent(t *testing.T) {
 			wantSpec: &testworkflowsv1.StepAgent{Name: "failure-triage", Prompt: "Read {{ step.tests.outputs.summary }}."},
 		},
 		{
+			name: "fails when another operation makes a stage before the agent stage, because that stage takes the ID of the step",
+			step: testworkflowsv1.Step{StepOperations: testworkflowsv1.StepOperations{
+				Delay: "1s",
+				Shell: "true",
+				Agent: &testworkflowsv1.StepAgent{Name: "failure-triage"},
+			}},
+			wantErr: "agent: an agent step runs only the AI Agent. Move delay, shell to an earlier step",
+		},
+		{
+			name: "fails for content before the agent stage",
+			step: testworkflowsv1.Step{
+				StepSource:     testworkflowsv1.StepSource{Content: &testworkflowsv1.Content{}},
+				StepOperations: testworkflowsv1.StepOperations{Agent: &testworkflowsv1.StepAgent{Name: "failure-triage"}},
+			},
+			wantErr: "Move content to an earlier step",
+		},
+		{
+			name: "accepts artifacts, which make a stage after the agent stage",
+			step: testworkflowsv1.Step{StepOperations: testworkflowsv1.StepOperations{
+				Agent:     &testworkflowsv1.StepAgent{Name: "failure-triage"},
+				Artifacts: &testworkflowsv1.StepArtifacts{Paths: []string{"report.md"}},
+			}},
+			wantSpec: &testworkflowsv1.StepAgent{Name: "failure-triage"},
+		},
+		{
 			name: "accepts a step with no prompt",
 			step: testworkflowsv1.Step{StepOperations: testworkflowsv1.StepOperations{
 				Agent: &testworkflowsv1.StepAgent{Name: "failure-triage"},

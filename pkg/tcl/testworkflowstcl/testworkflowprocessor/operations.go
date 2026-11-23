@@ -119,6 +119,9 @@ func ProcessAgent(_ testworkflowprocessor.InternalProcessor, layer testworkflowp
 	if !expressions.IsTemplateStringWithoutExpressions(step.Agent.Name) {
 		return nil, errors.Errorf("agent: name %q: the name of the AI Agent accepts a literal or a config value only", step.Agent.Name)
 	}
+	if before := operationsBeforeAgent(step); len(before) > 0 {
+		return nil, errors.Errorf("agent: an agent step runs only the AI Agent. Move %s to an earlier step", strings.Join(before, ", "))
+	}
 	container = container.CreateChild()
 	stage := stage.NewContainerStage(layer.NextRef(), container)
 	stage.SetRetryPolicy(step.Retry)
@@ -143,6 +146,39 @@ func ProcessAgent(_ testworkflowprocessor.InternalProcessor, layer testworkflowp
 		EnableToolkit(stage.Ref())
 
 	return stage, nil
+}
+
+// operationsBeforeAgent lists the operations of the step that make a stage before the agent
+// stage. The processor gives the ID of a step to its first stage only, and the init process
+// collects the outputs of the stage with the ID. So with one of these operations, the session
+// output of the AI Agent is lost.
+func operationsBeforeAgent(step testworkflowsv1.Step) []string {
+	var before []string
+	if step.Delay != "" {
+		before = append(before, "delay")
+	}
+	if step.Content != nil {
+		before = append(before, "content")
+	}
+	if step.Cache != nil {
+		before = append(before, "cache")
+	}
+	if len(step.Services) > 0 {
+		before = append(before, "services")
+	}
+	if len(step.Setup) > 0 {
+		before = append(before, "setup")
+	}
+	if step.Run != nil {
+		before = append(before, "run")
+	}
+	if step.Shell != "" {
+		before = append(before, "shell")
+	}
+	if step.Execute != nil {
+		before = append(before, "execute")
+	}
+	return before
 }
 
 func ProcessParallel(_ testworkflowprocessor.InternalProcessor, layer testworkflowprocessor.Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
