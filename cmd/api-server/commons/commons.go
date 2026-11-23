@@ -412,8 +412,13 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		proContext.HasSourceOfTruthCapability = true
 	}
 
-	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityControlPlaneResources) {
-		proContext.ControlPlaneResourcesSyncSupported = true
+	for _, c := range []capabilities.Capability{
+		capabilities.CapabilityControlPlaneResources,
+		capabilities.CapabilityControlPlaneResourcesAI,
+	} {
+		if capabilities.Enabled(foundProContext.Capabilities, c) {
+			proContext.ControlPlaneResourceCapabilities = append(proContext.ControlPlaneResourceCapabilities, c)
+		}
 	}
 
 	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityMultiNamespaceSync) {

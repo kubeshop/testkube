@@ -159,8 +159,10 @@
 // A GitOps runner syncs these custom resources from its cluster to the Control
 // Plane (internal/sync, "Control Plane resources"): it checks each with
 // Normalize and sends it as ApplyPayload makes it, so the Control Plane reads
-// it with the same rules as an apply. Boards are synced today; the other kinds
-// are not yet. A resource a GitOps runner owns is read-only to every other
+// it with the same rules as an apply. Every kind in the registry is synced,
+// each once the Control Plane advertises its family's capability:
+// controlplane-resources for Boards, and controlplane-resources-ai for MCP
+// servers, LLM providers and AI Agents. A resource a GitOps runner owns is read-only to every other
 // writer, testkube apply and delete included, and its status.gitOpsOwner names
 // the runner.
 package declarative
