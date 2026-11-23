@@ -1,0 +1,305 @@
+package controller
+
+import (
+	"context"
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	authorizationv1 "k8s.io/api/authorization/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	insightsv1 "github.com/kubeshop/testkube/api/insights/v1alpha1"
+	gitopssync "github.com/kubeshop/testkube/internal/sync"
+	"github.com/kubeshop/testkube/pkg/controlplane/declarative"
+)
+
+// boardClient returns a copy of Board, without its type, as a cache read may.
+type boardClient struct {
+	Board *insightsv1.Board
+	Err   error
+}
+
+func (c boardClient) Get(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+	if c.Err != nil {
+		return c.Err
+	}
+	b := c.Board.DeepCopy()
+	b.TypeMeta = metav1.TypeMeta{}
+	*obj.(*insightsv1.Board) = *b
+	return nil
+}
+
+func (c boardClient) List(_ context.Context, _ client.ObjectList, _ ...client.ListOption) error {
+	return nil
+}
+
+type fakeControlPlaneResourceStore struct {
+	Sent        declarative.Object
+	DeletedKind declarative.Kind
+	Deleted     string
+	Err         error
+}
+
+func (s *fakeControlPlaneResourceStore) UpdateOrCreateControlPlaneResource(_ context.Context, obj declarative.Object) error {
+	s.Sent = obj
+	return s.Err
+}
+
+func (s *fakeControlPlaneResourceStore) DeleteControlPlaneResource(_ context.Context, kind declarative.Kind, name string) error {
+	s.DeletedKind, s.Deleted = kind, name
+	return s.Err
+}
+
+func boardKind(t *testing.T) declarative.Kind {
+	t.Helper()
+	kinds := SyncedControlPlaneKinds()
+	require.Len(t, kinds, 1, "boards are the only synced kind")
+	require.Equal(t, "boards", kinds[0].Resource)
+	return kinds[0]
+}
+
+func request(name string) reconcile.Request {
+	return reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "testkube", Name: name}}
+}
+
+// A board is normalized with the shared rules before it is sent, so the Control Plane gets what a
+// testkube apply of the same manifest would send.
+func TestControlPlaneResourceSyncReconcilerUpdateOrCreate(t *testing.T) {
+	board := &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: "release-health", Namespace: "testkube"}}
+	store := &fakeControlPlaneResourceStore{}
+
+	_, err := controlPlaneResourceSyncReconciler(boardClient{Board: board}, store, boardKind(t), newPausedResources()).Reconcile(t.Context(), request("release-health"))
+	require.NoError(t, err)
+
+	sent, ok := store.Sent.(*insightsv1.Board)
+	require.True(t, ok)
+	assert.Equal(t, "Board", sent.Kind, "the type is set again for the shared rules")
+	assert.Equal(t, "release-health", sent.Spec.DisplayName, "normalized: the display name defaults to the name")
+}
+
+// An invalid board is never sent, and is not retried: only a change in Git fixes it.
+func TestControlPlaneResourceSyncReconcilerInvalid(t *testing.T) {
+	board := &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: "Not A Name"}}
+	store := &fakeControlPlaneResourceStore{}
+
+	_, err := controlPlaneResourceSyncReconciler(boardClient{Board: board}, store, boardKind(t), newPausedResources()).Reconcile(t.Context(), request("Not A Name"))
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, reconcile.TerminalError(nil)), "terminal: %v", err)
+	assert.Nil(t, store.Sent)
+}
+
+// deletedBoard returns the runner's record of a board whose delete event it saw.
+func deletedBoard(name string) *pausedResources {
+	paused := newPausedResources()
+	paused.predicate().Delete(event.DeleteEvent{Object: &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "testkube"}}})
+	return paused
+}
+
+func TestControlPlaneResourceSyncReconcilerDelete(t *testing.T) {
+	store := &fakeControlPlaneResourceStore{}
+	paused := deletedBoard("release-health")
+
+	_, err := controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, store, boardKind(t), paused).Reconcile(t.Context(), request("release-health"))
+	require.NoError(t, err)
+	assert.Equal(t, "release-health", store.Deleted)
+	assert.Equal(t, "boards", store.DeletedKind.Resource)
+
+	// Sent once: a later read of the missing board has nothing to send.
+	again := &fakeControlPlaneResourceStore{}
+	_, err = controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, again, boardKind(t), paused).Reconcile(t.Context(), request("release-health"))
+	require.NoError(t, err)
+	assert.Empty(t, again.Deleted)
+}
+
+// A board read missing before its delete event is seen is not deleted yet: the informer drops it
+// from the cache before it hands the event over, so a reconcile queued earlier can run in between,
+// while an annotation added just before the delete is still unseen. It looks again once the event
+// is seen, and does what the event's final state says.
+func TestControlPlaneResourceSyncReconcilerDeleteWaitsForItsEvent(t *testing.T) {
+	board := &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: "release-health", Namespace: "testkube"}}
+	reconcileMissing := func(paused *pausedResources) (reconcile.Result, *fakeControlPlaneResourceStore) {
+		store := &fakeControlPlaneResourceStore{}
+		result, err := controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, store, boardKind(t), paused).Reconcile(t.Context(), request("release-health"))
+		require.NoError(t, err)
+		return result, store
+	}
+
+	// Annotated and deleted: the queued reconcile runs before the delete event's predicate.
+	paused := newPausedResources()
+	paused.predicate().Create(event.CreateEvent{Object: board})
+	result, store := reconcileMissing(paused)
+	assert.Empty(t, store.Deleted, "not sent before the delete event")
+	assert.Equal(t, deleteEventWait, result.RequeueAfter, "looked at again")
+
+	annotated := board.DeepCopy()
+	annotated.Annotations = map[string]string{noGitOpsSyncAnnotation: "true"}
+	paused.predicate().Delete(event.DeleteEvent{Object: annotated})
+	result, store = reconcileMissing(paused)
+	assert.Empty(t, store.Deleted, "paused by the final state")
+	assert.Zero(t, result.RequeueAfter)
+
+	// Deleted without the annotation: sent once the event is seen.
+	paused = newPausedResources()
+	paused.predicate().Create(event.CreateEvent{Object: board})
+	_, store = reconcileMissing(paused)
+	assert.Empty(t, store.Deleted)
+	paused.predicate().Delete(event.DeleteEvent{Object: board})
+	_, store = reconcileMissing(paused)
+	assert.Equal(t, "release-health", store.Deleted)
+}
+
+// A delete seen during a watch interruption carries a final state that may be stale, such as the
+// board as it was before the annotation was added, so its delete is not sent, by that reconcile or
+// any retry. A new board of the same name is synced and deleted again as usual.
+func TestControlPlaneResourceSyncReconcilerUnknownDeleteIsNotSent(t *testing.T) {
+	board := &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: "release-health", Namespace: "testkube"}}
+	reconcileMissing := func(paused *pausedResources) *fakeControlPlaneResourceStore {
+		store := &fakeControlPlaneResourceStore{}
+		_, err := controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, store, boardKind(t), paused).Reconcile(t.Context(), request("release-health"))
+		require.NoError(t, err)
+		return store
+	}
+
+	paused := newPausedResources()
+	paused.predicate().Create(event.CreateEvent{Object: board})
+	// The board was annotated and deleted while the watch was down; the tombstone holds it unannotated.
+	paused.predicate().Delete(event.DeleteEvent{Object: board, DeleteStateUnknown: true})
+	assert.Empty(t, reconcileMissing(paused).Deleted, "stale state: not sent")
+	assert.Empty(t, reconcileMissing(paused).Deleted, "nor by a retry")
+
+	paused.predicate().Create(event.CreateEvent{Object: board})
+	paused.predicate().Delete(event.DeleteEvent{Object: board})
+	assert.Equal(t, "release-health", reconcileMissing(paused).Deleted, "a known delete is sent")
+}
+
+func TestControlPlaneResourceSyncReconcilerDeleteWhenMarkedForDeletion(t *testing.T) {
+	now := metav1.Now()
+	board := &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: "release-health", DeletionTimestamp: &now, Finalizers: []string{"keep"}}}
+	store := &fakeControlPlaneResourceStore{}
+
+	_, err := controlPlaneResourceSyncReconciler(boardClient{Board: board}, store, boardKind(t), newPausedResources()).Reconcile(t.Context(), request("release-health"))
+	require.NoError(t, err)
+	assert.Equal(t, "release-health", store.Deleted)
+	assert.Nil(t, store.Sent)
+}
+
+// An ownership conflict is terminal for updates and deletes alike; any other failure is retried.
+func TestControlPlaneResourceSyncReconcilerRejection(t *testing.T) {
+	board := &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: "release-health"}}
+	conflict := &fakeControlPlaneResourceStore{Err: gitopssync.ErrOwnershipConflict}
+
+	_, err := controlPlaneResourceSyncReconciler(boardClient{Board: board}, conflict, boardKind(t), newPausedResources()).Reconcile(t.Context(), request("release-health"))
+	assert.True(t, errors.Is(err, reconcile.TerminalError(nil)), "update: %v", err)
+	_, err = controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, conflict, boardKind(t), deletedBoard("release-health")).Reconcile(t.Context(), request("release-health"))
+	assert.True(t, errors.Is(err, reconcile.TerminalError(nil)), "delete: %v", err)
+
+	unavailable := &fakeControlPlaneResourceStore{Err: errors.New("unavailable")}
+	_, err = controlPlaneResourceSyncReconciler(boardClient{Board: board}, unavailable, boardKind(t), newPausedResources()).Reconcile(t.Context(), request("release-health"))
+	require.Error(t, err)
+	assert.False(t, errors.Is(err, reconcile.TerminalError(nil)), "retried: %v", err)
+}
+
+// A resource carrying testkube.io/no-gitops-sync is not deleted in the Control Plane when its custom
+// resource goes: the Control Plane does not store the annotation, so the runner, which saw it last,
+// does not send the delete. One whose annotation was removed, or that never had it, is deleted.
+func TestControlPlaneResourceSyncReconcilerPausedDelete(t *testing.T) {
+	marked := func(value string) *insightsv1.Board {
+		return &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{
+			Name: "release-health", Namespace: "testkube",
+			Annotations: map[string]string{noGitOpsSyncAnnotation: value},
+		}}
+	}
+	gone := func(paused *pausedResources) *fakeControlPlaneResourceStore {
+		store := &fakeControlPlaneResourceStore{}
+		_, err := controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, store, boardKind(t), paused).Reconcile(t.Context(), request("release-health"))
+		require.NoError(t, err)
+		return store
+	}
+
+	// Seen last with the annotation: the delete is not sent, nor by any later read of the missing
+	// resource, such as a retry queued before the delete.
+	paused := newPausedResources()
+	paused.predicate().Delete(event.DeleteEvent{Object: marked("true")})
+	assert.Empty(t, gone(paused).Deleted)
+	assert.Empty(t, gone(paused).Deleted, "a retry is paused too")
+
+	// A new resource of the same name, without the annotation, is synced and deleted again.
+	unmarked := marked("true")
+	unmarked.Annotations = nil
+	paused.predicate().Create(event.CreateEvent{Object: unmarked})
+	paused.predicate().Delete(event.DeleteEvent{Object: unmarked})
+	assert.Equal(t, "release-health", gone(paused).Deleted, "an event clears the pause")
+
+	// The annotation removed before the delete, or not true, deletes it.
+	paused = newPausedResources()
+	paused.predicate().Create(event.CreateEvent{Object: marked("true")})
+	paused.predicate().Update(event.UpdateEvent{ObjectOld: marked("true"), ObjectNew: marked("false")})
+	paused.predicate().Delete(event.DeleteEvent{Object: marked("false")})
+	assert.Equal(t, "release-health", gone(paused).Deleted)
+	paused.predicate().Delete(event.DeleteEvent{Object: marked("yes")})
+	assert.Equal(t, "release-health", gone(paused).Deleted, "read as the Control Plane reads it")
+
+	// Marked for deletion with the annotation: not sent either.
+	now := metav1.Now()
+	finalizing := marked("true")
+	finalizing.DeletionTimestamp, finalizing.Finalizers = &now, []string{"keep"}
+	store := &fakeControlPlaneResourceStore{}
+	_, err := controlPlaneResourceSyncReconciler(boardClient{Board: finalizing}, store, boardKind(t), newPausedResources()).Reconcile(t.Context(), request("release-health"))
+	require.NoError(t, err)
+	assert.Empty(t, store.Deleted)
+	assert.Nil(t, store.Sent)
+}
+
+type fakeAccessReviews struct {
+	denied string
+	err    error
+	asked  []authorizationv1.ResourceAttributes
+}
+
+func (f *fakeAccessReviews) Create(_ context.Context, review *authorizationv1.SelfSubjectAccessReview, _ metav1.CreateOptions) (*authorizationv1.SelfSubjectAccessReview, error) {
+	f.asked = append(f.asked, *review.Spec.ResourceAttributes)
+	if f.err != nil {
+		return nil, f.err
+	}
+	out := review.DeepCopy()
+	out.Status.Allowed = review.Spec.ResourceAttributes.Verb != f.denied
+	return out, nil
+}
+
+// A kind is synced only when the runner may both list and watch it in its namespace.
+func TestCanListAndWatch(t *testing.T) {
+	reviews := &fakeAccessReviews{}
+	allowed, err := canListAndWatch(t.Context(), reviews, "testkube", "insights.testkube.io", "boards")
+	require.NoError(t, err)
+	assert.True(t, allowed)
+	assert.Equal(t, []authorizationv1.ResourceAttributes{
+		{Namespace: "testkube", Verb: "list", Group: "insights.testkube.io", Resource: "boards"},
+		{Namespace: "testkube", Verb: "watch", Group: "insights.testkube.io", Resource: "boards"},
+	}, reviews.asked)
+
+	allowed, err = canListAndWatch(t.Context(), &fakeAccessReviews{denied: "watch"}, "testkube", "insights.testkube.io", "boards")
+	require.NoError(t, err)
+	assert.False(t, allowed)
+}
+
+// A cluster that forbids the access review itself makes the kind unavailable, which the caller
+// skips, rather than an error that stops the runner; any other failure is still an error.
+func TestCanListAndWatch_ReviewForbidden(t *testing.T) {
+	forbidden := apierrors.NewForbidden(schema.GroupResource{Group: "authorization.k8s.io", Resource: "selfsubjectaccessreviews"}, "", errors.New("RBAC: access denied"))
+	allowed, err := canListAndWatch(t.Context(), &fakeAccessReviews{err: forbidden}, "testkube", "insights.testkube.io", "boards")
+	require.ErrorIs(t, err, errAccessReviewForbidden)
+	assert.False(t, allowed)
+
+	unavailable := apierrors.NewServiceUnavailable("apiserver is starting")
+	_, err = canListAndWatch(t.Context(), &fakeAccessReviews{err: unavailable}, "testkube", "insights.testkube.io", "boards")
+	require.Error(t, err)
+	assert.NotErrorIs(t, err, errAccessReviewForbidden)
+}
