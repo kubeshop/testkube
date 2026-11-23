@@ -14,9 +14,10 @@ func NewDeleteTestTriggerCmd() *cobra.Command {
 	var selectors []string
 
 	cmd := &cobra.Command{
-		Use:     "testtrigger [name]",
-		Aliases: []string{"testtriggers", "tt"},
-		Short:   "Delete a TestTrigger by name, or bulk-delete by selector",
+		Use:               "testtrigger [name]",
+		ValidArgsFunction: common.CompleteTestTriggerNames,
+		Aliases:           []string{"testtriggers", "tt"},
+		Short:             "Delete a TestTrigger by name, or bulk-delete by selector",
 		Run: func(cmd *cobra.Command, args []string) {
 			ignoreNotFound, err := cmd.Flags().GetBool("ignore-not-found")
 			ui.ExitOnError("reading flag ignore-not-found", err)

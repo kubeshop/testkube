@@ -15,6 +15,17 @@ import (
 	phttp "github.com/kubeshop/testkube/pkg/http"
 )
 
+// cloudAgentSegment is the Control Plane's agent proxy, with the API version the
+// request is written for. Control Plane releases before 2.14.0 prefix /v1 to every
+// proxied path themselves, so against them this sends /v1/v1 to the agent.
+var cloudAgentSegment = "/agent/" + Version
+
+// CloudAgentPathPrefix is the path prefix of agent API requests sent through the
+// Control Plane for one environment.
+func CloudAgentPathPrefix(organizationID, environmentID string) string {
+	return fmt.Sprintf("/organizations/%s/environments/%s%s", organizationID, environmentID, cloudAgentSegment)
+}
+
 func NewCloudClient[A All](httpClient *http.Client, apiURI, apiPathPrefix string, insecure ...bool) CloudClient[A] {
 	if apiPathPrefix == "" {
 		apiPathPrefix = "/" + Version
@@ -58,10 +69,10 @@ type ArtifactURL struct {
 	URL string `json:"url"`
 }
 
-// GetFile, in cloud we need to call non
+// GetFile asks the Control Plane's own endpoint, outside the agent proxy, for a
+// download URL, then downloads the file from it.
 func (t CloudClient[A]) GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error) {
-
-	cloudURI := strings.ReplaceAll(uri, "/agent", "")
+	cloudURI := strings.Replace(uri, cloudAgentSegment, "", 1)
 	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, cloudURI, nil)
 	if err != nil {
 		return "", err

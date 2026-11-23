@@ -15,10 +15,11 @@ func NewDeleteWebhookTemplateCmd() *cobra.Command {
 	var selectors []string
 
 	cmd := &cobra.Command{
-		Use:     "webhooktemplate <webhookTemplateName>",
-		Aliases: []string{"wht"},
-		Short:   "Delete webhook template",
-		Long:    `Delete webhook template, pass webhook template name which should be deleted`,
+		Use:               "webhooktemplate <webhookTemplateName>",
+		ValidArgsFunction: common.CompleteWebhookTemplateNames,
+		Aliases:           []string{"wht"},
+		Short:             "Delete webhook template",
+		Long:              `Delete webhook template, pass webhook template name which should be deleted`,
 		Run: func(cmd *cobra.Command, args []string) {
 			ignoreNotFound, err := cmd.Flags().GetBool("ignore-not-found")
 			ui.ExitOnError("reading flag ignore-not-found", err)

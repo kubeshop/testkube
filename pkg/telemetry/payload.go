@@ -64,6 +64,9 @@ type Params struct {
 	PreviewSkipArtifacts       bool       `json:"preview_skip_artifacts,omitempty"`
 	PreviewError               string     `json:"preview_error,omitempty"`
 	AgentCapabilities          []string   `json:"agent_capabilities,omitempty"`
+	// GitOpsSyncedResources counts, by resource (boards, aiagents, ...), the Control Plane
+	// resources a GitOps runner syncs. Only the agent heartbeat sets it.
+	GitOpsSyncedResources map[string]int `json:"gitops_synced_resources,omitempty"`
 
 	Extra map[string]any `json:"-"`
 }

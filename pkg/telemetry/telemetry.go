@@ -189,8 +189,10 @@ func SendPreviewEvent(cmd *cobra.Command, version, executionID string, artifactC
 }
 
 // SendHeartbeatEvent will send event to GA
-func SendHeartbeatEvent(host, version, clusterId string, capabilities []string) (string, error) {
+// with the number of Control Plane resources of each kind a GitOps runner syncs, nil for none.
+func SendHeartbeatEvent(host, version, clusterId string, capabilities []string, gitOpsSynced map[string]int) (string, error) {
 	payload := NewAPIPayload(clusterId, "testkube_api_heartbeat", version, host, GetClusterType(), capabilities)
+	payload.Events[0].Params.GitOpsSyncedResources = gitOpsSynced
 	return sendData(senders, payload)
 }
 

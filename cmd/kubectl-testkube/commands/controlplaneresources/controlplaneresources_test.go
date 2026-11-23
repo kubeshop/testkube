@@ -270,3 +270,82 @@ func TestCommandsUseTheirClientFactory(t *testing.T) {
 	require.NoError(t, del.Execute())
 	assert.Equal(t, []string{"a"}, c.deleted)
 }
+
+const agentBeforeItsServer = `apiVersion: ai.testkube.io/v1alpha1
+kind: AIAgent
+metadata:
+  name: triager
+spec:
+  instructions: Triage failures.
+  mcpServers:
+    - name: github
+---
+apiVersion: ai.testkube.io/v1alpha1
+kind: MCPServer
+metadata:
+  name: github
+spec:
+  url: https://api.githubcopilot.com/mcp/
+`
+
+func TestApply_SendsTheServerBeforeTheAgentThatLinksToIt(t *testing.T) {
+	c := &fakeClient{}
+	var out bytes.Buffer
+	require.NoError(t, Apply(context.Background(), c, read(t, agentBeforeItsServer), ApplyOptions{}, &out))
+
+	assert.Equal(t, "mcpserver/github applied\naiagent/triager applied\n", out.String())
+	require.Len(t, c.applied, 2)
+	assert.Equal(t, "github", c.applied[0].GetName())
+	assert.Equal(t, "triager", c.applied[1].GetName())
+}
+
+const agentBeforeItsSkill = `apiVersion: ai.testkube.io/v1alpha1
+kind: AIAgent
+metadata:
+  name: load-tester
+spec:
+  instructions: Test load.
+  skillRefs:
+    - name: k6-load-testing
+    - name: company-style
+      scope: organization
+---
+apiVersion: ai.testkube.io/v1alpha1
+kind: Skill
+metadata:
+  name: k6-load-testing
+spec:
+  description: Use when writing a k6 load test.
+  allowed-tools: Bash(k6:*) Read
+  content: Start small.
+`
+
+func TestApply_SendsTheSkillBeforeTheAgentThatRefersToIt(t *testing.T) {
+	c := &fakeClient{}
+	var out bytes.Buffer
+	require.NoError(t, Apply(context.Background(), c, read(t, agentBeforeItsSkill), ApplyOptions{}, &out))
+
+	assert.Equal(t, "skill/k6-load-testing applied\naiagent/load-tester applied\n", out.String())
+	require.Len(t, c.applied, 2)
+	assert.Equal(t, "k6-load-testing", c.applied[0].GetName())
+}
+
+// testkube apply cannot read a ConfigMap, so a dry run already says a Skill read with skillFrom
+// is the GitOps runner's to sync.
+func TestApply_DryRunRefusesSkillFrom(t *testing.T) {
+	const skillFrom = `apiVersion: ai.testkube.io/v1alpha1
+kind: Skill
+metadata:
+  name: k6-load-testing
+spec:
+  skillFrom:
+    configMapKeyRef:
+      name: skills
+      key: SKILL.md
+`
+	var out bytes.Buffer
+	err := Apply(context.Background(), nil, read(t, skillFrom), ApplyOptions{DryRun: true}, &out)
+	require.Error(t, err)
+	assert.Equal(t, "skill/k6-load-testing: spec.skillFrom: Forbidden: only a GitOps runner reads a SKILL.md from a ConfigMap in its cluster; testkube apply takes the Skill inline", err.Error())
+	assert.Empty(t, out.String())
+}

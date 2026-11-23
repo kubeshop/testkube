@@ -35,10 +35,11 @@ func NewReRunTestWorkflowExecutionCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "testworkflowexecution [id]",
-		Aliases: []string{"testworkflowexecutions", "twe"},
-		Short:   "ReRun test workflow execution",
-		Args:    validator.ExecutionName,
+		Use:               "testworkflowexecution [id]",
+		ValidArgsFunction: common.CompleteTestWorkflowExecutionNames,
+		Aliases:           []string{"testworkflowexecutions", "twe"},
+		Short:             "ReRun test workflow execution",
+		Args:              validator.ExecutionName,
 
 		Run: func(cmd *cobra.Command, args []string) {
 			outputFlag := cmd.Flag("output")

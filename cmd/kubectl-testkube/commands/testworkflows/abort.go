@@ -12,11 +12,12 @@ import (
 
 func NewAbortTestWorkflowExecutionCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:        "testworkflowexecution <executionName>",
-		Deprecated: "use \"cancel\" instead",
-		Aliases:    []string{"twe", "testworkflows-execution", "testworkflow-execution"},
-		Short:      "Abort test workflow execution",
-		Args:       validator.ExecutionName,
+		Use:               "testworkflowexecution <executionName>",
+		ValidArgsFunction: common.CompleteActiveTestWorkflowExecutionNames,
+		Deprecated:        "use \"cancel\" instead",
+		Aliases:           []string{"twe", "testworkflows-execution", "testworkflow-execution"},
+		Short:             "Abort test workflow execution",
+		Args:              validator.ExecutionName,
 
 		Run: func(cmd *cobra.Command, args []string) {
 			executionID := args[0]

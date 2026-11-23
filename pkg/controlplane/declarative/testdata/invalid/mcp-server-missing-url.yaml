@@ -1,0 +1,7 @@
+apiVersion: ai.testkube.io/v1alpha1
+kind: MCPServer
+metadata:
+  name: github
+spec:
+  type: sse
+  command: npx
