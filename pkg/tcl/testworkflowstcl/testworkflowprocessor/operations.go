@@ -157,8 +157,12 @@ func operationsBeforeAgent(step testworkflowsv1.Step) []string {
 	if step.Delay != "" {
 		before = append(before, "delay")
 	}
-	if step.Content != nil {
-		before = append(before, "content")
+	// Files only mount volumes and make no stage.
+	if step.Content != nil && step.Content.Git != nil {
+		before = append(before, "content.git")
+	}
+	if step.Content != nil && len(step.Content.Tarball) > 0 {
+		before = append(before, "content.tarball")
 	}
 	if step.Cache != nil {
 		before = append(before, "cache")

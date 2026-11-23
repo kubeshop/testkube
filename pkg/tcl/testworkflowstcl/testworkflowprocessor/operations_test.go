@@ -64,12 +64,20 @@ func TestProcessAgent(t *testing.T) {
 			wantErr: "agent: an agent step runs only the AI Agent. Move delay, shell to an earlier step",
 		},
 		{
-			name: "fails for content before the agent stage",
+			name: "fails for a Git checkout before the agent stage",
 			step: testworkflowsv1.Step{
-				StepSource:     testworkflowsv1.StepSource{Content: &testworkflowsv1.Content{}},
+				StepSource:     testworkflowsv1.StepSource{Content: &testworkflowsv1.Content{Git: &testworkflowsv1.ContentGit{Uri: "https://github.com/kubeshop/testkube"}}},
 				StepOperations: testworkflowsv1.StepOperations{Agent: &testworkflowsv1.StepAgent{Name: "failure-triage"}},
 			},
-			wantErr: "Move content to an earlier step",
+			wantErr: "Move content.git to an earlier step",
+		},
+		{
+			name: "accepts files, which only mount volumes and make no stage",
+			step: testworkflowsv1.Step{
+				StepSource:     testworkflowsv1.StepSource{Content: &testworkflowsv1.Content{Files: []testworkflowsv1.ContentFile{{Path: "/data/prompt.md", Content: "Find the cause."}}}},
+				StepOperations: testworkflowsv1.StepOperations{Agent: &testworkflowsv1.StepAgent{Name: "failure-triage"}},
+			},
+			wantSpec: &testworkflowsv1.StepAgent{Name: "failure-triage"},
 		},
 		{
 			name: "accepts artifacts, which make a stage after the agent stage",
