@@ -25,6 +25,11 @@
 // flags) from the runtime config; a new agent feature or toggle that should be tracked goes there
 // and in capabilities_test.go.
 //
+// A GitOps runner that syncs Control Plane resources also reports how many of each kind it syncs
+// (the gitops_synced_resources param, Segment property gitopsSyncedResources, such as
+// {"boards": 3, "aiagents": 1}), read for each heartbeat from internal/sync/controller
+// SyncedResources. It holds counts only, never names.
+//
 // The hosted-runner tag marks runners that Testkube provisions for trial users, detected from the
 // tkcagent_hr_ prefix the Control Plane assigns to RUNNER_NAME. Keep hostedRunnerNamePrefix in
 // sync with naming.HostedRunnerAgentName in testkube-cloud-api.

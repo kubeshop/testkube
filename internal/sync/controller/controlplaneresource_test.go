@@ -102,7 +102,7 @@ func TestControlPlaneResourceSyncReconcilerUpdateOrCreate(t *testing.T) {
 	board := &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: "release-health", Namespace: "testkube"}}
 	store := &fakeControlPlaneResourceStore{}
 
-	_, err := controlPlaneResourceSyncReconciler(boardClient{Board: board}, store, boardKind(t), newPausedResources()).Reconcile(t.Context(), request("release-health"))
+	_, err := controlPlaneResourceSyncReconciler(boardClient{Board: board}, store, boardKind(t), newPausedResources(), nil).Reconcile(t.Context(), request("release-health"))
 	require.NoError(t, err)
 
 	sent, ok := store.Sent.(*insightsv1.Board)
@@ -116,7 +116,7 @@ func TestControlPlaneResourceSyncReconcilerInvalid(t *testing.T) {
 	board := &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: "Not A Name"}}
 	store := &fakeControlPlaneResourceStore{}
 
-	_, err := controlPlaneResourceSyncReconciler(boardClient{Board: board}, store, boardKind(t), newPausedResources()).Reconcile(t.Context(), request("Not A Name"))
+	_, err := controlPlaneResourceSyncReconciler(boardClient{Board: board}, store, boardKind(t), newPausedResources(), nil).Reconcile(t.Context(), request("Not A Name"))
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, reconcile.TerminalError(nil)), "terminal: %v", err)
 	assert.Nil(t, store.Sent)
@@ -133,14 +133,14 @@ func TestControlPlaneResourceSyncReconcilerDelete(t *testing.T) {
 	store := &fakeControlPlaneResourceStore{}
 	paused := deletedBoard("release-health")
 
-	_, err := controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, store, boardKind(t), paused).Reconcile(t.Context(), request("release-health"))
+	_, err := controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, store, boardKind(t), paused, nil).Reconcile(t.Context(), request("release-health"))
 	require.NoError(t, err)
 	assert.Equal(t, "release-health", store.Deleted)
 	assert.Equal(t, "boards", store.DeletedKind.Resource)
 
 	// Sent once: a later read of the missing board has nothing to send.
 	again := &fakeControlPlaneResourceStore{}
-	_, err = controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, again, boardKind(t), paused).Reconcile(t.Context(), request("release-health"))
+	_, err = controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, again, boardKind(t), paused, nil).Reconcile(t.Context(), request("release-health"))
 	require.NoError(t, err)
 	assert.Empty(t, again.Deleted)
 }
@@ -153,7 +153,7 @@ func TestControlPlaneResourceSyncReconcilerDeleteWaitsForItsEvent(t *testing.T) 
 	board := &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: "release-health", Namespace: "testkube"}}
 	reconcileMissing := func(paused *pausedResources) (reconcile.Result, *fakeControlPlaneResourceStore) {
 		store := &fakeControlPlaneResourceStore{}
-		result, err := controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, store, boardKind(t), paused).Reconcile(t.Context(), request("release-health"))
+		result, err := controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, store, boardKind(t), paused, nil).Reconcile(t.Context(), request("release-health"))
 		require.NoError(t, err)
 		return result, store
 	}
@@ -189,7 +189,7 @@ func TestControlPlaneResourceSyncReconcilerUnknownDeleteIsNotSent(t *testing.T) 
 	board := &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: "release-health", Namespace: "testkube"}}
 	reconcileMissing := func(paused *pausedResources) *fakeControlPlaneResourceStore {
 		store := &fakeControlPlaneResourceStore{}
-		_, err := controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, store, boardKind(t), paused).Reconcile(t.Context(), request("release-health"))
+		_, err := controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, store, boardKind(t), paused, nil).Reconcile(t.Context(), request("release-health"))
 		require.NoError(t, err)
 		return store
 	}
@@ -211,7 +211,7 @@ func TestControlPlaneResourceSyncReconcilerDeleteWhenMarkedForDeletion(t *testin
 	board := &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: "release-health", DeletionTimestamp: &now, Finalizers: []string{"keep"}}}
 	store := &fakeControlPlaneResourceStore{}
 
-	_, err := controlPlaneResourceSyncReconciler(boardClient{Board: board}, store, boardKind(t), newPausedResources()).Reconcile(t.Context(), request("release-health"))
+	_, err := controlPlaneResourceSyncReconciler(boardClient{Board: board}, store, boardKind(t), newPausedResources(), nil).Reconcile(t.Context(), request("release-health"))
 	require.NoError(t, err)
 	assert.Equal(t, "release-health", store.Deleted)
 	assert.Nil(t, store.Sent)
@@ -222,13 +222,13 @@ func TestControlPlaneResourceSyncReconcilerRejection(t *testing.T) {
 	board := &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: "release-health"}}
 	conflict := &fakeControlPlaneResourceStore{Err: gitopssync.ErrOwnershipConflict}
 
-	_, err := controlPlaneResourceSyncReconciler(boardClient{Board: board}, conflict, boardKind(t), newPausedResources()).Reconcile(t.Context(), request("release-health"))
+	_, err := controlPlaneResourceSyncReconciler(boardClient{Board: board}, conflict, boardKind(t), newPausedResources(), nil).Reconcile(t.Context(), request("release-health"))
 	assert.True(t, errors.Is(err, reconcile.TerminalError(nil)), "update: %v", err)
-	_, err = controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, conflict, boardKind(t), deletedBoard("release-health")).Reconcile(t.Context(), request("release-health"))
+	_, err = controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, conflict, boardKind(t), deletedBoard("release-health"), nil).Reconcile(t.Context(), request("release-health"))
 	assert.True(t, errors.Is(err, reconcile.TerminalError(nil)), "delete: %v", err)
 
 	unavailable := &fakeControlPlaneResourceStore{Err: errors.New("unavailable")}
-	_, err = controlPlaneResourceSyncReconciler(boardClient{Board: board}, unavailable, boardKind(t), newPausedResources()).Reconcile(t.Context(), request("release-health"))
+	_, err = controlPlaneResourceSyncReconciler(boardClient{Board: board}, unavailable, boardKind(t), newPausedResources(), nil).Reconcile(t.Context(), request("release-health"))
 	require.Error(t, err)
 	assert.False(t, errors.Is(err, reconcile.TerminalError(nil)), "retried: %v", err)
 }
@@ -245,7 +245,7 @@ func TestControlPlaneResourceSyncReconcilerPausedDelete(t *testing.T) {
 	}
 	gone := func(paused *pausedResources) *fakeControlPlaneResourceStore {
 		store := &fakeControlPlaneResourceStore{}
-		_, err := controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, store, boardKind(t), paused).Reconcile(t.Context(), request("release-health"))
+		_, err := controlPlaneResourceSyncReconciler(boardClient{Err: fakeNotFoundErr}, store, boardKind(t), paused, nil).Reconcile(t.Context(), request("release-health"))
 		require.NoError(t, err)
 		return store
 	}
@@ -278,10 +278,45 @@ func TestControlPlaneResourceSyncReconcilerPausedDelete(t *testing.T) {
 	finalizing := marked("true")
 	finalizing.DeletionTimestamp, finalizing.Finalizers = &now, []string{"keep"}
 	store := &fakeControlPlaneResourceStore{}
-	_, err := controlPlaneResourceSyncReconciler(boardClient{Board: finalizing}, store, boardKind(t), newPausedResources()).Reconcile(t.Context(), request("release-health"))
+	_, err := controlPlaneResourceSyncReconciler(boardClient{Board: finalizing}, store, boardKind(t), newPausedResources(), nil).Reconcile(t.Context(), request("release-health"))
 	require.NoError(t, err)
 	assert.Empty(t, store.Deleted)
 	assert.Nil(t, store.Sent)
+}
+
+// A board counts as synced once the Control Plane took it, and stops counting once it is deleted,
+// pauses its sync, turns invalid or is refused. A failure that is retried leaves the count as it
+// was.
+func TestControlPlaneResourceSyncReconcilerCountsSynced(t *testing.T) {
+	synced := NewSyncedResources()
+	reconcileWith := func(c boardClient, store *fakeControlPlaneResourceStore) {
+		_, _ = controlPlaneResourceSyncReconciler(c, store, boardKind(t), newPausedResources(), synced).Reconcile(t.Context(), request("release-health"))
+	}
+	board := &insightsv1.Board{ObjectMeta: metav1.ObjectMeta{Name: "release-health", Namespace: "testkube"}}
+	assert.Nil(t, synced.Counts())
+
+	reconcileWith(boardClient{Board: board}, &fakeControlPlaneResourceStore{})
+	assert.Equal(t, map[string]int{"boards": 1}, synced.Counts())
+	reconcileWith(boardClient{Board: board}, &fakeControlPlaneResourceStore{Err: errors.New("unavailable")})
+	assert.Equal(t, map[string]int{"boards": 1}, synced.Counts(), "retried: unchanged")
+	reconcileWith(boardClient{Board: board}, &fakeControlPlaneResourceStore{Err: gitopssync.ErrOwnershipConflict})
+	assert.Nil(t, synced.Counts(), "another runner's")
+
+	reconcileWith(boardClient{Board: board}, &fakeControlPlaneResourceStore{})
+	paused := board.DeepCopy()
+	paused.Annotations = map[string]string{noGitOpsSyncAnnotation: "true"}
+	reconcileWith(boardClient{Board: paused}, &fakeControlPlaneResourceStore{})
+	assert.Nil(t, synced.Counts(), "paused")
+
+	reconcileWith(boardClient{Board: board}, &fakeControlPlaneResourceStore{})
+	invalid := board.DeepCopy()
+	invalid.Spec.Reports = []insightsv1.BoardReport{{ID: "no-kind"}}
+	reconcileWith(boardClient{Board: invalid}, &fakeControlPlaneResourceStore{})
+	assert.Nil(t, synced.Counts(), "turned invalid")
+
+	reconcileWith(boardClient{Board: board}, &fakeControlPlaneResourceStore{})
+	reconcileWith(boardClient{Err: fakeNotFoundErr}, &fakeControlPlaneResourceStore{})
+	assert.Nil(t, synced.Counts(), "deleted")
 }
 
 type fakeAccessReviews struct {

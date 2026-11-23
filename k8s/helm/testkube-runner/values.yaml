@@ -92,11 +92,16 @@ webhooks:
 
 ## GitOps capability configuration
 gitops:
-  ## Enable Kubernetes to Control Plane sync. It also syncs the Control Plane resources the
-  ## Control Plane serves: Insights Boards, MCP servers, LLM providers and AI Agents.
+  ## Enable Kubernetes to Control Plane sync
   enabled: false
   ## Install the shared Testkube CRDs required by GitOps watchers
   installCRD: true
+  controlPlaneResources:
+    ## Also sync the Control Plane resources: Insights Boards, MCP servers, LLM providers and AI
+    ## Agents. Needs gitops.enabled. It grants the runner read access to their custom resources
+    ## (installed with installCRD). A Control Plane that does not serve a kind is not sent it, and
+    ## the runner skips it.
+    enabled: false
 
 execution:
   default:
