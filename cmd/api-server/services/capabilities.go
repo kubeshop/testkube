@@ -59,6 +59,9 @@ func AgentCapabilities(cfg *config.Config) []string {
 	}
 	if cfg.GitOpsSyncKubernetesToCloudEnabled {
 		caps = append(caps, "gitops-sync")
+		if cfg.GitOpsSyncControlPlaneResourcesEnabled {
+			caps = append(caps, "gitops-controlplane-resources")
+		}
 	}
 	if cfg.FeatureCloudStorage {
 		caps = append(caps, "cloud-storage")

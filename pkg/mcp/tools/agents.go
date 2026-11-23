@@ -24,6 +24,7 @@ type AgentsLister interface {
 
 func ListAgents(client AgentsLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_agents",
+		readOnlyTool(),
 		mcp.WithDescription(ListAgentsDescription),
 		mcp.WithString("type", mcp.Description("Filter by agent type (e.g., 'runner')")),
 		mcp.WithString("capability", mcp.Description("Filter by capability (e.g., 'execution')")),

@@ -1,0 +1,12 @@
+# skillFrom reads every field from the SKILL.md, and testkube apply cannot
+# read a ConfigMap at all.
+apiVersion: ai.testkube.io/v1alpha1
+kind: Skill
+metadata:
+  name: k6-load-testing
+spec:
+  description: Written here as well.
+  allowed-tools: Read
+  skillFrom:
+    configMapKeyRef:
+      name: skills

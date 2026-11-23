@@ -27,6 +27,7 @@ type WorkflowResourceHistoryGetter interface {
 // across multiple executions of a workflow.
 func GetWorkflowResourceHistory(client WorkflowResourceHistoryGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_workflow_resource_history",
+		readOnlyTool(),
 		mcp.WithDescription(GetWorkflowResourceHistoryDescription),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
 		mcp.WithString("lastN", mcp.Description("Number of recent executions to analyze (default: 50, max: 100)")),

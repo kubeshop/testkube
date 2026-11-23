@@ -68,6 +68,51 @@ func TestFixtures_Invalid(t *testing.T) {
 		"board-unknown-field.yaml":          {"document 1", `unknown field "dispayName"`},
 		"unknown-kind.yaml":                 {`unknown kind "Dashboard"`},
 		"not-a-controlplane-resource.yaml":  {`"testworkflows.testkube.io/v1" is not a Control Plane resource`},
+		"ai-agent-literal-secret.yaml": {
+			"spec.mcpServers[0].headers[Authorization]", "a key itself never goes in a manifest",
+			"spec.mcpServers[0].headers[X-Trace]", `may read a credential only as {{ credential("name") }}`,
+		},
+		"ai-agent-group-label.yaml": {"metadata.labels[testkube.io/group]", "spec.access.resourceGroups"},
+		"ai-agent-private.yaml":     {`unknown field "private"`},
+		"llm-provider-vault-key.yaml": {
+			"spec.apiKey", "must read an Environment Credential",
+			"spec.extraHeaders[Authorization]", "is set from apiKey",
+		},
+		"ai-agent-bad-link.yaml": {
+			"spec.mcpServers[0].headers", "only a shared_key link",
+			"spec.mcpServers[1].name", "Duplicate value",
+			"spec.access.roles[0]", `"owner"`,
+		},
+		"ai-agent-no-instructions.yaml": {"metadata.name", "spec.instructions"},
+		"ai-agent-bad-skills.yaml": {
+			"spec.skills[0].name", "lowercase letters, digits and single hyphens",
+			"spec.skills[1].description: Required", "spec.skills[1].content: Required",
+			"spec.skills[2].name", "Duplicate value",
+		},
+		"llm-provider-bad-model.yaml": {
+			"spec.extraHeaders[Host]", "does not forward",
+			"spec.models[0].name", "spec.models[2].name", "Duplicate value",
+		},
+		"ai-agent-bad-skill-refs.yaml": {
+			"spec.skills[1].skillFrom: Forbidden: only a GitOps runner reads a SKILL.md",
+			`spec.skillRefs[0].name: Invalid value: "notes": is also the name of one of the agent's own Skills`,
+			`spec.skillRefs[2].name: Duplicate value: "style"`,
+			`spec.skillRefs[3].name: Invalid value: "Style Guide"`,
+			`spec.skillRefs[4].scope: Unsupported value: "cluster"`,
+		},
+		"skill-bad.yaml": {
+			`metadata.name: Invalid value: "k6--load": must be up to 64 lowercase letters, digits and single hyphens`,
+			"spec.description: Required value", "spec.content: Required value",
+			"spec.compatibility: Invalid value: may not be more than 500 characters",
+			"spec.metadata", "a metadata entry needs a key",
+		},
+		"skill-from-with-inline-fields.yaml": {
+			"spec.skillFrom.configMapKeyRef.key: Required value",
+			"spec.description: Forbidden: comes from the SKILL.md", "spec.allowed-tools: Forbidden",
+			"spec.skillFrom: Forbidden: only a GitOps runner reads a SKILL.md from a ConfigMap in its cluster; testkube apply takes the Skill inline",
+		},
+		"mcp-server-builtin-name.yaml": {"metadata.name", "built-in Testkube MCP server"},
+		"mcp-server-missing-url.yaml":  {"spec.url", "spec.command", "only a stdio server"},
 	}
 	files, err := filepath.Glob(filepath.Join("testdata", "invalid", "*.yaml"))
 	require.NoError(t, err)
@@ -85,6 +130,11 @@ func TestFixtures_Invalid(t *testing.T) {
 			require.Error(t, err)
 			for _, want := range wants {
 				assert.Contains(t, err.Error(), want)
+			}
+			// The secrets the fixtures hold must not reach the error, which the
+			// CLI prints to terminal and CI logs.
+			for _, secret := range []string{"ghp_abc123", "hunter2", "sk-live-123"} {
+				assert.NotContains(t, err.Error(), secret)
 			}
 		})
 	}

@@ -13,6 +13,7 @@ type ResourceGroupsLister interface {
 
 func ListResourceGroups(client ResourceGroupsLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_resource_groups",
+		readOnlyTool(),
 		mcp.WithDescription(ListResourceGroupsDescription),
 	)
 

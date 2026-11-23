@@ -24,7 +24,6 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 // allowLogin is false, a failed token refresh is returned as an error instead
 // of starting a login, which shell completion relies on.
 func getClient(ctx context.Context, cmd *cobra.Command, allowLogin bool) (client.Client, string, error) {
-	clientType := cmd.Flag("client").Value.String()
 	namespace := cmd.Flag("namespace").Value.String()
 	apiURI := cmd.Flag("api-uri").Value.String()
 
@@ -43,6 +42,9 @@ func getClient(ctx context.Context, cmd *cobra.Command, allowLogin bool) (client
 	if err != nil {
 		return nil, "", fmt.Errorf("loading config file %w", err)
 	}
+
+	clientFlag := cmd.Flag("client")
+	clientType := cfg.ResolveClientType(clientFlag.Value.String(), clientFlag.Changed)
 
 	// set kubeconfig as default config type
 	if cfg.ContextType == "" {
@@ -110,7 +112,7 @@ func getClient(ctx context.Context, cmd *cobra.Command, allowLogin bool) (client
 			}
 		}
 		clientType = string(client.ClientCloud)
-		options.CloudApiPathPrefix = fmt.Sprintf("/organizations/%s/environments/%s/agent", cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId)
+		options.CloudApiPathPrefix = client.CloudAgentPathPrefix(cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId)
 		options.CloudApiKey = token
 		options.CloudEnvironment = cfg.CloudContext.EnvironmentId
 		options.CloudOrganization = cfg.CloudContext.OrganizationId

@@ -15,6 +15,7 @@ type ArtifactLister interface {
 
 func ListArtifacts(client ArtifactLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_artifacts",
+		readOnlyTool(),
 		mcp.WithDescription(ListArtifactsDescription),
 		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),
 	)
@@ -42,6 +43,7 @@ type ArtifactReader interface {
 
 func ReadArtifact(client ArtifactReader) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("read_artifact",
+		readOnlyTool(),
 		mcp.WithDescription(ReadArtifactDescription),
 		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),
 		mcp.WithString("fileName", mcp.Required(), mcp.Description(FilenameDescription)),

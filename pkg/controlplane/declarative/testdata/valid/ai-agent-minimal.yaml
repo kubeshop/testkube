@@ -1,0 +1,6 @@
+apiVersion: ai.testkube.io/v1alpha1
+kind: AIAgent
+metadata:
+  name: helper
+spec:
+  instructions: Answer questions about this environment.

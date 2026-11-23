@@ -1,0 +1,23 @@
+apiVersion: ai.testkube.io/v1alpha1
+kind: AIAgent
+metadata:
+  name: helper
+spec:
+  instructions: Help.
+  skills:
+    - name: notes
+      description: Notes.
+      content: Some notes.
+    - name: from-git
+      skillFrom:
+        configMapKeyRef:
+          name: skills
+          key: SKILL.md
+  skillRefs:
+    - name: notes
+    - name: style
+      scope: organization
+    - name: style
+    - name: Style Guide
+    - name: k6
+      scope: cluster
