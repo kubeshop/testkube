@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
+	aiv1 "github.com/kubeshop/testkube/api/ai/v1alpha1"
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 	insightsv1 "github.com/kubeshop/testkube/api/insights/v1alpha1"
 	"github.com/kubeshop/testkube/pkg/mcp/boards"
@@ -29,8 +30,14 @@ func Normalize(obj Object) error {
 	switch o := obj.(type) {
 	case *insightsv1.Board:
 		return normalizeBoard(o).ToAggregate()
+	case *aiv1.AIAgent:
+		return normalizeAIAgent(o).ToAggregate()
+	case *aiv1.MCPServer:
+		return normalizeMCPServer(o).ToAggregate()
+	case *aiv1.LLMProvider:
+		return normalizeLLMProvider(o).ToAggregate()
 	}
-	return fmt.Errorf("unsupported object type %T", obj)
+	return unsupportedType(obj)
 }
 
 func normalizeBoard(b *insightsv1.Board) field.ErrorList {
