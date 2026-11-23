@@ -17,24 +17,25 @@ func TestMapParams(t *testing.T) {
 			{
 				Name: "e1",
 				Params: Params{
-					AppName:         "testkube-api",
-					AppVersion:      "v1.0.0",
-					Architecture:    "amd64",
-					OperatingSystem: "linux",
-					MachineID:       "mid1",
-					ClusterID:       "cid1",
-					EventCategory:   "command",
-					Host:            "local",
-					DataSource:      "git-dir",
-					TestType:        "postman/collection",
-					DurationMs:      100,
-					Status:          "failed",
-					TestSource:      "main",
-					TestSuiteSteps:  5,
-					ClusterType:     "local",
-					Source:          "cli-direct",
-					CliContext:      "others|local",
-					AITool:          "claude-code",
+					AppName:               "testkube-api",
+					AppVersion:            "v1.0.0",
+					Architecture:          "amd64",
+					OperatingSystem:       "linux",
+					MachineID:             "mid1",
+					ClusterID:             "cid1",
+					EventCategory:         "command",
+					Host:                  "local",
+					DataSource:            "git-dir",
+					TestType:              "postman/collection",
+					DurationMs:            100,
+					Status:                "failed",
+					TestSource:            "main",
+					TestSuiteSteps:        5,
+					ClusterType:           "local",
+					Source:                "cli-direct",
+					CliContext:            "others|local",
+					AITool:                "claude-code",
+					GitOpsSyncedResources: map[string]int{"boards": 2, "aiagents": 1},
 				},
 			},
 		},
@@ -62,6 +63,7 @@ func TestMapParams(t *testing.T) {
 	assert.Equal(t, int32(5), track.Properties["testSuiteSteps"])
 	assert.Equal(t, "local", track.Properties["clusterType"])
 	assert.Equal(t, "cli-direct", track.Properties["source"])
+	assert.Equal(t, map[string]int{"boards": 2, "aiagents": 1}, track.Properties["gitopsSyncedResources"])
 }
 
 func TestSegmentioSender(t *testing.T) {

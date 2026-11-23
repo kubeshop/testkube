@@ -18,6 +18,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -79,6 +80,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -170,6 +172,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -231,6 +234,7 @@ SELECT DISTINCT ON (e.workflow_name)
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -293,6 +297,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -355,6 +360,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -511,6 +517,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -684,6 +691,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -825,9 +833,9 @@ INSERT INTO test_workflow_executions (
 
 -- name: InsertTestWorkflowSignature :one
 INSERT INTO test_workflow_signatures (
-    execution_id, ref, name, category, optional, negative, parent_id, sig_order
+    execution_id, ref, step_id, name, category, optional, negative, parent_id, sig_order
 ) VALUES (
-    @execution_id, @ref, @name, @category, @optional, @negative, @parent_id, @sig_order
+    @execution_id, @ref, @step_id, @name, @category, @optional, @negative, @parent_id, @sig_order
 )
 RETURNING test_workflow_signatures.id;
 
@@ -1059,6 +1067,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -1177,6 +1186,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -1336,6 +1346,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
@@ -1495,6 +1506,7 @@ SELECT
             json_build_object(
                 'id', s.id,
                 'ref', s.ref,
+                'step_id', s.step_id,
                 'name', s.name,
                 'category', s.category,
                 'optional', s.optional,
