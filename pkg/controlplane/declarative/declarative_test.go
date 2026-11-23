@@ -93,6 +93,24 @@ func TestFixtures_Invalid(t *testing.T) {
 			"spec.extraHeaders[Host]", "does not forward",
 			"spec.models[0].name", "spec.models[2].name", "Duplicate value",
 		},
+		"ai-agent-bad-skill-refs.yaml": {
+			"spec.skills[1].skillFrom: Forbidden: only a GitOps runner reads a SKILL.md",
+			`spec.skillRefs[0].name: Invalid value: "notes": is also the name of one of the agent's own Skills`,
+			`spec.skillRefs[2].name: Duplicate value: "style"`,
+			`spec.skillRefs[3].name: Invalid value: "Style Guide"`,
+			`spec.skillRefs[4].scope: Unsupported value: "cluster"`,
+		},
+		"skill-bad.yaml": {
+			`metadata.name: Invalid value: "k6--load": must be up to 64 lowercase letters, digits and single hyphens`,
+			"spec.description: Required value", "spec.content: Required value",
+			"spec.compatibility: Invalid value: may not be more than 500 characters",
+			"spec.metadata", "a metadata entry needs a key",
+		},
+		"skill-from-with-inline-fields.yaml": {
+			"spec.skillFrom.configMapKeyRef.key: Required value",
+			"spec.description: Forbidden: comes from the SKILL.md", "spec.allowed-tools: Forbidden",
+			"spec.skillFrom: Forbidden: only a GitOps runner reads a SKILL.md from a ConfigMap in its cluster; testkube apply takes the Skill inline",
+		},
 		"mcp-server-builtin-name.yaml": {"metadata.name", "built-in Testkube MCP server"},
 		"mcp-server-missing-url.yaml":  {"spec.url", "spec.command", "only a stdio server"},
 	}

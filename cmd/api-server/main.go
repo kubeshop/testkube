@@ -21,21 +21,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	aiv1 "github.com/kubeshop/testkube/api/ai/v1alpha1"
-	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
-	insightsv1 "github.com/kubeshop/testkube/api/insights/v1alpha1"
-	testexecutionv1 "github.com/kubeshop/testkube/api/testexecution/v1"
-	testsuiteexecutionv1 "github.com/kubeshop/testkube/api/testsuiteexecution/v1"
-	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
-	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
-	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
@@ -736,25 +727,8 @@ func main() {
 		ctrl.SetLogger(zapr.NewLogger(log.DefaultLogger.Desugar()))
 
 		// Configure a scheme to include the required resource definitions.
-		scheme := runtime.NewScheme()
-		err = testworkflowsv1.AddToScheme(scheme)
-		commons.ExitOnError("add TestWorkflows to kubernetes runtime scheme", err)
-		err = testtriggersv1.AddToScheme(scheme)
-		commons.ExitOnError("add TestTriggers to kubernetes runtime scheme", err)
-		err = workflowtriggersv1.AddToScheme(scheme)
-		commons.ExitOnError("add WorkflowTriggers to kubernetes runtime scheme", err)
-		err = executorv1.AddToScheme(scheme)
-		commons.ExitOnError("add Webhooks to kubernetes runtime scheme", err)
-		err = insightsv1.AddToScheme(scheme)
-		commons.ExitOnError("add Boards to kubernetes runtime scheme", err)
-		err = aiv1.AddToScheme(scheme)
-		commons.ExitOnError("add AI Agents, MCP servers and LLM providers to kubernetes runtime scheme", err)
-
-		// Legacy schemes
-		err = testexecutionv1.AddToScheme(scheme)
-		commons.ExitOnError("add TestExecution to kubernetes runtime scheme", err)
-		err = testsuiteexecutionv1.AddToScheme(scheme)
-		commons.ExitOnError("add TestSuiteExecution to kubernetes runtime scheme", err)
+		scheme, err := services.NewControllerScheme()
+		commons.ExitOnError("configure kubernetes runtime scheme", err)
 
 		// Configure the manager to use the defined scheme and to operate in the current namespace.
 		mgr, err := manager.New(kubeConfig, manager.Options{

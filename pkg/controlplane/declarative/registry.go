@@ -68,8 +68,8 @@ func (k Kind) Name() string {
 }
 
 // kinds is in apply order: a kind comes after every kind it refers to, so
-// SortForApply can put an AI Agent after the MCP servers and LLM providers in
-// the same input.
+// SortForApply can put an AI Agent after the MCP servers, LLM providers and
+// Skills in the same input.
 var kinds = []Kind{
 	{
 		GroupVersion: insightsv1.GroupVersion,
@@ -94,6 +94,14 @@ var kinds = []Kind{
 		Names:        []string{"mcpserver", "mcpservers"},
 		Scope:        ScopeEnvironment,
 		newObject:    func() Object { return &aiv1.MCPServer{} },
+	},
+	{
+		GroupVersion: aiv1.GroupVersion,
+		Kind:         aiv1.SkillKind,
+		Resource:     aiv1.SkillResource,
+		Names:        []string{"skill", "skills"},
+		Scope:        ScopeEnvironment,
+		newObject:    func() Object { return &aiv1.Skill{} },
 	},
 	{
 		GroupVersion: aiv1.GroupVersion,
@@ -182,6 +190,8 @@ func StatusOf(obj Object) commonv1.ControlPlaneResourceStatus {
 	case *aiv1.MCPServer:
 		return o.Status.ControlPlaneResourceStatus
 	case *aiv1.LLMProvider:
+		return o.Status
+	case *aiv1.Skill:
 		return o.Status
 	}
 	return commonv1.ControlPlaneResourceStatus{}

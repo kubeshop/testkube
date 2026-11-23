@@ -42,6 +42,12 @@ const CapabilityControlPlaneResources Capability = "controlplane-resources"
 // features on PostgreSQL, and one that predates their sync refuses them.
 const CapabilityControlPlaneResourcesAI Capability = "controlplane-resources-ai"
 
+// CapabilityControlPlaneResourcesSkills is whether the control plane takes the Skills of an
+// environment's library (the Skill kind) through the control_plane_resource arm. It is advertised
+// apart from CapabilityControlPlaneResourcesAI because a control plane that takes the other AI
+// kinds may predate the Skill kind, and would refuse it.
+const CapabilityControlPlaneResourcesSkills Capability = "controlplane-resources-skills"
+
 // CapabilityMultiNamespaceSync is whether the control plane reads the namespace fields of the
 // sync API and the environment-id header, and keys GitOps ownership by (agentId, namespace).
 // Without it an agent must sync one namespace per Environment.
