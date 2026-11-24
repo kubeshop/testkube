@@ -1,5 +1,5 @@
 ARG BUSYBOX_IMAGE="busybox:1.38.0-musl"
-ARG ALPINE_IMAGE="alpine:3.24.3"
+ARG ALPINE_IMAGE="alpine:3.24.4"
 FROM ${BUSYBOX_IMAGE} AS busybox
 
 ###################################
