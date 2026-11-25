@@ -186,7 +186,7 @@ func StatusOf(obj Object) commonv1.ControlPlaneResourceStatus {
 	case *insightsv1.Board:
 		return o.Status
 	case *aiv1.AIAgent:
-		return o.Status
+		return o.Status.ControlPlaneResourceStatus
 	case *aiv1.MCPServer:
 		return o.Status.ControlPlaneResourceStatus
 	case *aiv1.LLMProvider:
