@@ -2232,7 +2232,8 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 		if scope.Key == "" {
 			return params, errors.New("a label scope needs a label key")
 		}
-		params.LabelScopeKey = scope.Key
+		// The stored label keys have escaped dots, as for the other label filters.
+		params.LabelScopeKey = utils.EscapeDots(scope.Key)
 		params.LabelScopeValues = scope.Values
 	}
 
@@ -2411,7 +2412,8 @@ func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testwo
 		if scope.Key == "" {
 			return params, errors.New("a label scope needs a label key")
 		}
-		params.LabelScopeKey = scope.Key
+		// The stored label keys have escaped dots, as for the other label filters.
+		params.LabelScopeKey = utils.EscapeDots(scope.Key)
 		params.LabelScopeValues = scope.Values
 	}
 

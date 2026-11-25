@@ -1005,12 +1005,14 @@ func TestPostgresRepositoryLabelScope_Integration(t *testing.T) {
 	testDB, _ := testpostgres.PreparePostgresTestDatabase(t, "repo_label_scope")
 	repo := NewPostgresRepository(testDB.Pool, WithOrganizationID("test-org"), WithEnvironmentID("test-env"))
 	ctx := context.Background()
+	// The key has a dot, as the Resource Group label does, and the store escapes the dots of keys.
+	const groupLabel = "testkube.io/group"
 
 	for name, labels := range map[string]map[string]string{
 		"no-labels":   nil,
 		"other-label": {"team": "payments"},
-		"mine":        {"group": "mine"},
-		"secret":      {"group": "secret"},
+		"mine":        {groupLabel: "mine"},
+		"secret":      {groupLabel: "secret"},
 	} {
 		execution := fixtures.NewExecution(name, fixtures.WithStatus(testkube.PASSED_TestWorkflowStatus))
 		execution.Workflow.Labels = labels
@@ -1029,17 +1031,17 @@ func TestPostgresRepositoryLabelScope_Integration(t *testing.T) {
 		},
 		{
 			name:     "a scope lists the executions with no group label and with a given group",
-			filter:   testworkflow.NewExecutionsFilter().WithLabelScope(&testworkflow.LabelScope{Key: "group", Values: []string{"mine"}}),
+			filter:   testworkflow.NewExecutionsFilter().WithLabelScope(&testworkflow.LabelScope{Key: groupLabel, Values: []string{"mine"}}),
 			wantRuns: []string{"mine", "no-labels", "other-label"},
 		},
 		{
 			name:     "a scope with no values lists only the executions with no group label",
-			filter:   testworkflow.NewExecutionsFilter().WithLabelScope(&testworkflow.LabelScope{Key: "group"}),
+			filter:   testworkflow.NewExecutionsFilter().WithLabelScope(&testworkflow.LabelScope{Key: groupLabel}),
 			wantRuns: []string{"no-labels", "other-label"},
 		},
 		{
 			name:     "a scope also applies to the fast path of one workflow name",
-			filter:   testworkflow.NewExecutionsFilter().WithName("secret").WithLabelScope(&testworkflow.LabelScope{Key: "group", Values: []string{"mine"}}),
+			filter:   testworkflow.NewExecutionsFilter().WithName("secret").WithLabelScope(&testworkflow.LabelScope{Key: groupLabel, Values: []string{"mine"}}),
 			wantRuns: nil,
 		},
 	}
