@@ -28,7 +28,7 @@ spec:
     activeDeadlineSeconds: 1380
   container:
     workingDir: /data/repo/js/packages/e2e-tests
-    image: mcr.microsoft.com/playwright:v1.62.1-noble
+    image: mcr.microsoft.com/playwright:v1.65.1-noble
     env:
     - name: npm_config_cache
       value: /root/.npm
@@ -157,7 +157,7 @@ spec:
     SHARDS: {type: integer, default: 10}
   container:
     workingDir: /data/repo/js/packages/e2e-tests
-    image: mcr.microsoft.com/playwright:v1.62.1-noble
+    image: mcr.microsoft.com/playwright:v1.65.1-noble
     resources:
       requests:
         cpu: 256m
