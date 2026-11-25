@@ -1,0 +1,11 @@
+apiVersion: ai.testkube.io/v1alpha1
+kind: Skill
+metadata:
+  name: skill
+spec:
+  description: Example skill description.
+  content: |
+    Example skill contents.
+  testkube:
+    alwaysInclude: true
+    addToNewTestBundles: false

@@ -1,0 +1,8 @@
+apiVersion: ai.testkube.io/v1alpha1
+kind: MCPServer
+metadata:
+  name: mcpserver
+spec:
+  displayName: Example MCP server
+  description: Example MCP server description.
+  url: https://example.com/mcp

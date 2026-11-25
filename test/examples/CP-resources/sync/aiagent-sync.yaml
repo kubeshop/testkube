@@ -1,0 +1,21 @@
+apiVersion: ai.testkube.io/v1alpha1
+kind: AIAgent
+metadata:
+  name: aiagent-sync
+spec:
+  displayName: Example AI agent sync
+  description: Example AI agent description.
+  instructions: |
+    Example agent instructions.
+  mcpServers:
+    - name: mcpserver-sync
+  skills:
+    - name: example-inline-skill
+      description: Example inline skill description.
+      content: |
+        Example inline skill contents.
+  skillRefs:
+    - name: skill-sync
+      scope: environment
+  access:
+    roles: [run]

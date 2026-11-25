@@ -1,0 +1,21 @@
+apiVersion: ai.testkube.io/v1alpha1
+kind: AIAgent
+metadata:
+  name: aiagent
+spec:
+  displayName: Example AI agent
+  description: Example AI agent description.
+  instructions: |
+    Example agent instructions.
+  mcpServers:
+    - name: mcpserver
+  skills:
+    - name: example-inline-skill
+      description: Example inline skill description.
+      content: |
+        Example inline skill contents.
+  skillRefs:
+    - name: skill
+      scope: environment
+  access:
+    roles: [run]
