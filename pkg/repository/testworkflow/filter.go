@@ -22,6 +22,7 @@ type FilterImpl struct {
 	FSelector           string
 	FTagSelector        string
 	FLabelSelector      *LabelSelector
+	FLabelScope         *LabelScope
 	FActorName          string
 	FActorType          testkube.TestWorkflowRunningContextActorType
 	FMinDurationMs      int64
@@ -137,6 +138,11 @@ func (f *FilterImpl) WithMaxDurationMs(durationMs int64) *FilterImpl {
 
 func (f *FilterImpl) WithLabelSelector(selector *LabelSelector) *FilterImpl {
 	f.FLabelSelector = selector
+	return f
+}
+
+func (f *FilterImpl) WithLabelScope(scope *LabelScope) *FilterImpl {
+	f.FLabelScope = scope
 	return f
 }
 
@@ -258,6 +264,10 @@ func (f FilterImpl) TagSelector() string {
 
 func (f FilterImpl) LabelSelector() *LabelSelector {
 	return f.FLabelSelector
+}
+
+func (f FilterImpl) LabelScope() *LabelScope {
+	return f.FLabelScope
 }
 
 func (f FilterImpl) ActorName() string {

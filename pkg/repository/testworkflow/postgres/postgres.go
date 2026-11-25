@@ -757,6 +757,7 @@ func isFinishedByWorkflowFastPathFilter(f testworkflow.Filter) bool {
 		!f.HealthRangesDefined() &&
 		f.Selector() == "" &&
 		f.LabelSelector() == nil &&
+		f.LabelScope() == nil &&
 		f.TagSelector() == ""
 }
 
@@ -817,6 +818,7 @@ func isNameOnlyFilter(f testworkflow.Filter) bool {
 		!f.HealthRangesDefined() &&
 		f.Selector() == "" &&
 		f.LabelSelector() == nil &&
+		f.LabelScope() == nil &&
 		f.TagSelector() == ""
 }
 
@@ -2102,6 +2104,8 @@ func (r *PostgresRepository) Count(ctx context.Context, filter testworkflow.Filt
 		TagConditions:      params.TagConditions,
 		LabelKeys:          params.LabelKeys,
 		LabelConditions:    params.LabelConditions,
+		LabelScopeKey:      params.LabelScopeKey,
+		LabelScopeValues:   params.LabelScopeValues,
 		SelectorKeys:       params.SelectorKeys,
 		SelectorConditions: params.SelectorConditions,
 	})
@@ -2221,6 +2225,15 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 		keys, conditions := r.parseLabelSelectorToText(filter.LabelSelector())
 		params.LabelKeys = keys
 		params.LabelConditions = conditions
+	}
+
+	if scope := filter.LabelScope(); scope != nil {
+		// An empty key would match every execution, so a scope with no key is a caller error.
+		if scope.Key == "" {
+			return params, errors.New("a label scope needs a label key")
+		}
+		params.LabelScopeKey = scope.Key
+		params.LabelScopeValues = scope.Values
 	}
 
 	if filter.TagSelector() != "" {
@@ -2391,6 +2404,15 @@ func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testwo
 		keys, conditions := r.parseLabelSelectorToText(filter.LabelSelector())
 		params.LabelKeys = keys
 		params.LabelConditions = conditions
+	}
+
+	if scope := filter.LabelScope(); scope != nil {
+		// An empty key would match every execution, so a scope with no key is a caller error.
+		if scope.Key == "" {
+			return params, errors.New("a label scope needs a label key")
+		}
+		params.LabelScopeKey = scope.Key
+		params.LabelScopeValues = scope.Values
 	}
 
 	if filter.TagSelector() != "" {

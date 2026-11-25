@@ -22,6 +22,14 @@ type LabelSelector struct {
 	Or []Label
 }
 
+// LabelScope selects the executions whose workflow has no label Key, or has Key with one of Values.
+// An access rule needs both parts in one condition: LabelSelector joins a missing label and a label
+// value with AND. With no Values, only the executions without the label stay.
+type LabelScope struct {
+	Key    string
+	Values []string
+}
+
 type GetPreviousFinishedStateOptions struct {
 	SkipSilentWebhookExecutions bool
 }
@@ -89,6 +97,8 @@ type Filter interface {
 	TagSelector() string
 	// LabelSelector matches workflow labels. An execution matches when any one label of Or matches.
 	LabelSelector() *LabelSelector
+	// LabelScope limits the executions to the workflows that have no label Key or one of its Values.
+	LabelScope() *LabelScope
 	ActorName() string
 	ActorNameDefined() bool
 	ActorType() testkube.TestWorkflowRunningContextActorType

@@ -705,6 +705,17 @@ func composeQueryAndOpts(filter testworkflow.Filter) (bson.M, *options.FindOptio
 		query["$or"] = subquery
 	}
 
+	// The scope is an access rule, so it joins the other conditions with AND, also with the $or above.
+	if scope := filter.LabelScope(); scope != nil {
+		field := "workflow.labels." + utils.EscapeDots(scope.Key)
+		values := append([]string{}, scope.Values...)
+		and, _ := query["$and"].(bson.A)
+		query["$and"] = append(and, bson.M{"$or": bson.A{
+			bson.M{field: bson.M{"$exists": false}},
+			bson.M{field: bson.M{"$in": values}},
+		}})
+	}
+
 	if filter.ActorNameDefined() {
 		query["runningcontext.actor.name"] = filter.ActorName()
 	}
