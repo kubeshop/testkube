@@ -22,7 +22,12 @@ func NewCreateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:         "create <resourceName>",
 		Aliases:     []string{"c"},
-		Short:       "Create resource",
+		Short:       "Create a Test Workflow, template, trigger, webhook or runner",
+		Long: `Create one Test Workflow, Test Workflow Template, trigger, webhook or runner, from flags or a manifest.
+
+Creating one that already exists fails; pass --update to update it instead (not for runners).
+
+Boards, MCP Servers, LLM Providers, Skills and AI Agents are not created here: they are applied from YAML manifests with "testkube apply -f <file>", which creates or updates them.`,
 		Annotations: map[string]string{cmdGroupAnnotation: cmdGroupCommands},
 		Run: func(cmd *cobra.Command, args []string) {
 			err := cmd.Help()
