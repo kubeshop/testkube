@@ -9,12 +9,14 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/test/fixtures"
 )
 
 func TestNewMongoRepository_UpdateReport_Integration(t *testing.T) {
@@ -830,4 +832,91 @@ func TestNewMongoRepository_GetExecutions_StatusDetailsType_Integration(t *testi
 			assert.Equal(t, string(testkube.StopReasonOOMKilled), got.Result.StatusDetails.Reason)
 		}
 	})
+}
+
+// TestMongoRepositoryLabelScope_Integration checks the access rule of a label scope in every method
+// that takes a filter, alone and together with a tag selector and a label selector. The key has a dot,
+// as the Resource Group label does, and the store escapes the dots of keys.
+func TestMongoRepositoryLabelScope_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	ctx := context.Background()
+	client, err := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017"))
+	require.NoError(t, err)
+	db := client.Database("testworkflow-label-scope-mongo-repository-test")
+	t.Cleanup(func() { _ = db.Drop(ctx) })
+	repo := NewMongoRepository(db, false)
+
+	const groupLabel = "testkube.io/group"
+	for name, labels := range map[string]map[string]string{
+		"no-labels":   nil,
+		"other-label": {"team": "payments"},
+		"mine":        {groupLabel: "mine"},
+		"secret":      {groupLabel: "secret"},
+	} {
+		tags := map[string]string{"env": "prod"}
+		if name == "other-label" {
+			tags = map[string]string{"env": "dev"}
+		}
+		execution := fixtures.NewExecution(name, fixtures.WithStatus(testkube.PASSED_TestWorkflowStatus), fixtures.WithTags(tags))
+		execution.Workflow.Labels = labels
+		require.NoError(t, repo.Insert(ctx, execution))
+	}
+
+	scope := func(values ...string) *testworkflow.LabelScope {
+		return &testworkflow.LabelScope{Key: groupLabel, Values: values}
+	}
+	tests := []struct {
+		name     string
+		filter   *testworkflow.FilterImpl
+		wantRuns []string
+	}{
+		{name: "no scope lists every execution", filter: testworkflow.NewExecutionsFilter(),
+			wantRuns: []string{"mine", "no-labels", "other-label", "secret"}},
+		{name: "a scope keeps the executions with no group label and with a value in the list",
+			filter: testworkflow.NewExecutionsFilter().WithLabelScope(scope("mine")), wantRuns: []string{"mine", "no-labels", "other-label"}},
+		{name: "a scope drops the executions with a value that is not in the list",
+			filter: testworkflow.NewExecutionsFilter().WithLabelScope(scope("other")), wantRuns: []string{"no-labels", "other-label"}},
+		{name: "a scope with no values keeps only the executions with no group label",
+			filter: testworkflow.NewExecutionsFilter().WithLabelScope(scope()), wantRuns: []string{"no-labels", "other-label"}},
+		{name: "a scope joins a tag selector with AND",
+			filter: testworkflow.NewExecutionsFilter().WithTagSelector("env=prod").WithLabelScope(scope("mine")), wantRuns: []string{"mine", "no-labels"}},
+		{name: "a scope joins a label selector with AND",
+			filter: testworkflow.NewExecutionsFilter().WithLabelSelector(&testworkflow.LabelSelector{Or: []testworkflow.Label{{Key: "team", Value: strPtr("payments")}}}).
+				WithLabelScope(scope("mine")), wantRuns: []string{"other-label"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			summaries, err := repo.GetExecutionsSummary(ctx, tt.filter)
+			require.NoError(t, err)
+			executions, err := repo.GetExecutions(ctx, tt.filter)
+			require.NoError(t, err)
+			finished, err := repo.GetFinished(ctx, tt.filter)
+			require.NoError(t, err)
+			count, err := repo.Count(ctx, tt.filter)
+			require.NoError(t, err)
+			totals, err := repo.GetExecutionsTotals(ctx, tt.filter)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.wantRuns, sortedWorkflowNames(summaries, func(e testkube.TestWorkflowExecutionSummary) string { return e.Workflow.Name }), "GetExecutionsSummary")
+			assert.Equal(t, tt.wantRuns, sortedWorkflowNames(executions, func(e testkube.TestWorkflowExecution) string { return e.Workflow.Name }), "GetExecutions")
+			assert.Equal(t, tt.wantRuns, sortedWorkflowNames(finished, func(e testkube.TestWorkflowExecution) string { return e.Workflow.Name }), "GetFinished")
+			assert.Equal(t, int64(len(tt.wantRuns)), count, "Count")
+			assert.Equal(t, int32(len(tt.wantRuns)), totals.Results, "GetExecutionsTotals")
+		})
+	}
+
+	noKey := testworkflow.NewExecutionsFilter().WithLabelScope(&testworkflow.LabelScope{Values: []string{"mine"}})
+	_, err = repo.GetExecutions(ctx, noKey)
+	assert.ErrorIs(t, err, testworkflow.ErrLabelScopeKey, "a scope with no key would match every execution")
+	_, err = repo.Count(ctx, noKey)
+	assert.ErrorIs(t, err, testworkflow.ErrLabelScopeKey)
+}
+
+func sortedWorkflowNames[T any](items []T, workflowName func(T) string) []string {
+	var names []string
+	for _, item := range items {
+		names = append(names, workflowName(item))
+	}
+	sort.Strings(names)
+	return names
 }

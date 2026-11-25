@@ -47,6 +47,8 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionsTotals(t *tes
 		[]string{},           // tag_conditions
 		[]string{},           // label_keys
 		[]string{},           // label_conditions
+		"",                   // label_scope_key
+		[]string{},           // label_scope_values
 		[]string{},           // selector_keys
 		[]string{},           // selector_conditions
 	).WillReturnRows(rows)
@@ -74,6 +76,8 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionsTotals(t *tes
 		TagConditions:      []string{},
 		LabelKeys:          []string{},
 		LabelConditions:    []string{},
+		LabelScopeKey:      "",
+		LabelScopeValues:   []string{},
 		SelectorKeys:       []string{},
 		SelectorConditions: []string{},
 	})
@@ -123,6 +127,8 @@ func TestSQLCTestWorkflowExecutionQueries_CountTestWorkflowExecutions(t *testing
 		[]string{},           // tag_conditions
 		[]string{},           // label_keys
 		[]string{},           // label_conditions
+		"",                   // label_scope_key
+		[]string{},           // label_scope_values
 		[]string{},           // selector_keys
 		[]string{},           // selector_conditions
 	).WillReturnRows(rows)
@@ -150,6 +156,8 @@ func TestSQLCTestWorkflowExecutionQueries_CountTestWorkflowExecutions(t *testing
 		TagConditions:      []string{},
 		LabelKeys:          []string{},
 		LabelConditions:    []string{},
+		LabelScopeKey:      "",
+		LabelScopeValues:   []string{},
 		SelectorKeys:       []string{},
 		SelectorConditions: []string{},
 	})

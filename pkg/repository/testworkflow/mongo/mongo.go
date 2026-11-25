@@ -269,6 +269,9 @@ func (r *MongoRepository) GetRunning(ctx context.Context) (result []testkube.Tes
 
 func (r *MongoRepository) GetFinished(ctx context.Context, filter testworkflow.Filter) (result []testkube.TestWorkflowExecution, err error) {
 	result = make([]testkube.TestWorkflowExecution, 0)
+	if err := testworkflow.CheckLabelScope(filter); err != nil {
+		return result, err
+	}
 	query, opts := composeQueryAndOpts(filter)
 	if r.allowDiskUse {
 		opts.SetAllowDiskUse(r.allowDiskUse)
@@ -312,6 +315,9 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...tes
 
 	query := bson.M{}
 	if len(filter) > 0 {
+		if err := testworkflow.CheckLabelScope(filter[0]); err != nil {
+			return totals, err
+		}
 		query, _ = composeQueryAndOpts(filter[0])
 	}
 
@@ -366,12 +372,18 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...tes
 }
 
 func (r *MongoRepository) Count(ctx context.Context, filter testworkflow.Filter) (count int64, err error) {
+	if err := testworkflow.CheckLabelScope(filter); err != nil {
+		return 0, err
+	}
 	query, _ := composeQueryAndOpts(filter)
 	return r.Coll.CountDocuments(ctx, query)
 }
 
 func (r *MongoRepository) GetExecutions(ctx context.Context, filter testworkflow.Filter) (result []testkube.TestWorkflowExecution, err error) {
 	result = make([]testkube.TestWorkflowExecution, 0)
+	if err := testworkflow.CheckLabelScope(filter); err != nil {
+		return result, err
+	}
 	query, opts := composeQueryAndOpts(filter)
 	if r.allowDiskUse {
 		opts.SetAllowDiskUse(r.allowDiskUse)
@@ -394,6 +406,9 @@ type TestWorkflowExecutionSummaryWithResolvedWorkflow struct {
 
 func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter testworkflow.Filter) (result []testkube.TestWorkflowExecutionSummary, err error) {
 	executions := make([]TestWorkflowExecutionSummaryWithResolvedWorkflow, 0)
+	if err := testworkflow.CheckLabelScope(filter); err != nil {
+		return nil, err
+	}
 	query, _ := composeQueryAndOpts(filter)
 
 	pipeline := []bson.M{
@@ -706,7 +721,8 @@ func composeQueryAndOpts(filter testworkflow.Filter) (bson.M, *options.FindOptio
 	}
 
 	// The scope is an access rule, so it joins the other conditions with AND, also with the $or above.
-	if scope := filter.LabelScope(); scope != nil {
+	// Each method refuses a scope with no key first (testworkflow.CheckLabelScope).
+	if scope := filter.LabelScope(); scope != nil && scope.Key != "" {
 		field := "workflow.labels." + utils.EscapeDots(scope.Key)
 		values := append([]string{}, scope.Values...)
 		and, _ := query["$and"].(bson.A)

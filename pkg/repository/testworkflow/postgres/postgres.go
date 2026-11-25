@@ -2228,9 +2228,8 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 	}
 
 	if scope := filter.LabelScope(); scope != nil {
-		// An empty key would match every execution, so a scope with no key is a caller error.
-		if scope.Key == "" {
-			return params, errors.New("a label scope needs a label key")
+		if err := testworkflow.CheckLabelScope(filter); err != nil {
+			return params, err
 		}
 		// The stored label keys have escaped dots, as for the other label filters.
 		params.LabelScopeKey = utils.EscapeDots(scope.Key)
@@ -2408,9 +2407,8 @@ func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testwo
 	}
 
 	if scope := filter.LabelScope(); scope != nil {
-		// An empty key would match every execution, so a scope with no key is a caller error.
-		if scope.Key == "" {
-			return params, errors.New("a label scope needs a label key")
+		if err := testworkflow.CheckLabelScope(filter); err != nil {
+			return params, err
 		}
 		// The stored label keys have escaped dots, as for the other label filters.
 		params.LabelScopeKey = utils.EscapeDots(scope.Key)

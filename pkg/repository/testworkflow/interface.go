@@ -2,6 +2,7 @@ package testworkflow
 
 import (
 	"context"
+	"errors"
 	"io"
 	"time"
 
@@ -28,6 +29,21 @@ type LabelSelector struct {
 type LabelScope struct {
 	Key    string
 	Values []string
+}
+
+// ErrLabelScopeKey is the error for a label scope with no key. Such a scope would keep every execution,
+// so each repository refuses it.
+var ErrLabelScopeKey = errors.New("a label scope needs a label key")
+
+// CheckLabelScope returns ErrLabelScopeKey when the filter has a label scope with no key.
+func CheckLabelScope(filter Filter) error {
+	if filter == nil {
+		return nil
+	}
+	if scope := filter.LabelScope(); scope != nil && scope.Key == "" {
+		return ErrLabelScopeKey
+	}
+	return nil
 }
 
 type GetPreviousFinishedStateOptions struct {
