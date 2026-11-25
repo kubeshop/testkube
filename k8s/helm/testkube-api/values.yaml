@@ -760,7 +760,7 @@ minio:
   image:
     registry: docker.io
     repository: kubeshop/testkube-minio
-    tag: "2025.10"
+    tag: "2025.10-2"
     pullPolicy: IfNotPresent
     pullSecrets: []
   ## ServiceAccount name to use for Minio

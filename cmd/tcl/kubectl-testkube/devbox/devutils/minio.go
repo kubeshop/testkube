@@ -30,7 +30,7 @@ func NewMinio(pod *PodObject) *Minio {
 // minioImage is the image the testkube chart deploys MinIO with. MinIO no longer
 // publishes public images, so minio/minio and quay.io/minio/minio do not pull.
 // It runs as a non-root user, so the data directory has to be a mounted volume.
-const minioImage = "kubeshop/testkube-minio:2025.10"
+const minioImage = "kubeshop/testkube-minio:2025.10-2"
 
 func minioPod() *corev1.Pod {
 	return &corev1.Pod{
