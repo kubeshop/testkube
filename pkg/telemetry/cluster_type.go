@@ -36,12 +36,19 @@ func GetClusterType() string {
 	return cachedClusterType
 }
 
-// cliClusterType is the cluster type of a CLI event in the given context. A cloud context talks to
-// the Control Plane, not to the cluster of the local kubeconfig, so it is not detected there:
-// connecting to that cluster would run its credential plugin, which can fail loudly or prompt
-// (such as gcloud's) after a command that never needed it. Other contexts detect it as before.
+// RunContextTypeMCPEnvironment is the RunContext type of the MCP server's tool calls when it is
+// configured with an organization and environment, which it always talks to through the Control
+// Plane.
+const RunContextTypeMCPEnvironment = "mcp-environment"
+
+// cliClusterType is the cluster type of a CLI event in the given context. A cloud context, and the
+// MCP server's environment context, talk to the Control Plane, not to the cluster of the local
+// kubeconfig, so it is not detected there: connecting to that cluster would run its credential
+// plugin, which can fail loudly or prompt (such as gcloud's) after a command that never needed it.
+// Other contexts detect it as before.
 func cliClusterType(ctx RunContext, detect func() string) string {
-	if ctx.Type == string(config.ContextTypeCloud) {
+	switch ctx.Type {
+	case string(config.ContextTypeCloud), RunContextTypeMCPEnvironment:
 		return ""
 	}
 	return detect()

@@ -182,8 +182,9 @@ func TestDetectClusterTypeFromClientset_NodeMetadataListedOnce(t *testing.T) {
 	assert.Equal(t, 1, nodeListCalls)
 }
 
-// A CLI event in a cloud context never connects to the cluster of the local kubeconfig, whose
-// credential plugin can fail or prompt; the other contexts detect the cluster type as before.
+// A CLI event in a cloud context, or an MCP tool call in its environment context, never connects
+// to the cluster of the local kubeconfig, whose credential plugin can fail or prompt; the other
+// contexts detect the cluster type as before.
 func TestCLIClusterType(t *testing.T) {
 	tests := []struct {
 		contextType  string
@@ -191,6 +192,7 @@ func TestCLIClusterType(t *testing.T) {
 		wantDetected bool
 	}{
 		{contextType: "cloud", want: ""},
+		{contextType: "mcp-environment", want: ""},
 		{contextType: "kubeconfig", want: "gke", wantDetected: true},
 		{contextType: "", want: "gke", wantDetected: true},
 	}
