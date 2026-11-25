@@ -10,6 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -635,4 +637,72 @@ func TestBundle_PodLevelResources_InvalidValue_ReturnsError(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "pod.resources")
+}
+
+func TestBundle_PodHostNamespacesAndFQDN(t *testing.T) {
+	proc := New(&dummyInspector{}).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+	newWorkflow := func(pod testworkflowsv1.PodConfig) *testworkflowsv1.TestWorkflow {
+		return &testworkflowsv1.TestWorkflow{
+			Spec: testworkflowsv1.TestWorkflowSpec{
+				TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{Pod: &pod},
+				Steps: []testworkflowsv1.Step{
+					{StepOperations: testworkflowsv1.StepOperations{Shell: "echo hello"}},
+				},
+			},
+		}
+	}
+	options := func(allowLowSecurityFields bool) BundleOptions {
+		return BundleOptions{
+			Config: testworkflowconfig.InternalConfig{
+				Resource: testworkflowconfig.ResourceConfig{Id: "resource-id", RootId: "resource-root-id"},
+			},
+			AllowLowSecurityFields: allowLowSecurityFields,
+		}
+	}
+
+	bundle, err := proc.Bundle(context.Background(), newWorkflow(testworkflowsv1.PodConfig{
+		HostNetwork:       common.Ptr(true),
+		HostIPC:           common.Ptr(true),
+		Hostname:          "runner",
+		Subdomain:         "tests",
+		SetHostnameAsFQDN: common.Ptr(true),
+	}), options(true))
+	require.NoError(t, err)
+	podSpec := bundle.Job.Spec.Template.Spec
+	assert.True(t, podSpec.HostNetwork)
+	assert.True(t, podSpec.HostIPC)
+	assert.False(t, podSpec.HostPID)
+	require.NotNil(t, podSpec.SetHostnameAsFQDN)
+	assert.True(t, *podSpec.SetHostnameAsFQDN)
+	// the control port is reserved so host network pods don't collide on a node
+	mainContainer := podSpec.Containers[len(podSpec.Containers)-1]
+	assert.Contains(t, mainContainer.Ports, corev1.ContainerPort{
+		Name:          "tk-control",
+		ContainerPort: int32(initconstants.ControlServerPort),
+		Protocol:      corev1.ProtocolTCP,
+	})
+
+	// sharing a host namespace is a low security field
+	for name, pod := range map[string]testworkflowsv1.PodConfig{
+		"hostNetwork": {HostNetwork: common.Ptr(true)},
+		"hostIPC":     {HostIPC: common.Ptr(true)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := proc.Bundle(context.Background(), newWorkflow(pod), options(false))
+			assert.ErrorContains(t, err, "low security fields are not allowed")
+		})
+	}
+
+	// setHostnameAsFQDN is not one, and nothing changes when the fields aren't set
+	bundle, err = proc.Bundle(context.Background(), newWorkflow(testworkflowsv1.PodConfig{
+		SetHostnameAsFQDN: common.Ptr(true),
+	}), options(false))
+	require.NoError(t, err)
+	podSpec = bundle.Job.Spec.Template.Spec
+	assert.False(t, podSpec.HostNetwork)
+	assert.False(t, podSpec.HostIPC)
+	require.NotNil(t, podSpec.SetHostnameAsFQDN)
 }

@@ -18,6 +18,7 @@ var executionSchema string
 // This tool has no parameters and returns static embedded content.
 func GetWorkflowSchema() (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_workflow_schema",
+		readOnlyTool(),
 		mcp.WithDescription(GetWorkflowSchemaDescription),
 	)
 
@@ -32,6 +33,7 @@ func GetWorkflowSchema() (tool mcp.Tool, handler server.ToolHandlerFunc) {
 // This tool has no parameters and returns static embedded content.
 func GetExecutionSchema() (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_execution_schema",
+		readOnlyTool(),
 		mcp.WithDescription(GetExecutionSchemaDescription),
 	)
 

@@ -21,19 +21,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
-	testexecutionv1 "github.com/kubeshop/testkube/api/testexecution/v1"
-	testsuiteexecutionv1 "github.com/kubeshop/testkube/api/testsuiteexecution/v1"
-	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
-	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
-	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
@@ -271,6 +264,24 @@ func main() {
 			log.DefaultLogger.Fatalw("cannot register runner without secrets enabled", "error", "secrets must be enabled to register a runner")
 		}
 
+		// Pre-flight: prove the credentials secret is writable before creating any Control Plane state.
+		// Failing here needs only the RBAC/secret fix; failing after Register also needs the runner
+		// deleted in the Control Plane UI.
+		selfRegistrationOpts := commons.SelfRegistrationOptions{
+			Backoff:      commons.DefaultSelfRegistrationSecretBackoff(),
+			SecretPrefix: cfg.SecretCreationPrefix,
+		}
+		if err := commons.CheckSelfRegistrationSecretWritable(ctx, log.DefaultLogger, secretManager,
+			cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, selfRegistrationOpts); err != nil {
+			log.DefaultLogger.Fatalw("cannot write the self-registration secret; the runner was not registered, "+
+				"fix the secret or the service account permissions (create/update on secrets) and restart",
+				"runner_name", runnerName,
+				"namespace", cfg.TestkubeNamespace,
+				"secret", cfg.SecretCreationPrefix+cfg.SelfRegistrationSecret,
+				"error", err.Error(),
+			)
+		}
+
 		capabilities := buildStartupCapabilities(cfg)
 		log.DefaultLogger.Infow("runner capabilities", "capabilities", stringifyCapabilities(capabilities))
 
@@ -297,9 +308,16 @@ func main() {
 		if err != nil {
 			switch status.Code(err) {
 			case codes.AlreadyExists:
-				log.DefaultLogger.Fatalw("runner already registered; use a different name",
+				// Re-registering under the same name is refused by the Control Plane on purpose. This usually
+				// means an earlier start registered the runner but its credentials secret is missing.
+				log.DefaultLogger.Fatalw("runner already registered; use a different name, or check that the "+
+					"self-registration secret holds non-empty TESTKUBE_PRO_API_KEY and TESTKUBE_PRO_AGENT_ID (an empty secret means "+
+					"the credentials were never saved); "+
+					"if the secret is lost, delete the runner in the Control Plane UI so it can register again",
 					"runner_name", runnerName,
 					"organization_id", cfg.TestkubeProOrgID,
+					"namespace", cfg.TestkubeNamespace,
+					"secret", cfg.SecretCreationPrefix+cfg.SelfRegistrationSecret,
 					"error", err.Error(),
 				)
 			default:
@@ -311,13 +329,24 @@ func main() {
 		cfg.TestkubeProAPIKey = res.RunnerKey
 		cfg.TestkubeProAgentID = res.RunnerId
 
-		// Attempt to store the values in a Kubernetes secret for consumption next startup.
-		if _, err := secretManager.Create(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, map[string]string{
+		// Store the values in a Kubernetes secret for consumption next startup (mounted via envFrom).
+		if err := commons.PersistSelfRegistrationSecret(ctx, log.DefaultLogger, secretManager, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, map[string]string{
 			"TESTKUBE_PRO_API_KEY":  res.RunnerKey,
 			"TESTKUBE_PRO_AGENT_ID": res.RunnerId,
-		}, secretmanager.CreateOptions{}); err != nil {
-			log.DefaultLogger.Errorw("error creating self-register runner secret", "error", err.Error())
-			log.DefaultLogger.Warn("runner will re-register on restart")
+		}, selfRegistrationOpts); err != nil {
+			// Exit instead of running on in-memory credentials. The runner is now registered, so every later
+			// start without the secret fails with AlreadyExists. Running on would only hide that until the next
+			// restart or rollout (possibly days later, on every replica); failing now surfaces it at install
+			// time, while the operator is watching. Recovery is the same either way.
+			log.DefaultLogger.Fatalw("runner registered but its credentials could not be saved; it will not start again "+
+				"until the runner is deleted in the Control Plane UI and the secret can be written",
+				"runner_name", runnerName,
+				"runner_id", res.RunnerId,
+				"organization_id", cfg.TestkubeProOrgID,
+				"namespace", cfg.TestkubeNamespace,
+				"secret", cfg.SecretCreationPrefix+cfg.SelfRegistrationSecret,
+				"error", err.Error(),
+			)
 		}
 	}
 
@@ -694,26 +723,15 @@ func main() {
 
 	/////////////////////////////////
 	// KUBERNETES CONTROLLER SETUP
+	// The Control Plane resources the GitOps runner syncs, counted for the telemetry heartbeat.
+	gitOpsSynced := synccontroller.NewSyncedResources()
 	if cfg.EnableK8sControllers || cfg.GitOpsSyncKubernetesToCloudEnabled {
 		// Initialise the controller runtime with our logger.
 		ctrl.SetLogger(zapr.NewLogger(log.DefaultLogger.Desugar()))
 
 		// Configure a scheme to include the required resource definitions.
-		scheme := runtime.NewScheme()
-		err = testworkflowsv1.AddToScheme(scheme)
-		commons.ExitOnError("add TestWorkflows to kubernetes runtime scheme", err)
-		err = testtriggersv1.AddToScheme(scheme)
-		commons.ExitOnError("add TestTriggers to kubernetes runtime scheme", err)
-		err = workflowtriggersv1.AddToScheme(scheme)
-		commons.ExitOnError("add WorkflowTriggers to kubernetes runtime scheme", err)
-		err = executorv1.AddToScheme(scheme)
-		commons.ExitOnError("add Webhooks to kubernetes runtime scheme", err)
-
-		// Legacy schemes
-		err = testexecutionv1.AddToScheme(scheme)
-		commons.ExitOnError("add TestExecution to kubernetes runtime scheme", err)
-		err = testsuiteexecutionv1.AddToScheme(scheme)
-		commons.ExitOnError("add TestSuiteExecution to kubernetes runtime scheme", err)
+		scheme, err := services.NewControllerScheme()
+		commons.ExitOnError("configure kubernetes runtime scheme", err)
 
 		// Configure the manager to use the defined scheme and to operate in the current namespace.
 		mgr, err := manager.New(kubeConfig, manager.Options{
@@ -740,6 +758,17 @@ func main() {
 			commons.ExitOnError("creating Webhook sync controller", err)
 			err = synccontroller.NewWebhookTemplateSyncController(mgr, syncStore)
 			commons.ExitOnError("creating WebhookTemplate sync controller", err)
+			// Control Plane resources, such as Insights boards, are synced only when the runner is
+			// told to, and then only to a Control Plane that takes their kind, and only the kinds
+			// whose CRD is installed and readable here.
+			switch {
+			case !cfg.GitOpsSyncControlPlaneResourcesEnabled:
+			case len(proContext.ControlPlaneResourceCapabilities) == 0:
+				log.DefaultLogger.Infow("not syncing Control Plane resources: the Control Plane does not take them")
+			default:
+				err = synccontroller.NewControlPlaneResourceSyncControllers(ctx, mgr, syncStore, cfg.TestkubeNamespace, proContext.ControlPlaneResourceCapabilities, gitOpsSynced, log.DefaultLogger)
+				commons.ExitOnError("creating Control Plane resource sync controllers", err)
+			}
 		}
 
 		// Initialise controllers
@@ -980,7 +1009,7 @@ func main() {
 	leaderTasks = append(leaderTasks, leader.Task{
 		Name: "telemetry-heartbeat",
 		Start: func(taskCtx context.Context) error {
-			services.HandleTelemetryHeartbeat(taskCtx, clusterId, configMapConfig, capabilities)
+			services.HandleTelemetryHeartbeat(taskCtx, clusterId, configMapConfig, capabilities, gitOpsSynced.Counts)
 			return nil
 		},
 	})

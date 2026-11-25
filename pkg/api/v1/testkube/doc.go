@@ -82,6 +82,23 @@
 // because preferring the reserved meaning would instead make that child unreachable by name.
 // executiondata.IsReservedRef is the list.
 //
+// # Retrying a whole execution
+//
+// spec.execution.retry { count, on } reruns a workflow when it ends for a cause the policy
+// lists. on is infrastructure (evicted, preempted, node-shutdown, unschedulable; the default),
+// timeout (execution-timeout) or oom (oom-killed). The decision keys on the stop reason, not on
+// the status details type, because unschedulable is typed init-failure yet a retry can fix it.
+// Step failures, other init failures, user cancels and stops with no reason are never retried, so
+// a retry cannot turn a real regression green. ShouldRetryExecution is the one decision function.
+// count is a budget of automatic retries, and a manual rerun starts a new one, so the caller
+// passes Retries, the automatic retries since the last run a person started, not the lineage
+// attempt, which counts manual reruns too.
+// The agent does not schedule the retry: the Control Plane does, as a rerun with
+// ScheduleRequest.base_execution_id, so the lineage attempt counts it. That consumer in
+// testkube-cloud-api (the finished-event handler) must call ShouldRetryExecution with the stored
+// execution and make a redelivered event schedule one retry only. This is not the step-level
+// RetryPolicy, which reruns a step in the same pod.
+//
 // # Parallelism of a parallel step
 //
 // TestWorkflowStepParallel.Parallelism and TestWorkflowIndependentStepParallel.Parallelism are a
@@ -91,4 +108,14 @@
 // has to be migrated. It always encodes the object form {"value": "2"}. The dashboard type in
 // testkube-cloud-api (js/packages/shared-types/src/workflows.ts, TestWorkflowStepParallelBase)
 // reads the same field, so it changes to the boxed form together with this one.
+//
+// # Pod-level resources
+//
+// TestWorkflowPodConfig.Resources is a TestWorkflowPodResources, not the TestWorkflowResources of
+// a container. Its limits and requests are maps keyed by the Kubernetes resource name, so a
+// pod-level name such as hugepages-2Mi survives the mapping to the CRD and back. The fixed fields
+// of a container keep only cpu, memory, storage and ephemeral-storage. The JSON form of those
+// names stays the same object with string values, so a stored workflow decodes without a
+// migration. The Control Plane decodes the field with this model, so it keeps the other names
+// only after it updates its testkube module.
 package testkube

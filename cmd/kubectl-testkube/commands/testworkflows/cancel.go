@@ -14,10 +14,11 @@ func NewCancelTestWorkflowExecutionCmd() *cobra.Command {
 	var force bool
 
 	cmd := &cobra.Command{
-		Use:     "testworkflowexecution <executionName>",
-		Aliases: []string{"twe", "testworkflows-execution", "testworkflow-execution"},
-		Short:   "Cancel test workflow execution",
-		Args:    validator.ExecutionName,
+		Use:               "testworkflowexecution <executionName>",
+		ValidArgsFunction: common.CompleteActiveTestWorkflowExecutionNames,
+		Aliases:           []string{"twe", "testworkflows-execution", "testworkflow-execution"},
+		Short:             "Cancel test workflow execution",
+		Args:              validator.ExecutionName,
 
 		Run: func(cmd *cobra.Command, args []string) {
 			executionID := args[0]
@@ -42,10 +43,11 @@ func NewCancelTestWorkflowExecutionCmd() *cobra.Command {
 
 func NewCancelTestWorkflowExecutionsCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "testworkflowexecutions <testWorkflowName>",
-		Aliases: []string{"twes", "testworkflows-executions", "testworkflow-executions"},
-		Short:   "Cancel all test workflow executions",
-		Args:    cobra.ExactArgs(1),
+		Use:               "testworkflowexecutions <testWorkflowName>",
+		Aliases:           []string{"twes", "testworkflows-executions", "testworkflow-executions"},
+		Short:             "Cancel all test workflow executions",
+		ValidArgsFunction: common.CompleteTestWorkflowNames,
+		Args:              cobra.ExactArgs(1),
 
 		Run: func(cmd *cobra.Command, args []string) {
 			testWorkflowName := args[0]

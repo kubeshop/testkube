@@ -224,6 +224,9 @@ type RunnerConfig struct {
 
 type GitOpsSyncConfig struct {
 	GitOpsSyncKubernetesToCloudEnabled bool `envconfig:"GITOPS_KUBERNETES_TO_CLOUD_ENABLED" default:"false"`
+	// GitOpsSyncControlPlaneResourcesEnabled also syncs the Control Plane resources (Insights
+	// Boards, the AI kinds and Test Bundles), which a GitOps runner syncs only when it is set.
+	GitOpsSyncControlPlaneResourcesEnabled bool `envconfig:"GITOPS_CONTROLPLANE_RESOURCES_ENABLED" default:"false"`
 }
 
 type CronJobConfig struct {

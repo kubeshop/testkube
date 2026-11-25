@@ -112,6 +112,10 @@ func mapProperties(name string, params Params) analytics.Properties {
 		properties = properties.Set("agentCapabilities", params.AgentCapabilities)
 	}
 
+	if len(params.GitOpsSyncedResources) > 0 {
+		properties = properties.Set("gitopsSyncedResources", params.GitOpsSyncedResources)
+	}
+
 	if params.License != "" {
 		properties = properties.Set("license", params.License)
 	}

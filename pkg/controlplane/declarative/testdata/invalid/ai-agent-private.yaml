@@ -1,0 +1,10 @@
+# Privacy is a dashboard setting: a private agent is visible to its creator and
+# the members linked to it, and members cannot be declared, so the field is
+# unknown rather than quietly ignored.
+apiVersion: ai.testkube.io/v1alpha1
+kind: AIAgent
+metadata:
+  name: secretive
+spec:
+  instructions: Do things.
+  private: true

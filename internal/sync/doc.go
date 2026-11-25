@@ -3,13 +3,71 @@
 //
 // Reconcilers live in the controller package, one per syncable kind, and the Control Plane client
 // lives in the grpc package. The syncable kinds are TestWorkflow, TestWorkflowTemplate,
-// TestTrigger, WorkflowTrigger, Webhook and WebhookTemplate. Adding a kind means changing the
-// controller and grpc packages, the SyncService proto and the Control Plane together.
+// TestTrigger, WorkflowTrigger, Webhook and WebhookTemplate, each with its own reconciler and its
+// own arm of the SyncService proto; adding one of these means changing the controller and grpc
+// packages, the SyncService proto and the Control Plane together.
 //
 // The sync controllers are registered in cmd/api-server/main.go behind
 // proContext.CloudStorageSupportedInControlPlane and GITOPS_KUBERNETES_TO_CLOUD_ENABLED (default
 // false), so they only run for a GitOps-persona agent connected to a Control Plane that reports
 // cloud storage support.
+//
+// # Control Plane resources
+//
+// Control Plane resources, the kinds that live only in the Control Plane and are declared in the
+// registry of pkg/controlplane/declarative, share one reconciler and one
+// SyncService arm (ControlPlaneResource, named by the kind's resource and the object's name). The
+// reconciler (controller.NewControlPlaneResourceSyncControllers) checks each object with the shared
+// Normalize before sending it, so an invalid one is a terminal error reported in the cluster and is
+// never sent. It sends the object as declarative.ApplyPayload makes it for testkube apply: without
+// status, and with its annotations, so testkube.io/gitops-owner and testkube.io/no-gitops-sync work
+// as they do for the other kinds. A delete names the resource alone, and the Control Plane does not
+// store these kinds' annotations, so testkube.io/no-gitops-sync pauses deletes here, in the runner:
+// it remembers which custom resources carried the annotation when it last saw them
+// (pausedResources) and does not send their delete. It sends a delete only once it has seen the
+// resource's delete event, whose final state decides: a reconcile that reads the resource missing
+// before that, as one queued earlier may, looks again shortly. A delete seen during a watch
+// interruption carries a state that may predate the annotation, so its delete is not sent: the
+// resource stays in the Control Plane, and the runner logs it. The reconciler also counts the
+// resources it syncs, by kind, for the telemetry heartbeat (SyncedResources). Syncing another kind
+// means adding it to syncedControlPlaneResources in the controller package, its group to
+// services.NewControllerScheme (cmd/api-server/services), read access in the Helm charts, and its
+// arm in the Control Plane's handler; the proto stays as it is.
+//
+// A runner syncs them only with GITOPS_CONTROLPLANE_RESOURCES_ENABLED (default false), set by the
+// runner chart's gitops.controlPlaneResources.enabled and the testkube-api chart's
+// next.gitops.syncControlPlaneResources, which also grant the read access below; without it they
+// are not watched at all, and the runner needs neither their CRDs nor access to them.
+//
+// Each kind also needs the Control Plane to advertise its family's capability, so a Control Plane
+// that does not serve the kind never gets it: controlplane-resources for Insights Boards,
+// controlplane-resources-ai for MCP servers, LLM providers and AI Agents, and
+// controlplane-resources-skills for the Skills of an environment's library
+// (capabilities.CapabilityControlPlaneResources and the two beside it). The kinds are registered
+// in the order they reference each other, MCP servers and Skills before the AI Agents that link
+// them, so a first sync needs fewer retries. A resource naming one the Control Plane does not have
+// yet is retried with backoff, not refused, as what it names may be synced next. A
+// kind whose CRD is not installed, that the runner may not list and watch in its namespace, or
+// whose access the runner may not check (a cluster that forbids SelfSubjectAccessReviews) is
+// skipped with a warning: a controller whose cache cannot sync would stop the manager, and the
+// runner with it. The Helm charts install the CRDs (testkube-crds) and grant the read access (the
+// runner chart's watcher role when gitops.enabled and gitops.controlPlaneResources.enabled, and
+// the testkube-api chart's controlplaneresources role when next.gitops.syncControlPlaneResources).
+//
+// A Skill, or an AI Agent's own Skill, may read its SKILL.md from a ConfigMap in the runner's
+// namespace (skillFrom.configMapKeyRef). The runner reads it straight from the API server and sends
+// the Skill as if written inline (declarative.ResolveSkillSources), since the Control Plane cannot
+// read the cluster. A missing ConfigMap or key is retried; a SKILL.md that does not fit, such as
+// one naming another Skill, is not, until it changes. When the runner may list and watch ConfigMaps
+// (both charts grant it), it watches their metadata, and a changed ConfigMap syncs the resources
+// reading it again; otherwise a changed SKILL.md is synced with its resource's next change.
+//
+// While a GitOps runner owns a Control Plane resource, it is read-only everywhere else in the
+// Control Plane (the dashboard, the MCP tools, and testkube apply and delete), so it cannot drift
+// from Git. For an AI Agent that includes its roles, resource groups and own Skills. A synced AI Agent is never private: the
+// Control Plane refuses one that is. Deleting the custom resource deletes it in the Control Plane,
+// unless another runner owns it: that delete is an ownership conflict, and the resource is left as
+// it is.
 //
 // # Resource ownership contract
 //
@@ -18,11 +76,16 @@
 // contract spans four layers, and a change to one usually needs a matching change in the others:
 //
 //  1. Schema: Syncable.gitOpsOwner in api/v1/testkube.yaml, a GitOpsOwner holding the
-//     authoritative agentId plus a display-only agentName that may be stale after a rename. Run
-//     `make generate-openapi` after editing.
+//     authoritative agentId, the namespace the agent synced the resource from, and a
+//     display-only agentName that may be stale after a rename. The owner key is the pair
+//     (agentId, namespace); the namespace is empty for resources synced before it was recorded.
+//     Run `make generate-openapi` after editing.
 //  2. Wire: the Control Plane rejects a sync from a non-owning agent with the gRPC status
 //     codes.FailedPrecondition. That code is reserved for ownership conflicts on the sync API; do
-//     not reuse it there for other validation failures, or agents will misreport the cause.
+//     not reuse it there for other validation failures, or agents will misreport the cause. A
+//     request may carry the environment-id header: without it the Control Plane uses the
+//     Environment of the agent token, and an Environment the agent may not use is refused with
+//     codes.PermissionDenied.
 //  3. Agent translation: translateError in grpc/errors.go maps FailedPrecondition onto the
 //     ErrOwnershipConflict sentinel in errors.go, keeping the original status in the error chain
 //     because its message names the current owner. Callers match on the sentinel so that no layer
@@ -38,6 +101,15 @@
 // reconcilers, during SuperAgent migration. That migration retries sync failures forever by
 // design, so a rejection has to break the loop or a single unowned or invalid resource wedges the
 // migration indefinitely.
+//
+// The sync API carries the namespace explicitly: each *Id message of DeleteRequest and the
+// UpdateOrCreateRequest have an optional namespace field. When it is empty the Control Plane
+// falls back to the agent's default namespace for a delete, and to the namespace inside the
+// payload for an update. The Control Plane advertises that it reads these fields and the
+// environment-id header with the sync-multi-namespace capability
+// (capabilities.CapabilityMultiNamespaceSync), which the agent exposes as
+// ProContext.MultiNamespaceSyncSupportedInControlPlane. Without it an agent syncs one namespace
+// per Environment.
 //
 // The Control Plane side lives in testkube-cloud-api: it persists the owner on the six syncable
 // tables and enforces it in internal/sync/ownership.go, on every Upsert and Delete path.
