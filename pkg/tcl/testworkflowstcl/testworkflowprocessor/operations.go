@@ -115,7 +115,8 @@ func ProcessAgent(_ testworkflowprocessor.InternalProcessor, layer testworkflowp
 		return nil, errors.New("no AI Agent name provided to the 'agent' step")
 	}
 	// The control plane compares the name with the stored workflow before it runs the AI Agent.
-	// Config values are resolved by now, so an expression that remains has a value only in the pod.
+	// This check runs after the config values resolve, so an expression that remains has a value
+	// only in the pod.
 	if !expressions.IsTemplateStringWithoutExpressions(step.Agent.Name) {
 		return nil, errors.Errorf("agent: name %q: the name of the AI Agent accepts a literal or a config value only", step.Agent.Name)
 	}
@@ -131,8 +132,8 @@ func ProcessAgent(_ testworkflowprocessor.InternalProcessor, layer testworkflowp
 	stage.SetPure(true)
 
 	// Base64 encode to prevent testworkflow-init from resolving the expressions. The prompt
-	// reads the outputs of earlier steps, and a value of an output can contain text that the
-	// init process would read as an expression again. The toolkit resolves the prompt once.
+	// reads the outputs of earlier steps, and the value of an output can contain an expression.
+	// The toolkit resolves the prompt one time, so that value stays text.
 	encoded, err := expressionstcl.EncodeBase64JSON(step.Agent)
 	if err != nil {
 		return nil, errors.Wrap(err, "agent: encoding error")
@@ -149,9 +150,8 @@ func ProcessAgent(_ testworkflowprocessor.InternalProcessor, layer testworkflowp
 }
 
 // operationsBeforeAgent lists the operations of the step that make a stage before the agent
-// stage. The processor gives the ID of a step to its first stage only, and the init process
-// collects the outputs of the stage with the ID. So with one of these operations, the session
-// output of the AI Agent is lost.
+// stage. The processor gives the ID of a step to its first stage only. The init process collects
+// the outputs of the stage with the ID, so with one of these operations it loses the session output.
 func operationsBeforeAgent(step testworkflowsv1.Step) []string {
 	var before []string
 	if step.Delay != "" {

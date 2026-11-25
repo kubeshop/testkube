@@ -26,20 +26,21 @@
 //
 //   - The processor gives the spec as base64 JSON, so the command resolves the expressions of
 //     the name and the prompt. It resolves them one time: an expression in the value of a step
-//     output stays text. The prompt reads what a step of the init process reads, the data of
-//     the executions that an earlier step started included.
+//     output stays text. The prompt reads the same values as a step of the init process, and
+//     also the data of the executions that an earlier step started.
 //   - The command fails before the first call when the control plane does not publish the
 //     capability of the step.
 //   - Text from the AI Agent and its tools loses each byte 0x01 before the command prints it or
 //     writes it. With that byte the text can start an instruction for the init process.
 //   - The answer is the file response.md in the results directory of the step, and it is not a
 //     step output. The init process skips an output file above data.MaxOutputSize, and an
-//     answer has no size limit. The processor gives an ID to each step, so each agent step has
-//     a results directory. The ID goes to the first stage of a step only, so the processor
-//     refuses an agent step with an operation that makes an earlier stage, such as a delay.
-//     Without the ID, the init process does not collect the session output. A later step reads the answer at step.<id>.results/response.md, so
-//     the author sets the id or the name of the step to know that path. When the step has no
-//     results directory, the command fails before it starts a turn.
+//     answer has no size limit. A later step reads the answer at step.<id>.results/response.md,
+//     so the author sets the id or the name of the step to know that path.
+//   - The processor gives an ID to each step, so each agent step has a results directory. When
+//     the step has no results directory, the command fails before it starts a turn.
+//   - The ID goes to the first stage of a step only, and the init process collects the session
+//     output from the stage with the ID. So the processor refuses an agent step with an
+//     operation that makes an earlier stage, such as a delay.
 //   - The command makes one request ID for the process and sends it with the start call, so a
 //     retry of that call returns the same turn.
 //   - When the step stops before the turn ends, the command asks the control plane one time to

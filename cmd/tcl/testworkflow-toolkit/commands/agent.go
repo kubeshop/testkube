@@ -78,9 +78,9 @@ func agentCapabilityError(published []*cloud.Capability) error {
 		string(capabilities.CapabilityAgentStep))
 }
 
-// agentMachine returns the values that the spec of the step can read: the values of the workflow
-// and its steps, and with executions the data of the executions that an earlier step started. The
-// init process resolves the same set for a step that it does not hide.
+// agentMachine returns the values that the spec of the step can read. These are the values of the
+// workflow and its steps, and the data of the executions that an earlier step started. The init
+// process resolves the same set for a step that it does not hide.
 func agentMachine(executions expressions.Machine) expressions.Machine {
 	return expressions.CombinedMachines(data.GetBaseTestWorkflowMachine(), data.ExecutionMachine(), executions)
 }
@@ -115,8 +115,8 @@ type agentStep struct {
 // run starts the turn and follows it to its end. It returns an error for each end that is not a
 // completed turn.
 func (s *agentStep) run(ctx context.Context, spec testworkflowsv1.StepAgent) error {
-	// The answer is a file in the results directory. The processor gives each step an ID, but a
-	// turn costs time and tokens, so the step does not start one when it has no place for the answer.
+	// The answer is a file in the results directory. The processor gives each step an ID. A turn
+	// costs time and tokens, so the step starts no turn when it has no place for the answer.
 	if s.resultsDir == "" {
 		return &DefinitionError{Subject: agentSubject, Err: errors.New("the step has no results directory for the answer, because it has no id. Set an id on the step")}
 	}
@@ -235,7 +235,6 @@ func (s *agentStep) printEvents(events []*cloud.AgentTurnEvent) {
 	}
 }
 
-// writeAnswer writes the file with the answer.
 func (s *agentStep) writeAnswer(turn *cloud.AgentTurn) error {
 	path := filepath.Join(s.resultsDir, agentResponseFile)
 	if err := writeStepFile(path, plainText(turn.GetAnswer())); err != nil {
