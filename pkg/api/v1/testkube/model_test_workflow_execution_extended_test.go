@@ -90,7 +90,6 @@ func TestTestWorkflowExecution_AgentSteps(t *testing.T) {
 	}
 }
 
-// agentNamed returns the agent operation of a step for the AI Agent.
 func agentNamed(name string) *TestWorkflowStepAgent {
 	return &TestWorkflowStepAgent{Name: name}
 }
