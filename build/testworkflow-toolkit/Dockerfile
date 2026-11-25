@@ -4,7 +4,7 @@ ARG ALPINE_IMAGE
 
 FROM ${BUSYBOX_IMAGE} AS busybox
 FROM ${ALPINE_IMAGE}
-RUN apk --no-cache add ca-certificates libssl3 git openssh-client
+RUN apk --no-cache upgrade && apk --no-cache add ca-certificates libssl3 "git>=2.54.1-r0" "libexpat>=2.10.0-r0" "openssh-client>=10.3_p1-r2"
 COPY --from=busybox /bin /.tktw-bin
 COPY testworkflow-toolkit /toolkit
 COPY testworkflow-init /init
