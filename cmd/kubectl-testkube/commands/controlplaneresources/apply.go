@@ -35,7 +35,7 @@ func NewApplyCmd(newClient ClientFactory) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "apply -f <file|dir|->",
-		Short: "Create or update Boards and AI resources from YAML manifests",
+		Short: "Create or update Control Plane resources from YAML manifests",
 		Long: `Create or update Control Plane resources from YAML or JSON manifests: Boards, MCP Servers, LLM Providers, Skills and AI Agents.
 A resource that exists is updated to match the manifest; one that doesn't is created.
 
