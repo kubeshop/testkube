@@ -93,6 +93,16 @@
 // Environment Credential, which a dry run cannot see, since it never reaches
 // the Control Plane.
 //
+// An agent is served over the Agent2Agent (A2A) protocol only when its
+// spec.a2a.enabled is true. The manifest is the source of truth for it: an
+// agent that leaves spec.a2a out has A2A off, so Normalize writes the default
+// out ({enabled: false}), every apply sends it, and an export carries it. The
+// field never widens access: the Control Plane serves the agent only when the
+// deployment serves A2A and the organization turned it on, and a caller still
+// needs a token whose role allows it and has to pass the agent's access rules.
+// While the agent is served, the Control Plane exports its endpoint as
+// status.a2a.url, which, like the rest of status, is dropped before a PUT.
+//
 // An agent's Skills belong to it: applying a skills list replaces the whole
 // list, in manifest order, matched by name, so a Skill left out is deleted,
 // and skills: [] removes them all. An agent that leaves skills out keeps its

@@ -94,6 +94,20 @@ spec:
           spec:
             description: AIAgentSpec is what an AI Agent does and what it may use.
             properties:
+              a2a:
+                description: |-
+                  A2A serves the agent over the Agent2Agent (A2A) protocol. Leaving it
+                  out turns A2A off for the agent: the manifest is the source of truth,
+                  and an export always writes it.
+                properties:
+                  enabled:
+                    description: |-
+                      Enabled serves the agent over A2A. It never widens access: the agent
+                      is served only when the deployment serves A2A and the organization
+                      turned it on, and a caller still needs a token whose role allows it
+                      and has to pass the agent's access rules.
+                    type: boolean
+                type: object
               access:
                 description: |-
                   Access links the agent to roles and resource groups. When it is
@@ -310,11 +324,16 @@ spec:
             - instructions
             type: object
           status:
-            description: |-
-              ControlPlaneResourceStatus is the Control Plane's view of a resource. The Control Plane
-              fills it in when it exports a resource, and ignores it when one is applied:
-              ownership is never taken from a request body.
+            description: AIAgentStatus is the Control Plane's view of an AI Agent.
             properties:
+              a2a:
+                description: A2A is how the agent is reached over A2A, while it is
+                  served.
+                properties:
+                  url:
+                    description: URL is the agent's A2A endpoint.
+                    type: string
+                type: object
               creationSource:
                 description: 'CreationSource records how the resource was created:
                   ui, api or gitops.'
