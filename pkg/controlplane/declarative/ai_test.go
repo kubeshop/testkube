@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	aiv1 "github.com/kubeshop/testkube/api/ai/v1alpha1"
+	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 	insightsv1 "github.com/kubeshop/testkube/api/insights/v1alpha1"
 )
 
@@ -399,4 +400,78 @@ func TestNormalize_AIAgentSkillLengthsInCharacters(t *testing.T) {
 	assert.NotContains(t, err.Error(), "bytes")
 	assert.NotContains(t, err.Error(), content[:100], "the content is not echoed")
 	assert.NotContains(t, err.Error(), description[:100], "the description is not echoed")
+}
+
+// A manifest is the source of truth for A2A: leaving spec.a2a out turns it
+// off, so every apply sends it explicitly and an export writes it back.
+func TestNormalize_AIAgentA2A(t *testing.T) {
+	const head = "apiVersion: ai.testkube.io/v1alpha1\nkind: AIAgent\nmetadata:\n  name: helper\nspec:\n  instructions: Help.\n"
+	for name, tc := range map[string]struct {
+		yaml    string
+		enabled bool
+	}{
+		"absent":   {yaml: head},
+		"null":     {yaml: head + "  a2a: null\n"},
+		"empty":    {yaml: head + "  a2a: {}\n"},
+		"disabled": {yaml: head + "  a2a:\n    enabled: false\n"},
+		"enabled":  {yaml: head + "  a2a:\n    enabled: true\n", enabled: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			objects, err := Decode(strings.NewReader(tc.yaml))
+			require.NoError(t, err)
+			require.Len(t, objects, 1)
+			require.NoError(t, Normalize(objects[0]))
+			agent := objects[0].(*aiv1.AIAgent)
+			require.NotNil(t, agent.Spec.A2A)
+			assert.Equal(t, tc.enabled, agent.Spec.A2A.Enabled)
+
+			payload, err := ApplyPayload(agent)
+			require.NoError(t, err)
+			if tc.enabled {
+				assert.Contains(t, string(payload), `"a2a":{"enabled":true}`)
+			} else {
+				assert.Contains(t, string(payload), `"a2a":{"enabled":false}`, "off is sent, not left out")
+			}
+			sent, err := DecodeObject(payload)
+			require.NoError(t, err)
+			require.NoError(t, Normalize(sent))
+			assert.Equal(t, agent.Spec.A2A, sent.(*aiv1.AIAgent).Spec.A2A, "the Control Plane reads what was applied")
+		})
+	}
+}
+
+// status.a2a.url is filled in by the Control Plane on export and dropped
+// before a PUT, so an exported agent applies back as it was.
+func TestAIAgentA2A_ExportApplyRoundTrip(t *testing.T) {
+	exported := &aiv1.AIAgent{
+		Spec: aiv1.AIAgentSpec{Instructions: "Help.", A2A: &aiv1.AIAgentA2A{Enabled: true}},
+		Status: aiv1.AIAgentStatus{
+			ControlPlaneResourceStatus: commonv1.ControlPlaneResourceStatus{ID: "agent-1"},
+			A2A:                        &aiv1.AIAgentA2AStatus{URL: "https://api.example.com/a2a/agents/helper"},
+		},
+	}
+	exported.Name = "helper"
+	exported.SetGroupVersionKind(aiv1.GroupVersion.WithKind(aiv1.AIAgentKind))
+
+	data, err := Encode([]Object{exported}, "yaml")
+	require.NoError(t, err)
+	assert.Contains(t, string(data), "url: https://api.example.com/a2a/agents/helper")
+	assert.Contains(t, string(data), "enabled: true")
+
+	objects, err := Decode(strings.NewReader(string(data)))
+	require.NoError(t, err)
+	require.Len(t, objects, 1)
+	assert.Equal(t, "agent-1", StatusOf(objects[0]).ID)
+	require.NoError(t, Normalize(objects[0]))
+
+	payload, err := ApplyPayload(objects[0])
+	require.NoError(t, err)
+	assert.NotContains(t, string(payload), "status")
+	assert.NotContains(t, string(payload), "example.com")
+	assert.Contains(t, string(payload), `"a2a":{"enabled":true}`)
+
+	prepared, err := PrepareForApply(objects[0])
+	require.NoError(t, err)
+	assert.Equal(t, aiv1.AIAgentStatus{}, prepared.(*aiv1.AIAgent).Status)
+	assert.NotNil(t, objects[0].(*aiv1.AIAgent).Status.A2A, "the original is left alone")
 }
