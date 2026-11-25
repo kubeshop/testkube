@@ -1,0 +1,8 @@
+apiVersion: ai.testkube.io/v1alpha1
+kind: MCPServer
+metadata:
+  name: mcpserver-sync
+spec:
+  displayName: Example MCP server sync
+  description: Example MCP server description.
+  url: https://example.com/mcp

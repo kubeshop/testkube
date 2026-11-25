@@ -1,0 +1,13 @@
+apiVersion: insights.testkube.io/v1alpha1
+kind: Board
+metadata:
+  name: board
+spec:
+  displayName: Example board
+  description: Example board description.
+  reports:
+    - id: example-report
+      kind: pass-fail
+      name: Example report
+      params:
+        duration: week
