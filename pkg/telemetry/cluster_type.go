@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 )
@@ -33,6 +34,22 @@ func GetClusterType() string {
 		cachedClusterType = detectClusterType()
 	})
 	return cachedClusterType
+}
+
+// cliClusterType is the cluster type of a CLI event in the given context. A cloud context talks to
+// the Control Plane, not to the cluster of the local kubeconfig, so it is not detected there:
+// connecting to that cluster would run its credential plugin, which can fail loudly or prompt
+// (such as gcloud's) after a command that never needed it. Other contexts detect it as before.
+func cliClusterType(ctx RunContext, detect func() string) string {
+	if ctx.Type == string(config.ContextTypeCloud) {
+		return ""
+	}
+	return detect()
+}
+
+// currentCLIClusterType is the cluster type of a CLI event in the CLI's current context.
+func currentCLIClusterType() string {
+	return cliClusterType(getCurrentContext(), GetClusterType)
 }
 
 func detectClusterType() string {

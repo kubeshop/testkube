@@ -17,6 +17,11 @@
 // sync.Once. To support a new cluster type, add detection entries to the right layers in
 // cluster_type.go and test cases in cluster_type_test.go.
 //
+// CLI events (commands, errors, previews and the MCP server's tool calls) skip the detection in
+// a cloud context and send no cluster type: the CLI talks to the Control Plane there, and
+// connecting to the cluster of the local kubeconfig would run its credential plugin, such as
+// gcloud's, which can fail loudly or prompt after a command that never needed that cluster.
+//
 // # Agent heartbeat
 //
 // cmd/api-server/services/telemetry.go drives the loop that sends testkube_api_heartbeat events

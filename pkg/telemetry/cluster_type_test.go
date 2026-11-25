@@ -181,3 +181,28 @@ func TestDetectClusterTypeFromClientset_NodeMetadataListedOnce(t *testing.T) {
 	assert.Equal(t, "minikube", detectClusterTypeFromClientset(cs))
 	assert.Equal(t, 1, nodeListCalls)
 }
+
+// A CLI event in a cloud context never connects to the cluster of the local kubeconfig, whose
+// credential plugin can fail or prompt; the other contexts detect the cluster type as before.
+func TestCLIClusterType(t *testing.T) {
+	tests := []struct {
+		contextType  string
+		want         string
+		wantDetected bool
+	}{
+		{contextType: "cloud", want: ""},
+		{contextType: "kubeconfig", want: "gke", wantDetected: true},
+		{contextType: "", want: "gke", wantDetected: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.contextType, func(t *testing.T) {
+			detected := false
+			got := cliClusterType(RunContext{Type: tt.contextType}, func() string {
+				detected = true
+				return "gke"
+			})
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.wantDetected, detected)
+		})
+	}
+}
