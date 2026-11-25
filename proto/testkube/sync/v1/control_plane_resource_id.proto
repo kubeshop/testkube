@@ -1,0 +1,12 @@
+edition = "2023";
+
+package testkube.sync.v1;
+
+// ControlPlaneResourceId is the information required to uniquely identify a
+// Control Plane resource.
+message ControlPlaneResourceId {
+  // resource is the kind's plural name, as in ControlPlaneResource.
+  string resource = 1;
+  // name is the resource's metadata.name.
+  string name = 2;
+}

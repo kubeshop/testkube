@@ -38,7 +38,10 @@ type Signature struct {
 	// for this step of the Test Workflow to be considered successful.
 	Negative *bool `protobuf:"varint,5,opt,name=negative" json:"negative,omitempty"`
 	// children refers to any other steps that may be executed as part of this step.
-	Children      []*Signature `protobuf:"bytes,7,rep,name=children" json:"children,omitempty"`
+	Children []*Signature `protobuf:"bytes,7,rep,name=children" json:"children,omitempty"`
+	// id is the stable identifier of the step. It comes from the workflow, or the processor derives
+	// it from the name or the category of the step, so the same workflow gives the same id.
+	Id            *string `protobuf:"bytes,8,opt,name=id" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -115,18 +118,26 @@ func (x *Signature) GetChildren() []*Signature {
 	return nil
 }
 
+func (x *Signature) GetId() string {
+	if x != nil && x.Id != nil {
+		return *x.Id
+	}
+	return ""
+}
+
 var File_testkube_testworkflow_signature_v1_signature_proto protoreflect.FileDescriptor
 
 const file_testkube_testworkflow_signature_v1_signature_proto_rawDesc = "" +
 	"\n" +
-	"2testkube/testworkflow/signature/v1/signature.proto\x12\"testkube.testworkflow.signature.v1\"\xd0\x01\n" +
+	"2testkube/testworkflow/signature/v1/signature.proto\x12\"testkube.testworkflow.signature.v1\"\xe0\x01\n" +
 	"\tSignature\x12\x10\n" +
 	"\x03ref\x18\x01 \x01(\tR\x03ref\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
 	"\bcategory\x18\x03 \x01(\tR\bcategory\x12\x1a\n" +
 	"\boptional\x18\x04 \x01(\bR\boptional\x12\x1a\n" +
 	"\bnegative\x18\x05 \x01(\bR\bnegative\x12I\n" +
-	"\bchildren\x18\a \x03(\v2-.testkube.testworkflow.signature.v1.SignatureR\bchildrenB\xba\x02\n" +
+	"\bchildren\x18\a \x03(\v2-.testkube.testworkflow.signature.v1.SignatureR\bchildren\x12\x0e\n" +
+	"\x02id\x18\b \x01(\tR\x02idB\xba\x02\n" +
 	"&com.testkube.testworkflow.signature.v1B\x0eSignatureProtoP\x01ZUgithub.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/signature/v1;signaturev1\xa2\x02\x03TTS\xaa\x02\"Testkube.Testworkflow.Signature.V1\xca\x02\"Testkube\\Testworkflow\\Signature\\V1\xe2\x02.Testkube\\Testworkflow\\Signature\\V1\\GPBMetadata\xea\x02%Testkube::Testworkflow::Signature::V1b\beditionsp\xe8\a"
 
 var (

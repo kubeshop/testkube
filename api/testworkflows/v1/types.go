@@ -156,6 +156,15 @@ type PodConfig struct {
 	// Whether to allow a pod to have access to the host process ID namespace
 	HostPID *bool `json:"hostPID,omitempty" expr:"template"`
 
+	// Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+	HostNetwork *bool `json:"hostNetwork,omitempty" expr:"template"`
+
+	// Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+	HostIPC *bool `json:"hostIPC,omitempty" expr:"template"`
+
+	// If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+	SetHostnameAsFQDN *bool `json:"setHostnameAsFQDN,omitempty" expr:"template"`
+
 	// Pod-level resource requests and limits, shared by all containers in the pod,
 	// including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
 	Resources *Resources `json:"resources,omitempty" expr:"include"`
@@ -263,4 +272,32 @@ type TestWorkflowExecutionSchema struct {
 
 	// When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
 	Silent *bool `json:"silent,omitempty" expr:"template"`
+
+	// Retry reruns the whole workflow when the execution ends for a cause the policy lists.
+	// It is not the step-level retry: that one reruns a step inside the same pod.
+	Retry *ExecutionRetryPolicy `json:"retry,omitempty" expr:"include"`
+}
+
+// ExecutionRetryCause is a class of failure that an execution retry may answer.
+// +kubebuilder:validation:Enum=infrastructure;timeout;oom
+type ExecutionRetryCause string
+
+const (
+	// ExecutionRetryCauseInfrastructure is the cluster taking the pod away: evicted, preempted, node-shutdown, unschedulable.
+	ExecutionRetryCauseInfrastructure ExecutionRetryCause = "infrastructure"
+	// ExecutionRetryCauseTimeout is an execution-timeout stop.
+	ExecutionRetryCauseTimeout ExecutionRetryCause = "timeout"
+	// ExecutionRetryCauseOOM is an oom-killed stop.
+	ExecutionRetryCauseOOM ExecutionRetryCause = "oom"
+)
+
+type ExecutionRetryPolicy struct {
+	// how many automatic retries follow a run that a person started or a schedule triggered; a manual rerun starts a new budget
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=10
+	Count int32 `json:"count,omitempty"`
+
+	// the causes that are retried (defaults to: infrastructure)
+	On []ExecutionRetryCause `json:"on,omitempty"`
 }

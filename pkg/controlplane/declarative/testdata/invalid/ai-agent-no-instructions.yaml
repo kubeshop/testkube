@@ -1,0 +1,6 @@
+apiVersion: ai.testkube.io/v1alpha1
+kind: AIAgent
+metadata:
+  name: Silent_Agent
+spec:
+  description: Has nothing to say.

@@ -16,7 +16,10 @@ const (
 	heartbeatInterval = time.Hour
 )
 
-func HandleTelemetryHeartbeat(ctx context.Context, clusterId string, configMapConfig configRepo.Repository, capabilities []string) {
+// HandleTelemetryHeartbeat sends the start event, then a heartbeat every heartbeatInterval.
+// gitOpsSynced, when set, counts the Control Plane resources the GitOps runner syncs, by kind, read
+// again for each heartbeat.
+func HandleTelemetryHeartbeat(ctx context.Context, clusterId string, configMapConfig configRepo.Repository, capabilities []string, gitOpsSynced func() map[string]int) {
 	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
 	if telemetryEnabled {
 		out, err := telemetry.SendServerStartEvent(clusterId, version.Version, capabilities)
@@ -42,7 +45,11 @@ func HandleTelemetryHeartbeat(ctx context.Context, clusterId string, configMapCo
 				if err != nil {
 					l.Debugw("getting hostname error", "hostname", host, "error", err)
 				}
-				out, err := telemetry.SendHeartbeatEvent(host, version.Version, clusterId, capabilities)
+				var synced map[string]int
+				if gitOpsSynced != nil {
+					synced = gitOpsSynced()
+				}
+				out, err := telemetry.SendHeartbeatEvent(host, version.Version, clusterId, capabilities, synced)
 				if err != nil {
 					l.Debugw("sending heartbeat telemetry event error", "error", err)
 				} else {

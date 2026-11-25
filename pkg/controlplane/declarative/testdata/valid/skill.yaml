@@ -1,0 +1,46 @@
+# A Skill of the environment's library, written key for key as a SKILL.md
+# frontmatter, and an agent using it and an organization Skill by reference.
+apiVersion: ai.testkube.io/v1alpha1
+kind: Skill
+metadata:
+  name: k6-load-testing
+spec:
+  description: Use when writing or reviewing a k6 load test.
+  license: Apache-2.0
+  compatibility: Needs k6 0.50 or later on the runner.
+  metadata:
+    author: qa-team
+    version: "1.2"
+  allowed-tools: Bash(k6:*) Read
+  content: |
+    # k6 load testing
+
+    Start from a smoke test with one virtual user, then ramp up.
+  testkube:
+    alwaysInclude: true
+    addToNewTestBundles: true
+---
+apiVersion: ai.testkube.io/v1alpha1
+kind: Skill
+metadata:
+  name: release-notes
+spec:
+  description: Use when summarizing a release.
+  content: List the merged pull requests by area.
+---
+apiVersion: ai.testkube.io/v1alpha1
+kind: AIAgent
+metadata:
+  name: load-tester
+spec:
+  instructions: Write and run load tests.
+  skills:
+    - name: own-checklist
+      description: Use before running a load test.
+      content: Check the target is not production.
+  skillRefs:
+    - name: k6-load-testing
+    - name: release-notes
+      scope: environment
+    - name: company-style
+      scope: organization

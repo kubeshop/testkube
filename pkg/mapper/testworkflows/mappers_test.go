@@ -344,6 +344,9 @@ var (
 			RuntimeClassName:   common.Ptr("gvisor"),
 			SchedulerName:      "volcano",
 			HostUsers:          common.Ptr(false),
+			HostNetwork:        common.Ptr(true),
+			HostIPC:            common.Ptr(true),
+			SetHostnameAsFQDN:  common.Ptr(true),
 		},
 		Events: []testworkflowsv1.Event{
 			{
@@ -356,7 +359,8 @@ var (
 			},
 		},
 		Execution: &testworkflowsv1.TestWorkflowExecutionSchema{
-			Tags: map[string]string{"some-key": "some-value"},
+			Tags:  map[string]string{"some-key": "some-value"},
+			Retry: &testworkflowsv1.ExecutionRetryPolicy{Count: 2, On: []testworkflowsv1.ExecutionRetryCause{testworkflowsv1.ExecutionRetryCauseInfrastructure, testworkflowsv1.ExecutionRetryCauseOOM}},
 		},
 		Timeouts: &testworkflowsv1.TestWorkflowTimeouts{
 			Queue:          "30s",
@@ -554,6 +558,35 @@ func TestMapStepParallelRoundTripsParallelism(t *testing.T) {
 			independentAPI := MapIndependentStepParallelKubeToAPI(testworkflowsv1.IndependentStepParallel{Parallelism: tc.kube})
 			assert.Equal(t, tc.api, independentAPI.Parallelism)
 			assert.Equal(t, tc.kube, MapIndependentStepParallelAPIToKube(independentAPI).Parallelism)
+		})
+	}
+}
+
+func TestMapPodConfigResourcesRoundTrip(t *testing.T) {
+	tests := []struct {
+		name      string
+		resources *testworkflowsv1.Resources
+	}{
+		{
+			name: "keeps cpu and memory",
+			resources: &testworkflowsv1.Resources{
+				Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceCPU: "200m", corev1.ResourceMemory: "256Mi"},
+				Limits:   map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceCPU: "1", corev1.ResourceMemory: "512Mi"},
+			},
+		},
+		{
+			name: "keeps hugepages",
+			resources: &testworkflowsv1.Resources{
+				Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{"hugepages-2Mi": "64Mi"},
+				Limits:   map[corev1.ResourceName]testworkflowsv1.ConfigValue{"hugepages-2Mi": "128Mi", "hugepages-1Gi": "{{config.pages}}"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := testworkflowsv1.PodConfig{Resources: tt.resources}
+
+			assert.Equal(t, v, MapPodConfigAPIToKube(MapPodConfigKubeToAPI(v)))
 		})
 	}
 }

@@ -1,0 +1,20 @@
+edition = "2023";
+
+package testkube.sync.v1;
+
+// ControlPlaneResource contains a Control Plane resource, a kind that lives only in the Control
+// Plane, such as an Insights board, as declared in a custom resource. Every such kind uses this one
+// message, so a kind added later needs no change here.
+message ControlPlaneResource {
+  // resource is the kind's plural name, as in the declarative endpoints
+  // (/resources/{resource}/{name}), such as "boards". It names the kind in the
+  // registry of github.com/kubeshop/testkube/pkg/controlplane/declarative.
+  string resource = 1;
+  // name is the resource's metadata.name.
+  string name = 2;
+  // payload is the object as JSON, normalized and stripped as for a PUT to the
+  // declarative endpoints (declarative.ApplyPayload): apiVersion, kind, name,
+  // labels, annotations and spec. The annotations carry
+  // testkube.io/gitops-owner and testkube.io/no-gitops-sync.
+  bytes payload = 3;
+}

@@ -1,6 +1,10 @@
 package config
 
-import "time"
+import (
+	"fmt"
+	"strings"
+	"time"
+)
 
 type ContextType string
 
@@ -61,6 +65,9 @@ type Data struct {
 	APIServerPort    int               `json:"apiServerPort,omitempty"`
 	DashboardName    string            `json:"dashboardName,omitempty"`
 	DashboardPort    int               `json:"dashboardPort,omitempty"`
+	// Client is the client used to connect to the Testkube API when the
+	// --client flag isn't set: proxy, direct or cluster.
+	Client string `json:"client,omitempty"`
 
 	ContextType  ContextType  `json:"contextType,omitempty"`
 	CloudContext CloudContext `json:"cloudContext,omitempty"`
@@ -85,6 +92,28 @@ func (c *Data) DisableAnalytics() {
 
 func (c *Data) SetNamespace(ns string) {
 	c.Namespace = ns
+}
+
+// ClientTypes are the client types that can be saved with "config client".
+var ClientTypes = []string{"proxy", "direct", "cluster"}
+
+// ValidateClientType returns an error if client isn't one of ClientTypes.
+func ValidateClientType(client string) error {
+	for _, c := range ClientTypes {
+		if client == c {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid client %q, expected one of %s", client, strings.Join(ClientTypes, ", "))
+}
+
+// ResolveClientType returns the client to use: the --client flag when it was
+// set, otherwise the saved client, otherwise the flag's default.
+func (c *Data) ResolveClientType(flagValue string, flagChanged bool) string {
+	if flagChanged || c.Client == "" {
+		return flagValue
+	}
+	return c.Client
 }
 
 func (c *Data) SetInitialized() {

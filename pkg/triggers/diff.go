@@ -8,10 +8,21 @@ import (
 	"github.com/kubeshop/testkube/pkg/operator/validation/tests/v1/testtrigger"
 )
 
+const defaultDeploymentReplicas int32 = 1
+
+// deploymentReplicas returns the effective replica count, defaulting an unset
+// spec.replicas the same way the Kubernetes API server does.
+func deploymentReplicas(d *apps_v1.Deployment) int32 {
+	if d.Spec.Replicas == nil {
+		return defaultDeploymentReplicas
+	}
+	return *d.Spec.Replicas
+}
+
 func diffDeployments(old, new *apps_v1.Deployment) []testtrigger.Cause {
 	var causes []testtrigger.Cause
 
-	if *old.Spec.Replicas != *new.Spec.Replicas {
+	if deploymentReplicas(old) != deploymentReplicas(new) {
 		causes = append(causes, testtrigger.CauseDeploymentScaleUpdate)
 	}
 

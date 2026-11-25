@@ -13,6 +13,7 @@ type LabelsLister interface {
 
 func ListLabels(client LabelsLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_labels",
+		readOnlyTool(),
 		mcp.WithDescription(ListLabelsDescription),
 	)
 

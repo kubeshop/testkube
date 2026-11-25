@@ -191,3 +191,38 @@ func TestExtractErrorDetail(t *testing.T) {
 		assert.Equal(t, "", extractErrorDetail(nil))
 	})
 }
+
+// The Control Plane reads this header to tell an AI Agent's writes from a person's, so an
+// unidentified bridge makes its audit log attribute agent actions to the dashboard.
+func TestAPIClient_SendsTheSourceAsItsUserAgent(t *testing.T) {
+	for name, tc := range map[string]struct {
+		source string
+		want   string
+	}{
+		"an AI Agent's bridge":   {"ai-agent", "Testkube-MCP/ai-agent"},
+		"a person's CLI":         {"cli-direct", "Testkube-MCP/cli-direct"},
+		"a caller that set none": {"", "Testkube-MCP/unknown"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var got string
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				got = r.Header.Get("User-Agent")
+				_, _ = io.WriteString(w, "log content")
+			}))
+			defer server.Close()
+
+			client := NewAPIClient(&MCPServerConfig{
+				ControlPlaneUrl: server.URL,
+				AccessToken:     "tok",
+				OrgId:           "org-1",
+				EnvId:           "env-1",
+				Source:          tc.source,
+			}, server.Client())
+
+			_, err := client.GetExecutionLogs(context.Background(), "exec-1", tools.ExecutionLogParams{})
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}

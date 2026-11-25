@@ -16,10 +16,11 @@ func NewDeleteWebhookCmd() *cobra.Command {
 	var selectors []string
 
 	cmd := &cobra.Command{
-		Use:     "webhook <webhookName>",
-		Aliases: []string{"wh"},
-		Short:   "Delete webhook",
-		Long:    `Delete webhook, pass webhook name which should be deleted`,
+		Use:               "webhook <webhookName>",
+		ValidArgsFunction: common.CompleteWebhookNames,
+		Aliases:           []string{"wh"},
+		Short:             "Delete webhook",
+		Long:              `Delete webhook, pass webhook name which should be deleted`,
 		Run: func(cmd *cobra.Command, args []string) {
 			ignoreNotFound, err := cmd.Flags().GetBool("ignore-not-found")
 			if err != nil {
