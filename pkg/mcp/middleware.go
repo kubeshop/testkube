@@ -60,7 +60,7 @@ func TelemetryMiddleware(cfg *MCPServerConfig) server.ToolHandlerMiddleware {
 					// If MCP config has org/env IDs, use them (environment mode)
 					if cfg.OrgId != "" && cfg.EnvId != "" {
 						runContext = telemetry.RunContext{
-							Type:           "mcp-environment",
+							Type:           telemetry.RunContextTypeMCPEnvironment,
 							OrganizationId: cfg.OrgId,
 							EnvironmentId:  cfg.EnvId,
 						}
