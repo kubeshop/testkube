@@ -18,7 +18,7 @@ require (
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dustin/go-humanize v1.1.0
 	github.com/fasthttp/websocket v1.5.12
-	github.com/fluxcd/pkg/apis/event v0.28.0
+	github.com/fluxcd/pkg/apis/event v0.33.0
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/gabriel-vasile/mimetype v1.4.16
 	github.com/go-git/go-git/v6 v6.0.0-alpha.5
