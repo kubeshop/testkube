@@ -458,9 +458,11 @@ rules:
       - get
 
 ---
+{{- if and .Values.next.gitops.syncKubernetesToCloud .Values.next.gitops.syncControlPlaneResources }}
 
-# Control Plane resources (insights.testkube.io Boards), which a GitOps runner syncs to the Control
-# Plane. It only reads them.
+# Control Plane resources (Insights Boards, AI Agents, MCP servers, LLM providers and Skills),
+# which a GitOps runner syncs to the Control Plane. It only reads them, and the ConfigMaps a
+# Skill's skillFrom reads its SKILL.md from.
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: Role
 metadata:
@@ -481,6 +483,26 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - ai.testkube.io
+    resources:
+      - aiagents
+      - mcpservers
+      - llmproviders
+      - skills
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+{{- end }}
 
 ---
 {{- if .Values.next.testTriggers.enabled }}

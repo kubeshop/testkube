@@ -328,6 +328,7 @@ subjects:
     namespace: {{ .Release.Namespace }}
 
 ---
+{{- if and .Values.next.gitops.syncKubernetesToCloud .Values.next.gitops.syncControlPlaneResources }}
 
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: RoleBinding
@@ -348,6 +349,7 @@ subjects:
   - kind: ServiceAccount
     name: {{ include "testkube-api.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
+{{- end }}
 
 ---
 

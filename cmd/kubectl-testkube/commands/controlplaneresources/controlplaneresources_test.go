@@ -166,10 +166,35 @@ func TestApply_UnknownKind(t *testing.T) {
 	_, err := ReadInputs([]string{"-"}, strings.NewReader("apiVersion: insights.testkube.io/v1alpha1\nkind: QualityGate\nmetadata:\n  name: x\n"))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), `unknown kind "QualityGate"`)
+	assert.NotContains(t, err.Error(), "testkube create")
 
 	_, err = ReadInputs([]string{"-"}, strings.NewReader("apiVersion: testworkflows.testkube.io/v1\nkind: TestWorkflow\nmetadata:\n  name: x\n"))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "is not a Control Plane resource")
+}
+
+// A manifest of a kind that "testkube create" handles points to that command.
+func TestApply_CreateKindPointsToCreate(t *testing.T) {
+	for _, tc := range []struct {
+		apiVersion, kind, want string
+	}{
+		{"testworkflows.testkube.io/v1", "TestWorkflow", `"testkube create testworkflow -f <file>"`},
+		{"testworkflows.testkube.io/v1", "WorkflowTrigger", `"testkube create workflowtrigger -f <file>"`},
+		{"tests.testkube.io/v1", "TestTrigger", `"testkube create testtrigger -f <file>"`},
+		{"executor.testkube.io/v1", "Webhook", `"testkube create webhook"`},
+	} {
+		t.Run(tc.kind, func(t *testing.T) {
+			_, err := ReadInputs([]string{"-"}, strings.NewReader("apiVersion: "+tc.apiVersion+"\nkind: "+tc.kind+"\nmetadata:\n  name: x\n"))
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "is not a Control Plane resource")
+			assert.Contains(t, err.Error(), tc.want)
+		})
+	}
+
+	// A kind of that name outside Testkube gets no hint.
+	_, err := ReadInputs([]string{"-"}, strings.NewReader("apiVersion: example.com/v1\nkind: Webhook\nmetadata:\n  name: x\n"))
+	require.Error(t, err)
+	assert.NotContains(t, err.Error(), "testkube create")
 }
 
 func TestApply_ContinuesPastAFailure(t *testing.T) {
@@ -297,4 +322,55 @@ func TestApply_SendsTheServerBeforeTheAgentThatLinksToIt(t *testing.T) {
 	require.Len(t, c.applied, 2)
 	assert.Equal(t, "github", c.applied[0].GetName())
 	assert.Equal(t, "triager", c.applied[1].GetName())
+}
+
+const agentBeforeItsSkill = `apiVersion: ai.testkube.io/v1alpha1
+kind: AIAgent
+metadata:
+  name: load-tester
+spec:
+  instructions: Test load.
+  skillRefs:
+    - name: k6-load-testing
+    - name: company-style
+      scope: organization
+---
+apiVersion: ai.testkube.io/v1alpha1
+kind: Skill
+metadata:
+  name: k6-load-testing
+spec:
+  description: Use when writing a k6 load test.
+  allowed-tools: Bash(k6:*) Read
+  content: Start small.
+`
+
+func TestApply_SendsTheSkillBeforeTheAgentThatRefersToIt(t *testing.T) {
+	c := &fakeClient{}
+	var out bytes.Buffer
+	require.NoError(t, Apply(context.Background(), c, read(t, agentBeforeItsSkill), ApplyOptions{}, &out))
+
+	assert.Equal(t, "skill/k6-load-testing applied\naiagent/load-tester applied\n", out.String())
+	require.Len(t, c.applied, 2)
+	assert.Equal(t, "k6-load-testing", c.applied[0].GetName())
+}
+
+// testkube apply cannot read a ConfigMap, so a dry run already says a Skill read with skillFrom
+// is the GitOps runner's to sync.
+func TestApply_DryRunRefusesSkillFrom(t *testing.T) {
+	const skillFrom = `apiVersion: ai.testkube.io/v1alpha1
+kind: Skill
+metadata:
+  name: k6-load-testing
+spec:
+  skillFrom:
+    configMapKeyRef:
+      name: skills
+      key: SKILL.md
+`
+	var out bytes.Buffer
+	err := Apply(context.Background(), nil, read(t, skillFrom), ApplyOptions{DryRun: true}, &out)
+	require.Error(t, err)
+	assert.Equal(t, "skill/k6-load-testing: spec.skillFrom: Forbidden: only a GitOps runner reads a SKILL.md from a ConfigMap in its cluster; testkube apply takes the Skill inline", err.Error())
+	assert.Empty(t, out.String())
 }

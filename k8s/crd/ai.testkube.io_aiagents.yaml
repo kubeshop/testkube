@@ -47,6 +47,20 @@ spec:
           spec:
             description: AIAgentSpec is what an AI Agent does and what it may use.
             properties:
+              a2a:
+                description: |-
+                  A2A serves the agent over the Agent2Agent (A2A) protocol. Leaving it
+                  out turns A2A off for the agent: the manifest is the source of truth,
+                  and an export always writes it.
+                properties:
+                  enabled:
+                    description: |-
+                      Enabled serves the agent over A2A. It never widens access: the agent
+                      is served only when the deployment serves A2A and the organization
+                      turned it on, and a caller still needs a token whose role allows it
+                      and has to pass the agent's access rules.
+                    type: boolean
+                type: object
               access:
                 description: |-
                   Access links the agent to roles and resource groups. When it is
@@ -162,6 +176,36 @@ spec:
                   - name
                   type: object
                 type: array
+              skillRefs:
+                description: |-
+                  SkillRefs are Skills of the environment's or the organization's
+                  library the agent uses, in this order. They are shared, so a Skill
+                  left out is only unlinked. Applying a list replaces the whole list,
+                  and skillRefs: [] unlinks them all; when skillRefs is omitted, the
+                  agent's links are left as they are. No name may be both a skillRef and
+                  one of the agent's own Skills.
+                items:
+                  description: AIAgentSkillRef refers to a Skill of a library.
+                  properties:
+                    name:
+                      description: |-
+                        Name is the Skill's name: the metadata.name of a Skill, for the
+                        environment's library.
+                      maxLength: 64
+                      minLength: 1
+                      pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+                      type: string
+                    scope:
+                      description: 'Scope is the library: environment (the default)
+                        or organization.'
+                      enum:
+                      - environment
+                      - organization
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
               skills:
                 description: |-
                   Skills are guidance the agent uses, in this order. They belong to the
@@ -181,13 +225,13 @@ spec:
                         agent read it on demand.
                       type: boolean
                     content:
-                      description: Content is the guidance itself.
-                      minLength: 1
+                      description: Content is the guidance itself. Required unless
+                        skillFrom is set.
                       type: string
                     description:
-                      description: Description says what the Skill does and when to
-                        use it.
-                      minLength: 1
+                      description: |-
+                        Description says what the Skill does and when to use it. Required
+                        unless skillFrom is set.
                       type: string
                     metadata:
                       additionalProperties:
@@ -202,9 +246,30 @@ spec:
                       minLength: 1
                       pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
                       type: string
+                    skillFrom:
+                      description: |-
+                        SkillFrom reads the description, metadata and content from a SKILL.md
+                        kept in a ConfigMap. The SKILL.md's name must be the Skill's name. Only a
+                        GitOps runner reads it, from its own namespace; testkube apply takes the
+                        Skill inline.
+                      properties:
+                        configMapKeyRef:
+                          description: |-
+                            ConfigMapKeyRef selects the key of a ConfigMap, in the namespace of the
+                            resource, that holds a SKILL.md.
+                          properties:
+                            key:
+                              description: Key holding the SKILL.md, such as SKILL.md.
+                              type: string
+                            name:
+                              description: Name of the ConfigMap.
+                              type: string
+                          required:
+                          - key
+                          - name
+                          type: object
+                      type: object
                   required:
-                  - content
-                  - description
                   - name
                   type: object
                 type: array
@@ -212,11 +277,16 @@ spec:
             - instructions
             type: object
           status:
-            description: |-
-              ControlPlaneResourceStatus is the Control Plane's view of a resource. The Control Plane
-              fills it in when it exports a resource, and ignores it when one is applied:
-              ownership is never taken from a request body.
+            description: AIAgentStatus is the Control Plane's view of an AI Agent.
             properties:
+              a2a:
+                description: A2A is how the agent is reached over A2A, while it is
+                  served.
+                properties:
+                  url:
+                    description: URL is the agent's A2A endpoint.
+                    type: string
+                type: object
               creationSource:
                 description: 'CreationSource records how the resource was created:
                   ui, api or gitops.'

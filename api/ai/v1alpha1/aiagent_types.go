@@ -39,8 +39,8 @@ type AIAgent struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   AIAgentSpec                         `json:"spec,omitempty"`
-	Status commonv1.ControlPlaneResourceStatus `json:"status,omitempty"`
+	Spec   AIAgentSpec   `json:"spec,omitempty"`
+	Status AIAgentStatus `json:"status,omitempty"`
 }
 
 // AIAgentSpec is what an AI Agent does and what it may use.
@@ -77,6 +77,54 @@ type AIAgentSpec struct {
 	// does not delete the ones added in the dashboard.
 	// +optional
 	Skills []AIAgentSkill `json:"skills"`
+	// SkillRefs are Skills of the environment's or the organization's
+	// library the agent uses, in this order. They are shared, so a Skill
+	// left out is only unlinked. Applying a list replaces the whole list,
+	// and skillRefs: [] unlinks them all; when skillRefs is omitted, the
+	// agent's links are left as they are. No name may be both a skillRef and
+	// one of the agent's own Skills.
+	// +optional
+	SkillRefs []AIAgentSkillRef `json:"skillRefs"`
+	// A2A serves the agent over the Agent2Agent (A2A) protocol. Leaving it
+	// out turns A2A off for the agent: the manifest is the source of truth,
+	// and an export always writes it.
+	A2A *AIAgentA2A `json:"a2a,omitempty"`
+}
+
+// AIAgentA2A is how an AI Agent is served over the A2A protocol.
+type AIAgentA2A struct {
+	// Enabled serves the agent over A2A. It never widens access: the agent
+	// is served only when the deployment serves A2A and the organization
+	// turned it on, and a caller still needs a token whose role allows it
+	// and has to pass the agent's access rules.
+	// +optional
+	Enabled bool `json:"enabled"`
+}
+
+// AIAgentStatus is the Control Plane's view of an AI Agent.
+type AIAgentStatus struct {
+	commonv1.ControlPlaneResourceStatus `json:",inline"`
+	// A2A is how the agent is reached over A2A, while it is served.
+	A2A *AIAgentA2AStatus `json:"a2a,omitempty"`
+}
+
+// AIAgentA2AStatus is where an AI Agent is reached over A2A.
+type AIAgentA2AStatus struct {
+	// URL is the agent's A2A endpoint.
+	URL string `json:"url,omitempty"`
+}
+
+// AIAgentSkillRef refers to a Skill of a library.
+type AIAgentSkillRef struct {
+	// Name is the Skill's name: the metadata.name of a Skill, for the
+	// environment's library.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=64
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]+(-[a-z0-9]+)*$`
+	Name string `json:"name"`
+	// Scope is the library: environment (the default) or organization.
+	// +kubebuilder:validation:Enum=environment;organization
+	Scope string `json:"scope,omitempty"`
 }
 
 // AIAgentSkill is guidance an AI Agent uses, following the Agent Skills spec.
@@ -89,17 +137,21 @@ type AIAgentSkill struct {
 	// +kubebuilder:validation:MaxLength=64
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]+(-[a-z0-9]+)*$`
 	Name string `json:"name"`
-	// Description says what the Skill does and when to use it.
-	// +kubebuilder:validation:MinLength=1
-	Description string `json:"description"`
-	// Content is the guidance itself.
-	// +kubebuilder:validation:MinLength=1
-	Content string `json:"content"`
+	// Description says what the Skill does and when to use it. Required
+	// unless skillFrom is set.
+	Description string `json:"description,omitempty"`
+	// Content is the guidance itself. Required unless skillFrom is set.
+	Content string `json:"content,omitempty"`
 	// AlwaysInclude puts the content in every prompt instead of having the
 	// agent read it on demand.
 	AlwaysInclude bool `json:"alwaysInclude,omitempty"`
 	// Metadata is extra Agent Skills spec metadata.
 	Metadata map[string]string `json:"metadata,omitempty"`
+	// SkillFrom reads the description, metadata and content from a SKILL.md
+	// kept in a ConfigMap. The SKILL.md's name must be the Skill's name. Only a
+	// GitOps runner reads it, from its own namespace; testkube apply takes the
+	// Skill inline.
+	SkillFrom *SkillSource `json:"skillFrom,omitempty"`
 }
 
 // AIAgentMCPServer is an AI Agent's link to an MCP server.

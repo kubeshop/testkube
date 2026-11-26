@@ -15,7 +15,7 @@
 // # Control Plane resources
 //
 // Control Plane resources, the kinds that live only in the Control Plane and are declared in the
-// registry of pkg/controlplane/declarative (an Insights Board today), share one reconciler and one
+// registry of pkg/controlplane/declarative, share one reconciler and one
 // SyncService arm (ControlPlaneResource, named by the kind's resource and the object's name). The
 // reconciler (controller.NewControlPlaneResourceSyncControllers) checks each object with the shared
 // Normalize before sending it, so an invalid one is a terminal error reported in the cluster and is
@@ -28,23 +28,46 @@
 // resource's delete event, whose final state decides: a reconcile that reads the resource missing
 // before that, as one queued earlier may, looks again shortly. A delete seen during a watch
 // interruption carries a state that may predate the annotation, so its delete is not sent: the
-// resource stays in the Control Plane, and the runner logs it. Syncing another kind means adding it to
-// syncedControlPlaneResources in the controller package, its scheme in main.go, read access in the
-// Helm charts, and its arm in the Control Plane's handler; the proto stays as it is.
+// resource stays in the Control Plane, and the runner logs it. The reconciler also counts the
+// resources it syncs, by kind, for the telemetry heartbeat (SyncedResources). Syncing another kind
+// means adding it to syncedControlPlaneResources in the controller package, its group to
+// services.NewControllerScheme (cmd/api-server/services), read access in the Helm charts, and its
+// arm in the Control Plane's handler; the proto stays as it is.
 //
-// These controllers also need the Control Plane to advertise the controlplane-resources capability
-// (capabilities.CapabilityControlPlaneResources), so an older Control Plane never gets the arm. A
+// A runner syncs them only with GITOPS_CONTROLPLANE_RESOURCES_ENABLED (default false), set by the
+// runner chart's gitops.controlPlaneResources.enabled and the testkube-api chart's
+// next.gitops.syncControlPlaneResources, which also grant the read access below; without it they
+// are not watched at all, and the runner needs neither their CRDs nor access to them.
+//
+// Each kind also needs the Control Plane to advertise its family's capability, so a Control Plane
+// that does not serve the kind never gets it: controlplane-resources for Insights Boards,
+// controlplane-resources-ai for MCP servers, LLM providers and AI Agents, and
+// controlplane-resources-skills for the Skills of an environment's library
+// (capabilities.CapabilityControlPlaneResources and the two beside it). The kinds are registered
+// in the order they reference each other, MCP servers and Skills before the AI Agents that link
+// them, so a first sync needs fewer retries. A resource naming one the Control Plane does not have
+// yet is retried with backoff, not refused, as what it names may be synced next. A
 // kind whose CRD is not installed, that the runner may not list and watch in its namespace, or
 // whose access the runner may not check (a cluster that forbids SelfSubjectAccessReviews) is
 // skipped with a warning: a controller whose cache cannot sync would stop the manager, and the
 // runner with it. The Helm charts install the CRDs (testkube-crds) and grant the read access (the
-// runner chart's watcher role when gitops.enabled, and the testkube-api chart's
-// controlplaneresources role).
+// runner chart's watcher role when gitops.enabled and gitops.controlPlaneResources.enabled, and
+// the testkube-api chart's controlplaneresources role when next.gitops.syncControlPlaneResources).
+//
+// A Skill, or an AI Agent's own Skill, may read its SKILL.md from a ConfigMap in the runner's
+// namespace (skillFrom.configMapKeyRef). The runner reads it straight from the API server and sends
+// the Skill as if written inline (declarative.ResolveSkillSources), since the Control Plane cannot
+// read the cluster. A missing ConfigMap or key is retried; a SKILL.md that does not fit, such as
+// one naming another Skill, is not, until it changes. When the runner may list and watch ConfigMaps
+// (both charts grant it), it watches their metadata, and a changed ConfigMap syncs the resources
+// reading it again; otherwise a changed SKILL.md is synced with its resource's next change.
 //
 // While a GitOps runner owns a Control Plane resource, it is read-only everywhere else in the
 // Control Plane (the dashboard, the MCP tools, and testkube apply and delete), so it cannot drift
-// from Git. Deleting the custom resource deletes it in the Control Plane, unless another runner
-// owns it: that delete is an ownership conflict, and the resource is left as it is.
+// from Git. For an AI Agent that includes its roles, resource groups and own Skills. A synced AI Agent is never private: the
+// Control Plane refuses one that is. Deleting the custom resource deletes it in the Control Plane,
+// unless another runner owns it: that delete is an ownership conflict, and the resource is left as
+// it is.
 //
 // # Resource ownership contract
 //
