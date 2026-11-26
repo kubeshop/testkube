@@ -166,10 +166,35 @@ func TestApply_UnknownKind(t *testing.T) {
 	_, err := ReadInputs([]string{"-"}, strings.NewReader("apiVersion: insights.testkube.io/v1alpha1\nkind: QualityGate\nmetadata:\n  name: x\n"))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), `unknown kind "QualityGate"`)
+	assert.NotContains(t, err.Error(), "testkube create")
 
 	_, err = ReadInputs([]string{"-"}, strings.NewReader("apiVersion: testworkflows.testkube.io/v1\nkind: TestWorkflow\nmetadata:\n  name: x\n"))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "is not a Control Plane resource")
+}
+
+// A manifest of a kind that "testkube create" handles points to that command.
+func TestApply_CreateKindPointsToCreate(t *testing.T) {
+	for _, tc := range []struct {
+		apiVersion, kind, want string
+	}{
+		{"testworkflows.testkube.io/v1", "TestWorkflow", `"testkube create testworkflow -f <file>"`},
+		{"testworkflows.testkube.io/v1", "WorkflowTrigger", `"testkube create workflowtrigger -f <file>"`},
+		{"tests.testkube.io/v1", "TestTrigger", `"testkube create testtrigger -f <file>"`},
+		{"executor.testkube.io/v1", "Webhook", `"testkube create webhook"`},
+	} {
+		t.Run(tc.kind, func(t *testing.T) {
+			_, err := ReadInputs([]string{"-"}, strings.NewReader("apiVersion: "+tc.apiVersion+"\nkind: "+tc.kind+"\nmetadata:\n  name: x\n"))
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "is not a Control Plane resource")
+			assert.Contains(t, err.Error(), tc.want)
+		})
+	}
+
+	// A kind of that name outside Testkube gets no hint.
+	_, err := ReadInputs([]string{"-"}, strings.NewReader("apiVersion: example.com/v1\nkind: Webhook\nmetadata:\n  name: x\n"))
+	require.Error(t, err)
+	assert.NotContains(t, err.Error(), "testkube create")
 }
 
 func TestApply_ContinuesPastAFailure(t *testing.T) {
