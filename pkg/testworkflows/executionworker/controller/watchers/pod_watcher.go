@@ -147,8 +147,11 @@ func (e *podWatcher) read(sideCtx context.Context) (<-chan readStart, <-chan str
 			return
 		}
 
-		// There is no update
+		// There is no update. The list version still has to be saved: an object that has not
+		// changed carries the version the server just rejected, so keeping it would send the
+		// next watch back with the same rejected version.
 		if list.Items[0].ResourceVersion == e.opts.ResourceVersion {
+			e.opts.ResourceVersion = list.ResourceVersion
 			started <- readStart{count: 0}
 			close(started)
 			return
@@ -305,11 +308,18 @@ func (e *podWatcher) cycle() {
 			break
 		}
 
-		// List again so the next watch starts from a version the API server still knows.
+		// List again so the next watch starts from a version the API server still knows. A
+		// temporary failure here, such as the API server still coming back, must not end the
+		// watcher: the loop watches again, fails fast, and waits longer before the next list.
 		started, finished = e.read(context.Background())
-		if result = <-started; result.err != nil {
+		result = <-started
+		if errors.Is(result.err, ErrDone) {
 			err = result.err
 			break
+		}
+		if result.err != nil {
+			err = result.err
+			continue
 		}
 		<-finished
 	}
