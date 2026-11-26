@@ -299,8 +299,10 @@ func (e *jobWatcher) cycle() {
 			"fieldSelector", e.opts.FieldSelector, "retryIn", delay.String(), "error", err)
 		select {
 		case <-e.ctx.Done():
-			break
 		case <-time.After(delay):
+		}
+		if e.ctx.Err() != nil {
+			break
 		}
 
 		// List again so the next watch starts from a version the API server still knows.
