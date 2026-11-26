@@ -58,7 +58,9 @@ func TestPodWatcher_RecoversFromRejectedResourceVersion(t *testing.T) {
 
 	NewPodWatcher(ctx, client, metav1.ListOptions{ResourceVersion: "500"}, func(*corev1.Pod) {})
 
-	const window = 250 * time.Millisecond
+	// Longer than the one second base delay, so the window covers a real recovery list rather
+	// than only the first failed watch.
+	const window = 1400 * time.Millisecond
 	time.Sleep(window)
 	cancel()
 	time.Sleep(20 * time.Millisecond)
@@ -81,7 +83,7 @@ func TestPodWatcher_RecoversFromRejectedResourceVersion(t *testing.T) {
 	t.Logf("resourceVersions sent on list:  %v", listRVs)
 
 	// A dead watch must be paced, not respun as fast as the loop runs.
-	assert.Less(t, watches, int32(50),
+	assert.Less(t, watches, int32(10),
 		"watch was recreated %d times in %v (~%.0f/s) with no backoff", watches, window, rate)
 
 	// Recovery must re-enter through the list with a fresh version, or the next watch is
