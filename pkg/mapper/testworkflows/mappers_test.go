@@ -592,7 +592,12 @@ func TestMapPodConfigResourcesRoundTrip(t *testing.T) {
 }
 
 func TestMapStepAgentRoundTrips(t *testing.T) {
-	agent := &testworkflowsv1.StepAgent{Name: "failure-triage", Prompt: "Find the cause in {{ execution.id }}."}
+	agent := &testworkflowsv1.StepAgent{
+		Name:     "failure-triage",
+		Prompt:   "Find the cause in {{ execution.id }}.",
+		Model:    "{{ config.model }}",
+		Thinking: "high",
+	}
 	operations := testworkflowsv1.StepOperations{Agent: agent}
 
 	tests := []struct {
