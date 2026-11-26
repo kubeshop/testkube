@@ -296,7 +296,7 @@ func (e *podWatcher) cycle() {
 
 		delay := retry.delay(watched)
 		log.DefaultLogger.Warnw("watching the pod failed, listing it again",
-			"labelSelector", e.opts.LabelSelector, "retryIn", delay.String(), "error", err)
+			"labelSelector", e.currentOpts().LabelSelector, "retryIn", delay.String(), "error", err)
 		select {
 		case <-e.ctx.Done():
 		case <-time.After(delay):
@@ -317,6 +317,14 @@ func (e *podWatcher) cycle() {
 		err = context.Cause(e.ctx)
 	}
 	e.cancel(err)
+}
+
+// currentOpts returns a copy of the options under the lock, because the watch writes the
+// resourceVersion into them while the cycle reads them.
+func (e *podWatcher) currentOpts() metav1.ListOptions {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.opts
 }
 
 func (e *podWatcher) Err() error {

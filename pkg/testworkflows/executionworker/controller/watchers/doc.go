@@ -1,6 +1,24 @@
 // Package watchers follows the Kubernetes objects of one execution: the job, the pod, and the
 // events of both. It builds the state of the execution from them.
 //
+// # The job and the pod
+//
+// The job watcher and the pod watcher follow the same contract as each other:
+//
+//   - Each lists its object, then watches it from the version of the list.
+//   - A watch that ends without the context being done is a failure, not a success. That covers a
+//     watch the API server closed with no event, and an error event in the watch such as a version
+//     that is too old.
+//   - After a failure the watcher lists again, so the next watch starts from a version the API
+//     server still knows, and waits first with a delay that grows. A watch that delivered an event
+//     starts the delay again from the base.
+//   - A list repeats the current object to the listener. The listener stores one value per
+//     execution, so a repeat replaces it rather than adding to it.
+//
+// Before this contract the two watchers reported a closed watch as a success and reconnected at
+// once on the same version, which an API server restart turned into thousands of rejected watches
+// a second.
+//
 // # Events
 //
 // The events hold the cause of a pod that waits, for example a volume that Kubernetes cannot mount.
