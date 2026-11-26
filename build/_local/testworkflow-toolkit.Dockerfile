@@ -1,5 +1,5 @@
 ARG BUSYBOX_IMAGE="busybox:1.38.0-musl"
-ARG ALPINE_IMAGE="alpine:3.24.3"
+ARG ALPINE_IMAGE="alpine:3.24.4"
 FROM ${BUSYBOX_IMAGE} AS busybox
 
 ###################################
@@ -52,7 +52,7 @@ RUN go install github.com/go-delve/delve/cmd/dlv@v1.26.0
 ## Debug
 ###################################
 FROM ${ALPINE_IMAGE} AS debug
-RUN apk --no-cache add ca-certificates libssl3 git openssh-client
+RUN apk --no-cache upgrade && apk --no-cache add ca-certificates libssl3 "git>=2.54.1-r0" "libexpat>=2.10.0-r0" "openssh-client>=10.3_p1-r2"
 ENV GOTRACEBACK=all
 COPY --from=debug-builder /go/bin/dlv /
 COPY --from=busybox /bin /.tktw-bin
@@ -66,7 +66,7 @@ ENTRYPOINT ["/dlv", "exec", "--headless", "--continue", "--accept-multiclient", 
 ## Distribution
 ###################################
 FROM ${ALPINE_IMAGE} AS dist
-RUN apk --no-cache add ca-certificates libssl3 git openssh-client
+RUN apk --no-cache upgrade && apk --no-cache add ca-certificates libssl3 "git>=2.54.1-r0" "libexpat>=2.10.0-r0" "openssh-client>=10.3_p1-r2"
 COPY --from=busybox /bin /.tktw-bin
 COPY --from=builder-toolkit /app/build/_local/workflow-toolkit /toolkit
 COPY --from=builder-init /app/build/_local/workflow-init /init
