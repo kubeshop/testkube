@@ -1,13 +1,18 @@
 package testworkflowprocessor
 
 import (
+	"context"
 	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	batchv1 "k8s.io/api/batch/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 func TestJobCreateError(t *testing.T) {
@@ -55,6 +60,29 @@ func TestJobCreateError(t *testing.T) {
 				return
 			}
 			assert.EqualError(t, err, tt.want)
+		})
+	}
+}
+
+func TestBundle_Deploy_Namespace(t *testing.T) {
+	tests := []struct {
+		name          string
+		jobNamespace  string
+		wantNamespace string
+	}{
+		{name: "the job without a namespace runs in the given namespace", jobNamespace: "", wantNamespace: "src"},
+		{name: "the namespace of the job wins over the given namespace", jobNamespace: "job-ns", wantNamespace: "job-ns"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clientSet := fake.NewSimpleClientset()
+			b := &Bundle{Job: batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "exec-1", Namespace: tt.jobNamespace}}}
+
+			require.NoError(t, b.Deploy(context.Background(), clientSet, "src"))
+
+			assert.Equal(t, tt.wantNamespace, b.Job.Namespace)
+			_, err := clientSet.BatchV1().Jobs(tt.wantNamespace).Get(context.Background(), "exec-1", metav1.GetOptions{})
+			assert.NoError(t, err)
 		})
 	}
 }
