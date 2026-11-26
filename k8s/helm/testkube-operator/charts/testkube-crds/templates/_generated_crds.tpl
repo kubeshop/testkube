@@ -9408,12 +9408,20 @@ spec:
                       agent:
                         description: run an AI Agent of the environment
                         properties:
+                          model:
+                            description: model for the turn; when empty, the AI Agent uses its default model
+                            type: string
                           name:
                             description: name of the AI Agent
                             minLength: 1
                             type: string
                           prompt:
                             description: message for the AI Agent
+                            type: string
+                          thinking:
+                            description: |-
+                              reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                              when empty, the AI Agent uses its default effort
                             type: string
                         required:
                           - name
@@ -10623,12 +10631,20 @@ spec:
                           agent:
                             description: run an AI Agent of the environment
                             properties:
+                              model:
+                                description: model for the turn; when empty, the AI Agent uses its default model
+                                type: string
                               name:
                                 description: name of the AI Agent
                                 minLength: 1
                                 type: string
                               prompt:
                                 description: message for the AI Agent
+                                type: string
+                              thinking:
+                                description: |-
+                                  reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                                  when empty, the AI Agent uses its default effort
                                 type: string
                             required:
                               - name
@@ -15432,12 +15448,20 @@ spec:
                       agent:
                         description: run an AI Agent of the environment
                         properties:
+                          model:
+                            description: model for the turn; when empty, the AI Agent uses its default model
+                            type: string
                           name:
                             description: name of the AI Agent
                             minLength: 1
                             type: string
                           prompt:
                             description: message for the AI Agent
+                            type: string
+                          thinking:
+                            description: |-
+                              reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                              when empty, the AI Agent uses its default effort
                             type: string
                         required:
                           - name
@@ -16647,12 +16671,20 @@ spec:
                           agent:
                             description: run an AI Agent of the environment
                             properties:
+                              model:
+                                description: model for the turn; when empty, the AI Agent uses its default model
+                                type: string
                               name:
                                 description: name of the AI Agent
                                 minLength: 1
                                 type: string
                               prompt:
                                 description: message for the AI Agent
+                                type: string
+                              thinking:
+                                description: |-
+                                  reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                                  when empty, the AI Agent uses its default effort
                                 type: string
                             required:
                               - name
@@ -19068,12 +19100,20 @@ spec:
                       agent:
                         description: run an AI Agent of the environment
                         properties:
+                          model:
+                            description: model for the turn; when empty, the AI Agent uses its default model
+                            type: string
                           name:
                             description: name of the AI Agent
                             minLength: 1
                             type: string
                           prompt:
                             description: message for the AI Agent
+                            type: string
+                          thinking:
+                            description: |-
+                              reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                              when empty, the AI Agent uses its default effort
                             type: string
                         required:
                           - name
@@ -20283,12 +20323,20 @@ spec:
                           agent:
                             description: run an AI Agent of the environment
                             properties:
+                              model:
+                                description: model for the turn; when empty, the AI Agent uses its default model
+                                type: string
                               name:
                                 description: name of the AI Agent
                                 minLength: 1
                                 type: string
                               prompt:
                                 description: message for the AI Agent
+                                type: string
+                              thinking:
+                                description: |-
+                                  reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                                  when empty, the AI Agent uses its default effort
                                 type: string
                             required:
                               - name
@@ -23026,12 +23074,20 @@ spec:
                       agent:
                         description: run an AI Agent of the environment
                         properties:
+                          model:
+                            description: model for the turn; when empty, the AI Agent uses its default model
+                            type: string
                           name:
                             description: name of the AI Agent
                             minLength: 1
                             type: string
                           prompt:
                             description: message for the AI Agent
+                            type: string
+                          thinking:
+                            description: |-
+                              reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                              when empty, the AI Agent uses its default effort
                             type: string
                         required:
                           - name
@@ -24238,12 +24294,20 @@ spec:
                           agent:
                             description: run an AI Agent of the environment
                             properties:
+                              model:
+                                description: model for the turn; when empty, the AI Agent uses its default model
+                                type: string
                               name:
                                 description: name of the AI Agent
                                 minLength: 1
                                 type: string
                               prompt:
                                 description: message for the AI Agent
+                                type: string
+                              thinking:
+                                description: |-
+                                  reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                                  when empty, the AI Agent uses its default effort
                                 type: string
                             required:
                               - name
@@ -28908,12 +28972,20 @@ spec:
                       agent:
                         description: run an AI Agent of the environment
                         properties:
+                          model:
+                            description: model for the turn; when empty, the AI Agent uses its default model
+                            type: string
                           name:
                             description: name of the AI Agent
                             minLength: 1
                             type: string
                           prompt:
                             description: message for the AI Agent
+                            type: string
+                          thinking:
+                            description: |-
+                              reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                              when empty, the AI Agent uses its default effort
                             type: string
                         required:
                           - name
@@ -30120,12 +30192,20 @@ spec:
                           agent:
                             description: run an AI Agent of the environment
                             properties:
+                              model:
+                                description: model for the turn; when empty, the AI Agent uses its default model
+                                type: string
                               name:
                                 description: name of the AI Agent
                                 minLength: 1
                                 type: string
                               prompt:
                                 description: message for the AI Agent
+                                type: string
+                              thinking:
+                                description: |-
+                                  reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                                  when empty, the AI Agent uses its default effort
                                 type: string
                             required:
                               - name
@@ -32422,12 +32502,20 @@ spec:
                       agent:
                         description: run an AI Agent of the environment
                         properties:
+                          model:
+                            description: model for the turn; when empty, the AI Agent uses its default model
+                            type: string
                           name:
                             description: name of the AI Agent
                             minLength: 1
                             type: string
                           prompt:
                             description: message for the AI Agent
+                            type: string
+                          thinking:
+                            description: |-
+                              reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                              when empty, the AI Agent uses its default effort
                             type: string
                         required:
                           - name
@@ -33634,12 +33722,20 @@ spec:
                           agent:
                             description: run an AI Agent of the environment
                             properties:
+                              model:
+                                description: model for the turn; when empty, the AI Agent uses its default model
+                                type: string
                               name:
                                 description: name of the AI Agent
                                 minLength: 1
                                 type: string
                               prompt:
                                 description: message for the AI Agent
+                                type: string
+                              thinking:
+                                description: |-
+                                  reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                                  when empty, the AI Agent uses its default effort
                                 type: string
                             required:
                               - name

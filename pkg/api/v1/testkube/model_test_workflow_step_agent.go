@@ -14,4 +14,8 @@ type TestWorkflowStepAgent struct {
 	Name string `json:"name"`
 	// message for the AI Agent
 	Prompt string `json:"prompt,omitempty"`
+	// model for the turn; when empty, the AI Agent uses its default model
+	Model string `json:"model,omitempty"`
+	// reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max; when empty, the AI Agent uses its default effort
+	Thinking string `json:"thinking,omitempty"`
 }

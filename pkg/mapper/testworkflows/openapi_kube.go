@@ -1126,8 +1126,10 @@ func MapStepExecuteAPIToKube(v testkube.TestWorkflowStepExecute) testworkflowsv1
 
 func MapStepAgentAPIToKube(v testkube.TestWorkflowStepAgent) testworkflowsv1.StepAgent {
 	return testworkflowsv1.StepAgent{
-		Name:   v.Name,
-		Prompt: v.Prompt,
+		Name:     v.Name,
+		Prompt:   v.Prompt,
+		Model:    v.Model,
+		Thinking: v.Thinking,
 	}
 }
 
