@@ -140,7 +140,12 @@ func ProcessParallel(_ testworkflowprocessor.InternalProcessor, layer testworkfl
 	if err != nil {
 		return nil, errors.Wrap(err, "parallel: encoding error")
 	}
-	stage.Container().SetArgs("--base64", encoded)
+	args := []string{"--base64", encoded}
+	// The step id names the workers in parallel(), so the later steps can read what they published
+	if step.Id != "" {
+		args = append(args, "--id", step.Id)
+	}
+	stage.Container().SetArgs(args...)
 
 	return stage, nil
 }

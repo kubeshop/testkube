@@ -643,6 +643,7 @@ func NewExecuteCmd() *cobra.Command {
 				data.GetBaseTestWorkflowMachine(),
 				data.ExecutionMachine(),
 				data.ExecutionDataMachineFor(recorder.registry),
+				data.ParallelDataMachine(),
 				credMachine,
 			)
 

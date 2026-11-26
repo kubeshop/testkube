@@ -37,5 +37,6 @@ type StatusNotificationsWatcher interface {
 type WritableStatusNotificationsWatcher interface {
 	StatusNotificationsWatcher
 	Send(notification StatusNotification)
+	SendWithContext(ctx context.Context, notification StatusNotification) bool
 	Close(err error)
 }
