@@ -6,13 +6,21 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/log"
+)
+
+const (
+	jobRetryDelay    = time.Second
+	jobRetryMaxDelay = 30 * time.Second
 )
 
 type jobWatcher struct {
@@ -95,7 +103,7 @@ func (e *jobWatcher) read(sideCtx context.Context) (<-chan readStart, <-chan str
 		if opts.TimeoutSeconds == nil {
 			opts.TimeoutSeconds = common.Ptr(defaultListTimeoutSeconds)
 		}
-		list, err := e.client.List(ctx, e.opts)
+		list, err := e.client.List(ctx, opts)
 		if err != nil {
 			started <- readStart{err: err}
 			close(started)
@@ -168,8 +176,10 @@ func (e *jobWatcher) read(sideCtx context.Context) (<-chan readStart, <-chan str
 	return started, finished
 }
 
-// TODO: handle resource too old
-func (e *jobWatcher) watch() error {
+// watch reads a single watch stream. It reports whether any event was delivered, so the caller
+// can reset its backoff after a watch that worked, and it returns a real error when the stream
+// ends. A resourceVersion the API server has aged out arrives here as a watch.Error.
+func (e *jobWatcher) watch() (bool, error) {
 	// Initialize the watcher
 	opts := e.opts
 	if opts.TimeoutSeconds == nil {
@@ -177,7 +187,7 @@ func (e *jobWatcher) watch() error {
 	}
 	watcher, err := e.client.Watch(e.ctx, opts)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer watcher.Stop()
 
@@ -189,24 +199,33 @@ func (e *jobWatcher) watch() error {
 	}()
 
 	// Read the items
+	delivered := false
 	ch := watcher.ResultChan()
 	for {
 		// Prioritize checking for finished watcher
 		select {
 		case <-e.ctx.Done():
-			return e.ctx.Err()
+			return delivered, e.ctx.Err()
 		default:
 		}
 
 		// Wait for the results
 		select {
 		case <-e.ctx.Done():
-			return e.ctx.Err()
+			return delivered, e.ctx.Err()
 		case event, ok := <-ch:
-			// Handle closed watcher
+			// The watch ended without the context being done, so the API server or a proxy closed
+			// it. Report it so the caller lists again instead of reconnecting on the same version.
 			if !ok {
-				return e.ctx.Err()
+				return delivered, errWatchClosed
 			}
+
+			// The API reports an error in the stream, for example a version that is too old. The
+			// watch cannot continue from that version, so the cycle lists the job again.
+			if event.Type == watch.Error {
+				return delivered, apierrors.FromObject(event.Object)
+			}
+			delivered = true
 
 			// Load the current Kubernetes object
 			object, ok := event.Object.(*batchv1.Job)
@@ -238,7 +257,7 @@ func (e *jobWatcher) watch() error {
 			// Handle the deletion
 			if IsJobFinished(object) {
 				e.cancel(ErrDone)
-				return ErrDone
+				return delivered, ErrDone
 			}
 		}
 	}
@@ -262,11 +281,38 @@ func (e *jobWatcher) cycle() {
 	}
 	<-finished
 
-	// Watch for the data updates,
-	// and restart the watcher as long as there are no errors
+	// Watch for the data updates. A watch can end for a reason a retry recovers from, most often a
+	// resourceVersion the API server has aged out after a restart. Recovery re-enters through the
+	// list, so every attempt carries a fresh version, and the delay keeps a persistent failure from
+	// saturating the API server. A watch that delivered something resets the delay.
+	retry := backoff{base: jobRetryDelay, max: jobRetryMaxDelay}
 	var err error
-	for err == nil {
-		err = e.watch()
+	for e.ctx.Err() == nil {
+		var watched bool
+		watched, err = e.watch()
+		if e.ctx.Err() != nil || errors.Is(err, ErrDone) {
+			break
+		}
+
+		delay := retry.delay(watched)
+		log.DefaultLogger.Warnw("watching the job failed, listing it again",
+			"fieldSelector", e.opts.FieldSelector, "retryIn", delay.String(), "error", err)
+		select {
+		case <-e.ctx.Done():
+			break
+		case <-time.After(delay):
+		}
+
+		// List again so the next watch starts from a version the API server still knows.
+		started, finished = e.read(context.Background())
+		if result = <-started; result.err != nil {
+			err = result.err
+			break
+		}
+		<-finished
+	}
+	if err == nil {
+		err = context.Cause(e.ctx)
 	}
 	e.cancel(err)
 }
