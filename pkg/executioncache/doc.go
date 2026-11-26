@@ -62,4 +62,8 @@
 //
 // Cache entries expire through STORAGE_CACHE_EXPIRATION; the minio package documents
 // how that lifecycle rule is applied.
+//
+// When the agent has a shared ReadWriteMany volume (StepCacheVolume in the worker config),
+// the object holds only a pointer and the entry itself lives on that volume; package
+// volume documents the pointer, the store and its retention sweep.
 package executioncache
