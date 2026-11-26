@@ -46,6 +46,8 @@ spec:
       content: 'Title issues "Flaky: <workflow>" and link the execution.'
       metadata:
         author: qa-team
+  a2a:
+    enabled: true
 ---
 apiVersion: ai.testkube.io/v1alpha1
 kind: MCPServer

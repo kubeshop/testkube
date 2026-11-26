@@ -30,7 +30,7 @@ func NewMCPToolPayloadWithContext(toolName, eventName string, duration time.Dura
 				OperatingSystem: runtime.GOOS,
 				Architecture:    runtime.GOARCH,
 				Context:         runContext, // Use the provided context instead of getCurrentContext()
-				ClusterType:     GetClusterType(),
+				ClusterType:     cliClusterType(runContext, GetClusterType),
 				Status: func() string {
 					if hasError {
 						return "error"

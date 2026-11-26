@@ -41,7 +41,7 @@ func SendCmdEvent(cmd *cobra.Command, version, userID string) (string, error) {
 		command = "root"
 	}
 
-	payload := NewCLIPayload(getCurrentContext(), userID, command, version, "cli_command_execution", GetClusterType())
+	payload := NewCLIPayload(getCurrentContext(), userID, command, version, "cli_command_execution", currentCLIClusterType())
 	return sendData(senders, payload)
 }
 
@@ -75,7 +75,7 @@ func SendCmdErrorEventWithLicense(cmd *cobra.Command, version, errType, errorSta
 					OperatingSystem: runtime.GOOS,
 					Architecture:    runtime.GOARCH,
 					Context:         getCurrentContext(),
-					ClusterType:     GetClusterType(),
+					ClusterType:     currentCLIClusterType(),
 					CliContext:      GetCliRunContext(),
 					AITool:          GetAITool(),
 					ErrorCode:       errCode,
@@ -93,13 +93,13 @@ func SendCmdErrorEventWithLicense(cmd *cobra.Command, version, errType, errorSta
 
 func SendCmdAttemptEvent(cmd *cobra.Command, version, userID string) (string, error) {
 	// TODO pass error
-	payload := NewCLIPayload(getCurrentContext(), userID, getCommand(cmd), version, "cli_command_execution", GetClusterType())
+	payload := NewCLIPayload(getCurrentContext(), userID, getCommand(cmd), version, "cli_command_execution", currentCLIClusterType())
 	return sendData(senders, payload)
 }
 
 // SendCmdWithLicenseEvent will send CLI command attempt event with license
 func SendCmdWithLicenseEvent(cmd *cobra.Command, version, userID, license, step string) (string, error) {
-	payload := NewCLIWithLicensePayload(getCurrentContext(), userID, getCommandWithoutAttempt(cmd), version, "cli_command_execution", GetClusterType(), license, step)
+	payload := NewCLIWithLicensePayload(getCurrentContext(), userID, getCommandWithoutAttempt(cmd), version, "cli_command_execution", currentCLIClusterType(), license, step)
 	return sendData(senders, payload)
 }
 
@@ -139,7 +139,7 @@ func installLocalPayload(version, name, license, email string, props map[string]
 
 // SendCmdInitEvent will send CLI event to GA
 func SendCmdInitEvent(cmd *cobra.Command, version, userID string) (string, error) {
-	payload := NewCLIPayload(getCurrentContext(), userID, "init", version, "cli_command_execution", GetClusterType())
+	payload := NewCLIPayload(getCurrentContext(), userID, "init", version, "cli_command_execution", currentCLIClusterType())
 	return sendData(senders, payload)
 }
 
@@ -147,7 +147,7 @@ func SendCmdInitEvent(cmd *cobra.Command, version, userID string) (string, error
 // called while telemetry is still enabled (before the opt-out is persisted), as
 // no further events may be sent once the user has opted out.
 func SendTelemetryOptOutEvent(cmd *cobra.Command, version, userID string) (string, error) {
-	payload := NewCLIPayload(getCurrentContext(), userID, "telemetry_opt_out", version, "cli_command_execution", GetClusterType())
+	payload := NewCLIPayload(getCurrentContext(), userID, "telemetry_opt_out", version, "cli_command_execution", currentCLIClusterType())
 	return sendData(senders, payload)
 }
 
@@ -174,7 +174,7 @@ func SendPreviewEvent(cmd *cobra.Command, version, executionID string, artifactC
 					OperatingSystem:      runtime.GOOS,
 					Architecture:         runtime.GOARCH,
 					Context:              getCurrentContext(),
-					ClusterType:          GetClusterType(),
+					ClusterType:          currentCLIClusterType(),
 					CliContext:           GetCliRunContext(),
 					AITool:               GetAITool(),
 					PreviewExecutionID:   executionID,

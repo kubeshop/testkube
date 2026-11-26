@@ -39,8 +39,8 @@ type AIAgent struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   AIAgentSpec                         `json:"spec,omitempty"`
-	Status commonv1.ControlPlaneResourceStatus `json:"status,omitempty"`
+	Spec   AIAgentSpec   `json:"spec,omitempty"`
+	Status AIAgentStatus `json:"status,omitempty"`
 }
 
 // AIAgentSpec is what an AI Agent does and what it may use.
@@ -85,6 +85,33 @@ type AIAgentSpec struct {
 	// one of the agent's own Skills.
 	// +optional
 	SkillRefs []AIAgentSkillRef `json:"skillRefs"`
+	// A2A serves the agent over the Agent2Agent (A2A) protocol. Leaving it
+	// out turns A2A off for the agent: the manifest is the source of truth,
+	// and an export always writes it.
+	A2A *AIAgentA2A `json:"a2a,omitempty"`
+}
+
+// AIAgentA2A is how an AI Agent is served over the A2A protocol.
+type AIAgentA2A struct {
+	// Enabled serves the agent over A2A. It never widens access: the agent
+	// is served only when the deployment serves A2A and the organization
+	// turned it on, and a caller still needs a token whose role allows it
+	// and has to pass the agent's access rules.
+	// +optional
+	Enabled bool `json:"enabled"`
+}
+
+// AIAgentStatus is the Control Plane's view of an AI Agent.
+type AIAgentStatus struct {
+	commonv1.ControlPlaneResourceStatus `json:",inline"`
+	// A2A is how the agent is reached over A2A, while it is served.
+	A2A *AIAgentA2AStatus `json:"a2a,omitempty"`
+}
+
+// AIAgentA2AStatus is where an AI Agent is reached over A2A.
+type AIAgentA2AStatus struct {
+	// URL is the agent's A2A endpoint.
+	URL string `json:"url,omitempty"`
 }
 
 // AIAgentSkillRef refers to a Skill of a library.
