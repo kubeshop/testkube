@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -130,17 +131,8 @@ func checkAgentOutputValue(schema testworkflowsv1.ParameterSchema, text string) 
 	if len(text) > data.MaxOutputSize {
 		return "", fmt.Errorf("the value has %d bytes, and a step output holds %d", len(text), data.MaxOutputSize)
 	}
-	if len(schema.Enum) > 0 {
-		found := false
-		for _, allowed := range schema.Enum {
-			if text == allowed {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return "", fmt.Errorf("the value %q is not one of %s", text, strings.Join(schema.Enum, ", "))
-		}
+	if len(schema.Enum) > 0 && !slices.Contains(schema.Enum, text) {
+		return "", fmt.Errorf("the value %q is not one of %s", text, strings.Join(schema.Enum, ", "))
 	}
 
 	switch schema.Type {
@@ -212,8 +204,8 @@ func checkAgentOutputNumber(schema testworkflowsv1.ParameterNumberSchema, number
 }
 
 // agentOutputFields returns the fields that the AI Agent gave. The fields from its tool come
-// first: the AI service checked them, and they are apart from the text. An older control plane
-// gives none, and then the fields come from the block in the answer.
+// first, because they are apart from the text. An older control plane gives none, and then the
+// fields come from the block in the answer.
 func agentOutputFields(fromTool, answer string) (map[string]json.RawMessage, error) {
 	if strings.TrimSpace(fromTool) == "" {
 		return parseAgentOutputs(answer)

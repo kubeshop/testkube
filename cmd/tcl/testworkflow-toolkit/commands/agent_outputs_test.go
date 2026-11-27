@@ -71,32 +71,26 @@ func TestAgentOutputsContract(t *testing.T) {
 	tests := []struct {
 		name    string
 		schemas map[string]testworkflowsv1.ParameterSchema
-		want    []string
-		empty   bool
+		want    string
 	}{
-		{name: "adds nothing when the step declares no outputs", empty: true},
+		{name: "adds nothing when the step declares no outputs", want: ""},
 		{
 			name: "names the block and each field in a stable order",
 			schemas: map[string]testworkflowsv1.ParameterSchema{
 				"verdict": {Enum: []string{"go", "no-go"}, Default: testworkflowsv1.NewConfigValue("no-go"), Description: "go only when each suite passed"},
 				"blocked": {Type: testworkflowsv1.ParameterTypeInteger},
+				"id":      {ParameterStringSchema: testworkflowsv1.ParameterStringSchema{Pattern: "^shop-[a-z]+$"}},
 			},
-			want: []string{
-				"`testkube-outputs`",
-				"- \"blocked\": integer\n- \"verdict\": string, one of go, no-go, optional. go only when each suite passed\n",
-			},
+			want: "\n\nEnd your answer with one fenced code block that has the language `testkube-outputs`. " +
+				"The block holds one JSON object with these fields, and nothing else:\n" +
+				"- \"blocked\": integer\n" +
+				"- \"id\": string, matches the regular expression ^shop-[a-z]+$\n" +
+				"- \"verdict\": string, one of go, no-go, optional. go only when each suite passed\n",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := agentOutputsContract(tt.schemas)
-			if tt.empty {
-				assert.Empty(t, got)
-				return
-			}
-			for _, want := range tt.want {
-				assert.Contains(t, got, want)
-			}
+			assert.Equal(t, tt.want, agentOutputsContract(tt.schemas))
 		})
 	}
 }

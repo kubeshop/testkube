@@ -58,7 +58,7 @@ func TestCheckSchemas(t *testing.T) {
 		{
 			name:    "refuses a name with a path",
 			schemas: map[string]testworkflowsv1.ParameterSchema{"../verdict": {}},
-			wantErr: "is not valid",
+			wantErr: `the output name "../verdict" is not valid`,
 		},
 		{
 			name:    "refuses a type that an output cannot have",
