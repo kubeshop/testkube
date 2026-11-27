@@ -39,39 +39,13 @@ func TestCheckAgentOutputSchemas(t *testing.T) {
 	}{
 		{name: "accepts no outputs"},
 		{
-			name: "accepts each type, and a schema with no type",
-			schemas: map[string]testworkflowsv1.ParameterSchema{
-				"verdict": verdictSchema,
-				"count":   {Type: testworkflowsv1.ParameterTypeInteger},
-				"score":   {Type: testworkflowsv1.ParameterTypeNumber},
-				"flaky":   {Type: testworkflowsv1.ParameterTypeBoolean},
-				"cause_1": {},
-			},
+			name:    "accepts outputs with a valid default",
+			schemas: map[string]testworkflowsv1.ParameterSchema{"verdict": verdictSchema},
 		},
 		{
-			name:    "refuses a name that the init process does not read",
+			name:    "refuses what the shared rules refuse",
 			schemas: map[string]testworkflowsv1.ParameterSchema{".hidden": {}},
 			wantErr: `the output name ".hidden" is not valid`,
-		},
-		{
-			name:    "refuses a name with a path",
-			schemas: map[string]testworkflowsv1.ParameterSchema{"../verdict": {}},
-			wantErr: "is not valid",
-		},
-		{
-			name:    "refuses the name of the session output",
-			schemas: map[string]testworkflowsv1.ParameterSchema{"session": {}},
-			wantErr: `the output name "session" is reserved`,
-		},
-		{
-			name:    "refuses a type that an output cannot have",
-			schemas: map[string]testworkflowsv1.ParameterSchema{"list": {Type: "array"}},
-			wantErr: `the output "list" has the type "array"`,
-		},
-		{
-			name:    "refuses a pattern that does not compile",
-			schemas: map[string]testworkflowsv1.ParameterSchema{"id": {ParameterStringSchema: testworkflowsv1.ParameterStringSchema{Pattern: "("}}},
-			wantErr: `the output "id" has a pattern that is not a regular expression`,
 		},
 		{
 			name: "refuses a default that its own schema does not accept",

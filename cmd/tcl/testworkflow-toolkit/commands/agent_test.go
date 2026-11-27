@@ -11,6 +11,7 @@ package commands
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -130,7 +131,7 @@ func TestAgentStep_Run(t *testing.T) {
 				{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Next: 1, Answer: "All suites passed.\n" + outputsBlock(`{"verdict": "go"}`)}},
 			},
 			wantLog:     []string{"Output verdict: go\n"},
-			wantOutputs: map[string]string{"session": "session-1", "verdict": "go"},
+			wantOutputs: map[string]string{"verdict": "go"},
 			wantAnswer:  "All suites passed.\n" + outputsBlock(`{"verdict": "go"}`),
 		},
 		{
@@ -141,7 +142,7 @@ func TestAgentStep_Run(t *testing.T) {
 				{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Next: 1, Answer: "Go."}},
 			},
 			wantErr:     "the answer of the AI Agent does not give the outputs of the step: the answer has no `testkube-outputs` block",
-			wantOutputs: map[string]string{"session": "session-1", "verdict": "no-go"},
+			wantOutputs: map[string]string{"verdict": "no-go"},
 			wantAnswer:  "Go.",
 		},
 		{
@@ -163,28 +164,24 @@ func TestAgentStep_Run(t *testing.T) {
 			},
 			wantLog:     []string{"I read the logs.\n", "Tool call: fetch_execution_logs {\"executionId\":\"e1\"}\n", "The database was down.\n"},
 			wantCursors: []uint32{0, 2},
-			wantOutputs: map[string]string{"session": "session-1"},
 			wantAnswer:  "  The database was down.\n",
 		},
 		{
-			name:        "uses a turn that is completed in the answer to the start call",
-			start:       agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Answer: "pass"}},
-			wantOutputs: map[string]string{"session": "session-1"},
-			wantAnswer:  "pass",
+			name:       "uses a turn that is completed in the answer to the start call",
+			start:      agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Answer: "pass"}},
+			wantAnswer: "pass",
 		},
 		{
-			name:        "writes an answer above the size of a step output to the file in full",
-			start:       agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Answer: long}},
-			wantOutputs: map[string]string{"session": "session-1"},
-			wantAnswer:  long,
+			name:       "writes an answer above the size of a step output to the file in full",
+			start:      agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Answer: long}},
+			wantAnswer: long,
 		},
 		{
 			name: "removes the instruction start byte from the log, the output and the file",
 			start: agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "s\x01\x051", Answer: "ok\n\x01\x01\x05\x05;output",
 				Events: []*cloud.AgentTurnEvent{textEvent("\x01\x05;pass"), toolEvent("\x01\x05tool", "\x01\x05args")}}},
-			wantLog:     []string{"\x05;pass\n", "Tool call: \x05tool \x05args\n"},
-			wantOutputs: map[string]string{"session": "s\x051"},
-			wantAnswer:  "ok\n\x05\x05;output",
+			wantLog:    []string{"\x05;pass\n", "Tool call: \x05tool \x05args\n"},
+			wantAnswer: "ok\n\x05\x05;output",
 		},
 		{
 			name:     "starts no turn for a step with no ID",
@@ -198,11 +195,10 @@ func TestAgentStep_Run(t *testing.T) {
 			wantErr: `cannot start the AI Agent "failure-triage"`,
 		},
 		{
-			name:        "fails with the message of a failed turn and keeps its session",
-			start:       agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: working, SessionId: "session-1"}},
-			gets:        []agentReply{{turn: &cloud.AgentTurn{Id: "turn-1", State: failed, Message: "The tool run_workflow\x01 needs an approval."}}},
-			wantErr:     "the AI Agent failed: The tool run_workflow needs an approval.",
-			wantOutputs: map[string]string{"session": "session-1"},
+			name:    "fails with the message of a failed turn and keeps its session",
+			start:   agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: working, SessionId: "session-1"}},
+			gets:    []agentReply{{turn: &cloud.AgentTurn{Id: "turn-1", State: failed, Message: "The tool run_workflow\x01 needs an approval."}}},
+			wantErr: "the AI Agent failed: The tool run_workflow needs an approval.",
 		},
 		{
 			name:    "fails with the message of a canceled turn",
@@ -301,13 +297,39 @@ func TestAgentStep_Run(t *testing.T) {
 			assert.NoError(t, client.cancelCtxErr, "the cancel call must not use the context of the step")
 
 			assert.Equal(t, tt.wantOutputs, readDir(t, step.outputsDir))
-			var wantFiles map[string]string
-			if tt.wantAnswer != "" {
-				wantFiles = map[string]string{agentResponseFile: tt.wantAnswer}
+			files := readDir(t, filepath.Join(dir, "results"))
+			if session := wantAgentSession(tt.noStepID, tt.start, tt.gets); session != "" {
+				var info map[string]string
+				require.NoError(t, json.Unmarshal([]byte(files[data.StepAgentFile]), &info))
+				assert.Equal(t, map[string]string{data.StepAgentSession: session, data.StepAgentName: "failure-triage"}, info)
+			} else {
+				assert.NotContains(t, files, data.StepAgentFile)
 			}
-			assert.Equal(t, wantFiles, readDir(t, filepath.Join(dir, "results")))
+			delete(files, data.StepAgentFile)
+			wantFiles := map[string]string{}
+			if tt.wantAnswer != "" {
+				wantFiles[agentResponseFile] = tt.wantAnswer
+			}
+			if files == nil {
+				files = map[string]string{}
+			}
+			assert.Equal(t, wantFiles, files)
 		})
 	}
+}
+
+// wantAgentSession returns the session that the step must write for step.<id>.agent.session: the
+// first one that the control plane gives, with no instruction start byte.
+func wantAgentSession(noStepID bool, start agentReply, gets []agentReply) string {
+	if noStepID {
+		return ""
+	}
+	for _, reply := range append([]agentReply{start}, gets...) {
+		if reply.turn != nil && reply.turn.GetSessionId() != "" {
+			return strings.ReplaceAll(reply.turn.GetSessionId(), "\x01", "")
+		}
+	}
+	return ""
 }
 
 func repeatCursor(cursor uint32, n int) []uint32 {

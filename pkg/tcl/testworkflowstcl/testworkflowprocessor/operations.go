@@ -20,6 +20,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/agentoutputs"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -119,6 +120,9 @@ func ProcessAgent(_ testworkflowprocessor.InternalProcessor, layer testworkflowp
 	// only in the pod.
 	if !expressions.IsTemplateStringWithoutExpressions(step.Agent.Name) {
 		return nil, errors.Errorf("agent: name %q: the name of the AI Agent accepts a literal or a config value only", step.Agent.Name)
+	}
+	if err := agentoutputs.CheckSchemas(step.Agent.Outputs); err != nil {
+		return nil, errors.Wrap(err, "agent: outputs")
 	}
 	if before := operationsBeforeAgent(step); len(before) > 0 {
 		return nil, errors.Errorf("agent: an agent step runs only the AI Agent. Move %s to an earlier step", strings.Join(before, ", "))

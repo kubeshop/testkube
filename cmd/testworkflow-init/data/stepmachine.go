@@ -1,6 +1,8 @@
 package data
 
 import (
+	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -14,6 +16,7 @@ const (
 	stepStatusKey     = "status"
 	stepExitCodeKey   = "exitCode"
 	stepOutputsPrefix = "outputs."
+	stepAgentPrefix   = "agent."
 )
 
 var (
@@ -84,6 +87,16 @@ var StepMachine = expressions.NewMachine().
 			}
 			return int64(step.ExitCode), true, nil
 
+		case strings.HasPrefix(rest, stepAgentPrefix):
+			if state.GetStepByID(stepId) == nil {
+				return nil, false, nil
+			}
+			value, ok := stepAgentValue(stepId, rest[len(stepAgentPrefix):])
+			if !ok {
+				return nil, false, nil
+			}
+			return value, true, nil
+
 		case strings.HasPrefix(rest, stepOutputsPrefix):
 			key := rest[len(stepOutputsPrefix):]
 			if key == "" {
@@ -94,3 +107,32 @@ var StepMachine = expressions.NewMachine().
 
 		return nil, false, nil
 	})
+
+const (
+	// StepAgentFile is the file in the results directory of an agent step that holds the data of
+	// its turn. The toolkit writes it, and step.<id>.agent.<key> reads it.
+	//
+	// The data is not a step output. The outputs of all steps make one set of names for the
+	// workflow, which a parent workflow reads, so a value that each agent step writes would take
+	// a name from the author and the last step would win.
+	StepAgentFile = "agent.json"
+	// StepAgentSession is the key of the session of the AI Agent that holds the turn.
+	StepAgentSession = "session"
+	// StepAgentName is the key of the name of the AI Agent.
+	StepAgentName = "name"
+)
+
+// stepAgentValue reads one value of the turn of an agent step. A step that is not an agent step,
+// or that started no turn, has no file, so the expression stays unresolved.
+func stepAgentValue(stepId, key string) (string, bool) {
+	content, err := os.ReadFile(filepath.Join(StepResultsDir(stepId), StepAgentFile))
+	if err != nil {
+		return "", false
+	}
+	var values map[string]string
+	if err := json.Unmarshal(content, &values); err != nil {
+		return "", false
+	}
+	value, ok := values[key]
+	return value, ok
+}

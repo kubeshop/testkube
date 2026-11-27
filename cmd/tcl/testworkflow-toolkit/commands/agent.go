@@ -10,6 +10,7 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -32,6 +33,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/grpcutils"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/agentoutputs"
 )
 
 // agentSubject names the agent step in an error of its definition.
@@ -49,12 +51,9 @@ const (
 	agentPollFailureLimit = 10
 )
 
-const (
-	agentOutputSession = "session"
-	// agentResponseFile is the file in the step results directory that holds the answer. The
-	// answer is not a step output, because a step output has a size limit and an answer has none.
-	agentResponseFile = "response.md"
-)
+// agentResponseFile is the file in the step results directory that holds the answer. The
+// answer is not a step output, because a step output has a size limit and an answer has none.
+const agentResponseFile = "response.md"
 
 // instructionStart is the first byte of an instruction for the init process and for the Runner.
 const instructionStart = "\x01"
@@ -146,15 +145,15 @@ func (s *agentStep) runTurn(ctx context.Context, spec testworkflowsv1.StepAgent)
 	turnID := turn.GetId()
 	s.printf("AI Agent %q started. Session: %s\n", spec.Name, plainText(turn.GetSessionId()))
 
-	sessionWritten := false
+	infoWritten := false
 	for {
 		s.printEvents(turn.GetEvents())
 		// A turn that fails later still has a session, and a person finds the cause there.
-		if session := plainText(turn.GetSessionId()); session != "" && !sessionWritten {
-			if err := writeStepFile(filepath.Join(s.outputsDir, agentOutputSession), session); err != nil {
-				return fmt.Errorf("cannot write the %q output: %w", agentOutputSession, err)
+		if session := plainText(turn.GetSessionId()); session != "" && !infoWritten {
+			if err := s.writeInfo(map[string]string{data.StepAgentSession: session, data.StepAgentName: spec.Name}); err != nil {
+				return err
 			}
-			sessionWritten = true
+			infoWritten = true
 		}
 
 		switch turn.GetState() {
@@ -266,8 +265,20 @@ func (s *agentStep) writeAnswer(turn *cloud.AgentTurn, outputs map[string]testwo
 	if err := s.writeOutputs(values); err != nil {
 		return err
 	}
-	for _, name := range agentOutputNames(outputs) {
+	for _, name := range agentoutputs.Names(outputs) {
 		s.printf("Output %s: %s\n", name, values[name])
+	}
+	return nil
+}
+
+// writeInfo writes the file that the init process reads for step.<id>.agent.<key>.
+func (s *agentStep) writeInfo(info map[string]string) error {
+	content, err := json.Marshal(info)
+	if err != nil {
+		return fmt.Errorf("cannot encode the data of the turn: %w", err)
+	}
+	if err := writeStepFile(filepath.Join(s.resultsDir, data.StepAgentFile), string(content)); err != nil {
+		return fmt.Errorf("cannot write the data of the turn: %w", err)
 	}
 	return nil
 }

@@ -88,6 +88,13 @@ func TestProcessAgent(t *testing.T) {
 			wantSpec: &testworkflowsv1.StepAgent{Name: "failure-triage"},
 		},
 		{
+			name: "fails for an output name that the init process does not read",
+			step: testworkflowsv1.Step{StepOperations: testworkflowsv1.StepOperations{
+				Agent: &testworkflowsv1.StepAgent{Name: "failure-triage", Outputs: map[string]testworkflowsv1.ParameterSchema{"../verdict": {}}},
+			}},
+			wantErr: `agent: outputs: the output name "../verdict" is not valid`,
+		},
+		{
 			name: "accepts a step with no prompt",
 			step: testworkflowsv1.Step{StepOperations: testworkflowsv1.StepOperations{
 				Agent: &testworkflowsv1.StepAgent{Name: "failure-triage"},

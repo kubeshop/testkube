@@ -21,8 +21,12 @@
 //
 // agent.go runs the `agent` step: one turn of an AI Agent that runs in the control plane. The
 // command starts the turn, reads it until its end, prints its tool calls and text to the step
-// log, writes the answer to a file, and writes the step output `session`. It writes `session`
-// when the control plane first gives the session ID, so a failed turn has it too.
+// log, and writes the answer to a file. It also writes the file agent.json in the results
+// directory of the step, with the session and the name of the AI Agent. The init process reads
+// it for step.<id>.agent.session and step.<id>.agent.name. The command writes it when the
+// control plane first gives the session ID, so a failed turn has it too. The session is not a
+// step output: the outputs of all steps make one set of names for the workflow, so the session
+// of a second agent step would replace the first.
 //
 //   - The processor gives the spec as base64 JSON, so the command resolves the expressions of
 //     the name and the prompt. It resolves them one time: an expression in the value of a step
@@ -48,11 +52,12 @@
 //     condition on an output that does not exist aborts the execution, and with a default it
 //     reads a known value, such as "no-go". An output with no default has no value then.
 //   - The command fails before the first call for an output name that the init process does
-//     not read as a file, for the name `session`, and for a default that its schema refuses.
+//     not read as a file, and for a default that its schema refuses. The processor refuses
+//     the same names when it processes the workflow.
 //   - The processor gives an ID to each step, so each agent step has a results directory. When
 //     the step has no results directory, the command fails before it starts a turn.
-//   - The ID goes to the first stage of a step only, and the init process collects the session
-//     output from the stage with the ID. So the processor refuses an agent step with an
+//   - The ID goes to the first stage of a step only, and the init process collects the outputs
+//     from the stage with the ID. So the processor refuses an agent step with an
 //     operation that makes an earlier stage, such as a delay.
 //   - The command makes one request ID for the process and sends it with the start call, so a
 //     retry of that call returns the same turn.

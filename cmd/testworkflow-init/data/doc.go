@@ -12,6 +12,8 @@
 //   - step.<id>.outputs.<key>, a value that an earlier step published
 //   - step.<id>.status, the status of an earlier step
 //   - step.<id>.exitCode, the exit code of an earlier step
+//   - step.<id>.agent.<key>, a value of the turn of an earlier agent step: session, the session of
+//     the AI Agent, and name, the name of the AI Agent
 //
 // The <id> is the stable id of the step, and not the reference that Testkube generates for the execution.
 //

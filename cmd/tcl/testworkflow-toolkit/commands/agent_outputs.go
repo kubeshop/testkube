@@ -15,58 +15,30 @@ import (
 	"fmt"
 	"math"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"unicode/utf8"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/agentoutputs"
 )
 
 // agentOutputsBlock is the language of the fenced block that holds the outputs in the answer.
 const agentOutputsBlock = "testkube-outputs"
 
-var (
-	// agentOutputName accepts the names that the init process reads as a step output. An output
-	// is a file, and the init process skips a file whose name starts with a dot.
-	agentOutputName = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9_-]*$`)
-	// agentOutputsFence finds each outputs block in an answer.
-	agentOutputsFence = regexp.MustCompile("(?s)```" + agentOutputsBlock + "[ \t]*\r?\n(.*?)```")
-)
-
-// agentOutputNames returns the names of the declared outputs in a stable order.
-func agentOutputNames(schemas map[string]testworkflowsv1.ParameterSchema) []string {
-	names := make([]string, 0, len(schemas))
-	for name := range schemas {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
-}
+// agentOutputsFence finds each outputs block in an answer.
+var agentOutputsFence = regexp.MustCompile("(?s)```" + agentOutputsBlock + "[ \t]*\r?\n(.*?)```")
 
 // checkAgentOutputSchemas returns an error for a declaration that the step cannot keep. It runs
-// before the turn starts, because a turn costs time and tokens.
+// before the turn starts, because a turn costs time and tokens. The processor makes the same
+// check, but not for a default, which can be an expression until the pod resolves it.
 func checkAgentOutputSchemas(schemas map[string]testworkflowsv1.ParameterSchema) error {
-	for _, name := range agentOutputNames(schemas) {
+	if err := agentoutputs.CheckSchemas(schemas); err != nil {
+		return err
+	}
+	for _, name := range agentoutputs.Names(schemas) {
 		schema := schemas[name]
-		if !agentOutputName.MatchString(name) {
-			return fmt.Errorf("the output name %q is not valid: use letters, digits, '_' and '-', and start with a letter, a digit or '_'", name)
-		}
-		if name == agentOutputSession {
-			return fmt.Errorf("the output name %q is reserved: the step writes the session of the AI Agent to it", name)
-		}
-		switch schema.Type {
-		case "", testworkflowsv1.ParameterTypeString, testworkflowsv1.ParameterTypeInteger,
-			testworkflowsv1.ParameterTypeNumber, testworkflowsv1.ParameterTypeBoolean:
-		default:
-			return fmt.Errorf("the output %q has the type %q: use string, integer, number or boolean", name, schema.Type)
-		}
-		if schema.Pattern != "" {
-			if _, err := regexp.Compile(schema.Pattern); err != nil {
-				return fmt.Errorf("the output %q has a pattern that is not a regular expression: %w", name, err)
-			}
-		}
 		if schema.Default != nil {
 			if _, err := checkAgentOutputValue(schema, schema.Default.String()); err != nil {
 				return fmt.Errorf("the default of the output %q is not valid: %w", name, err)
@@ -85,7 +57,7 @@ func agentOutputsContract(schemas map[string]testworkflowsv1.ParameterSchema) st
 	var b strings.Builder
 	b.WriteString("\n\nEnd your answer with one fenced code block that has the language `" + agentOutputsBlock + "`. ")
 	b.WriteString("The block holds one JSON object with these fields, and nothing else:\n")
-	for _, name := range agentOutputNames(schemas) {
+	for _, name := range agentoutputs.Names(schemas) {
 		schema := schemas[name]
 		typ := string(schema.Type)
 		if typ == "" {
@@ -245,7 +217,7 @@ func resolveAgentOutputs(schemas map[string]testworkflowsv1.ParameterSchema, ans
 	}
 	values := make(map[string]string, len(schemas))
 	var problems []string
-	for _, name := range agentOutputNames(schemas) {
+	for _, name := range agentoutputs.Names(schemas) {
 		schema := schemas[name]
 		raw, ok := fields[name]
 		if !ok {
