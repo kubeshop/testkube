@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/fake"
 
@@ -112,6 +113,82 @@ func TestWorker_BuildInternalConfig_TLSRetry(t *testing.T) {
 			assert.Equal(t, tt.want.LogsTLSRetryMaxAttempts, cfg.Worker.LogsTLSRetryMaxAttempts)
 			assert.Equal(t, tt.want.LogsTLSRetryInitialDelay, cfg.Worker.LogsTLSRetryInitialDelay)
 			assert.Equal(t, tt.want.LogsTLSRetryMaxDelay, cfg.Worker.LogsTLSRetryMaxDelay)
+		})
+	}
+}
+
+func TestWorker_BuildInternalConfig_SourceNamespace(t *testing.T) {
+	tests := []struct {
+		name               string
+		flag               bool
+		sourceNamespace    string
+		job                *testworkflowsv1.JobConfig
+		wantNamespace      string
+		wantServiceAccount string
+	}{
+		{name: "keeps the default namespace when the flag is off", flag: false, sourceNamespace: "src", wantNamespace: "ns", wantServiceAccount: "sa-ns"},
+		{name: "runs in the source namespace when the flag is on and the runner allows it", flag: true, sourceNamespace: "src", wantNamespace: "src", wantServiceAccount: "sa-src"},
+		{name: "keeps the default namespace when the flag is on and the runner does not allow the source namespace", flag: true, sourceNamespace: "other", wantNamespace: "ns", wantServiceAccount: "sa-ns"},
+		{name: "lets spec.job.namespace win over the source namespace", flag: true, sourceNamespace: "src", job: &testworkflowsv1.JobConfig{Namespace: "ns"}, wantNamespace: "ns", wantServiceAccount: "sa-ns"},
+		{name: "drops the default service account when the source namespace has none", flag: true, sourceNamespace: "bare", wantNamespace: "bare", wantServiceAccount: ""},
+		{name: "keeps the default namespace when the workflow has no namespace", flag: true, sourceNamespace: "", wantNamespace: "ns", wantServiceAccount: "sa-ns"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := NewWorker(fake.NewSimpleClientset(), nil, Config{
+				Cluster: ClusterConfig{DefaultNamespace: "ns", Namespaces: map[string]NamespaceConfig{
+					"ns":   {DefaultServiceAccountName: "sa-ns"},
+					"src":  {DefaultServiceAccountName: "sa-src"},
+					"bare": {},
+				}},
+				ExecuteInSourceNamespace: tt.flag,
+			})
+			workflow := testworkflowsv1.TestWorkflow{
+				ObjectMeta: metav1.ObjectMeta{Namespace: tt.sourceNamespace},
+				Spec:       testworkflowsv1.TestWorkflowSpec{TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{Job: tt.job}},
+			}
+
+			cfg := w.buildInternalConfig("exec-1", "", testworkflowconfig.ExecutionConfig{Id: "exec-1"}, testworkflowconfig.ControlPlaneConfig{}, workflow, "")
+
+			assert.Equal(t, tt.wantNamespace, cfg.Worker.Namespace)
+			assert.Equal(t, tt.wantServiceAccount, cfg.Worker.DefaultServiceAccount)
+		})
+	}
+}
+
+func TestWorker_BuildInternalConfig_LocalApiUrl(t *testing.T) {
+	const (
+		shortUrl = "http://testkube-api-server:8088"
+		fullUrl  = "http://testkube-api-server.agent.svc.cluster.local.:8088"
+	)
+	tests := []struct {
+		name    string
+		job     *testworkflowsv1.JobConfig
+		wantUrl string
+	}{
+		{name: "keeps the short Service name in the agent namespace", wantUrl: shortUrl},
+		{name: "uses the absolute Service name in another namespace", job: &testworkflowsv1.JobConfig{Namespace: "src"}, wantUrl: fullUrl},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := NewWorker(fake.NewSimpleClientset(), nil, Config{
+				Cluster: ClusterConfig{DefaultNamespace: "agent", Namespaces: map[string]NamespaceConfig{
+					"agent": {},
+					"src":   {},
+				}},
+				Connection:                testworkflowconfig.WorkerConnectionConfig{LocalApiUrl: shortUrl},
+				AgentNamespace:            "agent",
+				CrossNamespaceLocalApiUrl: fullUrl,
+			})
+			workflow := testworkflowsv1.TestWorkflow{
+				Spec: testworkflowsv1.TestWorkflowSpec{TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{Job: tt.job}},
+			}
+
+			cfg := w.buildInternalConfig("exec-1", "", testworkflowconfig.ExecutionConfig{Id: "exec-1"}, testworkflowconfig.ControlPlaneConfig{}, workflow, "")
+
+			assert.Equal(t, tt.wantUrl, cfg.Worker.Connection.LocalApiUrl)
 		})
 	}
 }

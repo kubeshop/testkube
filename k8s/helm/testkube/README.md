@@ -409,7 +409,7 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | testkube-api.testConnection.resources | object | `{}` | Test Connection resource settings |
 | testkube-api.testConnection.tolerations | list | `[]` | Tolerations to schedule a workload to nodes with any architecture type. Required for deployment to GKE cluster. |
 | testkube-api.testServiceAccount | object | `{"annotations":{},"create":true}` | Service Account parameters |
-| testkube-api.testServiceAccount.annotations | object | `{}` | Annotations to add to the service account |
+| testkube-api.testServiceAccount.annotations | object | `{}` | Annotations to add to the test job service accounts. When empty, they get `serviceAccount.annotations` |
 | testkube-api.testServiceAccount.create | bool | `true` | Specifies whether a service account should be created |
 | testkube-api.testkubeLogs.grpcAddress | string | `"testkube-logs:9090"` | GRPC address |
 | testkube-api.testkubeLogs.tls.certSecret.baseMountPath | string | `"/etc/client-certs/grpc"` | Base path to mount the client certificate secret |

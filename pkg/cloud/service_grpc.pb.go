@@ -58,6 +58,10 @@ type TestKubeCloudAPIClient interface {
 	AppendExecutionReport(ctx context.Context, in *AppendExecutionReportRequest, opts ...grpc.CallOption) (*AppendExecutionReportResponse, error)
 	GetExecutionCachePresigned(ctx context.Context, in *GetExecutionCachePresignedRequest, opts ...grpc.CallOption) (*GetExecutionCachePresignedResponse, error)
 	SaveExecutionCachePresigned(ctx context.Context, in *SaveExecutionCachePresignedRequest, opts ...grpc.CallOption) (*SaveExecutionCachePresignedResponse, error)
+	// AI Agent step
+	StartAgentTurn(ctx context.Context, in *StartAgentTurnRequest, opts ...grpc.CallOption) (*AgentTurn, error)
+	GetAgentTurn(ctx context.Context, in *GetAgentTurnRequest, opts ...grpc.CallOption) (*AgentTurn, error)
+	CancelAgentTurn(ctx context.Context, in *CancelAgentTurnRequest, opts ...grpc.CallOption) (*AgentTurn, error)
 	// CRD Synchronisation
 	// -- Test Workflows
 	GetTestWorkflow(ctx context.Context, in *GetTestWorkflowRequest, opts ...grpc.CallOption) (*GetTestWorkflowResponse, error)
@@ -639,6 +643,33 @@ func (c *testKubeCloudAPIClient) GetExecutionCachePresigned(ctx context.Context,
 func (c *testKubeCloudAPIClient) SaveExecutionCachePresigned(ctx context.Context, in *SaveExecutionCachePresignedRequest, opts ...grpc.CallOption) (*SaveExecutionCachePresignedResponse, error) {
 	out := new(SaveExecutionCachePresignedResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/SaveExecutionCachePresigned", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) StartAgentTurn(ctx context.Context, in *StartAgentTurnRequest, opts ...grpc.CallOption) (*AgentTurn, error) {
+	out := new(AgentTurn)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/StartAgentTurn", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) GetAgentTurn(ctx context.Context, in *GetAgentTurnRequest, opts ...grpc.CallOption) (*AgentTurn, error) {
+	out := new(AgentTurn)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetAgentTurn", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) CancelAgentTurn(ctx context.Context, in *CancelAgentTurnRequest, opts ...grpc.CallOption) (*AgentTurn, error) {
+	out := new(AgentTurn)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/CancelAgentTurn", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1290,6 +1321,10 @@ type TestKubeCloudAPIServer interface {
 	AppendExecutionReport(context.Context, *AppendExecutionReportRequest) (*AppendExecutionReportResponse, error)
 	GetExecutionCachePresigned(context.Context, *GetExecutionCachePresignedRequest) (*GetExecutionCachePresignedResponse, error)
 	SaveExecutionCachePresigned(context.Context, *SaveExecutionCachePresignedRequest) (*SaveExecutionCachePresignedResponse, error)
+	// AI Agent step
+	StartAgentTurn(context.Context, *StartAgentTurnRequest) (*AgentTurn, error)
+	GetAgentTurn(context.Context, *GetAgentTurnRequest) (*AgentTurn, error)
+	CancelAgentTurn(context.Context, *CancelAgentTurnRequest) (*AgentTurn, error)
 	// CRD Synchronisation
 	// -- Test Workflows
 	GetTestWorkflow(context.Context, *GetTestWorkflowRequest) (*GetTestWorkflowResponse, error)
@@ -1449,6 +1484,15 @@ func (UnimplementedTestKubeCloudAPIServer) GetExecutionCachePresigned(context.Co
 }
 func (UnimplementedTestKubeCloudAPIServer) SaveExecutionCachePresigned(context.Context, *SaveExecutionCachePresignedRequest) (*SaveExecutionCachePresignedResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SaveExecutionCachePresigned not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) StartAgentTurn(context.Context, *StartAgentTurnRequest) (*AgentTurn, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartAgentTurn not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetAgentTurn(context.Context, *GetAgentTurnRequest) (*AgentTurn, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAgentTurn not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) CancelAgentTurn(context.Context, *CancelAgentTurnRequest) (*AgentTurn, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CancelAgentTurn not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) GetTestWorkflow(context.Context, *GetTestWorkflowRequest) (*GetTestWorkflowResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTestWorkflow not implemented")
@@ -2183,6 +2227,60 @@ func _TestKubeCloudAPI_SaveExecutionCachePresigned_Handler(srv interface{}, ctx 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(TestKubeCloudAPIServer).SaveExecutionCachePresigned(ctx, req.(*SaveExecutionCachePresignedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_StartAgentTurn_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartAgentTurnRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).StartAgentTurn(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/StartAgentTurn",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).StartAgentTurn(ctx, req.(*StartAgentTurnRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_GetAgentTurn_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAgentTurnRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).GetAgentTurn(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/GetAgentTurn",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).GetAgentTurn(ctx, req.(*GetAgentTurnRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_CancelAgentTurn_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelAgentTurnRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).CancelAgentTurn(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/CancelAgentTurn",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).CancelAgentTurn(ctx, req.(*CancelAgentTurnRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3066,6 +3164,18 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SaveExecutionCachePresigned",
 			Handler:    _TestKubeCloudAPI_SaveExecutionCachePresigned_Handler,
+		},
+		{
+			MethodName: "StartAgentTurn",
+			Handler:    _TestKubeCloudAPI_StartAgentTurn_Handler,
+		},
+		{
+			MethodName: "GetAgentTurn",
+			Handler:    _TestKubeCloudAPI_GetAgentTurn_Handler,
+		},
+		{
+			MethodName: "CancelAgentTurn",
+			Handler:    _TestKubeCloudAPI_CancelAgentTurn_Handler,
 		},
 		{
 			MethodName: "GetTestWorkflow",

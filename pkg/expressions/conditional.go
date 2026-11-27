@@ -34,7 +34,12 @@ func (s *conditional) Type() Type {
 }
 
 func (s *conditional) String() string {
-	return fmt.Sprintf("%s ? %s : %s", s.condition.String(), s.truthy.String(), s.falsy.String())
+	condition := s.condition.String()
+	if _, ok := s.condition.(*conditional); ok {
+		// Without the parentheses it would read as a ternary in the "else" branch.
+		condition = s.condition.SafeString()
+	}
+	return fmt.Sprintf("%s ? %s : %s", condition, s.truthy.String(), s.falsy.String())
 }
 
 func (s *conditional) SafeString() string {

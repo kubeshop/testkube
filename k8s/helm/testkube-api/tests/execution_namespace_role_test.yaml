@@ -1,0 +1,30 @@
+suite: testkube-api execution namespace roles
+templates:
+  - templates/role.yaml
+release:
+  name: testkube
+  namespace: testkube
+tests:
+  - it: lets the agent read the events of an execution namespace
+    set:
+      executionNamespaces:
+        - namespace: src
+          generateAPIServerRBAC: true
+    documentSelector:
+      path: metadata.name
+      value: jobs-role-src
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: src
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - ""
+            resources:
+              - events
+            verbs:
+              - get
+              - watch
+              - list

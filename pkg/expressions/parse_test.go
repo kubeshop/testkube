@@ -28,6 +28,38 @@ func TestCompileTernary(t *testing.T) {
 	assert.Equal(t, 5.78, must(MustCompile(`false ? 3 : (true ? 5.78 : 2)`).Static().FloatValue()))
 }
 
+func TestCompileChainedTernary(t *testing.T) {
+	tests := []struct {
+		expr string
+		env  string
+		want string
+	}{
+		{expr: `true ? "a" : false ? "b" : "c"`, want: `"a"`},
+		{expr: `false ? "a" : true ? "b" : "c"`, want: `"b"`},
+		{expr: `false ? "a" : false ? "b" : "c"`, want: `"c"`},
+		{expr: `true ? false ? "a" : "b" : "c"`, want: `"b"`},
+		{expr: `true ? 1 || 0 : 2`, want: `1`},
+		{expr: `env == "prod" ? 3 : env == "staging" ? 2 : 1`, env: "prod", want: `3`},
+		{expr: `env == "prod" ? 3 : env == "staging" ? 2 : 1`, env: "staging", want: `2`},
+		{expr: `env == "prod" ? 3 : env == "staging" ? 2 : 1`, env: "dev", want: `1`},
+		{expr: `(env == "prod" ? false : true) ? "a" : "b"`, env: "prod", want: `"b"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.expr+" "+tt.env, func(t *testing.T) {
+			vm := NewMachine().Register("env", tt.env)
+			result, err := CompileAndResolve(tt.expr, vm)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, result.String())
+
+			// The unresolved expression has to compile back from its string form.
+			str := MustCompile(tt.expr).String()
+			result, err = CompileAndResolve(str, vm)
+			require.NoError(t, err, str)
+			assert.Equal(t, tt.want, result.String(), str)
+		})
+	}
+}
+
 func TestCompileMath(t *testing.T) {
 	assert.Equal(t, 5.0, must(MustCompile(`2 + 3`).Static().FloatValue()))
 	assert.Equal(t, 0.6, must(MustCompile(`3 / 5`).Static().FloatValue()))
@@ -95,6 +127,60 @@ func TestCompileMathOperationsPrecedence(t *testing.T) {
 	assert.Equal(t, false, must(MustCompile(`!5 && 500`).Static().BoolValue()))
 
 	assert.Equal(t, "(A+B*(C+D)/E*F)+G<>H**I*J**K", MustCompile(`A + B * (C + D) / E * F + G <> H ** I * J ** K`).String())
+}
+
+func TestCompileMathKeepsGroupingOnTheRight(t *testing.T) {
+	tests := []struct {
+		expr string
+		want string
+	}{
+		{expr: `a - (b - c)`, want: `a-(b-c)`},
+		{expr: `a / (b / c)`, want: `a/(b/c)`},
+		{expr: `a % (b % c)`, want: `a%(b%c)`},
+		{expr: `a ** (b ** c)`, want: `a**(b**c)`},
+		{expr: `a * (b / c)`, want: `a*(b/c)`},
+		{expr: `a == (b == c)`, want: `a==(b==c)`},
+		{expr: `a && (b || c)`, want: `a&&(b||c)`},
+		{expr: `a || (b && c)`, want: `a||(b&&c)`},
+		{expr: `(a - b) - c`, want: `a-b-c`},
+		{expr: `a * (b * c)`, want: `a*b*c`},
+		{expr: `a && (b && c)`, want: `a&&b&&c`},
+		{expr: `a + (b + c)`, want: `a+(b+c)`},
+		{expr: `"x" + (a + 1)`, want: `"x"+(a+1)`},
+		{expr: `"x" + (float(a) + 1)`, want: `"x"+(float(a)+1)`},
+		{expr: `float(a) + (float(b) + 1)`, want: `float(a)+float(b)+1`},
+		{expr: `string(a) + (string(b) + "c")`, want: `string(a)+string(b)+"c"`},
+		{expr: `1 + (2 + (a + b))`, want: `1+(2+(a+b))`},
+		{expr: `float(a) + ((float(b) + 1) + float(c))`, want: `float(a)+float(b)+1+float(c)`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.expr, func(t *testing.T) {
+			str := MustCompile(tt.expr).String()
+			assert.Equal(t, tt.want, str)
+
+			// Compiling the string form again has to give the same result.
+			vm := NewMachine().Register("a", 2).Register("b", 3).Register("c", 4)
+			want := must(MustCompile(tt.expr).Resolve(vm)).String()
+			assert.Equal(t, want, must(MustCompile(str).Resolve(vm)).String())
+		})
+	}
+}
+
+func TestCompileMapKeepsGroupingOnTheRight(t *testing.T) {
+	// map() and filter() compile the inner expression to a string and back for every item.
+	assert.Equal(t, `[10,9,8]`, MustCompile(`map([1,2,3], "10 - (_.value - 1)")`).String())
+	assert.Equal(t, `[3]`, MustCompile(`filter([1,2,3], "10 - (_.value - 1) < 9")`).String())
+	// + also joins strings, so a sum next to a string keeps its parentheses.
+	assert.Equal(t, `["x3"]`, MustCompile(`map([2], "'x' + (float(_.value) + 1)")`).String())
+}
+
+func TestCompileNestedSumWithStringKeepsGrouping(t *testing.T) {
+	// a + b reports a number type for operands of unknown type, but joins strings at runtime.
+	const expr = `1 + (2 + (a + b))`
+	str := MustCompile(expr).String()
+	vm := NewMachine().Register("a", 1).Register("b", "p")
+	assert.Equal(t, `"121p"`, must(MustCompile(expr).Resolve(vm)).String())
+	assert.Equal(t, `"121p"`, must(MustCompile(str).Resolve(vm)).String())
 }
 
 func TestBuildTemplate(t *testing.T) {
@@ -288,6 +374,35 @@ func TestCircularResolution(t *testing.T) {
 
 func TestMinusNumber(t *testing.T) {
 	assert.Equal(t, -4.0, must(MustCompile("-4").Static().FloatValue()))
+}
+
+func TestCompileMinusPrecedence(t *testing.T) {
+	vm := NewMachine().Register("a", 2)
+	tests := []struct {
+		expr string
+		want float64
+	}{
+		{expr: `-2 + 3`, want: 1},
+		{expr: `-2 - 3`, want: -5},
+		{expr: `-2 * 3 + 10`, want: 4},
+		{expr: `-(2 + 3)`, want: -5},
+		{expr: `5 - -3 * 2`, want: 11},
+		{expr: `-a + 3`, want: 1},
+		{expr: `-a * a + 10`, want: 6},
+	}
+	for _, tt := range tests {
+		t.Run(tt.expr, func(t *testing.T) {
+			result, err := CompileAndResolve(tt.expr, vm)
+			require.NoError(t, err)
+			require.NotNil(t, result.Static())
+			assert.Equal(t, tt.want, must(result.Static().FloatValue()))
+		})
+	}
+
+	// A comparison with a negative number on the left used to negate the whole comparison.
+	result, err := Compile(`-1 < 0`)
+	require.NoError(t, err)
+	assert.Equal(t, true, must(result.Static().BoolValue()))
 }
 
 func TestCompileMultilineString(t *testing.T) {

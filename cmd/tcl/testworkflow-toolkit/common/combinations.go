@@ -29,9 +29,12 @@ func CountCombinations(matrix map[string][]interface{}) int64 {
 	return combinations
 }
 
+// GetMatrixValues returns the matrix combination at index. The keys are taken in name order, with
+// the last one changing fastest, so every caller maps an index to the same combination: each worker
+// computes its own.
 func GetMatrixValues(matrix map[string][]interface{}, index int64) map[string]interface{} {
 	// Compute modulo for each matrix parameter
-	keys := slices.Collect(maps.Keys(matrix))
+	keys := slices.Sorted(maps.Keys(matrix))
 	modulo := map[string]int64{}
 	floor := map[string]int64{}
 	for i, k := range keys {
