@@ -28,6 +28,38 @@ func TestCompileTernary(t *testing.T) {
 	assert.Equal(t, 5.78, must(MustCompile(`false ? 3 : (true ? 5.78 : 2)`).Static().FloatValue()))
 }
 
+func TestCompileChainedTernary(t *testing.T) {
+	tests := []struct {
+		expr string
+		env  string
+		want string
+	}{
+		{expr: `true ? "a" : false ? "b" : "c"`, want: `"a"`},
+		{expr: `false ? "a" : true ? "b" : "c"`, want: `"b"`},
+		{expr: `false ? "a" : false ? "b" : "c"`, want: `"c"`},
+		{expr: `true ? false ? "a" : "b" : "c"`, want: `"b"`},
+		{expr: `true ? 1 || 0 : 2`, want: `1`},
+		{expr: `env == "prod" ? 3 : env == "staging" ? 2 : 1`, env: "prod", want: `3`},
+		{expr: `env == "prod" ? 3 : env == "staging" ? 2 : 1`, env: "staging", want: `2`},
+		{expr: `env == "prod" ? 3 : env == "staging" ? 2 : 1`, env: "dev", want: `1`},
+		{expr: `(env == "prod" ? false : true) ? "a" : "b"`, env: "prod", want: `"b"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.expr+" "+tt.env, func(t *testing.T) {
+			vm := NewMachine().Register("env", tt.env)
+			result, err := CompileAndResolve(tt.expr, vm)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, result.String())
+
+			// The unresolved expression has to compile back from its string form.
+			str := MustCompile(tt.expr).String()
+			result, err = CompileAndResolve(str, vm)
+			require.NoError(t, err, str)
+			assert.Equal(t, tt.want, result.String(), str)
+		})
+	}
+}
+
 func TestCompileMath(t *testing.T) {
 	assert.Equal(t, 5.0, must(MustCompile(`2 + 3`).Static().FloatValue()))
 	assert.Equal(t, 0.6, must(MustCompile(`3 / 5`).Static().FloatValue()))

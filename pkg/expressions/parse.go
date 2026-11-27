@@ -26,7 +26,9 @@ func parseNextExpression(t []token, priority int) (e Expression, i int, err erro
 				return e, i, nil
 			}
 			i += 1
-			te, ti, terr := parseNextExpression(t[i:], 0)
+			// Both branches take a whole expression, so a ternary in the "else" branch is
+			// nested in it: a ? b : c ? d : e is a ? b : (c ? d : e).
+			te, ti, terr := parseNextExpression(t[i:], -1)
 			i += ti
 			if terr != nil {
 				return nil, i, terr
@@ -38,7 +40,7 @@ func parseNextExpression(t []token, priority int) (e Expression, i int, err erro
 				return nil, i, fmt.Errorf("expression syntax error: expected ternary separator: found %v", t[i])
 			}
 			i++
-			fe, fi, ferr := parseNextExpression(t[i:], 0)
+			fe, fi, ferr := parseNextExpression(t[i:], -1)
 			i += fi
 			if ferr != nil {
 				return nil, i, ferr
