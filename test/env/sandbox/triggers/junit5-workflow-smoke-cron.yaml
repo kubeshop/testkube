@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: suite-trigger
+  annotations:
+    testkube.io/description: "Starts junit5-workflow-smoke every 2 hours, to keep fresh JUnit results in a sandbox environment."
 spec:
   container:
     resources:
