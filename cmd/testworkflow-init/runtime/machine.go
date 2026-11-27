@@ -16,5 +16,9 @@ func GetInternalTestWorkflowMachine() expressions.Machine {
 		credentials.NewCredentialMachine(data.Credentials(), func(_ string, value string) {
 			orchestration.Setup.AddSensitiveWords(value)
 			output.Std.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
+		}),
+		credentials.NewIdentityTokenMachine(data.IdentityTokens(), func(_ string, token string) {
+			orchestration.Setup.AddSensitiveWords(token)
+			output.Std.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
 		}))
 }
