@@ -54,10 +54,10 @@ or an RFC 3339 timestamp (e.g., '2024-01-31T16:00:00Z'). Combine with startDate 
 	// Execution tool descriptions
 	FetchExecutionLogsDescription           = "Retrieve logs from a test workflow execution. Default returns last 100 lines. Use grep to search the full log in any case; over 100 matches, you get the last 100. Always paginate in 100-line chunks. For a failed execution, start with step set to the statusDetails.step that get_execution_info returns. Line numbers in results count from the top of the whole log, also when a step is set. For parallel workflows with workers, call get_execution_info first to get valid worker refs (do not use step refs)."
 	ListExecutionsDescription               = "List test workflow executions with filtering by workflow, status, date range, labels, tags, or text search. Returns execution summaries including status, duration, and metadata. Use to discover recent runs or find specific executions."
-	GetExecutionInfoDescription             = "Get detailed information about a specific workflow execution: status, timing, results, configuration, and worker instances. An execution that did not pass also carries statusDetails, which names the layer that failed, a reason code for the cause, and the step that holds it. Requires executionId. workflowName is optional for disambiguation."
+	GetExecutionInfoDescription             = "Get detailed information about a specific workflow execution: status, timing, results, configuration, worker instances, and outputs (the values its steps published by writing to /testkube/outputs/<key>). An execution that did not pass also carries statusDetails, which names the layer that failed, a reason code for the cause, and the step that holds it. Requires executionId. workflowName is optional for disambiguation."
 	GetExecutionInfoWorkflowNameDescription = "Optional workflow name for scoping an execution name lookup. Safe to omit when you have an execution ID."
 	LookupExecutionIdDescription            = "Resolve an execution name (e.g., 'my-workflow-123') to its execution ID. Use when you have an execution name but need the ID for other tools."
-	WaitForExecutionsDescription            = "Wait for a list of workflow executions to complete. Returns the final status of all executions. Use for synchronizing dependent workflows."
+	WaitForExecutionsDescription            = "Wait for a list of workflow executions to complete. Returns the final status of all executions, with the outputs each one published (the values its steps wrote to /testkube/outputs/<key>). Use for synchronizing dependent workflows."
 	AbortWorkflowExecutionDescription       = "Abort a running workflow execution. Stops the execution and marks it as aborted. Use for cancelling long-running or stuck executions."
 	UpdateExecutionTagsDescription          = "Update tags on a workflow execution. Uses replace semantics: provided tags completely replace existing tags. Send empty map {} to clear all tags. Tags are key-value pairs for categorization and filtering."
 
@@ -82,7 +82,8 @@ Use to find workflows by configuration patterns, image references, or step struc
 
 	QueryExecutionsDescription = `Query execution records across multiple workflows using JSONPath.
 Fetches execution data and extracts fields matching the expression.
-Use for cross-workflow analysis: find all failed executions, compare durations, or extract specific fields in bulk.`
+Use for cross-workflow analysis: find all failed executions, compare durations, or extract specific fields in bulk.
+Queries execution summaries, which carry no signature, output or resolvedWorkflow. To read the values an execution published, call get_execution_info and read outputs.`
 
 	// WorkflowTemplate tool descriptions
 	TemplateNameDescription = `The name of the workflow template. Template names are lowercase alphanumeric with dashes 

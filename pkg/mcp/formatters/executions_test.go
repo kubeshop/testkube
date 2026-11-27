@@ -2,6 +2,7 @@ package formatters
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -491,6 +492,52 @@ func TestFormatWaitForExecutions(t *testing.T) {
 		input := `[{"invalid json`
 		_, err := FormatWaitForExecutions(input)
 		assert.Error(t, err)
+	})
+}
+
+// TestFormatters_PublishedOutputs guards that the values steps write to /testkube/outputs reach
+// an MCP caller: merged across steps with the later step winning, as execution().outputs reads
+// them, and with no outputs field when the execution published nothing.
+func TestFormatters_PublishedOutputs(t *testing.T) {
+	published := `{
+		"id": "exec-1",
+		"name": "env-provision-1",
+		"result": {"status": "passed"},
+		"output": [
+			{"ref": "setup", "name": "pod", "value": {"nodeName": "node-1"}},
+			{"ref": "s1", "name": "outputs", "value": {"url": "http://old", "namespace": "env-1"}},
+			{"ref": "s2", "name": "outputs", "value": {"url": "http://podinfo.env-1.svc:9898"}}
+		]
+	}`
+	want := map[string]string{"url": "http://podinfo.env-1.svc:9898", "namespace": "env-1"}
+	nothingPublished := `{
+		"id": "exec-2",
+		"name": "plain-1",
+		"result": {"status": "passed"},
+		"output": [{"ref": "setup", "name": "pod", "value": {"nodeName": "node-1"}}]
+	}`
+
+	t.Run("get_execution_info", func(t *testing.T) {
+		result, err := FormatExecutionInfo(published)
+		require.NoError(t, err)
+		var got formattedExecutionInfo
+		require.NoError(t, json.Unmarshal([]byte(result), &got))
+		assert.Equal(t, want, got.Outputs)
+
+		result, err = FormatExecutionInfo(nothingPublished)
+		require.NoError(t, err)
+		assert.NotContains(t, result, `"outputs"`)
+	})
+
+	t.Run("wait_for_executions", func(t *testing.T) {
+		result, err := FormatWaitForExecutions("[" + published + "," + nothingPublished + "]")
+		require.NoError(t, err)
+		var got formattedWaitResult
+		require.NoError(t, json.Unmarshal([]byte(result), &got))
+		require.Len(t, got.Executions, 2)
+		assert.Equal(t, want, got.Executions[0].Outputs)
+		assert.Nil(t, got.Executions[1].Outputs)
+		assert.Equal(t, 1, strings.Count(result, `"outputs"`), "an execution that published nothing must carry no outputs field")
 	})
 }
 

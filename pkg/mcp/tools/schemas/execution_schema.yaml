@@ -102,6 +102,8 @@ result:
       # String (ISO 8601). When the container finished.
       finishedAt: ""
 # Array. Additional output information from steps, like referenced executed tests or artifacts.
+# Not returned by query_executions, which reads execution summaries. For the values a step
+# published to /testkube/outputs/<key>, read outputs from get_execution_info or wait_for_executions.
 output:
   # Object. Item in the array representing step output.
   - # String. Reference to the step that produced this output.
