@@ -99,8 +99,9 @@ func getNextSegment(t []token) (e Expression, i int, err error) {
 	}
 
 	// Negative numbers - -5
+	// Like the negation, it binds tighter than any operator, so -2 + 3 is (-2) + 3.
 	if t[0].Type == tokenTypeMath && operator(t[0].Value.(string)) == operatorSubtract {
-		e, i, err = parseNextExpression(t[1:], -1)
+		e, i, err = parseNextExpression(t[1:], math2.MaxInt)
 		if err != nil {
 			return nil, 0, err
 		}

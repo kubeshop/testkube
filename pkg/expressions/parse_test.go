@@ -290,6 +290,35 @@ func TestMinusNumber(t *testing.T) {
 	assert.Equal(t, -4.0, must(MustCompile("-4").Static().FloatValue()))
 }
 
+func TestCompileMinusPrecedence(t *testing.T) {
+	vm := NewMachine().Register("a", 2)
+	tests := []struct {
+		expr string
+		want float64
+	}{
+		{expr: `-2 + 3`, want: 1},
+		{expr: `-2 - 3`, want: -5},
+		{expr: `-2 * 3 + 10`, want: 4},
+		{expr: `-(2 + 3)`, want: -5},
+		{expr: `5 - -3 * 2`, want: 11},
+		{expr: `-a + 3`, want: 1},
+		{expr: `-a * a + 10`, want: 6},
+	}
+	for _, tt := range tests {
+		t.Run(tt.expr, func(t *testing.T) {
+			result, err := CompileAndResolve(tt.expr, vm)
+			require.NoError(t, err)
+			require.NotNil(t, result.Static())
+			assert.Equal(t, tt.want, must(result.Static().FloatValue()))
+		})
+	}
+
+	// A comparison with a negative number on the left used to negate the whole comparison.
+	result, err := Compile(`-1 < 0`)
+	require.NoError(t, err)
+	assert.Equal(t, true, must(result.Static().BoolValue()))
+}
+
 func TestCompileMultilineString(t *testing.T) {
 	assert.Equal(t, `"\nabc\ndef\n"`, MustCompile(`"
 abc
