@@ -21,7 +21,9 @@
 //
 // agent.go runs the `agent` step: one turn of an AI Agent that runs in the control plane. The
 // command starts the turn, reads it until its end, prints its tool calls and text to the step
-// log, and writes the answer to a file. It also writes the file agent.json in the results
+// log, and writes the answer to a file. The log shows what the AI Agent returned, as it is: the
+// command adds one line for the start and one for each tool call, and no line for the answer
+// file or for the outputs. A later step reads those through expressions. It also writes the file agent.json in the results
 // directory of the step, with the session and the name of the AI Agent. The init process reads
 // it for step.<id>.agent.session and step.<id>.agent.name. The command writes it when the
 // control plane first gives the session ID, so a failed turn has it too. The session is not a

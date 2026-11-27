@@ -33,7 +33,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/grpcutils"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/agentoutputs"
 )
 
 // agentSubject names the agent step in an error of its definition.
@@ -110,6 +109,8 @@ type agentStep struct {
 	// resultsDir is the results directory of the step. It is empty when the step has no ID.
 	resultsDir   string
 	pollInterval time.Duration
+	// lastText is the last text of the AI Agent that the step printed.
+	lastText string
 	// toolOutputs is whether the control plane gives the AI Agent a tool for the declared
 	// outputs. Without it the prompt asks for them as a block in the answer.
 	toolOutputs bool
@@ -252,10 +253,16 @@ func (s *agentStep) printEvents(events []*cloud.AgentTurnEvent) {
 			}
 			s.printf("%s\n", line)
 		default:
-			if text != "" {
-				s.printf("%s\n", text)
-			}
+			s.printText(text)
 		}
+	}
+}
+
+// printText prints text of the AI Agent as it is.
+func (s *agentStep) printText(text string) {
+	if text = strings.TrimSpace(text); text != "" {
+		s.printf("%s\n", text)
+		s.lastText = text
 	}
 }
 
@@ -267,7 +274,11 @@ func (s *agentStep) writeAnswer(turn *cloud.AgentTurn, outputs map[string]testwo
 	if err := writeStepFile(path, answer); err != nil {
 		return fmt.Errorf("cannot write the answer of the AI Agent: %w", err)
 	}
-	s.printf("The answer is in %s\n", path)
+	// The log shows what the AI Agent returned. The answer is the last text of the turn, so the
+	// events print it, but a turn whose events the control plane cannot read has only the answer.
+	if strings.TrimSpace(answer) != s.lastText {
+		s.printText(answer)
+	}
 	if len(outputs) == 0 {
 		return nil
 	}
@@ -279,13 +290,7 @@ func (s *agentStep) writeAnswer(turn *cloud.AgentTurn, outputs map[string]testwo
 	if err != nil {
 		return fmt.Errorf("the answer of the AI Agent does not give the outputs of the step: %w", err)
 	}
-	if err := s.writeOutputs(values); err != nil {
-		return err
-	}
-	for _, name := range agentoutputs.Names(outputs) {
-		s.printf("Output %s: %s\n", name, values[name])
-	}
-	return nil
+	return s.writeOutputs(values)
 }
 
 // writeInfo writes the file that the init process reads for step.<id>.agent.<key>.

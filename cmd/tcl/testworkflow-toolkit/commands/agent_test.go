@@ -132,7 +132,7 @@ func TestAgentStep_Run(t *testing.T) {
 			gets: []agentReply{
 				{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Next: 1, Answer: "All suites passed.\n" + outputsBlock(`{"verdict": "go"}`)}},
 			},
-			wantLog:     []string{"Output verdict: go\n"},
+			wantLog:     []string{"All suites passed.\n"},
 			wantOutputs: map[string]string{"verdict": "go"},
 			wantAnswer:  "All suites passed.\n" + outputsBlock(`{"verdict": "go"}`),
 		},
@@ -141,7 +141,7 @@ func TestAgentStep_Run(t *testing.T) {
 			outputs:     map[string]testworkflowsv1.ParameterSchema{"verdict": verdictSchema},
 			toolOutputs: true,
 			start:       agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Answer: "All suites passed.", Outputs: `{"verdict": "go"}`}},
-			wantLog:     []string{"Output verdict: go\n"},
+			wantLog:     []string{"All suites passed.\n"},
 			wantOutputs: map[string]string{"verdict": "go"},
 			wantAnswer:  "All suites passed.",
 		},
@@ -178,8 +178,9 @@ func TestAgentStep_Run(t *testing.T) {
 			wantAnswer:  "  The database was down.\n",
 		},
 		{
-			name:       "uses a turn that is completed in the answer to the start call",
+			name:       "uses a turn that is completed in the answer to the start call, and prints an answer that no event gave",
 			start:      agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Answer: "pass"}},
+			wantLog:    []string{"Session: session-1\npass\n"},
 			wantAnswer: "pass",
 		},
 		{
@@ -309,6 +310,12 @@ func TestAgentStep_Run(t *testing.T) {
 				assert.Contains(t, log.String(), line)
 			}
 			assert.NotContains(t, log.String(), "\x01")
+			// The log is what the AI Agent returned: the step adds no line about the file or the outputs.
+			assert.NotContains(t, log.String(), "The answer is in")
+			assert.NotContains(t, log.String(), "Output ")
+			if tt.wantAnswer != "" {
+				assert.Equal(t, 1, strings.Count(log.String(), strings.TrimSpace(tt.wantAnswer)), "the log has the answer one time")
+			}
 			if tt.wantCursors != nil {
 				assert.Equal(t, tt.wantCursors, client.cursors)
 			}
