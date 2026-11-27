@@ -28,7 +28,7 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 
 FROM ${BUSYBOX_IMAGE} AS busybox
 FROM ${ALPINE_IMAGE}
-RUN apk --no-cache upgrade && apk --no-cache add 'ca-certificates>=20261020-r0' libssl3 "git>=2.54.1-r0" "libexpat>=2.10.0-r0" "openssh-client>=10.3_p1-r2" "zlib>=1.3.2-r1" "brotli-libs>=1.2.1-r0" "libcurl>=8.23.0-r0"
+RUN apk --no-cache upgrade && apk --no-cache add 'ca-certificates>=20261020-r0' libssl3 "git>=2.54.1-r0" "openssh-client>=10.3_p1-r2" "libexpat>=2.10.0-r0" "zlib>=1.3.2-r1" "brotli-libs>=1.2.1-r0" "libcurl>=8.23.0-r0"
 COPY --from=busybox /bin /.tktw-bin
 COPY --from=build /app/testworkflow-toolkit /toolkit
 COPY --from=build /app/testworkflow-init /init
