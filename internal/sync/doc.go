@@ -127,7 +127,10 @@
 // ConfigMaps Skills are read from only in TESTKUBE_NAMESPACE
 // (controller.ControlPlaneResourceCacheObjects): a Control Plane resource is synced by kind and
 // name alone, so same-name resources of two namespaces would overwrite each other, and its access
-// is checked in TESTKUBE_NAMESPACE only.
+// is checked in TESTKUBE_NAMESPACE only. The manager resolves each of these kinds when it is
+// created, so it lists one only when its controller runs: TestWorkflowExecution with
+// ENABLE_K8S_CONTROLLERS, and a Control Plane kind only when its CRD is installed, so a missing
+// CRD of a kind the agent does not use never stops it.
 //
 // The agent needs get, list and watch on the six syncable kinds in every namespace it watches
 // (testworkflows, testworkflowtemplates and workflowtriggers in testworkflows.testkube.io,

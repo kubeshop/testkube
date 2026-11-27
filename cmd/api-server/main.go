@@ -755,12 +755,15 @@ func main() {
 
 		// Executions run only in the agent namespace, whatever GITOPS_NAMESPACES watches. So are
 		// the Control Plane resources synced: their sync names a resource by kind and name alone,
-		// and their access is checked in the agent namespace only.
+		// and their access is checked in the agent namespace only. The manager resolves every
+		// object listed here when it is created, so a kind is listed only when its controller
+		// runs: a GitOps-only agent may lack the TestWorkflowExecution CRD.
 		agentNamespaceOnly := func() cache.ByObject {
 			return cache.ByObject{Namespaces: map[string]cache.Config{cfg.TestkubeNamespace: {}}}
 		}
-		cachedByObject := map[ctrlclient.Object]cache.ByObject{
-			&testworkflowsv1.TestWorkflowExecution{}: agentNamespaceOnly(),
+		cachedByObject := map[ctrlclient.Object]cache.ByObject{}
+		if cfg.EnableK8sControllers {
+			cachedByObject[&testworkflowsv1.TestWorkflowExecution{}] = agentNamespaceOnly()
 		}
 		syncsControlPlaneResources := proContext.CloudStorageSupportedInControlPlane && cfg.GitOpsSyncKubernetesToCloudEnabled &&
 			cfg.GitOpsSyncControlPlaneResourcesEnabled && len(proContext.ControlPlaneResourceCapabilities) > 0
