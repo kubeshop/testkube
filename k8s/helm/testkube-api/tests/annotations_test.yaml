@@ -1,0 +1,124 @@
+suite: testkube-api annotations
+templates:
+  - templates/service.yaml
+  - templates/serviceaccount.yaml
+  - templates/hpa.yaml
+release:
+  name: testkube
+  namespace: testkube
+tests:
+  - it: puts global annotations on the service as annotations, not labels
+    template: templates/service.yaml
+    set:
+      global:
+        annotations:
+          argocd.argoproj.io/sync-wave: "-1"
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "-1"
+      - notExists:
+          path: metadata.labels["argocd.argoproj.io/sync-wave"]
+
+  - it: puts global annotations on the autoscaler as annotations, not labels
+    template: templates/hpa.yaml
+    set:
+      autoscaling:
+        enabled: true
+      global:
+        annotations:
+          team: qa
+    asserts:
+      - equal:
+          path: metadata.annotations.team
+          value: qa
+      - notExists:
+          path: metadata.labels.team
+
+  - it: puts global annotations on every service account as annotations, not labels
+    template: templates/serviceaccount.yaml
+    set:
+      global:
+        annotations:
+          team: qa
+      executionNamespaces:
+        - namespace: other
+          generateTestJobRBAC: true
+          jobServiceAccountName: other-tests-job
+    asserts:
+      - hasDocuments:
+          count: 3
+      - equal:
+          path: metadata.annotations.team
+          value: qa
+      - notExists:
+          path: metadata.labels.team
+
+  - it: keeps the service account annotations on the agent service account
+    template: templates/serviceaccount.yaml
+    set:
+      serviceAccount:
+        annotations:
+          eks.amazonaws.com/role-arn: arn:aws:iam::111111111111:role/testkube-api
+      testServiceAccount:
+        annotations:
+          eks.amazonaws.com/role-arn: arn:aws:iam::111111111111:role/test-jobs
+    documentSelector:
+      path: metadata.name
+      value: testkube-testkube-api
+    asserts:
+      - equal:
+          path: metadata.annotations["eks.amazonaws.com/role-arn"]
+          value: arn:aws:iam::111111111111:role/testkube-api
+
+  - it: gives the test job service account the test service account annotations
+    template: templates/serviceaccount.yaml
+    set:
+      serviceAccount:
+        annotations:
+          eks.amazonaws.com/role-arn: arn:aws:iam::111111111111:role/testkube-api
+      testServiceAccount:
+        annotations:
+          eks.amazonaws.com/role-arn: arn:aws:iam::111111111111:role/test-jobs
+    documentSelector:
+      path: metadata.name
+      value: testkube-testkube-api-tests-job
+    asserts:
+      - equal:
+          path: metadata.annotations["eks.amazonaws.com/role-arn"]
+          value: arn:aws:iam::111111111111:role/test-jobs
+
+  - it: gives the test job service account of an execution namespace the test service account annotations
+    template: templates/serviceaccount.yaml
+    set:
+      serviceAccount:
+        annotations:
+          eks.amazonaws.com/role-arn: arn:aws:iam::111111111111:role/testkube-api
+      testServiceAccount:
+        annotations:
+          eks.amazonaws.com/role-arn: arn:aws:iam::111111111111:role/test-jobs
+      executionNamespaces:
+        - namespace: other
+          generateTestJobRBAC: true
+          jobServiceAccountName: other-tests-job
+    documentSelector:
+      path: metadata.name
+      value: other-tests-job
+    asserts:
+      - equal:
+          path: metadata.annotations["eks.amazonaws.com/role-arn"]
+          value: arn:aws:iam::111111111111:role/test-jobs
+
+  - it: falls back to the service account annotations when the test service account has none
+    template: templates/serviceaccount.yaml
+    set:
+      serviceAccount:
+        annotations:
+          eks.amazonaws.com/role-arn: arn:aws:iam::111111111111:role/testkube-api
+    documentSelector:
+      path: metadata.name
+      value: testkube-testkube-api-tests-job
+    asserts:
+      - equal:
+          path: metadata.annotations["eks.amazonaws.com/role-arn"]
+          value: arn:aws:iam::111111111111:role/testkube-api
