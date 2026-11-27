@@ -118,6 +118,8 @@ func TestCompileMathKeepsGroupingOnTheRight(t *testing.T) {
 		{expr: `"x" + (float(a) + 1)`, want: `"x"+(float(a)+1)`},
 		{expr: `float(a) + (float(b) + 1)`, want: `float(a)+float(b)+1`},
 		{expr: `string(a) + (string(b) + "c")`, want: `string(a)+string(b)+"c"`},
+		{expr: `1 + (2 + (a + b))`, want: `1+(2+(a+b))`},
+		{expr: `float(a) + ((float(b) + 1) + float(c))`, want: `float(a)+float(b)+1+float(c)`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.expr, func(t *testing.T) {
@@ -138,6 +140,15 @@ func TestCompileMapKeepsGroupingOnTheRight(t *testing.T) {
 	assert.Equal(t, `[3]`, MustCompile(`filter([1,2,3], "10 - (_.value - 1) < 9")`).String())
 	// + also joins strings, so a sum next to a string keeps its parentheses.
 	assert.Equal(t, `["x3"]`, MustCompile(`map([2], "'x' + (float(_.value) + 1)")`).String())
+}
+
+func TestCompileNestedSumWithStringKeepsGrouping(t *testing.T) {
+	// a + b reports a number type for operands of unknown type, but joins strings at runtime.
+	const expr = `1 + (2 + (a + b))`
+	str := MustCompile(expr).String()
+	vm := NewMachine().Register("a", 1).Register("b", "p")
+	assert.Equal(t, `"121p"`, must(MustCompile(expr).Resolve(vm)).String())
+	assert.Equal(t, `"121p"`, must(MustCompile(str).Resolve(vm)).String())
 }
 
 func TestBuildTemplate(t *testing.T) {

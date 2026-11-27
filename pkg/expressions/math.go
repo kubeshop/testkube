@@ -207,7 +207,7 @@ func (s *math) itemString(v Expression, right bool) string {
 		// keeps its parentheses, unless both sides use the same operator and the grouping
 		// doesn't change the result: a-(b-c) is not a-b-c, and a&&(b||c) is not a&&b||c.
 		flatAtSamePriority := !right || (vv.operator == s.operator && isAssociative(s.operator) &&
-			(s.operator != operatorAdd || sameAddKind(s.left.Type(), vv.left.Type(), vv.right.Type())))
+			(s.operator != operatorAdd || sameAddKind(s.left, vv.left, vv.right)))
 		if (itemPriority > priority || (itemPriority == priority && flatAtSamePriority)) &&
 			(vv.operator != operatorAdd || v.Type() == vv.left.Type()) {
 			return v.String()
@@ -219,17 +219,27 @@ func (s *math) itemString(v Expression, right bool) string {
 // sameAddKind tells if a+(b+c) can be printed as a+b+c. + also joins strings, so 'x'+(1+2)
 // is "x3" while 'x'+1+2 is "x12": that only holds when all operands are known numbers, or
 // all are strings.
-func sameAddKind(types ...Type) bool {
+func sameAddKind(items ...Expression) bool {
 	numbers, texts := 0, 0
-	for _, t := range types {
-		switch t {
-		case TypeInt64, TypeFloat64:
+	for _, v := range items {
+		if isKnownNumber(v) {
 			numbers++
-		case TypeString:
+		} else if v.Type() == TypeString {
 			texts++
 		}
 	}
-	return numbers == len(types) || texts == len(types)
+	return numbers == len(items) || texts == len(items)
+}
+
+// isKnownNumber tells if v always gives a number. A sum reports TypeFloat64 whenever
+// neither side is a string type, also for operands of unknown type, and those sums join
+// strings at runtime, so a sum only counts when both of its sides do.
+func isKnownNumber(v Expression) bool {
+	if vv, ok := v.(*math); ok && vv.operator == operatorAdd {
+		return isKnownNumber(vv.left) && isKnownNumber(vv.right)
+	}
+	t := v.Type()
+	return t == TypeInt64 || t == TypeFloat64
 }
 
 func isAssociative(op operator) bool {
