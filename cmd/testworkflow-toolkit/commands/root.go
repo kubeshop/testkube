@@ -25,6 +25,7 @@ func init() {
 
 	// Pro functionalities
 	RootCmd.AddCommand(commands.NewExecuteCmd())
+	RootCmd.AddCommand(commands.NewAgentCmd())
 	RootCmd.AddCommand(commands.NewParallelCmd())
 	RootCmd.AddCommand(commands.NewServicesCmd())
 	RootCmd.AddCommand(commands.NewKillCmd())

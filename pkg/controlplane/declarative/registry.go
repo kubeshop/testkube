@@ -134,20 +134,32 @@ func Kinds() []Kind {
 
 // LookupKind returns the kind an object declares with apiVersion and kind.
 func LookupKind(apiVersion, kind string) (Kind, error) {
-	known := false
+	knownAPIVersion := false
 	for _, k := range kinds {
 		if k.GroupVersion.String() != apiVersion {
 			continue
 		}
-		known = true
+		knownAPIVersion = true
 		if k.Kind == kind {
 			return k, nil
 		}
 	}
-	if !known {
-		return Kind{}, fmt.Errorf("apiVersion %q is not a Control Plane resource (supported: %s)", apiVersion, strings.Join(supported(), ", "))
+	return Kind{}, &UnsupportedKindError{APIVersion: apiVersion, Kind: kind, knownAPIVersion: knownAPIVersion}
+}
+
+// UnsupportedKindError is the error for an object whose apiVersion and kind are not a Control
+// Plane resource, so a caller can tell the person where that kind is managed instead.
+type UnsupportedKindError struct {
+	APIVersion      string
+	Kind            string
+	knownAPIVersion bool
+}
+
+func (e *UnsupportedKindError) Error() string {
+	if !e.knownAPIVersion {
+		return fmt.Sprintf("apiVersion %q is not a Control Plane resource (supported: %s)", e.APIVersion, strings.Join(supported(), ", "))
 	}
-	return Kind{}, fmt.Errorf("unknown kind %q for %s (supported: %s)", kind, apiVersion, strings.Join(supported(), ", "))
+	return fmt.Sprintf("unknown kind %q for %s (supported: %s)", e.Kind, e.APIVersion, strings.Join(supported(), ", "))
 }
 
 // LookupName returns the kind a CLI name refers to, case-insensitively.
@@ -186,7 +198,7 @@ func StatusOf(obj Object) commonv1.ControlPlaneResourceStatus {
 	case *insightsv1.Board:
 		return o.Status
 	case *aiv1.AIAgent:
-		return o.Status
+		return o.Status.ControlPlaneResourceStatus
 	case *aiv1.MCPServer:
 		return o.Status.ControlPlaneResourceStatus
 	case *aiv1.LLMProvider:

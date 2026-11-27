@@ -167,7 +167,7 @@ func PrepareForApply(obj Object) (Object, error) {
 		o.Status = commonv1.ControlPlaneResourceStatus{}
 	case *aiv1.AIAgent:
 		o.ObjectMeta = meta
-		o.Status = commonv1.ControlPlaneResourceStatus{}
+		o.Status = aiv1.AIAgentStatus{}
 	case *aiv1.MCPServer:
 		o.ObjectMeta = meta
 		o.Status = aiv1.MCPServerStatus{}

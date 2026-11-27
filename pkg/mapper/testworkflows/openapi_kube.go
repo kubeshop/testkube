@@ -1124,6 +1124,15 @@ func MapStepExecuteAPIToKube(v testkube.TestWorkflowStepExecute) testworkflowsv1
 	}
 }
 
+func MapStepAgentAPIToKube(v testkube.TestWorkflowStepAgent) testworkflowsv1.StepAgent {
+	return testworkflowsv1.StepAgent{
+		Name:     v.Name,
+		Prompt:   v.Prompt,
+		Model:    v.Model,
+		Thinking: v.Thinking,
+	}
+}
+
 func MapStepArtifactsCompressionAPIToKube(v testkube.TestWorkflowStepArtifactsCompression) testworkflowsv1.ArtifactCompression {
 	return testworkflowsv1.ArtifactCompression{
 		Name: v.Name,
@@ -1211,6 +1220,7 @@ func MapStepParallelAPIToKube(v testkube.TestWorkflowStepParallel) testworkflows
 			Shell:     v.Shell,
 			Run:       common.MapPtr(v.Run, MapStepRunAPIToKube),
 			Execute:   common.MapPtr(v.Execute, MapStepExecuteAPIToKube),
+			Agent:     common.MapPtr(v.Agent, MapStepAgentAPIToKube),
 			Artifacts: common.MapPtr(v.Artifacts, MapStepArtifactsAPIToKube),
 			Cache:     common.MapPtr(v.Cache, MapStepCacheAPIToKube),
 		},
@@ -1259,6 +1269,7 @@ func MapIndependentStepParallelAPIToKube(v testkube.TestWorkflowIndependentStepP
 			Shell:     v.Shell,
 			Run:       common.MapPtr(v.Run, MapStepRunAPIToKube),
 			Execute:   common.MapPtr(v.Execute, MapStepExecuteAPIToKube),
+			Agent:     common.MapPtr(v.Agent, MapStepAgentAPIToKube),
 			Artifacts: common.MapPtr(v.Artifacts, MapStepArtifactsAPIToKube),
 			Cache:     common.MapPtr(v.Cache, MapStepCacheAPIToKube),
 		},
@@ -1416,6 +1427,7 @@ func MapStepAPIToKube(v testkube.TestWorkflowStep) testworkflowsv1.Step {
 			Shell:     v.Shell,
 			Run:       common.MapPtr(v.Run, MapStepRunAPIToKube),
 			Execute:   common.MapPtr(v.Execute, MapStepExecuteAPIToKube),
+			Agent:     common.MapPtr(v.Agent, MapStepAgentAPIToKube),
 			Artifacts: common.MapPtr(v.Artifacts, MapStepArtifactsAPIToKube),
 			Cache:     common.MapPtr(v.Cache, MapStepCacheAPIToKube),
 		},
@@ -1455,6 +1467,7 @@ func MapIndependentStepAPIToKube(v testkube.TestWorkflowIndependentStep) testwor
 			Shell:     v.Shell,
 			Run:       common.MapPtr(v.Run, MapStepRunAPIToKube),
 			Execute:   common.MapPtr(v.Execute, MapStepExecuteAPIToKube),
+			Agent:     common.MapPtr(v.Agent, MapStepAgentAPIToKube),
 			Artifacts: common.MapPtr(v.Artifacts, MapStepArtifactsAPIToKube),
 			Cache:     common.MapPtr(v.Cache, MapStepCacheAPIToKube),
 		},

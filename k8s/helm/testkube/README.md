@@ -325,7 +325,7 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | testkube-api.minio.extraEnvVars | list | `[]` | Minio extra vars |
 | testkube-api.minio.extraVolumeMounts | list | `[]` |  |
 | testkube-api.minio.extraVolumes | list | `[]` |  |
-| testkube-api.minio.image | object | `{"pullSecrets":[],"registry":"docker.io","repository":"kubeshop/testkube-minio","tag":"2025.10"}` | Minio image from DockerHub |
+| testkube-api.minio.image | object | `{"pullSecrets":[],"registry":"docker.io","repository":"kubeshop/testkube-minio","tag":"2025.10-2"}` | Minio image from DockerHub |
 | testkube-api.minio.minioRootPassword | string | `"minio123"` | Root password |
 | testkube-api.minio.minioRootUser | string | `"minio"` | Root username |
 | testkube-api.minio.nodeSelector | object | `{}` | Node labels for pod assignment. |
@@ -409,7 +409,7 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | testkube-api.testConnection.resources | object | `{}` | Test Connection resource settings |
 | testkube-api.testConnection.tolerations | list | `[]` | Tolerations to schedule a workload to nodes with any architecture type. Required for deployment to GKE cluster. |
 | testkube-api.testServiceAccount | object | `{"annotations":{},"create":true}` | Service Account parameters |
-| testkube-api.testServiceAccount.annotations | object | `{}` | Annotations to add to the service account |
+| testkube-api.testServiceAccount.annotations | object | `{}` | Annotations to add to the test job service accounts. When empty, they get `serviceAccount.annotations` |
 | testkube-api.testServiceAccount.create | bool | `true` | Specifies whether a service account should be created |
 | testkube-api.testkubeLogs.grpcAddress | string | `"testkube-logs:9090"` | GRPC address |
 | testkube-api.testkubeLogs.tls.certSecret.baseMountPath | string | `"/etc/client-certs/grpc"` | Base path to mount the client certificate secret |

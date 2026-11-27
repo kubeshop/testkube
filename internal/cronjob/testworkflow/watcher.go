@@ -185,7 +185,7 @@ func (w Watcher) WatchTestWorkflowTemplates(ctx context.Context, configChan chan
 
 					configChan <- cronjob.Config{
 						Workflow: cronjob.Workflow{
-							Name:  obj.Resource.GetName(),
+							Name:  testWorkflow.GetName(),
 							EnvId: w.environmentId,
 						},
 						Schedules: schedules,

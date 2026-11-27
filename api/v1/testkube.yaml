@@ -10060,6 +10060,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowStepRun"
         execute:
           $ref: "#/components/schemas/TestWorkflowStepExecute"
+        agent:
+          $ref: "#/components/schemas/TestWorkflowStepAgent"
         artifacts:
           $ref: "#/components/schemas/TestWorkflowStepArtifacts"
         cache:
@@ -10114,6 +10116,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowContainerConfig"
         execute:
           $ref: "#/components/schemas/TestWorkflowStepExecute"
+        agent:
+          $ref: "#/components/schemas/TestWorkflowStepAgent"
         artifacts:
           $ref: "#/components/schemas/TestWorkflowStepArtifacts"
         cache:
@@ -10187,6 +10191,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowContainerConfig"
         execute:
           $ref: "#/components/schemas/TestWorkflowStepExecute"
+        agent:
+          $ref: "#/components/schemas/TestWorkflowStepAgent"
         artifacts:
           $ref: "#/components/schemas/TestWorkflowStepArtifacts"
         cache:
@@ -10223,6 +10229,24 @@ components:
           description: workflows to schedule
           items:
             $ref: "#/components/schemas/TestWorkflowStepExecuteTestWorkflowRef"
+
+    TestWorkflowStepAgent:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          description: name of the AI Agent
+        prompt:
+          type: string
+          description: message for the AI Agent
+        model:
+          type: string
+          description: model for the turn; when empty, the AI Agent uses its default model
+        thinking:
+          type: string
+          description: "reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max; when empty, the AI Agent uses its default effort"
 
     TestWorkflowStepExecuteTestWorkflowRef:
       type: object

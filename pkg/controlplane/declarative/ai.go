@@ -374,6 +374,11 @@ func normalizeAIAgent(a *aiv1.AIAgent) field.ErrorList {
 		ownSkills[s.Name] = true
 	}
 	errs = append(errs, normalizeSkillRefs(spec.SkillRefs, ownSkills, path.Child("skillRefs"))...)
+	// Leaving a2a out turns A2A off, so it is written out the way an export
+	// writes it.
+	if spec.A2A == nil {
+		spec.A2A = &aiv1.AIAgentA2A{}
+	}
 	return errs
 }
 

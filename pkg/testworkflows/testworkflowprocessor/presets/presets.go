@@ -20,6 +20,7 @@ func NewOpenSource(inspector imageinspector.Inspector) testworkflowprocessor.Pro
 		Register(testworkflowprocessor.ProcessRunCommand).
 		Register(testworkflowprocessor.ProcessShellCommand).
 		Register(testworkflowprocessor.StubExecute).
+		Register(testworkflowprocessor.StubAgent).
 		Register(testworkflowprocessor.StubParallel).
 		Register(testworkflowprocessor.ProcessNestedSteps).
 		// After every producer, and before artifacts, which run on "always" and are
@@ -42,6 +43,7 @@ func NewPro(inspector imageinspector.Inspector) testworkflowprocessor.Processor 
 		Register(testworkflowprocessor.ProcessRunCommand).
 		Register(testworkflowprocessor.ProcessShellCommand).
 		Register(testworkflowprocessortcl.ProcessExecute).
+		Register(testworkflowprocessortcl.ProcessAgent).
 		Register(testworkflowprocessortcl.ProcessParallel).
 		Register(testworkflowprocessor.ProcessNestedSteps).
 		Register(testworkflowprocessortcl.ProcessServicesStop).

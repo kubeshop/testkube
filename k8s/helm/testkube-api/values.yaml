@@ -610,7 +610,7 @@ logsServiceAccount:
 testServiceAccount:
   ## Specifies whether a service account should be created
   create: true
-  ## Annotations to add to the service account
+  ## Annotations to add to the test job service accounts. When empty, they get serviceAccount.annotations
   annotations: {}
 
 ## Test Job ServiceAccount name
@@ -760,7 +760,7 @@ minio:
   image:
     registry: docker.io
     repository: kubeshop/testkube-minio
-    tag: "2025.10"
+    tag: "2025.10-2"
     pullPolicy: IfNotPresent
     pullSecrets: []
   ## ServiceAccount name to use for Minio

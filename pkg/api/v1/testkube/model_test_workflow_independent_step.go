@@ -36,6 +36,7 @@ type TestWorkflowIndependentStep struct {
 	WorkingDir *BoxedString                         `json:"workingDir,omitempty"`
 	Container  *TestWorkflowContainerConfig         `json:"container,omitempty"`
 	Execute    *TestWorkflowStepExecute             `json:"execute,omitempty"`
+	Agent      *TestWorkflowStepAgent               `json:"agent,omitempty"`
 	Artifacts  *TestWorkflowStepArtifacts           `json:"artifacts,omitempty"`
 	Cache      *TestWorkflowStepCache               `json:"cache,omitempty"`
 	Parallel   *TestWorkflowIndependentStepParallel `json:"parallel,omitempty"`

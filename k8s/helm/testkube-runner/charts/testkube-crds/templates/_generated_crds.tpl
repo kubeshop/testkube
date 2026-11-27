@@ -94,6 +94,20 @@ spec:
           spec:
             description: AIAgentSpec is what an AI Agent does and what it may use.
             properties:
+              a2a:
+                description: |-
+                  A2A serves the agent over the Agent2Agent (A2A) protocol. Leaving it
+                  out turns A2A off for the agent: the manifest is the source of truth,
+                  and an export always writes it.
+                properties:
+                  enabled:
+                    description: |-
+                      Enabled serves the agent over A2A. It never widens access: the agent
+                      is served only when the deployment serves A2A and the organization
+                      turned it on, and a caller still needs a token whose role allows it
+                      and has to pass the agent's access rules.
+                    type: boolean
+                type: object
               access:
                 description: |-
                   Access links the agent to roles and resource groups. When it is
@@ -310,11 +324,16 @@ spec:
             - instructions
             type: object
           status:
-            description: |-
-              ControlPlaneResourceStatus is the Control Plane's view of a resource. The Control Plane
-              fills it in when it exports a resource, and ignores it when one is applied:
-              ownership is never taken from a request body.
+            description: AIAgentStatus is the Control Plane's view of an AI Agent.
             properties:
+              a2a:
+                description: A2A is how the agent is reached over A2A, while it is
+                  served.
+                properties:
+                  url:
+                    description: URL is the agent's A2A endpoint.
+                    type: string
+                type: object
               creationSource:
                 description: 'CreationSource records how the resource was created:
                   ui, api or gitops.'
@@ -9386,6 +9405,27 @@ spec:
                   description: steps to run at the end of the workflow
                   items:
                     properties:
+                      agent:
+                        description: run an AI Agent of the environment
+                        properties:
+                          model:
+                            description: model for the turn; when empty, the AI Agent uses its default model
+                            type: string
+                          name:
+                            description: name of the AI Agent
+                            minLength: 1
+                            type: string
+                          prompt:
+                            description: message for the AI Agent
+                            type: string
+                          thinking:
+                            description: |-
+                              reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                              when empty, the AI Agent uses its default effort
+                            type: string
+                        required:
+                          - name
+                        type: object
                       artifacts:
                         description: scrape artifacts from the volumes
                         properties:
@@ -10588,6 +10628,27 @@ spec:
                           after:
                             description: steps to run at the end of the workflow
                             x-kubernetes-preserve-unknown-fields: true
+                          agent:
+                            description: run an AI Agent of the environment
+                            properties:
+                              model:
+                                description: model for the turn; when empty, the AI Agent uses its default model
+                                type: string
+                              name:
+                                description: name of the AI Agent
+                                minLength: 1
+                                type: string
+                              prompt:
+                                description: message for the AI Agent
+                                type: string
+                              thinking:
+                                description: |-
+                                  reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                                  when empty, the AI Agent uses its default effort
+                                type: string
+                            required:
+                              - name
+                            type: object
                           artifacts:
                             description: scrape artifacts from the volumes
                             properties:
@@ -15384,6 +15445,27 @@ spec:
                   description: steps for setting up the workflow
                   items:
                     properties:
+                      agent:
+                        description: run an AI Agent of the environment
+                        properties:
+                          model:
+                            description: model for the turn; when empty, the AI Agent uses its default model
+                            type: string
+                          name:
+                            description: name of the AI Agent
+                            minLength: 1
+                            type: string
+                          prompt:
+                            description: message for the AI Agent
+                            type: string
+                          thinking:
+                            description: |-
+                              reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                              when empty, the AI Agent uses its default effort
+                            type: string
+                        required:
+                          - name
+                        type: object
                       artifacts:
                         description: scrape artifacts from the volumes
                         properties:
@@ -16586,6 +16668,27 @@ spec:
                           after:
                             description: steps to run at the end of the workflow
                             x-kubernetes-preserve-unknown-fields: true
+                          agent:
+                            description: run an AI Agent of the environment
+                            properties:
+                              model:
+                                description: model for the turn; when empty, the AI Agent uses its default model
+                                type: string
+                              name:
+                                description: name of the AI Agent
+                                minLength: 1
+                                type: string
+                              prompt:
+                                description: message for the AI Agent
+                                type: string
+                              thinking:
+                                description: |-
+                                  reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                                  when empty, the AI Agent uses its default effort
+                                type: string
+                            required:
+                              - name
+                            type: object
                           artifacts:
                             description: scrape artifacts from the volumes
                             properties:
@@ -18994,6 +19097,27 @@ spec:
                   description: steps to execute in the workflow
                   items:
                     properties:
+                      agent:
+                        description: run an AI Agent of the environment
+                        properties:
+                          model:
+                            description: model for the turn; when empty, the AI Agent uses its default model
+                            type: string
+                          name:
+                            description: name of the AI Agent
+                            minLength: 1
+                            type: string
+                          prompt:
+                            description: message for the AI Agent
+                            type: string
+                          thinking:
+                            description: |-
+                              reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                              when empty, the AI Agent uses its default effort
+                            type: string
+                        required:
+                          - name
+                        type: object
                       artifacts:
                         description: scrape artifacts from the volumes
                         properties:
@@ -20196,6 +20320,27 @@ spec:
                           after:
                             description: steps to run at the end of the workflow
                             x-kubernetes-preserve-unknown-fields: true
+                          agent:
+                            description: run an AI Agent of the environment
+                            properties:
+                              model:
+                                description: model for the turn; when empty, the AI Agent uses its default model
+                                type: string
+                              name:
+                                description: name of the AI Agent
+                                minLength: 1
+                                type: string
+                              prompt:
+                                description: message for the AI Agent
+                                type: string
+                              thinking:
+                                description: |-
+                                  reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                                  when empty, the AI Agent uses its default effort
+                                type: string
+                            required:
+                              - name
+                            type: object
                           artifacts:
                             description: scrape artifacts from the volumes
                             properties:
@@ -22926,6 +23071,27 @@ spec:
                   description: steps to run at the end of the workflow
                   items:
                     properties:
+                      agent:
+                        description: run an AI Agent of the environment
+                        properties:
+                          model:
+                            description: model for the turn; when empty, the AI Agent uses its default model
+                            type: string
+                          name:
+                            description: name of the AI Agent
+                            minLength: 1
+                            type: string
+                          prompt:
+                            description: message for the AI Agent
+                            type: string
+                          thinking:
+                            description: |-
+                              reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                              when empty, the AI Agent uses its default effort
+                            type: string
+                        required:
+                          - name
+                        type: object
                       artifacts:
                         description: scrape artifacts from the volumes
                         properties:
@@ -24125,6 +24291,27 @@ spec:
                       parallel:
                         description: instructions for parallel execution
                         properties:
+                          agent:
+                            description: run an AI Agent of the environment
+                            properties:
+                              model:
+                                description: model for the turn; when empty, the AI Agent uses its default model
+                                type: string
+                              name:
+                                description: name of the AI Agent
+                                minLength: 1
+                                type: string
+                              prompt:
+                                description: message for the AI Agent
+                                type: string
+                              thinking:
+                                description: |-
+                                  reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                                  when empty, the AI Agent uses its default effort
+                                type: string
+                            required:
+                              - name
+                            type: object
                           artifacts:
                             description: scrape artifacts from the volumes
                             properties:
@@ -28782,6 +28969,27 @@ spec:
                   description: steps for setting up the workflow
                   items:
                     properties:
+                      agent:
+                        description: run an AI Agent of the environment
+                        properties:
+                          model:
+                            description: model for the turn; when empty, the AI Agent uses its default model
+                            type: string
+                          name:
+                            description: name of the AI Agent
+                            minLength: 1
+                            type: string
+                          prompt:
+                            description: message for the AI Agent
+                            type: string
+                          thinking:
+                            description: |-
+                              reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                              when empty, the AI Agent uses its default effort
+                            type: string
+                        required:
+                          - name
+                        type: object
                       artifacts:
                         description: scrape artifacts from the volumes
                         properties:
@@ -29981,6 +30189,27 @@ spec:
                       parallel:
                         description: instructions for parallel execution
                         properties:
+                          agent:
+                            description: run an AI Agent of the environment
+                            properties:
+                              model:
+                                description: model for the turn; when empty, the AI Agent uses its default model
+                                type: string
+                              name:
+                                description: name of the AI Agent
+                                minLength: 1
+                                type: string
+                              prompt:
+                                description: message for the AI Agent
+                                type: string
+                              thinking:
+                                description: |-
+                                  reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                                  when empty, the AI Agent uses its default effort
+                                type: string
+                            required:
+                              - name
+                            type: object
                           artifacts:
                             description: scrape artifacts from the volumes
                             properties:
@@ -32270,6 +32499,27 @@ spec:
                   description: steps to execute in the workflow
                   items:
                     properties:
+                      agent:
+                        description: run an AI Agent of the environment
+                        properties:
+                          model:
+                            description: model for the turn; when empty, the AI Agent uses its default model
+                            type: string
+                          name:
+                            description: name of the AI Agent
+                            minLength: 1
+                            type: string
+                          prompt:
+                            description: message for the AI Agent
+                            type: string
+                          thinking:
+                            description: |-
+                              reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                              when empty, the AI Agent uses its default effort
+                            type: string
+                        required:
+                          - name
+                        type: object
                       artifacts:
                         description: scrape artifacts from the volumes
                         properties:
@@ -33469,6 +33719,27 @@ spec:
                       parallel:
                         description: instructions for parallel execution
                         properties:
+                          agent:
+                            description: run an AI Agent of the environment
+                            properties:
+                              model:
+                                description: model for the turn; when empty, the AI Agent uses its default model
+                                type: string
+                              name:
+                                description: name of the AI Agent
+                                minLength: 1
+                                type: string
+                              prompt:
+                                description: message for the AI Agent
+                                type: string
+                              thinking:
+                                description: |-
+                                  reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                                  when empty, the AI Agent uses its default effort
+                                type: string
+                            required:
+                              - name
+                            type: object
                           artifacts:
                             description: scrape artifacts from the volumes
                             properties:

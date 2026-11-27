@@ -49,6 +49,11 @@ service TestKubeCloudAPI {
     rpc GetExecutionCachePresigned(GetExecutionCachePresignedRequest) returns (GetExecutionCachePresignedResponse);
     rpc SaveExecutionCachePresigned(SaveExecutionCachePresignedRequest) returns (SaveExecutionCachePresignedResponse);
 
+    // AI Agent step
+    rpc StartAgentTurn(StartAgentTurnRequest) returns (AgentTurn);
+    rpc GetAgentTurn(GetAgentTurnRequest) returns (AgentTurn);
+    rpc CancelAgentTurn(CancelAgentTurnRequest) returns (AgentTurn);
+
     // CRD Synchronisation
     // -- Test Workflows
     rpc GetTestWorkflow(GetTestWorkflowRequest) returns (GetTestWorkflowResponse);
@@ -1138,4 +1143,60 @@ message GetGitAccessResponse {
  string url = 1;
  string username = 2;
  string token = 3;
+}
+
+// AgentTurnState is the state of one turn of an AI Agent.
+//
+// The zero value is not a state. A reader that does not know a value must not read it as
+// a completed turn.
+enum AgentTurnState {
+  AGENT_TURN_STATE_UNSPECIFIED = 0;
+  AGENT_TURN_STATE_WORKING = 1;
+  AGENT_TURN_STATE_COMPLETED = 2;
+  AGENT_TURN_STATE_FAILED = 3;
+  AGENT_TURN_STATE_CANCELED = 4;
+}
+
+enum AgentTurnEventKind {
+  AGENT_TURN_EVENT_KIND_UNSPECIFIED = 0;
+  AGENT_TURN_EVENT_KIND_TEXT = 1;      // text of the AI Agent
+  AGENT_TURN_EVENT_KIND_TOOL_CALL = 2; // the AI Agent calls a tool
+}
+
+// StartAgentTurnRequest starts one turn of an AI Agent for a step of an execution.
+//
+// The organization, the environment and the execution come from the execution token,
+// never from this message.
+message StartAgentTurnRequest {
+  // The step makes one ID for each attempt and sends it with each retry of this call.
+  // A second call with the same ID returns the turn of the first call.
+  string request_id = 1;
+  string step_ref = 2;   // reference of the step in the execution
+  string agent_name = 3; // name of the AI Agent in the environment
+  string prompt = 4;     // the message for the AI Agent, with its expressions resolved
+}
+
+message GetAgentTurnRequest {
+  string turn_id = 1;
+  uint32 after = 2; // the `next` value of the previous answer; 0 reads from the start
+}
+
+message CancelAgentTurnRequest {
+  string turn_id = 1;
+}
+
+message AgentTurnEvent {
+  AgentTurnEventKind kind = 1;
+  string text = 2; // the text, or the detail of the tool call
+  string tool = 3; // name of the tool; set for a tool call
+}
+
+message AgentTurn {
+  string id = 1;
+  AgentTurnState state = 2;
+  string message = 3;                 // the reason for a failed or canceled turn, with the fix
+  repeated AgentTurnEvent events = 4; // the events after the cursor of the request
+  uint32 next = 5;                    // the cursor for the next GetAgentTurn call
+  string answer = 6;                  // the answer of the AI Agent; set for a completed turn
+  string session_id = 7;              // the session of the AI Agent that holds the turn
 }
