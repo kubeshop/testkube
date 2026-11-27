@@ -47,6 +47,9 @@
 //     value as a step output, so a later step reads step.<id>.outputs.<name>. A value is text,
 //     a number or a boolean; a list and an object fail. A field that the answer does not have
 //     takes its default.
+//   - A control plane with the capability tw-agent-step-outputs gives the AI Agent a tool for the
+//     outputs. The command sends it the schemas, adds no contract to the prompt, and takes the
+//     fields that the turn returns. It checks them the same way, because it trusts no other check.
 //   - An answer with no valid outputs fails the step. Then, and when the turn fails or the
 //     control plane refuses it, the command writes the default of each output that has one. A
 //     condition on an output that does not exist aborts the execution, and with a default it

@@ -1174,6 +1174,10 @@ message StartAgentTurnRequest {
   string step_ref = 2;   // reference of the step in the execution
   string agent_name = 3; // name of the AI Agent in the environment
   string prompt = 4;     // the message for the AI Agent, with its expressions resolved
+  // The outputs that the step declares: a JSON object of output name to parameter schema.
+  // A control plane with the capability tw-agent-step-outputs gives the AI Agent a tool that
+  // takes these outputs. Empty when the step declares none.
+  string outputs_schema = 5;
 }
 
 message GetAgentTurnRequest {
@@ -1199,4 +1203,7 @@ message AgentTurn {
   uint32 next = 5;                    // the cursor for the next GetAgentTurn call
   string answer = 6;                  // the answer of the AI Agent; set for a completed turn
   string session_id = 7;              // the session of the AI Agent that holds the turn
+  // The outputs that the AI Agent gave with its tool: a JSON object of output name to value.
+  // The step checks them against its schemas. Empty when the AI Agent gave none.
+  string outputs = 8;
 }

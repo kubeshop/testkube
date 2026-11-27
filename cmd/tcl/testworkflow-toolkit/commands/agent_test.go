@@ -113,6 +113,8 @@ func TestAgentStep_Run(t *testing.T) {
 		noStepID bool
 		// outputs are the outputs that the step declares.
 		outputs map[string]testworkflowsv1.ParameterSchema
+		// toolOutputs is whether the control plane gives the AI Agent a tool for the outputs.
+		toolOutputs bool
 
 		wantErr     string
 		wantLog     []string
@@ -133,6 +135,15 @@ func TestAgentStep_Run(t *testing.T) {
 			wantLog:     []string{"Output verdict: go\n"},
 			wantOutputs: map[string]string{"verdict": "go"},
 			wantAnswer:  "All suites passed.\n" + outputsBlock(`{"verdict": "go"}`),
+		},
+		{
+			name:        "sends no block contract and takes the outputs from the tool when the control plane has it",
+			outputs:     map[string]testworkflowsv1.ParameterSchema{"verdict": verdictSchema},
+			toolOutputs: true,
+			start:       agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Answer: "All suites passed.", Outputs: `{"verdict": "go"}`}},
+			wantLog:     []string{"Output verdict: go\n"},
+			wantOutputs: map[string]string{"verdict": "go"},
+			wantAnswer:  "All suites passed.",
 		},
 		{
 			name:    "fails for an answer with no valid outputs, and writes the answer and the defaults",
@@ -262,6 +273,7 @@ func TestAgentStep_Run(t *testing.T) {
 				outputsDir:   filepath.Join(dir, "outputs"),
 				resultsDir:   filepath.Join(dir, "results"),
 				pollInterval: time.Millisecond,
+				toolOutputs:  tt.toolOutputs,
 			}
 			if tt.noStepID {
 				step.resultsDir = ""
@@ -283,7 +295,14 @@ func TestAgentStep_Run(t *testing.T) {
 				assert.Equal(t, "request-1", client.started[0].GetRequestId())
 				assert.Equal(t, "ref-1", client.started[0].GetStepRef())
 				assert.Equal(t, "failure-triage", client.started[0].GetAgentName())
-				assert.Equal(t, "Find the cause."+agentOutputsContract(tt.outputs), client.started[0].GetPrompt())
+				wantPrompt := "Find the cause."
+				if !tt.toolOutputs {
+					wantPrompt += agentOutputsContract(tt.outputs)
+				}
+				assert.Equal(t, wantPrompt, client.started[0].GetPrompt())
+				wantSchema, err := agentOutputsSchemaJSON(tt.outputs)
+				require.NoError(t, err)
+				assert.Equal(t, wantSchema, client.started[0].GetOutputsSchema())
 			}
 
 			for _, line := range tt.wantLog {

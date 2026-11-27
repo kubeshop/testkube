@@ -207,14 +207,36 @@ func checkAgentOutputNumber(schema testworkflowsv1.ParameterNumberSchema, number
 	return nil
 }
 
-// resolveAgentOutputs returns the value of each declared output from the answer. A field that
+// agentOutputFields returns the fields that the AI Agent gave. The fields from its tool come
+// first: the AI service checked them, and they are apart from the text. An older control plane
+// gives none, and then the fields come from the block in the answer.
+func agentOutputFields(fromTool, answer string) (map[string]json.RawMessage, error) {
+	if strings.TrimSpace(fromTool) == "" {
+		return parseAgentOutputs(answer)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(fromTool), &fields); err != nil {
+		return nil, fmt.Errorf("the outputs from the tool of the AI Agent are not one JSON object: %w", err)
+	}
+	return fields, nil
+}
+
+// agentOutputsSchemaJSON encodes the declared outputs for the control plane.
+func agentOutputsSchemaJSON(schemas map[string]testworkflowsv1.ParameterSchema) (string, error) {
+	if len(schemas) == 0 {
+		return "", nil
+	}
+	encoded, err := json.Marshal(schemas)
+	if err != nil {
+		return "", fmt.Errorf("cannot encode the outputs of the step: %w", err)
+	}
+	return string(encoded), nil
+}
+
+// resolveAgentOutputs returns the value of each declared output from the fields. A field that
 // the answer does not have takes its default. The error names each output that has no valid
 // value, so the author corrects the prompt or the schema in one pass.
-func resolveAgentOutputs(schemas map[string]testworkflowsv1.ParameterSchema, answer string) (map[string]string, error) {
-	fields, err := parseAgentOutputs(answer)
-	if err != nil {
-		return nil, err
-	}
+func resolveAgentOutputs(schemas map[string]testworkflowsv1.ParameterSchema, fields map[string]json.RawMessage) (map[string]string, error) {
 	values := make(map[string]string, len(schemas))
 	var problems []string
 	for _, name := range agentoutputs.Names(schemas) {

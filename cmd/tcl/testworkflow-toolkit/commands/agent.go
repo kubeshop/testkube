@@ -109,6 +109,9 @@ type agentStep struct {
 	// resultsDir is the results directory of the step. It is empty when the step has no ID.
 	resultsDir   string
 	pollInterval time.Duration
+	// toolOutputs is whether the control plane gives the AI Agent a tool for the declared
+	// outputs. Without it the prompt asks for them as a block in the answer.
+	toolOutputs bool
 }
 
 // run runs the turn and gives the declared outputs a value. When the turn gives no valid
@@ -131,12 +134,21 @@ func (s *agentStep) runTurn(ctx context.Context, spec testworkflowsv1.StepAgent)
 	if s.resultsDir == "" {
 		return &DefinitionError{Subject: agentSubject, Err: errors.New("the step has no results directory for the answer, because it has no id. Set an id on the step")}
 	}
+	schema, err := agentOutputsSchemaJSON(spec.Outputs)
+	if err != nil {
+		return &DefinitionError{Subject: agentSubject, Err: err}
+	}
+	prompt := spec.Prompt
+	if !s.toolOutputs {
+		prompt += agentOutputsContract(spec.Outputs)
+	}
 	turn, err := s.call(ctx, func(ctx context.Context) (*cloud.AgentTurn, error) {
 		return s.client.StartAgentTurn(ctx, &cloud.StartAgentTurnRequest{
-			RequestId: s.requestID,
-			StepRef:   s.stepRef,
-			AgentName: spec.Name,
-			Prompt:    spec.Prompt + agentOutputsContract(spec.Outputs),
+			RequestId:     s.requestID,
+			StepRef:       s.stepRef,
+			AgentName:     spec.Name,
+			Prompt:        prompt,
+			OutputsSchema: schema,
 		})
 	})
 	if err != nil {
@@ -258,7 +270,11 @@ func (s *agentStep) writeAnswer(turn *cloud.AgentTurn, outputs map[string]testwo
 	if len(outputs) == 0 {
 		return nil
 	}
-	values, err := resolveAgentOutputs(outputs, answer)
+	fields, err := agentOutputFields(turn.GetOutputs(), answer)
+	var values map[string]string
+	if err == nil {
+		values, err = resolveAgentOutputs(outputs, fields)
+	}
 	if err != nil {
 		return fmt.Errorf("the answer of the AI Agent does not give the outputs of the step: %w", err)
 	}
@@ -350,6 +366,7 @@ func NewAgentCmd() *cobra.Command {
 				stepRef:      config.Ref(),
 				outputsDir:   data.GetOutputsDir(),
 				pollInterval: agentPollInterval,
+				toolOutputs:  capabilities.Enabled(env.GetCapabilities(), capabilities.CapabilityAgentStepOutputs),
 			}
 			if resultsDir != nil {
 				step.resultsDir, _ = resultsDir.StringValue()

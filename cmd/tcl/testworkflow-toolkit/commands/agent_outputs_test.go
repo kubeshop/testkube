@@ -110,9 +110,22 @@ func TestResolveAgentOutputs(t *testing.T) {
 		name    string
 		schemas map[string]testworkflowsv1.ParameterSchema
 		answer  string
-		want    map[string]string
-		wantErr []string
+		// fromTool is the JSON object that the AI Agent gave with its tool.
+		fromTool string
+		want     map[string]string
+		wantErr  []string
 	}{
+		{
+			name:     "takes the fields from the tool before the block in the answer",
+			answer:   outputsBlock(`{"verdict": "no-go", "blocked": 3}`),
+			fromTool: `{"verdict": "go", "blocked": 0}`,
+			want:     map[string]string{"verdict": "go", "blocked": "0"},
+		},
+		{
+			name:     "fails for outputs from the tool that are not a JSON object",
+			fromTool: `["go"]`,
+			wantErr:  []string{"the outputs from the tool of the AI Agent are not one JSON object"},
+		},
 		{
 			name:   "reads the fields of the block",
 			answer: "All suites passed.\n\n" + outputsBlock(`{"verdict": "go", "blocked": 0}`),
@@ -197,7 +210,11 @@ func TestResolveAgentOutputs(t *testing.T) {
 			if s == nil {
 				s = schemas
 			}
-			got, err := resolveAgentOutputs(s, tt.answer)
+			fields, err := agentOutputFields(tt.fromTool, tt.answer)
+			var got map[string]string
+			if err == nil {
+				got, err = resolveAgentOutputs(s, fields)
+			}
 			if len(tt.wantErr) > 0 {
 				require.Error(t, err)
 				for _, want := range tt.wantErr {
